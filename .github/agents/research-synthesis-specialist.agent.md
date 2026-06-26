@@ -2,7 +2,6 @@
 description: 'Use when: transforming raw scout reconnaissance data into structured alignment briefs for 01-planning, synthesizing multi-source research results, or preparing plan-alignment handoffs. Keywords: research synthesis, alignment brief, scout results, plan alignment, research methodology.'
 name: research-synthesis-specialist
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

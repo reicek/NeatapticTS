@@ -8,7 +8,10 @@ import {
   FLAPPY_NETWORK_INPUT_SIZE,
   FLAPPY_NETWORK_OUTPUT_SIZE,
 } from '../../constants/constants';
-import { drawNetworkVisualization, resolveNetworkArchitectureLabel } from './network-view';
+import {
+  drawNetworkVisualization,
+  resolveNetworkArchitectureLabel,
+} from './network-view';
 import {
   alignInputNodesToDescriptionScenes,
   resolveInputDescriptionScenes,
@@ -818,7 +821,11 @@ function createStubContext(
 
 describe('drawNetworkVisualization overlay visibility', () => {
   it('produces input-group label band scenes when the host canvas is wide despite a narrow viewport', () => {
-    const network = new Network(FLAPPY_NETWORK_INPUT_SIZE, FLAPPY_NETWORK_OUTPUT_SIZE, { seed: 42 });
+    const network = new Network(
+      FLAPPY_NETWORK_INPUT_SIZE,
+      FLAPPY_NETWORK_OUTPUT_SIZE,
+      { seed: 42 },
+    );
     const { context } = createStubContext(900, 600);
     const positionedScene = drawNetworkVisualization(
       context,
@@ -831,7 +838,11 @@ describe('drawNetworkVisualization overlay visibility', () => {
   });
 
   it('produces input-description scenes when the host canvas is wide despite a narrow viewport', () => {
-    const network = new Network(FLAPPY_NETWORK_INPUT_SIZE, FLAPPY_NETWORK_OUTPUT_SIZE, { seed: 42 });
+    const network = new Network(
+      FLAPPY_NETWORK_INPUT_SIZE,
+      FLAPPY_NETWORK_OUTPUT_SIZE,
+      { seed: 42 },
+    );
     const { context } = createStubContext(900, 600);
     const positionedScene = drawNetworkVisualization(
       context,
@@ -860,7 +871,9 @@ describe('drawNetworkVisualization activation labels', () => {
     drawNetworkVisualization(context, network, 1, 1);
 
     expect(
-      fillTextCalls.some((fillTextCall) => fillTextCall.text.includes(inputActivation)),
+      fillTextCalls.some((fillTextCall) =>
+        fillTextCall.text.includes(inputActivation),
+      ),
     ).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import { generateTrack, freezeTrackSpec } from './track.generator';
+import { resolveSplineSampleFrame } from './track.spline.utils';
 import { validateTrackSpec } from './track.validation';
 import type { TrackSegment } from './track.generator.types';
 
@@ -271,6 +272,71 @@ describe('track.generator', () => {
 
       // Act + Assert — stub returns true without checking crossings → red
       expect(() => validateTrackSpec(selfIntersectingSpec)).toThrow(RangeError);
+    });
+  });
+});
+
+describe('Tier 1/Tier 2 pit placement baseline', () => {
+  it('places each team on both sides of the track', () => {
+    // Arrange
+    const spec = generateTrack({
+      seed: 42,
+      layoutVersion: 1,
+      sizeBucket: 'medium',
+    });
+
+    // Act — compute signed lateral offset for each pit box relative to the
+    // nearest spline sample centerline; positive is inward, negative is outward
+    const teamOffsets = new Map<
+      0 | 1,
+      { hasPositive: boolean; hasNegative: boolean }
+    >([
+      [0, { hasPositive: false, hasNegative: false }],
+      [1, { hasPositive: false, hasNegative: false }],
+    ]);
+
+    for (const pitBox of spec.pitBoxes ?? []) {
+      const boxCenter = pitBox.boxCenter ?? { x: 0, y: 0 };
+      let nearestSample = spec.splineSamples[0]!;
+      let nearestDistanceSquared = Number.POSITIVE_INFINITY;
+
+      for (const sample of spec.splineSamples) {
+        const deltaX = sample.x - boxCenter.x;
+        const deltaY = sample.y - boxCenter.y;
+        const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+
+        if (distanceSquared < nearestDistanceSquared) {
+          nearestDistanceSquared = distanceSquared;
+          nearestSample = sample;
+        }
+      }
+
+      const frame = resolveSplineSampleFrame(
+        spec.splineSamples,
+        nearestSample.globalIndex,
+      );
+      const offset =
+        (boxCenter.x - nearestSample.x) * frame.normalX +
+        (boxCenter.y - nearestSample.y) * frame.normalY;
+      const entry = teamOffsets.get(pitBox.teamIndex)!;
+
+      if (offset > 0) {
+        entry.hasPositive = true;
+      } else if (offset < 0) {
+        entry.hasNegative = true;
+      }
+    }
+
+    const team0BothSides =
+      teamOffsets.get(0)!.hasPositive && teamOffsets.get(0)!.hasNegative;
+    const team1BothSides =
+      teamOffsets.get(1)!.hasPositive && teamOffsets.get(1)!.hasNegative;
+
+    // Assert — current implementation fixes Team A to the inner side and
+    // Team B to the outer side, so this contract fails until placement is mixed
+    expect({ team0BothSides, team1BothSides }).toEqual({
+      team0BothSides: true,
+      team1BothSides: true,
     });
   });
 });

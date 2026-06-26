@@ -2,7 +2,6 @@
 description: 'Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation.'
 name: '05-green-testing'
 tier: 1
-model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -51,7 +50,7 @@ handoffs:
     agent: '06-documenting'
     prompt: 'Continue from the active plan and Step 05 validation evidence. Execute Step 06 for the current phase by updating documentation only where the changed surface requires it.'
     send: false
-    model: 'glm-5.2:cloud (ollama)'
+    model: 'glm-5.2:cloud'
 ---
 
 ## Cortex-First Search Policy
@@ -292,6 +291,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
+- <agent or NONE>
 SUMMARY: <brief truthful summary>
 ```

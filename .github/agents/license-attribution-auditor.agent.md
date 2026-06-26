@@ -2,7 +2,6 @@
 description: 'Use as a hidden specialist for checking source references and license notes when external workflow standards inform NeatapticTS agents, skills, scripts, or plans. Keywords: license, attribution, Agent Skills, OpenSpec, Superpowers, VS Code docs.'
 name: license-attribution-auditor
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

@@ -2,7 +2,6 @@
 description: 'Use when analyzing coverage gaps from lcov.info, mapping uncovered paths to source files, classifying dead vs reachable code, or naming owner-local test files for coverage-tranche. Keywords: coverage analysis, lcov, uncovered paths, dead code classification, test file mapping.'
 name: test-coverage-analyst
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

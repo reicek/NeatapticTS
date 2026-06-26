@@ -314,6 +314,41 @@ export function createRuntimeAdaptationEngine(
 }
 
 /**
+ * Creates one independent runtime adaptation engine per car index.
+ *
+ * Each car in a multi-car racing simulation maintains its own adaptation
+ * state, cooldowns, and cadence boundaries.  This factory creates a
+ * `Map<number, RuntimeAdaptationEngine>` keyed by car index (0 to
+ * `carCount - 1`) where every engine has fully independent closure-scoped
+ * state — no shared mutable state across cars.
+ *
+ * @param carCount - Number of cars to create engines for.
+ * @param options - Optional engine options applied identically to every car's engine.
+ * @returns Map keyed by car index of independent adaptation engines.
+ * @example
+ * ```ts
+ * const engines = createPerCarAdaptationEngines(3, {
+ *   limits: { mutationCooldownTicks: 100 },
+ * });
+ * const car0Engine = engines.get(0); // independent state
+ * const car1Engine = engines.get(1); // independent state
+ * ```
+ */
+export function createPerCarAdaptationEngines(
+  carCount: number,
+  options: RuntimeAdaptationEngineOptions = {},
+): Map<number, RuntimeAdaptationEngine> {
+  const engines = new Map<number, RuntimeAdaptationEngine>();
+  const safeCarCount = Math.max(0, Math.floor(carCount));
+
+  for (let carIndex = 0; carIndex < safeCarCount; carIndex++) {
+    engines.set(carIndex, createRuntimeAdaptationEngine(options));
+  }
+
+  return engines;
+}
+
+/**
  * Lightweight default evaluator for rolling score history windows.
  *
  * @param network - Candidate network.

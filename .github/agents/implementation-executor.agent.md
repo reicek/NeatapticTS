@@ -2,7 +2,6 @@
 description: 'Use when: 04-implementing delegates scoped file edits, patch application, or write-phase synthesis. Executes implementation packets with implementation-standards compliance. Keywords: file edits, implementation executor, patch apply, write synthesis, scoped changes.'
 name: implementation-executor
 tier: 2
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -33,7 +32,7 @@ handoffs:
     agent: '05-green-testing'
     prompt: 'Continue from the active plan and Step 04 implementation diff. Execute Step 05 validation for the current phase by running focused validation gates and routing failures to the right prior step.'
     send: false
-    model: glm-5.2:cloud (ollama)
+    model: 'glm-5.2:cloud'
 ---
 
 ## Cortex-First Search Policy

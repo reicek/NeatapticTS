@@ -29,6 +29,9 @@ const PROGRESS_WEIGHT = 0.5 as const;
 /** Fitness penalty applied when the episode ends off-track. */
 const OFF_TRACK_PENALTY = 500 as const;
 
+/** Minimum center-to-center distance between two cars after separation. */
+const CAR_MIN_CENTER_SEPARATION = 2.5 as const;
+
 /** Fixed physics timestep in seconds (60 Hz). */
 const FIXED_TIMESTEP_SECONDS = 1 / 60;
 
@@ -107,6 +110,11 @@ export type RaceEpisodeRunner = {
   lapTimeTicks: Uint32Array;
   /** True when the episode was terminated because a car left the track. */
   endedOffTrack: boolean;
+  /**
+   * Per-car off-track flags; `1` for the car that triggered the episode end.
+   * Used by computeFitness so only the offending car pays the penalty.
+   */
+  endedOffTrackPerCar: Uint8Array;
   /**
    * Per-car guiding line points used by the host renderer to draw a dedicated
    * lane marker for each agent.
@@ -263,6 +271,7 @@ export function createRaceEpisodeRunner(
   const offTrackCounter = new Int16Array(agentCount);
   const lapCompleted = new Uint8Array(agentCount);
   const lapTimeTicks = new Uint32Array(agentCount);
+  const endedOffTrackPerCar = new Uint8Array(agentCount);
 
   const guidingLines = Array.from({ length: agentCount }, (_, carIndex) => {
     const carGuidingLine = buildGuidingLineForTeam(
@@ -285,6 +294,7 @@ export function createRaceEpisodeRunner(
     lapCompleted,
     lapTimeTicks,
     endedOffTrack: false,
+    endedOffTrackPerCar,
     guidingLines,
   };
 
@@ -333,6 +343,7 @@ export function createRaceEpisodeRunner(
         offTrackCounter[carIndex] += 1;
 
         if (offTrackCounter[carIndex] >= OFF_TRACK_GRACE_TICKS) {
+          runnerState.endedOffTrackPerCar[carIndex] = 1;
           runnerState.endedOffTrack = true;
           runnerState.frame.done = true;
         }
@@ -371,6 +382,8 @@ export function createRaceEpisodeRunner(
         (distanceAlongTrack[carIndex] % trackLength) / trackLength;
     }
 
+    separateCarsInFrame(runnerState.frame, agentCount);
+
     recomputePlaces();
 
     if (runnerState.frame.tick >= MAX_EPISODE_TICKS) {
@@ -389,9 +402,20 @@ export function createRaceEpisodeRunner(
     }
 
     const baseFitness = PROGRESS_WEIGHT * progress * MAX_EPISODE_TICKS;
-    return runnerState.endedOffTrack
-      ? baseFitness - OFF_TRACK_PENALTY
-      : baseFitness;
+    if (runnerState.endedOffTrackPerCar[carIndex] === 1) {
+      return baseFitness - OFF_TRACK_PENALTY;
+    }
+
+    // Backward-compatible fallback for tests and callers that set the legacy
+    // global flag directly instead of the per-car array.
+    const hasAnyPerCarFlag = Array.from(runnerState.endedOffTrackPerCar).some(
+      (value) => value !== 0,
+    );
+    if (!hasAnyPerCarFlag && runnerState.endedOffTrack) {
+      return baseFitness - OFF_TRACK_PENALTY;
+    }
+
+    return baseFitness;
   }
 
   function createRaceStepMessage(): {
@@ -419,6 +443,45 @@ export function createRaceEpisodeRunner(
 
     for (let rank = 0; rank < agentCount; rank++) {
       runnerState.frame.place[indices[rank]] = rank + 1;
+    }
+  }
+
+  function separateCarsInFrame(
+    targetFrame: RaceEpisodeRunnerFrame,
+    targetAgentCount: number,
+  ): void {
+    for (let firstIndex = 0; firstIndex < targetAgentCount; firstIndex++) {
+      for (
+        let secondIndex = firstIndex + 1;
+        secondIndex < targetAgentCount;
+        secondIndex++
+      ) {
+        const deltaX =
+          targetFrame.carX[secondIndex] - targetFrame.carX[firstIndex];
+        const deltaY =
+          targetFrame.carY[secondIndex] - targetFrame.carY[firstIndex];
+        const distance = Math.hypot(deltaX, deltaY);
+
+        if (distance >= CAR_MIN_CENTER_SEPARATION) {
+          continue;
+        }
+
+        let unitX: number;
+        let unitY: number;
+        if (distance < 1e-9) {
+          unitX = 1;
+          unitY = 0;
+        } else {
+          unitX = deltaX / distance;
+          unitY = deltaY / distance;
+        }
+
+        const push = (CAR_MIN_CENTER_SEPARATION - distance) / 2;
+        targetFrame.carX[firstIndex] -= unitX * push;
+        targetFrame.carY[firstIndex] -= unitY * push;
+        targetFrame.carX[secondIndex] += unitX * push;
+        targetFrame.carY[secondIndex] += unitY * push;
+      }
     }
   }
 }

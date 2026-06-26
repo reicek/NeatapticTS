@@ -1,4 +1,5 @@
 import { createTeamFitnessEvaluator } from '../../../../src/neat/nge-collective/neat.nge-collective';
+import { Network, methods } from '../../../../src/browser-entry.ts';
 
 /**
  * Team A/B coevolution container for the racing curriculum benchmark.
@@ -45,6 +46,29 @@ export type TeamPopulationContainer = {
 };
 
 /**
+ * Handle for one car's independent genome.
+ *
+ * Each car genome is a fully independent network with its own evolution state.
+ * Mutating one car's genome must not affect any other car's genome.  Each car
+ * gets a distinct `Network` instance seeded with a car-specific seed so
+ * activation outputs differ from the first generation onward.
+ */
+export type CarGenome = {
+  /** Car index within the race pack (0-based). */
+  readonly carIndex: number;
+  /** Team id: 0 for Team A (blue), 1 for Team B (red). */
+  readonly teamId: 0 | 1;
+  /** Population id of the team this car belongs to. */
+  readonly populationId: string;
+  /** Runs inference and returns the controller output vector. */
+  activate(inputs: number[]): number[];
+  /** Mutates this genome in place; must not affect other cars' genomes. */
+  mutate(): void;
+  /** Serializes the genome's connection weights to a typed-array payload. */
+  serialize(): Float32Array;
+};
+
+/**
  * Paired Team A/B coevolution container with a racing-specific team-fitness
  * resolver.
  *
@@ -72,10 +96,72 @@ export type CoevolutionContainer = {
    * @param teamId - `'team-a'` for Team A or `'team-b'` for Team B.
    */
   advanceTeamGeneration(teamId: 'team-a' | 'team-b'): void;
+  /**
+   * Returns the distinct genome for the requested car index.
+   * Each car gets its own independent genome — no sharing across cars.
+   *
+   * @param carIndex - 0-based car index within the race pack.
+   * @returns The independent genome handle for that car.
+   */
+  getCarGenome(carIndex: number): CarGenome;
+  /**
+   * Returns all car genomes as an array (one per car).
+   * Each entry must be a distinct genome object.
+   *
+   * @returns Array of per-car genomes.
+   */
+  getCarGenomes(): readonly CarGenome[];
 };
 
 /** Monotonic counter used to generate distinct population IDs per container. */
 let containerSerialNumber = 0;
+
+/** Number of cars in the race pack — one per team. */
+const CAR_COUNT = 2 as const;
+
+/** Input dimension for the per-car controller network. */
+const CONTROLLER_INPUT_SIZE = 4 as const;
+
+/** Output dimension for the per-car controller network. */
+const CONTROLLER_OUTPUT_SIZE = 2 as const;
+
+/**
+ * Creates a single car's independent genome backed by a real `Network` instance.
+ *
+ * Each car gets a unique seed derived from the base rngSeed plus the car index,
+ * so activation outputs differ from generation 1.
+ *
+ * @param carIndex - 0-based car index within the race pack.
+ * @param baseSeed - Base RNG seed from the coevolution config.
+ * @param teamId - 0 for Team A (blue), 1 for Team B (red).
+ * @param populationId - The population id of the team this car belongs to.
+ */
+function createCarGenome(
+  carIndex: number,
+  baseSeed: number,
+  teamId: 0 | 1,
+  populationId: string,
+): CarGenome {
+  const network = new Network(CONTROLLER_INPUT_SIZE, CONTROLLER_OUTPUT_SIZE, {
+    seed: baseSeed + carIndex,
+  });
+
+  return {
+    carIndex,
+    teamId,
+    populationId,
+    activate(inputs: number[]): number[] {
+      return network.activate(inputs);
+    },
+    mutate(): void {
+      network.mutate(methods.mutation.MOD_WEIGHT);
+    },
+    serialize(): Float32Array {
+      return Float32Array.from(network.connections.map((c) => c.weight));
+    },
+  };
+}
+
 /** Racing stores finish positions in `rawScore`; support score is unused here. */
 type RacingTeamMemberResult = {
   readonly memberId: string;
@@ -120,7 +206,35 @@ export function createCoevolutionContainer(
     generation: 0,
   };
 
-  return { teamA, teamB, resolveTeamFitness, advanceTeamGeneration };
+  // Step 2: Create independent per-car genomes — one per car, each with a
+  // distinct seed so activation outputs differ from generation 1 onward.
+  // Car 0 belongs to Team A (blue), car 1 belongs to Team B (red).
+  const carGenomes: CarGenome[] = Array.from({ length: CAR_COUNT }, (_, carIndex) => {
+    const teamId = carIndex === 0 ? 0 : 1;
+    const populationId = teamId === 0 ? teamA.populationId : teamB.populationId;
+    return createCarGenome(carIndex, config.rngSeed, teamId, populationId);
+  });
+
+  return { teamA, teamB, resolveTeamFitness, advanceTeamGeneration, getCarGenome, getCarGenomes };
+
+  /**
+   * Returns the distinct genome for the requested car index.
+   *
+   * @param carIndex - 0-based car index within the race pack.
+   * @returns The independent genome handle for that car.
+   */
+  function getCarGenome(carIndex: number): CarGenome {
+    return carGenomes[carIndex];
+  }
+
+  /**
+   * Returns all car genomes as an array (one per car).
+   *
+   * @returns Array of per-car genomes.
+   */
+  function getCarGenomes(): readonly CarGenome[] {
+    return carGenomes;
+  }
 
   /**
    * Resolves team fitness through the reusable NGE core evaluator.

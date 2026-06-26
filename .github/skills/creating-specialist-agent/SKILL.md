@@ -52,7 +52,7 @@ Include the job the new specialist will own, the parent orchestrator that will c
 Use creating-specialist-agent for <specialist-job-description>.
 Parent orchestrator: <agent-name>
 Required tools: <list of VS Code tool names>
-Model tier: <e.g. glm-5.2:cloud (ollama)>
+Model tier: <e.g. glm-5.2:cloud>
 Output contract fields: <field names the parent expects>
 Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs --json
              node scripts/agent-customization/validate-agent-graph.mjs --json

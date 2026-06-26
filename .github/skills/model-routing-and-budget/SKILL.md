@@ -76,11 +76,11 @@ Validation: advisory — confirm qualified name before committing.
 2. Treat session-local availability constraints as controlling for frontmatter
    edits. Under the current cost-tier restriction, `GPT-5.5 (copilot)` must
    not be written to frontmatter.
-3. Use `glm-5.2:cloud (ollama)` for coding-heavy implementation and red-test
+3. Use `glm-5.2:cloud` for coding-heavy implementation and red-test
    synthesis when available.
 4. Use `Claude Sonnet 4.6 (copilot)` for planning, documentation synthesis,
    nuanced maintenance, and ambiguity-heavy coordination when available.
-5. Use `glm-5.2:cloud (ollama)` for bounded research, validation, and subagent
+5. Use `glm-5.2:cloud` for bounded research, validation, and subagent
    work where coding or tool strength still matters.
 6. Use `Claude Haiku 4.6 (copilot)` for narrow checklist, summarization, and
    mechanical assistant work. If the model picker exposes only a different Haiku

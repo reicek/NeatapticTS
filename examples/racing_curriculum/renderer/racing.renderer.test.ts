@@ -1,4 +1,5 @@
 import {
+  buildGuidingLineForTeam,
   computeWorldTransform,
   createRacingRenderState,
   renderRacingFrame,
@@ -79,7 +80,7 @@ describe('racing renderer sibling seam', () => {
         },
       );
 
-      expect(strokeStyleAssignments.includes('rgba(255, 122, 69, 0.38)')).toBe(
+      expect(strokeStyleAssignments.includes('rgba(255, 0, 0, 0.38)')).toBe(
         true,
       );
     });
@@ -105,53 +106,7 @@ describe('racing renderer sibling seam', () => {
         },
       );
 
-      expect(strokeStyleAssignments.includes('#00e5ff')).toBe(true);
-    });
-
-    it('draws the optimal-line guidance along the inner-lane centerline', () => {
-      const trackSpec = createTrackSpecWithoutPits();
-      const { canvasElement, recordedPaths } =
-        createMockCanvasAndPathRecorder();
-      const envState = createRendererEnvironmentState(trackSpec);
-      const transform = computeWorldTransform(canvasElement, trackSpec);
-
-      renderRacingFrame(
-        canvasElement,
-        trackSpec,
-        envState,
-        createRacingRenderState(),
-        transform,
-        { guidanceAlpha: 0.8 },
-      );
-
-      const expectedInnerLanePoints = trackSpec.splineSamples.map((sample) => {
-        const frame = resolveSplineSampleFrame(
-          trackSpec.splineSamples,
-          sample.globalIndex,
-        );
-        const laneCount = 2;
-        const laneWidthWorld = sample.width / laneCount;
-        const innerOffsetWorld = sample.width / 2 - laneWidthWorld / 2;
-
-        return {
-          x: sample.x + frame.normalX * innerOffsetWorld,
-          y: sample.y + frame.normalY * innerOffsetWorld,
-        };
-      });
-      const expectedCanvasPoints = expectedInnerLanePoints.map((point) => ({
-        x: point.x * transform.scale + transform.offsetX,
-        y: point.y * transform.scale + transform.offsetY,
-      }));
-      const guidancePath = recordedPaths.find((recordedPath) =>
-        recordedPath.strokeStyle.includes('255,209,102'),
-      );
-      const actualCanvasPoints =
-        guidancePath?.operations.map((operation) => ({
-          x: operation.x,
-          y: operation.y,
-        })) ?? [];
-
-      expect(actualCanvasPoints).toEqual(expectedCanvasPoints);
+      expect(strokeStyleAssignments.includes('#ff0000')).toBe(true);
     });
   });
 });
@@ -174,36 +129,40 @@ describe('per-agent guiding line geometry', () => {
     };
     const trackSpec = createTrackSpecWithoutPits();
 
-    const teamAGuidingLine = rendererModule.buildGuidingLineForTeam?.(
-      trackSpec,
-      0,
-    ) ?? [];
-    const teamBGuidingLine = rendererModule.buildGuidingLineForTeam?.(
-      trackSpec,
-      1,
-    ) ?? [];
+    const teamAGuidingLine =
+      rendererModule.buildGuidingLineForTeam?.(trackSpec, 0) ?? [];
+    const teamBGuidingLine =
+      rendererModule.buildGuidingLineForTeam?.(trackSpec, 1) ?? [];
     const bothAreNonEmptyArrays =
       Array.isArray(teamAGuidingLine) &&
       teamAGuidingLine.length > 0 &&
       Array.isArray(teamBGuidingLine) &&
       teamBGuidingLine.length > 0;
 
-    expect(
-      bothAreNonEmptyArrays && teamAGuidingLine !== teamBGuidingLine,
-    ).toBe(true);
+    expect(bothAreNonEmptyArrays && teamAGuidingLine !== teamBGuidingLine).toBe(
+      true,
+    );
   });
 
-  it('places each guiding line parallel to the inner-lane centerline and within the inner lane', async () => {
+  it('places each guiding line parallel to the inner-lane centerline at the team baseline offset', async () => {
     const rendererModule = (await import('./racing.renderer')) as unknown as {
       buildGuidingLineForTeam?: (
         trackSpec: TrackSpec,
         teamIndex: number,
+        lateralOffsetWorld?: number,
       ) => Array<{ readonly x: number; readonly y: number }>;
     };
     const trackSpec = createTrackSpecWithoutPits();
     const buildGuidingLine = rendererModule.buildGuidingLineForTeam;
 
+    const firstSample = trackSpec.splineSamples[0];
+    const laneWidthWorld = (firstSample?.width ?? 0) / 2;
+    const innerOffsetWorld =
+      firstSample?.innerOffsetWorld ??
+      (firstSample?.width ?? 0) / 2 - laneWidthWorld / 2;
+    const expectedOffsets = [innerOffsetWorld, -innerOffsetWorld];
     let allOffsetsValid = true;
+
     for (const teamIndex of [0, 1]) {
       const guidingLine = buildGuidingLine?.(trackSpec, teamIndex) ?? [];
       if (!Array.isArray(guidingLine) || guidingLine.length === 0) {
@@ -222,9 +181,8 @@ describe('per-agent guiding line geometry', () => {
           allOffsetsValid = false;
           break;
         }
-        const splineSample = trackSpec.splineSamples[
-          sampleIndex % trackSpec.splineSamples.length
-        ];
+        const splineSample =
+          trackSpec.splineSamples[sampleIndex % trackSpec.splineSamples.length];
         if (splineSample === undefined) {
           allOffsetsValid = false;
           break;
@@ -233,12 +191,8 @@ describe('per-agent guiding line geometry', () => {
           trackSpec.splineSamples,
           sampleIndex,
         );
-        const innerLanePoint = resolveInnerLaneCenterlinePoint(
-          splineSample,
-          sampleFrame,
-        );
-        const deltaX = guidingPoint.x - innerLanePoint.x;
-        const deltaY = guidingPoint.y - innerLanePoint.y;
+        const deltaX = guidingPoint.x - splineSample.x;
+        const deltaY = guidingPoint.y - splineSample.y;
         const signedOffset =
           deltaX * sampleFrame.normalX + deltaY * sampleFrame.normalY;
         offsets.push(signedOffset);
@@ -248,16 +202,14 @@ describe('per-agent guiding line geometry', () => {
         allOffsetsValid = false;
         break;
       }
-      const firstOffset = offsets[0];
-      const laneWidthWorld = trackSpec.splineSamples[0]?.width ?? 0;
-      const halfLaneWidthWorld = laneWidthWorld / 4;
+      const expectedOffset = expectedOffsets[teamIndex] ?? 0;
       const offsetConstant = offsets.every(
-        (offset) => Math.abs(offset - firstOffset) < 1e-6,
+        (offset) => Math.abs(offset - (offsets[0] ?? 0)) < 1e-6,
       );
-      const withinInnerLane = offsets.every(
-        (offset) => Math.abs(offset) < halfLaneWidthWorld,
+      const offsetMatchesBaseline = offsets.every(
+        (offset) => Math.abs(offset - expectedOffset) < 1e-6,
       );
-      if (!offsetConstant || !withinInnerLane) {
+      if (!offsetConstant || !offsetMatchesBaseline) {
         allOffsetsValid = false;
         break;
       }
@@ -296,6 +248,50 @@ describe('per-agent guiding line geometry', () => {
 
     expect(distance).toBeLessThan(1e-6);
   });
+
+  it('defaults Team 0 lateral offset to the inner-lane centerline distance', () => {
+    const trackSpec = createTrackSpecWithoutPits();
+    const firstSample = trackSpec.splineSamples[0];
+    if (firstSample === undefined) {
+      throw new Error('Track spec has no spline samples');
+    }
+    const laneWidthWorld = firstSample.width / 2;
+    const innerOffsetWorld =
+      firstSample.innerOffsetWorld ??
+      firstSample.width / 2 - laneWidthWorld / 2;
+
+    const defaultTeam0Line = buildGuidingLineForTeam(trackSpec, 0);
+    const explicitTeam0Line = buildGuidingLineForTeam(
+      trackSpec,
+      0,
+      innerOffsetWorld,
+    );
+
+    expect(defaultTeam0Line).toEqual(explicitTeam0Line);
+  });
+
+  it('places Team 1 guiding line on the outer-lane centerline', () => {
+    const trackSpec = createTrackSpecWithoutPits();
+    const firstSample = trackSpec.splineSamples[0];
+    if (firstSample === undefined) {
+      throw new Error('Track spec has no spline samples');
+    }
+    const laneWidthWorld = firstSample.width / 2;
+    const innerOffsetWorld =
+      firstSample.innerOffsetWorld ??
+      firstSample.width / 2 - laneWidthWorld / 2;
+
+    const team1GuidingLine = buildGuidingLineForTeam(trackSpec, 1);
+    const firstFrame = resolveSplineSampleFrame(trackSpec.splineSamples, 0);
+    const actualStart = team1GuidingLine[0];
+    const signedOffset =
+      actualStart === undefined
+        ? Infinity
+        : (actualStart.x - firstSample.x) * firstFrame.normalX +
+          (actualStart.y - firstSample.y) * firstFrame.normalY;
+
+    expect(signedOffset).toBeCloseTo(-innerOffsetWorld, 6);
+  });
 });
 
 describe('per-agent guiding line draw calls', () => {
@@ -315,10 +311,10 @@ describe('per-agent guiding line draw calls', () => {
     );
 
     const teamAPath = recordedPaths.find((recordedPath) =>
-      recordedPath.strokeStyle.includes('rgba(0,229,255,'),
+      recordedPath.strokeStyle.includes('rgba(0,0,255,'),
     );
     const teamBPath = recordedPaths.find((recordedPath) =>
-      recordedPath.strokeStyle.includes('rgba(255,0,255,'),
+      recordedPath.strokeStyle.includes('rgba(255,0,0,'),
     );
 
     expect(teamAPath !== undefined && teamBPath !== undefined).toBe(true);
@@ -340,10 +336,10 @@ describe('per-agent guiding line draw calls', () => {
     );
 
     const teamAPath = recordedPaths.find((recordedPath) =>
-      recordedPath.strokeStyle.includes('rgba(0,229,255,'),
+      recordedPath.strokeStyle.includes('rgba(0,0,255,'),
     );
     const teamBPath = recordedPaths.find((recordedPath) =>
-      recordedPath.strokeStyle.includes('rgba(255,0,255,'),
+      recordedPath.strokeStyle.includes('rgba(255,0,0,'),
     );
     const bothFound =
       teamAPath !== undefined &&
@@ -369,21 +365,387 @@ describe('per-agent guiding line draw calls', () => {
     );
 
     const teamAIndex = recordedPaths.findIndex((recordedPath) =>
-      recordedPath.strokeStyle.includes('rgba(0,229,255,'),
+      recordedPath.strokeStyle.includes('rgba(0,0,255,'),
     );
     const teamBIndex = recordedPaths.findIndex((recordedPath) =>
-      recordedPath.strokeStyle.includes('rgba(255,0,255,'),
+      recordedPath.strokeStyle.includes('rgba(255,0,0,'),
     );
     const lastGuidingLineIndex = Math.max(teamAIndex, teamBIndex);
     const firstCarBodyIndex = recordedPaths.findIndex(
-      (recordedPath) => recordedPath.strokeStyle === '#00e5ff',
+      (recordedPath) =>
+        recordedPath.strokeStyle === '#0000ff' ||
+        recordedPath.strokeStyle === '#ff0000',
     );
     const bothGuidingLinesFound = teamAIndex >= 0 && teamBIndex >= 0;
     const carBodyFound = firstCarBodyIndex >= 0;
     const orderCorrect =
-      bothGuidingLinesFound && carBodyFound && lastGuidingLineIndex < firstCarBodyIndex;
+      bothGuidingLinesFound &&
+      carBodyFound &&
+      lastGuidingLineIndex < firstCarBodyIndex;
 
     expect(orderCorrect).toBe(true);
+  });
+
+  it('draws blue and red guide lines at inner and outer lane offsets for a 2-car pack', () => {
+    const trackSpec = createTrackSpecWithoutPits();
+    const { canvasElement, recordedPaths } = createMockCanvasAndPathRecorder();
+    const envState = createTwoCarEnvironmentState(trackSpec);
+    const transform = computeWorldTransform(canvasElement, trackSpec);
+
+    renderRacingFrame(
+      canvasElement,
+      trackSpec,
+      envState,
+      createRacingRenderState(),
+      transform,
+      { guidanceAlpha: 0.8 },
+    );
+
+    const firstSample = trackSpec.splineSamples[0];
+    const laneWidthWorld = (firstSample?.width ?? 0) / 2;
+    const innerOffsetWorld =
+      firstSample?.innerOffsetWorld ??
+      (firstSample?.width ?? 0) / 2 - laneWidthWorld / 2;
+
+    const bluePath = recordedPaths.find((recordedPath) =>
+      recordedPath.strokeStyle.includes('rgba(0,0,255,'),
+    );
+    const redPath = recordedPaths.find((recordedPath) =>
+      recordedPath.strokeStyle.includes('rgba(255,0,0,'),
+    );
+    const blueOffset =
+      bluePath === undefined
+        ? Infinity
+        : computeAverageSignedOffsetFromCenterline(
+            bluePath,
+            trackSpec,
+            transform,
+          );
+    const redOffset =
+      redPath === undefined
+        ? Infinity
+        : computeAverageSignedOffsetFromCenterline(
+            redPath,
+            trackSpec,
+            transform,
+          );
+    const guidePathCount = recordedPaths.filter(
+      (recordedPath) =>
+        recordedPath.strokeStyle.includes('rgba(0,0,255,') ||
+        recordedPath.strokeStyle.includes('rgba(255,0,0,'),
+    ).length;
+
+    const contractMet =
+      bluePath !== undefined &&
+      redPath !== undefined &&
+      guidePathCount === 2 &&
+      Math.abs(blueOffset - innerOffsetWorld) < 1e-6 &&
+      Math.abs(redOffset - -innerOffsetWorld) < 1e-6;
+
+    expect(contractMet).toBe(true);
+  });
+});
+
+describe('Tier 1/Tier 2 baseline color and guide-track contracts', () => {
+  it('draws Team 0 car bodies in blue when pit visuals are disabled', () => {
+    const trackSpec = createTrackSpecWithoutPits();
+    const { canvasElement, strokeStyleAssignments } =
+      createMockCanvasAndStrokeRecorder();
+    const envState = createTwoCarEnvironmentState(trackSpec);
+
+    renderRacingFrame(
+      canvasElement,
+      trackSpec,
+      envState,
+      createRacingRenderState(),
+      computeWorldTransform(canvasElement, trackSpec),
+      {
+        frame: {
+          featureFlags: 0,
+          carTeam: Uint8Array.from([0, 1]),
+          tireState: new Float32Array([1, 1, 1, 1, 1, 1, 1, 1]),
+        },
+      },
+    );
+
+    const hasBlueStroke = strokeStyleAssignments.some(
+      (strokeStyle) =>
+        strokeStyle === '#0000ff' || strokeStyle.includes('rgba(0,0,255,'),
+    );
+
+    expect(hasBlueStroke).toBe(true);
+  });
+
+  it('draws Team 1 car bodies in red when pit visuals are disabled', () => {
+    const trackSpec = createTrackSpecWithoutPits();
+    const { canvasElement, strokeStyleAssignments } =
+      createMockCanvasAndStrokeRecorder();
+    const envState = createTwoCarEnvironmentState(trackSpec);
+
+    renderRacingFrame(
+      canvasElement,
+      trackSpec,
+      envState,
+      createRacingRenderState(),
+      computeWorldTransform(canvasElement, trackSpec),
+      {
+        frame: {
+          featureFlags: 0,
+          carTeam: Uint8Array.from([0, 1]),
+          tireState: new Float32Array([1, 1, 1, 1, 1, 1, 1, 1]),
+        },
+      },
+    );
+
+    const hasRedStroke = strokeStyleAssignments.some(
+      (strokeStyle) =>
+        strokeStyle === '#ff0000' || strokeStyle.includes('rgba(255,0,0,'),
+    );
+
+    expect(hasRedStroke).toBe(true);
+  });
+
+  it('draws Team 0 guiding line in blue on the inner-lane centerline', () => {
+    const trackSpec = createTrackSpecWithoutPits();
+    const { canvasElement, recordedPaths } = createMockCanvasAndPathRecorder();
+    const envState = createTwoCarEnvironmentState(trackSpec);
+    const transform = computeWorldTransform(canvasElement, trackSpec);
+
+    renderRacingFrame(
+      canvasElement,
+      trackSpec,
+      envState,
+      createRacingRenderState(),
+      transform,
+      { guidanceAlpha: 0.8 },
+    );
+
+    const teamZeroPath = recordedPaths.find((recordedPath) =>
+      recordedPath.strokeStyle.includes('rgba(0,0,255,'),
+    );
+    const firstSample = trackSpec.splineSamples[0];
+    const laneWidthWorld =
+      firstSample === undefined ? 0 : (firstSample.width ?? 0) / 2;
+    const innerOffsetWorld =
+      firstSample === undefined
+        ? 0
+        : firstSample.width / 2 - laneWidthWorld / 2;
+    const averageOffset =
+      teamZeroPath === undefined
+        ? Infinity
+        : computeAverageSignedOffsetFromCenterline(
+            teamZeroPath,
+            trackSpec,
+            transform,
+          );
+
+    expect(averageOffset).toBeCloseTo(innerOffsetWorld, 6);
+  });
+
+  it('draws Team 1 guiding line in red on the outer-lane centerline', () => {
+    const trackSpec = createTrackSpecWithoutPits();
+    const { canvasElement, recordedPaths } = createMockCanvasAndPathRecorder();
+    const envState = createTwoCarEnvironmentState(trackSpec);
+    const transform = computeWorldTransform(canvasElement, trackSpec);
+
+    renderRacingFrame(
+      canvasElement,
+      trackSpec,
+      envState,
+      createRacingRenderState(),
+      transform,
+      { guidanceAlpha: 0.8 },
+    );
+
+    const teamOnePath = recordedPaths.find((recordedPath) =>
+      recordedPath.strokeStyle.includes('rgba(255,0,0,'),
+    );
+    const firstSample = trackSpec.splineSamples[0];
+    const laneWidthWorld =
+      firstSample === undefined ? 0 : (firstSample.width ?? 0) / 2;
+    const innerOffsetWorld =
+      firstSample === undefined
+        ? 0
+        : firstSample.width / 2 - laneWidthWorld / 2;
+    const expectedOuterOffset = -innerOffsetWorld;
+    const averageOffset =
+      teamOnePath === undefined
+        ? Infinity
+        : computeAverageSignedOffsetFromCenterline(
+            teamOnePath,
+            trackSpec,
+            transform,
+          );
+
+    expect(averageOffset).toBeCloseTo(expectedOuterOffset, 6);
+  });
+
+  it('draws one guiding line per car when the state contains multiple cars per team', () => {
+    const trackSpec = createTrackSpecWithoutPits();
+    const { canvasElement, recordedPaths } = createMockCanvasAndPathRecorder();
+    const envState = createFourCarEnvironmentState(trackSpec);
+    const transform = computeWorldTransform(canvasElement, trackSpec);
+
+    renderRacingFrame(
+      canvasElement,
+      trackSpec,
+      envState,
+      createRacingRenderState(),
+      transform,
+      { guidanceAlpha: 0.8 },
+    );
+
+    const guidePathCount = recordedPaths.filter(
+      (recordedPath) =>
+        recordedPath.strokeStyle.includes('rgba(0,0,255,') ||
+        recordedPath.strokeStyle.includes('rgba(255,0,0,'),
+    ).length;
+
+    expect(guidePathCount).toBe(4);
+  });
+});
+
+describe('per-car tire mark accumulation', () => {
+  it('records tire marks whose world positions reflect both cars in a 2-car pack', () => {
+    const trackSpec = createTrackSpecWithoutPits();
+    const { canvasElement } = createMockCanvasAndPathRecorder();
+    const transform = computeWorldTransform(canvasElement, trackSpec);
+    const renderState = createRacingRenderState();
+    const envState: EnvironmentState = {
+      tick: 0,
+      carX: 0,
+      carY: 0,
+      carHeading: 0,
+      teamIndex: 0,
+      tireState: [1, 1, 1, 1],
+      cars: [
+        {
+          carX: 0,
+          carY: 0,
+          carHeading: 0,
+          teamIndex: 0,
+          tireState: [1, 1, 1, 1],
+        },
+        {
+          carX: 80,
+          carY: 0,
+          carHeading: 0,
+          teamIndex: 1,
+          tireState: [1, 1, 1, 1],
+        },
+      ],
+      trackSpec,
+    };
+    const cars = envState.cars ?? [];
+    const car0 = cars[0];
+    const car1 = cars[1];
+    const carSeparation =
+      car0 === undefined || car1 === undefined
+        ? 0
+        : Math.hypot(car1.carX - car0.carX, car1.carY - car0.carY);
+
+    for (let tick = 0; tick < 8; tick++) {
+      envState.tick = tick;
+      renderRacingFrame(
+        canvasElement,
+        trackSpec,
+        envState,
+        renderState,
+        transform,
+      );
+    }
+
+    let maxMarkSeparation = 0;
+    for (
+      let firstIndex = 0;
+      firstIndex < renderState.tireMarks.length;
+      firstIndex++
+    ) {
+      for (
+        let secondIndex = firstIndex + 1;
+        secondIndex < renderState.tireMarks.length;
+        secondIndex++
+      ) {
+        const firstMark = renderState.tireMarks[firstIndex];
+        const secondMark = renderState.tireMarks[secondIndex];
+        if (firstMark === undefined || secondMark === undefined) {
+          continue;
+        }
+        const separation = Math.hypot(
+          firstMark.worldX - secondMark.worldX,
+          firstMark.worldY - secondMark.worldY,
+        );
+        if (separation > maxMarkSeparation) {
+          maxMarkSeparation = separation;
+        }
+      }
+    }
+
+    expect(maxMarkSeparation).toBeGreaterThanOrEqual(carSeparation);
+  });
+});
+
+describe('team-color tire mark rendering', () => {
+  it('renders tire marks in team colors rather than the cyan/white constants', () => {
+    const trackSpec = createTrackSpecWithoutPits();
+    const { canvasElement, recordedPaths } = createMockCanvasAndPathRecorder();
+    const transform = computeWorldTransform(canvasElement, trackSpec);
+    const renderState = createRacingRenderState();
+    const envState: EnvironmentState = {
+      tick: 0,
+      carX: 0,
+      carY: 0,
+      carHeading: 0,
+      teamIndex: 0,
+      tireState: [1, 1, 1, 1],
+      cars: [
+        {
+          carX: 0,
+          carY: 0,
+          carHeading: 0,
+          teamIndex: 0,
+          tireState: [1, 1, 1, 1],
+        },
+        {
+          carX: 60,
+          carY: 0,
+          carHeading: 0,
+          teamIndex: 1,
+          tireState: [1, 1, 1, 1],
+        },
+      ],
+      trackSpec,
+    };
+
+    for (let tick = 0; tick < 8; tick++) {
+      envState.tick = tick;
+      envState.carHeading = tick * 0.2;
+      renderRacingFrame(
+        canvasElement,
+        trackSpec,
+        envState,
+        renderState,
+        transform,
+        { guidanceAlpha: 0 },
+      );
+    }
+
+    const tireMarkPaths = recordedPaths.filter(
+      (recordedPath) =>
+        recordedPath.operations.length === 2 &&
+        (recordedPath.strokeStyle.includes('170,235,255') ||
+          recordedPath.strokeStyle.includes('248,254,255') ||
+          recordedPath.strokeStyle.includes('0,0,255') ||
+          recordedPath.strokeStyle.includes('255,0,0')),
+    );
+    const hasBlueTireMark = tireMarkPaths.some((recordedPath) =>
+      recordedPath.strokeStyle.includes('0,0,255'),
+    );
+    const hasRedTireMark = tireMarkPaths.some((recordedPath) =>
+      recordedPath.strokeStyle.includes('255,0,0'),
+    );
+
+    expect(hasBlueTireMark && hasRedTireMark).toBe(true);
   });
 });
 
@@ -451,6 +813,48 @@ function createTwoCarEnvironmentState(trackSpec: TrackSpec): EnvironmentState {
   };
 }
 
+function createFourCarEnvironmentState(trackSpec: TrackSpec): EnvironmentState {
+  return {
+    tick: 0,
+    carX: 0,
+    carY: 0,
+    carHeading: 0,
+    teamIndex: 0,
+    tireState: [1, 1, 1, 1],
+    cars: [
+      {
+        carX: 0,
+        carY: 0,
+        carHeading: 0,
+        teamIndex: 0,
+        tireState: [1, 1, 1, 1],
+      },
+      {
+        carX: 0,
+        carY: 0,
+        carHeading: 0,
+        teamIndex: 0,
+        tireState: [1, 1, 1, 1],
+      },
+      {
+        carX: 0,
+        carY: 0,
+        carHeading: 0,
+        teamIndex: 1,
+        tireState: [1, 1, 1, 1],
+      },
+      {
+        carX: 0,
+        carY: 0,
+        carHeading: 0,
+        teamIndex: 1,
+        tireState: [1, 1, 1, 1],
+      },
+    ],
+    trackSpec,
+  };
+}
+
 function createMockCanvasAndStrokeRecorder(): {
   canvasElement: HTMLCanvasElement;
   strokeStyleAssignments: string[];
@@ -500,6 +904,47 @@ type RecordedPath = {
   readonly operations: PathOperation[];
 };
 
+function computeAverageSignedOffsetFromCenterline(
+  recordedPath: RecordedPath,
+  trackSpec: TrackSpec,
+  transform: ReturnType<typeof computeWorldTransform>,
+): number {
+  const { splineSamples } = trackSpec;
+  const offsets: number[] = [];
+
+  for (
+    let operationIndex = 0;
+    operationIndex < recordedPath.operations.length;
+    operationIndex++
+  ) {
+    const operation = recordedPath.operations[operationIndex];
+    if (operation === undefined) {
+      continue;
+    }
+    const sampleIndex = operationIndex % splineSamples.length;
+    const sample = splineSamples[sampleIndex];
+    if (sample === undefined) {
+      continue;
+    }
+    const sampleFrame = resolveSplineSampleFrame(splineSamples, sampleIndex);
+    const worldX = (operation.x - transform.offsetX) / transform.scale;
+    const worldY = (operation.y - transform.offsetY) / transform.scale;
+    const deltaX = worldX - sample.x;
+    const deltaY = worldY - sample.y;
+    const signedOffset =
+      deltaX * sampleFrame.normalX + deltaY * sampleFrame.normalY;
+
+    offsets.push(signedOffset);
+  }
+
+  if (offsets.length === 0) {
+    return NaN;
+  }
+
+  const sum = offsets.reduce((accumulator, offset) => accumulator + offset, 0);
+  return sum / offsets.length;
+}
+
 function createMockCanvasAndPathRecorder(): {
   canvasElement: HTMLCanvasElement;
   recordedPaths: RecordedPath[];
@@ -527,7 +972,12 @@ function createMockCanvasAndPathRecorder(): {
     lineTo: (x: number, y: number) => {
       currentPath?.operations.push({ type: 'lineTo', x, y });
     },
-    stroke: () => undefined,
+    stroke: () => {
+      currentPath = undefined;
+    },
+    fill: () => {
+      currentPath = undefined;
+    },
   };
 
   const mockCanvasContext = new Proxy(mockContextState, {
@@ -541,6 +991,9 @@ function createMockCanvasAndPathRecorder(): {
     set(target, propertyKey: string, value) {
       if (propertyKey === 'strokeStyle' && typeof value === 'string') {
         currentStrokeStyle = value;
+        if (currentPath !== undefined) {
+          (currentPath as { strokeStyle: string }).strokeStyle = value;
+        }
       }
 
       target[propertyKey] = value;

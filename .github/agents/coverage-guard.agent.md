@@ -2,7 +2,6 @@
 description: 'Use when verifying that a set of recently changed src/ files still have 100% coverage in all four categories, or when a quick coverage regression check is needed before marking a task complete. Keywords: coverage regression, 100%, guard, verify coverage, post-change check.'
 name: coverage-guard
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

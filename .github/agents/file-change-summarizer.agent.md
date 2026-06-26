@@ -2,7 +2,6 @@
 description: 'Use when: summarizing changed files, affected customization surfaces, validation evidence, and residual risks for logging or handoff without reopening implementation context.'
 name: 'file-change-summarizer'
 tier: 4
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -102,9 +101,6 @@ KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
-VALIDATION_EVIDENCE:
-- <command/result or NOT RUN>
-HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:

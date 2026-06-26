@@ -39,6 +39,32 @@ describe('nge.controller', () => {
         didProvideObservationVector: true,
       });
     });
+
+    it('writes the last seven network outputs into the Tier 2 self-radio channel', async () => {
+      const envState = createExpandedEnvironmentState();
+      const trackSpec = createTrackSpec();
+      const radioOutputs = [0.11, -0.22, 0.33, -0.44, 0.55, -0.66, 0.77];
+      const networkOutputs = [0.25, -0.75, ...radioOutputs];
+      const network: ControllerNetwork = {
+        activate() {
+          return networkOutputs;
+        },
+      };
+
+      await expect(
+        loadNgeControllerModule().then(
+          ({ createNgeController, createSingleCarRadioChannel }) => {
+            const radioChannel = createSingleCarRadioChannel(7);
+            const controller = createNgeController(network, {
+              tier: 2,
+              radioChannel,
+            });
+            controller.computeControl(envState, trackSpec);
+            return Array.from(radioChannel.readSelf());
+          },
+        ),
+      ).resolves.toEqual(radioOutputs);
+    });
   });
 
   describe('resolveGuidanceAlphaForTier', () => {
@@ -103,6 +129,12 @@ interface ControllerNetwork {
   activate(inputVector: readonly number[] | Float32Array): readonly number[];
 }
 
+interface NgeControllerOptions {
+  tier?: number;
+  radioChannel?: SingleCarRadioChannel;
+  radioDim?: number;
+}
+
 interface NgeController {
   computeControl(
     envState: ExpandedEnvironmentState,
@@ -116,7 +148,10 @@ interface SingleCarRadioChannel {
 }
 
 interface NgeControllerModule {
-  createNgeController(network: ControllerNetwork): NgeController;
+  createNgeController(
+    network: ControllerNetwork,
+    options?: NgeControllerOptions,
+  ): NgeController;
   resolveGuidanceAlphaForTier(tier: 0 | 1 | 2): number;
   createSingleCarRadioChannel(radioDim: number): SingleCarRadioChannel;
 }

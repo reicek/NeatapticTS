@@ -341,9 +341,8 @@ describe('racing host boundary', () => {
           contextId,
         ) {
           if (contextId === '2d') {
-            (
-              stubContext as unknown as { canvas: HTMLCanvasElement }
-            ).canvas = this;
+            (stubContext as unknown as { canvas: HTMLCanvasElement }).canvas =
+              this;
             return stubContext as unknown as CanvasRenderingContext2D;
           }
           return null;
@@ -382,9 +381,8 @@ describe('racing host boundary', () => {
           contextId,
         ) {
           if (contextId === '2d') {
-            (
-              stubContext as unknown as { canvas: HTMLCanvasElement }
-            ).canvas = this;
+            (stubContext as unknown as { canvas: HTMLCanvasElement }).canvas =
+              this;
             return stubContext as unknown as CanvasRenderingContext2D;
           }
           return null;
@@ -420,9 +418,8 @@ describe('racing host boundary', () => {
           contextId,
         ) {
           if (contextId === '2d') {
-            (
-              stubContext as unknown as { canvas: HTMLCanvasElement }
-            ).canvas = this;
+            (stubContext as unknown as { canvas: HTMLCanvasElement }).canvas =
+              this;
             return stubContext as unknown as CanvasRenderingContext2D;
           }
           return null;

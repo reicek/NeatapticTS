@@ -243,6 +243,18 @@ await handle.done;
 
 Observation tier supported by the owner-local controller seam.
 
+### TEAM_BLUE_INDEX
+
+Team slot index reserved for the blue (inner-lane) team.
+Exported so renderer and observation contracts can agree on the red/blue
+baseline without magic numbers.
+
+### TEAM_RED_INDEX
+
+Team slot index reserved for the red (outer-lane) team.
+Exported alongside {@link TEAM_BLUE_INDEX} to keep Tier 1/Tier 2 color and
+lane assignments explicit and deterministic.
+
 ### TelemetryPanelNodes
 
 Live-updating text node references for the telemetry panel.

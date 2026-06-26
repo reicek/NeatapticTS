@@ -2,7 +2,6 @@
 description: 'Use when mapping parameter-vector layouts, deterministic export/import order, clone-vs-vector isolation, Lamarckian persistence policy, or deciding whether a hybrid evolution-plus-training issue belongs to hybrid-training-interop. Keywords: parameter vector, fine-tuning, Lamarckian, isolation, export, import, layout version, hybrid training.'
 name: hybrid-interop-scout
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

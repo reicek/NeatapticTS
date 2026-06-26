@@ -136,6 +136,196 @@ Important browser note:
 
 Node engine requirement in this repo is `>=22`.
 
+## Tier 1 / Tier 2 shared racing baseline
+
+Before the controller contract matters, the curriculum pins down a shared
+visual and spatial baseline.  Every Tier 1 and Tier 2 race uses the same
+two-car grid, the same color code, the same lane assignment, the same
+alternating pit ownership, and the same track-boundary enforcement.  Keeping
+these rules explicit prevents the two populations from drifting apart on
+layout assumptions before they ever compete on driving skill.
+
+### Team colors and guide lines
+
+Each car gets its own color and its own dedicated guide line:
+
+- **Team 0 is blue.**  Car bodies are drawn with `#0000ff` and the guide line is
+  rendered in `rgb(0,0,255)`.
+- **Team 1 is red.**  Car bodies are drawn with `#ff0000` and the guide line is
+  rendered in `rgb(255,0,0)`.
+
+The exported constants
+[`TEAM_BLUE_INDEX`](./browser-entry/browser-entry.ts) and
+[`TEAM_RED_INDEX`](./browser-entry/browser-entry.ts) make this mapping public:
+
+```ts
+export const TEAM_BLUE_INDEX = 0; // inner lane
+export const TEAM_RED_INDEX = 1;  // outer lane
+```
+
+The host builds a fresh guide line for every car with
+[`buildGuidingLineForTeam`](./renderer/racing.renderer.ts).  The optional
+`lateralOffsetWorld` argument is derived from the car's team: Team 0 (blue)
+uses the inner-lane centerline and Team 1 (red) uses the outer-lane
+centerline.  Because each line is reconstructed from the same deterministic
+`TrackSpec` that produced the race pack, the visual lane marker and the
+physical start position agree for every seed, and every car in a multi-car
+pack gets its own lane-aligned overlay.  The lines are not part of the
+zero-copy worker frame; they are pure host-side visualizations.
+
+Elsewhere in this README, "Team A" refers to Team 0 (blue) and "Team B"
+refers to Team 1 (red).
+
+### Blue-inner / red-outer lane assignment
+
+The starting grid is deterministic: Team 0 (blue) always begins on the
+inner-lane centerline, and Team 1 (red) always begins on the outer-lane
+centerline.  This is enforced when the race pack is created in
+[`browser-entry.ts`](./browser-entry/browser-entry.ts) and mirrored in
+`buildGuidingLineForTeam`, so the visual lane marker and the physical start
+position agree for every seed.
+
+```mermaid
+flowchart TD
+    classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+    classDef blueTeam fill:#0f2233,stroke:#0000ff,color:#a6c1ff,stroke-width:1.5px;
+    classDef redTeam fill:#2a0a0a,stroke:#ff0000,color:#ffaeae,stroke-width:1.5px;
+
+    Pack["createDeterministicRacePack\nseed + layoutVersion"]:::base
+    Assign["resolveCurriculumRacePackCars"]:::base
+    Blue["Team 0 (blue)\ninner-lane centerline"]:::blueTeam
+    Red["Team 1 (red)\nouter-lane centerline"]:::redTeam
+    GuideBlue["buildGuidingLineForTeam(spec, 0)"]:::blueTeam
+    GuideRed["buildGuidingLineForTeam(spec, 1)"]:::redTeam
+
+    Pack --> Assign
+    Assign --> Blue
+    Assign --> Red
+    Blue --> GuideBlue
+    Red --> GuideRed
+```
+
+Read the diagram as a single invariant chain: the same seed that builds the
+track also fixes the two-car grid, and the same geometry that places the cars
+also places their guide lines.
+
+### Tire-mark trails
+
+Each car leaves a short fading trail behind its rear axle.  The renderer
+samples a trail point every `TIRE_MARK_SAMPLE_INTERVAL_TICKS = 3` simulation
+ticks, evicts points older than `TIRE_MARK_MAX_AGE_TICKS = 260` ticks, and
+draws the remaining segments with team color at a peak alpha of
+`COLOR_TIRE_MARK_MAX_ALPHA = 0.3`.  Marks are grouped by team, so all blue
+cars share one continuous trail and all red cars share another.  The trail is
+render state owned by the host: it does not travel through the worker frame,
+so its length and density can be tuned without touching the simulation.
+
+```mermaid
+flowchart LR
+    classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+    classDef blueTeam fill:#0f2233,stroke:#0000ff,color:#a6c1ff,stroke-width:1.5px;
+    classDef redTeam fill:#2a0a0a,stroke:#ff0000,color:#ffaeae,stroke-width:1.5px;
+
+    CarA["Car 0 (blue)\nrear axle"]:::blueTeam
+    CarB["Car 1 (red)\nrear axle"]:::redTeam
+    Sample["sample every 3 ticks\nmax age 260 ticks"]:::base
+    GroupBlue["blue team trail"]:::blueTeam
+    GroupRed["red team trail"]:::redTeam
+    Draw["screen composited\nalpha 0.3 peak"]:::base
+
+    CarA --> Sample
+    CarB --> Sample
+    Sample --> GroupBlue
+    Sample --> GroupRed
+    GroupBlue --> Draw
+    GroupRed --> Draw
+```
+
+### Alternating pit ownership
+
+Six pit boxes are generated at fixed lap-progress anchors:
+
+```ts
+const ALTERNATING_PIT_PROGRESS_SAMPLES = [
+  0.083333, 0.25, 0.416667,
+  0.583333, 0.75, 0.916667,
+];
+```
+
+Ownership alternates around the lap, producing the order `[0, 1, 0, 1, 0, 1]`.
+Because the side selector also alternates, each team ends up with pits on both
+the inner and outer sides of the track.  A car may only enter a pit box that
+belongs to its own team; a four-tick stop restores all four tire channels to
+full health.
+
+### Track-boundary wall enforcement
+
+Every environment step ends with `clampCarToTrackBounds` in
+[`environment.step.service.ts`](./environment/environment.step.service.ts).  The
+car's position is projected onto the nearest spline centerline; if its signed
+lateral offset exceeds `[-halfWidth, halfWidth]`, it is pushed back onto the
+drivable ribbon.  This keeps cars from shortcutting or leaving the track, and
+it applies to every tier that reuses the same environment stepping path.
+
+### Physics contracts
+
+The same environment step also enforces three hard rules that every tier
+inherits:
+
+- **Off-track penalty.**  If `clampCarToTrackBounds` changes a car's position,
+  the step assigns `OFF_TRACK_CLAMP_REWARD = -1` to that car's `reward` field.
+- **Wrong-direction penalty.**  `detectWrongDirection` measures the car's
+  displacement against the forward tangent of its nearest spline sample.  A
+  negative dot product means the car moved backwards, so the step assigns
+  `WRONG_DIRECTION_REWARD = -1`.  Stationary cars are never flagged.
+- **Car-vs-car pushing.**  After clamping, `separateCars` enforces a minimum
+  center-to-center distance of `CAR_MIN_CENTER_SEPARATION = 1` world unit
+  between every pair of cars, pushing overlapping centers apart along the line
+  connecting them.
+
+```mermaid
+flowchart TD
+    classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+    classDef penalty fill:#2a0a0a,stroke:#ff6b6b,color:#ffd6d6,stroke-width:1.5px;
+
+    Step["stepEnvironment"]:::base
+    Kinematics["stepCarKinematics"]:::base
+    Wrong["detectWrongDirection\n{dot < 0}"]:::penalty
+    Clamp["clampCarToTrackBounds\n{ |offset| > halfWidth }"]:::penalty
+    Push["separateCars\n{ distance < 1 }"]:::penalty
+    Next["next EnvironmentState\nwith per-car rewards"]:::base
+
+    Step --> Kinematics
+    Kinematics --> Wrong
+    Kinematics --> Clamp
+    Clamp --> Push
+    Wrong --> Next
+    Push --> Next
+```
+
+The order matters: wrong-direction is detected on the raw displacement before
+clamping, the off-track clamp is applied next, and overlapping cars are
+pushed apart before pit entry is resolved.  This keeps the geometry penalties
+independent and deterministic for every tier that shares `stepEnvironment`.
+
+### Launching the browser demo
+
+The same contract exercised by the worker tests can be launched directly in
+the browser:
+
+```ts
+import { start } from './browser-entry/browser-entry';
+
+const handle = await start('racing-curriculum-output');
+// The demo runs at the active tier (Tier 1 by default).
+// Call handle.stop() when you want to shut down the demo.
+```
+
+`start` builds the host shell, generates the tier-aware track, creates the
+starting grid with the blue-inner / red-outer rule, and begins the animation
+loop.  The worker seam is initialized in parallel so the host can hand
+physics stepping off to the worker without changing the public entry point.
+
 ## Tier 1 single-agent usage contract
 
 Tier 1 is the narrowest rung of the racing ladder: one car per team, no radio,
@@ -163,10 +353,11 @@ The Tier 1 controller contract is intentionally small:
 - **Guidance:** a faint optimal-line overlay is rendered as a curriculum scaffold,
   but the controller is free to ignore it.  Tier 2 turns the overlay off entirely.
 
-The host renders two per-team guiding lines so the viewer can see each agent's
-intended lane: Team A in cyan and Team B in magenta.  These lines are generated
-with `buildGuidingLineForTeam` and are not part of the zero-copy transfer list;
-they are reconstructed locally from the same deterministic track geometry.
+The host renders one guiding line per car so the viewer can see each agent's
+intended lane: Team 0 (blue) on the inner lane and Team 1 (red) on the outer
+lane.  These lines are generated with `buildGuidingLineForTeam` and are not
+part of the zero-copy transfer list; they are reconstructed locally from the
+same deterministic track geometry.
 
 ### Tier 1 runtime story
 
@@ -179,7 +370,7 @@ flowchart LR
     Tick --> Msg["race-step message + transfer list"]
     Tick --> Fit["computeFitness(carIndex)"]
     Pack --> Guide["buildGuidingLineForTeam"]
-    Guide --> Overlay["per-team host overlay"]
+    Guide --> Overlay["per-car host overlay"]
 
     classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
     classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
@@ -251,6 +442,231 @@ This is the full Tier 1 surface: two single-agent controllers, a deterministic
 track, a frozen opponent snapshot slot, and a renderable guiding line.
 Everything else in the curriculum is layered on top of this contract.
 
+> **Note on the two controller seams.** The snippet above uses the worker
+> race-pack runner, which is a minimal proof-of-concept seam: it feeds each
+> network a raw five-dimensional state vector and consumes only a throttle output.
+> The browser host's `createNgeController` seam (used in the live demo and in
+> the Tier 2 example below) consumes the full 70-channel normalized observation
+> vector and produces both throttle and steer. Both count as "Tier 1" because the
+> pack layout and the learning goal are the same; only the inference wrapper differs.
+
+## Tier 2 1v1 self-radio usage contract
+
+Tier 2 keeps the one-car-per-team grid from Tier 1 but turns on the first
+radio seam. The learning question is no longer "can the car drive?" but
+"can the network learn to write and read a compact self-summary of its own
+state?". By forcing the controller to emit seven extra values that are
+fed back into the next observation vector, Tier 2 introduces the shortest
+possible recurrent communication loop without yet adding teammate
+coordination, tire wear, or pit strategy.
+
+### Tier 2 pack layout
+
+The Tier 2 race pack is still a two-car 1v1 grid:
+
+```ts
+const TIER_TWO_TEAM_LAYOUT = [0, 1]; // Team 0 (blue), Team 1 (red)
+```
+
+Team 0 (blue) starts on the inward side of the inner-lane centerline and
+Team 1 (red) starts on the outward side, exactly as in Tier 1. The visual difference is
+that the optimal-line overlay is now completely off: the network must
+self-navigate using only the observation vector and its own radio memory.
+
+### Tier 2 controller network
+
+The Tier 2 controller is a 77-input / 9-output MLP:
+
+```ts
+const network = createDeterministicRacingControllerNetwork(2);
+// network.input === 77
+// network.output === 9
+```
+
+The 77 inputs are the 70-channel Tier 1 base plus the seven-channel
+self-radio tail; the corresponding 9 outputs are chosen inside the same
+factory. The hidden layer size stays small (`[4]`) so the example remains
+cheap to run in the browser.
+
+### Tier 2 observation vector
+
+- **77 channels total.**
+- `[0..69]` — the same 70-channel Tier 1 base used by the solo controller:
+  - 20 scalar driving-state channels.
+  - 40 channels for five look-ahead track segments.
+  - 10 recurrent memory-trace channels.
+- `[70..76]` — seven self-radio channels written by the controller on the
+  previous tick and read back without re-normalization.
+
+On the very first tick the radio tail is zero-filled; afterwards it carries
+the network's own self-monitoring payload.
+
+### Tier 2 action vector
+
+The controller network emits **9 channels**:
+
+- `output[0]` → throttle, clamped to `[-1, 1]`.
+- `output[1]` → steer, clamped to `[-1, 1]`.
+- `outputs[2..8]` → seven self-radio write channels, clamped to `[-1, 1]`
+  and stored in the per-car self-radio seam.
+
+`createNgeController` performs the split automatically when `tier: 2` is
+passed: it writes the radio tail after inference, and the next tick's
+observation assembler reads it back into indices `[70..76]`.
+
+### Default self-radio payload
+
+The seven radio channels are populated from the environment state before the
+network sees them, then overwritten by the network's own radio-write head.
+The default self-monitoring payload (used when the network has not yet
+written) is:
+
+| Index | Signal | Normalization |
+| --- | --- | --- |
+| 70 | forward speed | `forwardSpeedWorld / 108` |
+| 71 | lateral speed | `lateralSpeedWorld / 54` |
+| 72 | total speed | `speedWorld / 108` |
+| 73 | yaw rate | `yawRateRadiansPerSecond / 1` |
+| 74 | slip angle | `slipAngleRadians / (π / 2)` |
+| 75 | lap progress | `progress01 * 2 - 1` |
+| 76 | optimal-line lateral offset | `optimalLineLateralOffsetWorld / 18` |
+
+Each value is clamped to `[-1, 1]`. Once the controller runs, the network's
+radio-write outputs replace this payload, so the learned semantics are
+entirely emergent. The curriculum only enforces the byte layout; the
+controller decides what the seven channels mean.
+
+### Tier 2 feedback loop
+
+```mermaid
+flowchart LR
+    classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+    classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+    Env["envState + trackSpec"]:::base --> Asm["assembleNormalizedObservationVector<br/>{ tier: 2 }<br/>77 channels"]:::accent
+    Asm --> Net["network.activate(...)"]:::base
+    Net --> Split["9 outputs"]:::base
+    Split --> Control["throttle [0]<br/>steer [1]"]:::base
+    Split --> Radio["radio write [2..8]"]:::accent
+    Radio --> Channel["single-car radio seam"]:::base
+    Channel --> Next["next tick's<br/>observation tail [70..76]"]:::accent
+    Next --> Asm
+```
+
+### Activating Tier 2
+
+The browser demo runs Tier 1 by default. The constant that selects it is in
+[`browser-entry/browser-entry.ts`](./browser-entry/browser-entry.ts):
+
+```ts
+const ACTIVE_CURRICULUM_TIER = 1;
+```
+
+Set it to `2` for the self-radio Tier 2 contract, or to `3` for the
+four-car fallback pack. Changing this constant rebuilds the race
+pack, the observation vector width, and the controller output head.
+
+### Running a Tier 2 controller from code
+
+The same contract used by the live browser demo can be exercised directly:
+
+```ts
+import {
+  createNgeController,
+  createSingleCarRadioChannel,
+} from './controller/nge.controller';
+import { assembleNormalizedObservationVector } from './controller/observation.assembler';
+import { generateTrack } from './track/track.generator';
+
+const trackSpec = generateTrack({
+  seed: 42,
+  layoutVersion: 1,
+  sizeBucket: 'medium',
+});
+
+// Tier 2 self-radio seam: seven channels written by the controller
+// and read back as the observation tail on the next tick.
+const radioChannel = createSingleCarRadioChannel(7);
+
+const network = {
+  activate: (inputs: readonly number[] | Float32Array) => {
+    // 77 inputs = 70 base channels + 7 self-radio channels
+    console.assert(inputs.length === 77);
+    // 9 outputs = throttle + steer + 7 self-radio write channels
+    return [0.75, 0.1, 0.5, -0.2, 0.3, 0, 0, 0, 0];
+  },
+};
+
+const controller = createNgeController(network, {
+  tier: 2,
+  radioChannel,
+});
+
+const envState = { tick: 0, carX: 0, carY: 0, carHeading: 0 };
+const result = controller.computeControlWithEvidence(envState, trackSpec);
+
+// Next tick: the seven radio writes reappear as observation indices [70..76].
+const nextObservation = assembleNormalizedObservationVector(
+  { ...envState, radioField: Float32Array.from(radioChannel.readSelf()) },
+  trackSpec,
+  { tier: 2 },
+);
+
+console.log(result.control); // { throttle: 0.75, steer: 0.1 }
+console.log(nextObservation.length); // 77
+console.log(Array.from(nextObservation.slice(70, 77))); // radio feedback
+```
+
+In this snippet:
+
+- `createSingleCarRadioChannel(7)` creates the self-radio seam that stores
+  the seven-channel payload between ticks.
+- `createNgeController(network, { tier: 2, radioChannel })` wraps the network
+  so the 77-channel observation is assembled, inference is run, the radio
+  tail is written, and throttle/steer are returned.
+- The second `assembleNormalizedObservationVector` call shows what the next
+  tick will feed back into the network: the seven written values occupy
+  indices `[70..76]`.
+
+This is the full Tier 2 surface: a 1v1 pack, a 77-channel observation
+with a self-radio tail, a 9-output network, and a one-tick delayed feedback
+loop that the controller can learn to exploit.
+
+## Tier 3 fallback four-car pack
+
+Tier 3 is not a full curriculum stage in the current demo, but the promotion
+path needs a safe fallback shape so that advancing from Tier 1/Tier 2 does not
+collapse the race to a single car.  When the active tier resolves to `3`,
+`resolveCurriculumRacePackLayout` returns `TIER_THREE_TEAM_LAYOUT`:
+
+```ts
+const TIER_THREE_TEAM_LAYOUT = [0, 0, 1, 1]; // two blue, two red
+```
+
+The four slots map to four cars on the starting grid: Team 0 (blue) fills the
+inner-lane slots and Team 1 (red) fills the outer-lane slots.  The same
+blue-inner / red-outer rule used for Tier 1 and Tier 2 is extended so that each
+team's two cars are placed along the same lane centerline, one behind the other,
+and each car gets its own lane-aligned guide line and team-colored tire trail.
+
+A tier promotion after `LAP_COMPLETIONS_REQUIRED_FOR_TIER_ADVANCE = 3` completed
+laps moves the demo to the next curriculum tier, so the Tier 3 fallback is the
+first shape a driver sees after mastering the two-car baseline.
+
+```ts
+import { generateTrack } from './track/track.generator';
+import { buildGuidingLineForTeam } from './renderer/racing.renderer';
+
+const trackSpec = generateTrack({ seed: 42, layoutVersion: 1, sizeBucket: 'medium' });
+
+// Tier 3 pack shape: two blue inner, two red outer.
+const tierThreeLayout = [0, 0, 1, 1];
+for (const teamIndex of tierThreeLayout) {
+  // Each car gets a lane-aligned guide line colored by team.
+  buildGuidingLineForTeam(trackSpec, teamIndex);
+}
+```
+
 ## What Each Boundary Protects
 
 ### `workers/simulation-worker/`: simulation authority
@@ -272,8 +688,8 @@ Read it before modifying any worker service.
 The browser entry boundary assembles host elements, canvas rendering, telemetry
 panels, and the physics-only worker seam.  It does not own the evolution
 algorithm.  The worker-authoritative protocol is fully typed on both sides, so
-the host can advance simulation ticks locally today and later hand the same
-work off to the worker without changing the message contract.
+the host can advance simulation ticks locally or hand the same work off to the
+worker without changing the message contract.
 
 ### `environment/`: the racing world
 
@@ -316,8 +732,8 @@ enter.
 1. `index.html` loads the prebuilt bundle.
 2. `browser-entry.ts` exposes the stable browser shell.
 3. `host/host.ts` wires DOM regions, canvas sizing, and viewport layout.
-4. The host currently steps the environment locally; the typed worker protocol
-   provides the boundary for later handing stepping, inference, and evolution
+4. The host may step the environment locally; the typed worker protocol
+   provides the boundary for handing stepping, inference, and evolution
    off to the worker without redesigning the host surface.
 
 The important teaching point is that the host is a consumer of the worker's
@@ -341,9 +757,9 @@ position rather than a better controller.
 
 ### Authority boundaries survive implementation gaps
 
-The worker-authoritative protocol is fully typed before it is fully wired.  That
-lets the host and worker services be designed around the intended contract,
-rather than around whatever seam happens to be running today.
+The worker-authoritative protocol is fully typed, so host and worker services
+can be designed around the intended contract rather than around the seam
+currently active.
 
 ### Visualization depends on compact snapshots
 
@@ -354,7 +770,7 @@ rendering loop stays cheap even when the simulation is complex.
 ## References
 
 - Stanley, K. O. & Miikkulainen, R. (2002). *Evolving Neural Networks through
-  Augmenting Topologies*. Neural Computation, 10(1), 99–127.
+  Augmenting Topologies*. Evolutionary Computation, 10(2), 99–127, 2002.
   ([Wikipedia overview](https://en.wikipedia.org/wiki/Neuroevolution_of_augmenting_topologies))
 - Wikipedia contributors. *Coevolution*. Wikipedia.
   https://en.wikipedia.org/wiki/Coevolution (CC BY-SA 4.0).

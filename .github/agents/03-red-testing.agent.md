@@ -2,7 +2,6 @@
 description: 'Use when creating failing tests, test plans, fixtures, assertions, mocks, and coverage strategy before implementation.'
 name: '03-red-testing'
 tier: 1
-model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -47,7 +46,7 @@ handoffs:
     agent: '04-implementing'
     prompt: 'Continue from the active plan and Step 03 contract. Execute Step 04 for the current phase by implementing the smallest change that satisfies the targeted test, eval, or explicit skip contract.'
     send: false
-    model: 'glm-5.2:cloud (ollama)'
+    model: 'glm-5.2:cloud'
 ---
 
 ## Cortex-First Search Policy
@@ -300,6 +299,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
+- <agent or NONE>
 SUMMARY: <brief truthful summary>
 ```

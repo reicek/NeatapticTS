@@ -1,5 +1,6 @@
 import { generateTrack } from '../track/track.generator';
 import type { TrackAabb, TrackSpec } from '../track/track.generator.types';
+import { resolveSplineSampleFrame } from '../track/track.spline.utils';
 import type {
   CarControlOutput,
   EnvironmentState,
@@ -20,6 +21,19 @@ const PIT_STOP_TICKS = 4;
 const TEAM_COUNT = 2;
 const PIT_SLOTS_PER_TEAM = 3;
 const PIT_SLOT_COUNT = TEAM_COUNT * PIT_SLOTS_PER_TEAM;
+/** Car bounding-box half-dimensions in world units, mirroring renderer constants. */
+const CAR_HALF_WIDTH = 2.2;
+const CAR_HALF_LENGTH = 3.8;
+/** Minimum Euclidean center-to-center distance enforced between any car pair. */
+const CAR_MIN_CENTER_SEPARATION = CAR_HALF_WIDTH * 2 + 1;
+/** Small margin added to AABB separation to avoid floating-point edge-touching. */
+const SEPARATION_MARGIN = 0.01;
+/** Maximum iterations for the pairwise overlap resolution solver. */
+const SEPARATION_MAX_ITERATIONS = 200;
+/** Penalty assigned when a car is clamped back onto the track ribbon. */
+const OFF_TRACK_CLAMP_REWARD = -1;
+/** Penalty assigned when a car moves opposite the track tangent. */
+const WRONG_DIRECTION_REWARD = -1;
 /** Base lateral wear contribution per step for the tire-health model. */
 const TIRE_DECAY_LATERAL_FACTOR = 0.00012;
 /** Base longitudinal wear contribution per step for the tire-health model. */
@@ -146,14 +160,16 @@ export function stepEnvironment(
   }));
   // Step 2: Expand the caller input to the exact car count for this pack.
   const controls = resolveControls(control, currentCars.length);
-  // Step 3: Tick pit timers before motion so expired slots release deterministically.
+  // Step 3: Resolve the active track geometry (used by clamp, direction, and pit checks).
+  const trackSpec = state.trackSpec ?? DEFAULT_TRACK_SPEC;
+  // Step 4: Tick pit timers before motion so expired slots release deterministically.
   const releasedCars = new Set<number>();
   const pitOccupancy = tickPitOccupancy(
     resolvePitOccupancy(state),
     currentCars,
     releasedCars,
   );
-  // Step 4: Advance every car that is not currently stopped in its team's pit.
+  // Step 5: Advance every car that is not currently stopped in its team's pit.
   const steppedCars = currentCars.map((car, carIndex) => {
     if (isCarStoppedInPit(pitOccupancy, carIndex)) {
       return car;
@@ -161,14 +177,40 @@ export function stepEnvironment(
 
     return stepCarKinematics(car, controls[carIndex]);
   });
-  // Step 5: Let each car claim one available own-team slot in deterministic roster order.
-  const nextPitOccupancy = resolvePitEntries(
+  // Step 6: Detect wrong-direction motion before clamping so the original velocity is read.
+  const wrongDirectionFlags = detectWrongDirection(
+    currentCars,
     steppedCars,
+    trackSpec,
+  );
+  // Step 7: Enforce track boundary walls and assign off-track/wrong-direction rewards.
+  const boundedCars = steppedCars.map((car, carIndex) => {
+    if (isCarStoppedInPit(pitOccupancy, carIndex)) {
+      return car;
+    }
+
+    const clamped = clampCarToTrackBounds(car, trackSpec);
+    const wasClamped = clamped.carX !== car.carX || clamped.carY !== car.carY;
+    let reward = 0;
+    if (wasClamped) {
+      reward += OFF_TRACK_CLAMP_REWARD;
+    }
+    if (wrongDirectionFlags[carIndex]) {
+      reward += WRONG_DIRECTION_REWARD;
+    }
+
+    return reward === 0 ? clamped : { ...clamped, reward };
+  });
+  // Step 8: Push overlapping cars apart so two cars cannot share the same space.
+  const separatedCars = separateCars(boundedCars);
+  // Step 9: Let each car claim one available own-team slot in deterministic roster order.
+  const nextPitOccupancy = resolvePitEntries(
+    separatedCars,
     pitOccupancy,
-    state.trackSpec ?? DEFAULT_TRACK_SPEC,
+    trackSpec,
     releasedCars,
   );
-  const primaryCar = steppedCars[0] ?? createFallbackPrimaryCar();
+  const primaryCar = separatedCars[0] ?? createFallbackPrimaryCar();
 
   return {
     ...state,
@@ -178,8 +220,8 @@ export function stepEnvironment(
     carHeading: primaryCar.carHeading,
     teamIndex: primaryCar.teamIndex,
     tireState: primaryCar.tireState,
-    cars: steppedCars,
-    trackSpec: state.trackSpec ?? DEFAULT_TRACK_SPEC,
+    cars: separatedCars,
+    trackSpec,
     pitOccupancy: nextPitOccupancy,
     pitStatus: nextPitOccupancy,
   };
@@ -287,6 +329,188 @@ function resolveControls(
   return Array.from({ length: carCount }, (_, carIndex) =>
     carIndex === 0 ? primaryControl : { throttle: 0, steer: 0 },
   );
+}
+
+/**
+ * Finds the spline sample nearest to a world-space point.
+ *
+ * Used by both boundary clamping and wrong-direction detection so both
+ * features agree on the local track frame.
+ *
+ * @param x - Point X coordinate.
+ * @param y - Point Y coordinate.
+ * @param trackSpec - Active track geometry.
+ * @returns Index of the nearest spline sample.
+ */
+function resolveNearestSampleIndex(
+  x: number,
+  y: number,
+  trackSpec: TrackSpec,
+): number {
+  const { splineSamples } = trackSpec;
+  let nearestSampleIndex = 0;
+  let nearestDistanceSquared = Infinity;
+
+  for (let sampleIndex = 0; sampleIndex < splineSamples.length; sampleIndex++) {
+    const sample = splineSamples[sampleIndex]!;
+    const deltaX = x - sample.x;
+    const deltaY = y - sample.y;
+    const distanceSquared = deltaX * deltaX + deltaY * deltaY;
+
+    if (distanceSquared < nearestDistanceSquared) {
+      nearestDistanceSquared = distanceSquared;
+      nearestSampleIndex = sampleIndex;
+    }
+  }
+
+  return nearestSampleIndex;
+}
+
+/**
+ * Detects cars that moved opposite to the track tangent during this step.
+ *
+ * A car is flagged when its displacement vector has a negative dot product
+ * with the forward tangent at its pre-step nearest sample. Stationary cars are
+ * never flagged, so a parked car cannot accumulate wrong-direction penalties.
+ *
+ * @param beforeCars - Car roster before the kinematic update.
+ * @param afterCars - Car roster after the kinematic update.
+ * @param trackSpec - Active track geometry.
+ * @returns Per-car boolean flags; `true` means wrong-direction motion.
+ */
+function detectWrongDirection(
+  beforeCars: readonly RacingCarState[],
+  afterCars: readonly RacingCarState[],
+  trackSpec: TrackSpec,
+): readonly boolean[] {
+  const { splineSamples } = trackSpec;
+
+  if (splineSamples.length === 0) {
+    return Array.from({ length: beforeCars.length }, () => false);
+  }
+
+  return beforeCars.map((beforeCar, carIndex) => {
+    const afterCar = afterCars[carIndex];
+
+    if (afterCar === undefined) {
+      return false;
+    }
+
+    const deltaX = afterCar.carX - beforeCar.carX;
+    const deltaY = afterCar.carY - beforeCar.carY;
+    const displacement = Math.hypot(deltaX, deltaY);
+
+    if (displacement < 1e-9) {
+      return false;
+    }
+
+    const nearestSampleIndex = resolveNearestSampleIndex(
+      beforeCar.carX,
+      beforeCar.carY,
+      trackSpec,
+    );
+    const sampleFrame = resolveSplineSampleFrame(
+      splineSamples,
+      nearestSampleIndex,
+    );
+    // The unit tangent is perpendicular to the left normal.
+    const tangentX = sampleFrame.normalY;
+    const tangentY = -sampleFrame.normalX;
+    const dotProduct = deltaX * tangentX + deltaY * tangentY;
+
+    return dotProduct < -1e-9;
+  });
+}
+
+/**
+ * Pushes overlapping car centers apart so bounding boxes never overlap.
+ *
+ * Uses axis-aligned bounding boxes with half-extents {@link CAR_HALF_WIDTH}
+ * along X and {@link CAR_HALF_LENGTH} along Y. For each overlapping pair the
+ * required center-to-center distance is computed along the connecting line so
+ * that either the X gap exceeds the combined half-widths or the Y gap exceeds
+ * the combined half-lengths, whichever is smaller. A minimum Euclidean
+ * separation of {@link CAR_MIN_CENTER_SEPARATION} is also enforced. The solver
+ * iterates up to {@link SEPARATION_MAX_ITERATIONS} times to resolve cascading
+ * overlaps in multi-car stacks.
+ *
+ * @param cars - Car roster after track-boundary clamping.
+ * @returns New roster with overlapping cars separated in place.
+ */
+function separateCars(
+  cars: readonly RacingCarState[],
+): readonly RacingCarState[] {
+  if (cars.length < 2) {
+    return cars;
+  }
+
+  const mutableCars = cars.map((car) => ({ ...car }));
+
+  for (let iteration = 0; iteration < SEPARATION_MAX_ITERATIONS; iteration++) {
+    let resolved = true;
+
+    for (let firstIndex = 0; firstIndex < mutableCars.length; firstIndex++) {
+      for (
+        let secondIndex = firstIndex + 1;
+        secondIndex < mutableCars.length;
+        secondIndex++
+      ) {
+        const firstCar = mutableCars[firstIndex]!;
+        const secondCar = mutableCars[secondIndex]!;
+        const deltaX = secondCar.carX - firstCar.carX;
+        const deltaY = secondCar.carY - firstCar.carY;
+        const distance = Math.hypot(deltaX, deltaY);
+
+        const overlapX = CAR_HALF_WIDTH * 2 - Math.abs(deltaX);
+        const overlapY = CAR_HALF_LENGTH * 2 - Math.abs(deltaY);
+        const aabbOverlapping = overlapX > 0 && overlapY > 0;
+        const tooClose = distance < CAR_MIN_CENTER_SEPARATION;
+
+        if (!aabbOverlapping && !tooClose) {
+          continue;
+        }
+
+        let unitX: number;
+        let unitY: number;
+        if (distance < 1e-9) {
+          unitX = 1;
+          unitY = 0;
+        } else {
+          unitX = deltaX / distance;
+          unitY = deltaY / distance;
+        }
+
+        const aabbDistX =
+          Math.abs(unitX) > 1e-9
+            ? (CAR_HALF_WIDTH * 2 + SEPARATION_MARGIN) / Math.abs(unitX)
+            : Infinity;
+        const aabbDistY =
+          Math.abs(unitY) > 1e-9
+            ? (CAR_HALF_LENGTH * 2 + SEPARATION_MARGIN) / Math.abs(unitY)
+            : Infinity;
+        const aabbDist = Math.min(aabbDistX, aabbDistY);
+        const required = Math.max(CAR_MIN_CENTER_SEPARATION, aabbDist) + 1e-6;
+
+        if (distance >= required) {
+          continue;
+        }
+
+        resolved = false;
+
+        const push = (required - distance) / 2;
+        firstCar.carX -= unitX * push;
+        firstCar.carY -= unitY * push;
+        secondCar.carX += unitX * push;
+        secondCar.carY += unitY * push;
+      }
+    }
+
+    if (resolved) {
+      break;
+    }
+  }
+
+  return mutableCars;
 }
 
 /**
@@ -409,6 +633,58 @@ function isCarStoppedInPit(
     (record) =>
       record.occupyingCarIndex === carIndex && record.remainingStopTicks > 0,
   );
+}
+
+/**
+ * Pulls a car's world position back onto the drivable ribbon if it has crossed
+ * either the inner or outer track edge.
+ *
+ * The ribbon is approximated by the nearest spline sample: the car is clamped
+ * so its signed lateral offset stays within `[-halfWidth, halfWidth]`. Cars that
+ * are stopped in a pit box are intentionally skipped, because pit stalls live
+ * outside the drivable surface.
+ *
+ * @param car - Car whose position should be clamped.
+ * @param trackSpec - Frozen track geometry used for the boundary lookup.
+ * @returns Car state with its position bounded to the track ribbon.
+ */
+function clampCarToTrackBounds(
+  car: RacingCarState,
+  trackSpec: TrackSpec,
+): RacingCarState {
+  const { splineSamples } = trackSpec;
+  if (splineSamples.length === 0) {
+    return car;
+  }
+
+  const nearestSampleIndex = resolveNearestSampleIndex(
+    car.carX,
+    car.carY,
+    trackSpec,
+  );
+  const nearestSample = splineSamples[nearestSampleIndex]!;
+  const sampleFrame = resolveSplineSampleFrame(
+    splineSamples,
+    nearestSampleIndex,
+  );
+  const halfWidth = nearestSample.width / 2;
+  const offsetX = car.carX - nearestSample.x;
+  const offsetY = car.carY - nearestSample.y;
+  const signedOffset =
+    offsetX * sampleFrame.normalX + offsetY * sampleFrame.normalY;
+
+  if (Math.abs(signedOffset) <= halfWidth + 1e-9) {
+    return car;
+  }
+
+  const clampedOffset = Math.max(-halfWidth, Math.min(halfWidth, signedOffset));
+  const correction = clampedOffset - signedOffset;
+
+  return {
+    ...car,
+    carX: car.carX + sampleFrame.normalX * correction,
+    carY: car.carY + sampleFrame.normalY * correction,
+  };
 }
 
 /**

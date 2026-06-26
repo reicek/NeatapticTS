@@ -2,7 +2,6 @@
 description: 'Use as a hidden specialist for mapping MCP runtime visibility gaps in NeatapticTS workflows. Keywords: MCP runtime, available agents, active agent, live triggers, model names, client facts.'
 name: mcp-runtime-scout
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

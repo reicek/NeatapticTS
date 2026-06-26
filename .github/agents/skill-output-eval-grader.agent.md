@@ -2,7 +2,6 @@
 description: 'Use as a hidden specialist for grading NeatapticTS skill outputs with evidence-backed assertions and baseline comparisons. Keywords: skill output eval, assertion, grading evidence, benchmark, pass rate, grade.'
 name: 'skill-output-eval-grader'
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

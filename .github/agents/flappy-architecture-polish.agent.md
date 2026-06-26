@@ -2,7 +2,6 @@
 description: 'Use when tuning, rerunning, or hardening one Flappy Bird architecture profile with a reusable browser-worker polish loop. Keywords: Flappy, LSTM, GRU, NARX, MLP, sparse, warm-start, probe, worker fairness, architecture polish.'
 name: 'flappy-architecture-polish'
 tier: 2
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

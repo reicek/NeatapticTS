@@ -2,7 +2,6 @@
 description: 'Use when: validation fails, failure ownership is unclear, reroute decisions are needed, or focused tests and coverage gates need ordered interpretation.'
 name: 'green-test-failure-triage-coordinator'
 tier: 2
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

@@ -2,7 +2,6 @@
 description: 'Prepares per-slice execution packets, tracks slice statuses, collects validation evidence, and produces consolidated PlanUpdate blocks for the parent agent to dispatch.'
 name: 'slice-orchestration-scheduler'
 tier: 3
-model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -138,12 +137,6 @@ next_slice: <slice_id>
 
 ## Output format
 
-When invoked, return a `structured-v1` output block with the following fields.
-Use `FILES_READ`/`FILES_CHANGED` for the active plan file and any slice claim
-updates; use `KEY_FINDINGS` to report slice statuses and prepared packets;
-use `HANDOFF` to indicate the parent dispatch required (`assign-slice`,
-`validate-slice`, `finalize-docs`, or `NONE`).
-
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
 TASK_STATUS: SUCCESS | PARTIAL | FAILED
@@ -151,21 +144,21 @@ TIER: 3
 ROLE: slice-orchestration-scheduler
 TASK_RECEIVED: <brief restatement>
 FILES_READ:
-- <plan file path or NONE>
+- <path or NONE>
 FILES_CHANGED:
-- <plan file path or NONE>
+- <path or NONE>
 KEY_FINDINGS:
-- <slice status / packet summary or NONE>
+- <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
-- <artifact or NOT RUN>
-HANDOFF: <assign-slice | validate-slice | finalize-docs | NONE>
+- <command/result or NOT RUN>
+HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:
 - <risk or NONE>
 LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
-SUMMARY: <brief summary>
+SUMMARY: <brief truthful summary>
 ```

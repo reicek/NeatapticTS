@@ -2,7 +2,6 @@
 description: 'Use when capturing, compressing, analyzing, or summarizing Chrome DevTools performance traces. Extracts CPU time, layout thrashing, JS execution, paint events, memory peaks, and dropped frames into concise metric summaries that fit in agent context windows. Can be called by ANY agent.'
 name: 'performance-trace-specialist'
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

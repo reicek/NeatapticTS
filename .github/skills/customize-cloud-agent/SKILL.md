@@ -73,7 +73,7 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 
 ## Model Validation Rules
 
-- Cloud model names must use the qualified format: `<model-id>:cloud (ollama)` or equivalent provider tag.
+- Cloud model names must use the qualified format: `<model-id>:cloud` or equivalent provider tag.
 - Tier 1 agents may use cloud models with user-invocable access.
 - Tier 2-4 agents use cloud models only when local context or reasoning limits require fallback.
 - `disable-model-invocation: false` is required for cloud-model agents that need autonomous dispatch.
@@ -119,7 +119,7 @@ model: claude-3.5-sonnet:local
 ```yaml
 ---
 name: my-agent
-model: gpt-4o:cloud (ollama)
+model: gpt-4o:cloud
 disable-model-invocation: false
 ---
 ```

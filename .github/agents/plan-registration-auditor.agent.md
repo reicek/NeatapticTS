@@ -2,7 +2,6 @@
 description: 'Use as a hidden specialist for validating NeatapticTS plan registration across .plans.md files, plans/README.md, and plans/Roadmap.md. Keywords: plan sync, roadmap status, trigger phrase, tracker registration.'
 name: plan-registration-auditor
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

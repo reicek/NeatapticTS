@@ -1,8 +1,7 @@
 ---
-description: 'Use as a hidden specialist for discovering and validating qualified Copilot model names before NeatapticTS agent frontmatter changes. Keywords: model routing, glm-5.2, kimi-k2.7-code, scalar model, qualified model.'
+description: 'Use as a hidden specialist for discovering and validating qualified Copilot model names before NeatapticTS agent frontmatter changes. Keywords: model routing, glm-5.2, scalar model, qualified model.'
 name: model-name-auditor
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -28,7 +27,7 @@ Confirm which qualified model names are known, which still require local model-p
 
 - ALWAYS stay read-only.
 - DO NOT edit agent frontmatter without explicit approval.
-- ALWAYS validate model strings against confirmed qualified names (glm-5.2:cloud (ollama), kimi-k2.7-code:cloud (ollama)).
+- ALWAYS validate model strings against confirmed qualified names (glm-5.2:cloud, glm-5.2:cloud).
 - DO NOT make assumptions about model availability; note unverified names as gaps.
 - This agent is intentionally thin. Model routing policy and Copilot integration belong to VS Code and Copilot product teams.
 
@@ -57,8 +56,8 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 2. Identify the proposed model name or legacy frontmatter array in question.
 3. Check existing agent files in `.github/agents/` to see which models are already in use.
 4. For each model name, determine:
-   - Is it a qualified Ollama model string (includes `(ollama)` suffix)?
-   - Is it from the canonical tier (glm-5.2:cloud, kimi-k2.7-code:cloud)?
+   - Is it a qualified model string (includes `:cloud` variant)?
+   - Is it from the canonical model (glm-5.2:cloud)?
    - Is there evidence of it in a verified agent or in recent handoff from model-picker?
 5. If the name is unverified, note it as requiring local model-picker validation.
 6. For legacy arrays, verify:
@@ -71,10 +70,9 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 | Pattern                      | Example                         | Status                              |
 | ---------------------------- | ------------------------------- | ----------------------------------- |
-| `<vendor>-<model>:<variant>` | `kimi-k2.7-code:cloud (ollama)` | Qualified — cloud-hosted via ollama |
-| `<vendor>-<model>:<variant>` | `glm-5.2:cloud (ollama)`        | Qualified — cloud-hosted via ollama |
-| `<model>` (bare)             | `kimi-k2.7-code`                | Unqualified — missing variant/host  |
-| `<model>:local`              | `kimi-k2.7-code:local`          | Qualified — local model             |
+| `<vendor>-<model>:<variant>` | `glm-5.2:cloud`                 | Qualified — cloud-hosted            |
+| `<model>` (bare)             | `glm-5.2`                       | Unqualified — missing variant/host  |
+| `<model>:local`              | `glm-5.2:local`                 | Qualified — local model             |
 | Deprecated model             | `gpt-4`                         | Deprecated — flag for replacement   |
 
 ## Model Validation Patterns

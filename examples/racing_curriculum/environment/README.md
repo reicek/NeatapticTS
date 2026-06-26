@@ -56,6 +56,29 @@ each channel clamped to the closed `[0, 1]` interval.
 
 ## environment/environment.step.service.ts
 
+### clampCarToTrackBounds
+
+```ts
+clampCarToTrackBounds(
+  car: CarState,
+  trackSpec: TrackSpec,
+): CarState
+```
+
+Pulls a car's world position back onto the drivable ribbon if it has crossed
+either the inner or outer track edge.
+
+The ribbon is approximated by the nearest spline sample: the car is clamped
+so its signed lateral offset stays within `[-halfWidth, halfWidth]`. Cars that
+are stopped in a pit box are intentionally skipped, because pit stalls live
+outside the drivable surface.
+
+Parameters:
+- `car` - Car whose position should be clamped.
+- `trackSpec` - Frozen track geometry used for the boundary lookup.
+
+Returns: Car state with its position bounded to the track ribbon.
+
 ### clampControlValue
 
 ```ts
@@ -192,6 +215,29 @@ const wornTires = decayTireState([0.3, 0.3, 0.3, 0.3], 0.2, 0.4, 10);
 wornTires[0] < freshTires[0]; // already-damaged tires decay faster
 ```
 
+### detectWrongDirection
+
+```ts
+detectWrongDirection(
+  beforeCars: readonly CarState[],
+  afterCars: readonly CarState[],
+  trackSpec: TrackSpec,
+): readonly boolean[]
+```
+
+Detects cars that moved opposite to the track tangent during this step.
+
+A car is flagged when its displacement vector has a negative dot product
+with the forward tangent at its pre-step nearest sample. Stationary cars are
+never flagged, so a parked car cannot accumulate wrong-direction penalties.
+
+Parameters:
+- `beforeCars` - Car roster before the kinematic update.
+- `afterCars` - Car roster after the kinematic update.
+- `trackSpec` - Active track geometry.
+
+Returns: Per-car boolean flags; `true` means wrong-direction motion.
+
 ### EnvironmentControlInput
 
 Accepted control input for one deterministic environment step.
@@ -298,6 +344,28 @@ Parameters:
 
 Returns: Mean health across all four corners.
 
+### resolveNearestSampleIndex
+
+```ts
+resolveNearestSampleIndex(
+  x: number,
+  y: number,
+  trackSpec: TrackSpec,
+): number
+```
+
+Finds the spline sample nearest to a world-space point.
+
+Used by both boundary clamping and wrong-direction detection so both
+features agree on the local track frame.
+
+Parameters:
+- `x` - Point X coordinate.
+- `y` - Point Y coordinate.
+- `trackSpec` - Active track geometry.
+
+Returns: Index of the nearest spline sample.
+
 ### resolvePitEntries
 
 ```ts
@@ -337,6 +405,25 @@ Parameters:
 - `state` - Current environment state.
 
 Returns: Six-slot pit occupancy shelf.
+
+### separateCars
+
+```ts
+separateCars(
+  cars: readonly CarState[],
+): readonly CarState[]
+```
+
+Pushes overlapping car centers apart so two cars cannot occupy the same point.
+
+The minimum separation is enforced along the line connecting the two centers.
+For coincident centers, a stable world-space X axis fallback is used so the
+separation is still deterministic.
+
+Parameters:
+- `cars` - Car roster after track-boundary clamping.
+
+Returns: New roster with overlapping cars separated in place.
 
 ### stepCarKinematics
 

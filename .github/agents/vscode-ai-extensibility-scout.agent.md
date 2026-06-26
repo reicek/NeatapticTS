@@ -2,7 +2,6 @@
 description: 'Use as a hidden specialist for official VS Code AI extensibility reconnaissance, including MCP, hooks, agent plugins, Prompt TSX, model access, and bridge APIs. Keywords: VS Code AI docs, MCP, hooks, plugins, Prompt TSX, extension API.'
 name: 'vscode-ai-extensibility-scout'
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

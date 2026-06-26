@@ -1,4 +1,4 @@
-import type { EnvironmentState } from '../environment/environment.types';
+import type { CarState, EnvironmentState } from '../environment/environment.types';
 import { generateTrack } from '../track/track.generator';
 import type { TrackSpec } from '../track/track.generator.types';
 import {
@@ -13,6 +13,7 @@ import {
   selectObservationFocalSample,
   wrapAngleToMinusPiPi,
 } from './pathtracking.test.fixtures';
+import { createNgeController } from './nge.controller';
 
 /**
  * Red-phase contracts for the owner-local Tier 1–2 observation-vector seam.
@@ -78,6 +79,25 @@ describe('observation.assembler', () => {
         length: 77,
         radioTail: Array.from(radioField),
       });
+    });
+
+    it('feeds a 77-dimensional observation vector to the Tier 2 controller network', async () => {
+      const trackSpec = createTrackSpec();
+      const envState = createExpandedEnvironmentState();
+      const activationInputs: number[][] = [];
+      const network = {
+        activate(inputVector: readonly number[] | Float32Array) {
+          activationInputs.push(Array.from(inputVector));
+          return [0.1, -0.2, 0.3, -0.4, 0.5, -0.6, 0.7, 0.8, -0.9];
+        },
+      };
+
+      createNgeController(network, { tier: 2 }).computeControl(
+        envState,
+        trackSpec,
+      );
+
+      expect(activationInputs[0]?.length).toBe(77);
     });
 
     describe('rounded spline seam contracts', () => {
@@ -201,6 +221,49 @@ describe('observation.assembler', () => {
       });
     });
   });
+
+  describe('derivePerCarObservationState', () => {
+    it('exports derivePerCarObservationState from the observation assembler module', async () => {
+      const mod = await loadObservationAssemblerModule();
+      expect(typeof mod.derivePerCarObservationState).toBe('function');
+    });
+
+    it('reads the requested car pose from envState.cars[carIndex]', async () => {
+      const trackSpec = createStraightTrackSpec();
+      const envState = createTwoCarEnvironmentState(trackSpec);
+      const mod = await loadObservationAssemblerModule();
+      const derived = mod.derivePerCarObservationState(envState, 1);
+
+      expect(derived.carX).toBe(envState.cars![1].carX);
+    });
+
+    it('derives teamIndex from the selected car instead of envState.teamIndex', async () => {
+      const trackSpec = createStraightTrackSpec();
+      const envState = createTwoCarEnvironmentState(trackSpec);
+      envState.teamIndex = 0;
+
+      const mod = await loadObservationAssemblerModule();
+      const derived = mod.derivePerCarObservationState(envState, 1);
+
+      expect(derived.teamIndex).toBe(1);
+    });
+
+    it('produces different Tier 1 observation vectors for blue and red cars on the same tick', async () => {
+      const trackSpec = createStraightTrackSpec();
+      const envState = createTwoCarEnvironmentState(trackSpec);
+      const mod = await loadObservationAssemblerModule();
+      const blueState = mod.derivePerCarObservationState(envState, 0);
+      const redState = mod.derivePerCarObservationState(envState, 1);
+      const blueVector = Array.from(
+        mod.assembleNormalizedObservationVector(blueState, trackSpec, { tier: 1 }),
+      );
+      const redVector = Array.from(
+        mod.assembleNormalizedObservationVector(redState, trackSpec, { tier: 1 }),
+      );
+
+      expect(redVector).not.toEqual(blueVector);
+    });
+  });
 });
 
 describe('assembleNormalizedObservationVector inner-lane optimal line', () => {
@@ -247,6 +310,90 @@ describe('assembleNormalizedObservationVector inner-lane optimal line', () => {
   });
 });
 
+describe('assembleNormalizedObservationVector team-aware optimal line', () => {
+  it('reports near-zero optimal-line offset for team 0 on the inner-lane centerline', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const focalSampleIndex = 2;
+    const focalSample = trackSpec.splineSamples[focalSampleIndex]!;
+    const frame = resolveSplineSampleFrame(
+      trackSpec.splineSamples,
+      focalSample.globalIndex,
+    );
+    const laneCount = 2;
+    const laneWidthWorld = focalSample.width / laneCount;
+    const innerOffsetWorld = focalSample.width / 2 - laneWidthWorld / 2;
+    const envState = createExpandedEnvironmentState({
+      teamIndex: 0,
+      carX: focalSample.x + frame.normalX * innerOffsetWorld,
+      carY: focalSample.y + frame.normalY * innerOffsetWorld,
+      carHeading: frame.tangentHeadingRadians,
+      boundaryDistanceLeftWorld: undefined,
+      boundaryDistanceRightWorld: undefined,
+      optimalLineLateralOffsetWorld: undefined,
+      optimalLineHeadingErrorRadians: undefined,
+    });
+
+    await expect(
+      loadObservationAssemblerModule().then(
+        ({ assembleNormalizedObservationVector }) => {
+          const observationVector = Array.from(
+            assembleNormalizedObservationVector(envState, trackSpec, {
+              tier: 1,
+            }),
+          );
+
+          return {
+            channel16: observationVector[16] ?? 0,
+          };
+        },
+      ),
+    ).resolves.toEqual({
+      channel16: expect.closeTo(0, 2),
+    });
+  });
+
+  it('reports near-zero optimal-line offset for team 1 on the outer-lane centerline', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const focalSampleIndex = 2;
+    const focalSample = trackSpec.splineSamples[focalSampleIndex]!;
+    const frame = resolveSplineSampleFrame(
+      trackSpec.splineSamples,
+      focalSample.globalIndex,
+    );
+    const laneCount = 2;
+    const laneWidthWorld = focalSample.width / laneCount;
+    const innerOffsetWorld = focalSample.width / 2 - laneWidthWorld / 2;
+    const envState = createExpandedEnvironmentState({
+      teamIndex: 1,
+      carX: focalSample.x - frame.normalX * innerOffsetWorld,
+      carY: focalSample.y - frame.normalY * innerOffsetWorld,
+      carHeading: frame.tangentHeadingRadians,
+      boundaryDistanceLeftWorld: undefined,
+      boundaryDistanceRightWorld: undefined,
+      optimalLineLateralOffsetWorld: undefined,
+      optimalLineHeadingErrorRadians: undefined,
+    });
+
+    await expect(
+      loadObservationAssemblerModule().then(
+        ({ assembleNormalizedObservationVector }) => {
+          const observationVector = Array.from(
+            assembleNormalizedObservationVector(envState, trackSpec, {
+              tier: 1,
+            }),
+          );
+
+          return {
+            channel16: observationVector[16] ?? 0,
+          };
+        },
+      ),
+    ).resolves.toEqual({
+      channel16: expect.closeTo(0, 2),
+    });
+  });
+});
+
 function createStraightTrackSpec(): TrackSpec {
   const segments = [
     { startX: 0, startY: 0, endX: 100, endY: 0, width: 24 },
@@ -289,6 +436,10 @@ interface ObservationAssemblerModule {
     trackSpec: TrackSpec,
     options: { tier: 1 | 2 },
   ): Float32Array | readonly number[];
+  derivePerCarObservationState(
+    envState: ExpandedEnvironmentState,
+    carIndex: number,
+  ): ExpandedEnvironmentState;
 }
 
 function createExpandedEnvironmentState(
@@ -326,6 +477,39 @@ function createExpandedEnvironmentState(
 
 function createTrackSpec(): TrackSpec {
   return generateTrack({ seed: 42, layoutVersion: 1, sizeBucket: 'medium' });
+}
+
+function createTwoCarEnvironmentState(
+  trackSpec: TrackSpec,
+): ExpandedEnvironmentState {
+  const focalSampleIndex = 2;
+  const focalSample = trackSpec.splineSamples[focalSampleIndex]!;
+  const frame = resolveSplineSampleFrame(
+    trackSpec.splineSamples,
+    focalSample.globalIndex,
+  );
+  const innerOffsetWorld = focalSample.width / 4;
+  const team0Car: CarState = {
+    carX: focalSample.x + frame.normalX * innerOffsetWorld,
+    carY: focalSample.y + frame.normalY * innerOffsetWorld,
+    carHeading: frame.tangentHeadingRadians,
+    teamIndex: 0,
+    tireState: [1, 1, 1, 1],
+  };
+  const team1Car: CarState = {
+    carX: focalSample.x - frame.normalX * innerOffsetWorld,
+    carY: focalSample.y - frame.normalY * innerOffsetWorld,
+    carHeading: frame.tangentHeadingRadians,
+    teamIndex: 1,
+    tireState: [1, 1, 1, 1],
+  };
+
+  return createExpandedEnvironmentState({
+    carX: team0Car.carX,
+    carY: team0Car.carY,
+    carHeading: team0Car.carHeading,
+    cars: [team0Car, team1Car] as const,
+  });
 }
 
 async function loadObservationAssemblerModule(): Promise<ObservationAssemblerModule> {

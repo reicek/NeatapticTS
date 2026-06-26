@@ -2,7 +2,6 @@
 description: 'Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps.'
 name: '07-logging'
 tier: 1
-model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -40,7 +39,7 @@ handoffs:
     agent: '01-planning'
     prompt: 'Continue from the updated tracker and decide the next Step 01 planning task for the next phase or reroute. Preserve completed evidence and avoid reopening closed work without a clear reason.'
     send: false
-    model: 'glm-5.2:cloud (ollama)'
+    model: 'glm-5.2:cloud'
 ---
 
 ## Cortex-First Search Policy
@@ -263,6 +262,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
+- <agent or NONE>
 SUMMARY: <brief truthful summary>
 ```

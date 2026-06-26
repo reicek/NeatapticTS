@@ -2,7 +2,6 @@
 description: 'Use when: planning needs compact context, plan alignment signals, ownership boundaries, nearest README evidence, freshness notes, or ambiguity triage before decomposition. Keywords: planning context, plan files, README, boundaries, ambiguity.'
 name: 'planning-context-coordinator'
 tier: 2
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

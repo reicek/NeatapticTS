@@ -27,12 +27,16 @@ advanceTireMarks(
 ): void
 ```
 
-Appends a new tire mark at the car's current position and ages all marks.
-Marks older than `TIRE_MARK_MAX_AGE_TICKS` are evicted from the front.
+Appends a new tire mark for every car and ages all marks. Marks older than
+`TIRE_MARK_MAX_AGE_TICKS` are evicted from the front.
+
+The legacy top-level `carX/carY/carHeading/teamIndex` fields are used as a
+fallback when the multi-car `cars` roster is absent, keeping the solo
+browser path stable.
 
 Parameters:
 - `renderState` - Mutable render state (mutated in-place).
-- `envState` - Current car position source.
+- `envState` - Current car roster and primary-car fallback source.
 
 ### buildGuidingLineForTeam
 
@@ -40,19 +44,24 @@ Parameters:
 buildGuidingLineForTeam(
   trackSpec: TrackSpec,
   teamIndex: number,
+  lateralOffsetWorld: number | undefined,
 ): { readonly x: number; readonly y: number; }[]
 ```
 
-Builds a fresh per-team guiding line parallel to the inner-lane centerline.
+Builds a fresh per-car guiding line parallel to the road centerline.
 
-Team A (`teamIndex = 0`) starts exactly on the inner-lane centerline so the
-first point matches the car start position. Team B (`teamIndex = 1`) uses a
-small constant inward offset that keeps the line inside the inner lane. Each
-call returns a distinct array, so callers may mutate or cache freely.
+Team 0 (blue) defaults to the inner-lane centerline (`+innerOffsetWorld`
+from the road centerline). Team 1 (red) defaults to the outer-lane centerline
+(`-innerOffsetWorld`). A caller may override the lateral offset to produce
+a distinct line for every car in multi-car packs. Each call returns a fresh
+array, so callers may mutate or cache freely.
 
 Parameters:
 - `trackSpec` - Frozen track geometry.
-- `teamIndex` - Team index: 0 = Team A, 1 = Team B.
+- `teamIndex` - Team index: 0 = blue team, 1 = red team.
+- `lateralOffsetWorld` - Optional signed lateral offset in world units
+relative to the road centerline; when omitted the offset follows the team
+baseline above.
 
 Returns: Fresh ordered list of world-space `{x, y}` guiding points.
 
@@ -312,21 +321,28 @@ drawTeamGuidingLines(
   spec: TrackSpec,
   transform: WorldTransform,
   guidanceAlpha: number,
+  envState: EnvironmentState,
+  overlayFrame: RacingRenderOverlayFrame | undefined,
+  focusCarIndex: number,
 ): void
 ```
 
-Draws a per-team dashed guiding line over the track when the guidance overlay
+Draws a dashed per-car guiding line over the track when the guidance overlay
 is enabled.
 
-Team A uses cyan and Team B uses magenta so each agent has a visually distinct
-lane marker. The lines are drawn before car bodies because this helper runs
-inside the track-drawing pass.
+Team 0 (blue) lines sit on the inner-lane side and Team 1 (red) lines sit on
+the outer-lane side. In multi-car packs each car receives its own line so
+the host can anchor every agent independently. The lines are drawn before
+car bodies because this helper runs inside the track-drawing pass.
 
 Parameters:
 - `ctx` - 2D rendering context.
 - `spec` - Frozen track geometry.
 - `transform` - World-to-canvas affine transform.
 - `guidanceAlpha` - Overlay alpha in [0, 1].
+- `envState` - Current environment snapshot (resolves the car roster).
+- `overlayFrame` - Optional packed team indices from the worker host.
+- `focusCarIndex` - Index of the focused car used for roster fallback.
 
 ### drawTireMarks
 
@@ -338,10 +354,12 @@ drawTireMarks(
 ): void
 ```
 
-Draws the fading tire-mark trail behind the car.
+Draws the fading tire-mark trail behind each car.
 
-Each mark fades from `COLOR_TIRE_MARK_MAX_ALPHA` to fully transparent as
-its age increases toward `TIRE_MARK_MAX_AGE_TICKS`.
+Marks are grouped by team so each car's trail is rendered as a continuous
+line in that team's color. Each segment fades from
+`COLOR_TIRE_MARK_MAX_ALPHA` to fully transparent as its age increases
+toward `TIRE_MARK_MAX_AGE_TICKS`.
 
 Parameters:
 - `ctx` - 2D rendering context.
@@ -356,6 +374,9 @@ drawTrack(
   spec: TrackSpec,
   transform: WorldTransform,
   guidanceAlpha: number,
+  envState: EnvironmentState,
+  overlayFrame: RacingRenderOverlayFrame | undefined,
+  focusCarIndex: number,
   pitStatus: Uint8Array<ArrayBufferLike> | Uint16Array<ArrayBufferLike> | Int16Array<ArrayBufferLike> | undefined,
   visiblePitTeamIndex: 0 | 1 | undefined,
 ): void
@@ -712,6 +733,24 @@ Parameters:
 
 Returns: Clamped square side length in world units.
 
+### resolveTeamCarColor
+
+```ts
+resolveTeamCarColor(
+  teamIndex: 0 | 1,
+): string
+```
+
+Resolves the car-body palette color for the supplied team index.
+
+When pit visuals are disabled the renderer still needs a team-colored
+outline so the Tier 1/Tier 2 blue/red baseline remains visible.
+
+Parameters:
+- `teamIndex` - Team index (`0 = blue team`, `1 = red team`).
+
+Returns: Team car-body color used when pits are not rendered.
+
 ### resolveTeamPitColor
 
 ```ts
@@ -723,7 +762,7 @@ resolveTeamPitColor(
 Resolves the pit palette color for the supplied team index.
 
 Parameters:
-- `teamIndex` - Team index (`0 = Team A`, `1 = Team B`).
+- `teamIndex` - Team index (`0 = blue team`, `1 = red team`).
 
 Returns: Team pit color used by both pit overlays and car outlines.
 

@@ -2,7 +2,6 @@
 description: 'Use when making scoped code changes through focused implementation specialists, reusing project patterns, and avoiding unrelated refactors.'
 name: '04-implementing'
 tier: 1
-model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -59,7 +58,7 @@ handoffs:
     agent: '05-green-testing'
     prompt: 'Continue from the active plan and Step 04 implementation diff. Execute Step 05 for the current phase by running focused validation gates and routing failures to the right prior step.'
     send: false
-    model: 'glm-5.2:cloud (ollama)'
+    model: 'glm-5.2:cloud'
 ---
 
 ## Cortex-First Search Policy
@@ -412,6 +411,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
+- <agent or NONE>
 SUMMARY: <brief truthful summary>
 ```

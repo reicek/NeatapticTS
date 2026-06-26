@@ -2,7 +2,6 @@
 description: 'Use when interacting with demo UIs via Chrome DevTools MCP without screenshots. Queries DOM, clicks elements, types text, verifies layout, checks element properties, navigates to demo pages, monitors console logs, and inspects network requests. Minimizes token usage by preferring DOM queries over screenshots. Can be called by ANY agent.'
 name: 'browser-ui-specialist'
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

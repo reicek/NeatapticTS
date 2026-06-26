@@ -1,23 +1,4 @@
 {
-  "evidence": [
-    {
-      "file": "src/neat/nge-experimental.ts",
-      "issue": "missing JSDoc",
-      "numericValue": 0,
-      "symbol": "assimilation"
-    },
-    {
-      "file": "src/neat/nge-experimental.ts",
-      "issue": "missing JSDoc",
-      "numericValue": 0,
-      "symbol": "juvenile"
-    },
-    {
-      "file": "src/neat/nge-experimental.ts",
-      "issue": "missing JSDoc",
-      "numericValue": 0,
-      "symbol": "lifecycle"
-    }
-  ],
-  "normalizedEvidenceDigest": "6ffa6809b3f63d39195ecd05e525b228bb1ebcac3d0ba3be725142cf8873a772"
+  "evidence": [],
+  "normalizedEvidenceDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
 }

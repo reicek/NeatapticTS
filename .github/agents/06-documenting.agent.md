@@ -2,7 +2,6 @@
 description: 'Use when updating user-facing docs, API docs, JSDoc/TSDoc, examples, changelogs, and usage guidance.'
 name: '06-documenting'
 tier: 1
-model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -42,7 +41,7 @@ handoffs:
     agent: '07-logging'
     prompt: 'Continue from the active plan, Step 05 validation evidence, and Step 06 documentation changes. Execute Step 07 for the current phase by updating the tracker, handoff query, and logs as appropriate.'
     send: false
-    model: 'glm-5.2:cloud (ollama)'
+    model: 'glm-5.2:cloud'
 ---
 
 ## Cortex-First Search Policy
@@ -208,6 +207,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
+- <agent or NONE>
 SUMMARY: <brief truthful summary>
 ```

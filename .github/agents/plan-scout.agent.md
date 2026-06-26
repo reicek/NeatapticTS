@@ -2,7 +2,6 @@
 description: 'Use when selecting a relevant plan document, checking roadmap alignment, mapping trigger phrases to plans, or preparing an architectural alignment brief before coding. Keywords: plans, roadmap, architecture, NEAT correctness, ONNX, workers, checkpointing, visualization.'
 name: 'plan-scout'
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

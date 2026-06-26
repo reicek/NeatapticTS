@@ -2,7 +2,6 @@
 description: 'Use for local AI system maintenance, workflow gap troubleshooting, config checks, CI support, and safe continuous-improvement updates.'
 name: '00-helping'
 tier: 1
-model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -52,7 +51,7 @@ handoffs:
     agent: '01-planning'
     prompt: 'Continue SDLC work via 01-planning. Carry only relevant customization evidence and unresolved gap notes.'
     send: false
-    model: 'glm-5.2:cloud (ollama)'
+    model: 'glm-5.2:cloud'
 ---
 
 ## Cortex-First Search Policy
@@ -221,6 +220,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
+- <agent or NONE>
 SUMMARY: <brief truthful summary>
 ```

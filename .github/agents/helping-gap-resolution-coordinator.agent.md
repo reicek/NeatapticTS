@@ -2,7 +2,6 @@
 description: 'Use when: an SDLC agent discovers a missing specialist, weak skill, malformed output contract, routing gap, model-routing issue, or repeated ad hoc prompt pattern.'
 name: 'helping-gap-resolution-coordinator'
 tier: 2
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

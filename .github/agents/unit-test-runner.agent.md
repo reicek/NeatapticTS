@@ -2,7 +2,6 @@
 description: 'Use when running focused unit test commands, checking a red or green result, or summarizing test output for a bounded validation target. Keywords: test, jest, focused, validation, output.'
 name: 'unit-test-runner'
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

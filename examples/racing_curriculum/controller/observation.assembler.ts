@@ -215,6 +215,52 @@ export function assembleNormalizedObservationVector(
 }
 
 /**
+ * Derives a per-car observation state from a multi-car environment snapshot.
+ *
+ * This helper copies the selected car's pose, team index, and tire state into a
+ * new observation state object while preserving all other environment fields
+ * (track sample, boundary distances, memory trace, etc.). The existing
+ * `assembleNormalizedObservationVector` can then be called unchanged; the
+ * team-aware optimal-line offset will automatically follow the selected car's
+ * team because `teamIndex` is taken from the car rather than the top-level state.
+ *
+ * @param envState - Current multi-car environment snapshot plus observation extensions.
+ * @param carIndex - Index of the car to observe within `envState.cars`.
+ * @returns Observation state scoped to the requested car.
+ * @throws RangeError when `envState.cars` is missing or `carIndex` is out of bounds.
+ *
+ * @example
+ * ```ts
+ * const blueState = derivePerCarObservationState(envState, 0);
+ * const blueVector = assembleNormalizedObservationVector(
+ *   blueState,
+ *   trackSpec,
+ *   { tier: 1 },
+ * );
+ * ```
+ */
+export function derivePerCarObservationState(
+  envState: RacingObservationState,
+  carIndex: number,
+): RacingObservationState {
+  const selectedCar = envState.cars?.[carIndex];
+  if (selectedCar === undefined) {
+    throw new RangeError(
+      `envState.cars[${carIndex}] is undefined; cannot derive observation state.`,
+    );
+  }
+
+  return {
+    ...envState,
+    carX: selectedCar.carX,
+    carY: selectedCar.carY,
+    carHeading: selectedCar.carHeading,
+    teamIndex: selectedCar.teamIndex,
+    tireState: selectedCar.tireState,
+  };
+}
+
+/**
  * Builds the Tier 3 observation vector with a fixed teammate-radio extension.
  *
  * The layout stays stable so controller weights can treat teammate radio rows
@@ -676,8 +722,13 @@ function resolveObservationState(
   );
   const innerLaneCenterlineOffsetWorld =
     resolveInnerLaneCenterlineOffsetWorld(closestSplineSample);
+  // Team 0 (blue) targets the inner-lane centerline, Team 1 (red) the outer.
+  const targetLaneCenterlineOffsetWorld =
+    envState.teamIndex === 1
+      ? -innerLaneCenterlineOffsetWorld
+      : innerLaneCenterlineOffsetWorld;
   const optimalLineLateralOffsetWorld =
-    signedLateralOffsetWorld - innerLaneCenterlineOffsetWorld;
+    signedLateralOffsetWorld - targetLaneCenterlineOffsetWorld;
   const forwardSpeedWorld = envState.forwardSpeedWorld ?? 0;
   const lateralSpeedWorld = envState.lateralSpeedWorld ?? 0;
   const speedWorld =

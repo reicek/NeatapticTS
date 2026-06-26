@@ -2,7 +2,6 @@
 description: 'Use when checking generated folder README context, JSDoc drift, missing examples, stale docs, or deciding whether to update source comments versus run npm run docs. Keywords: README, JSDoc, docs, generated docs, drift, examples.'
 name: docs-scout
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

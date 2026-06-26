@@ -27,6 +27,31 @@ Durable compressed log for the racing-curriculum reference-completion workstream
 - [DONE] Step 06 — Document Tier 1 contract: updated `examples/racing_curriculum/README.md` with Tier 1 usage contract, regenerated worker README, `npm run docs:quality:metrics` and `npm run lint` passed.
 - [DONE] Step 07 — Logging and tracker handoff: Phase 2 compressed into this log, Phase 3 Step 01 advanced to [WIP], plan-sync and phase-packet gates passed.
 
+### Phase 3 — Tier 2: 1v1 with radio (one car per team)
+
+- [DONE] Step 01 — Plan Tier 2 1v1 radio boundary: recorded one-car-per-team/two-cars-total, radio-on/no-pits/no-tires baseline, 7-channel self-signal semantics, and authored Step 02-07 packets.
+- [DONE] Step 02 — Research Tier 2 observation/action and radio contracts: documented 77-in (70 base + 7 self-radio tail at `[70..76]`) / 9-out (2 control + 7 radio-write) contract, traced `prepareObservationState` self-radio write/read wiring; deferred worker-authoritative evolution protocol wiring to a later phase.
+- [DONE] Step 03 — Red tests for Tier 2 1v1 pack and 77-dim observation: added focused red tests in `browser-entry.test.ts`, `nge.controller.test.ts`, and `observation.assembler.test.ts`; failures were honest missing-implementation gaps (pack layout, 9-output head, radio write split).
+- [DONE] Step 04 — Implement Tier 2 1v1 radio loop: added `TIER_TWO_TEAM_LAYOUT = [0, 1]`, activated `ACTIVE_CURRICULUM_TIER = 2`, built 77-input/9-output MLP, split outputs into throttle/steer + 7-channel self-radio write; no dual-path code; all owner-local tests passed, bundle built (732.1kb).
+- [DONE] Step 05 — Green validation and regression triage: targeted browser-entry, controller, observation assembler, and simulation-worker race-pack tests passed; Tier 1 paths remained green; lint, build, and plan validators passed.
+- [DONE] Step 06 — Document Tier 2 contract: updated `examples/racing_curriculum/README.md` with Tier 2 pack layout, 77-in/9-out network shape, self-radio semantics, activation instructions, runnable TypeScript example, and feedback-loop Mermaid diagram; `npm run docs`, `npm run lint`, and plan validators passed; example validated with `tsx` against real source files.
+- [DONE] Step 07 — Logging and tracker handoff: Phase 3 compressed into this log, Phase 4 Step 01 advanced to [WIP], plan-sync, phase-packet, phase-compression, and workflow-update-sync gates passed.
+
+**Changed file groups:**
+
+- `examples/racing_curriculum/browser-entry/browser-entry.ts`, `browser-entry.test.ts`
+- `examples/racing_curriculum/controller/nge.controller.ts`, `nge.controller.test.ts`
+- `examples/racing_curriculum/controller/observation.assembler.test.ts`
+- `examples/racing_curriculum/README.md`
+- Generated docs bundle: `docs/assets/racing-curriculum.bundle.js`
+
+**Residual risks (carry-forward):**
+
+- `node scripts/agent-customization/validate-docs-examples.mjs --json` is referenced by the plan but does not exist in the repo; the Tier 2 README example was validated manually via `tsx` instead.
+- `cortex-index` gate reports stale semantic index across pre-existing files; a rebuild did not resolve it. Owner: `00-helping`; not a Phase 3 closure blocker.
+- `routing-table-freshness` gate reports `.github/agent-skill-routing-table.md` is stale relative to source files; no routing changes were made in this phase. Owner: routing-table generator; not a Phase 3 closure blocker.
+- Worker-authoritative evolution protocol integration was explicitly deferred to Tier 3 or beyond; Tier 2 validated on the browser-host POC seam.
+
 ### Phase 1 (UI parity tranche) — Racing UI completion to Flappy Bird parity
 
 - [DONE] Step 01 authored the Phase 1 step packets and UI-first ordering constraint.
@@ -1102,12 +1127,12 @@ PlanUpdate:
 **Summary:**
 
 - `p2-04-red-guiding-lines` — 9 new focused red tests for per-agent guiding lines;
-all failed honestly before implementation.
+  all failed honestly before implementation.
 - `p2-04-impl-guiding-lines` — implemented `buildGuidingLineForTeam` in
-`racing.renderer.ts` and attached per-car `guidingLines` in
-`simulation-worker.race-pack.service.ts`; 47 focused tests passed.
+  `racing.renderer.ts` and attached per-car `guidingLines` in
+  `simulation-worker.race-pack.service.ts`; 47 focused tests passed.
 - `p2-04-green` — focused racing-curriculum tests, Phase 1 regression triage,
-type check, lint, folder quality, bundle build, and plan validators all passed.
+  type check, lint, folder quality, bundle build, and plan validators all passed.
 
 #### Step 04 — Implement single-agent worker authority [DONE]
 
@@ -1202,9 +1227,9 @@ dedicated lane marker to follow. Remove old dead code in the same step.
 
 - Red tests from Step 03 already define the race-pack contract and are passing.
 - The new per-agent guiding-line requirement is a Tier 1 visual/behavioral addition:
-each of the two cars (Team A and Team B) must see its own dedicated line on the
-track, distinct in color, following the inner-lane centerline or a per-agent
-offset that reinforces lane keeping.
+  each of the two cars (Team A and Team B) must see its own dedicated line on the
+  track, distinct in color, following the inner-lane centerline or a per-agent
+  offset that reinforces lane keeping.
 - Worker owns simulation and evolution; host owns DOM/canvas presentation.
 - Use Phase 1 UI parity as the rendering baseline.
 - No deferred cleanup: remove old import paths and dead host wiring when introducing new code.
@@ -1242,25 +1267,25 @@ PlanUpdate:
 slice_id: 'p2-04-impl-runtime-race-pack'
 status: '[DONE]'
 changed_files:
-   - examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts
+  - examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts
 preflight:
-   - 'npx tsc --noEmit -p tsconfig.json'
-   - 'npx tsc --noEmit -p tsconfig.test.json'
-   - 'npm run lint'
-   - 'npx prettier --check examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts'
+  - 'npx tsc --noEmit -p tsconfig.json'
+  - 'npx tsc --noEmit -p tsconfig.test.json'
+  - 'npm run lint'
+  - 'npx prettier --check examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts'
 validation:
-   - command: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=simulation-worker.race-pack'
-     expected_exit: 0
-     result: 'PASS — 33 tests across 2 suites'
+  - command: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=simulation-worker.race-pack'
+    expected_exit: 0
+    result: 'PASS — 33 tests across 2 suites'
 coverage_guard:
-   files:
-     - examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts
-   summary: 'Folder-quality gate: 0 in-folder diagnostics; no lcov regression for touched files.'
+  files:
+    - examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts
+  summary: 'Folder-quality gate: 0 in-folder diagnostics; no lcov regression for touched files.'
 quality_gate:
-   - command: 'npm run quality:folder -- --folder=examples/racing_curriculum/workers/simulation-worker'
-     result: 'PASS — 0 diagnostics across 25 files, 18/18 JSDoc exports documented'
+  - command: 'npm run quality:folder -- --folder=examples/racing_curriculum/workers/simulation-worker'
+    result: 'PASS — 0 diagnostics across 25 files, 18/18 JSDoc exports documented'
 rollback:
-   - 'git checkout -- examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts'
+  - 'git checkout -- examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts'
 next: 'Hand off to slice p2-04-red-guiding-lines: write focused red tests for per-agent guiding lines, then implement and green-validate within Step 04.'
 ```
 
@@ -1274,9 +1299,9 @@ next: 'Hand off to slice p2-04-red-guiding-lines: write focused red tests for pe
 - Focused Jest command run: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns='(racing\.renderer|simulation-worker\.race-pack)' --runInBand`
 - Result: 3 suites, 38 passed, 9 failed (all 9 failures are the new per-agent guiding-line red tests failing for the expected missing-implementation reason).
 - Representative failures:
-   - `exports a buildGuidingLineForTeam helper from the renderer module` — `typeof buildGuidingLineForTeam` is `'undefined'`.
-   - `draws a guiding line for each team when guidance overlay is enabled` — no recorded paths with Team A cyan (`rgba(0,229,255,`) or Team B magenta (`rgba(255,0,255,`).
-   - `attaches a guidingLines array with one entry per car to the runner` — `runner.guidingLines` is `undefined`.
+  - `exports a buildGuidingLineForTeam helper from the renderer module` — `typeof buildGuidingLineForTeam` is `'undefined'`.
+  - `draws a guiding line for each team when guidance overlay is enabled` — no recorded paths with Team A cyan (`rgba(0,229,255,`) or Team B magenta (`rgba(255,0,255,`).
+  - `attaches a guidingLines array with one entry per car to the runner` — `runner.guidingLines` is `undefined`.
 - Handoff to `p2-04-impl-guiding-lines`: implement `buildGuidingLineForTeam(trackSpec, teamIndex)` in `racing.renderer.ts`, draw one cyan and one magenta guiding line before car bodies when `guidanceAlpha > 0`, and attach a `guidingLines` array to the `RaceEpisodeRunner` returned by `createRaceEpisodeRunner`.
 
 #### p2-04-impl-guiding-lines implementation evidence (04-implementing)
@@ -1294,33 +1319,33 @@ PlanUpdate:
 slice_id: 'p2-04-impl-guiding-lines'
 status: '[DONE]'
 changed_files:
-   - examples/racing_curriculum/renderer/racing.renderer.ts
-   - examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts
+  - examples/racing_curriculum/renderer/racing.renderer.ts
+  - examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts
 preflight:
-   - 'npx tsc --noEmit -p tsconfig.json'
-   - 'npx tsc --noEmit -p tsconfig.test.json'
-   - 'npm run lint'
-   - 'npx prettier --check examples/racing_curriculum/renderer/racing.renderer.ts examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts'
+  - 'npx tsc --noEmit -p tsconfig.json'
+  - 'npx tsc --noEmit -p tsconfig.test.json'
+  - 'npm run lint'
+  - 'npx prettier --check examples/racing_curriculum/renderer/racing.renderer.ts examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts'
 validation:
-   - command: "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='(racing\\.renderer|simulation-worker\\.race-pack)' --runInBand"
-     expected_exit: 0
-     result: 'PASS — 47 tests across 3 suites'
+  - command: "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='(racing\\.renderer|simulation-worker\\.race-pack)' --runInBand"
+    expected_exit: 0
+    result: 'PASS — 47 tests across 3 suites'
 coverage_guard:
-   files:
-     - examples/racing_curriculum/renderer/racing.renderer.ts
-     - examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts
-   summary: 'No src/ files touched; coverage-guard not applicable. Focused Jest slice is green.'
+  files:
+    - examples/racing_curriculum/renderer/racing.renderer.ts
+    - examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts
+  summary: 'No src/ files touched; coverage-guard not applicable. Focused Jest slice is green.'
 quality_gate:
-   - command: 'npm run quality:folder -- --folder=examples/racing_curriculum'
-     result: 'PASS — 0 in-folder diagnostics across 69 files, 80/80 JSDoc exports documented'
+  - command: 'npm run quality:folder -- --folder=examples/racing_curriculum'
+    result: 'PASS — 0 in-folder diagnostics across 69 files, 80/80 JSDoc exports documented'
 plan_sync:
-   - command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
-     result: 'PASS plan sync: 0 errors, 0 warnings'
-   - command: 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
-     result: 'PASS plan phase packets: 0 errors, 0 warnings'
+  - command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
+    result: 'PASS plan sync: 0 errors, 0 warnings'
+  - command: 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
+    result: 'PASS plan phase packets: 0 errors, 0 warnings'
 rollback:
-   - 'git checkout -- examples/racing_curriculum/renderer/racing.renderer.ts'
-   - 'git checkout -- examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts'
+  - 'git checkout -- examples/racing_curriculum/renderer/racing.renderer.ts'
+  - 'git checkout -- examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.service.ts'
 next: 'Hand off to slice p2-04-green: run targeted racing-curriculum tests, folder-quality gate, and Phase 1 regression triage before Step 06.'
 ```
 
@@ -1328,41 +1353,41 @@ next: 'Hand off to slice p2-04-green: run targeted racing-curriculum tests, fold
 
 - Focused racing-curriculum tests passed.
 - Phase 1 regression triage passed: network panel live refresh, inner-track overlay,
-and Flappy Bird browser-entry regression tests remained green.
+  and Flappy Bird browser-entry regression tests remained green.
 - Type check (`tsconfig.json` and `tsconfig.test.json`) passed with 0 errors.
 - Lint passed with 0 new errors.
 - Folder-quality gate passed for `examples/racing_curriculum`.
 - Bundle build (`npm run build:racing-curriculum`) produced an updated
-`docs/assets/racing-curriculum.bundle.js`.
+  `docs/assets/racing-curriculum.bundle.js`.
 - Plan validators passed:
 - `validate-plan-sync`: PASS — 0 errors, 0 warnings.
 - `validate-plan-phase-packets`: PASS — 0 errors, 0 warnings.
 - Step 04 is now [DONE]; hand off to Step 05 for user visual confirmation of the
-cyan/magenta per-agent guiding lines in the live demo.
+  cyan/magenta per-agent guiding lines in the live demo.
 
 ```yaml
 PlanUpdate:
 slice_id: 'p2-04-green'
 status: '[DONE]'
 changed_files:
-   - docs/assets/racing-curriculum.bundle.js
+  - docs/assets/racing-curriculum.bundle.js
 preflight:
-   - 'npx tsc --noEmit -p tsconfig.json'
-   - 'npx tsc --noEmit -p tsconfig.test.json'
-   - 'npm run lint'
+  - 'npx tsc --noEmit -p tsconfig.json'
+  - 'npx tsc --noEmit -p tsconfig.test.json'
+  - 'npm run lint'
 validation:
-   - command: "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='examples/racing_curriculum'"
-     expected_exit: 0
-     result: 'PASS — focused racing-curriculum tests green'
-   - command: 'npm run quality:folder -- --folder=examples/racing_curriculum'
-     expected_exit: 0
-     result: 'PASS — 0 in-folder diagnostics'
-   - command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
-     expected_exit: 0
-     result: 'PASS plan sync: 0 errors, 0 warnings'
-   - command: 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
-     expected_exit: 0
-     result: 'PASS plan phase packets: 0 errors, 0 warnings'
+  - command: "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='examples/racing_curriculum'"
+    expected_exit: 0
+    result: 'PASS — focused racing-curriculum tests green'
+  - command: 'npm run quality:folder -- --folder=examples/racing_curriculum'
+    expected_exit: 0
+    result: 'PASS — 0 in-folder diagnostics'
+  - command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
+    expected_exit: 0
+    result: 'PASS plan sync: 0 errors, 0 warnings'
+  - command: 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
+    expected_exit: 0
+    result: 'PASS plan phase packets: 0 errors, 0 warnings'
 next: 'Hand off to Step 05 — User visual confirmation of Tier 1 guiding lines.'
 ```
 

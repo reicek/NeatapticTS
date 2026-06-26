@@ -2,7 +2,6 @@
 description: 'Use when planning a refactor, splitting a large module, identifying orchestration files versus helpers, or mapping module boundaries before edits. Keywords: refactor, split file, boundaries, helpers, orchestration, module map.'
 name: boundary-mapper
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

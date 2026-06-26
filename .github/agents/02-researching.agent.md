@@ -2,7 +2,6 @@
 description: 'Use when researching codebase patterns, APIs, dependencies, architecture, external references, existing utilities, and prior art.'
 name: '02-researching'
 tier: 1
-model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -57,7 +56,7 @@ handoffs:
     agent: '03-red-testing'
     prompt: 'Continue from the active plan and Step 02 research evidence. Execute Step 03 for the current phase by designing the smallest red test or explicit skip contract.'
     send: false
-    model: 'glm-5.2:cloud (ollama)'
+    model: 'glm-5.2:cloud'
 ---
 
 ## Cortex-First Search Policy
@@ -211,6 +210,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
+- <agent or NONE>
 SUMMARY: <brief truthful summary>
 ```

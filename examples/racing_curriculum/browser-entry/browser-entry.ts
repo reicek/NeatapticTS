@@ -79,12 +79,16 @@ import {
 import { resolveSplineSampleFrame } from '../track/track.spline.utils';
 import {
   createNgeController,
+  type NgeController,
   type NgeControllerTickEvidence,
   resolveGuidanceAlphaForTier,
 } from '../controller/nge.controller';
+import { derivePerCarObservationState } from '../controller/observation.assembler';
 import {
+  createPerCarAdaptationEngines,
   createRuntimeAdaptationEngine,
   type RuntimeAdaptationEngine,
+  type RuntimeAdaptationEngineOptions,
   type RuntimeAdaptationTelemetry,
 } from '../controller/runtime.adaptation';
 import type {
@@ -166,6 +170,22 @@ const TIER_FOUR_TEAM_LAYOUT = [0, 0, 1, 1] as const;
 const TIER_FIVE_TEAM_LAYOUT = [0, 0, 0, 1, 1, 1] as const;
 /** Tier 1 packs use a two-car 1v1 grid so both team guiding lines are visible. */
 const TIER_ONE_TEAM_LAYOUT = [0, 1] as const;
+/** Tier 2 packs use a two-car 1v1 grid with one car per team and the self-radio seam live. */
+const TIER_TWO_TEAM_LAYOUT = [0, 1] as const;
+/** Tier 3 fallback packs use a four-car 2v2 grid so promotion does not collapse to one car. */
+const TIER_THREE_TEAM_LAYOUT = [0, 0, 1, 1] as const;
+/**
+ * Team slot index reserved for the blue (inner-lane) team.
+ * Exported so renderer and observation contracts can agree on the red/blue
+ * baseline without magic numbers.
+ */
+export const TEAM_BLUE_INDEX = 0 as const;
+/**
+ * Team slot index reserved for the red (outer-lane) team.
+ * Exported alongside {@link TEAM_BLUE_INDEX} to keep Tier 1/Tier 2 color and
+ * lane assignments explicit and deterministic.
+ */
+export const TEAM_RED_INDEX = 1 as const;
 /** Default Tier 1 adaptation cadence in fixed-timestep ticks (very frequent). */
 const DEFAULT_RUNTIME_ADAPTATION_CADENCE_INTERVAL_TICKS = 1;
 /** Minimum mutation intensity while adaptation remains active in higher tiers. */
@@ -441,26 +461,58 @@ export async function start(
   // Step 3: Initialise the packed race state on the sampled spline lane center.
   let envState = episodeState.envState;
 
-  // Step 4: Initialise the deterministic NGE controller and render state.
+  // Step 4: Initialise one independent NGE controller per car and render state.
   let curriculumProgress = createInitialCurriculumProgress(trackSpec, envState);
   let activeObservationTier = resolveObservationTierForCurriculumTier(
     curriculumProgress.tier,
   );
-  let controllerNetwork = createDeterministicRacingControllerNetwork(
-    activeObservationTier,
-  );
-  let controller = createNgeController(controllerNetwork, {
-    tier: activeObservationTier,
-  });
+  const carCount = envState.cars?.length ?? 1;
+  const controllerNetworkByCarIndex = new Map<number, Network>();
+  const controllerByCarIndex = new Map<number, NgeController>();
+  const buildPerCarControllers = (
+    observationTier: SupportedObservationTier,
+    rosterSize: number,
+  ): void => {
+    controllerNetworkByCarIndex.clear();
+    controllerByCarIndex.clear();
+    for (let carIndex = 0; carIndex < rosterSize; carIndex++) {
+      const perCarNetwork =
+        createDeterministicRacingControllerNetwork(observationTier);
+      controllerNetworkByCarIndex.set(carIndex, perCarNetwork);
+      controllerByCarIndex.set(
+        carIndex,
+        createNgeController(perCarNetwork, { tier: observationTier }),
+      );
+    }
+  };
+  buildPerCarControllers(activeObservationTier, carCount);
+  let focusedControllerNetwork = controllerNetworkByCarIndex.get(0)!;
   let tierSignalEvidenceAccumulator =
     createEmptyTierSignalEvidenceAccumulator();
   let guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
     curriculumProgress.tier,
   );
-  const runtimeAdaptationState = createRuntimeAdaptationState(
+  const initialAdaptationOptions = resolveRuntimeAdaptationEngineOptionsForTier(
+    {
+      adaptationEnabled: true,
+      cadenceMode: DEFAULT_ADAPTATION_CADENCE_MODE,
+      cadenceInterval: DEFAULT_RUNTIME_ADAPTATION_CADENCE_INTERVAL_TICKS,
+      mutationIntensity: 1,
+      growthPruneBias: 0,
+      commitThreshold: 0.06,
+      rollbackSensitivity: 0.45,
+    },
     ACTIVE_CURRICULUM_TIER,
   );
-  const previousNetworkSize = resolveNetworkSize(controllerNetwork);
+  const perCarAdaptationEngines = createPerCarAdaptationEngines(
+    carCount,
+    initialAdaptationOptions,
+  );
+  const runtimeAdaptationState = createRuntimeAdaptationState(
+    ACTIVE_CURRICULUM_TIER,
+    perCarAdaptationEngines.get(0),
+  );
+  const previousNetworkSize = resolveNetworkSize(focusedControllerNetwork);
   const renderState = createRacingRenderState();
   const simulationWorker = createRacingSimulationWorker();
   simulationWorker?.postMessage({
@@ -479,7 +531,7 @@ export async function start(
   simulationWorker?.addEventListener('message', handleWorkerMessage);
 
   // Step 5: Build info panels inside the host regions.
-  hostHandle.renderNetworkArchitecture(controllerNetwork);
+  hostHandle.renderNetworkArchitecture(focusedControllerNetwork);
   const stageCardElement =
     hostHandle.canvasRegionElement.querySelector('.racing-stage-card');
   const runtimeControls = setupRuntimeControls(
@@ -602,11 +654,6 @@ export async function start(
   let animationFrameId = 0;
   let lastFrameTimestampMs: number | null = null;
   let accumulatedMs = 0;
-  let initialControlTick = controller.computeControlWithEvidence(
-    envState,
-    trackSpec,
-  );
-  let lastControlOutput = initialControlTick.control;
 
   const animationStep = async (nowMs: number): Promise<void> => {
     if (!running) return;
@@ -625,14 +672,19 @@ export async function start(
       const previousCurriculumTier = curriculumProgress.tier;
       const previousCompletedLaps =
         curriculumProgress.lapProgress.completedLaps;
-      const controlTickResult = controller.computeControlWithEvidence(
+      const perCarControls = resolvePerCarControls(
+        controllerByCarIndex,
         envState,
         trackSpec,
       );
-      lastControlOutput = controlTickResult.control;
+      const focusedTickResult =
+        controllerByCarIndex.get(0)!.computeControlWithEvidence(
+          derivePerCarObservationState(envState, 0),
+          trackSpec,
+        );
       tierSignalEvidenceAccumulator = collectTierSignalEvidence(
         tierSignalEvidenceAccumulator,
-        controlTickResult.evidence,
+        focusedTickResult.evidence,
       );
       const steppedEnvironmentState = simulationWorker
         ? await requestRacingWorkerStep(
@@ -640,11 +692,11 @@ export async function start(
             pendingWorkerSteps,
             ++nextWorkerRequestId,
             envState,
-            resolveControlFanOut(lastControlOutput, envState.cars?.length ?? 1),
+            perCarControls,
           )
         : stepEnvironment(
             envState,
-            resolveControlFanOut(lastControlOutput, envState.cars?.length ?? 1),
+            perCarControls,
           );
       envState = stabilizeCurriculumTierTireGrip(
         steppedEnvironmentState,
@@ -664,6 +716,7 @@ export async function start(
       const didRefreshRuntimeAdaptationEngine = refreshRuntimeAdaptationEngine(
         runtimeAdaptationState,
         curriculumProgress.tier,
+        perCarAdaptationEngines,
       );
       if (didRefreshRuntimeAdaptationEngine) {
         runtimeAdaptationState.telemetry.lastChangeReason =
@@ -671,18 +724,14 @@ export async function start(
       }
 
       if (curriculumProgress.tier !== previousCurriculumTier) {
-        // Step 1: Rebuild the controller with the promoted tier observation width.
+        // Step 1: Remap the focused controller network to the promoted tier width.
         activeObservationTier = resolveObservationTierForCurriculumTier(
           curriculumProgress.tier,
         );
-        controllerNetwork = remapControllerNetworkForObservationTier(
-          controllerNetwork,
+        const remappedFocusedNetwork = remapControllerNetworkForObservationTier(
+          focusedControllerNetwork,
           activeObservationTier,
         );
-        controller = createNgeController(controllerNetwork, {
-          tier: activeObservationTier,
-        });
-        hostHandle.renderNetworkArchitecture(controllerNetwork);
         // Step 2: Rebuild the track and race-local state for the promoted tier.
         episodeState = createCurriculumEpisodeState(
           curriculumProgress.tier,
@@ -693,19 +742,52 @@ export async function start(
           episodeState.envState,
           curriculumProgress.tier,
         );
-        // Step 3: Refresh control output at the promoted tier/start-state seam.
-        initialControlTick = controller.computeControlWithEvidence(
-          envState,
-          trackSpec,
+        // Step 3: Rebuild per-car controllers for the promoted roster.
+        const promotedCarCount = envState.cars?.length ?? 1;
+        controllerNetworkByCarIndex.clear();
+        controllerByCarIndex.clear();
+        controllerNetworkByCarIndex.set(0, remappedFocusedNetwork);
+        controllerByCarIndex.set(
+          0,
+          createNgeController(remappedFocusedNetwork, {
+            tier: activeObservationTier,
+          }),
         );
-        lastControlOutput = initialControlTick.control;
+        for (let carIndex = 1; carIndex < promotedCarCount; carIndex++) {
+          const perCarNetwork =
+            createDeterministicRacingControllerNetwork(activeObservationTier);
+          controllerNetworkByCarIndex.set(carIndex, perCarNetwork);
+          controllerByCarIndex.set(
+            carIndex,
+            createNgeController(perCarNetwork, { tier: activeObservationTier }),
+          );
+        }
+        // Step 3b: Rebuild per-car adaptation engines for the promoted roster.
+        const promotedAdaptationOptions =
+          resolveRuntimeAdaptationEngineOptionsForTier(
+            runtimeAdaptationState.tuning,
+            curriculumProgress.tier,
+          );
+        perCarAdaptationEngines.clear();
+        for (
+          let carIndex = 0;
+          carIndex < promotedCarCount;
+          carIndex++
+        ) {
+          perCarAdaptationEngines.set(
+            carIndex,
+            createRuntimeAdaptationEngine(promotedAdaptationOptions),
+          );
+        }
+        focusedControllerNetwork = remappedFocusedNetwork;
+        hostHandle.renderNetworkArchitecture(focusedControllerNetwork);
         tierSignalEvidenceAccumulator =
           createEmptyTierSignalEvidenceAccumulator();
         curriculumProgress = {
           ...curriculumProgress,
           lapProgress: createInitialLapProgress(trackSpec, envState),
         };
-        const promotedNetworkSize = resolveNetworkSize(controllerNetwork);
+        const promotedNetworkSize = resolveNetworkSize(focusedControllerNetwork);
         runtimeAdaptationState.telemetry.networkDeltaNodes =
           promotedNetworkSize.nodes - previousNetworkSize.nodes;
         runtimeAdaptationState.telemetry.networkDeltaConnections =
@@ -717,6 +799,7 @@ export async function start(
         refreshRuntimeAdaptationEngine(
           runtimeAdaptationState,
           curriculumProgress.tier,
+          perCarAdaptationEngines,
         );
         runtimeAdaptationState.engine.reset();
         runtimeAdaptationState.telemetry.adaptationScoreHistory.length = 0;
@@ -733,7 +816,7 @@ export async function start(
           tierSignalEvidenceAccumulator,
         );
         const didCommitRuntimeAdaptation = applyWithinTierAdaptation(
-          controllerNetwork,
+          focusedControllerNetwork,
           curriculumProgress.tier,
           runtimeAdaptationState,
           tierSignalEvidenceSummary,
@@ -744,7 +827,7 @@ export async function start(
         tierSignalEvidenceAccumulator =
           createEmptyTierSignalEvidenceAccumulator();
         if (didCommitRuntimeAdaptation) {
-          hostHandle.renderNetworkArchitecture(controllerNetwork);
+          hostHandle.renderNetworkArchitecture(focusedControllerNetwork);
         }
       }
 
@@ -771,7 +854,7 @@ export async function start(
     updateTelemetryPanelNodes(
       runtimeControls,
       runtimeAdaptationState,
-      controllerNetwork,
+      focusedControllerNetwork,
       envState,
       curriculumProgress.lapProgress.completedLaps,
       hostHandle.networkHud,
@@ -787,7 +870,7 @@ export async function start(
       return;
     }
 
-    hostHandle.renderNetworkArchitecture(controllerNetwork);
+    hostHandle.renderNetworkArchitecture(focusedControllerNetwork);
   }, FOCUSED_NETWORK_REFRESH_INTERVAL_MS);
 
   const handle: RacingCurriculumRunHandle = {
@@ -1905,10 +1988,11 @@ export function createDeterministicRacingControllerNetwork(
 ): Network {
   const resolvedInputCount =
     resolveControllerInputCountForObservationTier(observationTier);
+  const resolvedOutputCount = observationTier === 2 ? 9 : 2;
   const controllerNetwork = Network.createMLP(
     resolvedInputCount,
     [...CONTROLLER_HIDDEN_LAYER_SIZES],
-    2,
+    resolvedOutputCount,
   );
   configureDeterministicControllerParameters(controllerNetwork);
   return controllerNetwork;
@@ -1945,23 +2029,28 @@ function configureDeterministicControllerParameters(
   if (
     inputNodes.length !== controllerNetwork.input ||
     hiddenNodes.length !== CONTROLLER_HIDDEN_LAYER_SIZES[0] ||
-    outputNodes.length !== 2
+    (outputNodes.length !== 2 && outputNodes.length !== 9)
   ) {
-    throw new Error('Racing curriculum controller expected a N -> 4 -> 2 MLP.');
+    throw new Error(
+      'Racing curriculum controller expected a N -> 4 -> 2 or N -> 4 -> 9 MLP.',
+    );
   }
 
   hiddenNodes[0].squash = methods.Activation.relu;
   hiddenNodes[1].squash = methods.Activation.relu;
   hiddenNodes[2].squash = methods.Activation.relu;
   hiddenNodes[3].squash = methods.Activation.relu;
-  outputNodes[0].squash = methods.Activation.tanh;
-  outputNodes[1].squash = methods.Activation.tanh;
+
+  outputNodes.forEach((outputNode, outputIndex) => {
+    outputNode.squash = methods.Activation.tanh;
+    // Keep the historical throttle-bias shortcut on the first output; all
+    // other outputs default to zero bias.
+    outputNode.bias = outputIndex === 0 ? 1.1 : 0;
+  });
 
   hiddenNodes.forEach((hiddenNode) => {
     hiddenNode.bias = 0;
   });
-  outputNodes[0].bias = 1.1;
-  outputNodes[1].bias = 0;
 
   const weightByEdgeKey = new Map<string, number>([
     [
@@ -2460,8 +2549,16 @@ function resolveCurriculumRacePackLayout(
     return TIER_FOUR_TEAM_LAYOUT;
   }
 
+  if (curriculumTier === 3) {
+    return TIER_THREE_TEAM_LAYOUT;
+  }
+
   if (curriculumTier === 1) {
     return TIER_ONE_TEAM_LAYOUT;
+  }
+
+  if (curriculumTier === 2) {
+    return TIER_TWO_TEAM_LAYOUT;
   }
 
   return [0];
@@ -2510,9 +2607,10 @@ function resolveCurriculumRacePackCars(
   return teamLayout.map((teamIndex) => {
     const teamSlotIndex = teamSlotCounts[teamIndex];
     teamSlotCounts[teamIndex] = teamSlotIndex + 1;
+    const carTeamIndex = teamIndex as 0 | 1;
     const longitudinalOffsetWorldUnits = -teamSlotIndex * gridSpacingWorldUnits;
     const lateralOffsetWorldUnits =
-      teamIndex === 0 ? innerOffsetWorld : -innerOffsetWorld;
+      carTeamIndex === TEAM_BLUE_INDEX ? innerOffsetWorld : -innerOffsetWorld;
     const startX = firstSplineSample?.x ?? trackSpec.segments[0]?.startX ?? 0;
     const startY = firstSplineSample?.y ?? trackSpec.segments[0]?.startY ?? 0;
 
@@ -2799,21 +2897,37 @@ function resolveStageNarrativeForTier(tier: CurriculumTier): {
 }
 
 /**
- * Expands a single controller output across every active car in the roster.
+ * Computes one control output per car from the active per-car controller map.
  *
- * @param controlOutput - Controller output for the current step.
- * @param carCount - Number of cars that should receive motion input.
+ * Each controller receives its own per-car observation state via
+ * `derivePerCarObservationState` so that every agent acts on its own pose,
+ * team, and tire state. The resulting array is aligned to roster order.
+ *
+ * @param controllerByCarIndex - Per-car controller map keyed by car index.
+ * @param envState - Current multi-car environment snapshot.
+ * @param trackSpec - Frozen track geometry.
  * @returns Per-car control array aligned to roster order.
  * @internal
  */
-function resolveControlFanOut(
-  controlOutput: CarControlOutput,
-  carCount: number,
+function resolvePerCarControls(
+  controllerByCarIndex: Map<number, NgeController>,
+  envState: EnvironmentState,
+  trackSpec: TrackSpec,
 ): readonly CarControlOutput[] {
-  return Array.from({ length: Math.max(1, carCount) }, () => ({
-    throttle: controlOutput.throttle,
-    steer: controlOutput.steer,
-  }));
+  const rosterSize = Math.max(1, envState.cars?.length ?? 1);
+
+  return Array.from({ length: rosterSize }, (_, carIndex) => {
+    const perCarController = controllerByCarIndex.get(carIndex);
+
+    if (perCarController === undefined) {
+      return { throttle: 0, steer: 0 };
+    }
+
+    return perCarController.computeControl(
+      derivePerCarObservationState(envState, carIndex),
+      trackSpec,
+    );
+  });
 }
 
 /**
@@ -2881,6 +2995,7 @@ function summarizeTierSignalEvidence(
 
 function createRuntimeAdaptationState(
   curriculumTier: CurriculumTier,
+  engine?: RuntimeAdaptationEngine,
 ): RuntimeAdaptationState {
   const tuning: RuntimeTuningConfig = {
     adaptationEnabled: true,
@@ -2893,7 +3008,8 @@ function createRuntimeAdaptationState(
   };
 
   return {
-    engine: createRuntimeAdaptationEngineForTier(tuning, curriculumTier),
+    engine:
+      engine ?? createRuntimeAdaptationEngineForTier(tuning, curriculumTier),
     engineConfigSignature: resolveRuntimeAdaptationEngineConfigSignature(
       tuning,
       curriculumTier,
@@ -3028,10 +3144,10 @@ function applyWithinTierAdaptation(
   return adaptationTelemetry.committed;
 }
 
-function createRuntimeAdaptationEngineForTier(
+function resolveRuntimeAdaptationEngineOptionsForTier(
   tuningConfig: RuntimeTuningConfig,
   curriculumTier: CurriculumTier,
-): RuntimeAdaptationEngine {
+): RuntimeAdaptationEngineOptions {
   const cadenceInterval = Math.max(1, tuningConfig.cadenceInterval);
   const cadence =
     tuningConfig.cadenceMode === 'laps'
@@ -3054,7 +3170,7 @@ function createRuntimeAdaptationEngineForTier(
     0,
     0.01,
   );
-  return createRuntimeAdaptationEngine({
+  return {
     cadence,
     improvementThreshold: effectiveImprovementThreshold,
     minimumEvidenceWindow: 4,
@@ -3081,12 +3197,22 @@ function createRuntimeAdaptationEngineForTier(
           ? RUNTIME_ADAPTATION_TIER_ONE_ROLLBACK_COOLDOWN_TICKS
           : RUNTIME_ADAPTATION_ROLLBACK_COOLDOWN_TICKS,
     },
-  });
+  };
+}
+
+function createRuntimeAdaptationEngineForTier(
+  tuningConfig: RuntimeTuningConfig,
+  curriculumTier: CurriculumTier,
+): RuntimeAdaptationEngine {
+  return createRuntimeAdaptationEngine(
+    resolveRuntimeAdaptationEngineOptionsForTier(tuningConfig, curriculumTier),
+  );
 }
 
 function refreshRuntimeAdaptationEngine(
   runtimeAdaptationState: RuntimeAdaptationState,
   curriculumTier: CurriculumTier,
+  perCarEngines?: Map<number, RuntimeAdaptationEngine>,
 ): boolean {
   const nextConfigSignature = resolveRuntimeAdaptationEngineConfigSignature(
     runtimeAdaptationState.tuning,
@@ -3096,11 +3222,15 @@ function refreshRuntimeAdaptationEngine(
     return false;
   }
 
-  runtimeAdaptationState.engine = createRuntimeAdaptationEngineForTier(
+  const refreshedEngine = createRuntimeAdaptationEngineForTier(
     runtimeAdaptationState.tuning,
     curriculumTier,
   );
+  runtimeAdaptationState.engine = refreshedEngine;
   runtimeAdaptationState.engineConfigSignature = nextConfigSignature;
+  if (perCarEngines !== undefined) {
+    perCarEngines.set(0, refreshedEngine);
+  }
   return true;
 }
 

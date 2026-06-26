@@ -2,7 +2,6 @@
 description: 'Use when: maintaining .agent.md files, repairing YAML frontmatter, updating descriptions, adjusting model fields, narrowing routing lists, or splitting broad agents.'
 name: 'helping-agent-maintenance-coordinator'
 tier: 2
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

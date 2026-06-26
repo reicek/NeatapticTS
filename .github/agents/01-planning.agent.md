@@ -2,7 +2,6 @@
 description: 'Use when planning implementation work, decomposing user requests, identifying risks, defining acceptance criteria, and preparing test strategy.'
 name: '01-planning'
 tier: 1
-model: 'glm-5.2:cloud (ollama)'
 tools:
   [
     read,
@@ -48,7 +47,7 @@ handoffs:
     agent: '02-researching'
     prompt: 'Continue from the active plan only. Execute Step 02 research for the current phase, refine the Step 01 workset, and leave the next value-adding step ready with explicit skips for non-value gates.'
     send: false
-    model: 'glm-5.2:cloud (ollama)'
+    model: 'glm-5.2:cloud'
 ---
 
 ## Cortex-First Search Policy
@@ -477,6 +476,6 @@ LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
 PHASE_COMPLETE: true | false
 SUB_ORCHESTRATORS_USED:
-- <agent — at least one delegation required for non-trivial tasks; NONE only for trivially self-contained work>
+- <agent or NONE>
 SUMMARY: <brief truthful summary>
 ```

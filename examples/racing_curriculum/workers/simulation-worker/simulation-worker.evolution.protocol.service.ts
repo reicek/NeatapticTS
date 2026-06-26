@@ -69,6 +69,7 @@ import type {
   RacingWorkerInboundMessage,
   RacingWorkerPhase,
 } from './simulation-worker.evolution.types';
+import { createCoevolutionContainer } from './simulation-worker.coevolution.service';
 
 /** Allowed inbound message types per worker phase. */
 const PHASE_ALLOWED_MESSAGES: Record<RacingWorkerPhase, readonly string[]> = {
@@ -158,13 +159,34 @@ export function routeRacingWorkerProtocolMessage(
   }
 
   /**
-   * Builds a generation-ready response with a placeholder best-network payload.
+   * Builds a generation-ready response with per-car network payloads.
    *
-   * The transfer list includes the ArrayBuffer backing the payload so the host
-   * can receive the genome zero-copy over `postMessage`.
+   * Each car gets its own serialized genome payload.  Only car 0 (blue team #1)
+   * is copied back to the browser for visualization; other cars' networks stay
+   * in the worker.  The transfer list includes all payload ArrayBuffers for
+   * zero-copy `postMessage` transfer.
    */
   function createGenerationReadyResponse(): GenerationReadyResponse {
-    const bestNetworkPayload = new Float32Array([0]);
+    const container = createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 1,
+      tier: 1,
+    });
+    const carGenomes = container.getCarGenomes();
+
+    // Serialize each car's genome to a Float32Array payload.
+    const carNetworkPayloads = carGenomes.map((genome) => genome.serialize());
+    const carFitnessScores = carGenomes.map(() => 0);
+
+    // Car 0 (blue team #1) is the visualization car.
+    const visualizationCarIndex = 0;
+    const visualizationPayload = carNetworkPayloads[visualizationCarIndex];
+    const bestNetworkPayload = visualizationPayload as Float32Array;
+
+    // Collect all ArrayBuffer backs for zero-copy transfer.
+    const transferList = carNetworkPayloads.map(
+      (payload) => (payload as Float32Array).buffer as ArrayBuffer,
+    );
 
     return {
       type: 'generation-ready',
@@ -172,7 +194,11 @@ export function routeRacingWorkerProtocolMessage(
       teamABestFitness: 0,
       teamBBestFitness: 0,
       bestNetworkPayload,
-      transferList: [bestNetworkPayload.buffer],
+      transferList,
+      carNetworkPayloads,
+      carFitnessScores,
+      visualizationCarIndex,
+      visualizationPayload,
     };
   }
 }

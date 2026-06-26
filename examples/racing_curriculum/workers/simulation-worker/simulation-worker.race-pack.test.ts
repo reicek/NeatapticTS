@@ -268,7 +268,8 @@ describe('per-agent guiding line state', () => {
     };
     const guidingLines = runnerWithGuidingLines.guidingLines;
     const isValidArray =
-      Array.isArray(guidingLines) && guidingLines.length === runner.frame.agentCount;
+      Array.isArray(guidingLines) &&
+      guidingLines.length === runner.frame.agentCount;
 
     expect(isValidArray).toBe(true);
   });
@@ -679,12 +680,13 @@ describe('Tier 1 lap-time fitness', () => {
     const fasterFitness = getRunnerFitness(runner, 0);
     const slowerFitness = getRunnerFitness(runner, 1);
     const expectedDifference =
-      (COMPLETION_BONUS + (MAX_EPISODE_TICKS - 600)) -
+      COMPLETION_BONUS +
+      (MAX_EPISODE_TICKS - 600) -
       (COMPLETION_BONUS + (MAX_EPISODE_TICKS - 1200));
 
-    expect(
-      (fasterFitness ?? NaN) - (slowerFitness ?? NaN),
-    ).toBe(expectedDifference);
+    expect((fasterFitness ?? NaN) - (slowerFitness ?? NaN)).toBe(
+      expectedDifference,
+    );
   });
 
   it('applies the off-track penalty to incomplete fitness when the episode ends off-track', async () => {
@@ -734,8 +736,73 @@ describe('Tier 1 lap-time fitness', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tier 1 red tests — worker message contract
+// Tier 1 red tests — physics hardening (worker fitness and car separation)
 // ---------------------------------------------------------------------------
+
+describe('Tier 1 physics hardening — worker fitness and car separation', () => {
+  it('does not penalize the on-track car when only the other car leaves the track', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    // Place car 0 far off track and leave car 1 on the centerline.
+    (runner.frame.carX as Float32Array)[0] = 9999;
+    (runner.frame.carY as Float32Array)[0] = 9999;
+
+    for (let tickIndex = 0; tickIndex <= OFF_TRACK_GRACE_TICKS; tickIndex++) {
+      runner.tick();
+    }
+
+    const onTrackFitness = getRunnerFitness(runner, 1);
+
+    expect(onTrackFitness).toBeGreaterThan(0);
+  });
+
+  it('penalizes the car that leaves the track', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    (runner.frame.carX as Float32Array)[0] = 9999;
+    (runner.frame.carY as Float32Array)[0] = 9999;
+
+    for (let tickIndex = 0; tickIndex <= OFF_TRACK_GRACE_TICKS; tickIndex++) {
+      runner.tick();
+    }
+
+    const offTrackFitness = getRunnerFitness(runner, 0);
+
+    expect(offTrackFitness).toBe(-500);
+  });
+
+  it('pushes overlapping cars apart during a tick', async () => {
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(2),
+    );
+
+    // Place both cars at the same starting position.
+    (runner.frame.carX as Float32Array)[1] = runner.frame.carX[0];
+    (runner.frame.carY as Float32Array)[1] = runner.frame.carY[0];
+
+    runner.tick();
+
+    const separation = Math.hypot(
+      runner.frame.carX[0] - runner.frame.carX[1],
+      runner.frame.carY[0] - runner.frame.carY[1],
+    );
+
+    expect(separation).toBeGreaterThan(1e-6);
+  });
+});
 
 describe('Tier 1 worker race-step message', () => {
   it('produces a message whose type is race-step', async () => {

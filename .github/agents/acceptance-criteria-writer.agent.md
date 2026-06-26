@@ -2,7 +2,6 @@
 description: 'Use when: a plan or test phase needs concise acceptance criteria, observable behavior, edge cases, and out-of-scope boundaries before coding.'
 name: 'acceptance-criteria-writer'
 tier: 4
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,
@@ -105,9 +104,6 @@ KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
-VALIDATION_EVIDENCE:
-- <command/result or NOT RUN>
-HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:

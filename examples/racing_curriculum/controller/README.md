@@ -90,12 +90,17 @@ normalizeControllerOutputs(
 ): readonly number[]
 ```
 
-Normalizes controller outputs into a two-element array.
+Normalizes raw network outputs into a flat, finite array.
+
+Tier 1 expects at least two control outputs; Tier 2 expects nine outputs
+(throttle, steer, plus seven self-radio write channels). The array is
+clamped to finite values so downstream splitting stays safe regardless of
+network width.
 
 Parameters:
 - `controllerOutputs` - Raw network output.
 
-Returns: Two-element control vector.
+Returns: Finite controller output vector.
 
 ### prepareObservationState
 
@@ -644,6 +649,41 @@ const observation = assembleNormalizedObservationVector(envState, trackSpec, opt
 
 options.tier; // 5
 observation.length; // TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT + TIRE_CHANNEL_COUNT
+```
+
+### derivePerCarObservationState
+
+```ts
+derivePerCarObservationState(
+  envState: RacingObservationState,
+  carIndex: number,
+): RacingObservationState
+```
+
+Derives a per-car observation state from a multi-car environment snapshot.
+
+This helper copies the selected car's pose, team index, and tire state into a
+new observation state object while preserving all other environment fields
+(track sample, boundary distances, memory trace, etc.). The existing
+`assembleNormalizedObservationVector` can then be called unchanged; the
+team-aware optimal-line offset will automatically follow the selected car's
+team because `teamIndex` is taken from the car rather than the top-level state.
+
+Parameters:
+- `envState` - Current multi-car environment snapshot plus observation extensions.
+- `carIndex` - Index of the car to observe within `envState.cars`.
+
+Returns: Observation state scoped to the requested car.
+
+Example:
+
+```ts
+const blueState = derivePerCarObservationState(envState, 0);
+const blueVector = assembleNormalizedObservationVector(
+  blueState,
+  trackSpec,
+  { tier: 1 },
+);
 ```
 
 ### findClosestSplineSampleIndex

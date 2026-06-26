@@ -2,7 +2,6 @@
 description: 'Use when taking heap snapshots, comparing memory states, identifying memory leaks, or producing memory profiling summaries via Chrome DevTools MCP. Classifies retained object growth as leak or expected. Can be called by ANY agent.'
 name: 'browser-memory-specialist'
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
 tools:
   [
     read,

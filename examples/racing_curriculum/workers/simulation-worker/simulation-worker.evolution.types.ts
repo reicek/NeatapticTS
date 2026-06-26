@@ -131,6 +131,20 @@ export type RacingWorkerOutboundMessage =
       bestNetworkPayload?: unknown;
       /** Optional zero-copy transfer list for the generation payload. */
       transferList?: readonly ArrayBuffer[];
+      /** Per-car network payloads — one entry per car, not a single shared payload. */
+      carNetworkPayloads?: readonly unknown[];
+      /** Per-car fitness scores — one entry per car. */
+      carFitnessScores?: readonly number[];
+      /**
+       * Car index whose network is copied back for browser visualization.
+       * Must be 0 (blue team #1) per the independent-genome architecture decision.
+       */
+      visualizationCarIndex?: number;
+      /**
+       * Serialized network payload for the visualization car (car 0).
+       * Must be a real network payload, not a placeholder.
+       */
+      visualizationPayload?: unknown;
     }
   | {
       type: 'race-step';
@@ -152,6 +166,20 @@ export type GenerationReadyResponse = {
   readonly teamBBestFitness: number;
   readonly bestNetworkPayload?: unknown;
   readonly transferList?: readonly ArrayBuffer[];
+  /** Per-car network payloads — one entry per car, not a single shared payload. */
+  readonly carNetworkPayloads?: readonly unknown[];
+  /** Per-car fitness scores — one entry per car. */
+  readonly carFitnessScores?: readonly number[];
+  /**
+   * Car index whose network is copied back for browser visualization.
+   * Must be 0 (blue team #1) per the independent-genome architecture decision.
+   */
+  readonly visualizationCarIndex?: number;
+  /**
+   * Serialized network payload for the visualization car (car 0).
+   * Must be a real network payload, not a placeholder Float32Array([0]).
+   */
+  readonly visualizationPayload?: unknown;
 };
 
 /**
