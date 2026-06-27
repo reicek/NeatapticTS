@@ -1,3 +1,5 @@
+import type { OpponentSnapshotPool } from '../../../../src/neat/nge-collective/neat.nge-collective.types';
+
 /**
  * Typed message union for the worker-authoritative racing evolution protocol.
  *
@@ -61,7 +63,7 @@
  * - Radio semantics (`ModulatorBroadcaster`, `EpisodicSlot`, `GatingRouter`)
  *   depend on NGE primitives that are not yet available.
  * - Polyandric reproduction (`modeIsEvolvable`) depends on an NGE primitive
- *   that is not yet available.
+ *   that is not yet available; the escalation target is `nge-core-algorithm`.
  */
 
 /**
@@ -72,11 +74,7 @@
  * via a `stop` message.
  */
 export type RacingWorkerPhase =
-  | 'idle'
-  | 'initialised'
-  | 'generation-ready'
-  | 'racing'
-  | 'stopped';
+  'idle' | 'initialised' | 'generation-ready' | 'racing' | 'stopped';
 
 /**
  * Stateful protocol snapshot carried between inbound worker messages.
@@ -87,6 +85,49 @@ export type RacingWorkerPhase =
  */
 export type EvolutionProtocolState = {
   readonly phase: RacingWorkerPhase;
+  /** Configuration stored from the init message (no longer silently dropped). */
+  readonly initConfig?: {
+    readonly populationSize: number;
+    readonly rngSeed: number;
+    readonly tier: number;
+  };
+  /** Coevolution container created during request-generation. */
+  readonly coevolutionContainer?: unknown;
+  /** Per-car adaptation engines created during request-generation. */
+  readonly adaptationEngines?: ReadonlyMap<number, unknown>;
+  /** Race episode runner created during start-race. */
+  readonly raceRunner?: unknown;
+  /**
+   * Current generation counter.
+   *
+   * Starts at 0 and increments by 1 each time a race completes and the FSM
+   * transitions from `racing` back to `generation-ready`.  Carried in protocol
+   * state so the generation-ready response reports the real generation index
+   * instead of a hardcoded value.
+   */
+  readonly generation?: number;
+  /**
+   * Rolling opponent snapshot store created during the first
+   * `request-generation`.  Persists across generations so opponent snapshots
+   * accumulate in the hall-of-fame / recent pool rather than being discarded
+   * each generation.
+   */
+  readonly opponentSnapshotStore?: unknown;
+  /**
+   * Rolling opponent snapshot pool (hall-of-fame) created during the first
+   * `request-generation`.  Persists across generations so opponent snapshots
+   * accumulate via `addOpponentSnapshot` rather than being discarded each
+   * generation.  Uses the core collective `OpponentSnapshotPool` with FIFO
+   * eviction.
+   */
+  readonly opponentSnapshotPool?: OpponentSnapshotPool;
+  /**
+   * Strategy-divergence tracker that accumulates per-generation team advantage
+   * data across the racing coevolution loop. Created during the first
+   * `request-generation` and persisted so snapshots accumulate across
+   * generations rather than being discarded each generation.
+   */
+  readonly strategyDivergenceTracker?: StrategyDivergenceTracker;
 };
 
 /**
@@ -145,11 +186,25 @@ export type RacingWorkerOutboundMessage =
        * Must be a real network payload, not a placeholder.
        */
       visualizationPayload?: unknown;
+      /**
+       * Strategy-divergence classifier result for this generation's team fitness
+       * time series. Undefined when fewer than `minGenerations` have been recorded.
+       */
+      strategyDivergenceClassifier?: StrategyDivergenceClassifierResult;
+      /** Per-car pit-lap distribution for Team A (one entry per team member). */
+      teamAPitLapDistribution?: PitLapDistribution;
+      /** Per-car pit-lap distribution for Team B (one entry per team member). */
+      teamBPitLapDistribution?: PitLapDistribution;
     }
   | {
       type: 'race-step';
       requestId: string;
       done: boolean;
+      /**
+       * Serialized car 0 (blue team #1) network weights for browser visualization.
+       * Undefined when no adaptation context is registered.
+       */
+      visualizationPayload?: Float32Array;
     }
   | { type: 'runtime-status'; phase: RacingWorkerPhase; statusText: string }
   | { type: 'error'; message: string };
@@ -180,6 +235,15 @@ export type GenerationReadyResponse = {
    * Must be a real network payload, not a placeholder Float32Array([0]).
    */
   readonly visualizationPayload?: unknown;
+  /**
+   * Strategy-divergence classifier result for this generation's team fitness
+   * time series. Undefined when fewer than `minGenerations` have been recorded.
+   */
+  readonly strategyDivergenceClassifier?: StrategyDivergenceClassifierResult;
+  /** Per-car pit-lap distribution for Team A (one entry per team member). */
+  readonly teamAPitLapDistribution?: PitLapDistribution;
+  /** Per-car pit-lap distribution for Team B (one entry per team member). */
+  readonly teamBPitLapDistribution?: PitLapDistribution;
 };
 
 /**
@@ -196,3 +260,85 @@ export type EvolutionProtocolRouteResult = {
   readonly response?: unknown;
   readonly error?: string;
 };
+
+// ───────────────────────────────────────────────────────────────────────────
+// Strategy-divergence analytics types
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Per-car pit-lap distribution for one team.
+ *
+ * Each element is the lap number on which that car entered the pit lane
+ * during the race episode. A value of 0 means the car never pitted.
+ * The array length equals the team size (e.g. 3 for a 6-car pack).
+ */
+export type PitLapDistribution = readonly number[];
+
+/**
+ * One snapshot of team-level strategy divergence at a generation boundary.
+ *
+ * Captures the per-team aggregate fitness and per-car pit-lap choices so
+ * that the divergence classifier can detect alternating advantage patterns
+ * and score how strongly the two teams' strategies are diverging.
+ *
+ * @property generation — 1-based generation index
+ * @property teamAFitness — aggregate fitness for Team A (best or mean)
+ * @property teamBFitness — aggregate fitness for Team B (best or mean)
+ * @property teamAPitLapDistribution — per-car pit-lap entries for Team A
+ * @property teamBPitLapDistribution — per-car pit-lap entries for Team B
+ * @property reproductionModeMix — histogram of reproduction modes used
+ */
+export interface StrategyDivergenceSnapshot {
+  readonly generation: number;
+  readonly teamAFitness: number;
+  readonly teamBFitness: number;
+  readonly teamAPitLapDistribution: PitLapDistribution;
+  readonly teamBPitLapDistribution: PitLapDistribution;
+  /** eslint-disable-next-line @typescript-eslint/no-explicit-any -- histogram bag */
+  readonly reproductionModeMix: Record<string, number>;
+}
+
+/**
+ * Result of classifying a team-fitness time series for strategy divergence.
+ *
+ * @property isAlternating — true when advantage sign flips on every
+ *   consecutive pair (indicates a balanced coevolution arms race)
+ * @property dominantPeriod — estimated period of advantage oscillation
+ *   (2 when alternating, 1 when one team dominates)
+ * @property advantageAmplitude — mean absolute advantage across generations
+ * @property divergenceScore — normalised divergence in [0, 1], finite
+ */
+export interface StrategyDivergenceClassifierResult {
+  readonly isAlternating: boolean;
+  readonly dominantPeriod: number;
+  readonly advantageAmplitude: number;
+  readonly divergenceScore: number;
+}
+
+/**
+ * Accumulator that records per-generation strategy-divergence snapshots
+ * and classifies the resulting time series.
+ *
+ * @property recordSnapshot — append one generation's snapshot
+ * @property classify — analyse the accumulated trajectory and return a
+ *   classifier result (zeros default when insufficient data)
+ * @property getTrajectory — return the read-only snapshot array
+ */
+export interface StrategyDivergenceTracker {
+  readonly recordSnapshot: (snapshot: StrategyDivergenceSnapshot) => void;
+  readonly classify: () => StrategyDivergenceClassifierResult;
+  readonly getTrajectory: () => readonly StrategyDivergenceSnapshot[];
+}
+
+/**
+ * Factory service for creating strategy-divergence trackers.
+ *
+ * @property createStrategyDivergenceTracker — create a new tracker
+ *   configured with team size and minimum generation threshold
+ */
+export interface StrategyDivergenceService {
+  readonly createStrategyDivergenceTracker: (config: {
+    readonly teamSize: number;
+    readonly minGenerations: number;
+  }) => StrategyDivergenceTracker;
+}

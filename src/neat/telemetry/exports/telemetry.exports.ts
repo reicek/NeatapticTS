@@ -419,8 +419,7 @@ function serializeTelemetryEntry(
       case header.startsWith(COMPLEXITY_PREFIX): {
         const keyName = header.slice(COMPLEXITY_PREFIX.length);
         const complexity = entry.complexity as
-          | Record<string, unknown>
-          | undefined;
+          Record<string, unknown> | undefined;
         row.push(
           complexity && keyName in complexity
             ? JSON.stringify(complexity[keyName])
@@ -445,8 +444,7 @@ function serializeTelemetryEntry(
       case header.startsWith(DIVERSITY_PREFIX): {
         const keyName = header.slice(DIVERSITY_PREFIX.length);
         const diversity = entry.diversity as
-          | Record<string, unknown>
-          | undefined;
+          Record<string, unknown> | undefined;
         row.push(
           diversity && keyName in diversity
             ? JSON.stringify(diversity[keyName])

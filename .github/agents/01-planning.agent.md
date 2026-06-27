@@ -40,6 +40,7 @@ skills:
     'license-attribution-audit',
     'planning-acceptance-criteria',
     'plan-sync-validation',
+    'research-methodology',
     'execute',
   ]
 handoffs:

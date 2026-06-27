@@ -38,6 +38,7 @@ skills:
     'creating-unit-tests',
     'test-fix-workflow',
     'coverage-tranche',
+    'research-methodology',
     'execute',
     'chrome-devtools-mcp',
   ]

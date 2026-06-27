@@ -178,11 +178,7 @@ export interface IEvolutionAlgorithmConfig {
 
 /** Canonical stop reasons reported by the engine to host adapters. */
 export type EvolutionStopReason =
-  | 'solved'
-  | 'stagnation'
-  | 'maxGenerations'
-  | 'cancelled'
-  | 'aborted';
+  'solved' | 'stagnation' | 'maxGenerations' | 'cancelled' | 'aborted';
 
 /**
  * Host-facing stop event emitted by the engine when a run finishes for a concrete reason.
@@ -572,9 +568,7 @@ export interface NetworkNode {
   type?: string;
   bias?: number;
   squash?:
-    | string
-    | { name?: string }
-    | ((x: number, derivate?: boolean) => number);
+    string | { name?: string } | ((x: number, derivate?: boolean) => number);
   connections?: {
     in?: NetworkConnection[];
     out?: NetworkConnection[];

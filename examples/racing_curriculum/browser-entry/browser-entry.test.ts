@@ -10,7 +10,10 @@ import {
 import { createNgeController } from '../controller/nge.controller';
 import * as actualNgeControllerModule from '../controller/nge.controller';
 import { derivePerCarObservationState } from '../controller/observation.assembler';
-import type { CarControlOutput, EnvironmentState } from '../environment/environment.types';
+import type {
+  CarControlOutput,
+  EnvironmentState,
+} from '../environment/environment.types';
 import * as actualEnvironmentStepModule from '../environment/environment.step.service';
 import { generateTrack } from '../track/track.generator';
 import { resolveSplineSampleFrame } from '../track/track.spline.utils';
@@ -737,7 +740,9 @@ describe('Phase 3 per-car controller red contracts', () => {
 
     runHandle.stop();
 
-    const lastControls = stepEnvironmentSpy.mock.calls.at(-1)?.[1] as unknown as readonly CarControlOutput[];
+    const lastControls = stepEnvironmentSpy.mock.calls.at(
+      -1,
+    )?.[1] as unknown as readonly CarControlOutput[];
 
     expect(lastControls[0].steer).not.toBe(lastControls[1].steer);
   });
@@ -751,10 +756,60 @@ describe('Phase 3 per-car controller red contracts', () => {
       { tier: 1 },
     );
 
-    const blueSteer = controller.computeControl(blueState, episodeState.trackSpec).steer;
-    const redSteer = controller.computeControl(redState, episodeState.trackSpec).steer;
+    const blueSteer = controller.computeControl(
+      blueState,
+      episodeState.trackSpec,
+    ).steer;
+    const redSteer = controller.computeControl(
+      redState,
+      episodeState.trackSpec,
+    ).steer;
 
     expect(blueSteer).not.toBe(redSteer);
+  });
+});
+
+describe('Phase 4 tier 3 four-car rendering red contracts', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    Object.defineProperty(document, 'currentScript', {
+      value: null,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('creates four independent controllers for a tier-3 four-car team layout', async () => {
+    const { runHandle, createNgeControllerSpy } =
+      await startTier3WithControllerSpy();
+
+    runHandle.stop();
+
+    expect(createNgeControllerSpy).toHaveBeenCalledTimes(4);
+  });
+
+  it('passes four distinct network instances to the per-car controllers at tier 3', async () => {
+    const { runHandle, createNgeControllerSpy } =
+      await startTier3WithControllerSpy();
+
+    runHandle.stop();
+
+    const networkArgs = createNgeControllerSpy.mock.calls.map(
+      (callArgs) => callArgs[0],
+    );
+    const allDistinct =
+      networkArgs.length === 4 &&
+      networkArgs[0] !== networkArgs[1] &&
+      networkArgs[0] !== networkArgs[2] &&
+      networkArgs[0] !== networkArgs[3] &&
+      networkArgs[1] !== networkArgs[2] &&
+      networkArgs[1] !== networkArgs[3] &&
+      networkArgs[2] !== networkArgs[3];
+
+    expect(allDistinct).toBe(true);
   });
 });
 
@@ -820,9 +875,7 @@ async function startTier1WithStepEnvironmentSpy(): Promise<{
     hostElement.id = 'racing-curriculum-output';
     document.body.append(hostElement);
 
-    let capturedRafCallback:
-      | ((timestamp: number) => Promise<void>)
-      | undefined;
+    let capturedRafCallback: ((timestamp: number) => Promise<void>) | undefined;
     jest
       .spyOn(window, 'requestAnimationFrame')
       .mockImplementation((callback) => {
@@ -835,11 +888,56 @@ async function startTier1WithStepEnvironmentSpy(): Promise<{
       throw new Error('requestAnimationFrame callback was not captured');
     }
 
-    capturedResult = { runHandle, stepEnvironmentSpy, rafCallback: capturedRafCallback };
+    capturedResult = {
+      runHandle,
+      stepEnvironmentSpy,
+      rafCallback: capturedRafCallback,
+    };
   });
 
   if (capturedResult === undefined) {
-    throw new Error('startTier1WithStepEnvironmentSpy did not capture a result');
+    throw new Error(
+      'startTier1WithStepEnvironmentSpy did not capture a result',
+    );
+  }
+
+  return capturedResult;
+}
+
+async function startTier3WithControllerSpy(): Promise<{
+  runHandle: { stop: () => void };
+  createNgeControllerSpy: jest.Mock;
+}> {
+  let capturedResult:
+    | { runHandle: { stop: () => void }; createNgeControllerSpy: jest.Mock }
+    | undefined;
+
+  await jest.isolateModulesAsync(async () => {
+    const createNgeControllerSpy = jest.fn(
+      actualNgeControllerModule.createNgeController,
+    );
+
+    jest.doMock('../controller/nge.controller', () => ({
+      ...actualNgeControllerModule,
+      createNgeController: createNgeControllerSpy,
+    }));
+
+    const browserModule = (await import('./browser-entry')) as unknown as {
+      start: (
+        container: HTMLElement,
+        options?: { tier: number },
+      ) => Promise<{ stop: () => void }>;
+    };
+    const hostElement = document.createElement('div');
+    hostElement.id = 'racing-curriculum-output';
+    document.body.append(hostElement);
+    const runHandle = await browserModule.start(hostElement, { tier: 3 });
+
+    capturedResult = { runHandle, createNgeControllerSpy };
+  });
+
+  if (capturedResult === undefined) {
+    throw new Error('startTier3WithControllerSpy did not capture a result');
   }
 
   return capturedResult;

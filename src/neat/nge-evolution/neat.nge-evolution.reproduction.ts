@@ -14,9 +14,7 @@ import type {
 
 type NgeEvolutionSexualSourceParent = 'first-parent' | 'second-parent';
 type NgePolyandricRegionFamily =
-  | 'cppnPrograms'
-  | 'moduleArchetypes'
-  | 'rulePasses';
+  'cppnPrograms' | 'moduleArchetypes' | 'rulePasses';
 
 interface NgeParthenogenesisInput {
   ngeEnabled: boolean;

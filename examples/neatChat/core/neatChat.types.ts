@@ -35,10 +35,7 @@ export type NeatChatMetricName =
 
 /** Lightweight runtime buckets used before pretraining starts. */
 export type NeatChatRuntimeDurationBucket =
-  | 'very-short'
-  | 'short'
-  | 'moderate'
-  | 'heavy';
+  'very-short' | 'short' | 'moderate' | 'heavy';
 
 /** Stable field keys used in the pretraining corpus report. */
 export type NeatChatCorpusReportFieldKey =

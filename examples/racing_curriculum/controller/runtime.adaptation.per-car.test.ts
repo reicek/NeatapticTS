@@ -14,10 +14,7 @@ import * as path from 'node:path';
 import * as adaptationModule from './runtime.adaptation';
 import type { RuntimeAdaptationEngine } from './runtime.adaptation';
 
-const SOURCE_FILE = path.resolve(
-  __dirname,
-  'runtime.adaptation.ts',
-);
+const SOURCE_FILE = path.resolve(__dirname, 'runtime.adaptation.ts');
 
 function readSourceText(): string {
   return fs.readFileSync(SOURCE_FILE, 'utf-8');
@@ -168,9 +165,8 @@ describe('runtime.adaptation per-car contracts', () => {
 
     it('source file exports a per-car factory function (createPerCarAdaptationEngines)', () => {
       const sourceText = readSourceText();
-      const exportsPerCarFactory = /export\s+function\s+createPerCarAdaptationEngines/.test(
-        sourceText,
-      );
+      const exportsPerCarFactory =
+        /export\s+function\s+createPerCarAdaptationEngines/.test(sourceText);
 
       expect(exportsPerCarFactory).toBe(true);
     });

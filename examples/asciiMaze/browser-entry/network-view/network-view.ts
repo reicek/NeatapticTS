@@ -233,15 +233,9 @@ function resolveHostContentBoxDimensionPx(
   hostElement: HTMLElement | null,
   hostClientDimensionPx: number,
   startPaddingProperty:
-    | 'paddingBottom'
-    | 'paddingLeft'
-    | 'paddingRight'
-    | 'paddingTop',
+    'paddingBottom' | 'paddingLeft' | 'paddingRight' | 'paddingTop',
   endPaddingProperty:
-    | 'paddingBottom'
-    | 'paddingLeft'
-    | 'paddingRight'
-    | 'paddingTop',
+    'paddingBottom' | 'paddingLeft' | 'paddingRight' | 'paddingTop',
 ): number {
   if (!hostElement) {
     return hostClientDimensionPx;

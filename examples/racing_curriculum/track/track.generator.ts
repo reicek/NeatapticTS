@@ -219,8 +219,7 @@ function buildPitBoxes(
   return ALTERNATING_PIT_PROGRESS_SAMPLES.map((pitProgress, pitIndex) => {
     const teamIndex = (pitIndex % 2) as 0 | 1;
     const normalDirection = (Math.floor(pitIndex / 2) % 2 === 0 ? 1 : -1) as
-      | 1
-      | -1;
+      1 | -1;
 
     return buildPitBoxForTeam(
       teamIndex,

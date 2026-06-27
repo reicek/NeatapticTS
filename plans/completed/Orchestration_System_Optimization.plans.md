@@ -771,27 +771,28 @@ acceptance_criteria:
 - Created Step 02-07 packets for value-adding flow integration work
 
 **Flow mapping summary:**
-| Flow ID | Owner | Specialists to verify |
-|---|---|---|
-| 00.cross-tier-helper | 00-helping | helping-gap-resolution-coordinator |
-| 01.blocker-routing | 01-planning | Plan Scout, planning-risk-coordinator |
-| 01.plan-registration | 01-planning | Plan Scout, Plan Registration Auditor |
-| 02.codebase-recon | 02-researching | Boundary Mapper, research-codebase-coordinator |
-| 02.integration-surface-map | 02-researching | Boundary Mapper, MCP Runtime Scout |
-| 03.behavior-change-red | 03-red-testing | unit-test-writer, acceptance-criteria-writer |
-| 03.gate-schema-red | 03-red-testing | unit-test-writer, acceptance-criteria-writer |
-| 04.scoped-fix | 04-implementing | implementation-executor, Coverage Guard |
-| 04.refactor | 04-implementing | Boundary Mapper, implementation-pattern-coordinator |
-| 04.coverage-repair | 04-implementing | Coverage Scout, unit-test-writer |
-| 05.test-triage | 05-green-testing | failure-triage-specialist, code-quality-auditor |
-| 05.coverage-guard | 05-green-testing | Coverage Guard, test-coverage-analyst |
-| 05.ci-green-confirmation | 05-green-testing | unit-test-runner, green-test-failure-triage-coordinator |
-| 06.docs-audit | 06-documenting | Academic Docs Auditor, Docs Scout |
-| 06.jsdoc-update | 06-documenting | Docs Scout, docs-example-writer |
-| 06.readme-refresh | 06-documenting | Docs Scout |
-| 07.learning-event-log | 07-logging | learning-event-capturer, helping-gap-resolution-coordinator |
-| 07.session-summary | 07-logging | file-change-summarizer |
-| 07.tracker-closure | 07-logging | file-change-summarizer, phase-handoff-designer |
+
+| Flow ID                    | Owner            | Specialists to verify                                       |
+| -------------------------- | ---------------- | ----------------------------------------------------------- |
+| 00.cross-tier-helper       | 00-helping       | helping-gap-resolution-coordinator                          |
+| 01.blocker-routing         | 01-planning      | Plan Scout, planning-risk-coordinator                       |
+| 01.plan-registration       | 01-planning      | Plan Scout, Plan Registration Auditor                       |
+| 02.codebase-recon          | 02-researching   | Boundary Mapper, research-codebase-coordinator              |
+| 02.integration-surface-map | 02-researching   | Boundary Mapper, MCP Runtime Scout                          |
+| 03.behavior-change-red     | 03-red-testing   | unit-test-writer, acceptance-criteria-writer                |
+| 03.gate-schema-red         | 03-red-testing   | unit-test-writer, acceptance-criteria-writer                |
+| 04.scoped-fix              | 04-implementing  | implementation-executor, Coverage Guard                     |
+| 04.refactor                | 04-implementing  | Boundary Mapper, implementation-pattern-coordinator         |
+| 04.coverage-repair         | 04-implementing  | Coverage Scout, unit-test-writer                            |
+| 05.test-triage             | 05-green-testing | failure-triage-specialist, code-quality-auditor             |
+| 05.coverage-guard          | 05-green-testing | Coverage Guard, test-coverage-analyst                       |
+| 05.ci-green-confirmation   | 05-green-testing | unit-test-runner, green-test-failure-triage-coordinator     |
+| 06.docs-audit              | 06-documenting   | Academic Docs Auditor, Docs Scout                           |
+| 06.jsdoc-update            | 06-documenting   | Docs Scout, docs-example-writer                             |
+| 06.readme-refresh          | 06-documenting   | Docs Scout                                                  |
+| 07.learning-event-log      | 07-logging       | learning-event-capturer, helping-gap-resolution-coordinator |
+| 07.session-summary         | 07-logging       | file-change-summarizer                                      |
+| 07.tracker-closure         | 07-logging       | file-change-summarizer, phase-handoff-designer              |
 
 **Validation:**
 

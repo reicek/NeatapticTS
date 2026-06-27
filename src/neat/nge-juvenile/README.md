@@ -154,6 +154,51 @@ Parameters:
 
 Returns: A new bounded ledger with the newest entry preserved.
 
+### applyMorphDeltas
+
+```ts
+applyMorphDeltas(
+  network: default,
+  deltas: readonly NgeMorphDelta[],
+  budget: MorphApplyBudget,
+): MorphApplyOutcome[]
+```
+
+Apply a batch of juvenile morph deltas to a network, re-validating DNA
+budgets before each structural mutation.
+
+Each delta is translated into the corresponding NEAT mutation operator:
+
+- `edgeDensify` → `ADD_CONN` called N times (N = `detail.proposedAdditions`).
+- `nodeAdd` → `ADD_NODE`.
+- `edgePrune` → direct disconnect of the specific connection identified by
+  `detail.candidateId` (not random `SUB_CONN`).
+- `compact` → `SUB_NODE`.
+- `slotExpand` → documented no-op; returns a skipped outcome.
+
+Growth mutations (`edgeDensify`, `nodeAdd`) are guarded by the growth budget
+caps (`maxEdges`, `maxNodes`). Prune mutations (`edgePrune`, `compact`) are
+guarded by the prune budget floors (`minEdges`, `minNodes`). If a budget
+would be violated, {@link NgeJuvenile_BudgetError} is thrown.
+
+Parameters:
+- `network` - The live network to mutate in place.
+- `deltas` - Ordered list of dry-run morph deltas to apply.
+- `budget` - Combined growth and prune budgets for re-validation.
+
+Returns: One outcome per input delta, preserving order.
+
+Example:
+
+```ts
+const outcomes = applyMorphDeltas(network, deltas, budget);
+for (const outcome of outcomes) {
+  if (outcome.status === 'skipped') {
+    console.log(`${outcome.kind} skipped: ${outcome.reason}`);
+  }
+}
+```
+
 ### buildProbeLedgerEntry
 
 ```ts
@@ -349,6 +394,15 @@ Parameters:
 
 Returns: A normalized vector in the `[0, 1]` range or uniform degenerate weights.
 
+### MorphApplyBudget
+
+Combined growth and prune budget consumed by the morph applier.
+The applier re-validates both before mutating.
+
+### MorphApplyOutcome
+
+Outcome produced for one morph delta after the applier processes it.
+
 ### NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT
 
 Minimum viable edge increment applied by one approved juvenile densification step.
@@ -428,6 +482,24 @@ Hidden-state refresh floor below which recurrent state becomes prune evidence.
 
 Minimum viable episodic slot increment applied by one expansion step.
 
+### NGE_MAX_EDGE_CAPACITY
+
+Maximum edge capacity that the NGE growth budget supports.
+Caps the total number of connections a network may grow to during runtime adaptation.
+Used by the racing curriculum controller and growth lifecycle to enforce the
+32,000-edge ceiling agreed in Phase 4 capacity expansion.
+
+Contract: NGE_MAX_EDGE_CAPACITY=32_000
+
+### NGE_MAX_NODE_CAPACITY
+
+Maximum node capacity that the NGE growth budget supports.
+Caps the total number of nodes a network may grow to during runtime adaptation.
+Used by the racing curriculum controller and growth lifecycle to enforce the
+8,000-node ceiling agreed in Phase 4 capacity expansion.
+
+Contract: NGE_MAX_NODE_CAPACITY=8_000
+
 ### NgeFocusScore
 
 One module-level focus result containing both the raw and normalized score.
@@ -440,6 +512,8 @@ Contains per-module probability-like scores produced by the weighted focus formu
 ### NgeGrowthBudget
 
 DNA-configured structural caps and live counts for one locally growing module.
+
+### NgeGrowthMorphKind
 
 ### NgeHysteresisState
 
@@ -821,6 +895,8 @@ Parameters:
 
 Returns: A fresh hysteresis state ready for the next cooldown window.
 
+### NgeGrowthMorphKind
+
 ### planEdgeDensification
 
 ```ts
@@ -924,6 +1000,228 @@ Re-validate one dry-run morph delta against the current structural budget.
 Parameters:
 - `delta` - Planned morph delta to validate.
 - `budget` - DNA-configured growth caps and current live counts.
+
+## neat/nge-juvenile/neat.nge-juvenile.apply.ts
+
+Morph applier for the NGE juvenile phase.
+
+This module owns the translation from dry-run `NgeMorphDelta` structural plans
+into concrete `network.mutate()` calls. Each morph kind maps to a specific
+NEAT mutation operator (or a documented no-op for `slotExpand`), and every
+growth or prune action is re-validated against the supplied DNA budget before
+the network is touched.
+
+The applier is the final gate between planning and structural commitment: a
+delta that passes the planner's dry-run validation can still be rejected here
+if the live network state has drifted past a budget cap or floor since the
+plan was produced.
+
+### applyCompact
+
+```ts
+applyCompact(
+  network: default,
+  delta: NgeMorphDelta,
+  budget: NgePruneBudget,
+): MorphApplyOutcome
+```
+
+Apply a `compact` delta by calling `SUB_NODE` to remove a hidden node.
+
+Parameters:
+- `network` - The live network to mutate in place.
+- `delta` - The compact delta.
+- `budget` - The prune budget for re-validation.
+
+Returns: An applied outcome.
+
+### applyEdgeDensify
+
+```ts
+applyEdgeDensify(
+  network: default,
+  delta: NgeMorphDelta,
+  budget: NgeGrowthBudget,
+): MorphApplyOutcome
+```
+
+Apply an `edgeDensify` delta by calling `ADD_CONN` N times.
+
+Parameters:
+- `network` - The live network to mutate in place.
+- `delta` - The edge densification delta carrying `detail.proposedAdditions`.
+- `budget` - The growth budget for re-validation.
+
+Returns: An applied outcome.
+
+### applyEdgePrune
+
+```ts
+applyEdgePrune(
+  network: default,
+  delta: NgeMorphDelta,
+  budget: NgePruneBudget,
+): MorphApplyOutcome
+```
+
+Apply an `edgePrune` delta by disconnecting the specific connection
+identified by `detail.candidateId`.
+
+Unlike `SUB_CONN` which picks a random edge, this finds the exact
+connection whose innovation ID matches the candidate and disconnects
+it directly via `network.disconnect(from, to)`.
+
+Parameters:
+- `network` - The live network to mutate in place.
+- `delta` - The edge prune delta carrying `detail.candidateId`.
+- `budget` - The prune budget for re-validation.
+
+Returns: An applied outcome.
+
+### applyMorphDeltas
+
+```ts
+applyMorphDeltas(
+  network: default,
+  deltas: readonly NgeMorphDelta[],
+  budget: MorphApplyBudget,
+): MorphApplyOutcome[]
+```
+
+Apply a batch of juvenile morph deltas to a network, re-validating DNA
+budgets before each structural mutation.
+
+Each delta is translated into the corresponding NEAT mutation operator:
+
+- `edgeDensify` → `ADD_CONN` called N times (N = `detail.proposedAdditions`).
+- `nodeAdd` → `ADD_NODE`.
+- `edgePrune` → direct disconnect of the specific connection identified by
+  `detail.candidateId` (not random `SUB_CONN`).
+- `compact` → `SUB_NODE`.
+- `slotExpand` → documented no-op; returns a skipped outcome.
+
+Growth mutations (`edgeDensify`, `nodeAdd`) are guarded by the growth budget
+caps (`maxEdges`, `maxNodes`). Prune mutations (`edgePrune`, `compact`) are
+guarded by the prune budget floors (`minEdges`, `minNodes`). If a budget
+would be violated, {@link NgeJuvenile_BudgetError} is thrown.
+
+Parameters:
+- `network` - The live network to mutate in place.
+- `deltas` - Ordered list of dry-run morph deltas to apply.
+- `budget` - Combined growth and prune budgets for re-validation.
+
+Returns: One outcome per input delta, preserving order.
+
+Example:
+
+```ts
+const outcomes = applyMorphDeltas(network, deltas, budget);
+for (const outcome of outcomes) {
+  if (outcome.status === 'skipped') {
+    console.log(`${outcome.kind} skipped: ${outcome.reason}`);
+  }
+}
+```
+
+### applyNodeAdd
+
+```ts
+applyNodeAdd(
+  network: default,
+  delta: NgeMorphDelta,
+  budget: NgeGrowthBudget,
+): MorphApplyOutcome
+```
+
+Apply a `nodeAdd` delta by calling `ADD_NODE`.
+
+Parameters:
+- `network` - The live network to mutate in place.
+- `delta` - The node addition delta.
+- `budget` - The growth budget for re-validation.
+
+Returns: An applied outcome.
+
+### applyOneDelta
+
+```ts
+applyOneDelta(
+  network: default,
+  delta: NgeMorphDelta,
+  budget: MorphApplyBudget,
+): MorphApplyOutcome
+```
+
+Dispatch one morph delta to its handler based on `delta.kind`.
+
+Parameters:
+- `network` - The live network to mutate in place.
+- `delta` - One dry-run morph delta.
+- `budget` - Combined growth and prune budgets for re-validation.
+
+Returns: One morph apply outcome.
+
+### assertGrowthBudget
+
+```ts
+assertGrowthBudget(
+  projectedCount: number,
+  maxCount: number,
+  kind: string,
+  moduleId: string,
+): void
+```
+
+Assert that a projected count does not exceed the DNA growth cap.
+
+Parameters:
+- `projectedCount` - The count that would result after the growth mutation.
+- `maxCount` - The DNA-configured maximum allowed count.
+- `kind` - The morph kind label for the error message.
+- `moduleId` - The target module identifier for the error message.
+
+### assertPruneBudget
+
+```ts
+assertPruneBudget(
+  projectedCount: number,
+  minCount: number,
+  kind: string,
+  moduleId: string,
+): void
+```
+
+Assert that a projected count does not drop below the DNA prune floor.
+
+Parameters:
+- `projectedCount` - The count that would result after the prune mutation.
+- `minCount` - The DNA-configured minimum required count.
+- `kind` - The morph kind label for the error message.
+- `moduleId` - The target module identifier for the error message.
+
+### countHiddenNodes
+
+```ts
+countHiddenNodes(
+  network: default,
+): number
+```
+
+Count the hidden nodes currently in the network.
+
+Parameters:
+- `network` - The live network to inspect.
+
+Returns: The number of nodes whose type is `'hidden'`.
+
+### MorphApplyBudget
+
+Combined growth and prune budget consumed by the morph applier.
+The applier re-validates both before mutating.
+
+### MorphApplyOutcome
+
+Outcome produced for one morph delta after the applier processes it.
 
 ## neat/nge-juvenile/neat.nge-juvenile.focus.ts
 
@@ -1361,6 +1659,24 @@ Hidden-state refresh floor below which recurrent state becomes prune evidence.
 ### NGE_JUVENILE_DEFAULT_SLOT_EXPANSION_COUNT
 
 Minimum viable episodic slot increment applied by one expansion step.
+
+### NGE_MAX_EDGE_CAPACITY
+
+Maximum edge capacity that the NGE growth budget supports.
+Caps the total number of connections a network may grow to during runtime adaptation.
+Used by the racing curriculum controller and growth lifecycle to enforce the
+32,000-edge ceiling agreed in Phase 4 capacity expansion.
+
+Contract: NGE_MAX_EDGE_CAPACITY=32_000
+
+### NGE_MAX_NODE_CAPACITY
+
+Maximum node capacity that the NGE growth budget supports.
+Caps the total number of nodes a network may grow to during runtime adaptation.
+Used by the racing curriculum controller and growth lifecycle to enforce the
+8,000-node ceiling agreed in Phase 4 capacity expansion.
+
+Contract: NGE_MAX_NODE_CAPACITY=8_000
 
 ## neat/nge-juvenile/neat.nge-juvenile.utils.ts
 

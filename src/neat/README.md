@@ -731,6 +731,24 @@ console.log(typeof runNgeLifecycle, typeof advanceAdultState);
 
 ## neat/neat.nge-lifecycle.ts
 
+### extractCommittedGrowthKind
+
+```ts
+extractCommittedGrowthKind(
+  outcomes: readonly MorphApplyOutcome[],
+): NgeGrowthMorphKind | undefined
+```
+
+Find the first applied growth morph kind from apply outcomes.
+
+Used to determine whether `commitGrowth` should be called and which morph
+kind to report. Prune-only or all-skipped outcome sets return `undefined`.
+
+Parameters:
+- `outcomes` - Apply outcomes produced by `applyMorphDeltas`.
+
+Returns: The first applied growth morph kind, or `undefined` when none applied.
+
 ### NgeAdultLifecycleInput
 
 Inputs for the adult stage of the NGE lifecycle runner, including an equilibrium
@@ -775,6 +793,9 @@ const result = runNgeLifecycle({
   budget,
   config,
   hysteresis,
+  network,
+  pruneBudget,
 });
 console.log(result.stage); // 'adult'
+console.log(result.applyOutcomes?.length); // number of applied morphs
 ```

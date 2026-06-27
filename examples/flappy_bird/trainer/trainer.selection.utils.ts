@@ -66,8 +66,7 @@ export function resolveBestGenomeByScore(
 function buildScoredGenomeEntries(
   population: readonly FlappyTrainerNetwork[],
   provisionalScoresByGenome:
-    | ReadonlyMap<FlappyTrainerNetwork, number>
-    | undefined,
+    ReadonlyMap<FlappyTrainerNetwork, number> | undefined,
 ): ScoredGenomeEntry[] {
   const scoredEntries: ScoredGenomeEntry[] = [];
 
@@ -82,8 +81,7 @@ function buildScoredGenomeEntries(
 function resolveGenomeScore(
   genome: FlappyTrainerNetwork,
   provisionalScoresByGenome:
-    | ReadonlyMap<FlappyTrainerNetwork, number>
-    | undefined,
+    ReadonlyMap<FlappyTrainerNetwork, number> | undefined,
 ): number {
   if (provisionalScoresByGenome) {
     return provisionalScoresByGenome.get(genome) ?? Number.NEGATIVE_INFINITY;

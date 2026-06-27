@@ -110,8 +110,7 @@ export const createNeat = (
     input: number,
     output: number,
     fitness:
-      | ((network: Network) => unknown)
-      | ((population: Network[]) => unknown),
+      ((network: Network) => unknown) | ((population: Network[]) => unknown),
     options: NeatConfig,
   ) => Neat;
 

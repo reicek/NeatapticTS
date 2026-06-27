@@ -84,13 +84,6 @@ import {
   resolveGuidanceAlphaForTier,
 } from '../controller/nge.controller';
 import { derivePerCarObservationState } from '../controller/observation.assembler';
-import {
-  createPerCarAdaptationEngines,
-  createRuntimeAdaptationEngine,
-  type RuntimeAdaptationEngine,
-  type RuntimeAdaptationEngineOptions,
-  type RuntimeAdaptationTelemetry,
-} from '../controller/runtime.adaptation';
 import type {
   CarControlOutput,
   EnvironmentState,
@@ -126,14 +119,18 @@ const MAX_CATCHUP_STEPS_PER_FRAME = 4;
 
 /** Max device-pixel ratio used for the baseline canvas backbuffer. */
 const MAX_CANVAS_DEVICE_PIXEL_RATIO = 2;
+/** Maximum backing-store width in device pixels; CSS stretches beyond this. */
+const MAX_CANVAS_WIDTH_PX = 1600;
+/** Maximum backing-store height in device pixels; CSS stretches beyond this. */
+const MAX_CANVAS_HEIGHT_PX = 900;
 /** Refresh cadence for the focused network canvas in milliseconds. */
 const FOCUSED_NETWORK_REFRESH_INTERVAL_MS = 5000;
 
 /** Track determinism key: seed 42, layout v1. */
 const DEMO_TRACK_SEED = 42;
 const DEMO_TRACK_LAYOUT_VERSION = 1;
-/** Active browser harness tier for the NGE controller integration. */
-const ACTIVE_CURRICULUM_TIER = 1;
+/** Default browser harness tier for the NGE controller integration. */
+const DEFAULT_CURRICULUM_TIER: CurriculumTier = 1;
 /** Population size sent to the simulation worker during host initialisation. */
 const RACING_CURRICULUM_POPULATION_SIZE = 10;
 /** Small hidden layer used to pin a deterministic solo driving policy. */
@@ -186,30 +183,6 @@ export const TEAM_BLUE_INDEX = 0 as const;
  * lane assignments explicit and deterministic.
  */
 export const TEAM_RED_INDEX = 1 as const;
-/** Default Tier 1 adaptation cadence in fixed-timestep ticks (very frequent). */
-const DEFAULT_RUNTIME_ADAPTATION_CADENCE_INTERVAL_TICKS = 1;
-/** Minimum mutation intensity while adaptation remains active in higher tiers. */
-const MIN_ADAPTATION_MUTATION_STEPS = 1;
-/** Maximum mutation intensity for one within-tier adaptation pass. */
-const MAX_ADAPTATION_MUTATION_STEPS = 3;
-/** Default cadence mode for runtime adaptation controls. */
-const DEFAULT_ADAPTATION_CADENCE_MODE = 'ticks' as const;
-/** Lightweight trend epsilon used to classify adaptation momentum. */
-const IMPROVEMENT_TREND_EPSILON = 0.01;
-/** Bounded rolling score window used by runtime adaptation decisions. */
-const RUNTIME_ADAPTATION_SCORE_HISTORY_CAP = 48;
-/** Default hard cap for mutable runtime controller node count. */
-const RUNTIME_ADAPTATION_MAX_NODES = 192;
-/** Default hard cap for mutable runtime controller connection count. */
-const RUNTIME_ADAPTATION_MAX_CONNECTIONS = 640;
-/** Tier 1 keeps adaptation very frequent while bounding mutation pressure. */
-const RUNTIME_ADAPTATION_TIER_ONE_MUTATION_COOLDOWN_TICKS = 4;
-/** Tier 1 keeps rollback retries short so adaptation remains active while driving. */
-const RUNTIME_ADAPTATION_TIER_ONE_ROLLBACK_COOLDOWN_TICKS = 2;
-/** Rollback cooldown keeps repeated unsafe retries out of the hot loop. */
-const RUNTIME_ADAPTATION_ROLLBACK_COOLDOWN_TICKS = 12;
-/** Scale UI threshold controls to the engine's score-delta domain. */
-const RUNTIME_ADAPTATION_IMPROVEMENT_THRESHOLD_SCALE = 0.001;
 
 // ── POC worker seam (physics-only delegation) ────────────────────────────────
 //
@@ -289,60 +262,30 @@ export interface RacingCurriculumRunHandle {
   stop: () => void;
 }
 
+/**
+ * Options accepted by {@link start} to override the default curriculum tier.
+ *
+ * The browser harness defaults to Tier 1 (two-car 1v1 pack). Callers that need
+ * a higher-tier pack — for example Tier 3 (four-car 2v2) — pass `{ tier: 3 }`
+ * so the host builds the correct roster, controller map, and observation tier
+ * before the animation loop begins.
+ */
+export interface RacingCurriculumStartOptions {
+  /** Curriculum tier to launch; defaults to {@link DEFAULT_CURRICULUM_TIER}. */
+  readonly tier?: number;
+}
+
 // ── DOM panel element sets ────────────────────────────────────────────────────
 
-/** Live-updating redraw hook and text node references for the network panel. */
 /** Live-updating text node references for the telemetry panel. */
 interface TelemetryPanelNodes {
   tickValue: Text;
   lapValue: Text;
-  adaptationEnabledValue: Text;
-  cadenceModeValue: Text;
-  cadenceIntervalValue: Text;
-  mutationIntensityValue: Text;
-  growthPruneBiasValue: Text;
-  commitThresholdValue: Text;
-  rollbackSensitivityValue: Text;
-  commitCountValue: Text;
-  rollbackCountValue: Text;
-  recentTrendValue: Text;
   networkSizeValue: Text;
   networkDeltaValue: Text;
   lastChangeReasonValue: Text;
   controlsElement: HTMLDivElement;
   syncRuntimeControls: () => void;
-}
-
-type AdaptationCadenceMode = 'laps' | 'ticks';
-
-interface RuntimeTuningConfig {
-  adaptationEnabled: boolean;
-  cadenceMode: AdaptationCadenceMode;
-  cadenceInterval: number;
-  mutationIntensity: number;
-  growthPruneBias: number;
-  commitThreshold: number;
-  rollbackSensitivity: number;
-}
-
-interface RuntimeTelemetryState {
-  commitCount: number;
-  rollbackCount: number;
-  recentImprovementTrend: string;
-  lastChangeReason: string;
-  previousLapTick: number | null;
-  previousLapDuration: number | null;
-  lastLapImprovementRatio: number;
-  networkDeltaNodes: number;
-  networkDeltaConnections: number;
-  adaptationScoreHistory: number[];
-}
-
-interface RuntimeAdaptationState {
-  engine: RuntimeAdaptationEngine;
-  engineConfigSignature: string;
-  tuning: RuntimeTuningConfig;
-  telemetry: RuntimeTelemetryState;
 }
 
 /** Curriculum tier contract from the racing plan ladder. */
@@ -377,12 +320,6 @@ type TierSignalEvidenceAccumulator = {
   cumulativeLateralErrorNormalized: number;
   cumulativeHeadingAlignment01: number;
   cumulativeCenterGuideNeed01: number;
-};
-
-type TierSignalEvidenceSummary = {
-  meanLateralErrorNormalized: number;
-  meanHeadingAlignment01: number;
-  meanCenterGuideNeed01: number;
 };
 
 /**
@@ -421,6 +358,9 @@ const DEFAULT_TRACK_VIEWPORT_EDGE_PADDING_RATIO = 0.08;
  * {@link drawRacingNetworkVisualization} racing adapter.
  *
  * @param container - Host element or element id.
+ * @param options - Optional launch configuration; `tier` overrides the default
+ *   curriculum tier so callers can start directly at Tier 3 (four-car 2v2) or
+ *   higher without waiting for auto-promotion.
  * @returns Lightweight run handle.
  *
  * @example
@@ -435,10 +375,20 @@ const DEFAULT_TRACK_VIEWPORT_EDGE_PADDING_RATIO = 0.08;
  * handle.stop();
  * await handle.done;
  * ```
+ * @example
+ * ```ts
+ * // Launch directly at Tier 3 (four-car 2v2 pack).
+ * const handle = await start(host, { tier: 3 });
+ * handle.stop();
+ * ```
  */
 export async function start(
   container: HTMLElement | string = 'racing-curriculum-output',
+  options?: RacingCurriculumStartOptions,
 ): Promise<RacingCurriculumRunHandle> {
+  // Step 0: Resolve the curriculum tier from caller options.
+  const resolvedTier = resolveCurriculumTierFromOptions(options);
+
   // Step 1: Resolve container and build host DOM shell.
   const containerElement = resolveContainerElement(container);
   injectRacingStyles();
@@ -446,14 +396,14 @@ export async function start(
   setupCanvasStage(
     hostHandle.canvasRegionElement,
     hostHandle.canvasElement,
-    ACTIVE_CURRICULUM_TIER,
+    resolvedTier,
   );
   hostHandle.applyViewportLayout(window.innerWidth);
   syncCanvasToDisplaySize(hostHandle.canvasElement);
 
   // Step 2: Generate the tier-aware track and matching starting grid.
   let episodeState = createCurriculumEpisodeState(
-    ACTIVE_CURRICULUM_TIER,
+    resolvedTier,
     resolveTrackGenerationViewport(hostHandle.canvasElement),
   );
   let trackSpec = episodeState.trackSpec;
@@ -462,7 +412,11 @@ export async function start(
   let envState = episodeState.envState;
 
   // Step 4: Initialise one independent NGE controller per car and render state.
-  let curriculumProgress = createInitialCurriculumProgress(trackSpec, envState);
+  let curriculumProgress = createInitialCurriculumProgress(
+    trackSpec,
+    envState,
+    resolvedTier,
+  );
   let activeObservationTier = resolveObservationTierForCurriculumTier(
     curriculumProgress.tier,
   );
@@ -492,34 +446,13 @@ export async function start(
   let guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
     curriculumProgress.tier,
   );
-  const initialAdaptationOptions = resolveRuntimeAdaptationEngineOptionsForTier(
-    {
-      adaptationEnabled: true,
-      cadenceMode: DEFAULT_ADAPTATION_CADENCE_MODE,
-      cadenceInterval: DEFAULT_RUNTIME_ADAPTATION_CADENCE_INTERVAL_TICKS,
-      mutationIntensity: 1,
-      growthPruneBias: 0,
-      commitThreshold: 0.06,
-      rollbackSensitivity: 0.45,
-    },
-    ACTIVE_CURRICULUM_TIER,
-  );
-  const perCarAdaptationEngines = createPerCarAdaptationEngines(
-    carCount,
-    initialAdaptationOptions,
-  );
-  const runtimeAdaptationState = createRuntimeAdaptationState(
-    ACTIVE_CURRICULUM_TIER,
-    perCarAdaptationEngines.get(0),
-  );
-  const previousNetworkSize = resolveNetworkSize(focusedControllerNetwork);
   const renderState = createRacingRenderState();
   const simulationWorker = createRacingSimulationWorker();
   simulationWorker?.postMessage({
     type: 'init',
     populationSize: RACING_CURRICULUM_POPULATION_SIZE,
     rngSeed: DEMO_TRACK_SEED,
-    tier: ACTIVE_CURRICULUM_TIER,
+    tier: resolvedTier,
   });
   const pendingWorkerSteps = new Map<number, PendingWorkerStep>();
   let nextWorkerRequestId = 0;
@@ -536,110 +469,7 @@ export async function start(
     hostHandle.canvasRegionElement.querySelector('.racing-stage-card');
   const runtimeControls = setupRuntimeControls(
     (stageCardElement as HTMLElement | null) ?? hostHandle.canvasRegionElement,
-    runtimeAdaptationState.tuning,
   );
-  const handleRuntimeTuningKeydown = (keyboardEvent: KeyboardEvent): void => {
-    const eventTarget = keyboardEvent.target;
-    const isFormElement =
-      eventTarget instanceof HTMLInputElement ||
-      eventTarget instanceof HTMLSelectElement ||
-      eventTarget instanceof HTMLTextAreaElement;
-    if (isFormElement) {
-      return;
-    }
-
-    const tuning = runtimeAdaptationState.tuning;
-    let handled = true;
-    switch (keyboardEvent.code) {
-      case 'KeyA':
-        tuning.adaptationEnabled = !tuning.adaptationEnabled;
-        break;
-      case 'KeyC':
-        tuning.cadenceMode = tuning.cadenceMode === 'laps' ? 'ticks' : 'laps';
-        break;
-      case 'BracketLeft':
-        tuning.cadenceInterval = clampInteger(
-          tuning.cadenceInterval - 1,
-          1,
-          360,
-        );
-        break;
-      case 'BracketRight':
-        tuning.cadenceInterval = clampInteger(
-          tuning.cadenceInterval + 1,
-          1,
-          360,
-        );
-        break;
-      case 'KeyM':
-        tuning.mutationIntensity = clampNumber(
-          tuning.mutationIntensity + 0.1,
-          0.2,
-          3,
-        );
-        break;
-      case 'KeyN':
-        tuning.mutationIntensity = clampNumber(
-          tuning.mutationIntensity - 0.1,
-          0.2,
-          3,
-        );
-        break;
-      case 'KeyG':
-        tuning.growthPruneBias = clampNumber(
-          tuning.growthPruneBias + 0.1,
-          -1,
-          1,
-        );
-        break;
-      case 'KeyH':
-        tuning.growthPruneBias = clampNumber(
-          tuning.growthPruneBias - 0.1,
-          -1,
-          1,
-        );
-        break;
-      case 'KeyK':
-        tuning.commitThreshold = clampNumber(
-          tuning.commitThreshold + 0.01,
-          0,
-          0.5,
-        );
-        break;
-      case 'KeyJ':
-        tuning.commitThreshold = clampNumber(
-          tuning.commitThreshold - 0.01,
-          0,
-          0.5,
-        );
-        break;
-      case 'KeyR':
-        tuning.rollbackSensitivity = clampNumber(
-          tuning.rollbackSensitivity + 0.01,
-          0,
-          0.5,
-        );
-        break;
-      case 'KeyF':
-        tuning.rollbackSensitivity = clampNumber(
-          tuning.rollbackSensitivity - 0.01,
-          0,
-          0.5,
-        );
-        break;
-      default:
-        handled = false;
-    }
-
-    if (!handled) {
-      return;
-    }
-
-    runtimeAdaptationState.telemetry.lastChangeReason = `manual tuning ${keyboardEvent.code}`;
-    runtimeControls.syncRuntimeControls();
-    keyboardEvent.preventDefault();
-  };
-  window.addEventListener('keydown', handleRuntimeTuningKeydown);
 
   // Step 6: Keep layout mode and canvas backbuffer in sync with the viewport.
   const handleViewportResize = (): void => {
@@ -670,15 +500,14 @@ export async function start(
       stepsThisFrame < MAX_CATCHUP_STEPS_PER_FRAME
     ) {
       const previousCurriculumTier = curriculumProgress.tier;
-      const previousCompletedLaps =
-        curriculumProgress.lapProgress.completedLaps;
       const perCarControls = resolvePerCarControls(
         controllerByCarIndex,
         envState,
         trackSpec,
       );
-      const focusedTickResult =
-        controllerByCarIndex.get(0)!.computeControlWithEvidence(
+      const focusedTickResult = controllerByCarIndex
+        .get(0)!
+        .computeControlWithEvidence(
           derivePerCarObservationState(envState, 0),
           trackSpec,
         );
@@ -694,10 +523,7 @@ export async function start(
             envState,
             perCarControls,
           )
-        : stepEnvironment(
-            envState,
-            perCarControls,
-          );
+        : stepEnvironment(envState, perCarControls);
       envState = stabilizeCurriculumTierTireGrip(
         steppedEnvironmentState,
         curriculumProgress.tier,
@@ -707,21 +533,6 @@ export async function start(
         trackSpec,
         envState,
       );
-      updateRuntimeImprovementTrend(
-        runtimeAdaptationState.telemetry,
-        previousCompletedLaps,
-        curriculumProgress.lapProgress.completedLaps,
-        envState.tick,
-      );
-      const didRefreshRuntimeAdaptationEngine = refreshRuntimeAdaptationEngine(
-        runtimeAdaptationState,
-        curriculumProgress.tier,
-        perCarAdaptationEngines,
-      );
-      if (didRefreshRuntimeAdaptationEngine) {
-        runtimeAdaptationState.telemetry.lastChangeReason =
-          'runtime adaptation engine refreshed';
-      }
 
       if (curriculumProgress.tier !== previousCurriculumTier) {
         // Step 1: Remap the focused controller network to the promoted tier width.
@@ -754,29 +565,13 @@ export async function start(
           }),
         );
         for (let carIndex = 1; carIndex < promotedCarCount; carIndex++) {
-          const perCarNetwork =
-            createDeterministicRacingControllerNetwork(activeObservationTier);
+          const perCarNetwork = createDeterministicRacingControllerNetwork(
+            activeObservationTier,
+          );
           controllerNetworkByCarIndex.set(carIndex, perCarNetwork);
           controllerByCarIndex.set(
             carIndex,
             createNgeController(perCarNetwork, { tier: activeObservationTier }),
-          );
-        }
-        // Step 3b: Rebuild per-car adaptation engines for the promoted roster.
-        const promotedAdaptationOptions =
-          resolveRuntimeAdaptationEngineOptionsForTier(
-            runtimeAdaptationState.tuning,
-            curriculumProgress.tier,
-          );
-        perCarAdaptationEngines.clear();
-        for (
-          let carIndex = 0;
-          carIndex < promotedCarCount;
-          carIndex++
-        ) {
-          perCarAdaptationEngines.set(
-            carIndex,
-            createRuntimeAdaptationEngine(promotedAdaptationOptions),
           );
         }
         focusedControllerNetwork = remappedFocusedNetwork;
@@ -787,22 +582,6 @@ export async function start(
           ...curriculumProgress,
           lapProgress: createInitialLapProgress(trackSpec, envState),
         };
-        const promotedNetworkSize = resolveNetworkSize(focusedControllerNetwork);
-        runtimeAdaptationState.telemetry.networkDeltaNodes =
-          promotedNetworkSize.nodes - previousNetworkSize.nodes;
-        runtimeAdaptationState.telemetry.networkDeltaConnections =
-          promotedNetworkSize.connections - previousNetworkSize.connections;
-        previousNetworkSize.nodes = promotedNetworkSize.nodes;
-        previousNetworkSize.connections = promotedNetworkSize.connections;
-        runtimeAdaptationState.telemetry.lastChangeReason =
-          'tier promotion remap';
-        refreshRuntimeAdaptationEngine(
-          runtimeAdaptationState,
-          curriculumProgress.tier,
-          perCarAdaptationEngines,
-        );
-        runtimeAdaptationState.engine.reset();
-        runtimeAdaptationState.telemetry.adaptationScoreHistory.length = 0;
         guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
           curriculumProgress.tier,
         );
@@ -812,23 +591,8 @@ export async function start(
           curriculumProgress.tier,
         );
       } else {
-        const tierSignalEvidenceSummary = summarizeTierSignalEvidence(
-          tierSignalEvidenceAccumulator,
-        );
-        const didCommitRuntimeAdaptation = applyWithinTierAdaptation(
-          focusedControllerNetwork,
-          curriculumProgress.tier,
-          runtimeAdaptationState,
-          tierSignalEvidenceSummary,
-          previousNetworkSize,
-          envState.tick,
-          curriculumProgress.lapProgress.completedLaps,
-        );
         tierSignalEvidenceAccumulator =
           createEmptyTierSignalEvidenceAccumulator();
-        if (didCommitRuntimeAdaptation) {
-          hostHandle.renderNetworkArchitecture(focusedControllerNetwork);
-        }
       }
 
       accumulatedMs -= FIXED_TIMESTEP_MS;
@@ -853,7 +617,6 @@ export async function start(
     // Update telemetry readouts (text-only, no innerHTML churn).
     updateTelemetryPanelNodes(
       runtimeControls,
-      runtimeAdaptationState,
       focusedControllerNetwork,
       envState,
       curriculumProgress.lapProgress.completedLaps,
@@ -880,7 +643,6 @@ export async function start(
       if (!running) return;
       running = false;
       window.removeEventListener('resize', handleViewportResize);
-      window.removeEventListener('keydown', handleRuntimeTuningKeydown);
       hostHandle.resizeRedrawController.uninstall();
       window.clearInterval(focusedNetworkRefreshIntervalId);
       cancelAnimationFrame(animationFrameId);
@@ -1458,242 +1220,52 @@ function setupCanvasStage(
 }
 
 /**
- * Builds the live runtime-tuning controls and telemetry readouts.
- * Builds the live runtime-tuning controls and telemetry readouts.
+ * Builds the live telemetry readouts panel for the racing canvas region.
  *
- * The controls live inside the canvas region below the stage, matching the
+ * The panel lives inside the canvas region below the stage, matching the
  * Flappy Bird parity layout where runtime widgets share the left column.
+ * Adaptation now runs worker-side; the host only displays tick, lap, and
+ * network size telemetry.
  *
  * @param region - The stage-card body element inside the canvas region.
- * @param tuningConfig - Mutable runtime tuning configuration.
  * @returns References to live-updating telemetry text nodes plus a sync hook.
  * @internal
  */
-function setupRuntimeControls(
-  region: HTMLElement,
-  tuningConfig: RuntimeTuningConfig,
-): TelemetryPanelNodes {
+function setupRuntimeControls(region: HTMLElement): TelemetryPanelNodes {
   const tickValue = document.createTextNode('0');
   const lapValue = document.createTextNode('0');
-  const adaptationEnabledValue = document.createTextNode('on');
-  const cadenceModeValue = document.createTextNode('laps');
-  const cadenceIntervalValue = document.createTextNode(
-    String(DEFAULT_RUNTIME_ADAPTATION_CADENCE_INTERVAL_TICKS),
-  );
-  const mutationIntensityValue = document.createTextNode('1.0');
-  const growthPruneBiasValue = document.createTextNode('0.0');
-  const commitThresholdValue = document.createTextNode('0.06');
-  const rollbackSensitivityValue = document.createTextNode('0.45');
-  const commitCountValue = document.createTextNode('0');
-  const rollbackCountValue = document.createTextNode('0');
-  const recentTrendValue = document.createTextNode('flat');
   const networkSizeValue = document.createTextNode('N0 / C0');
   const networkDeltaValue = document.createTextNode('ΔN0 / ΔC0');
-  const lastChangeReasonValue = document.createTextNode('startup baseline');
+  const lastChangeReasonValue = document.createTextNode(
+    'worker-side adaptation',
+  );
 
-  const runtimeCard = createPanelCard('Runtime Tuning', 'Runtime Controls', [
-    'Tune adaptation behavior live while the simulation loop keeps running.',
-    'The right column mirrors active values so keyboard or pointer changes stay visible.',
+  const runtimeCard = createPanelCard('Runtime Telemetry', 'Runtime Controls', [
+    'Adaptation runs in the simulation worker. This panel shows live telemetry.',
   ]);
   const controlsElement = document.createElement('div');
   controlsElement.className = 'racing-controls';
-  const adaptationEnabledInput = document.createElement('input');
-  adaptationEnabledInput.type = 'checkbox';
-  adaptationEnabledInput.className = 'racing-control-input';
-  const cadenceModeInput = document.createElement('select');
-  cadenceModeInput.className = 'racing-control-input';
-  cadenceModeInput.append(
-    new Option('Laps', 'laps'),
-    new Option('Ticks', 'ticks'),
-  );
-  const cadenceIntervalInput = document.createElement('input');
-  cadenceIntervalInput.type = 'range';
-  cadenceIntervalInput.min = '1';
-  cadenceIntervalInput.max = '360';
-  cadenceIntervalInput.step = '1';
-  cadenceIntervalInput.className = 'racing-control-input';
-  const mutationIntensityInput = document.createElement('input');
-  mutationIntensityInput.type = 'range';
-  mutationIntensityInput.min = '0.2';
-  mutationIntensityInput.max = '3';
-  mutationIntensityInput.step = '0.1';
-  mutationIntensityInput.className = 'racing-control-input';
-  const growthPruneBiasInput = document.createElement('input');
-  growthPruneBiasInput.type = 'range';
-  growthPruneBiasInput.min = '-1';
-  growthPruneBiasInput.max = '1';
-  growthPruneBiasInput.step = '0.1';
-  growthPruneBiasInput.className = 'racing-control-input';
-  const commitThresholdInput = document.createElement('input');
-  commitThresholdInput.type = 'range';
-  commitThresholdInput.min = '0';
-  commitThresholdInput.max = '0.5';
-  commitThresholdInput.step = '0.01';
-  commitThresholdInput.className = 'racing-control-input';
-  const rollbackSensitivityInput = document.createElement('input');
-  rollbackSensitivityInput.type = 'range';
-  rollbackSensitivityInput.min = '0';
-  rollbackSensitivityInput.max = '0.5';
-  rollbackSensitivityInput.step = '0.01';
-  rollbackSensitivityInput.className = 'racing-control-input';
 
-  const syncControlInputsFromTuning = (): void => {
-    adaptationEnabledInput.checked = tuningConfig.adaptationEnabled;
-    cadenceModeInput.value = tuningConfig.cadenceMode;
-    cadenceIntervalInput.value = String(tuningConfig.cadenceInterval);
-    mutationIntensityInput.value = tuningConfig.mutationIntensity.toFixed(1);
-    growthPruneBiasInput.value = tuningConfig.growthPruneBias.toFixed(1);
-    commitThresholdInput.value = tuningConfig.commitThreshold.toFixed(2);
-    rollbackSensitivityInput.value =
-      tuningConfig.rollbackSensitivity.toFixed(2);
-  };
-
-  const syncTuningReadout = (): void => {
-    adaptationEnabledValue.textContent = tuningConfig.adaptationEnabled
-      ? 'on'
-      : 'off';
-    cadenceModeValue.textContent = tuningConfig.cadenceMode;
-    cadenceIntervalValue.textContent = String(tuningConfig.cadenceInterval);
-    mutationIntensityValue.textContent =
-      tuningConfig.mutationIntensity.toFixed(1);
-    growthPruneBiasValue.textContent = tuningConfig.growthPruneBias.toFixed(1);
-    commitThresholdValue.textContent = tuningConfig.commitThreshold.toFixed(2);
-    rollbackSensitivityValue.textContent =
-      tuningConfig.rollbackSensitivity.toFixed(2);
-  };
-
-  const syncRuntimeControls = (): void => {
-    syncControlInputsFromTuning();
-    syncTuningReadout();
-  };
-
-  syncControlInputsFromTuning();
-
-  adaptationEnabledInput.addEventListener('change', () => {
-    tuningConfig.adaptationEnabled = adaptationEnabledInput.checked;
-    syncTuningReadout();
-  });
-  cadenceModeInput.addEventListener('change', () => {
-    tuningConfig.cadenceMode =
-      cadenceModeInput.value as RuntimeTuningConfig['cadenceMode'];
-    syncTuningReadout();
-  });
-  cadenceIntervalInput.addEventListener('input', () => {
-    tuningConfig.cadenceInterval = clampInteger(
-      Number(cadenceIntervalInput.value),
-      1,
-      360,
-    );
-    syncTuningReadout();
-  });
-  mutationIntensityInput.addEventListener('input', () => {
-    tuningConfig.mutationIntensity = clampNumber(
-      Number(mutationIntensityInput.value),
-      0.2,
-      3,
-    );
-    syncTuningReadout();
-  });
-  growthPruneBiasInput.addEventListener('input', () => {
-    tuningConfig.growthPruneBias = clampNumber(
-      Number(growthPruneBiasInput.value),
-      -1,
-      1,
-    );
-    syncTuningReadout();
-  });
-  commitThresholdInput.addEventListener('input', () => {
-    tuningConfig.commitThreshold = clampNumber(
-      Number(commitThresholdInput.value),
-      0,
-      0.5,
-    );
-    syncTuningReadout();
-  });
-  rollbackSensitivityInput.addEventListener('input', () => {
-    tuningConfig.rollbackSensitivity = clampNumber(
-      Number(rollbackSensitivityInput.value),
-      0,
-      0.5,
-    );
-    syncTuningReadout();
-  });
-
-  controlsElement.append(
-    buildControlRowWithInput(
-      'Adaptation Enabled',
-      adaptationEnabledInput,
-      adaptationEnabledValue,
-    ),
-    buildControlRowWithInput(
-      'Cadence Mode',
-      cadenceModeInput,
-      cadenceModeValue,
-    ),
-    buildControlRowWithInput(
-      'Cadence Interval',
-      cadenceIntervalInput,
-      cadenceIntervalValue,
-    ),
-    buildControlRowWithInput(
-      'Mutation Intensity',
-      mutationIntensityInput,
-      mutationIntensityValue,
-    ),
-    buildControlRowWithInput(
-      'Growth vs Prune',
-      growthPruneBiasInput,
-      growthPruneBiasValue,
-    ),
-    buildControlRowWithInput(
-      'Commit Threshold',
-      commitThresholdInput,
-      commitThresholdValue,
-    ),
-    buildControlRowWithInput(
-      'Rollback Sensitivity',
-      rollbackSensitivityInput,
-      rollbackSensitivityValue,
-    ),
-  );
-
-  const adaptationTelemetryGrid = document.createElement('div');
-  adaptationTelemetryGrid.className = 'racing-telemetry';
-  adaptationTelemetryGrid.append(
+  const telemetryGrid = document.createElement('div');
+  telemetryGrid.className = 'racing-telemetry';
+  telemetryGrid.append(
     buildPanelRowWithLiveNode('Laps', lapValue),
     buildPanelRowWithLiveNode('Tick', tickValue),
-    buildPanelRowWithLiveNode('Commit Count', commitCountValue),
-    buildPanelRowWithLiveNode('Rollback Count', rollbackCountValue),
-    buildPanelRowWithLiveNode('Trend', recentTrendValue),
     buildPanelRowWithLiveNode('Network Size', networkSizeValue),
     buildPanelRowWithLiveNode('Network Δ', networkDeltaValue),
     buildPanelRowWithLiveNode('Last Change', lastChangeReasonValue),
   );
-  const runtimeTuningKeyboardHint = buildCallout(
-    'Keyboard: A toggle adaptation, C cycle cadence mode, [/] cadence interval, N/M mutation, H/G growth-prune bias, J/K commit threshold, F/R rollback sensitivity.',
-  );
-  syncRuntimeControls();
-  runtimeCard.bodyElement.append(
-    controlsElement,
-    adaptationTelemetryGrid,
-    runtimeTuningKeyboardHint,
-  );
 
+  const syncRuntimeControls = (): void => {
+    // No host-side tuning inputs to sync — telemetry is updated per-frame.
+  };
+
+  runtimeCard.bodyElement.append(controlsElement, telemetryGrid);
   region.append(runtimeCard.cardElement);
 
   return {
     tickValue,
     lapValue,
-    adaptationEnabledValue,
-    cadenceModeValue,
-    cadenceIntervalValue,
-    mutationIntensityValue,
-    growthPruneBiasValue,
-    commitThresholdValue,
-    rollbackSensitivityValue,
-    commitCountValue,
-    rollbackCountValue,
-    recentTrendValue,
     networkSizeValue,
     networkDeltaValue,
     lastChangeReasonValue,
@@ -1789,20 +1361,6 @@ function createStatusChip(label: string, value: string): HTMLDivElement {
 }
 
 /**
- * Creates a reusable explanatory callout.
- *
- * @param text - Callout body text.
- * @returns Callout element.
- * @internal
- */
-function buildCallout(text: string): HTMLDivElement {
-  const calloutElement = document.createElement('div');
-  calloutElement.className = 'racing-callout';
-  calloutElement.textContent = text;
-  return calloutElement;
-}
-
-/**
  * Creates a hover/focus tooltip chip styled to match the rest of the HUD.
  *
  * @param heading - Tooltip heading.
@@ -1876,13 +1434,13 @@ function syncCanvasToDisplaySize(canvasElement: HTMLCanvasElement): void {
     parentElement?.clientHeight ?? 0,
     canvasElement.height / devicePixelRatio,
   );
-  const displayWidth = Math.max(
-    1,
-    Math.round(cssDisplayWidth * devicePixelRatio),
+  const displayWidth = Math.min(
+    MAX_CANVAS_WIDTH_PX,
+    Math.max(1, Math.round(cssDisplayWidth * devicePixelRatio)),
   );
-  const displayHeight = Math.max(
-    1,
-    Math.round(cssDisplayHeight * devicePixelRatio),
+  const displayHeight = Math.min(
+    MAX_CANVAS_HEIGHT_PX,
+    Math.max(1, Math.round(cssDisplayHeight * devicePixelRatio)),
   );
 
   if (
@@ -1921,61 +1479,6 @@ function buildPanelRowWithLiveNode(
 
   row.append(labelSpan, valueSpan);
   return row;
-}
-
-/**
- * Builds a runtime control row with an input and a visible live value mirror.
- *
- * @param label - Control label shown in the left column.
- * @param inputElement - Interactive input element.
- * @param liveValueNode - Text node reflecting the current active value.
- * @returns Completed control row.
- * @internal
- */
-function buildControlRowWithInput(
-  label: string,
-  inputElement: HTMLInputElement | HTMLSelectElement,
-  liveValueNode: Text,
-): HTMLElement {
-  const rowElement = document.createElement('label');
-  rowElement.className = 'racing-control-row';
-
-  const labelSpan = document.createElement('span');
-  labelSpan.className = 'racing-panel__label';
-  labelSpan.textContent = label;
-
-  const liveValueSpan = document.createElement('span');
-  liveValueSpan.className = 'racing-control-value';
-  liveValueSpan.append(liveValueNode);
-
-  rowElement.append(labelSpan, inputElement, liveValueSpan);
-  return rowElement;
-}
-
-/**
- * Clamps one number inside an inclusive numeric range.
- *
- * @param value - Candidate value.
- * @param minimum - Inclusive minimum.
- * @param maximum - Inclusive maximum.
- * @returns Clamped numeric value.
- * @internal
- */
-function clampNumber(value: number, minimum: number, maximum: number): number {
-  return Math.min(maximum, Math.max(minimum, value));
-}
-
-/**
- * Clamps one number to an integer inside an inclusive range.
- *
- * @param value - Candidate value.
- * @param minimum - Inclusive minimum.
- * @param maximum - Inclusive maximum.
- * @returns Clamped integer value.
- * @internal
- */
-function clampInteger(value: number, minimum: number, maximum: number): number {
-  return Math.round(clampNumber(value, minimum, maximum));
 }
 
 /**
@@ -2253,55 +1756,34 @@ function createRoleEdgeKey(sourceRole: string, targetRole: string): string {
  * Updates telemetry panel text nodes from the current environment state.
  *
  * @param nodes - Live text node references.
+ * @param controllerNetwork - Current focused controller network.
  * @param envState - Current physics state.
+ * @param completedLaps - Current completed lap count.
+ * @param networkHud - Optional network HUD nodes to update.
  * @internal
  */
 function updateTelemetryPanelNodes(
   nodes: TelemetryPanelNodes,
-  runtimeAdaptationState: RuntimeAdaptationState,
   controllerNetwork: Network,
   envState: EnvironmentState,
   completedLaps: number,
   networkHud?: RacingNetworkHudNodes,
 ): void {
   const networkSize = resolveNetworkSize(controllerNetwork);
-  const runtimeTelemetry = runtimeAdaptationState.telemetry;
-  const runtimeTuning = runtimeAdaptationState.tuning;
 
   nodes.lapValue.textContent = String(completedLaps);
   nodes.tickValue.textContent = String(envState.tick);
-  nodes.adaptationEnabledValue.textContent = runtimeTuning.adaptationEnabled
-    ? 'on'
-    : 'off';
-  nodes.cadenceModeValue.textContent = runtimeTuning.cadenceMode;
-  nodes.cadenceIntervalValue.textContent = String(
-    runtimeTuning.cadenceInterval,
-  );
-  nodes.mutationIntensityValue.textContent =
-    runtimeTuning.mutationIntensity.toFixed(1);
-  nodes.growthPruneBiasValue.textContent =
-    runtimeTuning.growthPruneBias.toFixed(1);
-  nodes.commitThresholdValue.textContent =
-    runtimeTuning.commitThreshold.toFixed(2);
-  nodes.rollbackSensitivityValue.textContent =
-    runtimeTuning.rollbackSensitivity.toFixed(2);
-  nodes.commitCountValue.textContent = String(runtimeTelemetry.commitCount);
-  nodes.rollbackCountValue.textContent = String(runtimeTelemetry.rollbackCount);
-  nodes.recentTrendValue.textContent = runtimeTelemetry.recentImprovementTrend;
   nodes.networkSizeValue.textContent = `N${networkSize.nodes} / C${networkSize.connections}`;
-  nodes.networkDeltaValue.textContent = `ΔN${runtimeTelemetry.networkDeltaNodes} / ΔC${runtimeTelemetry.networkDeltaConnections}`;
-  nodes.lastChangeReasonValue.textContent = runtimeTelemetry.lastChangeReason;
+  nodes.networkDeltaValue.textContent = `ΔN0 / ΔC0`;
+  nodes.lastChangeReasonValue.textContent = 'worker-side adaptation';
 
   if (!networkHud) {
     return;
   }
 
   networkHud.sizeValue.textContent = `N${networkSize.nodes} / C${networkSize.connections}`;
-  networkHud.lastChangeValue.textContent = runtimeTelemetry.lastChangeReason;
-  networkHud.statusValue.textContent = resolveNetworkHudStatus(
-    runtimeTuning.adaptationEnabled,
-    runtimeTelemetry.recentImprovementTrend,
-  );
+  networkHud.lastChangeValue.textContent = 'worker-side adaptation';
+  networkHud.statusValue.textContent = resolveNetworkHudStatus(true, 'flat');
 }
 
 /**
@@ -2665,11 +2147,39 @@ export function stabilizeCurriculumTierTireGrip(
 function createInitialCurriculumProgress(
   trackSpec: TrackSpec,
   envState: EnvironmentState,
+  curriculumTier: CurriculumTier,
 ): CurriculumProgressState {
   return {
-    tier: ACTIVE_CURRICULUM_TIER,
+    tier: curriculumTier,
     lapProgress: createInitialLapProgress(trackSpec, envState),
   };
+}
+
+/**
+ * Resolve the curriculum tier from caller-provided start options.
+ *
+ * Falls back to {@link DEFAULT_CURRICULUM_TIER} when the caller omits `tier`
+ * or passes a value outside the valid `CurriculumTier` range.
+ *
+ * @param options - Caller options passed to {@link start}.
+ * @returns The validated curriculum tier to launch.
+ */
+function resolveCurriculumTierFromOptions(
+  options?: RacingCurriculumStartOptions,
+): CurriculumTier {
+  if (options?.tier === undefined) {
+    return DEFAULT_CURRICULUM_TIER;
+  }
+  const tier = options.tier;
+  if (
+    typeof tier === 'number' &&
+    Number.isInteger(tier) &&
+    tier >= 1 &&
+    tier <= 6
+  ) {
+    return tier as CurriculumTier;
+  }
+  return DEFAULT_CURRICULUM_TIER;
 }
 
 function createInitialLapProgress(
@@ -2835,10 +2345,6 @@ function resolveGuidanceAlphaForCurriculumTier(tier: CurriculumTier): number {
  * @returns Clamped unit-interval value.
  * @internal
  */
-function clampUnitInterval(value: number): number {
-  return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
-}
-
 function resolveControllerInputCountForObservationTier(
   observationTier: SupportedObservationTier,
 ): number {
@@ -2971,105 +2477,6 @@ function collectTierSignalEvidence(
   };
 }
 
-/**
- * Computes mean center-guide evidence for the last adaptation window.
- *
- * @param accumulator - Per-lap evidence accumulator.
- * @returns Mean evidence summary.
- * @internal
- */
-function summarizeTierSignalEvidence(
-  accumulator: TierSignalEvidenceAccumulator,
-): TierSignalEvidenceSummary {
-  const safeTickCount = Math.max(1, accumulator.tickCount);
-
-  return {
-    meanLateralErrorNormalized:
-      accumulator.cumulativeLateralErrorNormalized / safeTickCount,
-    meanHeadingAlignment01:
-      accumulator.cumulativeHeadingAlignment01 / safeTickCount,
-    meanCenterGuideNeed01:
-      accumulator.cumulativeCenterGuideNeed01 / safeTickCount,
-  };
-}
-
-function createRuntimeAdaptationState(
-  curriculumTier: CurriculumTier,
-  engine?: RuntimeAdaptationEngine,
-): RuntimeAdaptationState {
-  const tuning: RuntimeTuningConfig = {
-    adaptationEnabled: true,
-    cadenceMode: DEFAULT_ADAPTATION_CADENCE_MODE,
-    cadenceInterval: DEFAULT_RUNTIME_ADAPTATION_CADENCE_INTERVAL_TICKS,
-    mutationIntensity: 1,
-    growthPruneBias: 0,
-    commitThreshold: 0.06,
-    rollbackSensitivity: 0.45,
-  };
-
-  return {
-    engine:
-      engine ?? createRuntimeAdaptationEngineForTier(tuning, curriculumTier),
-    engineConfigSignature: resolveRuntimeAdaptationEngineConfigSignature(
-      tuning,
-      curriculumTier,
-    ),
-    tuning,
-    telemetry: {
-      commitCount: 0,
-      rollbackCount: 0,
-      recentImprovementTrend: 'flat',
-      lastChangeReason: 'startup baseline',
-      previousLapTick: null,
-      previousLapDuration: null,
-      lastLapImprovementRatio: 0,
-      networkDeltaNodes: 0,
-      networkDeltaConnections: 0,
-      adaptationScoreHistory: [],
-    },
-  };
-}
-
-function updateRuntimeImprovementTrend(
-  runtimeTelemetry: RuntimeTelemetryState,
-  previousCompletedLaps: number,
-  currentCompletedLaps: number,
-  currentTick: number,
-): void {
-  if (currentCompletedLaps <= previousCompletedLaps) {
-    return;
-  }
-
-  if (runtimeTelemetry.previousLapTick === null) {
-    runtimeTelemetry.previousLapTick = currentTick;
-    runtimeTelemetry.recentImprovementTrend = 'baseline';
-    runtimeTelemetry.lastLapImprovementRatio = 0;
-    return;
-  }
-
-  const currentLapDuration = currentTick - runtimeTelemetry.previousLapTick;
-  runtimeTelemetry.previousLapTick = currentTick;
-
-  if (runtimeTelemetry.previousLapDuration === null) {
-    runtimeTelemetry.previousLapDuration = currentLapDuration;
-    runtimeTelemetry.recentImprovementTrend = 'warming';
-    runtimeTelemetry.lastLapImprovementRatio = 0;
-    return;
-  }
-
-  const improvementRatio =
-    (runtimeTelemetry.previousLapDuration - currentLapDuration) /
-    Math.max(1, runtimeTelemetry.previousLapDuration);
-  runtimeTelemetry.previousLapDuration = currentLapDuration;
-  runtimeTelemetry.lastLapImprovementRatio = improvementRatio;
-  runtimeTelemetry.recentImprovementTrend =
-    improvementRatio > IMPROVEMENT_TREND_EPSILON
-      ? `up +${(improvementRatio * 100).toFixed(1)}%`
-      : improvementRatio < -IMPROVEMENT_TREND_EPSILON
-        ? `down ${(improvementRatio * 100).toFixed(1)}%`
-        : 'flat';
-}
-
 function resolveNetworkSize(network: Network): {
   nodes: number;
   connections: number;
@@ -3078,260 +2485,6 @@ function resolveNetworkSize(network: Network): {
     nodes: network.nodes.length,
     connections: network.connections.length,
   };
-}
-
-/**
- * Applies a single slow morph cycle to the focused controller network.
- *
- * @param controllerNetwork - Live controller network owned by the browser harness.
- * @internal
- */
-function applyWithinTierAdaptation(
-  controllerNetwork: ReturnType<
-    typeof createDeterministicRacingControllerNetwork
-  >,
-  curriculumTier: CurriculumTier,
-  runtimeAdaptationState: RuntimeAdaptationState,
-  tierSignalEvidenceSummary: TierSignalEvidenceSummary,
-  previousNetworkSize: { nodes: number; connections: number },
-  currentTick: number,
-  completedLaps: number,
-): boolean {
-  const runtimeTelemetry = runtimeAdaptationState.telemetry;
-  const runtimeTuning = runtimeAdaptationState.tuning;
-
-  if (!runtimeTuning.adaptationEnabled) {
-    runtimeTelemetry.networkDeltaNodes = 0;
-    runtimeTelemetry.networkDeltaConnections = 0;
-    runtimeTelemetry.lastChangeReason = 'adaptation_disabled (+0.000)';
-    return false;
-  }
-
-  const adaptationScoreSample = resolveRuntimeAdaptationScoreSample(
-    tierSignalEvidenceSummary,
-    curriculumTier,
-  );
-  pushRuntimeAdaptationScoreSample(
-    runtimeTelemetry.adaptationScoreHistory,
-    adaptationScoreSample,
-  );
-  const adaptationTelemetry = runtimeAdaptationState.engine.adaptOnTick({
-    tick: currentTick,
-    network: controllerNetwork,
-    scoreHistory: runtimeTelemetry.adaptationScoreHistory,
-    completedLaps,
-  });
-
-  if (adaptationTelemetry.committed) {
-    runtimeTelemetry.commitCount += 1;
-  } else if (adaptationTelemetry.operations.length > 0) {
-    runtimeTelemetry.rollbackCount += 1;
-  }
-
-  runtimeTelemetry.networkDeltaNodes =
-    adaptationTelemetry.networkSizeAfter.nodes -
-    adaptationTelemetry.networkSizeBefore.nodes;
-  runtimeTelemetry.networkDeltaConnections =
-    adaptationTelemetry.networkSizeAfter.connections -
-    adaptationTelemetry.networkSizeBefore.connections;
-  runtimeTelemetry.lastChangeReason =
-    resolveRuntimeAdaptationReason(adaptationTelemetry);
-
-  previousNetworkSize.nodes = adaptationTelemetry.networkSizeAfter.nodes;
-  previousNetworkSize.connections =
-    adaptationTelemetry.networkSizeAfter.connections;
-
-  return adaptationTelemetry.committed;
-}
-
-function resolveRuntimeAdaptationEngineOptionsForTier(
-  tuningConfig: RuntimeTuningConfig,
-  curriculumTier: CurriculumTier,
-): RuntimeAdaptationEngineOptions {
-  const cadenceInterval = Math.max(1, tuningConfig.cadenceInterval);
-  const cadence =
-    tuningConfig.cadenceMode === 'laps'
-      ? {
-          mode: 'lap_boundary' as const,
-          boundaryInterval: cadenceInterval,
-        }
-      : {
-          mode: 'every_n_ticks' as const,
-          everyNTicks: cadenceInterval,
-        };
-  const normalizedMutationIntensity = clampInteger(
-    Math.round(tuningConfig.mutationIntensity),
-    MIN_ADAPTATION_MUTATION_STEPS,
-    MAX_ADAPTATION_MUTATION_STEPS,
-  );
-  const effectiveImprovementThreshold = clampNumber(
-    (tuningConfig.commitThreshold + tuningConfig.rollbackSensitivity * 0.5) *
-      RUNTIME_ADAPTATION_IMPROVEMENT_THRESHOLD_SCALE,
-    0,
-    0.01,
-  );
-  return {
-    cadence,
-    improvementThreshold: effectiveImprovementThreshold,
-    minimumEvidenceWindow: 4,
-    random: createBiasedStructuralRandomSource(tuningConfig.growthPruneBias),
-    limits: {
-      maxStructuralEditsPerStep:
-        curriculumTier <= 1
-          ? normalizedMutationIntensity
-          : Math.max(
-              MIN_ADAPTATION_MUTATION_STEPS,
-              normalizedMutationIntensity - 1,
-            ),
-      maxNodes: RUNTIME_ADAPTATION_MAX_NODES,
-      maxConnections: RUNTIME_ADAPTATION_MAX_CONNECTIONS,
-      mutationCooldownTicks:
-        curriculumTier <= 1
-          ? RUNTIME_ADAPTATION_TIER_ONE_MUTATION_COOLDOWN_TICKS
-          : Math.max(
-              RUNTIME_ADAPTATION_TIER_ONE_MUTATION_COOLDOWN_TICKS,
-              tuningConfig.cadenceInterval,
-            ),
-      rollbackCooldownTicks:
-        curriculumTier <= 1
-          ? RUNTIME_ADAPTATION_TIER_ONE_ROLLBACK_COOLDOWN_TICKS
-          : RUNTIME_ADAPTATION_ROLLBACK_COOLDOWN_TICKS,
-    },
-  };
-}
-
-function createRuntimeAdaptationEngineForTier(
-  tuningConfig: RuntimeTuningConfig,
-  curriculumTier: CurriculumTier,
-): RuntimeAdaptationEngine {
-  return createRuntimeAdaptationEngine(
-    resolveRuntimeAdaptationEngineOptionsForTier(tuningConfig, curriculumTier),
-  );
-}
-
-function refreshRuntimeAdaptationEngine(
-  runtimeAdaptationState: RuntimeAdaptationState,
-  curriculumTier: CurriculumTier,
-  perCarEngines?: Map<number, RuntimeAdaptationEngine>,
-): boolean {
-  const nextConfigSignature = resolveRuntimeAdaptationEngineConfigSignature(
-    runtimeAdaptationState.tuning,
-    curriculumTier,
-  );
-  if (runtimeAdaptationState.engineConfigSignature === nextConfigSignature) {
-    return false;
-  }
-
-  const refreshedEngine = createRuntimeAdaptationEngineForTier(
-    runtimeAdaptationState.tuning,
-    curriculumTier,
-  );
-  runtimeAdaptationState.engine = refreshedEngine;
-  runtimeAdaptationState.engineConfigSignature = nextConfigSignature;
-  if (perCarEngines !== undefined) {
-    perCarEngines.set(0, refreshedEngine);
-  }
-  return true;
-}
-
-function resolveRuntimeAdaptationEngineConfigSignature(
-  tuningConfig: RuntimeTuningConfig,
-  curriculumTier: CurriculumTier,
-): string {
-  return [
-    curriculumTier,
-    tuningConfig.cadenceMode,
-    tuningConfig.mutationIntensity.toFixed(1),
-    tuningConfig.growthPruneBias.toFixed(1),
-    tuningConfig.commitThreshold.toFixed(2),
-    tuningConfig.rollbackSensitivity.toFixed(2),
-    tuningConfig.cadenceInterval,
-  ].join('|');
-}
-
-function createBiasedStructuralRandomSource(
-  growthPruneBias: number,
-): () => number {
-  const clampedBias = clampNumber(growthPruneBias, -1, 1);
-  if (clampedBias === 0) {
-    return Math.random;
-  }
-
-  const biasExponent = 1 + Math.abs(clampedBias) * 4;
-  if (clampedBias > 0) {
-    return () => 1 - Math.pow(1 - Math.random(), biasExponent);
-  }
-
-  return () => Math.pow(Math.random(), biasExponent);
-}
-
-function pushRuntimeAdaptationScoreSample(
-  scoreHistory: number[],
-  scoreSample: number,
-): void {
-  scoreHistory.push(scoreSample);
-  if (scoreHistory.length > RUNTIME_ADAPTATION_SCORE_HISTORY_CAP) {
-    scoreHistory.splice(
-      0,
-      scoreHistory.length - RUNTIME_ADAPTATION_SCORE_HISTORY_CAP,
-    );
-  }
-}
-
-function resolveRuntimeAdaptationScoreSample(
-  tierSignalEvidenceSummary: TierSignalEvidenceSummary,
-  curriculumTier: CurriculumTier,
-): number {
-  const guidanceEvidenceWeight =
-    resolveGuidanceEvidenceWeightForTier(curriculumTier);
-  const headingMisalignment01 =
-    1 - tierSignalEvidenceSummary.meanHeadingAlignment01;
-  const weightedAdaptationNeed01 = clampUnitInterval(
-    tierSignalEvidenceSummary.meanCenterGuideNeed01 * guidanceEvidenceWeight +
-      headingMisalignment01 * (1 - guidanceEvidenceWeight),
-  );
-
-  return 1 - weightedAdaptationNeed01;
-}
-
-function resolveRuntimeAdaptationReason(
-  adaptationTelemetry: RuntimeAdaptationTelemetry,
-): string {
-  const scoreDelta =
-    adaptationTelemetry.scoreAfter - adaptationTelemetry.scoreBefore;
-  const operationSummary =
-    adaptationTelemetry.operations.length === 0
-      ? 'none'
-      : adaptationTelemetry.operations.join('+');
-  return `${adaptationTelemetry.reason}:${operationSummary} (${scoreDelta >= 0 ? '+' : ''}${scoreDelta.toFixed(3)})`;
-}
-
-/**
- * Resolves guidance evidence weight for adaptation scoring by curriculum tier.
- *
- * Tier 1 prioritizes center-guide error strongly. Tier 2+ keeps adaptation
- * active while reducing direct dependence on the center-guide seam.
- *
- * @param curriculumTier - Active curriculum tier.
- * @returns Guidance evidence weight in [0, 1].
- * @internal
- */
-function resolveGuidanceEvidenceWeightForTier(
-  curriculumTier: CurriculumTier,
-): number {
-  if (curriculumTier <= 1) {
-    return 0.9;
-  }
-
-  if (curriculumTier === 2) {
-    return 0.5;
-  }
-
-  if (curriculumTier === 3) {
-    return 0.35;
-  }
-
-  return 0.2;
 }
 
 /**

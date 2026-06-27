@@ -1,5 +1,6 @@
 import type {
   EnvironmentState,
+  RacingCarState,
   TireStateTuple,
 } from '../environment/environment.types';
 import type { SplineSample, TrackSpec } from '../track/track.generator.types';
@@ -250,6 +251,16 @@ export function derivePerCarObservationState(
     );
   }
 
+  // Step 1: Populate teammate radio slots from same-team cars.
+  const teammateRadioSlots = buildTeammateRadioSlots(
+    envState.cars,
+    carIndex,
+    selectedCar.teamIndex,
+    selectedCar.carX,
+    selectedCar.carY,
+    selectedCar.carHeading,
+  );
+
   return {
     ...envState,
     carX: selectedCar.carX,
@@ -257,7 +268,118 @@ export function derivePerCarObservationState(
     carHeading: selectedCar.carHeading,
     teamIndex: selectedCar.teamIndex,
     tireState: selectedCar.tireState,
+    teammateRadioSlots,
   };
+}
+
+/**
+ * Builds the teammate radio slots for a focal car from the multi-car roster.
+ *
+ * Each slot encodes seven channels: teammate position x/y (normalized),
+ * teammate heading (sin), teammate speed (normalized, 0 when unavailable),
+ * relative offset x/y (normalized), and relative heading difference (sin).
+ *
+ * In a 2v2 layout only one teammate exists, so slot 0 is populated and
+ * slots 1–2 are zero-padded.
+ *
+ * @param cars - Ordered car roster from the environment state.
+ * @param focalCarIndex - Index of the focal car.
+ * @param focalTeamIndex - Team index of the focal car.
+ * @param focalCarX - Focal car X position in world units.
+ * @param focalCarY - Focal car Y position in world units.
+ * @param focalCarHeading - Focal car heading in radians.
+ * @returns Array of three 7-channel slots (populated or zero-padded).
+ */
+function buildTeammateRadioSlots(
+  cars: readonly RacingCarState[] | undefined,
+  focalCarIndex: number,
+  focalTeamIndex: 0 | 1,
+  focalCarX: number,
+  focalCarY: number,
+  focalCarHeading: number,
+): readonly (Float32Array | readonly number[])[] {
+  if (cars === undefined) {
+    return [
+      new Float32Array(TIER_THREE_CHANNELS_PER_TEAMMATE_SLOT),
+      new Float32Array(TIER_THREE_CHANNELS_PER_TEAMMATE_SLOT),
+      new Float32Array(TIER_THREE_CHANNELS_PER_TEAMMATE_SLOT),
+    ];
+  }
+
+  // Step 1: Collect teammates (same team, different car index).
+  const teammates = cars.filter(
+    (car, index) => index !== focalCarIndex && car.teamIndex === focalTeamIndex,
+  );
+
+  // Step 2: Count same-team cars including the focal car.
+  // For 3-car teams (Tier 5), the focal car's own state is included as a
+  // self-broadcast slot so all 3 radio rows carry non-zero data.
+  // For 2-car teams (Tier 3–4), the focal car is excluded and the third
+  // slot remains zero-padded.
+  const sameTeamCount = teammates.length + 1;
+  const includeSelfBroadcast = sameTeamCount >= 3;
+  const focalCar = cars[focalCarIndex];
+
+  // Step 3: Build up to 3 slots — populate available teammates, then
+  // self-broadcast for 3-car teams, zero-pad the rest.
+  const slots: (Float32Array | readonly number[])[] = [];
+  for (
+    let slotIndex = 0;
+    slotIndex < TIER_THREE_TEAMMATE_SLOT_COUNT;
+    slotIndex++
+  ) {
+    const teammate = teammates[slotIndex];
+    if (teammate !== undefined) {
+      slots.push(
+        buildTeammateSlot(teammate, focalCarX, focalCarY, focalCarHeading),
+      );
+    } else if (
+      includeSelfBroadcast &&
+      focalCar !== undefined &&
+      slotIndex === teammates.length
+    ) {
+      slots.push(
+        buildTeammateSlot(focalCar, focalCarX, focalCarY, focalCarHeading),
+      );
+    } else {
+      slots.push(new Float32Array(TIER_THREE_CHANNELS_PER_TEAMMATE_SLOT));
+    }
+  }
+
+  return slots;
+}
+
+/**
+ * Encodes one teammate's state into a 7-channel radio slot.
+ *
+ * Channel layout: [posX, posY, headingSin, speed, relOffsetX, relOffsetY, relHeadingSin].
+ * All channels are normalized to [-1, 1].
+ *
+ * @param teammate - The teammate car state to encode.
+ * @param focalCarX - Focal car X position in world units.
+ * @param focalCarY - Focal car Y position in world units.
+ * @param focalCarHeading - Focal car heading in radians.
+ * @returns Seven-channel Float32Array with normalized teammate state.
+ */
+function buildTeammateSlot(
+  teammate: RacingCarState,
+  focalCarX: number,
+  focalCarY: number,
+  focalCarHeading: number,
+): Float32Array {
+  const relOffsetX = teammate.carX - focalCarX;
+  const relOffsetY = teammate.carY - focalCarY;
+  const relHeading = teammate.carHeading - focalCarHeading;
+
+  return Float32Array.from([
+    teammate.carX / TRACK_POSITION_WORLD_SCALE,
+    teammate.carY / TRACK_POSITION_WORLD_SCALE,
+    Math.sin(teammate.carHeading),
+    0,
+    relOffsetX / TRACK_POSITION_WORLD_SCALE,
+    relOffsetY / TRACK_POSITION_WORLD_SCALE,
+    Math.sin(relHeading),
+  ]);
 }
 
 /**
@@ -269,9 +391,9 @@ export function derivePerCarObservationState(
  * `[84..90]` is teammate slot 2. `envState.teammateRadioSlots` feeds those
  * slots directly.
  *
- * Missing slots are zero-padded. That is the honest Phase 3 2v2 behavior: a
- * race pack can supply at most two teammate rows, so the unused tail remains
- * silent rather than fabricating extra agents.
+ * Missing slots are zero-padded. In a 2v2 race pack at most two teammate
+ * rows are populated, so the unused tail remains silent rather than
+ * fabricating extra agents.
  *
  * @param envState - Current environment snapshot plus optional teammate radio rows.
  * @param trackSpec - Frozen track geometry used to derive look-ahead features.

@@ -414,11 +414,16 @@ separateCars(
 ): readonly CarState[]
 ```
 
-Pushes overlapping car centers apart so two cars cannot occupy the same point.
+Pushes overlapping car centers apart so bounding boxes never overlap.
 
-The minimum separation is enforced along the line connecting the two centers.
-For coincident centers, a stable world-space X axis fallback is used so the
-separation is still deterministic.
+Uses axis-aligned bounding boxes with half-extents {@link CAR_HALF_WIDTH}
+along X and {@link CAR_HALF_LENGTH} along Y. For each overlapping pair the
+required center-to-center distance is computed along the connecting line so
+that either the X gap exceeds the combined half-widths or the Y gap exceeds
+the combined half-lengths, whichever is smaller. A minimum Euclidean
+separation of {@link CAR_MIN_CENTER_SEPARATION} is also enforced. The solver
+iterates up to {@link SEPARATION_MAX_ITERATIONS} times to resolve cascading
+overlaps in multi-car stacks.
 
 Parameters:
 - `cars` - Car roster after track-boundary clamping.

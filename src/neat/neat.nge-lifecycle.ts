@@ -1,3 +1,4 @@
+import type Network from '../architecture/network';
 import type { EquilibriumCandidate } from './nge-adult/neat.nge-adult.types';
 import { assimilateEquilibriumCandidate } from './nge-assimilation/neat.nge-assimilation';
 import type {
@@ -6,10 +7,17 @@ import type {
   NgeAssimilationResult,
 } from './nge-assimilation/neat.nge-assimilation.types';
 import {
+  applyMorphDeltas,
+  commitGrowth,
   computeFocusScores,
   planGrowthMorphs,
   resolveFocusConfig,
 } from './nge-juvenile/neat.nge-juvenile';
+import type {
+  MorphApplyBudget,
+  MorphApplyOutcome,
+} from './nge-juvenile/neat.nge-juvenile.apply';
+import type { NgeGrowthMorphKind } from './nge-juvenile/neat.nge-juvenile.grow';
 import type {
   NgeFocusScore,
   NgeGrowthBudget,
@@ -17,6 +25,7 @@ import type {
   NgeJuvenilePhaseConfig,
   NgeModuleMetricsSnapshot,
   NgeMorphDelta,
+  NgePruneBudget,
 } from './nge-juvenile/neat.nge-juvenile.types';
 
 /**
@@ -39,6 +48,10 @@ export interface NgeJuvenileLifecycleInput {
   focusScore?: NgeFocusScore;
   /** Optional pre-computed dry-run morph deltas supplied by the caller. */
   deltas?: NgeMorphDelta[];
+  /** Optional live network to mutate when the apply phase should run. */
+  network?: Network;
+  /** DNA-configured prune floors required when the apply phase runs. */
+  pruneBudget?: NgePruneBudget;
 }
 
 /**
@@ -71,6 +84,10 @@ export interface NgeLifecycleResult {
   };
   /** Assimilation result produced when an adult equilibrium candidate is processed. */
   assimilationResult?: NgeAssimilationResult;
+  /** Apply outcomes from `applyMorphDeltas`, present when the apply phase ran. */
+  applyOutcomes?: MorphApplyOutcome[];
+  /** Updated hysteresis state after growth commit, present when the apply phase ran. */
+  hysteresis?: NgeHysteresisState;
 }
 
 /**
@@ -94,8 +111,11 @@ export interface NgeLifecycleResult {
  *   budget,
  *   config,
  *   hysteresis,
+ *   network,
+ *   pruneBudget,
  * });
  * console.log(result.stage); // 'adult'
+ * console.log(result.applyOutcomes?.length); // number of applied morphs
  * ```
  */
 export function runNgeLifecycle(
@@ -117,14 +137,41 @@ export function runNgeLifecycle(
       input.hysteresis,
     );
 
-    // Step 3: Transition to the adult stage after one juvenile planning cycle.
+    // Step 3: When a live network and prune budget are supplied, apply the
+    //        planned morphs and commit growth hysteresis.
+    if (input.network !== undefined && input.pruneBudget !== undefined) {
+      const applyBudget: MorphApplyBudget = {
+        growth: input.budget,
+        prune: input.pruneBudget,
+      };
+      const applyOutcomes = applyMorphDeltas(
+        input.network,
+        deltas,
+        applyBudget,
+      );
+
+      const committedKind = extractCommittedGrowthKind(applyOutcomes);
+      const updatedHysteresis =
+        committedKind !== undefined
+          ? commitGrowth(input.hysteresis, committedKind, resolvedConfig)
+          : input.hysteresis;
+
+      return {
+        stage: 'adult',
+        juvenileResult: { focusScore, deltas },
+        applyOutcomes,
+        hysteresis: updatedHysteresis,
+      };
+    }
+
+    // Step 4: Dry-run path — return planned deltas without mutating any inputs.
     return {
       stage: 'adult',
       juvenileResult: { focusScore, deltas },
     };
   }
 
-  // Step 4: In the adult stage, assimilate the equilibrium candidate into structural priors.
+  // Step 5: In the adult stage, assimilate the equilibrium candidate into structural priors.
   const assimilationResult = assimilateEquilibriumCandidate(
     input.candidate,
     input.policy,
@@ -134,4 +181,31 @@ export function runNgeLifecycle(
     stage: 'adult',
     assimilationResult,
   };
+}
+
+/** Growth morph kinds that `commitGrowth` accepts. */
+const GROWTH_MORPH_KINDS: ReadonlySet<NgeMorphDelta['kind']> = new Set([
+  'edgeDensify',
+  'slotExpand',
+  'nodeAdd',
+]);
+
+/**
+ * Find the first applied growth morph kind from apply outcomes.
+ *
+ * Used to determine whether `commitGrowth` should be called and which morph
+ * kind to report. Prune-only or all-skipped outcome sets return `undefined`.
+ *
+ * @param outcomes - Apply outcomes produced by `applyMorphDeltas`.
+ * @returns The first applied growth morph kind, or `undefined` when none applied.
+ */
+function extractCommittedGrowthKind(
+  outcomes: readonly MorphApplyOutcome[],
+): NgeGrowthMorphKind | undefined {
+  for (const outcome of outcomes) {
+    if (outcome.status === 'applied' && GROWTH_MORPH_KINDS.has(outcome.kind)) {
+      return outcome.kind as NgeGrowthMorphKind;
+    }
+  }
+  return undefined;
 }

@@ -51,6 +51,7 @@ skills:
     'performance-optimization',
     'trace-analyzer-extension',
     'worker-inference-transport',
+    'research-methodology',
     'execute',
   ]
 handoffs:

@@ -126,6 +126,33 @@ Public run handle for the racing curriculum browser shell.
 Returned by `start(...)`. Use `stop()` to cancel the animation loop; await
 `done` to observe clean teardown.
 
+### RacingCurriculumStartOptions
+
+Options accepted by {@link start} to override the default curriculum tier.
+
+The browser harness defaults to Tier 1 (two-car 1v1 pack). Callers that need
+a higher-tier pack — for example Tier 3 (four-car 2v2) — pass `{ tier: 3 }`
+so the host builds the correct roster, controller map, and observation tier
+before the animation loop begins.
+
+### resolveCurriculumTierFromOptions
+
+```ts
+resolveCurriculumTierFromOptions(
+  options: RacingCurriculumStartOptions | undefined,
+): CurriculumTier
+```
+
+Resolve the curriculum tier from caller-provided start options.
+
+Falls back to {@link DEFAULT_CURRICULUM_TIER} when the caller omits `tier`
+or passes a value outside the valid `CurriculumTier` range.
+
+Parameters:
+- `options` - Caller options passed to  {@link start} .
+
+Returns: The validated curriculum tier to launch.
+
 ### resolveNetworkHudStatus
 
 ```ts
@@ -204,6 +231,7 @@ Returns: Unmodified stepped environment state.
 ```ts
 start(
   container: string | HTMLElement,
+  options: RacingCurriculumStartOptions | undefined,
 ): Promise<RacingCurriculumRunHandle>
 ```
 
@@ -222,6 +250,9 @@ sidebar stays in sync with the viewport through
 
 Parameters:
 - `container` - Host element or element id.
+- `options` - Optional launch configuration; `tier` overrides the default
+curriculum tier so callers can start directly at Tier 3 (four-car 2v2) or
+higher without waiting for auto-promotion.
 
 Returns: Lightweight run handle.
 
@@ -237,6 +268,12 @@ const handle = await start(document.getElementById('racing-output')!);
 console.log(handle.isRunning);
 handle.stop();
 await handle.done;
+```
+
+```ts
+// Launch directly at Tier 3 (four-car 2v2 pack).
+const handle = await start(host, { tier: 3 });
+handle.stop();
 ```
 
 ### SupportedObservationTier

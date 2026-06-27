@@ -66,6 +66,8 @@ export type CarGenome = {
   mutate(): void;
   /** Serializes the genome's connection weights to a typed-array payload. */
   serialize(): Float32Array;
+  /** Returns the underlying Network instance for worker-side adaptation. */
+  getNetwork(): Network;
 };
 
 /**
@@ -116,14 +118,28 @@ export type CoevolutionContainer = {
 /** Monotonic counter used to generate distinct population IDs per container. */
 let containerSerialNumber = 0;
 
-/** Number of cars in the race pack — one per team. */
-const CAR_COUNT = 2 as const;
-
-/** Input dimension for the per-car controller network. */
-const CONTROLLER_INPUT_SIZE = 4 as const;
-
-/** Output dimension for the per-car controller network. */
-const CONTROLLER_OUTPUT_SIZE = 2 as const;
+/** Team layout for Tier 1–2: one car per team. */
+const TIER_ONE_TWO_TEAM_LAYOUT = [0, 1] as const;
+/** Team layout for Tier 3–4: two cars per team (2v2). */
+const TIER_THREE_TEAM_LAYOUT = [0, 0, 1, 1] as const;
+/** Team layout for Tier 5: three cars per team (3v3). */
+const TIER_FIVE_TEAM_LAYOUT = [0, 0, 0, 1, 1, 1] as const;
+/** Tier 1–2 car count. */
+const TIER_ONE_TWO_CAR_COUNT = 2;
+/** Tier 3–4 car count. */
+const TIER_THREE_CAR_COUNT = 4;
+/** Tier 5 car count (3v3 = 6 cars). */
+const TIER_FIVE_CAR_COUNT = 6;
+/** Tier 1–2 controller input dimension. */
+const TIER_ONE_TWO_CONTROLLER_INPUT_SIZE = 4;
+/** Tier 3+ controller input dimension (91-channel observation). */
+const TIER_THREE_CONTROLLER_INPUT_SIZE = 91;
+/** Tier 4+ controller input dimension (95-channel observation with tire health). */
+const TIER_FOUR_CONTROLLER_INPUT_SIZE = 95;
+/** Tier 1–2 controller output dimension. */
+const TIER_ONE_TWO_CONTROLLER_OUTPUT_SIZE = 2;
+/** Tier 3+ controller output dimension (2 control + 7 radio-write). */
+const TIER_THREE_CONTROLLER_OUTPUT_SIZE = 9;
 
 /**
  * Creates a single car's independent genome backed by a real `Network` instance.
@@ -135,14 +151,18 @@ const CONTROLLER_OUTPUT_SIZE = 2 as const;
  * @param baseSeed - Base RNG seed from the coevolution config.
  * @param teamId - 0 for Team A (blue), 1 for Team B (red).
  * @param populationId - The population id of the team this car belongs to.
+ * @param inputSize - Controller network input dimension (tier-dependent).
+ * @param outputSize - Controller network output dimension (tier-dependent).
  */
 function createCarGenome(
   carIndex: number,
   baseSeed: number,
   teamId: 0 | 1,
   populationId: string,
+  inputSize: number,
+  outputSize: number,
 ): CarGenome {
-  const network = new Network(CONTROLLER_INPUT_SIZE, CONTROLLER_OUTPUT_SIZE, {
+  const network = new Network(inputSize, outputSize, {
     seed: baseSeed + carIndex,
   });
 
@@ -158,6 +178,9 @@ function createCarGenome(
     },
     serialize(): Float32Array {
       return Float32Array.from(network.connections.map((c) => c.weight));
+    },
+    getNetwork(): Network {
+      return network;
     },
   };
 }
@@ -180,6 +203,18 @@ const evaluateRacingTeamFitness = createTeamFitnessEvaluator<
  * Creates a paired Team A/B coevolution container with independent population
  * handles and a best-position team-fitness resolver.
  *
+ * The `tier` field in the config controls two dimension switches:
+ * - **Car count:** Tier 1–2 allocates 2 cars (one per team); Tier 3+ allocates
+ *   4 cars (two per team) using the `[0, 0, 1, 1]` team layout.
+ * - **Controller input dimension:** Tier 1–2 produces 4-input networks; Tier 3
+ *   produces 91-input networks (70 base + 21 teammate-radio); Tier 4+ produces
+ *   95-input networks (91 Tier 3 + 4 tire-health channels).
+ *
+ * The output dimension is 2 for Tier 1–2 (throttle + steer) and 9 for Tier 3+
+ * (2 control + 7 radio-write). Each car gets a distinct seed derived from the
+ * base `rngSeed` plus the car index so activation outputs differ from
+ * generation 1 onward.
+ *
  * @param _config - Container configuration (population size, seed, tier).
  * @returns Paired coevolution container with distinct team handles.
  *
@@ -188,6 +223,14 @@ const evaluateRacingTeamFitness = createTeamFitnessEvaluator<
  * const container = createCoevolutionContainer({ populationSize: 50, rngSeed: 1, tier: 1 });
  * // container.teamA.populationId !== container.teamB.populationId
  * const fitness = container.resolveTeamFitness(0, [3, 7]); // → 3
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Tier 4: 2v2 with 95-input / 9-output controller networks.
+ * const container = createCoevolutionContainer({ populationSize: 50, rngSeed: 42, tier: 4 });
+ * const genomes = container.getCarGenomes();
+ * // genomes.length === 4 (two blue, two red)
  * ```
  */
 export function createCoevolutionContainer(
@@ -208,14 +251,54 @@ export function createCoevolutionContainer(
 
   // Step 2: Create independent per-car genomes — one per car, each with a
   // distinct seed so activation outputs differ from generation 1 onward.
-  // Car 0 belongs to Team A (blue), car 1 belongs to Team B (red).
-  const carGenomes: CarGenome[] = Array.from({ length: CAR_COUNT }, (_, carIndex) => {
-    const teamId = carIndex === 0 ? 0 : 1;
-    const populationId = teamId === 0 ? teamA.populationId : teamB.populationId;
-    return createCarGenome(carIndex, config.rngSeed, teamId, populationId);
-  });
+  // Tier 5 uses a 6-car [0, 0, 0, 1, 1, 1] layout; Tier 3–4 uses 4 cars
+  // [0, 0, 1, 1]; Tier 1–2 uses 2 cars [0, 1].
+  const isTier5 = config.tier >= 5;
+  const isTier4 = config.tier >= 4;
+  const isTier3 = config.tier >= 3;
+  const carCount = isTier5
+    ? TIER_FIVE_CAR_COUNT
+    : isTier3
+      ? TIER_THREE_CAR_COUNT
+      : TIER_ONE_TWO_CAR_COUNT;
+  const inputSize = isTier4
+    ? TIER_FOUR_CONTROLLER_INPUT_SIZE
+    : isTier3
+      ? TIER_THREE_CONTROLLER_INPUT_SIZE
+      : TIER_ONE_TWO_CONTROLLER_INPUT_SIZE;
+  const outputSize = isTier3
+    ? TIER_THREE_CONTROLLER_OUTPUT_SIZE
+    : TIER_ONE_TWO_CONTROLLER_OUTPUT_SIZE;
+  const teamLayout = isTier5
+    ? TIER_FIVE_TEAM_LAYOUT
+    : isTier3
+      ? TIER_THREE_TEAM_LAYOUT
+      : TIER_ONE_TWO_TEAM_LAYOUT;
+  const carGenomes: CarGenome[] = Array.from(
+    { length: carCount },
+    (_, carIndex) => {
+      const teamId = teamLayout[carIndex] as 0 | 1;
+      const populationId =
+        teamId === 0 ? teamA.populationId : teamB.populationId;
+      return createCarGenome(
+        carIndex,
+        config.rngSeed,
+        teamId,
+        populationId,
+        inputSize,
+        outputSize,
+      );
+    },
+  );
 
-  return { teamA, teamB, resolveTeamFitness, advanceTeamGeneration, getCarGenome, getCarGenomes };
+  return {
+    teamA,
+    teamB,
+    resolveTeamFitness,
+    advanceTeamGeneration,
+    getCarGenome,
+    getCarGenomes,
+  };
 
   /**
    * Returns the distinct genome for the requested car index.
@@ -320,4 +403,92 @@ function selectBestFinishingPosition(group: {
       Math.min(bestFinishPosition, memberResult.rawScore),
     Number.POSITIVE_INFINITY,
   );
+}
+
+/**
+ * Result of queen selection for one team.
+ *
+ * The queen is the best-finishing car on the team — the one whose individual
+ * finishing position is lowest (best).  This selection drives polyandric
+ * reproduction: the queen's genome becomes the template, and the other team
+ * cars become drones.
+ *
+ * @property teamId - 0 for Team A, 1 for Team B.
+ * @property queenCarIndex - Car index of the best-finishing car on this team.
+ * @property queenFinishPosition - Individual finishing position of the queen.
+ * @property droneCarIndices - Car indices of the remaining team cars (drones).
+ */
+export type QueenSelectionResult = {
+  readonly teamId: 0 | 1;
+  readonly queenCarIndex: number;
+  readonly queenFinishPosition: number;
+  readonly droneCarIndices: readonly number[];
+};
+
+/**
+ * Selects the queen (best-finishing car) for each team after a race.
+ *
+ * The queen is the car with the lowest (best) individual finishing position
+ * on its team.  The remaining team cars become drones.  This function is
+ * observability-only and does NOT call `reproducePolyandric` — the actual
+ * reproduction call that would use the queen's genome as a template and the
+ * drones as contributors is deferred until the polyandric reproduction wiring
+ * is integrated into the racing harness.
+ *
+ * The queen-selection policy uses best-finishing-position (the lowest
+ * individual finish wins the queen role), while population-level team fitness
+ * remains shared-equal (average of all members) for team coordination. This
+ * split policy lets queen selection reward the winning car's DNA without
+ * destabilizing the cooperative fitness signal that drives team coordination.
+ *
+ * @param carFinishPositions - Finish positions for all cars, indexed by carIndex.
+ * @param teamLayout - Team assignment per car (0 for Team A, 1 for Team B).
+ * @returns One QueenSelectionResult per team (Team A first, Team B second).
+ *
+ * @example
+ * ```ts
+ * // 6-car Tier 5 pack: Team A cars 0,1,2 finish at positions 3,1,5
+ * // Team B cars 3,4,5 finish at positions 2,4,6
+ * const results = selectQueenPerTeam([3, 1, 5, 2, 4, 6], [0, 0, 0, 1, 1, 1]);
+ * // results[0].queenCarIndex === 1 (Team A best finish = position 1)
+ * // results[1].queenCarIndex === 3 (Team B best finish = position 2)
+ * ```
+ */
+export function selectQueenPerTeam(
+  carFinishPositions: readonly number[],
+  teamLayout: readonly (0 | 1)[],
+): readonly QueenSelectionResult[] {
+  const teamCarIndices: number[][] = [[], []];
+
+  // Step 1: Group car indices by team.
+  for (let carIndex = 0; carIndex < carFinishPositions.length; carIndex++) {
+    const teamId = teamLayout[carIndex] ?? 0;
+    teamCarIndices[teamId].push(carIndex);
+  }
+
+  // Step 2: For each team, find the best-finishing car (queen) and the rest (drones).
+  return teamCarIndices.map((teamCars, teamId) => {
+    let bestCarIndex = teamCars[0] ?? 0;
+    let bestPosition =
+      carFinishPositions[bestCarIndex] ?? Number.POSITIVE_INFINITY;
+
+    for (const carIndex of teamCars) {
+      const position = carFinishPositions[carIndex] ?? Number.POSITIVE_INFINITY;
+      if (position < bestPosition) {
+        bestPosition = position;
+        bestCarIndex = carIndex;
+      }
+    }
+
+    const droneCarIndices = teamCars.filter(
+      (carIndex) => carIndex !== bestCarIndex,
+    );
+
+    return {
+      teamId: teamId as 0 | 1,
+      queenCarIndex: bestCarIndex,
+      queenFinishPosition: bestPosition,
+      droneCarIndices,
+    };
+  });
 }

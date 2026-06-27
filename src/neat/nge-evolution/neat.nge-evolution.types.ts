@@ -8,10 +8,7 @@ import type {
  * Fixed term names used by the Phase E composite compatibility-distance calculator.
  */
 export type NgeEvolutionCompatibilityDistanceTermName =
-  | 'topology'
-  | 'computation'
-  | 'memory'
-  | 'lifecycle';
+  'topology' | 'computation' | 'memory' | 'lifecycle';
 
 /**
  * One weighted compatibility-distance term captured during Phase E speciation scoring.
@@ -124,21 +121,13 @@ export interface NgeEvolutionCompatibilityDistanceResult {
  * Parent-role labels used when Phase E operators report how one offspring was assembled.
  */
 export type NgeEvolutionParentRole =
-  | 'sole-parent'
-  | 'queen'
-  | 'drone'
-  | 'primary'
-  | 'secondary';
+  'sole-parent' | 'queen' | 'drone' | 'primary' | 'secondary';
 
 /**
  * High-level contribution kinds used to describe parent input at the reproduction boundary.
  */
 export type NgeEvolutionContributionKind =
-  | 'clone'
-  | 'mutation'
-  | 'patch'
-  | 'crossover'
-  | 'blend';
+  'clone' | 'mutation' | 'patch' | 'crossover' | 'blend';
 
 /**
  * One parent contribution reported by a Phase E reproduction operator.
@@ -234,10 +223,7 @@ export interface NgeEvolutionEpigeneticPriorResult<
  * High-level offspring outcome labels surfaced by the Phase E reproduction operators.
  */
 export type NgeEvolutionReproductionOutcome =
-  | 'clone'
-  | 'mutation-only'
-  | 'queen-template-patched'
-  | 'sexual-crossover';
+  'clone' | 'mutation-only' | 'queen-template-patched' | 'sexual-crossover';
 
 /**
  * Shared reproduction result returned by all three Phase E reproduction modes.

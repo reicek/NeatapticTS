@@ -45,7 +45,9 @@ function carAabb(car: RacingCarState): CarAabb {
 
 /** Returns true when two axis-aligned bounding boxes overlap (share interior area). */
 function aabbOverlap(a: CarAabb, b: CarAabb): boolean {
-  return a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY;
+  return (
+    a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY
+  );
 }
 
 /** Minimum required center-to-center distance so bounding boxes do not overlap. */
@@ -350,7 +352,10 @@ describe('Strengthened car separation — bounding box non-overlap', () => {
         cars: [initial.cars![0]!],
       };
 
-      const nextState = stepEnvironment(singleCarState, { throttle: 1, steer: 0 });
+      const nextState = stepEnvironment(singleCarState, {
+        throttle: 1,
+        steer: 0,
+      });
       const car = nextState.cars![0]!;
 
       expect(car.carX).not.toBe(singleCarState.cars![0]!.carX);

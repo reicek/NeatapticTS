@@ -42,6 +42,7 @@ skills:
     'test-fix-workflow',
     'plan-sync-validation',
     'trace-audit-reporting',
+    'research-methodology',
     'execute',
     'chrome-devtools-mcp',
   ]

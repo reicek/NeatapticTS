@@ -13,9 +13,7 @@
  * durable side-effect of a routing pass.
  */
 export type NeatChatRoutingPath =
-  | 'base'
-  | 'personalized'
-  | 'retrieval-grounded';
+  'base' | 'personalized' | 'retrieval-grounded';
 
 /**
  * One generated response candidate produced by the routing layer.

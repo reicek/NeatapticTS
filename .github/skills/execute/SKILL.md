@@ -617,19 +617,66 @@ the table rather than editing this skill to match a stale inventory.
 | Refresh the routing table        | `npm run agents:routing-table`      |
 | Validate routing table freshness | `npm run agents:routing-table:gate` |
 
-## Section 7 — Cortex-First Search Policy Cross-Reference
+## Section 7 — Cortex-First Search Policy (Mandatory)
 
-> **Search policy:** Follow the Cortex-First Search Policy from
-> `research-methodology`. Prefer Cortex MCP tools (`search_corpus`,
-> `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`)
-> over native tools (`grep`, `glob`, `view`). Use native tools only as
-> fallback when Cortex is degraded.
+**Cortex MCP tools are the PRIMARY search mechanism for ALL agents.**
+Every agent that performs codebase exploration, investigation, or
+discovery MUST use Cortex MCP RAG tools as the first choice, not as an
+optional alternative. Native tools (`grep`, `glob`, `view`) are
+**fallbacks of LAST RESORT**, not peers.
 
-When a delegation decision requires understanding the codebase before
-routing, use Cortex search first. When Cortex is degraded, fall back to
-native tools. Do not skip reconnaissance just because the delegation
-target seems obvious — a quick Cortex search can reveal that the assumed
-target agent's boundary has shifted.
+### Required Search Order
+
+When an agent needs to explore or search the codebase, it MUST follow
+this order:
+
+1. **`neataptic-cortex-mcp:freshness_check`** — verify index currency
+   before any search.
+2. **`neataptic-cortex-mcp:search_corpus`** — broad BM25 + dense hybrid
+   discovery for initial results.
+3. **`neataptic-cortex-mcp:search_advanced`** (with `compact: true`) —
+   agent-facing queries with reranking, ranking explanations,
+   `read_top_result`, and `follow_up_refs`.
+4. **`neataptic-cortex-mcp:search_context`** — token-budgeted context
+   window assembly for bounded agent context.
+5. **`neataptic-cortex-mcp:load_chunk`** — read full chunk content by ID
+   when a specific chunk is needed.
+6. **`neataptic-cortex-mcp:load_document`** — load all chunks for a
+   known file path when the full file context is needed.
+7. **`neataptic-cortex-mcp:traverse_graph`** — entity/dependency graph
+   traversal for relationship-aware discovery.
+8. **`neataptic-cortex-mcp:expand_query`** — domain-aware query
+   expansion when initial results are insufficient.
+9. **Native tools (`grep`, `glob`, `view`)** — **LAST RESORT ONLY.**
+   Use only when Cortex is degraded, the target is a known exact file
+   path, or Cortex returned zero results for a well-formed query.
+
+### Enforcement Rules
+
+- **All Tier 0, Tier 1, and Tier 2 agents** MUST include the
+  `research-methodology` skill in their frontmatter `skills:` array.
+  This skill contains the full Cortex-First Search Policy.
+- **Agent body instructions** MUST contain the standard Cortex-First
+  Search Policy section that references `freshness_check` and
+  `search_corpus` as primary discovery mechanisms.
+- When a delegation decision requires understanding the codebase before
+  routing, use Cortex search first. Do not skip reconnaissance just
+  because the delegation target seems obvious — a quick Cortex search
+  can reveal that the assumed target agent's boundary has shifted.
+
+### Gap Escalation Protocol
+
+If Cortex RAG cannot answer a needed query:
+
+1. **Report the gap** — state what was searched, what was expected, and
+   what Cortex returned.
+2. **Suggest an RAG enhancement** — identify whether the corpus index is
+   stale, the content is not indexed, or the query needs reformulation.
+3. **Use native tools as a temporary fallback only** — clearly label
+   this as a fallback, not a permanent search strategy.
+4. **Flag for `00-helping`** — if the gap is recurring or systematic,
+   escalate to `00-helping` via `00.cross-tier-helper` with a structured
+   gap report so the RAG pipeline can be improved.
 
 ## Section 8 — Chrome DevTools MCP Specialist Quick Reference
 

@@ -187,15 +187,14 @@ export function createOpponentSnapshotStore(
 
     const samples: SnapshotSample[] = [];
     const pool: readonly SnapshotSample[] = [
-      ...hallOfFameIds.map(
-        (snapshotId): SnapshotSample => ({
-          snapshotId,
-          source: 'hall-of-fame',
-        }),
-      ),
-      ...recentIds.map(
-        (snapshotId): SnapshotSample => ({ snapshotId, source: 'recent' }),
-      ),
+      ...hallOfFameIds.map((snapshotId): SnapshotSample => ({
+        snapshotId,
+        source: 'hall-of-fame',
+      })),
+      ...recentIds.map((snapshotId): SnapshotSample => ({
+        snapshotId,
+        source: 'recent',
+      })),
     ];
 
     // Step 1: Guarantee at least one hall-of-fame sample when both pools exist.
@@ -219,3 +218,7 @@ export function createOpponentSnapshotStore(
     return samples;
   }
 }
+
+// Re-export the core→race-pack snapshot adapter so callers that import from
+// the opponent-snapshot service can convert pool snapshots to race-pack shape.
+export { convertCoreToRacePackSnapshot } from './simulation-worker.race-pack.service';

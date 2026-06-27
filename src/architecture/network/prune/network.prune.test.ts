@@ -33,8 +33,7 @@ function setPruningConfig(
 
 function getPruningConfig(network: Network): PruningConfigSnapshot | undefined {
   return Reflect.get(network, '_pruningConfig') as
-    | PruningConfigSnapshot
-    | undefined;
+    PruningConfigSnapshot | undefined;
 }
 
 function captureInitialConnectionBaseline(network: Network): void {

@@ -69,9 +69,7 @@ export interface InferenceWorkerCapabilityOptions {
  * - `'transferable'` — Universal typed-array fallback when higher tiers are unavailable.
  */
 export type AutoInferenceTransport =
-  | 'channel'
-  | 'shared-memory'
-  | 'transferable';
+  'channel' | 'shared-memory' | 'transferable';
 
 /**
  * Detect the usable worker-backed inference transport tiers for one host.

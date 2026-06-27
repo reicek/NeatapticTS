@@ -108,3 +108,23 @@ export const NGE_JUVENILE_DEFAULT_PRUNE_COST_PRESSURE_THRESHOLD = 0.85;
  * Safe absolute minimum edge floor when DNA supplies no tighter prune bound.
  */
 export const NGE_JUVENILE_DEFAULT_MIN_EDGE_FLOOR = 1;
+
+/**
+ * Maximum node capacity that the NGE growth budget supports.
+ * Caps the total number of nodes a network may grow to during runtime adaptation.
+ * Used by the racing curriculum controller and growth lifecycle to enforce the
+ * 8,000-node ceiling agreed in Phase 4 capacity expansion.
+ *
+ * Contract: NGE_MAX_NODE_CAPACITY=8_000
+ */
+export const NGE_MAX_NODE_CAPACITY = 8_000;
+
+/**
+ * Maximum edge capacity that the NGE growth budget supports.
+ * Caps the total number of connections a network may grow to during runtime adaptation.
+ * Used by the racing curriculum controller and growth lifecycle to enforce the
+ * 32,000-edge ceiling agreed in Phase 4 capacity expansion.
+ *
+ * Contract: NGE_MAX_EDGE_CAPACITY=32_000
+ */
+export const NGE_MAX_EDGE_CAPACITY = 32_000;

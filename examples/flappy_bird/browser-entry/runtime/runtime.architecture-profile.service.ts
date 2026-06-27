@@ -79,8 +79,7 @@ export function resolveRuntimeArchitectureHistory(
     }
 
     const parsedHistory = JSON.parse(serializedHistory) as
-      | RuntimeArchitectureHistoryByProfileId
-      | undefined;
+      RuntimeArchitectureHistoryByProfileId | undefined;
     return parsedHistory ?? {};
   } catch {
     return {};
@@ -111,8 +110,7 @@ export function resolveRuntimeArchitectureChampions(
     }
 
     const parsedChampions = JSON.parse(serializedChampions) as
-      | RuntimeArchitectureChampionByProfileId
-      | undefined;
+      RuntimeArchitectureChampionByProfileId | undefined;
     return parsedChampions ?? {};
   } catch {
     return {};
@@ -382,8 +380,7 @@ function isRuntimeArchitectureScoreBetter(
  * @returns Browser storage implementation or `undefined` outside the browser.
  */
 function resolveRuntimeArchitectureHistoryStorage():
-  | RuntimeArchitectureHistoryStorage
-  | undefined {
+  RuntimeArchitectureHistoryStorage | undefined {
   try {
     return window.localStorage;
   } catch {

@@ -8,8 +8,7 @@ describe('neat telemetry facade buffer chapter', () => {
         network.connections.length;
 
       let latestTelemetryEntry:
-        | ReturnType<Neat['getTelemetry']>[number]
-        | undefined;
+        ReturnType<Neat['getTelemetry']>[number] | undefined;
 
       beforeAll(async () => {
         // Arrange
@@ -50,8 +49,7 @@ describe('neat telemetry facade buffer chapter', () => {
         network.connections.length;
 
       let latestTelemetryEntry:
-        | ReturnType<Neat['getTelemetry']>[number]
-        | undefined;
+        ReturnType<Neat['getTelemetry']>[number] | undefined;
 
       beforeAll(async () => {
         // Arrange
@@ -82,8 +80,7 @@ describe('neat telemetry facade buffer chapter', () => {
         network.connections.length;
 
       let latestTelemetryEntry:
-        | ReturnType<Neat['getTelemetry']>[number]
-        | undefined;
+        ReturnType<Neat['getTelemetry']>[number] | undefined;
 
       beforeAll(async () => {
         // Arrange
@@ -114,8 +111,7 @@ describe('neat telemetry facade buffer chapter', () => {
         network.connections.length;
 
       let latestTelemetryEntry:
-        | ReturnType<Neat['getTelemetry']>[number]
-        | undefined;
+        ReturnType<Neat['getTelemetry']>[number] | undefined;
 
       beforeAll(async () => {
         // Arrange
@@ -149,8 +145,7 @@ describe('neat telemetry facade buffer chapter', () => {
         network.connections.length;
 
       let latestTelemetryEntry:
-        | ReturnType<Neat['getTelemetry']>[number]
-        | undefined;
+        ReturnType<Neat['getTelemetry']>[number] | undefined;
 
       beforeAll(async () => {
         // Arrange
@@ -202,8 +197,7 @@ describe('neat telemetry facade buffer chapter', () => {
         network.connections.length;
 
       let latestTelemetryEntry:
-        | ReturnType<Neat['getTelemetry']>[number]
-        | undefined;
+        ReturnType<Neat['getTelemetry']>[number] | undefined;
 
       beforeAll(async () => {
         // Arrange

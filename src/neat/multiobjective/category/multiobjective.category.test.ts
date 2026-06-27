@@ -329,12 +329,10 @@ describe('neat multiobjective category chapter', () => {
         firstGenome.score = undefined;
         const latestCategoryArchive = () =>
           neat._paretoArchive.at(-1) as
-            | { genomes?: Array<{ id?: number; score?: number }> }
-            | undefined;
+            { genomes?: Array<{ id?: number; score?: number }> } | undefined;
         const latestObjectiveArchive = () =>
           neat._paretoObjectivesArchive.at(-1) as
-            | { vectors?: Array<{ id?: number }> }
-            | undefined;
+            { vectors?: Array<{ id?: number }> } | undefined;
         const fastNonDominatedSpy = jest
           .spyOn(multiobjectiveModule, 'fastNonDominated')
           .mockReturnValue([[firstGenome]] as unknown as ReturnType<

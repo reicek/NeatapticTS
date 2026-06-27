@@ -35,18 +35,14 @@ export interface NgeIdentityFields {
  * Governs whether offspring arise from a single parent, multiple drone donors, or sexual crossover.
  */
 export type NgeReproductionPolicyMode =
-  | 'parthenogenesis'
-  | 'polyandric'
-  | 'sexual';
+  'parthenogenesis' | 'polyandric' | 'sexual';
 
 /**
  * Region-assignment strategies used for polyandric drone patch selection among donors.
  * Determines how the queen distributes writable DNA regions among secondary drone contributors.
  */
 export type NgeAssignedRegionStrategy =
-  | 'roundRobin'
-  | 'byFitness'
-  | 'bySpecialization';
+  'roundRobin' | 'byFitness' | 'bySpecialization';
 
 /**
  * Seed governance toggles controlling sibling divergence and identical twin generation.
@@ -158,10 +154,7 @@ export interface NgeSubstrateConfig {
  * Each kind implies a distinct geometry strategy applied to the module placement list during development.
  */
 export type NgeRulePassKind =
-  | 'replicate'
-  | 'symmetry'
-  | 'hierarchy'
-  | 'differentiate';
+  'replicate' | 'symmetry' | 'hierarchy' | 'differentiate';
 
 /**
  * One requested placement emitted by a DNA rule pass during deterministic development.
@@ -193,11 +186,7 @@ export interface NgeRulePass {
  * CPPN activation families supported by the Phase A deterministic evaluator.
  */
 export type NgeCppnActivationKind =
-  | 'linear'
-  | 'tanh'
-  | 'sigmoid'
-  | 'gaussian'
-  | 'sine';
+  'linear' | 'tanh' | 'sigmoid' | 'gaussian' | 'sine';
 
 /**
  * One explicit non-input CPPN node.

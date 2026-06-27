@@ -27,19 +27,11 @@ export type ExampleDemoId = 'ascii-maze' | 'flappy-bird';
 
 /** Public builder families exposed through the shared example profile contract. */
 export type ExampleArchitectureBuilderFamily =
-  | 'GRU'
-  | 'LSTM'
-  | 'MLP'
-  | 'NARX'
-  | 'RandomSparse';
+  'GRU' | 'LSTM' | 'MLP' | 'NARX' | 'RandomSparse';
 
 /** Stable ids for the shared example architecture profiles. */
 export type ExampleArchitectureProfileId =
-  | 'gru'
-  | 'lstm'
-  | 'mlp'
-  | 'narx'
-  | 'random-sparse';
+  'gru' | 'lstm' | 'mlp' | 'narx' | 'random-sparse';
 
 const EXAMPLE_ARCHITECTURE_PROFILE_ORDER: readonly ExampleArchitectureProfileId[] =
   ['mlp', 'random-sparse', 'narx', 'gru', 'lstm'] as const;

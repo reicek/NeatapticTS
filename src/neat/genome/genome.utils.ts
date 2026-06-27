@@ -1843,8 +1843,7 @@ function validateExtensions(
 
 function validateConnectionGainExtension(
   connectionGainByInnovation:
-    | NeatGenomeExtensionValues['connectionGainByInnovation']
-    | undefined,
+    NeatGenomeExtensionValues['connectionGainByInnovation'] | undefined,
   connectionGenes: NeatGenomeConnectionGene[],
   issues: NeatGenomeValidationIssue[],
 ): void {
@@ -1904,8 +1903,7 @@ function validateConnectionGainExtension(
 
 function validateNodeResponseExtension(
   nodeResponseByGeneId:
-    | NeatGenomeExtensionValues['nodeResponseByGeneId']
-    | undefined,
+    NeatGenomeExtensionValues['nodeResponseByGeneId'] | undefined,
   nodeGenes: NeatGenomeNodeGene[],
   issues: NeatGenomeValidationIssue[],
 ): void {
@@ -2204,8 +2202,7 @@ function validateResidualStreamExtension(
 
 function validateWeightSharedCohortExtension(
   weightSharedCohorts:
-    | NeatGenomeExtensionValues['weightSharedCohorts']
-    | undefined,
+    NeatGenomeExtensionValues['weightSharedCohorts'] | undefined,
   issues: NeatGenomeValidationIssue[],
 ): Set<string> {
   const knownWeightSharedCohortIds = new Set<string>();

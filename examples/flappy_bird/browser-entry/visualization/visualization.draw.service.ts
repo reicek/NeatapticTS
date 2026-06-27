@@ -555,8 +555,7 @@ function resolveConnectionLayerStyle(
 
 function resolveHoveredNodeAnimationState(
   animatedHoveredNodes:
-    | readonly NetworkVisualizationAnimatedHoveredNode[]
-    | undefined,
+    readonly NetworkVisualizationAnimatedHoveredNode[] | undefined,
 ): HoveredNodeAnimationState {
   if (!animatedHoveredNodes || animatedHoveredNodes.length === 0) {
     return EMPTY_HOVERED_NODE_ANIMATION_STATE;

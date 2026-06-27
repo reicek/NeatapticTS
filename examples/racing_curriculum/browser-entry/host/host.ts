@@ -102,7 +102,9 @@ export function createRacingHost(
   networkCanvas.style.flex = '1';
   networkCanvas.style.minHeight = '0';
 
-  let networkContext = networkCanvas.getContext('2d');
+  let networkContext = networkCanvas.getContext('2d', {
+    desynchronized: true,
+  });
   if (networkContext === null) {
     // jsdom does not implement canvas 2D contexts; provide a minimal stub so
     // the host handle can still be exercised in browserless tests.
@@ -273,8 +275,7 @@ function createHostNetworkVisualizationController(
   };
 
   const resolveLatestNetworkVisualizationFrame = ():
-    | NetworkVisualizationResolvedFrame
-    | undefined => {
+    NetworkVisualizationResolvedFrame | undefined => {
     const currentFingerprint = state.currentNetwork
       ? computeNetworkStateFingerprint(state.currentNetwork)
       : undefined;

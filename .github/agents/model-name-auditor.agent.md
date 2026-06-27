@@ -68,12 +68,12 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Qualified Model Name Reference Table
 
-| Pattern                      | Example                         | Status                              |
-| ---------------------------- | ------------------------------- | ----------------------------------- |
-| `<vendor>-<model>:<variant>` | `glm-5.2:cloud`                 | Qualified — cloud-hosted            |
-| `<model>` (bare)             | `glm-5.2`                       | Unqualified — missing variant/host  |
-| `<model>:local`              | `glm-5.2:local`                 | Qualified — local model             |
-| Deprecated model             | `gpt-4`                         | Deprecated — flag for replacement   |
+| Pattern                      | Example         | Status                             |
+| ---------------------------- | --------------- | ---------------------------------- |
+| `<vendor>-<model>:<variant>` | `glm-5.2:cloud` | Qualified — cloud-hosted           |
+| `<model>` (bare)             | `glm-5.2`       | Unqualified — missing variant/host |
+| `<model>:local`              | `glm-5.2:local` | Qualified — local model            |
+| Deprecated model             | `gpt-4`         | Deprecated — flag for replacement  |
 
 ## Model Validation Patterns
 

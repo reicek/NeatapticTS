@@ -61,7 +61,10 @@ type CarGenome = {
 type CoevolutionContainer = {
   readonly teamA: TeamPopulationContainer;
   readonly teamB: TeamPopulationContainer;
-  resolveTeamFitness(teamId: 0 | 1, carFinishPositions: readonly number[]): number;
+  resolveTeamFitness(
+    teamId: 0 | 1,
+    carFinishPositions: readonly number[],
+  ): number;
   advanceTeamGeneration(teamId: 'team-a' | 'team-b'): void;
   /**
    * Returns the distinct genome for the requested car index.
@@ -84,11 +87,7 @@ interface CoevolutionService {
 // ---------------------------------------------------------------------------
 
 type RacingWorkerPhase =
-  | 'idle'
-  | 'initialised'
-  | 'generation-ready'
-  | 'racing'
-  | 'stopped';
+  'idle' | 'initialised' | 'generation-ready' | 'racing' | 'stopped';
 
 type EvolutionProtocolState = {
   readonly phase: RacingWorkerPhase;
@@ -397,7 +396,9 @@ describe('simulation worker evolution protocol per-car payloads', () => {
       const response = result.response as GenerationReadyResponse | undefined;
 
       // Assert — must have at least 2 entries (one per car)
-      expect(response?.carNetworkPayloads?.length ?? 0).toBeGreaterThanOrEqual(2);
+      expect(response?.carNetworkPayloads?.length ?? 0).toBeGreaterThanOrEqual(
+        2,
+      );
     });
 
     it('includes per-car fitness scores in the generation-ready response', async () => {

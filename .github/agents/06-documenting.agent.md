@@ -34,6 +34,7 @@ skills:
     'license-attribution-audit',
     'auditing-js-docs',
     'updating-js-docs',
+    'research-methodology',
     'execute',
   ]
 handoffs:

@@ -192,8 +192,7 @@ function resolveInputNodeIndexes(network: Network): number[] {
   );
   const explicitInputNodeIndexes = network.inputNodeIds.flatMap((nodeId) => {
     const node = nodesByGeneId.get(nodeId) as
-      | Partial<NodeWithIndex>
-      | undefined;
+      Partial<NodeWithIndex> | undefined;
     return typeof node?.index === 'number' ? [node.index] : [];
   });
 

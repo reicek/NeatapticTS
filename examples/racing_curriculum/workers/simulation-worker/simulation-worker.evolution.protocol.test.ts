@@ -16,11 +16,7 @@
 
 /** Phase labels for the worker-authoritative evolution FSM. */
 type RacingWorkerPhase =
-  | 'idle'
-  | 'initialised'
-  | 'generation-ready'
-  | 'racing'
-  | 'stopped';
+  'idle' | 'initialised' | 'generation-ready' | 'racing' | 'stopped';
 
 type EvolutionProtocolState = {
   readonly phase: RacingWorkerPhase;

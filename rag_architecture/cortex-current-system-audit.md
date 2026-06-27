@@ -62,23 +62,25 @@ This document contains the complete audit of the NeatapticTS Repo Cortex system 
 - **Failure mode 4 — No sub-chunking of large symbols**: A 42K-char utility object like `onnxImportOrchestratorsUtils` becomes one monolithic chunk, making fine-grained retrieval within it impossible.
 
 **Chunk size distribution (ts-source):**
+
 | Size range | Count |
-|---|---|
-| under 500 | 2,604 |
-| 500–1K | 710 |
-| 1K–2K | 186 |
-| 2K–5K | 62 |
-| 5K–10K | 22 |
-| 10K–20K | 15 |
-| over 20K | 10 |
+| ---------- | ----- |
+| under 500  | 2,604 |
+| 500–1K     | 710   |
+| 1K–2K      | 186   |
+| 2K–5K      | 62    |
+| 5K–10K     | 22    |
+| 10K–20K    | 15    |
+| over 20K   | 10    |
 
 **Chunk size distribution (markdown families):**
-| Size range | Count |
-|---|---|
-| under 500 | 8,348 |
-| 500–1K | 2,373 |
-| 1K–2K | 1,074 |
-| over 2K | 15,992 |
+
+| Size range | Count  |
+| ---------- | ------ |
+| under 500  | 8,348  |
+| 500–1K     | 2,373  |
+| 1K–2K      | 1,074  |
+| over 2K    | 15,992 |
 
 **Recommendation**: Implement two-level chunking — AST-aware splitting for TypeScript (per-symbol but with max-size sub-chunking at 1,500 chars with overlap at statement boundaries) and structure-aware markdown chunking (heading hierarchy with cross-chunk context headers). Add `parent_chunk_id`, `depth`, and `context_header` columns to the chunks table.
 
@@ -181,11 +183,12 @@ This document contains the complete audit of the NeatapticTS Repo Cortex system 
 #### 7. Cross-encoder selection
 
 **Candidate models for local ONNX runtime:**
-| Model | Size | Latency (est.) | Quality | Recommendation |
-|---|---|---|---|---|
-| `cross-encoder/ms-marco-MiniLM-L-6-v2` | ~22MB | ~5ms per pair | Moderate | **Start here** — best speed/quality tradeoff |
-| `cross-encoder/ms-marco-MiniLM-L-12-v2` | ~33MB | ~10ms per pair | Good | Upgrade if L-6 is insufficient |
-| `bge-reranker-v2-m3` | ~568MB | ~30ms per pair | Excellent | Defer — too large for local-first constraint |
+
+| Model                                   | Size   | Latency (est.) | Quality   | Recommendation                               |
+| --------------------------------------- | ------ | -------------- | --------- | -------------------------------------------- |
+| `cross-encoder/ms-marco-MiniLM-L-6-v2`  | ~22MB  | ~5ms per pair  | Moderate  | **Start here** — best speed/quality tradeoff |
+| `cross-encoder/ms-marco-MiniLM-L-12-v2` | ~33MB  | ~10ms per pair | Good      | Upgrade if L-6 is insufficient               |
+| `bge-reranker-v2-m3`                    | ~568MB | ~30ms per pair | Excellent | Defer — too large for local-first constraint |
 
 **Integration architecture**: Cross-encoder runs as a second-stage re-ranker on the top-K (10-20) hybrid candidates. This limits latency impact to ~50-200ms per query (10-20 × 10ms).
 
@@ -202,12 +205,13 @@ This document contains the complete audit of the NeatapticTS Repo Cortex system 
 - At 31K scale, brute-force with caching is faster than ANN for the first ~10 queries per warm session
 
 **Evaluation:**
-| Option | Latency | Complexity | Windows CI | Recommendation |
-|---|---|---|---|---|
-| Brute-force + query embedding cache | ~5-10ms search | Low | ✅ No native deps | **Current choice, keep for now** |
-| `sqlite-vec` | ~2-5ms search | Medium | ❌ Extension loading fragile on Windows | **Defer until Windows CI is stable** |
-| `hnswlib-node` | ~1-2ms search | Medium | ⚠️ Native addon, needs prebuilds | **Evaluate at >100K chunks** |
-| Brute-force + result caching | ~1ms for cached queries | Low | ✅ | **Add as incremental improvement** |
+
+| Option                              | Latency                 | Complexity | Windows CI                              | Recommendation                       |
+| ----------------------------------- | ----------------------- | ---------- | --------------------------------------- | ------------------------------------ |
+| Brute-force + query embedding cache | ~5-10ms search          | Low        | ✅ No native deps                       | **Current choice, keep for now**     |
+| `sqlite-vec`                        | ~2-5ms search           | Medium     | ❌ Extension loading fragile on Windows | **Defer until Windows CI is stable** |
+| `hnswlib-node`                      | ~1-2ms search           | Medium     | ⚠️ Native addon, needs prebuilds        | **Evaluate at >100K chunks**         |
+| Brute-force + result caching        | ~1ms for cached queries | Low        | ✅                                      | **Add as incremental improvement**   |
 
 **Recommendation**: Defer ANN until chunk count exceeds 100K. Add query-embedding caching (cache last 50 query embeddings with their results) for immediate latency wins.
 

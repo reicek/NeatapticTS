@@ -2,10 +2,7 @@
  * Benchmark release-gate names enforced during the Phase 10 hardening pass.
  */
 export type BenchmarkReleaseGateName =
-  | 'variance'
-  | 'memory'
-  | 'determinism'
-  | 'audit';
+  'variance' | 'memory' | 'determinism' | 'audit';
 
 /**
  * Failure emitted when one benchmark release gate does not pass.

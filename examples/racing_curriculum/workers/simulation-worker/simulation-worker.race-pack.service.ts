@@ -1,5 +1,73 @@
+/**
+ * Race episode runner and packed snapshot producer for the racing curriculum.
+ *
+ * This module owns the deterministic race episode lifecycle: building a race
+ * pack from a seed and frozen opponent snapshot, ticking physics + controller
+ * inference per car per tick, tracking lap completion and pit stops, computing
+ * per-car fitness from finish positions, and resolving the zero-copy transfer
+ * list for streaming packed `race-step` frames to the host.
+ *
+ * Key concepts:
+ * - **Deterministic race pack**: identical seed + identical opponent snapshot
+ *   produce identical starting frames, making race episodes replayable and
+ *   comparative fitness claims fair.
+ * - **Fixed-timestep simulation**: each `tick()` advances physics by
+ *   `FIXED_TIMESTEP_SECONDS` (1/60 s) and runs one controller inference per
+ *   car. The episode ends when all cars finish or `MAX_EPISODE_TICKS` is
+ *   reached.
+ * - **Pit lifecycle**: cars enter the pit when tire health drops below a
+ *   threshold, remain for `PIT_STOP_TICKS`, then exit with fresh tires. The
+ *   lap number at which each car pitted is recorded in `pitLapPerCar` for
+ *   strategy-divergence observables.
+ * - **Pit-lap distribution**: `extractPitLapDistribution` returns per-car lap
+ *   numbers at which each car on a team pitted. A value of 0 means that car
+ *   never pitted. These distributions feed the strategy-divergence tracker so
+ *   the host can observe whether teams are converging on similar pit strategies
+ *   or diverging.
+ * - **Fitness from finish positions**: lap finishers are ranked by lap time
+ *   ascending (fewer ticks = better finish); non-finishers are ranked by track
+ *   progress descending. Each car receives a base fitness scaled by finish
+ *   position plus a lap-completion bonus.
+ * - **Shared-equal team fitness**: each team's fitness is the arithmetic mean
+ *   of all member fitness scores, computed by `computeSharedEqualTeamFitness`
+ *   from the evolution protocol service.
+ *
+ * ## Race episode tick lifecycle
+ *
+ * The diagram below shows one tick of the race episode runner. Each tick
+ * advances physics, runs controller inference, updates pit and tire state,
+ * checks lap completion, and optionally runs per-car adaptation.
+ *
+ * ```mermaid
+ * flowchart TD
+ *     A["tick()"] --> B["Advance physics<br/>(position, speed, heading)"]
+ *     B --> C["Detect off-track<br/>+ wrong-direction"]
+ *     C --> D["Decay tire state"]
+ *     D --> E["Check pit entry/exit<br/>+ pit stop countdown"]
+ *     E --> F["Detect lap completion"]
+ *     F --> G["Run controller inference<br/>per car"]
+ *     G --> H["Run per-car adaptation<br/>(adaptOnTick)"]
+ *     H --> I["Check episode end<br/>(all done or max ticks)"]
+ *     I -- "not done" --> J["Emit packed race-step frame"]
+ *     I -- "done" --> K["Episode complete<br/>→ compute fitness"]
+ * ```
+ *
+ * ## Pit-lap distribution observables
+ *
+ * After a race episode completes, `extractPitLapDistribution` reads the
+ * `pitLapPerCar` array and filters by team to produce per-team pit-lap
+ * distributions. These feed the strategy-divergence tracker so the host can
+ * observe whether teams are converging on similar pit strategies or diverging.
+ * The distributions are observability-only — they do NOT change fitness or
+ * reproduction.
+ *
+ * See [Coevolution (Wikipedia)](https://en.wikipedia.org/wiki/Coevolution)
+ * for background on why observing strategy divergence helps assess whether a
+ * competitive coevolution arms race is producing diverse team strategies.
+ */
+
 import type { RacingRenderFrame } from './simulation-worker.types';
-import type { TrackSpec } from '../../track/track.generator.types';
+import type { TrackSpec, TrackAabb } from '../../track/track.generator.types';
 import type { SplineSample } from '../../track/track.generator.types';
 import { generateTrack } from '../../track/track.generator';
 import {
@@ -7,6 +75,21 @@ import {
   resolveInnerLaneCenterlinePoint,
 } from '../../track/track.spline.utils';
 import { buildGuidingLineForTeam } from '../../renderer/racing.renderer';
+import type { Network } from '../../../../src/browser-entry.ts';
+import type { RuntimeAdaptationEngine } from '../../controller/runtime.adaptation';
+import type { OpponentSnapshot as CoreOpponentSnapshot } from '../../../../src/neat/nge-collective/neat.nge-collective.types';
+import { computeSharedEqualTeamFitness } from './simulation-worker.evolution.protocol.service';
+import { decayTireState } from '../../environment/environment.step.service';
+import {
+  assembleTier4Observation,
+  assembleTier5Observation,
+  derivePerCarObservationState,
+  type RacingObservationState,
+} from '../../controller/observation.assembler';
+import type {
+  RacingCarState,
+  TireStateTuple,
+} from '../../environment/environment.types';
 
 /** Schema sentinel for all packed race-step frames. */
 const RACING_SCHEMA_VERSION = 'racing-packed-v1' as const;
@@ -16,6 +99,9 @@ const DEFAULT_AGENT_COUNT = 2 as const;
 
 /** Maximum number of fixed-timestep ticks in a single episode. */
 const MAX_EPISODE_TICKS = 1800 as const;
+
+/** Rolling score history cap for per-car adaptation decisions. */
+const ADAPTATION_SCORE_HISTORY_CAP = 48 as const;
 
 /** Consecutive off-track ticks allowed before the episode is terminated. */
 const OFF_TRACK_GRACE_TICKS = 60 as const;
@@ -41,6 +127,33 @@ const MAX_FORWARD_SPEED_UNITS_PER_SECOND = 108 as const;
 /** Expected number of distinct ArrayBuffer entries in a Tier-0 transfer list. */
 const EXPECTED_TRANSFER_BUFFER_COUNT = 10 as const;
 
+/** Sentinel value indicating no car is currently occupying a pit slot. */
+const NO_CAR_INDEX = 255 as const;
+
+/** Fixed number of ticks a car must remain in the pit before tire reset. */
+const PIT_STOP_TICKS = 4 as const;
+
+/** Fresh tire health value at episode start. */
+const FRESH_TIRE_HEALTH = 1.0;
+
+/** Team layout for Tier 1–2: one car per team (2-car 1v1). */
+const TIER_ONE_TWO_TEAM_LAYOUT = [0, 1] as const;
+
+/** Team layout for Tier 3–4: two cars per team (4-car 2v2). */
+const TIER_THREE_TEAM_LAYOUT = [0, 0, 1, 1] as const;
+
+/** Team layout for Tier 5: three cars per team (6-car 3v3). */
+const TIER_FIVE_TEAM_LAYOUT = [0, 0, 0, 1, 1, 1] as const;
+
+/** Car count threshold above which the Tier 3 four-car 2v2 layout applies. */
+const TIER_THREE_CAR_COUNT = 4 as const;
+
+/** Car count threshold above which the Tier 5 six-car 3v3 layout applies. */
+const TIER_FIVE_CAR_COUNT = 6 as const;
+
+/** Radio channels per car (7 channels: posX, posY, headingSin, speed, relX, relY, relHeadingSin). */
+const RADIO_CHANNELS_PER_CAR = 7;
+
 /**
  * Frozen opponent snapshot used as deterministic race-pack input.
  *
@@ -64,10 +177,65 @@ export type OpponentSnapshot = {
   readonly networkPayloads: readonly unknown[];
 };
 
+/**
+ * Converts a core collective opponent snapshot into the race-pack shape.
+ *
+ * The core `OpponentSnapshot` ({agentId, snapshot, frozenAt}) uses a generic
+ * payload record, while the race-pack variant ({snapshotId, generation,
+ * networkPayloads}) expects a flat serialised network payload array. This
+ * adapter bridges the two so snapshots accumulated in the core
+ * `OpponentSnapshotPool` can be consumed by the race-pack racing pipeline.
+ *
+ * @param core - Core collective snapshot to convert.
+ * @returns Race-pack-shaped opponent snapshot.
+ *
+ * @example
+ * ```ts
+ * const racePackSnapshot = convertCoreToRacePackSnapshot(coreSnapshot);
+ * console.log(racePackSnapshot.snapshotId); // core.agentId
+ * ```
+ */
+export function convertCoreToRacePackSnapshot(
+  core: CoreOpponentSnapshot,
+): OpponentSnapshot {
+  return {
+    snapshotId: core.agentId,
+    generation: core.frozenAt,
+    networkPayloads: extractNetworkPayloadsFromSnapshot(core.snapshot),
+  };
+}
+
+/**
+ * Extracts a network-payloads array from a core snapshot payload record.
+ *
+ * @param snapshot - Generic payload record from a core opponent snapshot.
+ * @returns The `networkPayloads` array when present, otherwise an empty array.
+ */
+function extractNetworkPayloadsFromSnapshot(
+  snapshot: Readonly<Record<string, unknown>>,
+): readonly unknown[] {
+  const candidate = snapshot['networkPayloads'];
+  return Array.isArray(candidate) ? candidate : [];
+}
+
 /** Minimal controller handle used inside a race episode runner. */
 export type RaceControllerNetwork = {
   /** Runs inference and returns the controller's output vector. */
   activate(inputs: number[]): number[];
+};
+
+/**
+ * Per-car adaptation context passed to the race episode runner.
+ *
+ * Each entry pairs a {@link RuntimeAdaptationEngine} with the live
+ * {@link Network} it mutates, so the runner can call `adaptOnTick` after
+ * physics + inference for each car on every tick.
+ */
+export type RaceAdaptationContext = {
+  /** Per-car adaptation engines, keyed by car index. */
+  readonly engines: ReadonlyMap<number, RuntimeAdaptationEngine>;
+  /** Per-car live Network instances, keyed by car index. */
+  readonly networks: ReadonlyMap<number, Network>;
 };
 
 /**
@@ -95,6 +263,23 @@ export type RaceEpisodeRunner = {
   /** Computes the lap-time fitness for the requested car. */
   computeFitness(carIndex: number): number;
   /**
+   * Resolves shared-equal team fitness as the average of member finishing
+   * positions for the requested team.
+   *
+   * Reuses the evolution protocol's {@link computeSharedEqualTeamFitness}
+   * aggregator so the race-pack service honours the cooperative team-fitness
+   * policy used across the racing curriculum. A team is only as strong as its
+   * average member, not its single best performer.
+   *
+   * @param teamId - 0 for Team A (blue), 1 for Team B (red).
+   * @param carFinishPositions - Finish positions for that team's cars only.
+   * @returns Average finish position, or 0 when the team has no members.
+   */
+  resolveTeamFitness(
+    teamId: 0 | 1,
+    carFinishPositions: readonly number[],
+  ): number;
+  /**
    * Builds a `race-step` worker message for the current frame.
    *
    * @returns Message object and the transfer list that owns its typed-array buffers.
@@ -108,6 +293,12 @@ export type RaceEpisodeRunner = {
   lapCompleted: Uint8Array;
   /** Per-car tick index at which the first lap was completed. */
   lapTimeTicks: Uint32Array;
+  /**
+   * Per-car lap number at which the car entered the pit lane.
+   * A value of 0 means the car never pitted during this episode.
+   * Used by strategy-divergence analytics to compute pit-lap distributions.
+   */
+  pitLapPerCar: Uint16Array;
   /** True when the episode was terminated because a car left the track. */
   endedOffTrack: boolean;
   /**
@@ -120,6 +311,16 @@ export type RaceEpisodeRunner = {
    * lane marker for each agent.
    */
   guidingLines: Array<readonly { readonly x: number; readonly y: number }[]>;
+  /**
+   * Serializes the blue team #1 car (car 0) network for browser visualization.
+   *
+   * Only car 0's network is copied back to the browser for the network-panel
+   * visualization. All other car networks remain worker-side only.
+   *
+   * @returns Float32Array of connection weights, or undefined when no
+   *   adaptation network is registered for car 0.
+   */
+  serializeVisualizationNetwork(): Float32Array | undefined;
 };
 
 type BuildRaceFrameOptions = {
@@ -252,6 +453,7 @@ export function createRaceEpisodeRunner(
   seed: number,
   _opponentSnapshot: OpponentSnapshot,
   networks: readonly RaceControllerNetwork[],
+  adaptationContext?: RaceAdaptationContext,
 ): RaceEpisodeRunner {
   void _opponentSnapshot;
   const agentCount = networks.length;
@@ -271,7 +473,14 @@ export function createRaceEpisodeRunner(
   const offTrackCounter = new Int16Array(agentCount);
   const lapCompleted = new Uint8Array(agentCount);
   const lapTimeTicks = new Uint32Array(agentCount);
+  const pitLapPerCar = new Uint16Array(agentCount);
   const endedOffTrackPerCar = new Uint8Array(agentCount);
+
+  // Per-car rolling score history for adaptation decisions.
+  const perCarScoreHistory: number[][] = Array.from(
+    { length: agentCount },
+    () => [],
+  );
 
   const guidingLines = Array.from({ length: agentCount }, (_, carIndex) => {
     const carGuidingLine = buildGuidingLineForTeam(
@@ -290,12 +499,15 @@ export function createRaceEpisodeRunner(
     frame,
     tick,
     computeFitness,
+    resolveTeamFitness,
     createRaceStepMessage,
     lapCompleted,
     lapTimeTicks,
+    pitLapPerCar,
     endedOffTrack: false,
     endedOffTrackPerCar,
     guidingLines,
+    serializeVisualizationNetwork,
   };
 
   return runnerState;
@@ -309,20 +521,23 @@ export function createRaceEpisodeRunner(
     runnerState.frame.raceTimeMs =
       runnerState.frame.tick * FIXED_TIMESTEP_SECONDS * 1000;
 
+    // Step 1: Tick pit lifecycle (decrement active stops, release finished cars).
+    tickPitLifecycle();
+
+    // Step 2: Build the cars roster once from the current frame state.
+    const cars = buildCarsFromFrame();
+
     for (let carIndex = 0; carIndex < agentCount; carIndex++) {
       const network = networks[carIndex];
       if (network === undefined) {
         continue;
       }
 
-      const controllerOutput = network.activate([
-        runnerState.frame.carX[carIndex],
-        runnerState.frame.carY[carIndex],
-        runnerState.frame.carHeading[carIndex],
-        runnerState.frame.progress01[carIndex],
-        runnerState.frame.tick,
-      ]);
+      // Step 3: Build 95-channel Tier 4 observation and run controller inference.
+      const observationInput = resolvePerCarObservation(carIndex, cars);
+      const controllerOutput = network.activate(observationInput);
       const throttle = clamp01(controllerOutput[0] ?? 0);
+      const steer = Math.max(-1, Math.min(1, controllerOutput[1] ?? 0));
 
       const currentCenterline = resolveTrackPointAtDistance(
         distanceAlongTrack[carIndex],
@@ -353,8 +568,14 @@ export function createRaceEpisodeRunner(
 
       offTrackCounter[carIndex] = 0;
 
+      // Step 4: Apply grip multiplier from tire health to forward progress.
+      const tireOffset = carIndex * 4;
+      const gripMultiplier = Math.sqrt(resolveMeanTireHealth(tireOffset));
       const forwardStep =
-        throttle * MAX_FORWARD_SPEED_UNITS_PER_SECOND * FIXED_TIMESTEP_SECONDS;
+        throttle *
+        gripMultiplier *
+        MAX_FORWARD_SPEED_UNITS_PER_SECOND *
+        FIXED_TIMESTEP_SECONDS;
       distanceAlongTrack[carIndex] += forwardStep;
 
       const newCenterline = resolveTrackPointAtDistance(
@@ -380,7 +601,34 @@ export function createRaceEpisodeRunner(
 
       runnerState.frame.progress01[carIndex] =
         (distanceAlongTrack[carIndex] % trackLength) / trackLength;
+
+      // Step 5: Apply tire decay based on driving forces.
+      const currentTireState = [
+        runnerState.frame.tireState[tireOffset],
+        runnerState.frame.tireState[tireOffset + 1],
+        runnerState.frame.tireState[tireOffset + 2],
+        runnerState.frame.tireState[tireOffset + 3],
+      ] as TireStateTuple;
+      const effectiveSpeed =
+        Math.abs(throttle * gripMultiplier) *
+        MAX_FORWARD_SPEED_UNITS_PER_SECOND;
+      const decayedTires = decayTireState(
+        currentTireState,
+        Math.abs(steer),
+        Math.abs(throttle),
+        effectiveSpeed,
+      );
+      runnerState.frame.tireState[tireOffset] = decayedTires[0];
+      runnerState.frame.tireState[tireOffset + 1] = decayedTires[1];
+      runnerState.frame.tireState[tireOffset + 2] = decayedTires[2];
+      runnerState.frame.tireState[tireOffset + 3] = decayedTires[3];
+
+      // Step 6: Run continuous adaptation for this car after physics + inference.
+      runCarAdaptation(carIndex);
     }
+
+    // Step 7: Resolve pit entries after all car updates.
+    resolvePitEntries();
 
     separateCarsInFrame(runnerState.frame, agentCount);
 
@@ -388,6 +636,220 @@ export function createRaceEpisodeRunner(
 
     if (runnerState.frame.tick >= MAX_EPISODE_TICKS) {
       runnerState.frame.done = true;
+    }
+  }
+
+  /**
+   * Runs per-car continuous adaptation (adaptOnTick) when an adaptation
+   * context is provided. Uses the car's progress as the score sample.
+   */
+  function runCarAdaptation(carIndex: number): void {
+    if (!adaptationContext) {
+      return;
+    }
+
+    const engine = adaptationContext.engines.get(carIndex);
+    const adaptationNetwork = adaptationContext.networks.get(carIndex);
+    if (!engine || !adaptationNetwork) {
+      return;
+    }
+
+    // Track per-car progress as the rolling score for adaptation decisions.
+    const scoreSample = runnerState.frame.progress01[carIndex];
+    perCarScoreHistory[carIndex].push(scoreSample);
+    if (perCarScoreHistory[carIndex].length > ADAPTATION_SCORE_HISTORY_CAP) {
+      perCarScoreHistory[carIndex].shift();
+    }
+
+    engine.adaptOnTick({
+      tick: runnerState.frame.tick,
+      network: adaptationNetwork,
+      scoreHistory: perCarScoreHistory[carIndex],
+      completedLaps: runnerState.frame.lap[carIndex],
+    });
+  }
+
+  /**
+   * Builds the ordered car roster from the current frame state.
+   * Used as input to observation assembly for all cars in the same tick.
+   */
+  function buildCarsFromFrame(): RacingCarState[] {
+    const cars: RacingCarState[] = [];
+    for (let i = 0; i < agentCount; i++) {
+      const tireOffset = i * 4;
+      cars.push({
+        carX: runnerState.frame.carX[i],
+        carY: runnerState.frame.carY[i],
+        carHeading: runnerState.frame.carHeading[i],
+        teamIndex: (runnerState.frame.carTeam[i] ?? 0) as 0 | 1,
+        tireState: [
+          runnerState.frame.tireState[tireOffset],
+          runnerState.frame.tireState[tireOffset + 1],
+          runnerState.frame.tireState[tireOffset + 2],
+          runnerState.frame.tireState[tireOffset + 3],
+        ] as TireStateTuple,
+      });
+    }
+    return cars;
+  }
+
+  /**
+   * Resolves the 95-channel Tier 4 observation vector for one car.
+   *
+   * The observation is assembled from the pre-physics, pre-decay state so
+   * the tire channels at `[91..94]` capture the car's current health
+   * *before* this tick's degradation is applied. This ordering lets the
+   * controller observe tire wear and decide whether to push or lift off
+   * before the wear happens, not after.
+   *
+   * @param carIndex - Index of the car to observe.
+   * @param cars - Ordered car roster from the current frame state.
+   * @returns 95-element observation array (91 Tier 3 + 4 tire health).
+   */
+  function resolvePerCarObservation(
+    carIndex: number,
+    cars: RacingCarState[],
+  ): number[] {
+    const tireOffset = carIndex * 4;
+    const envState: RacingObservationState = {
+      tick: runnerState.frame.tick,
+      carX: runnerState.frame.carX[carIndex],
+      carY: runnerState.frame.carY[carIndex],
+      carHeading: runnerState.frame.carHeading[carIndex],
+      teamIndex: (runnerState.frame.carTeam[carIndex] ?? 0) as 0 | 1,
+      tireState: [
+        runnerState.frame.tireState[tireOffset],
+        runnerState.frame.tireState[tireOffset + 1],
+        runnerState.frame.tireState[tireOffset + 2],
+        runnerState.frame.tireState[tireOffset + 3],
+      ] as TireStateTuple,
+      cars,
+      progress01: runnerState.frame.progress01[carIndex],
+    };
+    const perCarState = derivePerCarObservationState(envState, carIndex);
+    const observation =
+      agentCount >= TIER_FIVE_CAR_COUNT
+        ? assembleTier5Observation(perCarState, track)
+        : assembleTier4Observation(perCarState, track);
+    return Array.from(observation);
+  }
+
+  /**
+   * Computes the mean tire health for one car from the frame's tire buffer.
+   */
+  function resolveMeanTireHealth(tireOffset: number): number {
+    return (
+      (runnerState.frame.tireState[tireOffset] +
+        runnerState.frame.tireState[tireOffset + 1] +
+        runnerState.frame.tireState[tireOffset + 2] +
+        runnerState.frame.tireState[tireOffset + 3]) /
+      4
+    );
+  }
+
+  /**
+   * Returns true when the point lies inside the axis-aligned bounding box.
+   */
+  function isPointInsideAabb(x: number, y: number, aabb: TrackAabb): boolean {
+    return (
+      x >= aabb.x &&
+      x <= aabb.x + aabb.width &&
+      y >= aabb.y &&
+      y <= aabb.y + aabb.height
+    );
+  }
+
+  /**
+   * Ticks the pit lifecycle: decrements active stop counters and releases
+   * cars whose stop has completed, resetting their tires to fresh health.
+   *
+   * The compact `pitStatus` layout depends on the car count:
+   * - 4-car packs (Tier 3–4): `[teamA_car, teamA_ticks, teamB_car, teamB_ticks]`
+   *   with stride 2 per team.
+   * - 6-car packs (Tier 5): `[teamA_car, teamA_ticks, teamA_waiting,
+   *   teamB_car, teamB_ticks, teamB_waiting]` with stride 3 per team.
+   *
+   * For each team, if the car slot is not `255`, the tick counter is
+   * decremented. When the counter reaches zero, the car's four tire channels
+   * are restored to `1.0` (fresh tires) and the slot is released back to `255`.
+   */
+  function tickPitLifecycle(): void {
+    const pitStatus = runnerState.frame.pitStatus;
+    if (pitStatus === undefined) {
+      return;
+    }
+
+    const stride = pitStatus.length >= 6 ? 3 : 2;
+    for (let teamBase = 0; teamBase < pitStatus.length; teamBase += stride) {
+      const carSlot = pitStatus[teamBase];
+      if (carSlot === NO_CAR_INDEX) {
+        continue;
+      }
+      if (pitStatus[teamBase + 1] > 0) {
+        pitStatus[teamBase + 1] -= 1;
+      }
+      if (pitStatus[teamBase + 1] === 0) {
+        const tireOffset = carSlot * 4;
+        runnerState.frame.tireState[tireOffset] = FRESH_TIRE_HEALTH;
+        runnerState.frame.tireState[tireOffset + 1] = FRESH_TIRE_HEALTH;
+        runnerState.frame.tireState[tireOffset + 2] = FRESH_TIRE_HEALTH;
+        runnerState.frame.tireState[tireOffset + 3] = FRESH_TIRE_HEALTH;
+        pitStatus[teamBase] = NO_CAR_INDEX;
+      }
+    }
+  }
+
+  /**
+   * Resolves pit entries: checks whether any car has entered its own team's
+   * pit entrance corridor and claims the team's compact pit slot if available.
+   *
+   * A car can only enter its own team's pit, never the opposing team's. The
+   * check is `candidatePitBox.teamIndex === car.teamIndex`, so Team A cars
+   * are excluded from Team B pit boxes and vice versa. Each team's compact
+   * slot in `pitStatus` holds at most one car; if the slot is already
+   * occupied (`pitStatus[teamBase] !== 255`), the entry is skipped.
+   *
+   * The compact `pitStatus` layout depends on car count:
+   * - 4-car packs (Tier 3–4): `[teamA_car, teamA_ticks, teamB_car, teamB_ticks]`
+   *   with stride 2 per team.
+   * - 6-car packs (Tier 5): `[teamA_car, teamA_ticks, teamA_waiting,
+   *   teamB_car, teamB_ticks, teamB_waiting]` with stride 3 per team.
+   */
+  function resolvePitEntries(): void {
+    const pitStatus = runnerState.frame.pitStatus;
+    if (pitStatus === undefined) {
+      return;
+    }
+    const pitBoxes = track.pitBoxes;
+    if (pitBoxes === undefined) {
+      return;
+    }
+
+    const stride = pitStatus.length >= 6 ? 3 : 2;
+    for (let carIndex = 0; carIndex < agentCount; carIndex++) {
+      const carTeam = runnerState.frame.carTeam[carIndex] ?? 0;
+      const ownPitBox = pitBoxes.find((box) => box.teamIndex === carTeam);
+      if (ownPitBox === undefined) {
+        continue;
+      }
+
+      const teamBase = carTeam * stride;
+      if (pitStatus[teamBase] !== NO_CAR_INDEX) {
+        continue;
+      }
+
+      if (
+        isPointInsideAabb(
+          runnerState.frame.carX[carIndex],
+          runnerState.frame.carY[carIndex],
+          ownPitBox.entranceCorridor,
+        )
+      ) {
+        pitStatus[teamBase] = carIndex;
+        pitStatus[teamBase + 1] = PIT_STOP_TICKS;
+        // Record the lap on which this car entered the pit lane.
+        runnerState.pitLapPerCar[carIndex] = runnerState.frame.lap[carIndex];
+      }
     }
   }
 
@@ -418,6 +880,32 @@ export function createRaceEpisodeRunner(
     return baseFitness;
   }
 
+  /**
+   * Resolves shared-equal team fitness by delegating to the evolution
+   * protocol's cooperative aggregator.
+   *
+   * The caller supplies the finish positions for one team's cars only, so the
+   * shared-equal average is computed over the provided positions directly.
+   *
+   * @param teamId - 0 for Team A (blue), 1 for Team B (red).
+   * @param carFinishPositions - Finish positions for that team's cars only.
+   * @returns Average finish position, or 0 when the team has no members.
+   */
+  function resolveTeamFitness(
+    teamId: 0 | 1,
+    carFinishPositions: readonly number[],
+  ): number {
+    // The caller already filtered positions to this team's cars, so every
+    // entry belongs to `teamId`. Reuse the shared-equal aggregator by tagging
+    // each provided position with the requested team id.
+    const teamLayout = carFinishPositions.map(() => teamId) as (0 | 1)[];
+    return computeSharedEqualTeamFitness(
+      carFinishPositions,
+      teamLayout,
+      teamId,
+    );
+  }
+
   function createRaceStepMessage(): {
     type: 'race-step';
     frame: RacingRenderFrame;
@@ -428,6 +916,27 @@ export function createRaceEpisodeRunner(
       frame: runnerState.frame,
       transferList: resolveRaceStepTransferList(runnerState.frame),
     };
+  }
+
+  /**
+   * Serializes car 0 (blue team #1) network for visualization.
+   *
+   * Only car 0's network is copied back to the browser for network-panel
+   * visualization. All other car networks remain worker-side only.
+   */
+  function serializeVisualizationNetwork(): Float32Array | undefined {
+    if (!adaptationContext) {
+      return undefined;
+    }
+
+    const car0Network = adaptationContext.networks.get(0);
+    if (!car0Network) {
+      return undefined;
+    }
+
+    return Float32Array.from(
+      car0Network.connections.map((connection) => connection.weight),
+    );
   }
 
   function recomputePlaces(): void {
@@ -497,14 +1006,34 @@ function buildRaceFrame(
   const carActive = new Uint8Array(agentCount).fill(1);
   const carTeam = new Uint8Array(agentCount);
   const carMode = new Uint8Array(agentCount);
-  const tireState = new Float32Array(agentCount * 4);
-  const radioField = new Float32Array(0);
+  const tireState = new Float32Array(agentCount * 4).fill(FRESH_TIRE_HEALTH);
+  const radioField = new Float32Array(agentCount * RADIO_CHANNELS_PER_CAR);
   const lap = new Uint16Array(agentCount);
   const place = new Uint8Array(agentCount);
   const progress01 = new Float32Array(agentCount);
+  const pitStatus =
+    agentCount >= TIER_FIVE_CAR_COUNT
+      ? new Uint8Array([
+          NO_CAR_INDEX,
+          0,
+          NO_CAR_INDEX,
+          NO_CAR_INDEX,
+          0,
+          NO_CAR_INDEX,
+        ])
+      : agentCount >= TIER_THREE_CAR_COUNT
+        ? new Uint8Array([NO_CAR_INDEX, 0, NO_CAR_INDEX, 0])
+        : undefined;
+
+  const teamLayout =
+    agentCount >= TIER_FIVE_CAR_COUNT
+      ? TIER_FIVE_TEAM_LAYOUT
+      : agentCount >= TIER_THREE_CAR_COUNT
+        ? TIER_THREE_TEAM_LAYOUT
+        : TIER_ONE_TWO_TEAM_LAYOUT;
 
   for (let carIndex = 0; carIndex < agentCount; carIndex++) {
-    carTeam[carIndex] = carIndex % 2;
+    carTeam[carIndex] = teamLayout[carIndex] ?? carIndex % 2;
     place[carIndex] = carIndex + 1;
   }
 
@@ -536,6 +1065,7 @@ function buildRaceFrame(
     raceTimeMs: 0,
     done: false,
     progress01,
+    ...(pitStatus !== undefined ? { pitStatus } : {}),
   };
 }
 
@@ -688,6 +1218,49 @@ function clamp01(value: number): number {
     return 0;
   }
   return Math.min(1, Math.max(0, value));
+}
+
+/**
+ * Extract the per-car pit-lap distribution for one team from a race episode
+ * runner.
+ *
+ * Returns an array of lap numbers, one entry per car on the requested team.
+ * A value of 0 means that car never pitted during the episode. The array
+ * length equals the number of cars on the team.
+ *
+ * Handles mock runners gracefully: when the runner does not expose
+ * `pitLapPerCar` or `frame.carTeam` (e.g. in unit tests with minimal mocks),
+ * an empty array is returned.
+ *
+ * @param runner - Race episode runner after the episode has completed
+ * @param teamId - 0 for Team A, 1 for Team B
+ * @returns Per-car pit-lap distribution for the requested team
+ *
+ * @example
+ * ```ts
+ * const teamADistribution = extractPitLapDistribution(runner, 0);
+ * console.log(teamADistribution); // [2, 0, 4] — car 0 pitted on lap 2, etc.
+ * ```
+ */
+export function extractPitLapDistribution(
+  runner: {
+    readonly pitLapPerCar?: Uint16Array;
+    readonly frame?: { readonly carTeam?: Uint8Array | readonly number[] };
+  },
+  teamId: 0 | 1,
+): number[] {
+  const pitLapPerCar = runner.pitLapPerCar;
+  const carTeam = runner.frame?.carTeam;
+  if (pitLapPerCar === undefined || carTeam === undefined) {
+    return [];
+  }
+  const distribution: number[] = [];
+  for (let carIndex = 0; carIndex < pitLapPerCar.length; carIndex++) {
+    if ((carTeam[carIndex] ?? 0) === teamId) {
+      distribution.push(pitLapPerCar[carIndex]);
+    }
+  }
+  return distribution;
 }
 
 export { EXPECTED_TRANSFER_BUFFER_COUNT };

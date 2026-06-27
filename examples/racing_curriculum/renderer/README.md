@@ -4,10 +4,10 @@ Canvas 2D renderer for the Tier 0 racing curriculum demo.
 
 Rendering is intentionally flat and stateless relative to game logic —
 the renderer consumes a frozen `TrackSpec`, the current `EnvironmentState`,
-and a small mutable `RacingRenderState` (tire marks) and produces one frame.
+and a small mutable `RacingRenderState` (context cache) and produces one frame.
 
 Visual style: neon-retro-arcade — dark background, cyan/blue structure,
-square-outline car, fading tire marks, neon-white bumper lighting.
+square-outline car, neon-white bumper lighting.
 
 The world coordinate system is math-convention (Y increases upward).
 Canvas pixels use Y-down convention. The affine `WorldTransform` absorbs
@@ -17,26 +17,6 @@ both the car heading render and the physics movement are consistent in the
 same coordinate frame.
 
 ## renderer/racing.renderer.ts
-
-### advanceTireMarks
-
-```ts
-advanceTireMarks(
-  renderState: RacingRenderState,
-  envState: EnvironmentState,
-): void
-```
-
-Appends a new tire mark for every car and ages all marks. Marks older than
-`TIRE_MARK_MAX_AGE_TICKS` are evicted from the front.
-
-The legacy top-level `carX/carY/carHeading/teamIndex` fields are used as a
-fallback when the multi-car `cars` roster is absent, keeping the solo
-browser path stable.
-
-Parameters:
-- `renderState` - Mutable render state (mutated in-place).
-- `envState` - Current car roster and primary-car fallback source.
 
 ### buildGuidingLineForTeam
 
@@ -109,7 +89,7 @@ createRacingRenderState(): RacingRenderState
 
 Creates a zeroed `RacingRenderState` ready for first use.
 
-Returns: Fresh render state with an empty tire-mark list.
+Returns: Fresh render state with a cleared context cache.
 
 Example:
 
@@ -182,25 +162,6 @@ Parameters:
 - `rgbColor` - RGB color string without alpha wrapper.
 - `alpha` - Stroke alpha in [0, 1].
 
-### drawOptimalLineGuidance
-
-```ts
-drawOptimalLineGuidance(
-  ctx: CanvasRenderingContext2D,
-  trackRenderGeometry: TrackRenderGeometry,
-  transform: WorldTransform,
-  guidanceAlpha: number,
-): void
-```
-
-Draws the faded optimal-line overlay used by the Tier 1 browser harness.
-
-Parameters:
-- `ctx` - 2D rendering context.
-- `trackRenderGeometry` - Cached spline-derived track geometry.
-- `transform` - World-to-canvas transform.
-- `guidanceAlpha` - Overlay alpha in [0, 1].
-
 ### drawPitOverlayCenterDetails
 
 ```ts
@@ -255,18 +216,23 @@ drawPitOverlays(
 ): void
 ```
 
-Draws the Tier 4 pit entrance and stall overlays.
+Draws the Tier 4 / Tier 5 pit entrance and stall overlays.
 
-`pitStatus` uses the packed tuple `[teamA_car, teamA_ticks, teamB_car,
-teamB_ticks]`. A positive tick count marks that team's pit as occupied and
-causes both the stall and entrance corridor AABB to render with the occupied
-fill overlay.
+`pitStatus` uses a packed tuple whose layout depends on the car count:
+- 4-car packs (Tier 3–4): `[teamA_car, teamA_ticks, teamB_car, teamB_ticks]`
+  with stride 2 per team.
+- 6-car packs (Tier 5): `[teamA_car, teamA_ticks, teamA_waiting, teamB_car,
+  teamB_ticks, teamB_waiting]` with stride 3 per team.
+
+In both layouts a positive tick count at offset 1 within a team's slot marks
+that team's pit as occupied, causing both the stall and entrance corridor
+AABB to render with the occupied fill overlay.
 
 Parameters:
 - `ctx` - 2D rendering context.
 - `spec` - Frozen track geometry.
 - `transform` - World-to-canvas affine transform.
-- `pitStatus` - Optional packed pit-status tuple.
+- `pitStatus` - Optional packed pit-status tuple (4 or 6 elements).
 
 ### drawRotatedOverlay
 
@@ -344,28 +310,6 @@ Parameters:
 - `overlayFrame` - Optional packed team indices from the worker host.
 - `focusCarIndex` - Index of the focused car used for roster fallback.
 
-### drawTireMarks
-
-```ts
-drawTireMarks(
-  ctx: CanvasRenderingContext2D,
-  marks: readonly TireMark[],
-  transform: WorldTransform,
-): void
-```
-
-Draws the fading tire-mark trail behind each car.
-
-Marks are grouped by team so each car's trail is rendered as a continuous
-line in that team's color. Each segment fades from
-`COLOR_TIRE_MARK_MAX_ALPHA` to fully transparent as its age increases
-toward `TIRE_MARK_MAX_AGE_TICKS`.
-
-Parameters:
-- `ctx` - 2D rendering context.
-- `marks` - Tire mark list from the render state.
-- `transform` - World-to-canvas transform.
-
 ### drawTrack
 
 ```ts
@@ -391,23 +335,6 @@ Parameters:
 - `ctx` - 2D rendering context.
 - `spec` - Frozen track geometry.
 - `transform` - World-to-canvas affine transform.
-
-### drawTrackCenterline
-
-```ts
-drawTrackCenterline(
-  ctx: CanvasRenderingContext2D,
-  trackRenderGeometry: TrackRenderGeometry,
-  transform: WorldTransform,
-): void
-```
-
-Draws a dashed centerline along each segment.
-
-Parameters:
-- `ctx` - 2D rendering context.
-- `spec` - Track geometry.
-- `transform` - World-to-canvas transform.
 
 ### drawTrackEdgeLines
 
@@ -550,7 +477,7 @@ Narrow worker-frame fields consumed by the Tier 4 renderer overlays.
 Mutable render state owned by the animation loop.
 
 Isolated from the physics `EnvironmentState` so that rendering artefacts
-(trail length, mark density) can be tuned without touching the simulation.
+can be tuned without touching the simulation.
 
 ### RenderCarState
 
@@ -572,19 +499,20 @@ renderRacingFrame(
 Renders one animation frame onto the canvas.
 
 Rendering order: background → track glow → track surface → track edges →
-centerline dashes → tire marks → car body + front lighting accents.
+centerline dashes → car body + front lighting accents.
 
 When `renderOptions.frame` is present, the renderer also colors the four tire
 corners from the packed Tier 4 tire tuple and draws pit entrance/stall
 overlays from the packed pit-status tuple.
 
-Mutates `renderState.tireMarks` and `renderState.ticksSinceLastMark`.
+Lazily caches the 2D context on `renderState.cached2dContext` so
+that subsequent frames skip the per-frame `getContext('2d')` call.
 
 Parameters:
 - `canvas` - Target canvas element.
 - `spec` - Frozen track spec (geometry only).
 - `envState` - Current physics state from the simulation.
-- `renderState` - Mutable tire-mark accumulator.
+- `renderState` - Mutable context cache.
 - `transform` - World-to-canvas affine transform.
 - `renderOptions` - Optional overlay configuration; defaults to no guidance overlay.
 
@@ -816,27 +744,6 @@ Parameters:
 - `requestedEdgePaddingPx` - Optional explicit edge padding.
 
 Returns: Clamped edge padding in canvas pixels.
-
-### TireMark
-
-One sampled point in the fading tire-mark trail.
-
-### traceClosedSamplePath
-
-```ts
-traceClosedSamplePath(
-  ctx: CanvasRenderingContext2D,
-  centerlinePoints: readonly TrackSamplePoint[],
-  transform: WorldTransform,
-): void
-```
-
-Traces the sampled centerline path.
-
-Parameters:
-- `ctx` - 2D rendering context.
-- `centerlinePoints` - Ordered sampled centerline points.
-- `transform` - World-to-canvas affine transform.
 
 ### traceClosedWorldPath
 

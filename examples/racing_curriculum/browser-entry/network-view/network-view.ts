@@ -195,7 +195,7 @@ export function drawRacingNetworkVisualization(
 ): NetworkVisualizationPositionedScene {
   syncRacingCanvasToPanel(canvas);
 
-  const context = canvas.getContext('2d');
+  const context = canvas.getContext('2d', { desynchronized: true });
   if (!context) {
     return {
       positionedNodes: [],
@@ -247,15 +247,9 @@ function resolveHostContentBoxDimensionPx(
   hostElement: HTMLElement | null,
   hostClientDimensionPx: number,
   startPaddingProperty:
-    | 'paddingBottom'
-    | 'paddingLeft'
-    | 'paddingRight'
-    | 'paddingTop',
+    'paddingBottom' | 'paddingLeft' | 'paddingRight' | 'paddingTop',
   endPaddingProperty:
-    | 'paddingBottom'
-    | 'paddingLeft'
-    | 'paddingRight'
-    | 'paddingTop',
+    'paddingBottom' | 'paddingLeft' | 'paddingRight' | 'paddingTop',
 ): number {
   if (!hostElement) {
     return hostClientDimensionPx;

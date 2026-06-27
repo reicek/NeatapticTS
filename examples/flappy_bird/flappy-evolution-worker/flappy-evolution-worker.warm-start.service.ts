@@ -267,8 +267,7 @@ function applyWarmStartGenerationZero(
 }
 
 type WorkerWarmStartTeacherStrategy =
-  | 'feed-forward-teacher-fit'
-  | 'rollout-only';
+  'feed-forward-teacher-fit' | 'rollout-only';
 
 /**
  * Applies the teacher phase that best matches the selected architecture family.

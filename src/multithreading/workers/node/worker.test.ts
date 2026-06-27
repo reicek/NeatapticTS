@@ -7,8 +7,7 @@ describe('node worker entrypoint chapter', () => {
       await import('./worker');
 
       const messageHandler = process.listeners('message').at(-1) as
-        | ((message: unknown) => void)
-        | undefined;
+        ((message: unknown) => void) | undefined;
 
       if (!messageHandler) {
         throw new Error(

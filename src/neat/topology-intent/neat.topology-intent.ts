@@ -157,9 +157,7 @@ export type TopologyIntentRuntimeGenome = FeedForwardTopologyContractCarrier;
  */
 export function usesFeedForwardMutationPolicy(
   mutationConfig:
-    | TopologyIntentMutationMethod
-    | TopologyIntentMutationMethod[]
-    | unknown,
+    TopologyIntentMutationMethod | TopologyIntentMutationMethod[] | unknown,
 ): boolean {
   // Step 1: Accept the canonical direct FFW reference.
   if (mutationConfig === methods.mutation.FFW) {

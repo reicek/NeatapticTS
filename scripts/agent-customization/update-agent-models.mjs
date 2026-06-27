@@ -64,7 +64,8 @@ function parseArgs(argv) {
     else if (arg === '--dry-run' || arg === '--dry_run') opts.dryRun = true;
     else if (arg === '--json') opts.json = true;
     else if (arg.startsWith('--from=')) opts.from = arg.slice('--from='.length);
-    else if (arg === '--from' && argv[i + 1] !== undefined) opts.from = argv[++i];
+    else if (arg === '--from' && argv[i + 1] !== undefined)
+      opts.from = argv[++i];
     else if (arg.startsWith('--to=')) opts.to = arg.slice('--to='.length);
     else if (arg === '--to' && argv[i + 1] !== undefined) opts.to = argv[++i];
   }
@@ -144,7 +145,9 @@ function buildReplacementLine(originalLine, newModel) {
   const indentMatch = /^(\s*)/.exec(originalLine);
   const indent = indentMatch ? indentMatch[1] : '';
   // Detect quote style: single, double, or none
-  const valueMatch = /^(\s*model:\s*)(['"]?)(.*?)(['"]?)\s*$/.exec(originalLine);
+  const valueMatch = /^(\s*model:\s*)(['"]?)(.*?)(['"]?)\s*$/.exec(
+    originalLine,
+  );
   const prefix = valueMatch ? valueMatch[1] : `${indent}model: `;
   const openQuote = valueMatch?.[2] || "'";
   const closeQuote = valueMatch?.[4] || "'";
@@ -186,7 +189,8 @@ async function processFile(filePath, from, to, dryRun, removeMode) {
       modified = true;
     } else {
       // Replace mode
-      const shouldReplace = from !== null ? currentValue === from : currentValue !== to;
+      const shouldReplace =
+        from !== null ? currentValue === from : currentValue !== to;
       if (!shouldReplace) continue;
       changes.push({
         line: i + 1,
@@ -218,7 +222,9 @@ async function main() {
   }
 
   if (!opts.remove && !opts.to) {
-    console.error('Error: --to=<model-string> is required (or use --remove to remove model fields).');
+    console.error(
+      'Error: --to=<model-string> is required (or use --remove to remove model fields).',
+    );
     console.error('Run with --help for usage.');
     process.exit(1);
   }
@@ -228,7 +234,13 @@ async function main() {
   let totalChanges = 0;
 
   for (const filePath of files) {
-    const result = await processFile(filePath, opts.from, opts.to ?? '', opts.dryRun, opts.remove);
+    const result = await processFile(
+      filePath,
+      opts.from,
+      opts.to ?? '',
+      opts.dryRun,
+      opts.remove,
+    );
     results.push(result);
     totalChanges += result.changes.length;
   }
@@ -238,7 +250,9 @@ async function main() {
     ok: true,
     dryRun: opts.dryRun,
     mode: opts.remove ? 'remove' : 'replace',
-    from: opts.remove ? '(top-level model: fields)' : (opts.from ?? '(any model: value)'),
+    from: opts.remove
+      ? '(top-level model: fields)'
+      : (opts.from ?? '(any model: value)'),
     to: opts.remove ? '(removed)' : opts.to,
     filesScanned: files.length,
     filesModified: results.filter((r) => !r.skipped).length,
@@ -266,7 +280,9 @@ async function main() {
       }
     }
     if (totalChanges > 0 && !opts.dryRun) {
-      console.log('\nNext: refresh the routing table with `npm run agents:routing-table`');
+      console.log(
+        '\nNext: refresh the routing table with `npm run agents:routing-table`',
+      );
     }
   }
 }

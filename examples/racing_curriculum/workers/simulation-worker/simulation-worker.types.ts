@@ -3,10 +3,18 @@
  * consumed by the display thread.
  *
  * All typed arrays are row-major with `agentCount` rows (one row per car).
- * The `tireState` array is `agentCount * 4` elements (FL, FR, RL, RR per car).
+ * The `tireState` array is `agentCount * 4` elements ordered as
+ * `[FL, FR, RL, RR]` per car, with each channel clamped to `[0, 1]`.
  * The `radioField` array has 0 elements in Tier 0 (radio disabled).
- * Tier 4 may also append `pitStatus` as `[teamA_car, teamA_ticks, teamB_car, teamB_ticks]`,
- * where `255` in a car slot means that team's pit is currently empty.
+ *
+ * Tier 4+ packs (4 or more cars) also include a compact `pitStatus` typed
+ * array laid out as `[teamA_car, teamA_ticks, teamB_car, teamB_ticks]`.
+ * The value `255` in a car slot means that team's pit is currently empty;
+ * the tick slot counts down from `PIT_STOP_TICKS` (4) to zero, at which
+ * point the car is released and its tires are restored to full health.
+ * The environment-level `PitOccupancyState` shelf uses the full six-slot
+ * layout (three per team); the packed frame projects that into this compact
+ * form for zero-copy transfer.
  *
  * Zero-copy transfer contract:
  * - Every `ArrayBuffer` backing a typed-array field must appear exactly once in

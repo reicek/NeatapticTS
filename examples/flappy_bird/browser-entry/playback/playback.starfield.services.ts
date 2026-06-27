@@ -88,9 +88,7 @@ function resolveStarTileContext(
   canvas: HTMLCanvasElement | OffscreenCanvas,
 ): OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null {
   return canvas.getContext(FLAPPY_STARFIELD_CANVAS_CONTEXT_ID) as
-    | OffscreenCanvasRenderingContext2D
-    | CanvasRenderingContext2D
-    | null;
+    OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
 }
 
 /**

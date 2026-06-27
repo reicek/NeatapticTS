@@ -813,8 +813,7 @@ describe('Tier 1 worker race-step message', () => {
       makeFullThrottleNetworks(2),
     );
     const message = createRaceStepMessageOrUndefined(runner) as
-      | { type?: string }
-      | undefined;
+      { type?: string } | undefined;
 
     expect(message?.type).toBe('race-step');
   });
@@ -827,8 +826,7 @@ describe('Tier 1 worker race-step message', () => {
       makeFullThrottleNetworks(2),
     );
     const message = createRaceStepMessageOrUndefined(runner) as
-      | { frame?: RacingRenderFrame & { progress01?: Float32Array } }
-      | undefined;
+      { frame?: RacingRenderFrame & { progress01?: Float32Array } } | undefined;
     const frame = message?.frame;
     const hasRequiredFields =
       frame !== undefined &&
@@ -849,13 +847,289 @@ describe('Tier 1 worker race-step message', () => {
       makeFullThrottleNetworks(2),
     );
     const message = createRaceStepMessageOrUndefined(runner) as
-      | { frame?: RacingRenderFrame; transferList?: ArrayBuffer[] }
-      | undefined;
+      { frame?: RacingRenderFrame; transferList?: ArrayBuffer[] } | undefined;
     const transferList = message?.transferList ?? [];
     const carXBuffer = message?.frame?.carX.buffer as ArrayBuffer | undefined;
 
     expect(carXBuffer !== undefined && transferList.includes(carXBuffer)).toBe(
       true,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 3 red tests — shared-equal team-fitness and four-car team layout
+// ---------------------------------------------------------------------------
+
+describe('Tier 3 shared-equal team-fitness aggregation', () => {
+  it('resolves team fitness as the average of member finishing positions for a two-car team', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(4),
+    );
+
+    // Act — car 0 finishes at position 3, car 1 finishes at position 7
+    // Shared-equal: (3 + 7) / 2 = 5
+    // Best-position (current): min(3, 7) = 3
+    const runnerWithTeamFitness = runner as unknown as {
+      resolveTeamFitness?: (
+        teamId: 0 | 1,
+        carFinishPositions: readonly number[],
+      ) => number;
+    };
+
+    // Assert — must be 5 (average), not 3 (min)
+    expect(runnerWithTeamFitness.resolveTeamFitness?.(0, [3, 7])).toBe(5);
+  });
+
+  it('does not use best (minimum) finishing position for team fitness', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(4),
+    );
+
+    // Act — positions 1 and 9: average = 5, best = 1
+    const runnerWithTeamFitness = runner as unknown as {
+      resolveTeamFitness?: (
+        teamId: 0 | 1,
+        carFinishPositions: readonly number[],
+      ) => number;
+    };
+
+    // Assert — must be 5 (average), not 1 (best/min)
+    expect(runnerWithTeamFitness.resolveTeamFitness?.(0, [1, 9])).toBe(5);
+  });
+});
+
+describe('Tier 3 four-car team layout', () => {
+  it('assigns team layout [0, 0, 1, 1] for four cars', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(4),
+    );
+
+    // Act
+    const teamLayout = Array.from(runner.frame.carTeam);
+
+    // Assert — cars 0-1 = Team A, cars 2-3 = Team B
+    expect(teamLayout).toEqual([0, 0, 1, 1]);
+  });
+
+  it('creates a runner with four active cars when four networks are provided', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+
+    // Act
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(4),
+    );
+
+    // Assert
+    expect(runner.frame.agentCount).toBe(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 4 red tests — tire and pit coevolution contracts
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves the world-space center of a Team B pit entrance corridor from the
+ * track spec.  Used to position a Team A car at the opposing team's pit for
+ * the exclusion contract.
+ */
+function resolveTeamBPitEntranceCenter(track: TrackSpec): {
+  x: number;
+  y: number;
+} {
+  const teamBPitBox = track.pitBoxes?.find((box) => box.teamIndex === 1);
+  if (!teamBPitBox) {
+    throw new Error('No Team B pit box found in track spec');
+  }
+  const corridor = teamBPitBox.entranceCorridor;
+  return {
+    x: corridor.x + corridor.width / 2,
+    y: corridor.y + corridor.height / 2,
+  };
+}
+
+describe('Tier 4 tire and pit coevolution contracts', () => {
+  it('feeds a 95-channel observation vector to each car controller during tick', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const networks = makeSpyRaceNetworks(4);
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      networks,
+    );
+
+    // Act
+    runner.tick();
+
+    // Assert — Tier 4 must feed 95 channels (91 Tier 3 + 4 tire), not 5
+    const firstCallInput = networks[0].activate.mock.calls[0]?.[0];
+    expect(firstCallInput?.length).toBe(95);
+  });
+
+  it('includes own-car tire health in the observation tail channels 91 through 94', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const networks = makeSpyRaceNetworks(4);
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      networks,
+    );
+    // Set car 0 tire state to known distinct values
+    const tireState = runner.frame.tireState as Float32Array;
+    tireState[0] = 0.8; // FL
+    tireState[1] = 0.7; // FR
+    tireState[2] = 0.6; // RL
+    tireState[3] = 0.5; // RR
+
+    // Act
+    runner.tick();
+
+    // Assert — channels 91–94 must match the car's tire health [FL, FR, RL, RR]
+    const input = networks[0].activate.mock.calls[0]?.[0];
+    expect(
+      [input?.[91], input?.[92], input?.[93], input?.[94]].map((v) =>
+        Number((v ?? 0).toFixed(6)),
+      ),
+    ).toEqual([0.8, 0.7, 0.6, 0.5]);
+  });
+
+  it('decays tire state over a full-throttle race episode', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(4),
+    );
+    // Initialize car 0 tires to fresh (1.0)
+    const tireState = runner.frame.tireState as Float32Array;
+    tireState[0] = 1.0;
+    tireState[1] = 1.0;
+    tireState[2] = 1.0;
+    tireState[3] = 1.0;
+
+    // Act — run 120 ticks at full throttle
+    for (let tickIndex = 0; tickIndex < 120; tickIndex++) {
+      runner.tick();
+    }
+
+    // Assert — tire state must decrease from 1.0 due to driving forces
+    expect(runner.frame.tireState[0]).toBeLessThan(1.0);
+  });
+
+  it('reduces forward progress for worn tires versus fresh tires at the same throttle', async () => {
+    // Arrange — two identical runners, same seed and networks
+    const service = await loadRacePackService();
+    const snapshot = makeMinimalOpponentSnapshot();
+    const freshRunner = service.createRaceEpisodeRunner(
+      42,
+      snapshot,
+      makeFullThrottleNetworks(4),
+    );
+    const wornRunner = service.createRaceEpisodeRunner(
+      42,
+      snapshot,
+      makeFullThrottleNetworks(4),
+    );
+    // Fresh tires = 1.0, worn tires = 0.3
+    const freshTires = freshRunner.frame.tireState as Float32Array;
+    freshTires[0] = 1.0;
+    freshTires[1] = 1.0;
+    freshTires[2] = 1.0;
+    freshTires[3] = 1.0;
+    const wornTires = wornRunner.frame.tireState as Float32Array;
+    wornTires[0] = 0.3;
+    wornTires[1] = 0.3;
+    wornTires[2] = 0.3;
+    wornTires[3] = 0.3;
+
+    // Act — run 60 ticks on each
+    for (let tickIndex = 0; tickIndex < 60; tickIndex++) {
+      freshRunner.tick();
+      wornRunner.tick();
+    }
+    const freshProgress =
+      (
+        freshRunner.frame as unknown as {
+          progress01?: Float32Array;
+        }
+      ).progress01?.[0] ?? 0;
+    const wornProgress =
+      (
+        wornRunner.frame as unknown as {
+          progress01?: Float32Array;
+        }
+      ).progress01?.[0] ?? 0;
+
+    // Assert — fresh tires must achieve more progress than worn tires
+    expect(freshProgress).toBeGreaterThan(wornProgress);
+  });
+
+  it('exposes a pitStatus field on the race episode frame for a four-car pack', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(4),
+    );
+
+    // Assert — Tier 4 four-car frame must include a pitStatus typed array
+    expect(runner.frame.pitStatus).toBeDefined();
+  });
+
+  it('initializes all pit car slots to the no-car sentinel at episode start', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(4),
+    );
+    const pitStatus = runner.frame.pitStatus;
+
+    // Assert — both team car slots (index 0 = Team A, index 2 = Team B) must be 255
+    expect(
+      pitStatus !== undefined && pitStatus[0] === 255 && pitStatus[2] === 255,
+    ).toBe(true);
+  });
+
+  it('does not assign a Team A car to a Team B pit slot when the Team A car is at the Team B pit entrance', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const track = makeTier1Track(42);
+    const teamBPitCenter = resolveTeamBPitEntranceCenter(track);
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      makeFullThrottleNetworks(4),
+    );
+    // Position car 0 (Team A) at the Team B pit entrance corridor center
+    (runner.frame.carX as Float32Array)[0] = teamBPitCenter.x;
+    (runner.frame.carY as Float32Array)[0] = teamBPitCenter.y;
+
+    // Act
+    runner.tick();
+
+    // Assert — Team B pit car slot (index 2) must remain unoccupied (255)
+    expect(runner.frame.pitStatus?.[2]).toBe(255);
   });
 });

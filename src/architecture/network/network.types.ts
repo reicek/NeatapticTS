@@ -59,9 +59,7 @@ export interface NetworkRuntimeProps {
  * - `'inferred'`: sizes were estimated when no authoritative source was available.
  */
 export type NetworkArchitectureSource =
-  | 'layer-metadata'
-  | 'graph-topology'
-  | 'inferred';
+  'layer-metadata' | 'graph-topology' | 'inferred';
 
 /**
  * Stable architecture descriptor for UI and telemetry consumers.
@@ -166,15 +164,11 @@ export type ActivationMode = 'acyclic' | 'recurrent';
  * - `'raw-node-order'`: no schedule exists; nodes are activated in their raw storage order.
  */
 export type ActivationSchedulingExecutionPath =
-  | 'compiled-schedule'
-  | 'cycle-fallback-order'
-  | 'raw-node-order';
+  'compiled-schedule' | 'cycle-fallback-order' | 'raw-node-order';
 
 /** High-level issue attached to the latest scheduling decision. `'cycle-detected'` means acyclic enforcement found a back-edge; `'schedule-missing'` means topology was dirty and recompilation was needed. `null` means scheduling succeeded cleanly. */
 export type ActivationSchedulingIssue =
-  | 'cycle-detected'
-  | 'schedule-missing'
-  | null;
+  'cycle-detected' | 'schedule-missing' | null;
 
 /** Execution step shape inside a compiled activation schedule. `'wave'` steps are plain feed-forward Kahn waves; `'recurrent-component'` steps unroll one strongly-connected component for a fixed iteration count. */
 export type ActivationScheduleStepKind = 'wave' | 'recurrent-component';
@@ -1469,13 +1463,7 @@ export type MetricsHook = (m: {
  * Smoothing can make early stopping and progress logging less noisy.
  */
 export type MovingAverageType =
-  | 'sma'
-  | 'ema'
-  | 'adaptive-ema'
-  | 'median'
-  | 'gaussian'
-  | 'trimmed'
-  | 'wma';
+  'sma' | 'ema' | 'adaptive-ema' | 'median' | 'gaussian' | 'trimmed' | 'wma';
 
 /**
  * Public training options accepted by the high-level training orchestration.
@@ -1884,8 +1872,7 @@ export type PopulationFitnessFunction = (
 
 /** Unified evolution fitness callback shape accepting either a single-genome or population callback. */
 export type EvolutionFitnessFunction =
-  | SingleGenomeFitnessFunction
-  | PopulationFitnessFunction;
+  SingleGenomeFitnessFunction | PopulationFitnessFunction;
 
 /** Result of fitness-strategy setup describing the resolved callback and worker thread count. */
 export interface FitnessSetup {

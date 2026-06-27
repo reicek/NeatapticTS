@@ -32,6 +32,7 @@ skills:
     'summarizing-session-log',
     'plan-sync-validation',
     'capturing-learning-event',
+    'research-methodology',
     'execute',
   ]
 handoffs:

@@ -1,4 +1,7 @@
-import type { CarState, EnvironmentState } from '../environment/environment.types';
+import type {
+  CarState,
+  EnvironmentState,
+} from '../environment/environment.types';
 import { generateTrack } from '../track/track.generator';
 import type { TrackSpec } from '../track/track.generator.types';
 import {
@@ -255,13 +258,63 @@ describe('observation.assembler', () => {
       const blueState = mod.derivePerCarObservationState(envState, 0);
       const redState = mod.derivePerCarObservationState(envState, 1);
       const blueVector = Array.from(
-        mod.assembleNormalizedObservationVector(blueState, trackSpec, { tier: 1 }),
+        mod.assembleNormalizedObservationVector(blueState, trackSpec, {
+          tier: 1,
+        }),
       );
       const redVector = Array.from(
-        mod.assembleNormalizedObservationVector(redState, trackSpec, { tier: 1 }),
+        mod.assembleNormalizedObservationVector(redState, trackSpec, {
+          tier: 1,
+        }),
       );
 
       expect(redVector).not.toEqual(blueVector);
+    });
+  });
+
+  describe('Tier 3 teammate-state observation channels', () => {
+    it('populates teammateRadioSlots[0] with non-zero values when a same-team teammate exists', async () => {
+      const trackSpec = createStraightTrackSpec();
+      const envState = createFourCarEnvironmentState(trackSpec);
+      const mod = await loadObservationAssemblerModule();
+      const derived = mod.derivePerCarObservationState(envState, 0);
+
+      // Car 0's teammate is car 1 (both Team A, layout [0, 0, 1, 1])
+      const slot0 = derived.teammateRadioSlots?.[0];
+      const hasNonZero =
+        slot0 !== undefined && Array.from(slot0).some((v) => v !== 0);
+
+      expect(hasNonZero).toBe(true);
+    });
+
+    it('leaves teammateRadioSlots[1] and [2] zero-padded for a 2v2 layout', async () => {
+      const trackSpec = createStraightTrackSpec();
+      const envState = createFourCarEnvironmentState(trackSpec);
+      const mod = await loadObservationAssemblerModule();
+      const derived = mod.derivePerCarObservationState(envState, 0);
+
+      // 2v2: slot 0 has teammate, slots 1 and 2 are zero-padded
+      const slot1 = derived.teammateRadioSlots?.[1];
+      const slot2 = derived.teammateRadioSlots?.[2];
+      const slotsAreZeroPadded =
+        (slot1 === undefined || Array.from(slot1).every((v) => v === 0)) &&
+        (slot2 === undefined || Array.from(slot2).every((v) => v === 0));
+
+      expect(slotsAreZeroPadded).toBe(true);
+    });
+
+    it('populates teammateRadioSlots with the teammate car position and heading for car 2 teammate car 3', async () => {
+      const trackSpec = createStraightTrackSpec();
+      const envState = createFourCarEnvironmentState(trackSpec);
+      const mod = await loadObservationAssemblerModule();
+      const derived = mod.derivePerCarObservationState(envState, 2);
+
+      // Car 2's teammate is car 3 (both Team B, layout [0, 0, 1, 1])
+      const slot0 = derived.teammateRadioSlots?.[0];
+      const hasNonZero =
+        slot0 !== undefined && Array.from(slot0).some((v) => v !== 0);
+
+      expect(hasNonZero).toBe(true);
     });
   });
 });
@@ -428,6 +481,7 @@ type ExpandedEnvironmentState = EnvironmentState & {
   targetSpeedWorld?: number;
   memoryTrace?: readonly number[];
   radioField?: Float32Array;
+  teammateRadioSlots?: readonly (Float32Array | readonly number[])[];
 };
 
 interface ObservationAssemblerModule {
@@ -509,6 +563,69 @@ function createTwoCarEnvironmentState(
     carY: team0Car.carY,
     carHeading: team0Car.carHeading,
     cars: [team0Car, team1Car] as const,
+  });
+}
+
+function createFourCarEnvironmentState(
+  trackSpec: TrackSpec,
+): ExpandedEnvironmentState {
+  const focalSampleIndex = 2;
+  const focalSample = trackSpec.splineSamples[focalSampleIndex]!;
+  const frame = resolveSplineSampleFrame(
+    trackSpec.splineSamples,
+    focalSample.globalIndex,
+  );
+  const innerOffsetWorld = focalSample.width / 4;
+  const tangentUnitX = Math.cos(frame.tangentHeadingRadians);
+  const tangentUnitY = Math.sin(frame.tangentHeadingRadians);
+  const carSpacing = 5;
+
+  const car0: CarState = {
+    carX: focalSample.x + frame.normalX * innerOffsetWorld,
+    carY: focalSample.y + frame.normalY * innerOffsetWorld,
+    carHeading: frame.tangentHeadingRadians,
+    teamIndex: 0,
+    tireState: [1, 1, 1, 1],
+  };
+  const car1: CarState = {
+    carX:
+      focalSample.x +
+      frame.normalX * innerOffsetWorld +
+      tangentUnitX * -carSpacing,
+    carY:
+      focalSample.y +
+      frame.normalY * innerOffsetWorld +
+      tangentUnitY * -carSpacing,
+    carHeading: frame.tangentHeadingRadians,
+    teamIndex: 0,
+    tireState: [1, 1, 1, 1],
+  };
+  const car2: CarState = {
+    carX: focalSample.x - frame.normalX * innerOffsetWorld,
+    carY: focalSample.y - frame.normalY * innerOffsetWorld,
+    carHeading: frame.tangentHeadingRadians,
+    teamIndex: 1,
+    tireState: [1, 1, 1, 1],
+  };
+  const car3: CarState = {
+    carX:
+      focalSample.x -
+      frame.normalX * innerOffsetWorld +
+      tangentUnitX * -carSpacing,
+    carY:
+      focalSample.y -
+      frame.normalY * innerOffsetWorld +
+      tangentUnitY * -carSpacing,
+    carHeading: frame.tangentHeadingRadians,
+    teamIndex: 1,
+    tireState: [1, 1, 1, 1],
+  };
+
+  return createExpandedEnvironmentState({
+    carX: car0.carX,
+    carY: car0.carY,
+    carHeading: car0.carHeading,
+    cars: [car0, car1, car2, car3] as const,
   });
 }
 

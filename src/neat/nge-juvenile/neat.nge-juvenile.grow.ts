@@ -16,7 +16,7 @@ import type {
   NgeMorphDelta,
 } from './neat.nge-juvenile.types';
 
-type NgeGrowthMorphKind = 'edgeDensify' | 'slotExpand' | 'nodeAdd';
+export type NgeGrowthMorphKind = 'edgeDensify' | 'slotExpand' | 'nodeAdd';
 
 /**
  * Check whether juvenile growth may commit in the current window.

@@ -7,6 +7,7 @@
  * surface so the juvenile stage stays a coherent module boundary.
  */
 
+export * from './neat.nge-juvenile.apply';
 export * from './neat.nge-juvenile.constants';
 export * from './neat.nge-juvenile.errors';
 export * from './neat.nge-juvenile.focus';

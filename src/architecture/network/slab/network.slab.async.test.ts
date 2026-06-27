@@ -147,11 +147,9 @@ describe('network slab chapter', () => {
           >(
             this: Promise<unknown>,
             onfulfilled?:
-              | ((value: unknown) => TResult1 | PromiseLike<TResult1>)
-              | null,
+              ((value: unknown) => TResult1 | PromiseLike<TResult1>) | null,
             onrejected?:
-              | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
-              | null,
+              ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
           ): Promise<TResult1 | TResult2> {
             microtaskYields++;
             return originalThen.call(this, onfulfilled, onrejected) as Promise<

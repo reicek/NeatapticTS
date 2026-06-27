@@ -184,6 +184,110 @@ Mutable self-radio seam used by Tier 2 single-car self-monitoring.
 
 ## controller/runtime.adaptation.ts
 
+### buildGrowthBudget
+
+```ts
+buildGrowthBudget(
+  network: default,
+  limits: RuntimeAdaptationLimits,
+): NgeGrowthBudget
+```
+
+Build a growth budget from the runtime limits and live network.
+
+Parameters:
+- `network` - Live controller network.
+- `limits` - Runtime adaptation limits.
+
+Returns: NGE growth budget for the lifecycle apply phase.
+
+### buildModuleMetricsSnapshot
+
+```ts
+buildModuleMetricsSnapshot(
+  network: default,
+  evidenceWindow: readonly number[],
+): NgeModuleMetricsSnapshot
+```
+
+Build a module metrics snapshot from the runtime evidence window.
+
+Parameters:
+- `network` - Live controller network.
+- `evidenceWindow` - Filtered rolling score history.
+
+Returns: NGE module metrics for the lifecycle focus scorer.
+
+### buildPruneBudget
+
+```ts
+buildPruneBudget(
+  network: default,
+): NgePruneBudget
+```
+
+Build a prune budget from the live network.
+
+Parameters:
+- `network` - Live controller network.
+
+Returns: NGE prune budget for the lifecycle apply phase.
+
+### computeGrowthThrottle
+
+```ts
+computeGrowthThrottle(
+  network: default,
+  tick: number,
+): { shouldThrottle: boolean; interval: number; }
+```
+
+Compute whether the growth lifecycle should be throttled for the current tick.
+
+When the network exceeds {@link LARGE_NETWORK_NODE_THRESHOLD}, the effective
+throttle interval scales with network size so that larger networks get
+progressively longer back-off intervals. This preserves real-time
+performance by preventing the lifecycle from running every tick at scale.
+
+Parameters:
+- `network` - Live controller network whose size determines throttling.
+- `tick` - Current fixed-timestep tick used for interval gating.
+
+Returns: Throttle decision with the computed interval.
+
+### createPerCarAdaptationEngines
+
+```ts
+createPerCarAdaptationEngines(
+  carCount: number,
+  options: RuntimeAdaptationEngineOptions,
+): Map<number, RuntimeAdaptationEngine>
+```
+
+Creates one independent runtime adaptation engine per car index.
+
+Each car in a multi-car racing simulation maintains its own adaptation
+state, cooldowns, and cadence boundaries.  This factory creates a
+`Map<number, RuntimeAdaptationEngine>` keyed by car index (0 to
+`carCount - 1`) where every engine has fully independent closure-scoped
+state — no shared mutable state across cars.
+
+Parameters:
+- `carCount` - Number of cars to create engines for.
+- `options` - Optional engine options applied identically to every car's engine.
+
+Returns: Map keyed by car index of independent adaptation engines.
+
+Example:
+
+```ts
+const engines = createPerCarAdaptationEngines(3, {
+  limits: { mutationCooldownTicks: 100 },
+});
+const car0Engine = engines.get(0); // independent state
+const car1Engine = engines.get(1); // independent state
+```
+
 ### createRuntimeAdaptationEngine
 
 ```ts
@@ -215,6 +319,21 @@ Parameters:
 - `scoreHistory` - Rolling score window.
 
 Returns: Combined trend/complexity score.
+
+### mapOutcomesToOperations
+
+```ts
+mapOutcomesToOperations(
+  outcomes: readonly MorphApplyOutcome[],
+): RuntimeAdaptationOperation[]
+```
+
+Map lifecycle apply outcomes to runtime adaptation operations.
+
+Parameters:
+- `outcomes` - Apply outcomes from the lifecycle result.
+
+Returns: Runtime operations for telemetry, excluding skipped morphs.
 
 ### RuntimeAdaptationCadenceMode
 
@@ -394,9 +513,9 @@ as a predictable suffix: `[0..69]` is the Tier 1 driving baseline,
 `[84..90]` is teammate slot 2. `envState.teammateRadioSlots` feeds those
 slots directly.
 
-Missing slots are zero-padded. That is the honest Phase 3 2v2 behavior: a
-race pack can supply at most two teammate rows, so the unused tail remains
-silent rather than fabricating extra agents.
+Missing slots are zero-padded. In a 2v2 race pack at most two teammate
+rows are populated, so the unused tail remains silent rather than
+fabricating extra agents.
 
 Parameters:
 - `envState` - Current environment snapshot plus optional teammate radio rows.
@@ -508,6 +627,62 @@ observation.slice(
   TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT,
 ); // own-car tire channels
 ```
+
+### buildTeammateRadioSlots
+
+```ts
+buildTeammateRadioSlots(
+  cars: readonly CarState[] | undefined,
+  focalCarIndex: number,
+  focalTeamIndex: 0 | 1,
+  focalCarX: number,
+  focalCarY: number,
+  focalCarHeading: number,
+): readonly (Float32Array<ArrayBufferLike> | readonly number[])[]
+```
+
+Builds the teammate radio slots for a focal car from the multi-car roster.
+
+Each slot encodes seven channels: teammate position x/y (normalized),
+teammate heading (sin), teammate speed (normalized, 0 when unavailable),
+relative offset x/y (normalized), and relative heading difference (sin).
+
+In a 2v2 layout only one teammate exists, so slot 0 is populated and
+slots 1–2 are zero-padded.
+
+Parameters:
+- `cars` - Ordered car roster from the environment state.
+- `focalCarIndex` - Index of the focal car.
+- `focalTeamIndex` - Team index of the focal car.
+- `focalCarX` - Focal car X position in world units.
+- `focalCarY` - Focal car Y position in world units.
+- `focalCarHeading` - Focal car heading in radians.
+
+Returns: Array of three 7-channel slots (populated or zero-padded).
+
+### buildTeammateSlot
+
+```ts
+buildTeammateSlot(
+  teammate: CarState,
+  focalCarX: number,
+  focalCarY: number,
+  focalCarHeading: number,
+): Float32Array<ArrayBufferLike>
+```
+
+Encodes one teammate's state into a 7-channel radio slot.
+
+Channel layout: [posX, posY, headingSin, speed, relOffsetX, relOffsetY, relHeadingSin].
+All channels are normalized to [-1, 1].
+
+Parameters:
+- `teammate` - The teammate car state to encode.
+- `focalCarX` - Focal car X position in world units.
+- `focalCarY` - Focal car Y position in world units.
+- `focalCarHeading` - Focal car heading in radians.
+
+Returns: Seven-channel Float32Array with normalized teammate state.
 
 ### clamp01
 

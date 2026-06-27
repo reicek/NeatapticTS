@@ -91,8 +91,7 @@ function shouldAutoRegisterSharedInferenceWorkerRuntime(): boolean {
 
 async function loadNodeWorkerThreadsModule(
   builtinModuleResolver: () =>
-    | NodeWorkerThreadsModule
-    | undefined = resolveNodeWorkerThreadsModule,
+    NodeWorkerThreadsModule | undefined = resolveNodeWorkerThreadsModule,
   importFunction: (moduleSpecifier: string) => Promise<unknown> = Function(
     'moduleSpecifier',
     'return import(moduleSpecifier);',
@@ -113,8 +112,7 @@ function resolveNodeWorkerThreadsModule(): NodeWorkerThreadsModule | undefined {
   };
 
   return nodeProcess.getBuiltinModule?.('worker_threads') as
-    | NodeWorkerThreadsModule
-    | undefined;
+    NodeWorkerThreadsModule | undefined;
 }
 
 function handleBootstrapMessage(message: unknown):
