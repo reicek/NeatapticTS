@@ -1,6 +1,6 @@
 ---
 name: coverage-guard
-description: 'Verify that 100% coverage is maintained across all four categories (statements, branches, functions, lines) for every src/ file touched by a code change. Use after any edit to src/ to confirm the coverage baseline has not dropped. This is an enforcement gate, not an expansion workflow.'
+description: 'Use when: verifying 100% coverage on touched src/ files.'
 argument-hint: 'List the src/ files that were changed, provide the most recent green baseline, and state whether this is a post-change check or a regression repair.'
 user-invocable: true
 disable-model-invocation: false
@@ -45,18 +45,8 @@ Do NOT use for coverage expansion on passing code - use `coverage-tranche` inste
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["src/ file changed"] --> B["Run focused Jest slice"]
-    B --> C{"All 4 categories 100%?"}
-    C -- "Yes" --> D["Gate passed"]
-    C -- "No" --> E["Classify gap"]
-    E --> F{"Reachable?"}
-    F -- "Yes" --> G["Add smallest owner-local test"]
-    F -- "No" --> H["Remove dead code"]
-    G --> I["Re-run focused slice"]
-    H --> I
-    I --> C
+```text
+Flowchart summary: "src/ file changed" → "Run focused Jest slice"; "Run focused Jest slice" → "All 4 categories 100%?"; "All 4 categories 100%?" → "Gate passed" (Yes), "Classify gap" (No); "Gate passed"; "Classify gap" → "Reachable?"; "Reachable?" → "Add smallest owner-local test" (Yes), "Remove dead code" (No); "Add smallest owner-local test" → "Re-run focused slice"; "Remove dead code" → "Re-run focused slice"; "Re-run focused slice" → "All 4 categories 100%?".
 ```
 
 ## Task Packet

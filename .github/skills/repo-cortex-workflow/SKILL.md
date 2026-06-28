@@ -1,6 +1,6 @@
 ---
 name: repo-cortex-workflow
-description: 'Use when maintaining Repo Cortex health: checking semantic-index freshness, choosing incremental versus forced rebuilds, regenerating the browser snapshot, running Cortex lifecycle gates, recovering from workflow or corpus MCP drift, or packaging durable Cortex evidence for hooks and CI. Use this workflow instead of ad hoc rebuild guesses.'
+description: 'Use when: maintaining Repo Cortex health, freshness, or RAG gaps.'
 argument-hint: 'Describe the Cortex symptom, failing command or gate, known stale paths or plan binding, whether snapshot or dense search is in scope, and the desired green proof.'
 user-invocable: false
 disable-model-invocation: false
@@ -43,18 +43,8 @@ Do NOT use for embedding-specific work - use `repo-cortex-embeddings` instead. D
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Index stale?"] --> B["Run freshness check"]
-    B --> C{"Fresh?"}
-    C -- "Yes" --> D["Search ready"]
-    C -- "No" --> E["Rebuild index"]
-    E --> F["Run build-index"]
-    F --> G["Run validate-index"]
-    G --> H{"Pass?"}
-    H -- "Yes" --> D
-    H -- "No" --> I["Fix indexing error"]
-    I --> F
+```text
+Flowchart summary: "Index stale?" → "Run freshness check"; "Run freshness check" → "Fresh?"; "Fresh?" → "Search ready" (Yes), "Rebuild index" (No); "Search ready"; "Rebuild index" → "Run build-index"; "Run build-index" → "Run validate-index"; "Run validate-index" → "Pass?"; "Pass?" → "Search ready" (Yes), "Fix indexing error" (No); "Fix indexing error" → "Run build-index".
 ```
 
 ## Task Packet
@@ -225,17 +215,8 @@ Prefer existing automation surfaces over bespoke shell glue:
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Cortex symptom"] --> B{"What's failing?"}
-    B -- "stale_paths / missing_paths" --> C["Incremental rebuild"]
-    B -- "validate-index clean, search wrong" --> D["Check MCP binding"]
-    B -- "Gate fails, index green" --> E["Diagnose MCP / snapshot"]
-    B -- "Freshness-proof corruption" --> F["Forced rebuild"]
-    C --> G["Rerun validate-index"]
-    D --> H["Check workflow MCP self-check"]
-    E --> I["Isolate failing surface"]
-    F --> G
+```text
+Flowchart summary: "Cortex symptom" → "What's failing?"; "What's failing?" → "Incremental rebuild" (stale_paths / missing_paths), "Check MCP binding" (validate-index clean, search wrong), "Diagnose MCP / snapshot" (Gate fails, index green), "Forced rebuild" (Freshness-proof corruption); "Incremental rebuild" → "Rerun validate-index"; "Check MCP binding" → "Check workflow MCP self-check"; "Diagnose MCP / snapshot" → "Isolate failing surface"; "Forced rebuild" → "Rerun validate-index"; "Rerun validate-index"; "Check workflow MCP self-check"; "Isolate failing surface".
 ```
 
 ## Before / After Examples

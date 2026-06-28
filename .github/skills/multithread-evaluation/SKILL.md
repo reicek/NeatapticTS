@@ -1,6 +1,6 @@
 ---
 name: multithread-evaluation
-description: 'Design, implement, or validate NeatapticTS batch evaluation in Node and browser worker pools. Use when working on evaluateInWorkers, task queueing, ordered results, workerCount sizing, backpressure, dataset broadcast, AsyncResource correlation, graceful single-thread fallback, or deterministic multithread fitness evaluation.'
+description: 'Use when: designing or validating parallel evaluation in Node/browser workers.'
 argument-hint: 'Describe the pool target, current step in Turnkey_Multithread_Evaluation_API.md, environment, dataset strategy, and whether the pass is design, implementation, benchmark, or validation.'
 user-invocable: true
 disable-model-invocation: false
@@ -96,16 +96,8 @@ Choose pool complexity only when the batch size and compute cost justify it.
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Start evaluation"] --> B["Broadcast dataset to workers"]
-    B --> C["Schedule genome batches"]
-    C --> D["Workers evaluate in parallel"]
-    D --> E["Collect ordered results"]
-    E --> F{"All done?"}
-    F -- "No" --> C
-    F -- "Yes" --> G["Assemble final scores"]
-    G --> H["Done"]
+```text
+Flowchart summary: "Start evaluation" → "Broadcast dataset to workers"; "Broadcast dataset to workers" → "Schedule genome batches"; "Schedule genome batches" → "Workers evaluate in parallel"; "Workers evaluate in parallel" → "Collect ordered results"; "Collect ordered results" → "All done?"; "All done?" → "Schedule genome batches" (No), "Assemble final scores" (Yes); "Assemble final scores" → "Done"; "Done".
 ```
 
 ## Task Packet
@@ -203,16 +195,8 @@ Validate with: focused multithreading tests, a small batch integration test, and
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Batch to evaluate"] --> B{"Workers available?"}
-    B -- "No / unsupported" --> C["Single-thread fallback"]
-    B -- "Yes" --> D{"Batch size predictable?"}
-    D -- "Yes" --> E["Fixed pool"]
-    D -- "No, varies widely" --> F["Dynamic sizing"]
-    C --> G["Preserve result semantics"]
-    E --> H["Bounded queue + backpressure"]
-    F --> H
+```text
+Flowchart summary: "Batch to evaluate" → "Workers available?"; "Workers available?" → "Single-thread fallback" (No / unsupported), "Batch size predictable?" (Yes); "Single-thread fallback" → "Preserve result semantics"; "Batch size predictable?" → "Fixed pool" (Yes), "Dynamic sizing" (No, varies widely); "Preserve result semantics"; "Fixed pool" → "Bounded queue + backpressure"; "Dynamic sizing" → "Bounded queue + backpressure"; "Bounded queue + backpressure".
 ```
 
 ## Before / After Examples

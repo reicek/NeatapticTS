@@ -16,8 +16,8 @@ describe('analyze-trace.io', () => {
       expect(detectTraceFormat([])).toBe('standard');
     });
 
-    it('returns chrome-devtools-mcp when result property exists', () => {
-      expect(detectTraceFormat({ result: [] })).toBe('chrome-devtools-mcp');
+    it('returns devtools when result property exists', () => {
+      expect(detectTraceFormat({ result: [] })).toBe('devtools');
     });
 
     it('returns standard for an object without result', () => {

@@ -1,7 +1,8 @@
 ---
-description: 'Use when executing a deliberate SOLID module split, folderizing a large file, starting from a user-specified root such as #file:flappy_bird, following or creating a durable split plan, improving JSDoc so generated README files read naturally, updating plan progress, and either ending an active step with a handoff prompt or terminally closing the plan with compression plus logs. Keywords: SOLID split, split plan, folderize, module boundary, orchestration-first, compatibility re-export, generated README, JSDoc, handoff prompt, logs.'
+description: 'Coordinator for SOLID module splits, folderization, and generated README updates.'
 name: 'solid-split'
 tier: 2
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -10,7 +11,7 @@ tools:
     execute,
     todo,
     agent,
-    neataptic-cortex-mcp/*,
+    cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -21,21 +22,13 @@ skills: ['solid-split', 'implementation-standards', 'execute']
 user-invocable: false
 ---
 
+## Purpose
+
+Use when executing a deliberate SOLID module split, folderizing a large file, starting from a user-specified root such as #file:flappy_bird, following or creating a durable split plan, improving JSDoc so generated README files read naturally, updating plan progress, and either ending an active step with a handoff prompt or terminally closing the plan with compression plus logs. Keywords: SOLID split, split plan, folderize, module boundary, orchestration-first, compatibility re-export, generated README, JSDoc, handoff prompt, logs.
+
 ## Cortex-First Search Policy
 
-This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
-
-1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
-2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
-3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
-4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
-5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
-6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
-7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
-8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
-9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
-
-If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
+This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
 
 ## Mission
 
@@ -100,7 +93,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 5. **Convert the chosen step into a tight todo list with one active item.**
    - _Example:_
      ```
-     - [ ] Extract validator to validator.js
+     - [] Extract validator to validator.js
      ```
 6. **Add or update the smallest boundary-local red-phase test first whenever the step changes behavior or carries meaningful runtime risk.**
    - _Example:_ Add a failing test for validator's new location.
@@ -124,17 +117,8 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 Use this decision tree to decide whether to split a module or keep it cohesive. A split is warranted only when a SOLID principle is genuinely violated; otherwise cohesion wins.
 
-```mermaid
-flowchart TD
-    A["Large module"] --> B{"Does it have more than one<br/>reason to change? (SRP)"}
-    B -- "No" --> C["Keep cohesive — do not split"]
-    B -- "Yes" --> D{"Are the responsibilities<br/>used by different consumers? (OCP/LSP)"}
-    D -- "No, same consumers" --> E["Keep cohesive; extract helpers,<br/>do not folderize"]
-    D -- "Yes, different consumers" --> F{"Can consumers depend on<br/>a narrow interface? (ISP)"}
-    F -- "No" --> G["Split into sub-modules<br/>with compatibility re-export"]
-    F -- "Yes" --> H["Split into sub-modules;<br/>expose narrow facades"]
-    G --> I["Folderize with naming convention"]
-    H --> I
+```text
+Flowchart summary: "Large module" → "Does it have more than one reason to change? (SRP)"; "Does it have more than one reason to change? (SRP)" → "Keep cohesive — do not split" (No), "Are the responsibilities used by different consumers? (OCP/LSP)" (Yes); "Keep cohesive — do not split"; "Are the responsibilities used by different consumers? (OCP/LSP)" → "Keep cohesive; extract helpers, do not folderize" (No, same consumers), "Can consumers depend on a narrow interface? (ISP)" (Yes, different consumers); "Keep cohesive; extract helpers, do not folderize"; "Can consumers depend on a narrow interface? (ISP)" → "Split into sub-modules with compatibility re-export" (No), "Split into sub-modules; expose narrow facades" (Yes); "Split into sub-modules with compatibility re-export" → "Folderize with naming convention"; "Split into sub-modules; expose narrow facades" → "Folderize with naming convention"; "Folderize with naming convention".
 ```
 
 - **Split when**: the module has multiple reasons to change (SRP), the responsibilities serve different consumers (OCP/LSP), and a narrow interface would let consumers depend only on what they use (ISP).

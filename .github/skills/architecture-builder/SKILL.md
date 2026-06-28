@@ -1,6 +1,6 @@
 ---
 name: architecture-builder
-description: 'Design, implement, test, and document preconfigured architecture builders (MLP, LSTM, GRU, NARX, sparse) in NeatapticTS. Use when adding a new builder entrypoint, extending an existing one, hardening builder validation, or documenting an architecture API.'
+description: 'Use when: designing, implementing, or validating preconfigured network architecture builders.'
 argument-hint: 'Name the architecture type (mlp, lstm, gru, narx, sparse), describe the current state of the builder, and state whether this is API design, implementation, testing, or documentation.'
 user-invocable: true
 disable-model-invocation: false
@@ -67,16 +67,8 @@ Do NOT use for refactoring existing module boundaries - use `solid-split` instea
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Design builder API"] --> B["Implement builder function"]
-    B --> C["Write roundtrip tests"]
-    C --> D["Run focused Jest slice"]
-    D --> E["Run coverage-guard"]
-    E --> F["Improve JSDoc"]
-    F --> G["Run npm run docs"]
-    G --> H["Update plan"]
-    H --> I["Invoke educational-docs"]
+```text
+Flowchart summary: "Design builder API" → "Implement builder function"; "Implement builder function" → "Write roundtrip tests"; "Write roundtrip tests" → "Run focused Jest slice"; "Run focused Jest slice" → "Run coverage-guard"; "Run coverage-guard" → "Improve JSDoc"; "Improve JSDoc" → "Run npm run docs"; "Run npm run docs" → "Update plan"; "Update plan" → "Invoke educational-docs"; "Invoke educational-docs".
 ```
 
 ## Task Packet
@@ -167,13 +159,8 @@ These rules apply to every architecture type: MLP, LSTM, GRU, NARX, sparse.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Builder work"] --> B{"Which phase?"}
-    B -- "Define typed config + defaults" --> C["API design"]
-    B -- "Implement build<Arch>()" --> D["Implementation"]
-    B -- "Roundtrip + determinism tests" --> E["Testing"]
-    B -- "JSDoc + generated README" --> F["Documentation"]
+```text
+Flowchart summary: "Builder work" → "Which phase?"; "Which phase?" → "API design" (Define typed config + defaults), "Testing" (Roundtrip + determinism tests), "Documentation" (JSDoc + generated README); "API design"; "Testing"; "Documentation".
 ```
 
 ## Before / After Examples

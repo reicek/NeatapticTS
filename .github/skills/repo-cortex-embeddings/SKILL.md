@@ -1,6 +1,6 @@
 ---
 name: repo-cortex-embeddings
-description: 'Use when mapping ONNX embedding model cache state, embeddings index readiness, hybrid BM25+dense ranking gaps, or deciding whether an embeddings issue belongs to repo-cortex-embeddings. Hands off to the embeddings skill when advanced RAG is ready. Keywords: cortex embeddings, ONNX embeddings, dense retrieval, embed-index, Turso native vectors, F8_BLOB, DiskANN, hybrid ranking, RRF, MRR, embeddings scout.'
+description: 'Use when: mapping Cortex embeddings index state, freshness, or hybrid search.'
 argument-hint: 'Describe the embeddings surface: cache state, index readiness, ranking gap, or architecture question, and whether the issue is cache, index, or architecture.'
 user-invocable: false
 disable-model-invocation: false
@@ -44,17 +44,8 @@ Do NOT use for general corpus search or indexing - use `repo-cortex-workflow` in
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Embedding request"] --> B["Check ONNX model cache"]
-    B --> C{"Model loaded?"}
-    C -- "Yes" --> D["Generate embeddings"]
-    C -- "No" --> E["Load model"]
-    E --> D
-    D --> F["Update Turso vector index (DiskANN)"]
-    F --> G{"Index warm?"}
-    G -- "Yes" --> H["Hybrid search available"]
-    G -- "No" --> I["BM25 only fallback"]
+```text
+Flowchart summary: "Embedding request" → "Check ONNX model cache"; "Check ONNX model cache" → "Model loaded?"; "Model loaded?" → "Generate embeddings" (Yes), "Load model" (No); "Generate embeddings" → "Update Turso vector index (DiskANN)"; "Load model" → "Generate embeddings"; "Update Turso vector index (DiskANN)" → "Index warm?"; "Index warm?" → "Hybrid search available" (Yes), "BM25 only fallback" (No); "Hybrid search available"; "BM25 only fallback".
 ```
 
 ## Task Packet
@@ -102,13 +93,8 @@ Desired assessment: classify whether this is a cache, index, or architecture gap
 
 ## Decision Tree: Cache, Index, or Architecture
 
-```mermaid
-flowchart TD
-    A["Embeddings issue"] --> B{"What kind?"}
-    B -- "Model not loading" --> C["Check ONNX cache"]
-    B -- "Index not ready" --> D["Rebuild DiskANN vector index"]
-    B -- "Hybrid ranking gap" --> E["Check BM25 + dense blend"]
-    B -- "MRR regression" --> F["Validate recall vs brute-force fallback"]
+```text
+Flowchart summary: "Embeddings issue" → "What kind?"; "What kind?" → "Check ONNX cache" (Model not loading), "Rebuild DiskANN vector index" (Index not ready), "Check BM25 + dense blend" (Hybrid ranking gap), "Validate recall vs brute-force fallback" (MRR regression); "Check ONNX cache"; "Rebuild DiskANN vector index"; "Check BM25 + dense blend"; "Validate recall vs brute-force fallback".
 ```
 
 ## Before / After Examples

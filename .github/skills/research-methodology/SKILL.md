@@ -1,6 +1,6 @@
 ---
 name: research-methodology
-description: 'Execute disciplined discovery workflows in NeatapticTS using Cortex-first search, ordered README reconnaissance, plan-aware execution, and certainty-threshold gating. Use when a task requires structured investigation before implementation, testing, or documentation.'
+description: 'Use when: executing disciplined Cortex-first discovery workflows.'
 argument-hint: 'Describe the investigation target, suspected subsystem, whether Cortex search is needed, known plan files, and whether the goal is reconnaissance only or an implementation brief.'
 user-invocable: false
 disable-model-invocation: false
@@ -67,21 +67,8 @@ Do NOT use for implementation work - use `04-implementing` instead. Do NOT use f
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Investigation target"] --> B["Check Cortex freshness"]
-    B --> C{"Index fresh?"}
-    C -- "Yes" --> D["Search corpus"]
-    C -- "No" --> E["Fall back to grep/glob"]
-    D --> F["Search context assembly"]
-    F --> G["Load chunk by ID"]
-    G --> H["Traverse dependency graph"]
-    H --> I{"Enough certainty?"}
-    I -- "Yes" --> J["Report findings"]
-    I -- "No" --> K["Expand query"]
-    K --> D
-    E --> L["Read files directly"]
-    L --> J
+```text
+Flowchart summary: "Investigation target" → "Check Cortex freshness"; "Check Cortex freshness" → "Index fresh?"; "Index fresh?" → "Search corpus" (Yes), "Fall back to grep/glob" (No); "Search corpus" → "Search context assembly"; "Fall back to grep/glob" → "Read files directly"; "Search context assembly" → "Load chunk by ID"; "Read files directly" → "Report findings"; "Load chunk by ID" → "Traverse dependency graph"; "Report findings"; "Traverse dependency graph" → "Enough certainty?"; "Enough certainty?" → "Report findings" (Yes), "Expand query" (No); "Expand query" → "Search corpus".
 ```
 
 ## Discovery Order

@@ -1,6 +1,6 @@
 ---
 name: agent-inventory-audit
-description: 'Inventory and audit NeatapticTS agents and skills. Use when mapping customizations, counting user-invocable agents, finding model or handoff drift, comparing before/after architecture, or preparing validation evidence.'
+description: 'Use when: auditing agent/skill inventory or routing-table freshness.'
 argument-hint: 'Describe whether the audit is baseline, after an edit batch, strict target validation, or registration evidence.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,16 +31,8 @@ Do NOT use for validating a single agent file - use `agent-frontmatter-standards
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Run inventory script"] --> B["Count agents, skills, tiers"]
-    B --> C["Compare to routing table"]
-    C --> D{"Counts match?"}
-    D -- "Yes" --> E["Audit complete"]
-    D -- "No" --> F["Identify drift source"]
-    F --> G["Fix frontmatter or regenerate table"]
-    G --> H["Re-run inventory"]
-    H --> D
+```text
+Flowchart summary: "Run inventory script" → "Count agents, skills, tiers"; "Count agents, skills, tiers" → "Compare to routing table"; "Compare to routing table" → "Counts match?"; "Counts match?" → "Audit complete" (Yes), "Identify drift source" (No); "Audit complete"; "Identify drift source" → "Fix frontmatter or regenerate table"; "Fix frontmatter or regenerate table" → "Re-run inventory"; "Re-run inventory" → "Counts match?".
 ```
 
 ## Task Packet
@@ -72,15 +64,8 @@ Each inventory script serves a specific purpose in the customization pipeline. T
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Inventory audit"] --> B{"When?"}
-    B -- "Before changes" --> C["Baseline audit"]
-    B -- "After edit batch" --> D["Post-edit audit"]
-    B -- "Final validation" --> E["Strict audit"]
-    C --> F["Record counts"]
-    D --> F
-    E --> G["Confirm eight-agent surface"]
+```text
+Flowchart summary: "Inventory audit" → "When?"; "When?" → "Baseline audit" (Before changes), "Post-edit audit" (After edit batch), "Strict audit" (Final validation); "Baseline audit" → "Record counts"; "Post-edit audit" → "Record counts"; "Strict audit" → "Confirm eight-agent surface"; "Record counts"; "Confirm eight-agent surface".
 ```
 
 ## Before / After Examples

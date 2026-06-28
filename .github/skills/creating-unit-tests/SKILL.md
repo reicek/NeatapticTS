@@ -1,6 +1,6 @@
 ---
 name: creating-unit-tests
-description: 'Use when: writing focused unit tests, red tests, failing tests, test fixtures, mocks, assertions, or coverage for a scoped change.'
+description: 'Use when: writing focused unit tests, fixtures, mocks, or coverage-aware tests.'
 argument-hint: 'Describe the behavior under test, owner-local test file or folder, expected red/green state, and focused command.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,16 +31,8 @@ Do NOT use for red test contract design - use `red-test-contracts` instead. Do N
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Need test for code path"] --> B["Find owner-local test file"]
-    B --> C["Write single it() block"]
-    C --> D["One top-level expect()"]
-    D --> E["Run focused slice"]
-    E --> F{"Pass?"}
-    F -- "Yes" --> G["Done"]
-    F -- "No" --> H["Fix test or code"]
-    H --> E
+```text
+Flowchart summary: "Need test for code path" → "Find owner-local test file"; "Find owner-local test file" → "Write single it() block"; "Write single it() block" → "One top-level expect()"; "One top-level expect()" → "Run focused slice"; "Run focused slice" → "Pass?"; "Pass?" → "Done" (Yes), "Fix test or code" (No); "Done"; "Fix test or code" → "Run focused slice".
 ```
 
 ## Task Packet
@@ -106,17 +98,8 @@ it('produces deterministic output under fixed seed', () => {
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Need test for code path"] --> B{"What is missing?"}
-    B -- "No test exists" --> C["Write new it() in owner-local file"]
-    B -- "Setup duplication" --> D["Extract shared fixture"]
-    B -- "Dependency not isolated" --> E["Add mock or stub"]
-    B -- "Assertion unclear" --> F["Refine single expect"]
-    C --> G["Run focused slice"]
-    D --> G
-    E --> G
-    F --> G
+```text
+Flowchart summary: "Need test for code path" → "What is missing?"; "What is missing?" → "Write new it() in owner-local file" (No test exists), "Extract shared fixture" (Setup duplication), "Add mock or stub" (Dependency not isolated), "Refine single expect" (Assertion unclear); "Write new it() in owner-local file" → "Run focused slice"; "Extract shared fixture" → "Run focused slice"; "Add mock or stub" → "Run focused slice"; "Refine single expect" → "Run focused slice"; "Run focused slice".
 ```
 
 ## Before / After Examples

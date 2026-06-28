@@ -1,6 +1,6 @@
 ---
 name: performance-optimization
-description: 'Implement memory efficiency, slab optimization, typed-array usage, cache-friendly data layouts, or benchmark-driven library performance improvements in NeatapticTS. Use when executing a Track 1 phase of Memory_Optimization.md or addressing a measured hotspot after trace-audit-reporting or trace-analyzer-extension has identified a library-owned bottleneck.'
+description: 'Use when: optimizing memory, typed arrays, caches, or runtime speed.'
 argument-hint: 'Describe the optimization target (slab, typed array, activation path, cache layout, browser-worker hotspot), the evidence (trace report or benchmark), and the current plan phase.'
 user-invocable: true
 disable-model-invocation: false
@@ -62,22 +62,8 @@ Do NOT use for trace analysis or reporting - use `trace-audit-reporting` instead
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Profiled hotspot"] --> B{"Target type?"}
-    B -- "Memory allocation" --> C["Slab/pool optimization"]
-    B -- "Activation path" --> D["Fast-path optimization"]
-    B -- "Data layout" --> E["Cache-friendly refactor"]
-    C --> F["Write correctness test"]
-    D --> F
-    E --> F
-    F --> G["Implement optimization"]
-    G --> H["Verify invariant"]
-    H --> I{"Output identical?"}
-    I -- "Yes" --> J["Run benchmark"]
-    I -- "No" --> K["Debug"]
-    K --> G
-    J --> L["Report improvement"]
+```text
+Flowchart summary: "Profiled hotspot" → "Target type?"; "Target type?" → "Slab/pool optimization" (Memory allocation), "Fast-path optimization" (Activation path), "Cache-friendly refactor" (Data layout); "Slab/pool optimization" → "Write correctness test"; "Fast-path optimization" → "Write correctness test"; "Cache-friendly refactor" → "Write correctness test"; "Write correctness test" → "Implement optimization"; "Implement optimization" → "Verify invariant"; "Verify invariant" → "Output identical?"; "Output identical?" → "Run benchmark" (Yes), "Debug" (No); "Run benchmark" → "Report improvement"; "Debug" → "Implement optimization"; "Report improvement".
 ```
 
 ## Task Packet
@@ -152,14 +138,8 @@ use `plan-alignment` to verify before proceeding.
 
 ## Decision Tree: Optimization Targets
 
-```mermaid
-flowchart TD
-    A["Performance complaint"] --> B{"Where is the hotspot?"}
-    B -- "Library code in src/" --> C["This skill"]
-    B -- "Demo rendering / DOM" --> D["visualizer-workflow"]
-    B -- "Worker payload encoding" --> E["worker-inference-transport"]
-    B -- "Trace tooling gap" --> F["trace-analyzer-extension"]
-    B -- "Unknown" --> G["trace-audit-reporting first"]
+```text
+Flowchart summary: "Performance complaint" → "Where is the hotspot?"; "Where is the hotspot?" → "This skill" (Library code in src/), "visualizer-workflow" (Demo rendering / DOM), "worker-inference-transport" (Worker payload encoding), "trace-analyzer-extension" (Trace tooling gap), "trace-audit-reporting first" (Unknown); "This skill"; "visualizer-workflow"; "worker-inference-transport"; "trace-analyzer-extension"; "trace-audit-reporting first".
 ```
 
 ## Before / After Examples

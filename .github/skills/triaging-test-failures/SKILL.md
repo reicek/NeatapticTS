@@ -1,6 +1,6 @@
 ---
 name: triaging-test-failures
-description: 'Use when: a validation command fails and the workflow needs failure ownership, root-cause grouping, reroute decisions, or unrelated-failure separation.'
+description: 'Use when: triaging validation failures, root cause, reroute, or recovery.'
 argument-hint: 'Provide the failing command, relevant output summary, changed files, and whether failures may be unrelated or environment-owned.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,19 +31,8 @@ Do NOT use for fixing tests - use `test-fix-workflow` after triage. Do NOT use f
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Test failure"] --> B["Classify failure"]
-    B --> C{"Type?"}
-    C -- "Assertion" --> D["Check expected vs actual"]
-    C -- "Timeout" --> E["Check async/await"]
-    C -- "Import error" --> F["Check module paths"]
-    C -- "Environment" --> G["Check config/fixture"]
-    D --> H["Route to owner"]
-    E --> H
-    F --> H
-    G --> H
-    H --> I["Report triage"]
+```text
+Flowchart summary: Test failure → Classify failure → Type decision (Assertion, Timeout, Import error, Environment) → owner-specific check → Route to owner → Report triage.
 ```
 
 ## Task Packet

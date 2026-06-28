@@ -1,6 +1,6 @@
 ---
 name: agent-json-body-to-md
-description: 'Use when: converting the JSON body of a .github/agents/*.agent.md file to Markdown, replacing the raw JSON block with the formatted MD output, or running scripts/agent-customization/json-to-md.mjs against an agent description body.'
+description: 'Use when: converting the JSON body of an agent file to Markdown prose.'
 argument-hint: 'Name the target agent file (relative to .github/agents/), and confirm whether the YAML frontmatter should remain untouched.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,14 +31,8 @@ Do NOT use for agents already in markdown format - this skill is only for JSON-b
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Agent file"] --> B{"Format?"}
-    B -- "JSON body" --> C["Convert to markdown"]
-    B -- "Already markdown" --> D["No action needed"]
-    C --> E["Validate frontmatter"]
-    E --> F["Run agent-frontmatter-standards"]
-    F --> G["Done"]
+```text
+Flowchart summary: "Agent file" → "Format?"; "Format?" → "Convert to markdown" (JSON body), "No action needed" (Already markdown); "Convert to markdown" → "Validate frontmatter"; "No action needed"; "Validate frontmatter" → "Run agent-frontmatter-standards"; "Run agent-frontmatter-standards" → "Done"; "Done".
 ```
 
 ## Task Packet
@@ -105,16 +99,8 @@ Preserve frontmatter: <yes>
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Agent .agent.md file"] --> B{"Body format?"}
-    B -- "Raw JSON object" --> C["Convert with jsonToMarkdown"]
-    B -- "Already Markdown" --> D["No action — pass through"]
-    B -- "Mixed JSON + trailing fenced block" --> E["Convert JSON body, preserve fence"]
-    C --> F["Validate frontmatter unchanged"]
-    E --> F
-    D --> G["Report PARTIAL: nothing to convert"]
-    F --> H["Done"]
+```text
+Flowchart summary: "Agent .agent.md file" → "Body format?"; "Body format?" → "Convert with jsonToMarkdown" (Raw JSON object), "No action — pass through" (Already Markdown), "Convert JSON body, preserve fence" (Mixed JSON + trailing fenced block); "Convert with jsonToMarkdown" → "Validate frontmatter unchanged"; "No action — pass through" → "Report PARTIAL: nothing to convert"; "Convert JSON body, preserve fence" → "Validate frontmatter unchanged"; "Validate frontmatter unchanged" → "Done"; "Report PARTIAL: nothing to convert"; "Done".
 ```
 
 ## Before / After Examples

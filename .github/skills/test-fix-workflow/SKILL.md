@@ -1,6 +1,6 @@
 ---
 name: test-fix-workflow
-description: 'Systematically fix multiple test failures by planning first, preferring a TDD red-green-coverage cadence inside each fix cluster, validating types early, and only running the full suite at the end.'
+description: 'Use when: systematically fixing multiple test failures with TDD discipline.'
 argument-hint: 'Describe the failing surface, available failure output, whether the issue is type-level, runtime, or mixed, and any known plan file or validation constraints.'
 user-invocable: true
 disable-model-invocation: false
@@ -51,17 +51,8 @@ Do NOT use for triaging failures when root cause is unknown - use `triaging-test
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Test failure"] --> B["Reproduce"]
-    B --> C["Identify root cause"]
-    C --> D{"Fixable?"}
-    D -- "Yes" --> E["Apply fix"]
-    D -- "No" --> F["Escalate to 00-helping"]
-    E --> G["Re-run test"]
-    G --> H{"Pass?"}
-    H -- "Yes" --> I["Run coverage-guard"]
-    H -- "No" --> C
+```text
+Flowchart summary: "Test failure" → "Reproduce"; "Reproduce" → "Identify root cause"; "Identify root cause" → "Fixable?"; "Fixable?" → "Apply fix" (Yes), "Escalate to 00-helping" (No); "Apply fix" → "Re-run test"; "Escalate to 00-helping"; "Re-run test" → "Pass?"; "Pass?" → "Run coverage-guard" (Yes), "Identify root cause" (No); "Run coverage-guard".
 ```
 
 ## Task Packet
@@ -130,20 +121,8 @@ repo-wide confirmation.
 
 ## Decision Tree: Repair vs Escalate
 
-```mermaid
-flowchart TD
-    A["Failing test"] --> B["Reproduce locally"]
-    B --> C{"Root cause clear?"}
-    C -- "Yes" --> D["Fix"]
-    C -- "No" --> E["Triage with triaging-test-failures"]
-    D --> F{"Fix works?"}
-    F -- "Yes" --> G["Done"]
-    F -- "No" --> H{"3 attempts?"}
-    H -- "Yes" --> I["Escalate to 00-helping"]
-    H -- "No" --> D
-    E --> J{"Root cause found?"}
-    J -- "Yes" --> D
-    J -- "No" --> I
+```text
+Flowchart summary: "Failing test" → "Reproduce locally"; "Reproduce locally" → "Root cause clear?"; "Root cause clear?" → "Fix" (Yes), "Triage with triaging-test-failures" (No); "Fix" → "Fix works?"; "Triage with triaging-test-failures" → "Root cause found?"; "Fix works?" → "Done" (Yes), "3 attempts?" (No); "Root cause found?" → "Fix" (Yes), "Escalate to 00-helping" (No); "Done"; "3 attempts?" → "Escalate to 00-helping" (Yes), "Fix" (No); "Escalate to 00-helping".
 ```
 
 ## Before / After Examples

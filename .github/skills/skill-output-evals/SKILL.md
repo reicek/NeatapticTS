@@ -1,6 +1,6 @@
 ---
 name: skill-output-evals
-description: 'Evaluate NeatapticTS skill output quality with evidence-backed assertions. Use when comparing with-skill versus baseline behavior, grading specialist output, aggregating pass rates, or deciding whether a skill improves quality enough to keep.'
+description: 'Use when: evaluating skill output quality against rubrics.'
 argument-hint: 'Describe the skill, eval fixtures, expected outputs, assertions, and baseline or previous version.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,18 +31,8 @@ Do NOT use for description evaluation - use `skill-description-evals` instead. D
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Skill output"] --> B["Run eval"]
-    B --> C{"Assertion type?"}
-    C -- "Contains check" --> D["Verify expected text present"]
-    C -- "Structure check" --> E["Verify YAML/JSON shape"]
-    C -- "Behavior check" --> F["Verify observable action"]
-    D --> G{"Pass?"}
-    E --> G
-    F --> G
-    G -- "Yes" --> H["Done"]
-    G -- "No" --> I["Report failure"]
+```text
+Flowchart summary: "Skill output" → "Run eval"; "Run eval" → "Assertion type?"; "Assertion type?" → "Verify expected text present" (Contains check), "Verify YAML/JSON shape" (Structure check), "Verify observable action" (Behavior check); "Verify expected text present" → "Pass?"; "Verify YAML/JSON shape" → "Pass?"; "Verify observable action" → "Pass?"; "Pass?" → "Done" (Yes), "Report failure" (No); "Done"; "Report failure".
 ```
 
 ## Task Packet
@@ -92,13 +82,8 @@ VALIDATION_EVIDENCE:
 
 ## Decision Tree: Assertion Type
 
-```mermaid
-flowchart TD
-    A["Evaluate output"] --> B{"What to check?"}
-    B -- "Text present" --> C["Contains assertion"]
-    B -- "Structured shape" --> D["Structure assertion"]
-    B -- "Observable behavior" --> E["Behavior assertion"]
-    B -- "No regression" --> F["Comparison assertion"]
+```text
+Flowchart summary: "Evaluate output" → "What to check?"; "What to check?" → "Contains assertion" (Text present), "Structure assertion" (Structured shape), "Behavior assertion" (Observable behavior), "Comparison assertion" (No regression); "Contains assertion"; "Structure assertion"; "Behavior assertion"; "Comparison assertion".
 ```
 
 ## Guardrails

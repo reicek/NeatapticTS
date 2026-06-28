@@ -1,6 +1,6 @@
 # Repo Cortex MCP Server
 
-`neataptic-cortex-mcp` exposes the Repo Cortex semantic index as read-only MCP tools.
+`cortex` exposes the Repo Cortex semantic index as read-only MCP tools.
 It is an async Turso/libSQL-backed semantic corpus MCP server, so agents can search,
 load, and validate indexed repository context without walking the raw filesystem for
 every question. The driver is `@libsql/client` `createClient()` — fully async
@@ -23,7 +23,7 @@ The workspace registers four sibling MCP servers. Repo Cortex adds semantic corp
 | `neataptic-workflow-mcp`   | Repo-static workflow context     | Active plan and deterministic workflow inventory facts.                                                                        |
 | `neataptic-validation-mcp` | Direct validation gate execution | Exact allow-listed validation commands from the active step packet.                                                            |
 | `neataptic-gate-mcp`       | Release gate contracts           | Gate metadata and contract-oriented release checks.                                                                            |
-| `neataptic-cortex-mcp`     | Repo-static semantic corpus      | Hybrid BM25 + dense vector search with RRF fusion, graph traversal, context assembly, freshness checks, and corpus statistics. |
+| `cortex`     | Repo-static semantic corpus      | Hybrid BM25 + dense vector search with RRF fusion, graph traversal, context assembly, freshness checks, and corpus statistics. |
 
 ## Index Configuration
 

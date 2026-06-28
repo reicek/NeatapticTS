@@ -1,6 +1,6 @@
 ---
 name: green-validation-gates
-description: 'Run and interpret green-phase validation for NeatapticTS agent workflow changes. Use when deciding focused test order, rerouting failed checks, enforcing coverage guard, or proving scripts, plans, agents, and skills are consistent.'
+description: 'Use when: running or interpreting green-phase validation gates.'
 argument-hint: 'Describe changed files, expected validations, latest failures, and whether strict customization validation should pass yet.'
 user-invocable: false
 disable-model-invocation: false
@@ -47,24 +47,8 @@ Do NOT use for test repair - use `test-fix-workflow` instead. Do NOT use for pla
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Implementation complete"] --> B["Run tsc"]
-    B --> C{"Pass?"}
-    C -- "No" --> D["Fix type errors"]
-    C -- "Yes" --> E["Run lint"]
-    D --> B
-    E --> F{"Pass?"}
-    F -- "No" --> G["Fix lint issues"]
-    F -- "Yes" --> H["Run focused jest"]
-    G --> E
-    H --> I{"Pass?"}
-    I -- "No" --> J["Triage failures"]
-    I -- "Yes" --> K["Run coverage-guard"]
-    J --> L["Fix or escalate"]
-    K --> M{"100%?"}
-    M -- "Yes" --> N["Gates passed"]
-    M -- "No" --> O["Fix coverage gap"]
+```text
+Flowchart summary: "Implementation complete" → "Run tsc"; "Run tsc" → "Pass?"; "Pass?" → "Fix type errors" (No), "Run lint" (Yes); "Fix type errors" → "Run tsc"; "Run lint" → "Pass?"; "Pass?" → "Fix lint issues" (No), "Run focused jest" (Yes); "Fix lint issues" → "Run lint"; "Run focused jest" → "Pass?"; "Pass?" → "Triage failures" (No), "Run coverage-guard" (Yes); "Triage failures" → "Fix or escalate"; "Run coverage-guard" → "100%?"; "Fix or escalate"; "100%?" → "Gates passed" (Yes), "Fix coverage gap" (No); "Gates passed"; "Fix coverage gap".
 ```
 
 ## Task Packet
@@ -142,17 +126,8 @@ active step packet's `validation` list, or at a phase boundary with user approva
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Implementation complete"] --> B{"Changed surface?"}
-    B -- "src/ TypeScript" --> C["Run tsc + lint + coverage-guard"]
-    B -- ".github/agents/" --> D["Run agent-graph + frontmatter gates"]
-    B -- ".github/skills/" --> E["Run skill frontmatter validation"]
-    B -- "plans/" --> F["Run plan-sync gate"]
-    C --> G["All gates pass?"]
-    D --> G
-    E --> G
-    F --> G
+```text
+Flowchart summary: "Implementation complete" → "Changed surface?"; "Changed surface?" → "Run tsc + lint + coverage-guard" (src/ TypeScript), "Run agent-graph + frontmatter gates" (.github/agents/), "Run skill frontmatter validation" (.github/skills/), "Run plan-sync gate" (plans/); "Run tsc + lint + coverage-guard" → "All gates pass?"; "Run agent-graph + frontmatter gates" → "All gates pass?"; "Run skill frontmatter validation" → "All gates pass?"; "Run plan-sync gate" → "All gates pass?"; "All gates pass?".
 ```
 
 ## Before / After Examples

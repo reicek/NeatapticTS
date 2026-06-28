@@ -1,6 +1,6 @@
 ---
 name: nge-core-algorithm
-description: 'Design, implement, or validate the NEAT Genesis EvoDevo core algorithm in NeatapticTS. Use when working on computation motifs, NGE_DNA, deterministic development, lifecycle state machines, local growth or prune policy, memory tiers, neuromodulation, reproduction modes, collective-intelligence primitives, or core invariants that benchmark demos will later consume.'
+description: 'Use when: designing or validating NGE core algorithm motifs, DNA, lifecycle, or reproduction.'
 argument-hint: 'Describe the NGE phase or primitive in scope, the archived plan section in plans/completed/NEAT_Genesis_EvoDevo.md, whether the pass is architecture, implementation, or validation, and which invariants must remain deterministic and opt-in.'
 user-invocable: true
 disable-model-invocation: false
@@ -96,16 +96,8 @@ This skill primarily owns the algorithm side of these plan phases:
 
 ## Workflow Diagram
 
-```mermaid
-stateDiagram-v2
-    [*] --> Embryo
-    Embryo --> Juvenile: development complete
-    Juvenile --> Adult: maturity threshold
-    Adult --> Reproducing: fitness evaluated
-    Reproducing --> Embryo: offspring created
-    Reproducing --> [*]: termination
-    note right of Embryo: NGE_DNA encoded
-    note right of Adult: Neuromodulation active
+```text
+State-machine summary: Workflow Diagram. Transitions: start → Embryo; Embryo → Juvenile (development complete); Juvenile → Adult (maturity threshold); Adult → Reproducing (fitness evaluated); Reproducing → Embryo (offspring created); Reproducing → end (termination).
 ```
 
 ## Task Packet
@@ -203,13 +195,8 @@ as hidden tuning noise.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["NGE work"] --> B{"Which owner?"}
-    B -- "DNA, motifs, lifecycle, reproduction" --> C["nge-core-algorithm"]
-    B -- "Demo world, curriculum, fairness" --> D["nge-benchmark-workflow"]
-    B -- "Runtime speed or memory" --> E["performance-optimization"]
-    B -- "Plan or roadmap alignment" --> F["plan-alignment"]
+```text
+Flowchart summary: "NGE work" → "Which owner?"; "Which owner?" → "nge-core-algorithm" (DNA, motifs, lifecycle, reproduction), "nge-benchmark-workflow" (Demo world, curriculum, fairness), "performance-optimization" (Runtime speed or memory), "plan-alignment" (Plan or roadmap alignment); "nge-core-algorithm"; "nge-benchmark-workflow"; "performance-optimization"; "plan-alignment".
 ```
 
 ## Before / After Examples

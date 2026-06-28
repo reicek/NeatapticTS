@@ -3,7 +3,7 @@
  * missing JSDoc entirely, JSDoc with fewer than 10 non-whitespace words (weak signal),
  * and functions with cyclomatic complexity above a configurable threshold. Emits the
  * standard gate JSON contract `{ pass, evidence, fixHint, owner }`. Also exposed as
- * the `scan_code_quality` MCP tool in `neataptic-cortex-mcp`.
+ * the `scan_code_quality` MCP tool in `cortex`.
  *
  * @param {boolean} [--json]                       - Emit the standard gate JSON contract.
  * @param {number}  [--complexity-threshold <n>]   - Maximum allowed cyclomatic complexity (default: 10).

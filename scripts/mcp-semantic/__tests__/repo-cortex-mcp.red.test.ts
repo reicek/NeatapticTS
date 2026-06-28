@@ -122,8 +122,8 @@ describe('repo cortex MCP red contracts', () => {
       const mcpConfig = JSON.parse(readFileSync(MCP_CONFIG_PATH, 'utf8'));
 
       expect(Object.keys(mcpConfig.servers).toSorted()).toEqual([
-        'chrome-devtools-mcp',
-        'neataptic-cortex-mcp',
+        'devtools',
+        'cortex',
         'neataptic-dispatch-mcp',
         'neataptic-gate-mcp',
         'neataptic-validation-mcp',

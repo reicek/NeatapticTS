@@ -238,7 +238,7 @@ For options, telemetry, multiobjective search, ONNX export, and subsystem detail
 
 NeatapticTS ships a semantic retrieval layer — the **Repo Cortex** — that lets agents search the codebase by meaning rather than by substring. It is the primary search mechanism for the project's agents and skills: `grep`, `glob`, and `view` are fallbacks of last resort, not the routine path. The Cortex-First Search Policy in `copilot-instructions.md` codifies this preference.
 
-The Cortex is exposed as a local `stdio` MCP server (`neataptic-cortex-mcp`) with 18 read-only tools: `search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `load_parent_chunk`, `load_document`, `freshness_check`, `index_stats`, `ann_build_index`, `list_families`, `scan_code_quality`, `traverse_graph`, `expand_query`, `submit_feedback`, `parallel_search`, `multi_hop_search`, `turso_branch`, and `turso_pitr`.
+The Cortex is exposed as a local `stdio` MCP server (`cortex`) with 18 read-only tools: `search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `load_parent_chunk`, `load_document`, `freshness_check`, `index_stats`, `ann_build_index`, `list_families`, `scan_code_quality`, `traverse_graph`, `expand_query`, `submit_feedback`, `parallel_search`, `multi_hop_search`, `turso_branch`, and `turso_pitr`. The `cortex` server is a lightweight lazy-load facade that spawns the real Repo Cortex server only when a tool is actually called.
 
 Retrieval combines BM25 full-text search (FTS5) with dense vector search and fuses the two streams server-side via **Reciprocal Rank Fusion (RRF, k=60)** rather than a fixed alpha blend. Dense vectors are 8-bit quantized (`F8_BLOB`) and served through Turso's native DiskANN index (`vector_top_k`), so no embeddings are loaded into JavaScript memory at query time. A cross-encoder reranker and a query-expansion layer refine results further, and `search_context` assembles a token-bounded context window ready to hand to a language model.
 
@@ -258,7 +258,7 @@ The Repo Cortex is backed by a Turso (libSQL) database. The MCP server connects 
 | `TURSO_SYNC_INTERVAL` | Embedded-replica sync interval, in seconds.                                                                        | `60`                                                            |
 | `TURSO_CONCURRENCY`   | Maximum in-flight queries for `parallel_search`.                                                                   | `20`                                                            |
 
-The MCP registration in `.mcp.json` supplies defaults for local development:
+The MCP registrations in `.mcp.json` (Copilot CLI) and `.vscode/mcp.json` (VS Code) both supply the default env values for local development. They are kept in sync so the same six servers are available in either client:
 
 ```json
 {

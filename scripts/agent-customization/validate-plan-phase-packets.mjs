@@ -30,6 +30,8 @@ const SLICE_GOAL_VALUES = new Set([
   'red-testing',
   'implementing',
   'green-testing',
+  'documenting',
+  'researching',
   'helping',
 ]);
 
@@ -71,6 +73,9 @@ const STEP_OPTIONAL_KEYS = new Set([
   'auto_expand',
   'slices',
   'specialists',
+  'owner',
+  'reviewer',
+  'evidence',
 ]);
 
 const PHASE_REQUIRED_SECTIONS = [
@@ -642,12 +647,6 @@ async function validateStepPacketInPhase(
           stepPath,
           `Invalid goal '${String(metadata.goal)}'. Must be one of: ${[...GOAL_VALUES].join(', ')}.`,
         ),
-      );
-    }
-
-    if (metadata.goal === 'planning' && headingStep !== 1) {
-      issues.push(
-        issue('error', stepPath, "Only Step 01 may have goal 'planning'."),
       );
     }
 

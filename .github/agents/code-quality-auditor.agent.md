@@ -1,14 +1,15 @@
 ---
-description: 'Use when running quality gates and interpreting results for 05-green-testing, including npm run quality:folder, npm run build, and lint commands. Keywords: quality gate, folder quality, build validation, lint results, violation classification, repair packet.'
+description: 'Auditor for quality gates, build validation, and lint result interpretation.'
 name: code-quality-auditor
 tier: 3
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
     execute,
     agent,
-    neataptic-cortex-mcp/*,
+    cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -17,6 +18,10 @@ user-invocable: false
 agents: ['file-change-summarizer']
 skills: ['green-validation-gates', 'implementation-standards']
 ---
+
+## Purpose
+
+Use when running quality gates and interpreting results for 05-green-testing, including npm run quality:folder, npm run build, and lint commands. Keywords: quality gate, folder quality, build validation, lint results, violation classification, repair packet.
 
 You are the `code-quality-auditor` agent for NeatapticTS.
 
@@ -42,16 +47,16 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+1. Before manual file reads, follow the Cortex-First Search Policy (`research-methodology` skill):
 
-   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
-   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
-   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
-   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
-   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
-   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
-   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
-   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - `cortex({ operation: 'freshness_check' })` — verify index currency.
+   - `cortex({ operation: 'search_corpus' })` — BM25 + dense hybrid search for broad discovery.
+   - `cortex({ operation: 'search_advanced' })` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `cortex({ operation: 'search_context' })` — token-budgeted context window.
+   - `cortex({ operation: 'load_chunk' })` — load full chunk content by ID.
+   - `cortex({ operation: 'load_document' })` — load all chunks for a file path.
+   - `cortex({ operation: 'traverse_graph' })` — entity/dependency graph traversal.
+   - `cortex({ operation: 'expand_query' })` — domain-aware query expansion.
    - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
 
    If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.

@@ -1,6 +1,6 @@
 ---
 name: skill-description-evals
-description: 'Design and grade trigger evals for NeatapticTS Agent Skill and custom agent descriptions. Use when testing should-trigger and should-not-trigger queries, preventing broad false positives, or optimizing descriptions under the 1024-character limit.'
+description: 'Use when: designing or grading trigger evals for skill/agent descriptions.'
 argument-hint: 'Name the skill or agent, describe expected trigger scope, and provide observed trigger results or planned eval queries.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,19 +31,8 @@ Do NOT use for output evaluation - use `skill-output-evals` instead. Do NOT use 
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Skill description"] --> B["Run eval"]
-    B --> C{"Pass?"}
-    C -- "Yes" --> D["Done"]
-    C -- "No" --> E{"Failure category?"}
-    E -- "Too vague" --> F["Add specificity"]
-    E -- "Missing use case" --> G["Add when-to-use"]
-    E -- "Too long" --> H["Trim to 1024 chars"]
-    F --> I["Re-run eval"]
-    G --> I
-    H --> I
-    I --> C
+```text
+Flowchart summary: "Skill description" → "Run eval"; "Run eval" → "Pass?"; "Pass?" → "Done" (Yes), "Failure category?" (No); "Done"; "Failure category?" → "Add specificity" (Too vague), "Add when-to-use" (Missing use case), "Trim to 1024 chars" (Too long); "Add specificity" → "Re-run eval"; "Add when-to-use" → "Re-run eval"; "Trim to 1024 chars" → "Re-run eval"; "Re-run eval" → "Pass?".
 ```
 
 ## Task Packet
@@ -86,13 +75,8 @@ description: 'Run focused Jest slices for specific source boundaries. Use when v
 
 ## Decision Tree: Failure Categories
 
-```mermaid
-flowchart TD
-    A["Eval failed"] --> B{"Why?"}
-    B -- "No 'Use when' trigger" --> C["Add use-case trigger"]
-    B -- "Description too generic" --> D["Add specificity: name target, action, scope"]
-    B -- "Exceeds 1024 chars" --> E["Compress description"]
-    B -- "No argument-hint" --> F["Add argument-hint"]
+```text
+Flowchart summary: "Eval failed" → "Why?"; "Why?" → "Add use-case trigger" (No 'Use when' trigger), "Add specificity: name target, action, scope" (Description too generic), "Compress description" (Exceeds 1024 chars), "Add argument-hint" (No argument-hint); "Add use-case trigger"; "Add specificity: name target, action, scope"; "Compress description"; "Add argument-hint".
 ```
 
 ## Guardrails

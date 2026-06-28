@@ -1,6 +1,6 @@
 ---
 name: flappy-architecture-polish
-description: 'Tune, stabilize, and instrument one Flappy Bird architecture profile across browser runtime, warm-start, worker evaluation, and durable long-run probes so the same polish loop can be reused for LSTM, GRU, NARX, MLP, or Sparse profiles.'
+description: 'Use when: tuning or instrumenting a Flappy Bird architecture profile.'
 argument-hint: 'Describe the Flappy architecture profile, the current symptom or polish target, whether a durable probe already exists, and whether this pass is reconnaissance, implementation, or rerun validation.'
 user-invocable: true
 disable-model-invocation: false
@@ -62,16 +62,8 @@ not replace `tracker-handoff` for tracker structure.
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Select architecture profile"] --> B["Run training probe"]
-    B --> C["Analyze results"]
-    C --> D{"Meets target?"}
-    D -- "Yes" --> E["Record polished profile"]
-    D -- "No" --> F["Adjust hyperparams"]
-    F --> G["Re-run probe"]
-    G --> C
-    E --> H["Update plan"]
+```text
+Flowchart summary: "Select architecture profile" → "Run training probe"; "Run training probe" → "Analyze results"; "Analyze results" → "Meets target?"; "Meets target?" → "Record polished profile" (Yes), "Adjust hyperparams" (No); "Record polished profile" → "Update plan"; "Adjust hyperparams" → "Re-run probe"; "Update plan"; "Re-run probe" → "Analyze results".
 ```
 
 ## Task Packet
@@ -211,13 +203,8 @@ behavior, not hide the summary.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Flappy symptom"] --> B{"Which owner boundary?"}
-    B -- "Recurrent tuning, hyperparams" --> C["LSTM/GRU architecture tuning"]
-    B -- "Per-generation seed rotation" --> D["Worker fairness (flappy-evolution-worker.runtime.service)"]
-    B -- "Post-warm-start regression" --> E["Warm-start (flappy-evolution-worker.warm-start.service)"]
-    B -- "Topology or connection density" --> F["Sparse architecture (architecture-builder)"]
+```text
+Flowchart summary: "Flappy symptom" → "Which owner boundary?"; "Which owner boundary?" → "LSTM/GRU architecture tuning" (Recurrent tuning, hyperparams), "Worker fairness (flappy-evolution-worker.runtime.service)" (Per-generation seed rotation), "Warm-start (flappy-evolution-worker.warm-start.service)" (Post-warm-start regression), "Sparse architecture (architecture-builder)" (Topology or connection density); "LSTM/GRU architecture tuning"; "Worker fairness (flappy-evolution-worker.runtime.service)"; "Warm-start (flappy-evolution-worker.warm-start.service)"; "Sparse architecture (architecture-builder)".
 ```
 
 ## Before / After Examples

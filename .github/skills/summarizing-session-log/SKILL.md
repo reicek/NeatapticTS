@@ -1,6 +1,6 @@
 ---
 name: summarizing-session-log
-description: 'Use when: summarizing session activity, changed files, validation evidence, learning events, residual risks, or next-step handoff context without replaying the transcript.'
+description: 'Use when: summarizing session activity, files, evidence, and handoffs.'
 argument-hint: 'Describe the workstream, files changed, validations run, learning events, and whether this is a chat summary, tracker note, or log entry.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,14 +31,8 @@ Do NOT use for active tracker management - use `tracker-handoff` instead. Do NOT
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Session ending"] --> B["Collect decisions"]
-    B --> C["Compress evidence"]
-    C --> D["Write .logs.md entry"]
-    D --> E["Update plan status"]
-    E --> F["Refresh handoff query"]
-    F --> G["Done"]
+```text
+Flowchart summary: "Session ending" → "Collect decisions"; "Collect decisions" → "Compress evidence"; "Compress evidence" → "Write .logs.md entry"; "Write .logs.md entry" → "Update plan status"; "Update plan status" → "Refresh handoff query"; "Refresh handoff query" → "Done"; "Done".
 ```
 
 ## Task Packet
@@ -100,15 +94,8 @@ Session logs that preserve full transcripts consume context budget in future ses
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Session summary"] --> B{"Destination?"}
-    B -- "Chat response" --> C["Chat summary"]
-    B -- "Plan tracker" --> D["Tracker note"]
-    B -- "Persistent log" --> E["Log entry"]
-    C --> F["Output in session"]
-    D --> G["Update .plans.md"]
-    E --> H["Append to .logs.md"]
+```text
+Flowchart summary: "Session summary" → "Destination?"; "Destination?" → "Chat summary" (Chat response), "Tracker note" (Plan tracker), "Log entry" (Persistent log); "Chat summary" → "Output in session"; "Tracker note" → "Update .plans.md"; "Log entry" → "Append to .logs.md"; "Output in session"; "Update .plans.md"; "Append to .logs.md".
 ```
 
 ## Guardrails

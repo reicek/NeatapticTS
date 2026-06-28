@@ -1,6 +1,6 @@
 ---
 name: creating-specialist-agent
-description: 'Use when: creating a hidden specialist or auxiliary .agent.md for one narrow reusable job, including tools, model tier, output contract, and parent routing.'
+description: 'Use when: creating a hidden specialist .agent.md for a narrow reusable job.'
 argument-hint: 'Describe the missing specialist job, parent orchestrator, required tools, model tier, output fields, and validation commands.'
 user-invocable: false
 disable-model-invocation: false
@@ -30,18 +30,8 @@ Do NOT use for splitting an existing monolithic agent - use `splitting-monolithi
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Need new specialist"] --> B{"Agent or skill?"}
-    B -- "Reusable procedure" --> C["Create skill"]
-    B -- "Autonomous worker" --> D["Create agent"]
-    D --> E{"Specialist or orchestrator?"}
-    E -- "Scoped worker" --> F["Create specialist (Tier 3)"]
-    E -- "Coordinates others" --> G["Create coordinator (Tier 2)"]
-    F --> H["Write frontmatter"]
-    G --> H
-    H --> I["Validate with agent-frontmatter-standards"]
-    I --> J["Add to routing table"]
+```text
+Flowchart summary: "Need new specialist" → "Agent or skill?"; "Agent or skill?" → "Create skill" (Reusable procedure), "Create agent" (Autonomous worker); "Create skill"; "Create agent" → "Specialist or orchestrator?"; "Specialist or orchestrator?" → "Create specialist (Tier 3)" (Scoped worker), "Create coordinator (Tier 2)" (Coordinates others); "Create specialist (Tier 3)" → "Write frontmatter"; "Create coordinator (Tier 2)" → "Write frontmatter"; "Write frontmatter" → "Validate with agent-frontmatter-standards"; "Validate with agent-frontmatter-standards" → "Add to routing table"; "Add to routing table".
 ```
 
 ## Task Packet
@@ -98,16 +88,8 @@ tools:
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Recurring workflow gap"] --> B{"Needs isolated context or restricted tools?"}
-    B -- "No" --> C["Create or update a skill"]
-    B -- "Yes" --> D{"Coordinates other agents?"}
-    D -- "No — scoped worker" --> E["Create specialist agent (Tier 3)"]
-    D -- "Yes — delegates to others" --> F["Create coordinator agent (Tier 2)"]
-    C --> G["Validate skill frontmatter"]
-    E --> H["Validate agent frontmatter + graph"]
-    F --> H
+```text
+Flowchart summary: "Recurring workflow gap" → "Needs isolated context or restricted tools?"; "Needs isolated context or restricted tools?" → "Create or update a skill" (No), "Coordinates other agents?" (Yes); "Create or update a skill" → "Validate skill frontmatter"; "Coordinates other agents?" → "Create specialist agent (Tier 3)" (No — scoped worker), "Create coordinator agent (Tier 2)" (Yes — delegates to others); "Validate skill frontmatter"; "Create specialist agent (Tier 3)" → "Validate agent frontmatter + graph"; "Create coordinator agent (Tier 2)" → "Validate agent frontmatter + graph"; "Validate agent frontmatter + graph".
 ```
 
 ## Guardrails

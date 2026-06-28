@@ -65,7 +65,7 @@ export function loadTrace(traceFilePath: string): TraceFile {
  * or as `{ traceEvents: [...] }`.
  *
  * @param rawJson - Parsed JSON value from the trace file.
- * @returns `'standard'` for raw Chrome traces, `'chrome-devtools-mcp'` for
+ * @returns `'standard'` for raw Chrome traces, `'devtools'` for
  *   MCP server responses.
  */
 export function detectTraceFormat(rawJson: unknown): TraceFormat {
@@ -77,7 +77,7 @@ export function detectTraceFormat(rawJson: unknown): TraceFormat {
   }
   const obj = rawJson as Record<string, unknown>;
   if (obj.result !== undefined) {
-    return 'chrome-devtools-mcp';
+    return 'devtools';
   }
   return 'standard';
 }
@@ -97,7 +97,7 @@ export function detectTraceFormat(rawJson: unknown): TraceFormat {
  */
 export function normalizeTraceFile(rawJson: unknown): TraceFile {
   const format = detectTraceFormat(rawJson);
-  if (format === 'chrome-devtools-mcp') {
+  if (format === 'devtools') {
     const obj = rawJson as Record<string, unknown>;
     const result = obj.result;
     if (Array.isArray(result)) {

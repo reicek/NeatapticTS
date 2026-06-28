@@ -1,6 +1,6 @@
 ---
 name: onnx-work
-description: 'Extend, harden, or validate ONNX-like export and import in NeatapticTS. Use when adding operator support, hardening constrained recurrent import, validating JSON-first roundtrips, updating honest supported-subset documentation, or enabling external seed ingestion through ONNX or an explicitly documented non-ONNX bridge.'
+description: 'Use when: extending or validating ONNX export/import for networks.'
 argument-hint: 'Describe the ONNX target (export operator / import subset / recurrent hardening / external seed path), the current plan phase, and whether this is implementation, import hardening, documentation, or roundtrip validation.'
 user-invocable: true
 disable-model-invocation: false
@@ -81,16 +81,8 @@ Do NOT use for internal serialization - use Network native methods instead. Do N
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Network"] --> B["Export to ONNX-like JSON"]
-    B --> C["Import back"]
-    C --> D["Reconstruct Network"]
-    D --> E["Compare activation output"]
-    E --> F{"Within tolerance?"}
-    F -- "Yes" --> G["Roundtrip verified"]
-    F -- "No" --> H["Debug operator mapping"]
-    H --> B
+```text
+Flowchart summary: "Network" → "Export to ONNX-like JSON"; "Export to ONNX-like JSON" → "Import back"; "Import back" → "Reconstruct Network"; "Reconstruct Network" → "Compare activation output"; "Compare activation output" → "Within tolerance?"; "Within tolerance?" → "Roundtrip verified" (Yes), "Debug operator mapping" (No); "Roundtrip verified"; "Debug operator mapping" → "Export to ONNX-like JSON".
 ```
 
 ## Task Packet
@@ -205,13 +197,8 @@ ONNX export must satisfy:
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["ONNX task"] --> B{"Which surface?"}
-    B -- "Add operator mapping" --> C["Export mapping"]
-    B -- "Constrained recurrent import" --> D["Import hardening"]
-    B -- "Export/import fidelity" --> E["Roundtrip validation"]
-    B -- "Operator table update" --> F["Supported-subset docs"]
+```text
+Flowchart summary: "ONNX task" → "Which surface?"; "Which surface?" → "Export mapping" (Add operator mapping), "Import hardening" (Constrained recurrent import), "Roundtrip validation" (Export/import fidelity), "Supported-subset docs" (Operator table update); "Export mapping"; "Import hardening"; "Roundtrip validation"; "Supported-subset docs".
 ```
 
 ## Before / After Examples

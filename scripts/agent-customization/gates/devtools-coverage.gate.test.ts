@@ -33,19 +33,16 @@ interface SpawnedResult {
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const GATE_URL = pathToFileURL(
-  path.resolve(__dirname, 'chrome-devtools-mcp-coverage.gate.mjs'),
+  path.resolve(__dirname, 'devtools-coverage.gate.mjs'),
 ).href;
-const GATE_PATH = path.resolve(
-  __dirname,
-  'chrome-devtools-mcp-coverage.gate.mjs',
-);
+const GATE_PATH = path.resolve(__dirname, 'devtools-coverage.gate.mjs');
 
 function makeFullAgent(name: string): string {
   return [
     '---',
     `name: '${name}'`,
     'tier: 1',
-    'skills: [execute, chrome-devtools-mcp]',
+    'skills: [execute, devtools]',
     'agents: [performance-trace-specialist, browser-ui-specialist, browser-memory-specialist]',
     '---',
     '',
@@ -71,7 +68,7 @@ function makeAgentMissingSpecialist(name: string): string {
     '---',
     `name: '${name}'`,
     'tier: 1',
-    'skills: [execute, chrome-devtools-mcp]',
+    'skills: [execute, devtools]',
     'agents: [performance-trace-specialist, browser-ui-specialist]',
     '---',
     '',
@@ -87,8 +84,8 @@ function buildLoaderSource(inventory: Record<string, string>): string {
 
 function runGate(loaderSource: string): SpawnedResult {
   const inlineScript = [
-    `import { runChromeDevToolsMcpCoverageGate } from ${JSON.stringify(GATE_URL)};`,
-    'const report = await runChromeDevToolsMcpCoverageGate({',
+    `import { runDevtoolsCoverageGate } from ${JSON.stringify(GATE_URL)};`,
+    'const report = await runDevtoolsCoverageGate({',
     '  agentLoader: async (name) => ({',
     loaderSource,
     '  })[name],',
@@ -138,7 +135,7 @@ function tryParseJson<ReportType>(stdout: string): ReportType | null {
   }
 }
 
-describe('chrome-devtools-mcp-coverage.gate.mjs', () => {
+describe('devtools-coverage.gate.mjs', () => {
   it('passes when both required agents have the skill and all specialists', () => {
     const result = runGate(
       buildLoaderSource({
@@ -152,7 +149,7 @@ describe('chrome-devtools-mcp-coverage.gate.mjs', () => {
       expect.objectContaining({
         pass: true,
         fixHint: null,
-        owner: 'chrome-devtools-mcp-workflow',
+        owner: 'devtools-workflow',
         evidence: expect.objectContaining({
           missingSkillAgents: [],
           missingSpecialistAgents: [],
@@ -161,7 +158,7 @@ describe('chrome-devtools-mcp-coverage.gate.mjs', () => {
     );
   });
 
-  it('fails when a required agent is missing the chrome-devtools-mcp skill', () => {
+  it('fails when a required agent is missing the devtools skill', () => {
     const result = runGate(
       buildLoaderSource({
         '03-red-testing': makeAgentMissingSkill('03-red-testing'),
@@ -208,10 +205,10 @@ describe('chrome-devtools-mcp-coverage.gate.mjs', () => {
     expect(result.report).toEqual(
       expect.objectContaining({
         pass: expect.any(Boolean),
-        owner: 'chrome-devtools-mcp-workflow',
+        owner: 'devtools-workflow',
         evidence: expect.objectContaining({
           requiredAgents: ['03-red-testing', '05-green-testing'],
-          requiredSkill: 'chrome-devtools-mcp',
+          requiredSkill: 'devtools',
         }),
       }),
     );

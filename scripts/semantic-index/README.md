@@ -220,18 +220,18 @@ embeddings into JS memory.
 
 Documents are collected in the following priority order and tagged with a family label:
 
-| Priority | Family label           | Glob                                                         | Chunker                                  |
-| -------- | ---------------------- | ------------------------------------------------------------ | ---------------------------------------- |
-| 1        | `readme`               | `src/**/README.md`                                           | Markdown heading-window                  |
-| 2        | `ts-source`            | `src/**/*.ts` (non-test, non-declaration)                    | ts-morph symbol-level (`ts-chunker.mjs`) |
-| 3        | `skill`                | `.github/skills/**/SKILL.md`                                 | Markdown heading-window                  |
-| 4        | `agent`                | `.github/agents/*.agent.md`                                  | Markdown heading-window                  |
-| 5        | `plan`                 | `plans/**/*.md` (excluding `plans/completed/`)               | Markdown heading-window                  |
-| 6        | `completed-plan`       | `plans/completed/**/*.md`                                    | Markdown heading-window                  |
-| 7        | `demo`                 | `examples/**/README.md`, `examples/**/*.ts`                  | Markdown heading-window                  |
-| 8        | `benchmark`            | `benchmarks/README.md`, `benchmarks/**/*.test.ts`            | Markdown heading-window                  |
-| 9        | `root-doc`             | `README.md`, `CLAUDE.md`, `STYLEGUIDE.md`, `CONTRIBUTING.md` | Markdown heading-window                  |
-| 10       | `copilot-instructions` | `.github/copilot-instructions.md`                            | Markdown heading-window                  |
+| Priority | Family label           | Glob                                              | Chunker                                  |
+| -------- | ---------------------- | ------------------------------------------------- | ---------------------------------------- |
+| 1        | `readme`               | `src/**/README.md`                                | Markdown heading-window                  |
+| 2        | `ts-source`            | `src/**/*.ts` (non-test, non-declaration)         | ts-morph symbol-level (`ts-chunker.mjs`) |
+| 3        | `skill`                | `.github/skills/**/SKILL.md`                      | Markdown heading-window                  |
+| 4        | `agent`                | `.github/agents/*.agent.md`                       | Markdown heading-window                  |
+| 5        | `plan`                 | `plans/**/*.md` (excluding `plans/completed/`)    | Markdown heading-window                  |
+| 6        | `completed-plan`       | `plans/completed/**/*.md`                         | Markdown heading-window                  |
+| 7        | `demo`                 | `examples/**/README.md`, `examples/**/*.ts`       | Markdown heading-window                  |
+| 8        | `benchmark`            | `benchmarks/README.md`, `benchmarks/**/*.test.ts` | Markdown heading-window                  |
+| 9        | `root-doc`             | `README.md`, `STYLEGUIDE.md`, `CONTRIBUTING.md`   | Markdown heading-window                  |
+| 10       | `copilot-instructions` | `.github/copilot-instructions.md`                 | Markdown heading-window                  |
 
 The `ts-source` family uses the **ts-morph AST chunker** (`ts-chunker.mjs`) instead of
 the text-window chunker. Each chunk covers one exported symbol (function, class,

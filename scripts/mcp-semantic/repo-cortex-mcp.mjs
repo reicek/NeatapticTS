@@ -11,7 +11,7 @@
  *
  * ```mermaid
  * graph LR
- *   MCP[neataptic-cortex-mcp] --> search_corpus
+ *   MCP[cortex] --> search_corpus
  *   MCP --> load_chunk
  *   MCP --> load_parent_chunk
  *   MCP --> load_document
@@ -79,7 +79,7 @@ export function createRepoCortexMcpServer(options = {}) {
   const databasePath = options.databasePath;
   const tools = createRepoCortexTools(databasePath);
   return createMcpServer({
-    serverName: 'neataptic-cortex-mcp',
+    serverName: 'cortex',
     serverVersion: SERVER_VERSION,
     tools,
   });

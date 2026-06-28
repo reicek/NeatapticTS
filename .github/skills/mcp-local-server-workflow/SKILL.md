@@ -1,6 +1,6 @@
 ---
 name: mcp-local-server-workflow
-description: 'Use when: designing, updating, or validating local MCP runtime-visibility surfaces for NeatapticTS, including repo-static facts, direct-MCP gates, bridge-required evidence, manual-only boundaries, transition-state migrations, read-only or bounded-executor tool schemas, validation failures, CI evidence, or trust-boundary communication.'
+description: 'Use when: designing or validating local MCP runtime-visibility surfaces.'
 argument-hint: 'Name the runtime facts, current and target classification, planned component, evidence source and freshness, blocker or validation failure, required self-checks or gates, and how the limitation or promotion should be communicated.'
 user-invocable: false
 disable-model-invocation: false
@@ -87,20 +87,8 @@ Communication target: user-facing blocker summary plus tracker note.
 
 ## Classification Decision Flow
 
-```mermaid
-flowchart TD
-  A[Runtime fact] --> B{Deterministic repo file or script?}
-  B -- yes --> C[repo-static<br/>Prefer neataptic-workflow-mcp]
-  B -- no --> D{Produced today by a shipped MCP tool?}
-  D -- yes --> E[direct-MCP<br/>Validate with self-check or gate]
-  D -- no --> F{Needs documented client or extension-host observation?}
-  F -- yes --> G[bridge-required<br/>Record source, freshness, client context]
-  F -- no --> H[manual-only<br/>Do not invent an API]
-  C --> I{Need a direct-MCP delivery surface?}
-  I -- yes --> E
-  I -- no --> J[Keep as repo-static evidence]
-  G --> K[Record blocker or bridge plan]
-  H --> K
+```text
+Flowchart summary: Runtime fact → Deterministic repo file or script?; Deterministic repo file or script? → repo-static Prefer neataptic-workflow-mcp (yes), Produced today by a shipped MCP tool? (no); repo-static Prefer neataptic-workflow-mcp → Need a direct-MCP delivery surface?; Produced today by a shipped MCP tool? → direct-MCP Validate with self-check or gate (yes), Needs documented client or extension-host observation? (no); Need a direct-MCP delivery surface? → direct-MCP Validate with self-check or gate (yes), Keep as repo-static evidence (no); direct-MCP Validate with self-check or gate; Needs documented client or extension-host observation? → bridge-required Record source, freshness, client context (yes), manual-only Do not invent an API (no); Keep as repo-static evidence; bridge-required Record source, freshness, client context → Record blocker or bridge plan; manual-only Do not invent an API → Record blocker or bridge plan; Record blocker or bridge plan.
 ```
 
 ## Required Workflow

@@ -1,7 +1,8 @@
 ---
-description: 'Use when researching codebase patterns, APIs, dependencies, architecture, external references, existing utilities, and prior art.'
+description: 'Research orchestrator for codebase patterns, APIs, dependencies, and prior art.'
 name: '02-researching'
 tier: 1
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -11,7 +12,7 @@ tools:
     todo,
     agent,
     web,
-    neataptic-cortex-mcp/*,
+    cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -59,21 +60,13 @@ handoffs:
     model: 'glm-5.2:cloud'
 ---
 
+## Purpose
+
+Use when researching codebase patterns, APIs, dependencies, architecture, external references, existing utilities, and prior art.
+
 ## Cortex-First Search Policy
 
-This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
-
-1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
-2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
-3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
-4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
-5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
-6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
-7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
-8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
-9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
-
-If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
+This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
 
 ## Mission
 
@@ -140,21 +133,8 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 When a research request arrives, classify it and route to the correct specialist:
 
-```mermaid
-flowchart TD
-    A["Research request"] --> B{"What type of investigation?"}
-    B -- "Bug investigation" --> C["boundary-mapper<br/>Map the failing boundary and call sites"]
-    B -- "Architecture survey" --> D["implementation-pattern-scout<br/>Discover existing patterns and conventions"]
-    B -- "Prior art / external refs" --> E["docs-scout + web search<br/>Find references, papers, prior implementations"]
-    B -- "Plan context" --> F["plan-scout<br/>Locate relevant plan, roadmap, step packet"]
-    B -- "Integration surface" --> G["boundary-mapper + docs-scout<br/>Map module boundaries and integration docs"]
-    B -- "Dependency / API recon" --> H["implementation-pattern-scout + repo-cortex-scout<br/>Trace imports and API surface"]
-    C --> I["Synthesize and update plan"]
-    D --> I
-    E --> I
-    F --> I
-    G --> I
-    H --> I
+```text
+Flowchart summary: Research request → classify investigation type (bug, architecture, prior art, plan context, integration, dependency/API) → route to the appropriate scout → synthesize evidence and update the plan.
 ```
 
 ## Delegation Targets

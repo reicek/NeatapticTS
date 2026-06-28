@@ -1,6 +1,6 @@
 ---
 name: capturing-learning-event
-description: 'Use when: recording an ISO-42001-style local evidence event for agent-system gaps, agent updates, skill updates, routing updates, model changes, or output-contract fixes.'
+description: 'Use when: recording an ISO-42001-style local evidence event.'
 argument-hint: 'Describe the gap or update, files changed, agents or skills affected, confirmation status, and resume action.'
 user-invocable: false
 disable-model-invocation: false
@@ -32,19 +32,8 @@ Do NOT use for routine validation passes - use `green-validation-gates` instead.
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Workflow gap discovered"] --> B["Classify event type"]
-    B --> C{"Event type?"}
-    C -- "routing" --> D["Record routing update"]
-    C -- "skill" --> E["Record skill update"]
-    C -- "model" --> F["Record model update"]
-    C -- "output contract" --> G["Record contract fix"]
-    D --> H["Append to learning-log.jsonl"]
-    E --> H
-    F --> H
-    G --> H
-    H --> I["Done"]
+```text
+Flowchart summary: "Workflow gap discovered" → "Classify event type"; "Classify event type" → "Event type?"; "Event type?" → "Record routing update" (routing), "Record skill update" (skill), "Record model update" (model), "Record contract fix" (output contract); "Record routing update" → "Append to learning-log.jsonl"; "Record skill update" → "Append to learning-log.jsonl"; "Record model update" → "Append to learning-log.jsonl"; "Record contract fix" → "Append to learning-log.jsonl"; "Append to learning-log.jsonl" → "Done"; "Done".
 ```
 
 ## Task Packet
@@ -104,17 +93,8 @@ The learning event log creates an ISO-42001-style evidence trail for workflow im
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Learning event"] --> B{"Event type?"}
-    B -- "Workflow gap" --> C["Record as agent-system-gap"]
-    B -- "Routing change" --> D["Record as routing-update"]
-    B -- "Skill updated" --> E["Record as skill-update"]
-    B -- "Output contract fix" --> F["Record as output-contract-fix"]
-    C --> G["Append to learning-log.jsonl"]
-    D --> G
-    E --> G
-    F --> G
+```text
+Flowchart summary: "Learning event" → "Event type?"; "Event type?" → "Record as agent-system-gap" (Workflow gap), "Record as routing-update" (Routing change), "Record as skill-update" (Skill updated), "Record as output-contract-fix" (Output contract fix); "Record as agent-system-gap" → "Append to learning-log.jsonl"; "Record as routing-update" → "Append to learning-log.jsonl"; "Record as skill-update" → "Append to learning-log.jsonl"; "Record as output-contract-fix" → "Append to learning-log.jsonl"; "Append to learning-log.jsonl".
 ```
 
 ## Before / After Examples

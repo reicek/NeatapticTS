@@ -1,6 +1,6 @@
 ---
 name: coverage-tranche
-description: 'Systematically expand test coverage for a specific source boundary in NeatapticTS toward 100% statements, branches, functions, and lines. Use when a source file has a known coverage gap and passing tests, not for fixing test failures.'
+description: 'Use when: expanding test coverage for a specific src/ boundary toward 100%.'
 argument-hint: 'Name the target source file, provide the current coverage % or uncovered line count from lcov.info or a focused run, and state whether this is reconnaissance, implementation, or validation.'
 user-invocable: true
 disable-model-invocation: false
@@ -52,18 +52,8 @@ Do NOT use for post-edit coverage enforcement - use `coverage-guard` instead. Do
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Read lcov.info"] --> B["Find file below 100%"]
-    B --> C["Identify uncovered lines"]
-    C --> D{"Dead code?"}
-    D -- "Yes" --> E["Remove branch"]
-    D -- "No" --> F["Write smallest test"]
-    E --> G["Re-run focused slice"]
-    F --> G
-    G --> H{"100% now?"}
-    H -- "Yes" --> I["Tranche complete"]
-    H -- "No" --> C
+```text
+Flowchart summary: "Read lcov.info" → "Find file below 100%"; "Find file below 100%" → "Identify uncovered lines"; "Identify uncovered lines" → "Dead code?"; "Dead code?" → "Remove branch" (Yes), "Write smallest test" (No); "Remove branch" → "Re-run focused slice"; "Write smallest test" → "Re-run focused slice"; "Re-run focused slice" → "100% now?"; "100% now?" → "Tranche complete" (Yes), "Identify uncovered lines" (No); "Tranche complete".
 ```
 
 ## Task Packet
@@ -160,15 +150,8 @@ forward progress; `coverage-guard` is for regression prevention after changes.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Coverage work needed"] --> B{"Tests passing?"}
-    B -- "No — failing" --> C["Use test-fix-workflow first"]
-    B -- "Yes, but below 100%" --> D["Use coverage-tranche (this skill)"]
-    B -- "Yes, change just landed" --> E["Use coverage-guard"]
-    C --> F["Fix failures, then return"]
-    D --> G["Add smallest test or remove dead code"]
-    E --> H["Verify touched files at 100%"]
+```text
+Flowchart summary: "Coverage work needed" → "Tests passing?"; "Tests passing?" → "Use test-fix-workflow first" (No — failing), "Use coverage-tranche (this skill)" (Yes, but below 100%), "Use coverage-guard" (Yes, change just landed); "Use test-fix-workflow first" → "Fix failures, then return"; "Use coverage-tranche (this skill)" → "Add smallest test or remove dead code"; "Use coverage-guard" → "Verify touched files at 100%"; "Fix failures, then return"; "Add smallest test or remove dead code"; "Verify touched files at 100%".
 ```
 
 ## Guardrails

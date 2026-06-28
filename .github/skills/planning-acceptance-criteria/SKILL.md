@@ -1,6 +1,6 @@
 ---
 name: planning-acceptance-criteria
-description: 'Use when: turning user intent into observable acceptance criteria, edge cases, non-goals, validation expectations, and done-state checks.'
+description: 'Use when: turning user intent into acceptance criteria and scope boundaries.'
 argument-hint: 'Describe the user request, target surface, edge cases, non-goals, and validation or done-state expectations.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,16 +31,8 @@ Do NOT use for plan alignment checking - use `plan-alignment` instead. Do NOT us
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Feature request"] --> B["Identify observable behaviors"]
-    B --> C["Write acceptance criteria"]
-    C --> D{"Can it be split?"}
-    D -- "Yes" --> E["Decompose into slices"]
-    D -- "No" --> F["Keep as single step"]
-    E --> G["Define each slice boundary"]
-    F --> H["Proceed to red testing"]
-    G --> H
+```text
+Flowchart summary: "Feature request" → "Identify observable behaviors"; "Identify observable behaviors" → "Write acceptance criteria"; "Write acceptance criteria" → "Can it be split?"; "Can it be split?" → "Decompose into slices" (Yes), "Keep as single step" (No); "Decompose into slices" → "Define each slice boundary"; "Keep as single step" → "Proceed to red testing"; "Define each slice boundary" → "Proceed to red testing"; "Proceed to red testing".
 ```
 
 ## Task Packet
@@ -100,14 +92,8 @@ that were deleted, not just "old code removed."
 
 ## Decision Tree: Splitting Work
 
-```mermaid
-flowchart TD
-    A["Acceptance criteria"] --> B{"Multiple independent behaviors?"}
-    B -- "Yes" --> C["Split into slices"]
-    B -- "No" --> D["Single step"]
-    C --> E["Each slice has its own files_to_change"]
-    E --> F["Each slice has its own acceptance criteria"]
-    F --> G["Define parallelizable flag"]
+```text
+Flowchart summary: "Acceptance criteria" → "Multiple independent behaviors?"; "Multiple independent behaviors?" → "Split into slices" (Yes), "Single step" (No); "Split into slices" → "Each slice has its own files_to_change"; "Single step"; "Each slice has its own files_to_change" → "Each slice has its own acceptance criteria"; "Each slice has its own acceptance criteria" → "Define parallelizable flag"; "Define parallelizable flag".
 ```
 
 ## Guardrails

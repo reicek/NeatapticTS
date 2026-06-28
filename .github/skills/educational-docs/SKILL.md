@@ -1,6 +1,6 @@
 ---
 name: educational-docs
-description: 'Turn JSDoc and source comments into world-class educational documentation for generated README surfaces and hand-written docs. Use when a module README feels dry, a public API needs stronger explanation, or a docs pass needs Mermaid diagrams, compliant external references, or Wikimedia-safe visuals.'
+description: 'Use when: turning JSDoc/source comments into READMEs, examples, or guides.'
 argument-hint: 'Describe the target folder or public surface, the intended reader, and whether you need tone shaping, source mapping, Mermaid diagrams, citations, or Wikimedia-safe media.'
 user-invocable: true
 disable-model-invocation: false
@@ -616,26 +616,14 @@ For diagram selection, syntax caveats, and validation guidance, use
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Read source JSDoc"] --> B["Read nearest README"]
-    B --> C["Map source to README"]
-    C --> D["Improve JSDoc"]
-    D --> E["Add Mermaid/citations"]
-    E --> F["Regenerate docs"]
-    F --> G["Inspect output"]
-    G --> H["Report changes"]
+```text
+Flowchart summary: "Read source JSDoc" → "Read nearest README"; "Read nearest README" → "Map source to README"; "Map source to README" → "Improve JSDoc"; "Improve JSDoc" → "Add Mermaid/citations"; "Add Mermaid/citations" → "Regenerate docs"; "Regenerate docs" → "Inspect output"; "Inspect output" → "Report changes"; "Report changes".
 ```
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Docs work needed"] --> B{"What kind?"}
-    B -- "JSDoc quality audit" --> C["Use auditing-js-docs"]
-    B -- "Update existing JSDoc" --> D["Use updating-js-docs"]
-    B -- "Educational rewrite" --> E["Use educational-docs"]
-    B -- "Citation check" --> F["Use docs-academic-citation-audit"]
+```text
+Flowchart summary: "Docs work needed" → "What kind?"; "What kind?" → "Use auditing-js-docs" (JSDoc quality audit), "Use updating-js-docs" (Update existing JSDoc), "Use educational-docs" (Educational rewrite), "Use docs-academic-citation-audit" (Citation check); "Use auditing-js-docs"; "Use updating-js-docs"; "Use educational-docs"; "Use docs-academic-citation-audit".
 ```
 
 ## Before / After Examples

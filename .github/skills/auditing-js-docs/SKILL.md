@@ -1,6 +1,6 @@
 ---
 name: auditing-js-docs
-description: 'Use when: auditing JSDoc/TSDoc quality, generated README inputs, missing examples, stale public API docs, or educational documentation gaps.'
+description: 'Use when: auditing JSDoc/README quality, examples, or citations.'
 argument-hint: 'Describe the documentation surface, source files or generated README to inspect, and whether the pass is read-only or should recommend updates.'
 user-invocable: false
 disable-model-invocation: false
@@ -32,17 +32,8 @@ Do NOT use for citation auditing - use `docs-academic-citation-audit` instead. D
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Scan exported symbols"] --> B["Check JSDoc presence"]
-    B --> C{"JSDoc missing?"}
-    C -- "Yes" --> D["Flag for improvement"]
-    C -- "No" --> E["Check quality: what/why/when"]
-    E --> F{"Adequate?"}
-    F -- "No" --> D
-    F -- "Yes" --> G["Pass"]
-    D --> H["Prioritize by export visibility"]
-    H --> I["Report findings"]
+```text
+Flowchart summary: "Scan exported symbols" → "Check JSDoc presence"; "Check JSDoc presence" → "JSDoc missing?"; "JSDoc missing?" → "Flag for improvement" (Yes), "Check quality: what/why/when" (No); "Flag for improvement" → "Prioritize by export visibility"; "Check quality: what/why/when" → "Adequate?"; "Prioritize by export visibility" → "Report findings"; "Adequate?" → "Flag for improvement" (No), "Pass" (Yes); "Report findings"; "Pass".
 ```
 
 ## Task Packet
@@ -106,13 +97,8 @@ export function buildMLP(config?: MLPConfig): Network { ... }
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Doc work needed"] --> B{"What kind?"}
-    B -- "Audit JSDoc quality" --> C["Use auditing-js-docs"]
-    B -- "Update JSDoc content" --> D["Use updating-js-docs"]
-    B -- "Educational rewrite" --> E["Use educational-docs"]
-    B -- "Coverage check" --> F["Use coverage-guard"]
+```text
+Flowchart summary: "Doc work needed" → "What kind?"; "What kind?" → "Use auditing-js-docs" (Audit JSDoc quality), "Use updating-js-docs" (Update JSDoc content), "Use educational-docs" (Educational rewrite), "Use coverage-guard" (Coverage check); "Use auditing-js-docs"; "Use updating-js-docs"; "Use educational-docs"; "Use coverage-guard".
 ```
 
 ## Guardrails

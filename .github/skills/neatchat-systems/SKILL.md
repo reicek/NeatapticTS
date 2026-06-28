@@ -1,6 +1,6 @@
 ---
 name: neatchat-systems
-description: 'Design, implement, or validate the post-toy NEATchat system in NeatapticTS. Use when work involves persistent chat sessions, multi-tier memory, retrieval-like ranking, candidate routing, stronger teacher or seed import, background adaptation, checkpoint-aware personalization, evaluation harnesses, or dependency gating across workers, checkpoints, hybrid interop, ONNX import, and browser runtime for the NEATchat follow-up lane.'
+description: 'Use when: designing or validating NEATchat memory, retrieval, routing, or sessions.'
 argument-hint: 'Describe the NEATchat workstream, the active section in NEATchat.plans.md, whether the pass is architecture, implementation, evaluation, or dependency gating, which prerequisite owners are already satisfied, and what user-visible conversational behavior must be proven.'
 user-invocable: true
 disable-model-invocation: false
@@ -39,19 +39,8 @@ Do NOT use for general chat systems or simple Q&A - this skill is specifically f
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["User input"] --> B["Dialogue manager"]
-    B --> C["Retrieve from memory tiers"]
-    C --> D["Rank candidates"]
-    D --> E["Route to response generator"]
-    E --> F["Generate response"]
-    F --> G["Update session memory"]
-    G --> H["Return response"]
-    B --> I["Branch / reset check"]
-    I --> J{"Reset?"}
-    J -- "Yes" --> K["Clear session state"]
-    J -- "No" --> H
+```text
+Flowchart summary: "User input" → "Dialogue manager"; "Dialogue manager" → "Retrieve from memory tiers", "Branch / reset check"; "Retrieve from memory tiers" → "Rank candidates"; "Branch / reset check" → "Reset?"; "Rank candidates" → "Route to response generator"; "Reset?" → "Clear session state" (Yes), "Return response" (No); "Route to response generator" → "Generate response"; "Clear session state"; "Return response"; "Generate response" → "Update session memory"; "Update session memory" → "Return response".
 ```
 
 ## Scope Boundary
@@ -193,14 +182,8 @@ traceable reason why a memory was surfaced.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["NEATchat task"] --> B{"Which dependency gate?"}
-    B -- "Seed import needs pretrained recurrent model" --> C["onnx-work"]
-    B -- "Session save/branch/restore" --> D["checkpointing-persistence"]
-    B -- "Semantic ranking over corpus" --> E["repo-cortex-embeddings / advanced RAG"]
-    B -- "Browser delivery or worker payload" --> F["browser-build / worker-inference-transport"]
-    B -- "Custom NEATchat-internal bridge" --> G["neatchat-systems owns the bridge"]
+```text
+Flowchart summary: "NEATchat task" → "Which dependency gate?"; "Which dependency gate?" → "onnx-work" (Seed import needs pretrained recurrent model), "checkpointing-persistence" (Session save/branch/restore), "repo-cortex-embeddings / advanced RAG" (Semantic ranking over corpus), "browser-build / worker-inference-transport" (Browser delivery or worker payload), "neatchat-systems owns the bridge" (Custom NEATchat-internal bridge); "onnx-work"; "checkpointing-persistence"; "repo-cortex-embeddings / advanced RAG"; "browser-build / worker-inference-transport"; "neatchat-systems owns the bridge".
 ```
 
 ## Before / After Examples

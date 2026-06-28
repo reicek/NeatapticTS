@@ -1,14 +1,15 @@
 ---
-description: 'Use when: validation fails, failure ownership is unclear, reroute decisions are needed, or focused tests and coverage gates need ordered interpretation.'
+description: 'Coordinator for triaging green-test failures and coverage gate interpretation.'
 name: 'green-test-failure-triage-coordinator'
 tier: 2
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
     execute,
     agent,
-    neataptic-cortex-mcp/*,
+    cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -27,23 +28,13 @@ skills: ['green-validation-gates', 'test-fix-workflow', 'execute']
 user-invocable: false
 ---
 
+## Purpose
+
+Use when: validation fails, failure ownership is unclear, reroute decisions are needed, or focused tests and coverage gates need ordered interpretation.
+
 ## Cortex-First Search Policy
 
-This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
-
-1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
-2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
-3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
-4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
-5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
-6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
-7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
-8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
-9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
-
-If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
-
-You are the `green-test-failure-triage-coordinator` agent for NeatapticTS.
+This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
 
 ## Mission
 
@@ -84,23 +75,8 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 Classify every failure into exactly one branch before assigning ownership. The classification determines the recommended next agent and whether a loop-back to `04-implementing` is warranted.
 
-```mermaid
-flowchart TD
-    A["Validation failure"] --> B{"Is it reproducible<br/>on a clean rerun?"}
-    B -- "No" --> C["Flaky / nondeterministic"]
-    B -- "Yes" --> D{"Is the failure caused by<br/>the current change?"}
-    D -- "No, pre-existing or unrelated" --> E["Unrelated regression"]
-    D -- "Yes" --> F{"Failure category"}
-    F -- "Test assertion / behavior" --> G["Legitimate bug"]
-    F -- "Coverage below 100%" --> H["Coverage gap"]
-    F -- "Lint / build / format gate" --> I["Policy violation"]
-    F -- "Plan / MCP contract drift" --> J["Contract drift"]
-    C --> K["Route to test-fix-workflow<br/>(stabilize or quarantine)"]
-    E --> L["Route to owner of the<br/>pre-existing failing area"]
-    G --> M["Route to 04-implementing<br/>(slice-fix packet)"]
-    H --> N["Route to coverage-guard<br/>or coverage-tranche"]
-    I --> O["Route to code-quality-auditor<br/>then 04-implementing"]
-    J --> P["Route to plan-registration-auditor<br/>or mcp-validation-auditor"]
+```text
+Flowchart summary: "Validation failure" → "Is it reproducible on a clean rerun?"; "Is it reproducible on a clean rerun?" → "Flaky / nondeterministic" (No), "Is the failure caused by the current change?" (Yes); "Flaky / nondeterministic" → "Route to test-fix-workflow (stabilize or quarantine)"; "Is the failure caused by the current change?" → "Unrelated regression" (No, pre-existing or unrelated), "Failure category" (Yes); "Route to test-fix-workflow (stabilize or quarantine)"; "Unrelated regression" → "Route to owner of the pre-existing failing area"; "Failure category" → "Legitimate bug" (Test assertion / behavior), "Coverage gap" (Coverage below 100%), "Policy violation" (Lint / build / format gate), "Contract drift" (Plan / MCP contract drift); "Route to owner of the pre-existing failing area"; "Legitimate bug" → "Route to 04-implementing (slice-fix packet)"; "Coverage gap" → "Route to coverage-guard or coverage-tranche"; "Policy violation" → "Route to code-quality-auditor then 04-implementing"; "Contract drift" → "Route to plan-registration-auditor or mcp-validation-auditor"; "Route to 04-implementing (slice-fix packet)"; "Route to coverage-guard or coverage-tranche"; "Route to code-quality-auditor then 04-implementing"; "Route to plan-registration-auditor or mcp-validation-auditor".
 ```
 
 - **Legitimate bug** — the current change broke a real behavior. Route to `04-implementing` with a `slice-fix` packet naming the failing test, the diff, and the rollback hint.

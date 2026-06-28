@@ -1,6 +1,6 @@
 ---
 name: plan-sync-validation
-description: 'Validate alignment between NeatapticTS active plans, plans/README.md, and plans/Roadmap.md. Use when registering a plan, changing status markers, adding trigger phrases, or checking that roadmap and index entries agree.'
+description: 'Use when: validating plan tracker, README, and Roadmap alignment.'
 argument-hint: 'Describe the plan path, expected status, index entry, roadmap placement, and whether this is advisory or blocking.'
 user-invocable: false
 disable-model-invocation: false
@@ -41,14 +41,8 @@ Do NOT use for plan alignment or selection - use `plan-alignment` instead. Do NO
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Plan edited"] --> B["Run workflow-update-sync"]
-    B --> C["Run validate-plan-sync"]
-    C --> D{"Pass?"}
-    D -- "Yes" --> E["Sync complete"]
-    D -- "No" --> F["Fix status/README/roadmap"]
-    F --> B
+```text
+Flowchart summary: "Plan edited" → "Run workflow-update-sync"; "Run workflow-update-sync" → "Run validate-plan-sync"; "Run validate-plan-sync" → "Pass?"; "Pass?" → "Sync complete" (Yes), "Fix status/README/roadmap" (No); "Sync complete"; "Fix status/README/roadmap" → "Run workflow-update-sync".
 ```
 
 ## Task Packet
@@ -106,17 +100,8 @@ Mode: blocking gate.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Plan / README / Roadmap"] --> B{"Which surface is wrong?"}
-    B -- "Plan status stale" --> C["Update plan file marker"]
-    B -- "README entry missing/stale" --> D["Update plans/README.md"]
-    B -- "Roadmap lane mismatch" --> E["Update plans/Roadmap.md"]
-    B -- "All three disagree" --> F["Fix plan first, then propagate"]
-    C --> G["Re-run validate-plan-sync"]
-    D --> G
-    E --> G
-    F --> G
+```text
+Flowchart summary: "Plan / README / Roadmap" → "Which surface is wrong?"; "Which surface is wrong?" → "Update plan file marker" (Plan status stale), "Update plans/README.md" (README entry missing/stale), "Update plans/Roadmap.md" (Roadmap lane mismatch), "Fix plan first, then propagate" (All three disagree); "Update plan file marker" → "Re-run validate-plan-sync"; "Update plans/README.md" → "Re-run validate-plan-sync"; "Update plans/Roadmap.md" → "Re-run validate-plan-sync"; "Fix plan first, then propagate" → "Re-run validate-plan-sync"; "Re-run validate-plan-sync".
 ```
 
 ## Before / After Examples

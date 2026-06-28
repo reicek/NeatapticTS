@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * @description Tier-1 gate: chrome-devtools-mcp-coverage.
+ * @description Tier-1 gate: devtools-coverage.
  *
  * Validates that the `03-red-testing` and `05-green-testing` agents include the
- * `chrome-devtools-mcp` skill in their `skills` frontmatter array and reference
+ * `devtools` skill in their `skills` frontmatter array and reference
  * all three Chrome DevTools MCP specialists (`performance-trace-specialist`,
  * `browser-ui-specialist`, `browser-memory-specialist`) in their `agents`
  * frontmatter array.
@@ -16,7 +16,7 @@
  * Gate contract: `{ pass: boolean, evidence: object, fixHint: string|null, owner: string }`
  *
  * Usage:
- *   node scripts/agent-customization/gates/chrome-devtools-mcp-coverage.gate.mjs [--json]
+ *   node scripts/agent-customization/gates/devtools-coverage.gate.mjs [--json]
  *
  * @param {boolean} [--json] - Emit the standard gate JSON contract.
  * @returns {void} Exits 0 when the coverage prerequisites are green, 1 otherwise.
@@ -30,10 +30,10 @@ import {
   readWorkspaceFile,
 } from '../customization-utils.mjs';
 
-const OWNER = 'chrome-devtools-mcp-workflow';
+const OWNER = 'devtools-workflow';
 
 /**
- * Agent names that must carry the chrome-devtools-mcp skill and specialist
+ * Agent names that must carry the devtools skill and specialist
  * references. Kept as a named constant so the gate's coverage scope is legible
  * and adjustable in one place.
  */
@@ -42,7 +42,7 @@ const REQUIRED_AGENTS = ['03-red-testing', '05-green-testing'];
 /**
  * Skill that must appear in each required agent's `skills` frontmatter array.
  */
-const REQUIRED_SKILL = 'chrome-devtools-mcp';
+const REQUIRED_SKILL = 'devtools';
 
 /**
  * Specialists that must appear in each required agent's `agents` frontmatter
@@ -60,7 +60,7 @@ const REQUIRED_SPECIALISTS = [
 const AGENTS_DIR = '.github/agents';
 
 /**
- * Runs the chrome-devtools-mcp-coverage gate.
+ * Runs the devtools-coverage gate.
  *
  * @param {object} [options] - Optional configuration.
  * @param {function} [options.agentLoader] - Async function that receives an
@@ -69,7 +69,7 @@ const AGENTS_DIR = '.github/agents';
  * @returns {Promise<object>} Standard gate contract:
  *   `{ pass, evidence, fixHint, owner }`.
  */
-export async function runChromeDevToolsMcpCoverageGate(options = {}) {
+export async function runDevtoolsCoverageGate(options = {}) {
   const agentLoader =
     options.agentLoader ?? createDefaultAgentLoader(AGENTS_DIR);
 
@@ -190,15 +190,12 @@ function createDefaultAgentLoader(agentsDir) {
 const options = parseArgs(process.argv.slice(2));
 
 async function main() {
-  const report = await runChromeDevToolsMcpCoverageGate();
+  const report = await runDevtoolsCoverageGate();
 
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
-    console.log(
-      report.pass ? 'PASS' : 'FAIL',
-      'chrome-devtools-mcp-coverage gate',
-    );
+    console.log(report.pass ? 'PASS' : 'FAIL', 'devtools-coverage gate');
     if (!report.pass) console.log('fixHint:', report.fixHint);
   }
 

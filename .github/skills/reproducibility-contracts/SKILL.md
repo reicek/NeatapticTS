@@ -1,6 +1,6 @@
 ---
 name: reproducibility-contracts
-description: 'Design, implement, or validate reproducibility and determinism contracts in NeatapticTS. Use when work depends on stable seeds, RNG state capture, ordered evaluation, worker replay, serialization fidelity, floating-point caveats, exact resume claims, or cross-environment reproducibility boundaries for Node, browser, and worker execution.'
+description: 'Use when: designing reproducibility contracts for seeds, RNG, replay, or workers.'
 argument-hint: 'Describe the deterministic claim you need to support, the runtime surfaces involved, whether replay must be exact or best-effort, and the validation target for seed, ordering, worker, or floating-point behavior.'
 user-invocable: true
 disable-model-invocation: false
@@ -125,17 +125,8 @@ If any required component is missing, the claim weakens.
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Repro claim"] --> B{"What level?"}
-    B -- "Same seed, same output" --> C["Basic determinism"]
-    B -- "Same seed, same sequence" --> D["Ordered determinism"]
-    B -- "Bitwise identical" --> E["Strict determinism"]
-    C --> F["Record contract"]
-    D --> F
-    E --> F
-    F --> G["Write test"]
-    G --> H["Verify"]
+```text
+Flowchart summary: "Repro claim" → "What level?"; "What level?" → "Basic determinism" (Same seed, same output), "Ordered determinism" (Same seed, same sequence), "Strict determinism" (Bitwise identical); "Basic determinism" → "Record contract"; "Ordered determinism" → "Record contract"; "Strict determinism" → "Record contract"; "Record contract" → "Write test"; "Write test" → "Verify"; "Verify".
 ```
 
 ## Task Packet
@@ -224,17 +215,8 @@ Validation: repeated runs produce identical ordered fitness results and matching
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Determinism claim"] --> B{"What level needed?"}
-    B -- "Same seed, same high-level output" --> C["Level 1: Seed-repeatable"]
-    B -- "Same seed + ordering rules" --> D["Level 2: Ordered deterministic"]
-    B -- "Bit-identical at checkpoint" --> E["Level 3: Replay exact"]
-    B -- "Cross Node/browser/worker" --> F["Level 4: Cross-environment bounded"]
-    C --> G["Capture seed + document caveats"]
-    D --> H["Capture seed + ordering + tie-breaks"]
-    E --> I["Capture full tuple: seed, RNG state, serialized state"]
-    F --> J["Document floating-point + transport caveats"]
+```text
+Flowchart summary: "Determinism claim" → "What level needed?"; "What level needed?" → "Level 1: Seed-repeatable" (Same seed, same high-level output), "Level 2: Ordered deterministic" (Same seed + ordering rules), "Level 3: Replay exact" (Bit-identical at checkpoint), "Level 4: Cross-environment bounded" (Cross Node/browser/worker); "Level 1: Seed-repeatable" → "Capture seed + document caveats"; "Level 2: Ordered deterministic" → "Capture seed + ordering + tie-breaks"; "Level 3: Replay exact" → "Capture full tuple: seed, RNG state, serialized state"; "Level 4: Cross-environment bounded" → "Document floating-point + transport caveats"; "Capture seed + document caveats"; "Capture seed + ordering + tie-breaks"; "Capture full tuple: seed, RNG state, serialized state"; "Document floating-point + transport caveats".
 ```
 
 ## Before / After Examples

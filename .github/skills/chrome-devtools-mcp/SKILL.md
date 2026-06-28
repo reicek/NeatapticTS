@@ -1,6 +1,6 @@
 ---
 name: chrome-devtools-mcp
-description: 'Durable knowledge for Chrome DevTools MCP tool usage across the agent orchestration system. Contains tool catalog, decision trees for direct MCP vs. specialist delegation, token-efficient strategies, and workflows for trace capture, DOM interaction, and memory profiling.'
+description: 'Use when: using Chrome DevTools MCP for browser profiling or DOM inspection.'
 argument-hint: 'Describe the browser testing, performance measurement, or UI validation task.'
 user-invocable: true
 disable-model-invocation: false
@@ -28,18 +28,8 @@ Do NOT use for simple code lookups or grep searches - use `research-methodology`
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Need browser data"] --> B{"Task type?"}
-    B -- "Performance" --> C["performance-trace-specialist"]
-    B -- "UI interaction" --> D["browser-ui-specialist"]
-    B -- "Memory" --> E["browser-memory-specialist"]
-    C --> F["Capture trace"]
-    D --> G["Query DOM / click / type"]
-    E --> H["Heap snapshot"]
-    F --> I["Analyze results"]
-    G --> I
-    H --> I
+```text
+Flowchart summary: "Need browser data" → "Task type?"; "Task type?" → "performance-trace-specialist" (Performance), "browser-ui-specialist" (UI interaction), "browser-memory-specialist" (Memory); "performance-trace-specialist" → "Capture trace"; "browser-ui-specialist" → "Query DOM / click / type"; "browser-memory-specialist" → "Heap snapshot"; "Capture trace" → "Analyze results"; "Query DOM / click / type" → "Analyze results"; "Heap snapshot" → "Analyze results"; "Analyze results".
 ```
 
 ## Section 1 — Chrome DevTools MCP Tool Catalog
@@ -312,13 +302,8 @@ configuration error.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Need browser data"] --> B{"Task type?"}
-    B -- "Performance / CPU / paint" --> C["Delegate to performance-trace-specialist"]
-    B -- "Multi-step DOM interaction" --> D["Delegate to browser-ui-specialist"]
-    B -- "Heap snapshot / leak" --> E["Delegate to browser-memory-specialist"]
-    B -- "Single DOM query or nav" --> F["Use Chrome DevTools MCP directly"]
+```text
+Flowchart summary: "Need browser data" → "Task type?"; "Task type?" → "Delegate to performance-trace-specialist" (Performance / CPU / paint), "Delegate to browser-ui-specialist" (Multi-step DOM interaction), "Delegate to browser-memory-specialist" (Heap snapshot / leak), "Use Chrome DevTools MCP directly" (Single DOM query or nav); "Delegate to performance-trace-specialist"; "Delegate to browser-ui-specialist"; "Delegate to browser-memory-specialist"; "Use Chrome DevTools MCP directly".
 ```
 
 ## Cross-References

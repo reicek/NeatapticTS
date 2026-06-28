@@ -65,7 +65,7 @@ const CORPUS_SOURCES = [
   },
   {
     family: 'root-doc',
-    patterns: ['README.md', 'CLAUDE.md', 'STYLEGUIDE.md', 'CONTRIBUTING.md'],
+    patterns: ['README.md', 'STYLEGUIDE.md', 'CONTRIBUTING.md'],
   },
   {
     family: 'copilot-instructions',

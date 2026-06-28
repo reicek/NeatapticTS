@@ -22,6 +22,32 @@ Active plans stay in `plans/`; terminally closed reopen baselines and their logs
 - Phase 6 — `Plan Scout` + `onnx-work`
 - Phase 7 — `Plan Scout` + `plan-alignment`
 
+## Standalone RAG/index Consolidation Lane [WIP]
+
+**Outcome:** consolidate all Repo Cortex RAG/index scripts and generated
+artifacts into a single top-level `rag-index/` directory, add one idempotent
+incremental `rag-index/update-rag.mjs` entry point, and update all downstream
+consumers so the live `cortex` MCP server and validation gates stay green.
+
+- RAG/index infrastructure reorganization
+  - Plan: [rag-update.plans.md](rag-update.plans.md) [WIP]
+  - Current internal state: Phase 1 planned; target layout decided (flat rename
+    preserving internal subfolders; generated artifacts under `rag-index/data/`,
+    `rag-index/models/`, `rag-index/freshness-proofs/`, `rag-index/snapshots/`);
+    decision records recorded for snapshot location and entity-graph
+    incrementality.
+
+**Coordination rule:** this lane owns `scripts/semantic-index/` relocation,
+`rag-index/` creation, `package.json` script repointing, `.gitignore` updates,
+MCP wiring in `.vscode/mcp.json` / `.mcp.json`, and path-reference updates in
+`scripts/mcp-semantic/tools/cortex-db.mjs`,
+`scripts/agent-customization/gates/cortex-index.gate.mjs`,
+`.github/skills/repo-cortex-workflow/SKILL.md`, and
+`.github/agents/repo-cortex-scout.agent.md`. It does not change `src/`, core
+NEAT algorithms, or cloud/Turso deployment topology. Keep
+`data/eval-baselines/` in place; it is persistent evaluation data, not a
+generated runtime artifact.
+
 ## Standalone Workspace MCP Registration Lane [DONE]
 
 **Outcome:** register the repo-owned direct MCP servers in `.vscode/mcp.json`
@@ -48,8 +74,8 @@ checks.
 **Coordination rule:** this lane owns `src/architecture/network/activate/network.activate.core.utils.ts`
 (and parallel activate guards) for the bug fix, and `scripts/folder-quality-metrics.mjs` +
 `scripts/agent-customization/gates/folder-quality.gate.mjs` + `package.json` `quality:folder`
-script + mandatory checklist entries in `.github/copilot-instructions.md` and `CLAUDE.md` for the
-tooling half. Racing Curriculum Phase 3 (Tier 3: 2v2 Roles) is not part of this lane.
+script + mandatory checklist entries in `.github/copilot-instructions.md` and the
+relevant skills for the tooling half. Racing Curriculum Phase 3 (Tier 3: 2v2 Roles) is not part of this lane.
 
 - Workspace MCP registration
   - Plan: [completed/workspace-mcp-registration.plans.md](completed/workspace-mcp-registration.plans.md) [DONE]
@@ -127,7 +153,7 @@ and MCP ownership contracts.
 system to enable direct performance measurements, UI testing, and browser-based validation.
 Delivered three new Tier 3 specialists (performance-trace-specialist, browser-ui-specialist,
 browser-memory-specialist), two new skills (`execute` for mandatory delegation enforcement and
-`chrome-devtools-mcp` for durable browser tool knowledge), strict sliced RED→IMPLEMENT→GREEN
+`devtools` for durable browser tool knowledge), strict sliced RED→IMPLEMENT→GREEN
 implementation loop enforcement, updated testing agents with Chrome DevTools MCP awareness,
 trace analysis infrastructure scripts, and two new validation gates. All 8 phases complete;
 all gates pass; plan archived.
@@ -142,6 +168,33 @@ all gates pass; plan archived.
 `.github/flows/`, `.github/copilot-instructions.md`, `scripts/agent-customization/`,
 `scripts/analyze-trace/`, `.vscode/mcp.json`, `.gitignore`, and plan index files. Do not modify
 `src/` library code.
+
+## Standalone Meta-Workflow Lane — MCP Lazy-Load Facade [DONE]
+
+**Outcome:** reduce no-op MCP session startup cost by replacing the heavy
+`devtools` and `cortex` server registrations with
+lightweight stdio facades (`cortex`, `devtools`) that expose only short
+stripped tool descriptions at session start and lazily spawn the real servers
+on first actual tool use. Preserve the existing tool-name surface and routing
+so agents, skills, `copilot-instructions.md`, and validation gates continue to
+work after the rename. Remove old server entries from `.vscode/mcp.json` and
+`.mcp.json` in the same step that adds the facades — no deferred cleanup and no
+dual-path compatibility wrappers.
+
+- MCP lazy-load facade
+  - Plan: [completed/MCP_Lazy_Load_Facade.plans.md](completed/MCP_Lazy_Load_Facade.plans.md) [DONE]
+  - Current state: Phase 1 complete and archived. Router-tool facades implemented, all markdown callers migrated, configs updated, routing table and semantic index regenerated, green validation passed. User restart of Copilot CLI / VS Code required before facades become active.
+  - Stop/reset checkpoint: after `.vscode/mcp.json`/`.mcp.json` are updated and
+    green validation passes, the user must restart Copilot CLI / VS Code before
+    the new facades are active.
+
+**Coordination rule:** this lane is confined to `scripts/agent-customization/mcp/`,
+`.vscode/mcp.json`, `.mcp.json`, `.github/copilot-instructions.md`,
+`.github/agents/`, `.github/skills/`, `.github/flows/`,
+`scripts/agent-customization/hooks/`, `scripts/agent-customization/gates/`, and
+plan index files. It may rename agent/skill/flow references and gate tool names
+but must not modify `src/` library code or the core search/embedding logic inside
+`scripts/mcp-semantic/`.
 
 ## Standalone Meta-Workflow Lane — Step Packet Goal Redesign [DONE]
 
@@ -160,8 +213,21 @@ all gates pass; plan archived.
 - Holistic agent & skill optimization
   - Plan: [holistic-agent-skill-optimization.plans.md](holistic-agent-skill-optimization.plans.md) [WIP]
   - Current internal state: Phase 0 (planning) [DONE], Phase 1 (agent grading round 1) [DONE], Phase 2 (agent fixes round 1) [WIP] (Tier 2 DONE, Tier 1 in progress, Tier 3+4 + execute/gate fixes queued). Phases 3–6 (regrade, skill grading, skill fixes, plan updates) [PLANNED].
+- `agent-json-body-to-md` skill load fix
+  - Plan: [completed/agent-json-body-to-md-skill-load-fix.plans.md](completed/agent-json-body-to-md-skill-load-fix.plans.md) [DONE]
+  - Scope: fix unescaped apostrophe in skill frontmatter `description` so strict YAML parsers can load the file; regenerate routing table; verify skill goal and downstream consumers remain intact.
 
 **Coordination rule:** this lane is confined to `.github/agents/*.agent.md` (65 files — all tiers), `.github/skills/*/SKILL.md` (58 files), `.github/skills/execute/SKILL.md`, `.github/flows/*.flow.yml`, `scripts/agent-customization/gates/delegate-skill-coverage.gate.mjs` + `.test.ts`, `.github/agent-skill-routing-table.md` (regeneration only if frontmatter changed), WIP/PLANNED plan files, and tracker/log files. Do not modify `src/` library code or MCP server implementations. Treat [completed/Orchestration_System_Optimization.plans.md](completed/Orchestration_System_Optimization.plans.md) as the archived structural baseline and this lane as its expanded holistic follow-up.
+
+## Standalone Context Optimization Lane [DONE]
+
+**Outcome:** reduce Copilot CLI context-window overhead by repo-side changes to instructions and tool-catalog descriptions, while deferring runtime-dependent lazy-loading and schema-split work to future spikes.
+
+- Context optimization
+  - Plan: [context-optimization.plans.md](completed/context-optimization.plans.md) [DONE]
+  - Current internal state: Phase 1 complete; all seven steps [DONE]; green validation passed; tracker archived to `plans/completed/`.
+
+**Coordination rule:** this lane is confined to `.github/copilot-instructions.md`, `.github/agents/*.agent.md`, `.github/skills/*/SKILL.md`, `.github/agent-skill-routing-table.md`, `scripts/agent-customization/`, and plan tracker/log files. It must not modify `src/` library code. Runtime-dependent changes (lazy tool schemas, splitting the `task` tool) are recorded as deferred spikes owned by `00-helping`/external CLI team and are out of scope for this lane.
 
 ## Standalone Documentation Metrics Contract Lane [DONE]
 
@@ -395,7 +461,7 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1�
 
 - Plan: [completed/Semantic_Knowledge_MCP_Tools.plans.md](completed/Semantic_Knowledge_MCP_Tools.plans.md) [DONE]
 - Gate: Layer 1 [DONE] satisfied
-- Artifacts: `scripts/mcp-semantic/`, `neataptic-cortex-mcp` in `.vscode/mcp.json`
+- Artifacts: `scripts/mcp-semantic/`, `cortex` in `.vscode/mcp.json`
 
 3. Browser snapshot and IndexedDB loader (all demos)
 
@@ -490,8 +556,9 @@ sequentially:
     batch transactions, server-side context assembly, SQL time-decay feedback).
   - Phase 6: MCP tool updates (4 new tools: parallel_search, multi_hop_search,
     turso_branch, turso_pitr; update existing 14 tools for Turso-native features).
-  - Phase 7: Agent/skill/script documentation updates (CLAUDE.md,
-    copilot-instructions.md, research-methodology skill, package.json scripts).
+  - Phase 7: Agent/skill/script documentation updates (copilot-instructions.md,
+    implementation-standards skill, educational-docs skill, research-methodology
+    skill, package.json scripts).
   - Phase 8: Evaluation, optimization, and rollout (eval suite MRR@5 ≥ 0.350,
     latency optimization, final legacy sync SQLite driver cleanup, rollout signoff).
 

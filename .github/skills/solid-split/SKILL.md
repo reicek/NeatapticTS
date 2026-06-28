@@ -1,6 +1,6 @@
 ---
 name: solid-split
-description: 'Use when: planning or executing a repo-consistent SOLID split in NeatapticTS across src/, examples/, benchmarks/, testing/, scripts/, or tooling surfaces; mapping seams from a root such as #file:flappy_bird; folderizing an overloaded module; migrating imports directly to new chapter folders; coordinating tracker-handoff, educational-docs, coverage-guard, and plan-alignment follow-up; or continuing one durable split step with stable imports and explicit validations.'
+description: 'Use when: planning or executing a repo-consistent SOLID split.'
 argument-hint: 'Provide split root, mode (map|plan|execute|close), current boundary, plan path, stable import or compatibility requirements, expected validations, documentation follow-up needs, and any blocker or worktree caution.'
 user-invocable: true
 disable-model-invocation: false
@@ -33,21 +33,8 @@ owned by the companion skill `tracker-handoff`.
 
 ## Workflow At A Glance
 
-```mermaid
-flowchart TD
-    A[Task packet] --> B[README inventory]
-    B --> C[Explicit todo list]
-    C --> D{Mode}
-    D -->|map| E[Map seams and choose plan]
-    D -->|plan| F[Create or refine tracker]
-    D -->|execute| G[Run one durable extraction]
-    D -->|close| H[Compress and archive tracker pair]
-    G --> I[educational-docs follow-up]
-    I --> J[Targeted validation]
-    J --> K[tracker-handoff update]
-    E --> K
-    F --> K
-    H --> K
+```text
+Flowchart summary: Task packet → README inventory; README inventory → Explicit todo list; Explicit todo list → Mode; Mode → Map seams and choose plan (map), Create or refine tracker (plan), Run one durable extraction (execute), Compress and archive tracker pair (close); Map seams and choose plan → tracker-handoff update; Create or refine tracker → tracker-handoff update; Run one durable extraction → educational-docs follow-up; Compress and archive tracker pair → tracker-handoff update; tracker-handoff update; educational-docs follow-up → Targeted validation; Targeted validation → tracker-handoff update.
 ```
 
 ## Core Promise
@@ -307,19 +294,8 @@ API, default, or runtime contract.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Overloaded public file"] --> B{"Stable entrypoint?"}
-    B -- "Yes" --> C["Keep thin facade, extract helpers"]
-    B -- "No — internal" --> D["Folderize freely"]
-    C --> E{"README too large?"}
-    E -- "Yes" --> F["Split into chapter folders"]
-    E -- "No" --> G["Single split is enough"]
-    D --> G
-    F --> H{"Real problem is docs?"}
-    H -- "Yes" --> I["Use educational-docs instead"]
-    H -- "No" --> J["Proceed with code split"]
-    G --> J
+```text
+Flowchart summary: "Overloaded public file" → "Stable entrypoint?"; "Stable entrypoint?" → "Keep thin facade, extract helpers" (Yes), "Folderize freely" (No — internal); "Keep thin facade, extract helpers" → "README too large?"; "Folderize freely" → "Single split is enough"; "README too large?" → "Split into chapter folders" (Yes), "Single split is enough" (No); "Single split is enough" → "Proceed with code split"; "Split into chapter folders" → "Real problem is docs?"; "Proceed with code split"; "Real problem is docs?" → "Use educational-docs instead" (Yes), "Proceed with code split" (No); "Use educational-docs instead".
 ```
 
 ## Required Split Workflow

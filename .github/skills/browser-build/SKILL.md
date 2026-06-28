@@ -1,6 +1,6 @@
 ---
 name: browser-build
-description: 'Configure, validate, and publish browser runtime artifacts for NeatapticTS. Use when working on scripts/build-browser.mjs, root dist browser bundles, docs/assets example bundles, browser env aliasing, smoke-browser-build validation, CDN/runtime packaging, or CI-sensitive browser build gates.'
+description: 'Use when: configuring or validating browser build artifacts.'
 argument-hint: 'Describe the target artifact (root browser dist / example docs asset / smoke test / size audit / CI gate), the current plan step, and known constraints such as size budget, worker entry delivery, HTML consumer, or browser targets.'
 user-invocable: true
 disable-model-invocation: false
@@ -64,18 +64,8 @@ Do NOT use for general build or lint tasks - use standard `npm run build` and `n
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Source change"] --> B["Run webpack build"]
-    B --> C{"Build succeeds?"}
-    C -- "Yes" --> D["Check bundle size"]
-    C -- "No" --> E["Fix build error"]
-    E --> B
-    D --> F["Run smoke test in browser"]
-    F --> G{"Pass?"}
-    G -- "Yes" --> H["Done"]
-    G -- "No" --> I["Debug in browser"]
-    I --> E
+```text
+Flowchart summary: "Source change" → "Run webpack build"; "Run webpack build" → "Build succeeds?"; "Build succeeds?" → "Check bundle size" (Yes), "Fix build error" (No); "Check bundle size" → "Run smoke test in browser"; "Fix build error" → "Run webpack build"; "Run smoke test in browser" → "Pass?"; "Pass?" → "Done" (Yes), "Debug in browser" (No); "Done"; "Debug in browser" → "Fix build error".
 ```
 
 ## Task Packet
@@ -179,13 +169,8 @@ bundle.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Browser work"] --> B{"Which artifact?"}
-    B -- "Root dist ESM/IIFE bundle" --> C["scripts/build-browser.mjs"]
-    B -- "docs/assets example bundle" --> D["Targeted example build script"]
-    B -- "Load + instantiate smoke" --> E["scripts/smoke-browser-build.mjs"]
-    B -- "Size or tree-shaking audit" --> F["Bundle size analysis"]
+```text
+Flowchart summary: "Browser work" → "Which artifact?"; "Which artifact?" → "scripts/build-browser.mjs" (Root dist ESM/IIFE bundle), "Targeted example build script" (docs/assets example bundle), "scripts/smoke-browser-build.mjs" (Load + instantiate smoke), "Bundle size analysis" (Size or tree-shaking audit); "scripts/build-browser.mjs"; "Targeted example build script"; "scripts/smoke-browser-build.mjs"; "Bundle size analysis".
 ```
 
 ## Before / After Examples

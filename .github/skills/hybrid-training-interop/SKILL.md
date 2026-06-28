@@ -1,6 +1,6 @@
 ---
 name: hybrid-training-interop
-description: 'Design, implement, or validate deterministic parameter-vector and fine-tuning contracts in NeatapticTS. Use when working on toParameterVector, fromParameterVector, layout versioning, isolated fine-tuning, Lamarckian persistence policy, optimizer interoperability, cloned-vs-vector training, or hybrid evolution plus gradient workflows.'
+description: 'Use when: designing deterministic hybrid-training interop contracts.'
 argument-hint: 'Describe the parameter-vector or hybrid-training target, current step in Evolution_Training_Interoperability_Contracts.md, the mutation-isolation requirement, and whether the pass is design, implementation, or validation.'
 user-invocable: true
 disable-model-invocation: false
@@ -91,17 +91,8 @@ the gradient mechanism and the persistence decision must stay separate.
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Export parameter vector"] --> B["Feed to training loop"]
-    B --> C["Training updates weights"]
-    C --> D["Import updated vector"]
-    D --> E["Reconstruct network"]
-    E --> F["Verify inference output"]
-    F --> G{"Matches?"}
-    G -- "Yes" --> H["Lamarckian persistence OK"]
-    G -- "No" --> I["Debug vector layout"]
-    I --> A
+```text
+Flowchart summary: "Export parameter vector" → "Feed to training loop"; "Feed to training loop" → "Training updates weights"; "Training updates weights" → "Import updated vector"; "Import updated vector" → "Reconstruct network"; "Reconstruct network" → "Verify inference output"; "Verify inference output" → "Matches?"; "Matches?" → "Lamarckian persistence OK" (Yes), "Debug vector layout" (No); "Debug vector layout" → "Export parameter vector"; "Lamarckian persistence OK".
 ```
 
 ## Task Packet
@@ -186,13 +177,8 @@ Validate with: vector roundtrip inference equality and layout compatibility nega
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Hybrid-training task"] --> B{"Which surface?"}
-    B -- "Export/import order or layout version" --> C["Parameter vector layout"]
-    B -- "Fine-tuning mutates shared state" --> D["Isolation (clone vs vector)"]
-    B -- "Trained weights write-back policy" --> E["Lamarckian persistence policy"]
-    B -- "Checkpoint format" --> F["checkpointing-persistence"]
+```text
+Flowchart summary: "Hybrid-training task" → "Which surface?"; "Which surface?" → "Parameter vector layout" (Export/import order or layout version), "Isolation (clone vs vector)" (Fine-tuning mutates shared state), "Lamarckian persistence policy" (Trained weights write-back policy), "checkpointing-persistence" (Checkpoint format); "Parameter vector layout"; "Isolation (clone vs vector)"; "Lamarckian persistence policy"; "checkpointing-persistence".
 ```
 
 ## Before / After Examples

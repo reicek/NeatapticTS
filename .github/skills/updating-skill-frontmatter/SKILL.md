@@ -1,6 +1,6 @@
 ---
 name: updating-skill-frontmatter
-description: 'Use when: updating SKILL.md YAML frontmatter, names, descriptions, argument hints, user-invocable flags, compatibility notes, or resource links.'
+description: 'Use when: updating SKILL.md frontmatter, names, descriptions, or hints.'
 argument-hint: 'Name the skill folder, frontmatter fields to update, desired trigger scope, visibility decision, and validation command.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,15 +31,8 @@ Do NOT use for agent frontmatter updates - use `updating-agent-frontmatter` inst
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Read SKILL.md"] --> B["Identify fields to update"]
-    B --> C["Apply changes"]
-    C --> D["Validate with skill-frontmatter-standards"]
-    D --> E{"Pass?"}
-    E -- "Yes" --> F["Done"]
-    E -- "No" --> G["Fix validation errors"]
-    G --> D
+```text
+Flowchart summary: "Read SKILL.md" → "Identify fields to update"; "Identify fields to update" → "Apply changes"; "Apply changes" → "Validate with skill-frontmatter-standards"; "Validate with skill-frontmatter-standards" → "Pass?"; "Pass?" → "Done" (Yes), "Fix validation errors" (No); "Done"; "Fix validation errors" → "Validate with skill-frontmatter-standards".
 ```
 
 ## Task Packet
@@ -99,14 +92,8 @@ skills:
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Frontmatter field to update"] --> B{"Which field?"}
-    B -- "name" --> C["Update name + folder + all references, then run routing-table:gate"]
-    B -- "description" --> D["Keep under 1024 chars, flag for trigger eval"]
-    B -- "skills" --> E["Verify each skill exists, run validate-skill-frontmatter"]
-    B -- "argument-hint" --> F["Update task-shaping text, run validator"]
-    B -- "user-invocable" --> G["Toggle visibility, confirm intended audience"]
+```text
+Flowchart summary: "Frontmatter field to update" → "Which field?"; "Which field?" → "Update name + folder + all references, then run routing-table:gate" (name), "Keep under 1024 chars, flag for trigger eval" (description), "Verify each skill exists, run validate-skill-frontmatter" (skills), "Update task-shaping text, run validator" (argument-hint), "Toggle visibility, confirm intended audience" (user-invocable); "Update name + folder + all references, then run routing-table:gate"; "Keep under 1024 chars, flag for trigger eval"; "Verify each skill exists, run validate-skill-frontmatter"; "Update task-shaping text, run validator"; "Toggle visibility, confirm intended audience".
 ```
 
 ## Guardrails

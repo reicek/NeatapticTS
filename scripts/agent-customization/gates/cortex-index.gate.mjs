@@ -241,7 +241,7 @@ function resolveFixHint({
   }
 
   if (!corpusMcpReport.pass) {
-    return 'Check neataptic-cortex-mcp server in .vscode/mcp.json; run cortex-mcp-smoke.mjs for details';
+    return 'Check cortex server in .vscode/mcp.json; run cortex-mcp-smoke.mjs for details';
   }
 
   if (!workflowMcpReport.pass) {

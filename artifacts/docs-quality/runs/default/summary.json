@@ -5,6 +5,12 @@
   "weakCount": 0,
   "weakJsdoc": 0,
   "coverage": {
-    "available": false
+    "available": true,
+    "totalFiles": 3,
+    "filesBelow100": 0,
+    "filesBelow100Detail": [],
+    "overallLines": 100,
+    "overallBranches": 100,
+    "overallFunctions": 100
   }
 }

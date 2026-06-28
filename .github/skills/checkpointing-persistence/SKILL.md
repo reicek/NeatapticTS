@@ -1,6 +1,6 @@
 ---
 name: checkpointing-persistence
-description: 'Design, implement, validate, or actively plan versioned save and resume checkpoints in NeatapticTS. Use when starting or advancing Population_Save_Resume_and_Checkpointing.md, including Step 0 boundary mapping, full vs light checkpoint semantics, strict vs best-effort restore rules, RNG or counter persistence, schema versioning, metadata extension, migration, or exact-resume claims.'
+description: 'Use when: designing, implementing, or validating network checkpoint save/resume.'
 argument-hint: 'Describe the checkpoint mode, current step in Population_Save_Resume_and_Checkpointing.md (including Step 0 kickoff when relevant), target orchestration surface, determinism requirement, and whether the pass is design, implementation, migration, or validation.'
 user-invocable: true
 disable-model-invocation: false
@@ -120,19 +120,8 @@ If any term is absent, the checkpoint is not exact-resume capable.
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Training iteration"] --> B["Save checkpoint"]
-    B --> C{"Checkpoint type?"}
-    C -- "Full" --> D["Save all state + RNG"]
-    C -- "Light" --> E["Save counters only"]
-    D --> F["Write to disk"]
-    E --> F
-    F --> G["Continue training"]
-    G --> H{"Interrupted?"}
-    H -- "Yes" --> I["Resume from checkpoint"]
-    H -- "No" --> J["Complete"]
-    I --> A
+```text
+Flowchart summary: "Training iteration" → "Save checkpoint"; "Save checkpoint" → "Checkpoint type?"; "Checkpoint type?" → "Save all state + RNG" (Full), "Save counters only" (Light); "Save all state + RNG" → "Write to disk"; "Save counters only" → "Write to disk"; "Write to disk" → "Continue training"; "Continue training" → "Interrupted?"; "Interrupted?" → "Resume from checkpoint" (Yes), "Complete" (No); "Resume from checkpoint" → "Training iteration"; "Complete".
 ```
 
 ## Task Packet
@@ -218,16 +207,8 @@ Validate with: save/load roundtrip tests and deterministic replay test. Only run
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Checkpoint needed"] --> B{"Exact resume required?"}
-    B -- "Yes" --> C["Full checkpoint + strict restore"]
-    B -- "No, best-effort" --> D["Light checkpoint"]
-    B -- "Missing fields on load" --> E{"Strict mode?"}
-    E -- "Yes" --> F["Throw on missing required fields"]
-    E -- "No" --> G["Warn + downgrade to best-effort"]
-    C --> H["Capture full state tuple"]
-    D --> I["Capture best genomes + seed + config"]
+```text
+Flowchart summary: "Checkpoint needed" → "Exact resume required?"; "Exact resume required?" → "Full checkpoint + strict restore" (Yes), "Light checkpoint" (No, best-effort), "Strict mode?" (Missing fields on load); "Full checkpoint + strict restore" → "Capture full state tuple"; "Light checkpoint" → "Capture best genomes + seed + config"; "Strict mode?" → "Throw on missing required fields" (Yes), "Warn + downgrade to best-effort" (No); "Capture full state tuple"; "Capture best genomes + seed + config"; "Throw on missing required fields"; "Warn + downgrade to best-effort".
 ```
 
 ## Before / After Examples

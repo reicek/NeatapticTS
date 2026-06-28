@@ -1,6 +1,6 @@
 ---
 name: red-test-contracts
-description: 'Design red-phase tests and eval assertions for NeatapticTS before behavior changes. Use when a phase agent needs failing tests, AAA structure, single top-level expectation, nested describe blocks, coverage targets, or eval assertions before implementation.'
+description: 'Use when: designing red-phase failing tests, contracts, or mocks.'
 argument-hint: 'Describe the behavior change, target file or skill, expected failing assertion, and validation command.'
 user-invocable: false
 disable-model-invocation: false
@@ -43,17 +43,8 @@ Do NOT use for writing unit tests - use `creating-unit-tests` instead. Do NOT us
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Feature to test"] --> B["Define expected behavior"]
-    B --> C["Write failing test"]
-    C --> D["Run test"]
-    D --> E{"Fails for right reason?"}
-    E -- "Yes" --> F["Red contract complete"]
-    E -- "No, fails for wrong reason" --> G["Fix test fixture"]
-    E -- "No, passes already" --> H["Check if test is meaningful"]
-    G --> D
-    H --> I["Add edge case or remove"]
+```text
+Flowchart summary: "Feature to test" → "Define expected behavior"; "Define expected behavior" → "Write failing test"; "Write failing test" → "Run test"; "Run test" → "Fails for right reason?"; "Fails for right reason?" → "Red contract complete" (Yes), "Fix test fixture" (No, fails for wrong reason), "Check if test is meaningful" (No, passes already); "Red contract complete"; "Fix test fixture" → "Run test"; "Check if test is meaningful" → "Add edge case or remove"; "Add edge case or remove".
 ```
 
 ## Task Packet
@@ -133,13 +124,8 @@ it('produces correct node count for 3-layer MLP', () => {
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Test work"] --> B{"What kind?"}
-    B -- "No failing test yet exists" --> C["red-test-contracts (create red contract)"]
-    B -- "Tests already failing, need repair" --> D["test-fix-workflow"]
-    B -- "Passing code needs more coverage" --> E["coverage-tranche"]
-    B -- "Post-change coverage gate" --> F["coverage-guard"]
+```text
+Flowchart summary: "Test work" → "What kind?"; "What kind?" → "red-test-contracts (create red contract)" (No failing test yet exists), "test-fix-workflow" (Tests already failing, need repair), "coverage-tranche" (Passing code needs more coverage), "coverage-guard" (Post-change coverage gate); "red-test-contracts (create red contract)"; "test-fix-workflow"; "coverage-tranche"; "coverage-guard".
 ```
 
 ## Before / After Examples

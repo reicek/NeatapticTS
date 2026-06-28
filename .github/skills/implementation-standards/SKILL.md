@@ -1,6 +1,6 @@
 ---
 name: implementation-standards
-description: 'Owns durable code standards for NeatapticTS: ES2023-first syntax, folder-based module architecture, JSDoc requirements, naming conventions, cognitive complexity rules, and validation gates. Use when implementing, reviewing, or refactoring src/ code to ensure consistency with repo patterns and quality gates.'
+description: 'Use when: applying durable code standards (ES2023, JSDoc, architecture, validation).'
 argument-hint: 'Provide the target surface (src/ file or folder), the type of work (implement, refactor, review), and any validation constraints such as build, quality:folder, or coverage requirements.'
 user-invocable: false
 disable-model-invocation: false
@@ -64,18 +64,8 @@ Do NOT use for scripts or config files - use standard lint and build commands in
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["New module"] --> B["Create folder structure"]
-    B --> C["Write orchestration file"]
-    C --> D["Extract helpers below fold"]
-    D --> E["Add JSDoc to exports"]
-    E --> F["Write tests"]
-    F --> G["Run quality:folder"]
-    G --> H{"Pass?"}
-    H -- "Yes" --> I["Run coverage-guard"]
-    H -- "No" --> J["Fix issues"]
-    J --> G
+```text
+Flowchart summary: "New module" → "Create folder structure"; "Create folder structure" → "Write orchestration file"; "Write orchestration file" → "Extract helpers below fold"; "Extract helpers below fold" → "Add JSDoc to exports"; "Add JSDoc to exports" → "Write tests"; "Write tests" → "Run quality:folder"; "Run quality:folder" → "Pass?"; "Pass?" → "Run coverage-guard" (Yes), "Fix issues" (No); "Run coverage-guard"; "Fix issues" → "Run quality:folder".
 ```
 
 ## ES2023-First Policy
@@ -546,13 +536,8 @@ List any flagged legacy patterns and intended replacements:
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Code task"] --> B{"What kind?"}
-    B -- "New module in src/" --> C["Follow folder layout + JSDoc + tests"]
-    B -- "Refactor existing module" --> D["Use solid-split, preserve coverage"]
-    B -- "Review against standards" --> E["Run quality:folder + coverage-guard"]
-    B -- "Test-only or docs-only" --> F["Use peer skill (coverage-tranche, educational-docs)"]
+```text
+Flowchart summary: "Code task" → "What kind?"; "What kind?" → "Follow folder layout + JSDoc + tests" (New module in src/), "Use solid-split, preserve coverage" (Refactor existing module), "Run quality:folder + coverage-guard" (Review against standards), "Use peer skill (coverage-tranche, educational-docs)" (Test-only or docs-only); "Follow folder layout + JSDoc + tests"; "Use solid-split, preserve coverage"; "Run quality:folder + coverage-guard"; "Use peer skill (coverage-tranche, educational-docs)".
 ```
 
 ## No Deferred Cleanup Policy

@@ -1,6 +1,6 @@
 ---
 name: visualizer-workflow
-description: 'Design, debug, and harden browser visualizers in examples/ and docs surfaces, including layout scaling, overflow behavior, hover hit-testing, tooltip UX, visual parity checks, and durable validation for canvas/SVG/ASCII renderers.'
+description: 'Use when: designing or debugging browser visualizers in examples/docs.'
 argument-hint: 'Describe the visualizer path, current symptom, expected behavior or parity target, rendering surface (canvas/SVG/DOM), and whether this pass is reconnaissance, implementation, or validation-only.'
 user-invocable: true
 disable-model-invocation: false
@@ -59,18 +59,8 @@ This skill does not replace `educational-docs` for long-form teaching docs.
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Visualizer issue"] --> B["Reproduce in browser"]
-    B --> C["Inspect DOM/canvas"]
-    C --> D{"Layout problem?"}
-    D -- "Cramped" --> E["Adjust CSS/overflow"]
-    D -- "Tooltip" --> F["Fix hover handlers"]
-    D -- "Parity drift" --> G["Compare demo visualizers"]
-    E --> H["Verify fix"]
-    F --> H
-    G --> H
-    H --> I["Update plan"]
+```text
+Flowchart summary: "Visualizer issue" → "Reproduce in browser"; "Reproduce in browser" → "Inspect DOM/canvas"; "Inspect DOM/canvas" → "Layout problem?"; "Layout problem?" → "Adjust CSS/overflow" (Cramped), "Fix hover handlers" (Tooltip), "Compare demo visualizers" (Parity drift); "Adjust CSS/overflow" → "Verify fix"; "Fix hover handlers" → "Verify fix"; "Compare demo visualizers" → "Verify fix"; "Verify fix" → "Update plan"; "Update plan".
 ```
 
 ## Task Packet
@@ -135,13 +125,8 @@ tooltip semantics, and invariants before changing code.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Visualizer symptom"] --> B{"Primary issue class?"}
-    B -- "Cramped or clipped layout" --> C["layout-allocation fix"]
-    B -- "No scroll for wide content" --> D["overflow-contract fix"]
-    B -- "Hover/tooltip unstable" --> E["hit-area-sync fix"]
-    B -- "Color/opacity mismatch" --> F["style-parity fix"]
+```text
+Flowchart summary: "Visualizer symptom" → "Primary issue class?"; "Primary issue class?" → "layout-allocation fix" (Cramped or clipped layout), "overflow-contract fix" (No scroll for wide content), "hit-area-sync fix" (Hover/tooltip unstable), "style-parity fix" (Color/opacity mismatch); "layout-allocation fix"; "overflow-contract fix"; "hit-area-sync fix"; "style-parity fix".
 ```
 
 ## Before / After Examples

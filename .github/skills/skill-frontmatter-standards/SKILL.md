@@ -1,6 +1,6 @@
 ---
 name: skill-frontmatter-standards
-description: 'Use when: validating or designing SKILL.md frontmatter, skill folder names, argument-hint fields, descriptions, visibility, compatibility text, or local resource links.'
+description: 'Use when: validating or designing SKILL.md frontmatter and metadata.'
 argument-hint: 'Describe the skill folder, intended trigger scope, visibility decision, argument hint, local resources, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,17 +31,8 @@ Do NOT use for agent frontmatter validation - use `agent-frontmatter-standards` 
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Skill SKILL.md"] --> B["Validate frontmatter"]
-    B --> C{"Valid?"}
-    C -- "Yes" --> D["Check body links"]
-    C -- "No" --> E["Fix fields"]
-    D --> F{"Links valid?"}
-    F -- "Yes" --> G["Pass"]
-    F -- "No" --> H["Fix broken links"]
-    E --> B
-    H --> D
+```text
+Flowchart summary: "Skill SKILL.md" → "Validate frontmatter"; "Validate frontmatter" → "Valid?"; "Valid?" → "Check body links" (Yes), "Fix fields" (No); "Check body links" → "Links valid?"; "Fix fields" → "Validate frontmatter"; "Links valid?" → "Pass" (Yes), "Fix broken links" (No); "Pass"; "Fix broken links" → "Check body links".
 ```
 
 ## Task Packet
@@ -69,14 +60,8 @@ Validate with: node scripts/agent-customization/validate-skill-frontmatter.mjs -
 
 ## Decision Tree: User-Invocable Visibility
 
-```mermaid
-flowchart TD
-    A["Skill frontmatter"] --> B{"user-invocable set?"}
-    B -- "true" --> C["Appears in user agent list"]
-    B -- "false" --> D["Hidden from users, model-invoked only"]
-    B -- "not set" --> E["Default: treat as false"]
-    C --> F["Validate description has Use-when trigger"]
-    D --> G["Validate argument-hint exists"]
+```text
+Flowchart summary: "Skill frontmatter" → "user-invocable set?"; "user-invocable set?" → "Appears in user agent list" (true), "Hidden from users, model-invoked only" (false), "Default: treat as false" (not set); "Appears in user agent list" → "Validate description has Use-when trigger"; "Hidden from users, model-invoked only" → "Validate argument-hint exists"; "Default: treat as false"; "Validate description has Use-when trigger"; "Validate argument-hint exists".
 ```
 
 ## Before / After Examples

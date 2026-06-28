@@ -99,9 +99,17 @@ const config = {
           'ts-jest',
           { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
         ],
+        '^.+\\.mjs$': [
+          '<rootDir>/scripts/agent-customization/mcp/__tests__/mjs-cjs-transformer.cjs',
+        ],
       },
       setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
       testTimeout: 300000,
+      collectCoverageFrom: [
+        'scripts/agent-customization/mcp/lazy-facade-core.mjs',
+        'scripts/agent-customization/mcp/cortex-facade.mjs',
+        'scripts/agent-customization/mcp/devtools-facade.mjs',
+      ],
     },
     {
       displayName: 'mcp-semantic-scripts',
@@ -186,7 +194,14 @@ const config = {
   },
   setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
   testTimeout: 300000,
-  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/*.test.ts'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.d.ts',
+    '!src/**/*.test.ts',
+    'scripts/agent-customization/mcp/lazy-facade-core.mjs',
+    'scripts/agent-customization/mcp/cortex-facade.mjs',
+    'scripts/agent-customization/mcp/devtools-facade.mjs',
+  ],
   coverageReporters: ['lcov', 'text', 'html', 'json-summary'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
 };

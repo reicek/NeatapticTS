@@ -1,13 +1,14 @@
 ---
-description: 'Use when: planning or red-testing needs acceptance criteria, red-test scope, coverage expectations, deterministic claims, fixtures, or validation order.'
+description: 'Coordinator for acceptance criteria, coverage expectations, and red-test scope.'
 name: 'planning-test-strategy-coordinator'
 tier: 2
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
     agent,
-    neataptic-cortex-mcp/*,
+    cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -24,23 +25,13 @@ skills: ['planning-acceptance-criteria', 'red-test-contracts', 'execute']
 user-invocable: false
 ---
 
+## Purpose
+
+Use when: planning or red-testing needs acceptance criteria, red-test scope, coverage expectations, deterministic claims, fixtures, or validation order.
+
 ## Cortex-First Search Policy
 
-This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
-
-1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
-2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
-3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
-4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
-5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
-6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
-7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
-8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
-9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
-
-If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
-
-You are the `planning-test-strategy-coordinator` agent for NeatapticTS.
+This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
 
 ## Mission
 

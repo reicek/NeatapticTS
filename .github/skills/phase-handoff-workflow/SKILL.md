@@ -1,6 +1,6 @@
 ---
 name: phase-handoff-workflow
-description: 'Design and validate the seven-step NeatapticTS agent workflow inside each plan phase. Use when creating copy-pasteable step packets, phase-step handoffs, step stop conditions, sequential orchestration, or when deciding whether a phase can advance.'
+description: 'Use when: designing phase gates, handoffs, or slice boundaries.'
 argument-hint: 'Name the source phase, target phase, current plan state, and whether the handoff should be user-reviewed or auto-sent.'
 user-invocable: false
 disable-model-invocation: false
@@ -249,29 +249,14 @@ mandatory response shape when those agents answer in chat.
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Phase completes"] --> B["Author step packet"]
-    B --> C["Set send/model"]
-    C --> D["Dispatch to next phase"]
-    D --> E["Next phase executes"]
-    E --> F{"Green pass?"}
-    F -- "Yes" --> G["Advance to next phase"]
-    F -- "No" --> H["Route back to prior phase"]
-    H --> B
+```text
+Flowchart summary: "Phase completes" → "Author step packet"; "Author step packet" → "Set send/model"; "Set send/model" → "Dispatch to next phase"; "Dispatch to next phase" → "Next phase executes"; "Next phase executes" → "Green pass?"; "Green pass?" → "Advance to next phase" (Yes), "Route back to prior phase" (No); "Advance to next phase"; "Route back to prior phase" → "Author step packet".
 ```
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Phase step result"] --> B{"Green testing?"}
-    B -- "Pass" --> C["Advance to next phase"]
-    B -- "Fail" --> D["Loop back to prior phase"]
-    C --> E{"More steps?"}
-    E -- "Yes" --> F["Author next step packet"]
-    E -- "No" --> G["Close phase"]
-    D --> H["3 failures? Escalate to 00-helping"]
+```text
+Flowchart summary: "Phase step result" → "Green testing?"; "Green testing?" → "Advance to next phase" (Pass), "Loop back to prior phase" (Fail); "Advance to next phase" → "More steps?"; "Loop back to prior phase" → "3 failures? Escalate to 00-helping"; "More steps?" → "Author next step packet" (Yes), "Close phase" (No); "3 failures? Escalate to 00-helping"; "Author next step packet"; "Close phase".
 ```
 
 ## Guardrails

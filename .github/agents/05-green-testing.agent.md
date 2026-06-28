@@ -1,7 +1,8 @@
 ---
-description: 'Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation.'
+description: 'Green-test orchestrator for validation, triage, and regression fixes.'
 name: '05-green-testing'
 tier: 1
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -10,11 +11,11 @@ tools:
     execute,
     todo,
     agent,
-    neataptic-cortex-mcp/*,
+    cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
-    chrome-devtools-mcp/*,
+    devtools,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -54,21 +55,13 @@ handoffs:
     model: 'glm-5.2:cloud'
 ---
 
+## Purpose
+
+Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation.
+
 ## Cortex-First Search Policy
 
-This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
-
-1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
-2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
-3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
-4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
-5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
-6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
-7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
-8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
-9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
-
-If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
+This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
 
 ## Mission
 

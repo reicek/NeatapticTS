@@ -1,6 +1,6 @@
 ---
 name: agent-frontmatter-standards
-description: 'Use when: validating or designing VS Code custom agent frontmatter for NeatapticTS, including tier, skills, tools, agents allow-lists, model routing, visibility, handoffs, migration state, CI validation, or diagnosing silent customization loading failures.'
+description: 'Use when: validating or designing VS Code agent frontmatter (tier, skills, tools, model, visibility).'
 argument-hint: 'Describe the agent file(s), tier and visibility target, tools/skills/agents changes, model routing, migration state, observed failure symptom, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
@@ -32,20 +32,8 @@ Do NOT use for skill frontmatter validation - use `skill-frontmatter-standards` 
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Agent frontmatter change"] --> B{"Validates in CI?"}
-    B -- "Yes" --> C["Done"]
-    B -- "No" --> C2{"Silent failure?"}
-    C2 -- "No error shown" --> D["Check tier/visibility fields"]
-    C2 -- "Error reported" --> E["Fix reported issue"]
-    D --> F{"user-invocable set?"}
-    F -- "Yes, but not visible" --> G["Check disable-model-invocation"]
-    F -- "No" --> H["Check tier enforcement"]
-    G --> I["Fix and re-validate"]
-    H --> I
-    E --> I
-    I --> B
+```text
+Flowchart summary: "Agent frontmatter change" → "Validates in CI?"; "Validates in CI?" → "Done" (Yes), "Silent failure?" (No); "Done"; "Silent failure?" → "Check tier/visibility fields" (No error shown), "Fix reported issue" (Error reported); "Check tier/visibility fields" → "user-invocable set?"; "Fix reported issue" → "Fix and re-validate"; "user-invocable set?" → "Check disable-model-invocation" (Yes, but not visible), "Check tier enforcement" (No); "Fix and re-validate" → "Validates in CI?"; "Check disable-model-invocation" → "Fix and re-validate"; "Check tier enforcement" → "Fix and re-validate".
 ```
 
 ## Task Packet

@@ -1,6 +1,6 @@
 ---
 name: worker-inference-transport
-description: 'Design, implement, harden, or validate worker-friendly network serialization and inference transport in NeatapticTS. Use when working on inference IR extraction, portable or transferable payloads, MessageChannel predictors, SharedArrayBuffer paths, workerUrl overrides, structured clone constraints, or browser and node worker parity.'
+description: 'Use when: designing worker-friendly network serialization/inference transport.'
 argument-hint: 'Describe the transport strategy, current phase in Worker_Friendly_Network_Serialization_Fastpath.md, target environment, and whether this pass is reconnaissance, implementation, benchmark, or validation.'
 user-invocable: true
 disable-model-invocation: false
@@ -116,17 +116,8 @@ measured bottleneck, not by intuition alone.
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Payload to send"] --> B["Check structuredClone"]
-    B --> C{"Cloneable?"}
-    C -- "Yes" --> D["postMessage directly"]
-    C -- "No" --> E["Serialize to transferable"]
-    E --> F["Use transfer list"]
-    D --> G["Worker receives"]
-    F --> G
-    G --> H["Process in worker"]
-    H --> I["Return result"]
+```text
+Flowchart summary: "Payload to send" → "Check structuredClone"; "Check structuredClone" → "Cloneable?"; "Cloneable?" → "postMessage directly" (Yes), "Serialize to transferable" (No); "postMessage directly" → "Worker receives"; "Serialize to transferable" → "Use transfer list"; "Worker receives" → "Process in worker"; "Use transfer list" → "Worker receives"; "Process in worker" → "Return result"; "Return result".
 ```
 
 ## Task Packet
@@ -216,15 +207,8 @@ Validate with: focused worker-payload tests, multithreading tests if loader code
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Payload to transport"] --> B{"Reuse across many calls?"}
-    B -- "No, one-shot" --> C{"Transferable typed arrays?"}
-    B -- "Yes, repeated" --> D{"Shared memory available?"}
-    C -- "Yes, owned" --> E["TransferableInferencePayload"]
-    C -- "No, structured-clone safe" --> F["PortableInferencePayload"]
-    D -- "Yes, COOP/COEP set" --> G["SharedInferenceWorker"]
-    D -- "No / uncertain" --> H["InferenceChannel"]
+```text
+Flowchart summary: "Payload to transport" → "Reuse across many calls?"; "Reuse across many calls?" → "Transferable typed arrays?" (No, one-shot), "Shared memory available?" (Yes, repeated); "Transferable typed arrays?" → "TransferableInferencePayload" (Yes, owned), "PortableInferencePayload" (No, structured-clone safe); "Shared memory available?" → "SharedInferenceWorker" (Yes, COOP/COEP set), "InferenceChannel" (No / uncertain); "TransferableInferencePayload"; "PortableInferencePayload"; "SharedInferenceWorker"; "InferenceChannel".
 ```
 
 ## Before / After Examples

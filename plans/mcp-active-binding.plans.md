@@ -4,43 +4,48 @@
 
 ## Current state
 
-Claim: 04-implementing @ 2026-06-24T12:00:00Z
+Claim: 04-implementing @ 2026-06-28T08:15:02Z
 
-Downstream tracker discovery fix for `validate-plan-sync.mjs` and `workflow-update-sync.mjs`. The shared `extractDownstreamTrackers` utility in `scripts/agent-customization/customization-utils.mjs` now matches `.plans.md` tracker filenames and falls back to the active plan's `plans/Roadmap.md` phase section when a plan body is compressed, so NGE benchmark demos are correctly reported as downstream trackers.
+Chrome DevTools MCP lazy-load facade fix. `lazy-facade-core.mjs` now supports a `routingMode` option (`single-tool` default / `native`). `devtools-facade.mjs` uses `routingMode: 'native'` so known MCP JSON-RPC methods (`initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list`, `prompts/get`) are forwarded as raw method calls, while unknown operations are forwarded as real-server `tools/call` calls. `cortex-facade.mjs` remains in `single-tool` mode. Windows spawn resolution was hardened so `.cmd/.ps1/.bat` wrappers are resolved absolutely with `shell: true`, falling back to the directory containing the Node executable when the wrapper is not on PATH. Focused tests were added for native routing, omitted args, and the Windows spawn fallback paths. `lazy-facade-core.mjs` coverage is 100% in statements, branches, functions, and lines.
 
 ```yaml
 PlanUpdate:
   changed_files:
-    - scripts/agent-customization/customization-utils.mjs
-    - scripts/agent-customization/plan-workflow.test.ts
+    - scripts/agent-customization/mcp/lazy-facade-core.mjs
+    - scripts/agent-customization/mcp/devtools-facade.mjs
+    - scripts/agent-customization/mcp/__tests__/lazy-facade.red.test.ts
     - plans/mcp-active-binding.plans.md
   preflight:
     - 'npx tsc --noEmit -p tsconfig.json'
-    - 'npx tsc --noEmit -p tsconfig.test.json'
     - 'npm run lint'
-    - 'npx prettier --check scripts/agent-customization/customization-utils.mjs scripts/agent-customization/plan-workflow.test.ts plans/mcp-active-binding.plans.md'
+    - 'npm run prettier:scripts'
   validation:
-    - command: "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='scripts/agent-customization/plan-workflow'"
+    - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=lazy-facade'
       expected_exit: 0
       actual_exit: 0
-      result: 'PASS — 1 suite / 9 tests passed (both downstream synchronization contract tests green)'
-    - command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
+      result: 'PASS — 1 suite / 59 tests passed; lazy-facade-core.mjs coverage 100/100/100/100'
+    - command: 'node scripts/agent-customization/mcp/devtools-facade.mjs --self-check --json'
       expected_exit: 0
       actual_exit: 0
-      result: 'PASS — downstreamTrackers contains AntHive and PredatorPrey demos'
-    - command: 'node .github/hooks/workflow-update-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
+      result: 'PASS — devtools facade self-check reports pass: true'
+    - command: 'node scripts/agent-customization/mcp/cortex-facade.mjs --self-check --json'
       expected_exit: 0
-      actual_exit: 1
-      result: 'FAIL — syncEvent.downstreamTrackers DOES contain AntHive and PredatorPrey demos, but script reports "No [WIP] step found in plan. Cannot determine sync state." and exits non-zero'
+      actual_exit: 0
+      result: 'PASS — cortex facade self-check reports pass: true'
+    - command: 'node -e "import(''./scripts/agent-customization/mcp/devtools-facade.mjs'').then(async ({ createDevtoolsFacade }) => { const facade = createDevtoolsFacade(); try { const response = await facade.dispatch({ jsonrpc: ''2.0'', id: 1, method: ''tools/call'', params: { name: ''devtools'', arguments: { operation: ''tools/list'' } } }); const tools = response.result?.tools ?? []; console.log(JSON.stringify({ toolCount: tools.length, firstFive: tools.slice(0,5).map(t=>t.name), pass: tools.length > 0 })); } finally { await facade.close(); } });"'
+      expected_exit: 0
+      actual_exit: 0
+      result: 'PASS — real chrome-devtools-mcp returned 29 tools (click, close_page, drag, emulate, evaluate_script, ...)'
   gates:
-    - 'plan-sync: PASS (node scripts/agent-customization/gates/plan-sync.gate.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md)'
-    - 'learning-event: PASS (node scripts/agent-customization/gates/learning-event.gate.mjs --json)'
+    - 'plan-sync: PASS (node scripts/agent-customization/gates/plan-sync.gate.mjs --json --plan=plans/mcp-active-binding.plans.md)'
     - 'agent-graph: N/A (no delegation changes)'
+    - 'learning-event: false (no workflow gap discovered)'
   rollback:
-    - 'git checkout -- scripts/agent-customization/customization-utils.mjs'
-    - 'git checkout -- scripts/agent-customization/plan-workflow.test.ts'
+    - 'git checkout -- scripts/agent-customization/mcp/lazy-facade-core.mjs'
+    - 'git checkout -- scripts/agent-customization/mcp/devtools-facade.mjs'
+    - 'git checkout -- scripts/agent-customization/mcp/__tests__/lazy-facade.red.test.ts'
     - 'git checkout -- plans/mcp-active-binding.plans.md'
-  next: 'Route workflow-update-sync.mjs "No [WIP] step" failure back to 04-implementing or 01-planning for plan-state fix; downstream tracker extraction itself is green.'
+  next: 'Hand off to 05-green-testing for focused slice confirmation; no src/ files touched, so coverage-guard obligation is limited to the reported 100% coverage on lazy-facade-core.mjs.'
 ```
 
 ## Purpose
@@ -50,8 +55,13 @@ give `neataptic-workflow-mcp` and `neataptic-validation-mcp` a stable `loadActiv
 target that is never archived.
 
 **Do not archive or close this file.** When a workstream plan closes, the `--plan` arg in
-`.vscode/mcp.json` must point here rather than at the closing plan. That is the only update
-needed.
+both `.mcp.json` and `.vscode/mcp.json` must point here rather than at the closing plan. That
+is the only update needed.
+
+**Canonical MCP config locations.** Both `.mcp.json` (Copilot CLI) and `.vscode/mcp.json`
+(VS Code) are authoritative for their respective clients. They must remain in sync so the same
+six servers are available in either client. Do not remove server registrations from
+`.mcp.json`; doing so causes Copilot CLI's `/mcp show` to report no servers.
 
 Replace the `--plan` arg only when migrating to a new binding strategy. Keep Phase 1 Step 01
 perpetually [WIP] so both MCP servers can start cleanly regardless of which workstream trackers
@@ -77,13 +87,15 @@ skills:
   - execute
 validation:
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/mcp-active-binding.plans.md'
-  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
+  - 'node scripts/agent-customization/gates/delegate-skill-coverage.gate.mjs --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
   - 'execute skill present on any agent dispatched from this plan boundary.'
 placeholder_steps:
   - 'Step 01 — MCP servers operational'
 ```
+
+**Phase objective:** Provide a permanent, perpetually-[WIP] MCP binding context so `neataptic-workflow-mcp` and `neataptic-validation-mcp` can start cleanly regardless of which workstream trackers are open or archived. This phase hosts the lazy-load Chrome DevTools MCP facade (`devtools-facade.mjs`) and the Repo Cortex MCP facade (`cortex-facade.mjs`) as two lightweight binding surfaces that forward JSON-RPC calls without owning the underlying browser or semantic-index workstreams.
 
 This phase never closes. It provides a stable `[WIP]` context for MCP server startup so the
 workflow and validation servers can call `loadActivePlanContext` without depending on any specific
@@ -101,18 +113,20 @@ expansion: none
 auto_expand: false
 mode: perpetual
 source_of_truth: plans/mcp-active-binding.plans.md
-copy_paste: false
+copy_paste: true
 skills:
   - mcp-local-server-workflow
   - execute
 next_step: null
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md'
-  - 'neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json'
+  - 'node scripts/agent-customization/gates/delegate-skill-coverage.gate.mjs --json'
 acceptance_criteria:
   - 'Phase/step metadata validates with the new plan-phase-step schema.'
   - 'execute skill present so any delegated specialist follows the strict sliced RED → IMPLEMENT → GREEN loop.'
 ```
+
+**User instruction:** Keep the two lightweight MCP lazy-load facades — the Chrome DevTools MCP facade (`devtools-facade.mjs`) and the Repo Cortex MCP facade (`cortex-facade.mjs`) — permanently bound and operational. The facades should start cleanly, route unknown operations through the real underlying server, and forward known JSON-RPC methods as native calls where supported, without taking ownership of the browser, semantic index, or active workstream trackers.
 
 **Step objective:** Provide a perpetual stable binding for MCP server startup. This step does not
 advance to [DONE]. Both `neataptic-workflow-mcp` and `neataptic-validation-mcp` reference this
@@ -128,7 +142,7 @@ or heap/memory profiling) should route through the Tier 3 Chrome DevTools MCP sp
 
 `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md`
 
-`neataptic-gate-mcp:run_gate_check --gate=delegate-skill-coverage --json`
+`node scripts/agent-customization/gates/delegate-skill-coverage.gate.mjs --json`
 
 **Stop conditions:** Never — this step is perpetually [WIP] by design.
 
@@ -162,6 +176,7 @@ boundary:
 - 2026-06-08: Orchestration_System_Optimization Phase 4 Step 05 validation — `tier-enforcement.gate.mjs --json` -> PASS (`ok: true`, `issueCount: 0`, `byTier: {1: 8, 2: 11, 3: 38, 4: 4}`, `userInvocableTotal: 8`); `validate-plan-sync.mjs --json --plan=plans/Orchestration_System_Optimization.plans.md` -> PASS (`0 errors`, `0 warnings`, status: `WIP`). Flow specialist references validated with zero tier violations.
 - 2026-06-20: orchestration-alignment refresh after Chrome DevTools MCP Integration closure — `execute` skill added to the phase and step `skills:` lists; `delegate-skill-coverage` gate added to validation; Chrome DevTools MCP specialist availability noted for any browser-related validation routed from this boundary. `chrome-devtools-mcp-coverage` gate applies to any `03-red-testing`/`05-green-testing` dispatch from this plan. No substantive change to the perpetual binding contract.
 - 2026-06-21: scoped cleanup pass from `05-green-testing`. Changed fixture references `schema.sql`/`schema-v2.sql` → `schema-turso.sql` in `examples/shared/semantic/build-browser-snapshot.test.ts`, `scripts/mcp-semantic/tools/freshness-check.test.ts`, `scripts/mcp-semantic/tools/search-corpus.test.ts`, `scripts/mcp-semantic/tools/submit-feedback.test.ts`; deleted legacy `scripts/semantic-index/schema-v2.sql`; surfaced per-query errors from `scripts/semantic-index/parallel-search.mjs` via a non-enumerable `errors` array and propagated them through the `parallel_search` MCP handler in `scripts/mcp-semantic/repo-cortex-mcp.mjs`; added targeted test `runParallelQueries surfaces per-query errors on the returned array` in `scripts/mcp-semantic/__tests__/parallel-search.test.mjs`. Validation: `npx tsc --noEmit -p tsconfig.json` -> PASS; `npm run lint` -> PASS; `npx prettier --check <touched files>` -> PASS; `npx jest ... --testPathPatterns=build-browser-snapshot` -> PASS (1 suite, 1 test); `npx jest ... --testPathPatterns="freshness-check.test|search-corpus.test|submit-feedback.test"` -> PASS (3 suites, 17 tests); `NODE_OPTIONS=--experimental-vm-modules npx jest ... --selectProjects mcp-semantic-mjs --testPathPatterns=parallel-search.test.mjs` -> PASS (1 suite, 16 tests); `node --check scripts/semantic-index/parallel-search.mjs` and `node --check scripts/mcp-semantic/repo-cortex-mcp.mjs` -> OK. Note: `scripts/mcp-semantic/repo-cortex-mcp.test.ts` and `scripts/mcp-semantic/__tests__/repo-cortex-mcp.red.test.ts` currently fail to run with `ReferenceError: __dirname is not defined` under ts-jest ESM; this is a pre-existing red-test issue outside the scoped cleanup items and was left untouched per the "no red tests" boundary. Gate checks: `validate-plan-sync` -> PASS; `delegate-skill-coverage` -> PASS; `chrome-devtools-mcp-coverage` -> PASS. No `src/` files were changed, so no additional coverage-guard obligation.
+- 2026-06-28: Chrome DevTools MCP lazy-load facade native-routing fix. Added `routingMode` to `lazy-facade-core.mjs`, wired `devtools-facade.mjs` to `native`, kept `cortex-facade.mjs` in `single-tool`, hardened Windows `resolveSpawnCommand` to find `npx.cmd` next to the Node executable, and added native-mode + Windows spawn fallback tests. Validation: `npx tsc --noEmit -p tsconfig.json` -> PASS; `npm run lint` -> PASS; `npm run prettier:scripts` -> PASS; `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=lazy-facade` -> PASS (1 suite, 59 tests, `lazy-facade-core.mjs` 100/100/100/100); `node scripts/agent-customization/mcp/devtools-facade.mjs --self-check --json` -> PASS (`pass: true`); `node scripts/agent-customization/mcp/cortex-facade.mjs --self-check --json` -> PASS (`pass: true`); direct `createDevtoolsFacade().dispatch({operation:'tools/list'})` against real `chrome-devtools-mcp` -> PASS (29 tools returned). Gate: `plan-sync` -> PASS.
 
 ```yaml
 PlanUpdate:
@@ -197,7 +212,8 @@ PlanUpdate:
 
 ## Handoff query
 
-Perpetual binding with one active workflow fix: downstream tracker discovery in
-`scripts/agent-customization/customization-utils.mjs` is green, and the two
-`plan-workflow.test.ts` downstream-synchronization contract tests pass. Next
-step is `05-green-testing` focused confirmation on the changed script/test files.
+Perpetual binding with the Chrome DevTools MCP lazy-load facade fix. Native routing is
+enabled for `devtools-facade.mjs`, classic `single-tool` routing remains for `cortex-facade.mjs`,
+Windows spawn resolution now finds `npx.cmd` next to the Node executable, and focused tests cover
+native-mode forwarding plus all Windows fallback paths. Next step is `05-green-testing` focused
+confirmation on the changed MCP facade files.

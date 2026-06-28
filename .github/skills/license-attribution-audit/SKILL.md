@@ -1,6 +1,6 @@
 ---
 name: license-attribution-audit
-description: 'Audit source references and license notes for NeatapticTS workflow customizations. Use when external standards such as Agent Skills, VS Code docs, OpenSpec, or Superpowers inform agent, skill, plan, script, or documentation changes.'
+description: 'Use when: auditing source references and license attribution.'
 argument-hint: 'List the external sources used, target files, whether text was summarized or copied, and required license notes.'
 user-invocable: false
 disable-model-invocation: false
@@ -99,30 +99,14 @@ Agent Skills specification [copilot-instructions.md, MIT licensed].
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["External source used"] --> B["Identify license"]
-    B --> C{"License known?"}
-    C -- "Yes" --> D["Summarize, don't copy"]
-    C -- "No" --> E["Record blocker"]
-    D --> F["Add attribution to references"]
-    E --> G["Halt until resolved"]
-    F --> H["Record in learning log"]
-    G --> H
-    H --> I["Done"]
+```text
+Flowchart summary: "External source used" → "Identify license"; "Identify license" → "License known?"; "License known?" → "Summarize, don't copy" (Yes), "Record blocker" (No); "Summarize, don't copy" → "Add attribution to references"; "Record blocker" → "Halt until resolved"; "Add attribution to references" → "Record in learning log"; "Halt until resolved" → "Record in learning log"; "Record in learning log" → "Done"; "Done".
 ```
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["External source found"] --> B{"License known?"}
-    B -- "Yes, permissive" --> C["Audit and add attribution"]
-    B -- "Yes, restrictive" --> D["Summarize only, note constraints"]
-    B -- "Unknown" --> E["Record as blocker"]
-    C --> F["Record in references file"]
-    D --> F
-    E --> G["Do not merge until resolved"]
+```text
+Flowchart summary: "External source found" → "License known?"; "License known?" → "Audit and add attribution" (Yes, permissive), "Summarize only, note constraints" (Yes, restrictive), "Record as blocker" (Unknown); "Audit and add attribution" → "Record in references file"; "Summarize only, note constraints" → "Record in references file"; "Record as blocker" → "Do not merge until resolved"; "Record in references file"; "Do not merge until resolved".
 ```
 
 ## Guardrails

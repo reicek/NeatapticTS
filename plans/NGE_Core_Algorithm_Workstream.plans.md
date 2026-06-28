@@ -869,8 +869,11 @@ skills:
   - 'red-test-contracts'
   - 'nge-core-algorithm'
   - 'reproducibility-contracts'
+specialists:
+  - 'nge-core-scout'
+  - 'determinism-scout'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-evolution'
+  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-evolution'
 acceptance_criteria:
   - 'A library test imports NgePolyandricInput and NgePolyandricDroneInput from ./neat.nge-evolution.reproduction AND from the facade ./neat.nge-evolution — fails to compile before Step 04 (TS2305/TS2497)'
   - 'A red test asserts queenBias=1.0 yields queen-wins-all offspring (current behavior anchor)'
@@ -905,7 +908,7 @@ skip-contracts at the library level (the example skip-contracts stay skipped per
 - **Done:** New red tests exist and fail for the right reason; evidence recorded.
 - **Route-back:** If a test fails for a syntax/fixture reason, fix the fixture and re-run.
 
-**Required validation:** `npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-evolution`
+**Required validation:** `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-evolution`
 
 **Plan update requirement:** Record failing-test evidence and Step 03 [DONE] marker.
 
@@ -957,8 +960,10 @@ skills:
   - 'implementation-standards'
   - 'nge-core-algorithm'
   - 'reproducibility-contracts'
+specialists:
+  - 'nge-core-scout'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-evolution'
+  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-evolution'
   - 'npx tsc --noEmit'
 acceptance_criteria:
   - 'NgePolyandricInput and NgePolyandricDroneInput are exported from reproduction.ts and re-exported via the facade'
@@ -993,7 +998,7 @@ hard-queen-wins spread in the same step (no deferred cleanup).
 - **Done:** Both slices pass; all Step 03 red tests green; tsc clean; no dual-path code.
 - **Route-back:** If queenBias honoring requires a new strategy enum value, route to Phase 5 (P4).
 
-**Required validation:** `npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-evolution` and `npx tsc --noEmit`.
+**Required validation:** `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-evolution` and `npx tsc --noEmit`.
 
 **Plan update requirement:** Record implementation evidence, slice statuses, and Step 04 [DONE] marker.
 
@@ -1013,10 +1018,12 @@ source_of_truth: 'plans/NGE_Core_Algorithm_Workstream.plans.md'
 copy_paste: true
 next_step: 'Step 06 — Document the polyandric contract'
 skills:
-  - 'green-testing-standards'
+  - 'green-validation-gates'
   - 'coverage-guard'
+specialists:
+  - 'nge-core-scout'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/neat/nge-evolution --collectCoverageFrom=src/neat/nge-evolution/**/*.ts'
+  - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-evolution --collectCoverageFrom=src/neat/nge-evolution/**/*.ts'
   - 'npx eslint src/neat/nge-evolution'
 acceptance_criteria:
   - 'All Step 03/04 tests remain green; zero regressions in the nge-evolution suite'
@@ -1070,6 +1077,8 @@ next_step: 'Step 07 — Compress Phase 2 into logs'
 skills:
   - 'educational-docs'
   - 'nge-core-algorithm'
+specialists:
+  - 'nge-core-scout'
 validation:
   - 'npm run docs'
   - 'npm run lint'

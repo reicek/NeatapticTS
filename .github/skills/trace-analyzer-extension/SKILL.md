@@ -1,6 +1,6 @@
 ---
 name: trace-analyzer-extension
-description: 'Extend scripts/analyze-trace/analyze-trace.ts with new rollups, comparisons, script attribution, percentiles, or deterministic report sections. Use when the existing trace analyzer cannot answer an engineering question about Chrome trace or Perfetto data.'
+description: 'Use when: extending the trace analyzer with new rollups or comparisons.'
 argument-hint: 'Describe the trace question, missing metric, and validation trace file.'
 user-invocable: true
 disable-model-invocation: false
@@ -40,16 +40,8 @@ Do NOT use for trace reporting or analysis - use `trace-audit-reporting` instead
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Analyzer cant answer question"] --> B["Read analyze-trace.ts"]
-    B --> C["Design new section"]
-    C --> D["Implement helper"]
-    D --> E["Validate against trace"]
-    E --> F{"Output correct?"}
-    F -- "Yes" --> G["Update trace-audit-reporting docs"]
-    F -- "No" --> C
-    G --> H["Done"]
+```text
+Flowchart summary: "Analyzer cant answer question" → "Read analyze-trace.ts"; "Read analyze-trace.ts" → "Design new section"; "Design new section" → "Implement helper"; "Implement helper" → "Validate against trace"; "Validate against trace" → "Output correct?"; "Output correct?" → "Update trace-audit-reporting docs" (Yes), "Design new section" (No); "Update trace-audit-reporting docs" → "Done"; "Done".
 ```
 
 ## Task Packet
@@ -128,12 +120,8 @@ Per-thread p95 durations:
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Trace work"] --> B{"What kind?"}
-    B -- "Analyzer cannot answer question" --> C["trace-analyzer-extension"]
-    B -- "Write report from analyzer output" --> D["trace-audit-reporting"]
-    B -- "Implement perf optimization" --> E["performance-optimization"]
+```text
+Flowchart summary: "Trace work" → "What kind?"; "What kind?" → "trace-analyzer-extension" (Analyzer cannot answer question), "trace-audit-reporting" (Write report from analyzer output), "performance-optimization" (Implement perf optimization); "trace-analyzer-extension"; "trace-audit-reporting"; "performance-optimization".
 ```
 
 ## Guardrails

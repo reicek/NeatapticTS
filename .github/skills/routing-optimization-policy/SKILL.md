@@ -1,6 +1,6 @@
 ---
 name: routing-optimization-policy
-description: 'Enforce routing discipline across the SDLC orchestrator tier graph. Use when validating delegation boundaries, tier enforcement, flow-and-gate protocol compliance, or canonical routing-table freshness. This skill owns durable routing knowledge: tier contracts, delegation rules, gate protocols, and skill-companion boundaries.'
+description: 'Use when: enforcing routing discipline, tier boundaries, or routing-table freshness.'
 argument-hint: 'Describe the routing decision, tier boundary, or gate protocol to validate. Include target agent/skill, suspected violation, and validation command.'
 user-invocable: false
 disable-model-invocation: false
@@ -36,17 +36,8 @@ Do NOT use for simple routing decisions that `execute` can handle directly. Do N
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Routing request"] --> B["Classify surface"]
-    B --> C{"Tier boundary?"}
-    C -- "Yes" --> D["Check delegation direction"]
-    C -- "No" --> E["Check gate or freshness"]
-    D --> F["Dispatch to correct tier"]
-    E --> G["Run validation gate"]
-    F --> H["Record evidence"]
-    G --> H
-    H --> I["Done"]
+```text
+Flowchart summary: "Routing request" → "Classify surface"; "Classify surface" → "Tier boundary?"; "Tier boundary?" → "Check delegation direction" (Yes), "Check gate or freshness" (No); "Check delegation direction" → "Dispatch to correct tier"; "Check gate or freshness" → "Run validation gate"; "Dispatch to correct tier" → "Record evidence"; "Run validation gate" → "Record evidence"; "Record evidence" → "Done"; "Done".
 ```
 
 ## Tier Graph Contract
@@ -230,13 +221,8 @@ Validate: grep .github/ai-learning/learning-log.jsonl for gate_exception entries
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Routing question"] --> B{"What kind?"}
-    B -- "Simple delegation" --> C["Use execute skill"]
-    B -- "Tier/gate enforcement" --> D["Use routing-optimization-policy"]
-    B -- "Frontmatter validation" --> E["Use agent-frontmatter-standards"]
-    B -- "Routing table freshness" --> F["Run npm run agents:routing-table:gate"]
+```text
+Flowchart summary: "Routing question" → "What kind?"; "What kind?" → "Use execute skill" (Simple delegation), "Use routing-optimization-policy" (Tier/gate enforcement), "Use agent-frontmatter-standards" (Frontmatter validation), "Run npm run agents:routing-table:gate" (Routing table freshness); "Use execute skill"; "Use routing-optimization-policy"; "Use agent-frontmatter-standards"; "Run npm run agents:routing-table:gate".
 ```
 
 ## Guardrails

@@ -1,6 +1,6 @@
 ---
 name: docs-academic-citation-audit
-description: 'Audit NeatapticTS educational documentation quality for customization or source docs. Use when adding JSDoc, Mermaid diagrams, academic references, generated README inputs, source attributions, or checking that documentation meets research-and-education standards.'
+description: 'Use when: auditing citations, attribution, or academic references in docs.'
 argument-hint: 'Describe the documentation surface, source files, generated outputs, citations needed, and validation command.'
 user-invocable: false
 disable-model-invocation: false
@@ -43,17 +43,8 @@ Do NOT use for license auditing - use `license-attribution-audit` instead. Do NO
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Scan docs for citations"] --> B["Check each citation"]
-    B --> C{"Source exists?"}
-    C -- "Yes" --> D["Verify claim matches source"]
-    C -- "No" --> E["Flag missing citation"]
-    D --> F{"Accurate?"}
-    F -- "Yes" --> G["Pass"]
-    F -- "No" --> H["Flag inaccurate citation"]
-    E --> I["Report findings"]
-    H --> I
+```text
+Flowchart summary: "Scan docs for citations" → "Check each citation"; "Check each citation" → "Source exists?"; "Source exists?" → "Verify claim matches source" (Yes), "Flag missing citation" (No); "Verify claim matches source" → "Accurate?"; "Flag missing citation" → "Report findings"; "Accurate?" → "Pass" (Yes), "Flag inaccurate citation" (No); "Report findings"; "Pass"; "Flag inaccurate citation" → "Report findings".
 ```
 
 ## Task Packet

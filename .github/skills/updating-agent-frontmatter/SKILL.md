@@ -1,6 +1,6 @@
 ---
 name: updating-agent-frontmatter
-description: 'Use when: updating .agent.md YAML frontmatter, names, descriptions, tools, agents allow-lists, model strings, handoffs, or visibility flags.'
+description: 'Use when: updating .agent.md frontmatter, names, tools, or visibility.'
 argument-hint: 'Name the agent file, metadata fields to change, visibility target, allowed subagents, model tier, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,16 +31,8 @@ Do NOT use for skill frontmatter updates - use `updating-skill-frontmatter` inst
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Read agent file"] --> B["Identify fields to update"]
-    B --> C["Apply changes"]
-    C --> D["Validate with agent-frontmatter-standards"]
-    D --> E{"Pass?"}
-    E -- "Yes" --> F["Regenerate routing table"]
-    E -- "No" --> G["Fix validation errors"]
-    G --> D
-    F --> H["Done"]
+```text
+Flowchart summary: "Read agent file" → "Identify fields to update"; "Identify fields to update" → "Apply changes"; "Apply changes" → "Validate with agent-frontmatter-standards"; "Validate with agent-frontmatter-standards" → "Pass?"; "Pass?" → "Regenerate routing table" (Yes), "Fix validation errors" (No); "Regenerate routing table" → "Done"; "Fix validation errors" → "Validate with agent-frontmatter-standards"; "Done".
 ```
 
 ## Task Packet
@@ -101,16 +93,8 @@ tools:
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Frontmatter field change"] --> B{"Field affects routing?"}
-    B -- "No (description, argument-hint)" --> C["Single-field update + validate"]
-    B -- "Yes (name, agents, model)" --> D{"Name changed?"}
-    D -- "No" --> E["Update field + validate + regenerate routing table"]
-    D -- "Yes" --> F["Update field + check parent allow-lists + regenerate"]
-    C --> G["Run validate-agent-frontmatter.mjs"]
-    E --> G
-    F --> G
+```text
+Flowchart summary: "Frontmatter field change" → "Field affects routing?"; "Field affects routing?" → "Single-field update + validate" (No (description, argument-hint)), "Name changed?" (Yes (name, agents, model)); "Single-field update + validate" → "Run validate-agent-frontmatter.mjs"; "Name changed?" → "Update field + validate + regenerate routing table" (No), "Update field + check parent allow-lists + regenerate" (Yes); "Run validate-agent-frontmatter.mjs"; "Update field + validate + regenerate routing table" → "Run validate-agent-frontmatter.mjs"; "Update field + check parent allow-lists + regenerate" → "Run validate-agent-frontmatter.mjs".
 ```
 
 ## Guardrails

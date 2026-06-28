@@ -1,6 +1,6 @@
 ---
 name: trace-audit-reporting
-description: 'Analyze Chrome trace or Perfetto trace captures, run scripts/analyze-trace/analyze-trace.ts, map hotspots to NeatapticTS source files, and generate a detailed performance report with findings, evidence, and an action plan. Use when auditing renderer, worker, GPU, requestAnimationFrame, postMessage, or long-task regressions.'
+description: 'Use when: analyzing Chrome/Perfetto traces and producing performance reports.'
 argument-hint: 'Describe the trace file, feature area, and target report file.'
 user-invocable: true
 disable-model-invocation: false
@@ -43,16 +43,8 @@ Do NOT use for extending the analyzer tool - use `trace-analyzer-extension` inst
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Trace file"] --> B["Run analyze-trace.ts"]
-    B --> C["Read output sections"]
-    C --> D["Identify hotspots"]
-    D --> E{"Enough data?"}
-    E -- "Yes" --> F["Write report"]
-    E -- "No" --> G["Request analyzer extension"]
-    G --> H["trace-analyzer-extension"]
-    F --> I["Update tracker"]
+```text
+Flowchart summary: "Trace file" → "Run analyze-trace.ts"; "Run analyze-trace.ts" → "Read output sections"; "Read output sections" → "Identify hotspots"; "Identify hotspots" → "Enough data?"; "Enough data?" → "Write report" (Yes), "Request analyzer extension" (No); "Write report" → "Update tracker"; "Request analyzer extension" → "trace-analyzer-extension"; "Update tracker"; "trace-analyzer-extension".
 ```
 
 ## Task Packet
@@ -118,25 +110,8 @@ Top events to focus: RunTask, HandlePostMessage, FireAnimationFrame.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Trace capture received"] --> B{"Is it a Chrome trace or Perfetto JSON?"}
-    B -- "Yes" --> C["Run analyze-trace.ts"]
-    B -- "No" --> D["Request proper trace export first"]
-    D --> A
-    C --> E["Read output sections: thread totals, longest events, dropped frames"]
-    E --> F{"Hotspots identified?"}
-    F -- "Yes" --> G["Map each hotspot to source file"]
-    F -- "No" --> H["Extend analyzer via trace-analyzer-extension"]
-    H --> C
-    G --> I{"Is the bottleneck library-level?"}
-    I -- "Yes" --> J["Recommend library fix via performance-optimization"]
-    I -- "No, demo-only" --> K["Recommend demo-local fix"]
-    I -- "No, worker/protocol" --> L["Recommend protocol fix"]
-    J --> M["Write report with prioritized action plan"]
-    K --> M
-    L --> M
-    M --> N["Update tracker via tracker-handoff"]
+```text
+Flowchart summary: "Trace capture received" → "Is it a Chrome trace or Perfetto JSON?"; "Is it a Chrome trace or Perfetto JSON?" → "Run analyze-trace.ts" (Yes), "Request proper trace export first" (No); "Request proper trace export first" → "Trace capture received"; "Run analyze-trace.ts" → "Read output sections: thread totals, longest events, dropped frames"; "Read output sections: thread totals, longest events, dropped frames" → "Hotspots identified?"; "Hotspots identified?" → "Map each hotspot to source file" (Yes), "Extend analyzer via trace-analyzer-extension" (No); "Extend analyzer via trace-analyzer-extension" → "Run analyze-trace.ts"; "Map each hotspot to source file" → "Is the bottleneck library-level?"; "Is the bottleneck library-level?" → "Recommend library fix via performance-optimization" (Yes), "Recommend demo-local fix" (No, demo-only), "Recommend protocol fix" (No, worker/protocol); "Recommend library fix via performance-optimization" → "Write report with prioritized action plan"; "Recommend demo-local fix" → "Write report with prioritized action plan"; "Recommend protocol fix" → "Write report with prioritized action plan"; "Write report with prioritized action plan" → "Update tracker via tracker-handoff"; "Update tracker via tracker-handoff".
 ```
 
 ## Before/After Examples

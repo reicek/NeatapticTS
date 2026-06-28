@@ -1,7 +1,8 @@
 ---
-description: 'Use when updating user-facing docs, API docs, JSDoc/TSDoc, examples, changelogs, and usage guidance.'
+description: 'Documentation orchestrator for docs, JSDoc, examples, and changelogs.'
 name: '06-documenting'
 tier: 1
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -10,7 +11,7 @@ tools:
     execute,
     todo,
     agent,
-    neataptic-cortex-mcp/*,
+    cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -20,6 +21,7 @@ disable-model-invocation: false
 agents:
   [
     'docs-scout',
+    'nge-core-scout',
     'academic-docs-auditor',
     'docs-example-writer',
     'plan-scout',
@@ -30,6 +32,7 @@ agents:
 skills:
   [
     'educational-docs',
+    'nge-core-algorithm',
     'docs-academic-citation-audit',
     'license-attribution-audit',
     'auditing-js-docs',
@@ -45,21 +48,13 @@ handoffs:
     model: 'glm-5.2:cloud'
 ---
 
+## Purpose
+
+Use when updating user-facing docs, API docs, JSDoc/TSDoc, examples, changelogs, and usage guidance.
+
 ## Cortex-First Search Policy
 
-This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
-
-1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
-2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
-3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
-4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
-5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
-6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
-7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
-8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
-9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
-
-If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
+This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
 
 ## Mission
 
@@ -135,22 +130,8 @@ Do not mark `TASK_STATUS: SUCCESS` for the step if docs-quality gaps remain.
 
 When deciding how to fix a documentation issue, follow this decision tree:
 
-```mermaid
-flowchart TD
-    A["Documentation issue found"] --> B{"What type of doc?"}
-    B -- "Generated README<br/>(src/**/README.md)" --> C["Improve source JSDoc<br/>then rerun npm run docs"]
-    B -- "Manual README<br/>(docs/, top-level)" --> D["Edit directly<br/>with atemporal language"]
-    B -- "JSDoc in source" --> E["Edit source comments<br/>then rerun npm run docs"]
-    B -- "Example page" --> F["Update example source<br/>then verify rendering"]
-    B -- "Changelog" --> G["Add entry with honest<br/>deprecation/migration state"]
-    C --> H["Validate: npm run docs"]
-    D --> H
-    E --> H
-    F --> H
-    G --> I["Validate: manual review"]
-    H --> J["Delegate drift scan to docs-scout"]
-    I --> J
-    J --> K["Delegate citation audit to academic-docs-auditor"]
+```text
+Flowchart summary: Documentation issue found → classify doc type (generated README, manual README, source JSDoc, example page, changelog) → edit and validate with npm run docs or manual review → run drift scan and citation audit.
 ```
 
 **Key rules:**

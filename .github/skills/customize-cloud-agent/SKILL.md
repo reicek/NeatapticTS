@@ -1,6 +1,6 @@
 ---
 name: customize-cloud-agent
-description: 'Use when: customizing cloud-based agent model routing, validating cloud model name references, budgeting model usage across tiers, and safely switching between local and cloud fallback agents.'
+description: 'Use when: customizing or validating cloud-based agent model routing.'
 argument-hint: 'Describe the agent being customized, the target cloud model, the tier constraints, and whether this is a model swap, budget adjustment, or fallback configuration.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,19 +31,8 @@ Do NOT use for model selection alone - use `model-routing-and-budget` instead. D
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Need cloud agent"] --> B{"Cloud provider?"}
-    B -- "Copilot" --> C["Configure model + tools"]
-    B -- "Other" --> D["Check provider API"]
-    C --> E["Write frontmatter"]
-    D --> E
-    E --> F["Validate frontmatter"]
-    F --> G["Test delegation"]
-    G --> H{"Works?"}
-    H -- "Yes" --> I["Record learning event"]
-    H -- "No" --> J["Debug routing"]
-    J --> F
+```text
+Flowchart summary: "Need cloud agent" → "Cloud provider?"; "Cloud provider?" → "Configure model + tools" (Copilot), "Check provider API" (Other); "Configure model + tools" → "Write frontmatter"; "Check provider API" → "Write frontmatter"; "Write frontmatter" → "Validate frontmatter"; "Validate frontmatter" → "Test delegation"; "Test delegation" → "Works?"; "Works?" → "Record learning event" (Yes), "Debug routing" (No); "Record learning event"; "Debug routing" → "Validate frontmatter".
 ```
 
 ## Task Packet
@@ -90,17 +79,8 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Need cloud model for agent"] --> B{"Which provider?"}
-    B -- "Copilot / GPT" --> C["Use qualified Copilot model string"]
-    B -- "Claude" --> D["Use qualified Claude model string"]
-    B -- "Gemini" --> E["Use qualified Gemini model string"]
-    B -- "Local fallback" --> F["Keep local model, document fallback path"]
-    C --> G["Validate + regenerate routing table"]
-    D --> G
-    E --> G
-    F --> G
+```text
+Flowchart summary: "Need cloud model for agent" → "Which provider?"; "Which provider?" → "Use qualified Copilot model string" (Copilot / GPT), "Use qualified Claude model string" (Claude), "Use qualified Gemini model string" (Gemini), "Keep local model, document fallback path" (Local fallback); "Use qualified Copilot model string" → "Validate + regenerate routing table"; "Use qualified Claude model string" → "Validate + regenerate routing table"; "Use qualified Gemini model string" → "Validate + regenerate routing table"; "Keep local model, document fallback path" → "Validate + regenerate routing table"; "Validate + regenerate routing table".
 ```
 
 ## Before / After Examples

@@ -1,6 +1,6 @@
 ---
 name: tracker-handoff
-description: 'Use when: standardizing NeatapticTS `.plans.md` or `.logs.md` trackers, including creating or refreshing active trackers, compressing completed history, managing `[PLANNED]`/`[WIP]`/`[DONE]`, handling intentional parallel lanes, archiving closed tracker pairs in `plans/completed/`, or updating a reusable `Handoff query` for safe session continuation.'
+description: 'Use when: standardizing plan/log trackers and handoff blocks.'
 argument-hint: 'Describe the tracker path, active vs closed intent, single-lane or parallel-lane state, history to compress, validations required, and what the next session must resume safely.'
 user-invocable: true
 disable-model-invocation: false
@@ -49,16 +49,8 @@ Do NOT use for non-durable tracking like scratch notes or temporary buffers. Do 
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Tracker state"] --> B{"Active or closing?"}
-    B -- "Active" --> C["Update WIP section"]
-    B -- "Closing" --> D["Compress to DONE"]
-    C --> E["Refresh handoff query"]
-    D --> F["Create .logs.md"]
-    F --> G["Move to plans/completed/"]
-    E --> H["Run sync gates"]
-    G --> H
+```text
+Flowchart summary: "Tracker state" → "Active or closing?"; "Active or closing?" → "Update WIP section" (Active), "Compress to DONE" (Closing); "Update WIP section" → "Refresh handoff query"; "Compress to DONE" → "Create .logs.md"; "Refresh handoff query" → "Run sync gates"; "Create .logs.md" → "Move to plans/completed/"; "Run sync gates"; "Move to plans/completed/" → "Run sync gates".
 ```
 
 ## Task Packet
@@ -397,15 +389,8 @@ For `.logs.md` files, prefer:
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Tracker action"] --> B{"Tracker state?"}
-    B -- "Active, work ongoing" --> C["Refresh WIP + Handoff query"]
-    B -- "All phases complete" --> D["Compress to DONE + create .logs.md"]
-    B -- "Archived, needs new work" --> E["Reopen: move back or new tracker"]
-    C --> F["Run sync gates"]
-    D --> G["Move pair to plans/completed/"]
-    E --> H["Add fresh Handoff query"]
+```text
+Flowchart summary: "Tracker action" → "Tracker state?"; "Tracker state?" → "Refresh WIP + Handoff query" (Active, work ongoing), "Compress to DONE + create .logs.md" (All phases complete), "Reopen: move back or new tracker" (Archived, needs new work); "Refresh WIP + Handoff query" → "Run sync gates"; "Compress to DONE + create .logs.md" → "Move pair to plans/completed/"; "Reopen: move back or new tracker" → "Add fresh Handoff query"; "Run sync gates"; "Move pair to plans/completed/"; "Add fresh Handoff query".
 ```
 
 ## Before / After Examples

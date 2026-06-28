@@ -1,6 +1,6 @@
 ---
 name: plan-alignment
-description: 'Select the smallest useful subset of plan documents, preserve roadmap terminology and constraints, and align implementation work to the intended architectural direction without loading unnecessary plan context.'
+description: 'Use when: selecting or aligning plan documents and roadmap terminology.'
 argument-hint: 'Describe the architectural task, trigger phrases, suspected subsystem, whether core NEAT correctness is involved, and any known plan files or roadmap tensions.'
 user-invocable: true
 disable-model-invocation: false
@@ -40,18 +40,8 @@ Do NOT use for consistency checking or sync validation - use `plan-sync-validati
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["User request"] --> B["Search plan files"]
-    B --> C["Read roadmap"]
-    C --> D["Match trigger phrases"]
-    D --> E{"Plan found?"}
-    E -- "Yes" --> F["Check alignment"]
-    E -- "No" --> G["Create new plan"]
-    F --> H{"Aligned?"}
-    H -- "Yes" --> I["Proceed"]
-    H -- "No" --> J["Update plan"]
-    J --> I
+```text
+Flowchart summary: "User request" → "Search plan files"; "Search plan files" → "Read roadmap"; "Read roadmap" → "Match trigger phrases"; "Match trigger phrases" → "Plan found?"; "Plan found?" → "Check alignment" (Yes), "Create new plan" (No); "Check alignment" → "Aligned?"; "Create new plan"; "Aligned?" → "Proceed" (Yes), "Update plan" (No); "Proceed"; "Update plan" → "Proceed".
 ```
 
 ## Task Packet
@@ -126,16 +116,8 @@ alignment workflow.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Implementation task"] --> B{"Plan file obvious?"}
-    B -- "Yes, single plan" --> C["Read that plan + roadmap check"]
-    B -- "No, unclear" --> D["Search plans/README.md triggers"]
-    D --> E{"1 plan match?"}
-    E -- "Yes" --> C
-    E -- "No, multiple" --> F["Read 1 primary + 1 adjacent only"]
-    C --> G["Proceed with minimal context"]
-    F --> G
+```text
+Flowchart summary: "Implementation task" → "Plan file obvious?"; "Plan file obvious?" → "Read that plan + roadmap check" (Yes, single plan), "Search plans/README.md triggers" (No, unclear); "Read that plan + roadmap check" → "Proceed with minimal context"; "Search plans/README.md triggers" → "1 plan match?"; "Proceed with minimal context"; "1 plan match?" → "Read that plan + roadmap check" (Yes), "Read 1 primary + 1 adjacent only" (No, multiple); "Read 1 primary + 1 adjacent only" → "Proceed with minimal context".
 ```
 
 ## Before / After Examples

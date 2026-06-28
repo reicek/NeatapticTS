@@ -1,6 +1,6 @@
 ---
 name: subagent-delegation-patterns
-description: 'Prepare precise subagent task packets for NeatapticTS. Use when deciding between sequential and parallel specialist calls, using runSubagent, assigning hidden agents, limiting tool scope, or validating specialist output contracts.'
+description: 'Use when: preparing or reviewing subagent task packets and delegation.'
 argument-hint: 'Describe the parent phase, specialist needed, task packet, expected output format, and whether calls can run in parallel.'
 user-invocable: false
 disable-model-invocation: false
@@ -43,16 +43,8 @@ Do NOT use for simple 1-2 read tasks that can be done directly with grep/view. D
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Task to delegate"] --> B{"Independent?"}
-    B -- "Yes" --> C["Launch in parallel"]
-    B -- "No" --> D["Sequential dispatch"]
-    C --> E["Collect all results"]
-    D --> F["Wait for each result"]
-    E --> G["Merge findings"]
-    F --> G
-    G --> H["Done"]
+```text
+Flowchart summary: "Task to delegate" → "Independent?"; "Independent?" → "Launch in parallel" (Yes), "Sequential dispatch" (No); "Launch in parallel" → "Collect all results"; "Sequential dispatch" → "Wait for each result"; "Collect all results" → "Merge findings"; "Wait for each result" → "Merge findings"; "Merge findings" → "Done"; "Done".
 ```
 
 ## Task Packet
@@ -99,15 +91,8 @@ Return: <exact output fields>
 
 ## Parallel vs Sequential Decision Tree
 
-```mermaid
-flowchart TD
-    A["Multiple sub-tasks"] --> B{"Independent?"}
-    B -- "Yes" --> C["Parallel: launch all at once"]
-    B -- "No" --> D["Sequential: wait for each"]
-    C --> E["Collect results in order"]
-    D --> F["Pass result to next agent"]
-    E --> G["Merge"]
-    F --> G
+```text
+Flowchart summary: "Multiple sub-tasks" → "Independent?"; "Independent?" → "Parallel: launch all at once" (Yes), "Sequential: wait for each" (No); "Parallel: launch all at once" → "Collect results in order"; "Sequential: wait for each" → "Pass result to next agent"; "Collect results in order" → "Merge"; "Pass result to next agent" → "Merge"; "Merge".
 ```
 
 ## Before / After Examples

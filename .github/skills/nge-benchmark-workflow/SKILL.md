@@ -1,6 +1,6 @@
 ---
 name: nge-benchmark-workflow
-description: 'Design, implement, or validate NGE benchmark environments and demo harnesses in NeatapticTS. Use when working on predator/prey coevolution, ant-hive collective intelligence, racing curriculum tiers, rolling opponent snapshots, shared-field benchmark semantics, benchmark worker topology, observability charts, fairness contracts, or browser simulation methodology that consumes NGE core primitives.'
+description: 'Use when: designing NGE benchmark environments, curricula, or scoring.'
 argument-hint: 'Describe the benchmark family, the active plan file, whether the pass is world design, harness implementation, metrics, or validation, which core primitives are assumed available, and what observable or acceptance criterion must be demonstrated.'
 user-invocable: true
 disable-model-invocation: false
@@ -113,18 +113,8 @@ Do NOT use for core algorithm work - use `nge-core-algorithm` instead. Do NOT us
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Define benchmark"] --> B["Set up curriculum tiers"]
-    B --> C["Create predator/prey populations"]
-    C --> D["Run coevolution"]
-    D --> E["Capture rolling snapshots"]
-    E --> F["Score opponents"]
-    F --> G{"Fairness contract met?"}
-    G -- "Yes" --> H["Record results"]
-    G -- "No" --> I["Adjust fairness"]
-    I --> D
-    H --> J["Report"]
+```text
+Flowchart summary: "Define benchmark" → "Set up curriculum tiers"; "Set up curriculum tiers" → "Create predator/prey populations"; "Create predator/prey populations" → "Run coevolution"; "Run coevolution" → "Capture rolling snapshots"; "Capture rolling snapshots" → "Score opponents"; "Score opponents" → "Fairness contract met?"; "Fairness contract met?" → "Record results" (Yes), "Adjust fairness" (No); "Record results" → "Report"; "Adjust fairness" → "Run coevolution"; "Report".
 ```
 
 ## Task Packet
@@ -218,13 +208,8 @@ Prefer benchmark observables that expose mechanism instead of only score:
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Benchmark work"] --> B{"Which layer?"}
-    B -- "World or environment rules" --> C["World setup"]
-    B -- "Episode or coordinator logic" --> D["Harness implementation"]
-    B -- "Charts, ablation, observables" --> E["Metrics and observability"]
-    B -- "Seed-pack or snapshot fairness" --> F["Fairness validation"]
+```text
+Flowchart summary: "Benchmark work" → "Which layer?"; "Which layer?" → "World setup" (World or environment rules), "Harness implementation" (Episode or coordinator logic), "Metrics and observability" (Charts, ablation, observables), "Fairness validation" (Seed-pack or snapshot fairness); "World setup"; "Harness implementation"; "Metrics and observability"; "Fairness validation".
 ```
 
 ## Before / After Examples

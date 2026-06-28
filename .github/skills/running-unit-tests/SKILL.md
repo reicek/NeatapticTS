@@ -1,6 +1,6 @@
 ---
 name: running-unit-tests
-description: 'Use when: running focused unit tests, confirming red or green status, choosing Jest command scope, or summarizing bounded test output.'
+description: 'Use when: running focused unit tests or interpreting bounded test output.'
 argument-hint: 'Provide the focused command or test path, expected red/green state, and whether output should be summarized or rerouted.'
 user-invocable: false
 disable-model-invocation: false
@@ -31,20 +31,8 @@ Do NOT use for triaging test failures - use `triaging-test-failures` instead. Do
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Need to run tests"] --> B{"What scope?"}
-    B -- "Single file" --> C["npx jest --testPathPattern=file"]
-    B -- "Folder" --> D["npx jest --testPathPattern=folder"]
-    B -- "Full suite" --> E["npm run test:silent"]
-    B -- "Coverage" --> F["npx jest --coverage --testPathPattern=file"]
-    C --> G["Run"]
-    D --> G
-    E --> G
-    F --> G
-    G --> H{"Pass?"}
-    H -- "Yes" --> I["Done"]
-    H -- "No" --> J["Triage failures"]
+```text
+Flowchart summary: "Need to run tests" → "What scope?"; "What scope?" → "npx jest --testPathPattern=file" (Single file), "npx jest --testPathPattern=folder" (Folder), "npm run test:silent" (Full suite), "npx jest --coverage --testPathPattern=file" (Coverage); "npx jest --testPathPattern=file" → "Run"; "npx jest --testPathPattern=folder" → "Run"; "npm run test:silent" → "Run"; "npx jest --coverage --testPathPattern=file" → "Run"; "Run" → "Pass?"; "Pass?" → "Done" (Yes), "Triage failures" (No); "Done"; "Triage failures".
 ```
 
 ## Task Packet
@@ -79,16 +67,8 @@ The full test suite is large and slow. Running it speculatively wastes time and 
 
 ## Decision Tree: Scope Selection
 
-```mermaid
-flowchart TD
-    A["Tests needed"] --> B{"Changed files known?"}
-    B -- "Yes" --> C["Find nearest test file"]
-    B -- "No" --> D["Run full suite"]
-    C --> E["Run focused slice"]
-    E --> F{"Pass?"}
-    F -- "Yes" --> G["Done"]
-    F -- "No" --> H["Triage failures"]
-    D --> H
+```text
+Flowchart summary: "Tests needed" → "Changed files known?"; "Changed files known?" → "Find nearest test file" (Yes), "Run full suite" (No); "Find nearest test file" → "Run focused slice"; "Run full suite" → "Triage failures"; "Run focused slice" → "Pass?"; "Triage failures"; "Pass?" → "Done" (Yes), "Triage failures" (No); "Done".
 ```
 
 ## Before / After Examples

@@ -23,10 +23,10 @@ export interface TraceFile {
  * Trace file format detected by the I/O layer.
  *
  * - `standard` — bare array or `{ traceEvents: [...] }` (raw Chrome/Perfetto export).
- * - `chrome-devtools-mcp` — `{ result: { traceEvents: [...] } }` or `{ result: [...] }`
+ * - `devtools` — `{ result: { traceEvents: [...] } }` or `{ result: [...] }`
  *   (Chrome DevTools MCP server response wrapper).
  */
-export type TraceFormat = 'standard' | 'chrome-devtools-mcp';
+export type TraceFormat = 'standard' | 'devtools';
 
 /** Parsed CLI options for one analyzer invocation. */
 export interface CliOptions {

@@ -1,6 +1,6 @@
 ---
 name: splitting-monolithic-agent
-description: 'Use when: splitting an overloaded custom agent into an orchestrator, sub-orchestrator, specialists, reusable skills, and explicit output contracts.'
+description: 'Use when: splitting an overloaded agent into orchestrators and specialists.'
 argument-hint: 'Describe the source agent, broad responsibilities, desired compatibility surface, candidate specialists, skills to extract, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
@@ -32,16 +32,8 @@ Do NOT use for splitting code modules - use `solid-split` instead. Do NOT use fo
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Monolithic agent"] --> B["Identify responsibilities"]
-    B --> C["Map boundaries"]
-    C --> D{"Split decision"}
-    D -- "Distinct roles" --> E["Split into specialists"]
-    D -- "Overlapping" --> F["Refactor, dont split"]
-    E --> G["Create new agent files"]
-    G --> H["Update routing table"]
-    H --> I["Validate frontmatter"]
+```text
+Flowchart summary: "Monolithic agent" → "Identify responsibilities"; "Identify responsibilities" → "Map boundaries"; "Map boundaries" → "Split decision"; "Split decision" → "Split into specialists" (Distinct roles), "Refactor, dont split" (Overlapping); "Split into specialists" → "Create new agent files"; "Refactor, dont split"; "Create new agent files" → "Update routing table"; "Update routing table" → "Validate frontmatter"; "Validate frontmatter".
 ```
 
 ## Task Packet
@@ -73,15 +65,8 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 
 ## Decision Tree: Split Decisions
 
-```mermaid
-flowchart TD
-    A["Agent too large"] --> B{"Multiple distinct responsibilities?"}
-    B -- "Yes" --> C["Split into specialists"]
-    B -- "No" --> D{"Just too much code?"}
-    D -- "Yes" --> E["Extract skills, keep agent thin"]
-    D -- "No" --> F["No split needed"]
-    C --> G["Each gets single responsibility"]
-    E --> H["Move procedures to SKILL.md"]
+```text
+Flowchart summary: "Agent too large" → "Multiple distinct responsibilities?"; "Multiple distinct responsibilities?" → "Split into specialists" (Yes), "Just too much code?" (No); "Split into specialists" → "Each gets single responsibility"; "Just too much code?" → "Extract skills, keep agent thin" (Yes), "No split needed" (No); "Each gets single responsibility"; "Extract skills, keep agent thin" → "Move procedures to SKILL.md"; "No split needed"; "Move procedures to SKILL.md".
 ```
 
 ## Guardrails

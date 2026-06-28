@@ -1,6 +1,6 @@
 ---
 name: agent-script-tooling
-description: 'Design reusable scripts for NeatapticTS agent customization workflows. Use when adding scripts under scripts/agent-customization, defining --help, JSON output, stderr diagnostics, dry-run behavior, idempotency, or validation exit codes.'
+description: 'Use when: designing or refactoring reusable agent-customization scripts.'
 argument-hint: 'Describe the script purpose, inputs, outputs, failure modes, and whether it reads, validates, or changes files.'
 user-invocable: false
 disable-model-invocation: false
@@ -43,18 +43,8 @@ Do NOT use for scripts outside the `scripts/agent-customization/` directory - th
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Script change"] --> B["Run script directly"]
-    B --> C{"Exit code?"}
-    C -- "0" --> D["Check stderr for warnings"]
-    C -- "Non-zero" --> E["Fix reported error"]
-    D --> F["Run validate-agent-frontmatter"]
-    E --> B
-    F --> G{"Pass?"}
-    G -- "Yes" --> H["Done"]
-    G -- "No" --> I["Fix validation issue"]
-    I --> F
+```text
+Flowchart summary: "Script change" → "Run script directly"; "Run script directly" → "Exit code?"; "Exit code?" → "Check stderr for warnings" (0), "Fix reported error" (Non-zero); "Check stderr for warnings" → "Run validate-agent-frontmatter"; "Fix reported error" → "Run script directly"; "Run validate-agent-frontmatter" → "Pass?"; "Pass?" → "Done" (Yes), "Fix validation issue" (No); "Done"; "Fix validation issue" → "Run validate-agent-frontmatter".
 ```
 
 ## Task Packet
@@ -119,15 +109,8 @@ Read or write: read-only.
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Need new script"] --> B{"Purpose?"}
-    B -- "Block on pass/fail" --> C["Create gate script (--json, exit codes)"]
-    B -- "Summarize state" --> D["Create reporting script (--json summary)"]
-    B -- "One-off helper" --> E["Create utility script (--help)"]
-    C --> F["Audit in dry-run, then wire to gate"]
-    D --> F
-    E --> G["Document in top-of-file JSDoc"]
+```text
+Flowchart summary: "Need new script" → "Purpose?"; "Purpose?" → "Create gate script (--json, exit codes)" (Block on pass/fail), "Create reporting script (--json summary)" (Summarize state), "Create utility script (--help)" (One-off helper); "Create gate script (--json, exit codes)" → "Audit in dry-run, then wire to gate"; "Create reporting script (--json summary)" → "Audit in dry-run, then wire to gate"; "Create utility script (--help)" → "Document in top-of-file JSDoc"; "Audit in dry-run, then wire to gate"; "Document in top-of-file JSDoc".
 ```
 
 ## Before / After Examples

@@ -1,13 +1,14 @@
 ---
-description: 'Use when: planning needs compact context, plan alignment signals, ownership boundaries, nearest README evidence, freshness notes, or ambiguity triage before decomposition. Keywords: planning context, plan files, README, boundaries, ambiguity.'
+description: 'Coordinator for compact planning context, README evidence, and ambiguity triage.'
 name: 'planning-context-coordinator'
 tier: 2
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
     agent,
-    neataptic-cortex-mcp/*,
+    cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -18,23 +19,13 @@ agents: ['plan-scout', 'docs-scout', 'boundary-mapper']
 skills: ['plan-alignment', 'execute']
 ---
 
+## Purpose
+
+Use when: planning needs compact context, plan alignment signals, ownership boundaries, nearest README evidence, freshness notes, or ambiguity triage before decomposition. Keywords: planning context, plan files, README, boundaries, ambiguity.
+
 ## Cortex-First Search Policy
 
-This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
-
-1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
-2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
-3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
-4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
-5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
-6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
-7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
-8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
-9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
-
-If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
-
-You are the `planning-context-coordinator` agent for NeatapticTS.
+This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
 
 ## Mission
 
@@ -81,17 +72,8 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 Use this decision tree to choose the smallest specialist set for the planning question. Invoke only the scouts the question actually requires; do not invoke all three by default.
 
-```mermaid
-flowchart TD
-    A["Planning question"] --> B{"What context is needed?"}
-    B -- "Plan files, roadmap alignment,<br/>terminology, active tracker" --> C["plan-scout"]
-    B -- "Ownership seams, orchestration files,<br/>edit boundaries, module responsibility" --> D["boundary-mapper"]
-    B -- "Nearest README, JSDoc-backed<br/>documentation context, doc drift" --> E["docs-scout"]
-    B -- "Multiple context types" --> F["Run matching scouts in parallel<br/>only when scopes do not overlap"]
-    C --> G["Synthesize compact planning brief"]
-    D --> G
-    E --> G
-    F --> G
+```text
+Flowchart summary: "Planning question" → "What context is needed?"; "What context is needed?" → "plan-scout" (Plan files, roadmap alignment,<br/>terminology, active tracker), "boundary-mapper" (Ownership seams, orchestration files,<br/>edit boundaries, module responsibility), "docs-scout" (Nearest README, JSDoc-backed<br/>documentation context, doc drift), "Run matching scouts in parallel only when scopes do not overlap" (Multiple context types); "plan-scout" → "Synthesize compact planning brief"; "boundary-mapper" → "Synthesize compact planning brief"; "docs-scout" → "Synthesize compact planning brief"; "Run matching scouts in parallel only when scopes do not overlap" → "Synthesize compact planning brief"; "Synthesize compact planning brief".
 ```
 
 - **Plan context** (plan files, roadmap alignment, active-tracker status, terminology) → invoke `plan-scout`.

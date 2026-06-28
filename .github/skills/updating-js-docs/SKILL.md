@@ -1,6 +1,6 @@
 ---
 name: updating-js-docs
-description: 'Use when: updating JSDoc/TSDoc, API examples, generated README source inputs, conceptual docs, or public documentation comments.'
+description: 'Use when: updating JSDoc/TSDoc, examples, README inputs, or tone compliance.'
 argument-hint: 'Describe the API or docs surface, source files to edit, example or citation needs, and docs generation decision.'
 user-invocable: false
 disable-model-invocation: false
@@ -88,27 +88,14 @@ export function buildMLP(config?: Partial<MLPConfig>): Network { ... }
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Read source JSDoc"] --> B["Identify gaps"]
-    B --> C["Edit JSDoc in source"]
-    C --> D{"Regenerate README?"}
-    D -- "Yes" --> E["Run npm run docs"]
-    D -- "No" --> F["Skip generation"]
-    E --> G["Inspect generated output"]
-    F --> G
-    G --> H["Report changes"]
+```text
+Flowchart summary: "Read source JSDoc" → "Identify gaps"; "Identify gaps" → "Edit JSDoc in source"; "Edit JSDoc in source" → "Regenerate README?"; "Regenerate README?" → "Run npm run docs" (Yes), "Skip generation" (No); "Run npm run docs" → "Inspect generated output"; "Skip generation" → "Inspect generated output"; "Inspect generated output" → "Report changes"; "Report changes".
 ```
 
 ## Decision Tree
 
-```mermaid
-flowchart TD
-    A["Doc work needed"] --> B{"What kind?"}
-    B -- "JSDoc quality audit" --> C["Use auditing-js-docs"]
-    B -- "Update JSDoc content" --> D["Use updating-js-docs"]
-    B -- "Regenerate README only" --> E["Run npm run docs"]
-    B -- "Add citation" --> F["Use docs-academic-citation-audit"]
+```text
+Flowchart summary: "Doc work needed" → "What kind?"; "What kind?" → "Use auditing-js-docs" (JSDoc quality audit), "Use updating-js-docs" (Update JSDoc content), "Run npm run docs" (Regenerate README only), "Use docs-academic-citation-audit" (Add citation); "Use auditing-js-docs"; "Use updating-js-docs"; "Run npm run docs"; "Use docs-academic-citation-audit".
 ```
 
 ## Guardrails

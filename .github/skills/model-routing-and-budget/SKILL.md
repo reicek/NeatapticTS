@@ -1,6 +1,6 @@
 ---
 name: model-routing-and-budget
-description: 'Choose, validate, and document model routing for NeatapticTS custom agents. Use when assigning GPT-5.4, GPT-5.4-mini, Claude Sonnet 4.6, Claude Haiku 4.6, phase-specific model budgets, or when a model string must be verified before frontmatter changes.'
+description: 'Use when: choosing or validating custom-agent model routing and budget.'
 argument-hint: 'Describe the agent phase, desired model tier, available model names, and whether validation should be advisory or strict.'
 user-invocable: false
 disable-model-invocation: false
@@ -41,19 +41,8 @@ Do NOT use for cloud agent setup - use `customize-cloud-agent` instead. Do NOT u
 
 ## Workflow Diagram
 
-```mermaid
-flowchart TD
-    A["Select model"] --> B{"Agent tier?"}
-    B -- "Tier 0-1" --> C["Use high-capability model"]
-    B -- "Tier 2-3" --> D["Use mid-capability model"]
-    B -- "Tier 4" --> E["Use lightweight model"]
-    C --> F["Check context budget"]
-    D --> F
-    E --> F
-    F --> G{"Within budget?"}
-    G -- "Yes" --> H["Approve routing"]
-    G -- "No" --> I["Downgrade model"]
-    I --> F
+```text
+Flowchart summary: "Select model" → "Agent tier?"; "Agent tier?" → "Use high-capability model" (Tier 0-1), "Use mid-capability model" (Tier 2-3), "Use lightweight model" (Tier 4); "Use high-capability model" → "Check context budget"; "Use mid-capability model" → "Check context budget"; "Use lightweight model" → "Check context budget"; "Check context budget" → "Within budget?"; "Within budget?" → "Approve routing" (Yes), "Downgrade model" (No); "Approve routing"; "Downgrade model" → "Check context budget".
 ```
 
 ## Task Packet
@@ -106,14 +95,8 @@ Validation: advisory — confirm qualified name before committing.
 
 ## Decision Tree: Model Selection by Tier
 
-```mermaid
-flowchart TD
-    A["Need model for agent"] --> B{"What tier?"}
-    B -- "Tier 0 (Agent Zero)" --> C["claude-sonnet-4-20250514"]
-    B -- "Tier 1 (SDLC)" --> C
-    B -- "Tier 2 (Coordinators)" --> D["haiku-3.5 or equivalent"]
-    B -- "Tier 3 (Scouts)" --> D
-    B -- "Tier 4 (Auxiliaries)" --> E["Lightest available model"]
+```text
+Flowchart summary: "Need model for agent" → "What tier?"; "What tier?" → "claude-sonnet-4-20250514" (Tier 0 (Agent Zero)), "claude-sonnet-4-20250514" (Tier 1 (SDLC)), "haiku-3.5 or equivalent" (Tier 2 (Coordinators)), "haiku-3.5 or equivalent" (Tier 3 (Scouts)), "Lightest available model" (Tier 4 (Auxiliaries)); "claude-sonnet-4-20250514"; "haiku-3.5 or equivalent"; "Lightest available model".
 ```
 
 ## Before / After Examples

@@ -27,6 +27,9 @@ export const knownAgentTools = new Set([
   'search',
   'todo',
   'web',
+  // Lightweight lazy-load MCP facades (router tools that spawn the real server on demand)
+  'cortex',
+  'devtools',
 ]);
 
 /**
