@@ -16,7 +16,7 @@ skills:
 
 Use this skill before adding or changing scripts that support agents or skills,
 particularly anything under `scripts/agent-customization/` or
-`scripts/semantic-index/`.
+`rag-index/`.
 
 This skill owns the design standards for agent-supporting Node ES module
 scripts: interface shape, output format, error conventions, idempotency rules,
@@ -25,7 +25,7 @@ and validation exit codes.
 ## When to Use
 
 - A new validation gate, freshness check, or health-summary script is being
-  added under `scripts/agent-customization/` or `scripts/semantic-index/`.
+  added under `scripts/agent-customization/` or `rag-index/`.
 - An existing agent script needs `--json` output, `--help` text, or structured
   stderr diagnostics added.
 - A script is being promoted from ad hoc to a durable gate used in step packet

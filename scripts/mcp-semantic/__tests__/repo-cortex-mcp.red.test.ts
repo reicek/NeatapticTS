@@ -68,7 +68,7 @@ describe('repo cortex MCP red contracts', () => {
     it('registers all semantic tools through createTool-compatible descriptors', () => {
       const descriptors = runModuleEvaluation<ToolDescriptor[]>(`
         import { createRepoCortexMcpServer } from './scripts/mcp-semantic/repo-cortex-mcp.mjs';
-        const server = createRepoCortexMcpServer({ databasePath: './data/turso-replica.sqlite' });
+        const server = createRepoCortexMcpServer({ databasePath: './rag-index/data/turso-replica.sqlite' });
         const listed = await server.dispatch({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
         console.log(JSON.stringify(listed.tools));
       `);
@@ -136,7 +136,7 @@ describe('repo cortex MCP red contracts', () => {
     it('search_corpus returns ranked structured chunk results', () => {
       const result = runModuleEvaluation<Record<string, unknown>>(`
         import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
-        const result = await searchCorpus({ databasePath: './data/turso-replica.sqlite', query: 'NEAT activation', limit: 3 });
+        const result = await searchCorpus({ databasePath: './rag-index/data/turso-replica.sqlite', query: 'NEAT activation', limit: 3 });
         console.log(JSON.stringify(result));
       `);
 
@@ -156,7 +156,7 @@ describe('repo cortex MCP red contracts', () => {
     it('load_chunk returns one structured chunk by numeric id', () => {
       const result = runModuleEvaluation<Record<string, unknown>>(`
         import { loadChunk } from './scripts/mcp-semantic/tools/load-chunk.mjs';
-        const result = await loadChunk({ databasePath: './data/turso-replica.sqlite', chunk_id: 1 });
+        const result = await loadChunk({ databasePath: './rag-index/data/turso-replica.sqlite', chunk_id: 1 });
         console.log(JSON.stringify(result));
       `);
 
@@ -174,7 +174,7 @@ describe('repo cortex MCP red contracts', () => {
     it('load_document returns ordered chunks for a repo file path', () => {
       const result = runModuleEvaluation<Record<string, unknown>>(`
         import { loadDocument } from './scripts/mcp-semantic/tools/load-document.mjs';
-        const result = await loadDocument({ databasePath: './data/turso-replica.sqlite', file_path: 'README.md' });
+        const result = await loadDocument({ databasePath: './rag-index/data/turso-replica.sqlite', file_path: 'README.md' });
         console.log(JSON.stringify(result));
       `);
 
@@ -192,7 +192,7 @@ describe('repo cortex MCP red contracts', () => {
       const result = runModuleEvaluation<Record<string, unknown>>(`
         import { freshnessCheck } from './scripts/mcp-semantic/tools/freshness-check.mjs';
         const result = await freshnessCheck({
-          databasePath: './data/turso-replica.sqlite',
+          databasePath: './rag-index/data/turso-replica.sqlite',
           file_path: 'README.md',
           freshnessProof: { mtime_ms: 1, file_size: 1, sha256: 'stale-proof' },
         });
@@ -210,7 +210,7 @@ describe('repo cortex MCP red contracts', () => {
     it('index_stats returns corpus row counts and last build timestamp', () => {
       const result = runModuleEvaluation<Record<string, unknown>>(`
         import { indexStats } from './scripts/mcp-semantic/tools/index-stats.mjs';
-        const result = await indexStats({ databasePath: './data/turso-replica.sqlite' });
+        const result = await indexStats({ databasePath: './rag-index/data/turso-replica.sqlite' });
         console.log(JSON.stringify(result));
       `);
 
@@ -226,7 +226,7 @@ describe('repo cortex MCP red contracts', () => {
     it('list_families returns indexed document families with counts', () => {
       const result = runModuleEvaluation<Record<string, unknown>>(`
         import { listFamilies } from './scripts/mcp-semantic/tools/list-families.mjs';
-        const result = await listFamilies({ databasePath: './data/turso-replica.sqlite' });
+        const result = await listFamilies({ databasePath: './rag-index/data/turso-replica.sqlite' });
         console.log(JSON.stringify(result));
       `);
 
@@ -289,7 +289,7 @@ describe('repo cortex MCP red contracts', () => {
       expect(report).toEqual(
         expect.objectContaining({
           pass: false,
-          fixHint: 'Run: node scripts/semantic-index/build-index.mjs',
+          fixHint: 'Run: node rag-index/build-index.mjs',
         }),
       );
     });

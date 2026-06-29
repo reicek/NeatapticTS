@@ -67,7 +67,7 @@ export function splitSqlStatements(sql) {
 export async function readCorpusSchema() {
   const schemaPath = path.join(
     __dirname,
-    '../../semantic-index/schema-turso.sql',
+    '../../../rag-index/schema-turso.sql',
   );
   return readFile(schemaPath, 'utf8');
 }

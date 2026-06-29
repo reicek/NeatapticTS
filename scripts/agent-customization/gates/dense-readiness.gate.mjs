@@ -16,8 +16,8 @@ import {
   parseCliArgs,
   printHelp,
   writeJsonOrText,
-} from '../../semantic-index/cli-utils.mjs';
-import { checkDenseReadiness } from '../../semantic-index/dense-readiness.mjs';
+} from '../../../rag-index/cli-utils.mjs';
+import { checkDenseReadiness } from '../../../rag-index/dense-readiness.mjs';
 
 const FIX_HINT = 'Run `npm run index:prewarm` to build the embedding index.';
 const OWNER = '01-planning';

@@ -49,23 +49,23 @@
  * ```
  */
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
-import { queryDenseIndex } from '../../semantic-index/query-dense.mjs';
-import { checkDenseReadiness } from '../../semantic-index/dense-readiness.mjs';
-import { checkRerankerReadiness } from '../../semantic-index/reranker-readiness.mjs';
+import { queryDenseIndex } from '../../../rag-index/query-dense.mjs';
+import { checkDenseReadiness } from '../../../rag-index/dense-readiness.mjs';
+import { checkRerankerReadiness } from '../../../rag-index/reranker-readiness.mjs';
 import {
   rerankCandidates,
   normalizeRerankCandidates,
-} from '../../semantic-index/rerank-index.mjs';
+} from '../../../rag-index/rerank-index.mjs';
 import { getTursoClient, normalizeLimit, readChunkRow } from './cortex-db.mjs';
-import { sanitizeFtsQuery } from '../../semantic-index/tokenizer.mjs';
-import { classifyForSearchCorpus } from '../../semantic-index/classify-query.mjs';
-import { classifyAndRoute } from '../../semantic-index/routing-table.mjs';
+import { sanitizeFtsQuery } from '../../../rag-index/tokenizer.mjs';
+import { classifyForSearchCorpus } from '../../../rag-index/classify-query.mjs';
+import { classifyAndRoute } from '../../../rag-index/routing-table.mjs';
 import {
   validateFilter,
   compileFilterToSqlAliased,
-} from '../../semantic-index/metadata-filter.mjs';
-import { expandQuery } from '../../semantic-index/expand-query.mjs';
-import { runParallelQueries } from '../../semantic-index/parallel-search.mjs';
+} from '../../../rag-index/metadata-filter.mjs';
+import { expandQuery } from '../../../rag-index/expand-query.mjs';
+import { runParallelQueries } from '../../../rag-index/parallel-search.mjs';
 import { createHash, randomUUID } from 'node:crypto';
 import { ErrorCodes, cortexError } from './cortex-error.mjs';
 import {

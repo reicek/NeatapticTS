@@ -318,7 +318,7 @@ slices:
 
 Guidelines:
 
-- Target slice size: prefer <= 8 hours or single-file/folder boundaries.
+- Target slice size: prefer <= 4 hours or single-file/folder boundaries.
 - Include explicit `acceptance_criteria` per slice.
 - Mark `parallelizable: true` only when slices do not share state or ordering constraints.
 - `01-planning` must indicate slice ordering. Sequential slices must include `next_slice`.

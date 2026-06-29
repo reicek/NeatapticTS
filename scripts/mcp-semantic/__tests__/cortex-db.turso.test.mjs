@@ -31,7 +31,7 @@ import path from 'node:path';
 import {
   defaultDatabasePath,
   repoRoot,
-} from '../../semantic-index/init-schema.mjs';
+} from '../../../rag-index/init-schema.mjs';
 
 const MODULE_PATH = '../tools/cortex-db.mjs';
 

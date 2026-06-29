@@ -9,7 +9,7 @@ every question. The driver is `@libsql/client` `createClient()` — fully async
 The server is intentionally bounded to repo-static and direct-MCP facts. It reads
 indexed files, chunk metadata, freshness proofs, and aggregate corpus counts from
 the consolidated Turso corpus database (default local embedded replica at
-`data/turso-replica.sqlite`). It does not read live VS Code UI state, Copilot client state,
+`rag-index/data/turso-replica.sqlite`). It does not read live VS Code UI state, Copilot client state,
 selected agent state, tool-picker state, or model-selection state; those remain
 outside this direct MCP surface unless a future documented bridge supplies them
 with source and freshness metadata.
@@ -23,7 +23,7 @@ The workspace registers four sibling MCP servers. Repo Cortex adds semantic corp
 | `neataptic-workflow-mcp`   | Repo-static workflow context     | Active plan and deterministic workflow inventory facts.                                                                        |
 | `neataptic-validation-mcp` | Direct validation gate execution | Exact allow-listed validation commands from the active step packet.                                                            |
 | `neataptic-gate-mcp`       | Release gate contracts           | Gate metadata and contract-oriented release checks.                                                                            |
-| `cortex`     | Repo-static semantic corpus      | Hybrid BM25 + dense vector search with RRF fusion, graph traversal, context assembly, freshness checks, and corpus statistics. |
+| `cortex`                   | Repo-static semantic corpus      | Hybrid BM25 + dense vector search with RRF fusion, graph traversal, context assembly, freshness checks, and corpus statistics. |
 
 ## Index Configuration
 
@@ -34,20 +34,20 @@ The server opens the Turso (libSQL) corpus database in async mode via
 ```json
 {
   "env": {
-    "TURSO_DATABASE_URL": "file:${workspaceFolder}/data/turso-replica.sqlite"
+    "TURSO_DATABASE_URL": "file:${workspaceFolder}/rag-index/data/turso-replica.sqlite"
   }
 }
 ```
 
 Supported environment variables:
 
-| Variable              | Purpose                                                                                                                                                                                    |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `TURSO_DATABASE_URL`  | Primary database URL. Use `file:./data/turso-replica.sqlite` (or `file:${workspaceFolder}/data/turso-replica.sqlite`) for a local embedded replica, or `libsql://<db>.turso.io` for cloud. |
-| `TURSO_AUTH_TOKEN`    | JWT auth token for cloud access (optional for local `file:` URLs).                                                                                                                         |
-| `TURSO_SYNC_URL`      | Remote sync URL for embedded replica mode (optional; when set, the local `file:` DB syncs from a remote Turso primary).                                                                    |
-| `TURSO_SYNC_INTERVAL` | Sync interval in seconds (optional, default 60).                                                                                                                                           |
-| `TURSO_CONCURRENCY`   | Max in-flight parallel search queries (optional, default 20).                                                                                                                              |
+| Variable              | Purpose                                                                                                                                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TURSO_DATABASE_URL`  | Primary database URL. Use `file:./rag-index/data/turso-replica.sqlite` (or `file:${workspaceFolder}/rag-index/data/turso-replica.sqlite`) for a local embedded replica, or `libsql://<db>.turso.io` for cloud. |
+| `TURSO_AUTH_TOKEN`    | JWT auth token for cloud access (optional for local `file:` URLs).                                                                                                                                             |
+| `TURSO_SYNC_URL`      | Remote sync URL for embedded replica mode (optional; when set, the local `file:` DB syncs from a remote Turso primary).                                                                                        |
+| `TURSO_SYNC_INTERVAL` | Sync interval in seconds (optional, default 60).                                                                                                                                                               |
+| `TURSO_CONCURRENCY`   | Max in-flight parallel search queries (optional, default 20).                                                                                                                                                  |
 
 **Fallback behavior:** When Turso is unreachable, an embedded replica (`file:` URL)
 continues serving reads locally with read-your-writes semantics. If no embedded
@@ -59,7 +59,7 @@ For direct script runs, you can also pass `--databasePath=<path>` or set
 it from repository sources:
 
 ```powershell
-node scripts/semantic-index/build-index.mjs
+node rag-index/build-index.mjs
 ```
 
 ## Tool Schemas and Examples
@@ -777,5 +777,5 @@ node scripts/agent-customization/gates/cortex-mcp-smoke.mjs --json
 If the smoke gate reports a missing index, rebuild first:
 
 ```powershell
-node scripts/semantic-index/build-index.mjs
+node rag-index/build-index.mjs
 ```

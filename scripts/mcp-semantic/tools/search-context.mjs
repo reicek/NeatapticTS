@@ -24,7 +24,7 @@
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
 import { normalizeLimit } from './cortex-db.mjs';
 import { buildResponseFreshness, searchCorpus } from './search-corpus.mjs';
-import { assembleContext } from '../../semantic-index/assemble-context.mjs';
+import { assembleContext } from '../../../rag-index/assemble-context.mjs';
 
 /**
  * Default token budget for an assembled context window.

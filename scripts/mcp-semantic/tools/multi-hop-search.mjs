@@ -175,7 +175,7 @@ async function resolveQueryEmbeddingBuffer(query, options) {
   }
   try {
     const { createOnnxTextEmbedder, normalizeEmbeddingVector } =
-      await import('../../semantic-index/embed-index.mjs');
+      await import('../../../rag-index/embed-index.mjs');
     const embedText = await createOnnxTextEmbedder({
       dimension: DEFAULT_EMBEDDING_DIMENSION,
     });

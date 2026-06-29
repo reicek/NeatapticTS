@@ -16,9 +16,9 @@
  * Each stage reports its state so callers can understand which subsystems
  * contributed to a result and which degraded or timed out.
  */
-import { expandQuery } from '../../semantic-index/expand-query.mjs';
-import { assembleContext } from '../../semantic-index/assemble-context.mjs';
-import { classifyAndRoute } from '../../semantic-index/routing-table.mjs';
+import { expandQuery } from '../../../rag-index/expand-query.mjs';
+import { assembleContext } from '../../../rag-index/assemble-context.mjs';
+import { classifyAndRoute } from '../../../rag-index/routing-table.mjs';
 import {
   buildRankingExplanation,
   buildResponseFreshness,

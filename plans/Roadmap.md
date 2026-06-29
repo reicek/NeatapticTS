@@ -30,14 +30,14 @@ incremental `rag-index/update-rag.mjs` entry point, and update all downstream
 consumers so the live `cortex` MCP server and validation gates stay green.
 
 - RAG/index infrastructure reorganization
-  - Plan: [rag-update.plans.md](rag-update.plans.md) [WIP]
-  - Current internal state: Phase 1 planned; target layout decided (flat rename
-    preserving internal subfolders; generated artifacts under `rag-index/data/`,
-    `rag-index/models/`, `rag-index/freshness-proofs/`, `rag-index/snapshots/`);
-    decision records recorded for snapshot location and entity-graph
-    incrementality.
+  - Plan: [completed/rag-update.plans.md](completed/rag-update.plans.md) [DONE]
+  - Current internal state: Phase 1 archived under `plans/completed/`. Target
+    layout was flat rename preserving internal subfolders; generated artifacts
+    under `rag-index/data/`, `rag-index/models/`, `rag-index/freshness-proofs/`,
+    `rag-index/snapshots/`; decision records recorded for snapshot location and
+    entity-graph incrementality.
 
-**Coordination rule:** this lane owns `scripts/semantic-index/` relocation,
+**Coordination rule:** this lane owns `rag-index/` relocation,
 `rag-index/` creation, `package.json` script repointing, `.gitignore` updates,
 MCP wiring in `.vscode/mcp.json` / `.mcp.json`, and path-reference updates in
 `scripts/mcp-semantic/tools/cortex-db.mjs`,
@@ -243,7 +243,7 @@ and CI-enforced validation.
     parity, docs-quality CI gate wiring, and migration runbook closure.
 
 **Coordination rule:** keep this lane constrained to docs-quality metric ownership surfaces
-(`scripts/semantic-index/**`, `scripts/agent-customization/mcp/**`, gate scripts, package scripts,
+(`rag-index/**`, `scripts/agent-customization/mcp/**`, gate scripts, package scripts,
 CI workflow wiring, and documentation). Avoid unrelated architecture or runtime refactors.
 
 ## Standalone Docs-Quality Complexity Cleanup Lane [DONE]
@@ -455,7 +455,7 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1â€
 1. Corpus index foundation (SQLite, BM25, freshness)
 
 - Plan: [completed/Semantic_Knowledge_Foundation.plans.md](completed/Semantic_Knowledge_Foundation.plans.md) [DONE]
-- Artifacts: `scripts/semantic-index/`, `data/semantic-index.sqlite`
+- Artifacts: `rag-index/`, `rag-index/data/turso-replica.sqlite`
 
 2. MCP tools (search, load, freshness, stats)
 
@@ -467,7 +467,7 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1â€
 
 - Plan: [completed/Semantic_Knowledge_Browser_Snapshot.plans.md](completed/Semantic_Knowledge_Browser_Snapshot.plans.md) [DONE]
 - Gate: Layers 1 and 2 [DONE] satisfied; Layer 3 archived
-- Artifacts: `docs/assets/semantic-snapshot.json`, `examples/shared/semantic/`
+- Artifacts: `rag-index/snapshots/semantic-snapshot.json`, `examples/shared/semantic/`
 
 4. Cortex MCP reliability hardening (Layer 4 â€” agents, skill, lifecycle gate, MCP enhancements)
 
@@ -479,14 +479,14 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1â€
 
 - Plan: [completed/Semantic_Knowledge_Embeddings.plans.md](completed/Semantic_Knowledge_Embeddings.plans.md) [DONE]
 - Gate: Layers 1 and 2 [DONE] required
-- Artifacts: `scripts/semantic-index/embed-index.mjs`, `data/embeddings.sqlite`, ONNX model cache
+- Artifacts: `rag-index/embed-index.mjs`, `rag-index/data/embeddings.sqlite`, ONNX model cache
 
 6. Embedding prewarm + default-on dense contract (Layer 6)
 
 - Plan: [completed/Semantic_Knowledge_Dense_Prewarm.plans.md](completed/Semantic_Knowledge_Dense_Prewarm.plans.md) [DONE]
 - Gate: Layer 5 [DONE] satisfied; Layer 6 archived after final prewarm, readiness, gate, MCP degradation, and tracker-closure validation
 - Soft dependency: Layer 4 [DONE] improved MCP lifecycle management but was not required to close Layer 6
-- Artifacts: `scripts/semantic-index/prewarm-dense.mjs`, `scripts/semantic-index/dense-readiness.mjs`, `scripts/agent-customization/gates/dense-readiness.gate.mjs`; MCP `search_corpus` now defaults `use_dense: true` with graceful cold-state degradation and warm-state `dense_state` provenance
+- Artifacts: `rag-index/prewarm-dense.mjs`, `rag-index/dense-readiness.mjs`, `scripts/agent-customization/gates/dense-readiness.gate.mjs`; MCP `search_corpus` now defaults `use_dense: true` with graceful cold-state degradation and warm-state `dense_state` provenance
 
 7. Advanced RAG architecture (Layer 7+)
 
@@ -513,15 +513,15 @@ had no dependency on the SQLite corpus index and ran in parallel with Layers 1â€
 - NeatChat local retrieval and memory (separate from Repo Cortex)
   - Plan: [completed/NeatChat_Local_Retrieval_Memory.plans.md](completed/NeatChat_Local_Retrieval_Memory.plans.md) [DONE]
   - Depends on archived [completed/neatChat-live-safety-red.plans.md](completed/neatChat-live-safety-red.plans.md) [DONE] as the closed live safety baseline (no conflict; guarded integration)
-  - May reuse chunking and BM25 patterns from Layers 1â€“3 but must not import from `scripts/semantic-index/`
+  - May reuse chunking and BM25 patterns from Layers 1â€“3 but must not import from `rag-index/`
   - Artifacts: `examples/neatChat/memory/` (types, DB adapters, retrieval, services, tests)
 
 **Coordination rules:**
 
 - `completed/Delegation_Tier_Enforcement.plans.md` is the archived Agentic Workflow Enforcement Prerequisite baseline, not a Repo Cortex corpus layer. It has no "Layer N" designation.
-- `data/semantic-index.sqlite` and `data/embeddings.sqlite` are gitignored generated artifacts.
-- `docs/assets/semantic-snapshot.json` is a generated artifact; treat it as read-only.
-- NeatChat memory (`examples/neatChat/memory/`) must never import from `scripts/semantic-index/`.
+- `rag-index/data/turso-replica.sqlite` and `rag-index/data/embeddings.sqlite` are gitignored generated artifacts.
+- `rag-index/snapshots/semantic-snapshot.json` is a generated artifact; treat it as read-only.
+- NeatChat memory (`examples/neatChat/memory/`) must never import from `rag-index/`.
 
 ## Standalone Turso RAG Migration Lane [WIP]
 
@@ -565,7 +565,7 @@ sequentially:
 **Gate:** all archived Repo Cortex Layers 1â€“8 [DONE] satisfied.
 
 **Coordination rule:** this lane is confined to `scripts/mcp-semantic/`,
-`scripts/semantic-index/`, `.mcp.json`, `.vscode/mcp.json`, `package.json` scripts,
+`rag-index/`, `.mcp.json`, `.vscode/mcp.json`, `package.json` scripts,
 and agent/skill documentation files. Do not modify `src/` library code. Treat the
 archived Repo Cortex layer plans as the baselines this migration builds upon.
 

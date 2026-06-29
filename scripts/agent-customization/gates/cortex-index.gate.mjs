@@ -12,8 +12,8 @@ import {
 import {
   defaultDatabasePath,
   repoRoot,
-} from '../../semantic-index/init-schema.mjs';
-import { validateDatabase } from '../../semantic-index/validate-index.mjs';
+} from '../../../rag-index/init-schema.mjs';
+import { validateDatabase } from '../../../rag-index/validate-index.mjs';
 import { runCortexMcpSmoke } from './cortex-mcp-smoke.mjs';
 
 const OWNER = '00-helping';
@@ -21,8 +21,8 @@ const DEFAULT_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_SNAPSHOT_PATH = path.join(
   repoRoot,
-  'docs',
-  'assets',
+  'rag-index',
+  'snapshots',
   'semantic-snapshot.json',
 );
 const DEFAULT_WORKFLOW_PLAN_PATH = 'plans/mcp-active-binding.plans.md';
@@ -233,11 +233,11 @@ function resolveFixHint({
   workflowMcpReport,
 }) {
   if (!indexReport.pass) {
-    return 'Run: node scripts/semantic-index/build-index.mjs to rebuild stale index';
+    return 'Run: node rag-index/build-index.mjs to rebuild stale index';
   }
 
   if (!snapshotCurrency.pass) {
-    return 'Run: npm run docs to regenerate snapshot';
+    return 'Run: npm run index:build-snapshot to regenerate snapshot';
   }
 
   if (!corpusMcpReport.pass) {

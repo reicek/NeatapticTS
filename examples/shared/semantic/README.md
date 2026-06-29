@@ -16,7 +16,7 @@ documentation alongside its UI.
 
 ## Snapshot format
 
-`docs/assets/semantic-snapshot.json` is a **generated artifact** produced by the docs
+`rag-index/snapshots/semantic-snapshot.json` is a **generated artifact** produced by the docs
 pipeline. Never edit it directly — it is regenerated on every `npm run docs` run.
 
 **To update the corpus:**
@@ -24,9 +24,9 @@ pipeline. Never edit it directly — it is regenerated on every `npm run docs` r
 ```sh
 # 1. Edit source documents (READMEs, plans, skills, etc.)
 # 2. Rebuild the SQLite index:
-node scripts/semantic-index/build-index.mjs
+node rag-index/build-index.mjs
 # 3. Publish the snapshot (or let npm run docs do it):
-node scripts/semantic-index/build-browser-snapshot.mjs
+node rag-index/build-browser-snapshot.mjs
 ```
 
 ### Top-level schema
@@ -70,12 +70,12 @@ node scripts/semantic-index/build-browser-snapshot.mjs
 
 ## Generated output contract
 
-`docs/assets/semantic-snapshot.json` is published as part of Stage 1 of the docs pipeline
+`rag-index/snapshots/semantic-snapshot.json` is published as part of Stage 1 of the docs pipeline
 (see `scripts/run-docs.ts → runFullDocsWorkflow`). The snapshot generator runs before the
 browser bundles and folder docs are copied, so the served file is always in sync with the
 SQLite index at build time.
 
-**Treat `docs/assets/semantic-snapshot.json` as read-only** — the same rule that applies to
+**Treat `rag-index/snapshots/semantic-snapshot.json` as read-only** — the same rule that applies to
 all generated artifacts under `docs/` (see the `educational-docs` skill and the
 `implementation-standards` skill for generated-artifact handling).
 

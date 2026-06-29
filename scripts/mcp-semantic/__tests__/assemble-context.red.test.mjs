@@ -6,8 +6,8 @@
 
 import { createHash } from 'node:crypto';
 
-const ASSEMBLE_CONTEXT_PATH = '../../semantic-index/assemble-context.mjs';
-const SEARCH_CONTEXT_PATH = '../../mcp-semantic/tools/search-context.mjs';
+const ASSEMBLE_CONTEXT_PATH = '../../../rag-index/assemble-context.mjs';
+const SEARCH_CONTEXT_PATH = '../tools/search-context.mjs';
 
 function loadAssembleContext() {
   return import(ASSEMBLE_CONTEXT_PATH);

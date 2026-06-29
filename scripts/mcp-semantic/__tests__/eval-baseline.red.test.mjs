@@ -6,7 +6,7 @@
  * and compares current eval runs against stored baselines for Step 22.
  */
 
-const BASELINE_PATH = '../../semantic-index/eval-baseline.mjs';
+const BASELINE_PATH = '../../../rag-index/eval-baseline.mjs';
 
 function loadBaseline() {
   return import(BASELINE_PATH);

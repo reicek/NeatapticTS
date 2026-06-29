@@ -36,7 +36,7 @@ You gather evidence from index-validation output, snapshot metadata, MCP configu
 - ALWAYS stay read-only.
 - Terminal use is limited to non-mutating inspection or validation commands.
 - DO NOT rebuild the corpus, regenerate docs, or edit files.
-- DO NOT hand-edit `docs/assets/semantic-snapshot.json`.
+- DO NOT hand-edit `rag-index/snapshots/semantic-snapshot.json`.
 - DO NOT treat workflow MCP binding symptoms as proof that the semantic index is stale without separate evidence.
 
 ## Gate Enforcement
@@ -68,7 +68,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - Example: If the error log says "index out of date," boundary is index freshness. If "MCP unreachable," boundary is corpus MCP reachability.
 4. **Collect the minimum evidence needed:**
    - Use only index-validation output, snapshot metadata, MCP config, and nearby source files.
-   - Example: Run `cat docs/assets/semantic-snapshot.json | grep "timestamp"` to check snapshot currency.
+   - Example: Run `cat rag-index/snapshots/semantic-snapshot.json | grep "timestamp"` to check snapshot currency.
    - Example: Run `cat .github/mcp-config.yml` to check MCP binding.
 5. **Summarize the failure surface, strongest evidence, and smallest useful handoff into `repo-cortex-workflow`.**
    - Example: "Index validation failed, snapshot timestamp is 3 days old, MCP config unchanged. Handoff to repo-cortex-workflow."

@@ -1,0 +1,128 @@
+Running 2 projects:
+- rag-index-mjs
+- rag-index-scripts
+(node:5000) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:5000) Warning: `--localstorage-file` was provided without a valid path
+PASS rag-index-scripts rag-index/__tests__/metadata-filter.red.test.ts (10.647 s)
+PASS rag-index-scripts rag-index/__tests__/metadata-enrichment.red.test.ts
+PASS rag-index-scripts rag-index/dense-readiness.red.test.ts
+PASS rag-index-scripts rag-index/__tests__/classify-query.red.test.ts
+Freshness hook background embedding update failed: SQLITE_BUSY: database is locked
+file:///C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:435
+        return new LibsqlError(e.message, code, extendedCode, e.rawCode, e);
+               ^
+
+LibsqlError: SQLITE_BUSY: database is locked
+    at mapSqliteError (file:///C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:435:16)
+    at executeStmt (file:///C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:338:15)
+    at Sqlite3Client.execute (file:///C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:83:16)
+    at collectIndexedPaths (file:///C:/NeatapticTS/rag-index/freshness-hooks/freshness-hooks.mjs:361:39)
+    at async flushNow (file:///C:/NeatapticTS/rag-index/freshness-hooks/freshness-hooks.mjs:154:26) {
+  code: 'SQLITE_BUSY',
+  extendedCode: 'SQLITE_BUSY',
+  rawCode: 5,
+  [cause]: SqliteError: database is locked
+      at convertError (C:\NeatapticTS\node_modules\libsql\index.js:59:12)
+      at Database.prepare (C:\NeatapticTS\node_modules\libsql\index.js:131:13)
+      at executeStmt (file:///C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:309:28)
+      at Sqlite3Client.execute (file:///C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:83:16)
+      at collectIndexedPaths (file:///C:/NeatapticTS/rag-index/freshness-hooks/freshness-hooks.mjs:361:39)
+      at async flushNow (file:///C:/NeatapticTS/rag-index/freshness-hooks/freshness-hooks.mjs:154:26) {
+    code: 'SQLITE_BUSY',
+    rawCode: 5
+  }
+}
+
+Node.js v25.4.0
+FAIL rag-index-scripts rag-index/freshness-hooks/freshness-hooks.test.ts (31.43 s)
+  ● freshness-hooks.mjs › createFreshnessHook › debounce and batching › batches two rapid writes into a single incremental run
+
+    Command failed: C:\nvm4w\nodejs\node.exe --input-type=module --eval 
+              import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
+              const calls = [];
+              const hook = createFreshnessHook({
+                debounce_ms: 50,
+                runIncrementalBuild: async (paths) => {
+                  calls.push(paths);
+                  return { updated: paths, failed: [] };
+                },
+              });
+              hook.notifyWrite('src/a.ts');
+              hook.notifyWrite('src/b.ts');
+              await hook.flush();
+              console.log(JSON.stringify(calls));
+            
+    file:///C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:435
+            return new LibsqlError(e.message, code, extendedCode, e.rawCode, e);
+                   ^
+
+    LibsqlError: SQLITE_BUSY: database is locked
+
+    [0m [90m 433 |[39m         [36mconst[39m extendedCode [33m=[39m e[33m.[39mcode[33m;[39m
+     [90m 434 |[39m         [36mconst[39m code [33m=[39m mapToBaseCode(e[33m.[39mrawCode)[33m;[39m
+    [31m[1m>[22m[39m[90m 435 |[39m         [36mreturn[39m [36mnew[39m [33mLibsqlError[39m(e[33m.[39mmessage[33m,[39m code[33m,[39m extendedCode[33m,[39m e[33m.[39mrawCode[33m,[39m e)[33m;[39m
+     [90m     |[39m                [31m[1m^[22m[39m
+     [90m 436 |[39m     }
+     [90m 437 |[39m     [36mreturn[39m e[33m;[39m
+     [90m 438 |[39m }[0m
+
+      at mapSqliteError (file:/C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:435:16)
+      at executeStmt (file:/C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:338:15)
+      at Sqlite3Client.execute (file:/C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:83:16)
+      at collectIndexedPaths (file:/C:/NeatapticTS/rag-index/freshness-hooks/freshness-hooks.mjs:361:39)
+      at async flushNow (file:/C:/NeatapticTS/rag-index/freshness-hooks/freshness-hooks.mjs:154:26) {
+        code: 'SQLITE_BUSY',
+        extendedCode: 'SQLITE_BUSY',
+        rawCode: 5,
+        [cause]: SqliteError: database is locked
+      at convertError (node_modules/libsql/index.js:59:12)
+      at Database.prepare (node_modules/libsql/index.js:131:13)
+      at executeStmt (file:/C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:309:28)
+      at Sqlite3Client.execute (file:/C:/NeatapticTS/node_modules/@libsql/client/lib-esm/sqlite3.js:83:16)
+      at collectIndexedPaths (file:/C:/NeatapticTS/rag-index/freshness-hooks/freshness-hooks.mjs:361:39)
+      at async flushNow (file:/C:/NeatapticTS/rag-index/freshness-hooks/freshness-hooks.mjs:154:26) {
+          code: 'SQLITE_BUSY',
+          rawCode: 5
+        }
+      }
+      
+      Node.js v25.4.0
+      at runModuleEvaluation (rag-index/freshness-hooks/freshness-hooks.test.ts:22:18)
+      at Object.<anonymous> (rag-index/freshness-hooks/freshness-hooks.test.ts:201:24)
+
+PASS rag-index-mjs rag-index/__tests__/schema-turso.test.mjs
+PASS rag-index-scripts rag-index/docs-quality/docs-quality.metrics.test.ts (9.56 s)
+PASS rag-index-mjs rag-index/__tests__/expand-query.red.test.mjs
+PASS rag-index-mjs rag-index/__tests__/eval-recall-benchmark.test.mjs
+PASS rag-index-mjs rag-index/__tests__/expand-turso.test.mjs
+PASS rag-index-mjs rag-index/__tests__/extract-doc-entities.red.test.mjs
+PASS rag-index-mjs rag-index/__tests__/build-term-index.red.test.mjs
+PASS rag-index-mjs rag-index/__tests__/extract-cross-refs.red.test.mjs
+PASS rag-index-mjs rag-index/__tests__/vector-top-k.test.mjs
+PASS rag-index-mjs rag-index/__tests__/metadata-filter-turso.test.mjs
+PASS rag-index-mjs rag-index/__tests__/assemble-context-turso.test.mjs
+PASS rag-index-scripts rag-index/__tests__/rerank-index.red.test.ts
+PASS rag-index-scripts rag-index/embed/hybrid-rank.red.test.ts
+PASS rag-index-scripts rag-index/__tests__/routing-table.red.test.ts
+PASS rag-index-mjs rag-index/__tests__/batch-index.test.mjs
+PASS rag-index-mjs rag-index/__tests__/rrf.test.mjs
+PASS rag-index-mjs rag-index/__tests__/embed-turso.test.mjs
+PASS rag-index-scripts rag-index/__tests__/semantic-index.red.test.ts
+PASS rag-index-scripts rag-index/__tests__/reranker-readiness.red.test.ts
+PASS rag-index-scripts rag-index/embed/embed-index.red.test.ts
+PASS rag-index-scripts rag-index/code-quality/code-quality-scanner.red.test.ts (6.703 s)
+PASS rag-index-mjs rag-index/__tests__/extract-code-entities.red.test.mjs (15.277 s)
+PASS rag-index-scripts rag-index/prewarm-dense.red.test.ts
+PASS rag-index-mjs rag-index/__tests__/update-rag.test.mjs (522.749 s)
+PASS rag-index-scripts rag-index/__tests__/download-reranker.red.test.ts
+PASS rag-index-mjs rag-index/__tests__/build-query.turso.test.mjs
+PASS rag-index-mjs rag-index/__tests__/graph-term.turso.test.mjs (42.487 s)
+PASS rag-index-mjs rag-index/__tests__/schema-session.turso.test.mjs
+PASS rag-index-scripts rag-index/embed/validate-embeddings.red.test.ts
+PASS rag-index-scripts rag-index/docs-quality/docs-quality.compare.test.ts
+PASS rag-index-scripts rag-index/rag-eval/eval-runner.test.ts
+PASS rag-index-scripts rag-index/ts-chunk/ts-chunker.red.test.ts
+PASS rag-index-scripts rag-index/embed-readiness.test.ts
+PASS rag-index-mjs rag-index/__tests__/validate.turso.test.mjs
+PASS rag-index-mjs rag-index/__tests__/semantic-index.red.test.mjs

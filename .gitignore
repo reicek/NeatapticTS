@@ -16,19 +16,20 @@ pnpm-debug.log*
 /docs/
 /dist-docs/
 
+# RAG generated artifacts
+rag-index/data/*.sqlite
+rag-index/data/*.sqlite-journal
+rag-index/data/hook-context/*.json
+rag-index/data/mcp-session-override.json
+rag-index/models/
+rag-index/freshness-proofs/*/
+rag-index/snapshots/
+
 # Coverage and test output
 /coverage/
 /nyc_output/
 /test-results/
 /ascii_maze_snapshots/
-data/semantic-index.sqlite
-data/embeddings.sqlite
-data/turso-replica.sqlite
-data/turso-replica.sqlite.backup-pre-migration
-data/*.sqlite-journal
-data/mcp-session-override.json
-data/hook-context-*.json
-scripts/semantic-index/models/
 
 # Environment/secret files
 .env
@@ -71,5 +72,4 @@ benchmarks/asciiMaze.benchmark.results.
 
 # Trace storage (Chrome DevTools MCP performance traces)
 tmp/
-freshness-proof-*/
 tmp-feedback-*/

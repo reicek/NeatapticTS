@@ -11,10 +11,10 @@ context with a local BM25 + token-overlap ranking engine.
 NeatChat uses two cooperating memory tiers. This module adds the **durable tier only**;
 the session tier is already delivered and frozen under `examples/neatChat/core/`.
 
-| Tier             | Storage                                    | Scope                    | Retention                      |
-| ---------------- | ------------------------------------------ | ------------------------ | ------------------------------ |
-| **Session**      | In-process (W3 baseline in `core/`)        | Current session only     | Cleared on session reset       |
-| **Durable**      | SQLite (Node) / IndexedDB (browser)        | Persists across sessions | Pruned by LRU cap (1 000 max)  |
+| Tier        | Storage                             | Scope                    | Retention                     |
+| ----------- | ----------------------------------- | ------------------------ | ----------------------------- |
+| **Session** | In-process (W3 baseline in `core/`) | Current session only     | Cleared on session reset      |
+| **Durable** | SQLite (Node) / IndexedDB (browser) | Persists across sessions | Pruned by LRU cap (1 000 max) |
 
 The two tiers cooperate during a live exchange:
 
@@ -44,17 +44,17 @@ run simultaneously.
 
 ## How this differs from the Repo Cortex
 
-The [Repo Cortex](../../data/semantic-index.sqlite) indexes **NeatapticTS library
+The [Repo Cortex](../../rag-index/data/turso-replica.sqlite) indexes **NeatapticTS library
 documentation, skills, agents, and plans** for developer AI tooling. Its data and query
 surface are entirely separate.
 
 This module indexes **NeatChat's own conversation history** for conversational quality
 improvement. The two systems share no database files:
 
-| System          | Database file                     | Purpose                          |
-| --------------- | --------------------------------- | -------------------------------- |
-| Repo Cortex     | `data/semantic-index.sqlite`      | Developer tooling (library docs) |
-| NeatChat memory | `data/neatchat-memory.sqlite`     | Conversation history (demo)      |
+| System          | Database file                         | Purpose                          |
+| --------------- | ------------------------------------- | -------------------------------- |
+| Repo Cortex     | `rag-index/data/turso-replica.sqlite` | Developer tooling (library docs) |
+| NeatChat memory | `data/neatchat-memory.sqlite`         | Conversation history (demo)      |
 
 NeatChat memory must be **self-contained**: it must run in both Node and browser without
 the Repo Cortex being present or having been indexed.
@@ -114,15 +114,15 @@ flowchart TD
 
 ## Module files
 
-| File                              | Role                                                                    |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| `neatChat.memory.types.ts`        | `StoredMemoryEntry`, `MemoryQuery`, `MemoryResult`, `MemoryAdapter`     |
-| `neatChat.memory.constants.ts`    | `MAX_DURABLE_ENTRIES`, BM25 params, `DEFAULT_DB_PATH`, IDB names        |
-| `neatChat.memory.fts.ts`          | `sanitizeFtsQuery` — local FTS5 sanitizer (no Repo Cortex dependency)   |
-| `neatChat.memory.db.ts`           | `SqliteMemoryAdapter` — Node SQLite + FTS5 adapter                      |
-| `neatChat.memory.idb.ts`          | `IdbMemoryAdapter` — browser raw IndexedDB adapter                      |
-| `neatChat.retrieval.ts`           | `retrieveStoredMemoryResults`, `rankMemoryEntries` — BM25 ranking       |
-| `neatChat.memory.services.ts`     | `storeExchangeMemory`, `retrieveMemoryContext`, `pruneMemory`, `exportMemory` |
+| File                           | Role                                                                          |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `neatChat.memory.types.ts`     | `StoredMemoryEntry`, `MemoryQuery`, `MemoryResult`, `MemoryAdapter`           |
+| `neatChat.memory.constants.ts` | `MAX_DURABLE_ENTRIES`, BM25 params, `DEFAULT_DB_PATH`, IDB names              |
+| `neatChat.memory.fts.ts`       | `sanitizeFtsQuery` — local FTS5 sanitizer (no Repo Cortex dependency)         |
+| `neatChat.memory.db.ts`        | `SqliteMemoryAdapter` — Node SQLite + FTS5 adapter                            |
+| `neatChat.memory.idb.ts`       | `IdbMemoryAdapter` — browser raw IndexedDB adapter                            |
+| `neatChat.retrieval.ts`        | `retrieveStoredMemoryResults`, `rankMemoryEntries` — BM25 ranking             |
+| `neatChat.memory.services.ts`  | `storeExchangeMemory`, `retrieveMemoryContext`, `pruneMemory`, `exportMemory` |
 
 ---
 
@@ -186,16 +186,16 @@ is well within raw IDB's practical complexity threshold).
 
 **Object store:** `neatchat_memory` (database: `neatchat-memory`, version 1)
 
-| Field        | IDB role                        | Notes                              |
-| ------------ | ------------------------------- | ---------------------------------- |
-| `entryId`    | Auto-increment key path         | Set by `autoIncrement: true`       |
-| `sessionId`  | Index (`sessionId`, non-unique) | Used for session-scoped list       |
-| `lastUsed`   | Index (`lastUsed`, non-unique)  | Used for LRU ordering              |
-| `entryType`  | Index (`entryType`, non-unique) | Used for type-based filtering      |
-| `content`    | Stored field                    | Full text payload                  |
-| `tokens`     | Stored field (string array)     | Pre-tokenized terms for BM25       |
-| `score`      | Stored field                    | Reinforcement weight               |
-| `createdAt`  | Stored field                    | Epoch ms                           |
+| Field       | IDB role                        | Notes                         |
+| ----------- | ------------------------------- | ----------------------------- |
+| `entryId`   | Auto-increment key path         | Set by `autoIncrement: true`  |
+| `sessionId` | Index (`sessionId`, non-unique) | Used for session-scoped list  |
+| `lastUsed`  | Index (`lastUsed`, non-unique)  | Used for LRU ordering         |
+| `entryType` | Index (`entryType`, non-unique) | Used for type-based filtering |
+| `content`   | Stored field                    | Full text payload             |
+| `tokens`    | Stored field (string array)     | Pre-tokenized terms for BM25  |
+| `score`     | Stored field                    | Reinforcement weight          |
+| `createdAt` | Stored field                    | Epoch ms                      |
 
 The IDB schema mirrors the SQLite schema field-for-field so adapter tests can switch
 between the two without changing assertion shapes.
@@ -214,6 +214,7 @@ $$
 $$
 
 Where:
+
 - $f(q, d)$ — term frequency of $q$ in document $d$
 - $|d|$ — document length (token count)
 - $\overline{dl}$ — average document length across the corpus
@@ -255,7 +256,7 @@ const safe = sanitizeFtsQuery('hello (world)* "test"'); // → 'hello world test
 ```
 
 This sanitizer is **local to this module** and must not be imported from
-`scripts/semantic-index/`. Both the SQLite and browser retrieval paths call it before
+`rag-index/`. Both the SQLite and browser retrieval paths call it before
 scoring.
 
 ---
@@ -265,10 +266,10 @@ scoring.
 The `MemoryAdapter` interface in `neatChat.memory.types.ts` decouples storage from
 business logic. Two real adapters ship with this module:
 
-| Adapter               | Runtime  | Dependency       |
-| --------------------- | -------- | ---------------- |
-| `SqliteMemoryAdapter` | Node     | `@libsql/client` |
-| `IdbMemoryAdapter`    | Browser  | none (raw IDB)   |
+| Adapter               | Runtime | Dependency       |
+| --------------------- | ------- | ---------------- |
+| `SqliteMemoryAdapter` | Node    | `@libsql/client` |
+| `IdbMemoryAdapter`    | Browser | none (raw IDB)   |
 
 Tests inject a tiny in-memory adapter that satisfies the same interface without touching
 the filesystem or adding `fake-indexeddb`:
@@ -387,7 +388,7 @@ rm data/neatchat-memory.sqlite
 ```
 
 The adapter will recreate the schema automatically on the next open. The database is
-distinct from `data/semantic-index.sqlite` (Repo Cortex), so deleting one does not
+distinct from `rag-index/data/turso-replica.sqlite` (Repo Cortex), so deleting one does not
 affect the other.
 
 ### Clear IndexedDB (browser)
@@ -420,7 +421,8 @@ await storeExchangeMemory({
   adapter,
   sessionId: 'session-abc',
   userMessage: 'What activation functions work best for NEAT?',
-  response: 'Sigmoid and tanh are common defaults; ReLU can destabilize recurrent nets.',
+  response:
+    'Sigmoid and tanh are common defaults; ReLU can destabilize recurrent nets.',
 });
 
 // Retrieve ranked context before the next candidate selection

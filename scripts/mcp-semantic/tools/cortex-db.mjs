@@ -13,13 +13,12 @@ import { pathToFileURL } from 'node:url';
 import {
   defaultDatabasePath,
   repoRoot,
-} from '../../semantic-index/init-schema.mjs';
+} from '../../../rag-index/init-schema.mjs';
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
-import { sanitizeFtsQuery as sanitizeFtsQueryImpl } from '../../semantic-index/tokenizer.mjs';
+import { sanitizeFtsQuery as sanitizeFtsQueryImpl } from '../../../rag-index/tokenizer.mjs';
 
 /** Human-readable hint for operators when the semantic index database is missing. */
-export const CORTEX_FIX_HINT =
-  'Run: node scripts/semantic-index/build-index.mjs';
+export const CORTEX_FIX_HINT = 'Run: node rag-index/build-index.mjs';
 
 /**
  * Default embedded-replica sync interval in seconds.
@@ -43,7 +42,7 @@ const tursoClientCache = new Map();
  * `TURSO_DATABASE_URL` environment variable, or the compiled-in default path.
  *
  * When `TURSO_DATABASE_URL` is set (e.g. `libsql://my-db.turso.io` or
- * `file:data/turso-replica.sqlite`), it is returned verbatim — it is already
+ * `file:./rag-index/data/turso-replica.sqlite`), it is returned verbatim — it is already
  * a URL, not a filesystem path, so `path.resolve` must not be applied.
  *
  * When no Turso URL is configured, the compiled-in default path
@@ -256,7 +255,7 @@ export function asIsoTimestamp(value) {
 /**
  * Sanitizes user-supplied text for safe use as an FTS5 MATCH query.
  *
- * Delegates to {@link sanitizeFtsQueryImpl} in `scripts/semantic-index/tokenizer.mjs`,
+ * Delegates to {@link sanitizeFtsQueryImpl} in `rag-index/tokenizer.mjs`,
  * which preserves code identifiers (dotted, camelCase, snake_case, file-extension
  * hints) as quoted phrases and applies prefix wildcards to plain words.
  *

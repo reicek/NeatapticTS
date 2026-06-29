@@ -17,18 +17,18 @@ import {
   matchesQueryExpectation,
   aggregateMetrics,
   aggregateByClass,
-} from '../../semantic-index/eval-metrics.mjs';
+} from '../../../rag-index/eval-metrics.mjs';
 import {
   storeBaseline,
   loadBaseline,
   compareToBaseline,
-} from '../../semantic-index/eval-baseline.mjs';
+} from '../../../rag-index/eval-baseline.mjs';
 import {
   wilcoxonSignedRankTest,
   compareResults,
   alphaSweep,
   normalCdf,
-} from '../../semantic-index/eval-compare.mjs';
+} from '../../../rag-index/eval-compare.mjs';
 import {
   validateQuerySchema,
   runEval,
@@ -39,12 +39,12 @@ import {
   resolveSearchFn,
   runAllConditions,
   DEFAULT_QUERY_FILE_PATH,
-} from '../../semantic-index/eval-runner.mjs';
+} from '../../../rag-index/eval-runner.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const runnerPath = path.resolve(
   __dirname,
-  '../../semantic-index/eval-runner.mjs',
+  '../../../rag-index/eval-runner.mjs',
 );
 
 afterEach(() => {
@@ -661,6 +661,10 @@ describe('eval-runner remaining coverage', () => {
       alpha: 0.5,
       limit: 10,
       contextBudget: 4096,
+      compact: true,
+      read_top_result: true,
+      auto_fallback: true,
+      include_code_only: false,
     });
   });
 

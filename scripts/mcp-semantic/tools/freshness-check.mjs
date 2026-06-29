@@ -10,8 +10,8 @@ import path from 'node:path';
 import {
   getFreshnessProof,
   isFreshDocument,
-} from '../../semantic-index/freshness.mjs';
-import { repoRoot } from '../../semantic-index/init-schema.mjs';
+} from '../../../rag-index/freshness.mjs';
+import { repoRoot } from '../../../rag-index/init-schema.mjs';
 import { normalizeRepoPath, getTursoClient } from './cortex-db.mjs';
 
 /**

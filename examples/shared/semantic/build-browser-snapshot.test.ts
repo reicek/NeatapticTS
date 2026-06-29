@@ -21,7 +21,7 @@ describe('semantic browser snapshot', () => {
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'semantic-browser-snapshot-'),
       );
-      const databasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
+      const databasePath = path.join(fixtureDirectory, 'rag-index.sqlite');
       const outputPath = path.join(fixtureDirectory, 'semantic-snapshot.json');
 
       execFileSync(
@@ -34,7 +34,7 @@ describe('semantic browser snapshot', () => {
       execFileSync(
         process.execPath,
         [
-          'scripts/semantic-index/build-browser-snapshot.mjs',
+          'rag-index/build-browser-snapshot.mjs',
           '--database',
           databasePath,
           '--output',
@@ -70,7 +70,7 @@ function buildSeedScript(databasePath: string): string {
     import { readFile } from 'node:fs/promises';
     import path from 'node:path';
     const databasePath = ${JSON.stringify(databasePath)};
-    const schema = await readFile(path.resolve('scripts/semantic-index/schema-turso.sql'), 'utf8');
+    const schema = await readFile(path.resolve('rag-index/schema-turso.sql'), 'utf8');
     const database = createClient({ url: 'file:' + databasePath });
     try {
       await database.executeMultiple(schema);

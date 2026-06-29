@@ -10,7 +10,12 @@ export const LEARNING_LOG_PATH = path.join(
   'ai-learning',
   'learning-log.jsonl',
 );
-export const RUNTIME_CONTEXT_DIR = path.join(repoRoot, 'data');
+export const RUNTIME_CONTEXT_DIR = path.join(
+  repoRoot,
+  'rag-index',
+  'data',
+  'hook-context',
+);
 export const RUNTIME_PROOF_TOOL_PATTERN =
   /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol)$/i;
 export const RUNTIME_CONTEXT_PREPARE_PATTERN =

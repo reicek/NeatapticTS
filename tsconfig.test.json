@@ -26,7 +26,8 @@
     "testing/**/*.test.ts",
     "benchmarks/**/*.ts",
     "examples/**/*.ts",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "rag-index/**/*.ts"
   ],
   "exclude": ["dist", "node_modules"]
 }

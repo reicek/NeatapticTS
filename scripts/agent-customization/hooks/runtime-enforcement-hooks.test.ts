@@ -20,7 +20,9 @@ const RUNTIME_CONTEXT_CLI_PATH = path.join(
 const TEST_SESSION_ID = 'runtime-hook-test-session';
 const TEST_CONTEXT_PATH = path.join(
   REPO_ROOT,
+  'rag-index',
   'data',
+  'hook-context',
   `hook-context-${TEST_SESSION_ID}.json`,
 );
 const EDIT_HOOK_INPUT = JSON.stringify({
@@ -41,7 +43,7 @@ describe('runtime enforcement hook path', () => {
     // are self-contained and not coupled to the environment's index state.
     const refreshResult = spawnSync(
       process.execPath,
-      ['scripts/semantic-index/session-start-index.mjs'],
+      ['rag-index/session-start-index.mjs'],
       {
         cwd: REPO_ROOT,
         encoding: 'utf8',

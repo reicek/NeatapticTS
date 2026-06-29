@@ -54,7 +54,7 @@ import { loadChunk } from './tools/load-chunk.mjs';
 import { loadDocument } from './tools/load-document.mjs';
 import { loadParentChunk } from './tools/load-parent-chunk.mjs';
 import { multiHopSearchHandler } from './tools/multi-hop-search.mjs';
-import { runDocsQualityMetrics } from '../semantic-index/docs-quality/docs-quality.metrics.mjs';
+import { runDocsQualityMetrics } from '../../rag-index/docs-quality/docs-quality.metrics.mjs';
 import { searchAdvanced } from './tools/search-advanced.mjs';
 import { searchContext } from './tools/search-context.mjs';
 import { searchCorpus } from './tools/search-corpus.mjs';
@@ -64,7 +64,7 @@ import { tursoBranch } from './tools/turso-branch.mjs';
 import { tursoPitr } from './tools/turso-pitr.mjs';
 import { buildAnnIndex } from './tools/ann-index.mjs';
 import { getTursoClient } from './tools/cortex-db.mjs';
-import { runParallelQueries } from '../semantic-index/parallel-search.mjs';
+import { runParallelQueries } from '../../rag-index/parallel-search.mjs';
 
 const SERVER_VERSION = '0.1.0';
 const ENTRYPOINT = 'scripts/mcp-semantic/repo-cortex-mcp.mjs';

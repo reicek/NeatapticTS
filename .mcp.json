@@ -26,7 +26,7 @@
       "command": "node",
       "args": ["scripts/agent-customization/mcp/cortex-facade.mjs"],
       "env": {
-        "TURSO_DATABASE_URL": "file:./data/turso-replica.sqlite",
+        "TURSO_DATABASE_URL": "file:./rag-index/data/turso-replica.sqlite",
         "TURSO_AUTH_TOKEN": "",
         "TURSO_SYNC_URL": "",
         "TURSO_SYNC_INTERVAL": "60"

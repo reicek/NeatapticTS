@@ -37,8 +37,7 @@ function createTestDb(databasePath) {
 describe('traverse-graph', () => {
   describe('traverseGraph', () => {
     it('returns graph_available: false when entities/edges tables do not exist', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -73,8 +72,7 @@ describe('traverse-graph', () => {
     });
 
     it('returns empty results when no seed entities are found', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -133,8 +131,7 @@ describe('traverse-graph', () => {
     });
 
     it('resolves seed entities by exact qualified_name', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -207,8 +204,7 @@ describe('traverse-graph', () => {
     });
 
     it('performs BFS traversal following outgoing edges', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -303,8 +299,7 @@ describe('traverse-graph', () => {
     });
 
     it('performs BFS traversal following incoming edges (reverse traversal)', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -397,8 +392,7 @@ describe('traverse-graph', () => {
     });
 
     it('filters by relationship types', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -514,8 +508,7 @@ describe('traverse-graph', () => {
     });
 
     it('respects max_hops limit', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -595,8 +588,7 @@ describe('traverse-graph', () => {
     });
 
     it('respects max_results limit', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -683,8 +675,7 @@ describe('traverse-graph', () => {
     });
 
     it('filters by confidence level', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -790,8 +781,7 @@ describe('traverse-graph', () => {
     });
 
     it('prevents cycles in BFS traversal', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -873,8 +863,7 @@ describe('traverse-graph', () => {
     });
 
     it('resolves seed entities by fuzzy name matching', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -944,8 +933,7 @@ describe('traverse-graph', () => {
     });
 
     it('resolves seed entities by free-text query', async () => {
-      const { traverseGraph } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+      const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),
@@ -1017,7 +1005,7 @@ describe('traverse-graph', () => {
   describe('traverseGraphHandler', () => {
     it('maps MCP tool arguments to traverseGraph options', async () => {
       const { traverseGraphHandler } =
-        await import('../../mcp-semantic/tools/traverse-graph.mjs');
+        await import('../tools/traverse-graph.mjs');
 
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'traverse-graph-test-'),

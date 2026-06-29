@@ -4,7 +4,7 @@
  *
  * These tests define the EXPECTED behavior AFTER implementation. They must FAIL
  * because:
- * - `scripts/semantic-index/parallel-search.mjs` does not exist yet (dynamic import throws).
+ * - `rag-index/parallel-search.mjs` does not exist yet (dynamic import throws).
  * - `readFileSync` for the missing source file throws ENOENT.
  * - `search-corpus.mjs` still uses the old sequential `await denseQuery({...})` pattern.
  * - `parallel_search` is not registered in the MCP tool list yet.
@@ -36,7 +36,7 @@ const PARALLEL_SEARCH_PATH = path.resolve(
   __dirname,
   '..',
   '..',
-  'semantic-index',
+  'rag-index',
   'parallel-search.mjs',
 );
 const SEARCH_CORPUS_PATH = path.resolve(
@@ -156,7 +156,7 @@ async function teardownDb(client, tempDir, dbPath) {
 // ---------------------------------------------------------------------------
 
 describe('parallel-search.mjs: module exists and exports', () => {
-  it('scripts/semantic-index/parallel-search.mjs exports runParallelQueries', async () => {
+  it('rag-index/parallel-search.mjs exports runParallelQueries', async () => {
     const mod = await import(PARALLEL_SEARCH_PATH);
     expect(typeof mod.runParallelQueries).toBe('function');
   });

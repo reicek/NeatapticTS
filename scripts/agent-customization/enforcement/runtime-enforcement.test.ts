@@ -16,7 +16,9 @@ const RUNTIME_ENFORCEMENT_MODULE_URL = pathToFileURL(
 const TEST_SESSION_ID = 'runtime-enforcement-test-session';
 const TEST_CONTEXT_PATH = path.join(
   REPO_ROOT,
+  'rag-index',
   'data',
+  'hook-context',
   `hook-context-${TEST_SESSION_ID}.json`,
 );
 

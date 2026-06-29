@@ -1,9 +1,9 @@
 /**
  * @description Standard gate for the Repo Cortex dense embedding layer. Checks three
  * conditions in order:
- * 1. ONNX model assets are present in `scripts/semantic-index/models/`
+ * 1. ONNX model assets are present in `rag-index/models/`
  *    (`model.onnx` and `model-meta.json`).
- * 2. The consolidated corpus DB (`data/turso-replica.sqlite`) has usable embeddings
+ * 2. The consolidated corpus DB (`rag-index/data/turso-replica.sqlite`) has usable embeddings
  *    for the active model in the `chunks.embedding` column
  *    (delegates to `validate-embeddings.mjs`).
  * 3. Hybrid MRR\@5 exceeds BM25-only MRR\@5 by at least the minimum improvement
@@ -25,8 +25,8 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { validateEmbeddings } from '../../semantic-index/validate-embeddings.mjs';
-import { DEFAULT_MODEL_DIRECTORY } from '../../semantic-index/embed-index.mjs';
+import { validateEmbeddings } from '../../../rag-index/validate-embeddings.mjs';
+import { DEFAULT_MODEL_DIRECTORY } from '../../../rag-index/embed-index.mjs';
 
 const OWNER = '05-green-testing';
 const DEFAULT_MIN_HYBRID_IMPROVEMENT = 0.02;
@@ -109,14 +109,14 @@ function createGateReport(evidence) {
     fixHint:
       evidence.length === 0
         ? null
-        : 'Run: node scripts/semantic-index/download-model.mjs; node scripts/semantic-index/embed-index.mjs; node scripts/semantic-index/eval-embeddings.mjs --json',
+        : 'Run: node rag-index/download-model.mjs; node rag-index/embed-index.mjs; node rag-index/eval-embeddings.mjs --json',
     owner: OWNER,
   };
 }
 
 async function loadEvaluationReport(options) {
   const evaluationModule =
-    await import('../../semantic-index/eval-embeddings.mjs');
+    await import('../../../rag-index/eval-embeddings.mjs');
   return evaluationModule.evaluateEmbeddings({
     alpha: options.alpha,
     corpusDatabasePath: options.corpusDatabasePath,

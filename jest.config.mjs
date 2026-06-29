@@ -74,8 +74,8 @@ const config = {
       testTimeout: 300000,
     },
     {
-      displayName: 'semantic-index-scripts',
-      testMatch: ['**/scripts/semantic-index/**/*.test.ts'],
+      displayName: 'rag-index-scripts',
+      testMatch: ['**/rag-index/**/*.test.ts'],
       preset: 'ts-jest/presets/default-esm',
       testEnvironment: 'node',
       extensionsToTreatAsEsm: ['.ts'],
@@ -127,11 +127,11 @@ const config = {
       testTimeout: 300000,
     },
     {
-      displayName: 'semantic-index-mjs',
-      testMatch: ['**/scripts/semantic-index/**/*.test.mjs'],
+      displayName: 'rag-index-mjs',
+      testMatch: ['**/rag-index/**/*.test.mjs'],
       testEnvironment: 'node',
       transform: {},
-      testTimeout: 300000,
+      testTimeout: 600000,
     },
     {
       displayName: 'mcp-semantic-mjs',

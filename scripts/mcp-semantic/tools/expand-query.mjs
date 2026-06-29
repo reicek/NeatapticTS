@@ -6,7 +6,7 @@
  * that can be invoked directly by VS Code's MCP host. Handles parameter
  * coercion, error isolation, and result normalization.
  */
-import { expandQuery } from '../../semantic-index/expand-query.mjs';
+import { expandQuery } from '../../../rag-index/expand-query.mjs';
 
 /**
  * Handle an expand_query MCP tool invocation.
@@ -46,7 +46,7 @@ export async function expandQueryHandler(argumentsObject = {}) {
   // Map query_class to expansion behavior when provided
   if (argumentsObject.query_class && expandQueryOption === true) {
     const { expansionBehaviorForClass } =
-      await import('../../semantic-index/expand-query.mjs');
+      await import('../../../rag-index/expand-query.mjs');
     const behavior = expansionBehaviorForClass(argumentsObject.query_class);
     if (behavior === false) {
       expandQueryOption = false;

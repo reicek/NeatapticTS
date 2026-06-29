@@ -9,10 +9,10 @@
 Finalize the contract and lightweight tool snapshots for the two planned
 stdio MCP facades:
 
-| Facade key | Real server | Lazy-spawn command                                                                                       |
-| ---------- | ----------- | -------------------------------------------------------------------------------------------------------- |
-| `cortex`   | `cortex`    | `node scripts/mcp-semantic/repo-cortex-mcp.mjs`                                                         |
-| `devtools` | `devtools`  | `npx -y chrome-devtools-mcp@1.4.0 --headless=true --usage-statistics=false --performance-crux=false`     |
+| Facade key | Real server | Lazy-spawn command                                                                                   |
+| ---------- | ----------- | ---------------------------------------------------------------------------------------------------- |
+| `cortex`   | `cortex`    | `node scripts/mcp-semantic/repo-cortex-mcp.mjs`                                                      |
+| `devtools` | `devtools`  | `npx -y chrome-devtools-mcp@1.4.0 --headless=true --usage-statistics=false --performance-crux=false` |
 
 ## Deliverables
 
@@ -82,8 +82,14 @@ facade spawns the child.
   "inputSchema": {
     "type": "object",
     "properties": {
-      "operation": { "type": "string", "description": "Real Cortex tool name, e.g. search_corpus." },
-      "args": { "type": "object", "description": "Arguments forwarded to the real tool." }
+      "operation": {
+        "type": "string",
+        "description": "Real Cortex tool name, e.g. search_corpus."
+      },
+      "args": {
+        "type": "object",
+        "description": "Arguments forwarded to the real tool."
+      }
     },
     "required": ["operation"]
   }
@@ -107,7 +113,7 @@ different description.
 - **Contract:** Host calls `cortex({ operation: "<op>", args: {...} })` or
   `devtools({ operation: "<op>", args: {...} })`. The facade validates the router
   name, extracts `operation`, and forwards `tools/call { name: <op>,
-  arguments: args }` to the real server.
+arguments: args }` to the real server.
 - **Trade-off:** The host no longer sees per-operation argument schemas at
   session start. Argument validation happens at call time by the real server,
   which is acceptable because both facades are lazy and the real server is the
@@ -156,13 +162,13 @@ facade forwards: tools/call { name: "freshness_check", arguments: {} }
 
 ### Transport details
 
-| Concern                  | `cortex` facade                                 | `devtools` facade                                                                          |
-| ------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Spawn command            | `node scripts/mcp-semantic/repo-cortex-mcp.mjs`                                                                   | `npx -y chrome-devtools-mcp@1.4.0 --headless=true --usage-statistics=false --performance-crux=false` |
-| Framing to child         | Content-Length (via `mcp-utils.mjs`) or NDJSON                                                                      | NDJSON only                                                                                         |
-| Env to disable telemetry | not applicable                                  | `CI=1`, `CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS=1`                                        |
-| Stderr handling          | log/ignore                                      | ignore (disclaimers); optional passthrough for debugging                                   |
-| First-call timeout       | normal                                          | generous (slow `checkForUpdates` / install)                                                |
+| Concern                  | `cortex` facade                                 | `devtools` facade                                                                                    |
+| ------------------------ | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Spawn command            | `node scripts/mcp-semantic/repo-cortex-mcp.mjs` | `npx -y chrome-devtools-mcp@1.4.0 --headless=true --usage-statistics=false --performance-crux=false` |
+| Framing to child         | Content-Length (via `mcp-utils.mjs`) or NDJSON  | NDJSON only                                                                                          |
+| Env to disable telemetry | not applicable                                  | `CI=1`, `CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS=1`                                                  |
+| Stderr handling          | log/ignore                                      | ignore (disclaimers); optional passthrough for debugging                                             |
+| First-call timeout       | normal                                          | generous (slow `checkForUpdates` / install)                                                          |
 
 ### Error propagation
 
@@ -183,14 +189,14 @@ facade forwards: tools/call { name: "freshness_check", arguments: {} }
 
 Methods are handled as follows:
 
-| Method                                 | Handler                                                                                                                             |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `initialize`                           | Facade responds from snapshot metadata; child is not spawned. The returned capabilities must **not** advertise `tools.listChanged`. |
-| `notifications/initialized`            | Facade acknowledges; no child interaction.                                                                                          |
-| `ping`                                 | Facade responds locally.                                                                                                            |
-| `tools/list`                           | Facade returns the static snapshot; no child interaction.                                                                           |
+| Method                                 | Handler                                                                                                                                                    |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `initialize`                           | Facade responds from snapshot metadata; child is not spawned. The returned capabilities must **not** advertise `tools.listChanged`.                        |
+| `notifications/initialized`            | Facade acknowledges; no child interaction.                                                                                                                 |
+| `ping`                                 | Facade responds locally.                                                                                                                                   |
+| `tools/list`                           | Facade returns the static snapshot; no child interaction.                                                                                                  |
 | `tools/call`                           | Facade validates the router tool name, extracts `{ operation, args? }`, lazily spawns the child if needed, then forwards `tools/call { name, arguments }`. |
-| `resources/list`, `prompts/list`, etc. | Not supported by either target; return JSON-RPC error `-32601` (method not found).                                                  |
+| `resources/list`, `prompts/list`, etc. | Not supported by either target; return JSON-RPC error `-32601` (method not found).                                                                         |
 
 Host request IDs are preserved in the host→facade→host response path. The
 facade may use its own internal request IDs to the child, but the response
@@ -303,7 +309,7 @@ forcing the facade snapshot to mirror every tool schema.
    ≥120 s first-call timeout). The facade should not warm the child on
    `tools/list`; it must remain lazy.
 4. **Cortex DB path.** The Repo Cortex server defaults to
-   `data/turso-replica.sqlite`. The facade should pass `TURSO_DATABASE_URL`
+   `rag-index/data/turso-replica.sqlite`. The facade should pass `TURSO_DATABASE_URL`
    through from the host environment unchanged.
 5. **Framing adapter risk.** The VS Code/Copilot host speaks
    `Content-Length` framing, while the `devtools` child speaks NDJSON. The

@@ -250,20 +250,20 @@ The Repo Cortex is backed by a Turso (libSQL) database. The MCP server connects 
 
 ### Environment variables
 
-| Variable              | Purpose                                                                                                            | Example                                                         |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| `TURSO_DATABASE_URL`  | Primary database URL. A `file:` URL uses a local embedded replica; a `libsql:` URL targets a cloud primary.        | `file:./data/turso-replica.sqlite` or `libsql://my-db.turso.io` |
-| `TURSO_AUTH_TOKEN`    | JWT auth token for cloud access. Optional for local `file:` URLs.                                                  | _keep secret_                                                   |
-| `TURSO_SYNC_URL`      | Remote sync URL for embedded-replica mode. When set, the local `file:` database syncs from a remote Turso primary. | `libsql://my-db.turso.io`                                       |
-| `TURSO_SYNC_INTERVAL` | Embedded-replica sync interval, in seconds.                                                                        | `60`                                                            |
-| `TURSO_CONCURRENCY`   | Maximum in-flight queries for `parallel_search`.                                                                   | `20`                                                            |
+| Variable              | Purpose                                                                                                            | Example                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `TURSO_DATABASE_URL`  | Primary database URL. A `file:` URL uses a local embedded replica; a `libsql:` URL targets a cloud primary.        | `file:./rag-index/data/turso-replica.sqlite` or `libsql://my-db.turso.io` |
+| `TURSO_AUTH_TOKEN`    | JWT auth token for cloud access. Optional for local `file:` URLs.                                                  | _keep secret_                                                             |
+| `TURSO_SYNC_URL`      | Remote sync URL for embedded-replica mode. When set, the local `file:` database syncs from a remote Turso primary. | `libsql://my-db.turso.io`                                                 |
+| `TURSO_SYNC_INTERVAL` | Embedded-replica sync interval, in seconds.                                                                        | `60`                                                                      |
+| `TURSO_CONCURRENCY`   | Maximum in-flight queries for `parallel_search`.                                                                   | `20`                                                                      |
 
 The MCP registrations in `.mcp.json` (Copilot CLI) and `.vscode/mcp.json` (VS Code) both supply the default env values for local development. They are kept in sync so the same six servers are available in either client:
 
 ```json
 {
   "env": {
-    "TURSO_DATABASE_URL": "file:./data/turso-replica.sqlite",
+    "TURSO_DATABASE_URL": "file:./rag-index/data/turso-replica.sqlite",
     "TURSO_AUTH_TOKEN": "",
     "TURSO_SYNC_URL": "",
     "TURSO_SYNC_INTERVAL": "60"
@@ -273,7 +273,7 @@ The MCP registrations in `.mcp.json` (Copilot CLI) and `.vscode/mcp.json` (VS Co
 
 ### Embedded replica config
 
-For local development, set `TURSO_DATABASE_URL` to a `file:` path (default `file:./data/turso-replica.sqlite`). This runs an **embedded replica** — a local libSQL database file that can operate standalone or sync from a remote Turso primary when `TURSO_SYNC_URL` is also set. Reads are served locally (sub-millisecond), and read-your-writes semantics apply. Run `node scripts/semantic-index/build-index.mjs` to populate the corpus, then `node scripts/semantic-index/embed-index.mjs` to generate and store `F8_BLOB` vectors.
+For local development, set `TURSO_DATABASE_URL` to a `file:` path (default `file:./rag-index/data/turso-replica.sqlite`). This runs an **embedded replica** — a local libSQL database file that can operate standalone or sync from a remote Turso primary when `TURSO_SYNC_URL` is also set. Reads are served locally (sub-millisecond), and read-your-writes semantics apply. Run `node rag-index/build-index.mjs` to populate the corpus, then `node rag-index/embed-index.mjs` to generate and store `F8_BLOB` vectors.
 
 For cloud-only operation, set `TURSO_DATABASE_URL` to a `libsql:` URL and provide `TURSO_AUTH_TOKEN`. All queries hit the cloud primary directly.
 

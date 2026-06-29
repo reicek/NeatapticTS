@@ -59,7 +59,7 @@ async function makeFeedbackFixture(): Promise<{
   const db = createClient({ url: 'file:' + databasePath });
   try {
     await db.executeMultiple(
-      fs.readFileSync('./scripts/semantic-index/schema-turso.sql', 'utf8'),
+      fs.readFileSync('./rag-index/schema-turso.sql', 'utf8'),
     );
     await db.executeMultiple(`
       INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)

@@ -45,7 +45,7 @@ describe('search-corpus.mjs classification-aware routing', () => {
   describe('code identifier detection routes to ts-source', () => {
     it('classifies camelCase identifiers as code_specific with ts-source family', () => {
       const result = runModuleEvaluation<ClassificationResult>(`
-        import { classifyForSearchCorpus } from './scripts/semantic-index/classify-query.mjs';
+        import { classifyForSearchCorpus } from './rag-index/classify-query.mjs';
         console.log(JSON.stringify(classifyForSearchCorpus('findTheNEATSelectionCode')));
       `);
       expect(result).toEqual(
@@ -58,7 +58,7 @@ describe('search-corpus.mjs classification-aware routing', () => {
 
     it('classifies dotted identifiers as code_specific with ts-source family', () => {
       const result = runModuleEvaluation<ClassificationResult>(`
-        import { classifyForSearchCorpus } from './scripts/semantic-index/classify-query.mjs';
+        import { classifyForSearchCorpus } from './rag-index/classify-query.mjs';
         console.log(JSON.stringify(classifyForSearchCorpus('network.activate')));
       `);
       expect(result).toEqual(
@@ -71,7 +71,7 @@ describe('search-corpus.mjs classification-aware routing', () => {
 
     it('classifies snake_case identifiers as code_specific with ts-source family', () => {
       const result = runModuleEvaluation<ClassificationResult>(`
-        import { classifyForSearchCorpus } from './scripts/semantic-index/classify-query.mjs';
+        import { classifyForSearchCorpus } from './rag-index/classify-query.mjs';
         console.log(JSON.stringify(classifyForSearchCorpus('snake_case_function')));
       `);
       expect(result).toEqual(
@@ -84,7 +84,7 @@ describe('search-corpus.mjs classification-aware routing', () => {
 
     it('classifies file-extension hints as code_specific with ts-source family', () => {
       const result = runModuleEvaluation<ClassificationResult>(`
-        import { classifyForSearchCorpus } from './scripts/semantic-index/classify-query.mjs';
+        import { classifyForSearchCorpus } from './rag-index/classify-query.mjs';
         console.log(JSON.stringify(classifyForSearchCorpus('NEAT selection code.ts')));
       `);
       expect(result).toEqual(
@@ -99,7 +99,7 @@ describe('search-corpus.mjs classification-aware routing', () => {
   describe('natural language queries avoid code-source bias', () => {
     it('keeps pure natural language queries out of ts-source family', () => {
       const result = runModuleEvaluation<ClassificationResult>(`
-        import { classifyForSearchCorpus } from './scripts/semantic-index/classify-query.mjs';
+        import { classifyForSearchCorpus } from './rag-index/classify-query.mjs';
         console.log(JSON.stringify(classifyForSearchCorpus('how does NEAT work')));
       `);
       expect(result.family).not.toBe('ts-source');
@@ -107,7 +107,7 @@ describe('search-corpus.mjs classification-aware routing', () => {
 
     it('does not regress existing code-keyword classification', () => {
       const result = runModuleEvaluation<ClassificationResult>(`
-        import { classifyForSearchCorpus } from './scripts/semantic-index/classify-query.mjs';
+        import { classifyForSearchCorpus } from './rag-index/classify-query.mjs';
         console.log(JSON.stringify(classifyForSearchCorpus('Network class implementation')));
       `);
       expect(result).toEqual(
@@ -133,9 +133,9 @@ describe('search-corpus.mjs classification-aware routing', () => {
         import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
 
         const fixtureDirectory = await mkdtemp(path.join(tmpdir(), 'search-corpus-exact-symbol-'));
-        const databasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
+        const databasePath = path.join(fixtureDirectory, 'rag-index.sqlite');
         const database = createClient({ url: 'file:' + databasePath });
-        const schema = await readFile('./scripts/semantic-index/schema-turso.sql', 'utf8');
+        const schema = await readFile('./rag-index/schema-turso.sql', 'utf8');
         await database.executeMultiple(schema + \`
           INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
             VALUES (1, 'src/network.ts', 'ts-source', 1, 100, 'fixture-sha', 1);
