@@ -18,7 +18,6 @@ import type {
 import { runNgeLifecycle } from './neat.nge-lifecycle';
 import Network from '../architecture/network';
 
-
 function createJuvenileFixture(): {
   metrics: NgeModuleMetricsSnapshot;
   budget: NgeGrowthBudget;

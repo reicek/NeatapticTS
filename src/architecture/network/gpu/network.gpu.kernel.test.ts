@@ -2,9 +2,15 @@ import type Network from '../network';
 import { createMockGPUDevice, type MockGPUDevice } from './__mocks__/gpu.mock';
 import {
   buildGPUPipeline,
+  compileActivationKernel,
   createActivationKernel,
   createBindGroupLayout,
+  SUPPORTED_ACTIVATION_INDICES as ExportedSupportedIndices,
 } from './network.gpu.kernel';
+import {
+  GPU_BUFFER_BINDING,
+  GPU_BUFFER_BINDING_COUNT,
+} from './network.gpu.types';
 
 // GPUShaderStage is not available at runtime in the jsdom test environment,
 // so we mirror the COMPUTE stage bit here for explicit visibility assertions.
@@ -119,6 +125,131 @@ describe('network.gpu.kernel', () => {
       expect(() => createActivationKernel(network)).toThrow(
         /network topology is not eligible for gpu activation kernel/i,
       );
+    });
+  });
+
+  describe('compileActivationKernel', () => {
+    it('returns the compute pipeline created by the device', () => {
+      const network = createFakeNetwork(4);
+
+      const pipeline = compileActivationKernel(device, network);
+
+      expect(pipeline).toBe(
+        (device.createComputePipeline as jest.Mock).mock.results[0].value,
+      );
+    });
+
+    it('creates a shader module from generated WGSL', () => {
+      const network = createFakeNetwork(4);
+
+      compileActivationKernel(device, network);
+
+      expect(device.recorded.shaderModules.length).toBe(1);
+    });
+
+    it('creates a bind group layout for the kernel buffers', () => {
+      const network = createFakeNetwork(4);
+
+      compileActivationKernel(device, network);
+
+      expect(device.createBindGroupLayout).toHaveBeenCalledTimes(1);
+    });
+
+    it('reuses the cached pipeline for an identical topology', () => {
+      const network = createFakeNetwork(4);
+
+      compileActivationKernel(device, network);
+      compileActivationKernel(device, network);
+
+      expect({
+        pipelines: device.recorded.pipelines.length,
+        shaders: device.recorded.shaderModules.length,
+        layouts: device.recorded.bindGroupLayouts.length,
+      }).toEqual({
+        pipelines: 1,
+        shaders: 1,
+        layouts: 1,
+      });
+    });
+
+    it('creates a new pipeline when the topology differs', () => {
+      const smallNetwork = createFakeNetwork(4);
+      const largeNetwork = {
+        nodes: [
+          { squash: Object.assign(() => 0, { index: 4 }) },
+          { squash: Object.assign(() => 0, { index: 4 }) },
+        ],
+        connections: [],
+      } as unknown as Network;
+
+      compileActivationKernel(device, smallNetwork);
+      compileActivationKernel(device, largeNetwork);
+
+      expect(device.recorded.pipelines.length).toBe(2);
+    });
+
+    it('includes CSR from/to arrays in the topology key', () => {
+      const networkA = {
+        nodes: [{ squash: Object.assign(() => 0, { index: 4 }) }],
+        connections: [{ id: 'a' }],
+        _connFrom: new Uint32Array([1]),
+        _connTo: new Uint32Array([2]),
+      } as unknown as Network;
+      const networkB = {
+        nodes: [{ squash: Object.assign(() => 0, { index: 4 }) }],
+        connections: [{ id: 'b' }],
+        _connFrom: new Uint32Array([2]),
+        _connTo: new Uint32Array([1]),
+      } as unknown as Network;
+
+      compileActivationKernel(device, networkA);
+      compileActivationKernel(device, networkB);
+
+      expect(device.recorded.pipelines.length).toBe(2);
+    });
+
+    it('throws for unsupported activation index', () => {
+      const network = createFakeNetwork(99);
+
+      expect(() => compileActivationKernel(device, network)).toThrow(
+        /activation index 99 is not supported/i,
+      );
+    });
+
+    it('throws when the network has no nodes', () => {
+      const network = { nodes: [], connections: [] } as unknown as Network;
+
+      expect(() => compileActivationKernel(device, network)).toThrow(
+        /network topology is not eligible for gpu activation kernel/i,
+      );
+    });
+  });
+
+  describe('GPU buffer contract constants', () => {
+    it('exports the expected binding indices and count', () => {
+      expect({
+        binding: GPU_BUFFER_BINDING,
+        count: GPU_BUFFER_BINDING_COUNT,
+      }).toEqual({
+        binding: {
+          weights: 0,
+          from: 1,
+          to: 2,
+          flags: 3,
+          outStart: 4,
+          outOrder: 5,
+          outputs: 6,
+        },
+        count: 7,
+      });
+    });
+  });
+
+  describe('SUPPORTED_ACTIVATION_INDICES re-export', () => {
+    it('exports the worker activation subset from the kernel module', () => {
+      expect(ExportedSupportedIndices).toEqual([
+        0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13,
+      ]);
     });
   });
 

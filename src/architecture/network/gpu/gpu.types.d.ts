@@ -41,8 +41,12 @@ declare global {
     destroy(): void;
   }
 
+  // Intentionally empty marker interfaces used by the ambient WebGPU stub.
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface GPUBindGroupLayout {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface GPUBindGroup {}
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface GPUPipelineLayout {}
 
   interface GPUShaderModuleDescriptor {
@@ -78,6 +82,8 @@ declare global {
     finish(): GPUCommandBuffer;
   }
 
+  // Empty marker interface used by the ambient WebGPU stub.
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface GPUCommandBuffer {}
 
   interface GPUQueue {
@@ -110,7 +116,7 @@ declare global {
 
   interface GPUAdapter {
     limits: GPUSupportedLimits;
-    requestDevice(descriptor?: unknown): Promise<GPUDevice | null>;
+    requestDevice(descriptor?: unknown): Promise<GPUDevice>;
   }
 
   interface GPURequestAdapterOptions {
@@ -120,12 +126,22 @@ declare global {
 
   type GPUTextureFormat = string;
 
-  interface WGSLLanguageFeatures extends Iterable<string> {}
+  type WGSLLanguageFeatures = Iterable<string>;
 
   interface GPU {
-    requestAdapter(options?: GPURequestAdapterOptions): Promise<GPUAdapter | null>;
+    requestAdapter(
+      options?: GPURequestAdapterOptions,
+    ): Promise<GPUAdapter | null>;
     getPreferredCanvasFormat(): GPUTextureFormat;
     wgslLanguageFeatures: WGSLLanguageFeatures;
+  }
+
+  interface Navigator {
+    gpu?: GPU;
+  }
+
+  interface WorkerNavigator {
+    gpu?: GPU;
   }
 }
 

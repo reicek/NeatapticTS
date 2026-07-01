@@ -1,4 +1,173 @@
 {
-  "evidence": [],
-  "normalizedEvidenceDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  "evidence": [
+    {
+      "file": "src/neat/nge-juvenile/neat.nge-juvenile.focus.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "resolveFocusConfig"
+    },
+    {
+      "file": "src/neat/nge-juvenile/neat.nge-juvenile.ts",
+      "issue": "high complexity",
+      "numericValue": 11,
+      "symbol": "resolveFocusConfig"
+    },
+    {
+      "file": "src/architecture/network/gpu/__mocks__/gpu.mock.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "MockGPUDevice"
+    },
+    {
+      "file": "src/architecture/network/gpu/network.gpu.types.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "GPUDeviceType"
+    },
+    {
+      "file": "src/architecture/network/gpu/network.gpu.types.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "GPURequestAdapterOptionsType"
+    },
+    {
+      "file": "src/architecture/network/gpu/network.gpu.types.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "GPUSupportedLimitsType"
+    },
+    {
+      "file": "src/neat/nge-experimental.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "assimilation"
+    },
+    {
+      "file": "src/neat/nge-experimental.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "juvenile"
+    },
+    {
+      "file": "src/neat/nge-experimental.ts",
+      "issue": "missing JSDoc",
+      "numericValue": 0,
+      "symbol": "lifecycle"
+    },
+    {
+      "file": "src/architecture/network/gpu/network.gpu.activation.wgsl.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ActivationFunctionEntry"
+    },
+    {
+      "file": "src/architecture/network/gpu/network.gpu.racing.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "RacingBatchOptions"
+    },
+    {
+      "file": "src/neat/nge-dna/neat.nge-dna.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NGE_DNA_SCHEMA_VERSION"
+    },
+    {
+      "file": "src/neat/nge-dna/neat.nge-dna.substrate.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "normalizeCoordinate"
+    },
+    {
+      "file": "src/neat/nge-dna/neat.nge-dna.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeCppnActivationKind"
+    },
+    {
+      "file": "src/neat/nge-dna/neat.nge-dna.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeRealizedModule"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeEvolutionCompatibilityDistanceResult"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeEvolutionCompatibilityDistanceTerm"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeEvolutionCompatibilityDistanceWeights"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeEvolutionCompatibilityWiringCostWeights"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeEvolutionParentContribution"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeEvolutionCompatibilityDistanceResult"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeEvolutionCompatibilityDistanceTerm"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeEvolutionCompatibilityDistanceWeights"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeEvolutionCompatibilityWiringCostWeights"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.types.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "NgeEvolutionParentContribution"
+    },
+    {
+      "file": "src/neat/nge-evolution/neat.nge-evolution.utils.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 9,
+      "symbol": "ngeEvolutionConstants"
+    },
+    {
+      "file": "src/architecture/network/gpu/network.gpu.activation.wgsl.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "buildActivationRegistry"
+    },
+    {
+      "file": "src/neat/nge-dna/neat.nge-dna.constants.ts",
+      "issue": "weak JSDoc",
+      "numericValue": 8,
+      "symbol": "NGE_DNA_DEFAULT_ZONE_PARTITION_COUNT"
+    }
+  ],
+  "normalizedEvidenceDigest": "0079d05eb4ebee4729d2fae8b7dfbf87ac2ea500a54e37044dd1c57f5a247c0d"
 }

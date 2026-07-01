@@ -11,7 +11,8 @@ describe('NGE_DNA schema alignment (P5)', () => {
       });
 
       // Act
-      const canonicalSeedPolicy = dna.toCanonical().reproductionPolicy.seedPolicy;
+      const canonicalSeedPolicy =
+        dna.toCanonical().reproductionPolicy.seedPolicy;
 
       // Assert
       expect(canonicalSeedPolicy).toEqual({
@@ -51,7 +52,8 @@ describe('NGE_DNA schema alignment (P5)', () => {
       });
 
       // Act
-      const strategy = dna.toCanonical().reproductionPolicy.assignedRegionStrategy;
+      const strategy =
+        dna.toCanonical().reproductionPolicy.assignedRegionStrategy;
 
       // Assert
       expect(strategy).toBe('non-overlapping');

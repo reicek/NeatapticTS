@@ -1790,11 +1790,13 @@ hard-queen-wins spread in the same step (no deferred cleanup).
 **Step 04 implementation evidence:**
 
 Files changed:
+
 - `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts`: exported `NgePolyandricDroneInput` (L26) and `NgePolyandricInput` (L33); added `hashRegionIdToUnitInterval` FNV-1a helper; threaded `queenBias` through `applyPolyandricAssignments`, `patchPolyandricRegion`, and `mergeModuleArchetypeWithQueenPriority`; replaced hard queen-wins-all spreads with deterministic per-region winner gate (`hash < clampedQueenBias` → queen priority, else drone priority); clamped `queenBias` to `[0, 1]` at point of use.
 - `src/neat/nge-evolution/neat.nge-evolution.ts`: added `export type { NgePolyandricInput, NgePolyandricDroneInput } from './neat.nge-evolution.reproduction';` to the facade.
 - `src/neat/nge-evolution/neat.nge-evolution.reproduction.queen-bias.test.ts`: extended with 2 owner-local fallback-coverage tests to reach 100% branch coverage on the parameterSchema fallbacks.
 
 Validation evidence:
+
 - Targeted Jest slice: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-evolution` → 51 passed, 0 failed.
 - Focused coverage: `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-evolution --collectCoverageFrom="src/neat/nge-evolution/**/*.ts"` → 100% statements/branches/functions/lines on all touched `src/neat/nge-evolution/` files.
 - TypeScript: `npx tsc --noEmit -p tsconfig.json` → 0 diagnostics.
@@ -1861,13 +1863,20 @@ acceptance_criteria:
 VALIDATION_EVIDENCE:
   tests: '51 passed, 0 failed across 4 nge-evolution suites'
   coverage_summary:
-    neat.nge-evolution.constants.ts:    { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.distance.ts:     { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.epigenetic.ts:   { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.errors.ts:       { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.reproduction.ts: { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.ts:              { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.utils.ts:        { statements: 100, branches: 100, functions: 100, lines: 100 }
+    neat.nge-evolution.constants.ts:
+      { statements: 100, branches: 100, functions: 100, lines: 100 }
+    neat.nge-evolution.distance.ts:
+      { statements: 100, branches: 100, functions: 100, lines: 100 }
+    neat.nge-evolution.epigenetic.ts:
+      { statements: 100, branches: 100, functions: 100, lines: 100 }
+    neat.nge-evolution.errors.ts:
+      { statements: 100, branches: 100, functions: 100, lines: 100 }
+    neat.nge-evolution.reproduction.ts:
+      { statements: 100, branches: 100, functions: 100, lines: 100 }
+    neat.nge-evolution.ts:
+      { statements: 100, branches: 100, functions: 100, lines: 100 }
+    neat.nge-evolution.utils.ts:
+      { statements: 100, branches: 100, functions: 100, lines: 100 }
   lint: 'npx eslint src/neat/nge-evolution → exit 0, 0 issues'
   scope_boundary:
     examples_touched: false
@@ -2069,7 +2078,6 @@ compact [DONE] marker in the plan file, then advance to Phase 3.
 **Required validation:** `phase-compression.gate.mjs --json` and `validate-plan-phase-packets.mjs --json`.
 
 **Plan update requirement:** Record compression evidence, advance active phase to Phase 3, refresh the Handoff query.
-
 
 ---
 
@@ -2835,6 +2843,7 @@ conflict, and `runNgeLifecycle` is seed-deterministic. Growth-curve harness pass
 previous stall point.
 
 **Root cause (H1):**
+
 - `applyEdgeDensify` was treating every structural-mutation attempt as a successful
   application even when the underlying `ADD_CONN` operator returned a no-op (e.g., graph
   already saturated or self-connection rejected).
@@ -3268,7 +3277,6 @@ acceptance_criteria:
   - 'All listed gates pass'
 ```
 
-
 ---
 
 ## Phase 5 — Schema Alignment: Core NGE ↔ Racing Worker (P4) [DONE]
@@ -3310,7 +3318,6 @@ deferred to Phase 7).
 - plan-sync gate → pass; step-packet gate → pass.
 
 **Detailed step packets, research brief, and evidence:**
-
 
 ```yaml
 phase: 5
@@ -3477,7 +3484,7 @@ specialists:
   - 'boundary-mapper'
 validation:
   - 'npx tsc --noEmit -p tsconfig.json'
-  - "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-dna/.*types.*test|src/neat/nge-evolution/.*reproduction.*test"
+  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-dna/.*types.*test|src/neat/nge-evolution/.*reproduction.*test'
 acceptance_criteria:
   - 'Exact file/line locations of NgeAssignedRegionStrategy and NgeSeedPolicy definitions are documented'
   - 'assignPolyandricRegions runtime dispatch is traced; non-overlapping path is identified or designed'
@@ -3600,7 +3607,7 @@ skills:
 specialists:
   - 'unit-test-writer'
 validation:
-  - "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test"
+  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test'
   - 'node scripts/agent-customization/gates/red-test-contract.gate.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md --step=03'
 acceptance_criteria:
   - 'Red tests fail for the right reason (schema not yet supported)'
@@ -3681,7 +3688,7 @@ specialists:
   - 'implementation-executor'
   - 'implementation-pattern-scout'
 validation:
-  - "npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test"
+  - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test'
   - 'npm run lint'
 acceptance_criteria:
   - 'All red tests from Step 03 pass'
@@ -3796,7 +3803,7 @@ PlanUpdate:
     - 'npm run lint'
     - 'npx prettier --check src/neat/nge-dna/neat.nge-dna.types.ts src/neat/nge-dna/neat.nge-dna.ts src/neat/nge-evolution/neat.nge-evolution.reproduction.ts'
   tests_for_green:
-    - "npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test"
+    - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test'
   rollback:
     - 'git checkout -- src/neat/nge-dna/neat.nge-dna.types.ts src/neat/nge-dna/neat.nge-dna.ts src/neat/nge-evolution/neat.nge-evolution.reproduction.ts'
   next: 'Run 05-green-testing focused schema alignment slice and attach coverage-guard evidence'
@@ -3829,7 +3836,7 @@ specialists:
   - 'unit-test-runner'
   - 'coverage-guard'
 validation:
-  - "npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test"
+  - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test'
   - 'npx tsc --noEmit -p tsconfig.json'
   - 'npm run lint'
 acceptance_criteria:
@@ -4019,8 +4026,6 @@ acceptance_criteria:
 - `node scripts/agent-customization/gates/phase-compression.gate.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md`
 - `node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md`
 - `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json`
-
-
 
 ---
 
@@ -4312,48 +4317,35 @@ slices:
 **No-deferred-cleanup note:** The old counter-only reproduction path in `transitionToGenerationReady` must be deleted in the same step that introduces `reproducePolyandric`. No backward-compatibility wrapper, no feature flag, no dual-path code.
 
 PlanUpdate:
-  slice_id: '04-wire-reproduction'
-  changed_files:
-    - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts'
-    - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts'
-  preflight:
-    - 'npx tsc --noEmit -p tsconfig.json → pass'
-    - 'npx eslint --no-cache examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts → 0 issues'
-    - 'npx prettier --check examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts → pass'
-  tests_for_green:
-    - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction'
-    - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns "(simulation-worker\\.(evolution\\.protocol|coevolution)(\\.service)?\\.test\\.ts)|(src\\neat\\nge-dna\\.*\\.test\\.ts)|(src\\neat\\nge-evolution\\.*\\.test\\.ts)"'
-  validation:
-    - command: 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction'
-      exit: 0
-      owner: '05-green-testing'
-  rollback:
-    - 'git checkout -- examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts'
-    - 'git checkout -- examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts'
-    - 'git checkout -- plans/NGE_Core_Algorithm_Workstream.plans.md'
-  notes:
-    - 'src/neat/nge-dna/neat.nge-dna.operator.ts was listed in slice files_to_change but required no production edit; it is only imported.'
-    - '27 pre-existing tsconfig.test.json duplicate-identifier errors in skipped racing-worker test files remain unchanged.'
-    - '2 lint errors in the red test file (unused vars) block the repo-wide `npm run lint` gate; they must be fixed before Step 05 can close.'
-  next: 'Slice 04-self-check closed; hand off to Step 05 — Green validation and coverage guard.'
+slice_id: '04-wire-reproduction'
+changed_files: - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts' - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts'
+preflight: - 'npx tsc --noEmit -p tsconfig.json → pass' - 'npx eslint --no-cache examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts → 0 issues' - 'npx prettier --check examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts → pass'
+tests_for_green: - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction' - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns "(simulation-worker\\.(evolution\\.protocol|coevolution)(\\.service)?\\.test\\.ts)|(src\\neat\\nge-dna\\._\\.test\\.ts)|(src\\neat\\nge-evolution\\._\\.test\\.ts)"'
+validation: - command: 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction'
+exit: 0
+owner: '05-green-testing'
+rollback: - 'git checkout -- examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts' - 'git checkout -- examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts' - 'git checkout -- plans/NGE_Core_Algorithm_Workstream.plans.md'
+notes: - 'src/neat/nge-dna/neat.nge-dna.operator.ts was listed in slice files_to_change but required no production edit; it is only imported.' - '27 pre-existing tsconfig.test.json duplicate-identifier errors in skipped racing-worker test files remain unchanged.' - '2 lint errors in the red test file (unused vars) block the repo-wide `npm run lint` gate; they must be fixed before Step 05 can close.'
+next: 'Slice 04-self-check closed; hand off to Step 05 — Green validation and coverage guard.'
 
 VALIDATION_EVIDENCE:
-  - 'Root-cause fix: removed duplicate `activateNgeNetworkFromEnvelope` call in `transitionToGenerationReady` (simulation-worker.evolution.protocol.service.ts). The FSM now passes only the offspring envelope to `createCarGenome`, which owns single-point materialization via its `providedNetwork ?? activateNgeNetworkFromEnvelope(envelope, seed)` fallback.'
-  - 'Test fix: updated `simulation-worker.polyandric-reproduction.test.ts` expectation from 6 to 12 activations, reflecting 6 initial population materializations + 6 post-race offspring materializations.'
-  - 'Lint cleanup: removed unused `mockedCreateRaceEpisodeRunner`, unused `NgePolyandricInputLike` type alias, and now-unused `racePackModule` namespace import from the red-test file.'
-  - 'Files changed: examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts; examples/racing_curriculum/workers/simulation-worker/simulation-worker.polyandric-reproduction.test.ts; plans/NGE_Core_Algorithm_Workstream.plans.md.'
-  - 'tsc: npx tsc --noEmit -p tsconfig.json → pass (exit 0)'
-  - 'tsc.test: npx tsc --noEmit -p tsconfig.test.json → 27 pre-existing duplicate-identifier errors in skipped racing-worker tests (unchanged, out of scope)'
-  - 'lint: npm run lint → pass (0 issues)'
-  - 'prettier: npx prettier --check on touched files → pass'
-  - 'focused jest: npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction → 9/9 passed'
-  - 'plan-sync gate: pass'
-  - 'step-packet gate: pass'
-  - 'agent-graph gate: pass'
-  - 'validate-plan-phase-packets: pass (0 errors, 0 warnings)'
-  - 'learning-event gate: pass'
-  - 'artifact: artifacts/implementing/20260630T014521-04-self-check-closeout.txt'
-  - 'STATUS: slice `04-self-check` is [DONE]; Step 04 is [DONE]; Step 05 is [WIP].'
+
+- 'Root-cause fix: removed duplicate `activateNgeNetworkFromEnvelope` call in `transitionToGenerationReady` (simulation-worker.evolution.protocol.service.ts). The FSM now passes only the offspring envelope to `createCarGenome`, which owns single-point materialization via its `providedNetwork ?? activateNgeNetworkFromEnvelope(envelope, seed)` fallback.'
+- 'Test fix: updated `simulation-worker.polyandric-reproduction.test.ts` expectation from 6 to 12 activations, reflecting 6 initial population materializations + 6 post-race offspring materializations.'
+- 'Lint cleanup: removed unused `mockedCreateRaceEpisodeRunner`, unused `NgePolyandricInputLike` type alias, and now-unused `racePackModule` namespace import from the red-test file.'
+- 'Files changed: examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts; examples/racing_curriculum/workers/simulation-worker/simulation-worker.polyandric-reproduction.test.ts; plans/NGE_Core_Algorithm_Workstream.plans.md.'
+- 'tsc: npx tsc --noEmit -p tsconfig.json → pass (exit 0)'
+- 'tsc.test: npx tsc --noEmit -p tsconfig.test.json → 27 pre-existing duplicate-identifier errors in skipped racing-worker tests (unchanged, out of scope)'
+- 'lint: npm run lint → pass (0 issues)'
+- 'prettier: npx prettier --check on touched files → pass'
+- 'focused jest: npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction → 9/9 passed'
+- 'plan-sync gate: pass'
+- 'step-packet gate: pass'
+- 'agent-graph gate: pass'
+- 'validate-plan-phase-packets: pass (0 errors, 0 warnings)'
+- 'learning-event gate: pass'
+- 'artifact: artifacts/implementing/20260630T014521-04-self-check-closeout.txt'
+- 'STATUS: slice `04-self-check` is [DONE]; Step 04 is [DONE]; Step 05 is [WIP].'
 
 [WIP] Step 05: Green validation and coverage guard.
 
@@ -4391,6 +4383,7 @@ acceptance_criteria:
 ```
 
 **VALIDATION_EVIDENCE (Step 05 green run):
+
 - Focused polyandric FSM slice: `npx jest ... --testPathPatterns=simulation-worker.polyandric-reproduction` → 1 suite, 9/9 passed.
 - Broader owner-local regression (plan Step 05 pattern plus polyandric test, plus `src/neat/nge-dna/` and `src/neat/nge-evolution/` tests): 15 suites, 194/194 passed.
 - `npm run lint`: pass (exit 0, 0 issues).
@@ -4411,6 +4404,7 @@ acceptance_criteria:
 [DONE] Step 05: Green validation and coverage guard.
 
 **VALIDATION_EVIDENCE (Step 05 final green run after coverage repair):**
+
 - Focused polyandric FSM slice: `npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction` → 1 suite, 16/16 passed.
 - Broader simulation-worker regression surface with coverage: 4 suites, 36/36 passed.
 - `npm run lint`: pass (exit 0, 0 issues).
@@ -4426,6 +4420,7 @@ acceptance_criteria:
 [DONE] Step 06: Document the FSM reproduction contract.
 
 **VALIDATION_EVIDENCE (Step 06 docs run):**
+
 - Source JSDoc updated in `simulation-worker.evolution.protocol.service.ts` (module diagram + `REPRODUCE` node, reproduction sub-step and deterministic seed formula), `simulation-worker.evolution.types.ts` (polyandric wired / `modeIsEvolvable` descriptor-only), and `simulation-worker.coevolution.service.ts` (`selectQueenPerTeam` no longer deferred).
 - Generated `examples/racing_curriculum/workers/simulation-worker/README.md` regenerated via `npm run docs` and now reflects the wired polyandric FSM contract.
 - `npm run docs`: exit 0.
@@ -4466,7 +4461,6 @@ acceptance_criteria:
   - 'Phase 7 advanced to [WIP]'
   - 'Closure and sync gates pass'
 ```
-
 
 ## Phase 7 — Verification: Seed → 8,000+ Neurons with Continuous Adaptation [DONE]
 
@@ -5313,4 +5307,3 @@ acceptance_criteria:
 - `node scripts/agent-customization/gates/phase-compression.gate.mjs --json`
 - `node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json`
 - `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json`
-

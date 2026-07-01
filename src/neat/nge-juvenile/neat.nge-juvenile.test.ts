@@ -1208,7 +1208,8 @@ describe('nge juvenile focus metrics', () => {
             const growthBudget = createGrowthBudget({ maxEdges: 10 });
             const focusScore = createFocusScore();
             const config = createResolvedConfig({
-              edgeDensificationCount: NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
+              edgeDensificationCount:
+                NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
             });
 
             // Act
@@ -1235,7 +1236,8 @@ describe('nge juvenile focus metrics', () => {
             });
             const focusScore = createFocusScore({ normalizedScore: 0.9 });
             const config = createResolvedConfig({
-              edgeDensificationCount: NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
+              edgeDensificationCount:
+                NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
             });
 
             // Act
@@ -1267,7 +1269,12 @@ describe('nge juvenile focus metrics', () => {
 
             // Act
             const planOverBudgetEdgeDensification = () =>
-              planEdgeDensification('module:alpha', growthBudget, focusScore, config);
+              planEdgeDensification(
+                'module:alpha',
+                growthBudget,
+                focusScore,
+                config,
+              );
 
             // Assert
             expect(planOverBudgetEdgeDensification).toThrow(
@@ -1478,7 +1485,12 @@ describe('nge juvenile focus metrics', () => {
 
             // Act
             const planWithSignalAtFloor = () =>
-              planNodeAddition('module:alpha', growthBudget, focusScore, config);
+              planNodeAddition(
+                'module:alpha',
+                growthBudget,
+                focusScore,
+                config,
+              );
 
             // Assert
             expect(planWithSignalAtFloor).toThrow(NgeJuvenile_MorphError);
@@ -1530,7 +1542,12 @@ describe('nge juvenile focus metrics', () => {
 
             // Act
             const planOverBudgetNodeAddition = () =>
-              planNodeAddition('module:alpha', growthBudget, focusScore, config);
+              planNodeAddition(
+                'module:alpha',
+                growthBudget,
+                focusScore,
+                config,
+              );
 
             // Assert
             expect(planOverBudgetNodeAddition).toThrow(NgeJuvenile_BudgetError);
@@ -2048,14 +2065,17 @@ describe('nge juvenile focus metrics', () => {
               costExemptEdgeIds: [],
               currentEdgeCount: network.connections.length,
               currentNodeCount: network.nodes.length,
-              currentWiringCost: network.nodes.length + network.connections.length,
+              currentWiringCost:
+                network.nodes.length + network.connections.length,
               minEdges: 0,
               minNodes: 1,
             },
           });
 
           // Assert
-          const nodeOutcome = outcomes.find((outcome) => outcome.kind === 'nodeAdd');
+          const nodeOutcome = outcomes.find(
+            (outcome) => outcome.kind === 'nodeAdd',
+          );
           const structuralChange = {
             nodes: network.nodes.length - initialNodeCount,
             reportedStatus: nodeOutcome?.status,

@@ -1,4 +1,9 @@
 import type Network from '../network';
+import {
+  buildActivationRegistry,
+  formatActivationFunctionsWgsl,
+  SUPPORTED_ACTIVATION_INDICES,
+} from './network.gpu.activation.wgsl';
 
 /**
  * WebGPU shader-stage bit for compute visibility.
@@ -16,9 +21,7 @@ const GPU_SHADER_STAGE_COMPUTE = 0x0004;
  * case for every index in this list so the GPU path can dispatch the same
  * activation functions as the CPU worker serialization contract.
  */
-export const SUPPORTED_ACTIVATION_INDICES = [
-  0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13,
-] as const;
+export { SUPPORTED_ACTIVATION_INDICES };
 
 /**
  * Read the activation index that the network would use from its first
@@ -53,58 +56,76 @@ function readActivationIndex(network: Network): number {
 }
 
 /**
- * Build the WGSL source for a placeholder forward-pass activation kernel.
+ * Size of the one-dimensional compute workgroup used by the activation kernel.
+ */
+const WORKGROUP_SIZE = 64;
+
+/**
+ * Build the WGSL source for the forward-pass activation kernel.
  *
- * This is intentionally a red-test seam, not a real GPU implementation. It
- * produces a syntactically valid WGSL module that exposes the expected compute
- * entry point, storage bindings, and activation switch so that compile-contract
- * tests can verify the kernel surface before Phase 4 fills in the actual
- * topology traversal.
+ * The shader exposes the seven storage-buffer bindings from the slab upload
+ * contract, declares a real f32 activation function for every supported worker
+ * index, and dispatches one thread per node in topological order. The current
+ * kernel applies the network's canonical activation index to the per-node output
+ * buffer; full weighted fan-out is intentionally left for the parity slice that
+ * owns the complete forward pass.
  *
  * @param activationIndex - Activation index that must appear as a switch case.
+ * @param nodeCount - Number of nodes in the network; bounds the dispatch.
  * @returns WGSL source string.
  */
-function generateActivationSource(activationIndex: number): string {
-  const supportedCases = SUPPORTED_ACTIVATION_INDICES.map(
-    (index) => `    case ${index}: { return activation_${index}(x); }`,
-  ).join('\n');
+function generateActivationSource(
+  activationIndex: number,
+  nodeCount: number,
+): string {
+  const registry = buildActivationRegistry();
+  const activationFunctions = formatActivationFunctionsWgsl(registry);
+  const supportedCases = registry
+    .map(
+      (entry) =>
+        `    case ${entry.index}: { activationValue = activation_${entry.index}(activationValue); }`,
+    )
+    .join('\n');
 
-  const activationStubs = SUPPORTED_ACTIVATION_INDICES.map(
-    (index) => `fn activation_${index}(x: f32) -> f32 { return x; }`,
-  ).join('\n');
+  return `const NODE_COUNT: u32 = ${nodeCount}u;
+const WORKGROUP_SIZE: u32 = ${WORKGROUP_SIZE}u;
+const ACTIVATION_INDEX: i32 = ${activationIndex}i;
 
-  return `@group(0) @binding(0) var<storage, read> weights: array<f32>;
+@group(0) @binding(0) var<storage, read> weights: array<f32>;
 @group(0) @binding(1) var<storage, read> from_nodes: array<u32>;
 @group(0) @binding(2) var<storage, read> to_nodes: array<u32>;
-@group(0) @binding(3) var<storage, read> flags: array<u32>;
-@group(0) @binding(4) var<storage, read> outStart: array<u32>;
-@group(0) @binding(5) var<storage, read> outOrder: array<u32>;
-@group(0) @binding(6) var<storage, read_write> outputs: array<f32>;
+@group(0) @binding(3) var<storage, read> connection_flags: array<u32>;
+@group(0) @binding(4) var<storage, read> out_start: array<u32>;
+@group(0) @binding(5) var<storage, read> out_order: array<u32>;
+@group(0) @binding(6) var<storage, read_write> node_outputs: array<f32>;
 
-// Placeholder activation stubs for the first supported subset.
-${activationStubs}
+${activationFunctions}
 
-fn applyActivation(index: u32, x: f32) -> f32 {
-  switch(index) {
-${supportedCases}
-    default: { return x; }
-  }
-}
-
-@compute @workgroup_size(64)
+@compute @workgroup_size(${WORKGROUP_SIZE})
 fn forward() {
-  // Placeholder compute entry point for the red-test seam.
-  // Selected activation index ${activationIndex} is covered by the switch above.
+  let nodeIndex = global_invocation_id.x;
+  if (nodeIndex >= NODE_COUNT) {
+    return;
+  }
+
+  var activationValue = node_outputs[nodeIndex];
+  switch (ACTIVATION_INDEX) {
+${supportedCases}
+    default: { break; }
+  }
+  node_outputs[nodeIndex] = activationValue;
 }
 `;
 }
 
 /**
- * Generate a placeholder WGSL activation kernel for a supported network.
+ * Generate the WGSL source for the activation kernel of a supported network.
  *
- * The returned source is not intended to be run on real hardware yet; it
- * satisfies the compile-contract tests in Phase 3 by exposing the correct
- * entry point name, workgroup size, storage bindings, and activation switch.
+ * The returned source is a real, bindable compute shader: it declares the
+ * seven storage-buffer bindings, one f32 activation function per supported
+ * worker index, and a `forward` entry point that dispatches one thread per
+ * node. Unsupported activations or ineligible topologies are rejected before
+ * any source is emitted.
  *
  * @param network - Network whose activation index and topology are inspected.
  * @returns Non-empty WGSL source string.
@@ -128,7 +149,126 @@ export function createActivationKernel(network: Network): string {
     throw new Error(`activation index ${activationIndex} is not supported`);
   }
 
-  return generateActivationSource(activationIndex);
+  return generateActivationSource(activationIndex, network.nodes.length);
+}
+
+/**
+ * Internal slab-backed shape used only to read CSR source/target arrays for
+ * topology hashing. Optional because compile-contract tests use shallow network
+ * stubs that do not carry slab state.
+ */
+interface InternalSlabNetwork extends Network {
+  /** Source node index per connection, when the slab has been materialized. */
+  _connFrom?: Uint32Array;
+  /** Target node index per connection, when the slab has been materialized. */
+  _connTo?: Uint32Array;
+}
+
+/** Pipeline cache keyed by topology hash, scoped per device. */
+const pipelineCache = new WeakMap<GPUDevice, Map<string, GPUComputePipeline>>();
+
+/**
+ * Return the per-device pipeline cache map, creating it on first use.
+ */
+function getDevicePipelineCache(
+  device: GPUDevice,
+): Map<string, GPUComputePipeline> {
+  let cache = pipelineCache.get(device);
+  if (!cache) {
+    cache = new Map();
+    pipelineCache.set(device, cache);
+  }
+  return cache;
+}
+
+/** Mix one integer into a simple 32-bit rolling hash. */
+function mixHash(hash: number, value: number): number {
+  return ((hash << 5) - hash + value) | 0;
+}
+
+/**
+ * Compute a deterministic key that identifies the network topology.
+ *
+ * The key includes node and connection counts plus the CSR from/to arrays when
+ * they are available. Networks that differ only in weights therefore share a
+ * key, which is exactly the condition that lets the pipeline cache reuse the
+ * same compiled shader.
+ *
+ * @param network - Network whose topology will be hashed.
+ * @param activationIndex - Activation index that changes the generated shader.
+ * @returns A stable string key for the pipeline cache.
+ */
+function computeTopologyKey(network: Network, activationIndex: number): string {
+  const nodeCount = network.nodes.length;
+  const connectionCount = network.connections.length;
+  const slabNetwork = network as InternalSlabNetwork;
+
+  if (slabNetwork._connFrom && slabNetwork._connTo) {
+    const from = slabNetwork._connFrom;
+    const to = slabNetwork._connTo;
+    let hash = 0;
+    for (let index = 0; index < from.length; index++) {
+      hash = mixHash(hash, from[index]);
+    }
+    for (let index = 0; index < to.length; index++) {
+      hash = mixHash(hash, to[index]);
+    }
+    return `${activationIndex}:${nodeCount}:${connectionCount}:${hash}`;
+  }
+
+  return `${activationIndex}:${nodeCount}:${connectionCount}`;
+}
+
+/**
+ * Compile (or reuse) the activation compute pipeline for a network topology.
+ *
+ * The pipeline is created once per unique topology and cached on the supplied
+ * device. Recompilations with identical topology but different weights reuse
+ * the cached `GPUComputePipeline`, satisfying the compile-stall mitigation in the
+ * WebGPU skill. The shader module, bind-group layout, and pipeline creation
+ * calls remain observable through the mock device used by owner-local tests.
+ *
+ * @param device - WebGPU device used to compile the compute pipeline.
+ * @param network - Network whose topology and activation index drive the kernel.
+ * @returns A compute pipeline configured for the `forward` entry point.
+ * @throws Error when the network has no nodes, lacks an activation index, or
+ *   requests an unsupported activation.
+ *
+ * @example
+ * ```ts
+ * const pipeline = compileActivationKernel(device, network);
+ * ```
+ */
+export function compileActivationKernel(
+  device: GPUDevice,
+  network: Network,
+): GPUComputePipeline {
+  const activationIndex = readActivationIndex(network);
+
+  if (
+    !(SUPPORTED_ACTIVATION_INDICES as readonly number[]).includes(
+      activationIndex,
+    )
+  ) {
+    throw new Error(`activation index ${activationIndex} is not supported`);
+  }
+
+  const topologyKey = computeTopologyKey(network, activationIndex);
+  const cache = getDevicePipelineCache(device);
+  const cached = cache.get(topologyKey);
+  if (cached) {
+    return cached;
+  }
+
+  const source = generateActivationSource(
+    activationIndex,
+    network.nodes.length,
+  );
+  const shaderModule = device.createShaderModule({ code: source });
+  const bindGroupLayout = createBindGroupLayout(device);
+  const pipeline = buildGPUPipeline(device, shaderModule, bindGroupLayout);
+  cache.set(topologyKey, pipeline);
+  return pipeline;
 }
 
 /**
@@ -193,8 +333,8 @@ export function createBindGroupLayout(device: GPUDevice): GPUBindGroupLayout {
  * Build a compute pipeline from a shader module and a bind-group layout.
  *
  * The pipeline uses the `forward` compute entry point and a pipeline layout
- * built from the supplied bind-group layout. This placeholder mirrors the
- * contract the real GPU inference path will use in Phase 4.
+ * built from the supplied bind-group layout. It is the factory used by
+ * {@link compileActivationKernel} to materialize the compiled GPU path.
  *
  * @param device - WebGPU device used to create the pipeline layout and pipeline.
  * @param shaderModule - Shader module containing the `forward` entry point.

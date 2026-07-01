@@ -1,0 +1,8 @@
+:tsc: npx tsc --noEmit -p tsconfig.json -> PASS (exit 0)
+:lint: npx eslint src/architecture/network/gpu/network.gpu.device.ts src/architecture/network/gpu/network.gpu.capability.ts src/architecture/network/gpu/network.gpu.types.ts src/architecture/network/gpu/gpu.types.d.ts src/architecture/network/gpu/network.gpu.device.test.ts src/architecture/network/gpu/network.gpu.capability.test.ts -> PASS (exit 0)
+:prettier: npx prettier --check src/architecture/network/gpu/network.gpu.device.ts src/architecture/network/gpu/network.gpu.capability.ts src/architecture/network/gpu/network.gpu.types.ts src/architecture/network/gpu/gpu.types.d.ts src/architecture/network/gpu/network.gpu.device.test.ts src/architecture/network/gpu/network.gpu.capability.test.ts plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md -> PASS (exit 0)
+:plan-sync: node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md -> PASS
+:plan-phase-packets: node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md -> PASS
+:phase-compression: node scripts/agent-customization/gates/phase-compression.gate.mjs --json -> PASS
+:MCP-plan-sync: neataptic-gate-mcp:run_gate_check --gate=plan-sync -> PASS
+:MCP-step-packet: neataptic-gate-mcp:run_gate_check --gate=step-packet -> PASS

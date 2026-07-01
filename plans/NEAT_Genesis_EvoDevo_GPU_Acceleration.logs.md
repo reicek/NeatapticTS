@@ -1,10 +1,11 @@
-# NEAT Genesis EvoDevo: GPU Acceleration — Phase 2 log
+# NEAT Genesis EvoDevo: GPU Acceleration — Plan log
 
 **Status:** [DONE]
 
-This log contains the archived Phase 2 research output that was compressed from
+This log contains the archived Phase 2 research output and Phase 3 red-test
+evidence that were compressed from
 `plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` so the active tracker can
-focus on Phase 3 red testing.
+focus on Phase 4 implementation.
 
 ---
 
@@ -599,11 +600,20 @@ function createMockGPUDevice(
   };
 
   const mockDevice = {
-    limits: { maxStorageBufferBindingSize: 128 * 1024 * 1024, maxBufferSize: 256 * 1024 * 1024, ...limits },
+    limits: {
+      maxStorageBufferBindingSize: 128 * 1024 * 1024,
+      maxBufferSize: 256 * 1024 * 1024,
+      ...limits,
+    },
     lost: new Promise(() => {}),
     __lost: false,
     createBuffer: (desc: GPUBufferDescriptor) => {
-      const buf = { label: desc.label, size: desc.size, usage: desc.usage, mapAsync: async () => {} };
+      const buf = {
+        label: desc.label,
+        size: desc.size,
+        usage: desc.usage,
+        mapAsync: async () => {},
+      };
       recorded.buffers.push(buf);
       return buf as GPUBuffer;
     },
@@ -611,7 +621,9 @@ function createMockGPUDevice(
     createBindGroup: () => ({}) as GPUBindGroup,
     createShaderModule: (desc: GPUShaderModuleDescriptor) => {
       recorded.shaderModules.push(desc.code);
-      return { getCompilationInfo: async () => ({ messages: [] }) } as GPUShaderModule;
+      return {
+        getCompilationInfo: async () => ({ messages: [] }),
+      } as GPUShaderModule;
     },
     createComputePipeline: (desc: GPUComputePipelineDescriptor) => {
       recorded.pipelines.push(desc);
@@ -621,14 +633,19 @@ function createMockGPUDevice(
       beginComputePass: () => ({
         setPipeline: () => {},
         setBindGroup: () => {},
-        dispatchWorkgroups: (...args: number[]) => recorded.submissions.push(args),
+        dispatchWorkgroups: (...args: number[]) =>
+          recorded.submissions.push(args),
         end: () => {},
       }),
       finish: () => ({}) as GPUCommandBuffer,
     }),
     queue: {
       writeBuffer: (buffer: GPUBuffer, offset: number, data: BufferSource) =>
-        recorded.writeBuffers.push({ buffer, offset, byteLength: data.byteLength }),
+        recorded.writeBuffers.push({
+          buffer,
+          offset,
+          byteLength: data.byteLength,
+        }),
       submit: () => {},
     },
     fakeLose: () => {
@@ -1623,4 +1640,3 @@ implementation begins.
 - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md`
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/`
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/racing_curriculum/workers/simulation-worker/simulation-worker.gpu.test.ts`
-

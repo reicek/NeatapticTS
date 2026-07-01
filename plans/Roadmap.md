@@ -206,18 +206,34 @@ but must not modify `src/` library code or the core search/embedding logic insid
 
 **Coordination rule:** this lane is confined to `.github/copilot-instructions.md`, `.github/skills/phase-handoff-workflow/SKILL.md`, `scripts/agent-customization/gates/step-packet.gate.mjs`, and plan file step packet YAML. Do not modify `src/` library code, flow YAML files (`.github/flows/*.flow.yml` use `agent:` for flow ownership, a different concern), or runtime enforcement scripts.
 
-## Standalone Meta-Workflow Lane — Holistic Agent & Skill Optimization [WIP]
+## Standalone Meta-Workflow Lane — Holistic Agent & Skill Optimization [DONE]
 
-**Outcome:** grade, fix, and regrade ALL 65 agents (8 Tier 1, 11 Tier 2, 42 Tier 3, 4 Tier 4) and ALL 58 skills to 100/100/100 across three dimensions — Orchestration, Tools & Skills, and Role Knowledge — using a grade→fix→regrade loop where the executor never assesses itself. Then update all WIP/PLANNED plans to use the updated agentic contracts, `delegate_to` fields, and delegation mandates. Supersedes the archived Tier 1 Delegation Remediation lane, which addressed only Tier 1 instructional and output-contract gaps (P0–P5: output contract tightening + gate enforcement, Mission-level delegation mandate, slice `delegate_to` schema field, Tier 1→specialist lookup table, routing table body references, ordered flow dispatch sequences). The structural infrastructure from the archived Orchestration System Optimization lane remains sound; this lane expands remediation to every tier and every skill.
+**Outcome:** grade, fix, and regrade ALL 65 agents (8 Tier 1, 11 Tier 2, 42 Tier 3, 4 Tier 4) and ALL 58 skills to 100/100/100 across three dimensions — Orchestration, Tools & Skills, and Role Knowledge — using a grade→fix→regrade loop where the executor never assesses itself. Then update all WIP/PLANNED plans to use the updated agentic contracts, `delegate_to` fields, and delegation mandates. Supersedes the archived Tier 1 Delegation Remediation lane, which addressed only Tier 1 instructional and output-contract gaps (P0–P5: output contract tightening + gate enforcement, Mission-level delegation mandate, slice `delegate_to` schema field, Tier 1→specialist lookup table, routing table body references, ordered flow dispatch sequences). The structural infrastructure from the archived Orchestration System Optimization lane remains sound; this lane expands remediation to every tier and every skill. Plan archived to `plans/completed/holistic-agent-skill-optimization.plans.md`.
 
 - Holistic agent & skill optimization
-  - Plan: [holistic-agent-skill-optimization.plans.md](holistic-agent-skill-optimization.plans.md) [WIP]
-  - Current internal state: Phase 0 (planning) [DONE], Phase 1 (agent grading round 1) [DONE], Phase 2 (agent fixes round 1) [WIP] (Tier 2 DONE, Tier 1 in progress, Tier 3+4 + execute/gate fixes queued). Phases 3–6 (regrade, skill grading, skill fixes, plan updates) [PLANNED].
+  - Plan: [completed/holistic-agent-skill-optimization.plans.md](completed/holistic-agent-skill-optimization.plans.md) [DONE]
+  - Final state: all 65 agents and 58 skills graded/fixed/regraded; P0–P5 remediation gaps addressed; plan archived.
 - `agent-json-body-to-md` skill load fix
   - Plan: [completed/agent-json-body-to-md-skill-load-fix.plans.md](completed/agent-json-body-to-md-skill-load-fix.plans.md) [DONE]
   - Scope: fix unescaped apostrophe in skill frontmatter `description` so strict YAML parsers can load the file; regenerate routing table; verify skill goal and downstream consumers remain intact.
 
 **Coordination rule:** this lane is confined to `.github/agents/*.agent.md` (65 files — all tiers), `.github/skills/*/SKILL.md` (58 files), `.github/skills/execute/SKILL.md`, `.github/flows/*.flow.yml`, `scripts/agent-customization/gates/delegate-skill-coverage.gate.mjs` + `.test.ts`, `.github/agent-skill-routing-table.md` (regeneration only if frontmatter changed), WIP/PLANNED plan files, and tracker/log files. Do not modify `src/` library code or MCP server implementations. Treat [completed/Orchestration_System_Optimization.plans.md](completed/Orchestration_System_Optimization.plans.md) as the archived structural baseline and this lane as its expanded holistic follow-up.
+
+## Standalone External Tool Assimilation Lane [DONE]
+
+**Outcome:** deliver a repeatable skill/agent flow (`external-tool-assimilation` skill,
+`assimilator` specialist) that analyzes an external GitHub repository and produces a local
+comparison study under `<repo-name>/` with verbatim copies, per-area summaries, and a
+final synthesis of actionable assimilation recommendations.
+
+- External tool assimilation
+  - Plan: [completed/assimilate-repeatable-skill.plans.md](completed/assimilate-repeatable-skill.plans.md) [DONE]
+  - Final state: all seven steps [DONE]; skill, agent, templates, script, tests, and sample assimilation delivered and validated. Detailed evidence in [completed/assimilate-repeatable-skill.logs.md](completed/assimilate-repeatable-skill.logs.md).
+
+**Coordination rule:** this lane touched `.github/skills/external-tool-assimilation/SKILL.md`,
+`.github/agents/assimilator.agent.md`, `.github/templates/assimilation/`,
+`scripts/assimilation/`, and plan index files. It did not modify `src/` library code or
+MCP server implementations.
 
 ## Standalone Context Optimization Lane [DONE]
 

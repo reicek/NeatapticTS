@@ -19,9 +19,7 @@ import { advanceGrowthHysteresis } from './neat.nge-juvenile';
 import { applyMorphDeltas } from './neat.nge-juvenile.apply';
 import { runNgeLifecycle } from '../neat.nge-lifecycle';
 import { resolveFocusConfig } from './neat.nge-juvenile.focus';
-import type {
-  MorphApplyOutcome,
-} from './neat.nge-juvenile.apply';
+import type { MorphApplyOutcome } from './neat.nge-juvenile.apply';
 import type {
   NgeGrowthBudget,
   NgeHysteresisState,
@@ -55,7 +53,10 @@ interface GrowthTelemetry {
 
 interface StreamConfig {
   name: string;
-  buildMetrics: (windowIndex: number, network: Network) => NgeModuleMetricsSnapshot;
+  buildMetrics: (
+    windowIndex: number,
+    network: Network,
+  ) => NgeModuleMetricsSnapshot;
   windowCount: number;
 }
 
@@ -106,7 +107,11 @@ function runGrowthStream(
 
   const telemetry: GrowthTelemetry[] = [];
 
-  for (let windowIndex = 0; windowIndex < streamConfig.windowCount; windowIndex++) {
+  for (
+    let windowIndex = 0;
+    windowIndex < streamConfig.windowCount;
+    windowIndex++
+  ) {
     const metrics = streamConfig.buildMetrics(windowIndex, network);
     const isPositiveFocusWindow = metrics.rewardDelta > 0;
     hysteresis = advanceGrowthHysteresis(hysteresis, isPositiveFocusWindow);
@@ -130,7 +135,8 @@ function runGrowthStream(
     const nodesAfter = network.nodes.length;
     const edgesAfter = network.connections.length;
 
-    const plannedKinds = result.juvenileResult?.deltas.map((delta) => delta.kind) ?? [];
+    const plannedKinds =
+      result.juvenileResult?.deltas.map((delta) => delta.kind) ?? [];
     const outcomes = result.applyOutcomes ?? [];
 
     telemetry.push({
@@ -138,7 +144,8 @@ function runGrowthStream(
       rewardDelta: metrics.rewardDelta,
       utilization: metrics.utilization,
       focusRawScore: result.juvenileResult?.focusScore.rawScore ?? 0,
-      focusNormalizedScore: result.juvenileResult?.focusScore.normalizedScore ?? 0,
+      focusNormalizedScore:
+        result.juvenileResult?.focusScore.normalizedScore ?? 0,
       deltasPlanned: plannedKinds,
       outcomes,
       nodesBefore,
@@ -181,7 +188,8 @@ function summarizeTelemetry(telemetry: GrowthTelemetry[]): {
     }
 
     const edgeApplied = window.outcomes.some(
-      (outcome) => outcome.kind === 'edgeDensify' && outcome.status === 'applied',
+      (outcome) =>
+        outcome.kind === 'edgeDensify' && outcome.status === 'applied',
     );
     if (edgeApplied && window.edgesAfter === window.edgesBefore) {
       falsePositiveEdgeWindows += 1;
@@ -193,8 +201,10 @@ function summarizeTelemetry(telemetry: GrowthTelemetry[]): {
     finalEdges: final?.edgesAfter ?? 0,
     totalAppliedReports,
     totalSkippedReports,
-    actualNodeGrowth: (final?.nodesAfter ?? 0) - (telemetry[0]?.nodesBefore ?? 0),
-    actualEdgeGrowth: (final?.edgesAfter ?? 0) - (telemetry[0]?.edgesBefore ?? 0),
+    actualNodeGrowth:
+      (final?.nodesAfter ?? 0) - (telemetry[0]?.nodesBefore ?? 0),
+    actualEdgeGrowth:
+      (final?.edgesAfter ?? 0) - (telemetry[0]?.edgesBefore ?? 0),
     falsePositiveEdgeWindows,
   };
 }
@@ -290,7 +300,9 @@ describe('nge juvenile growth-curve red contracts', () => {
         prune: buildDefaultPruneBudget(network),
       });
 
-      const edgeOutcome = outcomes.find((outcome) => outcome.kind === 'edgeDensify');
+      const edgeOutcome = outcomes.find(
+        (outcome) => outcome.kind === 'edgeDensify',
+      );
       const structuralChange = {
         nodes: network.nodes.length - initialNodeCount,
         edges: network.connections.length - initialConnectionCount,
@@ -316,11 +328,15 @@ describe('nge juvenile growth-curve red contracts', () => {
     });
 
     it('grows past the historical 101-node stall point', () => {
-      expect(monotonicSummary.finalNodes).toBeGreaterThan(HISTORICAL_STALL_NODES);
+      expect(monotonicSummary.finalNodes).toBeGreaterThan(
+        HISTORICAL_STALL_NODES,
+      );
     });
 
     it('grows past the historical 388-edge stall point', () => {
-      expect(monotonicSummary.finalEdges).toBeGreaterThan(HISTORICAL_STALL_EDGES);
+      expect(monotonicSummary.finalEdges).toBeGreaterThan(
+        HISTORICAL_STALL_EDGES,
+      );
     });
 
     it('does not report edge-densify windows with no structural change', () => {
@@ -338,7 +354,9 @@ describe('nge juvenile growth-curve red contracts', () => {
       const networkB = new Network(4, 2, { seed: DEFAULT_SEED });
       runGrowthStream(networkB, stream);
 
-      expect(topologyFingerprint(networkA)).toEqual(topologyFingerprint(networkB));
+      expect(topologyFingerprint(networkA)).toEqual(
+        topologyFingerprint(networkB),
+      );
     });
   });
 

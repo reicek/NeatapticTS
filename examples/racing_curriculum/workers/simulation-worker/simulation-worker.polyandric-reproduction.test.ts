@@ -32,9 +32,11 @@ import {
 // brittle `mockReturnValueOnce` queue, which was being reset by
 // `jest.clearAllMocks()` before the FSM consumed it.
 // ---------------------------------------------------------------------------
-let activeRaceRunnerFactory: (agentCount: number, networks?: readonly unknown[]) => RaceEpisodeRunner = (
-  agentCount,
-) => createDeterministicDoneRunner(agentCount);
+let activeRaceRunnerFactory: (
+  agentCount: number,
+  networks?: readonly unknown[],
+) => RaceEpisodeRunner = (agentCount) =>
+  createDeterministicDoneRunner(agentCount);
 
 // ---------------------------------------------------------------------------
 // Module mocks — keep real implementations where possible, spy on boundaries
@@ -457,19 +459,19 @@ describe('FSM polyandric reproduction integration', () => {
     it('leaves raceRunner undefined when start-race is routed without a coevolution container', () => {
       const state = {
         ...createInitialProtocolState(),
-        phase: "generation-ready" as const,
+        phase: 'generation-ready' as const,
       };
       const result = routeRacingWorkerProtocolMessage(
         {
-          type: "start-race",
+          type: 'start-race',
           tierConfig: {},
-          opponentSnapshotId: "snap-0",
+          opponentSnapshotId: 'snap-0',
         },
         state,
       );
 
       expect(result.nextState).toMatchObject({
-        phase: "racing",
+        phase: 'racing',
         raceRunner: undefined,
       });
     });
@@ -477,20 +479,20 @@ describe('FSM polyandric reproduction integration', () => {
     it('returns an error response when request-race-step is routed without a raceRunner', () => {
       const state = {
         ...createInitialProtocolState(),
-        phase: "racing" as const,
+        phase: 'racing' as const,
       };
       const result = routeRacingWorkerProtocolMessage(
         {
-          type: "request-race-step",
-          requestId: "r-no-runner",
+          type: 'request-race-step',
+          requestId: 'r-no-runner',
           stepsToAdvance: 1,
         },
         state,
       );
 
       expect(result.response).toEqual({
-        type: "error",
-        message: "No race episode runner available.",
+        type: 'error',
+        message: 'No race episode runner available.',
       });
     });
 
@@ -498,37 +500,39 @@ describe('FSM polyandric reproduction integration', () => {
       activeRaceRunnerFactory = (_agentCount, networks) =>
         createActiveRunner(
           networks?.length ?? _agentCount,
-          networks as unknown as readonly { activate(inputs: number[]): number[] }[],
+          networks as unknown as readonly {
+            activate(inputs: number[]): number[];
+          }[],
         );
       let state = createInitialProtocolState();
       state = routeRacingWorkerProtocolMessage(
-        { type: "init", populationSize: 10, rngSeed: 42, tier: 1 },
+        { type: 'init', populationSize: 10, rngSeed: 42, tier: 1 },
         state,
       ).nextState;
       state = routeRacingWorkerProtocolMessage(
-        { type: "request-generation" },
+        { type: 'request-generation' },
         state,
       ).nextState;
       state = routeRacingWorkerProtocolMessage(
         {
-          type: "start-race",
+          type: 'start-race',
           tierConfig: {},
-          opponentSnapshotId: "snap-0",
+          opponentSnapshotId: 'snap-0',
         },
         state,
       ).nextState;
       const result = routeRacingWorkerProtocolMessage(
         {
-          type: "request-race-step",
-          requestId: "r-unfinished",
+          type: 'request-race-step',
+          requestId: 'r-unfinished',
           stepsToAdvance: 1,
         },
         state,
       );
 
       expect(result.response).toMatchObject({
-        type: "race-step",
-        requestId: "r-unfinished",
+        type: 'race-step',
+        requestId: 'r-unfinished',
         done: false,
       });
     });

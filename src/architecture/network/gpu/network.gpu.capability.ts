@@ -1,4 +1,5 @@
 import type Network from '../network';
+import { isDeviceReady } from './network.gpu.device';
 
 /**
  * Minimum GPU eligibility predicate for the red-test seam.
@@ -22,7 +23,7 @@ export function canUseGPU(
   device: GPUDevice | null,
   supportedActivations: ReadonlySet<number>,
 ): boolean {
-  if (device === null) {
+  if (!isDeviceReady(device)) {
     return false;
   }
 
@@ -53,7 +54,7 @@ export function canUseGPU(
     network.nodes.length * 4,
     network.connections.length * 4,
   );
-  const limit = device.limits.maxStorageBufferBindingSize!;
+  const limit = device!.limits.maxStorageBufferBindingSize!;
   if (estimatedBytes > limit) {
     return false;
   }

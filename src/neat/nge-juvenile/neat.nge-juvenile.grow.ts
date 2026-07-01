@@ -234,7 +234,11 @@ export function planNodeAddition(
   }
 
   const growthSignal = computeNodeGrowthSignal(score, config);
-  if (growthSignal <= (config.nodeGrowthSignalFloor ?? NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR)) {
+  if (
+    growthSignal <=
+    (config.nodeGrowthSignalFloor ??
+      NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR)
+  ) {
     throw new NgeJuvenile_MorphError(
       `Node addition requires growthSignal > ${config.nodeGrowthSignalFloor} for ${moduleId}.`,
     );
@@ -357,7 +361,12 @@ export function planGrowthMorphs(
 
   // Step 2: Try the preferred edge-densification increment first.
   try {
-    const edgeDelta = planEdgeDensification(moduleId, budget, focusScore, config);
+    const edgeDelta = planEdgeDensification(
+      moduleId,
+      budget,
+      focusScore,
+      config,
+    );
     validateMorphDelta(edgeDelta, budget);
     plannedDeltas.push(edgeDelta);
   } catch (error) {

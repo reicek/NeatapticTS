@@ -1,11 +1,16 @@
-import Network from '../network';
-import * as capability from './network.gpu.capability';
-import { createMockGPUDevice } from './__mocks__/gpu.mock';
 import {
+  createGPUBuffer,
   destroyGPUBufferSet,
   uploadNetworkToGPU,
   type GPUBufferSet,
 } from './network.gpu.buffer';
+import {
+  GPU_BUFFER_BINDING,
+  GPU_BUFFER_BINDING_COUNT,
+} from './network.gpu.types';
+import Network from '../network';
+import * as capability from './network.gpu.capability';
+import { createMockGPUDevice } from './__mocks__/gpu.mock';
 
 // WebGPU buffer usage constants are not available at runtime in the test
 // environment, so we mirror the spec values here for explicit assertions.
@@ -58,6 +63,68 @@ describe('network.gpu.buffer', () => {
     jest.restoreAllMocks();
   });
 
+  describe('createGPUBuffer', () => {
+    it.each([[NaN], [Infinity], [-1]])(
+      'rejects non-finite/negative byteLength (%s)',
+      (byteLength) => {
+        const device = createMockGPUDevice();
+
+        expect(() => createGPUBuffer(device, byteLength, 'bad')).toThrow(
+          /Invalid GPU buffer size for "bad"/,
+        );
+      },
+    );
+
+    it('rejects sizes above maxStorageBufferBindingSize', () => {
+      const device = createMockGPUDevice({ maxStorageBufferBindingSize: 100 });
+
+      expect(() => createGPUBuffer(device, 101, 'big-storage')).toThrow(
+        /exceeds maxStorageBufferBindingSize 100/,
+      );
+    });
+
+    it('rejects sizes above maxBufferSize', () => {
+      const device = createMockGPUDevice({
+        maxStorageBufferBindingSize: 200,
+        maxBufferSize: 100,
+      });
+
+      expect(() => createGPUBuffer(device, 101, 'big-buffer')).toThrow(
+        /exceeds maxBufferSize 100/,
+      );
+    });
+
+    it('defaults usage to STORAGE | COPY_DST', () => {
+      const device = createMockGPUDevice();
+      const expectedUsage =
+        GPU_BUFFER_USAGE_STORAGE | GPU_BUFFER_USAGE_COPY_DST;
+
+      createGPUBuffer(device, 16, 'default-usage');
+
+      expect(device.recorded.buffers[0]?.usage).toBe(expectedUsage);
+    });
+  });
+
+  describe('GPU buffer contract constants', () => {
+    it('exports the expected binding indices and count', () => {
+      expect({
+        binding: GPU_BUFFER_BINDING,
+        count: GPU_BUFFER_BINDING_COUNT,
+      }).toEqual({
+        binding: {
+          weights: 0,
+          from: 1,
+          to: 2,
+          flags: 3,
+          outStart: 4,
+          outOrder: 5,
+          outputs: 6,
+        },
+        count: 7,
+      });
+    });
+  });
+
   describe('uploadNetworkToGPU', () => {
     it('throws when the network is not GPU eligible', () => {
       const device = createMockGPUDevice();
@@ -93,8 +160,8 @@ describe('network.gpu.buffer', () => {
         from: slab.from.byteLength,
         to: slab.to.byteLength,
         flags: slab.flags.byteLength,
-        outStart: (internals._outStart?.byteLength ?? 0),
-        outOrder: (internals._outOrder?.byteLength ?? 0),
+        outStart: internals._outStart?.byteLength ?? 0,
+        outOrder: internals._outOrder?.byteLength ?? 0,
         outputs: network.nodes.length * Float32Array.BYTES_PER_ELEMENT,
       };
       const recordedSizes = {

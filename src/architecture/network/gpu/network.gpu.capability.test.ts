@@ -83,6 +83,16 @@ describe('network.gpu.capability', () => {
       ).toBe(false);
     });
 
+    it('returns false when a connection is self-referential', () => {
+      const network = createSlabEligibleNetwork({
+        connections: [{ from: 0, to: 0 }],
+      });
+      const device = createMockGPUDevice();
+      expect(
+        canUseGPU(network as unknown as Network, device, SUPPORTED_ACTIVATIONS),
+      ).toBe(false);
+    });
+
     it('returns false when a node uses an unsupported activation', () => {
       const unsupportedSquash = Object.assign(
         (x: number, derivate?: boolean) => Activation.logistic(x, derivate),

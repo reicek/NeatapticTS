@@ -44,6 +44,7 @@
 ## Reopen conditions
 
 Reopen this archive only if:
+
 - The `rag-index/` consolidation regresses (consumers break, gates fail, or old paths resurface).
 - The `update-rag.mjs` orchestrator contract needs extension (true incremental entity-graph updates, new stages, or different skip policy).
 - A follow-up reorganization needs to introduce semantic subfolders inside `rag-index/` (the chosen layout is flat to minimize import churn).

@@ -611,8 +611,10 @@ export function routeRacingWorkerProtocolMessage(
     );
 
     // Build per-car adaptation context: engines + live Network instances.
-    const engines = currentState.adaptationEngines as
-      Map<number, RuntimeAdaptationEngine>;
+    const engines = currentState.adaptationEngines as Map<
+      number,
+      RuntimeAdaptationEngine
+    >;
     const adaptationNetworks = new Map<number, Network>();
     for (const genome of carGenomes) {
       adaptationNetworks.set(genome.carIndex, genome.getNetwork());

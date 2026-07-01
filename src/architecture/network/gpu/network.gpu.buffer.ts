@@ -25,6 +25,60 @@ const GPU_BUFFER_USAGE_DEFAULT =
   GPU_BUFFER_USAGE_STORAGE | GPU_BUFFER_USAGE_COPY_DST;
 
 /**
+ * Create a WebGPU storage buffer that can receive `queue.writeBuffer` uploads.
+ *
+ * Every buffer produced by the upload path must be usable as a read-only
+ * (or read-write) storage binding and as a copy destination. This helper
+ * validates the request against the device's binding and buffer size limits
+ * before delegating to `device.createBuffer`.
+ *
+ * @param device - WebGPU device used to allocate the buffer.
+ * @param byteLength - Desired buffer size in bytes. Must be finite and
+ *   non-negative.
+ * @param label - Debug label attached to the buffer.
+ * @param usage - Additional usage flags merged with the mandatory
+ *   `STORAGE | COPY_DST` bits. Defaults to no extra flags.
+ * @returns A freshly created `GPUBuffer` with the mandatory usage bits set.
+ * @throws Error when `byteLength` is invalid or exceeds device limits.
+ */
+export function createGPUBuffer(
+  device: GPUDevice,
+  byteLength: number,
+  label: string,
+  usage: number = 0,
+): GPUBuffer {
+  if (!Number.isFinite(byteLength) || byteLength < 0) {
+    throw new Error(
+      `Invalid GPU buffer size for "${label}": ${String(byteLength)}`,
+    );
+  }
+
+  const maxStorageBufferBindingSize =
+    device.limits.maxStorageBufferBindingSize!;
+  const maxBufferSize = device.limits.maxBufferSize!;
+
+  if (byteLength > maxStorageBufferBindingSize) {
+    throw new Error(
+      `Buffer "${label}" size ${byteLength} exceeds maxStorageBufferBindingSize ${String(maxStorageBufferBindingSize)}`,
+    );
+  }
+
+  if (byteLength > maxBufferSize) {
+    throw new Error(
+      `Buffer "${label}" size ${byteLength} exceeds maxBufferSize ${String(maxBufferSize)}`,
+    );
+  }
+
+  const combinedUsage = usage | GPU_BUFFER_USAGE_DEFAULT;
+
+  return device.createBuffer({
+    label,
+    size: byteLength,
+    usage: combinedUsage,
+  });
+}
+
+/**
  * Internal network state used to read the CSR adjacency arrays produced by
  * the fast-slab path. The cast is intentional: GPU upload is a consumer of the
  * same private layout that slab activation uses.
@@ -56,16 +110,18 @@ export interface GPUBufferSet {
 /**
  * Upload a network's fast-slab structures to WebGPU buffers.
  *
- * This placeholder implementation exercises the mock recorder and the red-test
- * contract: it checks GPU eligibility, creates one `GPUBuffer` per slab/CSR
- * array, writes each slab with `queue.writeBuffer`, and returns the buffer
- * handles plus node/connection counts. It is intentionally not yet a real GPU
- * compute path.
+ * The upload path reuses the existing CPU slab arrays without
+ * re-serialization: it creates one `GPUBuffer` per slab/CSR array via
+ * {@link createGPUBuffer}, writes each slab exactly once with
+ * `queue.writeBuffer`, and returns the buffer handles plus node/connection
+ * counts. The buffer order matches {@link GPU_BUFFER_BINDING} so the compute
+ * kernel can bind them with stable indices.
  *
  * @param device - Mock or real WebGPU device used to allocate buffers.
  * @param network - Network whose fast-slab layout will be uploaded.
  * @returns Handles for the uploaded slab buffers and network metadata.
  * @throws Error when the network is not eligible for the GPU path.
+ * @throws Error when a requested buffer size exceeds device limits.
  */
 export function uploadNetworkToGPU(
   device: GPUDevice,
@@ -83,41 +139,37 @@ export function uploadNetworkToGPU(
   const outOrder = internals._outOrder ?? new Uint32Array(0);
 
   // Step 3: Create one GPU buffer per slab array.
-  const weightsBuffer = device.createBuffer({
-    label: 'network_weights',
-    size: slab.weights.byteLength,
-    usage: GPU_BUFFER_USAGE_DEFAULT,
-  });
-  const fromBuffer = device.createBuffer({
-    label: 'network_from',
-    size: slab.from.byteLength,
-    usage: GPU_BUFFER_USAGE_DEFAULT,
-  });
-  const toBuffer = device.createBuffer({
-    label: 'network_to',
-    size: slab.to.byteLength,
-    usage: GPU_BUFFER_USAGE_DEFAULT,
-  });
-  const flagsBuffer = device.createBuffer({
-    label: 'network_flags',
-    size: slab.flags.byteLength,
-    usage: GPU_BUFFER_USAGE_DEFAULT,
-  });
-  const outStartBuffer = device.createBuffer({
-    label: 'network_outStart',
-    size: outStart.byteLength,
-    usage: GPU_BUFFER_USAGE_DEFAULT,
-  });
-  const outOrderBuffer = device.createBuffer({
-    label: 'network_outOrder',
-    size: outOrder.byteLength,
-    usage: GPU_BUFFER_USAGE_DEFAULT,
-  });
-  const outputsBuffer = device.createBuffer({
-    label: 'network_outputs',
-    size: network.nodes.length * Float32Array.BYTES_PER_ELEMENT,
-    usage: GPU_BUFFER_USAGE_DEFAULT,
-  });
+  const weightsBuffer = createGPUBuffer(
+    device,
+    slab.weights.byteLength,
+    'network_weights',
+  );
+  const fromBuffer = createGPUBuffer(
+    device,
+    slab.from.byteLength,
+    'network_from',
+  );
+  const toBuffer = createGPUBuffer(device, slab.to.byteLength, 'network_to');
+  const flagsBuffer = createGPUBuffer(
+    device,
+    slab.flags.byteLength,
+    'network_flags',
+  );
+  const outStartBuffer = createGPUBuffer(
+    device,
+    outStart.byteLength,
+    'network_outStart',
+  );
+  const outOrderBuffer = createGPUBuffer(
+    device,
+    outOrder.byteLength,
+    'network_outOrder',
+  );
+  const outputsBuffer = createGPUBuffer(
+    device,
+    network.nodes.length * Float32Array.BYTES_PER_ELEMENT,
+    'network_outputs',
+  );
 
   // Step 4: Upload each slab to its GPU buffer.
   device.queue.writeBuffer(weightsBuffer, 0, slab.weights);
@@ -149,7 +201,8 @@ export function uploadNetworkToGPU(
 /**
  * Destroy every GPU buffer in a previously uploaded buffer set.
  *
- * @param device - WebGPU device that owns the buffers (unused by this placeholder).
+ * @param device - WebGPU device that owns the buffers (unused by this helper,
+ *   kept in the signature for API symmetry).
  * @param bufferSet - Buffer set returned by `uploadNetworkToGPU`.
  */
 export function destroyGPUBufferSet(

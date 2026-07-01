@@ -1,0 +1,14 @@
+Focused coverage: src/architecture/network/gpu/network.gpu.device.ts + network.gpu.capability.ts
+
+npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=src/architecture/network/gpu/network.gpu.device.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.capability.ts --testPathPatterns src/architecture/network/gpu/network.gpu.device.test.ts src/architecture/network/gpu/network.gpu.capability.test.ts
+
+---------------------------|---------|----------|---------|---------|-------------------
+File                       | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+---------------------------|---------|----------|---------|---------|-------------------
+All files                  |     100 |      100 |     100 |     100 |                   
+ network.gpu.capability.ts |     100 |      100 |     100 |     100 |                   
+ network.gpu.device.ts     |     100 |      100 |     100 |     100 |                   
+---------------------------|---------|----------|---------|---------|-------------------
+
+Test Suites: 2 passed, 2 total
+Tests:       16 passed, 16 total

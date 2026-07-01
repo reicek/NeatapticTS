@@ -1082,22 +1082,22 @@ rollback:
   lint: 'PASS (0 issues after removing unused import/variable left by coverage-guard)'
   prettier: 'PASS (pre-checked by 04-implementing)'
   focused_jest:
-    command: 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction'
-    result: 'PASS — 16 passed, 0 failed, 1 suite'
+  command: 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction'
+  result: 'PASS — 16 passed, 0 failed, 1 suite'
   broader_owner_local_regression:
-    command: 'npx jest --config=jest.config.mjs --no-cache --runInBand --coverage --coverageDirectory=tmp/coverage-p6d --collectCoverageFrom="examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts" --collectCoverageFrom="src/neat/nge-dna/neat.nge-dna.ts" --collectCoverageFrom="src/neat/nge-evolution/neat.nge-evolution.reproduction.ts" --collectCoverageFrom="src/neat/nge-evolution/neat.nge-evolution.reproduction.types.ts" --testPathPatterns="simulation-worker\.(polyandric-reproduction|multi-generation|evolution\.protocol|evolution)"'
-    result: 'PASS — 36 passed, 0 failed, 4 suites'
-    coverage_simulation_worker_evolution_protocol_service_ts:
-      statements_pct: 100
-      branches_pct: 100
-      functions_pct: 100
-      lines_pct: 100
-    coverage_other_files: 'Not evaluated from this test surface (src/neat/nge-dna/neat.nge-dna.ts and src/neat/nge-evolution/neat.nge-evolution.reproduction.ts are covered by their owner-local test files, not the simulation-worker test surface)'
+  command: 'npx jest --config=jest.config.mjs --no-cache --runInBand --coverage --coverageDirectory=tmp/coverage-p6d --collectCoverageFrom="examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts" --collectCoverageFrom="src/neat/nge-dna/neat.nge-dna.ts" --collectCoverageFrom="src/neat/nge-evolution/neat.nge-evolution.reproduction.ts" --collectCoverageFrom="src/neat/nge-evolution/neat.nge-evolution.reproduction.types.ts" --testPathPatterns="simulation-worker\.(polyandric-reproduction|multi-generation|evolution\.protocol|evolution)"'
+  result: 'PASS — 36 passed, 0 failed, 4 suites'
+  coverage_simulation_worker_evolution_protocol_service_ts:
+  statements_pct: 100
+  branches_pct: 100
+  functions_pct: 100
+  lines_pct: 100
+  coverage_other_files: 'Not evaluated from this test surface (src/neat/nge-dna/neat.nge-dna.ts and src/neat/nge-evolution/neat.nge-evolution.reproduction.ts are covered by their owner-local test files, not the simulation-worker test surface)'
   gates:
-    plan_sync: 'PASS (neataptic-gate-mcp:plan-sync)'
-    step_packet: 'PASS (neataptic-gate-mcp:step-packet)'
-    agent_graph: 'PASS (neataptic-gate-mcp:agent-graph)'
-    cortex_index: 'PASS after rebuild (node rag-index/build-index.mjs)'
+  plan_sync: 'PASS (neataptic-gate-mcp:plan-sync)'
+  step_packet: 'PASS (neataptic-gate-mcp:step-packet)'
+  agent_graph: 'PASS (neataptic-gate-mcp:agent-graph)'
+  cortex_index: 'PASS after rebuild (node rag-index/build-index.mjs)'
   coverage_guard: 'PASS — coverage-guard specialist reached 100% on simulation-worker.evolution.protocol.service.ts by removing dead branches and adding smallest owner-local tests'
   analysis: |
-    The slice-fix is green. The original mock-wiring problem was resolved by the mutable activeRaceRunnerFactory pattern introduced by 04-implementing. Coverage-guard removed genuinely unreachable defensive branches and added the smallest owner-local tests for reachable edge paths, bringing the touched production file to 100% statements/branches/functions/lines on the focused simulation-worker test surface.
+  The slice-fix is green. The original mock-wiring problem was resolved by the mutable activeRaceRunnerFactory pattern introduced by 04-implementing. Coverage-guard removed genuinely unreachable defensive branches and added the smallest owner-local tests for reachable edge paths, bringing the touched production file to 100% statements/branches/functions/lines on the focused simulation-worker test surface.

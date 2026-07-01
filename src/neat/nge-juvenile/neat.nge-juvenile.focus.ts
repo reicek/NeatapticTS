@@ -185,7 +185,8 @@ export function computeFocusScores(
     const normalizedUtilization = normalizedColumns.utilization[snapshotIndex];
     const normalizedRewardDelta = normalizedColumns.rewardDelta[snapshotIndex];
     const normalizedNovelty = normalizedColumns.novelty[snapshotIndex];
-    const normalizedStabilityAge = normalizedColumns.stabilityAge[snapshotIndex];
+    const normalizedStabilityAge =
+      normalizedColumns.stabilityAge[snapshotIndex];
     const normalizedWiringCost = normalizedColumns.wiringCost[snapshotIndex];
 
     const rawScore =

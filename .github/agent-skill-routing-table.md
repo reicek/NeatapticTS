@@ -1,6 +1,6 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: 771b292581f349743c28237388cb490b68971351c347249ff461923406538519 -->
-<!-- source-file-count: 125 -->
+<!-- source-hash: 914c976db0ee971875e549050004a1480cd3cda966b43e6b29f23bd9b0d3392f -->
+<!-- source-file-count: 127 -->
 # Canonical Agent and Skill Routing Table
 
 > Generated file. Do not edit manually.
@@ -22,6 +22,7 @@
 | academic-docs-auditor | 3 | kimi-k2.7-code:cloud | - | docs-academic-citation-audit<br>auditing-js-docs |
 | acceptance-criteria-writer | 4 | kimi-k2.7-code:cloud | - | planning-acceptance-criteria |
 | agent-frontmatter-auditor | 3 | kimi-k2.7-code:cloud | - | agent-frontmatter-standards<br>updating-agent-frontmatter |
+| assimilator | 3 | kimi-k2.7-code:cloud | - | external-tool-assimilation<br>license-attribution-audit<br>research-methodology<br>capturing-learning-event |
 | boundary-mapper | 3 | kimi-k2.7-code:cloud | - | solid-split<br>implementation-standards |
 | browser-memory-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp |
 | browser-runtime-scout | 3 | kimi-k2.7-code:cloud | - | browser-build |
@@ -88,7 +89,7 @@
 | architecture-builder | skill | - | 04-implementing<br>flappy-architecture-polish | self |
 | auditing-js-docs | skill | - | 06-documenting<br>academic-docs-auditor | self |
 | browser-build | skill | - | browser-runtime-scout | self |
-| capturing-learning-event | skill | - | 00-helping<br>07-logging<br>learning-event-capturer | self |
+| capturing-learning-event | skill | - | 00-helping<br>07-logging<br>assimilator<br>learning-event-capturer | self |
 | checkpointing-persistence | skill | - | checkpoint-scout | self |
 | chrome-devtools-mcp | skill | - | 03-red-testing<br>05-green-testing<br>browser-memory-specialist<br>browser-ui-specialist<br>performance-trace-specialist | self |
 | coverage-guard | skill | - | 05-green-testing<br>coverage-guard<br>coverage-scout<br>implementation-executor<br>test-coverage-analyst | self |
@@ -99,11 +100,12 @@
 | docs-academic-citation-audit | skill | - | 06-documenting<br>academic-docs-auditor | self |
 | educational-docs | skill | - | 06-documenting<br>docs-example-writer<br>docs-scout | self |
 | execute | skill | - | 00-helping<br>01-planning<br>02-researching<br>03-red-testing<br>04-implementing<br>05-green-testing<br>06-documenting<br>07-logging<br>flappy-architecture-polish<br>green-test-failure-triage-coordinator<br>helping-agent-maintenance-coordinator<br>helping-gap-resolution-coordinator<br>implementation-executor<br>implementation-pattern-coordinator<br>planning-context-coordinator<br>planning-risk-coordinator<br>planning-test-strategy-coordinator<br>research-codebase-coordinator<br>slice-orchestration-scheduler<br>solid-split | self |
+| external-tool-assimilation | skill | - | assimilator | self |
 | flappy-architecture-polish | skill | - | flappy-architecture-polish | self |
 | green-validation-gates | skill | - | 05-green-testing<br>code-quality-auditor<br>green-test-failure-triage-coordinator | self |
 | hybrid-training-interop | skill | - | hybrid-interop-scout | self |
 | implementation-standards | skill | - | 04-implementing<br>boundary-mapper<br>code-quality-auditor<br>implementation-executor<br>implementation-pattern-coordinator<br>implementation-pattern-scout<br>solid-split | self |
-| license-attribution-audit | skill | - | 01-planning<br>06-documenting<br>license-attribution-auditor<br>planning-risk-coordinator | self |
+| license-attribution-audit | skill | - | 01-planning<br>06-documenting<br>assimilator<br>license-attribution-auditor<br>planning-risk-coordinator | self |
 | mcp-local-server-workflow | skill | - | mcp-runtime-scout<br>mcp-server-architect<br>mcp-validation-auditor<br>vscode-ai-extensibility-scout | self |
 | model-routing-and-budget | skill | - | 00-helping<br>01-planning<br>helping-agent-maintenance-coordinator<br>helping-gap-resolution-coordinator<br>model-name-auditor<br>planning-risk-coordinator | self |
 | multithread-evaluation | skill | - | evaluation-pool-scout | self |
@@ -120,7 +122,7 @@
 | repo-cortex-embeddings | skill | - | cortex-embeddings-scout | self |
 | repo-cortex-workflow | skill | - | 02-researching<br>repo-cortex-scout<br>research-codebase-coordinator | self |
 | reproducibility-contracts | skill | - | 03-red-testing<br>04-implementing<br>determinism-scout | self |
-| research-methodology | skill | - | 01-planning<br>02-researching<br>03-red-testing<br>04-implementing<br>05-green-testing<br>06-documenting<br>07-logging<br>research-codebase-coordinator<br>research-synthesis-specialist | self |
+| research-methodology | skill | - | 01-planning<br>02-researching<br>03-red-testing<br>04-implementing<br>05-green-testing<br>06-documenting<br>07-logging<br>assimilator<br>research-codebase-coordinator<br>research-synthesis-specialist | self |
 | routing-optimization-policy | skill | - | 00-helping | self |
 | running-unit-tests | skill | - | unit-test-runner | self |
 | skill-description-evals | skill | - | skill-trigger-eval-designer | self |

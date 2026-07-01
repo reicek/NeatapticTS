@@ -32,74 +32,223 @@ existing typed-array slab fast path. The GPU path must:
 
 ## Current state
 
-Claim: 05-green-testing @ 2026-06-30T20:18:14-04:00 (Phase 3 Step 07 [DONE])
+Claim: Agent Zero @ 2026-06-30T21:15:00Z (Phase 4 Step 02 [DONE]; ready to advance to Phase 4 Step 03)
 
 ```yaml
 PlanUpdate:
-  slice_id: 03-07
+  slice_id: 04-02-green
+  changed_files:
+    - src/architecture/network/gpu/network.gpu.buffer.ts
+    - src/architecture/network/gpu/network.gpu.types.ts
+    - src/architecture/network/gpu/network.gpu.buffer.test.ts
+  validation_run:
+    - 'npx tsc --noEmit -p tsconfig.json' # PASS (exit 0)
+    - 'npx eslint src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.types.ts src/architecture/network/gpu/network.gpu.buffer.test.ts src/architecture/network/gpu/gpu.types.d.ts' # PASS (exit 0)
+    - 'npx prettier --check src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.types.ts src/architecture/network/gpu/network.gpu.buffer.test.ts src/architecture/network/gpu/gpu.types.d.ts plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (exit 0)
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.buffer.test.ts' # PASS (16/16 tests)
+    - 'npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=src/architecture/network/gpu/network.gpu.buffer.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.types.ts --testPathPatterns=src/architecture/network/gpu/network.gpu.buffer.test.ts' # PASS (100% statements/branches/functions/lines)
+    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings)
+    - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings)
+  next: 'Dispatch 01-planning for mandatory plan-readiness verification before Phase 4 Step 03, then 04-implementing for 04-03-impl'
+  notes:
+    - 'Phase 4 Step 02 complete: GPU buffer allocator, slab-to-GPU upload, and stable binding map are implemented and 100% covered.'
+    - 'Coverage guard now passes on touched src/ files.'
+```
+
+Claim: 01-planning @ 2026-06-30T21:15:52Z (Phase 4 Step 03 [WIP]; plan-readiness verification complete)
+
+```yaml
+PlanUpdate:
+  slice_id: 04-03-impl
   changed_files:
     - plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  validation:
-    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/'
-    - 'npx tsc --noEmit -p tsconfig.json'
-    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md'
-    - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md'
-    - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-    - 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-  artifacts:
-    - coverage/lcov.info
-  next: 'Phase 4 Step 01'
+  validation_run:
+    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings)
+    - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings)
+    - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync' # PASS
+    - 'neataptic-gate-mcp:run_gate_check --gate=step-packet' # PASS
+    - 'neataptic-gate-mcp:run_gate_check --gate=agent-graph' # PASS
+    - 'npx prettier --check plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS
+  next: 'Dispatch 04-implementing for Phase 4 Step 03 slice 04-03-impl'
   notes:
-    - 'Full Phase 3 GPU red-test suite: 8 suites, 54 passed, 15 failed. All failures are honest placeholder seams; no syntax/import/setup failures.'
-    - 'Per-suite: capability PASS; device FAIL (5/5 not-implemented); buffer PASS; kernel PASS; parity FAIL (5/5 zero-placeholder tolerance); batched FAIL (2/7 dispatch/read-back placeholders); fallback FAIL (1/4 zero-placeholder parity); racing FAIL (1/8 zero-placeholder parity).'
-    - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.gpu.test.ts does not exist; left as a Phase 4 integration surface.'
-    - 'Removed stale duplicate ## Latest validation evidence section that contained an outdated green-light marker.'
-    - 'Plan-sync gate passes; step-packet gate passes with planReadinessWarnings for the active red-testing and implementing packets (no green-light marker yet).'
-    - 'Hand-off to 04-implementing requires a fresh 01-planning verification that records green-light: true in ## Latest validation evidence.'
+    - 'Repaired Phase 4 Step 03 to conform to the green-only two-slice contract (04-03-impl + 04-03-green).'
+    - 'Merged former 04-03-registry and 04-03-kernel slices into 04-03-impl.'
+    - 'Updated Step 04 dependency from 04-03-kernel to 04-03-green.'
+    - 'workflow-update-sync hook intentionally skipped: Step 03 implementation is not yet complete; the hook advances only after green validation passes.'
+```
+
+Claim: 04-implementing @ 2026-07-01T01:26:17Z (Phase 4 Step 03 slice 04-03-impl [DONE]; preflight checks pass; handoff to 05-green-testing)
+
+```yaml
+PlanUpdate:
+  slice_id: 04-03-impl
+  changed_files:
+    - src/architecture/network/gpu/network.gpu.activation.wgsl.ts
+    - src/architecture/network/gpu/network.gpu.kernel.ts
+    - src/architecture/network/gpu/network.gpu.types.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json' # PASS (exit 0)
+    - 'npx eslint src/architecture/network/gpu/network.gpu.activation.wgsl.ts src/architecture/network/gpu/network.gpu.kernel.ts src/architecture/network/gpu/network.gpu.types.ts' # PASS (exit 0)
+    - 'npx prettier --check src/architecture/network/gpu/network.gpu.activation.wgsl.ts src/architecture/network/gpu/network.gpu.kernel.ts src/architecture/network/gpu/network.gpu.types.ts plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (exit 0)
+    - 'npm run quality:folder -- --folder=src/architecture/network/gpu' # FAIL due to pre-existing ambient GPU type resolution and missing-test-file smells in the folder scanner; project-level tsc/eslint/prettier are clean
+  gates:
+    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings)
+    - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings)
+    - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync' # PASS
+    - 'neataptic-gate-mcp:run_gate_check --gate=step-packet' # PASS
+    - 'neataptic-gate-mcp:run_gate_check --gate=agent-graph' # PASS
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts'
+  rollback:
+    - 'git checkout -- src/architecture/network/gpu/network.gpu.kernel.ts src/architecture/network/gpu/network.gpu.types.ts'
+    - 'git rm -f src/architecture/network/gpu/network.gpu.activation.wgsl.ts'
+  next: 'Dispatch 05-green-testing for 04-03-green to run the focused kernel suite and coverage guard'
+  notes:
+    - 'Created network.gpu.activation.wgsl.ts: registry of f32 WGSL activation functions for worker indices 0,1,2,3,4,5,9,10,11,12,13.'
+    - 'Replaced stub activation bodies in createActivationKernel with real WGSL functions and a forward entry point that dispatches one thread per node.'
+    - 'Added compileActivationKernel with per-device WeakMap topology cache, shader module creation, and the existing 7-entry bind-group layout.'
+    - 'Preserved existing exports createActivationKernel, createBindGroupLayout, buildGPUPipeline, and SUPPORTED_ACTIVATION_INDICES.'
+    - 'No jest/coverage run per 04-implementing policy.'
+```
+
+Claim: 04-implementing @ 2026-06-30T21:32:50-04:00 (Phase 4 Step 03 slice 04-03-green coverage repair; handoff to 05-green-testing)
+
+```yaml
+PlanUpdate:
+  slice_id: 04-03-green
+  changed_files:
+    - src/architecture/network/gpu/network.gpu.kernel.test.ts
+    - src/architecture/network/gpu/network.gpu.activation.wgsl.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json' # PASS (exit 0)
+    - 'npx eslint src/architecture/network/gpu/network.gpu.kernel.test.ts src/architecture/network/gpu/network.gpu.activation.wgsl.ts src/architecture/network/gpu/network.gpu.types.ts' # PASS (exit 0)
+    - 'npx prettier --check src/architecture/network/gpu/network.gpu.kernel.test.ts src/architecture/network/gpu/network.gpu.activation.wgsl.ts src/architecture/network/gpu/network.gpu.types.ts' # PASS (exit 0)
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts'
+    - 'npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=src/architecture/network/gpu/network.gpu.kernel.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.activation.wgsl.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.types.ts --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts'
+  rollback:
+    - 'git checkout -- src/architecture/network/gpu/network.gpu.kernel.test.ts'
+    - 'git checkout -- src/architecture/network/gpu/network.gpu.activation.wgsl.ts'
+  next: 'Dispatch 05-green-testing for 04-03-green to rerun focused kernel suite and coverage guard'
+  notes:
+    - 'Added compileActivationKernel coverage tests covering pipeline creation, bind-group layout, cache reuse, cache miss, CSR topology key (_connFrom/_connTo), unsupported activation error, and ineligible topology error.'
+    - 'Removed unreachable default branch in network.gpu.activation.wgsl.ts buildActivationFunctionBody under the supported-index contract.'
+    - 'Asserted GPU_BUFFER_BINDING and GPU_BUFFER_BINDING_COUNT from network.gpu.types.ts in the kernel test so types.ts is exercised by the kernel coverage scope.'
+    - 'tsconfig.test.json has pre-existing unrelated errors in examples/racing_curriculum; no errors in touched GPU files.'
+```
+
+Claim: 05-green-testing @ 2026-06-30T21:37:34-04:00 (Phase 4 Step 03 slice 04-03-green re-run after coverage repair)
+
+```yaml
+PlanUpdate:
+  slice_id: 04-03-green
+  changed_files:
+    - src/architecture/network/gpu/network.gpu.activation.wgsl.ts
+    - src/architecture/network/gpu/network.gpu.kernel.ts
+    - src/architecture/network/gpu/network.gpu.types.ts
+    - src/architecture/network/gpu/network.gpu.kernel.test.ts
+  validation_run:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts' # PASS (26/26 tests, exit 0)
+    - 'npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=src/architecture/network/gpu/network.gpu.activation.wgsl.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.kernel.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.types.ts --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts' # PARTIAL: activation.wgsl 100%, types 100%, kernel.ts statements/branches/lines 100%, functions 90.9% (10/11)
+  coverage_gaps:
+    - file: src/architecture/network/gpu/network.gpu.kernel.ts
+      category: functions
+      expected: '100%'
+      actual: '90.9% (10/11)'
+      uncovered_function: 'anonymous_0 at line 24'
+      source_line: 'export { SUPPORTED_ACTIVATION_INDICES };'
+      cause: 'network.gpu.kernel.test.ts does not import/read the re-exported SUPPORTED_ACTIVATION_INDICES binding from network.gpu.kernel.ts'
+      fix_options:
+        - 'Add owner-local test in network.gpu.kernel.test.ts that imports SUPPORTED_ACTIVATION_INDICES from network.gpu.kernel.ts and asserts it matches the expected registry list.'
+        - 'If the re-export is no longer required by the public API, remove it from network.gpu.kernel.ts (coverage guard prefers dead-code removal).'
+  gates:
+    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings)
+    - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings, 0 planReadinessWarnings)
+    - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync' # PASS
+    - 'neataptic-gate-mcp:run_gate_check --gate=step-packet' # PASS
+    - 'neataptic-gate-mcp:run_gate_check --gate=agent-graph' # PASS
+  next: 'Route to 04-implementing with slice-fix packet to close the single uncovered function, then re-dispatch 05-green-testing'
+  notes:
+    - 'Focused kernel suite passes cleanly after the coverage repair.'
+    - 'Only one function is uncovered: the re-export of SUPPORTED_ACTIVATION_INDICES at network.gpu.kernel.ts:24.'
+    - 'All statements, branches, and lines on the three touched src/ files are at 100%.'
+    - 'Slice 04-03-green remains [PLANNED] until coverage guard reaches 100% on all touched src/ files.'
+```
+
+Claim: 04-implementing @ 2026-06-30T21:40:55-04:00 (Phase 4 Step 03 slice 04-03-green coverage repair; handoff to 05-green-testing)
+
+```yaml
+PlanUpdate:
+  slice_id: 04-03-green
+  changed_files:
+    - src/architecture/network/gpu/network.gpu.kernel.test.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json' # PASS (exit 0)
+    - 'npx tsc --noEmit -p tsconfig.test.json' # PASS on GPU path; pre-existing unrelated errors in examples/racing_curriculum
+    - 'npx eslint src/architecture/network/gpu/network.gpu.kernel.test.ts' # PASS (exit 0)
+    - 'npx prettier --check src/architecture/network/gpu/network.gpu.kernel.test.ts plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts'
+    - 'npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=src/architecture/network/gpu/network.gpu.kernel.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.activation.wgsl.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.types.ts --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts'
+  gates:
+    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings)
+    - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings, 0 planReadinessWarnings)
+    - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync' # PASS
+    - 'neataptic-gate-mcp:run_gate_check --gate=step-packet' # PASS
+    - 'neataptic-gate-mcp:run_gate_check --gate=agent-graph' # PASS
+  rollback:
+    - 'git checkout -- src/architecture/network/gpu/network.gpu.kernel.test.ts'
+  next: 'Dispatch 05-green-testing for 04-03-green to rerun focused kernel suite and coverage guard'
+  notes:
+    - 'Added owner-local test that imports SUPPORTED_ACTIVATION_INDICES from ./network.gpu.kernel and asserts it deep equals [0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13].'
+    - 'This exercises the re-export at network.gpu.kernel.ts:24 so the functions coverage category can reach 100%.'
+    - 'No jest/coverage run per 04-implementing policy.'
+```
+
+Claim: 05-green-testing @ 2026-06-30T21:43:25-04:00 (Phase 4 Step 03 slice 04-03-green [DONE]; coverage guard passes)
+
+```yaml
+PlanUpdate:
+  slice_id: 04-03-green
+  changed_files:
+    - src/architecture/network/gpu/network.gpu.activation.wgsl.ts
+    - src/architecture/network/gpu/network.gpu.kernel.ts
+    - src/architecture/network/gpu/network.gpu.types.ts
+    - src/architecture/network/gpu/network.gpu.kernel.test.ts
+  validation_run:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts' # PASS (27/27 tests, exit 0)
+    - 'npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=src/architecture/network/gpu/network.gpu.activation.wgsl.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.kernel.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.types.ts --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts' # PASS (100% statements/branches/functions/lines on all three touched src/ files)
+  gates:
+    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings)
+    - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md' # PASS (0 errors, 0 warnings, 0 planReadinessWarnings)
+    - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync' # PASS
+    - 'neataptic-gate-mcp:run_gate_check --gate=step-packet' # PASS
+    - 'neataptic-gate-mcp:run_gate_check --gate=agent-graph' # PASS
+  next: 'Phase 4 Step 03 is [DONE]; advance to Phase 4 Step 04 slice 04-04-inference'
+  notes:
+    - 'Focused kernel suite passes: 27/27 tests green.'
+    - 'Coverage guard passes on all touched src/ files at 100% for statements, branches, functions, and lines.'
+    - 'Slice 04-03-green and Phase 4 Step 03 marked [DONE].'
 ```
 
 ## Latest validation evidence
 
 `green-light: true`
 
-Phase 3 is `[DONE]` and compressed to `plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.logs.md`. Phase 4 Step 01 is `[WIP]` and ready for `04-implementing` dispatch. Independent `01-planning` verification confirms:
+Phase 4 Step 03 is `[DONE]`; both slices `04-03-impl` and `04-03-green` are `[DONE]`:
 
-- Plan structure is valid: `validate-plan-sync.mjs` → PASS; `validate-plan-phase-packets.mjs` → PASS.
-- MCP gates: `plan-sync` → pass; `step-packet` → pass with **zero** `planReadinessWarnings`.
-- `plan-readiness.gate.mjs` → `greenLightFound: true`, `sectionFound: true`.
-- Phase 3 red-test suite is complete and honest: the aggregate `src/architecture/network/gpu/` Jest run reports **8 test suites, 54 tests passed, 15 tests failed**, all on expected placeholder seams.
-  - `network.gpu.capability.test.ts` → PASS.
-  - `network.gpu.device.test.ts` → FAIL (5 failed): `requestGPUDevice not implemented` ×4, `isDeviceReady not implemented` ×1.
-  - `network.gpu.buffer.test.ts` → PASS.
-  - `network.gpu.kernel.test.ts` → PASS.
-  - `network.gpu.parity.test.ts` → FAIL (5 failed): zero-placeholder GPU output outside tolerance vs CPU reference.
-  - `network.gpu.batched.test.ts` → FAIL (2 failed): `device.recorded.submissions.length` expected `batchSize`, received `0`; `device.recorded.mapAsyncCalls.length` expected `>0`, received `0`.
-  - `network.gpu.fallback.test.ts` → FAIL (1 failed): zero-placeholder GPU output vs CPU reference.
-  - `network.gpu.racing.test.ts` → FAIL (1 failed): zero-placeholder GPU batch output vs CPU reference.
-- `npx tsc --noEmit -p tsconfig.json` → PASS (exit 0).
-- Hand-off target: Phase 4 Step 01 slice `04-01-impl` — implement GPU capability probe and device manager.
-
-Verified by: 01-planning @ 2026-07-02.
-
-- 01-planning has confirmed that the repository contains **no existing GPU,
-  WebGPU, WebGL, shader, or GPGPU infrastructure**.
-- The CPU fast path is defined in
-  `src/architecture/network/slab/network.slab.fast-path.helpers.utils.ts` and
-  `network.slab.utils.ts`; eligibility already excludes gates, self-connections,
-  recurrent structure, dropout, weight noise, and stochastic depth.
-- The worker-compatible serialized network format in
-  `src/multithreading/multi.utils.ts` encodes activation functions by stable
-  index, which can be mirrored in a WGSL `switch` over the same ordered registry.
-- The racing-curriculum simulation worker calls `network.activate()` once per car
-  per tick in `examples/racing_curriculum/workers/simulation-worker/`.
-- The NGE Core Algorithm Workstream and NGE Core Growth Engine Wiring are both
-  `[DONE]` and archived, so the 8,000+ neuron / 32,000+ connection growth target
-  has been demonstrated on CPU and the racing-curriculum v2 demo is unblocked.
-- Phase 2 research and Phase 3 red tests are `[DONE]` and compressed to `plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.logs.md`; Phase 4 Step 01 is `[WIP]`.
-- Phase 3 and Phase 4 step packets have been tightened into thin, one-behavior-per-file
-  execution slices; the active tracker is ready for red-test implementation.
-- A reusable `webgpu` skill has been created at `.github/skills/webgpu/SKILL.md` and
-  passed strict skill-frontmatter validation.
+- Focused kernel test suite: 27/27 tests pass.
+- Coverage guard on touched `src/` files (statements/branches/functions/lines):
+  - `network.gpu.activation.wgsl.ts` → 100%/100%/100%/100%
+  - `network.gpu.kernel.ts` → 100%/100%/100%/100%
+  - `network.gpu.types.ts` → 100%/100%/100%/100%
+- Validation gates pass:
+  - `validate-plan-sync` → PASS (0 errors, 0 warnings).
+  - `validate-plan-phase-packets` → PASS (0 errors, 0 warnings).
+  - `neataptic-gate-mcp:run_gate_check --gate=plan-sync` → PASS.
+  - `neataptic-gate-mcp:run_gate_check --gate=step-packet` → PASS.
+  - `neataptic-gate-mcp:run_gate_check --gate=agent-graph` → PASS.
+- Next boundary: advance to Phase 4 Step 04 slice `04-04-inference`.
 
 ## Coverage backlog
 
@@ -315,13 +464,13 @@ paths untouched except for the transparent dispatch seam.
 - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md`
 - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md`
 
-#### Step 01 — Implement GPU capability probe and device manager [WIP]
+#### Step 01 — Implement GPU capability probe and device manager [DONE]
 
 ```yaml
 phase: 4
 step: 1
 title: Implement GPU capability probe and device manager
-status: '[WIP]'
+status: '[DONE]'
 goal: implementing
 expansion: slices
 tdd_sequence: green-only
@@ -347,7 +496,7 @@ acceptance_criteria:
 slices:
   - slice_id: 04-01-impl
     title: Add WebGPU types and implement GPU capability probe/device manager
-    status: '[WIP]'
+    status: '[DONE]'
     goal: implementing
     estimate_hours: 6
     files_to_change:
@@ -367,7 +516,7 @@ slices:
     next_slice: 04-01-green
   - slice_id: 04-01-green
     title: 'Green check: confirm capability and device red tests pass'
-    status: '[PLANNED]'
+    status: '[DONE]'
     goal: green-testing
     estimate_hours: 1
     files_to_change:
@@ -402,13 +551,13 @@ on the GPU?" for a given WebGPU device.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts`
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.device.test.ts`
 
-#### Step 02 — Implement GPU buffer allocator and slab-to-GPU upload [PLANNED]
+#### Step 02 — Implement GPU buffer allocator and slab-to-GPU upload [DONE]
 
 ```yaml
 phase: 4
 step: 2
 title: Implement GPU buffer allocator and slab-to-GPU upload
-status: '[PLANNED]'
+status: '[DONE]'
 goal: implementing
 expansion: slices
 tdd_sequence: green-only
@@ -425,54 +574,46 @@ validation:
   - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
   - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.buffer.test.ts
 acceptance_criteria:
+  - createGPUBuffer produces storage buffers with COPY_DST and respects device limits
+  - uploadNetworkToGPU creates the buffers declared in the Phase 2 contract
+  - Each slab array is written exactly once via queue.writeBuffer
+  - Buffer-to-binding index mapping is stable and exported for the kernel
   - uploadNetworkToGPU passes all buffer red tests
   - 'Buffer sizes, usage flags, and write offsets match the Phase 2 binding contract'
   - No re-layout of the CPU slab occurs; arrays are uploaded as-is
 slices:
-  - slice_id: 04-02-allocator
-    title: Implement GPU buffer allocator
-    status: '[PLANNED]'
+  - slice_id: 04-02-impl
+    title: Implement GPU buffer allocator and slab-to-GPU upload
+    status: '[DONE]'
     goal: implementing
-    estimate_hours: 3
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.buffer.ts
-    acceptance_criteria:
-      - 'createGPUBuffer(device, byteLength, label, usage) produces a storage buffer with COPY_DST'
-      - Allocator respects device.limits.maxBufferSize and maxStorageBufferBindingSize
-    parallelizable: false
-    dependencies:
-      - 04-01-probe
-    next_slice: 04-02-upload
-  - slice_id: 04-02-upload
-    title: Implement slab-to-GPU upload
-    status: '[PLANNED]'
-    goal: implementing
-    estimate_hours: 4
+    estimate_hours: 7
     files_to_change:
       - src/architecture/network/gpu/network.gpu.buffer.ts
       - src/architecture/network/gpu/network.gpu.types.ts
     acceptance_criteria:
-      - uploadNetworkToGPU creates the buffers declared in the Phase 2 contract
+      - 'createGPUBuffer(device, byteLength, label, usage) produces a storage buffer with COPY_DST'
+      - Allocator respects device.limits.maxBufferSize and maxStorageBufferBindingSize
+      - 'uploadNetworkToGPU creates the buffers declared in the Phase 2 contract'
       - Each slab array is written exactly once via queue.writeBuffer
       - Buffer-to-binding index mapping is stable and exported for the kernel
     parallelizable: false
     dependencies:
-      - 04-02-allocator
+      - 04-01-probe
     next_slice: 04-02-green
   - slice_id: 04-02-green
-    title: 'Green check: confirm red tests fail for the right reason'
-    status: '[PLANNED]'
+    title: 'Green check: confirm buffer red tests pass and coverage guard passes'
+    status: '[DONE]'
     goal: green-testing
     estimate_hours: 1
     files_to_change:
       - src/architecture/network/gpu/network.gpu.buffer.ts
       - src/architecture/network/gpu/network.gpu.types.ts
     acceptance_criteria:
-      - Run the focused Jest suite and capture failing assertions
-      - 'Confirm failures target missing GPU functions, not syntax/setup errors'
+      - Run the focused Jest suite and confirm tests pass
+      - 'Coverage guard reaches 100% on touched src/ files'
     parallelizable: false
     dependencies:
-      - 04-02-upload
+      - 04-02-impl
     next_slice: Phase 4 Step 03
 ```
 
@@ -496,13 +637,13 @@ slab already uses.
 - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md`
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.buffer.test.ts`
 
-#### Step 03 — Implement WGSL activation kernel and pipeline factory [PLANNED]
+#### Step 03 — Implement WGSL activation kernel and pipeline factory [DONE]
 
 ```yaml
 phase: 4
 step: 3
 title: Implement WGSL activation kernel and pipeline factory
-status: '[PLANNED]'
+status: '[DONE]'
 goal: implementing
 expansion: slices
 tdd_sequence: green-only
@@ -521,53 +662,46 @@ validation:
   - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts
 acceptance_criteria:
   - compileActivationKernel passes all kernel red tests
+  - Each supported activation maps to a WGSL function by the same index as the worker serialization contract
+  - Unsupported activations are excluded from the generated switch
   - WGSL source contains the activation switch and storage-buffer bindings in the correct order
-  - Pipelines are cached by topology hash
+  - Shader dispatches one thread per node in topological order
+  - Pipeline is cached per topology and reused
 slices:
-  - slice_id: 04-03-registry
-    title: Implement the WGSL activation function registry
-    status: '[PLANNED]'
+  - slice_id: 04-03-impl
+    title: Implement WGSL activation registry, compute shader, and pipeline factory
+    status: '[DONE]'
     goal: implementing
-    estimate_hours: 4
+    estimate_hours: 9
     files_to_change:
       - src/architecture/network/gpu/network.gpu.activation.wgsl.ts
-    acceptance_criteria:
-      - Each supported activation maps to a WGSL function by the same index as the worker serialization contract
-      - Unsupported activations are excluded from the generated switch
-    parallelizable: false
-    dependencies:
-      - 04-02-upload
-    next_slice: 04-03-kernel
-  - slice_id: 04-03-kernel
-    title: Implement the compute shader and pipeline factory
-    status: '[PLANNED]'
-    goal: implementing
-    estimate_hours: 5
-    files_to_change:
       - src/architecture/network/gpu/network.gpu.kernel.ts
       - src/architecture/network/gpu/network.gpu.types.ts
     acceptance_criteria:
+      - Each supported activation maps to a WGSL function by the same index as the worker serialization contract
+      - Unsupported activations are excluded from the generated switch
       - compileActivationKernel generates a compute pipeline with correct bind-group layout
       - Shader dispatches one thread per node in topological order
       - Pipeline is cached per topology and reused
     parallelizable: false
     dependencies:
-      - 04-03-registry
+      - 04-02-green
     next_slice: 04-03-green
   - slice_id: 04-03-green
-    title: 'Green check: confirm red tests fail for the right reason'
-    status: '[PLANNED]'
+    title: 'Green check: confirm kernel red tests pass and coverage guard passes'
+    status: '[DONE]'
     goal: green-testing
     estimate_hours: 1
     files_to_change:
+      - src/architecture/network/gpu/network.gpu.activation.wgsl.ts
       - src/architecture/network/gpu/network.gpu.kernel.ts
       - src/architecture/network/gpu/network.gpu.types.ts
     acceptance_criteria:
-      - Run the focused Jest suite and capture failing assertions
-      - 'Confirm failures target missing GPU functions, not syntax/setup errors'
+      - Run the focused Jest suite and confirm tests pass
+      - 'Coverage guard reaches 100% on touched src/ files'
     parallelizable: false
     dependencies:
-      - 04-03-kernel
+      - 04-03-impl
     next_slice: Phase 4 Step 04
 ```
 
@@ -633,7 +767,7 @@ slices:
       - CPU path remains unchanged and is the default
     parallelizable: false
     dependencies:
-      - 04-03-kernel
+      - 04-03-green
     next_slice: 04-04-parity
   - slice_id: 04-04-parity
     title: Confirm CPU-vs-GPU parity within tolerance
@@ -1054,18 +1188,23 @@ placeholder_steps:
 - Minimum network size / agent count at which GPU overhead pays off: resolved to **≥ 2× speed-up and total per-frame inference < 4 ms**; cross-over at current CPU costs is roughly **≥ 6 NGE-cap agents** or **≥ 130 racing-browser agents** per batch.
 - Whether the first racing-curriculum evaluation pack allows GPU opt-in or stays CPU-only for cross-machine determinism (to be decided with user input before Phase 5).
 
+### Latest validation evidence
+
+- 2026-06-30T21:37: Green validation re-run for 04-03-green after 04-implementing coverage repair. Focused kernel suite passed (26/26 tests). Coverage guard partial: network.gpu.activation.wgsl.ts 100/100/100/100, network.gpu.types.ts 100/100/100/100, network.gpu.kernel.ts statements/branches/lines 100% but functions 90.9% (10/11). Uncovered function: anonymous re-export `export { SUPPORTED_ACTIVATION_INDICES };` at network.gpu.kernel.ts:24. Slice 04-03-green remains [PLANNED]; route to 04-implementing with slice-fix packet to add an owner-local test that imports SUPPORTED_ACTIVATION_INDICES from network.gpu.kernel.ts, then re-dispatch 05-green-testing.
+- 2026-06-30: Earlier 04-03-green attempt passed focused kernel suite (17/17 tests) but coverage guard failed across all three touched src/ files; routed to 04-implementing for coverage repair.
+- 2026-07-01: Workflow sync entry suppressed because Phase 4 Step 03 cannot advance to [DONE] until 04-03-green coverage guard passes.
+
 ## Handoff query
 
 ```text
 Continue from the current repo state only. Do not rely on prior chat history.
 Active workstream: plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-Current boundary: Phase 4 Step 01 — Implement GPU capability probe and device manager [WIP]
-  - Slice 04-01-impl (status [PLANNED]): implement `requestGPUDevice`, `isDeviceReady`,
-    `canUseGPU`, and `getGPUDevice` in `src/architecture/network/gpu/network.gpu.capability.ts`
-    and `network.gpu.device.ts`; add minimal `@webgpu/types` type stubs to
-    `package.json`/`tsconfig.json` if needed.
-  - Slice 04-01-green (status [PLANNED]): run the focused capability/device suite and
-    confirm all Phase 3 red tests for capability and device turn green.
+Current boundary: Phase 4 Step 03 — Implement WGSL activation kernel and pipeline factory [WIP]
+  - Slice 04-03-impl [DONE]: WGSL activation registry, compute shader, and pipeline factory
+    implemented in `src/architecture/network/gpu/`; preflight checks pass.
+  - Slice 04-03-green [PLANNED]: focused kernel tests must pass and touched `src/`
+    files reach 100% coverage.
+  - Phase 4 Steps 01–02 are [DONE]; capability/device and buffer upload tests pass.
 What is already covered:
   - Phase 1 planning and step packets authored.
   - Phase 2 Steps 01–07 are [DONE]; durable log archived at plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.logs.md.
@@ -1074,18 +1213,17 @@ What is already covered:
   - WebGPU/WGSL survey captured in WebGPU_architecture/*.md; compact playbook in .github/skills/webgpu/SKILL.md.
   - Buffer binding contract, activation subset, precision contract, fallback rules,
     determinism policy, and risk register are documented.
-  - Phase 4 step packets are tightened into green-only slices (no standalone red tests needed
-    because Phase 3 red tests already exist).
-  - GPU capability predicate and jsdom mock-device strategy are defined so tests can assert
-    on adapter/device requests, buffer creation, WGSL source, and dispatch dimensions without
-    a real GPU.
-Next narrow task: dispatch 04-implementing for slice 04-01-impl.
-  1. Implement `requestGPUDevice`/`isDeviceReady` plus device-manager helpers, honoring the
-     mock-device recording contract used by the Phase 3 tests.
-  2. Run `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts`.
-  3. Run `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.device.test.ts`.
-  4. Confirm TypeScript (`npx tsc --noEmit -p tsconfig.json`) and lint/prettier checks pass for the touched files.
-  5. Update the tracker: mark slice 04-01-impl [DONE] and advance to slice 04-01-green.
+  - Phase 4 Steps 01–02 are [DONE] with all green validations passing.
+  - Phase 4 Step 03 slice 04-03-impl is [DONE]; the `green-only` two-slice contract
+    (`04-03-impl` + `04-03-green`) is ready for handoff.
+Next narrow task: dispatch 04-implementing with a slice-fix packet for 04-03-green.
+  1. Add the smallest owner-local test in `src/architecture/network/gpu/network.gpu.kernel.test.ts`
+     that imports `SUPPORTED_ACTIVATION_INDICES` from `./network.gpu.kernel` and asserts it
+     equals `[0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 13]`.
+  2. Re-run the focused kernel suite and coverage guard:
+     - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts`
+     - `npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=src/architecture/network/gpu/network.gpu.activation.wgsl.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.kernel.ts --collectCoverageFrom=src/architecture/network/gpu/network.gpu.types.ts --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts`
+  3. If 100% coverage is confirmed, route back to 05-green-testing to close 04-03-green.
 Required validations:
   - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS.
   - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS.
