@@ -86,9 +86,16 @@ flowchart TD
     ADVANCE --> SNAPSHOT["Store opponent snapshot<br/>Accumulate hall-of-fame pool"]
     SNAPSHOT --> DIVERGE["Record strategy-divergence snapshot<br/>Classify trajectory"]
     DIVERGE --> FITNESS["Extract per-car fitness<br/>Compute team fitness"]
-    FITNESS --> GEN_READY
+    FITNESS --> REPRODUCE["Polyandric reproduction per team<br/>Queen template + drone patches<br/>Offspring seed assignment"]
+    REPRODUCE --> GEN_READY
     GEN_READY --> NEXT["Next request-generation<br/>(reuses all stateful resources)"]
 ```
+
+The reproduction step follows the queen-plus-drones pattern described by the
+racing reference design. The biological analogy is polyandry; see
+[Polyandry (Wikipedia)](https://en.wikipedia.org/wiki/Polyandry) for
+background on why one primary genome can benefit from multiple donor
+contributions.
 
 ### Hall-of-fame opponent snapshot pool
 
@@ -193,6 +200,23 @@ Parameters:
 
 Returns: Per-car fitness scores (one entry per car).
 
+### extractOffspringEnvelope
+
+```ts
+extractOffspringEnvelope(
+  result: NgeDnaCanonicalEnvelope | { readonly offspring?: NgeDnaCanonicalEnvelope | undefined; },
+): NgeDnaCanonicalEnvelope
+```
+
+Normalizes the return of `reproducePolyandric` so the FSM can use both the
+real operator (which returns `{ offspring }`) and test mocks that return the
+envelope directly.
+
+Parameters:
+- `result` - Raw operator return value.
+
+Returns: The offspring canonical envelope.
+
 ### routeRacingWorkerProtocolMessage
 
 ```ts
@@ -220,6 +244,30 @@ Parameters:
 - `state` - Current FSM state.
 
 Returns: Next state plus optional response or rejection error.
+
+### tryExtractFinishPositionRanks
+
+```ts
+tryExtractFinishPositionRanks(
+  runner: unknown,
+  carCount: number,
+): number[] | null
+```
+
+Extracts 1-based finish positions from real lap-completion data.
+
+Cars that completed at least one lap are ranked by lap time ascending;
+non-finishers are ranked by track progress descending. The returned array
+uses 1-based positions (1 = first place) indexed by carIndex.
+
+Returns `null` when the runner does not expose the required lap-data fields,
+so callers can fall back to raw fitness scores.
+
+Parameters:
+- `runner` - Race episode runner (may be a mock without lap data).
+- `carCount` - Number of cars in the race pack.
+
+Returns: Per-car finish positions, or `null` when lap data is unavailable.
 
 ### tryExtractFinishPositions
 
@@ -311,8 +359,11 @@ for background on the state-machine pattern.
   sampling implementation depends on a real `Neat` snapshot payload.
 - Radio semantics (`ModulatorBroadcaster`, `EpisodicSlot`, `GatingRouter`)
   depend on NGE primitives that are not yet available.
-- Polyandric reproduction (`modeIsEvolvable`) depends on an NGE primitive
-  that is not yet available; the escalation target is `nge-core-algorithm`.
+- Polyandric reproduction is wired into the generation-boundary transition
+  in `simulation-worker.evolution.protocol.service.ts` via queen/drone
+  selection and `reproducePolyandric`. The evolvable-mode flag
+  (`modeIsEvolvable`) remains descriptor-only until NGE core provides a
+  runtime operator for it.
 
 ### EvolutionProtocolRouteResult
 
@@ -436,6 +487,10 @@ Mutating one car's genome must not affect any other car's genome.  Each car
 gets a distinct `Network` instance seeded with a car-specific seed so
 activation outputs differ from the first generation onward.
 
+### CarGenomeOptions
+
+Configuration options for `createCarGenome`.
+
 ### CoevolutionConfig
 
 Narrow config used to allocate the racing coevolution container.
@@ -452,27 +507,21 @@ positions into a scalar fitness value for each side.
 
 ```ts
 createCarGenome(
-  carIndex: number,
-  baseSeed: number,
-  teamId: 0 | 1,
-  populationId: string,
-  inputSize: number,
-  outputSize: number,
+  options: CarGenomeOptions,
 ): CarGenome
 ```
 
 Creates a single car's independent genome backed by a real `Network` instance.
 
-Each car gets a unique seed derived from the base rngSeed plus the car index,
-so activation outputs differ from generation 1.
+When no envelope or network is supplied, the genome is built from a minimal
+NGE DNA envelope and materialized deterministically with the provided seed.
+This keeps every car NGE-enabled so that polyandric reproduction can read
+its `envelope` at the generation boundary.
 
 Parameters:
-- `carIndex` - 0-based car index within the race pack.
-- `baseSeed` - Base RNG seed from the coevolution config.
-- `teamId` - 0 for Team A (blue), 1 for Team B (red).
-- `populationId` - The population id of the team this car belongs to.
-- `inputSize` - Controller network input dimension (tier-dependent).
-- `outputSize` - Controller network output dimension (tier-dependent).
+- `options` - Car genome configuration.
+
+Returns: A car genome handle with a materialized runtime network.
 
 ### createCoevolutionContainer
 
@@ -516,6 +565,30 @@ const container = createCoevolutionContainer({ populationSize: 50, rngSeed: 42, 
 const genomes = container.getCarGenomes();
 // genomes.length === 4 (two blue, two red)
 ```
+
+### createMinimalControllerEnvelope
+
+```ts
+createMinimalControllerEnvelope(
+  inputSize: number,
+  outputSize: number,
+): NgeDnaCanonicalEnvelope
+```
+
+Builds the smallest materializable NGE DNA envelope for a racing controller.
+
+The envelope contains one input archetype and one output archetype, each with
+a `replicate` rule pass that places `inputSize` modules at z=0 and
+`outputSize` modules at z=1. No CPPN programs are included, so the materialized
+phenotype has no edges. This is intentional for the current slice: the red tests
+only require correct `input`/`output` dimensions and a canonical envelope shape
+that polyandric reproduction can patch.
+
+Parameters:
+- `inputSize` - Controller network input dimension.
+- `outputSize` - Controller network output dimension.
+
+Returns: Canonical NGE DNA envelope ready for materialization.
 
 ### createRacingTeamResultGroup
 
@@ -581,11 +654,11 @@ selectQueenPerTeam(
 Selects the queen (best-finishing car) for each team after a race.
 
 The queen is the car with the lowest (best) individual finishing position
-on its team.  The remaining team cars become drones.  This function is
-observability-only and does NOT call `reproducePolyandric` — the actual
-reproduction call that would use the queen's genome as a template and the
-drones as contributors is deferred until the polyandric reproduction wiring
-is integrated into the racing harness.
+on its team. The remaining team cars become drones. This selection is
+consumed by the FSM generation-boundary transition in
+`simulation-worker.evolution.protocol.service.ts`, which calls
+`reproducePolyandric` once per team to produce the next generation's
+genomes.
 
 The queen-selection policy uses best-finishing-position (the lowest
 individual finish wins the queen role), while population-level team fitness
@@ -1240,7 +1313,7 @@ Zero-copy transfer contract:
 
 Tier 3 simulation-worker helpers for the smallest honest 2v2 race pack.
 
-This module keeps the Phase 3 worker contract narrow: one factory allocates
+This module keeps the Tier 3 worker contract narrow: one factory allocates
 the canonical four-car packed frame, and one resolver answers which radio
 rows a car may read. That is enough to exercise teammate communication
 without hard-coding later tournament logic into the worker seam.

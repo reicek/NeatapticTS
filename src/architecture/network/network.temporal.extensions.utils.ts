@@ -100,7 +100,7 @@ export function splitGruLayerNodes(
 }
 
 /**
- * Build the explicit Step 7.4 descriptor set for one runtime LSTM block using canonical role partitions and innovation ownership.
+ * Build the explicit temporal descriptor set for one runtime LSTM block using canonical role partitions and innovation ownership.
  * The result captures module and gate boundaries so downstream tooling can keep recurrent structure observable and stable.
  *
  * @param network Runtime network carrying the block.
@@ -145,7 +145,7 @@ export function buildLstmTemporalDescriptorSet(
 }
 
 /**
- * Build the explicit Step 7.4 descriptor set for one runtime GRU block from canonical role slices and gated innovations.
+ * Build the explicit temporal descriptor set for one runtime GRU block from canonical role slices and gated innovations.
  * This metadata keeps reconstruction, diagnostics, and visualization aligned with the live recurrent runtime graph.
  *
  * @param network Runtime network carrying the block.
@@ -192,7 +192,7 @@ export function buildGruTemporalDescriptorSet(
 }
 
 /**
- * Build one explicit Step 7.4 descriptor set for a NARX delay line using delay-step role partitions.
+ * Build one explicit temporal descriptor set for a NARX delay line using delay-step role partitions.
  * The descriptor preserves memory-shelf structure so serialization and inheritance retain temporal intent across generations.
  *
  * @param network Runtime network carrying the delay line.

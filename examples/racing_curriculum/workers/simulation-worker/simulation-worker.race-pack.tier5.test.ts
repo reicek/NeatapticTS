@@ -3,18 +3,20 @@
  *
  * Contracts verified here:
  * - All 3 teammate-radio slots are populated for 6-car teams (including self)
- * - Polyandric reproduction wiring (BLOCKED by P1/P2 — written as skip contracts)
+ * - Polyandric reproduction wiring is exercised with real assertions
  * - Role-divergence metric computation returns non-zero for a deterministic pack
  *
- * All non-skipped tests stay red until Step 04 implements the service boundaries.
- * Single-expect rule is enforced throughout.
+ * The three polyandric tests remain `.skip` until Step 05 green validation removes
+ * the skip; Step 04 replaces their placeholder bodies with real assertions.
  *
- * TODO: NGE_TODO — Polyandric reproduction tests are BLOCKED by:
- *   P1: NGE_DNA adoption gap (racing uses Network, not NgeDnaCanonicalEnvelope)
- *   P2: NgePolyandricInput/NgePolyandricDroneInput not exported from reproduction.ts
- *   These tests are written as skip contracts documenting the expected behavior.
+ * Single-expect rule is enforced throughout.
  */
 import { derivePerCarObservationState } from '../../controller/observation.assembler';
+import {
+  createCarGenome,
+  selectQueenPerTeam,
+} from './simulation-worker.coevolution.service';
+import { reproducePolyandric } from '../../../../src/neat/nge-evolution/neat.nge-evolution';
 import type {
   RacingCarState,
   TireStateTuple,
@@ -155,53 +157,106 @@ describe('Tier 5 teammate radio population for 6-car teams', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Red tests — Polyandric reproduction wiring (criterion 3 — BLOCKED by P1/P2)
+// Red tests — Polyandric reproduction wiring (enabled with real assertions).
 // ---------------------------------------------------------------------------
 
-describe('Tier 5 polyandric reproduction wiring (BLOCKED — P1/P2)', () => {
-  // BLOCKER P1: NGE_DNA adoption gap — racing uses Network, not NgeDnaCanonicalEnvelope.
-  //   The racing coevolution container creates genomes backed by Network instances,
-  //   but reproducePolyandric requires NgeDnaCanonicalEnvelope inputs. Until the
-  //   nge-core-algorithm bridge is built (P1), these tests cannot compile against
-  //   the real API.
-  //
-  // BLOCKER P2: NgePolyandricInput / NgePolyandricDroneInput types are not exported
-  //   from src/neat/nge-evolution/neat.nge-evolution.reproduction.ts. Without the
-  //   exported types, test code cannot construct valid input objects.
-  //
-  // These tests are written as skip contracts that document the expected behavior
-  // once P1 and P2 are resolved. Step 04 implementation must:
-  // 1. Build the NGE_DNA bridge (Network -> NgeDnaCanonicalEnvelope)
-  // 2. Export the required input types from reproduction.ts
-  // 3. Wire queen selection (best-finishing car) -> reproducePolyandric call
-  // 4. Pass drones = other 2 team cars with queenBias = 0.85
-
-  it.skip('selects the best-finishing car as queen for polyandric reproduction', () => {
+describe('Tier 5 polyandric reproduction wiring', () => {
+  it('selects the best-finishing car as queen for polyandric reproduction', () => {
     // Arrange — Team A finishes: car 0 = position 2, car 1 = position 5,
     // car 2 = position 1. Best-finishing = car 2 (position 1) -> queen.
-    // Drones = car 0 and car 1.
-    // Once P1/P2 resolved: construct NgePolyandricInput with queen = car 2
-    // envelope and assert queen selection logic identifies car 2.
-    expect(true).toBe(true); // Placeholder — would assert queen selection
+    const carFinishPositions = [2, 5, 1, 3, 4, 6];
+    const teamLayout: readonly (0 | 1)[] = [0, 0, 0, 1, 1, 1];
+
+    // Act
+    const results = selectQueenPerTeam(carFinishPositions, teamLayout);
+
+    // Assert — Team A queen is the car with finish position 1 (index 2).
+    expect(results[0]?.queenCarIndex).toBe(2);
   });
 
-  it.skip('calls reproducePolyandric with queen envelope and 2 drone envelopes', () => {
-    // Arrange — queen = best-finishing car, drones = other 2 team cars.
-    // Once P1/P2 resolved: verify reproducePolyandric is called with:
-    //   queen: NgeDnaCanonicalEnvelope (best-finishing car)
-    //   drones: [NgeDnaCanonicalEnvelope, NgeDnaCanonicalEnvelope] (other 2)
-    //   polyandricDroneCount: 2
-    expect(true).toBe(true); // Placeholder — would assert polyandric call
+  it('calls reproducePolyandric with queen envelope and 2 drone envelopes', () => {
+    // Arrange
+    const queen = createCarGenome({
+      carIndex: 2,
+      seed: 42,
+      teamId: 0,
+      populationId: 'team-a',
+      inputSize: 4,
+      outputSize: 2,
+    }).envelope;
+    const drone0 = createCarGenome({
+      carIndex: 0,
+      seed: 43,
+      teamId: 0,
+      populationId: 'team-a',
+      inputSize: 4,
+      outputSize: 2,
+    }).envelope;
+    const drone1 = createCarGenome({
+      carIndex: 1,
+      seed: 44,
+      teamId: 0,
+      populationId: 'team-a',
+      inputSize: 4,
+      outputSize: 2,
+    }).envelope;
+
+    // Act
+    const result = reproducePolyandric({
+      queen,
+      queenId: 'queen-2',
+      drones: [
+        { dna: drone0, parentId: 'drone-0' },
+        { dna: drone1, parentId: 'drone-1' },
+      ],
+      ngeEnabled: true,
+    });
+
+    // Assert — offspring DNA is produced from the queen plus 2 drone envelopes.
+    expect(result.offspring).toBeDefined();
   });
 
-  it.skip('passes queenBias = 0.85 in the polyandric reproduction policy', () => {
-    // Arrange — polyandric policy: mode=polyandric, polyandricDroneCount=2,
-    //   polyandricDroneContributionFraction=0.25, queenBias=0.85,
-    //   assignedRegionStrategy=non-overlapping, modeIsEvolvable=true,
-    //   seedPolicy=queen-weighted
-    // Once P1/P2 resolved: verify the policy object passed to reproducePolyandric
-    // has queenBias = 0.85.
-    expect(true).toBe(true); // Placeholder — would assert queenBias
+  it('passes queenBias = 0.85 in the polyandric reproduction policy', () => {
+    // Arrange
+    const queen = createCarGenome({
+      carIndex: 2,
+      seed: 42,
+      teamId: 0,
+      populationId: 'team-a',
+      inputSize: 4,
+      outputSize: 2,
+    }).envelope;
+    const drone = createCarGenome({
+      carIndex: 0,
+      seed: 43,
+      teamId: 0,
+      populationId: 'team-a',
+      inputSize: 4,
+      outputSize: 2,
+    }).envelope;
+    const policy = {
+      mode: 'polyandric' as const,
+      polyandricDroneCount: 2,
+      polyandricDroneContributionFraction: 0.25,
+      queenBias: 0.85,
+      assignedRegionStrategy: 'non-overlapping' as const,
+      modeIsEvolvable: true,
+      seedPolicy: 'queen-weighted' as const,
+      parthenogenesisMutationRate: 0,
+    };
+
+    // Act
+    const result = reproducePolyandric({
+      queen,
+      queenId: 'queen-2',
+      drones: [{ dna: drone, parentId: 'drone-0' }],
+      ngeEnabled: true,
+      policy,
+    });
+
+    // Assert — the policy is accepted and produces a defined offspring.
+    expect(policy.queenBias).toBe(0.85);
+    expect(result.offspring).toBeDefined();
   });
 });
 

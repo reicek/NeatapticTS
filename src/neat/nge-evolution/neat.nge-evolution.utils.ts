@@ -22,7 +22,7 @@ import {
 } from './neat.nge-evolution.reproduction';
 
 /**
- * Phase E compatibility-distance helpers grouped under one stable owner-local namespace object.
+ * NGE compatibility-distance helpers grouped under one stable owner-local namespace object.
  */
 export const ngeEvolutionCompatibilityUtils = {
   computeNgeEvolutionCompatibilityDistance,
@@ -36,7 +36,7 @@ export const ngeEvolutionEpigeneticUtils = {
 };
 
 /**
- * Phase E reproduction-mode operator helpers grouped under one stable owner-local namespace.
+ * NGE reproduction-mode operator helpers grouped under one stable owner-local namespace.
  */
 export const ngeEvolutionReproductionUtils = {
   reproduceParthenogenesis,
@@ -45,7 +45,7 @@ export const ngeEvolutionReproductionUtils = {
 };
 
 /**
- * Default Phase E constants grouped under one stable owner-local namespace.
+ * Default NGE constants grouped under one stable owner-local namespace.
  */
 export const ngeEvolutionConstants = {
   NGE_EVOLUTION_DEFAULT_ALPHA_TOPOLOGY,
@@ -59,7 +59,7 @@ export const ngeEvolutionConstants = {
 };
 
 /**
- * Phase E evolution error classes grouped under one stable owner-local namespace object.
+ * NGE evolution error classes grouped under one stable owner-local namespace object.
  */
 export const ngeEvolutionErrors = {
   NgeEvolution_ModeError,

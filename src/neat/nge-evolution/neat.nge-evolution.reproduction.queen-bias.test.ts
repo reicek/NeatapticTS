@@ -285,4 +285,60 @@ describe('reproducePolyandric queenBias honoring (P5)', () => {
       regionAssignment: result2.regionAssignment,
     });
   });
+
+  it('falls back to empty parameterSchema when queen lacks one and drone wins', () => {
+    const queen = createDnaEnvelope({
+      moduleArchetypes: [createModuleArchetype()],
+    });
+    const drone = createDnaEnvelope({
+      moduleArchetypes: [
+        createModuleArchetype({ parameterSchema: { source: 'drone' } }),
+      ],
+    });
+
+    const result = reproducePolyandric({
+      drones: [{ dna: drone, parentId: 'drone:empty-queen' }],
+      ngeEnabled: true,
+      policy: createReproductionPolicy({
+        mode: 'polyandric',
+        polyandricDroneContributionFraction: 1,
+        polyandricDroneCount: 1,
+        queenBias: 0.0,
+      }),
+      queen,
+      queenId: 'queen:empty',
+    });
+
+    expect(result.offspring.moduleArchetypes[0].parameterSchema).toEqual({
+      source: 'drone',
+    });
+  });
+
+  it('falls back to empty parameterSchema when drone lacks one and drone wins', () => {
+    const queen = createDnaEnvelope({
+      moduleArchetypes: [
+        createModuleArchetype({ parameterSchema: { source: 'queen' } }),
+      ],
+    });
+    const drone = createDnaEnvelope({
+      moduleArchetypes: [createModuleArchetype()],
+    });
+
+    const result = reproducePolyandric({
+      drones: [{ dna: drone, parentId: 'drone:no-schema' }],
+      ngeEnabled: true,
+      policy: createReproductionPolicy({
+        mode: 'polyandric',
+        polyandricDroneContributionFraction: 1,
+        polyandricDroneCount: 1,
+        queenBias: 0.0,
+      }),
+      queen,
+      queenId: 'queen:with-schema',
+    });
+
+    expect(result.offspring.moduleArchetypes[0].parameterSchema).toEqual({
+      source: 'queen',
+    });
+  });
 });

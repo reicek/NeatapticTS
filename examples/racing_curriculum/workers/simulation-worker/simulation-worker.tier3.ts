@@ -1,7 +1,7 @@
 /**
  * Tier 3 simulation-worker helpers for the smallest honest 2v2 race pack.
  *
- * This module keeps the Phase 3 worker contract narrow: one factory allocates
+ * This module keeps the Tier 3 worker contract narrow: one factory allocates
  * the canonical four-car packed frame, and one resolver answers which radio
  * rows a car may read. That is enough to exercise teammate communication
  * without hard-coding later tournament logic into the worker seam.

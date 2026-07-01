@@ -1,5 +1,12 @@
 import { createTeamFitnessEvaluator } from '../../../../src/neat/nge-collective/neat.nge-collective';
 import { Network, methods } from '../../../../src/browser-entry.ts';
+import { NGE_DNA } from '../../../../src/neat/nge-dna/neat.nge-dna';
+import { activateNgeNetworkFromEnvelope } from '../../../../src/neat/nge-dna/neat.nge-dna.operator';
+import type {
+  NgeDnaCanonicalEnvelope,
+  NgeRulePlacement,
+} from '../../../../src/neat/nge-dna/neat.nge-dna.types';
+import type { NeatGenomeSubstrateCoordinate } from '../../../../src/neat/genome/genome.types';
 
 /**
  * Team A/B coevolution container for the racing curriculum benchmark.
@@ -60,6 +67,14 @@ export type CarGenome = {
   readonly teamId: 0 | 1;
   /** Population id of the team this car belongs to. */
   readonly populationId: string;
+  /** Deterministic seed used to materialize this car's runtime network. */
+  readonly seed: number;
+  /** Controller network input dimension (tier-dependent). */
+  readonly inputSize: number;
+  /** Controller network output dimension (tier-dependent). */
+  readonly outputSize: number;
+  /** Canonical NGE DNA envelope carried by this car for polyandric reproduction. */
+  readonly envelope: NgeDnaCanonicalEnvelope;
   /** Runs inference and returns the controller output vector. */
   activate(inputs: number[]): number[];
   /** Mutates this genome in place; must not affect other cars' genomes. */
@@ -113,6 +128,16 @@ export type CoevolutionContainer = {
    * @returns Array of per-car genomes.
    */
   getCarGenomes(): readonly CarGenome[];
+  /**
+   * Replace one car genome in the container with a new genome.
+   *
+   * Used at generation boundaries when polyandric reproduction produces
+   * offspring envelopes that must be materialized into the team's car slots.
+   *
+   * @param carIndex - 0-based car index within the race pack.
+   * @param genome - New genome to assign to that slot.
+   */
+  replaceCarGenome(carIndex: number, genome: CarGenome): void;
 };
 
 /** Monotonic counter used to generate distinct population IDs per container. */
@@ -141,35 +166,149 @@ const TIER_ONE_TWO_CONTROLLER_OUTPUT_SIZE = 2;
 /** Tier 3+ controller output dimension (2 control + 7 radio-write). */
 const TIER_THREE_CONTROLLER_OUTPUT_SIZE = 9;
 
+/** Archetype id for controller input modules placed at substrate z=0. */
+const CONTROLLER_INPUT_ARCHETYPE_ID = 'controller-input' as const;
+/** Archetype id for controller output modules placed at substrate z=1. */
+const CONTROLLER_OUTPUT_ARCHETYPE_ID = 'controller-output' as const;
+/** Computation motif used for all controller input/output modules. */
+const CONTROLLER_COMPUTATION_TYPE = 'DenseFeedForward' as const;
+
+/**
+ * Builds the smallest materializable NGE DNA envelope for a racing controller.
+ *
+ * The envelope contains one input archetype and one output archetype, each with
+ * a `replicate` rule pass that places `inputSize` modules at z=0 and
+ * `outputSize` modules at z=1. No CPPN programs are included, so the materialized
+ * phenotype has no edges. This is intentional for the current slice: the red tests
+ * only require correct `input`/`output` dimensions and a canonical envelope shape
+ * that polyandric reproduction can patch.
+ *
+ * @param inputSize - Controller network input dimension.
+ * @param outputSize - Controller network output dimension.
+ * @returns Canonical NGE DNA envelope ready for materialization.
+ */
+function createMinimalControllerEnvelope(
+  inputSize: number,
+  outputSize: number,
+): NgeDnaCanonicalEnvelope {
+  const inputPlacements: NgeRulePlacement[] = Array.from(
+    { length: inputSize },
+    (_, index): NgeRulePlacement => ({
+      coordinate: [
+        index / Math.max(1, inputSize),
+        0,
+        0,
+      ] as NeatGenomeSubstrateCoordinate,
+      computationType: CONTROLLER_COMPUTATION_TYPE,
+    }),
+  );
+  const outputPlacements: NgeRulePlacement[] = Array.from(
+    { length: outputSize },
+    (_, index): NgeRulePlacement => ({
+      coordinate: [
+        index / Math.max(1, outputSize),
+        0,
+        1,
+      ] as NeatGenomeSubstrateCoordinate,
+      computationType: CONTROLLER_COMPUTATION_TYPE,
+    }),
+  );
+
+  return new NGE_DNA({
+    moduleArchetypes: [
+      {
+        archetypeId: CONTROLLER_INPUT_ARCHETYPE_ID,
+        computationType: CONTROLLER_COMPUTATION_TYPE,
+      },
+      {
+        archetypeId: CONTROLLER_OUTPUT_ARCHETYPE_ID,
+        computationType: CONTROLLER_COMPUTATION_TYPE,
+      },
+    ],
+    rulePasses: [
+      {
+        kind: 'replicate',
+        archetypeId: CONTROLLER_INPUT_ARCHETYPE_ID,
+        priority: 1,
+        placements: inputPlacements,
+      },
+      {
+        kind: 'replicate',
+        archetypeId: CONTROLLER_OUTPUT_ARCHETYPE_ID,
+        priority: 2,
+        placements: outputPlacements,
+      },
+    ],
+    reproductionPolicy: {
+      mode: 'polyandric',
+      polyandricDroneCount: 2,
+      polyandricDroneContributionFraction: 0.25,
+      queenBias: 0.85,
+      assignedRegionStrategy: 'non-overlapping',
+      modeIsEvolvable: true,
+      seedPolicy: 'queen-weighted',
+    },
+  }).toCanonical();
+}
+
+/**
+ * Configuration options for `createCarGenome`.
+ */
+export type CarGenomeOptions = {
+  /** Car index within the race pack (0-based). */
+  readonly carIndex: number;
+  /** Deterministic seed used to materialize the runtime network. */
+  readonly seed: number;
+  /** Team id: 0 for Team A (blue), 1 for Team B (red). */
+  readonly teamId: 0 | 1;
+  /** Population id of the team this car belongs to. */
+  readonly populationId: string;
+  /** Controller network input dimension (tier-dependent). */
+  readonly inputSize: number;
+  /** Controller network output dimension (tier-dependent). */
+  readonly outputSize: number;
+  /** Optional pre-built canonical envelope (used for polyandric offspring). */
+  readonly envelope?: NgeDnaCanonicalEnvelope;
+  /** Optional pre-materialized network (used for polyandric offspring). */
+  readonly network?: Network;
+};
+
 /**
  * Creates a single car's independent genome backed by a real `Network` instance.
  *
- * Each car gets a unique seed derived from the base rngSeed plus the car index,
- * so activation outputs differ from generation 1.
+ * When no envelope or network is supplied, the genome is built from a minimal
+ * NGE DNA envelope and materialized deterministically with the provided seed.
+ * This keeps every car NGE-enabled so that polyandric reproduction can read
+ * its `envelope` at the generation boundary.
  *
- * @param carIndex - 0-based car index within the race pack.
- * @param baseSeed - Base RNG seed from the coevolution config.
- * @param teamId - 0 for Team A (blue), 1 for Team B (red).
- * @param populationId - The population id of the team this car belongs to.
- * @param inputSize - Controller network input dimension (tier-dependent).
- * @param outputSize - Controller network output dimension (tier-dependent).
+ * @param options - Car genome configuration.
+ * @returns A car genome handle with a materialized runtime network.
  */
-function createCarGenome(
-  carIndex: number,
-  baseSeed: number,
-  teamId: 0 | 1,
-  populationId: string,
-  inputSize: number,
-  outputSize: number,
-): CarGenome {
-  const network = new Network(inputSize, outputSize, {
-    seed: baseSeed + carIndex,
-  });
+export function createCarGenome(options: CarGenomeOptions): CarGenome {
+  const {
+    carIndex,
+    seed,
+    teamId,
+    populationId,
+    inputSize,
+    outputSize,
+    envelope: providedEnvelope,
+    network: providedNetwork,
+  } = options;
+
+  const envelope =
+    providedEnvelope ?? createMinimalControllerEnvelope(inputSize, outputSize);
+  const network =
+    providedNetwork ?? activateNgeNetworkFromEnvelope(envelope, seed);
 
   return {
     carIndex,
     teamId,
     populationId,
+    seed,
+    inputSize,
+    outputSize,
+    envelope,
     activate(inputs: number[]): number[] {
       return network.activate(inputs);
     },
@@ -280,14 +419,14 @@ export function createCoevolutionContainer(
       const teamId = teamLayout[carIndex] as 0 | 1;
       const populationId =
         teamId === 0 ? teamA.populationId : teamB.populationId;
-      return createCarGenome(
+      return createCarGenome({
         carIndex,
-        config.rngSeed,
+        seed: config.rngSeed + carIndex,
         teamId,
         populationId,
         inputSize,
         outputSize,
-      );
+      });
     },
   );
 
@@ -298,6 +437,7 @@ export function createCoevolutionContainer(
     advanceTeamGeneration,
     getCarGenome,
     getCarGenomes,
+    replaceCarGenome,
   };
 
   /**
@@ -317,6 +457,16 @@ export function createCoevolutionContainer(
    */
   function getCarGenomes(): readonly CarGenome[] {
     return carGenomes;
+  }
+
+  /**
+   * Replace one car genome in the container with a new genome.
+   *
+   * @param carIndex - 0-based car index within the race pack.
+   * @param genome - New genome to assign to that slot.
+   */
+  function replaceCarGenome(carIndex: number, genome: CarGenome): void {
+    carGenomes[carIndex] = genome;
   }
 
   /**
@@ -429,11 +579,11 @@ export type QueenSelectionResult = {
  * Selects the queen (best-finishing car) for each team after a race.
  *
  * The queen is the car with the lowest (best) individual finishing position
- * on its team.  The remaining team cars become drones.  This function is
- * observability-only and does NOT call `reproducePolyandric` — the actual
- * reproduction call that would use the queen's genome as a template and the
- * drones as contributors is deferred until the polyandric reproduction wiring
- * is integrated into the racing harness.
+ * on its team. The remaining team cars become drones. This selection is
+ * consumed by the FSM generation-boundary transition in
+ * `simulation-worker.evolution.protocol.service.ts`, which calls
+ * `reproducePolyandric` once per team to produce the next generation's
+ * genomes.
  *
  * The queen-selection policy uses best-finishing-position (the lowest
  * individual finish wins the queen role), while population-level team fitness

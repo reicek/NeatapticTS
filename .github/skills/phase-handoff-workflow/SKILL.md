@@ -111,6 +111,33 @@ Skipping phase compression is a workflow violation. The orchestrator must
 not advance to the next phase or send the phase-to-phase handoff until
 compression is complete.
 
+### Mandatory Plan Verification Loop
+
+Before any phase step with `goal: red-testing` or `goal: implementing` is
+dispatched, the plan must pass an independent verification pass:
+
+1. **After Step 01 planning packets are authored**, the orchestrator dispatches
+   a **fresh** `01-planning` agent in verification mode to read the active plan.
+2. **The verifier checks:** completeness of phase/step YAML blocks, risk
+   coverage, acceptance criteria quality, dependency ordering, and consistency
+   with the phase objective.
+3. **The verifier records the verdict in the plan's
+   `## Latest validation evidence` section:**
+   - `green-light: true` or `status: green-light` when the plan is ready for
+     execution.
+   - Blockers with `green-light: false` or `status: blocked` when the plan is
+     not ready.
+4. **If blockers are recorded**, the orchestrator routes back to `01-planning`
+   for a patch cycle, then dispatches a new verification agent. This patch →
+   verify loop repeats until green light is recorded.
+5. **Only after a green-light verdict** may Agent Zero dispatch
+   `03-red-testing`, `04-implementing`, or other execution-phase agents.
+
+Every active `.plans.md` file must include a `## Latest validation evidence`
+section containing the most recent verification verdict and timestamp. The
+`plan-readiness` gate (`scripts/agent-customization/gates/plan-readiness.gate.mjs`)
+verifies this marker before execution-phase dispatch.
+
 ## Flow-Aware Handoff Contract
 
 Each numbered agent selects a named flow from `.github/flows/` that matches
@@ -118,6 +145,10 @@ the current task shape. Flows declare exit gates; every gate must return
 `{pass: true, evidence, fixHint, owner}` JSON before the flow is considered
 complete. Post-phase fan-out from the flow definition runs after the flow body.
 
+- The `plan-readiness` gate must return `pass: true` before any handoff to a
+  step with `goal: red-testing` or `goal: implementing`. The gate checks for a
+  green-light marker recorded by a fresh `01-planning` verification pass in the
+  plan's `## Latest validation evidence` section.
 - Gate exceptions are recorded via
   `scripts/agent-customization/gates/record-gate-exception.mjs` and appended to
   `.github/ai-learning/learning-log.jsonl`.

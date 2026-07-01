@@ -146,7 +146,7 @@ describe('nge lifecycle apply wiring', () => {
       };
 
       const budget: NgeGrowthBudget = {
-        maxNodes: 100,
+        maxNodes: network.nodes.length,
         maxEdges: network.connections.length,
         maxEpisodicSlots: 100,
         currentNodeCount: network.nodes.length,

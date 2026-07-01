@@ -391,6 +391,26 @@ Before marking a step complete, the plan must include prepared evidence placehol
 
 Store these under `step_packet.evidence`. The agent is responsible for preparing the commands and artifact paths; the user is responsible for executing the commands and attaching the resulting URLs and SHAs.
 
+## Plan Verification Mode
+
+In addition to authoring plans, a **fresh** `01-planning` instance may be dispatched in **verification mode** to independently validate a plan before any execution-phase work begins.
+
+When operating in verification mode:
+
+1. **Read the active plan file**, the current phase/step packets, and any prior `## Latest validation evidence` section.
+2. **Check the plan for:**
+   - **Completeness:** every value-adding step has a machine-readable YAML block, required fields, and clear acceptance criteria.
+   - **Risk coverage:** risks, dependencies, and scope boundaries are recorded and consistent with the phase objective.
+   - **Acceptance criteria:** criteria are observable, implementation-agnostic, and mapped to automation checks where applicable.
+   - **Dependencies:** slice ordering and inter-step dependencies are acyclic and complete.
+3. **Record the verdict in the plan's `## Latest validation evidence` section:**
+   - If the plan is ready for execution, record `green-light: true` (or `status: green-light`) together with a concise verdict and the verification timestamp.
+   - If blockers remain, record each blocker with `green-light: false` (or `status: blocked`) and route back to a new `01-planning` patch cycle. Do not dispatch `03-red-testing`, `04-implementing`, or other execution-phase agents until the blockers are resolved and a subsequent verification pass records green light.
+4. **Do not edit production code in verification mode**; only update the plan tracker with the verification verdict.
+5. **Treat a missing or stale `## Latest validation evidence` section as a blocker** and record the need for re-verification.
+
+The verification result is the mandatory input to the plan-readiness gate used by Agent Zero before dispatching red-testing, implementing, or green-testing work.
+
 ## Automation Hooks (recommended)
 
 After registering a step-packet, recommended programmatic actions:

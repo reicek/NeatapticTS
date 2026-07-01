@@ -41,7 +41,7 @@ export class NGE_DNA_SubstrateError extends Error {
 }
 
 /**
- * Error thrown when one Phase A CPPN descriptor or realization dispatch contract is invalid.
+ * Error thrown when one canonical CPPN descriptor or realization dispatch contract is invalid.
  */
 export class NGE_DNA_CppnError extends Error {
   /**

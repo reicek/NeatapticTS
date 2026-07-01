@@ -731,6 +731,36 @@ console.log(typeof runNgeLifecycle, typeof advanceAdultState);
 
 ## neat/neat.nge-lifecycle.ts
 
+NGE lifecycle staging runner.
+
+This module sequences one window of the Neuro-evolutionary Genesis Engine
+(NGE) lifecycle. The `juvenile` stage scores module focus, plans dry-run
+growth morphs, and optionally applies them to a live network. The `adult`
+stage takes an equilibrium candidate and writes it back as structural priors
+through the assimilation boundary.
+
+The runner is deliberately narrow: it expects the caller to supply metrics,
+budgets, hysteresis, and an optional network. No `examples/` or demo
+scaffolding is required; a headless test can drive the same growth engine
+that a racing curriculum or ant hive would use at runtime.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Juvenile : runNgeLifecycle({ stage: 'juvenile' })
+  Juvenile --> Adult : focus scored, morphs planned or applied
+  Adult --> Assimilation : equilibriumCandidate supplied
+  Assimilation --> [*] : structural priors written
+```
+
+## Determinism note
+
+When a `seed` is supplied with a live network, the runner seeds the network
+RNG and pins the global connection innovation counter to the network's
+current maximum innovation before any morph is applied. That makes the same
+DNA + seed + experience stream reproducible at the level of topology and
+innovation IDs. Omitting the seed leaves the engine non-deterministic but
+does not affect classic NEAT when NGE is disabled.
+
 ### extractCommittedGrowthKind
 
 ```ts
@@ -799,3 +829,28 @@ const result = runNgeLifecycle({
 console.log(result.stage); // 'adult'
 console.log(result.applyOutcomes?.length); // number of applied morphs
 ```
+
+### syncInnovationCounterToNetwork
+
+```ts
+syncInnovationCounterToNetwork(
+  network: default,
+): void
+```
+
+Pin the global connection innovation counter to a deterministic value for the
+current network state.
+
+The NEAT connection allocator assigns monotonic innovation IDs from a shared
+static counter. That counter is not reset per `Network` construction, so two
+identical seeded networks built in the same process receive different absolute
+innovation IDs. Before applying NGE morphs, we reset the counter to
+`max(network connection innovation) + 1`, which is deterministic for a fixed
+network state, so the same seed + experience stream yields bitwise-identical
+innovation assignments for newly grown edges.
+
+Parameters:
+- `network` - Live network whose current connection innovations define the
+deterministic starting point.
+
+Returns: Nothing.

@@ -1,6 +1,6 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: 7ed546f404902583b88b369ca149805be4e5a9fb469373205549604e6473335a -->
-<!-- source-file-count: 124 -->
+<!-- source-hash: 771b292581f349743c28237388cb490b68971351c347249ff461923406538519 -->
+<!-- source-file-count: 125 -->
 # Canonical Agent and Skill Routing Table
 
 > Generated file. Do not edit manually.
@@ -15,7 +15,7 @@
 | 01-planning | 1 | kimi-k2.7-code:cloud | planning-context-coordinator<br>planning-risk-coordinator<br>planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>plan-scout<br>model-name-auditor<br>plan-registration-auditor<br>helping-gap-resolution-coordinator<br>research-synthesis-specialist<br>phase-handoff-designer | plan-alignment<br>tracker-handoff<br>phase-handoff-workflow<br>agent-frontmatter-standards<br>model-routing-and-budget<br>license-attribution-audit<br>planning-acceptance-criteria<br>plan-sync-validation<br>research-methodology<br>execute |
 | 02-researching | 1 | kimi-k2.7-code:cloud | research-codebase-coordinator<br>plan-scout<br>docs-scout<br>repo-cortex-scout<br>boundary-mapper<br>skill-inventory-auditor<br>helping-gap-resolution-coordinator<br>cortex-embeddings-scout | subagent-delegation-patterns<br>research-methodology<br>repo-cortex-workflow<br>execute |
 | 03-red-testing | 1 | kimi-k2.7-code:cloud | planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>unit-test-writer<br>test-coverage-analyst<br>coverage-scout<br>determinism-scout<br>nge-core-scout<br>plan-scout<br>helping-gap-resolution-coordinator<br>performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist | red-test-contracts<br>nge-core-algorithm<br>reproducibility-contracts<br>creating-unit-tests<br>test-fix-workflow<br>coverage-tranche<br>research-methodology<br>execute<br>chrome-devtools-mcp |
-| 04-implementing | 1 | kimi-k2.7-code:cloud | implementation-pattern-coordinator<br>implementation-pattern-scout<br>implementation-executor<br>boundary-mapper<br>docs-scout<br>browser-runtime-scout<br>worker-payload-scout<br>evaluation-pool-scout<br>checkpoint-scout<br>hybrid-interop-scout<br>determinism-scout<br>visualizer-scout<br>nge-core-scout<br>nge-benchmark-scout<br>neatchat-scout<br>solid-split<br>flappy-architecture-polish<br>agent-frontmatter-auditor<br>phase-handoff-designer<br>mcp-server-architect<br>helping-gap-resolution-coordinator | implementation-standards<br>nge-core-algorithm<br>reproducibility-contracts<br>coverage-guard<br>tracker-handoff<br>architecture-builder<br>onnx-work<br>performance-optimization<br>trace-analyzer-extension<br>worker-inference-transport<br>research-methodology<br>execute |
+| 04-implementing | 1 | kimi-k2.7-code:cloud | implementation-pattern-coordinator<br>implementation-pattern-scout<br>implementation-executor<br>boundary-mapper<br>docs-scout<br>browser-runtime-scout<br>worker-payload-scout<br>evaluation-pool-scout<br>checkpoint-scout<br>hybrid-interop-scout<br>determinism-scout<br>visualizer-scout<br>nge-core-scout<br>nge-benchmark-scout<br>neatchat-scout<br>solid-split<br>flappy-architecture-polish<br>agent-frontmatter-auditor<br>phase-handoff-designer<br>mcp-server-architect<br>helping-gap-resolution-coordinator | implementation-standards<br>nge-core-algorithm<br>reproducibility-contracts<br>tracker-handoff<br>architecture-builder<br>onnx-work<br>performance-optimization<br>trace-analyzer-extension<br>worker-inference-transport<br>research-methodology<br>execute |
 | 05-green-testing | 1 | kimi-k2.7-code:cloud | green-test-failure-triage-coordinator<br>coverage-guard<br>coverage-scout<br>failure-triage-specialist<br>unit-test-runner<br>determinism-scout<br>plan-registration-auditor<br>mcp-validation-auditor<br>helping-gap-resolution-coordinator<br>code-quality-auditor<br>test-coverage-analyst<br>performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist | green-validation-gates<br>coverage-guard<br>test-fix-workflow<br>plan-sync-validation<br>trace-audit-reporting<br>research-methodology<br>execute<br>chrome-devtools-mcp |
 | 06-documenting | 1 | kimi-k2.7-code:cloud | docs-scout<br>nge-core-scout<br>academic-docs-auditor<br>docs-example-writer<br>plan-scout<br>license-attribution-auditor<br>vscode-ai-extensibility-scout<br>helping-gap-resolution-coordinator | educational-docs<br>nge-core-algorithm<br>docs-academic-citation-audit<br>license-attribution-audit<br>auditing-js-docs<br>updating-js-docs<br>research-methodology<br>execute |
 | 07-logging | 1 | kimi-k2.7-code:cloud | plan-scout<br>plan-registration-auditor<br>learning-event-capturer<br>file-change-summarizer<br>helping-gap-resolution-coordinator<br>phase-handoff-designer | tracker-handoff<br>summarizing-session-log<br>plan-sync-validation<br>capturing-learning-event<br>research-methodology<br>execute |
@@ -91,7 +91,7 @@
 | capturing-learning-event | skill | - | 00-helping<br>07-logging<br>learning-event-capturer | self |
 | checkpointing-persistence | skill | - | checkpoint-scout | self |
 | chrome-devtools-mcp | skill | - | 03-red-testing<br>05-green-testing<br>browser-memory-specialist<br>browser-ui-specialist<br>performance-trace-specialist | self |
-| coverage-guard | skill | - | 04-implementing<br>05-green-testing<br>coverage-guard<br>coverage-scout<br>implementation-executor<br>test-coverage-analyst | self |
+| coverage-guard | skill | - | 05-green-testing<br>coverage-guard<br>coverage-scout<br>implementation-executor<br>test-coverage-analyst | self |
 | coverage-tranche | skill | - | 03-red-testing<br>coverage-scout<br>test-coverage-analyst | self |
 | creating-specialist-agent | skill | - | helping-agent-maintenance-coordinator<br>helping-gap-resolution-coordinator | self |
 | creating-unit-tests | skill | - | 03-red-testing<br>unit-test-writer | self |
@@ -139,4 +139,5 @@
 | updating-js-docs | skill | - | 06-documenting | self |
 | updating-skill-frontmatter | skill | - | skill-frontmatter-auditor | self |
 | visualizer-workflow | skill | - | visualizer-scout | self |
+| webgpu | skill | - | - | self |
 | worker-inference-transport | skill | - | 04-implementing<br>worker-payload-scout | self |

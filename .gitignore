@@ -73,3 +73,6 @@ benchmarks/asciiMaze.benchmark.results.
 # Trace storage (Chrome DevTools MCP performance traces)
 tmp/
 tmp-feedback-*/
+tmp_*/
+tmp*
+# artifacts/*

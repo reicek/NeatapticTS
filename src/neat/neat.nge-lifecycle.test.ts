@@ -16,6 +16,8 @@ import type {
   NgeModuleMetricsSnapshot,
 } from './nge-juvenile/neat.nge-juvenile.types';
 import { runNgeLifecycle } from './neat.nge-lifecycle';
+import Network from '../architecture/network';
+
 
 function createJuvenileFixture(): {
   metrics: NgeModuleMetricsSnapshot;
@@ -114,6 +116,47 @@ describe('nge lifecycle staging runner', () => {
         hysteresis,
         focusScore,
         deltas,
+      });
+
+      // Assert
+      expect(result.stage).toBe('adult');
+    });
+
+    it('re-seeds a live network when a seed is supplied', () => {
+      // Arrange
+      const { metrics, budget, config, hysteresis } = createJuvenileFixture();
+      const focusVector = computeFocusScores([metrics], config);
+      const focusScore = focusVector.scores[0];
+      const deltas = planGrowthMorphs(
+        'module:alpha',
+        focusScore,
+        metrics,
+        budget,
+        config,
+        hysteresis,
+      );
+      const network = new Network(2, 1);
+
+      // Act
+      const result = runNgeLifecycle({
+        stage: 'juvenile',
+        moduleId: 'module:alpha',
+        metrics,
+        budget,
+        config,
+        hysteresis,
+        focusScore,
+        deltas,
+        network,
+        seed: 42,
+        pruneBudget: {
+          minEdges: 0,
+          minNodes: 1,
+          costExemptEdgeIds: [],
+          currentEdgeCount: network.connections.length,
+          currentNodeCount: network.nodes.length,
+          currentWiringCost: network.nodes.length + network.connections.length,
+        },
       });
 
       // Assert

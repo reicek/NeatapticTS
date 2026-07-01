@@ -1,0 +1,16 @@
+{
+  "introFile": "neat.nge-dna.operator.ts",
+  "fileOrder": [
+    "neat.nge-dna.operator.ts",
+    "neat.nge-dna.bridge.ts",
+    "neat.nge-dna.ts",
+    "neat.nge-dna.types.ts",
+    "neat.nge-dna.realize.ts",
+    "neat.nge-dna.rules.ts",
+    "neat.nge-dna.cppn.ts",
+    "neat.nge-dna.substrate.ts",
+    "neat.nge-dna.constants.ts",
+    "neat.nge-dna.utils.ts",
+    "neat.nge-dna.errors.ts"
+  ]
+}

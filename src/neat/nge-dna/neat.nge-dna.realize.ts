@@ -25,7 +25,7 @@ const KNOWN_COMPUTATION_TYPES = new Set<NeatGenomeComputationType>(
 /**
  * Materialize one serializable phenotype descriptor from the deterministic virtual module plan.
  *
- * @param plan - Canonical virtual module plan emitted by Step 03 rule execution.
+ * @param plan - Canonical virtual module plan emitted by substrate rule execution.
  * @param envelope - Canonical DNA envelope carrying CPPN programs and archetype metadata.
  * @param seed - Deterministic seed folded into the realized phenotype fingerprint.
  * @returns Fully JSON-serializable realized phenotype descriptor.
@@ -44,7 +44,7 @@ export function realizePhenotypeFromPlan(
     ]),
   );
 
-  // Step 2: Validate the Phase 0 computation-type dispatch contract.
+  // Step 2: Validate the public computation-type dispatch contract.
   validateComputationTypes(plan.modules);
 
   // Step 3: Build the realized modules and the archetype-derived assignment shelves.

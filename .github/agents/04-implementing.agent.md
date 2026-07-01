@@ -47,7 +47,6 @@ skills:
     'implementation-standards',
     'nge-core-algorithm',
     'reproducibility-contracts',
-    'coverage-guard',
     'tracker-handoff',
     'architecture-builder',
     'onnx-work',
@@ -85,6 +84,7 @@ Make the smallest implementation change that satisfies the active phase step con
 - Never copy workflow rules from skills into agents; always reference skills.
 - Keep all changes strictly within the active plan boundary.
 - Always update `plans/*.md` tracker before validation handoff.
+- **DO NOT run tests.** `04-implementing` writes code and runs compile/lint preflight only. Test execution is owned by `05-green-testing` after the orchestrator dispatches it.
 - Only one file, one writer for concurrent edits—never edit the same file in parallel.
 - Always re-read the target file before writing if concurrent edits are possible.
 - If a patch does not apply cleanly, stop and merge only the current-step intent; never force or overwrite.
@@ -102,14 +102,19 @@ authoritative edit boundary. Implementers MUST:
 
 - Respect `slice_id` and only change files listed in `slice.files_to_change`.
 - Prepare a `HandoffPayload` that includes `slice_id`, the changed files,
-  preflight outputs (tsc, lint, focused jest slice), and a `coverage_summary`.
+  preflight outputs (tsc, lint, prettier), and a list of tests that
+  `05-green-testing` should run. **Do not include coverage results or jest
+  output** — `04` does not run tests.
 - Include in the `PlanUpdate` block the `slice_id` and any `parallelizable`
   metadata so Agent Zero can orchestrate subsequent slices.
-- Target each slice to be small: one implementer, one PR, and one focused
-  validation run by `05-green-testing`.
+- Target each slice to be thin: one behavioral intent, ideally ≤3 files,
+  and one focused validation run by `05-green-testing`.
 - If the implementing agent discovers work outside the slice boundary that
   must be changed, stop, record a decision, and call `01-planning` to
   re-slice or expand the step — do not silently expand the owned slice.
+- **Never run `jest`, `coverage`, or any test command.** If a test fails
+  or is missing, record the observation and hand off to `05-green-testing`
+  or loop back through the orchestrator.
 
 Failure of slice validation should not be auto-fixed by `04` without an
 explicit `slice-fix` handoff: prepare a targeted `slice-fix` packet that
@@ -126,10 +131,10 @@ references the failing `slice_id`, failing tests, and suggested remediations.
 - Before any edit, run the following commands and attach their output to the plan's `VALIDATION_EVIDENCE`:
   - `npx tsc --noEmit -p tsconfig.json`
   - `npm run lint` or `npm run quality:folder -- --folder=<touched_folder>` when applicable
-  - `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=<nearest-test-file>` for a focused slice when touching `src/`
   - `git status --porcelain` (must be clean or contain only intended edits)
-
   - `npx prettier --check .` or `npm run prettier` to ensure consistent formatting
+
+  **DO NOT run `jest`, `coverage`, or any test command.** `04-implementing` writes code that compiles and lints; `05-green-testing` runs tests. If you need to know whether a test passes, record the test name and hand off to `05-green-testing`.
 
 These preflight checks are required to reduce surprises during validation and must be included in the plan update before `plan-sync` is invoked.
 
@@ -150,12 +155,6 @@ The following skills must be invoked (or their checks executed) and evidence att
 - **`implementation-standards`**: evidence that code follows repo conventions.
   - Required evidence: `tsc` output (noEmit), lint output (zero or explained issues), JSDoc presence checklist for exported symbols.
   - Example commands: `npx tsc --noEmit -p tsconfig.json`, `npm run lint`.
-
-- **`coverage-guard`**: evidence that every changed `src/` file remains at 100% in statements, branches, functions, and lines.
-  - Required evidence: focused `jest` slice output showing 100% in all four categories for each changed file. Only attach a repo-wide suite result when the active step packet or user explicitly requires it; never run the full suite speculatively.
-  - Example commands:
-    - `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=<nearest-test-file>`
-    - `npm run test:silent` (only when explicitly required)
 
 - **`tracker-handoff`**: evidence that the `PlanUpdate` YAML block is present in the plan and the `Handoff query` is refreshed.
   - Required evidence: the `PlanUpdate` block (in `plans/*.md`) and a one-line gate run confirming plan-sync (see MCP Gate Commands below).
@@ -302,9 +301,9 @@ PlanUpdate:
   preflight:
     - 'npx tsc --noEmit -p tsconfig.json'
     - 'npm run lint'
-  validation:
-    - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=testing/nearest.test.ts'
-      expected_exit: 0
+    - 'npx prettier --check .'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=testing/nearest.test.ts'
   rollback:
     - 'git revert <commit>'
   next: 'Run 05-green-testing and attach coverage-guard evidence'

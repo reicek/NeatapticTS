@@ -1,0 +1,34 @@
+Loop-back fix: Phase 6 Step 04 slice 04-wire-reproduction
+Timestamp: 2026-06-30T01:35:55-04:00
+Agent: 04-implementing
+
+Files changed:
+- examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts
+- examples/racing_curriculum/workers/simulation-worker/simulation-worker.polyandric-reproduction.test.ts
+- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md
+
+Root-cause decision:
+Removed the duplicate activateNgeNetworkFromEnvelope activation in the FSM
+reproduction block. createCarGenome now owns single-point materialization from
+the offspring envelope. The red-test expectation was updated from 6 to 12 to
+reflect 6 initial population materializations plus 6 post-race reproduction
+materializations.
+
+Preflight results:
+- npx tsc --noEmit -p tsconfig.json : OK (27 tsconfig.test.json duplicate-identifier errors preserved as out-of-scope carry-forward)
+- npm run lint : 0 issues
+- npx prettier --check <changed files> : OK
+- npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction : 9/9 passed (13.867 s)
+
+Plan gates:
+- node scripts/agent-customization/validate-plan-sync.mjs : PASS (0 errors, 0 warnings)
+- node scripts/agent-customization/validate-plan-phase-packets.mjs : PASS (0 errors, 1 warning: 0 [WIP] phases expected for closed plan)
+- neataptic-gate-mcp plan-sync : pass
+- neataptic-gate-mcp agent-graph : pass
+
+Constraints honored:
+- Did not unskip the 3 racing-worker .skip contracts.
+- Did not touch examples/ beyond the allowed service and test files.
+- Did not run or touch tsconfig.test.json (27 pre-existing errors out of scope).
+
+Next: Handoff to 05-green-testing for focused slice validation and regression triage.

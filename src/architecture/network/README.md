@@ -3,10 +3,6 @@
 Core network chapter for the architecture surface.
 
 This folder owns the public `Network` class: the boundary where a graph stops
-
-This is the explicit reset boundary for recurrent execution with carried
-state semantics. Call it before a new independent sequence when previous
-recurrent state should not influence the next activation run.
 being only nodes and connections and starts behaving like one runnable,
 mutable, trainable system. Higher-level NEAT code can mutate or score a
 network, but this chapter is where the graph itself learns how to activate,
@@ -19,6 +15,12 @@ forward passes, topology edits, reproducible stochastic behavior, sparse
 pruning, or a portable checkpoint. Keeping those responsibilities under one
 facade makes the public API readable while the helper chapters keep each
 policy cluster narrow enough to teach.
+
+Construction can be deterministic: passing a `seed` snapshots the global
+connection innovation counter before bootstrap and restores it afterwards,
+so two networks built from the same seed produce identical topology and
+innovation IDs until external mutation intervenes. This is the foundation
+used by NGE growth checkpoints to make structural expansion replayable.
 
 A useful mental model is to read `network/` as four cooperating shelves.
 `bootstrap/` explains one-time construction policy. `activate/`, `runtime/`,
@@ -189,7 +191,7 @@ after the split — evolution pressure then shapes the new node over time.
 
 This is one of the canonical NEAT structural mutations. It increases
 network depth without changing connectivity density significantly.
-See Stanley & Miikkulainen (2002) for the motivating analysis.
+See [Stanley & Miikkulainen (2002)](https://nn.cs.utexas.edu/?stanley:ec02) for the motivating analysis.
 
 Example:
 
@@ -731,6 +733,12 @@ Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in `methods.mutation`.
 
+Some structural methods, especially `ADD_CONN` and `ADD_NODE`, silently
+no-op when no eligible candidate exists (for example, a fully saturated
+graph). The NGE juvenile applier checks the live node/edge count before and
+after calling `mutate` so it can report the outcome truthfully as applied or
+skipped rather than claiming growth that did not happen.
+
 Parameters:
 - `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
   Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
@@ -988,6 +996,13 @@ setSeed(
 ```
 
 Seed the internal deterministic RNG.
+
+Seeding makes every subsequent structural mutation, weight initialization,
+and random choice reproducible for the same starting network. NGE uses this
+in `runNgeLifecycle` to guarantee that the same DNA + seed + experience
+stream produce identical growth checkpoints, including the same innovation
+IDs for newly created connections. Omitting the seed leaves the network
+using its default non-deterministic RNG.
 
 Parameters:
 - `seed` - Seed value.
@@ -2722,7 +2737,7 @@ first in the merged input order.
 
 Runtime materialization descriptor for one inherited connection gene.
 
-Step 7.2b keeps this runtime shelf narrower than the old crossover gene
+The runtime gene shelf is intentionally narrower than the old crossover gene
 shape. The phenotype materializer consumes only stable heredity identity
 plus weight and enabled state. Runtime node indexes are intentionally
 excluded because endpoints and gaters are resolved later by `geneId` after
@@ -4393,7 +4408,7 @@ buildGruTemporalDescriptorSet(
 ): TemporalDescriptorSet | undefined
 ```
 
-Build the explicit Step 7.4 descriptor set for one runtime GRU block from canonical role slices and gated innovations.
+Build the explicit temporal descriptor set for one runtime GRU block from canonical role slices and gated innovations.
 This metadata keeps reconstruction, diagnostics, and visualization aligned with the live recurrent runtime graph.
 
 Parameters:
@@ -4411,7 +4426,7 @@ buildLstmTemporalDescriptorSet(
 ): TemporalDescriptorSet | undefined
 ```
 
-Build the explicit Step 7.4 descriptor set for one runtime LSTM block using canonical role partitions and innovation ownership.
+Build the explicit temporal descriptor set for one runtime LSTM block using canonical role partitions and innovation ownership.
 The result captures module and gate boundaries so downstream tooling can keep recurrent structure observable and stable.
 
 Parameters:
@@ -4430,7 +4445,7 @@ buildNarxMemoryTemporalDescriptorSet(
 ): TemporalDescriptorSet | undefined
 ```
 
-Build one explicit Step 7.4 descriptor set for a NARX delay line using delay-step role partitions.
+Build one explicit temporal descriptor set for a NARX delay line using delay-step role partitions.
 The descriptor preserves memory-shelf structure so serialization and inheritance retain temporal intent across generations.
 
 Parameters:

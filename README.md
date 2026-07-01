@@ -9,7 +9,9 @@
 	<a href="https://github.com/reicek/NeatapticTS/actions/workflows/deploy-pages.yml"><img src="https://github.com/reicek/NeatapticTS/actions/workflows/deploy-pages.yml/badge.svg?branch=develop" alt="Docs deploy status"/></a>
 </div>
 
-<img src="nn.jpg" width="784"/>
+<img src="nn.jpg" width="784" alt="NeatapticTS cover art"/>
+
+_Cover art for the NeatapticTS repository._
 
 > A modern TypeScript NEAT library built to be read, tested, and extended.
 
@@ -39,7 +41,7 @@ The compatibility distance δ between two genomes is:
 δ = (c₁ · E) / N  +  (c₂ · D) / N  +  c₃ · W̄
 ```
 
-where **E** = excess gene count, **D** = disjoint gene count, **N** = larger genome length (normalizes for size), **W̄** = mean weight difference of matching genes, and **c₁, c₂, c₃** are coefficients that tune the relative importance of each term. Two genomes belong to the same species when δ < threshold. See Wikipedia contributors, [Neuroevolution of augmenting topologies](https://en.wikipedia.org/wiki/Neuroevolution_of_augmenting_topologies), for a concise summary of the algorithm's mechanics.
+where **E** = excess gene count, **D** = disjoint gene count, **N** = larger genome length (normalizes for size), **W̄** = mean weight difference of matching genes, and **c₁, c₂, c₃** are coefficients that tune the relative importance of each term. Two genomes belong to the same species when δ < threshold. See Stanley and Miikkulainen, [Evolving Neural Networks through Augmenting Topologies](https://nn.cs.utexas.edu/?stanley:ec02), for the original derivation of this formula and the NEAT mechanics.
 
 ### The Evolutionary Loop
 
@@ -78,6 +80,8 @@ The project gives you:
 - **Rich telemetry** — per-generation diversity, species history, Pareto fronts, novelty tracking.
 - **Worker-backed evaluation** — parallel genome scoring for Node and browser environments.
 - **ONNX export** — trained networks portable to ONNX-compatible inference runtimes.
+- **NGE core** — seed-to-scale neuroevolution with canonical DNA envelopes, polyandric reproduction, and continuous juvenile growth validated beyond 8,000 neurons; deterministic checkpoints make growth replayable.
+- **WebGPU target** — GPU offloading of activation and evolution workloads is not implemented yet, but the runtime is split so a GPU backend can be added without changing the public API.
 - **Educational examples** — three full examples (Flappy Bird, ASCII Maze, Racing Curriculum) that teach architecture choices rather than hiding them.
 
 ---
@@ -232,7 +236,7 @@ For options, telemetry, multiobjective search, ONNX export, and subsystem detail
 | [docs](./docs)                         | Generated documentation site and example assets                   |
 | [scripts](./scripts)                   | Build and docs tooling, semantic index, and Cortex RAG MCP server |
 | [rag_architecture](./rag_architecture) | Repo Cortex RAG architecture reference                            |
-| [plans](./plans)                       | Architecture and roadmap material                                 |
+| [plans](./plans)                       | Architecture and planning material                              |
 
 ## Repo Cortex RAG
 

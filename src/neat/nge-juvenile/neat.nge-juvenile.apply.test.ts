@@ -18,6 +18,7 @@
 
 import mutation from '../../methods/mutation/mutation';
 import Network from '../../architecture/network';
+import type Node from '../../architecture/node';
 import { NgeJuvenile_BudgetError } from './neat.nge-juvenile.errors';
 import { applyMorphDeltas } from './neat.nge-juvenile.apply';
 import type {
@@ -96,10 +97,216 @@ describe('nge juvenile morph applier', () => {
         // Assert
         expect(network.connections.length).toBe(initialConnectionCount + 2);
       });
+
+      it('skips edgeDensify when proposedAdditions is zero', () => {
+        // Arrange
+        const network = new Network(3, 2, { seed: 42 });
+        const initialConnectionCount = network.connections.length;
+        const deltas: NgeMorphDelta[] = [
+          {
+            kind: 'edgeDensify',
+            targetModuleId: 'module-A',
+            detail: {
+              currentEdgeCount: initialConnectionCount,
+              proposedAdditions: 0,
+              normalizedFocusScore: 0.8,
+            },
+            wiringCostDelta: 0,
+          },
+        ];
+
+        // Act
+        const outcomes = applyMorphDeltas(
+          network,
+          deltas,
+          buildPermissiveBudget(network),
+        );
+
+        // Assert
+        expect(outcomes[0]).toEqual({
+          kind: 'edgeDensify',
+          status: 'skipped',
+          reason:
+            'ADD_CONN produced no net edges (saturated graph or sparsity budget pruning).',
+        });
+      });
+
+      it('skips edgeDensify when the graph has no missing forward pairs', () => {
+        // Arrange — a minimal feed-forward network with all possible
+        // input-to-output edges already present.
+        const network = new Network(2, 1, { seed: 42 });
+        const initialConnectionCount = network.connections.length;
+        const deltas: NgeMorphDelta[] = [
+          {
+            kind: 'edgeDensify',
+            targetModuleId: 'module-A',
+            detail: {
+              currentEdgeCount: initialConnectionCount,
+              proposedAdditions: 5,
+              normalizedFocusScore: 0.8,
+            },
+            wiringCostDelta: 5,
+          },
+        ];
+
+        // Act
+        const outcomes = applyMorphDeltas(
+          network,
+          deltas,
+          buildPermissiveBudget(network),
+        );
+
+        // Assert
+        expect(outcomes[0]?.status).toBe('skipped');
+      });
+
+      it('applies all available missing forward pairs when fewer exist than requested', () => {
+        // Arrange — one input and two outputs with only one missing forward
+        // pair. Requesting more edges than exist should apply exactly the one
+        // missing pair, exercising the deduplication guard on repeated samples.
+        const network = new Network(1, 2, { seed: 42 });
+        network.disconnect(network.nodes[0] as Node, network.nodes[2] as Node);
+        const afterDisconnect = network.connections.length;
+        const deltas: NgeMorphDelta[] = [
+          {
+            kind: 'edgeDensify',
+            targetModuleId: 'module-A',
+            detail: {
+              currentEdgeCount: afterDisconnect,
+              proposedAdditions: 5,
+              normalizedFocusScore: 0.8,
+            },
+            wiringCostDelta: 5,
+          },
+        ];
+
+        // Act
+        applyMorphDeltas(network, deltas, buildPermissiveBudget(network));
+
+        // Assert — exactly one new edge is added because the pool is exhausted.
+        expect(network.connections.length).toBe(afterDisconnect + 1);
+      });
+
+      it('applies all available candidates when proposedAdditions exceed the candidate pool', () => {
+        // Arrange — one hidden node leaves a small set of missing forward pairs.
+        const network = new Network(2, 1, { seed: 42 });
+        network.mutate(mutation.ADD_NODE);
+        const initialConnectionCount = network.connections.length;
+        const deltas: NgeMorphDelta[] = [
+          {
+            kind: 'edgeDensify',
+            targetModuleId: 'module-A',
+            detail: {
+              currentEdgeCount: initialConnectionCount,
+              proposedAdditions: 100,
+              normalizedFocusScore: 0.8,
+            },
+            wiringCostDelta: 100,
+          },
+        ];
+
+        // Act
+        const outcomes = applyMorphDeltas(
+          network,
+          deltas,
+          buildPermissiveBudget(network),
+        );
+
+        // Assert — the delta applied at least one new edge, but not all 100.
+        expect(outcomes[0]?.status).toBe('applied');
+        expect(network.connections.length).toBeLessThan(
+          initialConnectionCount + 100,
+        );
+      });
+
+      it('defaults to one addition when detail.proposedAdditions is omitted', () => {
+        // Arrange — hidden nodes ensure missing forward pairs exist.
+        const network = new Network(3, 2, { seed: 42 });
+        network.mutate(mutation.ADD_NODE);
+        network.mutate(mutation.ADD_NODE);
+        const initialConnectionCount = network.connections.length;
+        const deltas: NgeMorphDelta[] = [
+          {
+            kind: 'edgeDensify',
+            targetModuleId: 'module-A',
+            detail: {
+              currentEdgeCount: initialConnectionCount,
+              normalizedFocusScore: 0.8,
+            },
+            wiringCostDelta: 1,
+          },
+        ];
+
+        // Act
+        applyMorphDeltas(network, deltas, buildPermissiveBudget(network));
+
+        // Assert
+        expect(network.connections.length).toBe(initialConnectionCount + 1);
+      });
     });
 
     describe('nodeAdd', () => {
       it('adds a hidden node to the network', () => {
+        // Arrange
+        const network = new Network(2, 1, { seed: 42 });
+        const initialHiddenCount = countHiddenNodes(network);
+        const deltas: NgeMorphDelta[] = [
+          {
+            kind: 'nodeAdd',
+            targetModuleId: 'module-A',
+            detail: {
+              currentNodeCount: network.nodes.length,
+              rewardDelta: 0.5,
+            },
+            wiringCostDelta: 0,
+          },
+        ];
+
+        // Act
+        applyMorphDeltas(network, deltas, buildPermissiveBudget(network));
+
+        // Assert
+        expect(countHiddenNodes(network)).toBe(initialHiddenCount + 1);
+      });
+
+      it('skips nodeAdd when the network sparsity budget denies the new connection', () => {
+        // Arrange — cap total connections below the minimum room needed so
+        // ADD_NODE cannot afford the extra connection it needs to split an
+        // edge. The sparsity budget prunes to make room only when the planned
+        // prune count stays above MIN_REMAINING_CONNECTION_COUNT; with only
+        // one connection allowed and two already present, growth is denied.
+        const network = new Network(2, 1, { seed: 42 });
+        network.configureSparsityBudget({
+          maxConnections: 1,
+        });
+        const deltas: NgeMorphDelta[] = [
+          {
+            kind: 'nodeAdd',
+            targetModuleId: 'module-A',
+            detail: {
+              currentNodeCount: network.nodes.length,
+              rewardDelta: 0.5,
+            },
+            wiringCostDelta: 0,
+          },
+        ];
+
+        // Act
+        const results = applyMorphDeltas(
+          network,
+          deltas,
+          buildPermissiveBudget(network),
+        );
+
+        // Assert
+        expect(results[0]).toEqual({
+          kind: 'nodeAdd',
+          status: 'skipped',
+          reason: 'ADD_NODE produced no net hidden nodes.',
+        });
+      });
+
+      it('defaults to one addition when detail.proposedAdditions is omitted', () => {
         // Arrange
         const network = new Network(2, 1, { seed: 42 });
         const initialHiddenCount = countHiddenNodes(network);

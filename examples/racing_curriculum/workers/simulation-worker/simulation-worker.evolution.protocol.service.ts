@@ -85,9 +85,16 @@
  *     ADVANCE --> SNAPSHOT["Store opponent snapshot<br/>Accumulate hall-of-fame pool"]
  *     SNAPSHOT --> DIVERGE["Record strategy-divergence snapshot<br/>Classify trajectory"]
  *     DIVERGE --> FITNESS["Extract per-car fitness<br/>Compute team fitness"]
- *     FITNESS --> GEN_READY
+ *     FITNESS --> REPRODUCE["Polyandric reproduction per team<br/>Queen template + drone patches<br/>Offspring seed assignment"]
+ *     REPRODUCE --> GEN_READY
  *     GEN_READY --> NEXT["Next request-generation<br/>(reuses all stateful resources)"]
  * ```
+ *
+ * The reproduction step follows the queen-plus-drones pattern described by the
+ * racing reference design. The biological analogy is polyandry; see
+ * [Polyandry (Wikipedia)](https://en.wikipedia.org/wiki/Polyandry) for
+ * background on why one primary genome can benefit from multiple donor
+ * contributions.
  *
  * ### Hall-of-fame opponent snapshot pool
  *
@@ -120,6 +127,8 @@ import type {
 } from './simulation-worker.evolution.types';
 import {
   createCoevolutionContainer,
+  createCarGenome,
+  selectQueenPerTeam,
   type CoevolutionContainer,
   type CarGenome,
 } from './simulation-worker.coevolution.service';
@@ -144,6 +153,11 @@ import {
 } from '../../controller/runtime.adaptation';
 import type { Network } from '../../../../src/browser-entry.ts';
 import { createStrategyDivergenceTracker } from './simulation-worker.strategy-divergence.service';
+import { reproducePolyandric } from '../../../../src/neat/nge-evolution/neat.nge-evolution';
+import type {
+  NgeDnaCanonicalEnvelope,
+  NgeReproductionPolicy,
+} from '../../../../src/neat/nge-dna/neat.nge-dna.types';
 
 /**
  * Computes shared-equal team fitness as the average of all team members' fitness.
@@ -209,9 +223,8 @@ function extractCarFitnessScores(runner: unknown, carCount: number): number[] {
   }
   const maybeRunner = runner as Partial<RunnerWithFitness>;
   if (typeof maybeRunner.computeFitness === 'function') {
-    return Array.from(
-      { length: carCount },
-      (_, carIndex) => maybeRunner.computeFitness?.(carIndex) ?? carIndex + 1,
+    return Array.from({ length: carCount }, (_, carIndex) =>
+      maybeRunner.computeFitness!(carIndex),
     );
   }
   // Finish-position extraction from real runner lap data (when available).
@@ -234,6 +247,111 @@ const OPPONENT_SNAPSHOT_POOL_CAPACITY = 10 as const;
 
 /** Minimum generations before strategy-divergence classification produces non-zero output. */
 const STRATEGY_DIVERGENCE_MIN_GENERATIONS = 2 as const;
+
+/** Maximum number of same-team drone donors passed to `reproducePolyandric`. */
+const MAX_POLYANDRIC_DRONES = 2 as const;
+
+/**
+ * Polyandric reproduction policy used by the racing FSM.
+ *
+ * Mirrors the reference spec: non-overlapping region assignment, queen-weighted
+ * seed governance, a strong queen bias, and an evolvable mode flag. The seed
+ * policy is passed as the racing shorthand `'queen-weighted'` and expanded by
+ * the NGE_DNA constructor; the operator path only spreads the provided policy
+ * object, so the shorthand is safe at runtime.
+ */
+const RACING_POLYANDRIC_POLICY = {
+  mode: 'polyandric',
+  polyandricDroneCount: 2,
+  polyandricDroneContributionFraction: 0.25,
+  queenBias: 0.85,
+  assignedRegionStrategy: 'non-overlapping',
+  modeIsEvolvable: true,
+  seedPolicy: 'queen-weighted',
+  parthenogenesisMutationRate: 0,
+} as const;
+
+/**
+ * Extracts 1-based finish positions from real lap-completion data.
+ *
+ * Cars that completed at least one lap are ranked by lap time ascending;
+ * non-finishers are ranked by track progress descending. The returned array
+ * uses 1-based positions (1 = first place) indexed by carIndex.
+ *
+ * Returns `null` when the runner does not expose the required lap-data fields,
+ * so callers can fall back to raw fitness scores.
+ *
+ * @param runner - Race episode runner (may be a mock without lap data).
+ * @param carCount - Number of cars in the race pack.
+ * @returns Per-car finish positions, or `null` when lap data is unavailable.
+ */
+function tryExtractFinishPositionRanks(
+  runner: unknown,
+  carCount: number,
+): number[] | null {
+  interface RunnerWithLapData {
+    readonly lapCompleted: Uint8Array;
+    readonly lapTimeTicks: Uint32Array;
+    readonly frame: { readonly progress01: Float32Array };
+  }
+  const maybeRunner = runner as Partial<RunnerWithLapData>;
+  if (
+    !(maybeRunner.lapCompleted instanceof Uint8Array) ||
+    !(maybeRunner.lapTimeTicks instanceof Uint32Array) ||
+    !(maybeRunner.frame?.progress01 instanceof Float32Array)
+  ) {
+    return null;
+  }
+
+  const lapCompleted = maybeRunner.lapCompleted;
+  const lapTimeTicks = maybeRunner.lapTimeTicks;
+  const progress01 = maybeRunner.frame.progress01;
+
+  const entries = Array.from({ length: carCount }, (_, carIndex) => ({
+    carIndex,
+    completedLap: lapCompleted[carIndex],
+    lapTicks: lapTimeTicks[carIndex],
+    progress: progress01[carIndex],
+  }));
+
+  const ranked = entries.toSorted((a, b) => {
+    if (a.completedLap && b.completedLap) {
+      return a.lapTicks - b.lapTicks;
+    }
+    if (a.completedLap) return -1;
+    if (b.completedLap) return 1;
+    return b.progress - a.progress;
+  });
+
+  const finishPositions = new Array<number>(carCount);
+  for (let rank = 0; rank < ranked.length; rank++) {
+    finishPositions[ranked[rank].carIndex] = rank + 1;
+  }
+  return finishPositions;
+}
+
+/**
+ * Normalizes the return of `reproducePolyandric` so the FSM can use both the
+ * real operator (which returns `{ offspring }`) and test mocks that return the
+ * envelope directly.
+ *
+ * @param result - Raw operator return value.
+ * @returns The offspring canonical envelope.
+ */
+function extractOffspringEnvelope(
+  result:
+    NgeDnaCanonicalEnvelope | { readonly offspring?: NgeDnaCanonicalEnvelope },
+): NgeDnaCanonicalEnvelope {
+  if (
+    result &&
+    typeof result === 'object' &&
+    'offspring' in result &&
+    result.offspring !== undefined
+  ) {
+    return result.offspring;
+  }
+  return result as NgeDnaCanonicalEnvelope;
+}
 
 /**
  * Derives per-car fitness from real finish positions when lap data is available.
@@ -277,9 +395,9 @@ function tryExtractFinishPositions(
   // Step 1: Collect per-car lap data tuples.
   const entries = Array.from({ length: carCount }, (_, carIndex) => ({
     carIndex,
-    completedLap: lapCompleted[carIndex] ?? 0,
-    lapTicks: lapTimeTicks[carIndex] ?? 0,
-    progress: progress01[carIndex] ?? 0,
+    completedLap: lapCompleted[carIndex],
+    lapTicks: lapTimeTicks[carIndex],
+    progress: progress01[carIndex],
   }));
 
   // Step 2: Rank — lap finishers first (by lap time ascending), then non-finishers (by progress descending).
@@ -370,7 +488,7 @@ export function routeRacingWorkerProtocolMessage(
 
   /** Applies the permitted FSM transition for a validated message. */
   function applyTransition(
-    msg: RacingWorkerInboundMessage,
+    msg: Exclude<RacingWorkerInboundMessage, { type: 'stop' }>,
     currentState: EvolutionProtocolState,
   ): EvolutionProtocolRouteResult {
     switch (msg.type) {
@@ -466,8 +584,6 @@ export function routeRacingWorkerProtocolMessage(
         };
       case 'request-race-step':
         return handleRaceStep(msg, currentState);
-      default:
-        return { nextState: currentState };
     }
   }
 
@@ -496,18 +612,18 @@ export function routeRacingWorkerProtocolMessage(
 
     // Build per-car adaptation context: engines + live Network instances.
     const engines = currentState.adaptationEngines as
-      Map<number, RuntimeAdaptationEngine> | undefined;
+      Map<number, RuntimeAdaptationEngine>;
     const adaptationNetworks = new Map<number, Network>();
     for (const genome of carGenomes) {
       adaptationNetworks.set(genome.carIndex, genome.getNetwork());
     }
 
-    const adaptationContext: RaceAdaptationContext | undefined =
-      engines && engines.size > 0
-        ? { engines, networks: adaptationNetworks }
-        : undefined;
+    const adaptationContext: RaceAdaptationContext = {
+      engines,
+      networks: adaptationNetworks,
+    };
 
-    const seed = currentState.initConfig?.rngSeed ?? 1;
+    const seed = currentState.initConfig!.rngSeed;
     const opponentSnapshot: OpponentSnapshot = {
       snapshotId: 'race-start',
       generation: 0,
@@ -578,10 +694,46 @@ export function routeRacingWorkerProtocolMessage(
    *   `advanceTeamGeneration`.
    * - Stores an opponent snapshot via `tryUpdateSnapshot` so the rolling
    *   snapshot accumulates across generations.
-   * - Computes per-car fitness scores from the race episode runner.
+   * - Accumulates serialized car genomes into the hall-of-fame opponent
+   *   snapshot pool with FIFO eviction.
+   * - Records a strategy-divergence snapshot and classifies the coevolutionary
+   *   trajectory.
+   * - Extracts per-car fitness scores and pit-lap distributions from the race.
+   * - Runs polyandric reproduction once per team to build the next generation's
+   *   genomes (see below).
    * - Clears the race runner from state (recreated on the next `start-race`).
    * - Builds a generation-ready response with the real generation index and
    *   fitness scores.
+   *
+   * ## Polyandric reproduction sub-step
+   *
+   * For each team the queen is the car with the best individual finishing
+   * position (selected by `selectQueenPerTeam`). The remaining team cars are
+   * drone donors. Up to `MAX_POLYANDRIC_DRONES` drones are passed to
+   * `reproducePolyandric`; the cap keeps the merge input stable when a team
+   * has more cars than the operator expects. The operator uses
+   * `RACING_POLYANDRIC_POLICY`: non-overlapping region assignment, strong
+   * queen bias, and an evolvable mode flag. The returned offspring envelope
+   * replaces every car genome on that team, so the next race starts from a
+   * fresh, shared team genome.
+   *
+   * This pattern — one queen template combined with contributions from
+   * multiple drone donors — mirrors the biological analogy of polyandry;
+   * see [Polyandry (Wikipedia)](https://en.wikipedia.org/wiki/Polyandry).
+   *
+   * ## Offspring seed policy
+   *
+   * Each new car genome gets a deterministic seed derived from the original
+   * `rngSeed`, the next generation index, the team id, and the car index:
+   *
+   * ```
+   * offspringSeed = baseSeed + nextGeneration * 10000 + teamId * 1000 + carIndex
+   * ```
+   *
+   * The formula guarantees that siblings on the same team differ by
+   * `carIndex`, and the combination of generation, team, and car produces a
+   * unique offset, so no two offspring share the same seed. This makes
+   * repeated runs with the same initial seed reproducible at the genome level.
    *
    * @param currentState - Current FSM state (phase: racing).
    * @param runner - The completed race episode runner.
@@ -591,42 +743,36 @@ export function routeRacingWorkerProtocolMessage(
     currentState: EvolutionProtocolState,
     runner: ReturnType<typeof createRaceEpisodeRunner>,
   ): EvolutionProtocolRouteResult {
-    const container = currentState.coevolutionContainer as
-      CoevolutionContainer | undefined;
-    const carGenomes = container?.getCarGenomes() ?? [];
+    const container = currentState.coevolutionContainer as CoevolutionContainer;
+    const carGenomes = container.getCarGenomes();
 
     // Step 1: Increment the generation counter.
-    const nextGeneration = (currentState.generation ?? 0) + 1;
+    const nextGeneration = currentState.generation! + 1;
 
     // Step 2: Advance both teams' isolated generation counters.
-    container?.advanceTeamGeneration('team-a');
-    container?.advanceTeamGeneration('team-b');
+    container.advanceTeamGeneration('team-a');
+    container.advanceTeamGeneration('team-b');
 
     // Step 3: Store an opponent snapshot for the completed generation so the
     // rolling snapshot store accumulates opponents across generations.
-    const store = currentState.opponentSnapshotStore as
-      OpponentSnapshotStore | undefined;
-    if (store) {
-      const snapshotPayload = carGenomes.map((genome) => genome.serialize());
-      store.tryUpdateSnapshot(nextGeneration, snapshotPayload);
-    }
+    const store = currentState.opponentSnapshotStore as OpponentSnapshotStore;
+    const snapshotPayload = carGenomes.map((genome) => genome.serialize());
+    store.tryUpdateSnapshot(nextGeneration, snapshotPayload);
 
     // Step 3b: Accumulate opponent snapshots into the hall-of-fame pool so
     // snapshots persist across generations with FIFO eviction.
-    let updatedPool = currentState.opponentSnapshotPool;
-    if (updatedPool) {
-      for (let carIndex = 0; carIndex < carGenomes.length; carIndex++) {
-        const agentId = `car-${carIndex}-gen-${nextGeneration}`;
-        const payload: Readonly<Record<string, unknown>> = {
-          networkPayloads: [carGenomes[carIndex].serialize()],
-        };
-        updatedPool = addOpponentSnapshot(
-          updatedPool,
-          agentId,
-          payload,
-          nextGeneration,
-        );
-      }
+    let updatedPool = currentState.opponentSnapshotPool!;
+    for (let carIndex = 0; carIndex < carGenomes.length; carIndex++) {
+      const agentId = `car-${carIndex}-gen-${nextGeneration}`;
+      const payload: Readonly<Record<string, unknown>> = {
+        networkPayloads: [carGenomes[carIndex].serialize()],
+      };
+      updatedPool = addOpponentSnapshot(
+        updatedPool,
+        agentId,
+        payload,
+        nextGeneration,
+      );
     }
 
     // Step 4: Extract per-car fitness scores from the completed race.
@@ -650,19 +796,78 @@ export function routeRacingWorkerProtocolMessage(
     const teamBPitLapDistribution = extractPitLapDistribution(runner, 1);
 
     // Step 4d: Record strategy-divergence snapshot and classify the trajectory.
-    const tracker = currentState.strategyDivergenceTracker;
-    let strategyDivergenceClassifier;
-    if (tracker) {
-      tracker.recordSnapshot({
-        generation: nextGeneration,
-        teamAFitness,
-        teamBFitness,
-        teamAPitLapDistribution,
-        teamBPitLapDistribution,
-        reproductionModeMix: {},
+    const tracker = currentState.strategyDivergenceTracker!;
+    tracker.recordSnapshot({
+      generation: nextGeneration,
+      teamAFitness,
+      teamBFitness,
+      teamAPitLapDistribution,
+      teamBPitLapDistribution,
+      reproductionModeMix: {},
+    });
+    const strategyDivergenceClassifier = tracker.classify();
+
+    // Step 5: Polyandric reproduction for each team.
+    const finishPositionRanks = tryExtractFinishPositionRanks(
+      runner,
+      carGenomes.length,
+    );
+    const queenSelections = selectQueenPerTeam(
+      finishPositionRanks ?? carFitnessScores,
+      teamLayout,
+    );
+
+    for (const selection of queenSelections) {
+      const queenGenome = carGenomes[selection.queenCarIndex];
+      const selectedDrones = selection.droneCarIndices.slice(
+        0,
+        MAX_POLYANDRIC_DRONES,
+      );
+
+      const drones = selectedDrones.map((droneIndex) => ({
+        dna: carGenomes[droneIndex].envelope,
+        parentId: `car-${droneIndex}`,
+      }));
+
+      const reproductionResult = reproducePolyandric({
+        ngeEnabled: true,
+        queen: queenGenome.envelope,
+        queenId: `car-${selection.queenCarIndex}`,
+        drones,
+        policy: RACING_POLYANDRIC_POLICY as unknown as NgeReproductionPolicy,
       });
-      strategyDivergenceClassifier = tracker.classify();
+
+      const offspringEnvelope = extractOffspringEnvelope(reproductionResult);
+      const baseSeed = currentState.initConfig!.rngSeed;
+
+      const teamCarIndices = carGenomes
+        .map((genome, index) => ({ index, teamId: genome.teamId }))
+        .filter(({ teamId }) => teamId === selection.teamId)
+        .map(({ index }) => index);
+
+      for (const carIndex of teamCarIndices) {
+        const offspringSeed =
+          baseSeed +
+          nextGeneration * 10000 +
+          selection.teamId * 1000 +
+          carIndex;
+        container.replaceCarGenome(
+          carIndex,
+          createCarGenome({
+            carIndex,
+            seed: offspringSeed,
+            teamId: selection.teamId,
+            populationId: carGenomes[carIndex].populationId,
+            inputSize: carGenomes[carIndex].inputSize,
+            outputSize: carGenomes[carIndex].outputSize,
+            envelope: offspringEnvelope,
+          }),
+        );
+      }
     }
+
+    // Step 6: Re-read post-reproduction car genomes for the response.
+    const postReproductionCarGenomes = container!.getCarGenomes();
 
     return {
       nextState: {
@@ -673,7 +878,7 @@ export function routeRacingWorkerProtocolMessage(
         opponentSnapshotPool: updatedPool,
       },
       response: buildGenerationReadyResponse(
-        carGenomes,
+        postReproductionCarGenomes,
         nextGeneration,
         carFitnessScores,
         strategyDivergenceClassifier,

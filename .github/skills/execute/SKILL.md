@@ -336,6 +336,39 @@ classify and route the work.
 Flowchart summary: "User request" → "Is it trivial? (1-sentence answer, zero file changes)"; "Is it trivial? (1-sentence answer, zero file changes)" → "Answer directly" (Yes), "Classify the SDLC phase" (No); "Answer directly"; "Classify the SDLC phase" → "Which phase?"; "Which phase?" → "01-planning" (Planning), "02-researching" (Researching), "03-red-testing" (Red testing), "04-implementing" (Implementing), "05-green-testing" (Green testing), "06-documenting" (Documenting), "07-logging" (Logging), "00-helping" (Helping / gap); "01-planning" → "Dispatch and wait for completion"; "02-researching" → "Dispatch and wait for completion"; "03-red-testing" → "Dispatch and wait for completion"; "04-implementing" → "Dispatch and wait for completion"; "05-green-testing" → "Dispatch and wait for completion"; "06-documenting" → "Dispatch and wait for completion"; "07-logging" → "Dispatch and wait for completion"; "00-helping" → "Dispatch and wait for completion"; "Dispatch and wait for completion" → "More phases needed?"; "More phases needed?" → "Classify the SDLC phase" (Yes), "Done" (No); "Done".
 ```
 
+## Section 5.0 — Plan Verification Gate
+
+Before any `03-red-testing`, `04-implementing`, or other execution-phase agent
+is dispatched for a plan, a second `01-planning` agent with a **fresh context**
+must independently verify the plan and record a green light in the plan's
+`## Latest validation evidence` section.
+
+### Verification Gate Flow
+
+```text
+Flowchart summary: "Plan authored or patched by 01-planning" → "Dispatch fresh 01-planning verification agent"; "Dispatch fresh 01-planning verification agent" → "Green light?"; "Green light?" → "Proceed to RED / IMPLEMENT / GREEN" (Yes), "Record blockers and route back to 01-planning patch cycle" (No); "Record blockers and route back to 01-planning patch cycle" → "Plan authored or patched by 01-planning"; "Proceed to RED / IMPLEMENT / GREEN".
+```
+
+### Gate Contract
+
+The verification verdict must be recorded in the plan's
+`## Latest validation evidence` section. The plan-readiness gate
+(`scripts/agent-customization/gates/plan-readiness.gate.mjs`) accepts either:
+
+- `green-light: true`
+- `status: green-light`
+
+in YAML or plain text inside that section. If the section is missing, stale,
+or contains blockers, the gate returns `pass: false` and the orchestrator must
+dispatch a fresh `01-planning` verification pass before proceeding.
+
+### Loop-Back Rule
+
+If verification finds blockers, the orchestrator routes the plan back to
+`01-planning` for a patch cycle. After the patch, a **new** fresh-context
+`01-planning` verification agent must run again. This patch → verify loop
+repeats until green light is recorded.
+
 ## Section 5 — Sliced Implementation Orchestration Protocol
 
 This section defines the strict RED → IMPLEMENT → GREEN loop that
@@ -346,11 +379,16 @@ receives a slice, implements it, and returns evidence.
 ### The RED → IMPLEMENT → GREEN Loop
 
 ```text
-Flowchart summary: "1. Red Testing 03-red-testing creates failing tests" → "2. Implementation 04-implementing makes tests pass"; "2. Implementation 04-implementing makes tests pass" → "3. Green Testing 05-green-testing validates implementation"; "3. Green Testing 05-green-testing validates implementation" → "4. Loop-back orchestrator passes observations to a NEW 04 instance" (observations (not OK)), "5. Advance move to next step/slice" (OK); "4. Loop-back orchestrator passes observations to a NEW 04 instance" → "2. Implementation 04-implementing makes tests pass"; "5. Advance move to next step/slice".
+Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green light" → "1. Red Testing 03-red-testing creates failing tests"; "1. Red Testing 03-red-testing creates failing tests" → "2. Implementation 04-implementing makes tests pass"; "2. Implementation 04-implementing makes tests pass" → "3. Green Testing 05-green-testing validates implementation"; "3. Green Testing 05-green-testing validates implementation" → "4. Loop-back orchestrator passes observations to a NEW 04 instance" (observations (not OK)), "5. Advance move to next step/slice" (OK); "4. Loop-back orchestrator passes observations to a NEW 04 instance" → "2. Implementation 04-implementing makes tests pass"; "5. Advance move to next step/slice".
 ```
 
 ### Loop Steps
 
+0. **Plan Verification Gate.** A fresh `01-planning` agent reads the active
+   plan, checks completeness, risk coverage, acceptance criteria, and
+   dependencies, and records a green light in `## Latest validation evidence`.
+   No `03-red-testing`, `04-implementing`, or execution-phase agent may be
+   dispatched until this gate passes.
 1. **Red Testing** (`03-red-testing`) creates failing tests that define
    expected behavior. The tests must fail for the right reason (missing
    implementation, not a syntax error or bad fixture).
@@ -407,6 +445,12 @@ Each slice is a bounded unit of work with these fields:
 
 ### Critical Rules
 
+- **MANDATORY PLAN VERIFICATION GATE — before RED/IMPLEMENT, run plan-readiness
+  gate and confirm green light.** No `03-red-testing`, `04-implementing`, or
+  execution-phase agent may be dispatched until a fresh `01-planning`
+  verification pass has recorded `green-light: true` (or
+  `status: green-light`) in the plan's `## Latest validation evidence`
+  section.
 - **MANDATORY DISPATCH CONSULTATION.** Before each `task` dispatch, the
   orchestrator MUST call `neataptic-dispatch-mcp / build_dispatch_packet`
   and use the returned `dispatch_packet`. Direct `task` use without a prior
@@ -414,6 +458,17 @@ Each slice is a bounded unit of work with these fields:
 - **The ORCHESTRATOR manages the loop, NOT the implementer.** The
   implementer receives a slice and returns evidence; it does not decide
   when to loop back or advance.
+- **`04-implementing` MUST NOT RUN TESTS.** The implementation agent's job
+  is to write code that compiles and passes lint. It may run `tsc`, `lint`,
+  and `prettier` as preflight checks, but it must **never** run `jest`,
+  `coverage`, or any test command. Validation is the exclusive responsibility
+  of `05-green-testing`, dispatched by the orchestrator after `04` returns.
+  If `04` discovers a failing test during code exploration, it records the
+  observation and hands off; it does not fix-and-test in the same turn.
+- **SLICES MUST BE THIN.** A single `04-implementing` slice should change
+  one behavioral intent, ideally across no more than three files. If a slice
+  requires touching many files or systems, the planner (`01-planning`) must
+  split it before dispatch. `04` must not silently expand a slice.
 - **Each iteration uses a NEW agent instance** (fresh context) to avoid
   context contamination. A implementer that failed once must not carry its
   failed context into the retry. Each new instance must be dispatched via

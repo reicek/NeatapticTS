@@ -15,6 +15,7 @@
 
 import mutation from '../../methods/mutation/mutation';
 import type Network from '../../architecture/network';
+import type Node from '../../architecture/node';
 import { NgeJuvenile_BudgetError } from './neat.nge-juvenile.errors';
 import type {
   NgeGrowthBudget,
@@ -51,7 +52,12 @@ export interface MorphApplyOutcome {
  *
  * Each delta is translated into the corresponding NEAT mutation operator:
  *
- * - `edgeDensify` → `ADD_CONN` called N times (N = `detail.proposedAdditions`).
+ * - `edgeDensify` → distinct forward edges added in one deterministic batch via
+ *   a bounded lazy sampler and `network.connectBatch()` (N = `detail.proposedAdditions`).
+ *   The sampler draws source/target indices from the same forward-only ranges used
+ *   by `ADD_CONN`, rejects pairs that already project, deduplicates accepted pairs,
+ *   and stops after a fixed attempt budget so densification stays cheap even near
+ *   the 8,000-node / 32,000-edge capacity ceiling.
  * - `nodeAdd` → `ADD_NODE`.
  * - `edgePrune` → direct disconnect of the specific connection identified by
  *   `detail.candidateId` (not random `SUB_CONN`).
@@ -164,55 +170,142 @@ function assertPruneBudget(
 }
 
 /**
- * Apply an `edgeDensify` delta by calling `ADD_CONN` N times.
+ * Apply an `edgeDensify` delta by adding `detail.proposedAdditions` distinct
+ * forward edges through a bounded lazy sampler.
+ *
+ * Instead of enumerating all O(N²) candidate pairs, the sampler draws
+ * source/target indices from the same forward-only ranges used by `ADD_CONN`,
+ * rejects pairs that already project, deduplicates accepted pairs in a local
+ * `Set`, and commits the accepted batch through `network.connectBatch()`. A
+ * fixed attempt budget (`MAX_ATTEMPTS_PER_EDGE = 20`) keeps densification cheap
+ * even as the network approaches the 8,000-node / 32,000-edge capacity ceiling.
+ *
+ * The sample is deterministic whenever `network.getRandomFn()` is seeded; the
+ * same network state and budget therefore always produce the same edges. If no
+ * missing pairs can be found within the attempt budget, the delta is reported
+ * as skipped rather than falsely applied.
  *
  * @param network - The live network to mutate in place.
  * @param delta - The edge densification delta carrying `detail.proposedAdditions`.
  * @param budget - The growth budget for re-validation.
- * @returns An applied outcome.
+ * @returns An applied or skipped outcome with a reason when no net growth occurred.
  */
 function applyEdgeDensify(
   network: Network,
   delta: NgeMorphDelta,
   budget: NgeGrowthBudget,
 ): MorphApplyOutcome {
-  const additions = delta.detail.proposedAdditions as number;
+  const requestedAdditions = (delta.detail.proposedAdditions as number) ?? 1;
 
   assertGrowthBudget(
-    network.connections.length + additions,
+    network.connections.length + requestedAdditions,
     budget.maxEdges,
     'edgeDensify',
     delta.targetModuleId,
   );
 
-  for (let i = 0; i < additions; i++) {
-    network.mutate(mutation.ADD_CONN);
+  const additions = requestedAdditions;
+  const MAX_ATTEMPTS_PER_EDGE = 20;
+
+  if (additions <= 0) {
+    return {
+      kind: 'edgeDensify',
+      status: 'skipped',
+      reason:
+        'ADD_CONN produced no net edges (saturated graph or sparsity budget pruning).',
+    };
   }
+
+  // Lazily sample missing forward (source, target) pairs instead of
+  // enumerating all O(N²) candidates. This keeps edge densification cheap
+  // even when the network grows toward the 8,000-node / 32,000-edge target.
+  const nodeCount = network.nodes.length;
+  const inputCount = network.input;
+  const outputCount = network.output;
+  const sourceEnd = nodeCount - outputCount;
+  const rng = network.getRandomFn()!;
+
+  const accepted: { from: Node; to: Node }[] = [];
+  const seen = new Set<string>();
+  const maxAttempts = additions * MAX_ATTEMPTS_PER_EDGE;
+
+  for (
+    let attempt = 0;
+    attempt < maxAttempts && accepted.length < additions;
+    attempt++
+  ) {
+    const sourceIndex = Math.floor(rng() * sourceEnd);
+    const source = network.nodes[sourceIndex] as Node;
+    const targetStart = Math.max(sourceIndex + 1, inputCount);
+    const targetIndex =
+      targetStart + Math.floor(rng() * (nodeCount - targetStart));
+    const target = network.nodes[targetIndex] as Node;
+
+    if (source.isProjectingTo(target)) {
+      continue;
+    }
+
+    const key = `${sourceIndex}->${targetIndex}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    accepted.push({ from: source, to: target });
+  }
+
+  if (accepted.length === 0) {
+    return {
+      kind: 'edgeDensify',
+      status: 'skipped',
+      reason:
+        'ADD_CONN produced no net edges (saturated graph or sparsity budget pruning).',
+    };
+  }
+
+  network.connectBatch(accepted);
 
   return { kind: 'edgeDensify', status: 'applied' };
 }
 
 /**
- * Apply a `nodeAdd` delta by calling `ADD_NODE`.
+ * Apply a `nodeAdd` delta by calling `ADD_NODE` the requested number of times.
+ * If no hidden node is inserted (for example, because the network has no
+ * eligible connection to split), the delta is reported as skipped.
  *
  * @param network - The live network to mutate in place.
- * @param delta - The node addition delta.
+ * @param delta - The node addition delta carrying `detail.proposedAdditions`.
  * @param budget - The growth budget for re-validation.
- * @returns An applied outcome.
+ * @returns An applied or skipped outcome.
  */
 function applyNodeAdd(
   network: Network,
   delta: NgeMorphDelta,
   budget: NgeGrowthBudget,
 ): MorphApplyOutcome {
+  const additions = (delta.detail.proposedAdditions as number) ?? 1;
+
   assertGrowthBudget(
-    network.nodes.length + 1,
+    network.nodes.length + additions,
     budget.maxNodes,
     'nodeAdd',
     delta.targetModuleId,
   );
 
-  network.mutate(mutation.ADD_NODE);
+  const hiddenNodesBefore = countHiddenNodes(network);
+
+  for (let i = 0; i < additions; i++) {
+    network.mutate(mutation.ADD_NODE);
+  }
+
+  const hiddenNodesAfter = countHiddenNodes(network);
+  if (hiddenNodesAfter <= hiddenNodesBefore) {
+    return {
+      kind: 'nodeAdd',
+      status: 'skipped',
+      reason: 'ADD_NODE produced no net hidden nodes.',
+    };
+  }
 
   return { kind: 'nodeAdd', status: 'applied' };
 }

@@ -1,6 +1,5 @@
 import {
-  NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
-  NGE_JUVENILE_DEFAULT_NODE_REWARD_DELTA_FLOOR,
+  NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR,
   NGE_JUVENILE_DEFAULT_SLOT_EXPANSION_COUNT,
 } from './neat.nge-juvenile.constants';
 import {
@@ -16,14 +15,31 @@ import type {
   NgeMorphDelta,
 } from './neat.nge-juvenile.types';
 
+/**
+ * Growth-side morph kinds that the juvenile planner can emit and the lifecycle
+ * can commit. Edge densify is the preferred fast path; slot expansion and node
+ * addition are rarer, higher-cost growth actions.
+ */
 export type NgeGrowthMorphKind = 'edgeDensify' | 'slotExpand' | 'nodeAdd';
 
 /**
  * Check whether juvenile growth may commit in the current window.
  *
+ * The gate opens only after `hysteresisWindowCount` consecutive windows have
+ * carried positive focus evidence *and* the previous growth cooldown has
+ * expired. Once growth commits, `commitGrowth` resets the streak and starts a
+ * new cooldown, so two morphs cannot fire back-to-back without fresh evidence.
+ *
  * @param hysteresis - Current hysteresis state tracked across windows.
  * @param config - Resolved juvenile-phase configuration.
  * @returns `true` when the positive-focus streak is satisfied and cooldown is clear.
+ *
+ * @example
+ * ```ts
+ * const hysteresis = { growthPositiveWindowCount: 3, cooldownWindowsRemaining: 0 };
+ * const config = resolveFocusConfig({ hysteresisWindowCount: 3 });
+ * console.log(canGrowNow(hysteresis, config)); // true
+ * ```
  */
 export function canGrowNow(
   hysteresis: NgeHysteresisState,
@@ -91,11 +107,11 @@ export function planEdgeDensification(
   moduleId: string,
   budget: NgeGrowthBudget,
   focusScore: NgeFocusScore,
+  config: NgeJuvenilePhaseConfig,
 ): NgeMorphDelta {
-  if (
-    budget.currentEdgeCount + NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT >
-    budget.maxEdges
-  ) {
+  const proposedAdditions = config.edgeDensificationCount;
+
+  if (budget.currentEdgeCount + proposedAdditions > budget.maxEdges) {
     throw new NgeJuvenile_BudgetError(
       `Edge densification would exceed the edge budget for ${moduleId}.`,
     );
@@ -106,18 +122,18 @@ export function planEdgeDensification(
     targetModuleId: moduleId,
     detail: {
       currentEdgeCount: budget.currentEdgeCount,
-      proposedAdditions: NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
+      proposedAdditions,
       normalizedFocusScore: focusScore.normalizedScore,
     },
-    wiringCostDelta: NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
+    wiringCostDelta: proposedAdditions,
   };
 }
 
 /**
  * Plan one local episodic-slot expansion delta for a single module.
  *
- * Phase B uses `metrics.utilization` as the hit-rate proxy until a dedicated episodic
- * hit-rate field lands in a later step.
+ * This planner uses `metrics.utilization` as the episodic hit-rate proxy until
+ * a dedicated hit-rate metric is added to the module snapshot.
  *
  * @param moduleId - Module receiving the planned slot expansion.
  * @param hitRate - Episodic hit-rate proxy for the target module.
@@ -169,25 +185,69 @@ export function planSlotExpansion(
 }
 
 /**
+ * Compute the composite node-growth signal from a focus score using the same
+ * normalized metric weights that produced the raw focus score. The signal is in
+ * [-1, 1] and replaces the old raw-reward-delta gate.
+ *
+ * @param score - Focus score for the target module.
+ * @param config - Resolved juvenile configuration carrying focus weights.
+ * @returns Scalar growth signal; values above the configured floor open the gate.
+ */
+function computeNodeGrowthSignal(
+  score: NgeFocusScore,
+  config: NgeJuvenilePhaseConfig,
+): number {
+  const weights = config.focusWeights;
+
+  return (
+    score.normalizedUtilization * weights.w_u +
+    score.normalizedRewardDelta * weights.w_r +
+    score.normalizedNovelty * weights.w_n +
+    score.normalizedStabilityAge * weights.w_s -
+    score.normalizedWiringCost * weights.w_c
+  );
+}
+
+/**
  * Plan one rare evidence-gated node-addition delta for a single module.
+ *
+ * Eligibility is now driven by the composite focus-derived growth signal rather
+ * than raw reward delta alone. The planned insertion count honors the DNA
+ * `nodeAdditionCount` and available node budget.
  *
  * @param moduleId - Module receiving the planned node addition.
  * @param budget - DNA-configured growth caps and current live counts.
- * @param rewardDelta - Measured reward delta acting as the positive-evidence signal.
+ * @param score - Focus score carrying normalized metrics and the growth flag.
+ * @param config - Resolved juvenile configuration.
  * @returns One dry-run node-addition delta.
  */
 export function planNodeAddition(
   moduleId: string,
   budget: NgeGrowthBudget,
-  rewardDelta: number,
+  score: NgeFocusScore,
+  config: NgeJuvenilePhaseConfig,
 ): NgeMorphDelta {
-  if (rewardDelta <= NGE_JUVENILE_DEFAULT_NODE_REWARD_DELTA_FLOOR) {
+  if (!score.supportsGrowth) {
     throw new NgeJuvenile_MorphError(
-      `Node addition requires rewardDelta > ${NGE_JUVENILE_DEFAULT_NODE_REWARD_DELTA_FLOOR} for ${moduleId}.`,
+      `Node addition requires a growth-supporting focus score for ${moduleId}.`,
     );
   }
 
-  if (budget.currentNodeCount + 1 > budget.maxNodes) {
+  const growthSignal = computeNodeGrowthSignal(score, config);
+  if (growthSignal <= (config.nodeGrowthSignalFloor ?? NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR)) {
+    throw new NgeJuvenile_MorphError(
+      `Node addition requires growthSignal > ${config.nodeGrowthSignalFloor} for ${moduleId}.`,
+    );
+  }
+
+  const requestedCount = Math.max(
+    1,
+    Math.floor(config.nodeAdditionCount * (1 + growthSignal)),
+  );
+  const availableHeadroom = budget.maxNodes - budget.currentNodeCount;
+  const count = Math.min(requestedCount, Math.max(1, availableHeadroom));
+
+  if (count <= 0 || budget.currentNodeCount + count > budget.maxNodes) {
     throw new NgeJuvenile_BudgetError(
       `Node addition would exceed the node budget for ${moduleId}.`,
     );
@@ -198,7 +258,8 @@ export function planNodeAddition(
     targetModuleId: moduleId,
     detail: {
       currentNodeCount: budget.currentNodeCount,
-      rewardDelta,
+      growthSignal,
+      proposedAdditions: count,
     },
     wiringCostDelta: 0,
   };
@@ -234,14 +295,16 @@ export function validateMorphDelta(
       }
 
       return;
-    case 'nodeAdd':
-      if (budget.currentNodeCount + 1 > budget.maxNodes) {
+    case 'nodeAdd': {
+      const nodeAdditions = (delta.detail.proposedAdditions as number) ?? 1;
+      if (budget.currentNodeCount + nodeAdditions > budget.maxNodes) {
         throw new NgeJuvenile_BudgetError(
           `Node addition would exceed the node budget for ${delta.targetModuleId}.`,
         );
       }
 
       return;
+    }
     case 'edgePrune':
     case 'compact':
       return;
@@ -258,6 +321,11 @@ export function validateMorphDelta(
 /**
  * Plan all eligible local growth deltas for one module in edge-first priority order.
  *
+ * The planner tries densification first, slot expansion second, and node
+ * addition last. Each candidate is validated against the supplied DNA budget
+ * before it is returned. If the hysteresis gate is closed, the function returns
+ * an empty array without throwing.
+ *
  * @param moduleId - Module receiving all planned local growth actions.
  * @param focusScore - Focus score for the target module.
  * @param metrics - Module metrics whose utilization and reward delta drive eligibility.
@@ -265,6 +333,12 @@ export function validateMorphDelta(
  * @param config - Resolved juvenile-phase configuration.
  * @param hysteresis - Current growth-side hysteresis state.
  * @returns Zero or more validated dry-run morph deltas in edge-first priority order.
+ *
+ * @example
+ * ```ts
+ * const deltas = planGrowthMorphs('policy', focus, metrics, budget, config, hysteresis);
+ * console.log(deltas.map((d) => d.kind)); // ['edgeDensify'] (or [] when gated)
+ * ```
  */
 export function planGrowthMorphs(
   moduleId: string,
@@ -283,7 +357,7 @@ export function planGrowthMorphs(
 
   // Step 2: Try the preferred edge-densification increment first.
   try {
-    const edgeDelta = planEdgeDensification(moduleId, budget, focusScore);
+    const edgeDelta = planEdgeDensification(moduleId, budget, focusScore, config);
     validateMorphDelta(edgeDelta, budget);
     plannedDeltas.push(edgeDelta);
   } catch (error) {
@@ -314,7 +388,7 @@ export function planGrowthMorphs(
 
   // Step 4: Try the rare evidence-gated node addition last.
   try {
-    const nodeDelta = planNodeAddition(moduleId, budget, metrics.rewardDelta);
+    const nodeDelta = planNodeAddition(moduleId, budget, focusScore, config);
     validateMorphDelta(nodeDelta, budget);
     plannedDeltas.push(nodeDelta);
   } catch (error) {

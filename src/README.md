@@ -4297,7 +4297,7 @@ after the split — evolution pressure then shapes the new node over time.
 
 This is one of the canonical NEAT structural mutations. It increases
 network depth without changing connectivity density significantly.
-See Stanley & Miikkulainen (2002) for the motivating analysis.
+See [Stanley & Miikkulainen (2002)](https://nn.cs.utexas.edu/?stanley:ec02) for the motivating analysis.
 
 Example:
 
@@ -5641,6 +5641,12 @@ Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in `methods.mutation`.
 
+Some structural methods, especially `ADD_CONN` and `ADD_NODE`, silently
+no-op when no eligible candidate exists (for example, a fully saturated
+graph). The NGE juvenile applier checks the live node/edge count before and
+after calling `mutate` so it can report the outcome truthfully as applied or
+skipped rather than claiming growth that did not happen.
+
 Parameters:
 - `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
   Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
@@ -6304,6 +6310,13 @@ setSeed(
 ```
 
 Seed the internal deterministic RNG.
+
+Seeding makes every subsequent structural mutation, weight initialization,
+and random choice reproducible for the same starting network. NGE uses this
+in `runNgeLifecycle` to guarantee that the same DNA + seed + experience
+stream produce identical growth checkpoints, including the same innovation
+IDs for newly created connections. Omitting the seed leaves the network
+using its default non-deterministic RNG.
 
 Parameters:
 - `seed` - Seed value.
@@ -8075,7 +8088,7 @@ after the split — evolution pressure then shapes the new node over time.
 
 This is one of the canonical NEAT structural mutations. It increases
 network depth without changing connectivity density significantly.
-See Stanley & Miikkulainen (2002) for the motivating analysis.
+See [Stanley & Miikkulainen (2002)](https://nn.cs.utexas.edu/?stanley:ec02) for the motivating analysis.
 
 Example:
 
@@ -9419,6 +9432,12 @@ Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in `methods.mutation`.
 
+Some structural methods, especially `ADD_CONN` and `ADD_NODE`, silently
+no-op when no eligible candidate exists (for example, a fully saturated
+graph). The NGE juvenile applier checks the live node/edge count before and
+after calling `mutate` so it can report the outcome truthfully as applied or
+skipped rather than claiming growth that did not happen.
+
 Parameters:
 - `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
   Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
@@ -10082,6 +10101,13 @@ setSeed(
 ```
 
 Seed the internal deterministic RNG.
+
+Seeding makes every subsequent structural mutation, weight initialization,
+and random choice reproducible for the same starting network. NGE uses this
+in `runNgeLifecycle` to guarantee that the same DNA + seed + experience
+stream produce identical growth checkpoints, including the same innovation
+IDs for newly created connections. Omitting the seed leaves the network
+using its default non-deterministic RNG.
 
 Parameters:
 - `seed` - Seed value.

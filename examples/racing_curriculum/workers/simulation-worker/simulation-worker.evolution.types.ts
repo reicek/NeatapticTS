@@ -62,8 +62,11 @@ import type { OpponentSnapshotPool } from '../../../../src/neat/nge-collective/n
  *   sampling implementation depends on a real `Neat` snapshot payload.
  * - Radio semantics (`ModulatorBroadcaster`, `EpisodicSlot`, `GatingRouter`)
  *   depend on NGE primitives that are not yet available.
- * - Polyandric reproduction (`modeIsEvolvable`) depends on an NGE primitive
- *   that is not yet available; the escalation target is `nge-core-algorithm`.
+ * - Polyandric reproduction is wired into the generation-boundary transition
+ *   in `simulation-worker.evolution.protocol.service.ts` via queen/drone
+ *   selection and `reproducePolyandric`. The evolvable-mode flag
+ *   (`modeIsEvolvable`) remains descriptor-only until NGE core provides a
+ *   runtime operator for it.
  */
 
 /**

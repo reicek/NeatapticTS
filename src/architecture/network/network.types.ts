@@ -1942,7 +1942,7 @@ export interface NetworkGeneticProps {
 /**
  * Runtime materialization descriptor for one inherited connection gene.
  *
- * Step 7.2b keeps this runtime shelf narrower than the old crossover gene
+ * The runtime gene shelf is intentionally narrower than the old crossover gene
  * shape. The phenotype materializer consumes only stable heredity identity
  * plus weight and enabled state. Runtime node indexes are intentionally
  * excluded because endpoints and gaters are resolved later by `geneId` after

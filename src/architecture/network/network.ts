@@ -2,10 +2,6 @@
  * Core network chapter for the architecture surface.
  *
  * This folder owns the public `Network` class: the boundary where a graph stops
- *
- * This is the explicit reset boundary for recurrent execution with carried
- * state semantics. Call it before a new independent sequence when previous
- * recurrent state should not influence the next activation run.
  * being only nodes and connections and starts behaving like one runnable,
  * mutable, trainable system. Higher-level NEAT code can mutate or score a
  * network, but this chapter is where the graph itself learns how to activate,
@@ -18,6 +14,12 @@
  * pruning, or a portable checkpoint. Keeping those responsibilities under one
  * facade makes the public API readable while the helper chapters keep each
  * policy cluster narrow enough to teach.
+ *
+ * Construction can be deterministic: passing a `seed` snapshots the global
+ * connection innovation counter before bootstrap and restores it afterwards,
+ * so two networks built from the same seed produce identical topology and
+ * innovation IDs until external mutation intervenes. This is the foundation
+ * used by NGE growth checkpoints to make structural expansion replayable.
  *
  * A useful mental model is to read `network/` as four cooperating shelves.
  * `bootstrap/` explains one-time construction policy. `activate/`, `runtime/`,
@@ -418,9 +420,24 @@ export default class Network implements NetworkView {
   /**
    * Create a network instance.
    *
+   * When `options.seed` is provided, the constructor snapshots the global
+   * connection innovation counter, resets it so the bootstrap emits
+   * deterministic innovation IDs starting from 1, and restores the saved
+   * counter (or advances it beyond any IDs assigned during bootstrap) once
+   * construction completes. This makes repeated seeded constructions
+   * reproducible without regressing the process-global counter used by other
+   * networks or populations.
+   *
    * @param input Number of input nodes.
    * @param output Number of output nodes.
    * @param options Optional constructor options.
+   *
+   * @example
+   * ```ts
+   * const network = new Network(2, 1, { seed: 42 });
+   * const replayed = new Network(2, 1, { seed: 42 });
+   * // network.connections[i].innovation matches replayed for every i
+   * ```
    */
   constructor(
     input: number,
@@ -441,6 +458,18 @@ export default class Network implements NetworkView {
     const topologyIntent = resolveTopologyIntent(options);
     const enforceAcyclic = resolveAcyclicEnforcement(options, topologyIntent);
 
+    // Step 3b: When a deterministic seed is requested, snapshot the current
+    // global connection innovation counter, then reset it so the bootstrap emits
+    // deterministic innovation IDs starting from 1. After bootstrap we restore
+    // the cursor to the saved baseline (or beyond any IDs assigned during
+    // bootstrap), which keeps repeated seeded construction reproducible
+    // without regressing the process-global counter used by other networks.
+    let savedInnovationCounter: number | undefined;
+    if (options?.seed !== undefined) {
+      savedInnovationCounter = Connection.nextInnovation;
+      Connection.resetInnovationCounter(1);
+    }
+
     // Step 4: Bootstrap the one-time runtime state and the initial graph shape.
     bootstrapNetwork(this as unknown as NetworkBootstrapInternals, {
       input,
@@ -449,6 +478,19 @@ export default class Network implements NetworkView {
       topologyIntent,
       enforceAcyclic,
     });
+
+    // Step 4b: Restore the global innovation counter after seeded bootstrap so
+    // other networks/populations never see a regressed or overlapping counter.
+    if (savedInnovationCounter !== undefined) {
+      const maxAssignedInnovation = this.connections.reduce(
+        (maxInnovation, connection) =>
+          Math.max(maxInnovation, connection.innovation),
+        0,
+      );
+      Connection.syncInnovationCounter(
+        Math.max(maxAssignedInnovation, savedInnovationCounter - 1),
+      );
+    }
   }
 
   /**
@@ -577,7 +619,7 @@ export default class Network implements NetworkView {
    *
    * This is one of the canonical NEAT structural mutations. It increases
    * network depth without changing connectivity density significantly.
-   * See Stanley & Miikkulainen (2002) for the motivating analysis.
+   * See [Stanley & Miikkulainen (2002)](https://nn.cs.utexas.edu/?stanley:ec02) for the motivating analysis.
    *
    * @example
    * ```ts
@@ -781,7 +823,16 @@ export default class Network implements NetworkView {
   /**
    * Seed the internal deterministic RNG.
    *
-   * @param seed Seed value.
+   * Seeding makes every subsequent structural mutation, weight initialization,
+   * and random choice reproducible for the same starting network. NGE uses this
+   * in `runNgeLifecycle` to guarantee that the same DNA + seed + experience
+   * stream produce identical growth checkpoints, including the same innovation
+   * IDs for newly created connections. Omitting the seed leaves the network
+   * using its default non-deterministic RNG.
+   *
+   * @param seed - Seed value.
+   *
+   * @see {@link runNgeLifecycle} for the seed-driven growth window.
    */
   setSeed(seed: number) {
     _setSeed.call(this, seed);
@@ -1063,11 +1114,18 @@ export default class Network implements NetworkView {
    * This is a core operation for neuro-evolutionary algorithms (like NEAT).
    * The method argument should be one of the mutation types defined in `methods.mutation`.
    *
+   * Some structural methods, especially `ADD_CONN` and `ADD_NODE`, silently
+   * no-op when no eligible candidate exists (for example, a fully saturated
+   * graph). The NGE juvenile applier checks the live node/edge count before and
+   * after calling `mutate` so it can report the outcome truthfully as applied or
+   * skipped rather than claiming growth that did not happen.
+   *
    * @param method The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
    *                 Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
    * @throws {Error} If no valid mutation `method` is provided.
    *
    * @see {@link methods.mutation} for available mutation types.
+   * @see {@link applyMorphDeltas} for the NGE wrapper that verifies structural changes.
    */
   mutate(method: MutationMethod): void {
     return _mutateImpl.call(this, method);
