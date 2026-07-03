@@ -1,14 +1,90 @@
-# NEAT Genesis EvoDevo: GPU Acceleration — Plan log
+﻿# NEAT Genesis EvoDevo: GPU Acceleration — Plan log
 
 **Status:** [DONE]
-
-This log contains the archived Phase 2 research output and Phase 3 red-test
-evidence that were compressed from
-`plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` so the active tracker can
-focus on Phase 4 implementation.
-
+This log contains the archived Phase 1 planning output, Phase 2 research
+output, Phase 3 red-test evidence, Phase 4 implementation evidence, Phase 5
+green-validation/coverage-guard evidence, Phase 6 documentation evidence, and
+Phase 7 tracker-closure evidence that were compressed from the active
+`plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` before the workstream was
+marked [DONE] and archived to `plans/completed/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md`.
 ---
 
+### Phase 1 — GPU acceleration workstream planning [DONE]
+
+```yaml
+phase: 1
+title: 'GPU acceleration workstream planning'
+status: '[DONE]'
+goal: 'planning'
+expansion: 'steps'
+auto_expand: false
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md'
+copy_paste: true
+next_phase: 'Phase 2 — WebGPU feasibility and CPU parity baseline'
+skills:
+  - 'plan-alignment'
+  - 'tracker-handoff'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md'
+  - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md'
+acceptance_criteria:
+  - 'Plan file is registered in plans/README.md and plans/Roadmap.md with a consistent [WIP] status'
+  - 'Phase/step YAML blocks pass plan-sync and step-packet gates'
+placeholder_steps:
+  - 'Step 01 — Author step packets for GPU acceleration'
+```
+
+**Phase objective:** Define the GPU acceleration workstream, position it after
+the completed NGE core workstreams and before the racing-curriculum v2 demo, and
+author the full phase/step packet set that downstream SDLC agents will
+execute.
+
+**Stop conditions:**
+
+- Done: the plan file exists, is indexed, and passes the sync/phase-packet
+  validators.
+- Hold: user must confirm scope/non-goals or execution order.
+- Blocked: roadmap/README registration is malformed; route to
+  `plan-sync-validation` or `00.cross-tier-helper`.
+
+**Required validation:**
+
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md`
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md`
+- `neataptic-gate-mcp:run_gate_check --gate=plan-sync`
+- `neataptic-gate-mcp:run_gate_check --gate=step-packet`
+- `neataptic-gate-mcp:run_gate_check --gate=agent-graph`
+
+#### Step 01 — Author step packets for GPU acceleration [DONE]
+
+```yaml
+phase: 1
+step: 1
+title: 'Author step packets for GPU acceleration'
+status: '[DONE]'
+goal: 'planning'
+expansion: 'none'
+auto_expand: false
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md'
+copy_paste: true
+next_step: 'Phase 2 Step 01 — Survey WebGPU API and WGSL constraints'
+skills:
+  - 'plan-alignment'
+  - 'tracker-handoff'
+validation:
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md'
+  - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md'
+acceptance_criteria:
+  - 'Plan file authored with phase/step YAML blocks'
+  - 'README and Roadmap references updated'
+  - 'Sync and step-packet gates pass'
+```
+
+Step 01 produced this plan, registered it in the index and roadmap, and
+prepared all downstream phase/step packets. Phase 1 is compressed to the
+observations above; the active frontier is Phase 2 research.
 ### Phase 2 — WebGPU feasibility and CPU parity baseline [DONE]
 
 ```yaml
@@ -1640,3 +1716,47 @@ implementation begins.
 - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md`
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/`
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/racing_curriculum/workers/simulation-worker/simulation-worker.gpu.test.ts`
+
+
+---
+
+### Phase 4 — WebGPU inference implementation [DONE]
+
+[DONE] Phase 4 — WebGPU inference implementation. Steps 01–07 complete.
+
+Key outcomes:
+
+- Implemented GPU capability probe (`network.gpu.capability.ts`), device manager (`network.gpu.device.ts`), buffer allocator and slab-to-GPU upload (`network.gpu.buffer.ts`), WGSL activation kernel and pipeline factory (`network.gpu.kernel.ts`), single-network GPU activation (`network.gpu.activate.ts`), batched multi-agent inference (`network.gpu.batched.ts`), transparent CPU fallback (`network.gpu.fallback.ts`), and racing-curriculum worker seam (`network.gpu.racing.ts`).
+- Wired GPU opt-in into `src/architecture/network/network.ts` via `network.gpuDevice` and `network.activate(input, { useGPU: true })`.
+- All focused GPU suites pass: 9 suites / 119 tests.
+- Racing worker GPU seam passes: 1 suite / 11 tests.
+- Coverage guard reports 100% statements / 100% branches / 100% functions / 100% lines on all non-declaration `src/architecture/network/gpu/**/*.ts` files.
+- `npm run lint` green.
+- Source files added/changed include `src/architecture/network/gpu/*.ts`, related test files, `WebGPU.md`, `WebGPU_architecture/webgpu.architecture.md`, and `.github/skills/webgpu/SKILL.md`.
+
+---
+
+### Phase 5 — Green validation and coverage guard [DONE]
+
+[DONE] Phase 5 — Green validation and coverage guard. All Phase 5 steps complete; validation and coverage guard passed. Focused GPU suites, the racing worker GPU seam, typecheck, and lint gates are green. Phase 5 detailed evidence was compressed from the active tracker into this log.
+
+---
+
+### Phase 6 — Documentation and usage contract [DONE]
+
+[DONE] Phase 6 — Documentation and usage contract. Steps 01–05 complete.
+
+Key outcomes:
+
+- Step 01 — Documented the GPU inference public API (`network.gpuDevice`, `network.activate(input, { useGPU: true })`) and the opt-in/fallback/tolerance contract in `docs/webgpu-inference.md`, `README.md`, and source JSDoc; generated GPU README uses `network.gpu.activate.ts` as chapter intro with Mermaid flowchart and Wikipedia citation.
+- Step 02 — Added `examples/racing_curriculum/gpu-enabled-racing.example.ts` and a GPU opt-in section to `examples/racing_curriculum/README.md` that explains the opt-in contract, eligibility, and fallback behavior.
+- Step 03 — Audited and updated JSDoc across `src/architecture/network/gpu/*.ts` and `src/architecture/network/network.ts`; removed test/fixture jargon, added module-level educational JSDoc to `network.gpu.batched.ts` and `network.gpu.fallback.ts`, and confirmed no stale `activateGpu` references or broken `{@link}` tags.
+- Step 04 — `npm run docs` and `npm run docs:quality:gate` pass with no GPU-related Typedoc warnings; Mermaid diagrams in `docs/architecture/network/gpu/README.md` and `WebGPU.md` validated.
+- Step 05 — Phase 6 history compressed into this log; tracker handed off to Phase 7.
+
+---
+
+### Phase 7 — Tracker closure [DONE]
+
+[DONE] Phase 7 — Tracker closure. Completed the final tracker-closure pass: Phase 1 detailed planning evidence moved to this log, plan file reduced to concise [DONE] coverage notes for Phases 1–6, all compression and log-completion-marker gates passed, `plans/README.md` and `plans/Roadmap.md` updated to point to the archived plan/log pair under `plans/completed/`, and the plan/log pair moved to `plans/completed/NEAT_Genesis_EvoDevo_GPU_Acceleration.{plans,logs}.md`.
+

@@ -179,7 +179,7 @@ export async function recordFeedbackEventAsync(client, params) {
   }
   const signalStrength =
     params.signal_strength !== undefined && params.signal_strength !== null
-      ? clampSignalStrength(Number(params.signal_strength))
+      ? Number(params.signal_strength)
       : defaultStrength;
 
   const rawQuery = params.query ?? params.query_hash;

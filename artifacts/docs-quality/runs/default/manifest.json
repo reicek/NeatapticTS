@@ -1,36 +1,37 @@
 {
   "metricVersion": 1,
   "scannerVersion": "1.0.0",
-  "gitCommit": "121dddc6178d7078febbaf3e3dd8c8c50605ed6b",
+  "gitCommit": "f72fff800b10b5bdf826a90d2c7005b7882883dd",
   "generatedAt": "1970-01-01T00:00:00.000Z",
   "thresholdConfig": {
     "minJsdocWords": 10,
     "complexityThreshold": 10
   },
   "scopeConfig": {
-    "scopeType": "src",
+    "scopeType": "paths",
     "scopeValue": [
-      "src"
+      "src/architecture/network.ts",
+      "src/neat.ts"
     ],
-    "scopeDigest": "d6ca942726b8a69d898c20c8b28d26532e08eca8c3226322463b5f2df41ef4e8"
+    "scopeDigest": "d36d8aef57058f860ee0e6ff49fd2d34413806b0bafcbf4f818a4378515f7f53"
   },
-  "sourcePathsDigest": "8a5ddc82a12b33bd1f871e54d98212e1e63dc8150e183c40b0c2d6086f41cd8c",
+  "sourcePathsDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
   "issueBreakdown": {
-    "missingJsdoc": 7,
-    "weakJsdoc": 19,
-    "highComplexity": 2
+    "missingJsdoc": 0,
+    "weakJsdoc": 0,
+    "highComplexity": 0
   },
-  "weakCount": 19,
-  "normalizedEvidenceDigest": "0079d05eb4ebee4729d2fae8b7dfbf87ac2ea500a54e37044dd1c57f5a247c0d",
+  "weakCount": 0,
+  "normalizedEvidenceDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
   "threshold": {
     "minJsdocWords": 10,
     "complexityThreshold": 10
   },
-  "scopeType": "src",
-  "scopeDigest": "8a5ddc82a12b33bd1f871e54d98212e1e63dc8150e183c40b0c2d6086f41cd8c",
+  "scopeType": "paths",
+  "scopeDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
   "coverage": {
     "available": true,
-    "totalFiles": 3,
+    "totalFiles": 1,
     "filesBelow100": 0,
     "filesBelow100Detail": [],
     "overallLines": 100,

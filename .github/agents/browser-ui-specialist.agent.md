@@ -8,15 +8,15 @@ tools:
     read,
     search,
     execute,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
-    devtools,
+    devtools/devtools,
   ]
 user-invocable: false
 agents: []
-skills: ['chrome-devtools-mcp']
+skills: ['chrome-devtools-mcp', 'browser-testing-harness']
 ---
 
 ## Purpose
@@ -32,6 +32,9 @@ Interact with browser demo UIs via Chrome DevTools MCP using DOM queries, clicks
 ## Constraints
 
 - ALWAYS stay read-only. DO NOT edit any files.
+- For WebGPU/GPU/performance tests, the browser window MUST be visible and in
+  the foreground. Report window visibility in the result; measurements from
+  hidden, minimized, or occluded windows are invalid.
 - MINIMIZE screenshot usage. Screenshots are token-expensive. Use DOM queries, text extraction, and element property checks instead.
 - Only use screenshots when explicitly requested by the calling agent or when visual regression requires pixel comparison.
 - DO NOT edit production code.

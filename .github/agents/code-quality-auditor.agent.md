@@ -9,7 +9,7 @@ tools:
     search,
     execute,
     agent,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,

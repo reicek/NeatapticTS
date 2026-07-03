@@ -1,22 +1,17 @@
 /**
  * @module update-rag.test
- * @description Red tests for the `rag-index/update-rag.mjs` CLI orchestrator.
+ * @description Unit tests for the `rag-index/update-rag.mjs` pipeline
+ * orchestrator.
  *
- * The orchestrator does not yet exist; these tests define the observable
- * contracts it must satisfy once implemented. They are expected to fail today
- * because the module is missing (module/file not found).
+ * These tests exercise the exported `updateRag` orchestrator with injected
+ * stage runners and hash storage so the contracts are fast, deterministic, and
+ * independent of the current on-disk corpus state.
  *
  * Stable stage names used by these contracts:
  *   build, prewarm-embed, build-terms, build-graph, snapshot, validate
  */
 
-import { spawn } from 'node:child_process';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, '..', '..');
-const scriptPath = path.join(repoRoot, 'rag-index', 'update-rag.mjs');
+import { updateRag } from '../update-rag.mjs';
 
 /** Canonical stage order, including the optional validate stage last. */
 const EXPECTED_STAGE_ORDER = [
@@ -29,49 +24,39 @@ const EXPECTED_STAGE_ORDER = [
 ];
 
 /**
- * Spawn the update-rag CLI with the given arguments from the repo root.
+ * Create an injectable stage runner that records every invocation and
+ * succeeds by default.
  *
- * @param {string[]} args - CLI arguments.
- * @returns {Promise<{ exitCode: number | null, stdout: string, stderr: string }>}
+ * @param {Record<string, number>} [exitByStage] - Optional exit status overrides keyed by stage name.
+ * @returns {{ runner: function, calls: Array<object> }} Runner and its call log.
  */
-function runUpdateRag(args = []) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [scriptPath, ...args], {
-      cwd: repoRoot,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    let stdout = '';
-    let stderr = '';
-
-    child.stdout.on('data', (data) => {
-      stdout += String(data);
-    });
-    child.stderr.on('data', (data) => {
-      stderr += String(data);
-    });
-
-    child.on('error', reject);
-    child.on('close', (exitCode) => {
-      resolve({ exitCode, stdout, stderr });
-    });
-  });
+function createMockRunner(exitByStage = {}) {
+  const calls = [];
+  const runner = ({ name, script, args }) => {
+    calls.push({ name, script, args });
+    return { status: exitByStage[name] ?? 0 };
+  };
+  return { runner, calls };
 }
 
 /**
- * Safely parse the JSON stages array from stdout.
- * Returns null when stdout is not valid JSON or has no stages array.
+ * Create an injectable corpus-hash store for idempotency tests.
  *
- * @param {string} stdout
- * @returns {Array<{ name: string, status: string, elapsedMs: number }> | null}
+ * @param {string | null} [initialHash] - Hash returned by the first read.
+ * @returns {{ readHashFile: function, writeHashFile: function, computeCorpusHash: function, storedHash: string | null }}
  */
-function parseJsonStages(stdout) {
-  try {
-    const parsed = JSON.parse(stdout);
-    return Array.isArray(parsed.stages) ? parsed.stages : null;
-  } catch {
-    return null;
-  }
+function createMockHashStore(initialHash = null) {
+  let storedHash = initialHash;
+  return {
+    readHashFile: async () => storedHash,
+    writeHashFile: async (hash) => {
+      storedHash = hash;
+    },
+    computeCorpusHash: async () => 'stable-corpus-hash',
+    get storedHash() {
+      return storedHash;
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -80,23 +65,51 @@ function parseJsonStages(stdout) {
 
 describe('update-rag.mjs CLI orchestrator', () => {
   describe('dry-run mode', () => {
-    it('exits 0 when invoked with --dry-run --json', async () => {
-      const result = await runUpdateRag(['--dry-run', '--json']);
+    it('returns a passing summary when invoked with dryRun and json options', async () => {
+      const { runner } = createMockRunner();
+      const hashStore = createMockHashStore();
 
-      expect(result.exitCode).toBe(0);
+      const summary = await updateRag({
+        dryRun: true,
+        json: true,
+        spawnRunner: runner,
+        readHashFile: hashStore.readHashFile,
+        writeHashFile: hashStore.writeHashFile,
+        computeCorpusHash: hashStore.computeCorpusHash,
+      });
+
+      expect(summary.ok).toBe(true);
     });
 
-    it('emits a JSON summary with a non-empty stages array in dry-run mode', async () => {
-      const result = await runUpdateRag(['--dry-run', '--json']);
-      const stages = parseJsonStages(result.stdout);
+    it('emits a non-empty stages array in dry-run mode', async () => {
+      const { runner } = createMockRunner();
+      const hashStore = createMockHashStore();
 
-      expect(stages?.length > 0).toBe(true);
+      const summary = await updateRag({
+        dryRun: true,
+        json: true,
+        spawnRunner: runner,
+        readHashFile: hashStore.readHashFile,
+        writeHashFile: hashStore.writeHashFile,
+        computeCorpusHash: hashStore.computeCorpusHash,
+      });
+
+      expect(summary.stages.length > 0).toBe(true);
     });
 
     it('does not report mutation side effects in dry-run stage statuses', async () => {
-      const result = await runUpdateRag(['--dry-run', '--json']);
-      const stages = parseJsonStages(result.stdout) ?? [];
-      const buildStage = stages.find((stage) => stage.name === 'build');
+      const { runner } = createMockRunner();
+      const hashStore = createMockHashStore();
+
+      const summary = await updateRag({
+        dryRun: true,
+        json: true,
+        spawnRunner: runner,
+        readHashFile: hashStore.readHashFile,
+        writeHashFile: hashStore.writeHashFile,
+        computeCorpusHash: hashStore.computeCorpusHash,
+      });
+      const buildStage = summary.stages.find((stage) => stage.name === 'build');
 
       expect({
         buildStageExists: Boolean(buildStage),
@@ -115,16 +128,35 @@ describe('update-rag.mjs CLI orchestrator', () => {
   // ---------------------------------------------------------------------------
 
   describe('--validate mode', () => {
-    it('exits 0 when invoked with --validate --json on a healthy corpus', async () => {
-      const result = await runUpdateRag(['--validate', '--json']);
+    it('returns a passing summary when validate is requested on a healthy corpus', async () => {
+      const { runner } = createMockRunner();
+      const hashStore = createMockHashStore();
 
-      expect(result.exitCode).toBe(0);
+      const summary = await updateRag({
+        validate: true,
+        json: true,
+        spawnRunner: runner,
+        readHashFile: hashStore.readHashFile,
+        writeHashFile: hashStore.writeHashFile,
+        computeCorpusHash: hashStore.computeCorpusHash,
+      });
+
+      expect(summary.ok).toBe(true);
     });
 
-    it('includes a validate stage in the JSON summary when --validate is passed', async () => {
-      const result = await runUpdateRag(['--validate', '--json']);
-      const stages = parseJsonStages(result.stdout) ?? [];
-      const hasValidateStage = stages.some(
+    it('includes a validate stage in the summary when validate is requested', async () => {
+      const { runner } = createMockRunner();
+      const hashStore = createMockHashStore();
+
+      const summary = await updateRag({
+        validate: true,
+        json: true,
+        spawnRunner: runner,
+        readHashFile: hashStore.readHashFile,
+        writeHashFile: hashStore.writeHashFile,
+        computeCorpusHash: hashStore.computeCorpusHash,
+      });
+      const hasValidateStage = summary.stages.some(
         (stage) => stage.name === 'validate',
       );
 
@@ -137,10 +169,19 @@ describe('update-rag.mjs CLI orchestrator', () => {
   // ---------------------------------------------------------------------------
 
   describe('stage ordering', () => {
-    it('lists stages in canonical order with --dry-run --json', async () => {
-      const result = await runUpdateRag(['--dry-run', '--json']);
-      const stages = parseJsonStages(result.stdout) ?? [];
-      const stageNames = stages.map((stage) => stage.name);
+    it('lists stages in canonical order in dry-run mode', async () => {
+      const { runner } = createMockRunner();
+      const hashStore = createMockHashStore();
+
+      const summary = await updateRag({
+        dryRun: true,
+        json: true,
+        spawnRunner: runner,
+        readHashFile: hashStore.readHashFile,
+        writeHashFile: hashStore.writeHashFile,
+        computeCorpusHash: hashStore.computeCorpusHash,
+      });
+      const stageNames = summary.stages.map((stage) => stage.name);
 
       expect(stageNames).toEqual(EXPECTED_STAGE_ORDER);
     });
@@ -152,10 +193,26 @@ describe('update-rag.mjs CLI orchestrator', () => {
 
   describe('idempotency', () => {
     it('skips the build-graph stage on a second unchanged run', async () => {
-      await runUpdateRag(['--json']);
-      const secondRun = await runUpdateRag(['--json']);
-      const stages = parseJsonStages(secondRun.stdout) ?? [];
-      const graphStage = stages.find((stage) => stage.name === 'build-graph');
+      const { runner } = createMockRunner();
+      const hashStore = createMockHashStore();
+
+      await updateRag({
+        json: true,
+        spawnRunner: runner,
+        readHashFile: hashStore.readHashFile,
+        writeHashFile: hashStore.writeHashFile,
+        computeCorpusHash: hashStore.computeCorpusHash,
+      });
+      const secondSummary = await updateRag({
+        json: true,
+        spawnRunner: runner,
+        readHashFile: hashStore.readHashFile,
+        writeHashFile: hashStore.writeHashFile,
+        computeCorpusHash: hashStore.computeCorpusHash,
+      });
+      const graphStage = secondSummary.stages.find(
+        (stage) => stage.name === 'build-graph',
+      );
 
       expect({
         graphStageExists: Boolean(graphStage),
@@ -173,9 +230,18 @@ describe('update-rag.mjs CLI orchestrator', () => {
 
   describe('per-stage status reporting', () => {
     it('reports every stage with name, status, and elapsedMs in dry-run output', async () => {
-      const result = await runUpdateRag(['--dry-run', '--json']);
-      const stages = parseJsonStages(result.stdout) ?? [];
-      const wellFormedStageCount = stages.filter(
+      const { runner } = createMockRunner();
+      const hashStore = createMockHashStore();
+
+      const summary = await updateRag({
+        dryRun: true,
+        json: true,
+        spawnRunner: runner,
+        readHashFile: hashStore.readHashFile,
+        writeHashFile: hashStore.writeHashFile,
+        computeCorpusHash: hashStore.computeCorpusHash,
+      });
+      const wellFormedStageCount = summary.stages.filter(
         (stage) =>
           typeof stage.name === 'string' &&
           typeof stage.status === 'string' &&
@@ -183,8 +249,8 @@ describe('update-rag.mjs CLI orchestrator', () => {
       ).length;
 
       expect({
-        nonEmpty: stages.length > 0,
-        allWellFormed: wellFormedStageCount === stages.length,
+        nonEmpty: summary.stages.length > 0,
+        allWellFormed: wellFormedStageCount === summary.stages.length,
       }).toEqual({
         nonEmpty: true,
         allWellFormed: true,

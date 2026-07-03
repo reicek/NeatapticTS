@@ -20,10 +20,12 @@ This skill executes a focused Jest command against a bounded test surface and re
 
 - Validating that a new or modified test file is in the expected red or green state.
 - Confirming that a targeted implementation change passes its owner-local tests before widening to the full suite.
-- Selecting the correct Jest command scope (single file, folder pattern, or full suite) for the current task.
+- Selecting the correct Jest command scope (single file, folder pattern, or full regression matrix in batches) for the current task.
 - Producing a bounded summary of test output for a tracker note or handoff packet.
 - Checking whether a pre-existing failure is unrelated to the active change before reporting it as a defect.
-- Running `npm run test:silent` for repo-wide coverage analysis without verbose output noise.
+- Running the regression matrix as separate, sequential batched calls (e.g., `npm run build`,
+  `npm run jest:base`, `npm run jest:esm-ts`, `npm run jest:mjs`) when a repo-wide run is explicitly
+  required. Never run the chained `npm test` or `npm run test:silent` command as a single shell call.
 
 ## When NOT to use
 
@@ -32,7 +34,7 @@ Do NOT use for triaging test failures - use `triaging-test-failures` instead. Do
 ## Workflow Diagram
 
 ```text
-Flowchart summary: "Need to run tests" → "What scope?"; "What scope?" → "npx jest --testPathPattern=file" (Single file), "npx jest --testPathPattern=folder" (Folder), "npm run test:silent" (Full suite), "npx jest --coverage --testPathPattern=file" (Coverage); "npx jest --testPathPattern=file" → "Run"; "npx jest --testPathPattern=folder" → "Run"; "npm run test:silent" → "Run"; "npx jest --coverage --testPathPattern=file" → "Run"; "Run" → "Pass?"; "Pass?" → "Done" (Yes), "Triage failures" (No); "Done"; "Triage failures".
+Flowchart summary: "Need to run tests" → "What scope?"; "What scope?" → "npx jest --testPathPattern=file" (Single file), "npx jest --testPathPattern=folder" (Folder), "batched regression matrix" (Full suite, explicit-only, separate shell calls), "npx jest --coverage --testPathPattern=file" (Coverage); "npx jest --testPathPattern=file" → "Run"; "npx jest --testPathPattern=folder" → "Run"; "batched regression matrix" → "Run each batch sequentially"; "npx jest --coverage --testPathPattern=file" → "Run"; "Run" → "Pass?"; "Pass?" → "Done" (Yes), "Triage failures" (No); "Done"; "Triage failures".
 ```
 
 ## Task Packet
@@ -51,8 +53,13 @@ On failure: <summarize | reroute to triaging-test-failures>
 1. Choose the narrowest Jest scope appropriate for the active change:
    - Single file: `--testPathPattern=src/neat/mutation/neat.mutation.ts`
    - Folder: `--testPathPattern=src/neat/mutation`
-   - Full suite (coverage, explicit-only): `npm run test:silent` — only when the user or active step packet explicitly requires a repo-wide run.
-2. Run the focused command; do not run `npm test` (which triggers a full build) until the targeted slice is green and the full suite is explicitly required.
+   - Full regression matrix (explicit-only, batched): run `npm run build`, then `npm run jest:base`,
+     then `npm run jest:esm-ts`, then `npm run jest:mjs`, each in a separate shell invocation — only
+     when the user or active step packet explicitly requires a repo-wide run. Never invoke the chained
+     `npm test` or `npm run test:silent` command as a single shell call.
+2. Run the focused command; do not run the full regression matrix (and never `npm test` as a single
+   shell call) until the targeted slice is green and the full matrix is explicitly required. When
+   required, run it as separate, sequential batched calls.
 3. Read the exit status and failure output; do not declare green until the requested command passes cleanly.
 4. Separate failures into two groups: caused by the active change, and pre-existing/unrelated.
 5. For pre-existing failures: note them and confirm they were present before the active change.
@@ -68,7 +75,7 @@ The full test suite is large and slow. Running it speculatively wastes time and 
 ## Decision Tree: Scope Selection
 
 ```text
-Flowchart summary: "Tests needed" → "Changed files known?"; "Changed files known?" → "Find nearest test file" (Yes), "Run full suite" (No); "Find nearest test file" → "Run focused slice"; "Run full suite" → "Triage failures"; "Run focused slice" → "Pass?"; "Triage failures"; "Pass?" → "Done" (Yes), "Triage failures" (No); "Done".
+Flowchart summary: "Tests needed" → "Changed files known?"; "Changed files known?" → "Find nearest test file" (Yes), "Run batched regression matrix" (No, explicit-only); "Find nearest test file" → "Run focused slice"; "Run batched regression matrix" → "Run each batch sequentially"; "Run focused slice" → "Pass?"; "Run each batch sequentially" → "All batches pass?"; "Pass?" → "Done" (Yes), "Triage failures" (No); "All batches pass?" → "Done" (Yes), "Triage failures" (No); "Done"; "Triage failures".
 ```
 
 ## Before / After Examples
@@ -90,7 +97,13 @@ Coverage: statements 100%, branches 100%, functions 100%, lines 100%
 
 ## Guardrails
 
-- Do not run `npm test` or the full suite speculatively. The full suite (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`, `npm run jest:mjs`) is large and slow. Only run it when the user or active step packet explicitly requires a repo-wide run; otherwise stay on focused slices.
+- Do not run `npm test`, `npm run test:silent`, or the full regression matrix speculatively. The full
+  regression matrix (`npm test`, `npm run test:silent`) chains multiple heavy test suites and has
+  crashed the host IDE. Only run the full matrix when the user or active step packet explicitly
+  requires a repo-wide run; otherwise stay on focused slices. When required, execute it as separate,
+  sequential batched calls (`npm run build`, `npm run jest:base`, `npm run jest:esm-ts`,
+  `npm run jest:mjs`, `npm run lint`), each in its own shell invocation. Never invoke the chained
+  `npm test` or `npm run test:silent` command as a single shell call.
 - Do not claim green until the requested command exits with code 0.
 - Do not conflate pre-existing failures with active-change failures; always separate them.
 - Do not attempt to fix failures within this skill; diagnosis belongs to `triaging-test-failures` and fixes belong to the appropriate implementation skill.

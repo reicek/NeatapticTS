@@ -4161,15 +4161,24 @@ Returns: Reinitialized connection instance.
 ```ts
 activate(
   input: number[] | Float32Array<ArrayBufferLike>,
-  training: boolean,
-  _maxActivationDepth: number,
-): number[]
+  options: { training?: boolean | undefined; useGPU: true; },
+  _maxActivationDepth: number | undefined,
+): Promise<Float32Array<ArrayBufferLike>>
 ```
 
-Standard activation API returning a plain number[] for backward compatibility.
-Internally may use pooled typed arrays; if so they are cloned before returning unless
-`reuseSequenceBuffers` opts the network into a small reusable plain-array ring for
-repeated sequence steps.
+Implementation signature used by the overloads above.
+
+Existing callers passing a boolean `training` flag are unchanged. The GPU
+path is used only when an options bag with `useGPU: true` is supplied,
+`gpuDevice` is set, and `isGPUEligible` returns true. In every other case
+the standard CPU `network.activate()` implementation runs.
+
+Parameters:
+- `input` - Input vector of length `this.input`.
+- `trainingOrOptions` - Boolean training flag or options bag.
+- `_maxActivationDepth` - Unused; kept for signature compatibility.
+
+Returns: Output values, or a promise when the GPU path is selected.
 
 #### activate
 
@@ -5262,6 +5271,36 @@ getTrainingStats(): TrainingStatsSnapshot
 ```
 
 Consolidated training stats snapshot.
+
+#### gpuDevice
+
+Optional WebGPU device used by the GPU inference fast path.
+
+Assign a device here, then call `activate(input, { useGPU: true })` to opt
+into the WebGPU forward pass. If the device is missing, the network is
+ineligible, or `useGPU` is omitted, the standard CPU path is used
+transparently. This opt-in design keeps classic NEAT behavior unchanged
+unless a caller explicitly requests the GPU path.
+
+A one-shot `device.lost` listener is attached the first time a device is
+assigned. If the device is later lost, this property is cleared so
+subsequent activations fall back to the CPU path until a new device is
+assigned.
+
+GPU output agrees with the CPU path within an absolute tolerance of `5e-1`
+and a mean absolute error of `≤ 1e-1`. For deterministic replay or
+cross-machine regression tests, use the CPU path as the canonical reference.
+
+Example:
+
+```ts
+const network = new Architect.Perceptron(2, 4, 1);
+const adapter = await navigator.gpu.requestAdapter({
+  powerPreference: 'high-performance',
+});
+network.gpuDevice = (await adapter?.requestDevice()) ?? undefined;
+const output = await network.activate([0.5, -0.2], { useGPU: true });
+```
 
 #### gradientAccumulator
 
@@ -7952,15 +7991,24 @@ Returns: Reinitialized connection instance.
 ```ts
 activate(
   input: number[] | Float32Array<ArrayBufferLike>,
-  training: boolean,
-  _maxActivationDepth: number,
-): number[]
+  options: { training?: boolean | undefined; useGPU: true; },
+  _maxActivationDepth: number | undefined,
+): Promise<Float32Array<ArrayBufferLike>>
 ```
 
-Standard activation API returning a plain number[] for backward compatibility.
-Internally may use pooled typed arrays; if so they are cloned before returning unless
-`reuseSequenceBuffers` opts the network into a small reusable plain-array ring for
-repeated sequence steps.
+Implementation signature used by the overloads above.
+
+Existing callers passing a boolean `training` flag are unchanged. The GPU
+path is used only when an options bag with `useGPU: true` is supplied,
+`gpuDevice` is set, and `isGPUEligible` returns true. In every other case
+the standard CPU `network.activate()` implementation runs.
+
+Parameters:
+- `input` - Input vector of length `this.input`.
+- `trainingOrOptions` - Boolean training flag or options bag.
+- `_maxActivationDepth` - Unused; kept for signature compatibility.
+
+Returns: Output values, or a promise when the GPU path is selected.
 
 #### activate
 
@@ -9053,6 +9101,36 @@ getTrainingStats(): TrainingStatsSnapshot
 ```
 
 Consolidated training stats snapshot.
+
+#### gpuDevice
+
+Optional WebGPU device used by the GPU inference fast path.
+
+Assign a device here, then call `activate(input, { useGPU: true })` to opt
+into the WebGPU forward pass. If the device is missing, the network is
+ineligible, or `useGPU` is omitted, the standard CPU path is used
+transparently. This opt-in design keeps classic NEAT behavior unchanged
+unless a caller explicitly requests the GPU path.
+
+A one-shot `device.lost` listener is attached the first time a device is
+assigned. If the device is later lost, this property is cleared so
+subsequent activations fall back to the CPU path until a new device is
+assigned.
+
+GPU output agrees with the CPU path within an absolute tolerance of `5e-1`
+and a mean absolute error of `≤ 1e-1`. For deterministic replay or
+cross-machine regression tests, use the CPU path as the canonical reference.
+
+Example:
+
+```ts
+const network = new Architect.Perceptron(2, 4, 1);
+const adapter = await navigator.gpu.requestAdapter({
+  powerPreference: 'high-performance',
+});
+network.gpuDevice = (await adapter?.requestDevice()) ?? undefined;
+const output = await network.activate([0.5, -0.2], { useGPU: true });
+```
 
 #### gradientAccumulator
 

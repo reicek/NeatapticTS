@@ -426,7 +426,7 @@ function usesOnlyAllowedModels(model) {
 }
 
 function hasOutputContract(body) {
-  return /(^|\n)(## Output Format|Return:|Return only:)/.test(body);
+  return /(^|\n)(## Output [Ff]ormat|Return:|Return only:)/.test(body);
 }
 
 function resolveStructuredPromptContract(agent) {

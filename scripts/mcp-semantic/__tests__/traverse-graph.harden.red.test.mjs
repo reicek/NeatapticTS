@@ -7,18 +7,14 @@
  * error taxonomy.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { createClient } from '@libsql/client';
 import { readCorpusSchema, splitSqlStatements } from './turso-test-helpers.mjs';
+import { closeTursoClient, setTursoClient } from '../tools/cortex-db.mjs';
 
 async function setupDb() {
-  const tempDir = await mkdtemp(
-    path.join(tmpdir(), 'traverse-graph-harden-test-'),
-  );
-  const dbPath = path.join(tempDir, 'test.sqlite');
-  const client = createClient({ url: 'file:' + dbPath });
+  const dbPath = 'file:./traverse-graph-harden-test.sqlite';
+  const client = createClient({ url: ':memory:' });
+  setTursoClient(dbPath, client);
   const schemaSql = await readCorpusSchema();
   for (const stmt of splitSqlStatements(schemaSql)) {
     await client.execute(stmt);
@@ -45,17 +41,13 @@ async function setupDb() {
       (2, 3, 'depends-on', 'medium'),
       (3, 4, 'depends-on', 'low');
   `);
-  return { client, dbPath, tempDir };
+  return { client, dbPath };
 }
 
-async function teardown(client, tempDir) {
+async function teardown(client, dbPath) {
+  setTursoClient(dbPath, undefined);
   await client.close();
-  await rm(tempDir, {
-    recursive: true,
-    force: true,
-    maxRetries: 10,
-    retryDelay: 200,
-  });
+  await closeTursoClient(dbPath);
 }
 
 describe('traverse-graph hardened', () => {
@@ -63,20 +55,20 @@ describe('traverse-graph hardened', () => {
     it('rejects missing seed_query and seed_names with SEED_REQUIRED', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         await expect(traverseGraphHandler({ client })).rejects.toThrow(
           /SEED_REQUIRED/,
         );
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
 
     it('rejects max_hops greater than 4 with INVALID_MAX_HOPS', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         await expect(
           traverseGraphHandler({
@@ -86,14 +78,14 @@ describe('traverse-graph hardened', () => {
           }),
         ).rejects.toThrow(/INVALID_MAX_HOPS/);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
 
     it('rejects max_hops of zero with INVALID_MAX_HOPS', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         await expect(
           traverseGraphHandler({
@@ -103,7 +95,7 @@ describe('traverse-graph hardened', () => {
           }),
         ).rejects.toThrow(/INVALID_MAX_HOPS/);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
   });
@@ -112,7 +104,7 @@ describe('traverse-graph hardened', () => {
     it('returns graph_state and traversal_stats for a populated graph', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         const result = await traverseGraphHandler({
           client,
@@ -131,14 +123,14 @@ describe('traverse-graph hardened', () => {
           }),
         );
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
 
     it('returns seed_entities for named seeds', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         const result = await traverseGraphHandler({
           client,
@@ -154,14 +146,14 @@ describe('traverse-graph hardened', () => {
           ]),
         );
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
 
     it('returns edges between discovered entities', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         const result = await traverseGraphHandler({
           client,
@@ -171,7 +163,7 @@ describe('traverse-graph hardened', () => {
 
         expect(result.relationships?.length).toBeGreaterThan(0);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
   });
@@ -180,7 +172,7 @@ describe('traverse-graph hardened', () => {
     it('discovers direct neighbors at hop 1', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         const result = await traverseGraphHandler({
           client,
@@ -193,14 +185,14 @@ describe('traverse-graph hardened', () => {
           'src.graph.bar',
         ]);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
 
     it('discovers neighbors of neighbors at hop 2', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         const result = await traverseGraphHandler({
           client,
@@ -213,7 +205,7 @@ describe('traverse-graph hardened', () => {
           'src.graph.baz',
         ]);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
   });
@@ -222,7 +214,7 @@ describe('traverse-graph hardened', () => {
     it('respects max_results', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         const result = await traverseGraphHandler({
           client,
@@ -233,14 +225,14 @@ describe('traverse-graph hardened', () => {
 
         expect(result.entities.length).toBeLessThanOrEqual(2);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
 
     it('respects confidence_filter', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         const result = await traverseGraphHandler({
           client,
@@ -255,14 +247,14 @@ describe('traverse-graph hardened', () => {
           ),
         ).toBe(true);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
 
     it('unions seed_query and seed_names seeds', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
+      const { client, dbPath } = await setupDb();
       try {
         const result = await traverseGraphHandler({
           client,
@@ -275,7 +267,7 @@ describe('traverse-graph hardened', () => {
         expect(seedIds).toContain(1);
         expect(seedIds).toContain(4);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client, dbPath);
       }
     });
   });
@@ -284,11 +276,9 @@ describe('traverse-graph hardened', () => {
     it('returns graph_state not_built when graph tables are absent', async () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
-      const tempDir = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-empty-test-'),
-      );
-      const dbPath = path.join(tempDir, 'empty.sqlite');
-      const emptyClient = createClient({ url: 'file:' + dbPath });
+      const dbPath = 'file:./traverse-graph-empty-test.sqlite';
+      const emptyClient = createClient({ url: ':memory:' });
+      setTursoClient(dbPath, emptyClient);
       await emptyClient.execute('CREATE TABLE dummy (id INTEGER PRIMARY KEY)');
 
       try {
@@ -299,7 +289,7 @@ describe('traverse-graph hardened', () => {
 
         expect(result.graph_state).toBe('not_built');
       } finally {
-        await teardown(emptyClient, tempDir);
+        await teardown(emptyClient, dbPath);
       }
     });
   });

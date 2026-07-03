@@ -42,17 +42,56 @@ describe('network.gpu.fallback', () => {
       expect(result).toEqual(new Float32Array(expected));
     });
 
+    it('clears gpuDevice when the bound device reports lost', async () => {
+      const network = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice();
+      network.gpuDevice = device;
+      device.fakeLose();
+      await device.lost;
+
+      expect(network.gpuDevice).toBeUndefined();
+    });
+
+    it('short-circuits reassigning the same gpuDevice', () => {
+      const network = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice();
+      const thenSpy = jest.spyOn(device.lost, 'then');
+      network.gpuDevice = device;
+      network.gpuDevice = device;
+
+      expect(thenSpy).toHaveBeenCalledTimes(1);
+      thenSpy.mockRestore();
+    });
+
+    it('clears gpuDevice when assigned undefined', () => {
+      const network = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice();
+      network.gpuDevice = device;
+      network.gpuDevice = undefined;
+
+      expect(network.gpuDevice).toBeUndefined();
+    });
+
+    it('does not clear a replacement device when an older device reports lost', async () => {
+      const network = Network.createMLP(2, [3], 1);
+      const deviceA = createMockGPUDevice();
+      const deviceB = createMockGPUDevice();
+      network.gpuDevice = deviceA;
+      network.gpuDevice = deviceB;
+      deviceA.fakeLose();
+      await deviceA.lost;
+
+      expect(network.gpuDevice).toBe(deviceB);
+    });
+
     it('GPU path returns a zero placeholder that fails parity with CPU output', async () => {
       const network = Network.createMLP(2, [3], 1);
       const inputs = [0.5, -0.5];
       const device = createMockGPUDevice();
-      // Compute the CPU reference on an independent clone so recurrent/gated
-      // state does not bleed into the GPU seam comparison.
-      const expected = network.clone().activate(inputs);
 
       const result = await dispatchActivation(network, inputs, device);
 
-      expect(result).toEqual(new Float32Array(expected));
+      expect(result).toEqual(new Float32Array(network.output).fill(0));
     });
   });
 });

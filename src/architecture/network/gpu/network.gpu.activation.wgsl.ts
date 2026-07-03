@@ -98,7 +98,7 @@ export function buildActivationRegistry(): readonly ActivationFunctionEntry[] {
 /**
  * Format the registry as a block of WGSL function declarations.
  *
- * @param registry - Activation entries from {@link buildActivationRegistry}.
+ * @param registry - Activation entries from `buildActivationRegistry`.
  * @returns WGSL source containing one `fn activation_<index>(x: f32) -> f32`
  *   declaration per supported index.
  */

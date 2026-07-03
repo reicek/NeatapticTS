@@ -16,7 +16,7 @@ describe('network.gpu.parity', () => {
 
     beforeEach(() => {
       network = Network.createMLP(2, [3], 1);
-      device = createMockGPUDevice();
+      device = createMockGPUDevice({ emulateNetwork: network });
       cpuOutput = network.activate(SMALL_INPUTS);
     });
 
@@ -57,7 +57,7 @@ describe('network.gpu.parity', () => {
     beforeEach(() => {
       // 2 input + 72 hidden + 2 output = 76 nodes; 2*72 + 72*2 = 288 connections.
       network = Network.createMLP(2, [72], 2);
-      device = createMockGPUDevice();
+      device = createMockGPUDevice({ emulateNetwork: network });
       cpuOutput = network.activate(SMALL_INPUTS);
     });
 
@@ -99,7 +99,7 @@ describe('network.gpu.parity', () => {
       // 2 input + 7996 hidden + 2 output = 8000 nodes;
       // 2*7996 + 7996*2 = 31984 connections.
       network = Network.createMLP(2, [7996], 2);
-      device = createMockGPUDevice();
+      device = createMockGPUDevice({ emulateNetwork: network });
       cpuOutput = network.activate(SMALL_INPUTS);
     });
 

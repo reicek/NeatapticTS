@@ -6,17 +6,11 @@
  * rerank_state, and graceful budget-exceeded handling.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { createClient } from '@libsql/client';
 import { readCorpusSchema, splitSqlStatements } from './turso-test-helpers.mjs';
 
 async function setupDb() {
-  const tempDir = await mkdtemp(path.join(tmpdir(), 'search-context-test-'));
-  const dbPath = path.join(tempDir, 'test.sqlite');
-  const client = createClient({ url: pathToFileURL(dbPath).href });
+  const client = createClient({ url: ':memory:' });
   const schemaSql = await readCorpusSchema();
   for (const stmt of splitSqlStatements(schemaSql)) {
     await client.execute(stmt);
@@ -36,28 +30,22 @@ async function setupDb() {
       args: [docId, i, `function foo${i}() { return ${i}; }`],
     });
   }
-  return { client, dbPath, tempDir };
+  return { client };
 }
 
-async function teardown(client, tempDir) {
+async function teardown(client) {
   await client.close();
-  await rm(tempDir, {
-    recursive: true,
-    force: true,
-    maxRetries: 10,
-    retryDelay: 200,
-  });
 }
 
 describe('search-context hardened', () => {
   describe('schema validation', () => {
     it('rejects a missing query parameter', async () => {
       const { searchContext } = await import('../tools/search-context.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         await expect(searchContext({ client })).rejects.toThrow(/query/);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
   });
@@ -65,7 +53,7 @@ describe('search-context hardened', () => {
   describe('budget accounting', () => {
     it('returns total_chunks_retrieved, chunks_in_context, tokens_used, budget_remaining', async () => {
       const { searchContext } = await import('../tools/search-context.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const result = await searchContext({
           client,
@@ -83,13 +71,13 @@ describe('search-context hardened', () => {
           }),
         );
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
 
     it('reports dense_state and rerank_state', async () => {
       const { searchContext } = await import('../tools/search-context.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const result = await searchContext({
           client,
@@ -104,13 +92,13 @@ describe('search-context hardened', () => {
           }),
         );
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
 
     it('sets budget_remaining to zero when budget is exceeded', async () => {
       const { searchContext } = await import('../tools/search-context.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const result = await searchContext({
           client,
@@ -121,7 +109,7 @@ describe('search-context hardened', () => {
 
         expect(result.budget_remaining).toBe(0);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
   });
@@ -129,7 +117,7 @@ describe('search-context hardened', () => {
   describe('include_metadata', () => {
     it('includes per-chunk metadata when include_metadata is true', async () => {
       const { searchContext } = await import('../tools/search-context.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const result = await searchContext({
           client,
@@ -145,7 +133,7 @@ describe('search-context hardened', () => {
           }),
         );
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
   });
@@ -153,7 +141,7 @@ describe('search-context hardened', () => {
   describe('dedup_strategy', () => {
     it('deduplicates identical chunks when dedup_strategy is exact', async () => {
       const { searchContext } = await import('../tools/search-context.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const docResult = await client.execute('SELECT doc_id FROM documents');
         const doc = docResult.rows[0];
@@ -176,7 +164,7 @@ describe('search-context hardened', () => {
           result.total_chunks_retrieved,
         );
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
   });
@@ -184,7 +172,7 @@ describe('search-context hardened', () => {
   describe('internal forwarding', () => {
     it('forwards to search_corpus so results contain chunk_id and feedback_boost', async () => {
       const { searchContext } = await import('../tools/search-context.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const result = await searchContext({
           client,
@@ -199,7 +187,7 @@ describe('search-context hardened', () => {
           }),
         );
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
   });

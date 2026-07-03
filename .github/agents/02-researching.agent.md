@@ -12,7 +12,7 @@ tools:
     todo,
     agent,
     web,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,

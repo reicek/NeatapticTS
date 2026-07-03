@@ -5,7 +5,7 @@
       "command": "node",
       "args": [
         "scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs",
-        "--plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md"
+        "--plan=plans/NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md"
       ]
     },
     "neataptic-validation-mcp": {
@@ -13,7 +13,7 @@
       "command": "node",
       "args": [
         "scripts/agent-customization/mcp/neataptic-validation-mcp.mjs",
-        "--plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md"
+        "--plan=plans/NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md"
       ]
     },
     "neataptic-gate-mcp": {

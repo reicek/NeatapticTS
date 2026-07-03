@@ -11,7 +11,7 @@ tools:
     execute,
     todo,
     agent,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -41,6 +41,7 @@ agents:
     'phase-handoff-designer',
     'mcp-server-architect',
     'helping-gap-resolution-coordinator',
+    'browser-harness-specialist',
   ]
 skills:
   [
@@ -55,6 +56,7 @@ skills:
     'worker-inference-transport',
     'research-methodology',
     'execute',
+    'browser-testing-harness',
   ]
 handoffs:
   - label: 'Validate Green'

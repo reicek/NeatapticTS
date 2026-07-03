@@ -20,7 +20,7 @@ export interface RacingBatchOptions {
  * Default threshold below which the per-network CPU path is preferred.
  *
  * The racing-curriculum worker can override this through
- * {@link RacingBatchOptions.gpuBatchThreshold}; the default is sized for a
+ * `RacingBatchOptions.gpuBatchThreshold`; the default is sized for a
  * generation large enough that GPU dispatch overhead is amortized.
  */
 const DEFAULT_GPU_BATCH_THRESHOLD = 8;
@@ -38,10 +38,9 @@ const SUPPORTED_ACTIVATIONS = new Set<number>(
 /**
  * Check whether a supplied GPU device is present and has not been lost.
  *
- * See the matching helper in {@link network.gpu.fallback} for the rationale:
- * the mock device exposes a synchronous `__lost` marker for unit tests, while
- * production callers are expected to wrap real devices and only hand a usable
- * device to the library seam.
+ * See the matching helper in `network.gpu.fallback` for the rationale:
+ * real devices report loss asynchronously through `device.lost`, while this
+ * predicate gives a synchronous yes/no answer for the current call site.
  *
  * @param device - Device to inspect, or null/undefined when WebGPU is absent.
  * @returns True when the device is present and not marked lost.
@@ -65,7 +64,7 @@ function isDeviceUsable(
  * 2. Every network in the batch is structurally GPU-eligible.
  *
  * Callers must already have verified the device is usable with
- * {@link isDeviceUsable} before invoking this predicate.
+ * `isDeviceUsable` before invoking this predicate.
  *
  * @param networks - Generation of networks to evaluate.
  * @param device - Verified WebGPU device.

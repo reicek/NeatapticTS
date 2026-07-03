@@ -28,8 +28,8 @@ export const knownAgentTools = new Set([
   'todo',
   'web',
   // Lightweight lazy-load MCP facades (router tools that spawn the real server on demand)
-  'cortex',
-  'devtools',
+  'cortex/cortex',
+  'devtools/devtools',
 ]);
 
 /**

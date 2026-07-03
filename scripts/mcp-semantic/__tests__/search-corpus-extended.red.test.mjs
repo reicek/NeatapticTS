@@ -6,16 +6,11 @@
  * behavior, backward compatibility, and structured error taxonomy.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { createClient } from '@libsql/client';
 import { readCorpusSchema, splitSqlStatements } from './turso-test-helpers.mjs';
 
 async function setupDb() {
-  const tempDir = await mkdtemp(path.join(tmpdir(), 'search-corpus-ext-test-'));
-  const dbPath = path.join(tempDir, 'test.sqlite');
-  const client = createClient({ url: 'file:' + dbPath });
+  const client = createClient({ url: ':memory:' });
   const schemaSql = await readCorpusSchema();
   for (const stmt of splitSqlStatements(schemaSql)) {
     await client.execute(stmt);
@@ -41,24 +36,18 @@ async function setupDb() {
       ],
     });
   }
-  return { client, dbPath, tempDir };
+  return { client };
 }
 
-async function teardown(client, tempDir) {
+async function teardown(client) {
   await client.close();
-  await rm(tempDir, {
-    recursive: true,
-    force: true,
-    maxRetries: 10,
-    retryDelay: 200,
-  });
 }
 
 describe('search-corpus extended', () => {
   describe('metadata filter', () => {
     it('applies an eq filter on arch_layer through SQL WHERE', async () => {
       const { searchCorpus } = await import('../tools/search-corpus.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const result = await searchCorpus({
           client,
@@ -73,13 +62,13 @@ describe('search-corpus extended', () => {
           'ts-source',
         ]);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
 
     it('combines metadata filter with explicit family using AND', async () => {
       const { searchCorpus } = await import('../tools/search-corpus.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const result = await searchCorpus({
           client,
@@ -93,13 +82,13 @@ describe('search-corpus extended', () => {
 
         expect(result.results.map((r) => r.arch_layer)).toEqual(['methods']);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
 
     it('returns identical results when metadata and classification_hints are omitted', async () => {
       const { searchCorpus } = await import('../tools/search-corpus.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const baseline = await searchCorpus({
           client,
@@ -116,13 +105,13 @@ describe('search-corpus extended', () => {
           baseline.results.map((r) => r.chunk_id).sort(),
         );
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
 
     it('rejects a malformed metadata filter with INVALID_METADATA_FILTER', async () => {
       const { searchCorpus } = await import('../tools/search-corpus.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         await expect(
           searchCorpus({
@@ -139,7 +128,7 @@ describe('search-corpus extended', () => {
           }),
         ).rejects.toThrow(/INVALID_METADATA_FILTER/);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
   });
@@ -147,7 +136,7 @@ describe('search-corpus extended', () => {
   describe('classification_hints', () => {
     it('overrides classification-derived alpha when classification_hints.alpha is provided', async () => {
       const { searchCorpus } = await import('../tools/search-corpus.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const result = await searchCorpus({
           client,
@@ -159,13 +148,13 @@ describe('search-corpus extended', () => {
 
         expect(result.alpha).toBeCloseTo(0.9, 2);
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
 
     it('overrides classification-derived family when classification_hints.family is provided', async () => {
       const { searchCorpus } = await import('../tools/search-corpus.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const result = await searchCorpus({
           client,
@@ -177,13 +166,13 @@ describe('search-corpus extended', () => {
 
         expect(result.family).toBe('plans');
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
 
     it('still returns classification metadata when hints are used', async () => {
       const { searchCorpus } = await import('../tools/search-corpus.mjs');
-      const { client, tempDir } = await setupDb();
+      const { client } = await setupDb();
       try {
         const result = await searchCorpus({
           client,
@@ -200,7 +189,7 @@ describe('search-corpus extended', () => {
           }),
         );
       } finally {
-        await teardown(client, tempDir);
+        await teardown(client);
       }
     });
   });

@@ -1,12 +1,12 @@
 {
-  "evidenceCount": 28,
-  "highComplexity": 2,
-  "missingJsdoc": 7,
-  "weakCount": 19,
-  "weakJsdoc": 19,
+  "evidenceCount": 0,
+  "highComplexity": 0,
+  "missingJsdoc": 0,
+  "weakCount": 0,
+  "weakJsdoc": 0,
   "coverage": {
     "available": true,
-    "totalFiles": 3,
+    "totalFiles": 1,
     "filesBelow100": 0,
     "filesBelow100Detail": [],
     "overallLines": 100,

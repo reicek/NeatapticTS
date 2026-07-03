@@ -364,10 +364,23 @@ dispatch a fresh `01-planning` verification pass before proceeding.
 
 ### Loop-Back Rule
 
-If verification finds blockers, the orchestrator routes the plan back to
-`01-planning` for a patch cycle. After the patch, a **new** fresh-context
-`01-planning` verification agent must run again. This patch → verify loop
-repeats until green light is recorded.
+The **orchestrator** (Agent Zero) controls the planning verification loop — not
+the sub-agents. This mirrors the RED → IMPLEMENT → GREEN loop: the orchestrator
+dispatches, receives results, and decides whether to loop or advance.
+
+1. After `01-planning` authors or patches a plan, the orchestrator dispatches a
+   **NEW** `01-planning` instance (fresh context) in verification mode.
+2. The verification agent checks completeness, slice quality (≤ 4 hours per
+   slice), risk coverage, acceptance criteria, and dependencies. It runs the
+   `plan-slice-quality` and `step-packet` gates.
+3. If verification returns **GREEN** (`green-light: true`), the orchestrator
+   proceeds to RED/IMPLEMENT/GREEN.
+4. If verification returns **BLOCKERS**, the orchestrator dispatches a **NEW**
+   `01-planning` (patch) to fix the blockers, then a **NEW** `01-planning`
+   (verification) to re-validate.
+5. This patch → verify loop repeats until a verification pass records green
+   light. The verification agent must NOT self-dispatch patch cycles — it
+   returns blockers to the orchestrator.
 
 ## Section 5 — Sliced Implementation Orchestration Protocol
 
@@ -400,7 +413,10 @@ Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green li
 4. **Loop-back**: If green gives observations (not OK), the orchestrator
    passes the observations to a **NEW** `04-implementing` instance (fresh
    context), which produces a fix, then a **NEW** `05-green-testing`
-   instance verifies. The loop repeats until green returns OK.
+   instance verifies. The loop repeats until green returns OK. A
+   `05-green-testing` agent that finds failures MUST return observations to
+   the orchestrator; it is forbidden from dispatching `04-implementing` or
+   editing source code itself.
 5. **Advance**: When green gives OK, the orchestrator records
    `VALIDATION_EVIDENCE` and moves to the next step or slice.
 6. **Phase Compression**: When all steps in a phase are marked `[DONE]` and
@@ -446,11 +462,11 @@ Each slice is a bounded unit of work with these fields:
 ### Critical Rules
 
 - **MANDATORY PLAN VERIFICATION GATE — before RED/IMPLEMENT, run plan-readiness
-  gate and confirm green light.** No `03-red-testing`, `04-implementing`, or
-  execution-phase agent may be dispatched until a fresh `01-planning`
-  verification pass has recorded `green-light: true` (or
-  `status: green-light`) in the plan's `## Latest validation evidence`
-  section.
+  and plan-slice-quality gates and confirm green light.** No `03-red-testing`,
+  `04-implementing`, or execution-phase agent may be dispatched until a fresh
+  `01-planning` verification pass has recorded `green-light: true` (or
+  `status: green-light`) in the plan's `## Latest validation evidence` section
+  AND the `plan-slice-quality` gate confirms no slice exceeds 4 hours.
 - **MANDATORY DISPATCH CONSULTATION.** Before each `task` dispatch, the
   orchestrator MUST call `neataptic-dispatch-mcp / build_dispatch_packet`
   and use the returned `dispatch_packet`. Direct `task` use without a prior
@@ -487,16 +503,20 @@ Each slice is a bounded unit of work with these fields:
   Slices that add new code alongside old code without removing the old
   code are PLANNING DEFECTS and must be rejected. No backward-compatibility
   wrappers, no dual-path code, no deferred cleanup — ever.
-- **Targeted Tests Only — Never the Full Suite.** Orchestrators and green-
-  testing agents MUST NOT run broad regression suites such as
-  `npm run test:silent`, `npm test`, or unconstrained `jest` without a
-  selector. Full-suite runs can hang for long periods and surface
-  pre-existing, unrelated failures that obscure the slice under validation.
+- **Targeted Tests Only — Never the Full Suite in a Single Call.**
+  Orchestrators and green-testing agents MUST NOT run broad regression
+  suites such as `npm run test:silent`, `npm test`, or unconstrained `jest`
+  in a single shell invocation. These commands chain multiple heavy test
+  matrices and can hang or exhaust host resources (including the IDE).
   Always run targeted tests with `--testPathPattern`, `--testNamePattern`,
   or an equivalent focused selector that covers only the files or behavior
-  changed by the current slice. If a broader validation is genuinely
-  required, escalate to `00-helping` for approval rather than running it
-  unprompted.
+  changed by the current slice. If the active step genuinely requires the
+  full regression matrix, run it as separate, sequential batched calls
+  (e.g., `npm run build`, then `npm run jest:base`, then
+  `npm run jest:esm-ts`, then `npm run jest:mjs`, then `npm run lint`),
+  each in its own shell invocation, and never as the chained `npm test`
+  command. If a broader validation is genuinely required, escalate to
+  `00-helping` for approval rather than running it unprompted.
 
 ### Phase Compression Policy
 

@@ -61,7 +61,7 @@ describe('network.gpu.kernel', () => {
       const source = createActivationKernel(network);
 
       expect(source).toMatch(
-        /@compute[\s\S]*?workgroup_size\s*\(\s*64\b[\s\S]*?fn\s+forward\s*\(\s*\)/,
+        /@compute[\s\S]*?workgroup_size\s*\(\s*64\b[\s\S]*?fn\s+forward\s*\(\s*@builtin\(global_invocation_id\)\s+global_invocation_id:\s*vec3<u32>\s*\)/,
       );
     });
 
@@ -236,11 +236,14 @@ describe('network.gpu.kernel', () => {
           from: 1,
           to: 2,
           flags: 3,
-          outStart: 4,
-          outOrder: 5,
+          inStart: 4,
+          inOrder: 5,
           outputs: 6,
+          bias: 7,
+          topoLevels: 8,
+          params: 9,
         },
-        count: 7,
+        count: 10,
       });
     });
   });
@@ -264,12 +267,12 @@ describe('network.gpu.kernel', () => {
       expect(device.createBindGroupLayout).toHaveBeenCalledTimes(1);
     });
 
-    it('creates seven storage-buffer entries', () => {
+    it('creates ten storage-buffer and uniform entries', () => {
       createBindGroupLayout(device);
       const descriptor = (device.createBindGroupLayout as jest.Mock).mock
         .calls[0][0];
 
-      expect(descriptor.entries.length).toBe(7);
+      expect(descriptor.entries.length).toBe(10);
     });
 
     it('sets compute visibility on every entry', () => {
@@ -285,7 +288,7 @@ describe('network.gpu.kernel', () => {
       ).toBe(true);
     });
 
-    it('orders entries as weights, from, to, flags, outStart, outOrder, outputs', () => {
+    it('orders entries as weights, from, to, flags, inStart, inOrder, outputs, bias, topoLevels, params', () => {
       createBindGroupLayout(device);
       const descriptor = (device.createBindGroupLayout as jest.Mock).mock
         .calls[0][0];
@@ -304,6 +307,9 @@ describe('network.gpu.kernel', () => {
         { binding: 4, type: 'read-only-storage' },
         { binding: 5, type: 'read-only-storage' },
         { binding: 6, type: 'storage' },
+        { binding: 7, type: 'read-only-storage' },
+        { binding: 8, type: 'read-only-storage' },
+        { binding: 9, type: 'uniform' },
       ]);
     });
   });

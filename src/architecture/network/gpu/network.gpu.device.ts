@@ -33,6 +33,14 @@ function trackDevice(device: GPUDevice): void {
  * obtained, or when device creation is rejected.
  *
  * @returns A ready-to-use `GPUDevice`, or `null` when WebGPU cannot be used.
+ *
+ * @example
+ * ```ts
+ * const device = await requestGPUDevice();
+ * if (device) {
+ *   network.gpuDevice = device;
+ * }
+ * ```
  */
 export async function requestGPUDevice(): Promise<GPUDevice | null> {
   if (typeof navigator === 'undefined' || !navigator.gpu) {
@@ -85,9 +93,9 @@ export function isDeviceReady(device: GPUDevice | null | undefined): boolean {
   trackDevice(device);
 
   const trackedLost = lostDevices.get(device)!;
-  // Mock devices used in owner-local tests expose a synchronous `__lost` flag
-  // so tests can deterministically simulate device loss without waiting for
-  // microtasks. Real WebGPU devices never carry this field.
+  // Some test doubles expose a synchronous `__lost` marker so deterministic
+  // device-loss simulation can avoid waiting for microtasks. Real WebGPU
+  // devices never carry this field.
   const mockLost = (device as { __lost?: boolean }).__lost === true;
 
   return !trackedLost && !mockLost;

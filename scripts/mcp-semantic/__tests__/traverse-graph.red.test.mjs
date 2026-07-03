@@ -2,18 +2,24 @@
  * @module traverse-graph.red.test
  * @description Red tests for BFS multi-hop traversal of the entity/relationship graph.
  */
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import { createClient } from '@libsql/client';
-import { closeTursoClient } from '../tools/cortex-db.mjs';
+import { closeTursoClient, setTursoClient } from '../tools/cortex-db.mjs';
 
-function createTestDb(databasePath) {
-  const client = createClient({ url: 'file:' + databasePath });
+function createMemoryTestDb(databasePath) {
+  const client = createClient({ url: ':memory:' });
+  setTursoClient(databasePath, client);
   return {
     client,
     async exec(sql) {
-      return client.execute(sql);
+      const statements = sql
+        .split(';')
+        .map((stmt) => stmt.trim())
+        .filter((stmt) => stmt.length > 0);
+      let last;
+      for (const stmt of statements) {
+        last = await client.execute(stmt + ';');
+      }
+      return last;
     },
     prepare(sql) {
       return {
@@ -34,21 +40,24 @@ function createTestDb(databasePath) {
   };
 }
 
+async function cleanupMemoryTestDb(databasePath, testDb) {
+  setTursoClient(databasePath, undefined);
+  await testDb.client.close();
+  await closeTursoClient(databasePath);
+}
+
 describe('traverse-graph', () => {
   describe('traverseGraph', () => {
     it('returns graph_available: false when entities/edges tables do not exist', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'empty.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
         // Create an empty database without entities/edges tables.
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec('CREATE TABLE dummy (id INTEGER PRIMARY KEY)');
-        await client.close();
 
         const result = await traverseGraph({
           databasePath,
@@ -61,26 +70,18 @@ describe('traverse-graph', () => {
         expect(result.chunk_ids).toEqual([]);
         expect(result.doc_ids).toEqual([]);
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('returns empty results when no seed entities are found', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -108,7 +109,6 @@ describe('traverse-graph', () => {
             UNIQUE(source_entity_id, target_entity_id, relationship)
           );
         `);
-        await client.close();
 
         const result = await traverseGraph({
           databasePath,
@@ -120,26 +120,18 @@ describe('traverse-graph', () => {
         expect(result.entities).toEqual([]);
         expect(result.total_discovered).toBe(0);
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('resolves seed entities by exact qualified_name', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -179,8 +171,6 @@ describe('traverse-graph', () => {
             'src/architecture/network/network.ts',
           );
 
-        await client.close();
-
         const result = await traverseGraph({
           databasePath,
           seed_names: ['src/architecture/network.Network'],
@@ -193,26 +183,18 @@ describe('traverse-graph', () => {
           'src/architecture/network.Network',
         );
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('performs BFS traversal following outgoing edges', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -272,8 +254,6 @@ describe('traverse-graph', () => {
           )
           .run(1, 2, 'owns', 'high');
 
-        await client.close();
-
         const result = await traverseGraph({
           databasePath,
           seed_names: ['src/architecture/network.Network'],
@@ -288,26 +268,18 @@ describe('traverse-graph', () => {
           'src/architecture/network.Network.evolve',
         );
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('performs BFS traversal following incoming edges (reverse traversal)', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -367,8 +339,6 @@ describe('traverse-graph', () => {
           )
           .run(1, 2, 'owns', 'high');
 
-        await client.close();
-
         const result = await traverseGraph({
           databasePath,
           seed_names: ['src/architecture/network.Network'],
@@ -381,26 +351,18 @@ describe('traverse-graph', () => {
         const entityNames = result.entities.map((e) => e.qualified_name);
         expect(entityNames).toContain('src/architecture/network');
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('filters by relationship types', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -482,8 +444,6 @@ describe('traverse-graph', () => {
           )
           .run(1, 4, 'imports', 'high');
 
-        await client.close();
-
         // Only follow "owns" relationship — imports should be ignored.
         const result = await traverseGraph({
           databasePath,
@@ -497,26 +457,18 @@ describe('traverse-graph', () => {
         // The methods module should NOT be discovered since we only follow "owns".
         expect(entityNames).not.toContain('src/methods');
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('respects max_hops limit', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -562,8 +514,6 @@ describe('traverse-graph', () => {
             .run(i + 1, i + 2, 'depends-on', 'high');
         }
 
-        await client.close();
-
         // With max_hops=1, should only discover B (1 hop from A).
         const result = await traverseGraph({
           databasePath,
@@ -577,26 +527,18 @@ describe('traverse-graph', () => {
         expect(entityNames).not.toContain('entity.C');
         expect(entityNames).not.toContain('entity.D');
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('respects max_results limit', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -652,8 +594,6 @@ describe('traverse-graph', () => {
             .run(1, i + 1, 'owns', 'high');
         }
 
-        await client.close();
-
         const result = await traverseGraph({
           databasePath,
           seed_names: ['src.architecture.network'],
@@ -664,26 +604,18 @@ describe('traverse-graph', () => {
         // Should return at most 5 entities (plus seed).
         expect(result.returned_count).toBeLessThanOrEqual(5);
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('filters by confidence level', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -753,8 +685,6 @@ describe('traverse-graph', () => {
           )
           .run(1, 3, 'references', 'low');
 
-        await client.close();
-
         // Filter to only high+medium confidence.
         const result = await traverseGraph({
           databasePath,
@@ -770,26 +700,18 @@ describe('traverse-graph', () => {
           'src.architecture.network.LowConfClass',
         );
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('prevents cycles in BFS traversal', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -841,8 +763,6 @@ describe('traverse-graph', () => {
           )
           .run(2, 1, 'depends-on', 'high');
 
-        await client.close();
-
         const result = await traverseGraph({
           databasePath,
           seed_names: ['entity.A'],
@@ -852,26 +772,18 @@ describe('traverse-graph', () => {
         // Should not loop infinitely; should discover exactly 2 entities.
         expect(result.total_discovered).toBe(2);
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('resolves seed entities by fuzzy name matching', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -910,8 +822,6 @@ describe('traverse-graph', () => {
             'src/architecture/network.Network',
             'test.ts',
           );
-
-        await client.close();
 
         // Use partial name for seed resolution.
         const result = await traverseGraph({
@@ -922,26 +832,18 @@ describe('traverse-graph', () => {
 
         expect(result.seed_entities.length).toBeGreaterThan(0);
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
 
     it('resolves seed entities by free-text query', async () => {
       const { traverseGraph } = await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'test.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec(`
           CREATE TABLE entities (
             entity_id INTEGER PRIMARY KEY,
@@ -981,8 +883,6 @@ describe('traverse-graph', () => {
             'test.ts',
           );
 
-        await client.close();
-
         const result = await traverseGraph({
           databasePath,
           seed_query: 'Network architecture',
@@ -991,13 +891,7 @@ describe('traverse-graph', () => {
 
         expect(result.seed_entities.length).toBeGreaterThan(0);
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
   });
@@ -1007,15 +901,12 @@ describe('traverse-graph', () => {
       const { traverseGraphHandler } =
         await import('../tools/traverse-graph.mjs');
 
-      const fixtureDirectory = await mkdtemp(
-        path.join(tmpdir(), 'traverse-graph-test-'),
-      );
-      const databasePath = path.join(fixtureDirectory, 'empty.sqlite');
+      const databasePath = 'file:./traverse-graph-test.sqlite';
+      let client;
 
       try {
-        const client = createTestDb(databasePath);
+        client = createMemoryTestDb(databasePath);
         await client.exec('CREATE TABLE dummy (id INTEGER PRIMARY KEY)');
-        await client.close();
 
         const result = await traverseGraphHandler({
           seed_query: 'test',
@@ -1031,13 +922,7 @@ describe('traverse-graph', () => {
         // Should not throw; returns gracefully even with empty graph.
         expect(result.graph_available).toBe(false);
       } finally {
-        await closeTursoClient(databasePath);
-        await rm(fixtureDirectory, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 200,
-        });
+        await cleanupMemoryTestDb(databasePath, client);
       }
     });
   });

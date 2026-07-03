@@ -18,6 +18,18 @@ const { transform } = require('sucrase');
 /** @type {import('@jest/transform').SyncTransformer} */
 module.exports = {
   process(sourceText, sourcePath) {
+    // When Node is running with --experimental-vm-modules, .mjs files are
+    // executed as native ESM by Jest. Transforming them to CommonJS in that
+    // mode produces a runtime ReferenceError because `exports` is not defined.
+    // In non-ESM mode we still need the CommonJS conversion so the default
+    // project can import .mjs sources without the Node ESM loader.
+    const usesVmModules =
+      process.execArgv.includes('--experimental-vm-modules') ||
+      (process.env.NODE_OPTIONS ?? '').includes('--experimental-vm-modules');
+    if (usesVmModules) {
+      return { code: sourceText, map: null };
+    }
+
     const fileUrl = pathToFileURL(sourcePath).href;
     const normalized = sourceText.replace(
       /import\.meta\.url/g,

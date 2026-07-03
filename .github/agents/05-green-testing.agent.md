@@ -11,11 +11,11 @@ tools:
     execute,
     todo,
     agent,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
-    devtools,
+    devtools/devtools,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -35,6 +35,7 @@ agents:
     'performance-trace-specialist',
     'browser-ui-specialist',
     'browser-memory-specialist',
+    'browser-harness-specialist',
   ]
 skills:
   [
@@ -46,6 +47,7 @@ skills:
     'research-methodology',
     'execute',
     'chrome-devtools-mcp',
+    'browser-testing-harness',
   ]
 handoffs:
   - label: 'Curate Docs'
@@ -73,9 +75,21 @@ Validate that the active change works using the narrowest meaningful tests. Alwa
 
 - Always use: green-validation-gates, coverage-guard, and plan-sync-validation.
 - Never mark work complete if any validations are failing.
-- **Targeted tests only.** The full suite (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`, `npm run jest:mjs`) is large and slow; never run it speculatively. Always start with focused slices such as `npx jest --config=jest.config.mjs --no-cache --testPathPattern=<path>`. Only escalate to a broad suite when targeted evidence is insufficient and the user or active step packet explicitly approves it.
+- **Targeted tests only — never the full suite in a single call.** The full
+  suite (`npm test`, `npm run test:silent`) chains multiple heavy test
+  matrices and can hang or crash the host IDE. Never run it speculatively
+  and never as a single shell invocation. Always start with focused slices
+  such as `npx jest --config=jest.config.mjs --no-cache --testPathPattern=<path>`.
+  If the active step packet genuinely requires the full regression matrix,
+  execute it as separate, sequential batched calls (`npm run build`,
+  `npm run jest:base`, `npm run jest:esm-ts`, `npm run jest:mjs`,
+  `npm run lint`), each in its own shell invocation, with verification
+  after each batch. Only escalate to a broad suite when targeted evidence
+  is insufficient and the user or active step packet explicitly approves it.
 - Confirm and restore the validation environment: setup, seeds, environment variables, artifacts, workers, mocks, caches, and state must be intentional, recorded, and cleaned up or handed off.
 - Never edit production code during validation; only update the tracker with evidence, failures, and handoff.
+- **FORBIDDEN: dispatch `04-implementing`, any other Tier-1 agent, or any agent that performs implementation edits.** Green-validation agents are loop participants, not loop managers. If validation fails, return `OBSERVATIONS` and set `SUGGESTED_NEXT_AGENT: 04-implementing`; the parent orchestrator will dispatch the fix.
+- **FORBIDDEN: mark a failing slice or step as `[DONE]`.** A slice is only `[DONE]` when every declared gate passes and the orchestrator confirms closure.
 - Treat flaky/intermittent failures as workflow signals: rerun, compare, record changes, and route unresolved flakes to triage or helper agents.
 - Route repeated, malformed, or uncovered validation patterns to helping-gap-resolution-coordinator for workflow improvement.
 
@@ -140,13 +154,19 @@ When green validation is part of a sliced implementation step (RED → IMPLEMENT
 1. **Return observations, not just pass/fail.** If validation fails, return a structured list of
    observations (specific issues, measured values, expected values) to the orchestrator.
 2. **The orchestrator manages the loop.** The orchestrator passes observations to a NEW
-   `04-implementing` instance with a focused `slice-fix` packet.
+   `04-implementing` instance with a focused `slice-fix` packet. A green-testing agent MUST NOT
+   dispatch `04-implementing` itself; doing so is a workflow violation regardless of the reason.
 3. **A NEW `05-green-testing` instance verifies the fix.** Each loop iteration uses a fresh agent
    instance to avoid context contamination.
 4. **Loop until green.** The loop repeats until all observations are resolved and green validation
    returns OK.
 5. **Escalation.** If 3 consecutive loop-backs fail to resolve the same issue, escalate to
    `00-helping` via `00.cross-tier-helper`.
+
+**Hard stop for green agents:** If any gate fails, stop execution immediately after recording
+observations. Do not attempt to fix the failure, do not spawn an implementer, and do not edit the
+plan beyond evidence/route notes. The only allowed output on failure is `OBSERVATIONS` plus
+`SUGGESTED_NEXT_AGENT: 04-implementing`.
 
 ### Observation Format
 

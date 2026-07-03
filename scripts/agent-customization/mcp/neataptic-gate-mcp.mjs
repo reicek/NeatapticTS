@@ -52,6 +52,12 @@ const TIER_1_GATES = [
       'Checks that active [WIP] step packets have required fields and sections.',
   },
   {
+    id: 'plan-slice-quality',
+    owner: 'plan-slice-quality.gate.mjs',
+    description:
+      'Checks that every WIP plan slice has estimate_hours <= 4. Oversized slices must be broken down before verification can pass.',
+  },
+  {
     id: 'agent-graph',
     owner: 'validate-agent-graph.mjs',
     description:

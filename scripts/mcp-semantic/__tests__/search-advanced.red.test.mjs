@@ -10,21 +10,15 @@
  * search-advanced.mjs is implemented and registered in repo-cortex-mcp.mjs.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { createClient } from '@libsql/client';
-import { readCorpusSchema, splitSqlStatements } from './turso-test-helpers.mjs';
-import { closeTursoClient } from '../tools/cortex-db.mjs';
+import { createSchemaClient } from './turso-test-helpers.mjs';
+import { closeTursoClient, setTursoClient } from '../tools/cortex-db.mjs';
 
+/**
+ * Create a minimal in-memory corpus database for search_advanced fixtures.
+ * @returns {Promise<{ client: object, dbPath: string }>}
+ */
 async function setupDb() {
-  const tempDir = await mkdtemp(path.join(tmpdir(), 'search-advanced-test-'));
-  const dbPath = path.join(tempDir, 'test.sqlite');
-  const client = createClient({ url: 'file:' + dbPath });
-  const schemaSql = await readCorpusSchema();
-  for (const stmt of splitSqlStatements(schemaSql)) {
-    await client.execute(stmt);
-  }
+  const client = await createSchemaClient();
   await client.execute(`
     INSERT INTO documents (file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
     VALUES ('src/network.ts', 'ts-source', 0, 100, 'a', 1);
@@ -36,27 +30,48 @@ async function setupDb() {
     VALUES (?, 0, 'NEAT activation function in network', 0, 35, 0, 'network')`,
     args: [docId],
   });
-  return { client, dbPath, tempDir };
+  const dbPath = 'file:./search-advanced-test.sqlite';
+  setTursoClient(dbPath, client);
+  return { client, dbPath };
 }
 
-async function teardownDb(client, tempDir, dbPath) {
+/**
+ * Release the injected corpus client.
+ * @param {object} client
+ * @param {string} dbPath
+ * @returns {Promise<void>}
+ */
+async function teardownDb(client, dbPath) {
+  setTursoClient(dbPath, undefined);
   await client.close();
-  if (dbPath) await closeTursoClient(dbPath);
-  await rm(tempDir, {
-    recursive: true,
-    force: true,
-    maxRetries: 10,
-    retryDelay: 200,
-  });
+  await closeTursoClient(dbPath);
 }
 
 describe('search-advanced', () => {
+  let sharedDb;
+  let originalRerankerForceState;
+
+  beforeAll(async () => {
+    originalRerankerForceState = process.env.RERANKER_FORCE_STATE;
+    process.env.RERANKER_FORCE_STATE = 'cold';
+    sharedDb = await setupDb();
+  });
+
+  afterAll(async () => {
+    if (sharedDb) {
+      await teardownDb(sharedDb.client, sharedDb.dbPath);
+      sharedDb = null;
+    }
+    if (originalRerankerForceState === undefined) {
+      delete process.env.RERANKER_FORCE_STATE;
+    } else {
+      process.env.RERANKER_FORCE_STATE = originalRerankerForceState;
+    }
+  });
   describe('server registration', () => {
     it('registers search_advanced in the MCP tool list', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const listed = await server.dispatch({
           jsonrpc: '2.0',
@@ -67,18 +82,13 @@ describe('search-advanced', () => {
         expect(listed.tools.map((tool) => tool.name)).toContain(
           'search_advanced',
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
   });
 
   describe('schema validation', () => {
     it('rejects a missing query parameter with EMPTY_QUERY code', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -98,16 +108,11 @@ describe('search-advanced', () => {
             }),
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
 
     it('rejects an invalid budget type', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -127,16 +132,11 @@ describe('search-advanced', () => {
             }),
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
 
     it('rejects an invalid limit type', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -156,18 +156,13 @@ describe('search-advanced', () => {
             }),
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
   });
 
   describe('classification-aware defaults', () => {
     it('uses BM25-heavy defaults for simple_lookup query class', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -190,16 +185,11 @@ describe('search-advanced', () => {
             use_rerank: false,
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
 
     it('uses dense expansion defaults for cross_boundary query class', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -222,18 +212,13 @@ describe('search-advanced', () => {
             use_rerank: true,
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
   });
 
   describe('pipeline orchestration', () => {
     it('returns pipeline metadata: classification, expansion, results', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -257,16 +242,11 @@ describe('search-advanced', () => {
             use_dense: expect.any(Boolean),
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
 
     it('assembles context when context_budget is provided', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -293,18 +273,13 @@ describe('search-advanced', () => {
             }),
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
   });
 
   describe('graceful degradation', () => {
     it('reports dense_state when dense subsystem is cold', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -324,16 +299,11 @@ describe('search-advanced', () => {
             dense_state: expect.any(String),
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
 
     it('reports rerank_state when reranker is cold', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -353,16 +323,11 @@ describe('search-advanced', () => {
             rerank_state: expect.any(String),
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
 
     it('reports expansion degradation when expansion is cold', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -384,18 +349,13 @@ describe('search-advanced', () => {
             }),
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
   });
 
   describe('timeout handling', () => {
     it('returns a partial result with CORTEX_TIMEOUT_PARTIAL error code', async () => {
-      const { createRepoCortexMcpServer } =
-        await import('../repo-cortex-mcp.mjs');
-      const { client, dbPath, tempDir } = await setupDb();
-      try {
+      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
+        const dbPath = sharedDb.dbPath;
         const server = createRepoCortexMcpServer({ databasePath: dbPath });
         const result = await server.dispatch({
           jsonrpc: '2.0',
@@ -415,9 +375,6 @@ describe('search-advanced', () => {
             error: expect.stringContaining('CORTEX_TIMEOUT_PARTIAL'),
           }),
         );
-      } finally {
-        await teardownDb(client, tempDir, dbPath);
-      }
     });
   });
 });

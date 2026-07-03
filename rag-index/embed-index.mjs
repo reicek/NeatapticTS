@@ -269,6 +269,16 @@ export async function readModelMeta(options = {}) {
 }
 
 export async function createOnnxTextEmbedder(options = {}) {
+  const forcedState =
+    typeof process.env.DENSE_FORCE_STATE === 'string'
+      ? process.env.DENSE_FORCE_STATE.trim()
+      : '';
+  if (forcedState === 'cold' || forcedState === 'model-only') {
+    throw new Error(
+      `ONNX embedder disabled because DENSE_FORCE_STATE=${forcedState}.`,
+    );
+  }
+
   const { Tokenizer } = await import('@huggingface/tokenizers');
   const { InferenceSession, Tensor } = await import('onnxruntime-node');
   const modelDirectory = path.resolve(

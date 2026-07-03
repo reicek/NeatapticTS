@@ -1,0 +1,14 @@
+{
+  "introFile": "network.gpu.activate.ts",
+  "fileOrder": [
+    "network.gpu.activate.ts",
+    "network.gpu.fallback.ts",
+    "network.gpu.capability.ts",
+    "network.gpu.device.ts",
+    "network.gpu.kernel.ts",
+    "network.gpu.buffer.ts",
+    "network.gpu.batched.ts",
+    "network.gpu.racing.ts",
+    "network.gpu.types.ts"
+  ]
+}

@@ -28,11 +28,8 @@ describe('ann-index (Turso async migration)', () => {
   beforeEach(async () => {
     saveEnv();
     client = await createSchemaClient();
-    // Add the embedding column required by DiskANN (schema-v2 does not include it)
-    await client.execute(
-      'ALTER TABLE chunks ADD COLUMN embedding F8_BLOB(384)',
-    );
-    // @libsql/client :memory: does not support `USING libsql_vector_idx`,
+    // The Turso schema already includes the embedding column and a DiskANN
+    // vector index. @libsql/client :memory: does not support `WITH KEY`,
     // so intercept the CREATE INDEX call and return a mock success. This
     // verifies that buildAnnIndex uses the injected client without requiring
     // databasePath.

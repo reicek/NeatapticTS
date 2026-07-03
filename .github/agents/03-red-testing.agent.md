@@ -11,11 +11,11 @@ tools:
     execute,
     todo,
     agent,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
-    devtools,
+    devtools/devtools,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -33,6 +33,7 @@ agents:
     'performance-trace-specialist',
     'browser-ui-specialist',
     'browser-memory-specialist',
+    'browser-harness-specialist',
   ]
 skills:
   [
@@ -45,6 +46,7 @@ skills:
     'research-methodology',
     'execute',
     'chrome-devtools-mcp',
+    'browser-testing-harness',
   ]
 handoffs:
   - label: 'Implement'

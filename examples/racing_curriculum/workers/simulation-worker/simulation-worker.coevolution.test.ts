@@ -25,59 +25,13 @@
  */
 
 // ---------------------------------------------------------------------------
-// Locally-defined interfaces
+// Type imports from the coevolution service
 // ---------------------------------------------------------------------------
 
-type CoevolutionConfig = {
-  readonly populationSize: number;
-  readonly rngSeed: number;
-  readonly tier: number;
-};
-
-/**
- * Opaque handle for one team's independent population + species + fitness
- * state.  Step 04 wraps a real `Neat` instance behind this interface.
- */
-type TeamPopulationContainer = {
-  /** Opaque identity token — distinct between teamA and teamB. */
-  readonly populationId: string;
-  /** Current NEAT generation for this team's isolated population. */
-  generation: number;
-};
-
-type CarGenome = {
-  readonly carIndex: number;
-  readonly teamId: 0 | 1;
-  readonly populationId: string;
-  activate(inputs: number[]): number[];
-  mutate(): void;
-  serialize(): Float32Array;
-  getNetwork(): { readonly input: number };
-};
-
-type CoevolutionContainer = {
-  readonly teamA: TeamPopulationContainer;
-  readonly teamB: TeamPopulationContainer;
-  /**
-   * Returns the team's fitness score, defined as the best (lowest) finishing
-   * position among the cars in `carFinishPositions`.
-   *
-   * @param teamId - 0 for Team A, 1 for Team B.
-   * @param carFinishPositions - Finish positions for only that team's cars.
-   *   Position 1 = first place (best).
-   */
-  resolveTeamFitness(
-    teamId: 0 | 1,
-    carFinishPositions: readonly number[],
-  ): number;
-  /**
-   * Advances one team's isolated population by a single generation.
-   * Step 04 wires this to the per-team `Neat` controller.
-   */
-  advanceTeamGeneration(teamId: 'team-a' | 'team-b'): void;
-  getCarGenome(carIndex: number): CarGenome;
-  getCarGenomes(): readonly CarGenome[];
-};
+import type {
+  CoevolutionConfig,
+  CoevolutionContainer,
+} from './simulation-worker.coevolution.service';
 
 interface CoevolutionService {
   createCoevolutionContainer(config: CoevolutionConfig): CoevolutionContainer;

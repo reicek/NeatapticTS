@@ -68,12 +68,15 @@ Mode: post-change check.
 
 ## Required Workflow
 
-The full test suite (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`,
-`npm run jest:mjs`) is large and slow. **Never run it speculatively.** Start
-with focused Jest slices for each changed file. Only run the repo-wide suite
-when the user or active step packet explicitly requires repo-wide confirmation;
-otherwise, record the focused slice results as the coverage-guard evidence and
-note that the full suite was intentionally skipped.
+The full regression matrix (`npm test`, `npm run test:silent`) chains multiple
+heavy test suites and has crashed the host IDE. **Never run it speculatively and
+never as a single shell invocation.** Start with focused Jest slices for each
+changed file. Only run the repo-wide matrix when the user or active step packet
+explicitly requires repo-wide confirmation; when required, execute it as separate,
+sequential batched calls (`npm run build`, `npm run jest:base`,
+`npm run jest:esm-ts`, `npm run jest:mjs`, `npm run lint`), each in its own shell
+invocation. Otherwise, record the focused slice results as the coverage-guard
+evidence and note that the full matrix was intentionally skipped.
 
 ### Step 1 — Identify changed files
 
@@ -133,15 +136,20 @@ After all changed files are verified at 100%, run the repo-wide suite **only if*
 the active step packet or user explicitly requires repo-wide confirmation:
 
 ```bash
-npm run test:silent
+npm run build
+npm run jest:base -- --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --testPathIgnorePatterns=benchmark\..*\.test\.ts$
+npm run jest:esm-ts -- --no-cache --runInBand
+npm run jest:mjs -- --no-cache --runInBand
 ```
 
-If the full suite is required, confirm it is green and that the baseline has not
-regressed. If new failures appear, resolve them with `test-fix-workflow` before
-marking this gate passed.
+If the full matrix is required, run each batch in a separate shell invocation,
+confirm each batch is green before proceeding to the next, and verify that the
+baseline has not regressed. If new failures appear, resolve them with
+`test-fix-workflow` before marking this gate passed. Never invoke the chained
+`npm test` or `npm run test:silent` command as a single shell call.
 
 If repo-wide confirmation is **not** required, report the focused slice results
-as the final coverage-guard evidence and note that the full suite was
+as the final coverage-guard evidence and note that the full regression matrix was
 intentionally skipped.
 
 ### Step 6 — Report

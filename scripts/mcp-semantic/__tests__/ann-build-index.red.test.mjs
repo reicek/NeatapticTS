@@ -8,25 +8,15 @@
  *   - `index_stats` emits an `ann` section describing strategy/index state.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { createClient } from '@libsql/client';
-import { readCorpusSchema, splitSqlStatements } from './turso-test-helpers.mjs';
-import { closeTursoClient } from '../tools/cortex-db.mjs';
+import { createSchemaClient } from './turso-test-helpers.mjs';
+import { closeTursoClient, setTursoClient } from '../tools/cortex-db.mjs';
 
 /**
  * Create a minimal corpus database for search/index_stats fixtures.
- * @returns {Promise<{ dbPath: string, tempDir: string }>}
+ * @returns {Promise<{ dbPath: string, tempDir: string, client: object }>}
  */
 async function setupCorpusDb() {
-  const tempDir = await mkdtemp(path.join(tmpdir(), 'ann-build-index-test-'));
-  const dbPath = path.join(tempDir, 'corpus.sqlite');
-  const client = createClient({ url: 'file:' + dbPath });
-  const schemaSql = await readCorpusSchema();
-  for (const stmt of splitSqlStatements(schemaSql)) {
-    await client.execute(stmt);
-  }
+  const client = await createSchemaClient();
   await client.execute(`
     INSERT INTO documents (file_path, doc_family, mtime_ms, file_size, sha256, indexed_at, arch_layer)
     VALUES
@@ -48,23 +38,21 @@ async function setupCorpusDb() {
       ],
     });
   }
-  await client.close();
-  return { dbPath, tempDir };
+  const dbPath = 'file:./ann-build-index-test.sqlite';
+  setTursoClient(dbPath, client);
+  return { dbPath, client };
 }
 
 /**
- * Remove the temporary fixture directory.
- * @param {string} tempDir
+ * Release an injected corpus client.
+ * @param {object} client
+ * @param {string} dbPath
  * @returns {Promise<void>}
  */
-async function teardown(tempDir, dbPath) {
-  if (dbPath) await closeTursoClient(dbPath);
-  await rm(tempDir, {
-    recursive: true,
-    force: true,
-    maxRetries: 10,
-    retryDelay: 200,
-  });
+async function teardown(client, dbPath) {
+  setTursoClient(dbPath, undefined);
+  await client.close();
+  await closeTursoClient(dbPath);
 }
 
 /**
@@ -76,6 +64,19 @@ async function loadAnnIndex() {
 }
 
 describe('ann_build_index MCP tool', () => {
+  let annDb;
+
+  beforeAll(async () => {
+    annDb = await setupCorpusDb();
+  });
+
+  afterAll(async () => {
+    if (annDb) {
+      await teardown(annDb.client, annDb.dbPath);
+      annDb = null;
+    }
+  });
+
   it('is registered in the Repo Cortex MCP server tool list', async () => {
     const { createRepoCortexMcpServer } =
       await import('../repo-cortex-mcp.mjs');
@@ -123,28 +124,23 @@ describe('ann_build_index MCP tool', () => {
   it('is callable via tools/call and returns a structured response', async () => {
     const { createRepoCortexMcpServer } =
       await import('../repo-cortex-mcp.mjs');
-    const { dbPath, tempDir } = await setupCorpusDb();
-    try {
-      const server = createRepoCortexMcpServer({ databasePath: dbPath });
-      const result = await server.dispatch({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'tools/call',
-        params: { name: 'ann_build_index', arguments: {} },
-      });
+    const server = createRepoCortexMcpServer({ databasePath: annDb.dbPath });
+    const result = await server.dispatch({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: { name: 'ann_build_index', arguments: {} },
+    });
 
-      expect(result).toEqual(
-        expect.objectContaining({
-          isError: false,
-          structuredContent: expect.objectContaining({
-            strategy: expect.any(String),
-            build_status: expect.any(String),
-          }),
+    expect(result).toEqual(
+      expect.objectContaining({
+        isError: false,
+        structuredContent: expect.objectContaining({
+          strategy: expect.any(String),
+          build_status: expect.any(String),
         }),
-      );
-    } finally {
-      await teardown(tempDir, dbPath);
-    }
+      }),
+    );
   });
 
   it('exports a buildAnnIndex handler from ann-index.mjs', async () => {
@@ -155,84 +151,95 @@ describe('ann_build_index MCP tool', () => {
 });
 
 describe('search_corpus dense_strategy extension', () => {
+  let searchDb;
+
+  beforeAll(async () => {
+    searchDb = await setupCorpusDb();
+  });
+
+  afterAll(async () => {
+    if (searchDb) {
+      await teardown(searchDb.client, searchDb.dbPath);
+      searchDb = null;
+    }
+  });
+
   it('includes dense_strategy in warm dense responses below threshold', async () => {
     const { searchCorpus } = await import('../tools/search-corpus.mjs');
-    const { dbPath, tempDir } = await setupCorpusDb();
-    try {
-      const result = await searchCorpus({
-        databasePath: dbPath,
-        query: 'network',
-        use_dense: true,
+    const result = await searchCorpus({
+      databasePath: searchDb.dbPath,
+      query: 'network',
+      use_dense: true,
+      alpha: 0.5,
+      readinessProbe: async () => ({ state: 'warm' }),
+      denseQuery: async () => ({
         alpha: 0.5,
-        readinessProbe: async () => ({ state: 'warm' }),
-        denseQuery: async () => ({
-          alpha: 0.5,
-          query: 'network',
-          limit: 10,
-          use_dense: true,
-          results: [
-            {
-              chunk_id: 1,
-              file_path: 'src/network.ts',
-              family: 'ts-source',
-              heading_path: '',
-              text: 'network content',
-              score: 0.9,
-            },
-          ],
-        }),
-      });
+        query: 'network',
+        limit: 10,
+        use_dense: true,
+        results: [
+          {
+            chunk_id: 1,
+            file_path: 'src/network.ts',
+            family: 'ts-source',
+            heading_path: '',
+            text: 'network content',
+            score: 0.9,
+          },
+        ],
+      }),
+    });
 
-      expect(result).toEqual(
-        expect.objectContaining({
-          dense_strategy: 'diskann',
-        }),
-      );
-    } finally {
-      await teardown(tempDir, dbPath);
-    }
+    expect(result).toEqual(
+      expect.objectContaining({
+        dense_strategy: 'diskann',
+      }),
+    );
   });
 });
 
 describe('index_stats ann section', () => {
+  let statsDb;
+
+  beforeAll(async () => {
+    statsDb = await setupCorpusDb();
+  });
+
+  afterAll(async () => {
+    if (statsDb) {
+      await teardown(statsDb.client, statsDb.dbPath);
+      statsDb = null;
+    }
+  });
+
   it('includes an ann section on every response', async () => {
     const { indexStats } = await import('../tools/index-stats.mjs');
-    const { dbPath, tempDir } = await setupCorpusDb();
-    try {
-      const result = await indexStats({ databasePath: dbPath });
+    const result = await indexStats({ databasePath: statsDb.dbPath });
 
-      expect(result).toEqual(
-        expect.objectContaining({
-          ann: expect.objectContaining({
-            strategy: expect.any(String),
-            threshold: expect.any(Number),
-            current_chunk_count: expect.any(Number),
-          }),
+    expect(result).toEqual(
+      expect.objectContaining({
+        ann: expect.objectContaining({
+          strategy: expect.any(String),
+          threshold: expect.any(Number),
+          current_chunk_count: expect.any(Number),
         }),
-      );
-    } finally {
-      await teardown(tempDir, dbPath);
-    }
+      }),
+    );
   });
 
   it('reports diskann with no index when below threshold', async () => {
     const { indexStats } = await import('../tools/index-stats.mjs');
-    const { dbPath, tempDir } = await setupCorpusDb();
-    try {
-      const result = await indexStats({ databasePath: dbPath });
+    const result = await indexStats({ databasePath: statsDb.dbPath });
 
-      expect(result.ann).toEqual(
-        expect.objectContaining({
-          strategy: 'diskann',
-          build_status: 'not_applicable',
-          threshold: 50000,
-          current_chunk_count: 3,
-          index_id: null,
-          index_type: null,
-        }),
-      );
-    } finally {
-      await teardown(tempDir, dbPath);
-    }
+    expect(result.ann).toEqual(
+      expect.objectContaining({
+        strategy: 'diskann',
+        build_status: 'not_applicable',
+        threshold: 50000,
+        current_chunk_count: 3,
+        index_id: null,
+        index_type: null,
+      }),
+    );
   });
 });

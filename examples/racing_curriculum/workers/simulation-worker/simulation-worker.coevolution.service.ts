@@ -178,10 +178,10 @@ const CONTROLLER_COMPUTATION_TYPE = 'DenseFeedForward' as const;
  *
  * The envelope contains one input archetype and one output archetype, each with
  * a `replicate` rule pass that places `inputSize` modules at z=0 and
- * `outputSize` modules at z=1. No CPPN programs are included, so the materialized
- * phenotype has no edges. This is intentional for the current slice: the red tests
- * only require correct `input`/`output` dimensions and a canonical envelope shape
- * that polyandric reproduction can patch.
+ * `outputSize` modules at z=1. A single CPPN program wires the `dist` input to the
+ * `weight` output, which creates a sparse set of directed edges during phenotype
+ * materialization. Per-car distinctness is then introduced by seeding each
+ * materialized network and applying a deterministic weight-perturbation pass.
  *
  * @param inputSize - Controller network input dimension.
  * @param outputSize - Controller network output dimension.
@@ -237,6 +237,18 @@ function createMinimalControllerEnvelope(
         archetypeId: CONTROLLER_OUTPUT_ARCHETYPE_ID,
         priority: 2,
         placements: outputPlacements,
+      },
+    ],
+    cppnPrograms: [
+      {
+        programId: 'dist-to-controls',
+        edges: [
+          {
+            sourceNodeId: 'dist',
+            targetNodeId: 'weight',
+            weight: 1,
+          },
+        ],
       },
     ],
     reproductionPolicy: {
@@ -300,6 +312,14 @@ export function createCarGenome(options: CarGenomeOptions): CarGenome {
     providedEnvelope ?? createMinimalControllerEnvelope(inputSize, outputSize);
   const network =
     providedNetwork ?? activateNgeNetworkFromEnvelope(envelope, seed);
+
+  if (!providedNetwork) {
+    network.setSeed(seed);
+    const mutationCount = Math.max(1, network.connections.length);
+    for (let index = 0; index < mutationCount; index++) {
+      network.mutate(methods.mutation.MOD_WEIGHT);
+    }
+  }
 
   return {
     carIndex,

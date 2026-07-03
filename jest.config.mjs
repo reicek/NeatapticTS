@@ -27,6 +27,9 @@ const config = {
           'ts-jest',
           { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
         ],
+        '^.+assimilate-repo\\.mjs$': [
+          '<rootDir>/scripts/agent-customization/mcp/__tests__/mjs-cjs-transformer.cjs',
+        ],
       },
       setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
       testTimeout: 300000,
@@ -204,6 +207,7 @@ const config = {
   ],
   coverageReporters: ['lcov', 'text', 'html', 'json-summary'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
+  modulePathIgnorePatterns: ['/dist/'],
 };
 
 export default config;

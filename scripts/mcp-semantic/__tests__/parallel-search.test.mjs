@@ -36,6 +36,7 @@ const PARALLEL_SEARCH_PATH = path.resolve(
   __dirname,
   '..',
   '..',
+  '..',
   'rag-index',
   'parallel-search.mjs',
 );

@@ -146,6 +146,27 @@ export function getCachedClientCount() {
 }
 
 /**
+ * Insert or replace a cached libSQL client for a specific database URL.
+ *
+ * Primarily intended for tests that need to inject an in-memory or
+ * pre-configured client so tools do not open new file-backed connections.
+ * The caller is responsible for closing any previously cached client and for
+ * clearing the entry when the test finishes.
+ *
+ * @param {string} url - Database URL or path key to cache the client under.
+ * @param {import('@libsql/client').Client | undefined} client - Client to cache, or `undefined` to evict.
+ * @returns {void}
+ */
+export function setTursoClient(url, client) {
+  requireString(url, 'url');
+  if (client === undefined) {
+    tursoClientCache.delete(url);
+  } else {
+    tursoClientCache.set(url, client);
+  }
+}
+
+/**
  * Read a single chunk by ID using an async `@libsql/client` `Client`.
  *
  * This is the Turso/libSQL replacement for the synchronous

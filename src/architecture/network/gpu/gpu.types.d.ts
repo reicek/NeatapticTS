@@ -1,9 +1,10 @@
 /**
- * Minimal ambient WebGPU types for the red-test seam.
+ * Minimal ambient WebGPU types for the GPU inference fast path.
  *
  * These declarations allow the GPU capability and device probes to compile
  * before the project pulls in a full WebGPU type package. They intentionally
- * expose only the surface exercised by the mock helpers and tests.
+ * expose only the surface exercised by the inference seam and its unit
+ * doubles.
  */
 
 declare global {

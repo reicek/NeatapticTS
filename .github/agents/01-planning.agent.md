@@ -11,7 +11,7 @@ tools:
     execute,
     todo,
     agent,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -105,6 +105,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 - `plan-sync` — after any plan status change
 - `step-packet` — after authoring or revising step packets
+- `plan-slice-quality` — after authoring or revising slices; confirms no slice exceeds 4 hours
 - `agent-graph` — after any agent delegation change
 
 Include the exact command used and paste the full JSON output into `step_packet.evidence.gate_outputs` for traceability.
@@ -248,7 +249,7 @@ slices:
     files_to_change:
       - 'coverage/lcov.info'
     acceptance_criteria:
-      - 'Targeted suites remain green; full suite only when explicitly required'
+      - 'Targeted suites remain green; full suite only when explicitly required, and then only as separate batched calls (never npm test in a single shell invocation)'
       - 'Coverage guard passes on touched src/ files'
     parallelizable: false
     dependencies:
@@ -318,7 +319,7 @@ slices:
 
 Guidelines:
 
-- Target slice size: prefer <= 4 hours or single-file/folder boundaries.
+- Slice size MUST be <= 4 hours (hard limit enforced by the `plan-slice-quality` gate). Ideally 2-3 hours per slice. Oversized slices must be broken into smaller sequential slices before the plan can pass verification.
 - Include explicit `acceptance_criteria` per slice.
 - Mark `parallelizable: true` only when slices do not share state or ordering constraints.
 - `01-planning` must indicate slice ordering. Sequential slices must include `next_slice`.
@@ -403,6 +404,7 @@ When operating in verification mode:
    - **Risk coverage:** risks, dependencies, and scope boundaries are recorded and consistent with the phase objective.
    - **Acceptance criteria:** criteria are observable, implementation-agnostic, and mapped to automation checks where applicable.
    - **Dependencies:** slice ordering and inter-step dependencies are acyclic and complete.
+   - **Slice quality:** every slice has `estimate_hours <= 4` (ideally 2-3); run `neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality` and `--gate=step-packet` and confirm both pass. Oversized slices are blockers.
 3. **Record the verdict in the plan's `## Latest validation evidence` section:**
    - If the plan is ready for execution, record `green-light: true` (or `status: green-light`) together with a concise verdict and the verification timestamp.
    - If blockers remain, record each blocker with `green-light: false` (or `status: blocked`) and route back to a new `01-planning` patch cycle. Do not dispatch `03-red-testing`, `04-implementing`, or other execution-phase agents until the blockers are resolved and a subsequent verification pass records green light.

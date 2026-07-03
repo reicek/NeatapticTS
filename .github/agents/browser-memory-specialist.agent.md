@@ -8,15 +8,15 @@ tools:
     read,
     search,
     execute,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
-    devtools,
+    devtools/devtools,
   ]
 user-invocable: false
 agents: []
-skills: ['chrome-devtools-mcp']
+skills: ['chrome-devtools-mcp', 'browser-testing-harness']
 ---
 
 ## Purpose

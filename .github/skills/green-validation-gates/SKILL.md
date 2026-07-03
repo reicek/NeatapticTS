@@ -67,12 +67,15 @@ Latest failure: agent-graph gate — missing skill reference in step 3.
 
 ## Required Workflow
 
-Run the narrowest validation that matches the changed surface. The full suite
-(`npm test`, `npm run test:silent`, `npm run jest:esm-ts`, `npm run jest:mjs`)
-is large and slow; **never run it speculatively**. Prefer focused Jest slices
-such as `npx jest --config=jest.config.mjs --no-cache --testPathPattern=<path>`.
-Only run the full suite when explicitly requested by the user, required by the
-active step packet's `validation` list, or at a phase boundary with user approval.
+Run the narrowest validation that matches the changed surface. The full regression
+matrix (`npm test`, `npm run test:silent`) chains multiple heavy test suites and
+has crashed the host IDE; **never run it speculatively and never as a single shell
+invocation**. Prefer focused Jest slices such as
+`npx jest --config=jest.config.mjs --no-cache --testPathPattern=<path>`. Only run
+the full matrix when explicitly requested by the user or required by the active
+step packet's `validation` list; when required, execute it as separate, sequential
+batched calls (`npm run build`, `npm run jest:base`, `npm run jest:esm-ts`,
+`npm run jest:mjs`, `npm run lint`), each in its own shell invocation.
 
 1. Run the narrowest validation that matches the changed surface:
    - TypeScript / source / package-script changes: `npm run build` or

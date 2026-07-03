@@ -8,7 +8,7 @@ tools:
     read,
     search,
     execute,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,

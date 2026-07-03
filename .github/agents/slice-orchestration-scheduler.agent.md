@@ -10,7 +10,7 @@ tools:
     edit,
     execute,
     todo,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-workflow-mcp/*,
   ]

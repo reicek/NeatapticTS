@@ -710,5 +710,6 @@ export async function traverseGraphHandler(argumentsObject) {
     max_results: argumentsObject.max_results,
     confidence_filter: argumentsObject.confidence_filter,
     databasePath: argumentsObject.databasePath,
+    client: argumentsObject.client,
   });
 }

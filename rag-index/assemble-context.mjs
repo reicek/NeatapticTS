@@ -18,6 +18,8 @@
  * ```
  */
 
+import { createHash } from 'node:crypto';
+
 /**
  * Approximate characters per token for the default rough tokenizer.
  * Conservative 4:1 ratio keeps the context slightly under-filled.
@@ -117,6 +119,45 @@ function getBodyText(chunk) {
 }
 
 /**
+ * Compute a SHA-256 hex digest for a UTF-8 string.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function sha256Hex(text) {
+  return createHash('sha256').update(text).digest('hex');
+}
+
+/**
+ * Build a provenance context header from a chunk's file path and heading.
+ *
+ * @param {InputChunk} chunk
+ * @returns {string}
+ */
+function buildContextHeader(chunk) {
+  const heading = chunk.heading_path?.trim();
+  return heading ? `${chunk.file_path} > ${heading}` : chunk.file_path;
+}
+
+/**
+ * Enrich a single chunk when no database client is available.
+ *
+ * @param {InputChunk} chunk
+ * @param {string} queryClass
+ * @returns {AssembledChunk}
+ */
+function fallbackEnrich(chunk, queryClass) {
+  const bodyText = getBodyText(chunk);
+  return {
+    ...chunk,
+    body_text: bodyText,
+    sha256: chunk.sha256 ?? chunk.chunk_sha256 ?? sha256Hex(bodyText),
+    context_header: chunk.context_header ?? buildContextHeader(chunk),
+    query_class: queryClass,
+  };
+}
+
+/**
  * Estimate the token cost of a text fragment using the configured chars-per-token
  * ratio. Empty text costs zero tokens.
  *
@@ -162,22 +203,14 @@ export async function enrichChunks(chunks, options = {}) {
   const queryClass = options.query_class ?? 'default';
 
   if (!client || chunks.length === 0) {
-    return chunks.map((chunk) => ({
-      ...chunk,
-      body_text: getBodyText(chunk),
-      query_class: queryClass,
-    }));
+    return chunks.map((chunk) => fallbackEnrich(chunk, queryClass));
   }
 
   const chunkIds = chunks
     .map((chunk) => chunk.chunk_id)
     .filter((id) => id != null);
   if (chunkIds.length === 0) {
-    return chunks.map((chunk) => ({
-      ...chunk,
-      body_text: getBodyText(chunk),
-      query_class: queryClass,
-    }));
+    return chunks.map((chunk) => fallbackEnrich(chunk, queryClass));
   }
 
   const placeholders = chunkIds.map(() => '?').join(',');
@@ -228,11 +261,7 @@ export async function enrichChunks(chunks, options = {}) {
   return chunks.map((chunk) => {
     const enriched = enrichedMap.get(chunk.chunk_id);
     if (!enriched) {
-      return {
-        ...chunk,
-        body_text: getBodyText(chunk),
-        query_class: queryClass,
-      };
+      return fallbackEnrich(chunk, queryClass);
     }
     return {
       ...chunk,
@@ -246,22 +275,87 @@ export async function enrichChunks(chunks, options = {}) {
 /**
  * Stage 2 — Deduplicate chunks by content hash. Server-side SQL dedup
  * (GROUP BY chunk_sha256) is handled in the enrichment query. This
- * client-side pass collapses any remaining exact-hash duplicates.
+ * client-side pass collapses any remaining exact-hash duplicates, near-duplicate
+ * embeddings (cosine similarity above the threshold), and parents that have a
+ * child chunk present in the result set.
  *
  * @param {AssembledChunk[]} chunks
  * @param {{ cosineThreshold?: number }} [options]
  * @returns {AssembledChunk[]}
  */
 export function deduplicateChunks(chunks, options = {}) {
+  const cosineThreshold = options.cosineThreshold ?? DEFAULT_COSINE_THRESHOLD;
+
+  // 1. Exact duplicate collapse by SHA-256 content hash (supplied by the
+  // enrichment stage) or by stable chunk id when no hash is present.
   const seen = new Set();
-  const deduped = [];
+  const exactDeduped = [];
   for (const chunk of chunks) {
-    const key = chunk.sha256 ?? chunk.body_text ?? chunk.chunk_id;
+    const key = chunk.sha256 ?? chunk.chunk_sha256 ?? chunk.chunk_id;
     if (seen.has(key)) continue;
     seen.add(key);
-    deduped.push(chunk);
+    exactDeduped.push(chunk);
   }
-  return deduped;
+
+  // 2. Parent collapse: remove a parent when any of its children are present.
+  const parentIds = new Set(
+    exactDeduped
+      .map((chunk) => chunk.parent_chunk_id)
+      .filter((id) => id != null && id !== ''),
+  );
+  const afterParentCollapse = exactDeduped.filter(
+    (chunk) => !parentIds.has(chunk.chunk_id),
+  );
+
+  // 3. Near-duplicate collapse by cosine similarity of embeddings.
+  const kept = [];
+  for (const chunk of afterParentCollapse) {
+    const embedding = chunk.embedding;
+    if (!Array.isArray(embedding) || embedding.length === 0) {
+      kept.push(chunk);
+      continue;
+    }
+
+    let isDuplicate = false;
+    for (const existing of kept) {
+      const existingEmbedding = existing.embedding;
+      if (!Array.isArray(existingEmbedding) || existingEmbedding.length !== embedding.length) {
+        continue;
+      }
+      if (cosineSimilarity(embedding, existingEmbedding) >= cosineThreshold) {
+        isDuplicate = true;
+        break;
+      }
+    }
+    if (!isDuplicate) {
+      kept.push(chunk);
+    }
+  }
+
+  return kept;
+}
+
+/**
+ * Compute cosine similarity between two numeric vectors.
+ *
+ * @param {number[] | Float32Array} left
+ * @param {number[] | Float32Array} right
+ * @returns {number}
+ */
+function cosineSimilarity(left, right) {
+  let dot = 0;
+  let leftNorm = 0;
+  let rightNorm = 0;
+  for (let i = 0; i < left.length; i += 1) {
+    const a = Number(left[i]);
+    const b = Number(right[i]);
+    dot += a * b;
+    leftNorm += a * a;
+    rightNorm += b * b;
+  }
+  const denominator = Math.sqrt(leftNorm) * Math.sqrt(rightNorm);
+  if (denominator === 0) return 0;
+  return dot / denominator;
 }
 
 /**

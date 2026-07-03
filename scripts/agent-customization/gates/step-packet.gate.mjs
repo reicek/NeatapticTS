@@ -414,10 +414,28 @@ function validateStepBlock(metadata, blockId, violations) {
 }
 
 function validateSlices(slices, tddSequence, blockId, violations) {
-  const expectedGoals =
-    tddSequence === 'green-only'
-      ? ['implementing', 'green-testing']
-      : ['red-testing', 'implementing', 'green-testing'];
+  const length = slices.length;
+  const isGreenOnly = tddSequence === 'green-only';
+
+  if (isGreenOnly && length < 2) {
+    violations.push({
+      blockId,
+      invalidField: 'slices',
+      invalidValue: length,
+      expected: 'at least 2 slices',
+      message:
+        'green-only tdd_sequence requires at least 2 slices (1 implementing + 1 green-testing)',
+    });
+  } else if (!isGreenOnly && length < 3) {
+    violations.push({
+      blockId,
+      invalidField: 'slices',
+      invalidValue: length,
+      expected: 'at least 3 slices',
+      message:
+        'red-green tdd_sequence requires at least 3 slices (1 red-testing + 1 implementing + 1 green-testing)',
+    });
+  }
 
   for (const [index, slice] of slices.entries()) {
     const sliceId = slice?.slice_id ?? `slice-${index}`;
@@ -455,7 +473,19 @@ function validateSlices(slices, tddSequence, blockId, violations) {
       });
     }
 
-    const expectedGoal = expectedGoals[index];
+    let expectedGoal = null;
+    if (isGreenOnly && length >= 2) {
+      expectedGoal = index === length - 1 ? 'green-testing' : 'implementing';
+    } else if (!isGreenOnly && length >= 3) {
+      if (index === 0) {
+        expectedGoal = 'red-testing';
+      } else if (index === length - 1) {
+        expectedGoal = 'green-testing';
+      } else {
+        expectedGoal = 'implementing';
+      }
+    }
+
     if (slice && expectedGoal && slice.goal !== expectedGoal) {
       violations.push({
         blockId,
@@ -509,6 +539,21 @@ function validateSlices(slices, tddSequence, blockId, violations) {
         sliceId,
         invalidField: 'estimate_hours',
         message: `slice ${index} estimate_hours must be a number`,
+      });
+    }
+
+    if (
+      slice &&
+      typeof slice.estimate_hours === 'number' &&
+      slice.estimate_hours > 4
+    ) {
+      violations.push({
+        blockId,
+        sliceId,
+        invalidField: 'estimate_hours',
+        invalidValue: slice.estimate_hours,
+        expected: '<= 4',
+        message: `slice ${index} estimate_hours ${slice.estimate_hours} exceeds the 4-hour limit; break into smaller slices (ideally 2-3 hours)`,
       });
     }
   }

@@ -8,7 +8,7 @@ tools:
     read,
     search,
     execute,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -98,7 +98,11 @@ npx tsc --noEmit -p tsconfig.json
 - Verify all four categories show 100%: Statements, Branches, Functions, Lines.
 - A file is only clear when ALL FOUR categories show 100%.
 - If any category is below 100%, classify the gap (reachable vs dead code) before acting.
-- Do NOT run the full suite unless the step packet explicitly requires it.
+- Do NOT run the full suite unless the step packet explicitly requires it. When a full regression
+  matrix is required, it must be executed as separate, sequential batched calls (e.g.,
+  `npm run build`, `npm run jest:base`, `npm run jest:esm-ts`, `npm run jest:mjs`,
+  `npm run lint`), each in its own shell invocation. Never invoke the chained `npm test` or
+  `npm run test:silent` command as a single shell call.
 
 ## If Blocked
 

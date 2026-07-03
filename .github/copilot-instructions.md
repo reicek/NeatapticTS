@@ -38,6 +38,24 @@ For sliced implementation steps, enforce a strict RED → IMPLEMENT → GREEN lo
 4. If green returns NOT OK, loop with NEW `04` then NEW `05` instances until OK.
 5. Never skip phases or perform edits yourself.
 
+## Planning Verification Loop
+
+After `01-planning` authors or patches a plan, the orchestrator MUST dispatch a
+**separate** `01-planning` instance (fresh context) in verification mode to
+independently validate the plan. The verification agent checks slice sizes
+(≤ 4 hours, ideally 2-3), structural completeness, and runs the
+`plan-slice-quality` and `step-packet` gates.
+
+1. Dispatch `01-planning` (author) to create or patch the plan.
+2. Dispatch a **NEW** `01-planning` (verification) to independently validate.
+3. If verification returns NOT GREEN (blockers found), loop: dispatch a NEW
+   `01-planning` (patch) to fix, then a NEW `01-planning` (verification) to
+   re-validate.
+4. Repeat until verification records `green-light: true`.
+5. The orchestrator controls the loop — verification agents must NOT self-dispatch
+   patch cycles. They return blockers to the orchestrator.
+6. Only after green light may the orchestrator proceed to RED/IMPLEMENT/GREEN.
+
 > Full policies below. Canonical skill homes: `execute` (delegation/routing/loop), `research-methodology` (search/certainty), `implementation-standards` (code), `educational-docs` (docs), `plan-alignment` (plans), `tracker-handoff` (trackers).
 
 ---

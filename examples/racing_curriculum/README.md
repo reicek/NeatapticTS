@@ -136,6 +136,96 @@ Important browser note:
 
 Node engine requirement in this repo is `>=22`.
 
+## GPU inference opt-in
+
+The racing curriculum uses the same public `Network.activate` surface as the rest
+of NeatapticTS, so you can opt a racing controller network into the WebGPU fast
+path. The opt-in contract is the same everywhere in the library:
+
+1. Attach a `GPUDevice` to the network via `network.gpuDevice`.
+2. Pass `{ useGPU: true }` when calling `network.activate`.
+
+If either choice is missing, or the network is ineligible, the call falls back
+to the optimized CPU path automatically.
+
+### Eligibility
+
+A racing controller network is eligible for the GPU path only when:
+
+- a usable WebGPU device is present and has not been lost,
+- the network stores weights as `float32`,
+- the network has no gating connections (`network.gates.length === 0`),
+- the network has no self-connections (`network.selfconns.length === 0`),
+- every computation node uses an activation function supported by the compiled
+  GPU kernel.
+
+The deterministic racing controller networks built by
+`createDeterministicRacingControllerNetwork` are feed-forward MLPs with ReLU
+hidden units, so they satisfy the structural requirements when the runtime also
+provides a compatible WebGPU device.
+
+### Where the GPU path fits in this demo
+
+The main race episode runner ticks synchronously inside the simulation worker:
+every physics step expects a controller output immediately. Because the GPU
+path returns a `Promise<Float32Array>` (GPU readback is asynchronous), the
+current worker tick loop stays on the CPU path. The helper
+`workers/simulation-worker/simulation-worker.gpu.ts` provides
+`shouldUseGPUForBatch(agentCount, network)` for batch-planning decisions: it
+returns `true` only when the batch is large enough to amortize WebGPU dispatch
+overhead and the network is structurally GPU-compatible.
+
+For standalone inference demos and browser experiments, use the GPU path
+directly:
+
+```ts
+import {
+  createDeterministicRacingControllerNetwork,
+  type SupportedObservationTier,
+} from './browser-entry/browser-entry';
+import { Network } from '../../src/browser-entry';
+
+async function runGpuRacingController(): Promise<void> {
+  const observationTier: SupportedObservationTier = 1;
+  const network = createDeterministicRacingControllerNetwork(observationTier);
+
+  const adapter = await navigator.gpu?.requestAdapter({
+    powerPreference: 'high-performance',
+  });
+  const device = await adapter?.requestDevice();
+  network.gpuDevice = device ?? undefined;
+
+  const observationWidth = network.input;
+  const observation = new Array(observationWidth)
+    .fill(0)
+    .map((_, i) => Math.sin(i * 0.5));
+
+  const output = await network.activate(observation, { useGPU: true });
+  console.log('GPU-enabled controller output:', Array.from(output));
+}
+```
+
+See [gpu-enabled-racing.example.ts](./gpu-enabled-racing.example.ts) for the
+runnable version and the esbuild command that bundles it for the browser.
+
+### Fallback and deterministic replay
+
+`network.activate` uses the CPU path automatically when:
+
+- `useGPU` is omitted or `false`,
+- `gpuDevice` is unset, `null`, or the device has been lost,
+- the network is structurally ineligible for any reason.
+
+Keep evaluation packs and deterministic replays on the CPU path. The CPU path is
+the canonical cross-platform reference: the same seed and network produce the
+same outputs everywhere. The GPU path is a performance optimization for live
+browser inference, not a second reference implementation. Expected CPU/GPU
+agreement is an absolute tolerance of `5e-1` per output value and a mean
+absolute error of `≤ 1e-1`.
+
+See the repo-level [WebGPU.md](../../WebGPU.md) guide for the full opt-in
+contract, fallback rules, and CPU-vs-GPU tolerance contract.
+
 ## Tier 1 / Tier 2 shared racing baseline
 
 Before the controller contract matters, the curriculum pins down a shared
@@ -705,8 +795,8 @@ The coevolution container resolves the controller input dimension based on the
 active tier. Tier 4 produces a 95-input / 9-output controller network:
 
 ```ts
-const TIER_FOUR_CONTROLLER_INPUT_SIZE = 95;  // 91 Tier 3 + 4 tire health
-const TIER_THREE_CONTROLLER_OUTPUT_SIZE = 9;  // 2 control + 7 radio-write
+const TIER_FOUR_CONTROLLER_INPUT_SIZE = 95; // 91 Tier 3 + 4 tire health
+const TIER_THREE_CONTROLLER_OUTPUT_SIZE = 9; // 2 control + 7 radio-write
 ```
 
 ### Tier 4 observation vector
@@ -716,7 +806,7 @@ tire-health suffix appended, producing **95 channels**:
 
 | Range      | Channels | Content                                                            |
 | ---------- | -------- | ------------------------------------------------------------------ |
-| `[0..69]`  | 70       | Tier 1 driving baseline (20 scalar + 40 look-ahead + 10 memory)   |
+| `[0..69]`  | 70       | Tier 1 driving baseline (20 scalar + 40 look-ahead + 10 memory)    |
 | `[70..90]` | 21       | Three teammate-radio slots (3 × 7 channels); unused slots zero-pad |
 | `[91..94]` | 4        | Own-car tire health `[frontLeft, frontRight, rearLeft, rearRight]` |
 
@@ -727,7 +817,7 @@ clamped to `[0, 1]`, where `1.0` means a fresh tire and `0.0` means a
 completely worn tire.
 
 The observation reflects the **pre-physics, pre-decay** state: the tire
-channels capture current health *before* this tick's degradation is applied.
+channels capture current health _before_ this tick's degradation is applied.
 That ordering lets the controller observe how worn its tires are and decide
 whether to push hard or lift off before the wear happens, not after.
 
@@ -746,7 +836,7 @@ baseDecay = |lateralForce|      * 0.00012
 ```
 
 Each tire then multiplies the base wear by a degradation-acceleration factor
-so already-damaged tires wear *faster* than fresh tires under the same load:
+so already-damaged tires wear _faster_ than fresh tires under the same load:
 
 ```
 degradationAcceleration = 1 + (1 - tireHealth) * 0.5
@@ -830,7 +920,7 @@ The packed render frame carries a compact `pitStatus` typed array that tracks
 at most one pitting car per team:
 
 ```ts
-pitStatus: Uint8Array([teamA_car, teamA_ticks, teamB_car, teamB_ticks])
+pitStatus: Uint8Array([teamA_car, teamA_ticks, teamB_car, teamB_ticks]);
 ```
 
 - **Car slots** (`[0]` and `[2]`): the car index currently in that team's
@@ -900,8 +990,16 @@ const genomes = container.getCarGenomes();
 // genomes[2].teamId === 1 (red),  genomes[3].teamId === 1 (red)
 
 // 3. Create the runnable episode with all four controllers.
-const snapshot = { snapshotId: 'tier4-demo', generation: 0, networkPayloads: [] };
-const runner = createRaceEpisodeRunner(42, snapshot, genomes.map(g => g));
+const snapshot = {
+  snapshotId: 'tier4-demo',
+  generation: 0,
+  networkPayloads: [],
+};
+const runner = createRaceEpisodeRunner(
+  42,
+  snapshot,
+  genomes.map((g) => g),
+);
 
 // 4. Step the episode. Each tick: pit lifecycle → observation → inference
 //    → grip-scaled movement → tire decay → pit entry resolution.
@@ -971,8 +1069,8 @@ network as Tier 4 — the vector shape is identical, only the number of
 genomes allocated doubles from four to six:
 
 ```ts
-const TIER_FIVE_CONTROLLER_INPUT_SIZE = 95;   // same as Tier 4
-const TIER_FIVE_CONTROLLER_OUTPUT_SIZE = 9;   // 2 control + 7 radio-write
+const TIER_FIVE_CONTROLLER_INPUT_SIZE = 95; // same as Tier 4
+const TIER_FIVE_CONTROLLER_OUTPUT_SIZE = 9; // 2 control + 7 radio-write
 ```
 
 ### Tier 5 observation vector
@@ -980,11 +1078,11 @@ const TIER_FIVE_CONTROLLER_OUTPUT_SIZE = 9;   // 2 control + 7 radio-write
 The Tier 5 observation is **byte-stable with Tier 4** — the same 95 channels
 in the same order. No channels are added, removed, or reordered:
 
-| Range      | Channels | Content                                                                                   |
-| ---------- | -------- | ----------------------------------------------------------------------------------------- |
-| `[0..69]`  | 70       | Tier 1 driving baseline (20 scalar + 40 look-ahead + 10 memory)                          |
-| `[70..90]` | 21       | Three teammate-radio slots (3 × 7 channels); Tier 5 fully populates all three rows        |
-| `[91..94]` | 4        | Own-car tire health `[frontLeft, frontRight, rearLeft, rearRight]`                        |
+| Range      | Channels | Content                                                                            |
+| ---------- | -------- | ---------------------------------------------------------------------------------- |
+| `[0..69]`  | 70       | Tier 1 driving baseline (20 scalar + 40 look-ahead + 10 memory)                    |
+| `[70..90]` | 21       | Three teammate-radio slots (3 × 7 channels); Tier 5 fully populates all three rows |
+| `[91..94]` | 4        | Own-car tire health `[frontLeft, frontRight, rearLeft, rearRight]`                 |
 
 The critical distinction is in the radio block. The 21 radio channels
 (`[70..90]`) are **already part of the 95** — Tier 5 does not add them. In
@@ -1076,19 +1174,19 @@ Two metrics are tracked per car:
 - **`blockerDelta`**: the leave-one-out contribution to the team's
   best-finishing position. Computed as
   `teamBestWithCar - teamBestWithoutCar`. A non-zero value means the car
-  *is* the team's best finisher (the queen) — removing it would worsen the
+  _is_ the team's best finisher (the queen) — removing it would worsen the
   team's best position. A zero value means removing the car does not change
   the team's best position, which is the expected signature of a blocker or
   pacer: their contribution is tactical, not positional.
 - **`inferredRole`**: a heuristic classification based on within-team
   finishing rank and team outcome:
 
-| Within-team rank | Team outcome | `inferredRole` |
-| ---------------- | ------------ | -------------- |
-| Best (lowest)    | any          | `queen`        |
-| Worst (highest)  | win or tie   | `blocker`      |
+| Within-team rank | Team outcome | `inferredRole`     |
+| ---------------- | ------------ | ------------------ |
+| Best (lowest)    | any          | `queen`            |
+| Worst (highest)  | win or tie   | `blocker`          |
 | Worst (highest)  | loss         | `undifferentiated` |
-| Mid-range        | any          | `pacer`        |
+| Mid-range        | any          | `pacer`            |
 
 The `queen` is the car with the best (lowest) individual finishing position
 on its team. The `blocker` is the worst finisher on a team that won or tied
@@ -1181,9 +1279,13 @@ team** instead of the stride-2 layout used by Tier 4:
 
 ```ts
 pitStatus: Uint8Array([
-  teamA_car, teamA_ticks, teamA_waiting,
-  teamB_car, teamB_ticks, teamB_waiting,
-])
+  teamA_car,
+  teamA_ticks,
+  teamA_waiting,
+  teamB_car,
+  teamB_ticks,
+  teamB_waiting,
+]);
 ```
 
 - **Car slots** (`[0]` and `[3]`): the car index currently in that team's
@@ -1228,8 +1330,16 @@ const genomes = container.getCarGenomes();
 // genomes[0..2].teamId === 0 (blue), genomes[3..5].teamId === 1 (red)
 
 // 3. Create the runnable episode with all six controllers.
-const snapshot = { snapshotId: 'tier5-demo', generation: 0, networkPayloads: [] };
-const runner = createRaceEpisodeRunner(42, snapshot, genomes.map(g => g));
+const snapshot = {
+  snapshotId: 'tier5-demo',
+  generation: 0,
+  networkPayloads: [],
+};
+const runner = createRaceEpisodeRunner(
+  42,
+  snapshot,
+  genomes.map((g) => g),
+);
 
 // 4. Step the episode. Each tick: pit lifecycle (6-element stride)
 //    → observation → inference → grip-scaled movement → tire decay

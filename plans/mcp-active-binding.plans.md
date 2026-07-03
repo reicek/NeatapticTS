@@ -4,48 +4,73 @@
 
 ## Current state
 
-Claim: 04-implementing @ 2026-06-28T08:15:02Z
+Claim: Agent 0 @ 2026-07-02T19:58:40Z
 
-Chrome DevTools MCP lazy-load facade fix. `lazy-facade-core.mjs` now supports a `routingMode` option (`single-tool` default / `native`). `devtools-facade.mjs` uses `routingMode: 'native'` so known MCP JSON-RPC methods (`initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list`, `prompts/get`) are forwarded as raw method calls, while unknown operations are forwarded as real-server `tools/call` calls. `cortex-facade.mjs` remains in `single-tool` mode. Windows spawn resolution was hardened so `.cmd/.ps1/.bat` wrappers are resolved absolutely with `shell: true`, falling back to the directory containing the Node executable when the wrapper is not on PATH. Focused tests were added for native routing, omitted args, and the Windows spawn fallback paths. `lazy-facade-core.mjs` coverage is 100% in statements, branches, functions, and lines.
+Active workstream tracker:
+`plans/NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md`.
+
+This plan validates and fixes the WebGPU compute path in NeatapticTS so that
+GPU inference is numerically correct and performant for NGE-scale networks.
+The current Phase 2 Step 02 [WIP] is the implementation of a correct weighted
+WebGPU forward pass after a failing red parity test proved the previous kernel
+only applied the activation function.
 
 ```yaml
 PlanUpdate:
   changed_files:
-    - scripts/agent-customization/mcp/lazy-facade-core.mjs
-    - scripts/agent-customization/mcp/devtools-facade.mjs
-    - scripts/agent-customization/mcp/__tests__/lazy-facade.red.test.ts
+    - plans/mcp-active-binding.plans.md
+  preflight: []
+  validation:
+    - command: 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/mcp-active-binding.plans.md'
+      expected_exit: 0
+      result: 'PASS — plan phase packets validate'
+  gates:
+    - 'plan-sync: PASS'
+    - 'routing-table-freshness: PASS'
+  rollback:
+    - 'git checkout -- plans/mcp-active-binding.plans.md'
+  next: 'Continue monitoring active workstream in plans/NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md; keep this binding file pointing at the current open tracker.'
+```
+
+### Slice-quality gate registration
+
+Added a new Tier-1 gate `plan-slice-quality` that enforces the 4-hour slice
+estimate limit on active [WIP] step packets. The gate is registered in
+`neataptic-gate-mcp`, the limit is also enforced inside `step-packet.gate.mjs`,
+and the oversized test fixture (`estimate_hours: 6`) was corrected to `3`.
+
+```yaml
+PlanUpdate:
+  changed_files:
+    - scripts/agent-customization/gates/plan-slice-quality.gate.mjs
+    - scripts/agent-customization/mcp/neataptic-gate-mcp.mjs
+    - scripts/agent-customization/gates/step-packet.gate.mjs
+    - scripts/agent-customization/gates/step-packet.gate.test.ts
     - plans/mcp-active-binding.plans.md
   preflight:
     - 'npx tsc --noEmit -p tsconfig.json'
     - 'npm run lint'
-    - 'npm run prettier:scripts'
+    - 'npx prettier --check <touched-files>'
   validation:
-    - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=lazy-facade'
+    - command: 'node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json'
       expected_exit: 0
-      actual_exit: 0
-      result: 'PASS — 1 suite / 59 tests passed; lazy-facade-core.mjs coverage 100/100/100/100'
-    - command: 'node scripts/agent-customization/mcp/devtools-facade.mjs --self-check --json'
+      result: 'PASS — no WIP slices exceed 4-hour limit'
+    - command: 'node scripts/agent-customization/gates/step-packet.gate.mjs --json'
       expected_exit: 0
-      actual_exit: 0
-      result: 'PASS — devtools facade self-check reports pass: true'
-    - command: 'node scripts/agent-customization/mcp/cortex-facade.mjs --self-check --json'
+      result: 'PASS — all WIP packets conform'
+    - command: 'npx jest scripts/agent-customization/gates/step-packet.gate.test.ts --no-coverage'
       expected_exit: 0
-      actual_exit: 0
-      result: 'PASS — cortex facade self-check reports pass: true'
-    - command: 'node -e "import(''./scripts/agent-customization/mcp/devtools-facade.mjs'').then(async ({ createDevtoolsFacade }) => { const facade = createDevtoolsFacade(); try { const response = await facade.dispatch({ jsonrpc: ''2.0'', id: 1, method: ''tools/call'', params: { name: ''devtools'', arguments: { operation: ''tools/list'' } } }); const tools = response.result?.tools ?? []; console.log(JSON.stringify({ toolCount: tools.length, firstFive: tools.slice(0,5).map(t=>t.name), pass: tools.length > 0 })); } finally { await facade.close(); } });"'
-      expected_exit: 0
-      actual_exit: 0
-      result: 'PASS — real chrome-devtools-mcp returned 29 tools (click, close_page, drag, emulate, evaluate_script, ...)'
+      result: 'PASS — 24 tests'
   gates:
-    - 'plan-sync: PASS (node scripts/agent-customization/gates/plan-sync.gate.mjs --json --plan=plans/mcp-active-binding.plans.md)'
-    - 'agent-graph: N/A (no delegation changes)'
-    - 'learning-event: false (no workflow gap discovered)'
+    - 'plan-sync: PASS'
+    - 'step-packet: PASS'
+    - 'plan-slice-quality: PASS'
   rollback:
-    - 'git checkout -- scripts/agent-customization/mcp/lazy-facade-core.mjs'
-    - 'git checkout -- scripts/agent-customization/mcp/devtools-facade.mjs'
-    - 'git checkout -- scripts/agent-customization/mcp/__tests__/lazy-facade.red.test.ts'
-    - 'git checkout -- plans/mcp-active-binding.plans.md'
-  next: 'Hand off to 05-green-testing for focused slice confirmation; no src/ files touched, so coverage-guard obligation is limited to the reported 100% coverage on lazy-facade-core.mjs.'
+    - 'git checkout -- scripts/agent-customization/gates/plan-slice-quality.gate.mjs'
+    - 'git checkout -- scripts/agent-customization/mcp/neataptic-gate-mcp.mjs'
+    - 'git checkout -- scripts/agent-customization/gates/step-packet.gate.mjs'
+    - 'git checkout -- scripts/agent-customization/gates/step-packet.gate.test.ts'
+  next: 'User should create PR; then 05-green-testing can verify the gate in CI if needed.'
 ```
 
 ## Purpose
@@ -160,6 +185,7 @@ boundary:
 
 ### Latest validation evidence
 
+- 2026-07-02: Added `plan-slice-quality` Tier-1 gate. Validation: `node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json` -> PASS (`pass: true`, `violations: []`, `limit: 4`); `node scripts/agent-customization/gates/step-packet.gate.mjs --json` -> PASS (`pass: true`, `violations: []`); `npx jest scripts/agent-customization/gates/step-packet.gate.test.ts --no-coverage` -> PASS (24 tests); `npm run lint` -> PASS (exit 0); `npx prettier --check <touched files>` -> PASS (exit 0).
 - 2026-05-22: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md` -> PASS (`ok: true`, `0 errors`, `0 warnings`, plan status `WIP`).
 - 2026-05-25: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md` -> PASS (`ok: true`, `0 errors`, `0 warnings`, plan status `WIP`).
 - 2026-05-25: `node scripts/agent-customization/mcp/neataptic-gate-mcp.mjs --self-check --json` -> PASS (`ok: true`, `0 errors`, `0 warnings`; `run_gate_check`, `query_tier_graph`, and `query_customization_routing_table` remained healthy after `cortex-first-search` gate registration).

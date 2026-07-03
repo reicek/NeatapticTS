@@ -160,7 +160,7 @@ function defaultSlices(stepNumber: number): Slice[] {
       title: 'Implement core behavior',
       status: '[PLANNED]',
       goal: 'implementing',
-      estimate_hours: 6,
+      estimate_hours: 3,
       files_to_change: ['TBD'],
       acceptance_criteria: ['Implementation satisfies red tests'],
       parallelizable: false,

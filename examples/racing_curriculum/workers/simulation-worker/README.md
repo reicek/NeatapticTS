@@ -579,10 +579,10 @@ Builds the smallest materializable NGE DNA envelope for a racing controller.
 
 The envelope contains one input archetype and one output archetype, each with
 a `replicate` rule pass that places `inputSize` modules at z=0 and
-`outputSize` modules at z=1. No CPPN programs are included, so the materialized
-phenotype has no edges. This is intentional for the current slice: the red tests
-only require correct `input`/`output` dimensions and a canonical envelope shape
-that polyandric reproduction can patch.
+`outputSize` modules at z=1. A single CPPN program wires the `dist` input to the
+`weight` output, which creates a sparse set of directed edges during phenotype
+materialization. Per-car distinctness is then introduced by seeding each
+materialized network and applying a deterministic weight-perturbation pass.
 
 Parameters:
 - `inputSize` - Controller network input dimension.
@@ -1501,6 +1501,102 @@ const frame = createTier5RacePack();
 resolveReadableRadioRows(frame, teamAAnchorCarIndex); // [0, 1, 2]
 resolveReadableRadioRows(frame, teamBAnchorCarIndex); // [3, 4, 5]
 ```
+
+## workers/simulation-worker/simulation-worker.gpu.ts
+
+GPU-aware controller integration for the racing-curriculum simulation worker.
+
+This module provides the worker-side decision helper that chooses when to
+pass the `useGPU` hint to {@link Network.activate}. It mirrors the Phase 2
+crossover threshold findings: in the racing-browser demo the GPU dispatch
+overhead only pays off once the batch is large enough.
+
+The module does not import the WebGPU API directly; it relies on the
+existing GPU seam in `src/architecture/network/gpu/` and on the
+`Network.activate` opt-in flag. This keeps the worker boundary thin and
+avoids duplicating device-management logic.
+
+### createGPUAwareRaceController
+
+```ts
+createGPUAwareRaceController(
+  network: default,
+  agentCount: number,
+): GPUAwareRaceController
+```
+
+Create a race controller that passes the GPU hint to {@link Network.activate}
+when the generation is large enough to justify GPU dispatch.
+
+The controller is synchronous because the racing tick loop is synchronous.
+When the GPU hint is passed but the network is not actually GPU-ready
+(missing device, lost device, ineligible structure), {@link Network.activate}
+falls back to the CPU path and returns a plain number array.
+
+Parameters:
+- `network` - Network that will drive one car.
+- `agentCount` - Total number of cars / networks in the batch. Used to
+apply the Phase 2 crossover threshold.
+
+Returns: A controller handle that internally decides whether to pass
+`useGPU: true`.
+
+### GPUAwareRaceController
+
+Synchronous controller handle returned by
+{@link createGPUAwareRaceController}.
+
+### isNetworkStructurallyGPUEligible
+
+```ts
+isNetworkStructurallyGPUEligible(
+  network: default,
+): boolean
+```
+
+Check structural GPU eligibility without requiring a live WebGPU device.
+
+Mirrors the device-independent portion of the eligibility checks used by
+the batched GPU seam so worker-side batch planning can decide before a
+device is bound.
+
+Parameters:
+- `network` - Network to inspect.
+
+Returns: True when the network has no gating, self-connections, or
+unsupported activations.
+
+### RACING_BROWSER_GPU_THRESHOLD
+
+Phase 2 crossover threshold for the racing-browser worker.
+
+Below this agent count the per-car CPU path is cheaper because the fixed
+WebGPU dispatch and readback overhead dominates. At or above the threshold
+the parallel GPU path begins to amortize that overhead.
+
+### shouldUseGPUForBatch
+
+```ts
+shouldUseGPUForBatch(
+  agentCount: number,
+  network: default,
+): boolean
+```
+
+Decide whether a racing generation batch should opt into the GPU path.
+
+The decision uses the Phase 2 racing-browser crossover threshold and a
+lightweight structural eligibility check on the representative network.
+Device readiness is intentionally checked at activation time by
+{@link Network.activate} so this predicate can be used in worker planning
+without requiring a live WebGPU device.
+
+Parameters:
+- `agentCount` - Number of cars / networks in the batch.
+- `network` - Representative network from the batch.
+
+Returns: True when the batch is large enough and the network is
+structurally GPU-compatible.
 
 ## workers/simulation-worker/simulation-worker.role-divergence.service.ts
 

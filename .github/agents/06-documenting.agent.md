@@ -11,7 +11,7 @@ tools:
     execute,
     todo,
     agent,
-    cortex,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -28,6 +28,7 @@ agents:
     'license-attribution-auditor',
     'vscode-ai-extensibility-scout',
     'helping-gap-resolution-coordinator',
+    'browser-harness-specialist',
   ]
 skills:
   [
@@ -39,6 +40,7 @@ skills:
     'updating-js-docs',
     'research-methodology',
     'execute',
+    'browser-testing-harness',
   ]
 handoffs:
   - label: 'Log Session'

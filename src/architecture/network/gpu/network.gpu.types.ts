@@ -2,7 +2,7 @@
  * Public type surface for the WebGPU inference fast path.
  *
  * The canonical WebGPU interfaces are declared ambiently in
- * `gpu.types.d.ts` so they are available to both source files and owner-local
+ * `gpu.types.d.ts` so they are available to both source files and automated
  * tests without a runtime dependency. This module re-exports the subset of
  * those names used by the device probe and capability predicate, giving
  * callers a single local import surface if they prefer explicit module
@@ -19,7 +19,7 @@ export type GPURequestAdapterOptionsType = GPURequestAdapterOptions;
  *
  * The compute kernel's bind group layout and WGSL declarations must use these
  * exact indices so the shader reads the uploaded arrays in the order produced
- * by {@link uploadNetworkToGPU}. Keeping the mapping in one exported table
+ * by `uploadNetworkToGPU`. Keeping the mapping in one exported table
  * prevents drift between the upload path and the kernel.
  *
  * @example
@@ -32,25 +32,28 @@ export const GPU_BUFFER_BINDING = {
   from: 1,
   to: 2,
   flags: 3,
-  outStart: 4,
-  outOrder: 5,
+  inStart: 4,
+  inOrder: 5,
   outputs: 6,
+  bias: 7,
+  topoLevels: 8,
+  params: 9,
 } as const;
 
 /**
  * Names of the slab buffers that participate in the GPU upload contract.
  *
- * Each name maps to a stable binding index in {@link GPU_BUFFER_BINDING}.
+ * Each name maps to a stable binding index in `GPU_BUFFER_BINDING`.
  */
 export type GPUBufferName = keyof typeof GPU_BUFFER_BINDING;
 
 /**
- * Number of storage-buffer bindings used by the GPU forward-pass kernel.
+ * Number of bindings used by the GPU forward-pass kernel.
  *
- * This count matches the length of {@link GPU_BUFFER_BINDING} and the number
+ * This count matches the length of `GPU_BUFFER_BINDING` and the number
  * of entries in the kernel bind-group layout.
  */
-export const GPU_BUFFER_BINDING_COUNT = 7;
+export const GPU_BUFFER_BINDING_COUNT = 10;
 
 /**
  * Pipeline cache scoped to one WebGPU device.
