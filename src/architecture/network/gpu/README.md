@@ -259,21 +259,6 @@ Parameters:
 Returns: The corresponding worker index, or `undefined` when the function is
 not part of the canonical registry.
 
-### writeInputValues
-
-```ts
-writeInputValues(
-  device: GPUDevice,
-  bufferSet: GPUBufferSet,
-  inputs: Float32Array<ArrayBufferLike>,
-): void
-```
-
-Write the input vector into the first `network.input` slots of the GPU
-node struct array. The `activation_state` field lives at offset zero of each
-node struct, so the input values become the source activations for the first
-hidden level.
-
 ## architecture/network/gpu/network.gpu.fallback.ts
 
 Transparent CPU fallback and GPU eligibility predicate.
@@ -627,10 +612,10 @@ Build the WGSL source for the struct-packed forward-pass activation kernel.
 
 The shader exposes four bindings: a read-only connection struct array, a
 read-write node struct array, a read-write output array, and a per-dispatch
-params uniform. The incoming-CSR offsets/order and the per-node topological
-level are baked into the shader as constants, which is what keeps the binding
-count at four instead of ten. One thread is dispatched per node and threads
-that do not belong to the current level early-exit.
+params uniform. The incoming-CSR offsets and the per-node topological level
+are baked into the shader as constants, which is what keeps the binding count
+at four instead of ten. One thread is dispatched per node and threads that
+do not belong to the current level early-exit.
 
 Parameters:
 - `network` - Network whose activation index, topology, and slab arrays
@@ -700,18 +685,25 @@ all use the same numeric index for the same activation.
 
 ```ts
 buildConnectionsArray(
-  slab: ConnectionSlab,
+  network: default,
+  connectionCount: number,
 ): ArrayBuffer
 ```
 
 Pack the connection slab into one contiguous struct array.
 
 Each connection is laid out as `{ from_node: u32, to_node: u32, weight: f32,
-flags: u32 }`. The flags byte is copied verbatim so the kernel can skip
-disabled connections without a separate flags buffer.
+flags: u32 }`. Connections are sorted by `(target_node, source_topological_rank)`
+so that each target node's incoming slice `[inStart[node], inStart[node+1])`
+is iterated in the same source-node order the CPU fast-slab path uses. Because
+f32 summation is order-dependent, matching the accumulation order gives the
+GPU gather kernel the same rounded result as the CPU push path instead of
+relying on looser tolerances.
 
 Parameters:
-- `slab` - Connection slab with `from`, `to`, `weights`, and `flags`.
+- `network` - Network whose nodes and connection slab will be packed.
+- `connectionCount` - Number of active connections to pack. The slab may
+over-allocate, so only this many entries are uploaded.
 
 Returns: An `ArrayBuffer` ready for `queue.writeBuffer`.
 
@@ -777,6 +769,33 @@ Parameters:
 - `connectionCount` - Number of connections in the network.
 
 Returns: Outgoing CSR offsets and connection order arrays.
+
+### buildSourceTopoRanks
+
+```ts
+buildSourceTopoRanks(
+  network: default,
+  slab: ConnectionSlab,
+  nodeCount: number,
+  connectionCount: number,
+): Uint32Array<ArrayBufferLike>
+```
+
+Compute the source-node topological rank used to order GPU incoming edges.
+
+The CPU fast-slab path accumulates outgoing activations by walking nodes in
+topological order (all level-0 nodes in stable tie-break order, then level-1,
+and so on). By sorting each target node's incoming slice by the source's rank
+in that same order, the GPU gather kernel sums the exact same f32 terms in the
+exact same order, eliminating cross-path rounding drift.
+
+Parameters:
+- `network` - Network whose nodes supply the stable tie-break values.
+- `slab` - Connection slab with `from`/`to` source/target arrays.
+- `nodeCount` - Number of nodes in the network.
+- `connectionCount` - Number of connections in the network.
+
+Returns: Per-node rank in the CPU-equivalent topological walk.
 
 ### buildTopoLevels
 
@@ -855,6 +874,31 @@ non-negative.
 
 Returns: A freshly created `GPUBuffer` with the mandatory usage bits set.
 
+### createGPUUniformBuffer
+
+```ts
+createGPUUniformBuffer(
+  device: GPUDevice,
+  byteLength: number,
+  label: string,
+): GPUBuffer
+```
+
+Create a WebGPU uniform buffer that can receive `queue.writeBuffer` uploads.
+
+The network parameter buffer is bound as a uniform because it is tiny
+(a few scalar uniforms) and read once per workgroup. Uniform buffers are
+limited by `maxUniformBufferBindingSize`, which is much smaller than the
+storage-buffer limit, so this helper validates against the correct limit.
+
+Parameters:
+- `device` - WebGPU device used to allocate the buffer.
+- `byteLength` - Desired buffer size in bytes. Must be finite and
+non-negative.
+- `label` - Debug label attached to the buffer.
+
+Returns: A freshly created `GPUBuffer` with `UNIFORM | COPY_DST` usage.
+
 ### destroyGPUBufferSet
 
 ```ts
@@ -871,6 +915,15 @@ Parameters:
 kept in the signature for API symmetry).
 - `bufferSet` - Buffer set returned by `uploadNetworkToGPU`.
 
+### GPU_NODE_STRUCT_BYTES
+
+Byte stride of one node struct on the GPU.
+
+The WGSL `Node` struct is `{ activation_state: f32, derivative_state: f32,
+error: f32, flags: u32 }`, which is 16 bytes after alignment. Reading a node
+fetches its state, bias (packed into the derivative slot for the forward
+pass), error, and flags in one contiguous read.
+
 ### GPUBufferSet
 
 GPU-side buffer handles and metadata produced by uploading a network slab.
@@ -879,6 +932,25 @@ The implementation creates exactly four WebGPU buffers and records
 `nodeCount`/`connectionCount` so the compute pipeline can size its dispatches
 without re-reading CPU structures. The `topoLevelsArray` is kept here because
 the CPU dispatch loop still needs to know how many levels to launch.
+
+### resolveStableNodeTieBreak
+
+```ts
+resolveStableNodeTieBreak(
+  node: default,
+): number
+```
+
+Resolve the deterministic tie-break scalar used by the CPU topological sort.
+
+The CPU fast-slab path emits nodes in Kahn order and sorts each zero-in-degree
+wave with this same rule, so matching it exactly lets the GPU pack incoming
+edges in the same source-node order.
+
+Parameters:
+- `node` - Node whose stable gene id or index will be read.
+
+Returns: Deterministic scalar for ordering.
 
 ### uploadDynamicNetworkBuffers
 
@@ -926,6 +998,30 @@ Parameters:
 - `network` - Network whose fast-slab layout will be uploaded.
 
 Returns: Handles for the uploaded slab buffers and network metadata.
+
+### writeInputValuesToNodeStruct
+
+```ts
+writeInputValuesToNodeStruct(
+  device: GPUDevice,
+  nodesBuffer: GPUBuffer,
+  inputs: Float32Array<ArrayBufferLike>,
+): void
+```
+
+Write input activations into the `activation_state` slot of the first
+`inputs.length` node structs.
+
+The WGSL `Node` struct stores `activation_state` at byte offset zero of each
+16-byte struct, so input node `i` must be written at `i * GPU_NODE_STRUCT_BYTES`
+rather than at `i * Float32Array.BYTES_PER_ELEMENT`. Centralising this logic in
+one helper prevents contiguous-write bugs when multiple upload paths need to
+seed the node buffer with input values.
+
+Parameters:
+- `device` - WebGPU device whose queue will perform the write.
+- `nodesBuffer` - GPU node buffer created by `uploadNetworkToGPU`.
+- `inputs` - Input vector to scatter into the node struct array.
 
 ## architecture/network/gpu/network.gpu.batched.ts
 

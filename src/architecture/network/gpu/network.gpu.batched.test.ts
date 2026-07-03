@@ -1,6 +1,7 @@
 import Network from '../network';
 import { ACTIVATION_FUNCTIONS } from '../../../multithreading/multi.utils';
 import { batchActivate } from './network.gpu.batched';
+import { GPU_NODE_STRUCT_BYTES } from './network.gpu.buffer';
 import { createMockGPUDevice } from './__mocks__/gpu.mock';
 
 describe('network.gpu.batched', () => {
@@ -60,7 +61,7 @@ describe('network.gpu.batched', () => {
         inputMatrix,
       );
 
-      const inputByteLength = network.input * Float32Array.BYTES_PER_ELEMENT;
+      const inputByteLength = Float32Array.BYTES_PER_ELEMENT;
       const inputWrites = device.recorded.writeBuffers.filter(
         (record) =>
           (record.buffer as unknown as { label?: string }).label ===
@@ -71,12 +72,18 @@ describe('network.gpu.batched', () => {
         0,
       );
 
+      const allOffsetsAligned = inputWrites.every(
+        (record) => record.offset % GPU_NODE_STRUCT_BYTES === 0,
+      );
+
       expect({
         writeCount: inputWrites.length,
         totalBytes,
+        allOffsetsAligned,
       }).toEqual({
-        writeCount: batchSize,
-        totalBytes: batchSize * inputByteLength,
+        writeCount: batchSize * network.input,
+        totalBytes: batchSize * network.input * inputByteLength,
+        allOffsetsAligned: true,
       });
     });
 

@@ -9,6 +9,7 @@
 
 import type Network from '../../network';
 import { GPU_BUFFER_BINDING } from '../network.gpu.types';
+import { GPU_NODE_STRUCT_BYTES } from '../network.gpu.buffer';
 
 /**
  * Context supplied to the optional per-dispatch output generator.
@@ -451,10 +452,24 @@ export function createMockGPUDevice(
               nodesEntry && hasMockData(nodesEntry.resource.buffer)
                 ? (nodesEntry.resource.buffer as unknown as MockBuffer).__data
                 : outBuffer.__data;
-            const inputArray = new Float32Array(nodeBuffer, 0, inputCount);
-            const cpuOutput = emulateNetwork.activate(Array.from(inputArray));
+            const inputs = new Array<number>(inputCount);
+            if (nodesEntry && hasMockData(nodesEntry.resource.buffer)) {
+              const nodesView = new DataView(nodeBuffer);
+              for (let i = 0; i < inputCount; i += 1) {
+                inputs[i] = nodesView.getFloat32(
+                  i * GPU_NODE_STRUCT_BYTES,
+                  true,
+                );
+              }
+            } else {
+              const fallbackArray = new Float32Array(nodeBuffer, 0, inputCount);
+              for (let i = 0; i < inputCount; i += 1) {
+                inputs[i] = fallbackArray[i] ?? 0;
+              }
+            }
+            const cpuOutput = emulateNetwork.activate(inputs);
             const outputArray = new Float32Array(outBuffer.__data);
-            for (let i = 0; i < outputCount; i++) {
+            for (let i = 0; i < outputCount; i += 1) {
               outputArray[nodeCount - outputCount + i] = cpuOutput[i];
             }
           } else if (generateOutput) {

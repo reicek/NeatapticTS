@@ -26,7 +26,347 @@ plan conflicts, the upstream plan wins.
 
 ## Current state
 
-Claim: 04-implementing @ 2026-07-03T09:52:04-04:00
+Claim: 04-implementing @ 2026-07-03T12:02:05-04:00
+
+- **Slice `02-01a-buffer` loop-back iteration 9 applied by `04-implementing`.**
+  - Fixes the last remaining failing test after loop-back-8: `network.gpu.batched.test.ts:77 uploads one input row per network to the GPU`.
+  - Root cause: the upload assertion still expected the old contiguous write pattern (`network.input * 4` bytes per row in a single write), but loop-back-8 introduced the shared `writeInputValuesToNodeStruct` helper, which scatters each input value as a separate 4-byte struct-stride write at `index * GPU_NODE_STRUCT_BYTES`.
+  - Fix: updated the test assertion in `src/architecture/network/gpu/network.gpu.batched.test.ts` to:
+    1. Count individual 4-byte writes to the `network_nodes` buffer (`byteLength === Float32Array.BYTES_PER_ELEMENT`).
+    2. Expect `writeCount = batchSize * network.input` and `totalBytes = batchSize * network.input * 4`.
+    3. Verify every matched write offset is aligned to `GPU_NODE_STRUCT_BYTES`.
+  - Source files: none changed (implementation in loop-back-8 is correct; parity tests pass).
+  - Touched test files: `src/architecture/network/gpu/network.gpu.batched.test.ts`.
+  - Preflight: `npx tsc --noEmit -p tsconfig.json`: OK (exit 0). `npm run lint`: OK (exit 0, 0 issues). `npx prettier --write src/architecture/network/gpu/network.gpu.batched.test.ts`: OK (file unchanged, already formatted). `git status --porcelain`: shows only expected prior slice edits plus the test-file change.
+
+```yaml
+PlanUpdate:
+  slice_id: '02-01a-buffer-loopback-9'
+  parent_slice_id: '02-01a-buffer'
+  changed_files:
+    - src/architecture/network/gpu/network.gpu.batched.test.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --write src/architecture/network/gpu/network.gpu.batched.test.ts'
+  tests_for_green:
+    - 'npx jest src/architecture/network/gpu/ --no-coverage'
+  rollback:
+    - 'git checkout -- src/architecture/network/gpu/network.gpu.batched.test.ts'
+  next: 'Run 05-green-testing focused GPU slice, record coverage-guard evidence, then validate on a real visible browser window before marking 02-01a-buffer-loopback-9 [DONE]'
+```
+
+- 2026-07-03T12:04-04:00: **05-green-testing FINAL validation for slice `02-01a-buffer` loop-back-9 — OK / GREEN.**
+  - All acceptance criteria met; see `## Latest validation evidence` for the complete gate evidence.
+  - Slice status: `[DONE]`.
+
+```json
+{
+  "pass": true,
+  "slice_id": "02-01a-buffer-loopback-9",
+  "evidence": {
+    "focused_gpu_jest": {
+      "suites": "10 passed / 0 failed / 10 total",
+      "tests": "137 passed / 0 failed / 137 total"
+    },
+    "coverage_summary": {
+      "all_gpu_source_files": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      }
+    },
+    "real_gpu_validation": {
+      "browserVisibility": "visible-foreground",
+      "gpuAdapterInfo": { "vendor": "nvidia", "architecture": "lovelace" },
+      "maxAbsDiff": 3.955205907235637e-8,
+      "meanAbsDiff": 2.1190035795481954e-8,
+      "gpuDeviceBound": true,
+      "scenarioUrl": "http://localhost:8080/docs/browser-tests/webgpu-inference-smoke.html"
+    },
+    "tier1_gates": {
+      "plan-sync": "PASS",
+      "agent-graph": "PASS",
+      "learning-event": "PASS"
+    },
+    "preflight": {
+      "tsc": "OK (exit 0)",
+      "lint": "OK (exit 0, 0 issues)"
+    }
+  },
+  "fixHint": null,
+  "owner": "05-green-testing"
+}
+```
+
+- **Slice `02-01a-buffer` loop-back iteration 8 applied by `04-implementing`.**
+  - Fixes the last remaining failing test: `network.gpu.batched.test.ts:148 batchActivate matches CPU reference output for each input row`.
+  - Root cause: `batchActivate` in `network.gpu.batched.ts` wrote each input row contiguously into the node buffer starting at byte offset `0`, but the WGSL `Node` struct places `activation_state` at 16-byte stride (`GPU_NODE_STRUCT_BYTES`). Input nodes beyond index 0 therefore read stale/corrupted values.
+  - Fix:
+    1. Extracted a shared helper `writeInputValuesToNodeStruct` in `network.gpu.buffer.ts` that scatters each input value into its node's `activation_state` slot at `index * GPU_NODE_STRUCT_BYTES`.
+    2. Replaced the local `writeInputValues` function in `network.gpu.activate.ts` with the shared helper.
+    3. Replaced the contiguous `device.queue.writeBuffer(bufferSet.nodes, 0, inputSlice, ...)` call in `network.gpu.batched.ts` with the shared helper.
+  - Verified that the remaining node-buffer write sites (`uploadNetworkToGPU` and `uploadDynamicNetworkBuffers`) already write the full struct-packed node array and do not need the strided helper.
+  - Touched source files: `src/architecture/network/gpu/network.gpu.buffer.ts`, `src/architecture/network/gpu/network.gpu.activate.ts`, `src/architecture/network/gpu/network.gpu.batched.ts`.
+  - Touched test files: none.
+  - Preflight: `npx tsc --noEmit -p tsconfig.json`: OK (exit 0). `npm run lint`: OK (exit 0, 0 issues). `npx prettier --write <changed-files>`: OK. `npm run docs`: OK (exit 0).
+
+```yaml
+PlanUpdate:
+  slice_id: '02-01a-buffer-loopback-8'
+  parent_slice_id: '02-01a-buffer'
+  changed_files:
+    - src/architecture/network/gpu/network.gpu.buffer.ts
+    - src/architecture/network/gpu/network.gpu.activate.ts
+    - src/architecture/network/gpu/network.gpu.batched.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --write src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.batched.ts plans/NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md'
+    - 'npm run docs'
+  tests_for_green:
+    - 'npx jest src/architecture/network/gpu/ --no-coverage'
+  rollback:
+    - 'git checkout -- src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.batched.ts'
+  next: 'Run 05-green-testing focused GPU slice, record coverage-guard evidence, then validate on a real visible browser window before marking 02-01a-buffer-loopback-8 [DONE]'
+```
+
+- **05-green-testing validation result for loop-back-8 (2026-07-03T11:58-04:00): NOT OK.**
+  - Focused GPU Jest: 1 failed suite / 1 failed test / 9 passed suites / 136 passed tests.
+  - `network.gpu.batched.test.ts:77 uploads one input row per network to the GPU` expected `writeCount: 3, totalBytes: 24` but received `writeCount: 0, totalBytes: 0`.
+  - Root cause: the test filters `device.recorded.writeBuffers` for records whose `byteLength === inputByteLength` (`network.input * Float32Array.BYTES_PER_ELEMENT`). The new shared helper `writeInputValuesToNodeStruct` writes each input value as a separate 4-byte struct-stride write (`byteLength = Float32Array.BYTES_PER_ELEMENT`), so the filter no longer matches any records.
+  - The CPU-vs-GPU parity test (`network.gpu.batched.test.ts:111`) and `network.gpu.parity-large.red.test.ts` both pass under tight tolerances.
+  - Preflight checks already confirmed by 04-implementing: `npx tsc --noEmit -p tsconfig.json` OK; `npm run lint` OK (0 issues); `npx prettier --write` OK; `npm run docs` OK.
+  - Coverage guard: all GPU source files at 100% statements/branches/functions/lines, including `network.gpu.buffer.ts` (`writeInputValuesToNodeStruct` fully covered).
+  - Real visible-window GPU validation: **NOT RUN** — focused Jest gate failed first.
+  - Tier-1 gate checks: plan-sync pass; agent-graph pass; learning-event pass (new gate exception recorded).
+  - Learning event recorded: `green-validation-gates-slice-02-01a-buffer-loopback-8`.
+  - Slice-level gate evidence:
+
+  ```json
+  {
+    "pass": false,
+    "slice_id": "02-01a-buffer-loopback-8",
+    "evidence": {
+      "focused_gpu_jest": {
+        "suites": "9 passed / 1 failed / 10 total",
+        "tests": "136 passed / 1 failed / 137 total",
+        "failed": [
+          "src/architecture/network/gpu/network.gpu.batched.test.ts:77 uploads one input row per network to the GPU — expected writeCount=3 totalBytes=24, actual writeCount=0 totalBytes=0"
+        ]
+      },
+      "coverage_summary": {
+        "all_gpu_source_files": "100/100/100/100"
+      },
+      "real_gpu_validation": "not run — focused Jest gate failed first",
+      "tier1_gates": {
+        "plan_sync": "pass",
+        "agent_graph": "pass",
+        "learning_event": "pass"
+      }
+    },
+    "fixHint": "Update network.gpu.batched.test.ts:51 to assert the struct-stride scatter pattern used by writeInputValuesToNodeStruct: each input row produces network.input separate writeBuffer calls (one per input value, byteLength = Float32Array.BYTES_PER_ELEMENT, offset = index * GPU_NODE_STRUCT_BYTES). Then re-run focused GPU Jest and real visible-window GPU validation.",
+    "owner": "05-green-testing"
+  }
+  ```
+
+  - Suggested next step: dispatch `04-implementing` with a `slice-fix` packet targeting `src/architecture/network/gpu/network.gpu.batched.test.ts:51` to align the upload assertion with the struct-stride helper contract, then re-run `05-green-testing`.
+
+- **Slice `02-01a-buffer` loop-back iteration 5 applied by `04-implementing`.**
+  - Rejects the tolerance relaxation from loop-back-4; tight tolerances (`maxAbsDiff 1e-3`, `meanAbsDiff 1e-4`) are restored as the binding acceptance criteria.
+  - Root cause: the GPU connection struct buffer was grouped by target node but the within-target order was raw connection-index order, while the CPU fast-slab path accumulates each target's incoming weighted activations in source-topological order. f32 summation is non-associative, so the ordering mismatch caused bounded drift that widens with layer size.
+  - Fix:
+    1. `buildConnectionsArray` now accepts the full `Network` (so it can read stable node tie-breaks) and sorts each target node's incoming CSR slice by the source node's topological rank before packing the struct buffer.
+    2. A new helper `buildSourceTopoRanks` computes ranks equivalent to the CPU Kahn topological walk: `(topological_level, stable_tie_break)` where the stable tie-break matches `resolveStableNodeTieBreak` used by the canonical CPU topo sort (`geneId`, then `node.index`).
+    3. `uploadNetworkToGPU` and `uploadDynamicNetworkBuffers` were updated to call the new `buildConnectionsArray(network, connectionCount)` signature.
+    4. The WGSL kernel does not change because it already iterates each node's incoming slice via `inStart`; the slice boundaries are unchanged and the per-target sort only reorders entries inside each slice.
+    5. `network.gpu.parity-large.red.test.ts` reverted the tolerances to `MAX_ABS_TOLERANCE = 1e-3` and `MEAN_ABS_TOLERANCE = 1e-4`, with a comment explaining that the ordering fix makes the two paths sum identical terms in identical order.
+  - Touched source files: `network.gpu.buffer.ts`.
+  - Touched test files: `network.gpu.parity-large.red.test.ts`.
+  - Preflight: `npx tsc --noEmit -p tsconfig.json`: OK (exit 0). `npm run lint`: OK (exit 0, 0 issues). `npx prettier --check src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.parity-large.red.test.ts`: OK (exit 0).
+
+```yaml
+PlanUpdate:
+  slice_id: '02-01a-buffer-loopback-5'
+  parent_slice_id: '02-01a-buffer'
+  changed_files:
+    - src/architecture/network/gpu/network.gpu.buffer.ts
+    - src/architecture/network/gpu/network.gpu.parity-large.red.test.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --check src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.parity-large.red.test.ts'
+  tests_for_green:
+    - 'npx jest src/architecture/network/gpu/ --no-coverage'
+  rollback:
+    - 'git checkout -- src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.parity-large.red.test.ts'
+  next: 'Run 05-green-testing focused GPU slice, record coverage-guard evidence, then validate on a real visible browser window before marking 02-01a-buffer-loopback-5 [DONE]'
+```
+
+- **05-green-testing validation result for loop-back-5 (2026-07-03T12:00-04:00): NOT OK.**
+  - Focused GPU Jest: 1 failed suite / 2 failed tests / 9 passed suites / 132 passed tests.
+  - `network.gpu.parity-large.red.test.ts` still exceeds tight tolerances: `maxAbsDiff ≈ 0.00237` (threshold `1e-3`), `meanAbsDiff ≈ 0.00264` (threshold `1e-4`).
+  - Preflight checks: `npx tsc --noEmit -p tsconfig.json` OK; `npm run lint` OK (0 issues).
+  - Coverage guard: all touched GPU source files at 100% across statements/branches/functions/lines except `network.gpu.buffer.ts` (`98.36 / 89.79 / 100 / 98.22`, uncovered lines `322-326` in `resolveStableNodeTieBreak`).
+  - Real visible-window GPU validation: PASS on NVIDIA Lovelace, `browserVisibility: visible-foreground`, `maxAbsDiff ≈ 1.28e-5`, `meanAbsDiff ≈ 1.28e-5`, GPU device bound and pipeline compiled without validation errors.
+  - Tier-1 gate checks: plan-sync not re-run for this plan file; agent-graph/skill/flow gates were not triggered because no `.github/` customization changed in this slice.
+  - Learning event recorded: `green-validation-gates-slice-02-01a-buffer-loopback-5`.
+  - Slice-level gate evidence:
+
+```json
+{
+  "pass": false,
+  "slice_id": "02-01a-buffer-loopback-5",
+  "evidence": {
+    "focused_gpu_jest": {
+      "suites": "9 passed / 1 failed / 10 total",
+      "tests": "132 passed / 2 failed / 134 total",
+      "failed": [
+        "src/architecture/network/gpu/network.gpu.parity-large.red.test.ts:65 keeps per-element absolute difference below 1e-3",
+        "src/architecture/network/gpu/network.gpu.parity-large.red.test.ts:75 keeps mean absolute difference below 1e-4"
+      ]
+    },
+    "coverage_summary": {
+      "network.gpu.buffer.ts": {
+        "statements": 98.36,
+        "branches": 89.79,
+        "functions": 100,
+        "lines": 98.22,
+        "uncovered_lines": "322-326"
+      },
+      "network.gpu.activate.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      "network.gpu.batched.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      "network.gpu.capability.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      "network.gpu.kernel.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      "network.gpu.types.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      }
+    },
+    "real_gpu_validation": {
+      "success": true,
+      "browserVisibility": "visible-foreground",
+      "gpuAdapterInfo": { "vendor": "nvidia", "architecture": "lovelace" },
+      "maxAbsDiff": 0.000012776158321181619,
+      "meanAbsDiff": 0.000012776158321181619,
+      "gpuDeviceBound": true
+    },
+    "preflight": { "tsc": "pass", "lint": "pass" }
+  },
+  "fixHint": "The mock-vs-CPU parity drift persists above tight tolerances on the 10-64-4 MLP, and network.gpu.buffer.ts branch coverage is below 100% because resolveStableNodeTieBreak's index/MAX_SAFE_INTEGER branches are not exercised. Add owner-local tests for the geneId-less and fallback tie-break cases (or remove the branches if truly unreachable), and continue investigating why the source-topological reorder does not make the mock accumulate in the same order as the CPU fast-slab path.",
+  "owner": "05-green-testing",
+  "suggested_next_agent": "04-implementing"
+}
+```
+
+- **Slice `02-01a-buffer` loop-back iteration 6 applied by `04-implementing`.**
+  - Targets the two remaining failures from green-testing loopback-5:
+    1. `network.gpu.parity-large.red.test.ts` tolerance failures (`maxAbsDiff ~0.00445`, `meanAbsDiff ~0.00371`). Root cause: `writeInputValues` in `network.gpu.activate.ts` wrote the input `Float32Array` sequentially at byte offset `0`, but the WGSL `Node` struct buffer places each node's `activation_state` 16 bytes apart, so input nodes beyond index 0 read stale/corrupted values. The real GPU path uses the same node buffer, so the alignment bug affected both mock and hardware.
+    2. `network.gpu.buffer.ts` branch coverage gap at `resolveStableNodeTieBreak` lines 322-326 (fallback to `node.index` and `Number.MAX_SAFE_INTEGER`).
+  - Fix:
+    1. `writeInputValues` now writes each input element into the corresponding node's `activation_state` slot at `index * GPU_NODE_STRUCT_BYTES`. `GPU_NODE_STRUCT_BYTES` is now exported from `network.gpu.buffer.ts` so `activate.ts` and the buffer module share one source of truth.
+    2. Added owner-local tests in `network.gpu.buffer.test.ts` for `resolveStableNodeTieBreak` when `geneId` is missing (falls back to `node.index`) and when both `geneId` and `index` are missing (falls back to `Number.MAX_SAFE_INTEGER`). Added a test that calls `uploadDynamicNetworkBuffers` to cover the remaining dynamic-upload lines.
+  - Result: `network.gpu.parity-large.red.test.ts` now passes on the mock path with tight tolerances (`maxAbsDiff < 1e-3`, `meanAbsDiff < 1e-4`). `network.gpu.buffer.ts` reaches 100% statements/branches/functions/lines under the focused buffer test suite.
+  - Touched source files: `src/architecture/network/gpu/network.gpu.activate.ts`, `src/architecture/network/gpu/network.gpu.buffer.ts` (exported `GPU_NODE_STRUCT_BYTES`).
+  - Touched test files: `src/architecture/network/gpu/network.gpu.buffer.test.ts`.
+  - Preflight: `npx tsc --noEmit -p tsconfig.json`: OK (exit 0). `npm run lint`: OK (exit 0, 0 issues). `npx prettier --check src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.buffer.test.ts`: OK (exit 0). `npm run quality:folder -- --folder=src/architecture/network/gpu`: pre-existing scanner quirk (`Cannot find name 'GPU'`); full `tsc` and `tsc -p tsconfig.test.json` both pass.
+  - Re-verified after context reload: `tsc -p tsconfig.json` OK, `tsc -p tsconfig.test.json` OK, `lint` OK, `prettier` OK, `plan-sync` pass.
+
+```yaml
+PlanUpdate:
+  slice_id: '02-01a-buffer-loopback-6'
+  parent_slice_id: '02-01a-buffer'
+  changed_files:
+    - src/architecture/network/gpu/network.gpu.activate.ts
+    - src/architecture/network/gpu/network.gpu.buffer.ts
+    - src/architecture/network/gpu/network.gpu.buffer.test.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --check src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.buffer.test.ts'
+  tests_for_green:
+    - 'npx jest src/architecture/network/gpu/ --no-coverage'
+  rollback:
+    - 'git checkout -- src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.buffer.test.ts'
+  next: 'Run 05-green-testing focused GPU slice, record coverage-guard evidence, then validate on a real visible browser window before marking 02-01a-buffer-loopback-6 [DONE]'
+```
+
+- **05-green-testing validation result for loop-back-6 (2026-07-03T11:17-04:00): NOT OK.**
+  - Focused GPU Jest: 9 passed suites / 1 failed suite / 135 passed tests / 2 failed tests / 137 total.
+  - `network.gpu.parity-large.red.test.ts`: PASS (tight tolerances restored: maxAbsDiff < 1e-3, meanAbsDiff < 1e-4).
+  - `network.gpu.buffer.ts`: 100% statements / 100% branches / 100% functions / 100% lines.
+  - Failing tests:
+    1. `src/architecture/network/gpu/network.gpu.activate.coverage.test.ts:193` — behaviour-match wrapper parity exceeded 1e-6 (received maxAbsDiff ≈ 1.10e-5).
+    2. `src/architecture/network/gpu/network.gpu.activate.coverage.test.ts:206` — emulated CPU output mismatch (expected 0.510340690612793, received 0.5102642178535461).
+  - Root cause observed: `__mocks__/gpu.mock.ts` `emulateNetwork` path reads the input vector as a contiguous `Float32Array(nodeBuffer, 0, inputCount)`, but the new struct-packed node buffer writes each input value to `activation_state` at stride `GPU_NODE_STRUCT_BYTES` (16 bytes). The mock must gather the strided `activation_state` slots instead.
+  - Real visible-window GPU validation: PASS (NVIDIA Lovelace, visible-foreground, maxAbsDiff ≈ 1.03e-8, meanAbsDiff ≈ 1.03e-8, gpuDeviceBound: true).
+  - Tier-1 gate checks: plan-sync pass, agent-graph pass, learning-event pass.
+  - Slice-level gate evidence:
+
+```json
+{
+  "pass": false,
+  "slice_id": "02-01a-buffer-loopback-6",
+  "evidence": {
+    "focused_gpu_jest": {
+      "suites": "9 passed / 1 failed / 10 total",
+      "tests": "135 passed / 2 failed / 137 total",
+      "failed": [
+        "src/architecture/network/gpu/network.gpu.activate.coverage.test.ts:193 resolves a thin wrapper around a built-in activation by behaviour match",
+        "src/architecture/network/gpu/network.gpu.activate.coverage.test.ts:206 returns emulated CPU outputs when useGPU is true and a device is attached"
+      ]
+    },
+    "coverage_summary": {
+      "network.gpu.buffer.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      }
+    },
+    "real_gpu_validation": {
+      "success": true,
+      "browserVisibility": "visible-foreground",
+      "gpuAdapterInfo": { "vendor": "nvidia", "architecture": "lovelace" },
+      "maxAbsDiff": 1.0309206044389896e-8,
+      "meanAbsDiff": 1.0309206044389896e-8,
+      "gpuDeviceBound": true
+    },
+    "preflight": { "tsc": "pass", "lint": "pass" },
+    "tier1_gates": {
+      "plan-sync": "pass",
+      "agent-graph": "pass",
+      "learning-event": "pass"
+    }
+  },
+  "fixHint": "Update __mocks__/gpu.mock.ts so the emulateNetwork path reads input activations from the struct-packed node buffer at stride GPU_NODE_STRUCT_BYTES (16 bytes) instead of as a contiguous Float32Array. The computeMockForwardPass path already uses nodes[connection.fromNode * 4] and is correct; only the emulateNetwork branch needs alignment.",
+  "owner": "05-green-testing",
+  "suggested_next_agent": "04-implementing"
+}
+```
 
 - **Confirmed design change:** A visible-browser GPU probe on this machine (NVIDIA Lovelace adapter) returned `maxStorageBuffersPerShaderStage = 10`. Requesting `requiredLimits: { maxStorageBuffersPerShaderStage: 16 }` fails with "Required limit (16) is greater than the supported limit (10)". The WebGPU spec default guaranteed minimum is 8.
 - **New target layout:** The kernel must pack connection and node data into struct buffers, using exactly 4 storage buffers: (1) connections struct `{from_node, to_node, weight, flags}`, (2) nodes struct `{activation_state, derivative_state, error, flags}`, (3) constants/uniform metadata, and (4) output buffer. No `requiredLimits` request for `maxStorageBuffersPerShaderStage` is needed because 4 < 8.
@@ -187,6 +527,86 @@ PlanUpdate:
 
 green-light: true
 status: green-light
+
+- 2026-07-03T12:04-04:00: **05-green-testing FINAL validation for slice `02-01a-buffer` loop-back-9 — OK / GREEN.**
+  - Focused GPU Jest: `npx jest src/architecture/network/gpu/ --coverage --collectCoverageFrom='src/architecture/network/gpu/*.ts' --no-cache` → 10 suites passed, 137 tests passed, 0 failures.
+    - `network.gpu.batched.test.ts`: PASS (the previously failing `uploads one input row per network to the GPU` now matches the struct-stride scatter contract).
+    - `network.gpu.parity-large.red.test.ts`: PASS with strict tolerances (`MAX_ABS_TOLERANCE = 1e-3`, `MEAN_ABS_TOLERANCE = 1e-4`).
+  - TypeScript: `npx tsc --noEmit -p tsconfig.json` → OK (exit 0).
+  - Lint: `npm run lint` → OK (exit 0, 0 issues).
+  - Coverage-guard (delegated to `coverage-guard`): all touched GPU source files at 100% statements/branches/functions/lines.
+  - Real visible-window GPU validation (delegated to `browser-harness-specialist`): PASS on NVIDIA Lovelace.
+    - `browserVisibility`: `visible-foreground`.
+    - `gpuAdapterInfo`: vendor=nvidia, architecture=lovelace.
+    - `gpuDeviceBound`: true.
+    - Parity: `maxAbsDiff` ≈ 3.96e-8, `meanAbsDiff` ≈ 2.12e-8 — well under strict 1e-3 / 1e-4 thresholds.
+  - Tier-1 gates: `plan-sync`: PASS, `agent-graph`: PASS, `learning-event`: PASS.
+
+- 2026-07-03T11:52-04:00: **04-implementing preflight for slice `02-01a-buffer` loop-back-8 — PENDING GREEN.**
+  - Fix: `batchActivate` input upload now uses the struct-packed node stride via shared helper `writeInputValuesToNodeStruct`.
+  - Touched source files: `src/architecture/network/gpu/network.gpu.buffer.ts`, `src/architecture/network/gpu/network.gpu.activate.ts`, `src/architecture/network/gpu/network.gpu.batched.ts`.
+  - Preflight: `npx tsc --noEmit -p tsconfig.json`: OK (exit 0). `npm run lint`: OK (exit 0, 0 issues). `npx prettier --check src/architecture/network/gpu/network.gpu.buffer.ts src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.batched.ts plans/NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md`: OK (exit 0). `npm run docs`: OK (exit 0).
+  - Tier-1 gates: `plan-sync`: PASS, `validate-plan-sync`: PASS, `agent-graph`: PASS, `learning-event`: PASS.
+  - Next: dispatch `05-green-testing` for focused GPU Jest slice, coverage-guard, and real visible-browser validation.
+
+- 2026-07-03T11:38-04:00: **05-green-testing validation for slice `02-01a-buffer` loop-back-7 — NOT OK.**
+  - Focused GPU Jest: `npx jest src/architecture/network/gpu/ --coverage --collectCoverageFrom='src/architecture/network/gpu/*.ts' --no-cache` → 9 suites passed, 1 failed suite / 136 tests passed, 1 failed test / 137 total.
+    - `network.gpu.activate.coverage.test.ts`: PASS (the 2 previously failing tests from loop-back-6 are now green after the `emulateNetwork` struct-read fix).
+    - `network.gpu.parity-large.red.test.ts`: PASS with tight tolerances (`MAX_ABS_TOLERANCE = 1e-3`, `MEAN_ABS_TOLERANCE = 1e-4`).
+    - `network.gpu.batched.test.ts`: FAIL — `batchActivate › matches CPU reference output for each input row` exceeds tolerance (`maxDifference ≈ 0.00021` in full run, `≈ 0.00065` in isolation; test expects `< 1e-4`).
+  - Coverage-guard on touched `src/` files:
+    - `network.gpu.buffer.ts`: 100% statements, 100% branches, 100% functions, 100% lines.
+    - All other `src/architecture/network/gpu/*.ts` source files: 100% statements/branches/functions/lines.
+  - Real visible-window GPU validation: **PASS** on NVIDIA Lovelace using `docs/browser-tests/webgpu-inference-smoke.html`.
+    - `browserVisibility`: `visible-foreground` (Chrome launched headless: false, page brought to front, `document.visibilityState === 'visible'`, `document.hidden === false`).
+    - `gpuAdapterInfo`: vendor=nvidia, architecture=lovelace.
+    - `gpuDeviceBound`: true; 4-buffer struct-packed layout uploads, bind-group and compute pipeline created successfully.
+    - Parity: `maxAbsDiff` = 1.2315071185042825e-8, `meanAbsDiff` = 1.2315071185042825e-8 — well under the strict 1e-3 / 1e-4 thresholds.
+  - Tier-1 gates: `plan-sync`: PASS, `agent-graph`: PASS, `learning-event`: PASS.
+  - Root-cause observation: `batchActivate` in `src/architecture/network/gpu/network.gpu.batched.ts` writes the input row to the node buffer contiguously starting at byte offset 0 (lines 384-390), but the struct-packed node buffer stores each node's `activation_state` at 16-byte stride (`GPU_NODE_STRUCT_BYTES`). The same bug was fixed in `writeInputValues` in `network.gpu.activate.ts` (loop-back-6), but the batched path was missed. It needs to write each input element at `index * GPU_NODE_STRUCT_BYTES`, or use a shared helper that already applies the stride.
+  - Suggested fix: align `batchActivate` input upload with the struct-packed node layout, or refactor both upload sites to share the strided-write logic.
+  - Suggested next agent: `04-implementing` (slice-fix for `02-01a-buffer` loop-back-8, touching `src/architecture/network/gpu/network.gpu.batched.ts` and possibly `src/architecture/network/gpu/network.gpu.buffer.ts`).
+
+  ```json
+  {
+    "pass": false,
+    "slice_id": "02-01a-buffer-loopback-7",
+    "evidence": {
+      "focused_gpu_jest": {
+        "suites": "9 passed / 1 failed / 10 total",
+        "tests": "136 passed / 1 failed / 137 total",
+        "failed": [
+          "src/architecture/network/gpu/network.gpu.batched.test.ts:148 batchActivate matches CPU reference output for each input row"
+        ]
+      },
+      "coverage_summary": {
+        "network.gpu.buffer.ts": {
+          "statements": 100,
+          "branches": 100,
+          "functions": 100,
+          "lines": 100
+        }
+      },
+      "real_gpu_validation": {
+        "success": true,
+        "browserVisibility": "visible-foreground",
+        "gpuAdapterInfo": { "vendor": "nvidia", "architecture": "lovelace" },
+        "maxAbsDiff": 1.2315071185042825e-8,
+        "meanAbsDiff": 1.2315071185042825e-8,
+        "gpuDeviceBound": true,
+        "scenarioUrl": "http://localhost:8080/docs/browser-tests/webgpu-inference-smoke.html"
+      },
+      "tier1_gates": {
+        "plan-sync": "PASS",
+        "agent-graph": "PASS",
+        "learning-event": "PASS"
+      }
+    },
+    "fixHint": "Update batchActivate in src/architecture/network/gpu/network.gpu.batched.ts to write each input row element into the struct-packed node buffer at index * GPU_NODE_STRUCT_BYTES (16-byte stride), matching writeInputValues in network.gpu.activate.ts, so the mock and real GPU paths read correct input values for input nodes beyond index 0.",
+    "owner": "05-green-testing",
+    "suggested_next_agent": "04-implementing"
+  }
+  ```
 
 - 2026-07-03T09:55-04:00: **05-green-testing FINAL re-validation attempt for slice `02-01a-buffer` loop-back-4 — OK.**
   - Focused GPU Jest: `npx jest src/architecture/network/gpu/ --no-coverage` → 10 suites passed, 134 tests passed, 0 failures.
@@ -702,12 +1122,130 @@ PlanUpdate:
   next: 'Run 05-green-testing focused GPU slice, record coverage-guard evidence, then validate on a real visible browser window before marking 02-01a-buffer [DONE]'
 ```
 
+- 2026-07-03T10:20-04:00: **05-green-testing re-validation attempt for slice `02-01a-buffer` loop-back-5 — NOT OK.**
+  - Focused GPU Jest: `npx jest src/architecture/network/gpu/ --no-coverage` → 1 suite failed (`network.gpu.parity-large.red.test.ts`), 2 tests failed, 9 suites passed, 132 tests passed, 134 tests total.
+    - Failures:
+      - `keeps per-element absolute difference below 1e-3`: expected < 0.001, received 0.0013642510159431742.
+      - `keeps mean absolute difference below 5e-3`: expected < 0.0001, received 0.00143331509743376.
+    - The source-topological-rank reordering in `buildConnectionsArray` brought the mock summation order closer to the CPU fast-slab order, but the 10-64-4 MLP still drifts beyond the tight `1e-3`/`1e-4` tolerances. Uncovered branches in `resolveStableNodeTieBreak` (lines 322–326) may also contribute because the index/fallback tie-break paths are not exercised by existing tests.
+  - TypeScript: `npx tsc --noEmit -p tsconfig.json` → pass (exit 0).
+  - Lint: `npm run lint` → pass (exit 0, 0 issues).
+  - Prettier: not re-run; previous loop-back-4 preflight was clean and no source files changed in loop-back-5 beyond what `04-implementing` already formatted.
+  - Coverage-guard on touched `src/` files:
+    - `network.gpu.activate.ts`, `network.gpu.batched.ts`, `network.gpu.capability.ts`, `network.gpu.kernel.ts`, `network.gpu.types.ts`: 100% statements, branches, functions, lines.
+    - `network.gpu.buffer.ts`: 98.36% statements, 89.79% branches, 100% functions, 98.22% lines. Uncovered live path at lines 322–326 (`resolveStableNodeTieBreak` branches for `node.index` and `Number.MAX_SAFE_INTEGER` fallback). These branches must be covered or removed before the gate can pass.
+  - Real visible-window GPU validation: **PASS** on NVIDIA Lovelace using `docs/browser-tests/webgpu-inference-smoke.html`.
+    - `browserVisibility`: `visible-foreground`.
+    - `gpuAdapterInfo`: vendor=nvidia, architecture=lovelace.
+    - `gpuDeviceBound`: true; 4-buffer struct-packed layout uploads, bind-group and compute pipeline create successfully.
+    - Parity for the 2-3-1 smoke network: `maxAbsDiff` = 0.00008540178841720536, `meanAbsDiff` = 0.00008540178841720536.
+  - Acceptance-criteria check:
+    1. Connections uploaded as single struct array `{from_node, to_node, weight, flags}`; nodes as single struct array `{activation_state, derivative_state, error, flags}` — **PASS**.
+    2. Binding contract uses exactly 4 storage buffers — **PASS**.
+    3. No `requiredLimits` request for `maxStorageBuffersPerShaderStage` — **PASS**.
+    4. Cache-locality benefit documented in JSDoc — **PASS**.
+    5. Real GPU validation on visible browser window confirms buffer layout uploads and kernel pipeline compiles — **PASS**.
+    6. Focused GPU Jest tests pass; typecheck and lint clean — **PARTIAL** (`parity-large.red.test.ts` still fails; typecheck/lint clean).
+    7. Old flat-buffer binding code removed — **PASS**.
+    8. Connection buffer ordered by `(target_node, source_topological_index)` — **PASS** (implemented in `buildConnectionsArray` via `buildSourceTopoRanks`).
+    9. Parity tolerances tight (`1e-3` max, `1e-4` mean) — **PASS** in source/test; but the mock does not yet meet them.
+  - Tier-1 gates: `plan-sync`: PASS, `step-packet`: PASS, `agent-graph`: PASS, `learning-event`: PASS.
+  - Gate exception recorded via `record-gate-exception.mjs` for `green-validation-gates-slice-02-01a-buffer-loopback-5`.
+  - Verdict: slice must loop back to `04-implementing` for a sixth fix pass. Remaining issues: (a) `network.gpu.parity-large.red.test.ts` still exceeds tight tolerances even after source-topological reordering, and (b) `network.gpu.buffer.ts` branch coverage at 89.79% with uncovered `resolveStableNodeTieBreak` lines 322–326.
+
+```json
+{
+  "pass": false,
+  "slice_id": "02-01a-buffer",
+  "evidence": {
+    "focused_gpu_jest": "1 failed suite / 2 failed tests / 9 passed suites / 132 passed tests / 134 total",
+    "typecheck": "pass",
+    "lint": "pass",
+    "coverage_summary": {
+      "network.gpu.activate.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      "network.gpu.batched.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      "network.gpu.capability.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      "network.gpu.kernel.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      "network.gpu.types.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      },
+      "network.gpu.buffer.ts": {
+        "statements": 98.36,
+        "branches": 89.79,
+        "functions": 100,
+        "lines": 98.22,
+        "uncovered_lines": "322-326"
+      }
+    },
+    "real_gpu_validation": {
+      "browserVisibility": "visible-foreground",
+      "gpuAdapterInfo": {
+        "vendor": "nvidia",
+        "architecture": "lovelace",
+        "device": "",
+        "description": ""
+      },
+      "success": true,
+      "gpuDeviceBound": true,
+      "maxAbsDiff": 0.00008540178841720536,
+      "meanAbsDiff": 0.00008540178841720536,
+      "scenarioUrl": "http://localhost:8080/docs/browser-tests/webgpu-inference-smoke.html"
+    },
+    "tier1_gates": {
+      "plan-sync": "PASS",
+      "step-packet": "PASS",
+      "agent-graph": "PASS",
+      "learning-event": "PASS"
+    },
+    "acceptance_criteria": {
+      "connections_struct_array": "PASS",
+      "nodes_struct_array": "PASS",
+      "four_buffer_binding_contract": "PASS",
+      "no_requiredLimits_maxStorageBuffersPerShaderStage": "PASS",
+      "cache_locality_jsdoc": "PASS",
+      "real_visible_window_gpu_validation": "PASS",
+      "focused_jest_typecheck_lint": "PARTIAL",
+      "old_flat_buffer_code_removed": "PASS",
+      "connection_buffer_ordered_by_target_source_topo": "PASS",
+      "tolerances_tight": "PASS"
+    }
+  },
+  "fixHint": "The parity-large.red.test.ts mismatch persists after source-topological reordering (maxAbsDiff ~0.00136, meanAbsDiff ~0.00143 for a 10-64-4 MLP) and network.gpu.buffer.ts branch coverage is at 89.79% with uncovered lines 322-326 in resolveStableNodeTieBreak. Either align the mock/CPU comparison order more exactly, change the CPU comparison path to use the same f32/order as the GPU, add owner-local coverage for the missing tie-break branches, or document/adjust tolerance only if the divergence is explicitly accepted. Then re-run focused GPU Jest, coverage-guard, and real visible-window GPU validation.",
+  "owner": "05-green-testing",
+  "suggested_next_agent": "04-implementing"
+}
+```
+
 - 2026-07-03T07:46-04:00: **Re-slicing verification pass — GREEN LIGHT.** After `04-implementing` reported that the old flat-buffer binding code is coupled across the whole GPU seam, slice `02-01a-buffer` was expanded to cover the struct-packed 4-buffer contract plus the kernel rewrite and all downstream consumers (`network.gpu.activate.ts`, `network.gpu.batched.ts`, `network.gpu.kernel.ts`, mock, and owner-local tests) so the repo stays type-check clean and old flat-buffer branches are removed in the same step. Former `02-01b-kernel`/`02-01c-cache` are now `02-01b-cache` (pipeline/buffer caching) and `02-01c-parity` (real-device NGE benchmark, dead-code cleanup, coverage guard). All slices are ≤4 hours, the no-deferred-cleanup criterion is present in every implementation slice, real visible-window GPU validation is required for every slice touching `src/architecture/network/gpu/*`, and the dependency chain remains sequential a→b→c→green. `plan-sync` gate: PASS. `step-packet` gate: PASS. `plan-slice-quality` gate: PASS.
 - 2026-07-03T07:41:02-04:00: **Fresh 01-planning verification pass — GREEN LIGHT (historical, pre-re-slicing).** All three prior blockers are resolved: no-deferred-cleanup criterion was present in the prior slices 02-01a-buffer, 02-01b-kernel, and 02-01c-cache; validation commands use `npx tsc --noEmit -p tsconfig.json`; only the canonical `## Latest validation evidence` section remains. Slice estimates were within the 4-hour limit. The struct-packed 4-buffer design was intact, no `requiredLimits` request for `maxStorageBuffersPerShaderStage` was listed, and real visible-window GPU measurement was required for every slice touching `src/architecture/network/gpu/*`. `plan-slice-quality` gate: PASS. `step-packet` gate: PASS. `npx tsc --noEmit -p tsconfig.json`: OK (exit 0).
 - 2026-07-03T07:36:40-04:00: **Fresh 01-planning verification pass — BLOCKED.** Phase 2 Step 01 slices 02-01a-buffer (3h), 02-01b-kernel (3h), and 02-01c-cache (2h) are within the 4-hour limit and structurally complete. The 4-buffer struct-packed design (connections struct, nodes struct, constants/uniform, output) is reflected and no `requiredLimits` request for `maxStorageBuffersPerShaderStage` is listed. Visible-window GPU measurement is required in each slice's acceptance criteria. `plan-slice-quality` gate: PASS. `step-packet` gate: PASS (with pre-existing plan-readiness warnings because no green-light had been recorded). Remaining blockers before execution-phase dispatch:
   1. **No-deferred-cleanup criterion missing.** FIXED — added the observable criterion "Old flat-buffer binding code removed — no dual-path code, no backward-compatibility wrappers, no dead flat-buffer branches remain." to slices 02-01a-buffer, 02-01b-kernel, and 02-01c-cache.
   2. **Invalid validation command.** FIXED — all Step 01 type-check references now use `npx tsc --noEmit -p tsconfig.json`; `package.json` was left unchanged.
   3. **Stale duplicate evidence section.** FIXED — removed the superseded `### Latest validation evidence` subsection under `## Validation gates`; only the canonical `## Latest validation evidence` section remains.
+- 2026-07-03: Workflow sync: Advanced Phase 2 Step 1 → [DONE]; Phase 2 Step 2 → [WIP]
 - 2026-07-03: Workflow sync: Advanced Phase 2 Step 1 → [DONE]; Phase 2 Step 2 → [WIP]
 - 2026-07-03T07:39:02-04:00: **Patch cycle applied** — all three blockers fixed in the tracker only (no production code changes). A fresh `01-planning` verification pass is required to record `green-light: true` before execution-phase dispatch.
 - 2026-07-03T07:30:56-04:00: **Design change recorded** — real GPU probe confirmed `maxStorageBuffersPerShaderStage = 10` on NVIDIA Lovelace; requesting 16 fails. Struct-packed 4-buffer layout supersedes previous 9/10 flat-buffer design. Slices 02-01a/b/c updated; a fresh `01-planning` verification pass is required before execution-phase dispatch.
@@ -894,7 +1432,7 @@ phase: 2
 step: 1
 title: 'Implement correct weighted WebGPU forward pass'
 status: '[DONE]'
-active_slice: '02-01a-buffer'
+active_slice: '02-01b-cache'
 goal: 'implementing'
 tdd_sequence: 'green-only'
 expansion: 'slices'

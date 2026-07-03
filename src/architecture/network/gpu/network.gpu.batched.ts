@@ -26,6 +26,7 @@ import {
 import {
   destroyGPUBufferSet,
   uploadNetworkToGPU,
+  writeInputValuesToNodeStruct,
   type GPUBufferSet,
 } from './network.gpu.buffer';
 import { GPU_BUFFER_BINDING } from './network.gpu.types';
@@ -381,13 +382,7 @@ export async function batchActivate(
         index * inputCount,
         (index + 1) * inputCount,
       );
-      device.queue.writeBuffer(
-        bufferSet.nodes,
-        0,
-        inputSlice,
-        0,
-        inputSlice.length,
-      );
+      writeInputValuesToNodeStruct(device, bufferSet.nodes, inputSlice);
     }
 
     // One command encoder and one compute pass dispatch every network in the

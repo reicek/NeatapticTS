@@ -3,6 +3,7 @@ import {
   createGPUUniformBuffer,
   destroyGPUBufferSet,
   uploadNetworkToGPU,
+  uploadDynamicNetworkBuffers,
   type GPUBufferSet,
 } from './network.gpu.buffer';
 import {
@@ -318,6 +319,56 @@ describe('network.gpu.buffer', () => {
               .length ?? 0) === 1,
         ),
       ).toBe(true);
+    });
+  });
+
+  describe('resolveStableNodeTieBreak fallback branches', () => {
+    it('falls back to node.index when geneId is missing', () => {
+      const device = createMockGPUDevice();
+      const network = createEligibleMLP();
+      jest.spyOn(capability, 'canUseGPU').mockReturnValue(true);
+
+      for (const node of network.nodes.slice(0, network.input)) {
+        (node as unknown as { geneId?: number }).geneId = undefined;
+      }
+
+      uploadNetworkToGPU(device, network);
+
+      expect(device.recorded.buffers.length).toBe(4);
+    });
+
+    it('falls back to MAX_SAFE_INTEGER when both geneId and index are missing', () => {
+      const device = createMockGPUDevice();
+      const network = createEligibleMLP();
+      jest.spyOn(capability, 'canUseGPU').mockReturnValue(true);
+
+      for (const node of network.nodes.slice(0, network.input)) {
+        const mutableNode = node as unknown as {
+          geneId?: number;
+          index?: number;
+        };
+        mutableNode.geneId = undefined;
+        mutableNode.index = undefined;
+      }
+
+      uploadNetworkToGPU(device, network);
+
+      expect(device.recorded.buffers.length).toBe(4);
+    });
+  });
+
+  describe('uploadDynamicNetworkBuffers', () => {
+    it('writes updated weights and node data into the existing buffers', () => {
+      const device = createMockGPUDevice();
+      const network = createEligibleMLP();
+      jest.spyOn(capability, 'canUseGPU').mockReturnValue(true);
+
+      const bufferSet = uploadNetworkToGPU(device, network);
+      const previousWriteCount = device.recorded.writeBuffers.length;
+
+      uploadDynamicNetworkBuffers(device, bufferSet, network);
+
+      expect(device.recorded.writeBuffers.length).toBe(previousWriteCount + 2);
     });
   });
 });

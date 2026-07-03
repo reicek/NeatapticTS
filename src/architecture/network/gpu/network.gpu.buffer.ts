@@ -1,4 +1,5 @@
 import type Network from '../network';
+import type Node from '../../node/node';
 import { canUseGPU } from './network.gpu.capability';
 import type { GPUBufferSet } from './network.gpu.types';
 
@@ -304,6 +305,71 @@ export function buildTopoLevels(
 }
 
 /**
+ * Resolve the deterministic tie-break scalar used by the CPU topological sort.
+ *
+ * The CPU fast-slab path emits nodes in Kahn order and sorts each zero-in-degree
+ * wave with this same rule, so matching it exactly lets the GPU pack incoming
+ * edges in the same source-node order.
+ *
+ * @param node - Node whose stable gene id or index will be read.
+ * @returns Deterministic scalar for ordering.
+ */
+function resolveStableNodeTieBreak(node: Node): number {
+  if (typeof node.geneId === 'number' && Number.isFinite(node.geneId)) {
+    return node.geneId;
+  }
+
+  if (typeof node.index === 'number' && Number.isFinite(node.index)) {
+    return node.index;
+  }
+
+  return Number.MAX_SAFE_INTEGER;
+}
+
+/**
+ * Compute the source-node topological rank used to order GPU incoming edges.
+ *
+ * The CPU fast-slab path accumulates outgoing activations by walking nodes in
+ * topological order (all level-0 nodes in stable tie-break order, then level-1,
+ * and so on). By sorting each target node's incoming slice by the source's rank
+ * in that same order, the GPU gather kernel sums the exact same f32 terms in the
+ * exact same order, eliminating cross-path rounding drift.
+ *
+ * @param network - Network whose nodes supply the stable tie-break values.
+ * @param slab - Connection slab with `from`/`to` source/target arrays.
+ * @param nodeCount - Number of nodes in the network.
+ * @param connectionCount - Number of connections in the network.
+ * @returns Per-node rank in the CPU-equivalent topological walk.
+ */
+function buildSourceTopoRanks(
+  network: Network,
+  slab: ConnectionSlab,
+  nodeCount: number,
+  connectionCount: number,
+): Uint32Array {
+  const levels = buildTopoLevels(slab, nodeCount, connectionCount);
+  const order = Array.from({ length: nodeCount }, (_, index) => index).toSorted(
+    (leftIndex, rightIndex) => {
+      const levelDiff = levels[leftIndex] - levels[rightIndex];
+      if (levelDiff !== 0) {
+        return levelDiff;
+      }
+      return (
+        resolveStableNodeTieBreak(network.nodes[leftIndex]) -
+        resolveStableNodeTieBreak(network.nodes[rightIndex])
+      );
+    },
+  );
+
+  const ranks = new Uint32Array(nodeCount);
+  for (let rank = 0; rank < nodeCount; rank += 1) {
+    ranks[order[rank]] = rank;
+  }
+
+  return ranks;
+}
+
+/**
  * Byte stride of one connection struct on the GPU.
  *
  * The WGSL `Connection` struct is `{ from_node: u32, to_node: u32, weight: f32,
@@ -321,7 +387,37 @@ const GPU_CONNECTION_STRUCT_BYTES = 16;
  * fetches its state, bias (packed into the derivative slot for the forward
  * pass), error, and flags in one contiguous read.
  */
-const GPU_NODE_STRUCT_BYTES = 16;
+export const GPU_NODE_STRUCT_BYTES = 16;
+
+/**
+ * Write input activations into the `activation_state` slot of the first
+ * `inputs.length` node structs.
+ *
+ * The WGSL `Node` struct stores `activation_state` at byte offset zero of each
+ * 16-byte struct, so input node `i` must be written at `i * GPU_NODE_STRUCT_BYTES`
+ * rather than at `i * Float32Array.BYTES_PER_ELEMENT`. Centralising this logic in
+ * one helper prevents contiguous-write bugs when multiple upload paths need to
+ * seed the node buffer with input values.
+ *
+ * @param device - WebGPU device whose queue will perform the write.
+ * @param nodesBuffer - GPU node buffer created by `uploadNetworkToGPU`.
+ * @param inputs - Input vector to scatter into the node struct array.
+ */
+export function writeInputValuesToNodeStruct(
+  device: GPUDevice,
+  nodesBuffer: GPUBuffer,
+  inputs: Float32Array,
+): void {
+  for (let index = 0; index < inputs.length; index += 1) {
+    device.queue.writeBuffer(
+      nodesBuffer,
+      index * GPU_NODE_STRUCT_BYTES,
+      inputs,
+      index,
+      1,
+    );
+  }
+}
 
 /**
  * Byte size of the per-dispatch params uniform.
@@ -336,25 +432,52 @@ const GPU_PARAMS_BYTES = 16;
  * Pack the connection slab into one contiguous struct array.
  *
  * Each connection is laid out as `{ from_node: u32, to_node: u32, weight: f32,
- * flags: u32 }`. Connections are ordered by the incoming-CSR order produced by
- * `buildIncomingCSR`, which groups them by target node and preserves the
- * connection-index order used by the CPU fast-slab path. The kernel can then
- * iterate the struct buffer linearly for each node, keeping f32 summation
- * order consistent with the CPU and avoiding cross-platform drift.
+ * flags: u32 }`. Connections are sorted by `(target_node, source_topological_rank)`
+ * so that each target node's incoming slice `[inStart[node], inStart[node+1])`
+ * is iterated in the same source-node order the CPU fast-slab path uses. Because
+ * f32 summation is order-dependent, matching the accumulation order gives the
+ * GPU gather kernel the same rounded result as the CPU push path instead of
+ * relying on looser tolerances.
  *
- * @param slab - Connection slab with `from`, `to`, `weights`, and `flags`.
- * @param nodeCount - Number of nodes in the network, including inputs and
- *   outputs. Drives the incoming-CSR offsets used to order the buffer.
+ * @param network - Network whose nodes and connection slab will be packed.
  * @param connectionCount - Number of active connections to pack. The slab may
  *   over-allocate, so only this many entries are uploaded.
  * @returns An `ArrayBuffer` ready for `queue.writeBuffer`.
  */
 function buildConnectionsArray(
-  slab: ConnectionSlab,
-  nodeCount: number,
+  network: Network,
   connectionCount: number,
 ): ArrayBuffer {
-  const { inOrder } = buildIncomingCSR(slab, nodeCount, connectionCount);
+  const slab = network.getConnectionSlab() as unknown as ConnectionSlab;
+  const nodeCount = network.nodes.length;
+  const sourceRanks = buildSourceTopoRanks(
+    network,
+    slab,
+    nodeCount,
+    connectionCount,
+  );
+  const { inStart, inOrder } = buildIncomingCSR(
+    slab,
+    nodeCount,
+    connectionCount,
+  );
+
+  if (connectionCount > 0) {
+    for (let node = 0; node < nodeCount; node += 1) {
+      const start = inStart[node];
+      const end = inStart[node + 1];
+      if (end - start > 1) {
+        const slice = inOrder.subarray(start, end);
+        const sorted = Array.from(slice).toSorted(
+          (leftConnection, rightConnection) =>
+            sourceRanks[slab.from[leftConnection]] -
+            sourceRanks[slab.from[rightConnection]],
+        );
+        slice.set(sorted);
+      }
+    }
+  }
+
   const buffer = new ArrayBuffer(connectionCount * GPU_CONNECTION_STRUCT_BYTES);
   const view = new DataView(buffer);
 
@@ -444,16 +567,15 @@ export function uploadNetworkToGPU(
   }
 
   // Step 2: Read the packed connection slab and build GPU-friendly arrays.
-  const slab = network.getConnectionSlab() as unknown as ConnectionSlab;
   const nodeCount = network.nodes.length;
   const connectionCount = network.connections.length;
-  const connectionsArray = buildConnectionsArray(
-    slab,
+  const connectionsArray = buildConnectionsArray(network, connectionCount);
+  const nodesArray = buildNodesArray(network);
+  const topoLevels = buildTopoLevels(
+    network.getConnectionSlab() as unknown as ConnectionSlab,
     nodeCount,
     connectionCount,
   );
-  const nodesArray = buildNodesArray(network);
-  const topoLevels = buildTopoLevels(slab, nodeCount, connectionCount);
 
   // Step 3: Create the four buffers required by the struct-packed contract.
   const connectionsBuffer = createGPUBuffer(
@@ -525,11 +647,10 @@ export function uploadDynamicNetworkBuffers(
   bufferSet: GPUBufferSet,
   network: Network,
 ): void {
-  const slab = network.getConnectionSlab() as unknown as ConnectionSlab;
   device.queue.writeBuffer(
     bufferSet.connections,
     0,
-    buildConnectionsArray(slab, bufferSet.nodeCount, bufferSet.connectionCount),
+    buildConnectionsArray(network, bufferSet.connectionCount),
   );
   device.queue.writeBuffer(bufferSet.nodes, 0, buildNodesArray(network));
 }

@@ -49,6 +49,7 @@ import {
   destroyGPUBufferSet,
   uploadDynamicNetworkBuffers,
   uploadNetworkToGPU,
+  writeInputValuesToNodeStruct,
   type GPUBufferSet,
 } from './network.gpu.buffer';
 import { GPU_BUFFER_BINDING } from './network.gpu.types';
@@ -281,7 +282,7 @@ export async function activateGPU(
   const { bufferSet, bindGroup } = state;
 
   uploadDynamicNetworkBuffers(device, bufferSet, network);
-  writeInputValues(device, bufferSet, typedInputs);
+  writeInputValuesToNodeStruct(device, bufferSet.nodes, typedInputs);
   await dispatchActivationKernel(
     device,
     bufferSet,
@@ -512,20 +513,6 @@ function prepareActivationContext(network: Network): {
       squashWithIndex.index = savedIndex;
     },
   };
-}
-
-/**
- * Write the input vector into the first `network.input` slots of the GPU
- * node struct array. The `activation_state` field lives at offset zero of each
- * node struct, so the input values become the source activations for the first
- * hidden level.
- */
-function writeInputValues(
-  device: GPUDevice,
-  bufferSet: GPUBufferSet,
-  inputs: Float32Array,
-): void {
-  device.queue.writeBuffer(bufferSet.nodes, 0, inputs, 0, inputs.length);
 }
 
 /**

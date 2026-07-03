@@ -26,6 +26,22 @@ activations (read from the bound node buffer) plus the node's bias. Input
 nodes are never processed by a dispatch, so they retain the values uploaded
 by the caller.
 
+### computeMockLevels
+
+```ts
+computeMockLevels(
+  connections: MockConnection[],
+  nodeCount: number,
+): Uint32Array<ArrayBufferLike>
+```
+
+Compute a simple topological level for every node from the connection list.
+
+Level 0 contains nodes with no incoming connections; every other node gets
+one level above its highest predecessor. This is sufficient for the mock
+because GPU-eligible networks are feed-forward and the real kernel already
+skips disabled connections via its flags check.
+
 ### createMockGPUDevice
 
 ```ts
@@ -77,6 +93,10 @@ Context supplied to the optional per-dispatch output generator.
 
 ### MockGPURecordings
 
+### MockParams
+
+Per-dispatch params mirrored from the WGSL `Params` layout.
+
 ### readBoundConnections
 
 ```ts
@@ -98,3 +118,13 @@ readBoundFloatArray(
 
 Read a bound buffer as a typed array, returning an empty array if the buffer
 is not a mock-backed GPUBuffer.
+
+### readBoundParams
+
+```ts
+readBoundParams(
+  entries: { binding: number; resource: { buffer: GPUBuffer; }; }[],
+): MockParams | undefined
+```
+
+Read the bound params uniform as a typed struct.
