@@ -15,33 +15,36 @@ export type GPUSupportedLimitsType = GPUSupportedLimits;
 export type GPURequestAdapterOptionsType = GPURequestAdapterOptions;
 
 /**
- * Stable WebGPU binding indices for the slab-to-GPU upload contract.
+ * Stable WebGPU binding indices for the struct-packed network upload contract.
  *
- * The compute kernel's bind group layout and WGSL declarations must use these
- * exact indices so the shader reads the uploaded arrays in the order produced
- * by `uploadNetworkToGPU`. Keeping the mapping in one exported table
- * prevents drift between the upload path and the kernel.
+ * The activation kernel binds exactly four buffers: a struct array of
+ * connections, a struct array of nodes, the per-node output buffer, and the
+ * small per-dispatch params uniform. Packing fields into structs improves cache
+ * locality: reading one connection fetches `from_node`, `to_node`, `weight`, and
+ * `flags` from one contiguous 16-byte region, and reading one node fetches
+ * `activation_state`, `derivative_state`, `error`, and `flags` from one
+ * contiguous 16-byte region. The four-buffer layout sits below the WebGPU
+ * default `maxStorageBuffersPerShaderStage` limit, so the code does not request
+ * a custom limit for that resource.
  *
  * @example
  * ```ts
- * const binding = GPU_BUFFER_BINDING.weights; // 0
+ * const binding = GPU_BUFFER_BINDING.connections; // 0
  * ```
  */
 export const GPU_BUFFER_BINDING = {
-  weights: 0,
-  from: 1,
-  to: 2,
-  flags: 3,
-  inStart: 4,
-  inOrder: 5,
-  outputs: 6,
-  bias: 7,
-  topoLevels: 8,
-  params: 9,
+  /** Connections struct array `{ from_node, to_node, weight, flags }`. */
+  connections: 0,
+  /** Nodes struct array `{ activation_state, derivative_state, error, flags }`. */
+  nodes: 1,
+  /** Per-node activation/output buffer used for readback. */
+  outputs: 2,
+  /** Per-dispatch level and dimension uniform. */
+  params: 3,
 } as const;
 
 /**
- * Names of the slab buffers that participate in the GPU upload contract.
+ * Names of the buffers that participate in the GPU upload contract.
  *
  * Each name maps to a stable binding index in `GPU_BUFFER_BINDING`.
  */
@@ -53,7 +56,34 @@ export type GPUBufferName = keyof typeof GPU_BUFFER_BINDING;
  * This count matches the length of `GPU_BUFFER_BINDING` and the number
  * of entries in the kernel bind-group layout.
  */
-export const GPU_BUFFER_BINDING_COUNT = 10;
+export const GPU_BUFFER_BINDING_COUNT = 4;
+
+/**
+ * GPU-side buffer handles and metadata produced by uploading a network slab.
+ *
+ * The implementation creates exactly four WebGPU buffers and records
+ * `nodeCount`/`connectionCount` so the compute pipeline can size its dispatches
+ * without re-reading CPU structures. The `topoLevelsArray` is kept here because
+ * the CPU dispatch loop still needs to know how many levels to launch.
+ */
+export interface GPUBufferSet {
+  /** Struct array buffer `{ from_node, to_node, weight, flags }`. */
+  connections: GPUBuffer;
+  /** Struct array buffer `{ activation_state, derivative_state, error, flags }`. */
+  nodes: GPUBuffer;
+  /** Per-node output buffer for readback. */
+  outputs: GPUBuffer;
+  /** Per-dispatch params uniform. */
+  params: GPUBuffer;
+  /** Number of nodes in the uploaded network. */
+  nodeCount: number;
+  /** Number of connections in the uploaded network. */
+  connectionCount: number;
+  /** Topological level assigned to every node. */
+  topoLevelsArray: Uint32Array;
+  /** Number of distinct topological levels (max level + 1). */
+  topoLevelCount: number;
+}
 
 /**
  * Pipeline cache scoped to one WebGPU device.

@@ -1,9 +1,23 @@
 import type Network from '../network';
+import { buildIncomingCSR, buildTopoLevels } from './network.gpu.buffer';
 import {
   buildActivationRegistry,
   formatActivationFunctionsWgsl,
   SUPPORTED_ACTIVATION_INDICES,
 } from './network.gpu.activation.wgsl';
+
+/**
+ * Raw connection slab used to build GPU-friendly adjacency arrays.
+ *
+ * The cast is intentional: GPU kernel generation is a consumer of the same
+ * private layout that slab activation uses.
+ */
+interface ConnectionSlab {
+  from: Uint32Array;
+  to: Uint32Array;
+  weights: Float32Array | Float64Array;
+  flags: Uint8Array;
+}
 
 /**
  * WebGPU shader-stage bit for compute visibility.
@@ -61,19 +75,22 @@ function readActivationIndex(network: Network): number {
 const WORKGROUP_SIZE = 64;
 
 /**
- * Build the WGSL source for the forward-pass activation kernel.
+ * Build the WGSL source for the struct-packed forward-pass activation kernel.
  *
- * The shader exposes the ten bindings from the slab upload contract, declares
- * a real f32 activation function for every supported worker index, and
- * dispatches one thread per node for the current topological level. Each level
- * is processed in a separate pass so threads only read source values that have
- * already been computed by earlier levels, avoiding cross-thread write/read
- * races in the gather loop.
+ * The shader exposes four bindings: a read-only connection struct array, a
+ * read-write node struct array, a read-write output array, and a per-dispatch
+ * params uniform. The incoming-CSR offsets and the per-node topological level
+ * are baked into the shader as constants, which is what keeps the binding count
+ * at four instead of ten. One thread is dispatched per node and threads that
+ * do not belong to the current level early-exit.
  *
- * @param activationIndex - Activation index that must appear as a switch case.
+ * @param network - Network whose activation index, topology, and slab arrays
+ *   drive the generated shader.
  * @returns WGSL source string.
+ * @throws Error when the network has no nodes or lacks an indexed squash
+ *   function.
  */
-function generateActivationSource(activationIndex: number): string {
+function generateActivationSource(network: Network): string {
   const registry = buildActivationRegistry();
   const activationFunctions = formatActivationFunctionsWgsl(registry);
   const supportedCases = registry
@@ -83,24 +100,44 @@ function generateActivationSource(activationIndex: number): string {
     )
     .join('\n');
 
+  const activationIndex = readActivationIndex(network);
+  const nodeCount = network.nodes.length;
+  const connectionCount = network.connections.length;
+  const slab = network.getConnectionSlab() as unknown as ConnectionSlab;
+  const { inStart } = buildIncomingCSR(slab, nodeCount, connectionCount);
+  const topoLevels = buildTopoLevels(slab, nodeCount, connectionCount);
+
   return `const WORKGROUP_SIZE: u32 = ${WORKGROUP_SIZE}u;
 const ACTIVATION_INDEX: i32 = ${activationIndex}i;
 
-@group(0) @binding(0) var<storage, read> weights: array<f32>;
-@group(0) @binding(1) var<storage, read> from_nodes: array<u32>;
-@group(0) @binding(2) var<storage, read> to_nodes: array<u32>;
-@group(0) @binding(3) var<storage, read> connection_flags: array<u32>;
-@group(0) @binding(4) var<storage, read> in_start: array<u32>;
-@group(0) @binding(5) var<storage, read> in_order: array<u32>;
-@group(0) @binding(6) var<storage, read_write> node_outputs: array<f32>;
-@group(0) @binding(7) var<storage, read> node_bias: array<f32>;
-@group(0) @binding(8) var<storage, read> topo_levels: array<u32>;
-@group(0) @binding(9) var<uniform> params: Params;
+struct Connection {
+  from_node: u32,
+  to_node: u32,
+  weight: f32,
+  flags: u32,
+};
+
+struct Node {
+  activation_state: f32,
+  derivative_state: f32,
+  error: f32,
+  flags: u32,
+};
 
 struct Params {
   level: u32,
   node_count: u32,
+  connection_count: u32,
+  output_start: u32,
 };
+
+@group(0) @binding(0) var<storage, read> connections: array<Connection>;
+@group(0) @binding(1) var<storage, read_write> nodes: array<Node>;
+@group(0) @binding(2) var<storage, read_write> outputs: array<f32>;
+@group(0) @binding(3) var<uniform> params: Params;
+
+const topoLevels = array<u32, ${nodeCount}>(${topoLevels.join(',')});
+const inStart = array<u32, ${nodeCount + 1}>(${inStart.join(',')});
 
 ${activationFunctions}
 
@@ -113,26 +150,30 @@ ${supportedCases}
 
 @compute @workgroup_size(${WORKGROUP_SIZE})
 fn forward(@builtin(global_invocation_id) global_invocation_id: vec3<u32>) {
-  let nodeIndex = global_invocation_id.x;
-  if (nodeIndex >= params.node_count) {
+  let node_index = global_invocation_id.x;
+  if (node_index >= params.node_count) {
     return;
   }
 
-  if (topo_levels[nodeIndex] != params.level) {
+  if (topoLevels[node_index] != params.level) {
     return;
   }
 
-  var sum = node_bias[nodeIndex];
-  let start = in_start[nodeIndex];
-  let end = in_start[nodeIndex + 1u];
+  var pre_activation = nodes[node_index].derivative_state;
+  let start = inStart[node_index];
+  let end = inStart[node_index + 1u];
 
-  for (var i = start; i < end; i = i + 1u) {
-    let connection = in_order[i];
-    let source = from_nodes[connection];
-    sum = sum + weights[connection] * node_outputs[source];
+  for (var connection_index = start; connection_index < end; connection_index = connection_index + 1u) {
+    let conn = connections[connection_index];
+    if ((conn.flags & 1u) == 0u) {
+      continue;
+    }
+    pre_activation = pre_activation + conn.weight * nodes[conn.from_node].activation_state;
   }
 
-  node_outputs[nodeIndex] = applyActivation(sum);
+  let activated = applyActivation(pre_activation);
+  nodes[node_index].activation_state = activated;
+  outputs[node_index] = activated;
 }
 `;
 }
@@ -140,10 +181,12 @@ fn forward(@builtin(global_invocation_id) global_invocation_id: vec3<u32>) {
 /**
  * Generate the WGSL source for the activation kernel of a supported network.
  *
- * The returned source is a real, bindable compute shader: it declares the
- * ten storage-buffer and uniform bindings, one f32 activation function per supported
- * worker index, and a `forward` entry point that dispatches one thread per node for the current topological level. Unsupported activations or ineligible topologies are rejected before
- * any source is emitted.
+ * The returned source is a real, bindable compute shader: it declares four
+ * storage-buffer/uniform bindings, the connection and node structs, one f32
+ * activation function per supported worker index, and a `forward` entry point
+ * that dispatches one thread per node for the current topological level.
+ * Unsupported activations or ineligible topologies are rejected before any
+ * source is emitted.
  *
  * @param network - Network whose activation index and topology are inspected.
  * @returns Non-empty WGSL source string.
@@ -167,7 +210,7 @@ export function createActivationKernel(network: Network): string {
     throw new Error(`activation index ${activationIndex} is not supported`);
   }
 
-  return generateActivationSource(activationIndex);
+  return generateActivationSource(network);
 }
 
 /**
@@ -278,7 +321,7 @@ export function compileActivationKernel(
     return cached;
   }
 
-  const source = generateActivationSource(activationIndex);
+  const source = generateActivationSource(network);
   const shaderModule = device.createShaderModule({ code: source });
   const bindGroupLayout = createBindGroupLayout(device);
   const pipeline = buildGPUPipeline(device, shaderModule, bindGroupLayout);
@@ -289,14 +332,12 @@ export function compileActivationKernel(
 /**
  * Create the bind-group layout used by the GPU forward-pass kernel.
  *
- * The layout exposes ten entries in the exact order expected by the
- * slab-to-GPU upload contract: connection weights, source node ids, target
- * node ids, connection flags, incoming-CSR start offsets, incoming-CSR
- * connection order, the per-node output buffer, per-node bias, per-node
- * topological level, and the per-dispatch params uniform.
+ * The layout exposes four entries in the exact order expected by the
+ * struct-packed upload contract: the connection struct array, the node struct
+ * array, the per-node output buffer, and the per-dispatch params uniform.
  *
  * @param device - WebGPU device used to create the layout.
- * @returns A bind-group layout with ten entries.
+ * @returns A bind-group layout with four entries.
  *
  * @example
  * ```ts
@@ -314,45 +355,15 @@ export function createBindGroupLayout(device: GPUDevice): GPUBindGroupLayout {
       {
         binding: 1,
         visibility: GPU_SHADER_STAGE_COMPUTE,
-        buffer: { type: 'read-only-storage' },
+        buffer: { type: 'storage' },
       },
       {
         binding: 2,
         visibility: GPU_SHADER_STAGE_COMPUTE,
-        buffer: { type: 'read-only-storage' },
-      },
-      {
-        binding: 3,
-        visibility: GPU_SHADER_STAGE_COMPUTE,
-        buffer: { type: 'read-only-storage' },
-      },
-      {
-        binding: 4,
-        visibility: GPU_SHADER_STAGE_COMPUTE,
-        buffer: { type: 'read-only-storage' },
-      },
-      {
-        binding: 5,
-        visibility: GPU_SHADER_STAGE_COMPUTE,
-        buffer: { type: 'read-only-storage' },
-      },
-      {
-        binding: 6,
-        visibility: GPU_SHADER_STAGE_COMPUTE,
         buffer: { type: 'storage' },
       },
       {
-        binding: 7,
-        visibility: GPU_SHADER_STAGE_COMPUTE,
-        buffer: { type: 'read-only-storage' },
-      },
-      {
-        binding: 8,
-        visibility: GPU_SHADER_STAGE_COMPUTE,
-        buffer: { type: 'read-only-storage' },
-      },
-      {
-        binding: 9,
+        binding: 3,
         visibility: GPU_SHADER_STAGE_COMPUTE,
         buffer: { type: 'uniform' },
       },

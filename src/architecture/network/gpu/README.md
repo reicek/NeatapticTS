@@ -64,6 +64,35 @@ if (device) {
 }
 ```
 
+### computeTopologyHash
+
+```ts
+computeTopologyHash(
+  network: default,
+): string
+```
+
+Compute a deterministic topology hash for a network.
+
+The hash includes node count and the ordered from/to indices of every
+connection. Networks that differ only in weights therefore share a hash,
+which lets the GPU buffer cache reuse the uploaded static structure across
+weight-only mutations such as backprop updates.
+
+### createActivationBindGroup
+
+```ts
+createActivationBindGroup(
+  device: GPUDevice,
+  layout: GPUBindGroupLayout,
+  bufferSet: GPUBufferSet,
+): GPUBindGroup
+```
+
+Build the bind group that wires the four struct-packed kernel buffers into
+the pipeline layout. The bind group can be reused across activations as long
+as the underlying buffers are the same.
+
 ### dispatchActivationKernel
 
 ```ts
@@ -71,11 +100,71 @@ dispatchActivationKernel(
   device: GPUDevice,
   bufferSet: GPUBufferSet,
   pipeline: GPUComputePipeline,
+  bindGroup: GPUBindGroup,
+  outputNodeCount: number,
 ): Promise<void>
 ```
 
-Create the bind group for the supplied compiled pipeline and dispatch the
-kernel for every node in the network.
+Dispatch the activation kernel once per topological level.
+
+The params uniform carries the current level, total node count, connection
+count, and output-node start index. Threads for nodes that do not belong to
+the current level early-exit, so the same global dispatch size can be reused
+for every level while still guaranteeing that all source values are available
+from previous levels.
+
+### ensureNetworkGPUState
+
+```ts
+ensureNetworkGPUState(
+  device: GPUDevice,
+  network: default,
+): { state: NetworkGPUState; pipeline: GPUComputePipeline; }
+```
+
+Ensure the cached buffer set and bind group for a network match the current
+topology, and return the compatible compiled pipeline.
+
+Creates or reuses GPU state as needed. When only the activation function
+changes, the buffer set (which is independent of activation) is kept and only
+the pipeline is replaced.
+
+### getActivationBindGroupLayout
+
+```ts
+getActivationBindGroupLayout(
+  device: GPUDevice,
+): GPUBindGroupLayout
+```
+
+Return the shared bind-group layout for activation kernels on this device,
+creating and caching it on first use.
+
+### getActivationPipelineCache
+
+```ts
+getActivationPipelineCache(
+  device: GPUDevice,
+): Map<string, GPUComputePipeline>
+```
+
+Return the per-device pipeline cache map, creating it on first use.
+
+### getOrCreateActivationPipeline
+
+```ts
+getOrCreateActivationPipeline(
+  device: GPUDevice,
+  network: default,
+): GPUComputePipeline
+```
+
+Compile (or reuse) the activation compute pipeline for a network.
+
+The pipeline is keyed by the generated WGSL source, so networks that share an
+activation function share one compiled pipeline even when their topologies
+differ. The temporary activation-index annotation on the first node is
+restored before returning, keeping the mutation scoped to this seam.
 
 ### GPUCommandEncoderCopy
 
@@ -83,6 +172,33 @@ Local extension of the ambient GPU command encoder so we can copy a storage
 buffer to a mappable staging buffer. The WebGPU ambient types in this repo are
 intentionally minimal; the cast is justified because `copyBufferToBuffer` is
 part of the actual WebGPU API surface.
+
+### matchesBuiltInActivation
+
+```ts
+matchesBuiltInActivation(
+  candidate: (value: number, derivate?: boolean | undefined) => number,
+  reference: (value: number, derivate?: boolean | undefined) => number,
+): boolean
+```
+
+Test whether a candidate squash produces the same values as a reference
+built-in activation across a small deterministic input grid.
+
+This lets the GPU path support thin wrappers (for example the benchmark
+harness wrapping `Neataptic.methods.Activation.logistic` with a custom
+symbol key) without requiring the wrapper to carry the exact same function
+object as the worker registry.
+
+### NetworkGPUState
+
+Per-network cached GPU state.
+
+The buffer set and bind group are reused across activations while the
+network topology (node count, connection set, and adjacency structure) stays
+unchanged. The compiled pipeline lives in a separate per-device cache keyed
+by the generated WGSL shader so that networks with different topologies but
+the same activation function share one compiled pipeline.
 
 ### prepareActivationContext
 
@@ -132,7 +248,10 @@ Look up the worker-registry activation index for a built-in squash function.
 The lookup is intentionally robust across module-loading boundaries and mock
 environments where the same activation may be imported from different source
 files and therefore fails a strict `===` comparison. It first tries the
-runtime-registry symbol key, then falls back to the function name.
+runtime-registry symbol key, then falls back to the function name, and
+finally falls back to a deterministic behaviour match against the built-in
+activation functions so that thin wrappers around supported activations are
+still dispatchable.
 
 Parameters:
 - `squash` - Activation function attached to a node.
@@ -151,7 +270,9 @@ writeInputValues(
 ```
 
 Write the input vector into the first `network.input` slots of the GPU
-output buffer.
+node struct array. The `activation_state` field lives at offset zero of each
+node struct, so the input values become the source activations for the first
+hidden level.
 
 ## architecture/network/gpu/network.gpu.fallback.ts
 
@@ -433,6 +554,13 @@ Parameters:
 
 Returns: A stable string key for the pipeline cache.
 
+### ConnectionSlab
+
+Raw connection slab used to build GPU-friendly adjacency arrays.
+
+The cast is intentional: GPU kernel generation is a consumer of the same
+private layout that slab activation uses.
+
 ### createActivationKernel
 
 ```ts
@@ -443,11 +571,12 @@ createActivationKernel(
 
 Generate the WGSL source for the activation kernel of a supported network.
 
-The returned source is a real, bindable compute shader: it declares the
-seven storage-buffer bindings, one f32 activation function per supported
-worker index, and a `forward` entry point that dispatches one thread per
-node. Unsupported activations or ineligible topologies are rejected before
-any source is emitted.
+The returned source is a real, bindable compute shader: it declares four
+storage-buffer/uniform bindings, the connection and node structs, one f32
+activation function per supported worker index, and a `forward` entry point
+that dispatches one thread per node for the current topological level.
+Unsupported activations or ineligible topologies are rejected before any
+source is emitted.
 
 Parameters:
 - `network` - Network whose activation index and topology are inspected.
@@ -471,15 +600,14 @@ createBindGroupLayout(
 
 Create the bind-group layout used by the GPU forward-pass kernel.
 
-The layout exposes seven storage-buffer entries in the exact order expected
-by the slab-to-GPU upload contract: connection weights, source node ids,
-target node ids, connection flags, CSR output-start offsets, CSR output
-order, and the per-node output buffer.
+The layout exposes four entries in the exact order expected by the
+struct-packed upload contract: the connection struct array, the node struct
+array, the per-node output buffer, and the per-dispatch params uniform.
 
 Parameters:
 - `device` - WebGPU device used to create the layout.
 
-Returns: A bind-group layout with seven storage-buffer entries.
+Returns: A bind-group layout with four entries.
 
 Example:
 
@@ -491,23 +619,22 @@ const bindGroupLayout = createBindGroupLayout(device);
 
 ```ts
 generateActivationSource(
-  activationIndex: number,
-  nodeCount: number,
+  network: default,
 ): string
 ```
 
-Build the WGSL source for the forward-pass activation kernel.
+Build the WGSL source for the struct-packed forward-pass activation kernel.
 
-The shader exposes the seven storage-buffer bindings from the slab upload
-contract, declares a real f32 activation function for every supported worker
-index, and dispatches one thread per node in topological order. The current
-kernel applies the network's canonical activation index to the per-node output
-buffer; full weighted fan-out is intentionally left for the parity slice that
-owns the complete forward pass.
+The shader exposes four bindings: a read-only connection struct array, a
+read-write node struct array, a read-write output array, and a per-dispatch
+params uniform. The incoming-CSR offsets/order and the per-node topological
+level are baked into the shader as constants, which is what keeps the binding
+count at four instead of ten. One thread is dispatched per node and threads
+that do not belong to the current level early-exit.
 
 Parameters:
-- `activationIndex` - Activation index that must appear as a switch case.
-- `nodeCount` - Number of nodes in the network; bounds the dispatch.
+- `network` - Network whose activation index, topology, and slab arrays
+drive the generated shader.
 
 Returns: WGSL source string.
 
@@ -569,6 +696,137 @@ all use the same numeric index for the same activation.
 
 ## architecture/network/gpu/network.gpu.buffer.ts
 
+### buildConnectionsArray
+
+```ts
+buildConnectionsArray(
+  slab: ConnectionSlab,
+): ArrayBuffer
+```
+
+Pack the connection slab into one contiguous struct array.
+
+Each connection is laid out as `{ from_node: u32, to_node: u32, weight: f32,
+flags: u32 }`. The flags byte is copied verbatim so the kernel can skip
+disabled connections without a separate flags buffer.
+
+Parameters:
+- `slab` - Connection slab with `from`, `to`, `weights`, and `flags`.
+
+Returns: An `ArrayBuffer` ready for `queue.writeBuffer`.
+
+### buildIncomingCSR
+
+```ts
+buildIncomingCSR(
+  slab: ConnectionSlab,
+  nodeCount: number,
+  connectionCount: number,
+): { inStart: Uint32Array<ArrayBufferLike>; inOrder: Uint32Array<ArrayBufferLike>; }
+```
+
+Build the incoming-CSR adjacency arrays needed by the gather kernel.
+
+`inStart[node]` and `inStart[node + 1]` bound the slice of `inOrder` that
+lists connection indices feeding into `node`. The ordering is deterministic
+because it follows the connection index order returned by the slab.
+
+Parameters:
+- `slab` - Connection slab with `from`/`to` source/target arrays.
+- `nodeCount` - Number of nodes in the network.
+- `connectionCount` - Number of connections in the network.
+
+Returns: Incoming CSR offsets and connection order arrays.
+
+### buildNodesArray
+
+```ts
+buildNodesArray(
+  network: default,
+): ArrayBuffer
+```
+
+Pack node state into one contiguous struct array.
+
+Each node is laid out as `{ activation_state: f32, derivative_state: f32,
+error: f32, flags: u32 }`. The forward-pass kernel reads the bias from the
+`derivative_state` slot because the plan's node struct keeps `bias` there
+(the slot is unused by the forward pass otherwise). Callers should treat the
+`derivative_state` field as the per-node bias while the kernel is running.
+
+Parameters:
+- `network` - Network whose node state will be packed.
+
+Returns: An `ArrayBuffer` ready for `queue.writeBuffer`.
+
+### buildOutgoingCSR
+
+```ts
+buildOutgoingCSR(
+  slab: ConnectionSlab,
+  nodeCount: number,
+  connectionCount: number,
+): { outStart: Uint32Array<ArrayBufferLike>; outOrder: Uint32Array<ArrayBufferLike>; }
+```
+
+Build the outgoing-CSR adjacency arrays used for topological level sorting.
+
+Parameters:
+- `slab` - Connection slab with `from`/`to` source/target arrays.
+- `nodeCount` - Number of nodes in the network.
+- `connectionCount` - Number of connections in the network.
+
+Returns: Outgoing CSR offsets and connection order arrays.
+
+### buildTopoLevels
+
+```ts
+buildTopoLevels(
+  slab: ConnectionSlab,
+  nodeCount: number,
+  connectionCount: number,
+): Uint32Array<ArrayBufferLike>
+```
+
+Compute a topological level for every node in a feed-forward network.
+
+Input nodes have level `0`; every other node's level is one greater than the
+maximum level among its incoming sources. The Kahn-style traversal is
+deterministic and produces the same levels for the same topology, which the
+GPU kernel uses to schedule per-level dispatches without cross-thread races.
+
+Parameters:
+- `slab` - Connection slab with `from`/`to` source/target arrays.
+- `nodeCount` - Number of nodes in the network.
+- `connectionCount` - Number of connections in the network.
+
+Returns: A `nodeCount`-length array of unsigned topological levels.
+
+### computeTopoLevelCount
+
+```ts
+computeTopoLevelCount(
+  levels: Uint32Array<ArrayBufferLike>,
+): number
+```
+
+Count how many distinct topological levels are present in a level array.
+
+Levels start at `0` for input nodes, so the number of passes needed by the
+dispatch loop is `max(levels) + 1`.
+
+Parameters:
+- `levels` - Per-node topological level array.
+
+Returns: Number of distinct levels.
+
+### ConnectionSlab
+
+Raw connection slab used to build GPU-friendly adjacency arrays.
+
+The cast is intentional: GPU upload is a consumer of the same private layout
+that slab activation uses.
+
 ### createGPUBuffer
 
 ```ts
@@ -617,15 +875,34 @@ kept in the signature for API symmetry).
 
 GPU-side buffer handles and metadata produced by uploading a network slab.
 
-The implementation creates one WebGPU buffer per slab/activation array
-and records `nodeCount`/`connectionCount` so the compute pipeline can size its
-dispatches without re-reading CPU structures.
+The implementation creates exactly four WebGPU buffers and records
+`nodeCount`/`connectionCount` so the compute pipeline can size its dispatches
+without re-reading CPU structures. The `topoLevelsArray` is kept here because
+the CPU dispatch loop still needs to know how many levels to launch.
 
-### NetworkSlabInternals
+### uploadDynamicNetworkBuffers
 
-Internal network state used to read the CSR adjacency arrays produced by
-the fast-slab path. The cast is intentional: GPU upload is a consumer of the
-same private layout that slab activation uses.
+```ts
+uploadDynamicNetworkBuffers(
+  device: GPUDevice,
+  bufferSet: GPUBufferSet,
+  network: default,
+): void
+```
+
+Re-upload the weights and bias arrays for a network whose topology has not
+changed.
+
+The GPU kernel reads weights and node biases every dispatch, so these fields
+must be kept in sync with the CPU network state across activations. Because
+the values live inside struct arrays, the whole connections buffer and the
+whole nodes buffer are rewritten. Topology metadata does not change here;
+callers recreate the full `GPUBufferSet` when the topology changes.
+
+Parameters:
+- `device` - WebGPU device that owns the buffers.
+- `bufferSet` - Topology buffers created by `uploadNetworkToGPU`.
+- `network` - Network whose current weights and bias will be uploaded.
 
 ### uploadNetworkToGPU
 
@@ -638,12 +915,11 @@ uploadNetworkToGPU(
 
 Upload a network's fast-slab structures to WebGPU buffers.
 
-The upload path reuses the existing CPU slab arrays without
-re-serialization: it creates one `GPUBuffer` per slab/CSR array via
-`createGPUBuffer`, writes each slab exactly once with
-`queue.writeBuffer`, and returns the buffer handles plus node/connection
-counts. The buffer order matches `GPU_BUFFER_BINDING` so the compute
-kernel can bind them with stable indices.
+The upload path packs connections and nodes into two struct arrays and then
+creates only four GPU buffers: connections, nodes, outputs, and params.
+Keeping the binding count at four sits below the WebGPU default limit for
+storage buffers per shader stage and removes the need to request a custom
+`maxStorageBuffersPerShaderStage` limit.
 
 Parameters:
 - `device` - Mock or real WebGPU device used to allocate buffers.
@@ -727,7 +1003,8 @@ Parameters:
 - `pipeline` - Compiled activation pipeline.
 - `bufferSet` - Uploaded network slab buffers.
 
-Returns: A bind group wired to the seven storage-buffer bindings.
+Returns: A bind group wired to the four struct-packed storage-buffer and
+uniform bindings.
 
 ### GPUCommandEncoderCopy
 
@@ -921,22 +1198,27 @@ references over global declarations.
 
 ### GPU_BUFFER_BINDING
 
-Stable WebGPU binding indices for the slab-to-GPU upload contract.
+Stable WebGPU binding indices for the struct-packed network upload contract.
 
-The compute kernel's bind group layout and WGSL declarations must use these
-exact indices so the shader reads the uploaded arrays in the order produced
-by `uploadNetworkToGPU`. Keeping the mapping in one exported table
-prevents drift between the upload path and the kernel.
+The activation kernel binds exactly four buffers: a struct array of
+connections, a struct array of nodes, the per-node output buffer, and the
+small per-dispatch params uniform. Packing fields into structs improves cache
+locality: reading one connection fetches `from_node`, `to_node`, `weight`, and
+`flags` from one contiguous 16-byte region, and reading one node fetches
+`activation_state`, `derivative_state`, `error`, and `flags` from one
+contiguous 16-byte region. The four-buffer layout sits below the WebGPU
+default `maxStorageBuffersPerShaderStage` limit, so the code does not request
+a custom limit for that resource.
 
 Example:
 
 ```ts
-const binding = GPU_BUFFER_BINDING.weights; // 0
+const binding = GPU_BUFFER_BINDING.connections; // 0
 ```
 
 ### GPU_BUFFER_BINDING_COUNT
 
-Number of storage-buffer bindings used by the GPU forward-pass kernel.
+Number of bindings used by the GPU forward-pass kernel.
 
 This count matches the length of `GPU_BUFFER_BINDING` and the number
 of entries in the kernel bind-group layout.
@@ -961,9 +1243,18 @@ references over global declarations.
 
 ### GPUBufferName
 
-Names of the slab buffers that participate in the GPU upload contract.
+Names of the buffers that participate in the GPU upload contract.
 
 Each name maps to a stable binding index in `GPU_BUFFER_BINDING`.
+
+### GPUBufferSet
+
+GPU-side buffer handles and metadata produced by uploading a network slab.
+
+The implementation creates exactly four WebGPU buffers and records
+`nodeCount`/`connectionCount` so the compute pipeline can size its dispatches
+without re-reading CPU structures. The `topoLevelsArray` is kept here because
+the CPU dispatch loop still needs to know how many levels to launch.
 
 ### GPUDeviceType
 

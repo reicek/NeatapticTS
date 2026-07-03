@@ -65,9 +65,10 @@ export function canUseGPU(
     return false;
   }
 
+  // Struct-packed layout: nodes are 16 bytes each, connections are 16 bytes each.
   const estimatedBytes = Math.max(
-    network.nodes.length * 4,
-    network.connections.length * 4,
+    network.nodes.length * 16,
+    network.connections.length * 16,
   );
   const limit = device!.limits.maxStorageBufferBindingSize!;
   if (estimatedBytes > limit) {

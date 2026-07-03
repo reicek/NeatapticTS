@@ -206,6 +206,14 @@ Minimum requirements:
   touched files when unit tests are applicable).
 - Run any lint or quality checks the slice requires as listed in the slice's
   `acceptance_criteria` and attach their one-line outputs.
+- **GPU slices require real visible-window validation.** For any `slice` whose
+  `files_to_change` includes a path under `src/architecture/network/gpu/*`,
+  `05-green-testing` MUST run a real browser-based GPU parity test on a visible
+  browser window (not headless, not minimized). Mock-only Jest validation is
+  INSUFFICIENT for these slices. If no real GPU measurement was performed, return
+  `NOT OK — mock-only validation` and route back to implementation with a request
+  to invoke the `browser-harness-specialist` or Chrome DevTools MCP for real-device
+  measurement. This is a hard gate, not advisory.
 
 Slice-level gate contract (structured JSON):
 

@@ -24,6 +24,12 @@ function createFakeNetwork(activationIndex: number): Network {
   return {
     nodes: [{ squash: Object.assign(() => 0, { index: activationIndex }) }],
     connections: [],
+    getConnectionSlab: () => ({
+      from: new Uint32Array(0),
+      to: new Uint32Array(0),
+      weights: new Float32Array(0),
+      flags: new Uint8Array(0),
+    }),
   } as unknown as Network;
 }
 
@@ -180,6 +186,12 @@ describe('network.gpu.kernel', () => {
           { squash: Object.assign(() => 0, { index: 4 }) },
         ],
         connections: [],
+        getConnectionSlab: () => ({
+          from: new Uint32Array(0),
+          to: new Uint32Array(0),
+          weights: new Float32Array(0),
+          flags: new Uint8Array(0),
+        }),
       } as unknown as Network;
 
       compileActivationKernel(device, smallNetwork);
@@ -194,12 +206,24 @@ describe('network.gpu.kernel', () => {
         connections: [{ id: 'a' }],
         _connFrom: new Uint32Array([1]),
         _connTo: new Uint32Array([2]),
+        getConnectionSlab: () => ({
+          from: new Uint32Array([1]),
+          to: new Uint32Array([2]),
+          weights: new Float32Array([0]),
+          flags: new Uint8Array([0]),
+        }),
       } as unknown as Network;
       const networkB = {
         nodes: [{ squash: Object.assign(() => 0, { index: 4 }) }],
         connections: [{ id: 'b' }],
         _connFrom: new Uint32Array([2]),
         _connTo: new Uint32Array([1]),
+        getConnectionSlab: () => ({
+          from: new Uint32Array([2]),
+          to: new Uint32Array([1]),
+          weights: new Float32Array([0]),
+          flags: new Uint8Array([0]),
+        }),
       } as unknown as Network;
 
       compileActivationKernel(device, networkA);
@@ -232,18 +256,12 @@ describe('network.gpu.kernel', () => {
         count: GPU_BUFFER_BINDING_COUNT,
       }).toEqual({
         binding: {
-          weights: 0,
-          from: 1,
-          to: 2,
-          flags: 3,
-          inStart: 4,
-          inOrder: 5,
-          outputs: 6,
-          bias: 7,
-          topoLevels: 8,
-          params: 9,
+          connections: 0,
+          nodes: 1,
+          outputs: 2,
+          params: 3,
         },
-        count: 10,
+        count: 4,
       });
     });
   });
@@ -267,12 +285,12 @@ describe('network.gpu.kernel', () => {
       expect(device.createBindGroupLayout).toHaveBeenCalledTimes(1);
     });
 
-    it('creates ten storage-buffer and uniform entries', () => {
+    it('creates four struct-buffer and uniform entries', () => {
       createBindGroupLayout(device);
       const descriptor = (device.createBindGroupLayout as jest.Mock).mock
         .calls[0][0];
 
-      expect(descriptor.entries.length).toBe(10);
+      expect(descriptor.entries.length).toBe(4);
     });
 
     it('sets compute visibility on every entry', () => {
@@ -288,7 +306,7 @@ describe('network.gpu.kernel', () => {
       ).toBe(true);
     });
 
-    it('orders entries as weights, from, to, flags, inStart, inOrder, outputs, bias, topoLevels, params', () => {
+    it('orders entries as connections, nodes, outputs, params', () => {
       createBindGroupLayout(device);
       const descriptor = (device.createBindGroupLayout as jest.Mock).mock
         .calls[0][0];
@@ -301,15 +319,9 @@ describe('network.gpu.kernel', () => {
 
       expect(observed).toEqual([
         { binding: 0, type: 'read-only-storage' },
-        { binding: 1, type: 'read-only-storage' },
-        { binding: 2, type: 'read-only-storage' },
-        { binding: 3, type: 'read-only-storage' },
-        { binding: 4, type: 'read-only-storage' },
-        { binding: 5, type: 'read-only-storage' },
-        { binding: 6, type: 'storage' },
-        { binding: 7, type: 'read-only-storage' },
-        { binding: 8, type: 'read-only-storage' },
-        { binding: 9, type: 'uniform' },
+        { binding: 1, type: 'storage' },
+        { binding: 2, type: 'storage' },
+        { binding: 3, type: 'uniform' },
       ]);
     });
   });

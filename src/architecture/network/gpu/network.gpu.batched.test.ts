@@ -64,7 +64,7 @@ describe('network.gpu.batched', () => {
       const inputWrites = device.recorded.writeBuffers.filter(
         (record) =>
           (record.buffer as unknown as { label?: string }).label ===
-            'network_outputs' && record.byteLength === inputByteLength,
+            'network_nodes' && record.byteLength === inputByteLength,
       );
       const totalBytes = inputWrites.reduce(
         (sum, record) => sum + record.byteLength,

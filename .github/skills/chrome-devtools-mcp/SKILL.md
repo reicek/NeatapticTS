@@ -48,6 +48,13 @@ category has a primary use case and a token-cost profile.
 Use cases: CPU profiling, layout thrash detection, paint analysis, JS
 execution hotspots, frame rate measurement.
 
+> **GPU parity and performance tests require a visible browser window.** GPU
+> measurements MUST NOT be run headless, minimized, or in a background tab.
+> Headless GPU execution deprioritizes the GPU process and compositor, producing
+> invalid timing and parity data. Always launch the browser with `headless: false`,
+> bring the page to the foreground, and document `browserVisibility:
+visible-foreground` in the trace summary.
+
 ### Screenshots
 
 - `take_screenshot` — capture a PNG screenshot of the current page.

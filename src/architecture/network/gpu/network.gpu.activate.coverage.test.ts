@@ -1,11 +1,16 @@
 import Network from '../network';
 import { ACTIVATION_FUNCTIONS } from '../../../multithreading/multi.utils';
 import { activateGPU } from './network.gpu.activate';
+import * as capability from './network.gpu.capability';
 import { createMockGPUDevice } from './__mocks__/gpu.mock';
 
 type ActivationFunction = (value: number, derivate?: boolean) => number;
 
 describe('network.gpu.activate coverage', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   describe('activateGPU input validation', () => {
     it('throws when the network has no nodes', async () => {
       const fakeNetwork = {
@@ -229,6 +234,40 @@ describe('network.gpu.activate coverage', () => {
               .length ?? 0) === 1,
         ),
       ).toBe(true);
+    });
+
+    it('reuses the pipeline, shader module, bind group layout, and persistent buffers on the second activation', async () => {
+      const network = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice();
+      const isPersistentBuffer = (buffer: { label?: string }) =>
+        buffer.label !== 'network_outputs_staging';
+
+      network.getConnectionSlab();
+      await activateGPU(device, network, [0.1, 0.2]);
+      const persistentBufferCountAfterFirstCall =
+        device.recorded.buffers.filter(isPersistentBuffer).length;
+
+      await activateGPU(device, network, [0.1, 0.2]);
+
+      expect(
+        device.recorded.pipelines.length === 1 &&
+          device.recorded.shaderModules.length === 1 &&
+          device.recorded.bindGroupLayouts.length === 1 &&
+          device.recorded.buffers.filter(isPersistentBuffer).length ===
+            persistentBufferCountAfterFirstCall,
+      ).toBe(true);
+    });
+  });
+
+  describe('activateGPU eligibility', () => {
+    it('throws when the network is not eligible for GPU inference', async () => {
+      const network = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice();
+      jest.spyOn(capability, 'canUseGPU').mockReturnValue(false);
+
+      await expect(activateGPU(device, network, [0.1, 0.2])).rejects.toThrow(
+        'activateGPU: network is not eligible for GPU inference',
+      );
     });
   });
 });

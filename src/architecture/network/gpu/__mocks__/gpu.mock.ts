@@ -104,55 +104,148 @@ function readBoundFloatArray(
   return new Float32Array(entry.resource.buffer.__data);
 }
 
-function readBoundUintArray(
-  entries: Array<{ binding: number; resource: { buffer: GPUBuffer } }>,
-  binding: number,
-): Uint32Array {
-  const entry = entries.find((e) => e.binding === binding);
-  if (!entry || !hasMockData(entry.resource.buffer)) {
-    return new Uint32Array(0);
-  }
-  return new Uint32Array(entry.resource.buffer.__data);
+/**
+ * Connection struct mirrored from the WGSL `Connection` layout.
+ */
+interface MockConnection {
+  fromNode: number;
+  toNode: number;
+  weight: number;
+  flags: number;
 }
 
 /**
- * Compute the pre-activation values for nodes at the current topological level.
+ * Read the bound connection buffer as an array of connection structs.
+ */
+function readBoundConnections(
+  entries: Array<{ binding: number; resource: { buffer: GPUBuffer } }>,
+): MockConnection[] {
+  const entry = entries.find(
+    (e) => e.binding === GPU_BUFFER_BINDING.connections,
+  );
+  if (!entry || !hasMockData(entry.resource.buffer)) {
+    return [];
+  }
+
+  const view = new DataView(entry.resource.buffer.__data);
+  const connectionCount = entry.resource.buffer.size / 16;
+  const connections: MockConnection[] = [];
+
+  for (let i = 0; i < connectionCount; i++) {
+    const offset = i * 16;
+    connections.push({
+      fromNode: view.getUint32(offset, true),
+      toNode: view.getUint32(offset + 4, true),
+      weight: view.getFloat32(offset + 8, true),
+      flags: view.getUint32(offset + 12, true),
+    });
+  }
+
+  return connections;
+}
+
+/**
+ * Per-dispatch params mirrored from the WGSL `Params` layout.
+ */
+interface MockParams {
+  level: number;
+  nodeCount: number;
+  connectionCount: number;
+  outputStart: number;
+}
+
+/**
+ * Read the bound params uniform as a typed struct.
+ */
+function readBoundParams(
+  entries: Array<{ binding: number; resource: { buffer: GPUBuffer } }>,
+): MockParams | undefined {
+  const entry = entries.find((e) => e.binding === GPU_BUFFER_BINDING.params);
+  if (!entry || !hasMockData(entry.resource.buffer)) {
+    return undefined;
+  }
+
+  const view = new DataView(entry.resource.buffer.__data);
+  return {
+    level: view.getUint32(0, true),
+    nodeCount: view.getUint32(4, true),
+    connectionCount: view.getUint32(8, true),
+    outputStart: view.getUint32(12, true),
+  };
+}
+
+/**
+ * Compute a simple topological level for every node from the connection list.
  *
- * This mirrors the gather-and-activate kernel's per-level dispatch: only nodes
- * whose `topo_levels` entry equals `level` are updated. Their pre-activation
- * value is the sum of incoming weights times the current source activations
- * (read from the bound output buffer) plus bias. Input nodes (level 0) are
- * never processed by a dispatch, so they retain the values uploaded by the
- * caller.
+ * Level 0 contains nodes with no incoming connections; every other node gets
+ * one level above its highest predecessor. This is sufficient for the mock
+ * because GPU-eligible networks are feed-forward and the real kernel already
+ * skips disabled connections via its flags check.
+ */
+function computeMockLevels(
+  connections: MockConnection[],
+  nodeCount: number,
+): Uint32Array {
+  const levels = new Uint32Array(nodeCount);
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    for (const connection of connections) {
+      if (
+        connection.fromNode === connection.toNode ||
+        connection.fromNode < 0 ||
+        connection.fromNode >= nodeCount ||
+        connection.toNode < 0 ||
+        connection.toNode >= nodeCount
+      ) {
+        continue;
+      }
+      const candidate = levels[connection.fromNode] + 1;
+      if (candidate > levels[connection.toNode]) {
+        levels[connection.toNode] = candidate;
+        changed = true;
+      }
+    }
+  }
+
+  return levels;
+}
+
+/**
+ * Compute the pre-activation values for every non-input node.
+ *
+ * This mirrors the struct-packed gather-and-activate kernel: each node's
+ * pre-activation value is the sum of incoming weights times the current source
+ * activations (read from the bound node buffer) plus the node's bias. Input
+ * nodes are never processed by a dispatch, so they retain the values uploaded
+ * by the caller.
  */
 function computeMockForwardPass(
   entries: Array<{ binding: number; resource: { buffer: GPUBuffer } }>,
-  level: number,
   nodeCount: number,
 ): Float32Array {
+  const nodes = readBoundFloatArray(entries, GPU_BUFFER_BINDING.nodes);
   const outputs = readBoundFloatArray(entries, GPU_BUFFER_BINDING.outputs);
-  const weights = readBoundFloatArray(entries, GPU_BUFFER_BINDING.weights);
-  const fromNodes = readBoundUintArray(entries, GPU_BUFFER_BINDING.from);
-  const inStart = readBoundUintArray(entries, GPU_BUFFER_BINDING.inStart);
-  const inOrder = readBoundUintArray(entries, GPU_BUFFER_BINDING.inOrder);
-  const bias = readBoundFloatArray(entries, GPU_BUFFER_BINDING.bias);
-  const topoLevels = readBoundUintArray(entries, GPU_BUFFER_BINDING.topoLevels);
+  const connections = readBoundConnections(entries);
 
   const result = new Float32Array(nodeCount);
+  const hasNodeBuffer = nodes.length > 0;
 
   for (let node = 0; node < nodeCount; node++) {
-    if (topoLevels[node] !== level) {
-      continue;
-    }
+    let sum = nodes[node * 4 + 1] ?? 0;
 
-    let sum = bias[node] ?? 0;
-    const start = inStart[node] ?? 0;
-    const end = inStart[node + 1] ?? inOrder.length;
-
-    for (let i = start; i < end; i++) {
-      const connection = inOrder[i];
-      const source = fromNodes[connection];
-      sum += (weights[connection] ?? 0) * (outputs[source] ?? 0);
+    for (const connection of connections) {
+      if (connection.toNode !== node) {
+        continue;
+      }
+      if ((connection.flags & 1) === 0) {
+        continue;
+      }
+      const sourceActivation = hasNodeBuffer
+        ? (nodes[connection.fromNode * 4] ?? 0)
+        : (outputs[connection.fromNode] ?? 0);
+      sum += connection.weight * sourceActivation;
     }
 
     result[node] = sum;
@@ -190,6 +283,7 @@ export function createMockGPUDevice(
 
   const defaultLimits = {
     maxStorageBufferBindingSize: 128 * 1024 * 1024,
+    maxUniformBufferBindingSize: 64 * 1024,
     maxBufferSize: 256 * 1024 * 1024,
   } as GPUSupportedLimits;
 
@@ -350,25 +444,22 @@ export function createMockGPUDevice(
           if (emulateNetwork) {
             const inputCount = emulateNetwork.input;
             const outputCount = emulateNetwork.output;
-            const inputArray = new Float32Array(
-              outBuffer.__data,
-              0,
-              inputCount,
+            const nodesEntry = boundEntries.find(
+              (entry) => entry.binding === GPU_BUFFER_BINDING.nodes,
             );
+            const nodeBuffer =
+              nodesEntry && hasMockData(nodesEntry.resource.buffer)
+                ? (nodesEntry.resource.buffer as unknown as MockBuffer).__data
+                : outBuffer.__data;
+            const inputArray = new Float32Array(nodeBuffer, 0, inputCount);
             const cpuOutput = emulateNetwork.activate(Array.from(inputArray));
             const outputArray = new Float32Array(outBuffer.__data);
             for (let i = 0; i < outputCount; i++) {
               outputArray[nodeCount - outputCount + i] = cpuOutput[i];
             }
           } else if (generateOutput) {
-            const params = readBoundUintArray(
-              boundEntries,
-              GPU_BUFFER_BINDING.params,
-            );
-            const level = params[0] ?? 0;
             const preActivation = computeMockForwardPass(
               boundEntries,
-              level,
               nodeCount,
             );
             const generated = generateOutput({
@@ -380,14 +471,32 @@ export function createMockGPUDevice(
               generated instanceof Float32Array
                 ? generated
                 : new Float32Array(generated);
-            const topoLevels = readBoundUintArray(
-              boundEntries,
-              GPU_BUFFER_BINDING.topoLevels,
+
+            const params = readBoundParams(boundEntries);
+            const connections = readBoundConnections(boundEntries);
+            const levels =
+              params && connections.length > 0
+                ? computeMockLevels(connections, nodeCount)
+                : new Uint32Array(nodeCount);
+            const currentLevel = params?.level ?? 0;
+
+            const nodesEntry = boundEntries.find(
+              (entry) => entry.binding === GPU_BUFFER_BINDING.nodes,
             );
+            const nodeArray =
+              nodesEntry && hasMockData(nodesEntry.resource.buffer)
+                ? new Float32Array(nodesEntry.resource.buffer.__data)
+                : undefined;
             const outputArray = new Float32Array(outBuffer.__data);
+
             for (let node = 0; node < nodeCount; node++) {
-              if (topoLevels[node] === level) {
-                outputArray[node] = generatedFloat[node] ?? 0;
+              if (levels[node] !== currentLevel) {
+                continue;
+              }
+              const value = generatedFloat[node] ?? 0;
+              outputArray[node] = value;
+              if (nodeArray) {
+                nodeArray[node * 4] = value;
               }
             }
           }

@@ -75,8 +75,9 @@ const networkGPUStateCache = new WeakMap<Network, NetworkGPUState>();
 /**
  * Per-device cache for the standard activation bind-group layout.
  *
- * All activation pipelines in this module use the same ten-entry layout, so a
- * single layout per device is sufficient and avoids redundant layout creation.
+ * All activation pipelines in this module use the same four-entry
+ * struct-packed layout, so a single layout per device is sufficient and avoids
+ * redundant layout creation.
  */
 const activationBindGroupLayoutCache = new WeakMap<
   GPUDevice,
@@ -86,10 +87,11 @@ const activationBindGroupLayoutCache = new WeakMap<
 /**
  * Per-device cache for compiled activation pipelines.
  *
- * The cache key is the generated WGSL source string, which depends only on the
- * activation function switch. Identical WGSL implies an identical
- * `GPUComputePipeline` and `GPUPipelineLayout`, so the same compiled pipeline
- * can drive any network that uses the same activation.
+ * The cache key is the generated WGSL source string, which now depends on both
+ * the activation function switch and the embedded topology constants.
+ * Identical WGSL implies an identical `GPUComputePipeline` and
+ * `GPUPipelineLayout`, so the same compiled pipeline can drive any network that
+ * shares the same topology and activation.
  */
 const activationPipelineCache = new WeakMap<
   GPUDevice,
@@ -280,7 +282,13 @@ export async function activateGPU(
 
   uploadDynamicNetworkBuffers(device, bufferSet, network);
   writeInputValues(device, bufferSet, typedInputs);
-  await dispatchActivationKernel(device, bufferSet, pipeline, bindGroup);
+  await dispatchActivationKernel(
+    device,
+    bufferSet,
+    pipeline,
+    bindGroup,
+    network.output,
+  );
 
   return readOutputValues(device, network, bufferSet);
 }
@@ -508,20 +516,22 @@ function prepareActivationContext(network: Network): {
 
 /**
  * Write the input vector into the first `network.input` slots of the GPU
- * output buffer.
+ * node struct array. The `activation_state` field lives at offset zero of each
+ * node struct, so the input values become the source activations for the first
+ * hidden level.
  */
 function writeInputValues(
   device: GPUDevice,
   bufferSet: GPUBufferSet,
   inputs: Float32Array,
 ): void {
-  device.queue.writeBuffer(bufferSet.outputs, 0, inputs, 0, inputs.length);
+  device.queue.writeBuffer(bufferSet.nodes, 0, inputs, 0, inputs.length);
 }
 
 /**
- * Build the bind group that wires the ten kernel buffers into the pipeline
- * layout. The bind group can be reused across activations as long as the
- * underlying buffers are the same.
+ * Build the bind group that wires the four struct-packed kernel buffers into
+ * the pipeline layout. The bind group can be reused across activations as long
+ * as the underlying buffers are the same.
  */
 function createActivationBindGroup(
   device: GPUDevice,
@@ -532,37 +542,16 @@ function createActivationBindGroup(
     layout,
     entries: [
       {
-        binding: GPU_BUFFER_BINDING.weights,
-        resource: { buffer: bufferSet.weights },
+        binding: GPU_BUFFER_BINDING.connections,
+        resource: { buffer: bufferSet.connections },
       },
       {
-        binding: GPU_BUFFER_BINDING.from,
-        resource: { buffer: bufferSet.from },
-      },
-      { binding: GPU_BUFFER_BINDING.to, resource: { buffer: bufferSet.to } },
-      {
-        binding: GPU_BUFFER_BINDING.flags,
-        resource: { buffer: bufferSet.flags },
-      },
-      {
-        binding: GPU_BUFFER_BINDING.inStart,
-        resource: { buffer: bufferSet.inStart },
-      },
-      {
-        binding: GPU_BUFFER_BINDING.inOrder,
-        resource: { buffer: bufferSet.inOrder },
+        binding: GPU_BUFFER_BINDING.nodes,
+        resource: { buffer: bufferSet.nodes },
       },
       {
         binding: GPU_BUFFER_BINDING.outputs,
         resource: { buffer: bufferSet.outputs },
-      },
-      {
-        binding: GPU_BUFFER_BINDING.bias,
-        resource: { buffer: bufferSet.bias },
-      },
-      {
-        binding: GPU_BUFFER_BINDING.topoLevels,
-        resource: { buffer: bufferSet.topoLevels },
       },
       {
         binding: GPU_BUFFER_BINDING.params,
@@ -575,25 +564,29 @@ function createActivationBindGroup(
 /**
  * Dispatch the activation kernel once per topological level.
  *
- * The params uniform carries the current level and total node count. Threads
- * for nodes that do not belong to the current level early-exit, so the same
- * global dispatch size can be reused for every level while still guaranteeing
- * that all source values are available from previous levels.
+ * The params uniform carries the current level, total node count, connection
+ * count, and output-node start index. Threads for nodes that do not belong to
+ * the current level early-exit, so the same global dispatch size can be reused
+ * for every level while still guaranteeing that all source values are available
+ * from previous levels.
  */
 async function dispatchActivationKernel(
   device: GPUDevice,
   bufferSet: GPUBufferSet,
   pipeline: GPUComputePipeline,
   bindGroup: GPUBindGroup,
+  outputNodeCount: number,
 ): Promise<void> {
-  const levelCount = countTopoLevels(bufferSet);
+  const levelCount = bufferSet.topoLevelCount;
   const workgroupCount = Math.ceil(
     bufferSet.nodeCount / ACTIVATION_WORKGROUP_SIZE,
   );
-  const params = new Uint32Array(2);
+  const params = new Uint32Array(4);
   params[1] = bufferSet.nodeCount;
+  params[2] = bufferSet.connectionCount;
+  params[3] = bufferSet.nodeCount - outputNodeCount;
 
-  for (let level = 1; level <= levelCount; level++) {
+  for (let level = 1; level < levelCount; level++) {
     params[0] = level;
     device.queue.writeBuffer(bufferSet.params, 0, params);
 
@@ -611,20 +604,6 @@ async function dispatchActivationKernel(
     device.queue.submit([commandEncoder.finish()]);
     await device.queue.onSubmittedWorkDone();
   }
-}
-
-/** Count the maximum topological level present in the uploaded levels buffer. */
-function countTopoLevels(bufferSet: GPUBufferSet): number {
-  const levels = bufferSet.topoLevelsArray;
-  let maxLevel = 0;
-
-  for (let i = 0; i < levels.length; i++) {
-    if (levels[i] > maxLevel) {
-      maxLevel = levels[i];
-    }
-  }
-
-  return maxLevel;
 }
 
 /**

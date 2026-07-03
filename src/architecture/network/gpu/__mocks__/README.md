@@ -9,6 +9,23 @@ tests can compare GPU read-back values against the CPU source of truth.
 
 ## architecture/network/gpu/__mocks__/gpu.mock.ts
 
+### computeMockForwardPass
+
+```ts
+computeMockForwardPass(
+  entries: { binding: number; resource: { buffer: GPUBuffer; }; }[],
+  nodeCount: number,
+): Float32Array<ArrayBufferLike>
+```
+
+Compute the pre-activation values for every non-input node.
+
+This mirrors the struct-packed gather-and-activate kernel: each node's
+pre-activation value is the sum of incoming weights times the current source
+activations (read from the bound node buffer) plus the node's bias. Input
+nodes are never processed by a dispatch, so they retain the values uploaded
+by the caller.
+
 ### createMockGPUDevice
 
 ```ts
@@ -36,6 +53,10 @@ Build a fake `navigator` object that exposes a mock `gpu` property.
 
 Narrow a generic GPUBuffer to the mock's internal backing-store shape.
 
+### MockConnection
+
+Connection struct mirrored from the WGSL `Connection` layout.
+
 ### MockGenerateOutput
 
 ```ts
@@ -55,3 +76,25 @@ Context supplied to the optional per-dispatch output generator.
 ### MockGPUDeviceOptions
 
 ### MockGPURecordings
+
+### readBoundConnections
+
+```ts
+readBoundConnections(
+  entries: { binding: number; resource: { buffer: GPUBuffer; }; }[],
+): MockConnection[]
+```
+
+Read the bound connection buffer as an array of connection structs.
+
+### readBoundFloatArray
+
+```ts
+readBoundFloatArray(
+  entries: { binding: number; resource: { buffer: GPUBuffer; }; }[],
+  binding: number,
+): Float32Array<ArrayBufferLike>
+```
+
+Read a bound buffer as a typed array, returning an empty array if the buffer
+is not a mock-backed GPUBuffer.

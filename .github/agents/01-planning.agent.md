@@ -286,6 +286,11 @@ Acceptance criteria must be **observable** and **implementation-agnostic** — t
 - `Same seed + same config produces bitwise-identical network shape`
 - `Same network + same inputs produces bitwise-identical activation output`
 
+**GPU / WebGPU (real visible-window parity — mandatory):**
+
+- When authoring acceptance criteria for any slice touching `src/architecture/network/gpu/*` files, MUST include a criterion requiring real GPU parity validation on a visible browser window (not mock, not headless). Mock-only Jest validation is INSUFFICIENT for GPU slices.
+- The acceptance criteria must require: GPU adapter info (`vendor`/`architecture`), max absolute CPU/GPU difference, and `browserVisibility: visible-foreground` in the validation evidence.
+
 ### Anti-patterns (avoid)
 
 - `Uses toSorted() instead of sort()` — implementation-specific, not observable

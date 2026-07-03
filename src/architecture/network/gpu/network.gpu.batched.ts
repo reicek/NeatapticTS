@@ -265,7 +265,8 @@ function prepareActivationContext(network: Network): { restore: () => void } {
  * @param device - WebGPU device used to create the bind group.
  * @param pipeline - Compiled activation pipeline.
  * @param bufferSet - Uploaded network slab buffers.
- * @returns A bind group wired to the ten storage-buffer and uniform bindings.
+ * @returns A bind group wired to the four struct-packed storage-buffer and
+ *   uniform bindings.
  */
 function createBindGroup(
   device: GPUDevice,
@@ -278,37 +279,16 @@ function createBindGroup(
     layout: bindGroupLayout,
     entries: [
       {
-        binding: GPU_BUFFER_BINDING.weights,
-        resource: { buffer: bufferSet.weights },
+        binding: GPU_BUFFER_BINDING.connections,
+        resource: { buffer: bufferSet.connections },
       },
       {
-        binding: GPU_BUFFER_BINDING.from,
-        resource: { buffer: bufferSet.from },
-      },
-      { binding: GPU_BUFFER_BINDING.to, resource: { buffer: bufferSet.to } },
-      {
-        binding: GPU_BUFFER_BINDING.flags,
-        resource: { buffer: bufferSet.flags },
-      },
-      {
-        binding: GPU_BUFFER_BINDING.inStart,
-        resource: { buffer: bufferSet.inStart },
-      },
-      {
-        binding: GPU_BUFFER_BINDING.inOrder,
-        resource: { buffer: bufferSet.inOrder },
+        binding: GPU_BUFFER_BINDING.nodes,
+        resource: { buffer: bufferSet.nodes },
       },
       {
         binding: GPU_BUFFER_BINDING.outputs,
         resource: { buffer: bufferSet.outputs },
-      },
-      {
-        binding: GPU_BUFFER_BINDING.bias,
-        resource: { buffer: bufferSet.bias },
-      },
-      {
-        binding: GPU_BUFFER_BINDING.topoLevels,
-        resource: { buffer: bufferSet.topoLevels },
       },
       {
         binding: GPU_BUFFER_BINDING.params,
@@ -317,7 +297,6 @@ function createBindGroup(
     ],
   });
 }
-
 /**
  * Batched GPU activation for multi-agent evaluation.
  *
@@ -392,7 +371,7 @@ export async function batchActivate(
     }
 
     // Upload every network and write the corresponding input row into its
-    // output buffer. The kernel reads from the same buffer it writes to.
+    // node buffer. The kernel reads from the same node buffer it writes to.
     for (let index = 0; index < networks.length; index += 1) {
       const network = networks[index];
       const bufferSet = uploadNetworkToGPU(device, network);
@@ -403,7 +382,7 @@ export async function batchActivate(
         (index + 1) * inputCount,
       );
       device.queue.writeBuffer(
-        bufferSet.outputs,
+        bufferSet.nodes,
         0,
         inputSlice,
         0,

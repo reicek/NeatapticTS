@@ -1,5 +1,6 @@
 import {
   createGPUBuffer,
+  createGPUUniformBuffer,
   destroyGPUBufferSet,
   uploadNetworkToGPU,
   type GPUBufferSet,
@@ -15,7 +16,9 @@ import { createMockGPUDevice } from './__mocks__/gpu.mock';
 // WebGPU buffer usage constants are not available at runtime in the test
 // environment, so we mirror the spec values here for explicit assertions.
 const GPU_BUFFER_USAGE_COPY_DST = 0x0008;
+const GPU_BUFFER_USAGE_COPY_SRC = 0x0004;
 const GPU_BUFFER_USAGE_STORAGE = 0x0080;
+const GPU_BUFFER_USAGE_UNIFORM = 0x0040;
 
 function createEligibleMLP(): Network {
   const network = Network.createMLP(2, [3], 1);
@@ -37,17 +40,12 @@ function createFakeBufferSet(): GPUBufferSet {
   }
 
   return {
-    weights: makeBuffer(),
-    from: makeBuffer(),
-    to: makeBuffer(),
-    flags: makeBuffer(),
-    inStart: makeBuffer(),
-    inOrder: makeBuffer(),
+    connections: makeBuffer(),
+    nodes: makeBuffer(),
     outputs: makeBuffer(),
-    bias: makeBuffer(),
-    topoLevels: makeBuffer(),
     params: makeBuffer(),
     topoLevelsArray: new Uint32Array(6),
+    topoLevelCount: 1,
     nodeCount: 6,
     connectionCount: 9,
   };
@@ -100,6 +98,48 @@ describe('network.gpu.buffer', () => {
     });
   });
 
+  describe('createGPUUniformBuffer', () => {
+    it.each([[NaN], [Infinity], [-1]])(
+      'rejects non-finite/negative byteLength (%s)',
+      (byteLength) => {
+        const device = createMockGPUDevice();
+
+        expect(() => createGPUUniformBuffer(device, byteLength, 'bad')).toThrow(
+          /Invalid GPU buffer size for "bad"/,
+        );
+      },
+    );
+
+    it('rejects sizes above maxUniformBufferBindingSize', () => {
+      const device = createMockGPUDevice({ maxUniformBufferBindingSize: 100 });
+
+      expect(() => createGPUUniformBuffer(device, 101, 'big-uniform')).toThrow(
+        /exceeds maxUniformBufferBindingSize 100/,
+      );
+    });
+
+    it('rejects sizes above maxBufferSize', () => {
+      const device = createMockGPUDevice({
+        maxUniformBufferBindingSize: 200,
+        maxBufferSize: 100,
+      });
+
+      expect(() => createGPUUniformBuffer(device, 101, 'big-buffer')).toThrow(
+        /exceeds maxBufferSize 100/,
+      );
+    });
+
+    it('creates a buffer with UNIFORM | COPY_DST usage', () => {
+      const device = createMockGPUDevice();
+      const expectedUsage =
+        GPU_BUFFER_USAGE_UNIFORM | GPU_BUFFER_USAGE_COPY_DST;
+
+      createGPUUniformBuffer(device, 16, 'uniform-usage');
+
+      expect(device.recorded.buffers[0]?.usage).toBe(expectedUsage);
+    });
+  });
+
   describe('GPU buffer contract constants', () => {
     it('exports the expected binding indices and count', () => {
       expect({
@@ -107,18 +147,12 @@ describe('network.gpu.buffer', () => {
         count: GPU_BUFFER_BINDING_COUNT,
       }).toEqual({
         binding: {
-          weights: 0,
-          from: 1,
-          to: 2,
-          flags: 3,
-          inStart: 4,
-          inOrder: 5,
-          outputs: 6,
-          bias: 7,
-          topoLevels: 8,
-          params: 9,
+          connections: 0,
+          nodes: 1,
+          outputs: 2,
+          params: 3,
         },
-        count: 10,
+        count: 4,
       });
     });
   });
@@ -134,17 +168,17 @@ describe('network.gpu.buffer', () => {
       );
     });
 
-    it('creates one GPUBuffer for every slab', () => {
+    it('creates one GPUBuffer for every struct buffer', () => {
       const device = createMockGPUDevice();
       const network = createEligibleMLP();
       jest.spyOn(capability, 'canUseGPU').mockReturnValue(true);
 
       uploadNetworkToGPU(device, network);
 
-      expect(device.recorded.buffers.length).toBe(10);
+      expect(device.recorded.buffers.length).toBe(4);
     });
 
-    it('sizes each buffer to the byteLength of its source slab', () => {
+    it('sizes each buffer to the byteLength of its struct array', () => {
       const device = createMockGPUDevice();
       const network = createEligibleMLP();
       jest.spyOn(capability, 'canUseGPU').mockReturnValue(true);
@@ -153,49 +187,37 @@ describe('network.gpu.buffer', () => {
 
       const nodeCount = network.nodes.length;
       const connectionCount = network.connections.length;
-      const slab = network.getConnectionSlab();
       const expectedSizes = {
-        weights: slab.weights.byteLength,
-        from: slab.from.byteLength,
-        to: slab.to.byteLength,
-        flags: slab.flags.byteLength,
-        inStart: (nodeCount + 1) * Uint32Array.BYTES_PER_ELEMENT,
-        inOrder: connectionCount * Uint32Array.BYTES_PER_ELEMENT,
+        connections: connectionCount * 16,
+        nodes: nodeCount * 16,
         outputs: nodeCount * Float32Array.BYTES_PER_ELEMENT,
-        bias: nodeCount * Float32Array.BYTES_PER_ELEMENT,
-        topoLevels: nodeCount * Uint32Array.BYTES_PER_ELEMENT,
-        params: 2 * Uint32Array.BYTES_PER_ELEMENT,
+        params: 4 * Uint32Array.BYTES_PER_ELEMENT,
       };
       const recordedSizes = {
-        weights: device.recorded.buffers[0]?.size ?? 0,
-        from: device.recorded.buffers[1]?.size ?? 0,
-        to: device.recorded.buffers[2]?.size ?? 0,
-        flags: device.recorded.buffers[3]?.size ?? 0,
-        inStart: device.recorded.buffers[4]?.size ?? 0,
-        inOrder: device.recorded.buffers[5]?.size ?? 0,
-        outputs: device.recorded.buffers[6]?.size ?? 0,
-        bias: device.recorded.buffers[7]?.size ?? 0,
-        topoLevels: device.recorded.buffers[8]?.size ?? 0,
-        params: device.recorded.buffers[9]?.size ?? 0,
+        connections: device.recorded.buffers[0]?.size ?? 0,
+        nodes: device.recorded.buffers[1]?.size ?? 0,
+        outputs: device.recorded.buffers[2]?.size ?? 0,
+        params: device.recorded.buffers[3]?.size ?? 0,
       };
 
       expect(recordedSizes).toEqual(expectedSizes);
     });
 
-    it('uses STORAGE and COPY_DST usage on every created buffer', () => {
+    it('uses STORAGE and COPY_DST usage on data buffers and UNIFORM on params', () => {
       const device = createMockGPUDevice();
       const network = createEligibleMLP();
       jest.spyOn(capability, 'canUseGPU').mockReturnValue(true);
 
       uploadNetworkToGPU(device, network);
 
-      const expectedUsage =
-        GPU_BUFFER_USAGE_STORAGE | GPU_BUFFER_USAGE_COPY_DST;
-      expect(
-        device.recorded.buffers.every(
-          (buffer) => (buffer.usage & expectedUsage) === expectedUsage,
-        ),
-      ).toBe(true);
+      const [connections, nodes, outputs, params] = device.recorded.buffers;
+      const storageUsage = GPU_BUFFER_USAGE_STORAGE | GPU_BUFFER_USAGE_COPY_DST;
+      const uniformUsage = GPU_BUFFER_USAGE_UNIFORM | GPU_BUFFER_USAGE_COPY_DST;
+
+      expect(connections?.usage).toBe(storageUsage);
+      expect(nodes?.usage).toBe(storageUsage);
+      expect(outputs?.usage).toBe(storageUsage | GPU_BUFFER_USAGE_COPY_SRC);
+      expect(params?.usage).toBe(uniformUsage);
     });
 
     it('returns a GPUBufferSet with the created buffers and metadata', () => {
@@ -207,30 +229,24 @@ describe('network.gpu.buffer', () => {
 
       expect(bufferSet).toEqual(
         expect.objectContaining({
-          weights: device.recorded.buffers[0],
-          from: device.recorded.buffers[1],
-          to: device.recorded.buffers[2],
-          flags: device.recorded.buffers[3],
-          inStart: device.recorded.buffers[4],
-          inOrder: device.recorded.buffers[5],
-          outputs: device.recorded.buffers[6],
-          bias: device.recorded.buffers[7],
-          topoLevels: device.recorded.buffers[8],
-          params: device.recorded.buffers[9],
+          connections: device.recorded.buffers[0],
+          nodes: device.recorded.buffers[1],
+          outputs: device.recorded.buffers[2],
+          params: device.recorded.buffers[3],
           nodeCount: network.nodes.length,
           connectionCount: network.connections.length,
         }),
       );
     });
 
-    it('records a queue.writeBuffer call for every slab', () => {
+    it('records a queue.writeBuffer call for every struct buffer', () => {
       const device = createMockGPUDevice();
       const network = createEligibleMLP();
       jest.spyOn(capability, 'canUseGPU').mockReturnValue(true);
 
       uploadNetworkToGPU(device, network);
 
-      expect(device.recorded.writeBuffers.length).toBe(10);
+      expect(device.recorded.writeBuffers.length).toBe(4);
     });
 
     it('produces deterministic buffer bookkeeping across repeated uploads', () => {
@@ -241,7 +257,7 @@ describe('network.gpu.buffer', () => {
       uploadNetworkToGPU(device, network);
       uploadNetworkToGPU(device, network);
 
-      expect(device.recorded.buffers.length).toBe(20);
+      expect(device.recorded.buffers.length).toBe(8);
     });
     it('uploads a network with no connections', () => {
       const device = createMockGPUDevice();
@@ -256,6 +272,31 @@ describe('network.gpu.buffer', () => {
       expect(bufferSet.connectionCount).toBe(0);
     });
 
+    it('falls back to zero when node state or error responsibility is undefined', () => {
+      const device = createMockGPUDevice();
+      const network = createEligibleMLP();
+      jest.spyOn(capability, 'canUseGPU').mockReturnValue(true);
+
+      const node = network.nodes[0] as unknown as {
+        state: number | undefined;
+        error: { responsibility: number | undefined };
+      };
+      node.state = undefined;
+      node.error.responsibility = undefined;
+
+      const bufferSet = uploadNetworkToGPU(device, network);
+      const floats = new Float32Array(
+        (bufferSet.nodes as unknown as { __data: ArrayBuffer }).__data,
+      );
+
+      expect({
+        state: floats[0],
+        responsibility: floats[2],
+      }).toEqual({
+        state: 0,
+        responsibility: 0,
+      });
+    });
   });
 
   describe('destroyGPUBufferSet', () => {
@@ -267,15 +308,9 @@ describe('network.gpu.buffer', () => {
 
       expect(
         [
-          bufferSet.weights,
-          bufferSet.from,
-          bufferSet.to,
-          bufferSet.flags,
-          bufferSet.inStart,
-          bufferSet.inOrder,
+          bufferSet.connections,
+          bufferSet.nodes,
           bufferSet.outputs,
-          bufferSet.bias,
-          bufferSet.topoLevels,
           bufferSet.params,
         ].every(
           (buffer) =>

@@ -243,6 +243,26 @@ For an 8,000-node / 32,000-edge network, static GPU memory is well under 1 MB, s
 - Measure per-tick latency and CPU↔GPU transfer cost.
 - Define an empirical threshold above which GPU is enabled by default.
 
+## Real-Device Validation Requirement
+
+Any green-validation of WebGPU code MUST include real GPU measurement on a
+visible browser window. Mock GPU tests (mock `GPUAdapter`/`GPUDevice` in Jest)
+are a pre-flight check only; they are NOT a green gate for slices that touch
+`src/architecture/network/gpu/*`.
+
+Validation must:
+
+1. Run the browser-harness-specialist or Chrome DevTools MCP against a real
+   browser page such as `docs/browser-tests/webgpu-nge-tier-benchmark.html`.
+2. Use a **visible, non-headless, foreground** browser window; headless or
+   minimized measurements are invalid.
+3. Record GPU adapter info, CPU reference output, GPU output, and the maximum
+   absolute difference between them (or latency/throughput for performance slices).
+4. Report `browserVisibility: visible-foreground` in the trace summary.
+
+If real-device validation cannot be performed, the slice is NOT green and must
+be routed back to implementation through the orchestrator.
+
 ## Performance Basics
 
 - Create pipelines asynchronously with `createComputePipelineAsync`.

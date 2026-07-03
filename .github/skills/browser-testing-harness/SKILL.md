@@ -39,6 +39,7 @@ Any browser test that exercises **WebGPU, WebGL, GPU compute, or performance**
 **timing** MUST use a **visible, foreground browser window**. Non-negotiable.
 
 Why it matters:
+
 - Hidden, headless, minimized, or background tabs cause the GPU process and
   compositor to de-prioritize work, leading to artificially low throughput and
   invalid latency measurements.
@@ -46,6 +47,7 @@ Why it matters:
   background and produces unreliable numbers.
 
 Required behavior for harness and specialist agents:
+
 - Launch Chrome/Chromium with `--disable-background-timer-throttling`,
   `--disable-renderer-backgrounding`, `--disable-backgrounding-occluded-windows`,
   and a non-headless, visible window.
@@ -189,7 +191,12 @@ context.
    `scripts/agent-customization/browser-tests/harness-launcher.ts`.
 4. Launch the browser in a **visible, non-headless** window and, if possible,
    bring it to the foreground. Document window visibility in the trace summary.
-5. Navigate to the scenario URL; wait for the page to set the declared
+5. **Pre-flight visibility check.** Before running any GPU measurement, verify that
+   the browser window is visible and in the foreground. If the window is headless,
+   minimized, occluded, or cannot be confirmed as foreground, **abort the GPU test**
+   and report `browserVisibility: invalid` with the reason. GPU timing or parity
+   results from a non-visible window are invalid and must be discarded.
+6. Navigate to the scenario URL; wait for the page to set the declared
    `window.*SmokeResult` object.
 
    Scenario pages live under `docs/browser-tests/` and are intentionally hidden
@@ -197,17 +204,17 @@ context.
    server, for example
    `http://localhost:8080/docs/browser-tests/webgpu-inference-smoke.html`.
 
-6. If the scenario fails or needs deeper inspection, delegate to the relevant
+7. If the scenario fails or needs deeper inspection, delegate to the relevant
    Chrome DevTools specialist (`performance-trace-specialist`,
    `browser-ui-specialist`, `browser-memory-specialist`) via the
    `chrome-devtools-mcp` skill.
-7. Build a trace summary with `createTraceSummary()` from
+8. Build a trace summary with `createTraceSummary()` from
    `scripts/agent-customization/browser-tests/trace-summary.ts`.
-8. Include in the summary a `browserVisibility` field: `visible-foreground`,
+9. Include in the summary a `browserVisibility` field: `visible-foreground`,
    `visible-background`, `minimized`, or `headless`. GPU/perf measurements are
    only valid when this field is `visible-foreground`.
-9. Tear down the local server.
-10. Return the JSON summary and any artifacts.
+10. Tear down the local server.
+11. Return the JSON summary and any artifacts.
 
 ## Server Start and Scenario Navigation
 

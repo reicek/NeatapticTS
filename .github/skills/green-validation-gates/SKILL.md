@@ -127,6 +127,27 @@ batched calls (`npm run build`, `npm run jest:base`, `npm run jest:esm-ts`,
 | `agent-graph`    | All flow/gate/agent references resolve to real files                       | `scripts/agent-customization/gates/agent-graph.gate.mjs`    |
 | `learning-event` | A learning event exists for any gate exception or cross-tier call          | `scripts/agent-customization/gates/learning-event.gate.mjs` |
 
+## GPU Real-Device Gate
+
+Any slice that touches `src/architecture/network/gpu/*` must pass the **GPU
+Real-Device Gate** before it can be marked green. This gate is mandatory and
+supersedes mock-only Jest validation.
+
+Required gate evidence:
+
+- Browser test file used (e.g., `docs/browser-tests/webgpu-nge-tier-benchmark.html`).
+- GPU adapter info, including `vendor` and `architecture` from `navigator.gpu.requestAdapter().info`.
+- Maximum absolute difference between CPU and GPU outputs (or latency/throughput metric when the slice is performance-oriented).
+- Explicit confirmation that the browser window was **visible and in the foreground**
+  during measurement (`browserVisibility: visible-foreground`).
+- A statement that headless or minimized execution was **not** used.
+
+Mock GPU test results (mock `GPUAdapter`/`GPUDevice` in Jest) do NOT satisfy this
+gate. They are acceptable as pre-flight unit tests, but they cannot replace the
+real-device visible-window measurement. If the gate cannot pass because no real
+GPU is available in the execution environment, record `NOT OK — no real GPU
+measurement` and route the slice back to implementation via the orchestrator.
+
 ## Decision Tree
 
 ```text

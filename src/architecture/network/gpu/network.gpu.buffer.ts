@@ -1,5 +1,8 @@
 import type Network from '../network';
 import { canUseGPU } from './network.gpu.capability';
+import type { GPUBufferSet } from './network.gpu.types';
+
+export type { GPUBufferSet };
 
 /**
  * WebGPU buffer usage flag: the buffer may be the destination of a copy command.
@@ -23,6 +26,14 @@ const GPU_BUFFER_USAGE_STORAGE = 0x0080;
  * Mirror of the `GPUBufferUsage.COPY_SRC` bit.
  */
 const GPU_BUFFER_USAGE_COPY_SRC = 0x0004;
+
+/**
+ * WebGPU buffer usage flag: the buffer may be bound as a uniform buffer in a
+ * compute shader.
+ *
+ * Mirror of the `GPUBufferUsage.UNIFORM` bit.
+ */
+const GPU_BUFFER_USAGE_UNIFORM = 0x0040;
 
 /**
  * Combined usage for every slab buffer uploaded to the GPU: storage for the
@@ -86,6 +97,55 @@ export function createGPUBuffer(
 }
 
 /**
+ * Create a WebGPU uniform buffer that can receive `queue.writeBuffer` uploads.
+ *
+ * The network parameter buffer is bound as a uniform because it is tiny
+ * (a few scalar uniforms) and read once per workgroup. Uniform buffers are
+ * limited by `maxUniformBufferBindingSize`, which is much smaller than the
+ * storage-buffer limit, so this helper validates against the correct limit.
+ *
+ * @param device - WebGPU device used to allocate the buffer.
+ * @param byteLength - Desired buffer size in bytes. Must be finite and
+ *   non-negative.
+ * @param label - Debug label attached to the buffer.
+ * @returns A freshly created `GPUBuffer` with `UNIFORM | COPY_DST` usage.
+ * @throws Error when `byteLength` is invalid or exceeds device limits.
+ */
+export function createGPUUniformBuffer(
+  device: GPUDevice,
+  byteLength: number,
+  label: string,
+): GPUBuffer {
+  if (!Number.isFinite(byteLength) || byteLength < 0) {
+    throw new Error(
+      `Invalid GPU buffer size for "${label}": ${String(byteLength)}`,
+    );
+  }
+
+  const maxUniformBufferBindingSize =
+    device.limits.maxUniformBufferBindingSize!;
+  const maxBufferSize = device.limits.maxBufferSize!;
+
+  if (byteLength > maxUniformBufferBindingSize) {
+    throw new Error(
+      `Buffer "${label}" size ${byteLength} exceeds maxUniformBufferBindingSize ${String(maxUniformBufferBindingSize)}`,
+    );
+  }
+
+  if (byteLength > maxBufferSize) {
+    throw new Error(
+      `Buffer "${label}" size ${byteLength} exceeds maxBufferSize ${String(maxBufferSize)}`,
+    );
+  }
+
+  return device.createBuffer({
+    label,
+    size: byteLength,
+    usage: GPU_BUFFER_USAGE_UNIFORM | GPU_BUFFER_USAGE_COPY_DST,
+  });
+}
+
+/**
  * Raw connection slab used to build GPU-friendly adjacency arrays.
  *
  * The cast is intentional: GPU upload is a consumer of the same private layout
@@ -96,29 +156,6 @@ interface ConnectionSlab {
   to: Uint32Array;
   weights: Float32Array | Float64Array;
   flags: Uint8Array;
-}
-
-/**
- * GPU-side buffer handles and metadata produced by uploading a network slab.
- *
- * The implementation creates one WebGPU buffer per slab/activation array
- * and records `nodeCount`/`connectionCount` so the compute pipeline can size its
- * dispatches without re-reading CPU structures.
- */
-export interface GPUBufferSet {
-  weights: GPUBuffer;
-  from: GPUBuffer;
-  to: GPUBuffer;
-  flags: GPUBuffer;
-  inStart: GPUBuffer;
-  inOrder: GPUBuffer;
-  outputs: GPUBuffer;
-  bias: GPUBuffer;
-  topoLevels: GPUBuffer;
-  params: GPUBuffer;
-  nodeCount: number;
-  connectionCount: number;
-  topoLevelsArray: Uint32Array;
 }
 
 /**
@@ -133,7 +170,7 @@ export interface GPUBufferSet {
  * @param connectionCount - Number of connections in the network.
  * @returns Incoming CSR offsets and connection order arrays.
  */
-function buildIncomingCSR(
+export function buildIncomingCSR(
   slab: ConnectionSlab,
   nodeCount: number,
   connectionCount: number,
@@ -173,7 +210,7 @@ function buildIncomingCSR(
  * @param connectionCount - Number of connections in the network.
  * @returns Outgoing CSR offsets and connection order arrays.
  */
-function buildOutgoingCSR(
+export function buildOutgoingCSR(
   slab: ConnectionSlab,
   nodeCount: number,
   connectionCount: number,
@@ -214,7 +251,7 @@ function buildOutgoingCSR(
  * @param connectionCount - Number of connections in the network.
  * @returns A `nodeCount`-length array of unsigned topological levels.
  */
-function buildTopoLevels(
+export function buildTopoLevels(
   slab: ConnectionSlab,
   nodeCount: number,
   connectionCount: number,
@@ -267,31 +304,129 @@ function buildTopoLevels(
 }
 
 /**
- * Build a dense per-node bias array for the GPU gather kernel.
+ * Byte stride of one connection struct on the GPU.
  *
- * @param network - Network whose node biases will be uploaded.
- * @returns Float32 bias values ordered by node index.
+ * The WGSL `Connection` struct is `{ from_node: u32, to_node: u32, weight: f32,
+ * flags: u32 }`, which is 16 bytes after alignment. Packing all four fields
+ * into one struct means a single storage-buffer read brings the whole
+ * connection into cache.
  */
-function buildBiasArray(network: Network): Float32Array {
-  const nodeCount = network.nodes.length;
-  const bias = new Float32Array(nodeCount);
+const GPU_CONNECTION_STRUCT_BYTES = 16;
 
-  for (let node = 0; node < nodeCount; node += 1) {
-    bias[node] = network.nodes[node].bias;
+/**
+ * Byte stride of one node struct on the GPU.
+ *
+ * The WGSL `Node` struct is `{ activation_state: f32, derivative_state: f32,
+ * error: f32, flags: u32 }`, which is 16 bytes after alignment. Reading a node
+ * fetches its state, bias (packed into the derivative slot for the forward
+ * pass), error, and flags in one contiguous read.
+ */
+const GPU_NODE_STRUCT_BYTES = 16;
+
+/**
+ * Byte size of the per-dispatch params uniform.
+ *
+ * The WGSL `Params` struct is `{ level: u32, node_count: u32,
+ * connection_count: u32, output_start: u32 }`, padded to 16 bytes so it is a
+ * valid uniform binding.
+ */
+const GPU_PARAMS_BYTES = 16;
+
+/**
+ * Pack the connection slab into one contiguous struct array.
+ *
+ * Each connection is laid out as `{ from_node: u32, to_node: u32, weight: f32,
+ * flags: u32 }`. Connections are ordered by the incoming-CSR order produced by
+ * `buildIncomingCSR`, which groups them by target node and preserves the
+ * connection-index order used by the CPU fast-slab path. The kernel can then
+ * iterate the struct buffer linearly for each node, keeping f32 summation
+ * order consistent with the CPU and avoiding cross-platform drift.
+ *
+ * @param slab - Connection slab with `from`, `to`, `weights`, and `flags`.
+ * @param nodeCount - Number of nodes in the network, including inputs and
+ *   outputs. Drives the incoming-CSR offsets used to order the buffer.
+ * @param connectionCount - Number of active connections to pack. The slab may
+ *   over-allocate, so only this many entries are uploaded.
+ * @returns An `ArrayBuffer` ready for `queue.writeBuffer`.
+ */
+function buildConnectionsArray(
+  slab: ConnectionSlab,
+  nodeCount: number,
+  connectionCount: number,
+): ArrayBuffer {
+  const { inOrder } = buildIncomingCSR(slab, nodeCount, connectionCount);
+  const buffer = new ArrayBuffer(connectionCount * GPU_CONNECTION_STRUCT_BYTES);
+  const view = new DataView(buffer);
+
+  for (let index = 0; index < connectionCount; index += 1) {
+    const connectionIndex = inOrder[index];
+    const offset = index * GPU_CONNECTION_STRUCT_BYTES;
+    view.setUint32(offset, slab.from[connectionIndex], true);
+    view.setUint32(offset + 4, slab.to[connectionIndex], true);
+    view.setFloat32(offset + 8, Number(slab.weights[connectionIndex]), true);
+    view.setUint32(offset + 12, slab.flags[connectionIndex], true);
   }
 
-  return bias;
+  return buffer;
+}
+
+/**
+ * Pack node state into one contiguous struct array.
+ *
+ * Each node is laid out as `{ activation_state: f32, derivative_state: f32,
+ * error: f32, flags: u32 }`. The forward-pass kernel reads the bias from the
+ * `derivative_state` slot because the plan's node struct keeps `bias` there
+ * (the slot is unused by the forward pass otherwise). Callers should treat the
+ * `derivative_state` field as the per-node bias while the kernel is running.
+ *
+ * @param network - Network whose node state will be packed.
+ * @returns An `ArrayBuffer` ready for `queue.writeBuffer`.
+ */
+function buildNodesArray(network: Network): ArrayBuffer {
+  const nodeCount = network.nodes.length;
+  const buffer = new ArrayBuffer(nodeCount * GPU_NODE_STRUCT_BYTES);
+  const floats = new Float32Array(buffer);
+  const uints = new Uint32Array(buffer);
+
+  for (let node = 0; node < nodeCount; node += 1) {
+    const nodeRef = network.nodes[node];
+    const offset = node * 4;
+    floats[offset] = nodeRef.state ?? 0;
+    floats[offset + 1] = nodeRef.bias;
+    floats[offset + 2] = nodeRef.error.responsibility ?? 0;
+    uints[offset + 3] = 0;
+  }
+
+  return buffer;
+}
+
+/**
+ * Count how many distinct topological levels are present in a level array.
+ *
+ * Levels start at `0` for input nodes, so the number of passes needed by the
+ * dispatch loop is `max(levels) + 1`.
+ *
+ * @param levels - Per-node topological level array.
+ * @returns Number of distinct levels.
+ */
+function computeTopoLevelCount(levels: Uint32Array): number {
+  let maxLevel = 0;
+  for (let index = 0; index < levels.length; index += 1) {
+    if (levels[index] > maxLevel) {
+      maxLevel = levels[index];
+    }
+  }
+  return maxLevel + 1;
 }
 
 /**
  * Upload a network's fast-slab structures to WebGPU buffers.
  *
- * The upload path reuses the existing CPU slab arrays without
- * re-serialization: it creates one `GPUBuffer` per slab/CSR array via
- * `createGPUBuffer`, writes each slab exactly once with
- * `queue.writeBuffer`, and returns the buffer handles plus node/connection
- * counts. The buffer order matches `GPU_BUFFER_BINDING` so the compute
- * kernel can bind them with stable indices.
+ * The upload path packs connections and nodes into two struct arrays and then
+ * creates only four GPU buffers: connections, nodes, outputs, and params.
+ * Keeping the binding count at four sits below the WebGPU default limit for
+ * storage buffers per shader stage and removes the need to request a custom
+ * `maxStorageBuffersPerShaderStage` limit.
  *
  * @param device - Mock or real WebGPU device used to allocate buffers.
  * @param network - Network whose fast-slab layout will be uploaded.
@@ -312,40 +447,24 @@ export function uploadNetworkToGPU(
   const slab = network.getConnectionSlab() as unknown as ConnectionSlab;
   const nodeCount = network.nodes.length;
   const connectionCount = network.connections.length;
-  const { inStart, inOrder } = buildIncomingCSR(
+  const connectionsArray = buildConnectionsArray(
     slab,
     nodeCount,
     connectionCount,
   );
+  const nodesArray = buildNodesArray(network);
   const topoLevels = buildTopoLevels(slab, nodeCount, connectionCount);
-  const bias = buildBiasArray(network);
 
-  // Step 3: Create one GPU buffer per slab/CSR array.
-  const weightsBuffer = createGPUBuffer(
+  // Step 3: Create the four buffers required by the struct-packed contract.
+  const connectionsBuffer = createGPUBuffer(
     device,
-    slab.weights.byteLength,
-    'network_weights',
+    connectionsArray.byteLength,
+    'network_connections',
   );
-  const fromBuffer = createGPUBuffer(
+  const nodesBuffer = createGPUBuffer(
     device,
-    slab.from.byteLength,
-    'network_from',
-  );
-  const toBuffer = createGPUBuffer(device, slab.to.byteLength, 'network_to');
-  const flagsBuffer = createGPUBuffer(
-    device,
-    slab.flags.byteLength,
-    'network_flags',
-  );
-  const inStartBuffer = createGPUBuffer(
-    device,
-    inStart.byteLength,
-    'network_inStart',
-  );
-  const inOrderBuffer = createGPUBuffer(
-    device,
-    inOrder.byteLength,
-    'network_inOrder',
+    nodesArray.byteLength,
+    'network_nodes',
   );
   const outputsBuffer = createGPUBuffer(
     device,
@@ -353,45 +472,37 @@ export function uploadNetworkToGPU(
     'network_outputs',
     GPU_BUFFER_USAGE_COPY_SRC,
   );
-  const biasBuffer = createGPUBuffer(device, bias.byteLength, 'network_bias');
-  const topoLevelsBuffer = createGPUBuffer(
+  const paramsBuffer = createGPUUniformBuffer(
     device,
-    topoLevels.byteLength,
-    'network_topoLevels',
-  );
-  const paramsBuffer = createGPUBuffer(
-    device,
-    2 * Uint32Array.BYTES_PER_ELEMENT,
+    GPU_PARAMS_BYTES,
     'network_params',
   );
 
-  // Step 4: Upload each slab/CSR array to its GPU buffer.
-  device.queue.writeBuffer(weightsBuffer, 0, slab.weights);
-  device.queue.writeBuffer(fromBuffer, 0, slab.from);
-  device.queue.writeBuffer(toBuffer, 0, slab.to);
-  device.queue.writeBuffer(flagsBuffer, 0, slab.flags);
-  device.queue.writeBuffer(inStartBuffer, 0, inStart);
-  device.queue.writeBuffer(inOrderBuffer, 0, inOrder);
-  device.queue.writeBuffer(biasBuffer, 0, bias);
-  device.queue.writeBuffer(topoLevelsBuffer, 0, topoLevels);
-  device.queue.writeBuffer(paramsBuffer, 0, new Uint32Array([0, nodeCount]));
+  // Step 4: Upload the packed arrays and initialize mutable buffers.
+  device.queue.writeBuffer(connectionsBuffer, 0, connectionsArray);
+  device.queue.writeBuffer(nodesBuffer, 0, nodesArray);
   device.queue.writeBuffer(outputsBuffer, 0, new Float32Array(nodeCount));
+  device.queue.writeBuffer(
+    paramsBuffer,
+    0,
+    new Uint32Array([
+      0,
+      nodeCount,
+      connectionCount,
+      nodeCount - network.output,
+    ]),
+  );
 
   // Step 5: Return the buffer set and metadata required by the compute path.
   return {
-    weights: weightsBuffer,
-    from: fromBuffer,
-    to: toBuffer,
-    flags: flagsBuffer,
-    inStart: inStartBuffer,
-    inOrder: inOrderBuffer,
+    connections: connectionsBuffer,
+    nodes: nodesBuffer,
     outputs: outputsBuffer,
-    bias: biasBuffer,
-    topoLevels: topoLevelsBuffer,
     params: paramsBuffer,
     nodeCount,
     connectionCount,
     topoLevelsArray: topoLevels,
+    topoLevelCount: computeTopoLevelCount(topoLevels),
   };
 }
 
@@ -399,10 +510,11 @@ export function uploadNetworkToGPU(
  * Re-upload the weights and bias arrays for a network whose topology has not
  * changed.
  *
- * The GPU kernel reads weights and bias every dispatch, so these buffers must
- * be kept in sync with the CPU network state across activations. Topology
- * buffers are not re-uploaded here; callers recreate the full `GPUBufferSet`
- * when the topology changes.
+ * The GPU kernel reads weights and node biases every dispatch, so these fields
+ * must be kept in sync with the CPU network state across activations. Because
+ * the values live inside struct arrays, the whole connections buffer and the
+ * whole nodes buffer are rewritten. Topology metadata does not change here;
+ * callers recreate the full `GPUBufferSet` when the topology changes.
  *
  * @param device - WebGPU device that owns the buffers.
  * @param bufferSet - Topology buffers created by `uploadNetworkToGPU`.
@@ -414,8 +526,12 @@ export function uploadDynamicNetworkBuffers(
   network: Network,
 ): void {
   const slab = network.getConnectionSlab() as unknown as ConnectionSlab;
-  device.queue.writeBuffer(bufferSet.weights, 0, slab.weights);
-  device.queue.writeBuffer(bufferSet.bias, 0, buildBiasArray(network));
+  device.queue.writeBuffer(
+    bufferSet.connections,
+    0,
+    buildConnectionsArray(slab, bufferSet.nodeCount, bufferSet.connectionCount),
+  );
+  device.queue.writeBuffer(bufferSet.nodes, 0, buildNodesArray(network));
 }
 
 /**
@@ -431,15 +547,9 @@ export function destroyGPUBufferSet(
 ): void {
   void device;
   for (const buffer of [
-    bufferSet.weights,
-    bufferSet.from,
-    bufferSet.to,
-    bufferSet.flags,
-    bufferSet.inStart,
-    bufferSet.inOrder,
+    bufferSet.connections,
+    bufferSet.nodes,
     bufferSet.outputs,
-    bufferSet.bias,
-    bufferSet.topoLevels,
     bufferSet.params,
   ]) {
     buffer.destroy();

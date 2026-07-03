@@ -503,6 +503,13 @@ Each slice is a bounded unit of work with these fields:
   Slices that add new code alongside old code without removing the old
   code are PLANNING DEFECTS and must be rejected. No backward-compatibility
   wrappers, no dual-path code, no deferred cleanup — ever.
+- **GPU SLICES REQUIRE REAL VISIBLE-WINDOW VALIDATION.** For any slice whose
+  `files_to_change` includes a path under `src/architecture/network/gpu/*`,
+  `05-green-testing` MUST run a real browser-based GPU test on a visible browser
+  window. Mock-only Jest validation is INSUFFICIENT. If no real GPU measurement
+  was performed, the slice is NOT green; the orchestrator must loop back to
+  `04-implementing` with a `slice-fix` packet that instructs the use of the
+  `browser-harness-specialist` or Chrome DevTools MCP for real-device measurement.
 - **Targeted Tests Only — Never the Full Suite in a Single Call.**
   Orchestrators and green-testing agents MUST NOT run broad regression
   suites such as `npm run test:silent`, `npm test`, or unconstrained `jest`

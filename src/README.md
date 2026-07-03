@@ -6724,6 +6724,72 @@ const network = Architect.perceptron(2, 4, 1);
 const output = network.activate([0, 1]);
 ```
 
+### activateGPU
+
+```ts
+activateGPU(
+  device: GPUDevice,
+  network: default,
+  inputs: number[] | Float32Array<ArrayBufferLike>,
+): Promise<Float32Array<ArrayBufferLike>>
+```
+
+Run a single-network forward pass on the supplied WebGPU device.
+
+Parameters:
+- `device` - WebGPU device used to run the forward kernel.
+- `network` - Network whose fast-slab topology will be uploaded.
+- `inputs` - Input vector of length `network.input`.
+
+Returns: A promise resolving to a Float32Array of output-node values.
+
+Example:
+
+```ts
+const adapter = await navigator.gpu.requestAdapter({
+  powerPreference: 'high-performance',
+});
+const device = await adapter?.requestDevice();
+if (device) {
+  const output = await activateGPU(device, network, [0.5, -0.2]);
+}
+```
+
+### batchActivate
+
+```ts
+batchActivate(
+  device: GPUDevice,
+  networks: default[],
+  inputMatrix: Float32Array<ArrayBufferLike>,
+): Promise<BatchedGPUResult>
+```
+
+Batched GPU activation for multi-agent evaluation.
+
+Uploads the input matrix and every network's fast-slab topology to the GPU,
+reuses compiled pipelines for networks that share topology, dispatches all
+networks in a single compute pass, and reads back one output row per network
+into a row-major result matrix. The CPU path remains the default; this seam
+is opt-in and gated by `canUseGPU`.
+
+Parameters:
+- `device` - WebGPU device used to run the forward kernel.
+- `networks` - Networks to evaluate as a batch. All networks must have the
+same input and output dimensions.
+- `inputMatrix` - Flattened row-major inputs, length
+`networks.length * networks[0].input`.
+
+Returns: Promise resolving to a row-major output matrix.
+
+Example:
+
+```ts
+const networks = Array.from({ length: 4 }, () => Network.createMLP(2, [3], 1));
+const inputs = new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]);
+const { outputs, rowCount, colCount } = await batchActivate(device, networks, inputs);
+```
+
 ### formatConstructSummary
 
 ```ts

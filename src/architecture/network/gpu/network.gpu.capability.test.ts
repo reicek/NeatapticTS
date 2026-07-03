@@ -119,6 +119,16 @@ describe('network.gpu.capability', () => {
       ).toBe(false);
     });
 
+    it('returns true when a node has no explicit squash', () => {
+      const network = createSlabEligibleNetwork({
+        nodes: [{ squash: undefined }],
+      });
+      const device = createMockGPUDevice();
+      expect(
+        canUseGPU(network as unknown as Network, device, SUPPORTED_ACTIVATIONS),
+      ).toBe(true);
+    });
+
     it('returns true only for a fully eligible network', () => {
       const network = createSlabEligibleNetwork();
       const device = createMockGPUDevice();
