@@ -325,7 +325,7 @@ Attach this block to the plan and include it in `VALIDATION_EVIDENCE` before inv
 
 ## Escalation Protocol
 
-If 3 consecutive delegation attempts to the same specialist fail to resolve the issue, escalate to `00-helping` via `00.cross-tier-helper` with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
+Continue dispatching fresh specialist instances until the issue is resolved or a true technical limit is reached. Only escalate to `00-helping` via `00.cross-tier-helper` when a genuine, documented technical limit blocks further progress. Slow progress is still progress — no concessions.
 
 ## If Blocked
 

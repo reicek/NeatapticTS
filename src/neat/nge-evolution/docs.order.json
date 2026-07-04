@@ -9,7 +9,5 @@
     "neat.nge-evolution.distance.ts",
     "neat.nge-evolution.epigenetic.ts"
   ],
-  "hiddenSymbols": [
-    "expandSeedPolicy"
-  ]
+  "hiddenSymbols": ["expandSeedPolicy"]
 }

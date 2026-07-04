@@ -37,11 +37,12 @@ a distinct line for every car in multi-car packs. Each call returns a fresh
 array, so callers may mutate or cache freely.
 
 Parameters:
+
 - `trackSpec` - Frozen track geometry.
 - `teamIndex` - Team index: 0 = blue team, 1 = red team.
 - `lateralOffsetWorld` - Optional signed lateral offset in world units
-relative to the road centerline; when omitted the offset follows the team
-baseline above.
+  relative to the road centerline; when omitted the offset follows the team
+  baseline above.
 
 Returns: Fresh ordered list of world-space `{x, y}` guiding points.
 
@@ -70,6 +71,7 @@ Computes a world-to-canvas affine transform that fits the entire track
 inside the canvas with uniform padding on all sides.
 
 Parameters:
+
 - `canvas` - Target canvas (uses `width` and `height` attributes).
 - `spec` - Frozen track spec whose bounding box determines the scale.
 
@@ -118,6 +120,7 @@ positive local X), then rotated and translated to world position via the
 canvas transform stack.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `state` - Current physics state (position + heading).
 - `transform` - World-to-canvas affine transform.
@@ -136,6 +139,7 @@ drawCarTireCorners(
 Draws live tire-health corner markers on the car body.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `halfLengthCanvas` - Half car length in canvas pixels.
 - `halfWidthCanvas` - Half car width in canvas pixels.
@@ -156,6 +160,7 @@ drawGuidingLinePath(
 Traces and strokes one guiding line path with the requested team color.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `worldPoints` - Ordered world-space guiding points.
 - `transform` - World-to-canvas affine transform.
@@ -177,6 +182,7 @@ drawPitOverlayCenterDetails(
 Draws centered pit scanline and side beacons for extra Tron surface detail.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `canvasWidth` - Overlay width in canvas pixels.
 - `canvasHeight` - Overlay height in canvas pixels.
@@ -198,6 +204,7 @@ drawPitOverlayCornerAccents(
 Draws compact corner accent marks for pit overlays in local overlay space.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `canvasWidth` - Overlay width in canvas pixels.
 - `canvasHeight` - Overlay height in canvas pixels.
@@ -219,16 +226,18 @@ drawPitOverlays(
 Draws the Tier 4 / Tier 5 pit entrance and stall overlays.
 
 `pitStatus` uses a packed tuple whose layout depends on the car count:
+
 - 4-car packs (Tier 3–4): `[teamA_car, teamA_ticks, teamB_car, teamB_ticks]`
   with stride 2 per team.
 - 6-car packs (Tier 5): `[teamA_car, teamA_ticks, teamA_waiting, teamB_car,
-  teamB_ticks, teamB_waiting]` with stride 3 per team.
+teamB_ticks, teamB_waiting]` with stride 3 per team.
 
 In both layouts a positive tick count at offset 1 within a team's slot marks
 that team's pit as occupied, causing both the stall and entrance corridor
 AABB to render with the occupied fill overlay.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `spec` - Frozen track geometry.
 - `transform` - World-to-canvas affine transform.
@@ -251,6 +260,7 @@ drawRotatedOverlay(
 Draws one overlay rectangle in world space with optional rotation.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `worldBox` - World-space rectangle.
 - `transform` - World-to-canvas affine transform.
@@ -275,6 +285,7 @@ Squares are aligned with the local tangent direction and distributed across
 the lane width using the local normal direction.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `trackRenderGeometry` - Cached spline-derived track geometry.
 - `transform` - World-to-canvas affine transform.
@@ -302,6 +313,7 @@ the host can anchor every agent independently. The lines are drawn before
 car bodies because this helper runs inside the track-drawing pass.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `spec` - Frozen track geometry.
 - `transform` - World-to-canvas affine transform.
@@ -332,6 +344,7 @@ Layers (back to front): glow halo, asphalt surface, left/right edge lines,
 dashed centerline, start-line neon square crosswalk.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `spec` - Frozen track geometry.
 - `transform` - World-to-canvas affine transform.
@@ -350,6 +363,7 @@ Draws the bright cyan edge lines on both sides of each segment using
 perpendicular offset geometry.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `spec` - Track geometry.
 - `transform` - World-to-canvas transform.
@@ -367,6 +381,7 @@ drawTrackGlowLayer(
 Draws a wide semi-transparent glow behind each track segment.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `spec` - Track geometry.
 - `transform` - World-to-canvas transform.
@@ -384,6 +399,7 @@ drawTrackSurfaceLayer(
 Fills the track surface with the dark asphalt colour.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `spec` - Track geometry.
 - `transform` - World-to-canvas transform.
@@ -399,6 +415,7 @@ getTrackRenderGeometry(
 Resolves cached spline-derived geometry for the given `TrackSpec`.
 
 Parameters:
+
 - `spec` - Frozen track geometry.
 
 Returns: Cached centerline/boundary geometry.
@@ -419,6 +436,7 @@ Worker-backed paths expose explicit feature flags; browser-local fallback
 treats multi-car tiers with authored pit geometry as pit-enabled.
 
 Parameters:
+
 - `overlayFrame` - Optional packed worker frame.
 - `carCount` - Number of cars in the current render roster.
 - `pitBoxCount` - Number of generated pit boxes on the current track.
@@ -437,6 +455,7 @@ Normalizes a heading candidate to radians in [-pi, pi], tolerating degree
 inputs from future pit metadata producers.
 
 Parameters:
+
 - `headingCandidate` - Metadata heading candidate.
 
 Returns: Normalized radian heading.
@@ -452,6 +471,7 @@ normalizeRadians(
 Wraps an angle in radians to the interval [-pi, pi].
 
 Parameters:
+
 - `valueRadians` - Input angle in radians.
 
 Returns: Wrapped angle in radians.
@@ -509,6 +529,7 @@ Lazily caches the 2D context on `renderState.cached2dContext` so
 that subsequent frames skip the per-frame `getContext('2d')` call.
 
 Parameters:
+
 - `canvas` - Target canvas element.
 - `spec` - Frozen track spec (geometry only).
 - `envState` - Current physics state from the simulation.
@@ -527,6 +548,7 @@ resolvePitMetadataHeadingRadians(
 Resolves a pit heading when the pit metadata already carries orientation.
 
 Parameters:
+
 - `pitBox` - Team pit metadata descriptor.
 
 Returns: Optional heading value in radians.
@@ -544,6 +566,7 @@ resolvePitOverlayHeadingRadians(
 Resolves pit-overlay rotation from pit metadata or nearby spline tangent.
 
 Parameters:
+
 - `spec` - Frozen track geometry used for nearest-sample lookup.
 - `pitBox` - Team pit metadata descriptor.
 - `pitCenter` - World-space center used to locate the nearest spline sample.
@@ -561,6 +584,7 @@ resolveRenderCars(
 Resolves the render roster from the authoritative environment state.
 
 Parameters:
+
 - `envState` - Current environment snapshot.
 
 Returns: Ordered list of car states to draw for this frame.
@@ -580,6 +604,7 @@ resolveRenderCarTeamIndex(
 Resolves the team index used for per-car pit-colored outlines.
 
 Parameters:
+
 - `overlayFrame` - Optional packed worker frame.
 - `envState` - Current simulation state.
 - `renderCar` - Car being rendered.
@@ -603,6 +628,7 @@ resolveRenderTireState(
 Resolves the rendered tire-health tuple for the focused car.
 
 Parameters:
+
 - `envState` - Current environment snapshot.
 - `packedTireState` - Optional packed worker tire array.
 - `focusCarIndex` - Focused car row inside the packed worker frame.
@@ -623,6 +649,7 @@ Resolves a stable pit heading using a weighted circular mean of nearby
 spline tangents around the nearest lane-center sample.
 
 Parameters:
+
 - `spec` - Frozen track geometry containing spline samples.
 - `pitCenter` - World-space pit center used for proximity weighting.
 - `nearestSampleIndex` - Index of the nearest spline sample.
@@ -641,6 +668,7 @@ resolveStartLineSquareCount(
 Resolves how many start-line squares can fit across the current lane width.
 
 Parameters:
+
 - `laneWidthWorldUnits` - Current lane width in world units.
 - `squarePitchWorldUnits` - Square side plus inter-square gap.
 
@@ -657,6 +685,7 @@ resolveStartLineSquareSide(
 Resolves one start-line square side length from the current lane width.
 
 Parameters:
+
 - `laneWidthWorldUnits` - Current lane width in world units.
 
 Returns: Clamped square side length in world units.
@@ -675,6 +704,7 @@ When pit visuals are disabled the renderer still needs a team-colored
 outline so the Tier 1/Tier 2 blue/red baseline remains visible.
 
 Parameters:
+
 - `teamIndex` - Team index (`0 = blue team`, `1 = red team`).
 
 Returns: Team car-body color used when pits are not rendered.
@@ -690,6 +720,7 @@ resolveTeamPitColor(
 Resolves the pit palette color for the supplied team index.
 
 Parameters:
+
 - `teamIndex` - Team index (`0 = blue team`, `1 = red team`).
 
 Returns: Team pit color used by both pit overlays and car outlines.
@@ -705,6 +736,7 @@ resolveTireHealthColor(
 Resolves the live tire marker color from tire health.
 
 Parameters:
+
 - `tireHealth` - Normalized tire-health value.
 
 Returns: CSS color string for the tire marker.
@@ -722,6 +754,7 @@ resolveVisiblePitTeamIndex(
 Resolves which team's pit overlays should be visible in the current frame.
 
 Parameters:
+
 - `overlayFrame` - Optional packed worker frame.
 - `envState` - Current simulation state.
 - `focusCarIndex` - Focused car index for packed frames.
@@ -740,6 +773,7 @@ resolveWorldEdgePaddingPx(
 Resolves the edge padding used by world-to-canvas fitting.
 
 Parameters:
+
 - `canvas` - Target canvas.
 - `requestedEdgePaddingPx` - Optional explicit edge padding.
 
@@ -758,6 +792,7 @@ traceClosedWorldPath(
 Traces one closed polyline derived from world-space points.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `worldPoints` - Ordered world-space points.
 - `transform` - World-to-canvas affine transform.
@@ -775,6 +810,7 @@ traceTrackRibbonPath(
 Traces the filled ribbon path bounded by the left and right track edges.
 
 Parameters:
+
 - `ctx` - 2D rendering context.
 - `trackRenderGeometry` - Cached world-space track geometry.
 - `transform` - World-to-canvas affine transform.

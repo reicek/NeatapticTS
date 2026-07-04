@@ -37,6 +37,7 @@ budget and curriculum, fitness helpers define how populations are scored, and
 the loop turns all of that into a long-running evolutionary session.
 
 Trainer startup map:
+
 ```mermaid
 flowchart LR
     Entry["runTrainer()"] --> Setup["createTrainerSetup()\nstatic training shape"]
@@ -67,6 +68,7 @@ A useful reading order is:
 4. `FlappyGenerationReport` for what the loop emits back out.
 
 Type relationship map:
+
 ```mermaid
 flowchart TB
     Setup["FlappyTrainerSetup\nstatic sizes and counts"] --> Controller["FlappyTrainerNeatController\nmutable NEAT runtime"]
@@ -155,6 +157,7 @@ and terminal messaging consistent whether the failure came from setup,
 evaluation, or the loop itself.
 
 Parameters:
+
 - `error` - Unknown rejection reason from trainer execution.
 
 Returns: Nothing.
@@ -237,6 +240,7 @@ values. Normalizing both cases into one predictable string keeps the CLI
 surface boring in the good way.
 
 Parameters:
+
 - `error` - Unknown rejection reason from trainer execution.
 
 Returns: Formatted error string for CLI logging.
@@ -256,71 +260,71 @@ follows in the generated README.
 
 Available trainer constant groups:
 
-| Group | What it controls | Representative constants |
-| --- | --- | --- |
-| Population shape | Demo-scale NEAT size and elitism | `FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE`, `FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT` |
-| Mutation cooling | How aggressive structural search stays over time | `FLAPPY_TRAINER_MUTATION_RATE_START`, `FLAPPY_TRAINER_MUTATION_RATE_END` |
-| Stage budgets | How much rollout work each evaluation phase spends | `FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES`, `FLAPPY_TRAINER_FULL_ROLLOUT_PIPE_PROGRESS_TARGET` |
-| Ranking heuristics | How provisional and robust scores are composed | `FLAPPY_TRAINER_FRAME_PRIMARY_BASE_SCORE`, `FLAPPY_TRAINER_PIPE_FALLBACK_PIPE_WEIGHT` |
-| Reporting and fallback | Log formatting and defensive dummy-network paths | `FLAPPY_TRAINER_LOG_PARTS_DELIMITER`, `FLAPPY_TRAINER_DUMMY_NETWORK_ID` |
+| Group                  | What it controls                                   | Representative constants                                                                      |
+| ---------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Population shape       | Demo-scale NEAT size and elitism                   | `FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE`, `FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT`              |
+| Mutation cooling       | How aggressive structural search stays over time   | `FLAPPY_TRAINER_MUTATION_RATE_START`, `FLAPPY_TRAINER_MUTATION_RATE_END`                      |
+| Stage budgets          | How much rollout work each evaluation phase spends | `FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES`, `FLAPPY_TRAINER_FULL_ROLLOUT_PIPE_PROGRESS_TARGET` |
+| Ranking heuristics     | How provisional and robust scores are composed     | `FLAPPY_TRAINER_FRAME_PRIMARY_BASE_SCORE`, `FLAPPY_TRAINER_PIPE_FALLBACK_PIPE_WEIGHT`         |
+| Reporting and fallback | Log formatting and defensive dummy-network paths   | `FLAPPY_TRAINER_LOG_PARTS_DELIMITER`, `FLAPPY_TRAINER_DUMMY_NETWORK_ID`                       |
 
 Population and reproducibility:
 
-| Constant | Why it matters |
-| --- | --- |
+| Constant                                 | Why it matters                                                   |
+| ---------------------------------------- | ---------------------------------------------------------------- |
 | `FLAPPY_TRAINER_DEFAULT_POPULATION_SIZE` | Sets the demo-scale population size for each evolutionary round. |
-| `FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT` | Preserves a stable top slice of genomes between generations. |
-| `FLAPPY_TRAINER_DEFAULT_RNG_SEED` | Makes local runs reproducible across tuning sessions. |
+| `FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT`   | Preserves a stable top slice of genomes between generations.     |
+| `FLAPPY_TRAINER_DEFAULT_RNG_SEED`        | Makes local runs reproducible across tuning sessions.            |
 
 Mutation cooling:
 
-| Constant | Why it matters |
-| --- | --- |
-| `FLAPPY_TRAINER_MUTATION_ANNEAL_GENERATIONS` | Defines how long the trainer keeps cooling mutation pressure. |
-| `FLAPPY_TRAINER_MUTATION_RATE_START` | Starting probability of mutation while search is still broad. |
-| `FLAPPY_TRAINER_MUTATION_RATE_END` | Late-stage mutation probability after the trainer settles down. |
-| `FLAPPY_TRAINER_MUTATION_AMOUNT_START` | Starting mutation count budget for exploratory generations. |
-| `FLAPPY_TRAINER_MUTATION_AMOUNT_END` | Smaller late-stage mutation count for refinement. |
-| `FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE` | Bootstrap controller mutation rate before schedule updates take over. |
+| Constant                                      | Why it matters                                                          |
+| --------------------------------------------- | ----------------------------------------------------------------------- |
+| `FLAPPY_TRAINER_MUTATION_ANNEAL_GENERATIONS`  | Defines how long the trainer keeps cooling mutation pressure.           |
+| `FLAPPY_TRAINER_MUTATION_RATE_START`          | Starting probability of mutation while search is still broad.           |
+| `FLAPPY_TRAINER_MUTATION_RATE_END`            | Late-stage mutation probability after the trainer settles down.         |
+| `FLAPPY_TRAINER_MUTATION_AMOUNT_START`        | Starting mutation count budget for exploratory generations.             |
+| `FLAPPY_TRAINER_MUTATION_AMOUNT_END`          | Smaller late-stage mutation count for refinement.                       |
+| `FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_RATE`   | Bootstrap controller mutation rate before schedule updates take over.   |
 | `FLAPPY_TRAINER_NEAT_INITIAL_MUTATION_AMOUNT` | Bootstrap controller mutation amount before schedule updates take over. |
 
 Stage budgets and selection depth:
 
-| Constant | Why it matters |
-| --- | --- |
-| `FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES` | Caps the cheap first-pass screen. |
-| `FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES` | Delays quick-stage early termination until a short grace window passes. |
-| `FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES` | Requires a streak of bad frames before a quick-stage rollout is cut short. |
-| `FLAPPY_TRAINER_QUICK_ROLLOUT_PIPE_PROGRESS_TARGET` | Normalizes quick-stage progress against a modest target. |
-| `FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES` | Gives stronger candidates more recovery time in the deeper stage. |
-| `FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES` | Uses a stricter streak threshold before full-stage early termination. |
-| `FLAPPY_TRAINER_FULL_ROLLOUT_PIPE_PROGRESS_TARGET` | Normalizes deeper-stage progress against a tougher target. |
-| `FLAPPY_TRAINER_FULL_PASS_ELITISM_MULTIPLIER` | Sizes the full-pass candidate pool relative to elitism. |
-| `FLAPPY_TRAINER_FULL_PASS_POPULATION_FRACTION` | Sizes the full-pass candidate pool relative to total population. |
-| `FLAPPY_TRAINER_REEVALUATION_MIN_CANDIDATE_COUNT` | Guarantees that anti-luck reevaluation still compares a useful set of genomes. |
+| Constant                                                            | Why it matters                                                                 |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `FLAPPY_TRAINER_QUICK_ROLLOUT_MAX_FRAMES`                           | Caps the cheap first-pass screen.                                              |
+| `FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES`       | Delays quick-stage early termination until a short grace window passes.        |
+| `FLAPPY_TRAINER_QUICK_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES` | Requires a streak of bad frames before a quick-stage rollout is cut short.     |
+| `FLAPPY_TRAINER_QUICK_ROLLOUT_PIPE_PROGRESS_TARGET`                 | Normalizes quick-stage progress against a modest target.                       |
+| `FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_GRACE_FRAMES`        | Gives stronger candidates more recovery time in the deeper stage.              |
+| `FLAPPY_TRAINER_FULL_ROLLOUT_EARLY_TERMINATION_CONSECUTIVE_FRAMES`  | Uses a stricter streak threshold before full-stage early termination.          |
+| `FLAPPY_TRAINER_FULL_ROLLOUT_PIPE_PROGRESS_TARGET`                  | Normalizes deeper-stage progress against a tougher target.                     |
+| `FLAPPY_TRAINER_FULL_PASS_ELITISM_MULTIPLIER`                       | Sizes the full-pass candidate pool relative to elitism.                        |
+| `FLAPPY_TRAINER_FULL_PASS_POPULATION_FRACTION`                      | Sizes the full-pass candidate pool relative to total population.               |
+| `FLAPPY_TRAINER_REEVALUATION_MIN_CANDIDATE_COUNT`                   | Guarantees that anti-luck reevaluation still compares a useful set of genomes. |
 
 Ranking, robustness, and fallback behavior:
 
-| Constant | Why it matters |
-| --- | --- |
-| `FLAPPY_TRAINER_FRAME_STABILITY_STDDEV_WEIGHT` | Penalizes unstable shared-seed performance. |
-| `FLAPPY_TRAINER_PIPE_FILTER_TOLERANCE` | Gates frame-primary scoring to genomes close enough in pipe progress. |
-| `FLAPPY_TRAINER_FRAME_PRIMARY_BASE_SCORE` | Creates a large score offset once a genome passes the gate. |
-| `FLAPPY_TRAINER_FRAME_PRIMARY_SURVIVAL_WEIGHT` | Rewards longer stable survival inside the gated branch. |
-| `FLAPPY_TRAINER_FRAME_PRIMARY_PIPE_WEIGHT` | Keeps pipe progress visible inside the gated branch. |
-| `FLAPPY_TRAINER_PIPE_FALLBACK_PIPE_WEIGHT` | Emphasizes pipe progress when the primary gate is not met. |
-| `FLAPPY_TRAINER_DUMMY_NETWORK_ID` | Provides a stable fallback network identifier for defensive reporting paths. |
-| `FLAPPY_TRAINER_DUMMY_NO_FLAP_OUTPUT` | Encodes the dummy network's preferred passive action score. |
-| `FLAPPY_TRAINER_DUMMY_FLAP_OUTPUT` | Encodes the dummy network's lower flap score for deterministic fallback behavior. |
+| Constant                                       | Why it matters                                                                    |
+| ---------------------------------------------- | --------------------------------------------------------------------------------- |
+| `FLAPPY_TRAINER_FRAME_STABILITY_STDDEV_WEIGHT` | Penalizes unstable shared-seed performance.                                       |
+| `FLAPPY_TRAINER_PIPE_FILTER_TOLERANCE`         | Gates frame-primary scoring to genomes close enough in pipe progress.             |
+| `FLAPPY_TRAINER_FRAME_PRIMARY_BASE_SCORE`      | Creates a large score offset once a genome passes the gate.                       |
+| `FLAPPY_TRAINER_FRAME_PRIMARY_SURVIVAL_WEIGHT` | Rewards longer stable survival inside the gated branch.                           |
+| `FLAPPY_TRAINER_FRAME_PRIMARY_PIPE_WEIGHT`     | Keeps pipe progress visible inside the gated branch.                              |
+| `FLAPPY_TRAINER_PIPE_FALLBACK_PIPE_WEIGHT`     | Emphasizes pipe progress when the primary gate is not met.                        |
+| `FLAPPY_TRAINER_DUMMY_NETWORK_ID`              | Provides a stable fallback network identifier for defensive reporting paths.      |
+| `FLAPPY_TRAINER_DUMMY_NO_FLAP_OUTPUT`          | Encodes the dummy network's preferred passive action score.                       |
+| `FLAPPY_TRAINER_DUMMY_FLAP_OUTPUT`             | Encodes the dummy network's lower flap score for deterministic fallback behavior. |
 
 Reporting and terminal output:
 
-| Constant | Why it matters |
-| --- | --- |
-| `FLAPPY_TRAINER_SCORE_MEDIAN_PERCENTILE` | Names the percentile used for the reported median. |
-| `FLAPPY_TRAINER_SCORE_P90_PERCENTILE` | Names the percentile used for the reported upper-tail score. |
-| `FLAPPY_TRAINER_LOG_PARTS_DELIMITER` | Keeps compact generation logs consistently tokenized. |
-| `FLAPPY_TRAINER_STOPPED_MESSAGE` | Gives graceful shutdown a stable terminal message. |
+| Constant                                 | Why it matters                                               |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| `FLAPPY_TRAINER_SCORE_MEDIAN_PERCENTILE` | Names the percentile used for the reported median.           |
+| `FLAPPY_TRAINER_SCORE_P90_PERCENTILE`    | Names the percentile used for the reported upper-tail score. |
+| `FLAPPY_TRAINER_LOG_PARTS_DELIMITER`     | Keeps compact generation logs consistently tokenized.        |
+| `FLAPPY_TRAINER_STOPPED_MESSAGE`         | Gives graceful shutdown a stable terminal message.           |
 
 ### FLAPPY_TRAINER_DEFAULT_ELITISM_COUNT
 
@@ -580,6 +584,7 @@ readable as: resolve schedule, evolve once, run a representative rollout, and
 emit a summary.
 
 Loop sketch:
+
 ```mermaid
 flowchart LR
     Resolve["resolveMutationSchedule()"] --> Apply["applyMutationSchedule()"]
@@ -605,6 +610,7 @@ The schedule is resolved outside this helper so the loop can read as a clean
 easier to inspect the active schedule in logs or tests.
 
 Parameters:
+
 - `neatController` - Trainer NEAT controller.
 - `mutationSchedule` - Mutation schedule for current generation.
 
@@ -646,6 +652,7 @@ evolve one generation, run a representative fallback rollout for logging, and
 emit a compact summary.
 
 Parameters:
+
 - `neatController` - Trainer NEAT controller.
 - `trainerRuntimeState` - Mutable trainer runtime state.
 - `logGenerationSummary` - Callback that emits compact generation logs.
@@ -677,6 +684,7 @@ Flappy policy depends on fair comparison across shared seed batches, not on a
 one-network-at-a-time scoring callback.
 
 Parameters:
+
 - `trainerSetup` - Immutable trainer setup values.
 
 Returns: Typed NEAT controller used by the trainer loop.
@@ -757,6 +765,7 @@ whether a generation is broadly improving or whether one lucky genome is
 masking a weak population.
 
 Parameters:
+
 - `population` - Current population.
 - `aggregateByGenome` - Aggregate evaluation results keyed by genome.
 - `generationEvaluationPlan` - Per-generation staged evaluation plan.
@@ -783,6 +792,7 @@ hundreds of generations. The goal is not pretty output. The goal is a line
 that lets you spot drift, plateaus, and sudden regressions at a glance.
 
 Parameters:
+
 - `generationLabel` - Current generation label.
 - `mutationSchedule` - Active mutation schedule.
 - `report` - Optional aggregated generation report.
@@ -802,6 +812,7 @@ cheaply, spend more budget on the survivors, then reevaluate the finalists so
 ranking is less sensitive to luck.
 
 Fitness orchestration map:
+
 ```mermaid
 flowchart LR
     Population["population"] --> Plan["resolveGenerationEvaluationPlan()"]
@@ -831,6 +842,7 @@ evaluator that understands shared-seed screening, full-pass scoring, and
 reevaluation.
 
 Parameters:
+
 - `neatController` - Trainer NEAT controller.
 - `trainerRuntimeState` - Mutable trainer runtime state.
 - `elitismCount` - Number of elite genomes preserved each generation.
@@ -861,6 +873,7 @@ the same generation budget is spent unevenly so weak genomes are filtered out
 early and strong genomes are compared more carefully.
 
 Parameters:
+
 - `neatController` - Trainer NEAT controller.
 - `trainerRuntimeState` - Mutable trainer runtime state.
 - `elitismCount` - Number of elite genomes preserved each generation.
@@ -899,6 +912,7 @@ The handler does the minimum possible work because signal paths should stay
 predictable and side-effect light.
 
 Parameters:
+
 - `trainerRuntimeState` - Mutable trainer runtime state.
 
 Returns: Nothing.
@@ -919,6 +933,7 @@ Long-running evolutionary runs should stop cleanly when the user presses
 the process mid-generation.
 
 Parameters:
+
 - `trainerRuntimeState` - Mutable trainer runtime state.
 
 Returns: Nothing.
@@ -935,6 +950,7 @@ Use this file when you want the public trainer-level shelf for staged
 evaluation without learning the internal subfolder layout first.
 
 Staged evaluation ladder:
+
 ```mermaid
 flowchart LR
     Population["population"] --> Quick["quick stage\ncheap shared-seed screen"]
@@ -959,6 +975,7 @@ them without mutating the genomes too early. This helper performs the final
 write-back once staged evaluation is complete.
 
 Parameters:
+
 - `population` - Current population.
 - `provisionalScoresByGenome` - Final provisional score map.
 
@@ -984,6 +1001,7 @@ survives into it, but the survivors receive a more trustworthy estimate than
 the quick screen alone can provide.
 
 Parameters:
+
 - `population` - Current population.
 - `generationEvaluationPlan` - Per-generation staged evaluation plan.
 - `aggregateByGenome` - Mutable aggregate cache keyed by genome.
@@ -1012,6 +1030,7 @@ small shared seed batch so the trainer can discard obviously weak candidates
 before spending more rollout budget on them.
 
 Parameters:
+
 - `population` - Current population.
 - `generationEvaluationPlan` - Per-generation staged evaluation plan.
 - `aggregateByGenome` - Mutable aggregate cache keyed by genome.
@@ -1051,6 +1070,7 @@ are tested again on a larger shared seed batch so leaderboard positions are
 less sensitive to a fortunate early sample.
 
 Parameters:
+
 - `population` - Current population.
 - `generationEvaluationPlan` - Per-generation staged evaluation plan.
 - `aggregateByGenome` - Mutable aggregate cache keyed by genome.
@@ -1082,6 +1102,7 @@ Unevaluated or invalid scores are intentionally skipped so percentile and
 standard deviation calculations operate on stable numeric inputs only.
 
 Parameters:
+
 - `population` - Current population.
 
 Returns: Finite scores in population order.
@@ -1111,6 +1132,7 @@ episode. This helper centralizes the fallback rules so the service facade can
 remain a thin orchestration layer.
 
 Parameters:
+
 - `population` - Current population.
 - `bestGenome` - Genome selected as generation best.
 - `aggregateByGenome` - Cached aggregate evaluations keyed by genome.
@@ -1167,6 +1189,7 @@ The chosen order moves from identity (`gen`) to quality (`best`, `mean`,
 mutation, seed counts).
 
 Parameters:
+
 - `generationLabel` - Generation label shown in logs.
 - `bestFitness` - Best resolved fitness value for this generation.
 - `bestPipesPassed` - Best resolved pipes passed value.
@@ -1199,6 +1222,7 @@ single vocabulary term for "the current best genome under whatever score shelf
 is currently populated."
 
 Parameters:
+
 - `population` - Current trainer population.
 
 Returns: Highest-scoring genome or `undefined` when population is empty.
@@ -1216,6 +1240,7 @@ selectTopGenomesByScore(
 Returns top genomes ordered by current provisional score.
 
 Parameters:
+
 - `population` - Current trainer population.
 - `provisionalScoresByGenome` - Optional map of staged provisional scores.
 - `targetCount` - Maximum number of genomes to return.
@@ -1233,6 +1258,7 @@ seeds to use, how hard the environment should currently be, and how much
 mutation pressure should remain.
 
 Generation planning map:
+
 ```mermaid
 flowchart TB
     Generation["generationIndex"] --> Mutation["resolveMutationSchedule()\nrate + amount"]
@@ -1269,6 +1295,7 @@ same sampled worlds instead of winning because they happened to get a kinder
 random rollout.
 
 Parameters:
+
 - `generationIndex` - Zero-based generation index.
 - `stageSalt` - Constant stage-specific salt.
 - `seedCount` - Number of seeds to produce.
@@ -1290,6 +1317,7 @@ This stage gives stronger candidates a longer, stricter test so the trainer
 can refine the leaderboard before committing to expensive reevaluation.
 
 Parameters:
+
 - `difficultyScale` - Difficulty scale for this generation.
 
 Returns: Full stage rollout options.
@@ -1310,6 +1338,7 @@ trusted estimates because weak genomes only need enough evidence to be ruled
 out early.
 
 Parameters:
+
 - `difficultyScale` - Difficulty scale for this generation.
 
 Returns: Quick stage rollout options.
@@ -1328,6 +1357,7 @@ Reevaluation deliberately disables early termination so the strongest
 candidates are judged on a more faithful, less shortcut-heavy comparison.
 
 Parameters:
+
 - `difficultyScale` - Difficulty scale for this generation.
 
 Returns: Reevaluation stage rollout options.
@@ -1354,6 +1384,7 @@ The small mixing pipeline spreads nearby generation numbers apart so adjacent
 stages and generations do not accidentally reuse overly correlated seed sets.
 
 Parameters:
+
 - `generationIndex` - Current generation index.
 - `stageSalt` - Stage-specific salt.
 
@@ -1373,6 +1404,7 @@ The course starts gentle, ramps through the middle generations, and then caps
 at full difficulty once the population has had time to discover viable flight.
 
 Parameters:
+
 - `generationIndex` - Zero-based generation index.
 
 Returns: Difficulty scale in [0, 1].
@@ -1393,6 +1425,7 @@ can ask for one object and receive a fully prepared set of seeds, rollout
 options, and annealed mutation values.
 
 Parameters:
+
 - `generationIndex` - Zero-based generation index.
 
 Returns: Full staged evaluation plan for the generation.
@@ -1412,6 +1445,7 @@ space broadly. Later generations cool down so the trainer can refine useful
 structures rather than constantly replacing them.
 
 Parameters:
+
 - `generationIndex` - Zero-based generation index.
 
 Returns: Mutation rate and mutation amount for this generation.

@@ -168,7 +168,6 @@ export async function downloadRerankerAssets(options = {}) {
 
   // Write model-meta.json WITHOUT dimension (cross-encoders output scalar)
   const modelMeta = {
-    downloaded_at: new Date().toISOString(),
     max_sequence_length: maxSequenceLength,
     model_id: modelId,
     model_sha256: expectedModelSha256,

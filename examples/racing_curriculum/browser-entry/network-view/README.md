@@ -22,6 +22,7 @@ drawRacingNetworkVisualization(
 Draw the racing curriculum network panel using the shared Flappy visualizer.
 
 Parameters:
+
 - `canvas` - Canvas element to render onto.
 - `network` - Runtime network used for architecture metadata and weights.
 - `hoveredNodeIndices` - Optional host-owned hovered node ids.
@@ -44,6 +45,7 @@ The host uses this path for hover-only repaint work because it can reuse the
 cached static frame and only vary interactive emphasis.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `resolvedFrame` - Reusable frame cache.
 - `hoveredNodeIndices` - Optional host-owned hovered node ids.
@@ -73,6 +75,7 @@ resolveRacingArchitectureLabel(
 Resolve the compact architecture summary for the racing network legend.
 
 Parameters:
+
 - `network` - Runtime network being visualized.
 
 Returns: Shared architecture label with racing IO counts.
@@ -99,6 +102,7 @@ resolveRacingNetworkCanvasDimensions(
 Resolve responsive network-canvas dimensions from the host panel shelf.
 
 Parameters:
+
 - `measuredWidthPx` - Current measured canvas width from layout.
 - `measuredHeightPx` - Current measured host-panel height from layout.
 
@@ -119,6 +123,7 @@ Host-owned caching can reuse this frame between pointer-driven redraws so the
 expensive topology/layout work is not repeated for every hover event.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `network` - Network to visualize.
 
@@ -135,16 +140,16 @@ describe the semantic input groups, per-node chip labels, hover tooltip copy,
 and the short output tags shown in the right-sidebar network visualizer.
 
 Observation vector layout (in order):
-  0..19   Car state scalars — position, heading, speed, yaw, slip angle,
-          progress, boundary distances, hazard/waypoint distances, optimal-line
-          offset, target speed, etc.
-  20..59  Five look-ahead track segments, 8 channels each — relX, relY,
-          nextRelX, nextRelY, sinTangent, cosTangent, trackWidth, distance.
-  60..69  Recurrent memory trace — ten channels of self-feedback state.
+0..19 Car state scalars — position, heading, speed, yaw, slip angle,
+progress, boundary distances, hazard/waypoint distances, optimal-line
+offset, target speed, etc.
+20..59 Five look-ahead track segments, 8 channels each — relX, relY,
+nextRelX, nextRelY, sinTangent, cosTangent, trackWidth, distance.
+60..69 Recurrent memory trace — ten channels of self-feedback state.
 
 Action vector layout:
-  0  throttle (THR)
-  1  steer     (STR)
+0 throttle (THR)
+1 steer (STR)
 
 ### buildLookAheadGroupDefinitions
 
@@ -160,6 +165,7 @@ Each of the five look-ahead segments occupies eight consecutive channels and
 describes the track geometry ahead of the car in a local frame.
 
 Parameters:
+
 - `segmentIndex` - Zero-based look-ahead segment (0..4).
 
 Returns: One group definition with eight node descriptions.

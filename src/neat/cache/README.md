@@ -137,6 +137,7 @@ passes, and manual graph-edit utilities can all reuse the same final cleanup
 contract instead of maintaining subtly different invalidation rules.
 
 Parameters:
+
 - `genomeCandidate` - Genome-shaped value whose attached caches should be cleared.
 
 Returns: Nothing. The helper mutates the candidate in place when it is an object.

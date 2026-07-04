@@ -14,7 +14,6 @@ import {
 } from './simulation-worker.gpu';
 import { createMockGPUDevice } from '../../../../src/architecture/network/gpu/__mocks__/gpu.mock.ts';
 
-
 /**
  * Return a node index inside the single hidden layer of a `createMLP(2, [3], 1)`
  * network. The layout is input[0,1] → hidden[2,3,4] → output[5], so any

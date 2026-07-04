@@ -68,6 +68,7 @@ drawConnections(
 Draws weighted connections between nodes.
 
 Parameters:
+
 - `context` - Canvas 2D context.
 - `frame` - Resolved frame.
 
@@ -83,6 +84,7 @@ drawNetworkVisualization(
 Draws the network visualization on a canvas context.
 
 Parameters:
+
 - `context` - Canvas 2D context.
 - `frame` - Resolved visualization frame.
 
@@ -98,6 +100,7 @@ drawNodes(
 Draws nodes with type-specific shapes and styling.
 
 Parameters:
+
 - `context` - Canvas 2D context.
 - `frame` - Resolved frame.
 
@@ -112,6 +115,7 @@ mapGraphToNetworkLayers(
 Converts a VisualizationGraphV1 into network layers for layout.
 
 Parameters:
+
 - `graph` - Visualization graph.
 
 Returns: Layered nodes (input, hidden, output).
@@ -133,6 +137,7 @@ This is the main public entry point. It accepts a `VisualizationGraphV1` (from
 demo-specific overlays.
 
 **Typical usage:**
+
 ```ts
 const graph = exportVisualizationGraph(network);
 const canvas = document.getElementById('network-canvas') as HTMLCanvasElement;
@@ -144,6 +149,7 @@ const frame = renderNetworkView(canvas, graph, {
 ```
 
 Parameters:
+
 - `canvas` - Canvas element to render onto.
 - `graph` - Visualization graph (from `exportVisualizationGraph`).
 - `options` - Optional render settings (dimensions, padding, colors, overlays).
@@ -189,6 +195,7 @@ Shifts all node x-coordinates so the leftmost and rightmost nodes
 are balanced around the center of available space.
 
 Parameters:
+
 - `positionedNodes` - Positioned nodes.
 - `drawableWidthPx` - Drawable width.
 
@@ -216,6 +223,7 @@ available vertical space. Nodes in earlier layers are placed left; nodes
 in later layers are placed right.
 
 Parameters:
+
 - `networkLayers` - Resolved network layers (each layer is a list of nodes).
 - `leftPaddingPx` - Left graph padding.
 - `topPaddingPx` - Top graph padding.
@@ -265,6 +273,7 @@ resolveNetworkVisualizationLayers(
 Resolve ordered layered node groups from the topology plan, used by canvas layout and topology-aware rendering helpers.
 
 Parameters:
+
 - `network` - Runtime network instance (or undefined for fallback).
 - `inputSize` - Input count (used if network is undefined).
 - `outputSize` - Output count (used if network is undefined).
@@ -287,6 +296,7 @@ For recurrent networks, this detects temporal modules and creates annotations.
 For feed-forward networks, this creates a simple acyclic plan.
 
 Parameters:
+
 - `network` - Runtime network instance (or undefined for fallback).
 - `inputSize` - Input count (used if network is undefined).
 - `outputSize` - Output count (used if network is undefined).

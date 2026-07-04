@@ -15,6 +15,7 @@ evidence: how behaviorally unusual each genome looks relative to its nearby
 peers.
 
 Read this chapter when you want to answer questions such as:
+
 - Why does novelty stay a separate evaluation stage instead of widening into
   objective management or multi-objective ranking?
 - How do descriptor building, distance-matrix construction, and neighbor
@@ -25,6 +26,7 @@ Read this chapter when you want to answer questions such as:
   descriptor forever?
 
 The mental model is a five-step evidence loop:
+
 1. build one behavior descriptor per genome,
 2. compute pairwise distances across that descriptor set,
 3. average the nearest-neighbor distances into a novelty score,
@@ -73,6 +75,7 @@ remembering, while the cap prevents novelty exploration from turning into an
 unbounded memory sink.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `descriptor` - Behavior descriptor for the current genome.
 - `novelty` - Computed novelty score.
@@ -99,6 +102,7 @@ optionally blends that evidence into numeric scores and records sufficiently
 novel descriptors for future exploration pressure.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `descriptors` - Descriptor vectors for each genome.
 - `distanceMatrix` - Dense distance matrix.
@@ -128,6 +132,7 @@ Callers that need the unblended raw task score should preserve it separately
 before novelty blending.
 
 Parameters:
+
 - `genome` - Genome to update.
 - `novelty` - Computed novelty value.
 - `blendFactor` - Blend factor for novelty versus fitness.
@@ -147,6 +152,7 @@ the scoring flow simple: each genome reads one row, drops its self-distance,
 and averages the nearest neighbors.
 
 Parameters:
+
 - `descriptors` - Descriptor vectors for the current population.
 
 Returns: Dense distance matrix aligned with population order.
@@ -168,6 +174,7 @@ third. Descriptor failures degrade to an empty vector instead of failing the
 entire evaluation pass.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `noveltyOptions` - Novelty configuration.
 
@@ -191,6 +198,7 @@ of uneven length. Self-distance is fixed at zero to keep later neighbor
 ranking deterministic.
 
 Parameters:
+
 - `leftDescriptor` - Left descriptor vector.
 - `rightDescriptor` - Right descriptor vector.
 - `isSame` - Whether both descriptors belong to the same genome index.
@@ -213,6 +221,7 @@ after excluding the genome's self-distance. Higher values mean the genome is
 behaving in a less crowded region of descriptor space.
 
 Parameters:
+
 - `distanceRow` - Distance values for a single genome.
 - `kNeighbors` - Number of nearest neighbors to average.
 
@@ -233,6 +242,7 @@ makes novelty fully replace it when a numeric score exists. Values in between
 turn novelty into a partial exploratory bonus instead of a hard override.
 
 Parameters:
+
 - `noveltyOptions` - Novelty configuration.
 
 Returns: Blend factor used when a genome already has a numeric score.
@@ -252,6 +262,7 @@ differences, while larger counts smooth that signal across a wider portion of
 the current population.
 
 Parameters:
+
 - `noveltyOptions` - Novelty configuration.
 
 Returns: Neighbor count clamped to at least one.
@@ -273,6 +284,7 @@ If novelty is disabled or misconfigured, evaluation can safely continue with
 the base score evidence alone.
 
 The helper preserves several important controller assumptions:
+
 - the current population order is left intact,
 - current species membership is left intact,
 - no objective-registration policy is changed here,
@@ -280,6 +292,7 @@ The helper preserves several important controller assumptions:
   updated.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `evaluationOptions` - Options object for the current evaluation pass.
 

@@ -14,6 +14,7 @@ appendForwardWindowOutputs(
 Append one emitted window to the collected result matrix when collection is enabled.
 
 Parameters:
+
 - `forwardWindowContext` - Shared windowed activation state.
 - `windowOutputs` - Stable emitted window outputs.
 
@@ -30,6 +31,7 @@ assertForwardWindowInputsCollection(
 Validate that the windowed input collection is an array of input vectors.
 
 Parameters:
+
 - `inputs` - Candidate input sequence.
 
 Returns: Nothing.
@@ -47,6 +49,7 @@ assertForwardWindowInputSize(
 Validate one input vector width for windowed activation.
 
 Parameters:
+
 - `inputVector` - Candidate input vector.
 - `expectedInputSize` - Required input width.
 - `inputIndex` - Sequence index used in the error message.
@@ -65,6 +68,7 @@ clearForwardWindowBuffer(
 Release bounded buffer references once one emitted window has been handled.
 
 Parameters:
+
 - `windowBuffer` - Reusable bounded buffer of row outputs.
 - `windowRowCount` - Number of valid rows currently buffered.
 
@@ -82,6 +86,7 @@ collectForwardWindowOutputs(
 Advance one input sequence in explicit windows and collect ordered outputs.
 
 Parameters:
+
 - `network` - Bound network instance.
 - `inputs` - Ordered sequence of input vectors.
 - `windowSize` - Number of rows processed per window.
@@ -103,6 +108,7 @@ collectForwardWindowOutputsAsync(
 Advance one input sequence in explicit windows while yielding between browser-sized slices.
 
 Parameters:
+
 - `forwardWindowContext` - Shared windowed activation state.
 - `onWindow` - Optional async window callback.
 - `yieldAfterWindows` - Yield cadence measured in completed windows.
@@ -126,6 +132,7 @@ createForwardWindowChunk(
 Create one emitted window chunk from the reusable buffer.
 
 Parameters:
+
 - `windowBuffer` - Reusable bounded buffer of row outputs.
 - `windowRowCount` - Number of valid rows currently buffered.
 - `windowIndex` - Zero-based emitted window index.
@@ -149,6 +156,7 @@ createForwardWindowContext(
 Create the shared state used by sync and async windowed activation.
 
 Parameters:
+
 - `network` - Bound network instance.
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Shared windowed activation options.
@@ -167,6 +175,7 @@ formatInputLengthForMessage(
 Convert one input length into a display-safe string for error messages.
 
 Parameters:
+
 - `inputVector` - Candidate input vector.
 
 Returns: Numeric length as text or the shared undefined marker.
@@ -188,6 +197,7 @@ explicit windows so later browser and low-memory follow-up work has one
 stable orchestration boundary.
 
 Parameters:
+
 - `this` - Bound network instance.
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Optional activation-window configuration.
@@ -210,6 +220,7 @@ cooperatively yield after a configurable number of completed windows so long
 browser sequences do not monopolize the main thread.
 
 Parameters:
+
 - `this` - Bound network instance.
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Optional async activation-window configuration.
@@ -228,6 +239,7 @@ normalizeForwardWindowSize(
 Normalize the requested forward-window size to a positive integer.
 
 Parameters:
+
 - `windowSize` - Optional requested window size.
 
 Returns: Positive integer window size.
@@ -244,6 +256,7 @@ normalizeYieldAfterWindows(
 Normalize the requested async yield cadence to a positive integer or infinity.
 
 Parameters:
+
 - `yieldAfterWindows` - Optional requested yield cadence.
 - `environment` - Active runtime environment.
 
@@ -260,6 +273,7 @@ resolveDefaultForwardWindowSize(
 Resolve the default forward-window size for the active runtime.
 
 Parameters:
+
 - `environment` - Active runtime environment.
 
 Returns: Default bounded window size.
@@ -275,6 +289,7 @@ resolveDefaultForwardWindowYieldControl(
 Resolve the default async yield hook for the active runtime.
 
 Parameters:
+
 - `environment` - Active runtime environment.
 
 Returns: Promise-based yield hook when the runtime exposes one.
@@ -303,6 +318,7 @@ shouldYieldAfterCompletedWindow(
 Determine whether the async path should yield after one completed window.
 
 Parameters:
+
 - `completedWindowCount` - Total number of emitted windows so far.
 - `isLastInput` - Whether the just-emitted window closed the sequence.
 - `yieldAfterWindows` - Yield cadence measured in completed windows.

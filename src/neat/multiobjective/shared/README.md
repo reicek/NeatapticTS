@@ -10,6 +10,7 @@ chapters can agree on a deliberately small contract surface instead of
 depending on the full `Neat` controller shape.
 
 The shared surface is organized into three practical contract families:
+
 - objective descriptors define how one genome becomes one ordered value
   vector,
 - the minimal host contract exposes only the objective schema and compact
@@ -32,6 +33,7 @@ Minimal Neat-like interface required by the multi-objective helpers.
 This host contract stays intentionally small so the multi-objective helpers
 can be reused without depending on the entire `Neat` controller surface.
 The boundary owns only two kinds of state:
+
 - objective-schema access for the start of the ranking pass,
 - optional Pareto-archive state for the end of the ranking pass.
 
@@ -63,11 +65,13 @@ every later helper what each column means and whether larger or smaller
 values should win.
 
 Two rules matter most:
+
 - keep descriptor order stable for the duration of one ranking pass,
 - keep each accessor deterministic for a given genome state so pairwise
   comparisons do not change mid-pass.
 
 Notes:
+
 - `accessor` should return a finite numeric signal for the current genome.
 - `direction` controls Pareto dominance comparisons:
   - `'max'`: higher is better

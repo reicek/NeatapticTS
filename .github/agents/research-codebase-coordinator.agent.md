@@ -103,7 +103,7 @@ Choose between parallel and sequential scout dispatch using these rules. The def
 
 ## Escalation Protocol
 
-If 3 consecutive delegation attempts fail, escalate to the parent Tier 1 agent with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
+Continue dispatching fresh specialist instances until the issue is resolved or a true technical limit is reached. Only escalate to the parent Tier 1 agent when a genuine, documented technical limit blocks further progress. Slow progress is still progress — no concessions.
 
 ## If Blocked
 

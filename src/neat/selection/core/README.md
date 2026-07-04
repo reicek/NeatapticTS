@@ -9,6 +9,7 @@ the mechanics chapter can focus on guard rails, strategy dispatch, and
 strategy-specific choice flow rather than broader controller policy.
 
 Read the chapter in this order:
+
 - `GenomeWithScore` narrows the per-genome view to the score-centered fields
   selection actually consumes.
 - `SelectionOptions` describes the small set of knobs that alter parent
@@ -41,6 +42,7 @@ This host contract captures the minimum runtime surface the mechanics need in
 order to preserve stable controller assumptions.
 
 Those assumptions are:
+
 - selection reads the current in-memory population rather than rebuilding it,
 - evaluation can be triggered before score-dependent reads when needed,
 - sorting remains centralized through the host's in-place population order,
@@ -146,6 +148,7 @@ In other words, it prepares the roulette space so every genome still gets a
 measurable slice even when raw scores dip below zero.
 
 Parameters:
+
 - `population` - Genomes in the current population.
 
 Returns: Aggregate fitness totals with the negative-score shift.
@@ -168,6 +171,7 @@ same mechanics layer because the controller's summary reads should speak the
 same score semantics as the parent-selection pipeline.
 
 Parameters:
+
 - `population` - Genomes in the current population.
 
 Returns: Sum of all scores with missing scores treated as zero.
@@ -229,6 +233,7 @@ fittest genomes, averages, or parents without manually remembering whether
 evaluation already ran this generation.
 
 Parameters:
+
 - `internal` - NEAT host containing population and evaluation support.
 
 Returns: Nothing. Evaluation is triggered only when the population is unevaluated.
@@ -249,6 +254,7 @@ preserves that cheap guard by checking only the leading edge before calling
 the shared in-place sort hook.
 
 Parameters:
+
 - `internal` - NEAT host containing the current population.
 
 Returns: Nothing. Sorting only runs when the first two scores are out of order.
@@ -269,6 +275,7 @@ here instead of in the root chapter so the strategy can preserve that rule
 without forcing unrelated selection paths to sort first.
 
 Parameters:
+
 - `selectionContext` - Shared selection state.
 
 Returns: Nothing. Sorting only runs when the first two entries are out of order.
@@ -298,6 +305,7 @@ It also makes the fallback semantics explicit instead of hiding ad hoc random
 picks inside individual strategies.
 
 Parameters:
+
 - `selectionContext` - Shared selection state.
 
 Returns: Randomly chosen genome from the current population.
@@ -364,6 +372,7 @@ shifted-fitness window until the threshold lands inside one genome's slice.
 This keeps the selection flow linear and deterministic for a fixed RNG draw.
 
 Parameters:
+
 - `population` - Genomes in the current population.
 - `selectionThreshold` - Random threshold in shifted fitness space.
 - `minFitnessShift` - Amount added to each score to shift negatives.
@@ -388,6 +397,7 @@ how often weaker entrants remain reachable later in the walk.
 This is what makes tournament selection tunable instead of purely greedy.
 
 Parameters:
+
 - `selectionContext` - Shared selection state.
 - `sortedParticipants` - Participants sorted by descending score.
 
@@ -411,6 +421,7 @@ That separation keeps the normal controller path strict while still leaving a
 narrow escape hatch for compatibility scenarios.
 
 Parameters:
+
 - `selectionContext` - Shared selection state.
 
 Returns: A fallback parent genome.
@@ -433,6 +444,7 @@ behavior.
 The result is a lightweight temporary bracket, not a durable roster object.
 
 Parameters:
+
 - `selectionContext` - Shared selection state.
 - `tournamentSize` - Number of competitors to sample.
 
@@ -465,6 +477,7 @@ reacts to relative score magnitude rather than only rank or sampled bracket
 ordering.
 
 Parameters:
+
 - `selectionContext` - Shared selection state.
 
 Returns: The chosen parent genome.
@@ -487,6 +500,7 @@ Read this as the lightest built-in strategy: it does not inspect absolute
 score gaps, only the current descending order.
 
 Parameters:
+
 - `selectionContext` - Shared selection state.
 
 Returns: The chosen parent genome.
@@ -511,6 +525,7 @@ candidate instead of failing unexpectedly deep inside crossover or mutation
 flow.
 
 Parameters:
+
 - `internal` - NEAT host containing population, options, and RNG access.
 
 Returns: A genome chosen according to the active selection strategy.
@@ -541,6 +556,7 @@ small contest?" rather than "how does the whole population distribute
 weight?"
 
 Parameters:
+
 - `selectionContext` - Shared selection state.
 
 Returns: The chosen parent genome.

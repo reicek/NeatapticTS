@@ -22,11 +22,13 @@ score selection. Instead of asking "which genome has the highest score?",
 this chapter asks "which genomes are still competitive once several goals
 must be satisfied at the same time?"
 The result is a layered view of the population:
+
 - Pareto fronts separate clearly dominated genomes from still-competitive ones
 - crowding distances prefer spread along the frontier instead of collapsing to one region
 - optional archiving preserves the leading fronts for later telemetry and inspection
 
 A useful reading order is:
+
 1. this orchestration file for the top-level ranking flow
 2. `objectives/` for value extraction and direction handling
 3. `dominance/` for pairwise comparison rules
@@ -47,6 +49,7 @@ population of networks (genomes). This implements a standard NSGA-II style
 non-dominated sorting followed by crowding distance assignment.
 
 Conceptually, the function runs in four stages:
+
 1. read the active objective schema from the controller,
 2. build one objective-value vector per genome,
 3. resolve dominance relationships into ordered Pareto fronts,
@@ -59,6 +62,7 @@ identical solutions.
 
 The function annotates genomes with two controller-owned fields used
 elsewhere in the codebase:
+
 - `_moRank`: integer Pareto front rank (0 = best/frontier)
 - `_moCrowd`: numeric crowding distance (higher is better; Infinity for
   boundary solutions)
@@ -72,6 +76,7 @@ one place: compute the competitive ordering now, and optionally preserve the
 resulting frontier snapshot for later analysis.
 
 Example:
+
 ```ts
 // inside a Neat class that exposes `_getObjectives()` and Pareto archiving options
 const fronts = fastNonDominated.call(neatInstance, population);
@@ -81,19 +86,22 @@ const fronts = fastNonDominated.call(neatInstance, population);
 ```
 
 Read the return value like this:
+
 - `fronts[0]` is the current non-dominated frontier
 - `fronts[1]` contains genomes dominated only by the first front
 - larger `_moCrowd` values indicate genomes that sit in less crowded regions of the same front
 
 Important assumptions:
+
 - Each objective descriptor returned by `_getObjectives()` must have an
   `accessor(genome: Network): number` function and may include
   `direction: 'max' | 'min'` to indicate optimization direction.
 - Accessor failures are guarded and will yield a default value of 0.
 
 Parameters:
+
 - `this` - Neat instance providing `_getObjectives()`, `options` and
-`_paretoArchive` fields (function is meant to be invoked using `.call`)
+  `_paretoArchive` fields (function is meant to be invoked using `.call`)
 - `pop` - population array of `Network` genomes to be ranked
 
 Returns: Array of Pareto fronts; each front is an array of `Network` genomes.

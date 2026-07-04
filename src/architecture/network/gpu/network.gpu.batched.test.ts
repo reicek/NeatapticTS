@@ -1,6 +1,9 @@
 import Network from '../network';
 import { ACTIVATION_FUNCTIONS } from '../../../multithreading/multi.utils';
-import { batchActivate } from './network.gpu.batched';
+import {
+  batchActivate,
+  createBatchInferenceQueue,
+} from './network.gpu.batched';
 import { GPU_NODE_STRUCT_BYTES } from './network.gpu.buffer';
 import { createMockGPUDevice } from './__mocks__/gpu.mock';
 
@@ -350,6 +353,88 @@ describe('network.gpu.batched', () => {
       ).rejects.toThrow(
         'batchActivate: first node uses an activation that is not in the worker registry',
       );
+    });
+  });
+
+  describe('createBatchInferenceQueue', () => {
+    it('starts with queue size 0', () => {
+      const device = createMockGPUDevice();
+
+      const queue = createBatchInferenceQueue(device);
+
+      expect(queue.size).toBe(0);
+    });
+
+    it('returns incrementing job ids and increments queue size', () => {
+      const device = createMockGPUDevice();
+      const queue = createBatchInferenceQueue(device);
+      const network = Network.createMLP(2, [3], 1);
+
+      const firstJobId = queue.enqueue({ network, inputs: [0.1, 0.2] });
+      const secondJobId = queue.enqueue({ network, inputs: [0.3, 0.4] });
+
+      expect({
+        firstJobId,
+        secondJobId,
+        size: queue.size,
+      }).toEqual({
+        firstJobId: 0,
+        secondJobId: 1,
+        size: 2,
+      });
+    });
+
+    it('submits multiple enqueued jobs in a single GPU command pass', async () => {
+      const device = createMockGPUDevice();
+      const queue = createBatchInferenceQueue(device);
+      const network = Network.createMLP(2, [3], 1);
+      queue.enqueue({ network, inputs: [0.1, 0.2] });
+      queue.enqueue({ network, inputs: [0.3, 0.4] });
+
+      await queue.flush();
+
+      expect(device.queue.submit).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns outputs in the same order as enqueue', async () => {
+      const referenceNetwork = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice({ emulateNetwork: referenceNetwork });
+      const queue = createBatchInferenceQueue(device);
+      const firstInputs = [0.1, 0.2];
+      const secondInputs = [0.3, 0.4];
+      queue.enqueue({ network: referenceNetwork.clone(), inputs: firstInputs });
+      queue.enqueue({
+        network: referenceNetwork.clone(),
+        inputs: secondInputs,
+      });
+
+      const outputs = await queue.flush();
+
+      expect(outputs).toEqual([
+        new Float32Array(referenceNetwork.activate(firstInputs)),
+        new Float32Array(referenceNetwork.activate(secondInputs)),
+      ]);
+    });
+
+    it('shares one compiled pipeline for networks with identical topology', async () => {
+      const network = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice();
+      const queue = createBatchInferenceQueue(device);
+      queue.enqueue({ network: network.clone(), inputs: [0.1, 0.2] });
+      queue.enqueue({ network: network.clone(), inputs: [0.3, 0.4] });
+
+      await queue.flush();
+
+      expect(device.recorded.pipelines.length).toBe(1);
+    });
+
+    it('resolves an empty array when the queue is empty', async () => {
+      const device = createMockGPUDevice();
+      const queue = createBatchInferenceQueue(device);
+
+      const outputs = await queue.flush();
+
+      expect(outputs).toEqual([]);
     });
   });
 });

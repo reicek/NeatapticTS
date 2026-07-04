@@ -46,6 +46,7 @@ The helper follows a conservative fallback ladder:
 3. otherwise synthesize an empty-but-safe snapshot sized to the current population.
 
 Parameters:
+
 - `host` - `Neat` instance exposing cached diversity state.
 
 Returns: Diversity metrics for the current population.
@@ -72,6 +73,7 @@ compact place to inspect the latest controller-health signals without mixing
 them with lineage, species, or archive reads.
 
 Parameters:
+
 - `host` - `Neat` instance tracking performance timings.
 
 Returns: Snapshot of the last evaluation and evolution durations.

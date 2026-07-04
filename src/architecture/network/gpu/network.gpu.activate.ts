@@ -15,7 +15,7 @@
  * ineligible.
  *
  * GPU output is expected to agree with the CPU path within an absolute tolerance
- * of `5e-1` and a mean absolute error of `≤ 1e-1`. Use the CPU path for
+ * of `1e-3` and a mean absolute error of `≤ 1e-4`. Use the CPU path for
  * deterministic replay and cross-machine regression tests.
  *
  * ```mermaid
@@ -418,7 +418,7 @@ function matchesBuiltInActivation(
  * @returns The corresponding worker index, or `undefined` when the function is
  *   not part of the canonical registry.
  */
-function resolveActivationIndex(
+export function resolveActivationIndex(
   squash: (value: number, derivate?: boolean) => number,
 ): number | undefined {
   // Fast path: strict identity still works when the same function object is
@@ -516,7 +516,7 @@ function prepareActivationContext(network: Network): {
 }
 
 /**
- * Build the bind group that wires the four struct-packed kernel buffers into
+ * Build the bind group that wires the six struct-packed kernel buffers into
  * the pipeline layout. The bind group can be reused across activations as long
  * as the underlying buffers are the same.
  */
@@ -543,6 +543,14 @@ function createActivationBindGroup(
       {
         binding: GPU_BUFFER_BINDING.params,
         resource: { buffer: bufferSet.params },
+      },
+      {
+        binding: GPU_BUFFER_BINDING.topoLevels,
+        resource: { buffer: bufferSet.topoLevels },
+      },
+      {
+        binding: GPU_BUFFER_BINDING.inStart,
+        resource: { buffer: bufferSet.inStart },
       },
     ],
   });

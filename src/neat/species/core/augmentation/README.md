@@ -8,6 +8,7 @@ history rows, find matching live species records, and copy derived structural
 summaries into entries that are still missing them.
 
 The implementation deliberately stays conservative:
+
 - it enriches only rows that lack the extended fields,
 - it skips history rows whose species no longer exist in the live registry,
 - it derives only compact summary values instead of copying full genomes or
@@ -32,6 +33,7 @@ the backfill should run at all.
 
 The helper walks recorded generations first and species rows second. For each
 row, it performs a small three-step decision:
+
 1. skip rows that already contain the extended metrics,
 2. look up the matching live species by id,
 3. if that species still exists and has members, summarize its innovation
@@ -42,6 +44,7 @@ pretending that old history can always be reconstructed perfectly from the
 current runtime state.
 
 Parameters:
+
 - `history` - Recorded species history to enrich.
 - `context` - NEAT context exposing current species and optional fallback innovations.
 

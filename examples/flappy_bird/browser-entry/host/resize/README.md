@@ -13,6 +13,7 @@ choose the appropriate layout mode, resize canvases, and schedule any network
 redraws needed after the geometry changes.
 
 Layout decision flow:
+
 ```mermaid
 flowchart LR
     Measure["measure container"] --> Decide{"minimal mobile\nlayout?"}
@@ -39,6 +40,7 @@ The resize flow is intentionally split into two branches: the minimal mobile
 path and the richer standard path used for tablet and desktop layouts.
 
 Parameters:
+
 - `responsiveViewportSizingElements` - Host elements participating in layout.
 - `deferredNetworkRedrawController` - Deferred redraw controller.
 - `onNetworkResize` - Immediate network resize callback.
@@ -68,6 +70,7 @@ creates the deferred redraw policy, runs the first layout pass, and installs
 ongoing resize listeners.
 
 Parameters:
+
 - `canvas` - Simulation canvas to resize.
 - `containerElement` - Width/height source.
 - `mainSplitContainer` - Main split panel host.
@@ -188,6 +191,7 @@ On the smallest viewports, the resize policy prioritizes the simulation canvas
 and temporarily hides the stats/network panel to preserve playable space.
 
 Parameters:
+
 - `responsiveViewportSizingElements` - Host elements participating in layout.
 - `responsiveViewportLayoutContext` - Responsive layout context.
 
@@ -208,6 +212,7 @@ The network panel uses a fixed-height target so the visualization remains
 readable and stable across layout transitions.
 
 Parameters:
+
 - `networkCanvasHost` - Network canvas host element.
 - `deferredNetworkRedrawController` - Deferred redraw controller.
 
@@ -230,6 +235,7 @@ Once panel dimensions are known, this helper updates both backing stores and
 triggers an immediate network redraw when the visualization canvas changed.
 
 Parameters:
+
 - `responsiveViewportSizingElements` - Host elements participating in layout.
 - `responsiveViewportLayoutContext` - Responsive layout context.
 - `statsPanelDimensions` - Resolved stats panel dimensions.
@@ -252,6 +258,7 @@ This helper decides whether the main panels should stack or sit side-by-side,
 then applies the matching flexbox configuration.
 
 Parameters:
+
 - `responsiveViewportSizingElements` - Host elements participating in layout.
 - `responsiveViewportLayoutContext` - Responsive layout context.
 
@@ -273,6 +280,7 @@ This path keeps the auxiliary panes visible and resolves a balanced split
 between simulation and side-panel content.
 
 Parameters:
+
 - `responsiveViewportSizingElements` - Host elements participating in layout.
 - `responsiveViewportLayoutContext` - Responsive layout context.
 - `deferredNetworkRedrawController` - Deferred redraw controller.
@@ -292,6 +300,7 @@ applyStatsContainerDimensions(
 Applies the resolved dimensions and scrolling rules to the stats container.
 
 Parameters:
+
 - `statsContainer` - Stats host element.
 - `responsiveViewportLayoutContext` - Responsive layout context.
 - `statsPanelDimensions` - Resolved stats panel dimensions.
@@ -314,6 +323,7 @@ Compact layouts may hide the stats table or promote the network panel so the
 most informative content remains visible in constrained space.
 
 Parameters:
+
 - `statsTableHost` - Stats table host element.
 - `networkCanvasHost` - Network canvas host element.
 - `responsiveViewportLayoutContext` - Responsive layout context.
@@ -334,6 +344,7 @@ Waiting two animation frames is a pragmatic way to avoid redrawing the network
 panel against transient intermediate layout sizes.
 
 Parameters:
+
 - `onNetworkResize` - Callback after network resize.
 
 Returns: Deferred redraw controller.
@@ -354,6 +365,7 @@ The host listens both to global window resizes and to container-specific size
 changes when `ResizeObserver` is available.
 
 Parameters:
+
 - `containerElement` - Width and height source.
 - `applyCanvasSize` - Shared sizing callback.
 - `deferredNetworkRedrawController` - Deferred redraw controller.
@@ -381,6 +393,7 @@ The resize system subtracts the header from the total container height before
 budgeting the main panels.
 
 Parameters:
+
 - `containerElement` - Width and height source.
 
 Returns: Header height in pixels.
@@ -400,6 +413,7 @@ Minimal mobile mode spends nearly the entire available budget on the main
 simulation surface.
 
 Parameters:
+
 - `containerElement` - Width and height source.
 - `responsiveViewportLayoutContext` - Responsive layout context.
 
@@ -421,6 +435,7 @@ This is the measurement root for the resize system: read the current viewport,
 reserve required minimums, then classify the active layout mode.
 
 Parameters:
+
 - `containerElement` - Width and height source.
 - `statsContainer` - Stats host element.
 - `networkCanvasHost` - Network host element.
@@ -443,6 +458,7 @@ The simulation canvas consumes the remainder after the stats/network budget and
 fixed gutters are applied.
 
 Parameters:
+
 - `containerElement` - Width and height source.
 - `responsiveViewportLayoutContext` - Responsive layout context.
 - `statsPanelDimensions` - Resolved stats panel dimensions.
@@ -463,6 +479,7 @@ The stats panel budget is computed after preserving a minimum readable region
 for the simulation canvas.
 
 Parameters:
+
 - `responsiveViewportLayoutContext` - Responsive layout context.
 
 Returns: Stats panel dimensions.

@@ -3,18 +3,20 @@
 Topology utilities.
 
 Provides:
- - computeTopoOrder: Kahn-style topological sorting with graceful fallback when cycles detected.
- - hasPath: depth-first reachability query (used to prevent cycle introduction when acyclicity enforced).
- - topology contract helpers: public intent accessors that keep semantic API state aligned with low-level runtime flags.
+
+- computeTopoOrder: Kahn-style topological sorting with graceful fallback when cycles detected.
+- hasPath: depth-first reachability query (used to prevent cycle introduction when acyclicity enforced).
+- topology contract helpers: public intent accessors that keep semantic API state aligned with low-level runtime flags.
 
 Design Notes:
- - We deliberately tolerate cycles by falling back to raw node ordering instead of throwing; this
-   allows callers performing interim structural mutations to proceed (e.g. during evolve phases)
-   while signaling that the fast acyclic optimizations should not be used.
- - Input nodes are seeded into the queue immediately regardless of in-degree to keep them early in
-   the ordering even if an unusual inbound edge was added (defensive redundancy).
- - Self loops are ignored for in-degree accounting and queue progression (they neither unlock new
-   nodes nor should they block ordering completion).
+
+- We deliberately tolerate cycles by falling back to raw node ordering instead of throwing; this
+  allows callers performing interim structural mutations to proceed (e.g. during evolve phases)
+  while signaling that the fast acyclic optimizations should not be used.
+- Input nodes are seeded into the queue immediately regardless of in-degree to keep them early in
+  the ordering even if an unusual inbound edge was added (defensive redundancy).
+- Self loops are ignored for in-degree accounting and queue progression (they neither unlock new
+  nodes nor should they block ordering completion).
 
 ## architecture/network/topology/network.topology.utils.types.ts
 
@@ -103,6 +105,7 @@ lower-level runtime ultimately enforces acyclicity through booleans and cache
 invalidation.
 
 Parameters:
+
 - `this` - Target network instance.
 
 Returns: Current topology intent.
@@ -124,6 +127,7 @@ mutation and crossover helpers from introducing recurrent structure into a
 genome that still advertises acyclic semantics anywhere on its runtime seam.
 
 Parameters:
+
 - `carrier` - Narrow runtime shape or full network instance.
 
 Returns: True when feed-forward semantics are currently enforced.
@@ -157,6 +161,7 @@ rebuildConnections(
 Rebuild the canonical connection array from all per-node outgoing lists.
 
 Parameters:
+
 - `networkInstance` - Target network.
 
 ### setEnforceAcyclic
@@ -173,6 +178,7 @@ This exists for backward compatibility with callers that still use the legacy
 boolean API instead of the semantic `topologyIntent` field.
 
 Parameters:
+
 - `this` - Target network instance.
 - `flag` - Whether to enforce acyclic connectivity.
 
@@ -192,6 +198,7 @@ Updating the semantic contract also updates acyclic enforcement and marks the
 topological cache dirty so later activation paths rebuild consistent state.
 
 Parameters:
+
 - `this` - Target network instance.
 - `topologyIntent` - Desired topology intent.
 
@@ -211,6 +218,7 @@ appendActivationStep(
 Append one completed activation wave to the cached schedule.
 
 Parameters:
+
 - `activationSteps` - Accumulated activation waves.
 - `activationStep` - Current activation wave.
 
@@ -228,6 +236,7 @@ appendActivationStepNode(
 Append one stable node id to the current activation wave.
 
 Parameters:
+
 - `activationStep` - Current activation wave.
 - `node` - Node to append.
 
@@ -245,6 +254,7 @@ appendTopoNode(
 Append one node to topological order output.
 
 Parameters:
+
 - `topoOrder` - Accumulated topological order.
 - `node` - Node to append.
 
@@ -262,6 +272,7 @@ compareNodesByStableTieBreak(
 Compare two nodes using a stable deterministic activation tie-break order.
 
 Parameters:
+
 - `leftNode` - First node.
 - `rightNode` - Second node.
 
@@ -279,6 +290,7 @@ decrementNodeInDegree(
 Decrement node in-degree and return remaining value.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 - `node` - Target node.
 
@@ -296,6 +308,7 @@ getInDegree(
 Read in-degree for a node with zero fallback.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 - `node` - Candidate node.
 
@@ -312,6 +325,7 @@ isInputNode(
 Test whether a node is an input node.
 
 Parameters:
+
 - `node` - Candidate node.
 
 Returns: True when node type is input.
@@ -328,6 +342,7 @@ isQueueSeedNode(
 Determine whether a node belongs in the initial queue.
 
 Parameters:
+
 - `node` - Candidate node.
 - `buildContext` - Mutable build context.
 
@@ -345,6 +360,7 @@ isSelfConnection(
 Test whether a connection is a self-loop.
 
 Parameters:
+
 - `from` - Source node.
 - `to` - Target node.
 
@@ -361,6 +377,7 @@ processKahnQueue(
 Process the Kahn queue until all available topology nodes are emitted.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 
 Returns: Void.
@@ -378,6 +395,7 @@ relaxOutgoingEdges(
 Relax outgoing edges for one processed node.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 - `currentNode` - Processed node.
 
@@ -397,6 +415,7 @@ Stable gene ids are preferred. Node index remains a conservative fallback for
 unusual fixtures that bypass ordinary node construction.
 
 Parameters:
+
 - `node` - Candidate node.
 
 Returns: Deterministic scalar used for sorting and schedule emission.
@@ -412,6 +431,7 @@ seedProcessingQueue(
 Seed Kahn queue with input nodes and zero in-degree nodes.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 
 Returns: Void.
@@ -427,6 +447,7 @@ sortNodesByStableTieBreak(
 Sort one node collection by the deterministic activation wave tie-break order.
 
 Parameters:
+
 - `nodes` - Candidate nodes.
 
 Returns: Sorted node collection.
@@ -442,6 +463,7 @@ takeNextQueueStep(
 Take the full current Kahn wave from the processing queue.
 
 Parameters:
+
 - `processingQueue` - Queue of pending nodes.
 
 Returns: Current zero-in-degree wave in deterministic order.
@@ -460,6 +482,7 @@ createPathSearchContext(
 Create a depth-first search context for reachability testing between two topology nodes.
 
 Parameters:
+
 - `from` - Origin node.
 - `to` - Target node.
 
@@ -477,6 +500,7 @@ hasVisitedNode(
 Test whether a node has already been visited.
 
 Parameters:
+
 - `visitedNodes` - Visited-node set.
 - `node` - Candidate node.
 
@@ -494,6 +518,7 @@ isSameNode(
 Compare two node references by strict identity and return true when they refer to the same node.
 
 Parameters:
+
 - `leftNode` - Left node.
 - `rightNode` - Right node.
 
@@ -511,6 +536,7 @@ isSelfConnection(
 Test whether a connection is a self-loop.
 
 Parameters:
+
 - `from` - Source node.
 - `to` - Target node.
 
@@ -528,6 +554,7 @@ markVisited(
 Mark a node as visited.
 
 Parameters:
+
 - `visitedNodes` - Visited-node set.
 - `node` - Node to mark.
 
@@ -545,6 +572,7 @@ pushOutgoingTargets(
 Push non-self outgoing targets to DFS stack.
 
 Parameters:
+
 - `nodesToVisitStack` - DFS stack.
 - `currentNode` - Current expanded node.
 
@@ -561,6 +589,7 @@ takeNextStackNode(
 Pop and return next DFS stack node.
 
 Parameters:
+
 - `nodesToVisitStack` - DFS stack.
 
 Returns: Next node to process.
@@ -576,6 +605,7 @@ traversePathSearch(
 Traverse the DFS search stack and test whether the target node is reachable.
 
 Parameters:
+
 - `searchContext` - Mutable search context.
 
 Returns: True when target node is reachable.
@@ -594,6 +624,7 @@ Apply in-degree increments from non-self connections so topological scheduling r
 Self loops are excluded because they do not participate in feed-forward ordering.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 
 Returns: Void.
@@ -609,6 +640,7 @@ asTopologyProps(
 Cast a network instance to the internal topology props view for flag access.
 
 Parameters:
+
 - `network` - Network instance.
 
 Returns: Internal topology props view.
@@ -625,6 +657,7 @@ buildRecurrentScheduleSteps(
 Build deterministic recurrent schedule steps from the condensation graph.
 
 Parameters:
+
 - `stronglyConnectedComponents` - Stable SCC list.
 - `condensationContext` - Condensation graph context.
 
@@ -642,6 +675,7 @@ Clear cached topological order state and reset compiled scheduling diagnostics w
 This keeps later activation passes from reusing stale ordering data.
 
 Parameters:
+
 - `internalTopologyProps` - Internal topology props view.
 
 Returns: Void.
@@ -657,6 +691,7 @@ collectStronglyConnectedComponents(
 Collect strongly-connected components using Tarjan traversal.
 
 Parameters:
+
 - `nodes` - Candidate graph nodes.
 
 Returns: Stable SCC list.
@@ -672,6 +707,7 @@ createComponentIndexByNode(
 Build a reverse lookup from node to SCC index.
 
 Parameters:
+
 - `stronglyConnectedComponents` - Stable SCC list.
 
 Returns: Node-to-component lookup map.
@@ -689,6 +725,7 @@ createCondensationContext(
 Build the SCC condensation graph.
 
 Parameters:
+
 - `network` - Network instance.
 - `stronglyConnectedComponents` - Stable SCC list.
 - `componentIndexByNode` - Node-to-component lookup.
@@ -708,6 +745,7 @@ Create mutable build context for Kahn traversal so in-degree maps, queues, and o
 Centralizing this context keeps scheduling helpers composable and deterministic.
 
 Parameters:
+
 - `network` - Network instance.
 - `internalTopologyProps` - Internal topology props view.
 
@@ -725,6 +763,7 @@ finalizeRecurrentSchedule(
 Build and cache the deterministic recurrent activation schedule for the network.
 
 Parameters:
+
 - `network` - Network instance.
 - `internalTopologyProps` - Internal topology props view.
 
@@ -741,6 +780,7 @@ finalizeTopoOrder(
 Finalize cached order, falling back to raw node order on cycle detection.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 
 Returns: Void.
@@ -757,6 +797,7 @@ incrementNodeInDegree(
 Increment in-degree for a node in the tally map.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 - `node` - Target node.
 
@@ -774,6 +815,7 @@ Initialize all nodes with zero in-degree before incoming-edge counting populates
 This explicit reset prevents stale counts when contexts are reused across rebuilds.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 
 Returns: Void.
@@ -789,6 +831,7 @@ isRecurrentComponent(
 Check whether one SCC should be treated as a recurrent execution boundary.
 
 Parameters:
+
 - `componentNodes` - Stable SCC node list.
 
 Returns: True when the component is cyclic or carries a self-loop.
@@ -805,6 +848,7 @@ isSelfConnection(
 Test whether a connection is a self-loop.
 
 Parameters:
+
 - `from` - Source node.
 - `to` - Target node.
 
@@ -822,6 +866,7 @@ resolveCompiledSchedulingDiagnostics(
 Resolve the standard diagnostics payload for a compiled schedule.
 
 Parameters:
+
 - `network` - Network instance.
 - `activationSchedule` - Compiled activation schedule.
 
@@ -838,6 +883,7 @@ resolveComponentTieBreakValue(
 Resolve one SCC tie-break value from its first stable node.
 
 Parameters:
+
 - `componentNodes` - Stable SCC node list.
 
 Returns: Deterministic component sort scalar.
@@ -853,6 +899,7 @@ resolveCycleNodeIds(
 Resolve stable node ids that remained unscheduled after acyclic traversal.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 
 Returns: Stable node ids implicated in the cycle fallback.
@@ -868,6 +915,7 @@ resolveFinalActivationSchedule(
 Resolve the final deterministic activation schedule when the graph is acyclic.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 
 Returns: Cached activation schedule or null when a complete acyclic order was not found.
@@ -883,6 +931,7 @@ resolveFinalOrder(
 Resolve final topological order with cycle fallback.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 
 Returns: Fully valid topological order or raw node order fallback.
@@ -898,6 +947,7 @@ resolveFinalSchedulingDiagnostics(
 Resolve final human-friendly scheduling diagnostics for acyclic mode.
 
 Parameters:
+
 - `buildContext` - Mutable build context.
 
 Returns: Scheduling diagnostics snapshot.
@@ -916,6 +966,7 @@ Self-loops are excluded from traversal because they do not change SCC
 membership, but singleton self-loops are still classified as recurrent later.
 
 Parameters:
+
 - `node` - Candidate node.
 
 Returns: Deterministic outgoing neighbors.
@@ -934,6 +985,7 @@ The schedule is based on the SCC condensation graph so recurrent structure is
 explicit before activation-path integration consumes it.
 
 Parameters:
+
 - `network` - Network instance.
 
 Returns: Deterministic recurrent activation schedule.
@@ -951,6 +1003,7 @@ seedCondensationQueue(
 Seed the condensation queue with zero-indegree or input-owning components.
 
 Parameters:
+
 - `stronglyConnectedComponents` - Stable SCC list.
 - `componentInDegree` - Component indegree counts.
 - `queuedComponentIndexes` - Mutable set of already queued components.
@@ -969,6 +1022,7 @@ Determine whether recurrent scheduling should be used based on topology enforcem
 This gate decides whether Kahn-style acyclic ordering or recurrent schedule compilation is executed.
 
 Parameters:
+
 - `internalTopologyProps` - Internal topology props view.
 
 Returns: True when acyclic mode is disabled.
@@ -985,6 +1039,7 @@ sortComponentIndexesByTieBreak(
 Sort component indexes by the deterministic node tie-break of each SCC root.
 
 Parameters:
+
 - `componentIndexes` - Candidate component indexes.
 - `stronglyConnectedComponents` - Stable SCC list.
 
@@ -1006,6 +1061,7 @@ addOutgoingConnectionsToSet(
 Add all outgoing connections to a deduplication set.
 
 Parameters:
+
 - `outgoingConnections` - Outgoing connections from one node.
 - `allConnections` - Deduplication set for network connections.
 
@@ -1021,6 +1077,7 @@ assignNetworkNodes(
 Assign ordered nodes to the network instance.
 
 Parameters:
+
 - `networkInstance` - Target network.
 - `mlpNodeLayers` - Grouped node layers for this MLP.
 
@@ -1035,6 +1092,7 @@ collectUniqueOutgoingConnections(
 Collect unique outgoing connections across all network nodes.
 
 Parameters:
+
 - `networkInstance` - Target network.
 
 Returns: Set of unique outgoing connections.
@@ -1051,6 +1109,7 @@ connectLayerPair(
 Fully connect every source node to every target node.
 
 Parameters:
+
 - `sourceLayer` - Source layer.
 - `targetLayer` - Target layer.
 
@@ -1065,6 +1124,7 @@ connectMlpLayers(
 Fully connect each adjacent layer in MLP order.
 
 Parameters:
+
 - `mlpNodeLayers` - Grouped node layers for this MLP.
 
 ### convertConnectionSetToArray
@@ -1078,6 +1138,7 @@ convertConnectionSetToArray(
 Convert a connection set into the canonical array format.
 
 Parameters:
+
 - `uniqueConnections` - Unique network connections.
 
 Returns: Array of network connections.
@@ -1093,6 +1154,7 @@ createHiddenLayers(
 Create all hidden layers for an MLP topology.
 
 Parameters:
+
 - `hiddenCounts` - Hidden-layer node counts.
 
 Returns: Hidden layers in forward order.
@@ -1122,6 +1184,7 @@ createMlpNodeLayers(
 Build input, hidden, and output node layers for an MLP topology.
 
 Parameters:
+
 - `inputCount` - Number of input nodes.
 - `hiddenCounts` - Hidden-layer node counts.
 - `outputCount` - Number of output nodes.
@@ -1140,6 +1203,7 @@ createNodesOfType(
 Create all nodes for a single fixed node type.
 
 Parameters:
+
 - `nodeCount` - Number of nodes to create.
 - `nodeType` - Node type identifier.
 
@@ -1156,6 +1220,7 @@ createOrderedNodeList(
 Build the canonical ordered node list used by the network.
 
 Parameters:
+
 - `mlpNodeLayers` - Grouped node layers for this MLP.
 
 Returns: Ordered node list: input, hidden, then output.
@@ -1171,6 +1236,7 @@ flattenNodeLayers(
 Flatten layered node collections into a single ordered list.
 
 Parameters:
+
 - `nodeLayers` - Layered node collections.
 
 Returns: Flattened node list.
@@ -1188,6 +1254,7 @@ instantiateNetwork(
 Instantiate a new network using the runtime constructor.
 
 Parameters:
+
 - `networkFactory` - Network constructor function.
 - `inputCount` - Number of input nodes.
 - `outputCount` - Number of output nodes.
@@ -1205,6 +1272,7 @@ markTopologyDirty(
 Mark a network topology as dirty after structural edits.
 
 Parameters:
+
 - `networkInstance` - Network instance to mark.
 
 ### rebuildConnections
@@ -1218,6 +1286,7 @@ rebuildConnections(
 Rebuild the canonical connection array from all per-node outgoing lists.
 
 Parameters:
+
 - `networkInstance` - Target network.
 
 ## architecture/network/topology/network.topology.contract.utils.ts
@@ -1243,6 +1312,7 @@ lower-level runtime ultimately enforces acyclicity through booleans and cache
 invalidation.
 
 Parameters:
+
 - `this` - Target network instance.
 
 Returns: Current topology intent.
@@ -1264,6 +1334,7 @@ mutation and crossover helpers from introducing recurrent structure into a
 genome that still advertises acyclic semantics anywhere on its runtime seam.
 
 Parameters:
+
 - `carrier` - Narrow runtime shape or full network instance.
 
 Returns: True when feed-forward semantics are currently enforced.
@@ -1282,6 +1353,7 @@ This exists for backward compatibility with callers that still use the legacy
 boolean API instead of the semantic `topologyIntent` field.
 
 Parameters:
+
 - `this` - Target network instance.
 - `flag` - Whether to enforce acyclic connectivity.
 
@@ -1301,6 +1373,7 @@ Updating the semantic contract also updates acyclic enforcement and marks the
 topological cache dirty so later activation paths rebuild consistent state.
 
 Parameters:
+
 - `this` - Target network instance.
 - `topologyIntent` - Desired topology intent.
 
@@ -1326,6 +1399,7 @@ Keeping descriptor assembly in one place ensures every resolution strategy
 returns the same payload contract and avoids accidental field drift.
 
 Parameters:
+
 - `hiddenLayerSizes` - Hidden-layer widths.
 - `hasCycles` - Whether cycles were detected.
 - `source` - Descriptor provenance.
@@ -1337,7 +1411,13 @@ Returns: Descriptor object.
 Example:
 
 ```ts
-const descriptor = createArchitectureDescriptor([6, 3], false, 'graph-topology', 14, 25);
+const descriptor = createArchitectureDescriptor(
+  [6, 3],
+  false,
+  'graph-topology',
+  14,
+  25,
+);
 // descriptor.totalNodes === 14
 ```
 
@@ -1356,6 +1436,7 @@ Invalid references, disabled connections, and self-loops are removed so the
 remaining edge list can be consumed safely by cycle and depth algorithms.
 
 Parameters:
+
 - `runtimeConnections` - Runtime connections.
 - `nodeByIndex` - Indexed nodes.
 
@@ -1382,6 +1463,7 @@ Runtime objects may omit `index`; in that case the current array position is
 used as a deterministic fallback to keep downstream graph logic total.
 
 Parameters:
+
 - `runtimeNodes` - Runtime nodes.
 
 Returns: Node map keyed by stable node index.
@@ -1408,11 +1490,13 @@ can rely on the descriptor while still receiving useful output for partially
 specified runtime graphs.
 
 Resolution priority is intentionally explicit:
-1) node `layer` metadata (factual when present)
-2) graph-derived feed-forward depth layering (factual for acyclic graphs)
-3) hidden-node count fallback (heuristic inference)
+
+1. node `layer` metadata (factual when present)
+2. graph-derived feed-forward depth layering (factual for acyclic graphs)
+3. hidden-node count fallback (heuristic inference)
 
 Parameters:
+
 - `network` - Runtime network instance.
 
 Returns: Stable architecture descriptor.
@@ -1437,6 +1521,7 @@ Identifies whether a runtime node should be treated as hidden for topology
 reconstruction and fallback inference.
 
 Parameters:
+
 - `runtimeNode` - Candidate node.
 
 Returns: True when node type is hidden.
@@ -1461,6 +1546,7 @@ isHydratedDescriptorCompatible(
 Check whether hydrated descriptor metadata still matches the current graph shape.
 
 Parameters:
+
 - `network` - Runtime network instance.
 - `hydratedDescriptor` - Optional hydrated descriptor candidate.
 
@@ -1483,6 +1569,7 @@ owns the live analysis while serialization can optionally hydrate a cached
 descriptor that remains safe to reuse when the runtime graph shape matches.
 
 Parameters:
+
 - `network` - Runtime network instance.
 
 Returns: Public architecture descriptor for telemetry and UI consumers.
@@ -1503,6 +1590,7 @@ A complete topological ordering implies an acyclic graph. If some nodes
 remain unprocessed, at least one cycle exists.
 
 Parameters:
+
 - `nodeByIndex` - Indexed nodes.
 - `directedEdges` - Directed edges.
 
@@ -1511,7 +1599,10 @@ Returns: Topological order and cycle status.
 Example:
 
 ```ts
-const { topologicalOrder, hasCycles } = resolveCycleStateAndTopoOrder(nodeByIndex, edges);
+const { topologicalOrder, hasCycles } = resolveCycleStateAndTopoOrder(
+  nodeByIndex,
+  edges,
+);
 ```
 
 ### resolveHiddenCountsByDepth
@@ -1529,6 +1620,7 @@ This is the final transformation before emitting architecture widths:
 hidden nodes are grouped by depth and counted in insertion-safe maps.
 
 Parameters:
+
 - `nodeByIndex` - Indexed nodes.
 - `depthByNodeIndex` - Derived depths.
 
@@ -1537,7 +1629,10 @@ Returns: Hidden-node counts by depth.
 Example:
 
 ```ts
-const hiddenCountsByDepth = resolveHiddenCountsByDepth(nodeByIndex, depthByNodeIndex);
+const hiddenCountsByDepth = resolveHiddenCountsByDepth(
+  nodeByIndex,
+  depthByNodeIndex,
+);
 ```
 
 ### resolveHiddenLayerSizesFromGraphTopology
@@ -1557,6 +1652,7 @@ graphs are flagged and intentionally return no width inference because depth
 is not well-defined in recurrent loops.
 
 Parameters:
+
 - `runtimeNodes` - Runtime nodes.
 - `runtimeConnections` - Runtime connections.
 
@@ -1565,7 +1661,8 @@ Returns: Hidden-layer widths derived from acyclic topology and cycle flag.
 Example:
 
 ```ts
-const { hiddenLayerSizes, hasCycles } = resolveHiddenLayerSizesFromGraphTopology(nodes, edges);
+const { hiddenLayerSizes, hasCycles } =
+  resolveHiddenLayerSizesFromGraphTopology(nodes, edges);
 ```
 
 ### resolveHiddenLayerSizesFromLayerMetadata
@@ -1583,6 +1680,7 @@ usually produced by architecture-aware builders and does not depend on
 topological reconstruction.
 
 Parameters:
+
 - `runtimeNodes` - Runtime nodes.
 
 Returns: Hidden-layer widths from explicit node.layer metadata.
@@ -1610,6 +1708,7 @@ Depth assignment is parent-driven: each node depth is one plus the maximum
 resolved parent depth. Nodes with no resolved parents are skipped.
 
 Parameters:
+
 - `nodeByIndex` - Indexed nodes.
 - `directedEdges` - Directed edges.
 - `topologicalOrder` - Acyclic topological order.
@@ -1619,5 +1718,9 @@ Returns: Derived depth by node index.
 Example:
 
 ```ts
-const depthByNodeIndex = resolveNodeDepthByIndex(nodeByIndex, edges, topologicalOrder);
+const depthByNodeIndex = resolveNodeDepthByIndex(
+  nodeByIndex,
+  edges,
+  topologicalOrder,
+);
 ```

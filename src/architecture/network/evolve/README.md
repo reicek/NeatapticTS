@@ -72,17 +72,20 @@ evolveNetwork(
 Evolves a network with a NEAT-style search loop until an error target or generation limit is reached.
 
 Overview:
-- This method treats the current network as a *seed genome* and explores better variants.
+
+- This method treats the current network as a _seed genome_ and explores better variants.
 - Candidate genomes are scored by prediction error plus a structural complexity penalty.
 - The best discovered genome is copied back into the current instance (in-place upgrade).
 
 Typical usage guidance:
+
 - Use `error` when you care about reaching a quality threshold.
 - Use `iterations` when you need deterministic runtime bounds.
 - Use both when you want "stop when good enough, otherwise cap time" behavior.
 - Increase `threads` only when worker support exists and dataset evaluation is expensive.
 
 Parameters:
+
 - `this` - Bound Network instance that receives the best evolved structure.
 - `set` - Supervised samples; sample input/output dimensions must match network I/O.
 - `options` - Evolution hyperparameters and stop conditions.
@@ -115,6 +118,7 @@ applySmallPopulationHeuristics(
 Apply conservative mutation-rate and mutation-amount defaults for tiny populations to reduce early stagnation risk while avoiding aggressive overrides when callers already configured explicit mutation controls.
 
 Parameters:
+
 - `neatInstance` - Active NEAT instance.
 - `evolveOptions` - Evolve options object.
 
@@ -132,6 +136,7 @@ assertEvolutionDatasetCompatibility(
 Validate that training samples exist and that each sample shape matches the network input and output arity before any evolution work starts.
 
 Parameters:
+
 - `network` - Network being evolved.
 - `dataSet` - Supervised dataset.
 
@@ -149,6 +154,7 @@ configureNeatOptions(
 Normalize options consumed by the NEAT constructor, including compatibility mapping between populationSize and popsize, plus default speciation behavior needed for historical evolve-call consistency.
 
 Parameters:
+
 - `network` - Network instance being evolved.
 - `evolveOptions` - Evolve options object.
 
@@ -165,6 +171,7 @@ createEvolutionConfig(
 Build a structured evolution-config snapshot for diagnostics, callback payloads, and log hooks whenever scheduling metadata exists, while keeping omitted schedule paths represented as an explicit undefined result.
 
 Parameters:
+
 - `settingsToSummarize` - Scalar evolution settings.
 
 Returns: Optional summary config.
@@ -182,6 +189,7 @@ createNeatInstance(
 Lazy-load the NEAT runtime class and create an instance bound to the prepared fitness evaluator and normalized options so evolution setup can remain lightweight until construction is truly needed.
 
 Parameters:
+
 - `network` - Network instance being evolved.
 - `fitnessFunction` - Prepared fitness evaluator.
 - `evolveOptions` - Evolve options object.
@@ -199,6 +207,7 @@ getNormalizedOptions(
 Return the normalized evolve-options object that every downstream setup helper reads so defaults, compatibility shims, and diagnostics all start from one stable and predictable structure.
 
 Parameters:
+
 - `evolveOptions` - Incoming evolve options.
 
 Returns: Safe options object.
@@ -216,6 +225,7 @@ prepareFitnessFunction(
 Build the effective fitness evaluator by selecting either single-thread or worker-backed execution from resolved threading settings, then return both the callable function and the resolved runtime thread count.
 
 Parameters:
+
 - `dataSet` - Supervised dataset.
 - `resolvedSettings` - Scalar evolution settings.
 - `evolveOptions` - Evolve options object.
@@ -233,6 +243,7 @@ resolveEvolutionSettings(
 Resolve scalar evolution settings with explicit and stable defaults so later setup phases can run deterministically without repeating option-default logic in several different orchestration branches.
 
 Parameters:
+
 - `evolveOptions` - Evolve options object.
 
 Returns: Normalized scalar settings.
@@ -249,6 +260,7 @@ resolveStopConditions(
 Resolve stopping conditions while preserving legacy iteration-and-error semantics so existing callers keep the same termination behavior, including compatibility with historical zero-iteration and disabled-error workflows.
 
 Parameters:
+
 - `evolveOptions` - Evolve options object.
 - `initialTargetError` - Target error resolved from options.
 
@@ -266,6 +278,7 @@ warnIfNoBestGenomeMayOccur(
 Emit a best-genome advisory warning for zero-iteration runs where legacy flows can complete without setting a champion, preventing silent confusion when a caller expects a populated best network.
 
 Parameters:
+
 - `neatInstance` - Active NEAT instance.
 - `evolveOptions` - Evolve options object.
 
@@ -290,6 +303,7 @@ Build worker-based population fitness setup that serializes the dataset once and
 When worker construction fails, this helper falls back to the single-thread evaluator automatically.
 
 Parameters:
+
 - `set` - Dataset.
 - `cost` - Cost function or reference.
 - `amount` - Repetition count.
@@ -311,6 +325,7 @@ buildPopulationWorkerFitnessFunction(
 Build population-level fitness function powered by worker queue.
 
 Parameters:
+
 - `workers` - Spawned worker instances.
 - `growth` - Complexity penalty scalar.
 
@@ -331,6 +346,7 @@ Build a single-threaded genome fitness evaluator that repeats scoring, applies c
 This path is the deterministic fallback when worker-based evaluation is unavailable.
 
 Parameters:
+
 - `set` - Dataset of training samples.
 - `cost` - Cost function reference.
 - `amount` - Number of repeated evaluations.
@@ -351,6 +367,7 @@ cacheComplexityBase(
 Store complexity base cache entry for future reuse.
 
 Parameters:
+
 - `genome` - Candidate network used as cache key.
 - `structureCounts` - Current structural counts.
 - `complexityBase` - Computed base complexity value.
@@ -368,6 +385,7 @@ claimNextGenome(
 Claims the next genome index from shared queue state.
 
 Parameters:
+
 - `context` - Population evaluation context.
 
 Returns: Next genome, or undefined when queue is exhausted.
@@ -384,6 +402,7 @@ computeComplexityBase(
 Compute non-scaled complexity base from structural counts.
 
 Parameters:
+
 - `genome` - Candidate network whose complexity to compute.
 - `structureCounts` - Current structural counts.
 
@@ -402,6 +421,7 @@ Compute structural complexity penalty scaled by growth so larger genomes receive
 Cached structure counts avoid repeated recomputation for unchanged genome objects.
 
 Parameters:
+
 - `genome` - Candidate network whose complexity to measure.
 - `growth` - Positive scalar controlling parsimony pressure.
 
@@ -421,6 +441,7 @@ createPopulationWorkerEvaluationContext(
 Creates the shared evaluation context for one population run.
 
 Parameters:
+
 - `sourceWorkers` - Worker pool.
 - `sourcePopulation` - Population to evaluate.
 - `sourceGrowth` - Complexity penalty scalar.
@@ -442,6 +463,7 @@ createSingleThreadFallbackFitness(
 Build single-thread fallback fitness setup.
 
 Parameters:
+
 - `set` - Dataset.
 - `cost` - Cost function.
 - `amount` - Repetition count.
@@ -461,6 +483,7 @@ createWorkerTraversalContext(
 Creates traversal context for one worker.
 
 Parameters:
+
 - `context` - Population evaluation context.
 - `worker` - Worker instance.
 
@@ -480,6 +503,7 @@ evaluateGenomeAmountTimes(
 Evaluate one genome repeatedly and accumulate negative error.
 
 Parameters:
+
 - `genome` - Genome under evaluation.
 - `set` - Dataset used for evaluation.
 - `cost` - Cost function reference.
@@ -500,6 +524,7 @@ evaluateGenomeErrorSafely(
 Evaluate one genome and return error, with warning-protected failure handling.
 
 Parameters:
+
 - `genome` - Genome under evaluation.
 - `set` - Dataset used for evaluation.
 - `cost` - Cost function reference.
@@ -520,6 +545,7 @@ Evaluate one genome with a worker and assign a penalized score that includes str
 Non-numeric worker results are ignored so calling loops can continue safely.
 
 Parameters:
+
 - `worker` - Worker instance.
 - `genome` - Genome under evaluation.
 - `growth` - Complexity penalty scalar.
@@ -537,6 +563,7 @@ finalizeWorker(
 Marks one worker as completed and resolves when all workers finish.
 
 Parameters:
+
 - `context` - Population evaluation context.
 
 Returns: Nothing.
@@ -553,6 +580,7 @@ getCachedComplexityBase(
 Retrieve cached complexity base if cached structure counts still match.
 
 Parameters:
+
 - `genome` - Candidate network whose cached complexity is queried.
 - `structureCounts` - Current structural counts.
 
@@ -569,6 +597,7 @@ getGenomeStructureCounts(
 Get structural counts used by complexity heuristic.
 
 Parameters:
+
 - `genome` - Candidate network whose structure is being measured.
 
 Returns: Structural counts used for complexity computation.
@@ -584,6 +613,7 @@ hasNoWorkers(
 Checks whether there are workers available to process genomes.
 
 Parameters:
+
 - `context` - Population evaluation context.
 
 Returns: True when worker pool is empty.
@@ -601,6 +631,7 @@ Register a worker termination hook onto the evolve options object so spawned wor
 Termination errors are swallowed to avoid masking primary evolution outcomes.
 
 Parameters:
+
 - `options` - Evolve options object.
 - `workers` - Spawned worker instances.
 
@@ -617,6 +648,7 @@ resolveCostName(
 Resolve serializable cost name for worker payload.
 
 Parameters:
+
 - `cost` - Cost function or cost reference.
 
 Returns: Cost name string.
@@ -632,6 +664,7 @@ resolveEvaluation(
 Resolves the population evaluation promise.
 
 Parameters:
+
 - `context` - Population evaluation context.
 
 Returns: Nothing.
@@ -657,6 +690,7 @@ runWorkerTraversalStep(
 Runs one asynchronous traversal step for a worker.
 
 Parameters:
+
 - `traversalContext` - Worker traversal context.
 
 Returns: Nothing.
@@ -675,6 +709,7 @@ spawnTestWorkers(
 Spawn worker instances up to requested thread count.
 
 Parameters:
+
 - `workerConstructor` - Worker constructor resolved for runtime.
 - `serializedSet` - Serialized dataset shared with workers.
 - `cost` - Cost function or cost reference.
@@ -693,6 +728,7 @@ startWorkerTraversal(
 Starts traversal loops for all workers.
 
 Parameters:
+
 - `context` - Population evaluation context.
 
 Returns: Nothing.
@@ -708,6 +744,7 @@ warnGenomeEvaluationFailure(
 Emit warning when genome evaluation fails.
 
 Parameters:
+
 - `error` - Unknown evaluation error.
 
 Returns: Nothing.
@@ -727,6 +764,7 @@ applyEvolutionStep(
 Applies one evolve() result to loop state.
 
 Parameters:
+
 - `state` - Mutable loop state.
 - `evolvedGenome` - Genome returned by NEAT evolve step.
 - `growth` - Complexity growth scalar.
@@ -756,6 +794,7 @@ deriveErrorFromFitness(
 Derive error from fitness by inverting score composition.
 
 Parameters:
+
 - `fitness` - Fitness value from fittest genome.
 - `genome` - Fittest genome.
 - `growth` - Complexity growth scalar.
@@ -776,6 +815,7 @@ runEvolutionLoop(
 Run the core evolution loop until error target or iteration limit is reached.
 
 Parameters:
+
 - `neatInstance` - Active NEAT instance.
 - `resolvedSettings` - Scalar evolution settings.
 - `targetError` - Effective target error (-1 means disabled).
@@ -797,6 +837,7 @@ runScheduleCallbackSafely(
 Run schedule callback if schedule trigger is reached.
 
 Parameters:
+
 - `scheduleConfig` - Optional schedule configuration.
 - `generation` - Current generation.
 - `bestFitness` - Current best fitness.
@@ -815,6 +856,7 @@ shouldAbortForInvalidErrors(
 Determines whether loop must abort due to invalid-error streak.
 
 Parameters:
+
 - `state` - Mutable loop state.
 
 Returns: True when invalid-error threshold is reached.
@@ -834,6 +876,7 @@ shouldContinueEvolution(
 Determine whether evolution loop should continue.
 
 Parameters:
+
 - `currentError` - Current derived error value.
 - `targetError` - Effective target error (-1 means disabled).
 - `iterationsSpecified` - Whether iterations limit is active.
@@ -856,6 +899,7 @@ updateBestGenomeIfImproved(
 Update best fitness/genome snapshot when improved.
 
 Parameters:
+
 - `currentBestFitness` - Current best fitness.
 - `currentBestGenome` - Current best genome.
 - `candidateFitness` - Candidate fitness.
@@ -875,6 +919,7 @@ updateInvalidErrorCounter(
 Update invalid-error counter.
 
 Parameters:
+
 - `currentCount` - Current consecutive invalid-error count.
 - `currentError` - Current derived error value.
 
@@ -912,6 +957,7 @@ buildEvolutionSummary(
 Build the final evolution summary payload returned by the evolve loop.
 
 Parameters:
+
 - `error` - Final loop error.
 - `iterations` - Final generation count.
 - `loopStartTime` - Loop start timestamp.
@@ -932,6 +978,7 @@ This keeps finalize paths resilient when background evaluators were used and
 avoids leaking worker resources if teardown throws.
 
 Parameters:
+
 - `evolveOptions` - Evolve options object.
 
 Returns: Nothing.

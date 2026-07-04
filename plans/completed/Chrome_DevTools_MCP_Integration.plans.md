@@ -153,10 +153,10 @@ Reopen this plan if:
 
 ## Audit log
 
-- 2026-06-20: Plan created by 01-planning (8 phases, 41 steps).
-- 2026-06-20: Phases 1–8 executed and marked [DONE] across multiple sessions.
-- 2026-06-20: Final gate suite green; plan registered; 65 agents / 58 skills.
-- 2026-06-20: Plan compressed and archived to `plans/completed/` by 07-logging.
+- Plan created by 01-planning (8 phases, 41 steps).
+- Phases 1–8 executed and marked [DONE] across multiple sessions.
+- Final gate suite green; plan registered; 65 agents / 58 skills.
+- Plan compressed and archived to `plans/completed/` by 07-logging.
 
 ## Decision Records
 

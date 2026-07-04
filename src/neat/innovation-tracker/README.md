@@ -82,6 +82,7 @@ Look up a reusable connection innovation for the active generation using the cal
 Reuse allows homologous edge additions to remain historically aligned across genomes in the same pass.
 
 Parameters:
+
 - `tracker` - Live tracker.
 - `connectionKey` - Caller-defined exact connection identity.
 
@@ -100,6 +101,7 @@ Look up a reusable split record for the active generation so repeated node-split
 Stable split-key reuse keeps homologous mutations aligned within one generation boundary.
 
 Parameters:
+
 - `tracker` - Live tracker.
 - `splitKey` - Stable split-event identity, usually the split connection innovation.
 
@@ -129,6 +131,7 @@ the generation-local registries. Re-preparing the same generation is a no-op,
 which is what makes mid-generation checkpoint restore deterministic.
 
 Parameters:
+
 - `tracker` - Live tracker.
 - `targetGeneration` - Generation whose mutation window is about to run.
 
@@ -161,6 +164,7 @@ window. Using the larger generation value preserves that in-flight state
 instead of accidentally clearing it.
 
 Parameters:
+
 - `tracker` - Live tracker.
 - `controllerGeneration` - Generation currently recorded on the controller.
 
@@ -180,6 +184,7 @@ Record a reusable connection innovation for the active generation so matching st
 This write path is paired with lookup helpers to preserve deterministic innovation genealogy.
 
 Parameters:
+
 - `tracker` - Live tracker.
 - `connectionKey` - Caller-defined exact connection identity.
 - `innovationId` - Innovation id to reuse for matching mutations.
@@ -200,6 +205,7 @@ Record a reusable split result for the active generation so equivalent split eve
 This prevents duplicate node-lineage ids from drifting across identical mutations in one generation.
 
 Parameters:
+
 - `tracker` - Live tracker.
 - `splitKey` - Stable split-event identity, usually the split connection innovation.
 - `splitRecord` - Reusable node-split payload.
@@ -222,6 +228,7 @@ tracker becomes the canonical owner for both the global cursor and the
 current generation's structural reuse registries.
 
 Parameters:
+
 - `serializedTracker` - Tracker payload from controller export.
 
 Returns: Live innovation tracker ready for continued mutation.
@@ -241,6 +248,7 @@ current generation's de-duplication registries so a restored run can keep
 assigning the same identities if it resumes mid-generation.
 
 Parameters:
+
 - `tracker` - Live tracker to serialize.
 
 Returns: JSON-safe tracker payload.
@@ -257,6 +265,7 @@ Consume the next global innovation id from the tracker and advance the monotonic
 The returned id should be recorded immediately on the matching mutation event to preserve deterministic history.
 
 Parameters:
+
 - `tracker` - Live tracker.
 
 Returns: Newly reserved innovation id.

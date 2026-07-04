@@ -5,7 +5,7 @@ Architecture root — the graph substrate every network is built from.
 ## A Neural Network as a Directed Graph
 
 At its mathematical core, a neural network is a **weighted directed graph**.
-Each *node* (neuron) receives a weighted sum of its incoming signals, applies
+Each _node_ (neuron) receives a weighted sum of its incoming signals, applies
 a non-linear activation function, and sends its output along outgoing
 connections to the next layer of nodes. The forward-propagation formula for
 a single node is:
@@ -20,8 +20,8 @@ etc.) that gives the network its representational power.
 
 In NEAT, this graph is not fixed in advance. Nodes and connections are
 added by structural mutations over many generations, so the architecture
-layer must support both *fixed-topology training* and *dynamic structural
-growth*. See Wikipedia contributors,
+layer must support both _fixed-topology training_ and _dynamic structural
+growth_. See Wikipedia contributors,
 [Artificial neural network](https://en.wikipedia.org/wiki/Artificial_neural_network),
 for an introduction to the graph model, and Wikipedia contributors,
 [Topological sorting](https://en.wikipedia.org/wiki/Topological_sorting),

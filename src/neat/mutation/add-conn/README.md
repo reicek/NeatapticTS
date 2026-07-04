@@ -61,6 +61,7 @@ disabled genes are not duplicated here because they never reach the absent
 candidate pool.
 
 Parameters:
+
 - `connection` - newly created connection
 - `pairNodes` - resolved pair metadata
 - `internal` - neat controller context
@@ -83,6 +84,7 @@ self edges between the same endpoint gene ids are distinct structural events
 and must not alias through one recurrence-blind key.
 
 Parameters:
+
 - `sourceNode` - source node
 - `targetNode` - target node
 
@@ -105,6 +107,7 @@ This helper lets them ask the same legality question as the generic
 add-connection chapter instead of recreating a second pair-validation policy.
 
 Parameters:
+
 - `genomeToInspect` - genome to inspect
 - `chosenPair` - exact pair being considered
 - `allowRecurrentConnections` - whether recurrent and self candidates may be proposed
@@ -126,6 +129,7 @@ The deterministic single-pair fast path avoids wasting randomness when the
 structural search has already collapsed to one legal option.
 
 Parameters:
+
 - `pairs` - selection pool
 - `internal` - neat controller context
 
@@ -156,6 +160,7 @@ chapter only recreates historically known edges when the exact direction is
 absent from the genome.
 
 Parameters:
+
 - `genomeToInspect` - genome to scan
 - `allowRecurrentConnections` - whether recurrent and self candidates may be proposed
 
@@ -172,6 +177,7 @@ collectFeedForwardCandidatePairs(
 Collect forward-only connection candidates for feed-forward runs.
 
 Parameters:
+
 - `genomeToInspect` - genome to scan
 
 Returns: candidate node pairs
@@ -190,6 +196,7 @@ Input nodes remain invalid targets, but any non-input node may receive a new
 connection, including self loops or edges from later nodes.
 
 Parameters:
+
 - `genomeToInspect` - genome to scan
 
 Returns: candidate node pairs
@@ -211,6 +218,7 @@ discovery, policy filtering, and cycle guards should already be complete.
 The remaining job is just to materialize the chosen edge.
 
 Parameters:
+
 - `genomeToEdit` - genome to edit
 - `pairNodes` - resolved pair nodes
 
@@ -236,6 +244,7 @@ as the main mutation operator instead of letting them materialize edges with
 direct runtime connects.
 
 Parameters:
+
 - `genomeToEdit` - genome to edit
 - `chosenPair` - exact source-target pair to connect
 - `internal` - neat controller context
@@ -259,6 +268,7 @@ path back to the proposed source. If one exists, adding the new edge would
 close a loop and the caller can abort the structural edit for acyclic runs.
 
 Parameters:
+
 - `sourceNode` - source node of the new connection
 - `targetNode` - target node of the new connection
 
@@ -281,6 +291,7 @@ those historically known pairs so the selection path can favor them when such pa
 exist.
 
 Parameters:
+
 - `pairs` - candidate node pairs
 - `internal` - neat controller context
 
@@ -303,6 +314,7 @@ known edges only when the exact direction is absent, while dormant genes stay
 reserved for explicit re-enable flows.
 
 Parameters:
+
 - `sourceNode` - source node of the candidate edge
 - `targetNode` - target node of the candidate edge
 
@@ -326,6 +338,7 @@ runs in one place so direct repair paths can stay aligned with the generic
 candidate-generation chapter.
 
 Parameters:
+
 - `genomeToInspect` - genome to inspect
 - `sourceNode` - proposed source node
 - `targetNode` - proposed target node
@@ -348,6 +361,7 @@ nodes. It also needs the exact directional key used for generation-scoped
 innovation reuse.
 
 Parameters:
+
 - `chosenPair` - pair to connect
 
 Returns: resolved pair metadata
@@ -369,6 +383,7 @@ back to the full candidate set. That keeps the chapter's structural bias
 readable in one place.
 
 Parameters:
+
 - `allPairs` - all candidate pairs
 - `reusePairs` - pairs with historical innovations
 
@@ -390,6 +405,7 @@ acyclic topology. That keeps recurrent-capable runs permissive while still
 giving feed-forward-style runs one clear abort seam.
 
 Parameters:
+
 - `genomeToInspect` - genome to inspect
 - `pairNodes` - resolved pair nodes
 

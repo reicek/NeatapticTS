@@ -58,6 +58,7 @@ The projection stays intentionally simple:
 3. return one compact row per species.
 
 Parameters:
+
 - `host` - NEAT host exposing the internal species registry.
 
 Returns: Compact per-species summaries suitable for reporting.
@@ -68,7 +69,9 @@ Examples:
 const summaries = getSpeciesStats(neat);
 console.table(summaries);
 
-const activeSpeciesCount = summaries.filter((summary) => summary.size > 0).length;
+const activeSpeciesCount = summaries.filter(
+  (summary) => summary.size > 0,
+).length;
 console.log(activeSpeciesCount);
 ```
 

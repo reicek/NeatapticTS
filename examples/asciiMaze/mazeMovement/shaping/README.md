@@ -31,6 +31,7 @@ applyMazeMovementEntropyGuidanceShaping(
 Apply entropy-guided shaping based on confidence and perceptual guidance.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `rewardScale` - Global reward scale used by the penalties and bonuses.
 - `coordinateScratch` - Reused coordinate scratch buffer.
@@ -48,6 +49,7 @@ applyMazeMovementExplorationVisitAdjustment(
 Apply the per-cell exploration bonus or revisit penalty.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `rewardScale` - Global reward scale used by the adjustment.
 - `coordinateScratch` - Reused coordinate scratch buffer.
@@ -66,6 +68,7 @@ applyMazeMovementGlobalDistanceImprovementBonus(
 Apply the long-horizon global-distance improvement bonus.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `encodedMaze` - Maze grid used for distance lookup.
 - `rewardScale` - Global reward scale used by the bonus magnitude.
@@ -84,6 +87,7 @@ applyMazeMovementLocalAreaPenalty(
 Apply a local-area stagnation penalty when the run oscillates in a tight window.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `rewardScale` - Global reward scale used for the penalty magnitude.
 - `coordinateScratch` - Reused coordinate scratch buffer.
@@ -100,6 +104,7 @@ applyMazeMovementPostActionPenalties(
 Apply the post-action shaping and penalty aggregation phase.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `coordinateScratch` - Reused coordinate scratch buffer.
 
@@ -118,6 +123,7 @@ applyMazeMovementProgressShaping(
 Apply progress and away-from-goal shaping after a move.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `distanceDelta` - Positive when the agent moved closer to the goal.
 - `improved` - True when the move improved distance to the goal.
@@ -137,6 +143,7 @@ applyMazeMovementRepetitionAndBacktrackPenalties(
 Apply repetition and immediate-backtrack penalties.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `rewardScale` - Global reward scale used by the penalties.
 - `coordinateScratch` - Reused coordinate scratch buffer.
@@ -154,6 +161,7 @@ applyMazeMovementSaturationPenaltyCycle(
 Apply the periodic saturation penalty cycle.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `rewardScale` - Global reward scale used by the penalties.
 - `coordinateScratch` - Reused coordinate scratch buffer.
@@ -172,6 +180,7 @@ executeMazeMovementAndRewards(
 Execute the chosen move and apply the shaping terms tied to that move.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `encodedMaze` - Maze grid used for move validity and distance lookup.
 - `distanceMap` - Optional precomputed distance map.
@@ -189,6 +198,7 @@ maybeTerminateMazeMovementDeepStagnation(
 Apply the deep-stagnation termination penalty when appropriate.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `coordinateScratch` - Reused coordinate scratch buffer.
 

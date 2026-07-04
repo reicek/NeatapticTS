@@ -152,8 +152,9 @@ complete. Post-phase fan-out from the flow definition runs after the flow body.
 - Gate exceptions are recorded via
   `scripts/agent-customization/gates/record-gate-exception.mjs` and appended to
   `.github/ai-learning/learning-log.jsonl`.
-- Three consecutive gate failures in a session escalate automatically to
-  `00-helping` via the `00.cross-tier-helper` flow.
+- Gate failures are recorded for audit but do not trigger automatic
+  escalation. Continue retrying until resolved or a true technical limit is
+  reached. No concessions.
 - Cross-tier helper calls from any numbered agent route to `00-helping`, which
   resolves the blocker and returns a resolution summary. All cross-tier calls
   are logged as learning events visible to `00.workflow-gap-audit`.

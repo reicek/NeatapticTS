@@ -4,7 +4,7 @@
 
 ## Phase 1 — External Tool Assimilation
 
-[DONE] Phase 1 completed and compressed on 2026-06-30.
+[DONE] Phase 1 completed and compressed.
 
 - Step 01: Defined skill name (`external-tool-assimilation`), agent name (`assimilator`), tier (3), trigger phrase (`/assimilate <repo-url>`), comparison dimensions, and the full Step 02-07 packet sequence.
 - Step 02: Surveyed existing fetch utilities and confirmed none fetch arbitrary public GitHub repo trees + files; documented fetch hierarchy (raw → contents API → tree API → git clone fallback) with rate-limit and 404 handling.

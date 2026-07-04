@@ -1,7 +1,4 @@
 {
   "introFile": "activation.ts",
-  "fileOrder": [
-    "activation.ts",
-    "activation.utils.ts"
-  ]
+  "fileOrder": ["activation.ts", "activation.utils.ts"]
 }

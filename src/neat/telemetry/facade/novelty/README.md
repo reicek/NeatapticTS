@@ -39,6 +39,7 @@ This helper gives diagnostics and tests a small read path for novelty search
 state without pulling the rest of the telemetry facade into view.
 
 Parameters:
+
 - `host` - `Neat` instance tracking novelty behavior descriptors.
 
 Returns: Number of archived novelty descriptors.
@@ -63,6 +64,7 @@ Reach for this when you want novelty search to stop comparing against older
 behavior descriptors and begin building a new archive from scratch.
 
 Parameters:
+
 - `host` - `Neat` instance whose novelty archive should be reset.
 
 Returns: Nothing. The archive is mutated in place.

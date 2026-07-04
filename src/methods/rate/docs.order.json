@@ -1,7 +1,4 @@
 {
   "introFile": "rate.ts",
-  "fileOrder": [
-    "rate.ts",
-    "rate.utils.ts"
-  ]
+  "fileOrder": ["rate.ts", "rate.utils.ts"]
 }

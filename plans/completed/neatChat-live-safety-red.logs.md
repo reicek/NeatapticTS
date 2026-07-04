@@ -1,7 +1,7 @@
 # NEATchat Live Safety Red Contract - Audit Log
 
 **Status:** [DONE]
-**Closed:** 2026-05-23
+**Closed:**
 
 ## Pass history
 
@@ -13,7 +13,7 @@
 | 4    | Browser fallback polish          | The no-safe-candidate palette became vocabulary-aware and deterministic, which removed the shipped-snapshot four-turn fallback collapse.                                                                                                                                     |
 | 5    | Closeout                         | Focused Jest slice PASS, `npm run build:neat-chat` PASS, shipped-browser four-turn probe PASS, doc follow-up already landed, and the tracker was compressed for archive.                                                                                                     |
 | 6    | Canonical fallback ordering fix  | Reordered `resolveNoSafeCandidateFallbackResponseTokens` so `NEATCHAT_NO_SAFE_CANDIDATE_FALLBACK_RESPONSE_TOKENS` now sits immediately after the prompt-aware slot and before the additional palette; `neatChat.live-flow.safety` PASS and `neatChat.session.services` PASS. |
-| 7    | Independent green validation     | Re-ran `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="neatChat.live-flow.safety"` on 2026-05-25; PASS (`1 suite, 12 tests`). No wider gate was required for this examples-only fallback-order repair.                                                     |
+| 7    | Independent green validation     | Re-ran `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="neatChat.live-flow.safety"` ; PASS (`1 suite, 12 tests`). No wider gate was required for this examples-only fallback-order repair.                                                                  |
 
 ## Acceptance summary
 

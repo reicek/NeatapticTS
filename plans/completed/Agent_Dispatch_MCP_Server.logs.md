@@ -4,7 +4,7 @@
 
 ## Phase 1 — Implement and register neataptic-dispatch-mcp
 
-[DONE] Phase 1 completed and compressed on 2026-06-22.
+[DONE] Phase 1 completed and compressed.
 
 - Step 01: Authored implementation plan and step packets.
 - Step 02: Research skipped (prior planning pass already complete).

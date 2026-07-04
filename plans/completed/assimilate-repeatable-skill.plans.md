@@ -88,13 +88,13 @@ a structured study; the orchestrator records it in `plans/` or `docs/research/` 
 
 ## Current state
 
-Claim: 04-implementing @ 2026-06-30T23:07:55-04:00 — slice-fix on `scripts/assimilation/assimilate-repo.mjs` synthesis filename.
+Claim: 04-implementing — slice-fix on `scripts/assimilation/assimilate-repo.mjs` synthesis filename.
 
 - We have a complete manual example under `C:\NeatapticTS\spec-kit\`:
-  - `spec-kit.md` — final synthesis with 10 cherry-pick recommendations.
-  - `00-overview.md` through `07-verbatim-phrases-and-verbs.md` — per-area analyses.
-  - `spec-kit\verbatim\` — 31 full source files from the `github/spec-kit` repo.
-  - `archive\` — prior exploratory drafts.
+- `spec-kit.md` — final synthesis with 10 cherry-pick recommendations.
+- `00-overview.md` through `07-verbatim-phrases-and-verbs.md` — per-area analyses.
+- `spec-kit\verbatim\` — 31 full source files from the `github/spec-kit` repo.
+- `archive\` — prior exploratory drafts.
 - The manual process used a mix of raw GitHub fetches, blob API calls, tree API calls,
   and local comparison against NeatapticTS agents/skills/plans.
 - No reusable automation, template, or agent definition exists yet.
@@ -201,10 +201,10 @@ templates, and produce the remaining Step 02-07 packets.
 
 - The canonical prior art lives under `C:\NeatapticTS\spec-kit\`.
 - NeatapticTS agent/skill customization surfaces are governed by:
-  - `.github\agent-skill-routing-table.md` (generated)
-  - `scripts\agent-customization\validate-agent-frontmatter.mjs`
-  - `scripts\agent-customization\validate-skill-frontmatter.mjs`
-  - `scripts\agent-customization\validate-agent-graph.mjs`
+- `.github\agent-skill-routing-table.md` (generated)
+- `scripts\agent-customization\validate-agent-frontmatter.mjs`
+- `scripts\agent-customization\validate-skill-frontmatter.mjs`
+- `scripts\agent-customization\validate-agent-graph.mjs`
 - The **Holistic Agent & Skill Optimization** lane established the existing agent/skill
   inventory standards and is now [DONE]/archived; new skill/agent work should follow
   those standards and does not need to wait for an active lane owner.
@@ -275,10 +275,10 @@ script, and confirm there are no reusable in-repo utilities that already do this
 **Context the agent must know:**
 
 - The manual spec-kit pass used:
-  - `https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>` for individual files.
-  - `https://api.github.com/repos/<owner>/<repo>/git/trees/<ref>?recursive=1` for structure.
-  - `https://api.github.com/repos/<owner>/<repo>/contents/<path>?ref=<ref>` as an API fallback.
-  - Some files were not fetchable via raw/API and were noted in `notes\fetch-failures.md`.
+- `https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>` for individual files.
+- `https://api.github.com/repos/<owner>/<repo>/git/trees/<ref>?recursive=1` for structure.
+- `https://api.github.com/repos/<owner>/<repo>/contents/<path>?ref=<ref>` as an API fallback.
+- Some files were not fetchable via raw/API and were noted in `notes\fetch-failures.md`.
 - Windows PowerShell is the local shell; use `node` ESM scripts, not shell pipelines.
 
 **Execution steps:**
@@ -308,51 +308,52 @@ if a different implementation shape is needed.
 - **No reusable in-repo utility exists.** A `repo-cortex-scout` survey of `scripts/`,
   `rag-index/`, `spec-kit/`, `docs/`, and `.github/` found no script that fetches an
   arbitrary public GitHub repo tree + files. Existing `fetch()` callers are limited to:
-  - `rag-index/download-model.mjs` and `rag-index/download-reranker.mjs`
-    (HuggingFace single-asset downloads with SHA-256 verification and retry).
-  - `scripts/mcp-semantic/tools/turso-branch.mjs` and `turso-pitr.mjs`
-    (authenticated Turso Platform API calls).
-  - `scripts/render-docs-html/render-docs-html.shared.ts` (builds GitHub links, does not fetch).
-    There is no `scripts/assimilation/` folder and no `assimilate-repo*` file.
+- `rag-index/download-model.mjs` and `rag-index/download-reranker.mjs`
+  (HuggingFace single-asset downloads with SHA-256 verification and retry).
+- `scripts/mcp-semantic/tools/turso-branch.mjs` and `turso-pitr.mjs`
+  (authenticated Turso Platform API calls).
+- `scripts/render-docs-html/render-docs-html.shared.ts` (builds GitHub links, does not fetch).
+  There is no `scripts/assimilation/` folder and no `assimilate-repo*` file.
 
 - **Chosen fetch hierarchy (priority order) for `scripts\assimilation\assimilate-repo.mjs`:**
-  1. `https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>` — primary path for
-     individual blobs. Highest rate-limit budget and no JSON decoding.
-  2. `https://api.github.com/repos/<owner>/<repo>/contents/<path>?ref=<ref>` — fallback
-     when raw returns non-200 or non-text content. Decode `content` from base64.
-  3. `https://api.github.com/repos/<owner>/<repo>/git/trees/<ref>?recursive=1` — used
-     once per repo to enumerate the file tree and identify blobs to download.
-  4. `git clone --depth 1 <repo-url> <folder>` — final fallback when the API rate-limit is
-     exhausted, the repo contains LFS files, submodules, or a large number of raw/API
-     failures. After cloning, copy/convert the working tree into the same verbatim/summary
-     layout produced by the API path.
+
+1.  `https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>` — primary path for
+    individual blobs. Highest rate-limit budget and no JSON decoding.
+2.  `https://api.github.com/repos/<owner>/<repo>/contents/<path>?ref=<ref>` — fallback
+    when raw returns non-200 or non-text content. Decode `content` from base64.
+3.  `https://api.github.com/repos/<owner>/<repo>/git/trees/<ref>?recursive=1` — used
+    once per repo to enumerate the file tree and identify blobs to download.
+4.  `git clone --depth 1 <repo-url> <folder>` — final fallback when the API rate-limit is
+    exhausted, the repo contains LFS files, submodules, or a large number of raw/API
+    failures. After cloning, copy/convert the working tree into the same verbatim/summary
+    layout produced by the API path.
 
 - **Rate-limit and 404 handling:**
-  - Read `x-ratelimit-remaining` and `x-ratelimit-reset` from every API response.
-  - If `remaining == 0`, sleep until `reset` (or fail fast if the user prefers `--no-wait`).
-  - Support optional `GITHUB_TOKEN` for 5,000 requests/hour; add `Authorization: token ${TOKEN}`
-    to tree/contents API calls (raw does not need auth).
-  - On raw 404/403/5xx, immediately fall back to contents API; do not count a raw miss as a
-    hard failure.
-  - On contents API 404, record the path in `<folder>\notes\fetch-failures.md` and continue.
-  - Add a small concurrency limit (default 5 parallel fetches) with exponential back-off to
-    avoid tripping secondary GitHub throttles.
+- Read `x-ratelimit-remaining` and `x-ratelimit-reset` from every API response.
+- If `remaining == 0`, sleep until `reset` (or fail fast if the user prefers `--no-wait`).
+- Support optional `GITHUB_TOKEN` for 5,000 requests/hour; add `Authorization: token ${TOKEN}`
+  to tree/contents API calls (raw does not need auth).
+- On raw 404/403/5xx, immediately fall back to contents API; do not count a raw miss as a
+  hard failure.
+- On contents API 404, record the path in `<folder>\notes\fetch-failures.md` and continue.
+- Add a small concurrency limit (default 5 parallel fetches) with exponential back-off to
+  avoid tripping secondary GitHub throttles.
 
 - **Prototype evidence:**
-  - File: `tmp\fetch-prototype.mjs`
-  - Command: `node tmp\fetch-prototype.mjs https://github.com/github/spec-kit C:\NeatapticTS\tmp\fetch-prototype-output`
-  - Result: tree API returned 574 items; 10 blobs fetched and saved; raw miss for
-    `.devcontainer/devcontainer.json` and `.devcontainer/post-create.sh` recovered via the
-    contents API; deliberate missing-file test returned HTTP 404 and was logged gracefully.
-  - Rate-limit remaining stayed above 55 after 1 tree call + 11 API calls.
+- File: `tmp\fetch-prototype.mjs`
+- Command: `node tmp\fetch-prototype.mjs https://github.com/github/spec-kit C:\NeatapticTS\tmp\fetch-prototype-output`
+- Result: tree API returned 574 items; 10 blobs fetched and saved; raw miss for
+  `.devcontainer/devcontainer.json` and `.devcontainer/post-create.sh` recovered via the
+  contents API; deliberate missing-file test returned HTTP 404 and was logged gracefully.
+- Rate-limit remaining stayed above 55 after 1 tree call + 11 API calls.
 
 - **Tooling baseline:**
-  - `node --version` = `v25.4.0` (global `fetch` available, ESM supported).
-  - `npm --version` = `11.13.0`.
-  - `package.json` has `"type": "module"` and lists `undici` as a dependency, but the
-    prototype uses the built-in global `fetch` to avoid extra imports.
-  - Windows PowerShell is the local shell, so the implementation will be a Node ESM script
-    rather than a shell pipeline.
+- `node --version` = `v25.4.0` (global `fetch` available, ESM supported).
+- `npm --version` = `11.13.0`.
+- `package.json` has `"type": "module"` and lists `undici` as a dependency, but the
+  prototype uses the built-in global `fetch` to avoid extra imports.
+- Windows PowerShell is the local shell, so the implementation will be a Node ESM script
+  rather than a shell pipeline.
 
 #### Step 03 — Write red tests / fixtures for the assimilation script [DONE]
 
@@ -407,12 +408,14 @@ acceptance_criteria:
 
 1. Decide test location and runner (Jest project).
 2. Write tests for:
-   - URL parsing → owner/repo/ref.
-   - Repo-name derivation → safe folder name.
-   - Folder creation with user override.
-   - Tree fetch → file list.
-   - File fetch → verbatim save.
-   - LICENSE detection and recording.
+
+- URL parsing → owner/repo/ref.
+- Repo-name derivation → safe folder name.
+- Folder creation with user override.
+- Tree fetch → file list.
+- File fetch → verbatim save.
+- LICENSE detection and recording.
+
 3. Run tests; confirm they fail for the right reason.
 4. Update plan with test paths and failure evidence.
 
@@ -437,14 +440,16 @@ acceptance_criteria:
 - Test file: `testing\assimilation\assimilate-repo.test.ts`
 - Stub file: `scripts\assimilation\assimilate-repo.mjs`
 - Focused validation command:
-  ```bash
-  NODE_OPTIONS="--experimental-vm-modules --no-experimental-webstorage" npx jest --config=jest.config.mjs --no-cache --testPathPatterns=testing/assimilation/assimilate-repo.test.ts
-  ```
+
+```bash
+NODE_OPTIONS="--experimental-vm-modules --no-experimental-webstorage" npx jest --config=jest.config.mjs --no-cache --testPathPatterns=testing/assimilation/assimilate-repo.test.ts
+```
+
 - Result: `Test Suites: 1 failed, 1 total; Tests: 10 failed, 10 total`. All failures are honest red-phase failures because the stub functions throw `not implemented`:
-  - `parseRepoUrl not implemented (url=https://github.com/owner/repo)`
-  - `parseRepoUrl not implemented (url=https://github.com/owner/repo/tree/main)`
-  - `deriveFolderName not implemented ...`
-  - `assimilateRepo not implemented ...`
+- `parseRepoUrl not implemented (url=https://github.com/owner/repo)`
+- `parseRepoUrl not implemented (url=https://github.com/owner/repo/tree/main)`
+- `deriveFolderName not implemented ...`
+- `assimilateRepo not implemented ...`
 - Plan-sync gate: pass.
 - Step-packet gate: pass.
 - Handoff: Step 04 should implement `parseRepoUrl`, `deriveFolderName`, and `assimilateRepo` in `scripts\assimilate-repo.mjs` against these tests.
@@ -804,54 +809,62 @@ and targeted Jest validation. See the per-step validation lists above and the
 The skill/agent must reproduce the spec-kit manual process automatically:
 
 1. **Trigger parse**
-   - Accept `/assimilate <github-url> [<target-folder>]`.
-   - Derive owner/repo/ref from the URL.
-   - Derive folder name from repo name if not supplied.
-   - Validate the folder does not already exist unless `--force` is given.
+
+- Accept `/assimilate <github-url> [<target-folder>]`.
+- Derive owner/repo/ref from the URL.
+- Derive folder name from repo name if not supplied.
+- Validate the folder does not already exist unless `--force` is given.
 
 2. **Repo discovery**
-   - Fetch `README.md` and `LICENSE` first.
-   - Fetch the recursive tree via GitHub API to inventory structure.
-   - Identify meaningful surfaces:
-     - top-level docs,
-     - core concepts / philosophy,
-     - commands / workflows,
-     - validation / quality gates,
-     - templates / artifacts,
-     - extensions / ecosystem,
-     - learning / disclosure patterns.
+
+- Fetch `README.md` and `LICENSE` first.
+- Fetch the recursive tree via GitHub API to inventory structure.
+- Identify meaningful surfaces:
+- top-level docs,
+- core concepts / philosophy,
+- commands / workflows,
+- validation / quality gates,
+- templates / artifacts,
+- extensions / ecosystem,
+- learning / disclosure patterns.
 
 3. **Deep file retrieval**
-   - For each meaningful surface, fetch the relevant files using raw GitHub first,
-     API `contents` endpoint second, and git-clone third.
-   - Record any fetch failures in `<folder>\notes\fetch-failures.md`.
+
+- For each meaningful surface, fetch the relevant files using raw GitHub first,
+  API `contents` endpoint second, and git-clone third.
+- Record any fetch failures in `<folder>\notes\fetch-failures.md`.
 
 4. **Verbatim persistence**
-   - Save important source files under `<folder>\verbatim\` preserving relative paths.
-   - Do not edit verbatim copies.
+
+- Save important source files under `<folder>\verbatim\` preserving relative paths.
+- Do not edit verbatim copies.
 
 5. **Local NeatapticTS inventory**
-   - Read the local agent/skill/routing table, plan index, and roadmap.
-   - Identify comparable surfaces in NeatapticTS for each external surface.
+
+- Read the local agent/skill/routing table, plan index, and roadmap.
+- Identify comparable surfaces in NeatapticTS for each external surface.
 
 6. **Per-area summaries**
-   - Generate `00-overview.md`, `01-workflow.md`, `02-validation.md`,
-     `03-artifacts.md`, `04-ecosystem.md`, `05-learning.md` using the templates.
-   - Each summary compares the external tool with NeatapticTS and flags gaps.
+
+- Generate `00-overview.md`, `01-workflow.md`, `02-validation.md`,
+  `03-artifacts.md`, `04-ecosystem.md`, `05-learning.md` using the templates.
+- Each summary compares the external tool with NeatapticTS and flags gaps.
 
 7. **Final synthesis**
-   - Generate `<folder>.md` with:
-     - executive summary,
-     - top-N cherry-pick recommendations,
-     - area-by-area comparison table,
-     - what to preserve vs. what to adopt,
-     - concrete next steps,
-     - reference map.
+
+- Generate `<folder>.md` with:
+- executive summary,
+- top-N cherry-pick recommendations,
+- area-by-area comparison table,
+- what to preserve vs. what to adopt,
+- concrete next steps,
+- reference map.
 
 8. **License verification**
-   - Detect `LICENSE` type and obligations.
-   - Record attribution in `<folder>\notes\license.md` and in the skill references file.
-   - If license is unknown or restrictive, block further use and escalate.
+
+- Detect `LICENSE` type and obligations.
+- Record attribution in `<folder>\notes\license.md` and in the skill references file.
+- If license is unknown or restrictive, block further use and escalate.
 
 ---
 
@@ -909,7 +922,6 @@ The skill should define a new event type `external-tool-assimilated` with these 
 
 ```json
 {
-  "timestamp": "<ISO timestamp>",
   "eventType": "external-tool-assimilated",
   "triggeringTask": "/assimilate <repo-url>",
   "externalRepo": "<owner>/<repo>",

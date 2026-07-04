@@ -10,7 +10,5 @@
     "playback.background.cache.services.ts",
     "playback.background.utils.ts"
   ],
-  "folderOrder": [
-    "ground-grid"
-  ]
+  "folderOrder": ["ground-grid"]
 }

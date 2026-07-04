@@ -24,6 +24,15 @@ export const DEFAULT_SCENARIO_PATH =
   '/docs/browser-tests/webgpu-inference-smoke.html';
 
 /**
+ * Scenario path for the single-window parallel throughput benchmark.
+ *
+ * The parallel benchmark emulates multiple independent agents inside one visible
+ * browser window, so only a single URL is needed.
+ */
+export const DEFAULT_PARALLEL_SCENARIO_PATH =
+  '/docs/browser-tests/webgpu-parallel-throughput.html';
+
+/**
  * Default timeout (in milliseconds) to wait for the HTTP server to report that
  * it is ready.
  */

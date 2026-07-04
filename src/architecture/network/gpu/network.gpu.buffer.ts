@@ -444,7 +444,7 @@ const GPU_PARAMS_BYTES = 16;
  *   over-allocate, so only this many entries are uploaded.
  * @returns An `ArrayBuffer` ready for `queue.writeBuffer`.
  */
-function buildConnectionsArray(
+export function buildConnectionsArray(
   network: Network,
   connectionCount: number,
 ): ArrayBuffer {
@@ -505,7 +505,7 @@ function buildConnectionsArray(
  * @param network - Network whose node state will be packed.
  * @returns An `ArrayBuffer` ready for `queue.writeBuffer`.
  */
-function buildNodesArray(network: Network): ArrayBuffer {
+export function buildNodesArray(network: Network): ArrayBuffer {
   const nodeCount = network.nodes.length;
   const buffer = new ArrayBuffer(nodeCount * GPU_NODE_STRUCT_BYTES);
   const floats = new Float32Array(buffer);
@@ -532,7 +532,7 @@ function buildNodesArray(network: Network): ArrayBuffer {
  * @param levels - Per-node topological level array.
  * @returns Number of distinct levels.
  */
-function computeTopoLevelCount(levels: Uint32Array): number {
+export function computeTopoLevelCount(levels: Uint32Array): number {
   let maxLevel = 0;
   for (let index = 0; index < levels.length; index += 1) {
     if (levels[index] > maxLevel) {
@@ -546,10 +546,11 @@ function computeTopoLevelCount(levels: Uint32Array): number {
  * Upload a network's fast-slab structures to WebGPU buffers.
  *
  * The upload path packs connections and nodes into two struct arrays and then
- * creates only four GPU buffers: connections, nodes, outputs, and params.
- * Keeping the binding count at four sits below the WebGPU default limit for
- * storage buffers per shader stage and removes the need to request a custom
- * `maxStorageBuffersPerShaderStage` limit.
+ * creates six GPU buffers: connections, nodes, outputs, params, topological
+ * levels, and incoming-CSR start offsets. The six-buffer layout still sits
+ * below the WebGPU default limit for storage buffers per shader stage and
+ * removes the need to request a custom `maxStorageBuffersPerShaderStage`
+ * limit.
  *
  * @param device - Mock or real WebGPU device used to allocate buffers.
  * @param network - Network whose fast-slab layout will be uploaded.
@@ -569,15 +570,13 @@ export function uploadNetworkToGPU(
   // Step 2: Read the packed connection slab and build GPU-friendly arrays.
   const nodeCount = network.nodes.length;
   const connectionCount = network.connections.length;
+  const slab = network.getConnectionSlab() as unknown as ConnectionSlab;
   const connectionsArray = buildConnectionsArray(network, connectionCount);
   const nodesArray = buildNodesArray(network);
-  const topoLevels = buildTopoLevels(
-    network.getConnectionSlab() as unknown as ConnectionSlab,
-    nodeCount,
-    connectionCount,
-  );
+  const { inStart } = buildIncomingCSR(slab, nodeCount, connectionCount);
+  const topoLevels = buildTopoLevels(slab, nodeCount, connectionCount);
 
-  // Step 3: Create the four buffers required by the struct-packed contract.
+  // Step 3: Create the six buffers required by the struct-packed contract.
   const connectionsBuffer = createGPUBuffer(
     device,
     connectionsArray.byteLength,
@@ -599,6 +598,16 @@ export function uploadNetworkToGPU(
     GPU_PARAMS_BYTES,
     'network_params',
   );
+  const topoLevelsBuffer = createGPUBuffer(
+    device,
+    topoLevels.byteLength,
+    'network_topo_levels',
+  );
+  const inStartBuffer = createGPUBuffer(
+    device,
+    inStart.byteLength,
+    'network_in_start',
+  );
 
   // Step 4: Upload the packed arrays and initialize mutable buffers.
   device.queue.writeBuffer(connectionsBuffer, 0, connectionsArray);
@@ -614,6 +623,8 @@ export function uploadNetworkToGPU(
       nodeCount - network.output,
     ]),
   );
+  device.queue.writeBuffer(topoLevelsBuffer, 0, topoLevels);
+  device.queue.writeBuffer(inStartBuffer, 0, inStart);
 
   // Step 5: Return the buffer set and metadata required by the compute path.
   return {
@@ -621,6 +632,8 @@ export function uploadNetworkToGPU(
     nodes: nodesBuffer,
     outputs: outputsBuffer,
     params: paramsBuffer,
+    topoLevels: topoLevelsBuffer,
+    inStart: inStartBuffer,
     nodeCount,
     connectionCount,
     topoLevelsArray: topoLevels,
@@ -672,6 +685,8 @@ export function destroyGPUBufferSet(
     bufferSet.nodes,
     bufferSet.outputs,
     bufferSet.params,
+    bufferSet.topoLevels,
+    bufferSet.inStart,
   ]) {
     buffer.destroy();
   }

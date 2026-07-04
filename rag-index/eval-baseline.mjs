@@ -12,7 +12,6 @@
  *
  * const baseline = await storeBaseline({
  *   baseline_id: 'baseline-2026-06-15',
- *   timestamp: new Date().toISOString(),
  *   conditions: { hybrid: { mrr_at_5: 0.32 } },
  * });
  *
@@ -53,7 +52,7 @@ function resolveBaselinePath(baselineId, customPath) {
  * @param {object} data - Baseline payload with `baseline_id` and `conditions`.
  * @param {object} [options={}]
  * @param {string} [options.path] - Optional file path override.
- * @returns {Promise<object>} The stored baseline with a timestamp.
+ * @returns {Promise<object>} The stored baseline.
  * @throws {Error} When `baseline_id` is missing.
  */
 export async function storeBaseline(data, options = {}) {
@@ -67,7 +66,6 @@ export async function storeBaseline(data, options = {}) {
 
   const baseline = {
     ...data,
-    timestamp: data.timestamp ?? new Date().toISOString(),
   };
   const filePath = resolveBaselinePath(baseline.baseline_id, options.path);
   await mkdir(path.dirname(filePath), { recursive: true });

@@ -30,7 +30,7 @@ running. One is about topology layout. The other is about runtime control.
 Two compact background bridges help here. See Wikipedia contributors,
 [Activation function](https://en.wikipedia.org/wiki/Activation_function), for
 the signal-shaping side of the shelf, and Wikipedia contributors,
-[Selection (genetic algorithm)](https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)),
+[Selection (genetic algorithm)](<https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)>),
 for the search-pressure side. Together they frame the two big forces this
 folder keeps in play: how nodes respond to signal and how search decides
 which traits survive.
@@ -109,7 +109,7 @@ const loss = Cost.mse([1, 0], [0.9, 0.1]); // 0.01
 Runtime registry of built-in and custom activation functions.
 
 The chosen activation function determines what each neuron in the network
-can *represent* — whether it can learn smooth boundaries, sparse features,
+can _represent_ — whether it can learn smooth boundaries, sparse features,
 periodic patterns, or gated on/off signals. In NEAT, the evolutionary
 controller can assign different activations to different nodes, so this
 registry is the complete vocabulary of expressible neuron behaviors.
@@ -130,7 +130,7 @@ gelu(x)      ≈ x · Φ(x)                 Gaussian CDF gating
 The derivative of each activation function determines how gradient
 information flows backward through the network during training. Saturating
 functions (`logistic`, `tanh`) have vanishingly small derivatives far from
-the origin — this is the *vanishing gradient problem* that motivated
+the origin — this is the _vanishing gradient problem_ that motivated
 ReLU-family activations. See Wikipedia contributors,
 [Vanishing gradient problem](https://en.wikipedia.org/wiki/Vanishing_gradient_problem),
 for the historical context.
@@ -437,6 +437,7 @@ Supported mutation families:
 - `ADD_GRU_NODE`: Adds a new GRU node (gated recurrent unit).
 
 Summary shelves:
+
 - `ALL`: all mutation methods, including recurrent and memory-oriented ones.
 - `FFW`: the feedforward-safe subset that avoids recurrence and gating.
 
@@ -541,6 +542,7 @@ explore again.
 Formula: `learning_rate = minimumRate + 0.5 * (baseRate - minimumRate) * (1 + cos(pi * current_cycle_iteration / period))`
 
 Parameters:
+
 - `period` - The number of iterations over which the learning rate anneals from `baseRate` to `minimumRate` in one cycle. Defaults to 1000.
 - `minimumRate` - The minimum learning rate value at the end of a cycle. Defaults to 0.
 - `baseRate` - The initial (maximum) learning rate for the cycle.
@@ -566,6 +568,7 @@ exploration should be frequent but later training should settle for longer
 stretches between restarts.
 
 Parameters:
+
 - `initialPeriod` - Length of the first cycle in iterations.
 - `minimumRate` - Minimum learning rate at valley.
 - `periodGrowthMultiplier` - Factor to multiply the period after each restart (>=1).
@@ -610,6 +613,7 @@ about distinct phases and more about a steady fade in aggressiveness.
 Formula: `learning_rate = baseRate * decayFactor ^ iteration`
 
 Parameters:
+
 - `decayFactor` - The decay factor applied at each iteration. Should be less than 1. Defaults to 0.999.
 - `baseRate` - The initial learning rate.
 - `iteration` - The current training iteration.
@@ -630,6 +634,7 @@ optimal for complex problems. Use it when you want the rest of the system,
 not the schedule, to carry the full burden of training stability.
 
 Parameters:
+
 - `baseRate` - The initial learning rate, which will remain constant.
 - `iteration` - The current training iteration (unused in this method, but included for consistency).
 
@@ -689,6 +694,7 @@ too quickly.
 Formula: `learning_rate = baseRate / (1 + decayFactor * iteration ** decayPower)`
 
 Parameters:
+
 - `decayFactor` - Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.
 - `decayPower` - The exponent controlling the shape of the decay curve. Defaults to 2.
 - `baseRate` - The initial learning rate.
@@ -729,6 +735,7 @@ This schedule is common when the earliest steps are the most unstable: start
 gentle, reach full speed, then taper predictably.
 
 Parameters:
+
 - `totalStepCount` - Total steps for full schedule (must be > 0).
 - `warmupStepCount` - Steps for warmup (< totalStepCount). Defaults to 10% of totalStepCount.
 - `endRate` - Final rate at totalStepCount.
@@ -823,6 +830,7 @@ calendar, the schedule listens for stalled improvement and responds only when
 the run appears to flatten out.
 
 Parameters:
+
 - `options` - Optional reactive-control settings such as patience, cooldown, and minimum rate floor.
 
 Returns: A stateful schedule function that may lower the learning rate when the monitored error stops improving.
@@ -860,6 +868,7 @@ phases rather than one perfectly smooth curve.
 Formula: `learning_rate = baseRate * decayFactor ^ floor(iteration / decayStepSize)`
 
 Parameters:
+
 - `decayFactor` - The factor by which the learning rate is multiplied at each step. Should be less than 1. Defaults to 0.9.
 - `decayStepSize` - The number of iterations after which the learning rate decays. Defaults to 100.
 - `baseRate` - The initial learning rate.

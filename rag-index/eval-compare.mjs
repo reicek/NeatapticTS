@@ -15,6 +15,7 @@
  */
 
 import { runEval } from './eval-runner.mjs';
+import crypto from 'node:crypto';
 
 /**
  * Compute the standard normal CDF using a rational approximation.
@@ -200,7 +201,7 @@ export function compareResults(resultA, resultB) {
     throw new Error('resultB is required.');
   }
 
-  const comparisonId = `comparison-${new Date().toISOString()}`;
+  const comparisonId = `comparison-${crypto.randomUUID()}`;
   const perQueryA = Array.isArray(resultA.per_query) ? resultA.per_query : [];
   const perQueryB = Array.isArray(resultB.per_query) ? resultB.per_query : [];
 

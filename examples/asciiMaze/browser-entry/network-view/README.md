@@ -23,6 +23,7 @@ drawMazeNetworkVisualization(
 Draw the ASCII Maze network panel using the shared Flappy visualizer owner.
 
 Parameters:
+
 - `canvas` - Canvas element to render onto.
 - `network` - Runtime network used for architecture metadata and weights.
 - `graph` - Exported graph carrying authoritative input/output counts.
@@ -50,6 +51,7 @@ resolveMazeArchitectureLabel(
 Resolve the compact architecture summary for the maze network legend.
 
 Parameters:
+
 - `network` - Runtime network being visualized.
 - `graph` - Exported graph carrying authoritative input/output counts.
 
@@ -77,6 +79,7 @@ resolveMazeNetworkCanvasDimensions(
 Resolve responsive network-canvas dimensions from the host panel shelf.
 
 Parameters:
+
 - `measuredWidthPx` - Current measured canvas width from layout.
 - `measuredHeightPx` - Current measured host-panel height from layout.
 
@@ -94,6 +97,7 @@ resolveMazeVisualizationTopologyPlan(
 Resolve the shared topology plan for the maze network.
 
 Parameters:
+
 - `network` - Runtime network being visualized.
 - `graph` - Exported graph carrying authoritative input/output counts.
 
@@ -110,22 +114,23 @@ logits. These constants describe both the visual layout of the label panel
 shown for each input group and individual input node.
 
 Observation vector layout (in order):
-  0  compassScalar  — BFS-preferred direction as [0, 0.75] scalar
-  1  openN          — North corridor passable (0 / 1)
-  2  openE          — East corridor passable (0 / 1)
-  3  openS          — South corridor passable (0 / 1)
-  4  openW          — West corridor passable (0 / 1)
-  5  progressDelta  — Normalised step-progress signal
+0 compassScalar — BFS-preferred direction as [0, 0.75] scalar
+1 openN — North corridor passable (0 / 1)
+2 openE — East corridor passable (0 / 1)
+3 openS — South corridor passable (0 / 1)
+4 openW — West corridor passable (0 / 1)
+5 progressDelta — Normalised step-progress signal
 
 Action vector layout:
-  0  North  1  East  2  South  3  West
+0 North 1 East 2 South 3 West
 
 ### MAZE_GROUP_COLORS
 
 Per-group palette: background fill and accent border/text color.
 
 Index matches the ordering of `MAZE_INPUT_GROUP_DEFS`.
-- 0 HEADING  — cyan
+
+- 0 HEADING — cyan
 - 1 OPENNESS — green
 - 2 PROGRESS — amber
 

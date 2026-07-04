@@ -14,6 +14,7 @@ mean entropy signal and decide whether the next pass should loosen, tighten,
 or preserve the compatibility threshold.
 
 Read this chapter when you want to answer questions such as:
+
 - Why does evaluation tune compatibility threshold from mean entropy instead
   of folding that logic into speciation itself?
 - What does the deadband do, and why is it safer than reacting to every
@@ -23,6 +24,7 @@ Read this chapter when you want to answer questions such as:
   speciation reads?
 
 The mental model is a short three-step control loop:
+
 1. read the fresh mean entropy after evaluation,
 2. compare it with the configured target and deadband,
 3. nudge the compatibility threshold up or down inside its safe bounds.
@@ -70,10 +72,11 @@ The result is always clamped to the configured minimum and maximum so the
 controller cannot drift into an unusably tiny or overly permissive threshold.
 
 Parameters:
+
 - `entropyCompatOptions` - Tuning options that define the target entropy,
-deadband width, adjustment rate, and clamp bounds.
+  deadband width, adjustment rate, and clamp bounds.
 - `meanEntropy` - Freshly observed mean structural entropy for the current
-population.
+  population.
 - `currentThreshold` - Current compatibility threshold before adjustment.
 
 Returns: Next compatibility threshold to carry into later controller passes.
@@ -82,7 +85,14 @@ Example:
 
 ```ts
 const nextThreshold = computeNextCompatibilityThreshold(
-  { enabled: true, targetEntropy: 0.4, deadband: 0.02, adjustRate: 0.1, minThreshold: 1, maxThreshold: 6 },
+  {
+    enabled: true,
+    targetEntropy: 0.4,
+    deadband: 0.02,
+    adjustRate: 0.1,
+    minThreshold: 1,
+    maxThreshold: 6,
+  },
   0.46,
   3,
 );
@@ -106,6 +116,7 @@ chapter. It behaves like best-effort maintenance after fresh diversity
 evidence has been written, not like a required scoring or speciation phase.
 
 The helper preserves several important controller assumptions:
+
 - genome scores are already complete and are not recomputed here,
 - current species assignments are left intact,
 - population order is left intact,
@@ -115,6 +126,7 @@ That narrow scope lets the evaluation chapter adjust future speciation
 pressure without widening into a full species-rebuild workflow.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `evaluationOptions` - Options object for the current evaluation pass.
 

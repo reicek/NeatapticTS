@@ -148,7 +148,6 @@ export async function collectTierInventory({
   }));
 
   return {
-    generated_at: new Date().toISOString(),
     agents,
     violations: issues,
     summary: {
@@ -184,7 +183,6 @@ export async function runValidateAgentGraph({
 
   return {
     ...summarizeIssues('agent graph', inventory.violations),
-    generated_at: inventory.generated_at,
     graph: inventory.agents.map((agent) => ({
       name: agent.name,
       path: agent.file,

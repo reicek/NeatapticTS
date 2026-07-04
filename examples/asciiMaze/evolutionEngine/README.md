@@ -318,6 +318,7 @@ Aggregated profiling configuration and accumulators shared across the evolution 
 Centralised shared state for the ASCII maze evolution façade.
 
 Responsibilities:
+
 1. Define the scratch-buffer schema consumed by telemetry, population, and inspection helpers.
 2. Expose runtime toggle state (`EngineToggleState`) that drives optional phases and telemetry density.
 3. Provide factory and maintenance helpers (`createEngineState`, `initialiseTelemetryScratch`, `ensureVisitedHashCapacity`, `ensureRngCacheBatch`, `reseedRngState`) that size buffers and keep deterministic RNG state in sync.
@@ -359,17 +360,20 @@ Evolution Loop Module
 
 Purpose:
 -------
+
 Provides utilities for running the main NEAT evolution loop, including
 generation orchestration, cancellation checking, and loop helper preparation.
 
 This module encapsulates:
- - Cancellation detection (AbortSignal and legacy cancellation API)
- - Loop helper preparation (frame flushing, persistence, logging)
- - Generation execution and orchestration
- - Stop condition evaluation
+
+- Cancellation detection (AbortSignal and legacy cancellation API)
+- Loop helper preparation (frame flushing, persistence, logging)
+- Generation execution and orchestration
+- Stop condition evaluation
 
 ES2023 Policy:
 -------------
+
 - Uses nullish coalescing `??` and optional chaining `?.`
 - Descriptive variable names (no short identifiers)
 - Async/await for generation loops
@@ -387,23 +391,27 @@ checkCancellation(
 Inspect cooperative cancellation sources and annotate the provided result when cancelled.
 
 This function checks for cancellation from two sources in priority order:
- 1) Legacy cancellation object with `isCancelled()` method
- 2) Standard AbortSignal with `aborted` property
+
+1.  Legacy cancellation object with `isCancelled()` method
+2.  Standard AbortSignal with `aborted` property
 
 Design Rationale:
- - Allocation-free (uses only short-lived local references)
- - Best-effort error handling (swallow exceptions to avoid disrupting loop)
- - Sets `exitReason` on result object for caller inspection
- - Safe to call on hot paths (no scratch buffers or pooling needed)
+
+- Allocation-free (uses only short-lived local references)
+- Best-effort error handling (swallow exceptions to avoid disrupting loop)
+- Sets `exitReason` on result object for caller inspection
+- Safe to call on hot paths (no scratch buffers or pooling needed)
 
 Cancellation Priority:
- 1. Check `options.cancellation.isCancelled()` (legacy API)
- 2. Check `options.signal.aborted` (standard AbortSignal)
- 3. Return undefined if no cancellation detected
+
+1.  Check `options.cancellation.isCancelled()` (legacy API)
+2.  Check `options.signal.aborted` (standard AbortSignal)
+3.  Return undefined if no cancellation detected
 
 Parameters:
 
 Parameters:
+
 - `options` - Optional run configuration which may contain `cancellation` and/or `signal`
 - `bestResult` - Optional mutable result object that will be annotated with `exitReason`
 
@@ -417,8 +425,8 @@ if (cancelReason) return cancelReason;
 
 // Check cancellation without result annotation
 if (checkCancellation(opts)) {
-  console.log('User requested cancellation');
-  break;
+console.log('User requested cancellation');
+break;
 }
 
 ### checkStopConditions
@@ -445,26 +453,30 @@ checkStopConditions(
 Inspect common termination conditions and perform minimal, best-effort side-effects.
 
 This function checks three canonical stop reasons in priority order:
- 1) **Solved**: Best result achieves minimum progress threshold
- 2) **Stagnation**: No improvement for maxStagnantGenerations
- 3) **MaxGenerations**: Absolute generation cap reached
+
+1.  **Solved**: Best result achieves minimum progress threshold
+2.  **Stagnation**: No improvement for maxStagnantGenerations
+3.  **MaxGenerations**: Absolute generation cap reached
 
 Design Rationale:
- - Allocation-light (uses only local references)
- - Best-effort error handling (all side effects swallowed)
- - Safe to call frequently on hot paths
- - Updates dashboard and yields to host when stopping
- - Emits optional 'asciiMazeSolved' event on solve (browser only)
+
+- Allocation-light (uses only local references)
+- Best-effort error handling (all side effects swallowed)
+- Safe to call frequently on hot paths
+- Updates dashboard and yields to host when stopping
+- Emits optional 'asciiMazeSolved' event on solve (browser only)
 
 Side Effects (Best-Effort):
- - Updates dashboard manager when stopping
- - Awaits flushToFrame to yield to host
- - Reports stop events through the optional host adapter
- - Annotates `bestResult.exitReason` with canonical reason string
+
+- Updates dashboard manager when stopping
+- Awaits flushToFrame to yield to host
+- Reports stop events through the optional host adapter
+- Annotates `bestResult.exitReason` with canonical reason string
 
 Parameters:
 
 Parameters:
+
 - `bestResult` - Mutable run summary object (may be mutated with `exitReason`)
 - `bestNetwork` - Network object associated with the best result (for dashboard)
 - `maze` - Maze descriptor passed to dashboard updates/events
@@ -486,12 +498,12 @@ Example:
 
 // Check stop conditions after each generation
 const reason = await checkStopConditions(
-  bestResult, bestNet, maze, gen, neat, dashboard, flush,
-  95, true, false, stagnant, 500, 10000
+bestResult, bestNet, maze, gen, neat, dashboard, flush,
+95, true, false, stagnant, 500, 10000
 );
 if (reason) {
-  console.log('Stopping due to', reason);
-  break;
+console.log('Stopping due to', reason);
+break;
 }
 
 ### emitProfileSummary
@@ -517,21 +529,24 @@ profiling is enabled, it also prints averages for telemetry, simplify, snapshot,
 prune operations.
 
 Design Rationale:
- - Allocation-free (reuses pooled Float64Array for intermediate calculations)
- - Best-effort error handling (swallow all exceptions)
- - Defensive numeric validation with divide-by-zero guards
- - Conditional detailed profiling output
+
+- Allocation-free (reuses pooled Float64Array for intermediate calculations)
+- Best-effort error handling (swallow all exceptions)
+- Defensive numeric validation with divide-by-zero guards
+- Conditional detailed profiling output
 
 Calculation Steps:
- 1. Validate and normalize generation count (guard divide-by-zero)
- 2. Store totals in pooled scratch buffer (4-slot Float64Array)
- 3. Compute per-generation averages by dividing totals by generation count
- 4. Format numbers with 2 decimal places and print compact summary
- 5. If detailed profiling enabled, print averaged detail line
+
+1.  Validate and normalize generation count (guard divide-by-zero)
+2.  Store totals in pooled scratch buffer (4-slot Float64Array)
+3.  Compute per-generation averages by dividing totals by generation count
+4.  Format numbers with 2 decimal places and print compact summary
+5.  If detailed profiling enabled, print averaged detail line
 
 Parameters:
 
 Parameters:
+
 - `engineState` - Shared engine state with scratch buffers and profiling accumulators
 - `safeWrite` - Safe logging function (best-effort, never throws)
 - `completedGenerations` - Number of completed generations (must be > 0)
@@ -545,8 +560,8 @@ Example:
 
 // Print averages after a run that completed 100 generations
 emitProfileSummary(
-  state, console.log, 100, 12000, 3000, 4500,
-  isProfilingDetailsEnabled, getProfilingAccumulators
+state, console.log, 100, 12000, 3000, 4500,
+isProfilingDetailsEnabled, getProfilingAccumulators
 );
 
 ### EvolutionLoopResult
@@ -593,28 +608,32 @@ generation cadence aligns with the configured persistence interval. It captures
 top-K genomes, telemetry tail, and metadata for later analysis or resume.
 
 Design Rationale:
- - Best-effort semantics: swallows all errors to avoid disrupting evolution loop
- - Reuses pooled scratch objects (SCRATCH_SNAPSHOT_OBJ, SCRATCH_SNAPSHOT_TOP) to minimize allocations
- - Optional profiling when enabled (measures snapshot serialization time)
- - Defensive validation to ensure FS/path modules are available
+
+- Best-effort semantics: swallows all errors to avoid disrupting evolution loop
+- Reuses pooled scratch objects (SCRATCH_SNAPSHOT_OBJ, SCRATCH_SNAPSHOT_TOP) to minimize allocations
+- Optional profiling when enabled (measures snapshot serialization time)
+- Defensive validation to ensure FS/path modules are available
 
 Scheduling Logic:
- - Only persists when `completedGenerations % persistEvery === 0`
- - Requires valid fs.writeFileSync and pathModule.join functions
- - Requires non-empty population
+
+- Only persists when `completedGenerations % persistEvery === 0`
+- Requires valid fs.writeFileSync and pathModule.join functions
+- Requires non-empty population
 
 Snapshot Structure:
- - generation: completed generation index
- - bestFitness: best fitness score this generation
- - simplifyMode: whether simplification was active
- - plateauCounter: current plateau detection counter
- - timestamp: Date.now() when snapshot was created
- - telemetryTail: last N telemetry entries
- - top: top-K genomes with minimal metadata (idx, score, nodes, connections, json)
+
+- generation: completed generation index
+- bestFitness: best fitness score this generation
+- simplifyMode: whether simplification was active
+- plateauCounter: current plateau detection counter
+- timestamp: Date.now() when snapshot was created
+- telemetryTail: last N telemetry entries
+- top: top-K genomes with minimal metadata (idx, score, nodes, connections, json)
 
 Parameters:
 
 Parameters:
+
 - `engineState` - Shared engine state with scratch buffers and profiling
 - `fs` - Node.js fs module or compatible FS API
 - `pathModule` - Node.js path module or compatible path API
@@ -638,8 +657,8 @@ Example:
 
 // Persist snapshot every 25 generations
 persistSnapshotIfNeeded(
-  state, fs, path, './snapshots', 10, 50, 25, neat, 0.95, false, 3,
-  scratchObj, scratchTop, collectTail, getSorted, isProfilingEnabled, profileStart, profileAccum
+state, fs, path, './snapshots', 10, 50, 25, neat, 0.95, false, 3,
+scratchObj, scratchTop, collectTail, getSorted, isProfilingEnabled, profileStart, profileAccum
 );
 
 ### prepareLoopHelpers
@@ -654,29 +673,34 @@ prepareLoopHelpers(
 Build lightweight helpers used inside the evolution loop.
 
 This function assembles the helper utilities needed by the main evolution loop:
- - Frame flushing for cooperative yielding
- - Persistence handles for snapshot saving (Node.js only)
- - Safe logging writer with fallback chain
- - Scratch buffer warm-up (best-effort)
+
+- Frame flushing for cooperative yielding
+- Persistence handles for snapshot saving (Node.js only)
+- Safe logging writer with fallback chain
+- Scratch buffer warm-up (best-effort)
 
 Design Rationale:
- - All initialization is best-effort (failures swallowed)
- - Warms up common scratch buffers to reduce first-use allocation spikes
- - Returns simple POJO with utilities (no class coupling)
- - Side effects isolated to scratch bundle parameter
+
+- All initialization is best-effort (failures swallowed)
+- Warms up common scratch buffers to reduce first-use allocation spikes
+- Returns simple POJO with utilities (no class coupling)
+- Side effects isolated to scratch bundle parameter
 
 Scratch Buffer Warm-Up:
- - samplePool: Array for population sampling
- - profilingScratch: Float64Array(4) for timing accumulation
- - exps: Float64Array(64) for exponential computations
+
+- samplePool: Array for population sampling
+- profilingScratch: Float64Array(4) for timing accumulation
+- exps: Float64Array(64) for exponential computations
 
 Parameters:
 
 Parameters:
+
 - `opts` - Normalized run options (contains persistDir and dashboardManager)
 - `scratchBundle` - Engine scratch state for optional buffer warm-up
 
 Returns: Object containing:
+
 - flushToFrame: Async function for cooperative yielding
 - fs: Node.js fs module (null in browsers)
 - path: Node.js path module (null in browsers)
@@ -731,14 +755,16 @@ runEvolutionLoop(
 Internal evolution loop that executes generations until a stop condition or cancellation.
 
 Behaviour & contract:
- - Runs generations in a resilient, best-effort manner; internal errors are swallowed
-   so a single failure cannot abort the whole run.
- - When `doProfile` is truthy the loop accumulates timing into a pooled Float64Array
-   to avoid per-iteration allocations. The pooled buffer is reused across calls.
- - The helper performs side-effects (dashboard updates, persistence) in a non-fatal
-   fashion and yields to the host when requested via `helpers.flushToFrame`.
+
+- Runs generations in a resilient, best-effort manner; internal errors are swallowed
+  so a single failure cannot abort the whole run.
+- When `doProfile` is truthy the loop accumulates timing into a pooled Float64Array
+  to avoid per-iteration allocations. The pooled buffer is reused across calls.
+- The helper performs side-effects (dashboard updates, persistence) in a non-fatal
+  fashion and yields to the host when requested via `helpers.flushToFrame`.
 
 Parameters:
+
 - `engineState` - Shared engine state with scratch buffers and configuration
 - `neat` - NEAT driver instance used to perform evolution and mutation operations
 - `opts` - Normalised run options (produced by normalizeRunOptions)
@@ -761,7 +787,7 @@ Returns: Promise resolving to an object:
 Example:
 
 const runSummary = await runEvolutionLoop(
-  state, neat, opts, trainingSet, maze, start, exit, distMap, helpers, true, ...
+state, neat, opts, trainingSet, maze, start, exit, distMap, helpers, true, ...
 );
 
 ### runGeneration
@@ -795,21 +821,23 @@ Run one generation: evolve, ensure output identity, update species history, mayb
 and run Lamarckian training if configured.
 
 Behaviour & contract:
- - Performs a single NEAT generation step in a best-effort, non-throwing manner.
- - Measures profiling durations when `doProfile` is truthy. Profiling is optional and
-   kept allocation-free (uses local numeric temporaries only).
- - Invokes the following steps in order (each step is wrapped in a try/catch so
-   the evolution loop remains resilient to per-stage failures):
-     1) `neat.evolve()` to produce the fittest network for this generation.
-     2) `ensureOutputIdentity` to normalise output activations for consumers.
-     3) `handleSpeciesHistory` to update species statistics and history.
-     4) `maybeExpandPopulation` to grow the population when configured and warranted.
-     5) Optional Lamarckian warm-start training via `applyLamarckianTraining`.
- - The method is allocation-light and reuses engine helpers / pooled buffers where
-   appropriate. It never throws; internal errors are swallowed and optionally logged
-   via the provided `safeWrite` function.
+
+- Performs a single NEAT generation step in a best-effort, non-throwing manner.
+- Measures profiling durations when `doProfile` is truthy. Profiling is optional and
+  kept allocation-free (uses local numeric temporaries only).
+- Invokes the following steps in order (each step is wrapped in a try/catch so
+  the evolution loop remains resilient to per-stage failures):
+  1.  `neat.evolve()` to produce the fittest network for this generation.
+  2.  `ensureOutputIdentity` to normalise output activations for consumers.
+  3.  `handleSpeciesHistory` to update species statistics and history.
+  4.  `maybeExpandPopulation` to grow the population when configured and warranted.
+  5.  Optional Lamarckian warm-start training via `applyLamarckianTraining`.
+- The method is allocation-light and reuses engine helpers / pooled buffers where
+  appropriate. It never throws; internal errors are swallowed and optionally logged
+  via the provided `safeWrite` function.
 
 Parameters:
+
 - `engineState` - Shared engine state with scratch buffers and RNG
 - `neat` - NEAT driver instance used for evolving the generation
 - `doProfile` - When truthy measure timing for the evolve step (ms) using engine clock
@@ -832,6 +860,7 @@ Parameters:
 - `constants` - Object containing DEFAULT_TRAIN_ERROR, DEFAULT_TRAIN_RATE, DEFAULT_TRAIN_MOMENTUM, DEFAULT_TRAIN_BATCH_SMALL, DEFAULT_STD_SMALL, DEFAULT_STD_ADJUST_MULT
 
 Returns: An object shaped { fittest, tEvolve, tLamarck } where:
+
 - `fittest` is the network returned by `neat.evolve()` (may be null on error),
 - `tEvolve` is the measured evolve duration in milliseconds when `doProfile` is true (0 otherwise),
 - `tLamarck` is the total time spent in Lamarckian training (0 when skipped)
@@ -840,26 +869,26 @@ Example:
 
 // Run a single generation with profiling and optional Lamarckian warm-start
 const { fittest, tEvolve, tLamarck } = await runGeneration(
-  engineState,
-  neatInstance,
-  true,   // doProfile
-  5,      // lamarckianIterations
-  trainingSet,
-  16,     // lamarckianSampleSize
-  console.log,
-  genIndex,
-  true,
-  500,
-  10,
-  plateauCounter,
-  5,
-  0.1,
-  0.75,
-  speciesHistory,
-  [],
-  nodeIndexBuffer,
-  getNodeIndicesByTypeFn,
-  { DEFAULT_TRAIN_ERROR: 0.01, ... }
+engineState,
+neatInstance,
+true, // doProfile
+5, // lamarckianIterations
+trainingSet,
+16, // lamarckianSampleSize
+console.log,
+genIndex,
+true,
+500,
+10,
+plateauCounter,
+5,
+0.1,
+0.75,
+speciesHistory,
+[],
+nodeIndexBuffer,
+getNodeIndicesByTypeFn,
+{ DEFAULT_TRAIN_ERROR: 0.01, ... }
 );
 
 ### SimResultWithOutputs
@@ -892,28 +921,32 @@ simulateAndPostprocess(
 Simulate the supplied `fittest` genome/network and perform allocation-light postprocessing.
 
 Behaviour & contract:
- - Runs the simulation via `MazeMovement.simulateAgent` and attaches compact telemetry
-   (saturation fraction, action entropy) directly onto the `fittest` object (in-place).
- - When per-step logits are returned the helper attempts to copy them into the engine's pooled
-   ring buffers to avoid per-run allocations. Two copy modes are supported:
-     1) Shared SAB-backed flat Float32Array with an atomic Int32 write index (cross-worker safe).
-     2) Local in-process per-row Float32Array ring (`scratchLogitsRing`).
- - Best-effort: all mutation and buffer-copy steps are guarded; failures are swallowed so the
-   evolution loop is not interrupted. Use `safeWrite` for optional diagnostic messages.
+
+- Runs the simulation via `MazeMovement.simulateAgent` and attaches compact telemetry
+  (saturation fraction, action entropy) directly onto the `fittest` object (in-place).
+- When per-step logits are returned the helper attempts to copy them into the engine's pooled
+  ring buffers to avoid per-run allocations. Two copy modes are supported:
+  1.  Shared SAB-backed flat Float32Array with an atomic Int32 write index (cross-worker safe).
+  2.  Local in-process per-row Float32Array ring (`scratchLogitsRing`).
+- Best-effort: all mutation and buffer-copy steps are guarded; failures are swallowed so the
+  evolution loop is not interrupted. Use `safeWrite` for optional diagnostic messages.
 
 Steps (high level):
- 1) Run the simulator and capture wall-time when `doProfile` is truthy.
- 2) Attach compact telemetry fields to `fittest` and ensure legacy `_lastStepOutputs` exists.
- 3) If per-step logits are available, ensure ring capacity and copy them into the selected ring.
- 4) Optionally prune saturated hidden->output connections and emit telemetry via logGenerationTelemetry.
- 5) Return the raw simulation result and elapsed simulation time (ms when profiling enabled).
+
+1.  Run the simulator and capture wall-time when `doProfile` is truthy.
+2.  Attach compact telemetry fields to `fittest` and ensure legacy `_lastStepOutputs` exists.
+3.  If per-step logits are available, ensure ring capacity and copy them into the selected ring.
+4.  Optionally prune saturated hidden->output connections and emit telemetry via logGenerationTelemetry.
+5.  Return the raw simulation result and elapsed simulation time (ms when profiling enabled).
 
 Notes on pooling / reentrancy:
- - The local ring is not re-entrant; callers must avoid concurrent writes.
- - When shared mode is true we prefer the SAB-backed path which uses Atomics and is safe
-   for cross-thread producers.
+
+- The local ring is not re-entrant; callers must avoid concurrent writes.
+- When shared mode is true we prefer the SAB-backed path which uses Atomics and is safe
+  for cross-thread producers.
 
 Parameters:
+
 - `engineState` - Shared engine state with scratch buffers and ring configuration
 - `fittest` - Genome/network considered the generation's best; may be mutated with metadata
 - `encodedMaze` - Maze descriptor used by the simulator
@@ -936,7 +969,7 @@ Returns: An object { generationResult, simTime, updatedRingState } where simTime
 Example:
 
 const { generationResult, simTime, updatedRingState } = simulateAndPostprocess(
-  state, bestGenome, maze, start, exit, distMap, 1000, true, console.log, 10, genIdx, neat, ...
+state, bestGenome, maze, start, exit, distMap, 1000, true, console.log, 10, genIdx, neat, ...
 );
 
 ### SimulationOutcome
@@ -961,24 +994,27 @@ Safely update a UI dashboard with the latest run state and optionally yield to t
 host/frame via an awaited flush function.
 
 Behaviour (best-effort):
- 1) If `dashboardManager.update` exists and is callable, call it with the stable
+
+1.  If `dashboardManager.update` exists and is callable, call it with the stable
     argument order (maze, result, network, completedGenerations, neat). Any exception
     raised by the dashboard is swallowed to avoid interrupting the evolution loop.
- 2) If `flushToFrame` is supplied as an async function, await it to yield control to
+2.  If `flushToFrame` is supplied as an async function, await it to yield control to
     the event loop or renderer (for example `() => new Promise(r => requestAnimationFrame(r))`).
- 3) The helper avoids heap allocations and relies on existing pooled scratch buffers in
+3.  The helper avoids heap allocations and relies on existing pooled scratch buffers in
     the engine for heavy telemetry elsewhere; this method intentionally performs only
     short-lived control flow and minimal work.
 
 Design Rationale:
- - Allocation-free (no ephemeral objects or arrays created)
- - Best-effort error handling (swallow all dashboard/flush errors)
- - Stable argument order for dashboard implementations
- - Async support for cooperative yielding to host scheduler
+
+- Allocation-free (no ephemeral objects or arrays created)
+- Best-effort error handling (swallow all dashboard/flush errors)
+- Stable argument order for dashboard implementations
+- Async support for cooperative yielding to host scheduler
 
 Parameters:
 
 Parameters:
+
 - `maze` - Maze instance or descriptor used by dashboard rendering.
 - `result` - Per-run result object (path, progress, telemetry, etc.).
 - `network` - Network or genome object that should be visualised.
@@ -991,7 +1027,7 @@ Example:
 
 // Yield to the browser's next repaint after dashboard update:
 await updateDashboardAndMaybeFlush(
-  maze, genResult, fittestNetwork, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
+maze, genResult, fittestNetwork, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
 );
 
 ### updateDashboardPeriodic
@@ -1014,30 +1050,34 @@ intentionally small, allocation-light and best-effort: dashboard errors are
 swallowed so the evolution loop cannot be interrupted by UI issues.
 
 Behavioural contract:
- 1) If `dashboardManager.update` is present and callable the method invokes it with
+
+1.  If `dashboardManager.update` is present and callable the method invokes it with
     the stable argument order: (maze, bestResult, bestNetwork, completedGenerations, neat).
- 2) If `flushToFrame` is supplied the helper awaits it after the update to yield to
+2.  If `flushToFrame` is supplied the helper awaits it after the update to yield to
     the host renderer (eg. requestAnimationFrame). Any exceptions raised by the
     flush are swallowed.
- 3) The helper avoids creating ephemeral arrays/objects and therefore does not use
+3.  The helper avoids creating ephemeral arrays/objects and therefore does not use
     typed-array scratch buffers here — there is no hot numerical work to pool. Other
     engine helpers already reuse class-level scratch buffers where appropriate.
 
 Design Rationale:
- - Fast-guard early when update cannot be performed
- - Best-effort error handling (swallow all exceptions)
- - Preserves dashboard `this` binding with `.call()`
- - Minimal allocations (no scratch buffers needed)
+
+- Fast-guard early when update cannot be performed
+- Best-effort error handling (swallow all exceptions)
+- Preserves dashboard `this` binding with `.call()`
+- Minimal allocations (no scratch buffers needed)
 
 Steps / inline intent:
- 1. Fast-guard when an update cannot be performed (missing manager, update method,
+
+1.  Fast-guard when an update cannot be performed (missing manager, update method,
     or missing content to visualise).
- 2. Call the dashboard update in a try/catch to preserve best-effort semantics.
- 3. Optionally await the provided `flushToFrame` function to yield to the host.
+2.  Call the dashboard update in a try/catch to preserve best-effort semantics.
+3.  Optionally await the provided `flushToFrame` function to yield to the host.
 
 Parameters:
 
 Parameters:
+
 - `maze` - Maze descriptor passed to the dashboard renderer.
 - `bestResult` - Best-run result object used for display (may be falsy when not present).
 - `bestNetwork` - Network or genome object to visualise (may be falsy when not present).
@@ -1045,13 +1085,13 @@ Parameters:
 - `neat` - NEAT manager instance (passed through to dashboard update).
 - `dashboardManager` - Optional manager exposing `update(maze, result, network, gen, neat)`.
 - `flushToFrame` - Optional async function used to yield to the host/frame scheduler
- (for example: `() => new Promise(r => requestAnimationFrame(r))`).
+  (for example: `() => new Promise(r => requestAnimationFrame(r))`).
 
 Example:
 
 // Safe periodic update and yield to next frame
 await updateDashboardPeriodic(
-  maze, result, network, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
+maze, result, network, gen, neatInstance, dashboard, () => new Promise(r => requestAnimationFrame(r))
 );
 
 ## evolutionEngine/evolutionEngine.services.ts
@@ -1067,6 +1107,7 @@ applyEvolutionEngineRingState(
 Apply the latest logits-ring runtime values returned by the evolution loop.
 
 Parameters:
+
 - `updatedRingState` - New ring-capacity, shared-mode, and write-cursor values.
 
 ### configureEvolutionEngineToggles
@@ -1082,6 +1123,7 @@ configureEvolutionEngineToggles(
 Apply telemetry and Baldwin-phase toggles derived from one normalized run request.
 
 Parameters:
+
 - `reducedTelemetry` - When true, keep only the essential telemetry metrics.
 - `telemetryMinimal` - When true, disable verbose telemetry capture.
 - `disableBaldwinPhase` - When true, skip the Baldwin refinement stage.
@@ -1132,6 +1174,7 @@ Reset the facade-owned logits-ring runtime state to its baseline defaults.
 Sampling and history helpers extracted from the ASCII maze evolution façade.
 
 Responsibilities:
+
 1. Provide allocation-light array sampling utilities that reuse the shared `EngineState` scratch pools.
 2. Expose history helpers that mirror the façade behaviour while keeping pooled buffers centralised.
 3. Centralise RNG parameter resolution for sampling paths to keep behaviour deterministic under shared state.
@@ -1153,11 +1196,13 @@ getTail(
 Extract the last `count` items from `source` into the shared tail buffer.
 
 Steps:
+
 1. Validate the source array and clamp the requested tail length.
 2. Grow the pooled tail buffer to the next power of two when necessary.
 3. Copy the suffix into the pooled buffer and trim its logical length.
 
 Parameters:
+
 - `state` - Shared engine state providing the tail history buffer.
 - `source` - Source array reference.
 - `count` - Number of trailing items requested.
@@ -1181,6 +1226,7 @@ pushHistory(
 Proxy to {@link MazeUtils.pushHistory} for consistency with the façade API.
 
 Parameters:
+
 - `buffer` - Existing history buffer (may be undefined).
 - `value` - Value to append to the buffer.
 - `maxLength` - Maximum allowed buffer length.
@@ -1208,11 +1254,13 @@ returned array reuses shared scratch storage, so callers should copy it first
 if they need the contents to survive another helper call.
 
 Steps:
+
 1. Validate the input array and normalise `sampleCount` to an integer.
 2. Grow the shared `sampleResultBuffer` to the next power of two when capacity is insufficient.
 3. Fill the pooled buffer using the shared fast RNG and truncate the logical length to `sampleCount`.
 
 Parameters:
+
 - `state` - Shared engine state providing pooled scratch buffers.
 - `source` - Source array to sample from.
 - `sampleCount` - Number of samples to draw (with replacement).
@@ -1241,11 +1289,13 @@ plus access to the pooled buffer on `state.scratch.samplePool`. That avoids
 one more logical array object on the hottest paths.
 
 Steps:
+
 1. Validate inputs and ensure the pooled buffer exists.
 2. Grow the buffer by powers of two when more capacity is required.
 3. Fill the buffer with random selections and return the number of items written.
 
 Parameters:
+
 - `state` - Shared engine state providing the pooled buffer.
 - `source` - Source array to sample from.
 - `sampleCount` - Number of elements requested (floored to an integer).
@@ -1256,7 +1306,7 @@ Example:
 
 const sampled = sampleIntoScratch(sharedState, population, 24);
 for (let index = 0; index < sampled; index++) {
-  processGenome(sharedState.scratch.samplePool[index]);
+processGenome(sharedState.scratch.samplePool[index]);
 }
 
 ### sampleSegmentIntoScratch
@@ -1276,11 +1326,13 @@ The common use case is "sample from the non-elite tail" or some later slice
 of a population without first allocating `source.slice(segmentStart)`.
 
 Steps:
+
 1. Clamp indices and ensure there is a non-empty segment.
 2. Ensure the pooled buffer can store the requested sample count.
 3. Fill the buffer via the shared RNG, returning the number of items written.
 
 Parameters:
+
 - `state` - Shared engine state providing pooled sampling buffers.
 - `source` - Source array to sample from.
 - `segmentStart` - Inclusive start index of the segment.
@@ -1298,6 +1350,7 @@ const genome = sharedState.scratch.samplePool[0];
 Centralised shared state for the ASCII maze evolution façade.
 
 Responsibilities:
+
 1. Define the scratch-buffer schema consumed by telemetry, population, and inspection helpers.
 2. Expose runtime toggle state (`EngineToggleState`) that drives optional phases and telemetry density.
 3. Provide factory and maintenance helpers (`createEngineState`, `initialiseTelemetryScratch`, `ensureVisitedHashCapacity`, `ensureRngCacheBatch`, `reseedRngState`) that size buffers and keep deterministic RNG state in sync.
@@ -1377,6 +1430,7 @@ Aggregated profiling configuration and accumulators shared across the evolution 
 Centralised shared state for the ASCII maze evolution façade.
 
 Responsibilities:
+
 1. Define the scratch-buffer schema consumed by telemetry, population, and inspection helpers.
 2. Expose runtime toggle state (`EngineToggleState`) that drives optional phases and telemetry density.
 3. Provide factory and maintenance helpers (`createEngineState`, `initialiseTelemetryScratch`, `ensureVisitedHashCapacity`, `ensureRngCacheBatch`, `reseedRngState`) that size buffers and keep deterministic RNG state in sync.
@@ -1404,6 +1458,7 @@ ensureRngCacheBatch(
 Ensure the RNG cache contains fresh samples before consumption.
 
 Parameters:
+
 - `parameters` - Congruential generator parameters and cache batch size.
 - `state` - Optional engine state container (defaults to the shared singleton).
 
@@ -1421,11 +1476,13 @@ ensureVisitedHashCapacity(
 Ensure the visited-coordinate hash table can store the requested entry count.
 
 Growth policy:
+
 1. Tables expand geometrically (powers of two) while respecting the configured load factor.
 2. When the existing table is large enough, it is cleared in place to preserve the allocation.
 3. Load factors outside the (0,1) range fall back to {@link DEFAULT_VISITED_HASH_LOAD_FACTOR}.
 
 Parameters:
+
 - `targetEntryCount` - Expected number of unique coordinates to store.
 - `state` - Optional engine state container (defaults to the shared singleton).
 
@@ -1447,14 +1504,16 @@ initialiseTelemetryScratch(
 Ensure telemetry-related scratch buffers allocate enough capacity for upcoming work.
 
 Growth strategy:
+
 - Float64Array pools grow geometrically (powers of two) and preserve previously written prefixes.
 - String buffers are replaced with larger arrays (also geometric) to avoid repeated reallocations.
 - Optional higher-moment buffers (M3/M4/kurtosis) are only created when {@link TelemetryScratchRequest.includeHigherMoments}
   is truthy to keep reduced telemetry lightweight.
 
 Parameters:
+
 - `request` - Capacity hints for upcoming telemetry computations.
-- `state` - Optional engine state target (defaults to the singleton  {@link engineState} ).
+- `state` - Optional engine state target (defaults to the singleton {@link engineState} ).
 
 Returns: Handles referencing the ensured scratch buffers for immediate use.
 
@@ -1470,6 +1529,7 @@ reseedRngState(
 Persist a new RNG seed and schedule a cache refill on the next draw.
 
 Parameters:
+
 - `seed` - Raw numeric seed requested by deterministic mode.
 - `state` - Optional engine state container (defaults to the shared singleton).
 
@@ -1494,6 +1554,7 @@ setBaldwinPhaseDisabledFlag(
 Enable or disable the Baldwin-phase warm-start pipeline.
 
 Parameters:
+
 - `isDisabled` - When true, skips the Lamarckian training stage.
 
 ### setReducedTelemetryFlag
@@ -1507,6 +1568,7 @@ setReducedTelemetryFlag(
 Toggle the reduced telemetry mode.
 
 Parameters:
+
 - `isEnabled` - When true, trims telemetry to the essential metrics only.
 
 ### setTelemetryMinimalFlag
@@ -1520,6 +1582,7 @@ setTelemetryMinimalFlag(
 Toggle the minimal telemetry mode for JSON output.
 
 Parameters:
+
 - `isMinimal` - When true, disables verbose telemetry capture.
 
 ### TelemetryScratchHandles
@@ -1551,6 +1614,7 @@ accumulateProfilingDuration(
 Accumulate a profiling duration under the supplied key when detail profiling is enabled.
 
 Parameters:
+
 - `state` - Shared engine state containing profiling configuration.
 - `category` - Profiling segment key (for example `telemetry`).
 - `deltaMs` - Millisecond duration to add to the accumulator.
@@ -1568,6 +1632,7 @@ clearDeterministicMode(
 Disable deterministic RNG mode.
 
 Parameters:
+
 - `state` - Shared engine state where the deterministic flag is stored.
 
 Returns: void.
@@ -1584,8 +1649,9 @@ drawFastRandom(
 Generate a fast uniform random sample using the shared RNG cache.
 
 Parameters:
+
 - `state` - Shared engine state providing the RNG cache and seed.
-- `parameters` - Congruential parameters forwarded to  {@link ensureRngCacheBatch} .
+- `parameters` - Congruential parameters forwarded to {@link ensureRngCacheBatch} .
 
 Returns: Uniform sample in the range [0, 1).
 
@@ -1604,6 +1670,7 @@ getProfilingAccumulators(
 Provide direct access to the profiling accumulator map.
 
 Parameters:
+
 - `state` - Shared engine state containing the profiling accumulators.
 
 Returns: Mutable record of profiling accumulators keyed by category name.
@@ -1619,6 +1686,7 @@ isDeterministicModeEnabled(
 Retrieve the deterministic RNG flag stored on the shared engine state.
 
 Parameters:
+
 - `state` - Shared engine state where the deterministic flag is stored.
 
 Returns: True when deterministic mode is active.
@@ -1634,6 +1702,7 @@ isProfilingDetailsEnabled(
 Determine whether detailed profiling accumulation is active.
 
 Parameters:
+
 - `state` - Shared engine state providing profiling configuration.
 
 Returns: True when detail profiling is enabled.
@@ -1670,7 +1739,7 @@ resolveRngParameters(): RngCacheParameters
 
 Provide cached congruential parameters used by the shared fast RNG helper.
 
-Returns: Immutable  {@link RngCacheParameters} reference reused across draws.
+Returns: Immutable {@link RngCacheParameters} reference reused across draws.
 
 Example:
 
@@ -1688,6 +1757,7 @@ setDeterministicMode(
 Enable deterministic RNG mode and optionally reseed the shared RNG state.
 
 Parameters:
+
 - `state` - Shared engine state where the deterministic flag is stored.
 - `seed` - Optional deterministic seed. Finite numeric inputs are normalised to u32.
 
@@ -1713,6 +1783,7 @@ allocateLogitsRing(
 Build a non-shared logits ring sized to the requested capacity.
 
 Parameters:
+
 - `capacity` - Number of rows to create.
 - `actionDimension` - Number of logits stored per row.
 
@@ -1730,6 +1801,7 @@ ensureConnFlagsCapacity(
 Ensure the recurrent/gated detection bitmap has sufficient capacity.
 
 Parameters:
+
 - `state` - Shared engine state containing the pooled bitmap.
 - `minimumCapacity` - Minimum number of entries required by the caller.
 
@@ -1746,6 +1818,7 @@ ensureLogitsRingCapacity(
 Grow or shrink the logits ring to accomodate the requested recent-step budget.
 
 Parameters:
+
 - `capacityRequest` - Parameters describing the requested resize.
 
 Returns: The resulting capacity and whether shared-array mode stayed enabled.
@@ -1762,6 +1835,7 @@ ensureScratchCapacity(
 Grow pooled scratch buffers to conservative sizes for the upcoming run.
 
 Parameters:
+
 - `state` - Shared engine state exposing scratch buffers.
 - `request` - Sizing request describing the evolution workload.
 
@@ -1777,6 +1851,7 @@ initialiseSharedLogitsRing(
 Attempt to allocate SharedArrayBuffer-backed logits ring storage.
 
 Parameters:
+
 - `state` - Shared engine state containing the logits buffers.
 - `config` - Shared ring configuration (capacity and action dimension).
 
@@ -1802,6 +1877,7 @@ maybeShrinkScratch(
 Shrink oversized scratch buffers once the population size drops significantly.
 
 Parameters:
+
 - `state` - Shared engine state exposing scratch buffers.
 - `populationSize` - Current population size used to derive shrink heuristics.
 
@@ -1818,6 +1894,7 @@ Parameters passed when attempting to initialise the shared logits ring buffers.
 Setup helpers for the ASCII maze evolution engine.
 
 Responsibilities:
+
 - Create cooperative frame-yielding helpers for async evolution loops.
 - Initialize Node.js persistence helpers when available.
 - Build resilient logging writers with dashboard and console fallbacks.
@@ -1842,17 +1919,20 @@ Initialize persistence helpers (Node `fs` & `path`) when available and ensure th
 directory exists. This helper intentionally does nothing in browser-like hosts.
 
 Steps:
+
 1. Detect whether a Node-like `require` is available and attempt to load `fs` and `path`
 2. If both modules are available and `persistDir` is provided, ensure the directory exists
    by creating it recursively when necessary
 3. Return an object containing the (possibly null) `{ fs, path }` references for callers to use
 
 Notes:
+
 - This helper deliberately performs defensive checks and swallows synchronous errors because
   persistence is optional in many host environments (tests, browser demos)
 - No large allocations are performed here; the function returns lightweight references
 
 Parameters:
+
 - `persistDir` - Optional directory to ensure exists. If falsy, no filesystem mutations are attempted.
 
 Returns: Object with `{ fs, path }` where each value may be `null` when unavailable.
@@ -1861,7 +1941,7 @@ Example:
 
 const { fs, path } = initPersistence('./snapshots');
 if (fs && path) {
-  fs.writeFileSync(path.join(dir, 'snapshot.json'), data);
+fs.writeFileSync(path.join(dir, 'snapshot.json'), data);
 }
 
 ### isPauseRequested
@@ -1875,6 +1955,7 @@ isPauseRequested(
 Read host-controlled pause state without letting host errors break the engine.
 
 Parameters:
+
 - `hostAdapter` - Optional host adapter implementing pause polling.
 
 Returns: True when the host asks the engine to remain paused.
@@ -1890,17 +1971,20 @@ makeFlushToFrame(
 Create a cooperative frame-yielding function used by the evolution loop.
 
 Behaviour:
+
 - Prefers `requestAnimationFrame` when available (browser hosts)
 - Falls back to `setImmediate` when available (Node) or `setTimeout(...,0)` otherwise
 - Respects an optional host adapter pause callback by polling between ticks without busy-waiting
 - Resolves once a single new frame or tick is available and the host is not paused
 
 Steps:
+
 1. Choose the preferred tick function based on the host runtime
 2. When called, await the preferred tick; if the host adapter reports pause, poll again after the tick
 3. Resolve once a tick passed while not paused
 
 Parameters:
+
 - `hostAdapter` - Optional host adapter that owns cooperative pause state.
 
 Returns: A function that yields cooperatively to the next animation frame / tick.
@@ -1922,16 +2006,19 @@ Build a resilient writer that attempts to write to Node stdout, then a provided
 dashboard logger, and finally `console.log` as a last resort.
 
 Steps:
+
 1. If Node `process.stdout.write` is available, use it (no trailing newline forced)
 2. Else if `dashboardManager.logFunction` exists, call it
 3. Else fall back to `console.log` and trim the message
 
 Notes:
+
 - Errors are swallowed; logging must never throw and disrupt the evolution loop
 - This factory is allocation-light; the returned function only creates a trimmed string
   when falling back to `console.log`
 
 Parameters:
+
 - `dashboardManager` - Optional manager exposing `logFunction(msg:string)` used in some UIs.
 
 Returns: A function accepting a single string message to write.
@@ -1959,6 +2046,7 @@ hasMazeEvolutionReachedCurriculumThreshold(
 Determine whether a completed phase should advance the surrounding curriculum.
 
 Parameters:
+
 - `progress` - Progress reported by the best run result.
 - `minProgressToPass` - Minimum progress percentage required to advance.
 
@@ -1976,6 +2064,7 @@ refineMazeEvolutionCarryOverNetwork(
 Refine the winning network before seeding the next curriculum phase.
 
 Parameters:
+
 - `bestNetwork` - Network returned by the latest evolution phase.
 - `previousBestNetwork` - Previously carried curriculum seed.
 
@@ -1994,6 +2083,7 @@ resolveMazeEvolutionPhaseOutcome(
 Resolve the stable curriculum-facing outcome of one maze evolution phase.
 
 Parameters:
+
 - `evolutionResult` - Stable engine result returned by `EvolutionEngine.runMazeEvolution()`.
 - `previousBestNetwork` - Previously carried winner used when the latest phase has no replacement.
 - `minProgressToPass` - Progress threshold required before curriculum should advance.
@@ -2015,16 +2105,19 @@ Options and Setup Module
 
 Purpose:
 -------
+
 Provides utilities for normalizing run options, preparing maze environment,
 and orchestrating NEAT driver creation with population seeding.
 
 This module encapsulates:
- - Run options validation and normalization with sensible defaults
- - Environment preparation (maze encoding, distance maps, I/O sizing)
- - NEAT driver creation and population seeding orchestration
+
+- Run options validation and normalization with sensible defaults
+- Environment preparation (maze encoding, distance maps, I/O sizing)
+- NEAT driver creation and population seeding orchestration
 
 ES2023 Policy:
 -------------
+
 - Uses nullish coalescing `??` for default values (never `||`)
 - Descriptive variable names (no short identifiers)
 - Optional chaining `?.` for safe property access
@@ -2046,25 +2139,29 @@ createAndSeedNeat(
 Create and seed a NEAT driver with normalized configuration and optional initial population.
 
 This function orchestrates the complete NEAT setup workflow:
- 1) Build a fitness callback bound to the fitness context
- 2) Instantiate the NEAT driver with normalized options
- 3) Seed the driver's population from optional initial networks
- 4) Warm up pooled scratch buffers to reduce first-use allocation spikes
+
+1.  Build a fitness callback bound to the fitness context
+2.  Instantiate the NEAT driver with normalized options
+3.  Seed the driver's population from optional initial networks
+4.  Warm up pooled scratch buffers to reduce first-use allocation spikes
 
 Design Rationale:
- - Single orchestration point for NEAT creation + seeding
- - Delegates heavy lifting to createNeat and seedInitialPopulation
- - Best-effort buffer warm-up (failures swallowed)
- - Returns updated scratch buffers for caller to persist
+
+- Single orchestration point for NEAT creation + seeding
+- Delegates heavy lifting to createNeat and seedInitialPopulation
+- Best-effort buffer warm-up (failures swallowed)
+- Returns updated scratch buffers for caller to persist
 
 Buffer Management:
- - Accepts and returns scratchPopClone buffer (grown if needed)
- - Accepts and returns scratchSample buffer (grown if needed)
- - Caller should persist returned buffers for reuse across runs
+
+- Accepts and returns scratchPopClone buffer (grown if needed)
+- Accepts and returns scratchSample buffer (grown if needed)
+- Caller should persist returned buffers for reuse across runs
 
 Parameters:
 
 Parameters:
+
 - `opts` - Normalized run options (produced by normalizeRunOptions)
 - `inputSize` - Network input count
 - `outputSize` - Network output count
@@ -2073,6 +2170,7 @@ Parameters:
 - `scratchSample` - Pooled sample buffer (will be grown if needed)
 
 Returns: Object containing:
+
 - neat: Configured and seeded NEAT driver instance
 - scratchPopClone: Updated clone buffer (may be new array if grown)
 - scratchSample: Updated sample buffer (may be new array if grown)
@@ -2081,12 +2179,12 @@ Example:
 
 // Create and seed NEAT with optional initial population
 const { neat, scratchPopClone, scratchSample } = createAndSeedNeat(
-  normalizedOpts,
-  6,
-  4,
-  fitnessContext,
-  scratchPopCloneBuffer,
-  scratchSampleBuffer
+normalizedOpts,
+6,
+4,
+fitnessContext,
+scratchPopCloneBuffer,
+scratchSampleBuffer
 );
 
 ### normalizeRunOptions
@@ -2107,38 +2205,42 @@ This function accepts the user-provided run options and returns a normalized
 options object with all defaults applied and configuration groups extracted.
 
 Configuration Philosophy:
- - Prefer explicit defaults over implicit framework defaults
- - Use nullish coalescing `??` for clarity (avoid falsy semantics)
- - Extract nested configuration groups for easier parameter passing
- - Apply side effects cautiously (determinism mode, telemetry flags)
+
+- Prefer explicit defaults over implicit framework defaults
+- Use nullish coalescing `??` for clarity (avoid falsy semantics)
+- Extract nested configuration groups for easier parameter passing
+- Apply side effects cautiously (determinism mode, telemetry flags)
 
 Default Values:
- - Population size: 500
- - Max stagnant generations: 500
- - Min progress to pass: 95%
- - Max generations: Infinity
- - Lamarckian iterations: 10
- - Plateau generations: 40
- - Plateau improvement threshold: 1e-6
- - Simplify duration: 30 seconds
- - Simplify prune fraction: 0.05 (5%)
- - Simplify strategy: 'weakWeight'
- - Persist every: 25 generations
- - Persist directory: './ascii_maze_snapshots'
- - Persist top K: 3
- - Dynamic population enabled: true
- - Dynamic population expand interval: 25
- - Dynamic population expand factor: 0.15
- - Dynamic population plateau slack: 0.6
- - Memory compaction interval: 50
+
+- Population size: 500
+- Max stagnant generations: 500
+- Min progress to pass: 95%
+- Max generations: Infinity
+- Lamarckian iterations: 10
+- Plateau generations: 40
+- Plateau improvement threshold: 1e-6
+- Simplify duration: 30 seconds
+- Simplify prune fraction: 0.05 (5%)
+- Simplify strategy: 'weakWeight'
+- Persist every: 25 generations
+- Persist directory: './ascii_maze_snapshots'
+- Persist top K: 3
+- Dynamic population enabled: true
+- Dynamic population expand interval: 25
+- Dynamic population expand factor: 0.15
+- Dynamic population plateau slack: 0.6
+- Memory compaction interval: 50
 
 Side Effects:
- - May call setDeterministic() when deterministic mode or randomSeed is provided
- - Sets global telemetry flags (REDUCED_TELEMETRY, TELEMETRY_MINIMAL, DISABLE_BALDWIN)
+
+- May call setDeterministic() when deterministic mode or randomSeed is provided
+- Sets global telemetry flags (REDUCED_TELEMETRY, TELEMETRY_MINIMAL, DISABLE_BALDWIN)
 
 Parameters:
 
 Parameters:
+
 - `options` - Raw run options from the user
 - `setDeterministic` - Callback to set deterministic mode (seed: number) => void
 - `setReducedTelemetry` - Callback to set reduced telemetry flag (enabled: boolean) => void
@@ -2151,11 +2253,11 @@ Example:
 
 // Normalize with custom population size and deterministic mode
 const opts = normalizeRunOptions(
-  { evolutionAlgorithmConfig: { popSize: 200, deterministic: true } },
-  (seed) => EvolutionEngine.setDeterministic(seed),
-  (enabled) => EvolutionEngine.setReducedTelemetry(enabled),
-  (enabled) => EvolutionEngine.setMinimalTelemetry(enabled),
-  (disabled) => EvolutionEngine.setDisableBaldwin(disabled)
+{ evolutionAlgorithmConfig: { popSize: 200, deterministic: true } },
+(seed) => EvolutionEngine.setDeterministic(seed),
+(enabled) => EvolutionEngine.setReducedTelemetry(enabled),
+(enabled) => EvolutionEngine.setMinimalTelemetry(enabled),
+(disabled) => EvolutionEngine.setDisableBaldwin(disabled)
 );
 
 ### prepareEnvironmentForRun
@@ -2174,29 +2276,34 @@ artifacts consumed by the evolution loop: encoded maze, start/exit coords,
 distance map, fixed I/O sizes, and a compact fitness context.
 
 Design Rationale:
- - Precompute expensive artifacts once (encoding, distance map) for reuse
- - Use descriptive, allocation-light locals for clarity
- - Best-effort scratch pool warm-up to reduce first-use allocation spikes
- - All pool allocation failures are swallowed (non-fatal optimization)
+
+- Precompute expensive artifacts once (encoding, distance map) for reuse
+- Use descriptive, allocation-light locals for clarity
+- Best-effort scratch pool warm-up to reduce first-use allocation spikes
+- All pool allocation failures are swallowed (non-fatal optimization)
 
 Fixed I/O Sizes:
- - Input size: 6 [compassScalar, openN, openE, openS, openW, progressDelta]
- - Output size: 4 [moveN, moveE, moveS, moveW]
+
+- Input size: 6 [compassScalar, openN, openE, openS, openW, progressDelta]
+- Output size: 4 [moveN, moveE, moveS, moveW]
 
 Steps (high-level):
- 1) Resolve maze source from `opts` (top-level `maze` or nested `mazeConfig.maze`)
- 2) Encode the maze into a simulator-friendly representation
- 3) Locate start ('S') and exit ('E') coordinates
- 4) Build a distance map from the exit to speed simulations
- 5) Assemble fixed I/O sizes and a `fitnessContext` object and return everything
+
+1.  Resolve maze source from `opts` (top-level `maze` or nested `mazeConfig.maze`)
+2.  Encode the maze into a simulator-friendly representation
+3.  Locate start ('S') and exit ('E') coordinates
+4.  Build a distance map from the exit to speed simulations
+5.  Assemble fixed I/O sizes and a `fitnessContext` object and return everything
 
 Parameters:
 
 Parameters:
+
 - `opts` - Normalized run options (produced by `normalizeRunOptions`)
 - `scratchBundle` - Engine scratch state for optional pool warm-up
 
 Returns: Object containing:
+
 - encodedMaze: Simulator-friendly maze representation
 - startPosition: {x, y} coordinates of start ('S')
 - exitPosition: {x, y} coordinates of exit ('E')
@@ -2236,6 +2343,7 @@ collectTelemetryTail(
 Collect a short telemetry tail from a NEAT instance when available.
 
 Parameters:
+
 - `state` - Shared engine state (provides pooled scratch buffers for `getTail`).
 - `neat` - NEAT instance that may expose a `getTelemetry` function.
 - `tailLength` - Desired tail length (floored to an integer >= 0). Defaults to 10.
@@ -2282,6 +2390,7 @@ logActionEntropy(
 Emit a best-effort telemetry line containing action-entropy statistics.
 
 Parameters:
+
 - `params` - Shared state, generation metadata and logging callback.
 
 Returns: void
@@ -2301,6 +2410,7 @@ logDiversity(
 Emit diversity telemetry including species count, Simpson index and weight standard deviation.
 
 Parameters:
+
 - `params` - Shared state, NEAT population reference and logger callback.
 
 Returns: void
@@ -2320,6 +2430,7 @@ logExploration(
 Emit exploration telemetry summarising unique coverage, path length and ratios.
 
 Parameters:
+
 - `params` - Shared state, generation result and logger callback.
 
 Returns: void
@@ -2357,22 +2468,25 @@ and diversity metrics. It respects the minimal telemetry mode and performs
 optional profiling when enabled.
 
 Design Rationale:
- - Orchestrates calls to individual telemetry functions (logActionEntropy, etc.)
- - Respects minimal telemetry toggle (early exit when disabled)
- - Best-effort error handling (swallow all exceptions)
- - Optional profiling accumulation when details are enabled
- - Accepts callback for anti-collapse recovery to avoid tight coupling
+
+- Orchestrates calls to individual telemetry functions (logActionEntropy, etc.)
+- Respects minimal telemetry toggle (early exit when disabled)
+- Best-effort error handling (swallow all exceptions)
+- Optional profiling accumulation when details are enabled
+- Accepts callback for anti-collapse recovery to avoid tight coupling
 
 Telemetry Steps (in order):
- 1. Action entropy - normalized entropy and unique move statistics
- 2. Output bias statistics - mean, std, and individual biases
- 3. Logits statistics - means, stds, kurtosis, entropy, stability, collapse detection
- 4. Exploration metrics - distinct coordinates visited and progress
- 5. Diversity metrics - species richness, Simpson index, weight variance
+
+1.  Action entropy - normalized entropy and unique move statistics
+2.  Output bias statistics - mean, std, and individual biases
+3.  Logits statistics - means, stds, kurtosis, entropy, stability, collapse detection
+4.  Exploration metrics - distinct coordinates visited and progress
+5.  Diversity metrics - species richness, Simpson index, weight variance
 
 Parameters:
 
 Parameters:
+
 - `engineState` - Shared engine state with scratch buffers and profiling
 - `neat` - NEAT instance with population
 - `fittest` - Best network/genome from this generation
@@ -2392,9 +2506,9 @@ Example:
 
 // Log telemetry for generation 42
 logGenerationTelemetry(
-  state, neat, fittestNetwork, result, 42, console.log, 4, 40, false, false,
-  () => antiCollapseRecovery(...),
-  isProfilingDetailsEnabled, profilingStartTimestamp, accumulateProfilingDuration
+state, neat, fittestNetwork, result, 42, console.log, 4, 40, false, false,
+() => antiCollapseRecovery(...),
+isProfilingDetailsEnabled, profilingStartTimestamp, accumulateProfilingDuration
 );
 
 ### LogitStatsParams
@@ -2416,6 +2530,7 @@ logLogitsAndCollapse(
 Emit logits-level telemetry, detect collapse streaks and trigger anti-collapse recovery when needed.
 
 Parameters:
+
 - `params` - Shared state, subject genomes and telemetry configuration.
 
 Returns: void
@@ -2439,6 +2554,7 @@ logOutputBiasStats(
 Emit bias statistics for the fittest network's output nodes.
 
 Parameters:
+
 - `params` - Shared state, subject network and writer callback.
 
 Returns: void
@@ -2463,16 +2579,19 @@ NEAT Configuration Module
 
 Purpose:
 -------
+
 Provides utilities for instantiating and seeding NEAT (NeuroEvolution of Augmenting Topologies)
 instances with standardized configuration and optional initial populations.
 
 This module encapsulates:
- - NEAT driver creation with opinionated defaults (elitism, provenance, mutation operators)
- - Population seeding with defensive cloning and best-effort error handling
- - Configuration normalization and validation
+
+- NEAT driver creation with opinionated defaults (elitism, provenance, mutation operators)
+- Population seeding with defensive cloning and best-effort error handling
+- Configuration normalization and validation
 
 ES2023 Policy:
 -------------
+
 - Uses nullish coalescing `??` for default values (never `||`)
 - Descriptive variable names (no short identifiers like `i`, `c`, `p`)
 - Optional chaining `?.` for safe property access
@@ -2496,26 +2615,29 @@ configuration normalization. It applies sensible defaults for population size,
 mutation operators, elitism, provenance, and various evolutionary strategies.
 
 Configuration Philosophy:
- - Prefer explicit defaults over implicit framework defaults
- - Use nullish coalescing `??` for clarity (avoid falsy semantics)
- - Compute derived settings (elitism, provenance) from population size
- - Treat generation-zero warm start as the shared-prior phase, then bias later generations toward topology search
- - Enable modern features by default (adaptive mutation, multi-objective, novelty)
+
+- Prefer explicit defaults over implicit framework defaults
+- Use nullish coalescing `??` for clarity (avoid falsy semantics)
+- Compute derived settings (elitism, provenance) from population size
+- Treat generation-zero warm start as the shared-prior phase, then bias later generations toward topology search
+- Enable modern features by default (adaptive mutation, multi-objective, novelty)
 
 Default Constants (from EvolutionEngine):
- - Population size: 100
- - Elitism fraction: 0.05 (top 5% preserved)
- - Provenance count: 0 (no fresh seed reinjection after generation zero)
- - Adaptive mutation initial rate: 0.55
- - Mutation amount: 3
- - Min hidden nodes: 0
- - Target species: 8
- - Entropy range: [0.40, 0.60]
- - Adaptive smooth factor: 0.90
+
+- Population size: 100
+- Elitism fraction: 0.05 (top 5% preserved)
+- Provenance count: 0 (no fresh seed reinjection after generation zero)
+- Adaptive mutation initial rate: 0.55
+- Mutation amount: 3
+- Min hidden nodes: 0
+- Target species: 8
+- Entropy range: [0.40, 0.60]
+- Adaptive smooth factor: 0.90
 
 Parameters:
 
 Parameters:
+
 - `inputCount` - Number of input nodes for the network topology
 - `outputCount` - Number of output nodes for the network topology
 - `fitnessCallback` - Function to evaluate network fitness (net: Network) => number
@@ -2563,6 +2685,7 @@ the maze run can explore routing changes instead of repeatedly rediscovering
 similar weight tweaks.
 
 Parameters:
+
 - `allowRecurrent` - Whether recurrent and gated growth is allowed.
 
 Returns: Demo-aligned default mutation shelf.
@@ -2586,25 +2709,29 @@ This function is intentionally best-effort and non-throwing: any cloning or
 driver mutating errors are swallowed so the evolution loop can continue.
 
 Design Rationale:
- - Uses pooled buffer to avoid per-call allocations (amortized O(1) cloning)
- - Defensive cloning: fallback to original reference on clone failure
- - Keeps `neat.options.popsize` synchronized with actual population length
- - All errors swallowed to maintain resilient evolution loop
+
+- Uses pooled buffer to avoid per-call allocations (amortized O(1) cloning)
+- Defensive cloning: fallback to original reference on clone failure
+- Keeps `neat.options.popsize` synchronized with actual population length
+- All errors swallowed to maintain resilient evolution loop
 
 Population Seeding Strategy:
- 1) When `initialPopulation` is provided, clone all networks into pooled buffer
- 2) Grow pooled buffer only when necessary (reuse across calls)
- 3) When `initialBestNetwork` is provided, place clone at index 0
- 4) Synchronize `neat.options.popsize` with actual population length
+
+1.  When `initialPopulation` is provided, clone all networks into pooled buffer
+2.  Grow pooled buffer only when necessary (reuse across calls)
+3.  When `initialBestNetwork` is provided, place clone at index 0
+4.  Synchronize `neat.options.popsize` with actual population length
 
 Pooling Pattern:
- - The pooled buffer `#SCRATCH_POP_CLONE` is shared across all seeding operations
- - Buffer grows monotonically (never shrinks) to amortize allocation costs
- - Logical length is set via `.length` property for correct slice semantics
+
+- The pooled buffer `#SCRATCH_POP_CLONE` is shared across all seeding operations
+- Buffer grows monotonically (never shrinks) to amortize allocation costs
+- Logical length is set via `.length` property for correct slice semantics
 
 Parameters:
 
 Parameters:
+
 - `neat` - NEAT driver/manager object which may receive the initial population
 - `initialPopulation` - Optional array of networks to use as the starting population
 - `initialBestNetwork` - Optional single network to place at index 0 (best seed)
@@ -2627,18 +2754,21 @@ Network Inspection Module
 
 Purpose:
 -------
+
 Provides utilities for inspecting and analyzing neural network topology,
 including node classification, activation function detection, and connection
 analysis (recurrent/gated detection).
 
 This module encapsulates:
- - Node classification (input/hidden/output buckets)
- - Activation function name gathering
- - Recurrent and gated connection detection
- - Network structure printing for debugging
+
+- Node classification (input/hidden/output buckets)
+- Activation function name gathering
+- Recurrent and gated connection detection
+- Network structure printing for debugging
 
 ES2023 Policy:
 -------------
+
 - Uses nullish coalescing `??` and optional chaining `?.`
 - Descriptive variable names (no short identifiers)
 - Pooled scratch buffers to avoid allocations
@@ -2656,17 +2786,20 @@ printNetworkStructure(
 Print a structured summary of network topology to the console.
 
 This is a developer-facing inspection utility that logs:
+
 - Node counts by type (input, hidden, output)
 - Activation function names used across the network
 - Total connection count
 - Whether the network contains recurrent or gated connections
 
 Design:
+
 - Best-effort: swallows errors and logs partial data when inspection fails
 - Allocation-light: reuses pooled scratch buffers for node classification and activation names
 - Delegates to helper functions for modular, testable logic
 
 Parameters:
+
 - `engineState` - Shared engine state containing pooled scratch buffers.
 - `network` - Network-like object to inspect.
 
@@ -2689,19 +2822,21 @@ to satisfy linters that flag unused catch binding variables. It has no
 runtime effect beyond the void operation.
 
 Design Rationale:
- - Explicit intent signaling for best-effort error handling
- - Lint-compliant alternative to catch binding suppression
- - Zero runtime overhead (optimized away by JIT)
+
+- Explicit intent signaling for best-effort error handling
+- Lint-compliant alternative to catch binding suppression
+- Zero runtime overhead (optimized away by JIT)
 
 Parameters:
+
 - `error` - The error object to void (can be any type)
 
 Example:
 
 try {
-  riskyOperation();
+riskyOperation();
 } catch (error) {
-  swallowError(error); // Explicit void for lint compliance
+swallowError(error); // Explicit void for lint compliance
 }
 
 ## evolutionEngine/populationPruning.ts
@@ -2713,6 +2848,7 @@ and warm-start initialization logic. All helpers operate on the shared {@link En
 buffers to avoid per-call allocations while keeping pruning logic modular and testable.
 
 Responsibilities:
+
 1. Apply simplify-phase pruning to entire populations via strategy-driven connection disabling.
 2. Collect, sort, and selectively disable weak connections based on absolute weight.
 3. Initialize compass warm-start wiring for directional inputs.
@@ -2732,12 +2868,14 @@ applyCompassWarmStart(
 Warm-start wiring for compass and directional openness inputs.
 
 Steps:
+
 1. Validate network structure and extract node/connection arrays.
 2. Collect input and output node indices using the shared helper.
 3. For each of the 4 compass directions, ensure an input→output connection exists with light initialization.
 4. Connect the special 'compass' input (index 0) to all outputs with deterministic base weights.
 
 Parameters:
+
 - `params` - Shared state and network reference.
 
 Returns: void
@@ -2765,11 +2903,13 @@ applySimplifyPruningToPopulation(
 Apply simplify-phase pruning to the entire population.
 
 Steps:
+
 1. Validate inputs and normalize prune fraction to [0, 1].
 2. Iterate through each genome in the population.
 3. Delegate per-genome pruning to the shared helper with isolated error handling.
 
 Parameters:
+
 - `params` - Pruning configuration and population reference.
 
 Returns: void
@@ -2777,9 +2917,9 @@ Returns: void
 Example:
 
 applySimplifyPruningToPopulation({
-  neat: neatInstance,
-  simplifyStrategy: 'weakRecurrentPreferred',
-  simplifyPruneFraction: 0.15,
+neat: neatInstance,
+simplifyStrategy: 'weakRecurrentPreferred',
+simplifyPruneFraction: 0.15,
 });
 
 ### centerOutputBiases
@@ -2793,12 +2933,14 @@ centerOutputBiases(
 Re-center and clamp output node biases to prevent drift.
 
 Steps:
+
 1. Collect output node indices using the shared helper.
 2. Compute mean and standard deviation of output biases using Welford's online algorithm.
 3. Subtract the mean from each bias (re-centering) and clamp to ±OUTPUT_BIAS_CLAMP.
 4. Persist statistics for optional telemetry.
 
 Parameters:
+
 - `params` - Shared state and network reference.
 
 Returns: void
@@ -2823,6 +2965,7 @@ supervised guidance give the population a better starting shape before the
 main search pressure takes over again?
 
 Responsibilities:
+
 - Build a tiny curriculum-style supervised dataset for compass-guided motion
 - Apply bounded Lamarckian backpropagation to whole populations
 - Re-center output biases after training so exploration does not collapse
@@ -2853,6 +2996,7 @@ low-variance heads back outward, the engine keeps exploration pressure alive
 after warm-start training instead of letting one action dominate forever.
 
 Steps:
+
 1. Collect output node biases into scratch buffer
 2. Compute mean and standard deviation via Welford's one-pass algorithm
 3. Subtract mean from each bias
@@ -2860,6 +3004,7 @@ Steps:
 5. Clamp adjusted biases to safe operational range [-5, 5] and write back
 
 Parameters:
+
 - `network` - Network object containing `nodes` array. Missing nodes treated as empty.
 - `state` - Shared engine state (provides scratch buffers and node index pool).
 - `constants` - Hyperparameters for adjustment (std threshold, multiplier).
@@ -2869,11 +3014,11 @@ Parameters:
 Example:
 
 adjustOutputBiasesAfterTraining(
-  trainedNetwork,
-  engineState,
-  { DEFAULT_STD_SMALL: 0.05, DEFAULT_STD_ADJUST_MULT: 1.5 },
-  scratchIndexBuffer,
-  getNodeIndicesByType
+trainedNetwork,
+engineState,
+{ DEFAULT_STD_SMALL: 0.05, DEFAULT_STD_ADJUST_MULT: 1.5 },
+scratchIndexBuffer,
+getNodeIndicesByType
 );
 
 ### applyLamarckianTraining
@@ -2902,6 +3047,7 @@ evolutionary loop takes over, while still measuring and logging enough to see
 whether the warm-start is becoming too aggressive or too weak.
 
 Steps:
+
 1. Validate inputs & early exits
 2. Start profiling timer if requested
 3. Optionally down-sample the training set (with replacement) to reduce cost for large sets
@@ -2912,6 +3058,7 @@ Steps:
 8. Return elapsed time when profiling; otherwise return 0
 
 Parameters:
+
 - `neat` - NEAT instance exposing `population` array.
 - `trainingSet` - Array of `{input:number[], output:number[]}` training cases.
 - `iterations` - Number of training iterations to run per-network (must be > 0).
@@ -2928,16 +3075,16 @@ Returns: Elapsed milliseconds spent in training when profiling is enabled; other
 Example:
 
 const elapsed = applyLamarckianTraining(
-  neatInstance,
-  trainingExamples,
-  2,
-  8,
-  console.log,
-  true,
-  currentGen,
-  engineState,
-  trainingConstants,
-  adjustOutputBiasesAfterTraining
+neatInstance,
+trainingExamples,
+2,
+8,
+console.log,
+true,
+currentGen,
+engineState,
+trainingConstants,
+adjustOutputBiasesAfterTraining
 );
 
 ### buildLamarckianTrainingSet
@@ -2952,6 +3099,7 @@ buildLamarckianTrainingSet(
 Build the supervised training set used for Lamarckian warm-start training.
 
 Generates a small curated dataset of canonical navigation scenarios combining:
+
 - Single-path corridors with varying progress signals
 - Two-way junctions with directional bias
 - Four-way intersections with full openness variety
@@ -2959,10 +3107,12 @@ Generates a small curated dataset of canonical navigation scenarios combining:
 - Mild data augmentation via random jitter on openness and progress values
 
 Each training case maps a 6-dimensional input to a soft one-hot output:
+
 - Input: [compassScalar, openN, openE, openS, openW, progressDelta]
 - Output: [pN, pE, pS, pW] with probabilities (high for target, low for others)
 
 Parameters:
+
 - `state` - Shared engine state (used for RNG when applying jitter augmentation).
 - `constants` - Training hyperparameters and signal constants.
 
@@ -2971,10 +3121,10 @@ Returns: Array of training cases `{ input: number[], output: number[] }`.
 Example:
 
 const trainingSet = buildLamarckianTrainingSet(engineState, {
-  TRAIN_OUT_PROB_HIGH: 0.9,
-  TRAIN_OUT_PROB_LOW: 0.033,
-  PROGRESS_MEDIUM: 0.5,
-  // ... other constants
+TRAIN_OUT_PROB_HIGH: 0.9,
+TRAIN_OUT_PROB_LOW: 0.033,
+PROGRESS_MEDIUM: 0.5,
+// ... other constants
 });
 
 ### LamarckianTrainingCase
@@ -3019,6 +3169,7 @@ pretrainPopulationWarmStart(
 Pretrain the population using a small supervised dataset and apply warm-start heuristics.
 
 Behaviour & contract:
+
 - Trains one cloned template network from the current population head
 - Copies the trained template parameters across the population with small noise
 - Treats the training set as a biasing hint, not as a replacement for later evolution
@@ -3029,12 +3180,14 @@ Behaviour & contract:
   tactical assist instead of a second training regime
 
 Steps:
+
 1. Validate inputs and obtain `population` (fast-exit on empty populations)
 2. Clone the lead genome into one trainable template and run the bounded supervised fit there
 3. Apply warm-start heuristics to that template only
 4. Copy tuned template parameters across the population with small Gaussian noise
 
 Parameters:
+
 - `neat` - NEAT instance exposing a `population` array of networks.
 - `lamarckianTrainingSet` - Array of `{input:number[], output:number[]}` training cases.
 - `constants` - Training hyperparameters (iteration limits, learning rates, etc.).
@@ -3045,11 +3198,11 @@ Parameters:
 Example:
 
 pretrainPopulationWarmStart(
-  neatInstance,
-  trainingDataset,
-  { PRETRAIN_MAX_ITER: 10, PRETRAIN_BASE_ITER: 3, ... },
-  applyCompassWarmStart,
-  centerOutputBiases
+neatInstance,
+trainingDataset,
+{ PRETRAIN_MAX_ITER: 10, PRETRAIN_BASE_ITER: 3, ... },
+applyCompassWarmStart,
+centerOutputBiases
 );
 
 ### TrainableNetwork
@@ -3087,6 +3240,7 @@ warmStartPopulationIfNeeded(
 Conditionally warm-start / pretrain the population using a provided training set.
 
 Behaviour & contract:
+
 - If a non-empty `trainingSet` is provided this method will attempt a best-effort
   invocation of `pretrainPopulationWarmStart(neat, trainingSet)`
 - To reduce first-use allocation spikes the helper will also attempt to ensure
@@ -3096,11 +3250,13 @@ Behaviour & contract:
   evolution loop resilient
 
 Steps:
+
 1. Fast-guard invalid inputs – nothing to do when no data or driver
 2. Best-effort ensure pooled buffers exist and have capacity
 3. Invoke the pretrain helper (best-effort). This may mutate the NEAT driver
 
 Parameters:
+
 - `neat` - NEAT driver instance which will be pre-trained (may be `null`/`undefined`).
 - `trainingSet` - Array of supervised training cases used for warm-start; ignored when empty.
 - `state` - Shared engine state (provides scratch buffer pools).
@@ -3109,10 +3265,10 @@ Parameters:
 Example:
 
 warmStartPopulationIfNeeded(
-  neatDriver,
-  trainingCasesArray,
-  engineState,
-  pretrainPopulationWarmStart
+neatDriver,
+trainingCasesArray,
+engineState,
+pretrainPopulationWarmStart
 );
 
 ## evolutionEngine/populationDynamics.ts
@@ -3128,6 +3284,7 @@ parent selection, child creation, collapse recovery, and bulk connection
 cleanup.
 
 Responsibilities:
+
 - Decide when search appears stuck and whether to enter a simplify phase
 - Expand the population by sampling from the current top performers
 - Sort genomes by fitness without allocating fresh arrays every generation
@@ -3155,12 +3312,14 @@ antiCollapseRecovery(
 Reinitialize output biases and weights for anti-collapse recovery.
 
 Behaviour:
+
 - Selects a fraction (up to 30%) of non-elite genomes.
 - Samples from non-elite segment using pooled sample buffer.
 - Reinitializes each sampled genome's outputs via `reinitializeGenomeOutputsAndWeights`.
 - Emits diagnostic summary.
 
 Parameters:
+
 - `state` - Shared engine state.
 - `neat` - NEAT driver with `population` and `options.elitism`.
 - `completedGenerations` - Current generation for logging.
@@ -3185,11 +3344,13 @@ applyMutationsToClone(
 Apply up to `mutateCount` distinct mutation operations to `clone`.
 
 Behaviour:
+
 1. Uses cached mutation operation array from `getMutationOps`.
 2. Selects up to `mutateCount` unique operations via partial Fisher–Yates shuffle.
 3. For small `mutateCount` values, uses unrolled fast path.
 
 Parameters:
+
 - `state` - Shared engine state for RNG and scratch buffers.
 - `clone` - Genome-like object with `mutate(op)` method.
 - `neat` - NEAT driver for resolving mutation ops.
@@ -3210,11 +3371,13 @@ compactGenomeConnections(
 Compact a single genome's connection list by removing disabled connections.
 
 Behaviour:
+
 - Performs in-place stable compaction of `genome.connections`.
 - Preserves relative order of enabled connections.
 - Two-pointer write/read technique.
 
 Parameters:
+
 - `genome` - Mutable genome with `connections` array.
 
 Returns: Number of removed (disabled) connections.
@@ -3235,11 +3398,13 @@ compactPopulation(
 Compact entire population by removing disabled connections from each genome.
 
 Behaviour:
+
 - Uses pooled sample buffer as scratch counts array.
 - Compacts each genome via `compactGenomeConnections`.
 - Returns total removed connections.
 
 Parameters:
+
 - `state` - Shared engine state.
 - `neat` - NEAT driver with `population`.
 
@@ -3262,12 +3427,14 @@ createChildFromParent(
 Create a child genome from a parent via cloning and mutation.
 
 Behaviour:
+
 1. Clone the parent genome (with or without ID tracking).
 2. Determine mutation count (1 or 2).
 3. Apply mutations to the clone.
 4. Register the clone with the NEAT driver.
 
 Parameters:
+
 - `state` - Shared engine state.
 - `neat` - NEAT driver instance.
 - `parent` - Parent genome object.
@@ -3287,6 +3454,7 @@ determineMutateCount(
 Determine how many mutation operations to attempt (1 or 2).
 
 Parameters:
+
 - `state` - Shared engine state for RNG.
 
 Returns: 1 or 2 based on random sample.
@@ -3302,11 +3470,13 @@ ensureOutputIdentity(
 Ensure all output nodes use identity activation.
 
 Behaviour:
+
 - Iterates population genomes.
 - Sets `node.squash = methods.Activation.identity` for output nodes.
 - Best-effort: swallows errors.
 
 Parameters:
+
 - `neat` - NEAT driver with `population` array.
 
 Example:
@@ -3333,12 +3503,14 @@ the current best-performing slice of the population instead of sampling from
 everyone equally.
 
 Steps:
+
 1. Prepare working sets (population reference, sorted parent indices, parent pool size).
 2. Sample parents uniformly from the top parent pool.
 3. Create children via `createChildFromParent` (per-child failures ignored).
 4. Update `neat.options.popsize` and emit status line.
 
 Parameters:
+
 - `state` - Shared engine state for RNG.
 - `neat` - NEAT driver with `population` and `options`.
 - `targetAdd` - Desired number of new genomes.
@@ -3361,12 +3533,14 @@ getSortedIndicesByScore(
 Sort population indices by descending score using iterative quicksort.
 
 Implementation details:
+
 1. Uses pooled scratch buffers (Int32Array or number[]) to avoid allocations.
 2. Initializes identity permutation [0,1,2,...].
 3. Sorts by descending `population[idx].score` with median-of-three pivot.
 4. Falls back to insertion sort for small partitions.
 
 Parameters:
+
 - `state` - Shared engine state for scratch buffers.
 - `population` - Population array with `.score` property.
 
@@ -3395,6 +3569,7 @@ handleSimplifyState(
 Handle simplify entry and per-generation advance.
 
 Behaviour:
+
 - Decides when to enter a simplification phase and runs one simplify cycle
   per generation.
 - Resets the plateau counter when simplify starts so the engine does not
@@ -3403,6 +3578,7 @@ Behaviour:
   actual pruning work to `runSimplifyCycle`.
 
 Parameters:
+
 - `state` - Shared engine state.
 - `neat` - NEAT driver instance.
 - `plateauCounter` - Current plateau counter.
@@ -3432,12 +3608,14 @@ handleSpeciesHistory(
 Update species history and detect species collapse.
 
 Behaviour:
+
 - Counts unique species IDs in population.
 - Pushes count into global history buffer.
 - Inspects recent window for collapse (consecutive single-species).
 - When collapsed, escalates mutation/novelty parameters.
 
 Parameters:
+
 - `state` - Shared engine state.
 - `neat` - NEAT driver with `population`.
 - `speciesHistory` - Global species history array (mutated).
@@ -3473,6 +3651,7 @@ operators for the duration of the pass, then restores the caller's original
 mutation configuration.
 
 Parameters:
+
 - `neat` - NEAT driver exposing the public `mutate()` hook.
 - `stagnantProgressGenerations` - Consecutive generations without progress improvement.
 - `safeWrite` - Best-effort logger used for concise telemetry.
@@ -3502,11 +3681,13 @@ maybeExpandPopulation(
 Attempt population expansion when conditions permit.
 
 Behaviour:
+
 - Checks if dynamic expansion is enabled and interval/plateau conditions met.
 - Computes target addition count based on current size and factor.
 - Delegates to `expandPopulation` when there is room to grow.
 
 Parameters:
+
 - `state` - Shared engine state.
 - `neat` - NEAT driver.
 - `dynamicPopEnabled` - Flag to enable dynamic expansion.
@@ -3536,10 +3717,12 @@ maybeStartSimplify(
 Decide whether to start a simplify phase based on plateau duration.
 
 Behaviour:
+
 - Returns requested simplify duration if plateau threshold is reached.
 - Skips simplify in browser environments (presence of `window` global).
 
 Parameters:
+
 - `plateauCounter` - Observed consecutive plateau generations.
 - `plateauGenerations` - Threshold to trigger simplify.
 - `simplifyDuration` - Requested simplify phase length.
@@ -3550,7 +3733,7 @@ Example:
 
 const duration = maybeStartSimplify(plateauCount, 10, 5);
 if (duration > 0) {
-  // Begin simplify for `duration` generations
+// Begin simplify for `duration` generations
 }
 
 ### PopulationDynamicsConnection
@@ -3611,6 +3794,7 @@ That gives expansion a clear bias toward current evidence without hard-coding
 elitist cloning only.
 
 Parameters:
+
 - `state` - Shared engine state.
 - `neat` - NEAT driver with `population`.
 
@@ -3634,11 +3818,13 @@ pruneSaturatedHiddenOutputs(
 Prune saturated hidden-to-output connections for a single genome.
 
 Behaviour:
+
 - Collects outgoing connections from hidden nodes to outputs.
 - Computes mean and variance of absolute weights.
 - If collapsed (low mean, near-zero variance), disables smallest half.
 
 Parameters:
+
 - `state` - Shared engine state for scratch buffers and profiling.
 - `genome` - Mutable genome with `nodes` array.
 - `getNodeIndicesByType` - Helper to collect node indices by type.
@@ -3661,6 +3847,7 @@ registerClone(
 Register a cloned genome with the NEAT driver's bookkeeping.
 
 Parameters:
+
 - `neat` - NEAT driver instance.
 - `clone` - Cloned genome object.
 - `parentId` - Optional parent ID for lineage tracking.
@@ -3681,11 +3868,13 @@ reinitializeGenomeOutputsAndWeights(
 Reinitialize output node biases and outgoing weights for a single genome.
 
 Behaviour:
+
 - Collects output nodes into pooled sample buffer.
 - Randomizes each output's `bias` within ±BIAS_RESET_HALF_RANGE.
 - Resets connection `weight` for connections targeting outputs.
 
 Parameters:
+
 - `state` - Shared engine state.
 - `genome` - Mutable genome with `nodes` and `connections`.
 
@@ -3715,6 +3904,7 @@ keeps." That is useful after a long plateau, but only in non-browser hosts
 where the extra pruning work is acceptable.
 
 Steps:
+
 1. Normalize inputs and perform fast exits for zero remaining or invalid population.
 2. Environment gate: skip pruning in browser-like hosts.
 3. Record profiling start time when enabled.
@@ -3722,6 +3912,7 @@ Steps:
 5. Record profiling delta and return remaining generations decremented.
 
 Parameters:
+
 - `state` - Shared engine state for RNG and profiling.
 - `neat` - NEAT instance with `population` array.
 - `simplifyRemaining` - Remaining simplify generations.
@@ -3752,11 +3943,13 @@ updatePlateauState(
 Update plateau state based on current fitness vs baseline.
 
 Behaviour:
+
 - Compares `fitness` against `lastBestFitnessForPlateau + threshold`.
 - If improved, resets plateau counter to 0 and updates baseline.
 - Otherwise, increments plateau counter (capped at a safe maximum).
 
 Parameters:
+
 - `fitness` - Current best fitness (must be finite).
 - `lastBestFitnessForPlateau` - Previous baseline fitness.
 - `plateauCounter` - Current consecutive plateau generations.
@@ -3921,6 +4114,7 @@ createAsciiMazeLocalGenomeEvaluator(
 Create the local ASCII Maze genome evaluator used by both fallback paths.
 
 Parameters:
+
 - `fitnessContext` - Read-only maze context shared by the active run.
 - `fitnessEvaluator` - Fitness delegate selected by the evolution engine.
 
@@ -3944,6 +4138,7 @@ controller can score one whole population through a worker batch while still
 preserving a local single-thread fallback for unsupported environments.
 
 Parameters:
+
 - `fitnessContext` - Read-only maze evaluation context shared by the run.
 - `workerEvaluation` - Browser worker controls for this run.
 - `fitnessEvaluator` - Active fitness delegate chosen by the caller.
@@ -3962,6 +4157,7 @@ evaluateAsciiMazePopulationLocally(
 Score an ASCII Maze population locally after worker evaluation becomes unusable.
 
 Parameters:
+
 - `population` - Ordered genome shelf to score in place.
 - `evaluateGenome` - Local scorer shared with the worker helper fallback.
 
@@ -3978,6 +4174,7 @@ reportAsciiMazeWorkerEvaluationFallback(
 Report worker evaluation fallback without making console availability fatal.
 
 Parameters:
+
 - `error` - Worker startup or evaluation error that triggered local scoring.
 
 Returns: Nothing.
@@ -3997,6 +4194,7 @@ buildTelemetryHandles(
 Build typed handles referencing the ensured telemetry scratch buffers.
 
 Parameters:
+
 - `scratch` - Scratch state containing the prepared buffers.
 
 Returns: Structured handles consumed by telemetry helpers.
@@ -4043,6 +4241,7 @@ ensureTelemetryFloatPools(
 Ensure all Float64 scratch pools required for telemetry are adequately sized.
 
 Parameters:
+
 - `scratch` - Shared scratch state mutated in place.
 - `hints` - Normalised capacity hints.
 
@@ -4060,6 +4259,7 @@ ensureTelemetryStringBuffer(
 Ensure the reusable string assembly buffer has sufficient capacity.
 
 Parameters:
+
 - `buffer` - Existing string buffer instance.
 - `required` - Minimum number of slots needed for upcoming telemetry joins.
 
@@ -4076,6 +4276,7 @@ nextPowerOfTwo(
 Compute the next power-of-two for geometric growth.
 
 Parameters:
+
 - `candidate` - Raw size candidate.
 
 Returns: Smallest power-of-two greater than or equal to the candidate.
@@ -4091,6 +4292,7 @@ normaliseRngBatchSize(
 Clamp the RNG cache batch size to a positive integer.
 
 Parameters:
+
 - `requestedBatchSize` - Raw batch size requested by callers.
 
 Returns: Valid batch size.
@@ -4106,6 +4308,7 @@ normaliseRngSeed(
 Normalise a raw numeric seed into an unsigned 32-bit value.
 
 Parameters:
+
 - `rawSeed` - Raw seed provided by the caller.
 
 Returns: Unsigned 32-bit seed suitable for the congruential generator.
@@ -4121,6 +4324,7 @@ normaliseTelemetryCapacityHints(
 Derive normalised capacity hints from the raw telemetry scratch request.
 
 Parameters:
+
 - `request` - Raw capacity request supplied by callers.
 
 Returns: Sanitised capacity values used during buffer initialisation.
@@ -4136,6 +4340,7 @@ normaliseVisitedHashEntries(
 Clamp the requested target entry count to a non-negative integer.
 
 Parameters:
+
 - `requestedEntries` - Raw target entry count supplied by callers.
 
 Returns: Sanitised entry count used for capacity planning.
@@ -4151,6 +4356,7 @@ normaliseVisitedHashLoad(
 Ensure the visited hash load factor falls within a sensible range.
 
 Parameters:
+
 - `requestedLoadFactor` - Proposed load factor from configuration or state.
 
 Returns: Clamped load factor with a fallback to the project default.
@@ -4184,6 +4390,7 @@ The evolution loop reuses this helper during network inspection to avoid
 allocating transient arrays while still keeping the public facade compact.
 
 Parameters:
+
 - `state` - Shared engine state that owns the reusable scratch arrays.
 - `hiddenNode` - Hidden node whose outgoing edges should be inspected.
 - `nodes` - Full node list aligned with the scratch index buffer.
@@ -4194,10 +4401,10 @@ Returns: Shared scratch array containing enabled hidden-to-output connections.
 Example:
 
 const connections = collectEvolutionEngineHiddenToOutputConnections(
-  state,
-  hiddenNode,
-  nodes,
-  outputCount,
+state,
+hiddenNode,
+nodes,
+outputCount,
 );
 
 ### collectEvolutionEngineNodeIndicesByType
@@ -4216,6 +4423,7 @@ This helper keeps the facade free of buffer-growth details while preserving
 the existing allocation-light behaviour used by the evolution loop.
 
 Parameters:
+
 - `state` - Shared engine state that owns the reusable node-index buffer.
 - `nodes` - Candidate nodes to scan.
 - `type` - Node type to collect, such as `input`, `hidden`, or `output`.

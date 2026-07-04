@@ -10,6 +10,7 @@ The design goal is stable browser-side state with minimal churn: allocate
 when the population grows, then mutate in place for the steady-state render loop.
 
 Snapshot flow:
+
 ```mermaid
 flowchart LR
     Worker["worker snapshot\npacked typed arrays"] --> Hydrate["applyPlaybackSnapshot"]
@@ -20,6 +21,7 @@ flowchart LR
 ```
 
 Minimal example:
+
 ```ts
 applyPlaybackSnapshot(renderState, payload.snapshot);
 ```
@@ -42,6 +44,7 @@ then synchronize packed pipe and bird arrays into reusable browser-side
 objects.
 
 Parameters:
+
 - `renderState` - Mutable render state mirror used by the browser.
 - `snapshot` - Worker playback snapshot for the current render tick.
 
@@ -62,6 +65,7 @@ This mirrors the pipe strategy: keep a stable array shape when possible and
 update fields in place from the packed worker buffers.
 
 Parameters:
+
 - `renderState` - Mutable render state mirror used by the browser.
 - `snapshot` - Packed worker playback snapshot for the current render tick.
 
@@ -82,6 +86,7 @@ Instead of recreating pipe objects every frame, the browser grows the array as
 needed and then mutates the existing records in place.
 
 Parameters:
+
 - `renderState` - Mutable render state mirror used by the browser.
 - `snapshot` - Packed worker playback snapshot for the current render tick.
 
@@ -109,6 +114,7 @@ This is the "leader frames survived" view of the current frame: the best raw
 frame count among all birds currently represented in the render state.
 
 Parameters:
+
 - `renderState` - Current render state.
 
 Returns: Maximum frames survived by any bird.

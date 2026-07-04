@@ -93,7 +93,11 @@ describe('assemble-context pipeline', () => {
       const chunks = [
         makeChunk({ chunk_id: 1, body_text: sharedText, sha256: sharedHash }),
         makeChunk({ chunk_id: 2, body_text: sharedText, sha256: sharedHash }),
-        makeChunk({ chunk_id: 3, body_text: 'unique body', sha256: sha256('unique body') }),
+        makeChunk({
+          chunk_id: 3,
+          body_text: 'unique body',
+          sha256: sha256('unique body'),
+        }),
       ];
       const result = deduplicateChunks(chunks, { cosineThreshold: 0.95 });
       expect(result.map((c) => c.chunk_id)).toEqual([1, 3]);

@@ -1,7 +1,7 @@
 # NEATchat Follow-up — Audit Log
 
-**Status:** [DONE]  
-**Closed:** 2026-05-22
+**Status:** [DONE]
+**Closed:**
 
 ## Pass history
 

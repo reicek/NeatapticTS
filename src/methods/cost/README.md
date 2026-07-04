@@ -8,7 +8,7 @@ A cost function measures how far the network's output is from the desired
 target. During gradient-based training, the network learns by computing the
 partial derivative of the cost with respect to every weight, then nudging
 each weight in the direction that reduces the cost. The cost function is
-therefore not just a score — it is the *shape of the learning signal*.
+therefore not just a score — it is the _shape of the learning signal_.
 
 Choosing the right cost function for a task is as important as choosing the
 right activation function. A regression network optimized with cross-entropy
@@ -258,6 +258,7 @@ clampProbability(
 Clamps a probability into the inclusive bounds defined by PROBABILITY_LOWER_BOUND and PROBABILITY_UPPER_BOUND.
 
 Parameters:
+
 - `probability` - Raw probability value to bound.
 
 Returns: Probability constrained to the numeric stability range.
@@ -273,6 +274,7 @@ classifyBinary(
 Converts a probability into a binary class label using the configured threshold.
 
 Parameters:
+
 - `probability` - Probability to classify.
 
 Returns: POSITIVE_CLASS_LABEL when above or equal to threshold; otherwise NEGATIVE_CLASS_LABEL.
@@ -289,6 +291,7 @@ computeBinaryError(
 Compute binary classification error rate so evaluation can report misclassification frequency after thresholding probabilistic predictions into hard labels with a consistent decision boundary.
 
 Parameters:
+
 - `targets` - Target labels (0 or 1).
 - `outputs` - Predicted probabilities.
 
@@ -306,6 +309,7 @@ computeCrossEntropy(
 Compute cross-entropy error over provided targets and outputs so probabilistic classification penalties remain numerically stable and interpretable across binary-style supervision.
 
 Parameters:
+
 - `targets` - Desired target probabilities (may be soft labels between 0 and 1).
 - `outputs` - Model output probabilities.
 
@@ -325,6 +329,7 @@ computeFocalLoss(
 Compute focal loss for imbalanced classification tasks so easy examples are down-weighted and rare hard cases dominate learning updates through tunable focusing and class-balance factors.
 
 Parameters:
+
 - `targets` - Target labels (0 or 1) or soft labels.
 - `outputs` - Predicted probabilities.
 - `gamma` - Focusing parameter controlling hard example emphasis.
@@ -344,6 +349,7 @@ computeHingeLoss(
 Compute hinge loss for margin-based classification so predictions inside the safety margin continue receiving corrective pressure and separating hyperplanes stay robust.
 
 Parameters:
+
 - `targets` - Target labels encoded as -1 or 1.
 - `outputs` - Model outputs (raw scores).
 
@@ -362,6 +368,7 @@ computeLabelSmoothingLoss(
 Compute cross-entropy with label smoothing applied to targets so overconfident supervision is softened and generalization remains more robust under noisy or uncertain labels.
 
 Parameters:
+
 - `targets` - Target labels (0 or 1) or soft labels.
 - `outputs` - Predicted probabilities.
 - `smoothing` - Smoothing factor between 0 and 1.
@@ -380,6 +387,7 @@ computeMeanAbsoluteError(
 Compute mean absolute error between targets and outputs so regression quality reflects linear deviation magnitude without amplifying outliers through quadratic penalties.
 
 Parameters:
+
 - `targets` - Desired target values.
 - `outputs` - Model outputs.
 
@@ -397,6 +405,7 @@ computeMeanAbsolutePercentageError(
 Compute mean absolute percentage error between targets and outputs so relative miss size remains comparable across different target scales and unit ranges.
 
 Parameters:
+
 - `targets` - Desired target values.
 - `outputs` - Model outputs.
 
@@ -414,6 +423,7 @@ computeMeanSquaredError(
 Computes mean squared error between targets and outputs so regression penalties scale quadratically with prediction distance and highlight large misses.
 
 Parameters:
+
 - `targets` - Desired target values.
 - `outputs` - Model outputs.
 
@@ -431,6 +441,7 @@ computeMeanSquaredLogarithmicError(
 Compute mean squared logarithmic error between targets and outputs so multiplicative-growth deviations are penalized symmetrically in log space for scale-sensitive forecasting tasks.
 
 Parameters:
+
 - `targets` - Desired non-negative target values.
 - `outputs` - Model outputs (expected non-negative).
 
@@ -448,6 +459,7 @@ computeSoftmaxCrossEntropy(
 Computes softmax cross entropy from target probabilities and raw score outputs so multi-class training feedback remains numerically stable and informative.
 
 Parameters:
+
 - `targets` - Desired target probabilities that should sum to 1 (will be normalized if not).
 - `outputs` - Raw logits or scores for each class.
 
@@ -465,6 +477,7 @@ crossEntropyTerm(
 Computes the cross-entropy contribution for a single target/output pair.
 
 Parameters:
+
 - `targetProbability` - Target probability for the sample (may be soft).
 - `clampedProbability` - Output probability already clamped for stability.
 
@@ -509,6 +522,7 @@ normalizeTargets(
 Normalizes target probabilities so they sum to 1 when possible.
 
 Parameters:
+
 - `targets` - Raw target probabilities.
 
 Returns: Normalized target probabilities; returns a shallow copy when the sum is zero.
@@ -529,6 +543,7 @@ smoothTarget(
 Applies label smoothing to a target probability.
 
 Parameters:
+
 - `targetProbability` - Original target probability.
 - `smoothing` - Smoothing factor between 0 and 1.
 
@@ -549,6 +564,7 @@ stableSoftmax(
 Computes a numerically stable softmax from raw output scores.
 
 Parameters:
+
 - `outputs` - Raw logits or scores.
 
 Returns: Softmax probabilities corresponding to the inputs.

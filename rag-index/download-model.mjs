@@ -124,7 +124,6 @@ export async function downloadModelAssets(options = {}) {
 
   const modelMeta = {
     dimension: Number(options.dimension ?? DEFAULT_MODEL_DIMENSION),
-    downloaded_at: new Date().toISOString(),
     model_id: modelId,
     model_sha256: expectedModelSha256,
     repository_id: repositoryId,

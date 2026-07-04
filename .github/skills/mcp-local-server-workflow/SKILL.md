@@ -192,9 +192,9 @@ Use explicit transition language whenever a fact or tool is evolving:
    `node scripts/agent-customization/gates/record-gate-exception.mjs`. If the
    pattern is unclear or recurring, inspect
    `node scripts/agent-customization/workflow-gap-audit.mjs --json`.
-6. After three consecutive gate failures in the same session, escalate via
-   `00.cross-tier-helper` and `00-helping` rather than normalizing a broken
-   boundary.
+6. Continue retrying until the issue is fully resolved or a true technical
+   limit is reached. No concessions, no threshold. Record each failure for
+   audit purposes, but do not cap retries.
 
 ## Change Tracking and Versioning
 

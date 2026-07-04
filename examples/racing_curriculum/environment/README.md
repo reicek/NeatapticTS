@@ -74,6 +74,7 @@ are stopped in a pit box are intentionally skipped, because pit stalls live
 outside the drivable surface.
 
 Parameters:
+
 - `car` - Car whose position should be clamped.
 - `trackSpec` - Frozen track geometry used for the boundary lookup.
 
@@ -90,6 +91,7 @@ clampControlValue(
 Clamps control values to the accepted controller range.
 
 Parameters:
+
 - `value` - Incoming control signal.
 
 Returns: Value clamped to [-1, 1].
@@ -105,6 +107,7 @@ clampUnitInterval(
 Clamps a value to the closed `[0, 1]` interval.
 
 Parameters:
+
 - `value` - Incoming floating-point value.
 
 Returns: Value clamped to the unit interval.
@@ -120,6 +123,7 @@ clonePitOccupancy(
 Clones the fixed six-slot pit shelf into a mutable array.
 
 Parameters:
+
 - `pitOccupancy` - Source pit occupancy state.
 
 Returns: Mutable clone suitable for in-step updates.
@@ -199,6 +203,7 @@ so already-degraded tires lose grip faster than fresh tires under the same load.
 The final value is always clamped to the closed `[0.0, 1.0]` interval.
 
 Parameters:
+
 - `current` - Current tire-health tuple `[FL, FR, RL, RR]`.
 - `lateralForce` - Absolute lateral load for the current step.
 - `longitudinalForce` - Absolute longitudinal load for the current step.
@@ -232,6 +237,7 @@ with the forward tangent at its pre-step nearest sample. Stationary cars are
 never flagged, so a parked car cannot accumulate wrong-direction penalties.
 
 Parameters:
+
 - `beforeCars` - Car roster before the kinematic update.
 - `afterCars` - Car roster after the kinematic update.
 - `trackSpec` - Active track geometry.
@@ -254,6 +260,7 @@ isCarStoppedInPit(
 Returns whether the given car is currently waiting out an active pit stop.
 
 Parameters:
+
 - `pitOccupancy` - Current pit occupancy shelf.
 - `carIndex` - Car index being checked.
 
@@ -272,6 +279,7 @@ isPointInsideAabb(
 Returns whether the point lies inside the provided axis-aligned rectangle.
 
 Parameters:
+
 - `x` - Point X coordinate.
 - `y` - Point Y coordinate.
 - `axisAlignedBox` - Rectangle to test.
@@ -293,6 +301,7 @@ Legacy two-slot inputs are mapped from `[teamA, teamB]` to
 slot `3`.
 
 Parameters:
+
 - `pitOccupancy` - Incoming pit occupancy state.
 
 Returns: Six-slot normalized pit occupancy shelf.
@@ -308,6 +317,7 @@ resolveCars(
 Resolves the active car roster from legacy or Tier 4 state shapes.
 
 Parameters:
+
 - `state` - Current environment state.
 
 Returns: Ordered car list to step for the current tick.
@@ -324,6 +334,7 @@ resolveControls(
 Resolves the ordered control list for the active car roster.
 
 Parameters:
+
 - `control` - Single-car or per-car control input.
 - `carCount` - Number of cars that will be stepped this tick.
 
@@ -340,6 +351,7 @@ resolveMeanTireHealth(
 Computes the mean tire-health value used by the grip model.
 
 Parameters:
+
 - `tireState` - Ordered tire-health tuple.
 
 Returns: Mean health across all four corners.
@@ -360,6 +372,7 @@ Used by both boundary clamping and wrong-direction detection so both
 features agree on the local track frame.
 
 Parameters:
+
 - `x` - Point X coordinate.
 - `y` - Point Y coordinate.
 - `trackSpec` - Active track geometry.
@@ -384,6 +397,7 @@ inside the frozen `TrackSpec`. Cars may claim up to one own-team slot each,
 but cars released earlier in the same tick cannot re-enter immediately.
 
 Parameters:
+
 - `cars` - Updated car roster.
 - `pitOccupancy` - Pit occupancy shelf after ticking active stops.
 - `trackSpec` - Active track metadata.
@@ -402,6 +416,7 @@ resolvePitOccupancy(
 Resolves the current pit occupancy shelf from either Tier 4 field name.
 
 Parameters:
+
 - `state` - Current environment state.
 
 Returns: Six-slot pit occupancy shelf.
@@ -426,6 +441,7 @@ iterates up to {@link SEPARATION_MAX_ITERATIONS} times to resolve cascading
 overlaps in multi-car stacks.
 
 Parameters:
+
 - `cars` - Car roster after track-boundary clamping.
 
 Returns: New roster with overlapping cars separated in place.
@@ -442,6 +458,7 @@ stepCarKinematics(
 Steps one car forward using the pinned Tier 4 grip and decay rules.
 
 Parameters:
+
 - `car` - Current car state.
 - `control` - Controller output for the car.
 
@@ -472,6 +489,7 @@ when that stop expires. Entry stays deterministic: cars claim in roster order
 and each car can claim at most one slot per tick.
 
 Parameters:
+
 - `state` - Current environment state.
 - `control` - Single-car control or ordered per-car controls for this tick.
 
@@ -490,6 +508,7 @@ stepEnvironmentBatch(
 Advances the environment by a fixed number of deterministic timesteps.
 
 Parameters:
+
 - `state` - Current environment state.
 - `control` - Controller output applied for each batched step.
 - `stepCount` - Number of fixed timesteps to apply.
@@ -514,6 +533,7 @@ released car index is marked for same-tick re-entry blocking, and the record
 returns to the `255 = no car` sentinel state.
 
 Parameters:
+
 - `pitOccupancy` - Current pit occupancy shelf.
 - `cars` - Ordered car roster for the current tick.
 - `releasedCars` - Mutable set filled with car indices released this tick.

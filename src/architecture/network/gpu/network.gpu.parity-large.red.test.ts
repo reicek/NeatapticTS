@@ -57,7 +57,7 @@ describe('network.gpu.parity-large.red', () => {
       originalSquashes.length = 0;
     });
 
-    it('keeps per-element absolute difference below 1e-2', () => {
+    it('keeps per-element absolute difference below 1e-3', () => {
       const maxAbsoluteDifference = Math.max(
         ...cpuOutput.map((value, index) => Math.abs(value - gpuOutput[index])),
       );
@@ -65,7 +65,7 @@ describe('network.gpu.parity-large.red', () => {
       expect(maxAbsoluteDifference).toBeLessThan(MAX_ABS_TOLERANCE);
     });
 
-    it('keeps mean absolute difference below 5e-3', () => {
+    it('keeps mean absolute difference below 1e-4', () => {
       const meanAbsoluteDifference =
         cpuOutput.reduce(
           (sum, value, index) => sum + Math.abs(value - gpuOutput[index]),

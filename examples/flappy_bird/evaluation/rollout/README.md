@@ -16,6 +16,7 @@ It is the bridge between one seeded control problem and one scored episode
 that can be compared fairly with other genomes.
 
 Rollout pipeline:
+
 ```mermaid
 flowchart LR
     Options["network + rollout options"] --> Context["normalize context"]
@@ -41,6 +42,7 @@ rolloutEpisode(
 Roll out an episode and return details.
 
 Parameters:
+
 - `network` - Genome/network to evaluate.
 - `rolloutOptions` - Optional rollout controls.
 
@@ -73,6 +75,7 @@ shaping semantics as `rolloutEpisode(...)` while sourcing control decisions
 from an async inference boundary such as `InferenceChannel.predict(...)`.
 
 Parameters:
+
 - `options` - Predictor callback plus optional rollout controls.
 
 Returns: Episode result details.
@@ -89,6 +92,7 @@ The companion utils file owns reward shaping and result composition. This file
 owns the episode heartbeat itself.
 
 Minimal usage sketch:
+
 ```ts
 const rolloutEpisodeContext = resolveRolloutEpisodeContext(network, {
   seed: 123,
@@ -102,10 +106,7 @@ runRolloutEpisodeLoop(
   rolloutEpisodeContext,
   rolloutEpisodeRuntimeState,
 );
-finalizeRolloutEpisodeState(
-  rolloutEpisodeContext,
-  rolloutEpisodeRuntimeState,
-);
+finalizeRolloutEpisodeState(rolloutEpisodeContext, rolloutEpisodeRuntimeState);
 ```
 
 ### applyRolloutEarlyTerminationIfNeeded
@@ -126,6 +127,7 @@ exists to stop obviously doomed warmup trajectories from consuming excessive
 rollout budget.
 
 Parameters:
+
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
 - `currentObservationFeatures` - Post-step observation features.
@@ -147,6 +149,7 @@ shared observation-memory compatibility state, and the shaping counters
 accumulated during the episode.
 
 Parameters:
+
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 
 Returns: Mutable runtime state.
@@ -166,6 +169,7 @@ Timeouts are applied here instead of inside the loop body so natural episode
 endings stay distinct from budget exhaustion.
 
 Parameters:
+
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
 
@@ -186,6 +190,7 @@ This is the rollout safety boundary: caller-provided values are clamped into
 deterministic, execution-safe ranges before the main loop touches them.
 
 Parameters:
+
 - `network` - Genome/network to evaluate.
 - `rolloutOptions` - Optional rollout controls.
 
@@ -209,6 +214,7 @@ reads only the current normalized frame, but keeping the bookkeeping point
 stable avoids runtime drift if an opt-in external-history experiment returns.
 
 Parameters:
+
 - `network` - Genome/network to evaluate.
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
@@ -232,6 +238,7 @@ commit point as the direct network path, so recurrent evaluation stays stable
 across browser-worker and synchronous rollout surfaces.
 
 Parameters:
+
 - `predictOutputs` - Async predictor callback for one observation vector.
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
@@ -255,6 +262,7 @@ Each frame follows a compact pipeline: observe, act, step the environment,
 accumulate shaping reward, then optionally prune the trajectory.
 
 Parameters:
+
 - `network` - Genome/network to evaluate.
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
@@ -278,6 +286,7 @@ worker-hosted predictor before advancing the environment, which keeps channel
 and direct evaluation semantics aligned.
 
 Parameters:
+
 - `predictOutputs` - Async predictor callback for one observation vector.
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
@@ -300,6 +309,7 @@ This is the episode heartbeat: keep stepping while the bird is alive and the
 rollout still has budget left.
 
 Parameters:
+
 - `network` - Genome/network to evaluate.
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
@@ -323,6 +333,7 @@ surface while allowing the control decision itself to come from a persistent
 worker-hosted predictor.
 
 Parameters:
+
 - `predictOutputs` - Async predictor callback for one observation vector.
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
@@ -346,6 +357,7 @@ the hook fires, the rollout is marked as a timeout so callers can distinguish
 budget exhaustion from a gameplay collision.
 
 Parameters:
+
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
 
@@ -366,6 +378,7 @@ around optional warm-start work; a broken guard should yield back to normal
 NEAT evolution instead of trapping the worker in refinement.
 
 Parameters:
+
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 
 Returns: True when the caller asks the rollout to stop.
@@ -403,6 +416,7 @@ Channel normalization is a pragmatic way to keep the objective balanced across
 episodes of different lengths and levels of progress.
 
 Parameters:
+
 - `framesValue` - Frames survived for the episode.
 - `pipesPassedValue` - Pipes passed during the episode.
 - `denseShapingValue` - Accumulated dense shaping reward.
@@ -428,6 +442,7 @@ shaping channels become the public `FlappyEpisodeResult` consumed by training
 and reporting.
 
 Parameters:
+
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
 
@@ -448,6 +463,7 @@ Dense shaping rewards incremental improvement throughout an episode instead of
 paying out only at the end, which gives evolution a more informative signal.
 
 Parameters:
+
 - `previousFeatures` - Observation before stepping the environment.
 - `currentFeatures` - Observation after stepping the environment.
 
@@ -468,6 +484,7 @@ Terminal bonuses refine the final ranking, but they are intentionally smaller
 than the main survival and pipe-progress channels.
 
 Parameters:
+
 - `episodeState` - Final rollout state.
 - `difficultyScale` - Active rollout difficulty scale.
 
@@ -487,6 +504,7 @@ The heuristic focuses on obvious early failures, where spending more rollout
 budget is least informative.
 
 Parameters:
+
 - `observationFeatures` - Post-step observation features.
 
 Returns: Whether the current trajectory appears unrecoverable.
@@ -506,6 +524,7 @@ If you want background reading, the Wikipedia article on "reward shaping" is
 a good high-level companion concept for why these components exist.
 
 Parameters:
+
 - `previousFeatures` - Observation before stepping the environment.
 - `currentFeatures` - Observation after stepping the environment.
 
@@ -528,6 +547,7 @@ Separating raw channels from final composition makes reward rebalancing much
 easier to reason about.
 
 Parameters:
+
 - `rolloutEpisodeContext` - Normalized rollout configuration.
 - `rolloutEpisodeRuntimeState` - Mutable runtime state.
 - `framesSurvived` - Final frame count.
@@ -549,6 +569,7 @@ This is the legacy unnormalized objective. The normalized path below caps
 channels so no single term dominates the whole score.
 
 Parameters:
+
 - `rolloutFitnessBreakdown` - Fitness-channel breakdown.
 
 Returns: Raw unnormalized fitness.

@@ -22,16 +22,16 @@ resort rather than routine tools.
 
 ## Current state
 
-Claim: 01-planning @ 2026-06-21T00:30:00Z
-Claim: 04-implementing @ 2026-06-22T12:09:16Z
+Claim: 01-planning
+Claim: 04-implementing
 
 The Repo Cortex RAG system (Layers 1–7, all archived as `[DONE]`) currently runs on:
 
 - **Two SQLite database files:**
-  - `data/semantic-index.sqlite` (~112 MB) — corpus: documents, chunks, chunks_fts,
-    entities, edges, term_embeddings, feedback_events, feedback_scores
-  - `data/embeddings.sqlite` (~68 MB) — vectors: chunk_embeddings, ann_index_meta,
-    ann_index_chunk_map
+- `data/semantic-index.sqlite` (~112 MB) — corpus: documents, chunks, chunks_fts,
+  entities, edges, term_embeddings, feedback_events, feedback_scores
+- `data/embeddings.sqlite` (~68 MB) — vectors: chunk_embeddings, ann_index_meta,
+  ann_index_chunk_map
 - **`legacy sync SQLite driver` ^12.10.0** — synchronous C++ binding; every DB call blocks the
   event loop. 33+ source/test files import it directly.
 - **Brute-force cosine similarity** — loads ALL 18,727 embeddings into JS memory for
@@ -69,74 +69,74 @@ The Repo Cortex RAG system (Layers 1–7, all archived as `[DONE]`) currently ru
 
 ```mermaid
 graph TB
-    subgraph "Agent Layer"
-        AGENTS["65 agents + 58 skills<br/>Cortex-First Search Policy"]
-        MCP["neataptic-cortex-mcp<br/>14 MCP tools (async)"]
-    end
+ subgraph "Agent Layer"
+ AGENTS["65 agents + 58 skills<br/>Cortex-First Search Policy"]
+ MCP["neataptic-cortex-mcp<br/>14 MCP tools (async)"]
+ end
 
-    subgraph "Application Layer (Node.js)"
-        CLIENT["@libsql/client<br/>createClient()"]
-        EMBEDDER["ONNX Embedder<br/>all-MiniLM-L6-v2 (384-dim)"]
-        RERANKER["Cross-Encoder Reranker<br/>ms-marco-MiniLM-L-6-v2"]
-        SCRIPTS["26+ npm scripts<br/>(async DB access)"]
-    end
+ subgraph "Application Layer (Node.js)"
+ CLIENT["@libsql/client<br/>createClient()"]
+ EMBEDDER["ONNX Embedder<br/>all-MiniLM-L6-v2 (384-dim)"]
+ RERANKER["Cross-Encoder Reranker<br/>ms-marco-MiniLM-L-6-v2"]
+ SCRIPTS["26+ npm scripts<br/>(async DB access)"]
+ end
 
-    subgraph "Turso Cloud (libSQL)"
-        PRIMARY["Primary Instance<br/>(Writes: BEGIN IMMEDIATE)"]
-        FTS5["FTS5 Virtual Table<br/>chunks_fts (porter unicode61)<br/>Weighted BM25"]
-        DISKANN["DiskANN ANN Index<br/>libsql_vector_idx(embedding)<br/>F8_BLOB(384) quantized"]
-        VECTORS["Native Vector Columns<br/>embedding F8_BLOB(384)<br/>term_embedding F8_BLOB(384)"]
-        GRAPH["Entity/Relationship Graph<br/>entities + edges tables"]
-        FEEDBACK["Feedback System<br/>feedback_events + feedback_scores<br/>Batch transaction writes"]
-        SCHEMA["_schema_version table<br/>(replaces PRAGMA user_version)"]
-    end
+ subgraph "Turso Cloud (libSQL)"
+ PRIMARY["Primary Instance<br/>(Writes: BEGIN IMMEDIATE)"]
+ FTS5["FTS5 Virtual Table<br/>chunks_fts (porter unicode61)<br/>Weighted BM25"]
+ DISKANN["DiskANN ANN Index<br/>libsql_vector_idx(embedding)<br/>F8_BLOB(384) quantized"]
+ VECTORS["Native Vector Columns<br/>embedding F8_BLOB(384)<br/>term_embedding F8_BLOB(384)"]
+ GRAPH["Entity/Relationship Graph<br/>entities + edges tables"]
+ FEEDBACK["Feedback System<br/>feedback_events + feedback_scores<br/>Batch transaction writes"]
+ SCHEMA["_schema_version table<br/>(replaces PRAGMA user_version)"]
+ end
 
-    subgraph "Embedded Replica (Local)"
-        LOCAL["Local File Replica<br/>data/turso-replica.sqlite<br/>Microsecond reads"]
-        SYNC["sync() — pull from primary<br/>syncInterval configurable"]
-    end
+ subgraph "Embedded Replica (Local)"
+ LOCAL["Local File Replica<br/>data/turso-replica.sqlite<br/>Microsecond reads"]
+ SYNC["sync() — pull from primary<br/>syncInterval configurable"]
+ end
 
-    subgraph "Platform API"
-        API["api.turso.tech<br/>DB management, groups,<br/>scoped JWT tokens"]
-    end
+ subgraph "Platform API"
+ API["api.turso.tech<br/>DB management, groups,<br/>scoped JWT tokens"]
+ end
 
-    AGENTS --> MCP
-    MCP --> CLIENT
-    SCRIPTS --> CLIENT
-    CLIENT -->|reads| LOCAL
-    CLIENT -->|writes + sync| PRIMARY
-    LOCAL -->|sync| PRIMARY
-    PRIMARY --> FTS5
-    PRIMARY --> DISKANN
-    PRIMARY --> VECTORS
-    PRIMARY --> GRAPH
-    PRIMARY --> FEEDBACK
-    PRIMARY --> SCHEMA
-    CLIENT -->|management| API
-    EMBEDDER -->|vector8()| VECTORS
-    RERANKER -->|optional rerank| MCP
+ AGENTS --> MCP
+ MCP --> CLIENT
+ SCRIPTS --> CLIENT
+ CLIENT -->|reads| LOCAL
+ CLIENT -->|writes + sync| PRIMARY
+ LOCAL -->|sync| PRIMARY
+ PRIMARY --> FTS5
+ PRIMARY --> DISKANN
+ PRIMARY --> VECTORS
+ PRIMARY --> GRAPH
+ PRIMARY --> FEEDBACK
+ PRIMARY --> SCHEMA
+ CLIENT -->|management| API
+ EMBEDDER -->|vector8()| VECTORS
+ RERANKER -->|optional rerank| MCP
 
-    style DISKANN fill:#4fc3f7
-    style VECTORS fill:#81c784
-    style FTS5 fill:#ffb74d
-    style LOCAL fill:#ce93d8
+ style DISKANN fill:#4fc3f7
+ style VECTORS fill:#81c784
+ style FTS5 fill:#ffb74d
+ style LOCAL fill:#ce93d8
 ```
 
 ### Hybrid search pipeline (target)
 
 ```mermaid
 flowchart LR
-    Q[Query] --> CL[Classify<br/>6 classes]
-    CL --> EX[Expand Query<br/>server-side term similarity]
-    EX --> FTS[FTS5 BM25 Search<br/>server-side]
-    EX --> VEC[Vector Search<br/>vector_top_k / vector_distance_cos]
-    FTS --> RRF[Reciprocal Rank Fusion<br/>1/(k+rank), k=60<br/>SQL-side]
-    VEC --> RRF
-    RRF --> META[Metadata Filter<br/>WHERE / partial index / post-filter JOIN]
-    META --> RR[Cross-Encoder Rerank<br/>optional]
-    RR --> FB[Feedback Boost<br/>SQL time-decay]
-    FB --> CTX[Context Assembly<br/>server-side joins]
-    CTX --> R[Results]
+ Q[Query] --> CL[Classify<br/>6 classes]
+ CL --> EX[Expand Query<br/>server-side term similarity]
+ EX --> FTS[FTS5 BM25 Search<br/>server-side]
+ EX --> VEC[Vector Search<br/>vector_top_k / vector_distance_cos]
+ FTS --> RRF[Reciprocal Rank Fusion<br/>1/(k+rank), k=60<br/>SQL-side]
+ VEC --> RRF
+ RRF --> META[Metadata Filter<br/>WHERE / partial index / post-filter JOIN]
+ META --> RR[Cross-Encoder Rerank<br/>optional]
+ RR --> FB[Feedback Boost<br/>SQL time-decay]
+ FB --> CTX[Context Assembly<br/>server-side joins]
+ CTX --> R[Results]
 ```
 
 ## Schema migration mappings
@@ -155,7 +155,7 @@ into the `chunks` table as an `embedding F8_BLOB(384)` column.
 | `entities`            | semantic-index | ?   | `entities`               | unchanged                                                                                                                                               |
 | `edges`               | semantic-index | ?   | `edges`                  | unchanged                                                                                                                                               |
 | `term_embeddings`     | semantic-index | ?   | `term_embeddings`        | `embedding BLOB` ? `embedding F8_BLOB(384)`; add DiskANN index                                                                                          |
-| `feedback_events`     | semantic-index | ?   | `feedback_events`        | `created_at DATETIME DEFAULT CURRENT_TIMESTAMP` ? verify libSQL compatibility                                                                           |
+| `feedback_events`     | semantic-index | ?   | `feedback_events`        | no wall-clock timestamp column; verify libSQL compatibility                                                                                             |
 | `feedback_scores`     | semantic-index | ?   | `feedback_scores`        | add `last_feedback_at INTEGER` (Unix epoch) for SQL time-decay `POWER()`                                                                                |
 | `chunk_embeddings`    | embeddings     | ?   | **merged into `chunks`** | eliminated as separate table                                                                                                                            |
 | `ann_index_meta`      | embeddings     | ?   | **eliminated**           | replaced by DiskANN (`libsql_vector_idx`) — index metadata managed by Turso                                                                             |
@@ -413,7 +413,7 @@ Turso-native features.
 - Step 02: parallel_search enhancements — fusion (rrf|alpha), limit, use_dense params added; sort-then-cap for deterministic limit
 - Step 03: multi_hop_search tool — vector?graph?vector composition (hop 1 vector_top_k, hop 2 entities?edges, hop 3 neighbor vector search); configurable max_hops 1-3
 - Step 04: turso_branch tool — Turso Platform API branching (POST/seed create, DELETE cleanup); 23 tests pass, 100% coverage
-- Step 05: turso_pitr tool — Platform API point-in-time recovery (timestamp seed); 21 tests pass, 100% coverage
+- Step 05: turso_pitr tool — Platform API point-in-time recovery (recovery seed); 21 tests pass, 100% coverage
 - Step 06: Turso-native feature reporting — diskann_used/rrf_used in search-corpus, turso_native_features in search-advanced, last_sync/sync_lag_ms in freshness-check, vector_type/quantization in index-stats
 - Step 07: MCP self-check all 18 tools — runSelfCheck rewritten to iterate all 18 tools; old index_stats-only check removed; unused invokeServerRequest import removed
 
@@ -602,9 +602,9 @@ the plan's `VALIDATION_EVIDENCE` section before signoff:
 
 ```bash
 # Phase 1 — Research
-node tmp/turso-fts5-test.mjs --json              # FTS5 parity
-node tmp/turso-diskann-test.mjs --json           # DiskANN recall
-node tmp/turso-replica-test.mjs --json           # Embedded replica latency
+node tmp/turso-fts5-test.mjs --json # FTS5 parity
+node tmp/turso-diskann-test.mjs --json # DiskANN recall
+node tmp/turso-replica-test.mjs --json # Embedded replica latency
 
 # Phase 2 — Schema
 node scripts/semantic-index/init-turso.mjs --json
@@ -676,44 +676,44 @@ git push origin turso-rag-migration
 
 ### Latest validation evidence
 
-- 2026-06-22: Phase 8 Step 05 slice-fix (05-green loop-back) — `scripts/mcp-semantic/__tests__/turso-test-helpers.mjs` updated to load the production Turso schema (`schema-turso.sql`) instead of the stale v2 schema. Focused Jest `search-tools.turso` (3/3 tests) PASS. `npm run lint` PASS. `npx tsc --noEmit -p tsconfig.json` PASS. `validate-turso-index.mjs --validate-search` search validation PASS; overall success:false because the local `data/turso-replica.sqlite` is stale vs. source counts (environment/sync issue, not a code regression).
+- Phase 8 Step 05 slice-fix (05-green loop-back) — `scripts/mcp-semantic/__tests__/turso-test-helpers.mjs` updated to load the production Turso schema (`schema-turso.sql`) instead of the stale v2 schema. Focused Jest `search-tools.turso` (3/3 tests) PASS. `npm run lint` PASS. `npx tsc --noEmit -p tsconfig.json` PASS. `validate-turso-index.mjs --validate-search` search validation PASS; overall success:false because the local `data/turso-replica.sqlite` is stale vs. source counts (environment/sync issue, not a code regression).
 
-- 2026-06-21: Workflow sync: Advanced Phase 5 Step 5 ? [DONE]; Phase 5 Step 6 ? [WIP]
-- 2026-06-21: Workflow sync: Advanced Phase 5 Step 4 ? [DONE]; Phase 5 Step 5 ? [WIP]
-- 2026-06-21: Workflow sync: Advanced Phase 5 Step 2 ? [DONE]; Phase 5 Step 3 ? [WIP]
-- 2026-06-21: Phase 7 Step 03 [DONE] — research-methodology SKILL.md updated with Turso-native search architecture (F8_BLOB, DiskANN, RRF k=60, parallel_search, multi_hop_search); repo-cortex-embeddings and repo-cortex-workflow skills cleaned of pre-Turso language (alpha-blend, sqlite-vec, SQLite corpus). npm run lint PASS, tsc --noEmit PASS, prettier PASS, grep for native-tools-first returns zero results.
+- Workflow sync: Advanced Phase 5 Step 5 ? [DONE]; Phase 5 Step 6 ? [WIP]
+- Workflow sync: Advanced Phase 5 Step 4 ? [DONE]; Phase 5 Step 5 ? [WIP]
+- Workflow sync: Advanced Phase 5 Step 2 ? [DONE]; Phase 5 Step 3 ? [WIP]
+- Phase 7 Step 03 [DONE] — research-methodology SKILL.md updated with Turso-native search architecture (F8_BLOB, DiskANN, RRF k=60, parallel_search, multi_hop_search); repo-cortex-embeddings and repo-cortex-workflow skills cleaned of pre-Turso language (alpha-blend, sqlite-vec, SQLite corpus). npm run lint PASS, tsc --noEmit PASS, prettier PASS, grep for native-tools-first returns zero results.
 
 ## Step 04 cleanup — validation evidence
 
 ```yaml
 PlanUpdate:
-  slice_id: 04-cleanup
-  changed_files: []
-  preflight:
-    - "node -e 'const fs=require(\"fs\"),p=JSON.parse(fs.readFileSync(\"package.json\",\"utf8\")); if(p.dependencies?.[\"better-sqlite3\"]||p.devDependencies?.[\"better-sqlite3\"]){process.exit(1)} console.log(\"PASS: no better-sqlite3 in package.json\")'"
-    - "node -e 'const fs=require(\"fs\"); const lock=JSON.parse(fs.readFileSync(\"package-lock.json\",\"utf8\")); const pkgs=Object.keys(lock.packages||{}); const deps=Object.keys(lock.dependencies||{}); let found=false; for(const k of pkgs){if(k.toLowerCase().includes(\"better-sqlite3\")||String((lock.packages[k]||{}).name||\"\").toLowerCase().includes(\"better-sqlite3\")){found=true;break}} for(const k of deps){if(k.toLowerCase().includes(\"better-sqlite3\")){found=true;break}} if(found){process.exit(1)} console.log(\"PASS: no better-sqlite3 in package-lock.json\")'"
-    - "node -e 'const fs=require(\"fs\"); if(fs.existsSync(\"node_modules/better-sqlite3\")){process.exit(1)} console.log(\"PASS: node_modules/better-sqlite3 removed\")'"
-    - "Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notlike '*node_modules*' -and $_.FullName -notlike '*\.git*' -and $_.FullName -notlike '*plans\\completed*' -and $_.FullName -notlike '*plans/completed*' } | Select-String -Pattern 'better-sqlite3' -CaseSensitive:$false -ErrorAction SilentlyContinue; if ($matches) { exit 1 } else { Write-Output 'SEARCH PASS: 0 better-sqlite3 matches outside .git, node_modules, and plans/completed' }"
-  validation:
-    - command: "npx jest --config=jest.config.mjs --no-cache --runInBand --forceExit --selectProjects mcp-semantic-scripts"
-      expected_exit: 0
-    - command: "npx jest --config=jest.config.mjs --no-cache --runInBand --forceExit --selectProjects semantic-index-scripts --testPathPatterns=dense-readiness"
-      expected_exit: 0
-    - command: "npm run lint"
-      expected_exit: 0
-  coverage_summary:
-    files_touched: []
-    summary: N/A — no src/ files changed by cleanup
-  rollback: []
-  next: "Hand off to Step 05 — Rollout and signoff. Full npm run test:silent skipped per user instruction to avoid the hanging full-suite run."
+ slice_id: 04-cleanup
+ changed_files: []
+ preflight:
+ - "node -e 'const fs=require(\"fs\"),p=JSON.parse(fs.readFileSync(\"package.json\",\"utf8\")); if(p.dependencies?.[\"better-sqlite3\"]||p.devDependencies?.[\"better-sqlite3\"]){process.exit(1)} console.log(\"PASS: no better-sqlite3 in package.json\")'"
+ - "node -e 'const fs=require(\"fs\"); const lock=JSON.parse(fs.readFileSync(\"package-lock.json\",\"utf8\")); const pkgs=Object.keys(lock.packages||{}); const deps=Object.keys(lock.dependencies||{}); let found=false; for(const k of pkgs){if(k.toLowerCase().includes(\"better-sqlite3\")||String((lock.packages[k]||{}).name||\"\").toLowerCase().includes(\"better-sqlite3\")){found=true;break}} for(const k of deps){if(k.toLowerCase().includes(\"better-sqlite3\")){found=true;break}} if(found){process.exit(1)} console.log(\"PASS: no better-sqlite3 in package-lock.json\")'"
+ - "node -e 'const fs=require(\"fs\"); if(fs.existsSync(\"node_modules/better-sqlite3\")){process.exit(1)} console.log(\"PASS: node_modules/better-sqlite3 removed\")'"
+ - "Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notlike '*node_modules*' -and $_.FullName -notlike '*\.git*' -and $_.FullName -notlike '*plans\\completed*' -and $_.FullName -notlike '*plans/completed*' } | Select-String -Pattern 'better-sqlite3' -CaseSensitive:$false -ErrorAction SilentlyContinue; if ($matches) { exit 1 } else { Write-Output 'SEARCH PASS: 0 better-sqlite3 matches outside .git, node_modules, and plans/completed' }"
+ validation:
+ - command: "npx jest --config=jest.config.mjs --no-cache --runInBand --forceExit --selectProjects mcp-semantic-scripts"
+ expected_exit: 0
+ - command: "npx jest --config=jest.config.mjs --no-cache --runInBand --forceExit --selectProjects semantic-index-scripts --testPathPatterns=dense-readiness"
+ expected_exit: 0
+ - command: "npm run lint"
+ expected_exit: 0
+ coverage_summary:
+ files_touched: []
+ summary: N/A — no src/ files changed by cleanup
+ rollback: []
+ next: "Hand off to Step 05 — Rollout and signoff. Full npm run test:silent skipped per user instruction to avoid the hanging full-suite run."
 ```
 
 Observations from broader focused test probes (not blockers for this cleanup):
 
 - `npx jest --selectProjects semantic-index-scripts --testPathIgnorePatterns=red.test`:
   6/10 suites pass, 4 fail with pre-existing issues unrelated to `better-sqlite3` removal:
-  - `ann.test.ts` fails because `__hnswTestSeam` is not exported from `ann-strategy.mjs`.
-  - `rag-eval/eval-runner.test.ts`, `build-index.health.test.ts`, and `validate-index.fixhint.test.ts` fail at compile time with TS1343 on `import.meta.url` under the current ts-jest configuration.
+- `ann.test.ts` fails because `__hnswTestSeam` is not exported from `ann-strategy.mjs`.
+- `rag-eval/eval-runner.test.ts`, `build-index.health.test.ts`, and `validate-index.fixhint.test.ts` fail at compile time with TS1343 on `import.meta.url` under the current ts-jest configuration.
 - These failures existed before the cleanup pass and do not involve the legacy sync SQLite driver.
 
 After Phase 8 completes: build the Turso index (npm run index:build), prewarm
@@ -753,7 +753,7 @@ Required validation:
 
 ````
 
-## Post-closure legacy artifact cleanup — 2026-06-22
+## Post-closure legacy artifact cleanup
 
 After green-testing confirmed the Turso index is warm and searchable, the final legacy SQLite artifacts and stale references were removed:
 
@@ -769,7 +769,7 @@ Details and full validation evidence are recorded in `plans/completed/turso-rag-
 
 ## PlanUpdate — 05-impl-scripts
 
-Claim: implementation-executor @ 2026-06-14T12:00:00Z
+Claim: implementation-executor
 
 ```yaml
 phase: 8
@@ -785,56 +785,56 @@ source_of_truth: plans/turso-rag-migration.plans.md
 copy_paste: true
 next_step: null
 skills:
-  - implementation-standards
+ - implementation-standards
 validation:
-  - '[object Object]'
-  - '[object Object]'
-  - '[object Object]'
+ - '[object Object]'
+ - '[object Object]'
+ - '[object Object]'
 acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
+ - 'Phase/step metadata validates with the new plan-phase-step schema.'
 slices:
-  - slice_id: step-5-red-tests
-    title: 'Write red tests'
-    status: '[PLANNED]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-5-core
-  - slice_id: step-5-core
-    title: 'Implement the core behavior'
-    status: '[PLANNED]'
-    goal: implementing
-    estimate_hours: 8
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
-    parallelizable: false
-    dependencies:
-      - step-5-red-tests
-    next_slice: step-5-green
-  - slice_id: step-5-green
-    title: 'Green validation and coverage guard'
-    status: '[PLANNED]'
-    goal: green-testing
-    estimate_hours: 4
-    files_to_change:
-      - coverage/lcov.info
-    acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
-    parallelizable: false
-    dependencies:
-      - step-5-core
+ - slice_id: step-5-red-tests
+ title: 'Write red tests'
+ status: '[PLANNED]'
+ goal: red-testing
+ estimate_hours: 4
+ files_to_change:
+ - TBD
+ acceptance_criteria:
+ - 'Red tests exist and fail for the expected behavior.'
+ parallelizable: false
+ dependencies:
+ next_slice: step-5-core
+ - slice_id: step-5-core
+ title: 'Implement the core behavior'
+ status: '[PLANNED]'
+ goal: implementing
+ estimate_hours: 8
+ files_to_change:
+ - TBD
+ acceptance_criteria:
+ - 'Implementation satisfies the red tests and design.'
+ parallelizable: false
+ dependencies:
+ - step-5-red-tests
+ next_slice: step-5-green
+ - slice_id: step-5-green
+ title: 'Green validation and coverage guard'
+ status: '[PLANNED]'
+ goal: green-testing
+ estimate_hours: 4
+ files_to_change:
+ - coverage/lcov.info
+ acceptance_criteria:
+ - 'All tests pass and coverage guard is satisfied.'
+ parallelizable: false
+ dependencies:
+ - step-5-core
 ````
 
 ## PlanUpdate — 05-impl-scripts (historical record)
 
-Claim: implementation-executor @ 2026-06-14T12:00:00Z
+Claim: implementation-executor
 
 ```yaml
 phase: 8
@@ -850,51 +850,51 @@ source_of_truth: plans/turso-rag-migration.plans.md
 copy_paste: true
 next_step: null
 skills:
-  - implementation-standards
+ - implementation-standards
 validation:
-  - '[object Object]'
-  - '[object Object]'
-  - '[object Object]'
+ - '[object Object]'
+ - '[object Object]'
+ - '[object Object]'
 acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
+ - 'Phase/step metadata validates with the new plan-phase-step schema.'
 slices:
-  - slice_id: step-5-red-tests
-    title: 'Write red tests'
-    status: '[PLANNED]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-5-core
-  - slice_id: step-5-core
-    title: 'Implement the core behavior'
-    status: '[PLANNED]'
-    goal: implementing
-    estimate_hours: 8
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
-    parallelizable: false
-    dependencies:
-      - step-5-red-tests
-    next_slice: step-5-green
-  - slice_id: step-5-green
-    title: 'Green validation and coverage guard'
-    status: '[PLANNED]'
-    goal: green-testing
-    estimate_hours: 4
-    files_to_change:
-      - coverage/lcov.info
-    acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
-    parallelizable: false
-    dependencies:
-      - step-5-core
+ - slice_id: step-5-red-tests
+ title: 'Write red tests'
+ status: '[PLANNED]'
+ goal: red-testing
+ estimate_hours: 4
+ files_to_change:
+ - TBD
+ acceptance_criteria:
+ - 'Red tests exist and fail for the expected behavior.'
+ parallelizable: false
+ dependencies:
+ next_slice: step-5-core
+ - slice_id: step-5-core
+ title: 'Implement the core behavior'
+ status: '[PLANNED]'
+ goal: implementing
+ estimate_hours: 8
+ files_to_change:
+ - TBD
+ acceptance_criteria:
+ - 'Implementation satisfies the red tests and design.'
+ parallelizable: false
+ dependencies:
+ - step-5-red-tests
+ next_slice: step-5-green
+ - slice_id: step-5-green
+ title: 'Green validation and coverage guard'
+ status: '[PLANNED]'
+ goal: green-testing
+ estimate_hours: 4
+ files_to_change:
+ - coverage/lcov.info
+ acceptance_criteria:
+ - 'All tests pass and coverage guard is satisfied.'
+ parallelizable: false
+ dependencies:
+ - step-5-core
 ```
 
 ## PlanUpdate — step-5-green-fix
@@ -903,26 +903,26 @@ Loop-back fix from 05-green-testing for Phase 8 Step 05 slice `05-green`.
 
 ```yaml
 PlanUpdate:
-  slice_id: step-5-green-fix
-  changed_files:
-    - scripts/mcp-semantic/__tests__/turso-test-helpers.mjs
-  preflight:
-    - 'npx tsc --noEmit -p tsconfig.json'
-    - 'npm run lint'
-  validation:
-    - command: 'node --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.mjs --no-cache --runInBand --forceExit --selectProjects mcp-semantic-mjs --testPathPatterns=search-tools.turso'
-      expected_exit: 0
-      result: 'PASS — 3/3 tests (search-corpus, search-advanced, search-context)'
-    - command: 'node scripts/semantic-index/validate-turso-index.mjs --json --validate-search'
-      expected_exit: 1
-      result: 'Environment-limited: searchValidation succeeds, but overall success:false because the local data/turso-replica.sqlite replica is stale vs. source counts. No TURSO_DATABASE_URL/TURSO_AUTH_TOKEN is configured.'
-  coverage_summary:
-    files_touched:
-      - scripts/mcp-semantic/__tests__/turso-test-helpers.mjs
-    summary: 'N/A — helper is a scripts/ .mjs test fixture, not a src/ file; coverage-guard does not apply. No src/ files were changed.'
-  rollback:
-    - 'git checkout -- scripts/mcp-semantic/__tests__/turso-test-helpers.mjs'
-  next: 'Hand off to 05-green-testing for re-validation of Phase 8 Step 05 slice 05-green.'
+ slice_id: step-5-green-fix
+ changed_files:
+ - scripts/mcp-semantic/__tests__/turso-test-helpers.mjs
+ preflight:
+ - 'npx tsc --noEmit -p tsconfig.json'
+ - 'npm run lint'
+ validation:
+ - command: 'node --experimental-vm-modules node_modules/jest/bin/jest.js --config=jest.config.mjs --no-cache --runInBand --forceExit --selectProjects mcp-semantic-mjs --testPathPatterns=search-tools.turso'
+ expected_exit: 0
+ result: 'PASS — 3/3 tests (search-corpus, search-advanced, search-context)'
+ - command: 'node scripts/semantic-index/validate-turso-index.mjs --json --validate-search'
+ expected_exit: 1
+ result: 'Environment-limited: searchValidation succeeds, but overall success:false because the local data/turso-replica.sqlite replica is stale vs. source counts. No TURSO_DATABASE_URL/TURSO_AUTH_TOKEN is configured.'
+ coverage_summary:
+ files_touched:
+ - scripts/mcp-semantic/__tests__/turso-test-helpers.mjs
+ summary: 'N/A — helper is a scripts/ .mjs test fixture, not a src/ file; coverage-guard does not apply. No src/ files were changed.'
+ rollback:
+ - 'git checkout -- scripts/mcp-semantic/__tests__/turso-test-helpers.mjs'
+ next: 'Hand off to 05-green-testing for re-validation of Phase 8 Step 05 slice 05-green.'
 ```
 
 ## PlanUpdate — 05-impl rollout and signoff
@@ -931,25 +931,25 @@ Phase 8 migration complete. No `src/` files were changed in this slice.
 
 ```yaml
 PlanUpdate:
-  slice_id: 05-impl
-  changed_files:
-    - plans/turso-rag-migration.plans.md
-    - plans/turso-rag-migration.logs.md
-  preflight:
-    - 'node scripts/agent-customization/gates/phase-compression.gate.mjs --json'
-    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/turso-rag-migration.plans.md'
-    - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-  validation:
-    - command: 'npm run index:build -- --json'
-      expected_exit: 0
-      result: 'scanned 1431, indexed 2, skipped 1429, chunks 128'
-    - command: 'npm run index:prewarm -- --json'
-      expected_exit: 0
-      result: 'model present; embed-index, validate-embeddings, reranker, validate-reranker all ok'
-  coverage_summary:
-    files_touched: []
-    summary: 'N/A — no src/ files changed in this slice'
-  rollback:
-    - 'git checkout -- plans/turso-rag-migration.plans.md plans/turso-rag-migration.logs.md'
-  next: 'Migration complete. No further work from this plan.'
+ slice_id: 05-impl
+ changed_files:
+ - plans/turso-rag-migration.plans.md
+ - plans/turso-rag-migration.logs.md
+ preflight:
+ - 'node scripts/agent-customization/gates/phase-compression.gate.mjs --json'
+ - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/turso-rag-migration.plans.md'
+ - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
+ validation:
+ - command: 'npm run index:build -- --json'
+ expected_exit: 0
+ result: 'scanned 1431, indexed 2, skipped 1429, chunks 128'
+ - command: 'npm run index:prewarm -- --json'
+ expected_exit: 0
+ result: 'model present; embed-index, validate-embeddings, reranker, validate-reranker all ok'
+ coverage_summary:
+ files_touched: []
+ summary: 'N/A — no src/ files changed in this slice'
+ rollback:
+ - 'git checkout -- plans/turso-rag-migration.plans.md plans/turso-rag-migration.logs.md'
+ next: 'Migration complete. No further work from this plan.'
 ```

@@ -159,9 +159,12 @@ When green validation is part of a sliced implementation step (RED → IMPLEMENT
 3. **A NEW `05-green-testing` instance verifies the fix.** Each loop iteration uses a fresh agent
    instance to avoid context contamination.
 4. **Loop until green.** The loop repeats until all observations are resolved and green validation
-   returns OK.
-5. **Escalation.** If 3 consecutive loop-backs fail to resolve the same issue, escalate to
-   `00-helping` via `00.cross-tier-helper`.
+   returns OK. There is no loop-back threshold — continue as many rounds as needed, even when each
+   round makes only incremental progress, until the issue is fully resolved or a true technical
+   limit is reached.
+5. **No escalation threshold.** No artificial cap on loop-backs. Slow progress is still progress —
+   keep dispatching fresh `04-implementing` / `05-green-testing` iterations until the slice passes
+   or a genuine, documented technical limit blocks further work.
 
 **Hard stop for green agents:** If any gate fails, stop execution immediately after recording
 observations. Do not attempt to fix the failure, do not spawn an implementer, and do not edit the
@@ -276,7 +279,7 @@ until all slices have passing gate evidence.
 
 ## Escalation Protocol
 
-If 3 consecutive delegation attempts to the same specialist fail to resolve the issue, escalate to `00-helping` via `00.cross-tier-helper` with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
+Continue dispatching fresh specialist instances until the issue is resolved or a true technical limit is reached. Only escalate to `00-helping` via `00.cross-tier-helper` when a genuine, documented technical limit blocks further progress. Slow progress is still progress — no concessions.
 
 ## If Blocked
 

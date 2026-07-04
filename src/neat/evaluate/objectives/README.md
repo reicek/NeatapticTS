@@ -13,6 +13,7 @@ multi-objective mode, should this pass ensure that structural entropy is one
 of the active objectives?
 
 Read this chapter when you want to answer questions such as:
+
 - Why does auto-entropy registration happen during evaluation instead of in
   constructor setup or the broader objectives chapter?
 - What conditions must be true before entropy is injected automatically?
@@ -22,9 +23,10 @@ Read this chapter when you want to answer questions such as:
   reads?
 
 The mental model is a three-step policy gate:
+
 1. check whether multi-objective mode and auto-entropy are both active,
 2. skip if entropy is already present or dynamic-objective mode owns the
-  policy,
+   policy,
 3. register entropy and invalidate cached objective resolution.
 
 This boundary preserves the current scores, novelty evidence, and species
@@ -58,6 +60,7 @@ must also be invalidated so later ranking stages resolve the updated
 objective set instead of continuing to use stale ordering information.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 
 ### runAutoEntropyObjectiveInjection
@@ -76,12 +79,14 @@ It behaves like best-effort policy maintenance after the rest of the
 evaluation evidence has been gathered.
 
 The helper preserves several important controller assumptions:
+
 - current scores are left intact,
 - novelty and diversity evidence are left intact,
 - current species state is left intact,
 - only the objective-registration layer and its cache are updated.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `evaluationOptions` - Options object for the current evaluation pass.
 
@@ -107,6 +112,7 @@ treated as the stronger owner when it is enabled, which prevents this helper
 from silently competing with a more explicit objective-management policy.
 
 Parameters:
+
 - `evaluationOptions` - Options object for the current evaluation pass.
 
 Returns: True when entropy should be injected.

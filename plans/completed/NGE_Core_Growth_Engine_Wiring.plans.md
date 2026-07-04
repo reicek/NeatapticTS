@@ -161,50 +161,47 @@ preserves real-time performance at scale.
 
 ```yaml
 decision_record:
-  id: 'DR-NGE-001'
-  context: 'edgePrune morph kind has a candidateId but network.mutate(SUB_CONN) picks a random edge. Need custom disconnect logic.'
-  options:
-    - id: optA
-      desc: 'Use network.disconnect(from, to) directly with the candidateId'
-    - id: optB
-      desc: 'Add a new mutation method SUB_CONN_BY_ID to the mutation handlers'
-  chosen: optA
-  rationale: 'Avoids changing the NEAT mutation handler API. The applier can look up the connection by candidateId and call disconnect directly.'
-  owner: '01-planning'
-  rollback_plan: 'If disconnect API is insufficient, fall back to optB and add SUB_CONN_BY_ID.'
-  created_at: '2025-01-15T00:00:00Z'
+ id: 'DR-NGE-001'
+ context: 'edgePrune morph kind has a candidateId but network.mutate(SUB_CONN) picks a random edge. Need custom disconnect logic.'
+ options:
+ - id: optA
+ desc: 'Use network.disconnect(from, to) directly with the candidateId'
+ - id: optB
+ desc: 'Add a new mutation method SUB_CONN_BY_ID to the mutation handlers'
+ chosen: optA
+ rationale: 'Avoids changing the NEAT mutation handler API. The applier can look up the connection by candidateId and call disconnect directly.'
+ owner: '01-planning'
+ rollback_plan: 'If disconnect API is insufficient, fall back to optB and add SUB_CONN_BY_ID.'
 ```
 
 ```yaml
 decision_record:
-  id: 'DR-NGE-002'
-  context: 'slotExpand morph kind has no NEAT mutation equivalent. The episodic slot primitive does not exist at the Network level.'
-  options:
-    - id: optA
-      desc: 'Document slotExpand as a no-op in the morph applier'
-    - id: optB
-      desc: 'Create a stub episodic slot primitive in the Network API'
-  chosen: optA
-  rationale: 'Creating a stub would violate the Non-Goals. The slot primitive is a module/DNA level concern, not a Network level concern. Document it as a no-op until the primitive exists.'
-  owner: '01-planning'
-  rollback_plan: 'If episodic slots are needed sooner, create a separate plan for the slot primitive.'
-  created_at: '2025-01-15T00:00:00Z'
+ id: 'DR-NGE-002'
+ context: 'slotExpand morph kind has no NEAT mutation equivalent. The episodic slot primitive does not exist at the Network level.'
+ options:
+ - id: optA
+ desc: 'Document slotExpand as a no-op in the morph applier'
+ - id: optB
+ desc: 'Create a stub episodic slot primitive in the Network API'
+ chosen: optA
+ rationale: 'Creating a stub would violate the Non-Goals. The slot primitive is a module/DNA level concern, not a Network level concern. Document it as a no-op until the primitive exists.'
+ owner: '01-planning'
+ rollback_plan: 'If episodic slots are needed sooner, create a separate plan for the slot primitive.'
 ```
 
 ```yaml
 decision_record:
-  id: 'DR-NGE-003'
-  context: 'compact morph kind calls SUB_NODE which picks a random node. The morph delta has no target node id.'
-  options:
-    - id: optA
-      desc: 'Accept random node removal for compact (use network.mutate(SUB_NODE))'
-    - id: optB
-      desc: 'Add targetNodeId to the compact morph delta detail'
-  chosen: optA
-  rationale: 'The compact morph is planned by the NGE focus-scoring logic which already selects what to compact. Adding targetNodeId would require changing the morph planner, which is a Non-Goal. Accept random removal within the focus-selected area.'
-  owner: '01-planning'
-  rollback_plan: 'If random removal causes issues, add targetNodeId in a follow-up plan.'
-  created_at: '2025-01-15T00:00:00Z'
+ id: 'DR-NGE-003'
+ context: 'compact morph kind calls SUB_NODE which picks a random node. The morph delta has no target node id.'
+ options:
+ - id: optA
+ desc: 'Accept random node removal for compact (use network.mutate(SUB_NODE))'
+ - id: optB
+ desc: 'Add targetNodeId to the compact morph delta detail'
+ chosen: optA
+ rationale: 'The compact morph is planned by the NGE focus-scoring logic which already selects what to compact. Adding targetNodeId would require changing the morph planner, which is a Non-Goal. Accept random removal within the focus-selected area.'
+ owner: '01-planning'
+ rollback_plan: 'If random removal causes issues, add targetNodeId in a follow-up plan.'
 ```
 
 ## Final state
@@ -248,9 +245,9 @@ The NGE growth pipeline is fully connected end-to-end:
 
 ## Audit log
 
-- 2026-06-26: Phase 1 (Morph Applier) [DONE] [COMPRESSED]
-- 2026-06-26: Phase 2 (Lifecycle Wiring) [DONE] [COMPRESSED]
-- 2026-06-27: Phase 3 (Runtime Integration) [DONE] [COMPRESSED]
-- 2026-06-27: Phase 4 (Capacity Limits & Throttling) [DONE] [COMPRESSED]
-- 2026-06-27: Phase 5 (End-to-End Growth Verification) [DONE] [COMPRESSED]
-- 2026-06-27: Plan archived to `plans/completed/`
+- Phase 1 (Morph Applier) [DONE] [COMPRESSED]
+- Phase 2 (Lifecycle Wiring) [DONE] [COMPRESSED]
+- Phase 3 (Runtime Integration) [DONE] [COMPRESSED]
+- Phase 4 (Capacity Limits & Throttling) [DONE] [COMPRESSED]
+- Phase 5 (End-to-End Growth Verification) [DONE] [COMPRESSED]
+- Plan archived to `plans/completed/`

@@ -106,6 +106,7 @@ allocateTypedArray(
 Acquire one typed array using the manager-owned slab allocator state.
 
 Parameters:
+
 - `kind` - Stable bucket discriminator.
 - `ctor` - Typed array constructor.
 - `length` - Required logical length.
@@ -134,6 +135,7 @@ getConfig(
 Resolve the active memory config for one runtime environment.
 
 Parameters:
+
 - `environment` - Optional explicit environment override for tests.
 
 Returns: Stable memory-config snapshot with resolved defaults.
@@ -149,6 +151,7 @@ getPoolStats(
 Read one registered pool snapshot when available.
 
 Parameters:
+
 - `poolName` - Stable pool key.
 
 Returns: Pool stats or null when the pool is absent.
@@ -175,6 +178,7 @@ init(
 Apply temporary overrides while preserving a baseline for teardown.
 
 Parameters:
+
 - `overrides` - Partial memory flag overrides.
 - `environment` - Optional explicit environment override for tests.
 
@@ -192,6 +196,7 @@ registerPool(
 Register a resettable pool or allocator snapshot provider.
 
 Parameters:
+
 - `poolName` - Stable pool key.
 - `poolProvider` - Stats and reset provider.
 
@@ -210,6 +215,7 @@ releaseTypedArray(
 Release one typed array back to the manager-owned slab allocator.
 
 Parameters:
+
 - `kind` - Stable bucket discriminator.
 - `bytesPerElement` - Byte width used for bucket keying.
 - `typedArray` - Typed array instance to retain when capacity permits.
@@ -259,6 +265,7 @@ resolveTypedArrayPoolKey(
 Build the stable bucket key for one typed-array allocation class.
 
 Parameters:
+
 - `kind` - Stable bucket discriminator.
 - `bytesPerElement` - Typed array byte width.
 - `length` - Typed array logical length.
@@ -277,6 +284,7 @@ setFlag(
 Mutate one memory flag on the shared config object.
 
 Parameters:
+
 - `flagName` - Memory flag to update.
 - `nextValue` - New value for the flag.
 

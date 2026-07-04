@@ -70,311 +70,323 @@ describe('search-advanced', () => {
   });
   describe('server registration', () => {
     it('registers search_advanced in the MCP tool list', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const listed = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/list',
-        });
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const listed = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list',
+      });
 
-        expect(listed.tools.map((tool) => tool.name)).toContain(
-          'search_advanced',
-        );
+      expect(listed.tools.map((tool) => tool.name)).toContain(
+        'search_advanced',
+      );
     });
   });
 
   describe('schema validation', () => {
     it('rejects a missing query parameter with EMPTY_QUERY code', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: {},
-          },
-        });
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: {},
+        },
+      });
 
-        expect(result).toEqual(
-          expect.objectContaining({
-            isError: true,
-            structuredContent: expect.objectContaining({
-              error: expect.stringContaining('EMPTY_QUERY'),
-            }),
+      expect(result).toEqual(
+        expect.objectContaining({
+          isError: true,
+          structuredContent: expect.objectContaining({
+            error: expect.stringContaining('EMPTY_QUERY'),
           }),
-        );
+        }),
+      );
     });
 
     it('rejects an invalid budget type', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: { query: 'NEAT', budget: 'big' },
-          },
-        });
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: { query: 'NEAT', budget: 'big' },
+        },
+      });
 
-        expect(result).toEqual(
-          expect.objectContaining({
-            isError: true,
-            structuredContent: expect.objectContaining({
-              error: expect.any(String),
-            }),
+      expect(result).toEqual(
+        expect.objectContaining({
+          isError: true,
+          structuredContent: expect.objectContaining({
+            error: expect.any(String),
           }),
-        );
+        }),
+      );
     });
 
     it('rejects an invalid limit type', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: { query: 'NEAT', limit: 'many' },
-          },
-        });
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: { query: 'NEAT', limit: 'many' },
+        },
+      });
 
-        expect(result).toEqual(
-          expect.objectContaining({
-            isError: true,
-            structuredContent: expect.objectContaining({
-              error: expect.any(String),
-            }),
+      expect(result).toEqual(
+        expect.objectContaining({
+          isError: true,
+          structuredContent: expect.objectContaining({
+            error: expect.any(String),
           }),
-        );
+        }),
+      );
     });
   });
 
   describe('classification-aware defaults', () => {
     it('uses BM25-heavy defaults for simple_lookup query class', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: {
-              query: 'NEAT activation',
-              query_class: 'simple_lookup',
-            },
-          },
-        });
-
-        expect(result.structuredContent).toEqual(
-          expect.objectContaining({
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: {
+            query: 'NEAT activation',
             query_class: 'simple_lookup',
-            alpha: expect.closeTo(0.7, 1),
-            expand_query: false,
-            use_rerank: false,
-          }),
-        );
+          },
+        },
+      });
+
+      expect(result.structuredContent).toEqual(
+        expect.objectContaining({
+          query_class: 'simple_lookup',
+          alpha: expect.closeTo(0.7, 1),
+          expand_query: false,
+          use_rerank: false,
+        }),
+      );
     });
 
     it('uses dense expansion defaults for cross_boundary query class', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: {
-              query: 'NEAT activation',
-              query_class: 'cross_boundary',
-            },
-          },
-        });
-
-        expect(result.structuredContent).toEqual(
-          expect.objectContaining({
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: {
+            query: 'NEAT activation',
             query_class: 'cross_boundary',
-            alpha: expect.closeTo(0.4, 1),
-            expand_query: true,
-            use_rerank: true,
-          }),
-        );
+          },
+        },
+      });
+
+      expect(result.structuredContent).toEqual(
+        expect.objectContaining({
+          query_class: 'cross_boundary',
+          alpha: expect.closeTo(0.4, 1),
+          expand_query: true,
+          use_rerank: true,
+        }),
+      );
     });
   });
 
   describe('pipeline orchestration', () => {
     it('returns pipeline metadata: classification, expansion, results', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: {
-              query: 'NEAT activation',
-              query_class: 'simple_lookup',
-              expand_query: false,
-            },
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: {
+            query: 'NEAT activation',
+            query_class: 'simple_lookup',
+            expand_query: false,
           },
-        });
+        },
+      });
 
-        expect(result.structuredContent).toEqual(
-          expect.objectContaining({
-            query_class: expect.any(String),
-            results: expect.any(Array),
-            limit: expect.any(Number),
-            use_dense: expect.any(Boolean),
-          }),
-        );
+      expect(result.structuredContent).toEqual(
+        expect.objectContaining({
+          query_class: expect.any(String),
+          results: expect.any(Array),
+          limit: expect.any(Number),
+          use_dense: expect.any(Boolean),
+        }),
+      );
     });
 
     it('assembles context when context_budget is provided', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: {
-              query: 'NEAT activation',
-              query_class: 'simple_lookup',
-              context_budget: 512,
-            },
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: {
+            query: 'NEAT activation',
+            query_class: 'simple_lookup',
+            context_budget: 512,
           },
-        });
+        },
+      });
 
-        expect(result.structuredContent).toEqual(
-          expect.objectContaining({
-            context: expect.any(String),
-            token_count: expect.any(Number),
-            tier_counts: expect.objectContaining({
-              essential: expect.any(Number),
-              supporting: expect.any(Number),
-              supplementary: expect.any(Number),
-            }),
+      expect(result.structuredContent).toEqual(
+        expect.objectContaining({
+          context: expect.any(String),
+          token_count: expect.any(Number),
+          tier_counts: expect.objectContaining({
+            essential: expect.any(Number),
+            supporting: expect.any(Number),
+            supplementary: expect.any(Number),
           }),
-        );
+        }),
+      );
     });
   });
 
   describe('graceful degradation', () => {
     it('reports dense_state when dense subsystem is cold', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: {
-              query: 'NEAT activation',
-              use_dense: true,
-            },
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: {
+            query: 'NEAT activation',
+            use_dense: true,
           },
-        });
+        },
+      });
 
-        expect(result.structuredContent).toEqual(
-          expect.objectContaining({
-            dense_state: expect.any(String),
-          }),
-        );
+      expect(result.structuredContent).toEqual(
+        expect.objectContaining({
+          dense_state: expect.any(String),
+        }),
+      );
     });
 
     it('reports rerank_state when reranker is cold', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: {
-              query: 'NEAT activation',
-              use_rerank: true,
-            },
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: {
+            query: 'NEAT activation',
+            use_rerank: true,
           },
-        });
+        },
+      });
 
-        expect(result.structuredContent).toEqual(
-          expect.objectContaining({
-            rerank_state: expect.any(String),
-          }),
-        );
+      expect(result.structuredContent).toEqual(
+        expect.objectContaining({
+          rerank_state: expect.any(String),
+        }),
+      );
     });
 
     it('reports expansion degradation when expansion is cold', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: {
-              query: 'NEAT activation',
-              expand_query: true,
-            },
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: {
+            query: 'NEAT activation',
+            expand_query: true,
           },
-        });
+        },
+      });
 
-        expect(result.structuredContent).toEqual(
-          expect.objectContaining({
-            expansion: expect.objectContaining({
-              degraded: expect.any(Boolean),
-            }),
+      expect(result.structuredContent).toEqual(
+        expect.objectContaining({
+          expansion: expect.objectContaining({
+            degraded: expect.any(Boolean),
           }),
-        );
+        }),
+      );
     });
   });
 
   describe('timeout handling', () => {
     it('returns a partial result with CORTEX_TIMEOUT_PARTIAL error code', async () => {
-      const { createRepoCortexMcpServer } = await import('../repo-cortex-mcp.mjs');
-        const dbPath = sharedDb.dbPath;
-        const server = createRepoCortexMcpServer({ databasePath: dbPath });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: {
-            name: 'search_advanced',
-            arguments: {
-              query: 'NEAT activation',
-              timeout_ms: 1,
-            },
+      const { createRepoCortexMcpServer } =
+        await import('../repo-cortex-mcp.mjs');
+      const dbPath = sharedDb.dbPath;
+      const server = createRepoCortexMcpServer({ databasePath: dbPath });
+      const result = await server.dispatch({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'search_advanced',
+          arguments: {
+            query: 'NEAT activation',
+            timeout_ms: 1,
           },
-        });
+        },
+      });
 
-        expect(result.structuredContent).toEqual(
-          expect.objectContaining({
-            error: expect.stringContaining('CORTEX_TIMEOUT_PARTIAL'),
-          }),
-        );
+      expect(result.structuredContent).toEqual(
+        expect.objectContaining({
+          error: expect.stringContaining('CORTEX_TIMEOUT_PARTIAL'),
+        }),
+      );
     });
   });
 });

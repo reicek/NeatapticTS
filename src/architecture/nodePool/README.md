@@ -84,6 +84,7 @@ The returned node is guaranteed to have detached connections, cleared error
 state, and a fresh gene id for its next lifecycle.
 
 Parameters:
+
 - `opts` - Optional acquisition settings.
 
 Returns: A ready-to-use node instance.
@@ -126,6 +127,7 @@ retains the object shell and clears connection lists, but does not reset activat
 that scrub happens at acquisition time inside `acquireNode`.
 
 Parameters:
+
 - `node` - Detached node instance to recycle.
 
 Returns: Nothing.

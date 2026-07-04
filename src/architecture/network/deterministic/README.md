@@ -99,11 +99,13 @@ getRandomFn(): (() => number) | undefined
 Returns the active deterministic RNG function currently attached to the network.
 
 Overview:
+
 - Use this when tooling or diagnostics need direct RNG access.
 - Returning the function allows advanced integration code to inspect or reuse the random stream.
 - For most persistence workflows, prefer `snapshotRNG` and `getRNGState` over direct function plumbing.
 
 Parameters:
+
 - `this` - Bound network instance queried for active RNG function.
 
 Returns: Active RNG function, or `undefined` when deterministic RNG is not initialized.
@@ -123,11 +125,13 @@ getRNGState(): number | undefined
 Returns the current deterministic RNG numeric state, when available.
 
 Overview:
+
 - Use this for lightweight checkpointing when full lifecycle snapshots are unnecessary.
 - The value can be persisted and later reapplied through `setRNGState`.
 - This is commonly used by tests that assert deterministic continuity across operations.
 
 Parameters:
+
 - `this` - Bound network instance queried for deterministic RNG numeric state.
 
 Returns: Numeric RNG state value, or `undefined` when no deterministic state exists yet.
@@ -156,11 +160,13 @@ restoreRNG(
 Restores deterministic RNG lifecycle behavior from a provided RNG function.
 
 Overview:
+
 - Use this when replaying deterministic flows after custom serialization, hydration, or test setup.
 - The restored RNG function becomes the active random source used by the network lifecycle helpers.
 - This keeps deterministic plumbing explicit when external code owns RNG reconstruction.
 
 Parameters:
+
 - `this` - Bound network instance receiving the restored RNG lifecycle function.
 - `fn` - Deterministic RNG function to install (expected to return values in `[0, 1)`).
 
@@ -187,11 +193,13 @@ setRNGState(
 Applies a deterministic RNG numeric state to continue from a known checkpoint.
 
 Overview:
+
 - Pair this with `getRNGState` to pause/resume deterministic sequences.
 - Useful for reproducible tests, multi-stage training workflows, and deterministic replay.
 - Delegation keeps the write path consistent with the rest of deterministic state utilities.
 
 Parameters:
+
 - `this` - Bound network instance receiving deterministic RNG state.
 - `state` - Numeric RNG state checkpoint to install.
 
@@ -214,11 +222,13 @@ setSeed(
 Sets deterministic randomness for a network by installing a seed-backed RNG.
 
 Overview:
+
 - Use this before training, mutation, or stochastic operations when you need repeatable runs.
 - The same seed and operation order produce the same random sequence and reproducible outcomes.
 - This method delegates to setup utilities so behavior stays centralized across deterministic APIs.
 
 Parameters:
+
 - `this` - Bound network instance whose RNG state is being initialized.
 - `seed` - Seed value used to derive deterministic RNG state (low 32 bits are applied).
 
@@ -239,11 +249,13 @@ snapshotRNG(): RNGSnapshot
 Captures the current deterministic RNG lifecycle state as a portable snapshot.
 
 Overview:
+
 - Use this before temporary experiments, branching simulations, or stateful debug sessions.
 - The snapshot preserves enough information to resume from the same deterministic point later.
 - This is useful when comparing alternate algorithm branches from an identical random timeline.
 
 Parameters:
+
 - `this` - Bound network instance whose RNG lifecycle state is captured.
 
 Returns: Snapshot containing deterministic progress metadata and RNG state payload.
@@ -285,6 +297,7 @@ advanceStateWithWeylIncrement(
 Advance state using a fixed Weyl increment with uint32 wraparound.
 
 Parameters:
+
 - `currentState` - Current state word (possibly undefined).
 
 Returns: Next unsigned 32-bit state.
@@ -300,6 +313,7 @@ createDeterministicRandomFunction(
 Create deterministic PRNG function bound to provided internal state holder.
 
 Parameters:
+
 - `internalState` - Runtime network internals used by deterministic RNG pipeline.
 
 Returns: PRNG function returning values in [0,1).
@@ -315,6 +329,7 @@ mixStateWord(
 Mix state word with xorshift and multiplication steps.
 
 Parameters:
+
 - `stateWord` - Unsigned 32-bit state word.
 
 Returns: Mixed unsigned 32-bit word.
@@ -331,6 +346,7 @@ setInternalSeedState(
 Assign normalized seed state to internal RNG storage.
 
 Parameters:
+
 - `internalState` - Runtime network internals used by deterministic RNG pipeline.
 - `normalizedState` - Unsigned 32-bit state.
 
@@ -348,6 +364,7 @@ setRandomFunction(
 Assign the active random function reference.
 
 Parameters:
+
 - `internalState` - Runtime network internals used by deterministic RNG pipeline.
 - `randomFunction` - PRNG function returning values in [0,1).
 
@@ -364,6 +381,7 @@ setSeed(
 Seed the internal PRNG and install a deterministic random() implementation on the Network instance.
 
 Parameters:
+
 - `this` - Bound Network instance.
 - `seed` - A finite number; only its lower 32 bits are used.
 
@@ -380,6 +398,7 @@ toUint32(
 Convert a numeric value into unsigned 32-bit state.
 
 Parameters:
+
 - `numericValue` - Numeric value to normalize.
 
 Returns: Unsigned 32-bit representation.
@@ -395,6 +414,7 @@ toUnitInterval(
 Convert unsigned 32-bit word to float in [0,1).
 
 Parameters:
+
 - `unsignedWord` - Unsigned 32-bit word.
 
 Returns: Unit-interval floating-point value.
@@ -410,6 +430,7 @@ getRandomFn(): (() => number) | undefined
 Return the active random number generator function bound to this network.
 
 Parameters:
+
 - `this` - Bound Network instance.
 
 Returns: Function producing numbers in [0,1). May be undefined if never seeded.
@@ -423,6 +444,7 @@ getRNGState(): number | undefined
 Return the current internal 32-bit RNG state used for deterministic sampling.
 
 Parameters:
+
 - `this` - Bound Network instance.
 
 Returns: Unsigned 32-bit state integer or undefined if generator not yet seeded or was reset.
@@ -441,6 +463,7 @@ This guard keeps state writes predictable by ignoring non-number payloads
 before uint32 normalization.
 
 Parameters:
+
 - `candidateState` - Candidate state value.
 
 Returns: True when the candidate is a number.
@@ -456,6 +479,7 @@ setRNGState(
 Explicitly set (override) the internal 32-bit RNG state without changing the generator function.
 
 Parameters:
+
 - `this` - Bound Network instance.
 - `state` - A finite number (only low 32 bits used). Ignored when non-numeric.
 
@@ -475,6 +499,7 @@ This mirrors the internal LCG-style state representation expected by the
 deterministic helpers.
 
 Parameters:
+
 - `numericState` - Numeric state value.
 
 Returns: Unsigned 32-bit state.
@@ -492,6 +517,7 @@ clearStoredRngState(
 Clear stored numeric RNG state.
 
 Parameters:
+
 - `internalState` - Runtime network internals used by deterministic RNG pipeline.
 
 Returns: Nothing.
@@ -507,6 +533,7 @@ restoreRNG(
 Restore a previously captured RNG function implementation and clear stored numeric state.
 
 Parameters:
+
 - `this` - Bound Network instance.
 - `fn` - Function returning a pseudo-random number in [0,1).
 
@@ -524,6 +551,7 @@ setRandomFunction(
 Assign active random function reference.
 
 Parameters:
+
 - `internalState` - Runtime network internals used by deterministic RNG pipeline.
 - `randomFunction` - PRNG function returning values in [0,1).
 
@@ -538,6 +566,7 @@ snapshotRNG(): RNGSnapshot
 Capture a snapshot of the RNG state together with the network's training step.
 
 Parameters:
+
 - `this` - Bound Network instance.
 
 Returns: Object containing current training step and 32-bit RNG state.

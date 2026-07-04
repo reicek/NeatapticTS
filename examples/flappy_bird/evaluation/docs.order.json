@@ -7,7 +7,5 @@
     "evaluation.seed.utils.ts",
     "evaluation.rollout.service.ts"
   ],
-  "folderOrder": [
-    "rollout"
-  ]
+  "folderOrder": ["rollout"]
 }

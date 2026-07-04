@@ -57,6 +57,7 @@ those per-genome counters once consumed, and only adjusts the shared
 probability when the sample size is large enough to be meaningful.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: Nothing.
@@ -78,6 +79,7 @@ allowed network size, and phased complexity can flip the controller between
 growth and simplification modes.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: A promise that resolves after optional complexity controllers have run.
@@ -99,6 +101,7 @@ stays narrow: it only attempts the optional handoff and tolerates runtimes
 where lineage adaptation is absent.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: A promise that resolves after the optional lineage controller runs.
@@ -125,6 +128,7 @@ nothing forever at equilibrium, the helper allows a bounded random nudge so
 the controller can keep exploring nearby coefficient space.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 - `config` - Tuning constants.
 
@@ -146,6 +150,7 @@ safe wrapper lets evolve apply that pressure when configured without forcing
 every runtime surface to include the full adaptive subtree.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: A promise that resolves after the optional acceptance controller runs.
@@ -166,6 +171,7 @@ recent evidence without forcing evolve to know the details of the adaptive
 operator-selection subsystem.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: A promise that resolves after optional operator-stat decay runs.
@@ -194,6 +200,7 @@ invalidateCompatibilityCaches(internal);
 ```
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: A promise that resolves after mutation-phase maintenance finishes.
@@ -214,6 +221,7 @@ recomputed from the post-mutation topology instead of reusing scores from the
 previous generation.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: Nothing.

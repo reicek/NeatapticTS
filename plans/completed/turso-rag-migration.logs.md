@@ -1,6 +1,6 @@
 ﻿# Turso RAG Migration â€” Compressed Work Log
 
-> Session handoff log. Compressed from multiple sessions. Last updated: 2026-06-22.308 baseline), latency optimization
+> Session handoff log. Compressed from multiple sessions. Last updated:.308 baseline), latency optimization
 > (search_corpus p95 < 100ms), final `legacy sync SQLite driver` cleanup, rollout and signoff. **Scope
 > change: no read-only public access; cloud backup via .env credentials only.**
 
@@ -23,7 +23,7 @@ KNOWN_ISSUES, not migration regressions.
 
 Required validation:
 - node scripts/agent-customization/validate-plan-phase-packets.mjs --json
-  --plan=plans/turso-rag-migration.plans.md
+ --plan=plans/turso-rag-migration.plans.md
 - neataptic-gate-mcp:run_gate_check --gate=step-packet
 - neataptic-gate-mcp:run_gate_check --gate=plan-sync
 ```
@@ -109,48 +109,48 @@ schema applied by `init-schema.mjs`.
 
 ```yaml
 PlanUpdate:
-  changed_files:
-    - scripts/semantic-index/embed/embed-index.red.test.ts
-    - scripts/semantic-index/embed/hybrid-rank.red.test.ts
-    - scripts/semantic-index/embed/validate-embeddings.red.test.ts
-    - scripts/semantic-index/__tests__/validate.turso.test.mjs
-    - scripts/mcp-semantic/repo-cortex-mcp.test.ts
-    - scripts/semantic-index/build-index.mjs
-    - scripts/semantic-index/README.md
-    - scripts/mcp-semantic/README.md
-    - CLAUDE.md
-  preflight:
-    - 'npx tsc --noEmit -p tsconfig.json'
-    - 'npm run lint'
-    - 'npx prettier --check <changed-files>'
-  validation:
-    - command: "npx jest --config=jest.config.mjs --no-cache --selectProjects semantic-index-scripts --coverage --testPathPatterns='scripts/semantic-index/embed/(embed-index|hybrid-rank|validate-embeddings)\\.red\\.test\\.ts$'"
-      expected_exit: 0
-      result: '3 suites passed, 4 tests passed'
-    - command: "npx jest --config=jest.config.mjs --no-cache --selectProjects mcp-semantic-scripts --coverage --testPathPatterns='scripts/mcp-semantic/repo-cortex-mcp\\.test\\.ts$'"
-      expected_exit: 0
-      result: '1 suite passed, 5 tests passed'
-    - command: "$env:NODE_OPTIONS='--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules'; npx jest --config=jest.config.mjs --no-cache --runInBand --selectProjects semantic-index-mjs --testPathPatterns='scripts/semantic-index/__tests__/validate\\.turso\\.test\\.mjs$'"
-      expected_exit: 0
-      result: '1 suite passed, 2 tests passed'
-    - command: 'npm run index:build'
-      expected_exit: 0
-      result: 'scanned 1431, indexed 1, skipped 1430, chunks 35'
-    - command: 'npm run index:prewarm'
-      expected_exit: 0
-      result: 'embed-index ok, validate-embeddings ok, reranker ok'
-    - command: 'neataptic-gate-mcp:run_gate_check --gate=cortex-index'
-      expected_exit: 0
-      result: 'pass, index_documents=1431, index_fresh=true'
-    - command: 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-      expected_exit: 0
-      result: 'pass'
-  coverage_guard:
-    files: [] # No src/ files changed in this pass.
-    summary: 'N/A (scripts-only change)'
-  rollback:
-    - 'git revert <commit>'
-  next: 'User should create the PR from the prepared branch and paste the PR URL into VALIDATION_EVIDENCE.'
+ changed_files:
+ - scripts/semantic-index/embed/embed-index.red.test.ts
+ - scripts/semantic-index/embed/hybrid-rank.red.test.ts
+ - scripts/semantic-index/embed/validate-embeddings.red.test.ts
+ - scripts/semantic-index/__tests__/validate.turso.test.mjs
+ - scripts/mcp-semantic/repo-cortex-mcp.test.ts
+ - scripts/semantic-index/build-index.mjs
+ - scripts/semantic-index/README.md
+ - scripts/mcp-semantic/README.md
+ - CLAUDE.md
+ preflight:
+ - 'npx tsc --noEmit -p tsconfig.json'
+ - 'npm run lint'
+ - 'npx prettier --check <changed-files>'
+ validation:
+ - command: "npx jest --config=jest.config.mjs --no-cache --selectProjects semantic-index-scripts --coverage --testPathPatterns='scripts/semantic-index/embed/(embed-index|hybrid-rank|validate-embeddings)\\.red\\.test\\.ts$'"
+ expected_exit: 0
+ result: '3 suites passed, 4 tests passed'
+ - command: "npx jest --config=jest.config.mjs --no-cache --selectProjects mcp-semantic-scripts --coverage --testPathPatterns='scripts/mcp-semantic/repo-cortex-mcp\\.test\\.ts$'"
+ expected_exit: 0
+ result: '1 suite passed, 5 tests passed'
+ - command: "$env:NODE_OPTIONS='--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules'; npx jest --config=jest.config.mjs --no-cache --runInBand --selectProjects semantic-index-mjs --testPathPatterns='scripts/semantic-index/__tests__/validate\\.turso\\.test\\.mjs$'"
+ expected_exit: 0
+ result: '1 suite passed, 2 tests passed'
+ - command: 'npm run index:build'
+ expected_exit: 0
+ result: 'scanned 1431, indexed 1, skipped 1430, chunks 35'
+ - command: 'npm run index:prewarm'
+ expected_exit: 0
+ result: 'embed-index ok, validate-embeddings ok, reranker ok'
+ - command: 'neataptic-gate-mcp:run_gate_check --gate=cortex-index'
+ expected_exit: 0
+ result: 'pass, index_documents=1431, index_fresh=true'
+ - command: 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
+ expected_exit: 0
+ result: 'pass'
+ coverage_guard:
+ files: [] # No src/ files changed in this pass.
+ summary: 'N/A (scripts-only change)'
+ rollback:
+ - 'git revert <commit>'
+ next: 'User should create the PR from the prepared branch and paste the PR URL into VALIDATION_EVIDENCE.'
 ```
 
 ### Notes
@@ -162,7 +162,7 @@ PlanUpdate:
 
 ---
 
-## Final legacy SQLite artifact cleanup — 2026-06-22
+## Final legacy SQLite artifact cleanup
 
 After green-testing confirmed the Turso index is warm and searchable, the remaining legacy SQLite artifacts and stale references were removed.
 
@@ -184,61 +184,61 @@ After green-testing confirmed the Turso index is warm and searchable, the remain
 
 ```yaml
 PlanUpdate:
-  changed_files:
-    - package.json
-    - .gitignore
-    - README.md
-    - rag_architecture/cortex-ann-index.md
-    - rag_architecture/cortex-context-assembly.md
-    - rag_architecture/cortex-cross-encoder-reranking.md
-    - rag_architecture/cortex-current-system-audit.md
-    - rag_architecture/cortex-entity-graph.md
-    - rag_architecture/cortex-mcp-tool-extensions.md
-    - rag_architecture/cortex-query-classification.md
-    - rag_architecture/cortex-query-expansion.md
-    - rag_architecture/cortex-rag-eval-suite.md
-    - rag_architecture/cortex-relevance-feedback.md
-    - rag_architecture/cortex-semantic-chunking.md
-    - plans/README.md
-    - plans/Roadmap.md
-    - plans/completed/turso-rag-migration.logs.md
-    - plans/completed/turso-rag-migration.plans.md
-  preflight:
-    - command: 'npx tsc --noEmit -p tsconfig.json'
-      expected_exit: 0
-      result: pass
-    - command: 'npx tsc --noEmit -p tsconfig.test.json'
-      expected_exit: 0
-      result: pass
-    - command: 'npm run lint'
-      expected_exit: 0
-      result: pass
-    - command: 'npx prettier --check README.md package.json rag_architecture/*.md plans/completed/turso-rag-migration.logs.md plans/completed/turso-rag-migration.plans.md plans/README.md plans/Roadmap.md'
-      expected_exit: 0
-      result: pass
-  validation:
-    - command: "$env:NODE_OPTIONS='--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules'; npx jest --config=jest.config.mjs --no-cache --selectProjects semantic-index-mjs --runInBand --forceExit --testPathPatterns='scripts/semantic-index/__tests__/schema-turso\\.test\\.mjs$'"
-      expected_exit: 0
-      result: 'PASS — 1 suite, 31 tests'
-    - command: "$env:NODE_OPTIONS='--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules'; npx jest --config=jest.config.mjs --no-cache --selectProjects semantic-index-mjs --runInBand --forceExit --testPathPatterns='scripts/semantic-index/__tests__/validate\\.turso\\.test\\.mjs$'"
-      expected_exit: 0
-      result: 'PASS — 1 suite, 2 tests'
-    - command: "$env:NODE_OPTIONS='--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules'; npx jest --config=jest.config.mjs --no-cache --selectProjects mcp-semantic-scripts --runInBand --forceExit --testPathPatterns='scripts/mcp-semantic/repo-cortex-mcp\\.test\\.ts$'"
-      expected_exit: 0
-      result: 'PRE-EXISTING FAILURE — __dirname is not defined in ESM mode; unrelated to cleanup'
-  coverage_summary:
-    files_touched: []
-    summary: N/A — no src/ files changed by cleanup
-  plan_sync:
-    - command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/completed/turso-rag-migration.plans.md'
-      expected_exit: 0
-      result: 'PASS — 0 errors, 0 warnings'
-    - command: 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-      expected_exit: 0
-      result: 'PASS'
-  rollback:
-    - 'git revert <commit>'
-  next: 'User should create the PR from the prepared branch and paste the PR URL into VALIDATION_EVIDENCE.'
+ changed_files:
+ - package.json
+ - .gitignore
+ - README.md
+ - rag_architecture/cortex-ann-index.md
+ - rag_architecture/cortex-context-assembly.md
+ - rag_architecture/cortex-cross-encoder-reranking.md
+ - rag_architecture/cortex-current-system-audit.md
+ - rag_architecture/cortex-entity-graph.md
+ - rag_architecture/cortex-mcp-tool-extensions.md
+ - rag_architecture/cortex-query-classification.md
+ - rag_architecture/cortex-query-expansion.md
+ - rag_architecture/cortex-rag-eval-suite.md
+ - rag_architecture/cortex-relevance-feedback.md
+ - rag_architecture/cortex-semantic-chunking.md
+ - plans/README.md
+ - plans/Roadmap.md
+ - plans/completed/turso-rag-migration.logs.md
+ - plans/completed/turso-rag-migration.plans.md
+ preflight:
+ - command: 'npx tsc --noEmit -p tsconfig.json'
+ expected_exit: 0
+ result: pass
+ - command: 'npx tsc --noEmit -p tsconfig.test.json'
+ expected_exit: 0
+ result: pass
+ - command: 'npm run lint'
+ expected_exit: 0
+ result: pass
+ - command: 'npx prettier --check README.md package.json rag_architecture/*.md plans/completed/turso-rag-migration.logs.md plans/completed/turso-rag-migration.plans.md plans/README.md plans/Roadmap.md'
+ expected_exit: 0
+ result: pass
+ validation:
+ - command: "$env:NODE_OPTIONS='--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules'; npx jest --config=jest.config.mjs --no-cache --selectProjects semantic-index-mjs --runInBand --forceExit --testPathPatterns='scripts/semantic-index/__tests__/schema-turso\\.test\\.mjs$'"
+ expected_exit: 0
+ result: 'PASS — 1 suite, 31 tests'
+ - command: "$env:NODE_OPTIONS='--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules'; npx jest --config=jest.config.mjs --no-cache --selectProjects semantic-index-mjs --runInBand --forceExit --testPathPatterns='scripts/semantic-index/__tests__/validate\\.turso\\.test\\.mjs$'"
+ expected_exit: 0
+ result: 'PASS — 1 suite, 2 tests'
+ - command: "$env:NODE_OPTIONS='--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules'; npx jest --config=jest.config.mjs --no-cache --selectProjects mcp-semantic-scripts --runInBand --forceExit --testPathPatterns='scripts/mcp-semantic/repo-cortex-mcp\\.test\\.ts$'"
+ expected_exit: 0
+ result: 'PRE-EXISTING FAILURE — __dirname is not defined in ESM mode; unrelated to cleanup'
+ coverage_summary:
+ files_touched: []
+ summary: N/A — no src/ files changed by cleanup
+ plan_sync:
+ - command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/completed/turso-rag-migration.plans.md'
+ expected_exit: 0
+ result: 'PASS — 0 errors, 0 warnings'
+ - command: 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
+ expected_exit: 0
+ result: 'PASS'
+ rollback:
+ - 'git revert <commit>'
+ next: 'User should create the PR from the prepared branch and paste the PR URL into VALIDATION_EVIDENCE.'
 ```
 
 ### Notes

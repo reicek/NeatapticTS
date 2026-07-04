@@ -42,6 +42,7 @@ Reach for this when an experiment wants to reset the objective surface to its
 baseline state without rebuilding the whole controller.
 
 Parameters:
+
 - `host` - `Neat` instance whose objective registry should be cleared.
 
 Returns: Nothing. The helper mutates the objective registry in place.
@@ -61,6 +62,7 @@ summary tells you what is active now; the event log tells you how the active
 set changed across recent generations.
 
 Parameters:
+
 - `host` - `Neat` instance storing objective lifecycle events.
 
 Returns: Shallow copy of the recorded objective events.
@@ -87,6 +89,7 @@ only need to confirm which objectives are active, not the full descriptor
 payload.
 
 Parameters:
+
 - `host` - `Neat` instance exposing objective descriptors.
 
 Returns: Ordered list of active objective keys.
@@ -113,6 +116,7 @@ debugging output: the key and whether the objective is minimized or
 maximized.
 
 Parameters:
+
 - `host` - `Neat` instance exposing objective descriptors.
 
 Returns: Compact objective summaries in evaluation order.
@@ -141,6 +145,7 @@ to the live registry without reaching into the deeper objective subsystem
 directly through controller internals.
 
 Parameters:
+
 - `host` - `Neat` instance whose multi-objective registry should change.
 - `key` - Unique objective key.
 - `direction` - Whether lower or higher values are considered better.

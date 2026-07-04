@@ -66,6 +66,7 @@ identical edge discoveries can still share innovation identity across the
 population.
 
 Parameters:
+
 - `genome` - Genome to mutate.
 - `internal` - NEAT controller context.
 - `methods` - Mutation methods module.
@@ -91,6 +92,7 @@ intentionally treats cache invalidation as part of the operation rather than
 leaving it to callers.
 
 Parameters:
+
 - `genome` - Genome to mutate.
 - `internal` - NEAT controller context.
 - `methods` - Mutation methods module.
@@ -114,6 +116,7 @@ streams, but NEAT replay needs these follow-up weight changes to come from
 the controller-owned RNG so the same checkpoint resumes identically.
 
 Parameters:
+
 - `genome` - Genome whose connection weight should be nudged.
 - `internal` - NEAT controller owning the deterministic RNG.
 - `mutationMethod` - MOD_WEIGHT descriptor providing the delta range.
@@ -145,6 +148,7 @@ keep the expensive cleanup targeted to methods that plausibly changed the
 structural view of the genome.
 
 Parameters:
+
 - `genome` - Genome to mutate.
 - `mutationMethod` - Mutation operator to apply.
 - `internal` - NEAT controller context.
@@ -168,6 +172,7 @@ resulting genome later scored better. This helper records the pre-mutation
 node and connection counts that make that local success signal possible.
 
 Parameters:
+
 - `genome` - Genome to inspect.
 
 Returns: Structural size snapshot.
@@ -193,6 +198,7 @@ cheap bootstrap check rather than a repeated reset of evolved mutation
 behavior.
 
 Parameters:
+
 - `genome` - Genome to initialize.
 - `internal` - NEAT controller context.
 
@@ -215,6 +221,7 @@ probabilistic and lightweight: the flow uses it as a gentle exploration bump,
 not as a second full operator-selection phase.
 
 Parameters:
+
 - `genome` - Genome to mutate.
 - `internal` - NEAT controller context.
 
@@ -250,6 +257,7 @@ and bandit-style policies to reward operators that change structure instead
 of merely consuming attempts.
 
 Parameters:
+
 - `genome` - Genome to mutate.
 - `internal` - NEAT controller context.
 - `methods` - Mutation methods module.
@@ -274,6 +282,7 @@ may carry its own evolving attempt budget; otherwise the controller-wide
 amount stays authoritative.
 
 Parameters:
+
 - `genome` - Genome to resolve for.
 - `internal` - NEAT controller context.
 
@@ -301,6 +310,7 @@ Keeping that precedence isolated here makes the rest of the mutation flow
 read as orchestration instead of configuration branching.
 
 Parameters:
+
 - `genome` - Genome to resolve for.
 - `internal` - NEAT controller context.
 
@@ -326,6 +336,7 @@ That normalization keeps `mutateGenome()` focused on lifecycle sequencing
 rather than on legacy selection-shape quirks.
 
 Parameters:
+
 - `genome` - Genome to select for.
 - `internal` - NEAT controller context.
 
@@ -348,6 +359,7 @@ graph structure or traversal semantics enough to make cached topology views
 unsafe.
 
 Parameters:
+
 - `mutationMethod` - Mutation operator to inspect.
 - `methods` - Mutation methods module.
 
@@ -369,6 +381,7 @@ comparison in one helper makes the orchestration read clearly and gives tests
 one stable seam for deterministic gating behavior.
 
 Parameters:
+
 - `effectiveRate` - Effective mutation probability.
 - `internal` - NEAT controller context.
 
@@ -394,6 +407,7 @@ collect every generation and concrete enough for later adaptation logic to
 bias toward operators that are actually creating new structure.
 
 Parameters:
+
 - `genome` - Genome used to compute after-sizes.
 - `mutationMethod` - Operator being recorded.
 - `beforeSizes` - Structural sizes captured before mutation.

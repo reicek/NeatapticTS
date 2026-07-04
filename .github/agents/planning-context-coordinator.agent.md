@@ -40,7 +40,7 @@ Gather only the project context needed to start a planning or decomposition pass
 - Prefer the closest usable source of truth when evidence conflicts: active tracker or plan files over README summaries, nearest README or source-adjacent evidence over parent or generated context, and repo-local evidence over commentary.
 - Do not silently choose between multiple plausible plans, owners, or edit boundaries. Record the competing interpretations explicitly and return `TASK_STATUS: PARTIAL` if the tie cannot be resolved safely.
 - If a scout is unavailable, fails, or returns partial output, retry once with a narrower packet or the smallest alternate evidence path. Keep successful scout findings instead of discarding the whole pass.
-- Reuse already-read evidence within the same pass. When freshness matters, report the observed timestamp, header hash, or `no material change observed` in `KEY_FINDINGS` rather than inventing new output fields.
+- Reuse already-read evidence within the same pass. When freshness matters, report the observed header hash or `no material change observed` in `KEY_FINDINGS` rather than inventing new output fields.
 - Set `LEARNING_EVENT_NEEDED: true` when recurring ambiguity, missing specialist coverage, or stale context patterns should be captured for maintainers.
 - ALWAYS stop after returning the structured output block; do not continue into implementation or plan editing.
 
@@ -83,7 +83,7 @@ Flowchart summary: "Planning question" → "What context is needed?"; "What cont
 
 ## Escalation Protocol
 
-If 3 consecutive delegation attempts fail, escalate to the parent Tier 1 agent with a structured gap report containing: the failing task, the specialist attempted, the failure mode, and the recovered evidence.
+Continue dispatching fresh specialist instances until the issue is resolved or a true technical limit is reached. Only escalate to the parent Tier 1 agent when a genuine, documented technical limit blocks further progress. Slow progress is still progress — no concessions.
 
 ## If Blocked
 

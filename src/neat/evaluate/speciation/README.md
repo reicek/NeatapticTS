@@ -12,6 +12,7 @@ the heavy lifting. This helper exists because some evaluation-time policies
 depend on refreshed species state immediately after new evidence lands.
 
 Read this chapter when you want to answer questions such as:
+
 - Why can evaluation trigger speciation at all if speciation already has its
   own chapter?
 - Which option flags are strong enough to justify a lightweight post-score
@@ -22,6 +23,7 @@ Read this chapter when you want to answer questions such as:
   reads?
 
 The mental model is a two-step gate:
+
 1. check whether evaluation-time features currently depend on refreshed
    species state,
 2. run the controller's existing speciation hook when they do.
@@ -92,11 +94,13 @@ made the current species snapshot stale enough that the existing speciation
 hook should run before later reads continue?"
 
 The helper preserves several important controller assumptions:
+
 - current score and novelty evidence are left intact,
 - objective policy is left intact,
 - only the existing speciation hook is triggered when needed.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `evaluationOptions` - Options object for the current evaluation pass.
 
@@ -133,6 +137,7 @@ not gain a second speciation subsystem here; it only gains a way to avoid
 stale follow-up reads.
 
 Parameters:
+
 - `evaluationOptions` - Options object for the current evaluation pass.
 
 Returns: True when speciation should run.

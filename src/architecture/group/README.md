@@ -35,10 +35,7 @@ readoutBlock.describe({
   metadata: { stage: 'readout' },
 });
 
-sensorBlock.connect(
-  readoutBlock,
-  methods.groupConnection.ALL_TO_ALL,
-);
+sensorBlock.connect(readoutBlock, methods.groupConnection.ALL_TO_ALL);
 ```
 
 ## architecture/group/group.ts
@@ -79,10 +76,7 @@ readoutBlock.describe({
   metadata: { stage: 'readout' },
 });
 
-sensorBlock.connect(
-  readoutBlock,
-  methods.groupConnection.ALL_TO_ALL,
-);
+sensorBlock.connect(readoutBlock, methods.groupConnection.ALL_TO_ALL);
 ```
 
 ### default
@@ -98,6 +92,7 @@ activate(
 Activates all nodes in the group.
 
 Parameters:
+
 - `value` - Optional array of input values. Its length must match the number of nodes in the group.
 
 Returns: Activation value of each node in the group, in order.
@@ -125,6 +120,7 @@ connect(
 Establishes connections from all nodes in this group to a target group, layer, or node.
 
 Parameters:
+
 - `target` - Destination entity to connect to.
 - `method` - Connection pattern to use.
 - `weight` - Optional fixed weight for all created connections.
@@ -153,6 +149,7 @@ meaningful architecture unit that later diagnostics should recognize
 without inferring from node order alone.
 
 Parameters:
+
 - `descriptor` - Optional label, intent, and scalar metadata to merge.
 
 Returns: Nothing.
@@ -181,6 +178,7 @@ disconnect(
 Removes connections between nodes in this group and a target group or node.
 
 Parameters:
+
 - `target` - Group or node to disconnect from.
 - `twosided` - Whether to also remove reciprocal connections.
 
@@ -198,6 +196,7 @@ gate(
 Configures nodes within this group to act as gates for the specified connection set.
 
 Parameters:
+
 - `connections` - Single connection or list of connections to gate.
 - `method` - Gating mechanism to use.
 
@@ -232,6 +231,7 @@ propagate(
 Propagates the error backward through all nodes in the group.
 
 Parameters:
+
 - `rate` - Learning rate to apply during weight updates.
 - `momentum` - Momentum factor to apply during weight updates.
 - `target` - Optional target values for error calculation. Its length must match the number of nodes.
@@ -249,6 +249,7 @@ set(
 Sets specific properties for all nodes within the group.
 
 Parameters:
+
 - `values` - Property values to apply to every node.
 
 Returns: Nothing.

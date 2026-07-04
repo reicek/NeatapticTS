@@ -18,6 +18,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import crypto from 'node:crypto';
 import {
   aggregateByClass,
   aggregateLatency,
@@ -967,7 +968,7 @@ export async function runCli(argv) {
     }
 
     const payload = {
-      eval_id: `eval-${new Date().toISOString()}`,
+      eval_id: `eval-${crypto.randomUUID()}`,
       query_file: args['query-file'] ?? DEFAULT_QUERY_FILE_PATH,
       query_count: queries.length,
       conditions,

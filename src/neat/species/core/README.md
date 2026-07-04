@@ -19,6 +19,7 @@ Read this chapter when you want to understand:
 - why the policy gate stays separate from the concrete augmentation loop.
 
 The flow is intentionally small:
+
 1. check whether the current options asked for extended history,
 2. if so, delegate to the augmentation chapter that enriches missing rows in
    place,
@@ -58,6 +59,7 @@ registry can still supply the evidence, the helper fills them in.
 Backfill missing extended history fields in place.
 
 Parameters:
+
 - `history` - Recorded species history to enrich.
 - `context` - NEAT context exposing current species and optional fallback innovations.
 
@@ -87,6 +89,7 @@ or whether the caller explicitly asked for the richer innovation-range and
 enabled-ratio view.
 
 Parameters:
+
 - `options` - Current NEAT options.
 
 Returns: `true` when extended history is enabled.

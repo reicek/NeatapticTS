@@ -65,6 +65,7 @@ and edge innovation ids preserves historical identity, which makes later
 alignment-based operations treat equivalent splits as equivalent structure.
 
 Parameters:
+
 - `genomeToEdit` - genome being modified
 - `connectionToSplit` - connection being split
 - `splitDescriptor` - metadata for the split
@@ -94,6 +95,7 @@ but the shared record should remain intact for other genomes that do not have
 the collision.
 
 Parameters:
+
 - `genomeToEdit` - genome being modified
 - `connectionToSplit` - connection being split
 - `splitDescriptor` - metadata for the split
@@ -121,6 +123,7 @@ hidden node, assigns new innovations to the replacement edges, and records
 the resulting identity under the split key so future genomes can reuse it.
 
 Parameters:
+
 - `genomeToEdit` - genome being modified
 - `connectionToSplit` - connection being split
 - `splitDescriptor` - metadata for the split
@@ -147,6 +150,7 @@ innovation ids to the replacement edges and packages those ids together with
 the new node gene id so later equivalent splits can be recognized quickly.
 
 Parameters:
+
 - `newNode` - newly created hidden node
 - `splitConnections` - incoming/outgoing connections
 - `internal` - neat controller context
@@ -170,6 +174,7 @@ When the connection lacks historical metadata, the descriptor falls back to a
 legacy endpoint key so bootstrap and imported edge cases remain stable.
 
 Parameters:
+
 - `connectionToSplit` - connection being split
 
 Returns: split descriptor
@@ -190,6 +195,7 @@ retained only so older or freshly bootstrapped connections without recorded
 innovations still behave deterministically.
 
 Parameters:
+
 - `connectionToSplit` - connection whose split identity is being resolved
 
 Returns: canonical split key for tracker lookup
@@ -210,6 +216,7 @@ RNG draw chooses the connection whose history may now branch into a hidden
 node insertion.
 
 Parameters:
+
 - `enabledConnectionsList` - candidate connections
 - `internal` - neat controller context
 
@@ -231,6 +238,7 @@ doing so would grow new structure from topology the runtime is not currently
 using.
 
 Parameters:
+
 - `genomeToInspect` - genome to inspect
 
 Returns: enabled connections list
@@ -254,6 +262,7 @@ original connection weight so the pre-split signal can still pass forward in
 a comparable way.
 
 Parameters:
+
 - `genomeToEdit` - genome being modified
 - `connectionToSplit` - connection being split
 - `newNode` - newly created hidden node
@@ -278,6 +287,7 @@ Passing the controller RNG through the node constructor keeps that
 initialization deterministic instead of falling back to `Math.random()`.
 
 Parameters:
+
 - `NodeClass` - node constructor used by the mutation path.
 - `randomValue` - deterministic controller RNG.
 
@@ -299,6 +309,7 @@ Removing the original edge first preserves the intended NEAT-style topology
 change: the signal must now pass through the new hidden node.
 
 Parameters:
+
 - `genomeToEdit` - genome to edit
 - `connectionToRemove` - original connection to remove
 
@@ -321,6 +332,7 @@ This guard detects the collision case so callers can fall back to fresh local
 identities while preserving the shared split record for other genomes.
 
 Parameters:
+
 - `genomeToInspect` - genome about to receive the reused split record
 - `splitRecord` - existing split identity record
 
@@ -344,6 +356,7 @@ behaving like a split-based structural mutation instead of bailing out
 immediately.
 
 Parameters:
+
 - `genomeToSeed` - genome that may need a bootstrap connection
 - `internal` - neat controller context retained for compatibility with existing callers
 
@@ -364,6 +377,7 @@ The add-node bootstrap path only needs a minimal node lookup strategy, so
 this helper stays intentionally simple and deterministic.
 
 Parameters:
+
 - `genomeToSearch` - genome whose nodes are searched
 - `nodeType` - node type to match
 
@@ -385,6 +399,7 @@ grouped at the tail of the genome node list. This helper preserves that local
 invariant while still placing the new hidden node near the split target.
 
 Parameters:
+
 - `genomeToEdit` - genome whose node list is updated
 - `targetNode` - original target node of the split connection
 

@@ -93,12 +93,13 @@ on a best-effort basis so experiments remain reproducible and do not abort
 mid-run.
 
 Parameters:
+
 - `this` - Bound NEAT instance.
 - `genome` - Genome / network object to insert. Mutated in place to add
-internal metadata fields (`_id`, `_parents`, `_depth`, `_reenableProb`).
+  internal metadata fields (`_id`, `_parents`, `_depth`, `_reenableProb`).
 - `parents` - Optional explicit list of parent genome IDs (for example, two
-parents for crossover). If omitted, the genome is treated as an
-exogenous insertion with empty lineage ancestry.
+  parents for crossover). If omitted, the genome is treated as an
+  exogenous insertion with empty lineage ancestry.
 
 Example:
 
@@ -132,6 +133,7 @@ such as importing one external genome or admitting a hand-picked offspring,
 belongs to {@link addGenome} instead.
 
 Design notes:
+
 - Population size is derived from `options.popsize` (default 50).
 - The controller innovation tracker is reseeded from the normalized
   generation-zero template so later structural mutations start above the
@@ -146,6 +148,7 @@ Design notes:
   prevent other genomes from being created, hence the broad try/catch.
 
 Parameters:
+
 - `this` - Bound NEAT instance.
 - `seedNetwork` - Optional prototype network to clone for every initial genome.
 
@@ -219,6 +222,7 @@ wants to preview, filter, score, or compare several children before allowing
 one of them to join the population through {@link addGenome}.
 
 Evolutionary rationale:
+
 - Cloning preserves the full topology and weights of the parent.
 - A configurable number of mutation passes are applied sequentially; each
   pass may alter structure (add/remove nodes or connections) or weights.
@@ -231,12 +235,13 @@ Robustness philosophy: individual mutation failures are silently ignored so a
 single stochastic edge case does not derail evolutionary progress.
 
 Parameters:
+
 - `this` - Bound NEAT instance (inferred when used as a method).
 - `parentGenome` - Parent genome/network to clone. Must implement either
-`clone()` OR a pair of `toJSON()` / static `fromJSON()` for deep copying.
+  `clone()` OR a pair of `toJSON()` / static `fromJSON()` for deep copying.
 - `mutateCount` - Number of sequential mutation operations to attempt; each
-iteration chooses a mutation method using the instance's selection
-logic. Defaults to 1 for conservative structural drift.
+  iteration chooses a mutation method using the instance's selection
+  logic. Defaults to 1 for conservative structural drift.
 
 Returns: A new genome whose score and derived caches are reset, whose lineage
 metadata references the parent, and whose final admission into the

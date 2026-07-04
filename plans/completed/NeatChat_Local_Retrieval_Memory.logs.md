@@ -1,7 +1,7 @@
 # NeatChat Local Retrieval and Memory - Audit Log
 
 **Status:** [DONE]
-**Closed:** 2026-05-26
+**Closed:**
 
 ## Pass history
 

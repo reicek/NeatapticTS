@@ -8,7 +8,7 @@ Reduce per-session MCP context tax by replacing the heavy `devtools` and `cortex
 
 ## Final state
 
-Phase 1 completed on 2026-06-28. All planned artifacts delivered and validated:
+Phase 1 completed. All planned artifacts delivered and validated:
 
 - `scripts/agent-customization/mcp/cortex-facade.mjs`, `devtools-facade.mjs`, and `lazy-facade-core.mjs` implement single router-tool facades.
 - `scripts/agent-customization/mcp/cortex-tool-snapshot.json` and `devtools-tool-snapshot.json` advertise one minimal router tool each.
@@ -33,10 +33,10 @@ Phase 1 completed on 2026-06-28. All planned artifacts delivered and validated:
 
 ## Decision records
 
-- DR-2026-07-03-01: Tool facade chosen over hook/script alternatives.
-- DR-2026-07-03-02: Short server keys `cortex` / `devtools` selected.
-- DR-2026-07-03-03 (superseded): Wrapper approach initially chosen.
-- DR-2026-07-05-04: Router-tool approach adopted because wrapper snapshots still paid the per-session tool-list cost.
+- DR-015: Tool facade chosen over hook/script alternatives.
+- DR-016: Short server keys `cortex` / `devtools` selected.
+- DR-017 (superseded): Wrapper approach initially chosen.
+- DR-018: Router-tool approach adopted because wrapper snapshots still paid the per-session tool-list cost.
 
 ## Reopen conditions
 

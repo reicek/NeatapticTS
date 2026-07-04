@@ -63,17 +63,19 @@ generateStandalone(
 Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.
 
 Implementation Steps:
- 1. Validate presence of output nodes (must produce something observable).
- 2. Assign stable sequential indices to nodes (used as array offsets in generated code).
- 3. Collect initial activation/state values into typed array initializers for warm starting.
- 4. For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
+
+1.  Validate presence of output nodes (must produce something observable).
+2.  Assign stable sequential indices to nodes (used as array offsets in generated code).
+3.  Collect initial activation/state values into typed array initializers for warm starting.
+4.  For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
     (post-activation output). Gating multiplies activation by gate activations; self-connection adds
     recurrent term S[i] * weight before activation.
- 5. De-duplicate activation functions: each unique squash name is emitted once; references become
+5.  De-duplicate activation functions: each unique squash name is emitted once; references become
     indices into array F of function references for compactness.
- 6. Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).
+6.  Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).
 
 Parameters:
+
 - `net` - Network instance to snapshot.
 
 Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.
@@ -92,6 +94,7 @@ Reinterpret the runtime `Network` instance as the internal standalone
 property surface used by generator setup utilities.
 
 Parameters:
+
 - `net` - Network instance to cast.
 
 Returns: Internal network properties used by the standalone generator.
@@ -108,6 +111,7 @@ Allocate a fresh emit-pass context that accumulates node indexes, cached
 activation sources, and generated body lines.
 
 Parameters:
+
 - `standaloneProps` - Internal standalone network view.
 
 Returns: Generation context with precision, index buffers, and emission state.
@@ -124,6 +128,7 @@ Enforce the standalone precondition that at least one output node exists
 before source generation proceeds.
 
 Parameters:
+
 - `standaloneProps` - Internal standalone network view.
 
 Returns: Void.
@@ -139,6 +144,7 @@ resolveInputNodeIndexes(
 Resolve input-node indexes in public input-vector order.
 
 Parameters:
+
 - `network` - Runtime network being snapshotted.
 
 Returns: Input-node indexes used when seeding generated activation buffers.
@@ -155,6 +161,7 @@ Resolve standalone numeric precision by reconciling shared precision config
 with the legacy `_activationPrecision` override.
 
 Parameters:
+
 - `standaloneProps` - Internal standalone network view.
 
 Returns: Resolved activation precision for generated storage.
@@ -176,6 +183,7 @@ lines such as NARX memory blocks, where raw node storage order can differ
 from the dependency order used during activation.
 
 Parameters:
+
 - `network` - Runtime network being snapshotted.
 - `generationContext` - Mutable generation context receiving index metadata.
 
@@ -193,6 +201,7 @@ Stamp stable per-node indexes and snapshot initial activation/state buffers
 used by emitted standalone runtime state.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 
 Returns: Void.
@@ -212,6 +221,7 @@ appendGateMultiplier(
 Append a gate activation multiplier to a connection term when a gate exists.
 
 Parameters:
+
 - `connectionTerm` - Base connection term.
 - `gateNode` - Optional gate node.
 
@@ -234,6 +244,7 @@ self-connection terms, then folds them into a single JavaScript expression
 emitted into standalone network source.
 
 Parameters:
+
 - `generationContext` - Standalone code-generation context.
 - `currentNode` - Current node.
 - `nodeTraversalIndex` - Node index.
@@ -260,6 +271,7 @@ buildStoredValueReadExpression(
 Build one storage read expression for generated standalone buffers.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `bufferName` - Generated buffer variable name.
 - `nodeIndex` - Indexed storage slot.
@@ -278,6 +290,7 @@ collectIncomingTerms(
 Collect feed-forward inbound connection terms for a node.
 
 Parameters:
+
 - `currentNode` - Current node.
 
 Returns: Weighted term expressions.
@@ -296,6 +309,7 @@ The returned array preserves traversal order so emitted output selectors map
 consistently to the public standalone activation result vector.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 
 Returns: Output indexes used for result array emission.
@@ -320,6 +334,7 @@ collectSelfConnectionTerms(
 Collect recurrent self-connection term for a node when present.
 
 Parameters:
+
 - `currentNode` - Current node.
 - `nodeTraversalIndex` - Node index used for self-state reference.
 
@@ -336,6 +351,7 @@ foldTermsIntoExpression(
 Fold a term collection into a summation expression.
 
 Parameters:
+
 - `allTerms` - Term collection.
 
 Returns: Summation expression or fallback zero literal.
@@ -355,6 +371,7 @@ Each output index is translated into a storage-buffer read expression and
 joined as a comma-separated selector list for emitted array literals.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `outputIndexes` - Output node indexes.
 
@@ -378,6 +395,7 @@ getOptionalNodeIndex(
 Resolve optional generated node index from a node reference.
 
 Parameters:
+
 - `nodeReference` - Optional node reference.
 
 Returns: Node index when available.
@@ -394,6 +412,7 @@ mergeTermCollections(
 Merge two term lists into a single ordered list.
 
 Parameters:
+
 - `firstTerms` - First term collection.
 - `secondTerms` - Second term collection.
 
@@ -410,6 +429,7 @@ resolveStandaloneBufferName(
 Resolve the generated working-buffer variable name for one standalone buffer.
 
 Parameters:
+
 - `bufferName` - Persistent standalone storage name.
 
 Returns: Working-buffer name used during one float16 activation call.
@@ -430,6 +450,7 @@ appendActivationLine(
 Append generated activation assignment line for one node.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `nodeTraversalIndex` - Node index.
 - `activationFunctionIndex` - Function table index.
@@ -448,6 +469,7 @@ appendAllNodeComputationLines(
 Append generated computation lines for all active non-input network nodes.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 
 Returns: Void.
@@ -463,6 +485,7 @@ appendInputSeedLine(
 Append the generated input-copy initialization loop to the standalone body.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 
 Returns: Void.
@@ -479,6 +502,7 @@ appendOutputReturnLine(
 Append the final generated return statement for collected output activations.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `outputIndexes` - Output node indexes.
 
@@ -496,6 +520,7 @@ appendSingleNodeComputationLines(
 Append state and activation lines for one node.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `nodeTraversalIndex` - Node index currently being emitted.
 
@@ -515,6 +540,7 @@ appendStateLine(
 Append generated state assignment line for one node.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `nodeTraversalIndex` - Node index.
 - `sumExpression` - Generated sum expression.
@@ -533,6 +559,7 @@ buildMaskSuffix(
 Build optional activation mask suffix for generated assignment line.
 
 Parameters:
+
 - `maskValue` - Multiplicative mask value.
 
 Returns: Empty suffix for identity, otherwise multiplicative fragment.
@@ -550,6 +577,7 @@ buildStoredValueReadExpression(
 Build one storage read expression for generated standalone buffers.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `bufferName` - Generated buffer variable name.
 - `nodeIndex` - Indexed storage slot.
@@ -570,6 +598,7 @@ buildStoredValueWriteStatement(
 Build one storage write statement for generated standalone buffers.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `bufferName` - Generated buffer variable name.
 - `nodeIndex` - Indexed storage slot.
@@ -588,6 +617,7 @@ resolveStandaloneBufferName(
 Resolve the generated working-buffer variable name for one standalone buffer.
 
 Parameters:
+
 - `bufferName` - Persistent standalone storage name.
 
 Returns: Working-buffer name used during one float16 activation call.
@@ -606,6 +636,7 @@ convertArrowToNamedFunction(
 Convert an arrow-function source string into a named function declaration source.
 
 Parameters:
+
 - `sourceCode` - Arrow-function source.
 - `squashName` - Required function name.
 
@@ -625,6 +656,7 @@ ensureActivationFunctionIndex(
 Register an activation implementation once and return its stable index in the generated activation table.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `squashName` - Activation function name.
 - `squashFunction` - Activation function implementation.
@@ -644,6 +676,7 @@ ensureNamedFunctionSource(
 Ensure generated function source starts with the required named signature.
 
 Parameters:
+
 - `sourceCode` - Function source.
 - `squashName` - Required function name.
 
@@ -663,6 +696,7 @@ Preserves block bodies and wraps expression bodies with an explicit return
 so generated standalone activation functions remain syntactically stable.
 
 Parameters:
+
 - `bodySegment` - Raw arrow body segment.
 
 Returns: Function body block string.
@@ -678,6 +712,7 @@ normalizeArrowParameters(
 Normalize arrow parameter segment into comma-separated parameter list content.
 
 Parameters:
+
 - `parameterSegment` - Raw arrow parameter segment.
 
 Returns: Parameter list body (without surrounding parentheses).
@@ -694,6 +729,7 @@ normalizeBuiltinSource(
 Normalize built-in activation source to a named function and strip coverage artifacts.
 
 Parameters:
+
 - `sourceCode` - Built-in function source.
 - `squashName` - Required function name.
 
@@ -712,6 +748,7 @@ normalizeCustomSource(
 Normalize custom activation source with function/arrow/fallback handling.
 
 Parameters:
+
 - `sourceCode` - Custom function source.
 - `squashName` - Required function name.
 - `nodeTraversalIndex` - Current node index for traversal-context parity.
@@ -731,6 +768,7 @@ registerActivationFunction(
 Persist a normalized activation source and bind its name to the next generated activation index.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `squashName` - Activation function name.
 - `functionSource` - Named function source to store.
@@ -748,6 +786,7 @@ resolveActivationFunctionSource(
 Resolve standalone-ready activation source by preferring built-in snippets and normalizing custom bodies.
 
 Parameters:
+
 - `squashName` - Activation function name.
 - `squashFunction` - Activation function implementation.
 - `nodeTraversalIndex` - Current node index for fallback flow.
@@ -765,6 +804,7 @@ resolveBuiltinActivationSource(
 Resolve built-in activation snippets for both canonical and exported helper names.
 
 Parameters:
+
 - `squashName` - Activation function name.
 
 Returns: Built-in activation source when known.
@@ -781,6 +821,7 @@ resolveSquashName(
 Resolve a stable activation function identifier for standalone code emission.
 
 Parameters:
+
 - `currentNode` - Current node.
 - `nodeTraversalIndex` - Node index for anonymous-name fallback.
 
@@ -799,6 +840,7 @@ stripCoverage(
 Remove coverage artifacts and formatting noise from generated function sources.
 
 Parameters:
+
 - `code` - Source text potentially containing coverage wrappers.
 
 Returns: Cleaned source text suitable for deterministic standalone emission.
@@ -816,6 +858,7 @@ assembleStandaloneSource(
 Assemble the final standalone IIFE source string from the generation context.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 
 Returns: Final generated source string.
@@ -831,6 +874,7 @@ buildActivationArrayLiteral(
 Build deterministic activation function array literal by function index ordering.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 
 Returns: Comma-separated activation function names.
@@ -848,6 +892,7 @@ buildInitialBufferLiteral(
 Build the array literal used to seed one generated storage buffer.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 - `values` - Initial numeric values for the buffer.
 
@@ -864,6 +909,7 @@ buildInputGuardLine(
 Build generated input length guard line.
 
 Parameters:
+
 - `expectedInputSize` - Required input vector size.
 
 Returns: Guard statement line including trailing newline.
@@ -879,6 +925,7 @@ buildPrecisionHelperSource(
 Build generated precision helper functions when standalone storage uses float16.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 
 Returns: Helper function source or an empty string for native precision paths.
@@ -894,6 +941,7 @@ buildWorkingBufferBootstrapSource(
 Build working-buffer bootstrap lines for the float16 standalone path.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 
 Returns: Working-buffer setup lines or an empty string for native precision paths.
@@ -909,6 +957,7 @@ encodeFloat16Value(
 Encode one JavaScript number into an unsigned float16 storage word.
 
 Parameters:
+
 - `value` - Numeric value being snapshotted into generated float16 storage.
 
 Returns: Unsigned 16-bit integer containing IEEE 754 binary16 bits.
@@ -924,6 +973,7 @@ resolveActivationBufferType(
 Resolve typed-array constructor name based on configured activation precision.
 
 Parameters:
+
 - `generationContext` - Mutable generation context.
 
 Returns: Constructor name used in generated source.

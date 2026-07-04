@@ -1,13 +1,8 @@
 {
-  "eval_id": "eval-2026-06-22T00:58:43.884Z",
+  "eval_id": "eval-turso-baseline-001",
   "query_file": "C:\\NeatapticTS\\scripts\\semantic-index\\eval-queries.json",
   "query_count": 20,
-  "conditions": [
-    "bm25_only",
-    "hybrid",
-    "hybrid_rerank",
-    "advanced_default"
-  ],
+  "conditions": ["bm25_only", "hybrid", "hybrid_rerank", "advanced_default"],
   "results": {
     "bm25_only": {
       "condition": "bm25_only",

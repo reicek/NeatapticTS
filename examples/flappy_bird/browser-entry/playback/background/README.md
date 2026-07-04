@@ -30,6 +30,7 @@ horizon seam last. That ordering gives the playback scene a stable visual
 identity while keeping the background deterministic and cheap to re-render.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `request` - Narrow render input required for background composition.
 
@@ -258,6 +259,7 @@ drawPlaybackBackgroundHorizon(
 Draws the glowing horizon divider across the visible viewport.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `sceneContext` - Derived scene geometry and style contract.
 
@@ -276,6 +278,7 @@ drawPlaybackBackgroundSky(
 Draws the starfield parallax clipped to the upper sky band.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `sceneContext` - Derived scene geometry and style contract.
 - `request` - Narrow render input required for background composition.
@@ -294,6 +297,7 @@ paintPlaybackBackgroundBase(
 Paints the base background fill for the currently visible viewport.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `sceneContext` - Derived scene geometry and style contract.
 
@@ -310,6 +314,7 @@ resolvePlaybackBackgroundSceneContext(
 Resolves the derived scene contract required by the background passes.
 
 Parameters:
+
 - `request` - Narrow render input required for background composition.
 
 Returns: Immutable scene context shared by the private render helpers.
@@ -327,6 +332,7 @@ resolvePlaybackBackgroundSceneContext(
 Resolves the derived scene contract required by the background passes.
 
 Parameters:
+
 - `request` - Narrow render input required for background composition.
 
 Returns: Immutable scene context shared by the private render helpers.
@@ -345,6 +351,7 @@ drawPlaybackBackgroundHorizon(
 Draws the glowing horizon divider across the visible viewport.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `sceneContext` - Derived scene geometry and style contract.
 
@@ -363,6 +370,7 @@ drawPlaybackBackgroundSky(
 Draws the starfield parallax clipped to the upper sky band.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `sceneContext` - Derived scene geometry and style contract.
 - `request` - Narrow render input required for background composition.
@@ -381,6 +389,7 @@ drawPlaybackHorizonLine(
 Draws the glowing horizon divider using the provided neon style.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `request` - Width, aligned y-position, and style for the divider.
 
@@ -402,6 +411,7 @@ drawPlaybackTiledImageRow(
 Draws a horizontally tiled image strip across the visible width.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `startXPx` - Leftmost visible world x-position for the tiled strip.
 - `tile` - Pre-rendered tile image reused across the sky band.
@@ -423,6 +433,7 @@ paintPlaybackBackgroundBase(
 Paints the base background fill for the currently visible viewport.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `sceneContext` - Derived scene geometry and style contract.
 
@@ -446,6 +457,7 @@ obsolete because the background bands and tile coverage both depend on the
 current viewport dimensions.
 
 Parameters:
+
 - `visibleWorldWidthPx` - Current visible world width in pixels.
 - `visibleWorldHeightPx` - Current visible world height in pixels.
 
@@ -463,6 +475,7 @@ resolveCachedPlaybackBackgroundLayout(
 Resolves cached background layout for the current viewport height.
 
 Parameters:
+
 - `visibleWorldHeightPx` - Current visible world height in pixels.
 - `factory` - Lazy layout builder used when the cache misses.
 
@@ -480,6 +493,7 @@ resolveCachedPlaybackTileCoverageCount(
 Resolves cached tile coverage count for one tile width.
 
 Parameters:
+
 - `tileWidthPx` - Width of one repeated starfield tile in pixels.
 - `factory` - Lazy coverage builder used when the cache misses.
 
@@ -497,6 +511,7 @@ resolvePlaybackBackgroundViewportCacheKey(
 Resolves the stable viewport-size cache key used by background caches.
 
 Parameters:
+
 - `visibleWorldWidthPx` - Current visible world width in pixels.
 - `visibleWorldHeightPx` - Current visible world height in pixels.
 
@@ -516,6 +531,7 @@ resolveAlignedHorizonYPx(
 Resolves pixel-snapped horizon positioning for crisp canvas strokes.
 
 Parameters:
+
 - `horizonYPx` - Logical horizon centerline in pixels.
 - `lineThicknessPx` - Stroke thickness in pixels.
 
@@ -532,6 +548,7 @@ resolvePlaybackBackgroundLayout(
 Resolves the vertical split between the starfield sky and the future ground.
 
 Parameters:
+
 - `visibleWorldHeightPx` - Current visible world height in pixels.
 
 Returns: Stable scene layout for the current frame.
@@ -557,6 +574,7 @@ resolveSafeBackgroundDimension(
 Clamps a background dimension into a render-safe positive integer.
 
 Parameters:
+
 - `dimensionPx` - Candidate viewport dimension in pixels.
 
 Returns: Positive integer dimension suitable for canvas math.

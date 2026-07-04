@@ -155,15 +155,15 @@ flowchart TD
 
 ### Supported direct-import subset
 
-| Constraint | Supported range |
-|---|---|
-| `family` | `'gru'` or `'lstm'` only |
-| `vocabSize` | 300â€“3000 |
-| `hiddenSize` | 8â€“128 |
-| `layers` | exactly one layer |
-| IO shape | unembedded one-hot (input dim == output dim == vocabSize) |
-| Activations | sigmoid and tanh only |
-| Excluded | bidirectional, multi-layer, attention, embedding, positional encoding, layer norm |
+| Constraint   | Supported range                                                                   |
+| ------------ | --------------------------------------------------------------------------------- |
+| `family`     | `'gru'` or `'lstm'` only                                                          |
+| `vocabSize`  | 300â€“3000                                                                        |
+| `hiddenSize` | 8â€“128                                                                           |
+| `layers`     | exactly one layer                                                                 |
+| IO shape     | unembedded one-hot (input dim == output dim == vocabSize)                         |
+| Activations  | sigmoid and tanh only                                                             |
+| Excluded     | bidirectional, multi-layer, attention, embedding, positional encoding, layer norm |
 
 ### Known approximations
 
@@ -337,7 +337,9 @@ import {
 } from './index';
 
 // Step 1: create a session and an adaptation manager.
-let session = createNeatChatSession({ corpusRetainedTerms: ['hello', 'world'] });
+let session = createNeatChatSession({
+  corpusRetainedTerms: ['hello', 'world'],
+});
 let manager = createNeatChatAdaptationManager(session);
 
 // Step 2: schedule one non-blocking adaptation pass.
@@ -394,10 +396,10 @@ flowchart LR
 
 Routing paths:
 
-| Path | Source | Condition |
-|---|---|---|
-| `base` | live session network | always present |
-| `personalized` | newest pending adaptation candidate | when `pendingCandidates` is non-empty |
+| Path                 | Source                                           | Condition                             |
+| -------------------- | ------------------------------------------------ | ------------------------------------- |
+| `base`               | live session network                             | always present                        |
+| `personalized`       | newest pending adaptation candidate              | when `pendingCandidates` is non-empty |
 | `retrieval-grounded` | live network, prompt grounded on recalled memory | when retrieved memories are available |
 
 ### Failure attribution
@@ -420,43 +422,40 @@ one `FailureBucket` when a regression is found.
 
 ### Baseline scores (shipped default seed)
 
-| Metric | Baseline score |
-|---|---|
-| `heldOutNextTokenAccuracy` | 12.29 |
-| `repetitionRate` | 0 (no repeated bigrams) |
-| `responseLengthStability` | 1 (length matches expected) |
+| Metric                     | Baseline score              |
+| -------------------------- | --------------------------- |
+| `heldOutNextTokenAccuracy` | 12.29                       |
+| `repetitionRate`           | 0 (no repeated bigrams)     |
+| `responseLengthStability`  | 1 (length matches expected) |
 
 These are the regression gate values used to validate any promoted seed or
 adaptation candidate against the known baseline.
 
 ### Metrics
 
-| `EvaluationMetric` | Direction | Description |
-|---|---|---|
-| `next-token-accuracy` | higher is better | Per-position token match against held-out expected output |
-| `factual-consistency` | higher is better | Token-overlap score against memory-bank fact records |
-| `repetition-rate` | lower is better | Fraction of repeated bigrams in the response |
-| `response-length-stability` | higher is better | Proximity of actual token count to expected count |
-| `unknown-handling` | higher is better | Whether OOV tokens are handled gracefully without runtime errors |
+| `EvaluationMetric`          | Direction        | Description                                                      |
+| --------------------------- | ---------------- | ---------------------------------------------------------------- |
+| `next-token-accuracy`       | higher is better | Per-position token match against held-out expected output        |
+| `factual-consistency`       | higher is better | Token-overlap score against memory-bank fact records             |
+| `repetition-rate`           | lower is better  | Fraction of repeated bigrams in the response                     |
+| `response-length-stability` | higher is better | Proximity of actual token count to expected count                |
+| `unknown-handling`          | higher is better | Whether OOV tokens are handled gracefully without runtime errors |
 
 ### Failure buckets
 
-| `FailureBucket` | Description |
-|---|---|
-| `base-seed` | Regression likely tied to pretrained seed weights |
-| `retrieval` | Regression correlated with episodic memory retrieval |
-| `routing` | Regression tied to multi-path routing selection |
-| `memory-compression` | Regression after memory-bank pruning dropped needed records |
+| `FailureBucket`         | Description                                                    |
+| ----------------------- | -------------------------------------------------------------- |
+| `base-seed`             | Regression likely tied to pretrained seed weights              |
+| `retrieval`             | Regression correlated with episodic memory retrieval           |
+| `routing`               | Regression tied to multi-path routing selection                |
+| `memory-compression`    | Regression after memory-bank pruning dropped needed records    |
 | `background-adaptation` | Regression observed after a promoted candidate changed weights |
-| `unattributed` | Harness could not narrow to a single subsystem |
+| `unattributed`          | Harness could not narrow to a single subsystem                 |
 
 ### Minimal API example
 
 ```ts
-import {
-  runNeatChatRegressionSuite,
-  scoreNextTokenAccuracy,
-} from './index';
+import { runNeatChatRegressionSuite, scoreNextTokenAccuracy } from './index';
 
 const result = runNeatChatRegressionSuite(session, {
   heldOutCorpus: [{ input: 'hello', expected: 'world' }],
@@ -497,17 +496,17 @@ flowchart TD
 import { checkSafety } from './index';
 
 const result = checkSafety(session, 'hello world');
-console.log(result.ok);        // true for normal responses
+console.log(result.ok); // true for normal responses
 console.log(result.violation); // null when no violation is detected
 ```
 
 ## Scale limitations
 
-| Limitation | Detail |
-|---|---|
-| One-hot vocabulary | Tokens are discrete one-hot vectors, not learned embeddings |
-| Context window cap | Each exchange sees a short fixed-length token window; long histories are truncated |
-| No transformer parity | LSTM/GRU/NARX builder only; no self-attention, positional encoding, or multi-head behavior |
-| Seed-import eligibility | Only single-layer GRU or LSTM with one-hot IO, vocab 300-3000, sigmoid/tanh activations |
-| No automatic weight promotion | Background adaptation candidates require explicit `promoteNeatChatAdaptationCandidate` |
-| No worker-thread backend | Background adaptation runs on the main thread via `queueMicrotask` |
+| Limitation                    | Detail                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| One-hot vocabulary            | Tokens are discrete one-hot vectors, not learned embeddings                                |
+| Context window cap            | Each exchange sees a short fixed-length token window; long histories are truncated         |
+| No transformer parity         | LSTM/GRU/NARX builder only; no self-attention, positional encoding, or multi-head behavior |
+| Seed-import eligibility       | Only single-layer GRU or LSTM with one-hot IO, vocab 300-3000, sigmoid/tanh activations    |
+| No automatic weight promotion | Background adaptation candidates require explicit `promoteNeatChatAdaptationCandidate`     |
+| No worker-thread backend      | Background adaptation runs on the main thread via `queueMicrotask`                         |

@@ -38,6 +38,7 @@ input uses `resolveObservationVectorFromFeatures(features)` directly and does
 not stack these core frames.
 
 Parameters:
+
 - `features` - Structured observation features.
 
 Returns: Core per-frame vector.
@@ -66,6 +67,7 @@ observation policy and network-shape concerns can evolve independently.
 
 The features deliberately mix two kinds of control signal plus a small set of
 shaping-oriented derived hints:
+
 1. Current state, such as bird height and vertical velocity.
 2. Immediate next-gap geometry, such as distance, offset, and corridor
    bounds.
@@ -79,6 +81,7 @@ For broader context, the Wikipedia article on "feature engineering" is a
 good companion reference.
 
 Parameters:
+
 - `input` - Observation input bundle.
 
 Returns: Structured observation features.
@@ -130,6 +133,7 @@ against one input layout, silent channel reshuffles would invalidate learned
 behavior.
 
 Parameters:
+
 - `features` - Structured feature object.
 
 Returns: Ordered feature vector.
@@ -161,6 +165,7 @@ Keeping this helper small and explicit makes it easy for callers to choose
 how much near-future geometry they actually want.
 
 Parameters:
+
 - `pipes` - Current pipe list.
 - `birdCenterXPx` - Bird center x-position.
 - `birdRadiusPx` - Bird radius.
@@ -192,6 +197,7 @@ Observation synthesis normalizes many raw measurements, so this helper keeps
 derived channels inside their documented ranges.
 
 Parameters:
+
 - `value` - Candidate value.
 - `min` - Inclusive lower bound.
 - `max` - Inclusive upper bound.
@@ -212,6 +218,7 @@ This is used for channels that are naturally interpreted as normalized
 proportions or bounded progress values.
 
 Parameters:
+
 - `value` - Candidate value.
 
 Returns: Value clamped between 0 and 1.
@@ -233,6 +240,7 @@ observation policy and network-shape concerns can evolve independently.
 
 The features deliberately mix two kinds of control signal plus a small set of
 shaping-oriented derived hints:
+
 1. Current state, such as bird height and vertical velocity.
 2. Immediate next-gap geometry, such as distance, offset, and corridor
    bounds.
@@ -246,6 +254,7 @@ For broader context, the Wikipedia article on "feature engineering" is a
 good companion reference.
 
 Parameters:
+
 - `input` - Observation input bundle.
 
 Returns: Structured observation features.
@@ -285,6 +294,7 @@ the current physics assumption?" That small prediction is enough to build the
 reachability and urgency features used by the controller.
 
 Parameters:
+
 - `startYPx` - Current bird y-position.
 - `initialVerticalVelocityPxPerFrame` - Initial vertical velocity.
 - `frameHorizon` - Predicted horizon in simulation frames.
@@ -310,6 +320,7 @@ Keeping this helper small and explicit makes it easy for callers to choose
 how much near-future geometry they actually want.
 
 Parameters:
+
 - `pipes` - Current pipe list.
 - `birdCenterXPx` - Bird center x-position.
 - `birdRadiusPx` - Bird radius.
@@ -345,6 +356,7 @@ input uses `resolveObservationVectorFromFeatures(features)` directly and does
 not stack these core frames.
 
 Parameters:
+
 - `features` - Structured observation features.
 
 Returns: Core per-frame vector.
@@ -386,6 +398,7 @@ against one input layout, silent channel reshuffles would invalidate learned
 behavior.
 
 Parameters:
+
 - `features` - Structured feature object.
 
 Returns: Ordered feature vector.

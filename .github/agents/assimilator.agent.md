@@ -13,7 +13,19 @@ skills:
     research-methodology,
     capturing-learning-event,
   ]
-tools: [read, search, edit, execute, agent, web, cortex/cortex, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]
+tools:
+  [
+    read,
+    search,
+    edit,
+    execute,
+    agent,
+    web,
+    cortex/cortex,
+    neataptic-gate-mcp/*,
+    neataptic-validation-mcp/*,
+    neataptic-workflow-mcp/*,
+  ]
 ---
 
 # `assimilator` Specialist Agent

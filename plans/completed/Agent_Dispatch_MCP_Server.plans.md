@@ -21,7 +21,7 @@ No `src/` library code is touched.
 
 ## Final state
 
-Phase 1 completed on 2026-06-22. All planned artifacts are delivered and validated:
+Phase 1 completed. All planned artifacts are delivered and validated:
 
 - `scripts/agent-customization/mcp/neataptic-dispatch-mcp.mjs` implements `list_dispatchable_agents`, `build_dispatch_packet`, and `get_dispatch_policy` with self-check.
 - `scripts/agent-customization/mcp/__tests__/neataptic-dispatch.red.test.mjs` passes 8/8.

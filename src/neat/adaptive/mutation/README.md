@@ -51,6 +51,7 @@ Self-adaptive per-genome mutation tuning.
 This function implements several strategies to adjust each genome's
 internal mutation rate (`g._mutRate`) and optionally its mutation
 amount (`g._mutAmount`) over time. Strategies include:
+
 - `twoTier`: push top and bottom halves in opposite directions to
   create exploration/exploitation balance.
 - `exploreLow`: preferentially increase mutation for lower-scoring
@@ -93,6 +94,7 @@ pressure. That outcome is later used to decide whether fallback balancing is
 needed to preserve the intended exploration-versus-exploitation contrast.
 
 Parameters:
+
 - `population` - Full population to mutate.
 - `partitions` - Scored partitions.
 - `settings` - Resolved settings.
@@ -118,6 +120,7 @@ attempts so later operator selection can weight recent performance more
 heavily.
 
 Parameters:
+
 - `stats` - Operator statistics map.
 - `entries` - Operator stat entries to update.
 - `decay` - Decay factor.
@@ -141,6 +144,7 @@ than the main update loop because it only nudges rates, leaving the richer
 strategy-specific reasoning to the first pass.
 
 Parameters:
+
 - `population` - Population of genomes.
 - `settings` - Resolved settings.
 
@@ -163,6 +167,7 @@ object so later helpers can stay focused on strategy logic instead of config
 fallback bookkeeping.
 
 Parameters:
+
 - `engine` - NEAT engine instance.
 - `config` - Adaptive mutation configuration.
 
@@ -182,6 +187,7 @@ Centralizing the default decay factor keeps the caller focused on the update
 cycle instead of repeatedly restating configuration fallback rules.
 
 Parameters:
+
 - `config` - Operator adaptation configuration.
 
 Returns: Decay factor for exponential smoothing.
@@ -202,6 +208,7 @@ every generation unless the configuration explicitly asks for that. This lets
 runs choose between fast reaction and slower, more stable adjustment cycles.
 
 Parameters:
+
 - `generation` - Current generation index.
 - `config` - Adaptive mutation configuration.
 
@@ -223,6 +230,7 @@ mutation pressure across the population. If randomness or missing state makes
 the result one-sided, the caller can trigger a deterministic rebalance pass.
 
 Parameters:
+
 - `strategy` - Mutation strategy identifier.
 - `outcome` - Mutation outcome flags.
 
@@ -260,6 +268,7 @@ Annealing gradually shrinks the effective delta as the run ages, making early
 mutation-pressure updates more aggressive and later ones more conservative.
 
 Parameters:
+
 - `baseDelta` - Base random delta.
 - `settings` - Resolved settings.
 
@@ -282,6 +291,7 @@ genomes receive larger positive pressure, while the rest are gently pushed
 downward so the search budget does not inflate everywhere at once.
 
 Parameters:
+
 - `baseDelta` - Base random delta.
 - `genome` - Current genome.
 - `bottomHalfSet` - Lookup for bottom-half genomes.
@@ -308,6 +318,7 @@ amount updates remain optional because some runs only want to tune how often
 mutation fires, not how large each mutation should be.
 
 Parameters:
+
 - `genome` - Current genome.
 - `settings` - Resolved settings.
 - `randomSource` - Random number provider.
@@ -337,6 +348,7 @@ pressure. That outcome is later used to decide whether fallback balancing is
 needed to preserve the intended exploration-versus-exploitation contrast.
 
 Parameters:
+
 - `population` - Full population to mutate.
 - `partitions` - Scored partitions.
 - `settings` - Resolved settings.
@@ -363,6 +375,7 @@ weaker genomes more room to roam and keep stronger genomes from drifting too
 far in one step.
 
 Parameters:
+
 - `baseDelta` - Base random delta.
 - `genome` - Current genome.
 - `genomeIndex` - Genome index.
@@ -391,6 +404,7 @@ When the score split is not available, the helper falls back to index parity
 just to preserve that contrasting pressure pattern.
 
 Parameters:
+
 - `baseDelta` - Base random delta.
 - `genome` - Current genome.
 - `genomeIndex` - Genome index.
@@ -416,6 +430,7 @@ than the main update loop because it only nudges rates, leaving the richer
 strategy-specific reasoning to the first pass.
 
 Parameters:
+
 - `population` - Population of genomes.
 - `settings` - Resolved settings.
 
@@ -438,6 +453,7 @@ configured rate and amount envelopes even when repeated random pressure would
 otherwise drift beyond them.
 
 Parameters:
+
 - `value` - Value to clamp.
 - `min` - Minimum bound.
 - `max` - Maximum bound.
@@ -459,6 +475,7 @@ evidence. Unevaluated genomes stay out of the ranking split so the strategy
 logic only reacts to genomes the run has actually judged.
 
 Parameters:
+
 - `population` - Population of genomes.
 
 Returns: Scored genomes.
@@ -478,6 +495,7 @@ This is the small stochastic core shared by rate and amount adaptation.
 Later strategy helpers decide how to reinterpret the sign and magnitude.
 
 Parameters:
+
 - `sigmaBase` - Sigma scaling factor.
 - `randomSource` - Random number provider.
 
@@ -503,6 +521,7 @@ otherwise keeps the raw stochastic delta. That keeps the amount policy easier
 to reason about than the richer rate-tuning branch.
 
 Parameters:
+
 - `settings` - Resolved settings.
 - `randomSource` - Random number provider.
 - `genome` - Current genome.
@@ -524,6 +543,7 @@ resolveMutationAmountSettings(
 Resolve mutation-amount settings from adaptive config and engine defaults.
 
 Parameters:
+
 - `engine` - NEAT engine instance.
 - `config` - Adaptive mutation configuration.
 
@@ -540,6 +560,7 @@ resolveMutationRateSettings(
 Resolve mutation-rate settings controlled directly by adaptive config.
 
 Parameters:
+
 - `config` - Adaptive mutation configuration.
 
 Returns: Rate-related mutation settings.
@@ -555,6 +576,7 @@ resolveMutationRuntimeSettings(
 Resolve generation-scoped runtime counters consumed by adaptive mutation.
 
 Parameters:
+
 - `engine` - NEAT engine instance.
 
 Returns: Runtime counters mirrored into mutation settings.
@@ -576,6 +598,7 @@ object so later helpers can stay focused on strategy logic instead of config
 fallback bookkeeping.
 
 Parameters:
+
 - `engine` - NEAT engine instance.
 - `config` - Adaptive mutation configuration.
 
@@ -595,6 +618,7 @@ Adaptive mutation uses the same RNG access pattern as the older runtime so
 the pressure updates remain comparable with existing runs and tests.
 
 Parameters:
+
 - `engine` - NEAT engine instance.
 
 Returns: Random number provider.
@@ -620,6 +644,7 @@ favoring exploration, rewarding stronger genomes with lower pressure, or
 annealing toward smaller adjustments over time.
 
 Parameters:
+
 - `settings` - Resolved settings.
 - `randomSource` - Random number provider.
 - `genome` - Current genome.
@@ -645,6 +670,7 @@ every generation unless the configuration explicitly asks for that. This lets
 runs choose between fast reaction and slower, more stable adjustment cycles.
 
 Parameters:
+
 - `generation` - Current generation index.
 - `config` - Adaptive mutation configuration.
 
@@ -666,6 +692,7 @@ mutation pressure across the population. If randomness or missing state makes
 the result one-sided, the caller can trigger a deterministic rebalance pass.
 
 Parameters:
+
 - `strategy` - Mutation strategy identifier.
 - `outcome` - Mutation outcome flags.
 
@@ -686,6 +713,7 @@ strategies. Lower-scoring genomes end up at the front, which makes the later
 top-half and bottom-half split read naturally.
 
 Parameters:
+
 - `scoredGenomes` - Scored genomes.
 
 Returns: Sorted genomes.
@@ -705,6 +733,7 @@ structure. Later helpers can ask whether a genome belongs to the exploratory
 bottom half or the conservative top half without re-deriving the split.
 
 Parameters:
+
 - `scoredGenomes` - Sorted scored genomes.
 
 Returns: Partitions used by strategy rules.
@@ -736,6 +765,7 @@ attempts so later operator selection can weight recent performance more
 heavily.
 
 Parameters:
+
 - `stats` - Operator statistics map.
 - `entries` - Operator stat entries to update.
 - `decay` - Decay factor.
@@ -757,6 +787,7 @@ the generated docs show that the helper operates over a stable view of the
 current operator table.
 
 Parameters:
+
 - `stats` - Operator statistics map.
 
 Returns: Array of operator stat entries.
@@ -777,6 +808,7 @@ attempt counts so the operator table preserves ratios while shrinking older
 evidence.
 
 Parameters:
+
 - `operatorStat` - Operator statistic record.
 - `decay` - Decay factor.
 
@@ -796,6 +828,7 @@ Centralizing the default decay factor keeps the caller focused on the update
 cycle instead of repeatedly restating configuration fallback rules.
 
 Parameters:
+
 - `config` - Operator adaptation configuration.
 
 Returns: Decay factor for exponential smoothing.

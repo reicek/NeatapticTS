@@ -38,9 +38,7 @@ This named-object form replaces tuple index access in internal orchestration cod
 
 Compact tuple payload used by `serialize` output.
 
-Tuple slots are intentionally positional to reduce payload size:
-0) activations, 1) states, 2) squash keys, 3) connections, 4) input size,
-5) output size, 6) optional node gene ids, 7) optional topology intent.
+Tuple slots are intentionally positional to reduce payload size: 0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size, 6) optional node gene ids, 7) optional topology intent.
 
 Example:
 
@@ -266,6 +264,7 @@ Suffix appended when emitting a warning about an unknown activation squash key e
 
 Connection (Synapse / Edge)
 ===========================
+
 Directed weighted link between two nodes. The connection keeps the everyday
 graph fields (`from`, `to`, `weight`, `innovation`) directly on the instance,
 then pushes rarer capabilities behind symbol-backed accessors so large
@@ -301,6 +300,7 @@ applyHydratedArchitectureDescriptor(
 Applies hydrated architecture metadata to runtime network when shape is valid.
 
 Parameters:
+
 - `network` - Rebuilt network instance.
 - `architectureDescriptor` - Optional serialized descriptor.
 
@@ -318,6 +318,7 @@ applyHydratedExtensionBag(
 Hydrates the generic extension bag onto the runtime network when shape is valid.
 
 Parameters:
+
 - `runtimeNetwork` - Runtime network receiving the extension bag.
 - `extensions` - Optional serialized extension bag.
 
@@ -335,6 +336,7 @@ applySerializedExtensionBag(
 Re-emits the hydrated generic extension bag on verbose JSON snapshots.
 
 Parameters:
+
 - `runtimeNetwork` - Runtime network that may carry hydrated extensions.
 - `networkJson` - Target JSON payload.
 
@@ -353,6 +355,7 @@ applySerializedRuntimeState(
 Restore live activation and recurrent-state scalars after structural import.
 
 Parameters:
+
 - `rebuiltNetwork` - Reconstructed runtime network.
 - `activations` - Activation values aligned to node order.
 - `states` - Recurrent state values aligned to node order.
@@ -370,6 +373,7 @@ cloneNetworkJsonExtensions(
 Clones one generic network extension bag when the top-level shape is valid.
 
 Parameters:
+
 - `extensions` - Optional serialized extension bag.
 
 Returns: Cloned extension bag or `undefined` when shape is invalid.
@@ -394,6 +398,7 @@ This helper describes layout order only; it is not a cross-runtime exact
 replay promise.
 
 Parameters:
+
 - `network` - Live network instance to inspect.
 
 Returns: Versioned ordered layout descriptors for the current topology.
@@ -421,6 +426,7 @@ Use this importer for compact payloads produced by `serialize`.
 Optional `inputSize` and `outputSize` let callers enforce shape overrides at import time.
 
 Parameters:
+
 - `data` - Compact tuple payload.
 - `inputSize` - Optional input-size override that takes precedence over serialized input.
 - `outputSize` - Optional output-size override that takes precedence over serialized output.
@@ -449,6 +455,7 @@ Rebuild a network instance from the compressed compact payload and restore runti
 The function validates payload format first so incompatible compressed data fails before partial reconstruction occurs.
 
 Parameters:
+
 - `data` - Compressed compact payload.
 - `inputSize` - Optional input-size override.
 - `outputSize` - Optional output-size override.
@@ -469,6 +476,7 @@ Rebuild a network instance from the compressed archive wrapper by inflating arch
 This keeps archive-specific decode concerns separate from structural reconstruction and runtime-state restoration.
 
 Parameters:
+
 - `data` - Archived compressed payload.
 - `inputSize` - Optional input-size override.
 - `outputSize` - Optional output-size override.
@@ -493,6 +501,7 @@ off the synchronous main-thread lane, while Node falls back to the existing
 archive owner when browser streams are unavailable.
 
 Parameters:
+
 - `data` - Archived compressed payload.
 - `inputSize` - Optional input-size override.
 - `outputSize` - Optional output-size override.
@@ -514,6 +523,7 @@ Rebuild a network archive with async codecs and report size plus decode-time met
 This helper preserves deterministic reconstruction while exposing decode telemetry for responsiveness tuning.
 
 Parameters:
+
 - `data` - Archived compressed payload.
 - `inputSize` - Optional input-size override.
 - `outputSize` - Optional output-size override.
@@ -535,6 +545,7 @@ Rebuild a network archive and report size plus decode-time metrics for import pe
 The returned metrics quantify archive inflation and reconstruction overhead alongside the rebuilt runtime.
 
 Parameters:
+
 - `data` - Archived compressed payload.
 - `inputSize` - Optional input-size override.
 - `outputSize` - Optional output-size override.
@@ -555,6 +566,7 @@ This importer validates payload shape, restores dropout and topology, and then r
 connections, gating relationships, and optional enabled flags.
 
 Parameters:
+
 - `json` - Verbose JSON payload.
 
 Returns: Reconstructed network instance.
@@ -590,6 +602,7 @@ and also rejects version, entry-count, values-length, or descriptor mismatch
 before mutation.
 
 Parameters:
+
 - `network` - Live target network instance.
 - `parameterVector` - Versioned payload to apply.
 
@@ -604,6 +617,7 @@ isArchitectureDescriptorShapeValid(
 ```
 
 Parameters:
+
 - `architectureDescriptor` - Optional descriptor candidate.
 
 Returns: True when minimal descriptor shape is valid.
@@ -645,6 +659,7 @@ Use this format when payload size and serialization speed matter more than reada
 The tuple layout is positional and optimized for transport/storage efficiency.
 
 Parameters:
+
 - `this` - Bound network instance.
 
 Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
@@ -672,6 +687,7 @@ This path keeps round-trip semantics identical to `serialize()` while
 replacing the object-per-connection payload with one array-oriented block.
 
 Parameters:
+
 - `this` - Bound network instance.
 
 Returns: Compressed compact payload.
@@ -691,6 +707,7 @@ builds the exact compressed JSON payload, then applies gzip or zstd above
 that payload without changing replay semantics.
 
 Parameters:
+
 - `this` - Bound network instance.
 - `options` - Optional archive compression settings.
 
@@ -711,6 +728,7 @@ off the synchronous main-thread lane, while Node falls back to the existing
 archive owner when browser streams are unavailable.
 
 Parameters:
+
 - `this` - Bound network instance.
 - `options` - Optional archive compression settings.
 
@@ -728,6 +746,7 @@ Serialize a network archive with async codecs and report size plus encode-time m
 This variant keeps the same archive semantics while allowing non-blocking compression paths in browser runtimes.
 
 Parameters:
+
 - `this` - Bound network instance.
 - `options` - Optional archive compression settings.
 
@@ -745,6 +764,7 @@ Serialize a network archive and report size plus encode-time metrics for determi
 The metrics payload helps compare archive codecs without changing the underlying compressed network contract.
 
 Parameters:
+
 - `this` - Bound network instance.
 - `options` - Optional archive compression settings.
 
@@ -769,6 +789,7 @@ Use this format when you need human-readable snapshots, explicit schema versioni
 and better forward/backward compatibility handling.
 
 Parameters:
+
 - `this` - Bound network instance.
 
 Returns: Versioned JSON payload with shape metadata, nodes, and connections.
@@ -806,6 +827,7 @@ instead of flattening those deferred families into the weights-and-biases v1
 payload.
 
 Parameters:
+
 - `network` - Live network instance to export.
 
 Returns: Ordered layout metadata plus aligned scalar values for same-runtime deterministic roundtrips.
@@ -835,6 +857,7 @@ Acquire a connection from the internal pool, or construct a fresh one when the p
 This is the low-allocation path used by topology mutation and other edge-churn heavy flows.
 
 Parameters:
+
 - `from` - Source node.
 - `to` - Target node.
 - `weight` - Optional initial weight.
@@ -903,6 +926,7 @@ Use it when you need a stable edge identifier without relying on the mutable
 auto-increment counter.
 
 Parameters:
+
 - `sourceNodeId` - Source node integer id or index.
 - `targetNodeId` - Target node integer id or index.
 
@@ -955,6 +979,7 @@ Return a connection instance to the internal pool for later reuse.
 Treat the instance as surrendered after calling this method.
 
 Parameters:
+
 - `conn` - The connection instance to recycle.
 
 Returns: Nothing.
@@ -971,6 +996,7 @@ Reset the monotonic innovation counter used for newly constructed or pooled conn
 You usually call this at the start of an experiment or before rebuilding a whole population.
 
 Parameters:
+
 - `value` - New starting value.
 
 Returns: Nothing.
@@ -997,6 +1023,7 @@ This keeps import and clone paths monotonic: once a payload brings in a high
 innovation id, newly created edges continue from above that value.
 
 Parameters:
+
 - `maxObservedInnovation` - Highest restored innovation id currently in memory.
 
 Returns: Nothing.
@@ -1050,6 +1077,7 @@ Append JSON entries for forward connections after validating that each endpoint 
 Invalid or stale endpoints are skipped to prevent malformed rows from contaminating serialized payloads.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `networkJson` - JSON accumulator.
 
@@ -1070,6 +1098,7 @@ Node indices are refreshed during this step so connection records can reference
 stable numeric endpoints.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `networkJson` - Target JSON accumulator.
 
@@ -1088,6 +1117,7 @@ appendJsonSelfConnectionWhenPresent(
 Appends JSON self-connection when node has one.
 
 Parameters:
+
 - `nodeInternals` - Node internals.
 - `nodeIndex` - Node index.
 - `networkJson` - JSON accumulator.
@@ -1106,6 +1136,7 @@ assignJsonEnabledFlagWhenProvided(
 Assigns enabled flag when value is provided.
 
 Parameters:
+
 - `createdConnection` - Created connection.
 - `enabled` - Optional enabled value.
 
@@ -1123,6 +1154,7 @@ assignJsonGainWhenProvided(
 Assigns a restored connection gain when one was serialized explicitly.
 
 Parameters:
+
 - `createdConnection` - Created connection.
 - `gain` - Optional serialized gain.
 
@@ -1141,6 +1173,7 @@ assignJsonGaterWhenValid(
 Assigns JSON gater when connection and gater index are valid.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `gaterIndex` - Optional gater index.
 - `createdConnection` - Created connection.
@@ -1161,6 +1194,7 @@ createConnection(
 Creates one connection and returns first created instance.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `sourceNode` - Source node.
 - `targetNode` - Target node.
@@ -1182,6 +1216,7 @@ The shell includes format and shape metadata and is filled in by subsequent
 node and connection append steps.
 
 Parameters:
+
 - `networkInternals` - Runtime internals with optional dropout.
 
 Returns: Empty JSON shell with `formatVersion` and scalar metadata initialized.
@@ -1205,6 +1240,7 @@ createJsonConnection(
 Creates one JSON connection entry.
 
 Parameters:
+
 - `connectionInstance` - Runtime connection carrying the historical identity to persist.
 - `from` - Source index.
 - `to` - Target index.
@@ -1224,6 +1260,7 @@ createJsonNode(
 Creates one JSON node entry.
 
 Parameters:
+
 - `node` - Runtime node.
 - `nodeInternals` - Node internals.
 - `nodeIndex` - Canonical index.
@@ -1241,6 +1278,7 @@ createNodeWithType(
 Creates one node with provided type.
 
 Parameters:
+
 - `nodeType` - Node type.
 
 Returns: New node.
@@ -1258,6 +1296,7 @@ hydrateNodeFromJsonEntry(
 Hydrates one node from JSON node entry.
 
 Parameters:
+
 - `rebuiltNode` - Node to hydrate.
 - `nodeJsonEntry` - JSON node entry.
 - `nodeIndex` - Canonical node index.
@@ -1275,6 +1314,7 @@ isConnectionEnabled(
 Resolves enabled status from optional connection flag.
 
 Parameters:
+
 - `connectionInstance` - Connection instance.
 
 Returns: True when connection is enabled.
@@ -1292,6 +1332,7 @@ isCurrentJsonEndpoint(
 Validates that one serialized endpoint still points at the canonical node table.
 
 Parameters:
+
 - `nodes` - Canonical node table being serialized.
 - `endpointNode` - Connection endpoint node reference.
 - `endpointIndex` - Endpoint index stored on the node internals.
@@ -1310,6 +1351,7 @@ isJsonConnectionInNodeBounds(
 Checks JSON connection indices against node list bounds.
 
 Parameters:
+
 - `nodes` - Node list.
 - `connectionJsonEntry` - JSON connection entry.
 
@@ -1326,6 +1368,7 @@ isJsonConnectionShapeValid(
 Checks that JSON connection has numeric endpoint fields.
 
 Parameters:
+
 - `connectionJsonEntry` - JSON connection entry.
 
 Returns: True when endpoint fields are numbers.
@@ -1342,6 +1385,7 @@ Rebuild runtime connections from verbose JSON entries while preserving best-effo
 Invalid rows are skipped with warnings so valid edge records still reconstruct successfully.
 
 Parameters:
+
 - `jsonConnectionContext` - JSON connection rebuild context.
 
 Returns: Nothing.
@@ -1367,6 +1411,7 @@ Rebuild runtime nodes from verbose JSON entries while restoring scalar fields an
 Unknown squash names are normalized through activation fallback logic to keep import paths resilient.
 
 Parameters:
+
 - `jsonNodeContext` - JSON node rebuild context.
 
 Returns: Nothing.
@@ -1389,6 +1434,7 @@ rebuildOneJsonConnection(
 Rebuilds one verbose JSON connection entry.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `connectionJsonEntry` - JSON connection entry.
 
@@ -1406,6 +1452,7 @@ Resolve dropout with a numeric fallback when the serialized value is absent or u
 Normalizing this value at one boundary keeps verbose JSON payloads stable for downstream consumers.
 
 Parameters:
+
 - `dropout` - Optional dropout value.
 
 Returns: Effective dropout.
@@ -1421,6 +1468,7 @@ resolveGaterIndex(
 Resolves gater node index from gater reference.
 
 Parameters:
+
 - `gaterNode` - Optional gater node.
 
 Returns: Gater index or null.
@@ -1437,6 +1485,7 @@ Validate the verbose JSON payload root shape before node and connection rebuild 
 This early guard prevents non-object payloads from entering best-effort rebuild paths.
 
 Parameters:
+
 - `json` - Payload candidate.
 
 Returns: Nothing.
@@ -1453,6 +1502,7 @@ Warn when incoming verbose format version differs from the expected serializer s
 The warning-only policy allows controlled migration attempts without forcing immediate import failure.
 
 Parameters:
+
 - `formatVersion` - Incoming format version.
 
 Returns: Nothing.
@@ -1489,6 +1539,7 @@ Materialize one runnable phenotype from a compressed strict-genome archive using
 Runtime hints are applied only after strict-genome restoration so deterministic genotype state stays authoritative.
 
 Parameters:
+
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
 - `runtimeHints` - Optional phenotype-only metadata to restore.
 
@@ -1508,6 +1559,7 @@ Materialize one runnable phenotype from a compressed strict-genome archive with 
 This path is suited for browser or streaming contexts where large payload inflation should stay responsive.
 
 Parameters:
+
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
 - `runtimeHints` - Optional phenotype-only metadata to restore.
 - `options` - Optional incremental decode callbacks.
@@ -1528,6 +1580,7 @@ Materialize one runnable phenotype from a compressed strict-genome archive with 
 The returned telemetry helps compare streaming decode strategies while preserving the same strict reconstruction contract.
 
 Parameters:
+
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
 - `runtimeHints` - Optional phenotype-only metadata to restore.
 - `options` - Optional incremental decode callbacks.
@@ -1547,6 +1600,7 @@ Materialize one runnable phenotype from a compressed strict-genome archive and r
 This variant keeps decode telemetry alongside the rebuilt network for reproducibility and performance audits.
 
 Parameters:
+
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
 - `runtimeHints` - Optional phenotype-only metadata to restore.
 
@@ -1564,6 +1618,7 @@ Parse one archived strict genome contract back into validated JSON state before 
 This boundary enforces archive tags and schema validity so malformed payloads fail with clear diagnostics.
 
 Parameters:
+
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
 
 Returns: Restored strict genome contract.
@@ -1584,6 +1639,7 @@ incremental progress while `DecompressionStream` inflates the wrapped UTF-8
 JSON bytes. Node falls back to one completed snapshot.
 
 Parameters:
+
 - `compressedArchive` - Base64-wrapped strict-genome archive payload.
 - `options` - Optional incremental decode callbacks.
 
@@ -1603,6 +1659,7 @@ This keeps the payload structural and replay-safe: runtime activation traces,
 slab allocations, and other phenotype-only state remain outside the archive.
 
 Parameters:
+
 - `options` - Optional archive codec and genome-capture settings.
 
 Returns: Base64-wrapped compressed strict-genome archive.
@@ -1626,6 +1683,7 @@ Archive one runtime phenotype through the strict genome contract and report dete
 The metrics payload helps compare codec and capture-option tradeoffs without changing archive semantics.
 
 Parameters:
+
 - `options` - Optional archive codec and genome-capture settings.
 
 Returns: Archived strict-genome payload plus encode metrics.
@@ -1650,6 +1708,7 @@ used by `toJSON()` and `fromJSON()`, so clone semantics stay stable as the
 serialization chapter evolves.
 
 Parameters:
+
 - `this` - Target network instance.
 
 Returns: Deep-cloned network instance.
@@ -1669,6 +1728,7 @@ assignCompactGaterGeneIdWhenProvided(
 Restores a gater node's historical gene id when compact metadata provides it.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `gaterIndex` - Optional compact gater index.
 - `gaterGeneId` - Optional persisted gater gene id.
@@ -1688,6 +1748,7 @@ assignCompactGaterWhenValid(
 Assigns compact gater when both connection and gater index are valid.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `gaterIndex` - Optional gater index.
 - `createdConnection` - Created connection.
@@ -1705,6 +1766,7 @@ collectAllConnections(
 Collects all runtime connections into a single list.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 
 Returns: Combined connections.
@@ -1721,6 +1783,7 @@ Collect node activation values in positional order so compact payload slot align
 The returned vector is index-stable relative to the current node list order.
 
 Parameters:
+
 - `nodes` - Node list.
 
 Returns: Activation list aligned to node indices.
@@ -1739,6 +1802,7 @@ This optional compact payload slot closes the identity gap that previously force
 restored nodes to receive fresh constructor-time ids.
 
 Parameters:
+
 - `nodes` - Node list in compact export order.
 
 Returns: Gene-id list aligned to node indices.
@@ -1755,6 +1819,7 @@ Collect node activation keys in positional order by normalizing function referen
 This keeps compact payloads portable across runtimes where function identity values cannot be serialized directly.
 
 Parameters:
+
 - `nodes` - Node list.
 
 Returns: Squash-key list aligned to node indices.
@@ -1771,6 +1836,7 @@ Collect node state values in positional order so recurrent runtime state can be 
 This preserves alignment with activation and squash-key arrays in the compact tuple.
 
 Parameters:
+
 - `nodes` - Node list.
 
 Returns: State list aligned to node indices.
@@ -1787,6 +1853,7 @@ Collect compact connection records from forward and self-connection groups while
 Callers should refresh node indices first so endpoint references remain canonical.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 
 Returns: Serialized connection list.
@@ -1805,6 +1872,7 @@ createConnection(
 Creates one connection and returns first created instance.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `sourceNode` - Source node.
 - `targetNode` - Target node.
@@ -1823,6 +1891,7 @@ createNodeWithType(
 Creates one node with provided type.
 
 Parameters:
+
 - `nodeType` - Node type.
 
 Returns: New node.
@@ -1842,6 +1911,7 @@ hydrateNodeStateFromCompactPayload(
 Hydrates node runtime state from compact tuple values.
 
 Parameters:
+
 - `rebuiltNode` - Node to hydrate.
 - `activation` - Activation value.
 - `state` - State value.
@@ -1862,6 +1932,7 @@ isSerializedConnectionInNodeBounds(
 Checks compact connection bounds against current node list.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `serializedConnection` - Serialized connection record.
 
@@ -1880,6 +1951,7 @@ Rebuilds runtime connections from compact connection records.
 Invalid endpoint or gater indices are skipped with warnings to preserve import flow.
 
 Parameters:
+
 - `compactConnectionContext` - Compact connection rebuild context.
 
 Returns: Nothing.
@@ -1908,6 +1980,7 @@ Rebuild runtime nodes from compact payload arrays by restoring type, scalar stat
 Node type is inferred from positional input/output boundaries to keep payload shape compact.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `compactNodeContext` - Compact node rebuild context.
 
@@ -1933,6 +2006,7 @@ rebuildOneCompactConnection(
 Rebuilds one compact serialized connection.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 - `serializedConnection` - Serialized connection record.
 
@@ -1952,6 +2026,7 @@ Canonical indices are required so compact connection records can store endpoints
 and gaters as stable numeric positions.
 
 Parameters:
+
 - `nodes` - Node list.
 
 Returns: Nothing.
@@ -1970,6 +2045,7 @@ resolveNodeTypeFromCompactIndex(
 Resolves node type from compact tuple position.
 
 Parameters:
+
 - `nodeIndex` - Node index.
 - `totalNodeCount` - Total node count.
 - `input` - Input size.
@@ -1988,6 +2064,7 @@ serializeOneConnection(
 Serializes one connection into compact indexed form.
 
 Parameters:
+
 - `connectionInstance` - Runtime connection.
 
 Returns: Serialized connection record.
@@ -2009,6 +2086,7 @@ Import paths still build edges through `connect()` so graph bookkeeping stays
 centralized. This helper then reapplies the persisted innovation and enabled state.
 
 Parameters:
+
 - `createdConnection` - Newly created runtime connection.
 - `identity` - Persisted identity metadata.
 
@@ -2025,6 +2103,7 @@ asNetworkInternals(
 Cast a public network instance to the internal serializer runtime shape so low-level deserialization helpers can access mutable fields without duplicating bridge-cast logic.
 
 Parameters:
+
 - `network` - Network instance.
 
 Returns: Runtime internals.
@@ -2040,6 +2119,7 @@ asNetworkInternalsWithDropout(
 Cast a public network instance to serializer internals that include optional dropout metadata so verbose restore and export paths can read dropout fields consistently.
 
 Parameters:
+
 - `network` - Network instance.
 
 Returns: Runtime internals with optional dropout.
@@ -2055,6 +2135,7 @@ asNodeInternals(
 Cast a node instance to its internal runtime representation so serializer helpers can read and write persisted node metadata through one shared bridge.
 
 Parameters:
+
 - `node` - Node instance.
 
 Returns: Node internals.
@@ -2073,6 +2154,7 @@ This improves readability in orchestration code by replacing positional tuple ac
 with semantically named fields.
 
 Parameters:
+
 - `data` - Compact tuple payload.
 
 Returns: Normalized payload context.
@@ -2095,6 +2177,7 @@ createNetworkInstance(
 Create a fresh network instance for deserialize workflows so restoration code can hydrate graph state onto a clean runtime object.
 
 Parameters:
+
 - `input` - Input size.
 - `output` - Output size.
 
@@ -2115,6 +2198,7 @@ Compact restore paths construct fresh runtime nodes first, then overwrite the
 temporary constructor-assigned ids with persisted historical ids.
 
 Parameters:
+
 - `node` - Restored runtime node.
 - `geneId` - Persisted stable gene id.
 
@@ -2131,6 +2215,7 @@ isFiniteIndex(
 Check whether a candidate index value is finite so endpoint validation can reject NaN and infinite references before bounds checks execute.
 
 Parameters:
+
 - `index` - Candidate index value.
 
 Returns: True when finite number.
@@ -2147,6 +2232,7 @@ isNodeIndexInBounds(
 Check whether a candidate node index falls inside the valid array bounds so restore logic can reject malformed serialized endpoint references.
 
 Parameters:
+
 - `nodes` - Node list.
 - `index` - Candidate index.
 
@@ -2163,6 +2249,7 @@ resetMutableRuntimeCollections(
 Clear mutable runtime collections before reconstruction so node, connection, self-connection, and gate arrays are reset to a predictable empty baseline.
 
 Parameters:
+
 - `networkInternals` - Runtime internals.
 
 Returns: Nothing.
@@ -2182,6 +2269,7 @@ Resolve effective input and output dimensions using optional explicit overrides 
 When an override is provided, it takes precedence over serialized values.
 
 Parameters:
+
 - `compactPayload` - Compact payload context.
 - `inputSizeOverride` - Optional input override.
 - `outputSizeOverride` - Optional output override.
@@ -2200,6 +2288,7 @@ resolveSizeOverride(
 Resolve one size value with override-first semantics so deserialization can prioritize explicit caller intent while preserving serialized fallbacks when overrides are absent.
 
 Parameters:
+
 - `overrideValue` - Optional explicit override.
 - `serializedValue` - Serialized fallback value.
 
@@ -2219,6 +2308,7 @@ Without this step, a fresh process could deserialize a high-id genome and then
 allocate colliding `geneId` or `innovation` values on the next mutation.
 
 Parameters:
+
 - `networkInternals` - Restored mutable network internals.
 
 Returns: Nothing.
@@ -2236,6 +2326,7 @@ findActivationByFunctionName(
 Resolves activation by matching function.name.
 
 Parameters:
+
 - `squashName` - Activation function name.
 
 Returns: Activation function or undefined.
@@ -2251,6 +2342,7 @@ findActivationByKey(
 Resolves activation by direct key lookup.
 
 Parameters:
+
 - `squashName` - Activation key.
 
 Returns: Activation function or undefined.
@@ -2266,6 +2358,7 @@ findActivationEntryByReference(
 Finds activation entry by function reference.
 
 Parameters:
+
 - `squashFunction` - Activation function instance.
 
 Returns: Activation entry or undefined.
@@ -2284,6 +2377,7 @@ Unknown values produce a warning and return the identity activation to keep
 deserialization deterministic and non-throwing.
 
 Parameters:
+
 - `squashName` - Activation key or function name.
 
 Returns: Activation function.
@@ -2308,6 +2402,7 @@ Resolution order is: attached stable key, direct registry reference match,
 then the function name, then a stable identity fallback key.
 
 Parameters:
+
 - `squashFunction` - Activation function instance.
 
 Returns: Activation key.
@@ -2331,6 +2426,7 @@ resolveAttachedActivationKey(
 Resolves a stable activation key attached directly to the function object.
 
 Parameters:
+
 - `squashFunction` - Activation function instance.
 
 Returns: Attached activation key or undefined.
@@ -2346,6 +2442,7 @@ resolveNamedActivationFromFunction(
 Resolves activation name from function.name when non-empty.
 
 Parameters:
+
 - `squashFunction` - Activation function instance.
 
 Returns: Activation name or undefined.
@@ -2361,6 +2458,7 @@ warnUnknownSquashName(
 Warns about unknown activation and fallback to identity.
 
 Parameters:
+
 - `squashName` - Unknown activation name.
 
 Returns: Nothing.
@@ -2390,6 +2488,7 @@ mark `done: true` on the last real decoded chunk rather than on a synthetic
 zero-byte completion event.
 
 Parameters:
+
 - `decodedStream` - Stream of decoded UTF-8 payload chunks.
 - `encodedByteLength` - Total compressed archive byte length.
 - `options` - Optional incremental progress callbacks.
@@ -2408,6 +2507,7 @@ compressArchivePayloadBytes(
 Compress UTF-8 payload bytes with one supported Node-side archive codec so binary wrappers stay compact while preserving exact JSON payload semantics.
 
 Parameters:
+
 - `payloadBytes` - UTF-8 payload bytes.
 - `compression` - Archive compression codec.
 
@@ -2425,6 +2525,7 @@ compressArchivePayloadBytesAsync(
 Compress UTF-8 payload bytes with the best available async archive codec.
 
 Parameters:
+
 - `payloadBytes` - UTF-8 payload bytes.
 - `compression` - Archive compression codec.
 
@@ -2486,6 +2587,7 @@ compressMatchingRuns(
 Collapse contiguous matching entries into run-length metadata.
 
 Parameters:
+
 - `values` - Ordered values to scan.
 - `shouldCompressValue` - Predicate deciding whether one value belongs to a run.
 
@@ -2502,6 +2604,7 @@ compressOptionalNumericSeries(
 Collapse optional numeric fields to `undefined` when no entries are present.
 
 Parameters:
+
 - `values` - Optional numeric series.
 
 Returns: Normalized nullable series or `undefined` when empty of numeric content.
@@ -2527,6 +2630,7 @@ concatenateArchiveByteChunks(
 Concatenate one ordered set of archive byte chunks into a single buffer.
 
 Parameters:
+
 - `byteChunks` - Ordered archive byte chunks.
 
 Returns: One contiguous byte buffer.
@@ -2542,6 +2646,7 @@ countRunEntries(
 Count how many connection rows are covered by one run list.
 
 Parameters:
+
 - `runs` - Optional run metadata.
 
 Returns: Total covered row count.
@@ -2559,6 +2664,7 @@ createCompressedArchiveDecodeMetrics(
 Create one metrics snapshot for an archive decode operation so callers can inspect decompression efficiency and elapsed decoding cost consistently.
 
 Parameters:
+
 - `uncompressedByteLength` - UTF-8 byte length after archive inflation.
 - `compressedByteLength` - Binary byte length before archive inflation.
 - `decodeTimeMs` - Elapsed decode time in milliseconds.
@@ -2578,6 +2684,7 @@ createCompressedArchiveEncodeMetrics(
 Create one metrics snapshot for an archive encode operation so callers can log compression efficiency and elapsed encoding cost consistently.
 
 Parameters:
+
 - `uncompressedByteLength` - UTF-8 byte length before archive compression.
 - `compressedByteLength` - Binary byte length after archive compression.
 - `encodeTimeMs` - Elapsed encode time in milliseconds.
@@ -2599,6 +2706,7 @@ This is intentionally additive: the wrapped payload stays the exact JSON form
 returned by `serializeCompressed`, then gzip or zstd is applied above it.
 
 Parameters:
+
 - `compressedPayload` - Existing compressed network payload.
 - `options` - Optional archive compression settings.
 
@@ -2626,6 +2734,7 @@ decodeArchivePayloadBase64(
 Decode archive payload bytes from base64 without assuming a specific runtime so compressed archives can hydrate reliably in browser and Node.
 
 Parameters:
+
 - `payload` - Base64-encoded payload text.
 
 Returns: Binary archive payload bytes.
@@ -2642,6 +2751,7 @@ decodeExactConnectionWeights(
 Decode one exact signed-16-bit delta stream back to float64 weights.
 
 Parameters:
+
 - `weightWords` - Encoded weight-word payload.
 - `connectionCount` - Expected number of weights.
 
@@ -2658,6 +2768,7 @@ decodeSignedInt16WordsToFloat64(
 Decode four signed 16-bit words back into one float64 number.
 
 Parameters:
+
 - `words` - Signed 16-bit little-endian words.
 
 Returns: Decoded numeric value.
@@ -2674,6 +2785,7 @@ decompressArchivePayloadBytes(
 Decompress archive payload bytes with one supported Node-side codec so compressed archive wrappers recover deterministic UTF-8 serialization payload bytes.
 
 Parameters:
+
 - `payloadBytes` - Compressed archive payload bytes.
 - `compression` - Archive compression codec.
 
@@ -2692,6 +2804,7 @@ decompressArchivePayloadBytesAsync(
 Decompress archive payload bytes with the best available async archive codec so browser and Node runtimes can share one non-blocking restore flow.
 
 Parameters:
+
 - `payloadBytes` - Compressed archive payload bytes.
 - `compression` - Archive compression codec.
 
@@ -2710,6 +2823,7 @@ decompressArchivePayloadBytesWithBrowserStream(
 Decompress archive payload bytes through one browser stream while reporting progress.
 
 Parameters:
+
 - `payloadBytes` - Compressed archive payload bytes.
 - `streamConstructor` - Browser decompression stream constructor.
 - `options` - Optional incremental progress callbacks.
@@ -2727,6 +2841,7 @@ decompressSerializedConnections(
 Decompress one array-oriented connection block back into compact rows so archived connection payloads regain legacy-friendly per-edge field records.
 
 Parameters:
+
 - `compressedConnections` - Compressed connection block.
 
 Returns: Reconstructed serialized connection rows.
@@ -2743,6 +2858,7 @@ emitArchiveDecodeProgress(
 Notify callers that one decoded archive chunk has been observed.
 
 Parameters:
+
 - `options` - Optional incremental progress callbacks.
 - `progress` - Progress payload for the decoded chunk.
 
@@ -2759,6 +2875,7 @@ encodeArchivePayloadBase64(
 Encode archive payload bytes to base64 without assuming a specific runtime so archive wrappers remain portable across browser and Node environments.
 
 Parameters:
+
 - `payloadBytes` - Binary archive payload bytes.
 
 Returns: Base64-encoded payload text.
@@ -2774,6 +2891,7 @@ encodeExactConnectionWeights(
 Encode float64 weights into one exact signed-16-bit delta stream.
 
 Parameters:
+
 - `weights` - Connection weights.
 
 Returns: Exact weight-word delta payload.
@@ -2789,6 +2907,7 @@ encodeFloat64ToSignedInt16Words(
 Encode one float64 number into four signed 16-bit words.
 
 Parameters:
+
 - `value` - Numeric value to encode.
 
 Returns: Signed 16-bit little-endian words.
@@ -2804,6 +2923,7 @@ estimateSerializedByteLength(
 Estimate the UTF-8 byte length of one serialization payload so archive ratio metrics can compare compressed and uncompressed storage cost.
 
 Parameters:
+
 - `payload` - Payload to measure.
 
 Returns: UTF-8 byte length of the JSON string form.
@@ -2821,6 +2941,7 @@ expandDecodedNonZeroWeights(
 Expand the decoded non-zero weight sequence back across zero-weight spans.
 
 Parameters:
+
 - `decodedNonZeroWeights` - Exact non-zero weights in encoded order.
 - `zeroWeightMask` - Optional zero-run membership mask.
 - `connectionCount` - Total number of serialized connections.
@@ -2839,6 +2960,7 @@ expandRunsToMask(
 Expand run-length metadata into one boolean mask aligned to connection order.
 
 Parameters:
+
 - `runs` - Optional run metadata.
 - `entryCount` - Total number of connection rows.
 
@@ -2865,6 +2987,7 @@ isPositiveZeroWeightWords(
 Determine whether one encoded float64 word sequence represents exact positive zero.
 
 Parameters:
+
 - `encodedWeightWords` - Signed 16-bit float64 words.
 
 Returns: Whether the encoded value is exact positive zero.
@@ -2880,6 +3003,7 @@ normalizeSignedInt16(
 Normalize one integer through wrapped signed-16-bit arithmetic.
 
 Parameters:
+
 - `value` - Integer value to normalize.
 
 Returns: Wrapped signed 16-bit integer.
@@ -2895,6 +3019,7 @@ parseCompressedNetworkArchive(
 Rebuild one compressed network payload from its Node-side archive wrapper so persisted archives can be restored into deterministic compact serialization objects.
 
 Parameters:
+
 - `compressedArchive` - Base64-wrapped compressed archive payload.
 
 Returns: Restored compressed network payload.
@@ -2962,6 +3087,7 @@ transformArchivePayloadBytesWithStream(
 Transform archive payload bytes through one browser compression stream.
 
 Parameters:
+
 - `payloadBytes` - Source payload bytes.
 - `streamConstructor` - Browser stream constructor.
 
@@ -2980,6 +3106,7 @@ validateCompressedOptionalVectorLength(
 Validate one optional vector width when the vector is present.
 
 Parameters:
+
 - `fieldName` - Logical field name.
 - `values` - Optional vector.
 - `expectedLength` - Required vector length.
@@ -2999,6 +3126,7 @@ validateCompressedRuns(
 Validate run metadata for bounds, ordering, and overlap.
 
 Parameters:
+
 - `fieldName` - Logical field name.
 - `runs` - Optional run metadata.
 - `entryCount` - Total number of connection rows.
@@ -3018,6 +3146,7 @@ validateCompressedVectorLength(
 Validate one required vector width inside the compressed connection block.
 
 Parameters:
+
 - `fieldName` - Logical field name.
 - `values` - Vector to validate.
 - `expectedLength` - Required vector length.

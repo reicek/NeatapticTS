@@ -24,13 +24,13 @@
 ## Audit summary
 
 - Step 9 docs pass updated source JSDoc in:
-  - examples/neatChat/core/neatChat.errors.ts
-  - examples/neatChat/core/neatChat.snapshot.services.ts
-  - examples/neatChat/core/neatChat.tokenization.utils.ts
+- examples/neatChat/core/neatChat.errors.ts
+- examples/neatChat/core/neatChat.snapshot.services.ts
+- examples/neatChat/core/neatChat.tokenization.utils.ts
 - Validation completed with:
-  - npx tsc --noEmit -p tsconfig.test.json
-  - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatChat/neatChat.test.ts
-  - npm run docs
+- npx tsc --noEmit -p tsconfig.test.json
+- npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatChat/neatChat.test.ts
+- npm run docs
 
 ## Reopen conditions
 

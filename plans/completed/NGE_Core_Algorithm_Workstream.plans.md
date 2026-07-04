@@ -10,7 +10,7 @@ The racing curriculum, ant hive, and predator/prey demos are all blocked until t
 workstream is complete.
 
 This workstream owns the carry-forward blockers documented in the racing curriculum
-logs (P1–P5, DR-2026-06-27-05 `modeIsEvolvable`) plus the user-reported growth gap:
+logs (P1–P5, DR-008 `modeIsEvolvable`) plus the user-reported growth gap:
 agents only reached 101 nodes / 388 connections by end of simulation when the target is
 organic growth from seed toward 8,000+ neurons with continuous real-time adaptation.
 
@@ -54,7 +54,7 @@ this plan wins on the specific carry-forward blockers and the growth-gap diagnos
   assignment; the implemented core uses `roundRobin` / `byFitness` / `bySpecialization`.
 - **P5: `queenBias` not honored.** The `queenBias` parameter is not honored by the merge
   logic in the reproduction pipeline.
-- **DR-2026-06-27-05: `modeIsEvolvable` is a dead boolean field.** No operator reads it.
+- **DR-008: `modeIsEvolvable` is a dead boolean field.** No operator reads it.
   `ModulatorBroadcaster` / `EpisodicSlot` / `GatingRouter` are descriptor-only. No
   phenotype↔Network bridge exists.
 
@@ -171,7 +171,7 @@ auto_expand: false
 mode: 'fresh-session'
 source_of_truth: 'plans/completed/NGE_Core_Algorithm_Workstream.plans.md'
 copy_paste: true
-next_phase: 'Phase 3 — modeIsEvolvable Activation & Phenotype↔Network Operator (DR-2026-06-27-05)'
+next_phase: 'Phase 3 — modeIsEvolvable Activation & Phenotype↔Network Operator (DR-008)'
 skills:
   - 'plan-alignment'
   - 'nge-core-algorithm'
@@ -217,11 +217,11 @@ region assignment. This resolves P2 and P5.
 - `src/neat/nge-evolution/docs.order.json` — chapter intro/order metadata
 - `src/neat/nge-evolution/README.md` — regenerated with polyandric contract docs
 
-### Phase 3 — modeIsEvolvable Activation & Phenotype↔Network Operator (DR-2026-06-27-05) [DONE]
+### Phase 3 — modeIsEvolvable Activation & Phenotype↔Network Operator (DR-008) [DONE]
 
 ```yaml
 phase: 3
-title: 'modeIsEvolvable Activation & Phenotype↔Network Operator (DR-2026-06-27-05)'
+title: 'modeIsEvolvable Activation & Phenotype↔Network Operator (DR-008)'
 status: '[DONE]'
 goal: 'planning'
 expansion: 'steps'
@@ -261,7 +261,7 @@ placeholder_steps:
 operator that reads `reproductionPolicy.modeIsEvolvable`, enables the NGE evolution
 path when true, and exposes a single canonical operator that turns an
 `NgeDnaCanonicalEnvelope` into a runtime `Network`. This resolves
-DR-2026-06-27-05 and scopes the descriptor-only neuromodulation primitives
+DR-008 and scopes the descriptor-only neuromodulation primitives
 for a later phase.
 
 > Detailed Phase 3 step packets, research brief, boundary map, decision record,
@@ -269,9 +269,9 @@ for a later phase.
 > `plans/completed/NGE_Core_Algorithm_Workstream.logs.md`.
 
 [DONE] Step 01: Plan Phase 3 — step packets authored, boundary map produced, plan-sync/step-packet/agent-graph gates passed.
-[DONE] Step 02: Research — `modeIsEvolvable` call sites catalogued (dead storage field); `materializeNetworkFromPhenotype` confirmed as the right reuse boundary; neuromodulation primitives scoped as a blocker (DR-2026-06-27-05-NM).
+[DONE] Step 02: Research — `modeIsEvolvable` call sites catalogued (dead storage field); `materializeNetworkFromPhenotype` confirmed as the right reuse boundary; neuromodulation primitives scoped as a blocker (DR-008-NM).
 [DONE] Step 03: Red tests — 7 red tests created in `src/neat/nge-dna/neat.nge-dna.operator.test.ts`; all failed with `Cannot find module './neat.nge-dna.operator'`.
-[DONE] Step 04: Implementation — operator `activateNgeNetworkFromEnvelope` created in `src/neat/nge-dna/neat.nge-dna.operator.ts`; cleanup test file added; dead-field policy satisfied; neuromodulation primitives remain descriptor-only and scoped to blocker DR-2026-06-27-05-NM.
+[DONE] Step 04: Implementation — operator `activateNgeNetworkFromEnvelope` created in `src/neat/nge-dna/neat.nge-dna.operator.ts`; cleanup test file added; dead-field policy satisfied; neuromodulation primitives remain descriptor-only and scoped to blocker DR-008-NM.
 [DONE] Step 05: Green validation — operator and cleanup suites pass (9/9), `src/neat/nge-dna/` aggregate coverage 100% on touched production files, lint clean, tsc clean.
 [DONE] Step 06: Documentation — operator JSDoc tightened, `src/neat/nge-dna/docs.order.json` added, `npm run docs` exit 0, generated README reflects the operator and neuromodulation primitive scoping.
 [DONE] Step 07: Phase compression — detailed Phase 3 content moved to
@@ -373,12 +373,12 @@ consistent across core and worker.
 
 > **Detailed Phase 5 step packets, decision record, research brief, validation evidence, and boundary notes have been compressed to `plans/completed/NGE_Core_Algorithm_Workstream.logs.md`.**
 
-[DONE] Step 01: Plan Phase 5 — step packets authored, decision record DR-2025-07-05-01 recorded, gates passed.
+[DONE] Step 01: Plan Phase 5 — step packets authored, decision record DR-019 recorded, gates passed.
 [DONE] Step 02: Research — runtime insertion points confirmed, research brief recorded, no decision-record amendment needed.
 [DONE] Step 03: Red tests — schema alignment tests authored and failed for expected schema-gap reasons.
 [DONE] Step 04: Implementation — `NgeAssignedRegionStrategy` extended with `'non-overlapping'`; `NgeSeedPolicyShorthand = 'queen-weighted'` added; constructor normalizes shorthand to canonical object envelope; no dual-path code introduced.
 [DONE] Step 05: Green validation — 2 focused suites / 5 tests pass, 10 broader suites / 152 tests pass zero regressions; 100% coverage on touched `src/neat/nge-dna/` and `src/neat/nge-evolution/` files; tsc 0 diagnostics, lint 0 errors, plan-sync and step-packet gates pass.
-[DONE] Step 06: Documentation — JSDoc and generated READMEs reflect input-shorthand vs canonical-envelope distinction, reference DR-2025-07-05-01, `npm run docs` and `npm run lint` clean.
+[DONE] Step 06: Documentation — JSDoc and generated READMEs reflect input-shorthand vs canonical-envelope distinction, reference DR-019, `npm run docs` and `npm run lint` clean.
 [DONE] Step 07: Phase compression — detailed content moved to logs, plan trimmed, closure gates validated.
 
 **Artifacts:**
@@ -429,7 +429,7 @@ placeholder_steps:
 
 **Final state:** FSM reproduction step wired to real polyandric call site; placeholder removed; offspring Network valid; determinism verified; 100% coverage on touched files; documentation updated; all gates pass.
 
-**Decision record:** DR-2026-07-06-01 (CarGenome envelope sourcing — Option A: refactor CarGenome/createCarGenome to build and store NgeDnaCanonicalEnvelope).
+**Decision record:** DR-020 (CarGenome envelope sourcing — Option A: refactor CarGenome/createCarGenome to build and store NgeDnaCanonicalEnvelope).
 
 **Artifacts produced:**
 
@@ -554,7 +554,7 @@ node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json
 
 ## Final state
 
-**Claim:** 07-logging @ 2026-06-30T11:24:23-04:00
+**Claim:** 07-logging
 
 NGE Core Algorithm Workstream is **complete**.
 

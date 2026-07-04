@@ -36,8 +36,9 @@ owns that gate.
   need targeted validation before proceeding.
 - A gate failed and the failure must be recorded and routed back to the
   implementation phase rather than bypassed.
-- The active session has accumulated three consecutive gate failures and must
-  escalate via `00.cross-tier-helper`.
+- A gate has failed and the failure must be routed back to the
+  implementation or red-testing phase for continued repair without an
+  artificial retry threshold.
 - A TypeScript, source, or package-script change requires build or lint
   confirmation alongside coverage verification.
 
@@ -112,8 +113,8 @@ batched calls (`npm run build`, `npm run jest:base`, `npm run jest:esm-ts`,
    - Route the failure back to the implementation or red-testing phase.
    - Do not continue forward to documentation or plan closure.
 
-5. After three consecutive gate failures in the same session, escalate to
-   `00-helping` via the `00.cross-tier-helper` flow.
+5. Continue validation loop-backs until the issue is fully resolved or a true
+   technical limit is reached. No concessions, no loop-back threshold.
 
 6. Record all gate evidence (pass or fail) in the active plan before marking the
    step `[DONE]`.

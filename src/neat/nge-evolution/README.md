@@ -209,7 +209,7 @@ drives the `bySpecialization` strategy. Only regions that are actually
 assigned to this drone will be patched into the queen template.
 
 Background reading on multi-parent recombination:
-[Wikipedia — Crossover (genetic algorithm)](https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)).
+[Wikipedia — Crossover (genetic algorithm)](<https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)>).
 
 Example:
 
@@ -345,6 +345,7 @@ offspring envelope. Each assigned region is passed to
 winner gate is deterministic across the whole patch set.
 
 Parameters:
+
 - `queenEnvelope` - Queen DNA template.
 - `drones` - Eligible drone donors in the order supplied by the caller.
 - `regionAssignment` - Region-to-drone mapping produced by the assignment step.
@@ -370,7 +371,8 @@ See the FNV-1a reference:
 [Wikipedia — Fowler–Noll–Vo hash function](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function).
 
 Parameters:
-- `regionId` - Stable region identifier emitted by  {@link collectPolyandricRegionIds} .
+
+- `regionId` - Stable region identifier emitted by {@link collectPolyandricRegionIds} .
 
 Returns: A deterministic number in [0, 1).
 
@@ -395,6 +397,7 @@ into the winning region and combine `parameterSchema` maps so no keys are
 silently dropped.
 
 Parameters:
+
 - `queenRegion` - Module archetype taken from the queen template.
 - `droneRegion` - Module archetype taken from the assigned drone.
 - `regionId` - Stable region identifier used to seed the deterministic gate.
@@ -412,7 +415,7 @@ drives the `bySpecialization` strategy. Only regions that are actually
 assigned to this drone will be patched into the queen template.
 
 Background reading on multi-parent recombination:
-[Wikipedia — Crossover (genetic algorithm)](https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)).
+[Wikipedia — Crossover (genetic algorithm)](<https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)>).
 
 Example:
 
@@ -483,6 +486,7 @@ replace the losing region with the winning region under the same FNV-1a gate.
 If either side is missing the region, the queen envelope is returned unchanged.
 
 Parameters:
+
 - `queenEnvelope` - Queen DNA template being patched.
 - `droneEnvelope` - Drone DNA carrying the candidate replacement region.
 - `regionId` - Stable region identifier in `family:index` form.
@@ -502,6 +506,7 @@ reproduceParthenogenesis(
 Build one parthenogenetic offspring from a single NGE DNA parent.
 
 Parameters:
+
 - `input` - Operator context containing the source parent DNA and mode flags.
 - `mutateOffspring` - Optional mutation callback applied only when the configured rate is non-zero.
 
@@ -529,14 +534,16 @@ See {@link NgePolyandricInput} for the input shape and
 {@link NGE_EVOLUTION_DEFAULT_POLYANDRIC_QUEEN_BIAS} for the default bias.
 
 Background reading:
+
 - Polyandry in evolutionary biology:
   [Wikipedia — Polyandry](https://en.wikipedia.org/wiki/Polyandry).
 - Multi-parent recombination in evolutionary computing:
-  [Wikipedia — Crossover (genetic algorithm)](https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)).
+  [Wikipedia — Crossover (genetic algorithm)](<https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)>).
 - The FNV-1a hash function:
   [Wikipedia — Fowler–Noll–Vo hash function](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function).
 
 Parameters:
+
 - `input` - Operator context containing the queen DNA, drone donors, and policy overrides.
 
 Returns: Canonical offspring DNA plus the resolved region-assignment report.
@@ -548,9 +555,7 @@ const result = reproducePolyandric({
   ngeEnabled: true,
   queen: queenEnvelope,
   queenId: 'queen-1',
-  drones: [
-    { dna: donorEnvelope, parentId: 'drone-a', fitness: 0.9 },
-  ],
+  drones: [{ dna: donorEnvelope, parentId: 'drone-a', fitness: 0.9 }],
 });
 console.log(result.outcome); // 'queen-template-patched'
 ```
@@ -567,6 +572,7 @@ reproduceSexual(
 Build one sexual offspring using NEAT-aligned fitter-parent handling for disjoint regions.
 
 Parameters:
+
 - `input` - Operator context containing both parent DNAs and their relative fitness scores.
 - `randomGenerator` - Deterministic selector used for matching-region crossover choices.
 
@@ -727,6 +733,7 @@ averageValues(
 Compute the arithmetic mean for one numeric vector.
 
 Parameters:
+
 - `values` - Numeric vector to average.
 
 Returns: Mean of the vector or `0` when the vector is empty.
@@ -742,6 +749,7 @@ buildClassicCompatibilityResult(
 Build the classic passthrough result used when NGE is disabled.
 
 Parameters:
+
 - `topologyDistance` - Raw classic NEAT compatibility distance.
 
 Returns: Classic passthrough result with the NGE-only terms collapsed to zero.
@@ -760,6 +768,7 @@ buildCompatibilityDistanceTerm(
 Build one weighted compatibility-distance term.
 
 Parameters:
+
 - `name` - Stable term name emitted in the result shelf.
 - `rawDistance` - Raw pre-normalization distance.
 - `normalizedDistance` - Slice-normalized distance.
@@ -778,6 +787,7 @@ buildNormalizationBounds(
 Collect min-max bounds for every normalized term across the active slice.
 
 Parameters:
+
 - `rawDistanceRecords` - Raw slice records prepared ahead of normalization.
 
 Returns: Per-term min-max bounds.
@@ -793,6 +803,7 @@ buildRawDistanceRecord(
 Build the raw term record for one pairwise comparison.
 
 Parameters:
+
 - `comparison` - Pairwise comparison to analyze.
 
 Returns: Raw term distances before slice-level normalization.
@@ -808,6 +819,7 @@ buildTermBounds(
 Build the min-max bounds for one normalized term column.
 
 Parameters:
+
 - `values` - Raw numeric term values for the current slice.
 
 Returns: Minimum and maximum values for the column.
@@ -823,6 +835,7 @@ clampUnitInterval(
 Clamp one enabled composite distance into the unit interval.
 
 Parameters:
+
 - `value` - Composite weighted distance before clamping.
 
 Returns: Unit-interval bounded composite distance.
@@ -838,6 +851,7 @@ collectComputationCounts(
 Collect the module-archetype counts keyed by computation type.
 
 Parameters:
+
 - `genome` - Genome-side input carrying the canonical DNA envelope.
 
 Returns: Count map keyed by computation type.
@@ -853,6 +867,7 @@ collectMemoryProfile(
 Collect the memory-tier profile used by the memory-distance term.
 
 Parameters:
+
 - `genome` - Genome-side comparison input carrying the canonical DNA envelope.
 
 Returns: Presence and capacity-bin summary for recurrent and episodic tiers.
@@ -869,6 +884,7 @@ computeDifferenceRatio(
 Compute a symmetric normalized difference ratio for two scalar values.
 
 Parameters:
+
 - `leftValue` - Left-side scalar value.
 - `rightValue` - Right-side scalar value.
 
@@ -891,6 +907,7 @@ tier shape, and an owner-local lifecycle sidecar that carries cadence and
 wiring-preference knobs until those fields land in the canonical DNA schema.
 
 Parameters:
+
 - `comparison` - Target pairwise comparison to score.
 - `context` - Optional normalization slice and alpha-weight overrides.
 
@@ -908,6 +925,7 @@ computeRawComputationDistance(
 Compute the raw computation-motif distance for one pair.
 
 Parameters:
+
 - `leftGenome` - Left genome-side comparison input.
 - `rightGenome` - Right genome-side comparison input.
 
@@ -925,6 +943,7 @@ computeRawLifecycleDistance(
 Compute the raw lifecycle-governance distance for one pair.
 
 Parameters:
+
 - `leftGenome` - Left genome-side comparison input.
 - `rightGenome` - Right genome-side comparison input.
 
@@ -942,6 +961,7 @@ computeRawMemoryDistance(
 Compute the raw memory-tier distance for one pair.
 
 Parameters:
+
 - `leftGenome` - Left genome-side comparison input.
 - `rightGenome` - Right genome-side comparison input.
 
@@ -959,6 +979,7 @@ computeWiringPreferenceDifference(
 Compute the normalized difference across one wiring-cost preference bag.
 
 Parameters:
+
 - `leftWeights` - Left-side wiring-cost weights.
 - `rightWeights` - Right-side wiring-cost weights.
 
@@ -979,6 +1000,7 @@ Degenerate non-zero slices resolve to `1` so a single differing pair still
 contributes fully when no wider slice context is available.
 
 Parameters:
+
 - `rawDistance` - Raw value to normalize.
 - `bounds` - Slice min-max bounds for the term.
 
@@ -995,6 +1017,7 @@ resolveCompatibilityDistanceWeights(
 Normalize a weight bag so the enabled composite sum stays bounded by one.
 
 Parameters:
+
 - `weights` - Optional caller overrides merged onto the NGE defaults.
 
 Returns: Normalized alpha weights whose sum is `1` unless every entry is `0`.
@@ -1010,6 +1033,7 @@ resolveMemoryCapacityBin(
 Resolve the bucketed memory-capacity bin for one total capacity value.
 
 Parameters:
+
 - `capacity` - Aggregate hidden-dimension or slot-count value.
 
 Returns: Stable ordinal capacity bin.
@@ -1026,6 +1050,7 @@ resolveNumericParameter(
 Resolve one numeric module-archetype parameter or return `0` when absent.
 
 Parameters:
+
 - `parameterSchema` - Optional archetype parameter schema.
 - `parameterName` - Parameter key to resolve.
 
@@ -1043,6 +1068,7 @@ resolvePopulationSlice(
 Resolve the slice used for min-max normalization while keeping the target pair first.
 
 Parameters:
+
 - `comparison` - Target comparison that must remain the first result row.
 - `populationSlice` - Optional additional comparisons from the active population slice.
 
@@ -1066,6 +1092,7 @@ When configured, it deterministically blends both parent references, applies the
 pending mutation delta, and adds the weak decay-scaled nudge toward that blend.
 
 Parameters:
+
 - `input` - Child parameter state, pending mutation delta, and optional parent reference vectors.
 
 Returns: The final child vector plus the resolved decay metadata for telemetry or tests.

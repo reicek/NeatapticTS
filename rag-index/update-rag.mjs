@@ -245,7 +245,7 @@ async function writeCorpusHash(hash) {
   await mkdir(path.dirname(CORPUS_HASH_PATH), { recursive: true });
   await writeFile(
     CORPUS_HASH_PATH,
-    `${JSON.stringify({ hash, generatedAt: new Date().toISOString() }, null, 2)}\n`,
+    `${JSON.stringify({ hash }, null, 2)}\n`,
     'utf8',
   );
 }

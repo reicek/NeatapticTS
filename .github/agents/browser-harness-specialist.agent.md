@@ -108,7 +108,7 @@ Before completing any task, run relevant gate checks via
    - `browser-memory-specialist` for memory snapshots.
 9. Tear down the server and return the JSON summary plus any artifacts.
 
-## Output Format
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -126,6 +126,7 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
+HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:

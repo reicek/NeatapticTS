@@ -6,11 +6,11 @@
 
 - [DONE] Locked the canonical docs-quality contract at version 1 and fixed deterministic dimensions for scope, thresholds, source fingerprint, ordering, and metric totals.
 - [DONE] Added the canonical docs-quality surfaces under `scripts/semantic-index/docs-quality/`:
-  - `docs-quality.contract.mjs`
-  - `docs-quality.normalize.mjs`
-  - `docs-quality.artifacts.mjs`
-  - `docs-quality.metrics.mjs`
-  - `docs-quality.compare.mjs`
+- `docs-quality.contract.mjs`
+- `docs-quality.normalize.mjs`
+- `docs-quality.artifacts.mjs`
+- `docs-quality.metrics.mjs`
+- `docs-quality.compare.mjs`
 - [DONE] Added runner/comparator command wiring in `package.json` (`docs:quality:metrics`, `docs:quality:compare`) and retained compatibility-oriented scanner boundaries.
 - [DONE] Routed MCP `scan_code_quality` through shared runner internals in `scripts/mcp-semantic/repo-cortex-mcp.mjs` to keep CLI and MCP serialization parity.
 - [DONE] Added and wired the docs-quality metrics gate (`scripts/agent-customization/gates/docs-quality-metrics.gate.mjs`, `docs:quality:gate`, `.github/workflows/ci.yml`).

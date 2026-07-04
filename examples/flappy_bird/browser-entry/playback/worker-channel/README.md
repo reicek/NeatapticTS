@@ -66,6 +66,7 @@ fractional remainder so long-term playback speed stays closer to the intended
 emulation rate.
 
 Parameters:
+
 - `input` - Current frame budget and viewport dimensions.
 
 Returns: Request payload plus carried-over fractional frame budget.
@@ -95,6 +96,7 @@ browser falls back to the latest leader values it has already observed during
 playback.
 
 Parameters:
+
 - `playbackStepPayload` - Playback payload returned by worker.
 - `latestLeaderPipesPassed` - Last observed leader pipes passed fallback.
 - `latestLeaderFramesSurvived` - Last observed leader frames fallback.
@@ -119,6 +121,7 @@ The frame-stats payload combines browser-derived leader information with any
 instrumentation values provided by the worker.
 
 Parameters:
+
 - `playbackStepPayload` - Playback payload returned by worker.
 - `frameIndex` - Current render frame index.
 - `activeBirdCount` - Number of alive birds in current frame.

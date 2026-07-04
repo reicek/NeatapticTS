@@ -21,76 +21,76 @@ source_reference: plans/completed/Agentic_Workflow_Architecture.plans.md
 active_tracker: plans/Orchestration_System_Optimization.plans.md
 primary_boundary: tier_1_delegation_and_skill_extraction
 reason:
-  - 'Tier 1 orchestrators must delegate all substantive work to Tier 2-4 specialists per the mini-agent architecture.'
-  - 'Durable policies currently reside in CLAUDE.md and copilot-instructions.md instead of skill files.'
-  - '04-implementing lacks a Tier 2 executor for actual file edits, creating substantive work leakage.'
-  - '02-researching and 01-planning lack dedicated skills for research methodology and synthesis.'
+ - 'Tier 1 orchestrators must delegate all substantive work to Tier 2-4 specialists per the mini-agent architecture.'
+ - 'Durable policies currently reside in CLAUDE.md and copilot-instructions.md instead of skill files.'
+ - '04-implementing lacks a Tier 2 executor for actual file edits, creating substantive work leakage.'
+ - '02-researching and 01-planning lack dedicated skills for research methodology and synthesis.'
 preserve_terms:
-  - mini-agent
-  - Tier 1 orchestrator
-  - Tier 2 executor
-  - Tier 3 specialist
-  - skill-first
-  - delegation tier
-  - agent frontmatter
-  - routing table
-  - agent-graph gate
+ - mini-agent
+ - Tier 1 orchestrator
+ - Tier 2 executor
+ - Tier 3 specialist
+ - skill-first
+ - delegation tier
+ - agent frontmatter
+ - routing table
+ - agent-graph gate
 mcp_services:
-  workflow:
-    - neataptic-workflow-mcp.get_active_workflow_snapshot
-    - neataptic-workflow-mcp.get_customization_inventory
-  cortex:
-    - neataptic-cortex-mcp.search_corpus
-    - neataptic-cortex-mcp.freshness_check
-  gates:
-    - neataptic-gate-mcp.list_gates
-    - neataptic-gate-mcp.run_gate_check
-    - neataptic-gate-mcp.query_customization_routing_table
-    - neataptic-gate-mcp.query_tier_graph
-  validation:
-    - neataptic-validation-mcp.get_active_validation_allowlist
-    - neataptic-validation-mcp.run_allowlisted_validation
+ workflow:
+ - neataptic-workflow-mcp.get_active_workflow_snapshot
+ - neataptic-workflow-mcp.get_customization_inventory
+ cortex:
+ - neataptic-cortex-mcp.search_corpus
+ - neataptic-cortex-mcp.freshness_check
+ gates:
+ - neataptic-gate-mcp.list_gates
+ - neataptic-gate-mcp.run_gate_check
+ - neataptic-gate-mcp.query_customization_routing_table
+ - neataptic-gate-mcp.query_tier_graph
+ validation:
+ - neataptic-validation-mcp.get_active_validation_allowlist
+ - neataptic-validation-mcp.run_allowlisted_validation
 specialist_delegation:
-  research:
-    - Plan Scout
-    - Boundary Mapper
-    - Agent Inventory Auditor
-    - Repo Cortex Scout
-  implementation:
-    - 04-implementing
-    - Helping Agent Maintenance Coordinator
-    - Creating Specialist Agent
-  validation:
-    - 05-green-testing
-    - Green Validation Gates
-    - Coverage Guard
-  escalation:
-    - '00-helping only when an MCP/tool/agent/flow gap blocks the active step.'
+ research:
+ - Plan Scout
+ - Boundary Mapper
+ - Agent Inventory Auditor
+ - Repo Cortex Scout
+ implementation:
+ - 04-implementing
+ - Helping Agent Maintenance Coordinator
+ - Creating Specialist Agent
+ validation:
+ - 05-green-testing
+ - Green Validation Gates
+ - Coverage Guard
+ escalation:
+ - '00-helping only when an MCP/tool/agent/flow gap blocks the active step.'
 non_goals:
-  - 'Do not change the number of Tier 1 orchestrators; this optimization works within the existing eight SDLC agents.'
-  - 'Do not archive or modify plans/completed/Agentic_Workflow_Architecture.plans.md; it remains the upstream authority.'
-  - 'Do not create new Tier 1 agents; all new agents must be Tier 2-4 specialists.'
-  - 'Do not modify MCP server implementations; this workstream only updates agent frontmatter, skills, and flows.'
+ - 'Do not change the number of Tier 1 orchestrators; this optimization works within the existing eight SDLC agents.'
+ - 'Do not archive or modify plans/completed/Agentic_Workflow_Architecture.plans.md; it remains the upstream authority.'
+ - 'Do not create new Tier 1 agents; all new agents must be Tier 2-4 specialists.'
+ - 'Do not modify MCP server implementations; this workstream only updates agent frontmatter, skills, and flows.'
 acceptance_criteria:
-  - id: skill_extraction
-    criterion: 'Given the critical gaps identified, when skill extraction completes, then implementation-standards, research-methodology, and routing-optimization-policy skills exist with proper frontmatter and durable policy content.'
-    validation: 'skill files present with skills: frontmatter field'
-  - id: specialist_creation
-    criterion: 'Given the new skills are authored, when specialist authoring completes, then implementation-executor (Tier 2), research-synthesis-specialist (Tier 3), and code-quality-auditor (Tier 3) agent files exist with correct tier assignments.'
-    validation: 'agent frontmatter tier field and agent-graph gate'
-  - id: routing_sync
-    criterion: 'Given new agents and skills are created, when routing sync completes, then all affected .agent.md files have updated skills: and agents: frontmatter fields.'
-    validation: 'npm run agents:routing-table and routing-table-freshness gate'
-  - id: delegation_enforcement
-    criterion: 'Given the optimization is complete, when tier enforcement is validated, then no Tier 1 agent performs work that should be delegated to Tier 2/3.'
-    validation: 'tier-enforcement gate and query_tier_graph MCP tool'
-  - id: flow_integration
-    criterion: 'Given agents and routing are updated, when flow integration completes, then 04.scoped-fix.flow.yml, 04.refactor.flow.yml, and 02.codebase-recon.flow.yml delegate to the new specialists.'
-    validation: 'flow YAML files and agent-graph gate'
+ - id: skill_extraction
+ criterion: 'Given the critical gaps identified, when skill extraction completes, then implementation-standards, research-methodology, and routing-optimization-policy skills exist with proper frontmatter and durable policy content.'
+ validation: 'skill files present with skills: frontmatter field'
+ - id: specialist_creation
+ criterion: 'Given the new skills are authored, when specialist authoring completes, then implementation-executor (Tier 2), research-synthesis-specialist (Tier 3), and code-quality-auditor (Tier 3) agent files exist with correct tier assignments.'
+ validation: 'agent frontmatter tier field and agent-graph gate'
+ - id: routing_sync
+ criterion: 'Given new agents and skills are created, when routing sync completes, then all affected .agent.md files have updated skills: and agents: frontmatter fields.'
+ validation: 'npm run agents:routing-table and routing-table-freshness gate'
+ - id: delegation_enforcement
+ criterion: 'Given the optimization is complete, when tier enforcement is validated, then no Tier 1 agent performs work that should be delegated to Tier 2/3.'
+ validation: 'tier-enforcement gate and query_tier_graph MCP tool'
+ - id: flow_integration
+ criterion: 'Given agents and routing are updated, when flow integration completes, then 04.scoped-fix.flow.yml, 04.refactor.flow.yml, and 02.codebase-recon.flow.yml delegate to the new specialists.'
+ validation: 'flow YAML files and agent-graph gate'
 stop_conditions:
-  done: 'All four phases complete with validation gates passing and tracker closed by 07-logging.'
-  hold: 'The active step needs user prioritization or agent-architecture policy clarification.'
-  blocked: 'An MCP/tool/agent/flow gap or upstream Agentic_Workflow_Architecture conflict prevents honest implementation.'
+ done: 'All four phases complete with validation gates passing and tracker closed by 07-logging.'
+ hold: 'The active step needs user prioritization or agent-architecture policy clarification.'
+ blocked: 'An MCP/tool/agent/flow gap or upstream Agentic_Workflow_Architecture conflict prevents honest implementation.'
 ```
 
 ## Current State Audit
@@ -242,36 +242,36 @@ name: implementation-executor
 tier: 2
 model: 'glm-5.2:cloud (ollama)'
 tools:
-  [
-    read,
-    search,
-    edit,
-    execute,
-    todo,
-    agent,
-    neataptic-cortex-mcp/*,
-    neataptic-gate-mcp/*,
-    neataptic-validation-mcp/*,
-    neataptic-workflow-mcp/*,
-  ]
+ [
+ read,
+ search,
+ edit,
+ execute,
+ todo,
+ agent,
+ neataptic-cortex-mcp/*,
+ neataptic-gate-mcp/*,
+ neataptic-validation-mcp/*,
+ neataptic-workflow-mcp/*,
+ ]
 user-invocable: false
 agents:
-  [
-    'boundary-mapper',
-    'docs-scout',
-    'browser-runtime-scout',
-    'worker-payload-scout',
-    'checkpoint-scout',
-    'determinism-scout',
-    'helping-gap-resolution-coordinator',
-  ]
+ [
+ 'boundary-mapper',
+ 'docs-scout',
+ 'browser-runtime-scout',
+ 'worker-payload-scout',
+ 'checkpoint-scout',
+ 'determinism-scout',
+ 'helping-gap-resolution-coordinator',
+ ]
 skills: ['implementation-standards', 'coverage-guard']
 handoffs:
-  - label: 'Validate Green'
-    agent: '05-green-testing'
-    prompt: 'Continue from active plan and Step 02 implementation diff. Execute Step 05 validation for current phase.'
-    send: false
-    model: 'glm-5.2:cloud (ollama)'
+ - label: 'Validate Green'
+ agent: '05-green-testing'
+ prompt: 'Continue from active plan and Step 02 implementation diff. Execute Step 05 validation for current phase.'
+ send: false
+ model: 'glm-5.2:cloud (ollama)'
 ```
 
 **Responsibility boundary:** Executes scoped file edits delegated from 04-implementing. Does not plan, does not coordinate scouts, does not synthesize research. Pure execution of implementation packets.
@@ -313,35 +313,35 @@ name: research-codebase-coordinator
 tier: 2
 model: 'glm-5.2:cloud (ollama)'
 tools:
-  [
-    read,
-    search,
-    edit,
-    execute,
-    todo,
-    agent,
-    neataptic-cortex-mcp/*,
-    neataptic-gate-mcp/*,
-    neataptic-validation-mcp/*,
-    neataptic-workflow-mcp/*,
-  ]
+ [
+ read,
+ search,
+ edit,
+ execute,
+ todo,
+ agent,
+ neataptic-cortex-mcp/*,
+ neataptic-gate-mcp/*,
+ neataptic-validation-mcp/*,
+ neataptic-workflow-mcp/*,
+ ]
 user-invocable: false
 agents:
-  [
-    'plan-scout',
-    'docs-scout',
-    'repo-cortex-scout',
-    'boundary-mapper',
-    'research-synthesis-specialist',
-    'helping-gap-resolution-coordinator',
-  ]
+ [
+ 'plan-scout',
+ 'docs-scout',
+ 'repo-cortex-scout',
+ 'boundary-mapper',
+ 'research-synthesis-specialist',
+ 'helping-gap-resolution-coordinator',
+ ]
 skills: ['research-methodology', 'plan-alignment']
 handoffs:
-  - label: 'Design Red Tests'
-    agent: '03-red-testing'
-    prompt: 'Continue from active plan and Step 03 research evidence. Execute Step 03 test design for current phase.'
-    send: false
-    model: 'glm-5.2:cloud (ollama)'
+ - label: 'Design Red Tests'
+ agent: '03-red-testing'
+ prompt: 'Continue from active plan and Step 03 research evidence. Execute Step 03 test design for current phase.'
+ send: false
+ model: 'glm-5.2:cloud (ollama)'
 ```
 
 **Responsibility boundary:** Coordinates scout deployments for 02-researching, synthesizes results via research-synthesis-specialist, produces alignment briefs. Does not execute implementation, does not run tests.
@@ -1178,17 +1178,17 @@ validation:
 
 ## Latest validation evidence
 
-- 2026-06-08: Phase 4 Step 01 [DONE] — All flows mapped, Step 02-07 packets authored
-- 2026-06-08: `validate-plan-sync` PASS (0 errors, 0 warnings)
-- 2026-06-08: `workflow-gap-audit.mjs --json` PASS (30 flows exist, zero mentions expected for new flows)
-- 2026-06-08: Workflow sync: Phase 4 Step 01 → [DONE], Step 02 → [WIP]
-- 2026-06-08: Workflow sync: Phase 4 Step 02 → [DONE], Step 03 → [WIP] (auto-advance)
-- 2026-06-08: Phase 4 Step 03 [DONE] — agent-graph, tier-enforcement, plan-sync gates all PASS
-- 2026-06-08: Phase 4 Step 04 [SKIPPED] — flow selection is manual agent decision, not mechanical contract
-- 2026-06-08: Phase 4 Step 05 [DONE] — tier-enforcement PASS, stale-wip-plans PASS
-- 2026-06-08: Phase 4 Step 06 [DONE] — `.github/FLOWS.md` created (53,770 chars, 30 flows documented)
-- 2026-06-08: Phase 4 Step 07 [DONE] — All gates PASS: agent-graph (61 agents, 0 issues), tier-enforcement (0 violations), routing-table-freshness (hash match), validate-plan-sync (0 errors)
-- 2026-06-08: **Phase 4 [DONE]** — Flow integration complete, ready for Phase 5: Validation & Polish
+- Phase 4 Step 01 [DONE] — All flows mapped, Step 02-07 packets authored
+- `validate-plan-sync` PASS (0 errors, 0 warnings)
+- `workflow-gap-audit.mjs --json` PASS (30 flows exist, zero mentions expected for new flows)
+- Workflow sync: Phase 4 Step 01 → [DONE], Step 02 → [WIP]
+- Workflow sync: Phase 4 Step 02 → [DONE], Step 03 → [WIP] (auto-advance)
+- Phase 4 Step 03 [DONE] — agent-graph, tier-enforcement, plan-sync gates all PASS
+- Phase 4 Step 04 [SKIPPED] — flow selection is manual agent decision, not mechanical contract
+- Phase 4 Step 05 [DONE] — tier-enforcement PASS, stale-wip-plans PASS
+- Phase 4 Step 06 [DONE] — `.github/FLOWS.md` created (53,770 chars, 30 flows documented)
+- Phase 4 Step 07 [DONE] — All gates PASS: agent-graph (61 agents, 0 issues), tier-enforcement (0 violations), routing-table-freshness (hash match), validate-plan-sync (0 errors)
+- **Phase 4 [DONE]** — Flow integration complete, ready for Phase 5: Validation & Polish
 
 ## Handoff query
 
@@ -1313,9 +1313,11 @@ validation:
 1. Run `npm run test:silent` and capture full output ✓
 2. If all tests pass, record evidence and mark step [DONE] ✓
 3. If tests fail, triage failures: ✓
-   - If failures in .github/ or plans/ unrelated to test infrastructure, mark as known issue
-   - If failures in src/, delegate to `green-test-failure-triage-coordinator` ✓
-   - If failures are test workflow issues, delegate to `test-fix-workflow` ✓
+
+- If failures in .github/ or plans/ unrelated to test infrastructure, mark as known issue
+- If failures in src/, delegate to `green-test-failure-triage-coordinator` ✓
+- If failures are test workflow issues, delegate to `test-fix-workflow` ✓
+
 4. Update plan with validation evidence and next step status ✓
 
 **Stop conditions:**

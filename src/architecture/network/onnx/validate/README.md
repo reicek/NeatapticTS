@@ -36,6 +36,7 @@ validateOnnxBinaryModel(
 Validate one binary `ModelProto` payload through the current Phase 8 compliance lane.
 
 Validation executes in three ordered stages:
+
 1. Decode and verify the protobuf payload structurally.
 2. Confirm the declared headers match the repo's explicit lower-opset policy.
 3. Ask ONNX Runtime to accept the model as an external consumer.
@@ -44,6 +45,7 @@ This is stronger than the repo's internal JSON-first checks, but it is still not
 full Phase 9 runtime-parity claim because it does not compare inference outputs.
 
 Parameters:
+
 - `binaryModel` - Binary `ModelProto` payload to validate.
 
 Returns: Structured validation result for the current external acceptance lane.

@@ -4,7 +4,7 @@
 
 ## Phase 3 — Independent populations and generation barriers [DONE]
 
-**Closed:** 2026-06-07
+**Closed:**
 
 **Scope:** Reusable independent-population harness and generation-barrier semantics in NGE core; Racing and Predator/Prey as downstream consumers; deterministic transport normalization deferred to Phase 4.
 
@@ -37,7 +37,7 @@
 
 ## Phase 4 — Deterministic evaluation packs / deterministic race packs normalization [DONE]
 
-**Closed:** 2026-06-22
+**Closed:**
 
 **Scope:** Normalize deterministic evaluation packs and race-pack transport so the same seed + inputs produce identical worker payloads; freeze Layer 1/2/3 ownership; keep Racing as the proving ground.
 
@@ -70,7 +70,7 @@
 
 ## Phase 5 — Lifecycle staging closure and nge-adult readiness reconciliation [DONE]
 
-**Closed:** 2026-06-23
+**Closed:**
 
 **Scope:** Close lifecycle staging gaps, reconcile `nge-adult` readiness with file-backed evidence, and resolve contradictions with archived closure claims.
 
@@ -106,7 +106,7 @@
 
 ## Phase 6 — Experimental root public API exposure [DONE]
 
-**Closed:** 2026-06-23
+**Closed:**
 
 **Scope:** Expose a narrow experimental NGE public entrypoint from `src/neataptic.ts` via a single `nge` namespace, without top-level NGE exports or stability guarantees.
 
@@ -140,7 +140,7 @@
 
 ## Phase 7 — Downstream benchmark dependency + MCP synchronization [DONE]
 
-**Closed:** 2026-06-23
+**Closed:**
 
 **Scope:** Synchronize downstream benchmark dependencies and hand completed core evidence back to Racing, Predator/Prey, and Ant Hive trackers via MCP-aware cross-plan packets.
 

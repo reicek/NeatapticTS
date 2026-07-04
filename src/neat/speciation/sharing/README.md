@@ -72,6 +72,7 @@ later parent selection purely because many near-duplicates all retained their
 full raw score.
 
 The helper supports two modes:
+
 - sigma-aware sharing, which weights neighbors by compatibility distance when
   the sharing radius is positive,
 - uniform sharing, which falls back to dividing each member's score by the
@@ -89,6 +90,7 @@ later selection and allocation steps, not as a replacement for the raw
 evaluation evidence that assignment started from.
 
 Parameters:
+
 - `speciationContext` - Neat instance context with species and distance function.
 - `sharingSigma` - Sharing radius used for distance weighting.
 
@@ -131,6 +133,7 @@ The resulting `bestScore` and `lastImproved` values belong to species-side
 controller bookkeeping, not to the canonical genome contract.
 
 Parameters:
+
 - `speciationContext` - Neat instance context with species array and generation counter.
 - `stagnationWindow` - Allowed stagnation window.
 - `sortSpeciesMembers` - Sort function for species members.

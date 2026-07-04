@@ -2,20 +2,23 @@
 
 Slab Packing / Structure‑of‑Arrays Backend (Educational Module)
 ==============================================================
+
 Packs per‑connection data into parallel typed arrays (SoA) to accelerate
 forward passes and to illustrate memory/layout optimizations.
 
 Why SoA?
- - Locality & fewer cache misses.
- - Predictable tight numeric loops (JIT / SIMD friendly).
- - Easy instrumentation (single contiguous blocks to measure & diff).
+
+- Locality & fewer cache misses.
+- Predictable tight numeric loops (JIT / SIMD friendly).
+- Easy instrumentation (single contiguous blocks to measure & diff).
 
 Key Arrays (logical length = `used`): weights | from | to | flags | (optional) gain | (optional) plastic.
 Adjacency (CSR style): outStart (nodeCount+1), outOrder (per‑source permutation) enabling fast fan‑out.
 
 On‑Demand & Omission:
- - Gain/plastic slabs allocated only when a non‑neutral value appears; freed if neutrality returns.
- - `getConnectionSlab()` synthesizes a neutral gain view if omitted internally (keeps teaching tools simple).
+
+- Gain/plastic slabs allocated only when a non‑neutral value appears; freed if neutrality returns.
+- `getConnectionSlab()` synthesizes a neutral gain view if omitted internally (keeps teaching tools simple).
 
 Capacity Strategy: geometric growth (1.25x browser / 1.75x Node) amortizes realloc cost.
 Pooling (config gated) reuses typed arrays (see `getSlabAllocationStats`).
@@ -24,6 +27,7 @@ Rebuild Steps (sync): reindex nodes → grow/allocate if needed → single pass 
 Async variant slices the population loop into microtasks to reduce long main‑thread blocks.
 
 Example (inspection):
+
 ```ts
 const slab = net.getConnectionSlab();
 console.log('Edges', slab.used, 'Version', slab.version, 'Cap', slab.capacity);
@@ -134,6 +138,7 @@ Report whether current network state can use slab fast activation without fallba
 Mirrors `_canUseFastSlab` while exposing eligibility to callers and diagnostics.
 
 Parameters:
+
 - `training` - Whether caller is performing training (disables fast path if true).
 
 Returns: True when slab fast path predicates hold.
@@ -153,16 +158,19 @@ fastSlabActivate(
 High‑performance forward pass using packed slabs + CSR adjacency.
 
 Fallback Conditions (auto‑detected):
- - Missing slabs / adjacency structures.
- - Topology/gating/stochastic predicates fail (see `_canUseFastSlab`).
- - Gating present, when applicable (explicit guard).
+
+- Missing slabs / adjacency structures.
+- Topology/gating/stochastic predicates fail (see `_canUseFastSlab`).
+- Gating present, when applicable (explicit guard).
 
 Implementation Notes:
- - Reuses internal activation/state buffers to reduce per‑step allocation churn.
- - Applies gain multiplication if optional gain slab exists.
- - Assumes acyclic graph; topological order recomputed on demand if marked dirty.
+
+- Reuses internal activation/state buffers to reduce per‑step allocation churn.
+- Applies gain multiplication if optional gain slab exists.
+- Assumes acyclic graph; topological order recomputed on demand if marked dirty.
 
 Parameters:
+
 - `input` - Input vector (length must equal `network.input`).
 
 Returns: Output activations (detached plain array) of length `network.output`.
@@ -190,9 +198,10 @@ getSlabAllocationStats(): { fresh: number; pooled: number; pool: Record<string, 
 Allocation statistics snapshot for slab typed arrays.
 
 Includes:
- - fresh: number of newly constructed typed arrays since process start / metrics reset.
- - pooled: number of arrays served from the pool.
- - pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
+
+- fresh: number of newly constructed typed arrays since process start / metrics reset.
+- pooled: number of arrays served from the pool.
+- pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
 
 NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.
 
@@ -220,6 +229,7 @@ Build (or refresh) the packed connection slabs for the network synchronously.
 
 ACTIONS
 -------
+
 1. Optionally reindex nodes if structural mutations invalidated indices.
 2. Grow (geometric) or reuse existing typed arrays to ensure capacity >= active connections.
 3. Populate the logical slice [0, connectionCount) with weight/from/to/flag data.
@@ -229,9 +239,11 @@ ACTIONS
 
 PERFORMANCE
 -----------
+
 O(C) over active connections with amortized allocation cost due to geometric growth.
 
 Parameters:
+
 - `force` - When true forces rebuild even if network not marked dirty (useful for timing tests).
 
 ### rebuildConnectionSlabAsync
@@ -245,14 +257,16 @@ rebuildConnectionSlabAsync(
 Cooperative asynchronous slab rebuild (Browser only).
 
 Strategy:
- - Perform capacity decision + allocation up front (mirrors sync path).
- - Populate connection data in timer-backed macrotask slices so the browser can service other queued work between chunks.
- - Adaptive slice sizing for very large graphs if `config.browserSlabChunkTargetMs` set.
+
+- Perform capacity decision + allocation up front (mirrors sync path).
+- Populate connection data in timer-backed macrotask slices so the browser can service other queued work between chunks.
+- Adaptive slice sizing for very large graphs if `config.browserSlabChunkTargetMs` set.
 
 Metrics: Increments `_slabAsyncBuilds` for observability.
 Fallback: On Node (no `window`) defers to synchronous rebuild for simplicity.
 
 Parameters:
+
 - `chunkSize` - Initial maximum connections per slice (may be reduced adaptively for huge graphs).
 
 Returns: Promise resolving once rebuild completes.
@@ -276,6 +290,7 @@ Acquire a typed-array slab for the requested key, reusing pooled capacity
 when available and allocating only on pool miss.
 
 Parameters:
+
 - `kind` - Pool kind discriminator.
 - `ctor` - Typed array constructor.
 - `length` - Desired typed array length.
@@ -308,6 +323,7 @@ Return a typed array to its bounded per-key slab pool so later activation
 passes can reuse capacity without reallocating.
 
 Parameters:
+
 - `kind` - Pool kind discriminator.
 - `bytesPerElement` - Element byte width for keying.
 - `arr` - Typed array instance to retain when room exists.
@@ -327,6 +343,7 @@ _createConnectionSlabView(
 Creates a read-oriented packed slab view from current network internals.
 
 Parameters:
+
 - `network` - Target network.
 
 Returns: Packed connection slab view.
@@ -342,6 +359,7 @@ _readSlabVersion(
 Reads the current monotonic slab version counter from network internals.
 
 Parameters:
+
 - `network` - Target network.
 
 Returns: Non-negative slab version counter.
@@ -358,6 +376,7 @@ _resolveConnectionGainView(
 Resolves gain slab view, synthesizing neutral gain values when omitted.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 - `capacity` - Resolved slab capacity.
 
@@ -374,6 +393,7 @@ _resolveConnectionSlabCapacity(
 Resolves effective slab capacity using explicit capacity first.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 
 Returns: Effective capacity value.
@@ -391,6 +411,7 @@ _prepareSlabBuildPreconditions(
 Applies all required prerequisite normalization steps before starting slab rebuild passes.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Nothing.
@@ -409,6 +430,7 @@ _activateFastSlab(
 Executes fast slab activation once slab and adjacency prerequisites are prepared.
 
 Parameters:
+
 - `network` - Target network.
 - `input` - Input activation vector.
 
@@ -427,6 +449,7 @@ _reindexNodes(
 Assigns sequential node indices used by slab packing and fast-path traversal.
 
 Parameters:
+
 - `network` - Target network.
 
 Returns: Nothing.
@@ -446,6 +469,7 @@ _allocateCoreSlabArrays(
 Allocates core slab arrays (weights/from/to/flags).
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Nothing.
@@ -461,6 +485,7 @@ _allocateCoreSlabArraysAsync(
 Allocates async core slabs with optional timer yields between large allocations.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Promise resolved after async core slabs are ready.
@@ -476,6 +501,7 @@ _allocateGainSlabForAsync(
 Allocates gain slab for async pass prefill strategy.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Promise resolved after the gain slab is ready.
@@ -492,6 +518,7 @@ _applyGainOmissionPolicy(
 Applies gain omission rule by releasing a fully neutral gain slab so optional gain storage remains absent unless non-default values are present.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 - `populateResult` - Populate result.
 
@@ -509,6 +536,7 @@ _applyPlasticPolicyAsync(
 Applies async plastic slab allocation and release policy so chunked rebuilds keep plastic-rate arrays aligned with observed plastic connection flags.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 - `populateResult` - Populate result.
 
@@ -526,6 +554,7 @@ _applyPlasticPolicySync(
 Applies sync plastic slab allocation and release policy so plasticity-rate storage exists only when plastic connections appear in the packed set.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 - `populateResult` - Populate result.
 
@@ -542,6 +571,7 @@ _createInitialSlabPopulateResult(
 Creates initial populate result from current optional slab state.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 
 Returns: Initial populate result.
@@ -558,6 +588,7 @@ _createSlabBuildContext(
 Creates immutable slab build context for one rebuild pass so capacity, precision, and runtime pointers stay consistent across helper calls.
 
 Parameters:
+
 - `network` - Target network.
 - `growthFactor` - Capacity growth multiplier.
 
@@ -574,6 +605,7 @@ _createSlabWriteArrays(
 Creates strongly typed write-array bundle for connection population.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Write-array bundle.
@@ -591,6 +623,7 @@ _ensureGainArrayExistsForIndex(
 Ensures gain slab exists before writing non-neutral value.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 - `populateResult` - Mutable populate result.
 - `connectionIndex` - Current connection index.
@@ -608,6 +641,7 @@ _ensureSlabCapacityAsync(
 Ensures async rebuild has enough slab capacity so cooperative chunked population can proceed without mid-pass reallocations or pointer invalidation hazards.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Promise resolved after any required cooperative allocations finish.
@@ -623,6 +657,7 @@ _ensureSlabCapacitySync(
 Ensures sync rebuild has enough slab capacity so packed arrays can hold every active connection before synchronous field population begins.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Nothing.
@@ -640,6 +675,7 @@ _expandSlabCapacity(
 Computes next capacity satisfying required size using geometric growth.
 
 Parameters:
+
 - `currentCapacity` - Existing capacity.
 - `requiredCapacity` - Required minimum capacity.
 - `growthFactor` - Capacity growth multiplier.
@@ -659,6 +695,7 @@ _fillPlasticityRates(
 Fills plastic slab values from connection plasticity rates.
 
 Parameters:
+
 - `network` - Target network.
 - `plasticArray` - Plastic slab array.
 - `connectionCount` - Number of active connections.
@@ -676,6 +713,7 @@ _finalizeAsyncSlabRebuild(
 Finalizes async rebuild bookkeeping fields so runtime counters and slab-version invalidation match the completed cooperative population pass in production telemetry.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Nothing.
@@ -692,6 +730,7 @@ _finalizeSharedSlabState(
 Finalizes shared rebuild bookkeeping fields.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 - `connectionCount` - Number of active connections.
 
@@ -708,6 +747,7 @@ _finalizeSyncSlabRebuild(
 Finalizes sync rebuild bookkeeping fields so connection counts, dirty flags, and slab versions remain coherent for downstream runtime caches and adapters.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Nothing.
@@ -727,6 +767,7 @@ _populateAsyncChunkRange(
 Populates one inclusive-exclusive chunk range for async rebuild.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 - `writeArrays` - Core write arrays.
 - `populateResult` - Mutable populate result.
@@ -747,6 +788,7 @@ _populateSlabConnectionsAsync(
 Populates core slab arrays in cooperative async chunks so large graphs remain responsive while preserving deterministic packed ordering semantics for replayability.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 - `chunkSize` - Maximum items per chunk.
 
@@ -763,6 +805,7 @@ _populateSlabConnectionsSync(
 Populates core slab arrays in a synchronous single pass so all connection fields are packed deterministically for the active network snapshot.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Population result flags and optional slabs.
@@ -778,6 +821,7 @@ _releaseExistingSlabArrays(
 Releases all currently allocated slab arrays back to pool.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 
 Returns: Nothing.
@@ -793,6 +837,7 @@ _resetOptionalSlabArraysAfterSyncAllocate(
 Resets optional slabs after sync allocation to keep omission semantics.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 
 Returns: Nothing.
@@ -809,6 +854,7 @@ _resolveAsyncChunkSize(
 Resolves effective async chunk size using adaptive heuristics so very large rebuilds honor browser frame budgets without starving throughput under load.
 
 Parameters:
+
 - `totalConnections` - Number of active connections.
 - `requestedChunkSize` - Requested chunk size.
 
@@ -826,6 +872,7 @@ _shouldSkipSlabRebuild(
 Determines whether slab rebuild can be skipped so callers avoid unnecessary typed-array churn when no topology mutation invalidated packed connection buffers.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 - `force` - True when rebuild must run regardless of dirty state.
 
@@ -843,6 +890,7 @@ _updatePlasticPresence(
 Updates plastic-presence flag from connection bitfield.
 
 Parameters:
+
 - `populateResult` - Mutable populate result.
 - `connection` - Connection internals.
 
@@ -859,6 +907,7 @@ _weightArrayCtor(
 Resolves typed-array constructor for weight slabs.
 
 Parameters:
+
 - `useFloat32Weights` - True when 32-bit weights are enabled.
 
 Returns: Matching typed-array constructor.
@@ -874,6 +923,7 @@ _weightByteWidth(
 Resolves byte width for weight slab arrays.
 
 Parameters:
+
 - `useFloat32Weights` - True when 32-bit weights are enabled.
 
 Returns: Byte width for weight elements.
@@ -891,6 +941,7 @@ _writeConnectionCoreFields(
 Writes core fields for one connection into slab arrays.
 
 Parameters:
+
 - `writeArrays` - Core write arrays.
 - `connection` - Connection internals.
 - `connectionIndex` - Connection index.
@@ -911,6 +962,7 @@ _writeConnectionGainField(
 Writes gain field for one connection and updates gain flags.
 
 Parameters:
+
 - `buildContext` - Slab build context.
 - `populateResult` - Mutable populate result.
 - `connection` - Connection internals.
@@ -943,6 +995,7 @@ _buildAdjacency(
 Build or refresh CSR-style adjacency (outStart + outOrder) for fast fan-out traversal.
 
 Parameters:
+
 - `network` - Target network.
 
 Returns: Nothing.
@@ -958,6 +1011,7 @@ asNetworkSlabProps(
 Cast network instance into internal slab-backed shape.
 
 Parameters:
+
 - `network` - Target network.
 
 Returns: Internal slab-backed network representation.
@@ -973,6 +1027,7 @@ buildOutgoingOrder(
 Build source-grouped outgoing order using CSR start offsets.
 
 Parameters:
+
 - `outgoingOrderBuildContext` - Context holding build data and start offsets.
 
 Returns: Ordered outgoing connection indices.
@@ -988,6 +1043,7 @@ buildOutgoingStartIndices(
 Build CSR start offsets from fan-out counts.
 
 Parameters:
+
 - `startIndicesBuildContext` - Context holding build data and fan-out counts.
 
 Returns: Outgoing start indices slab.
@@ -1003,6 +1059,7 @@ collectFanOutCounts(
 Collect fan-out counts for each source node.
 
 Parameters:
+
 - `buildContext` - Shared adjacency build context.
 
 Returns: Fan-out counts per node.
@@ -1018,6 +1075,7 @@ createBuildAdjacencyContext(
 Build adjacency context when required slabs are available.
 
 Parameters:
+
 - `network` - Target network.
 
 Returns: Build context or null when adjacency cannot be built yet.
@@ -1033,6 +1091,7 @@ createFanOutCollectionContext(
 Build fan-out collection context.
 
 Parameters:
+
 - `buildContext` - Shared adjacency build context.
 
 Returns: Fan-out collection context.
@@ -1048,6 +1107,7 @@ createFanOutCountsBuffer(
 Allocate fan-out counts buffer.
 
 Parameters:
+
 - `nodeCount` - Number of nodes.
 
 Returns: Zero-initialized fan-out counts.
@@ -1063,6 +1123,7 @@ createInsertionCursor(
 Create insertion cursor copy from outgoing start indices.
 
 Parameters:
+
 - `outgoingStartIndices` - Outgoing start indices slab.
 
 Returns: Mutable insertion cursor.
@@ -1078,6 +1139,7 @@ createOutgoingOrderBuffer(
 Allocate outgoing order buffer.
 
 Parameters:
+
 - `connectionCount` - Number of active connections.
 
 Returns: Outgoing order buffer.
@@ -1093,6 +1155,7 @@ createOutgoingStartIndicesBuffer(
 Allocate outgoing start indices buffer with terminal slot.
 
 Parameters:
+
 - `nodeCount` - Number of nodes.
 
 Returns: Outgoing start indices buffer.
@@ -1108,6 +1171,7 @@ hasRequiredConnectionSlabs(
 Check whether required connection slabs exist.
 
 Parameters:
+
 - `internalNet` - Internal slab-backed network representation.
 
 Returns: True when adjacency build prerequisites are present.
@@ -1123,6 +1187,7 @@ incrementFanOutCountAtSource(
 Increment fan-out count for one connection source index.
 
 Parameters:
+
 - `context` - Increment context.
 
 Returns: Nothing.
@@ -1138,6 +1203,7 @@ insertConnectionIntoOutgoingOrder(
 Insert one connection index into the proper source-grouped slot.
 
 Parameters:
+
 - `context` - Insertion context.
 
 Returns: Nothing.
@@ -1154,6 +1220,7 @@ iterateConnectionIndices(
 Iterate all connection indices.
 
 Parameters:
+
 - `connectionCount` - Number of active connections.
 - `visitor` - Index visitor.
 
@@ -1171,6 +1238,7 @@ iterateNodeIndices(
 Iterate all node indices.
 
 Parameters:
+
 - `nodeCount` - Number of nodes.
 - `visitor` - Index visitor.
 
@@ -1187,6 +1255,7 @@ populateFanOutCounts(
 Populate fan-out counts from the connection source slab.
 
 Parameters:
+
 - `fanOutCollectionContext` - Fan-out collection context.
 
 Returns: Nothing.
@@ -1202,6 +1271,7 @@ populateOutgoingOrder(
 Populate outgoing order by source-grouped insertion.
 
 Parameters:
+
 - `context` - Outgoing order population context.
 
 Returns: Nothing.
@@ -1217,6 +1287,7 @@ populateOutgoingStartIndices(
 Populate outgoing start indices and return terminal offset.
 
 Parameters:
+
 - `context` - Population context.
 
 Returns: Terminal running offset after the last node.
@@ -1232,6 +1303,7 @@ publishAdjacency(
 Publish adjacency slabs and clear dirty flag.
 
 Parameters:
+
 - `publishAdjacencyContext` - Values to publish on the internal network slab state.
 
 Returns: Nothing.
@@ -1247,6 +1319,7 @@ setTerminalOutgoingStartOffset(
 Set terminal outgoing start offset at the tail slot.
 
 Parameters:
+
 - `context` - Terminal offset context.
 
 Returns: Nothing.
@@ -1267,6 +1340,7 @@ _activateThroughLegacyPath(
 Executes legacy network activation fallback.
 
 Parameters:
+
 - `network` - Target network.
 - `input` - Activation input.
 
@@ -1283,6 +1357,7 @@ _canUseFastSlab(
 Evaluate whether the high-performance slab forward pass is currently safe to use under runtime, topology, gating, dropout, and stochastic-regularization constraints.
 
 Parameters:
+
 - `training` - Whether caller is in training mode.
 
 Returns: True if fast path can be safely used.
@@ -1300,6 +1375,7 @@ _collectFastSlabOutput(
 Collect output activations from the slab working buffer into a detached plain array so callers receive stable values independent of pooled buffer reuse.
 
 Parameters:
+
 - `network` - Target network.
 - `activationBuffer` - Activation buffer.
 - `nodeCount` - Node count.
@@ -1318,6 +1394,7 @@ _createFastActivationBuffer(
 Creates typed fast activation/state buffer.
 
 Parameters:
+
 - `useFloat32Activation` - True when 32-bit buffer is required.
 - `nodeCount` - Node count.
 
@@ -1335,6 +1412,7 @@ _ensureFastSlabBuffers(
 Ensure reusable fast activation and state buffers are allocated with the correct length and numeric precision for the upcoming slab propagation pass.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 - `nodeCount` - Node count.
 
@@ -1351,6 +1429,7 @@ _hasFastSlabPrerequisites(
 Checks whether core slab prerequisites are available.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 
 Returns: True when all required slabs/adjacency arrays exist.
@@ -1367,6 +1446,7 @@ _hasFastSlabRegularizationBlockers(
 Check runtime regularization features that invalidate slab fast-path execution.
 
 Parameters:
+
 - `network` - Target network.
 - `internalNet` - Internal slab runtime shape.
 
@@ -1384,6 +1464,7 @@ _hasFastSlabStructuralEligibility(
 Check topology and structure constraints that must hold before the slab fast path can execute.
 
 Parameters:
+
 - `network` - Target network.
 - `internalNet` - Internal slab runtime shape.
 
@@ -1404,6 +1485,7 @@ _maybeActivateNonInputNode(
 Activates one non-input node when required.
 
 Parameters:
+
 - `network` - Target network.
 - `node` - Current node.
 - `nodeIndex` - Node index.
@@ -1425,6 +1507,7 @@ _needsFastBufferReplacement(
 Checks whether a fast buffer requires replacement.
 
 Parameters:
+
 - `buffer` - Existing buffer.
 - `nodeCount` - Node count.
 - `useFloat32Activation` - True when 32-bit buffer is required.
@@ -1444,6 +1527,7 @@ _prepareFastSlabRuntime(
 Prepare topology ordering and node indexing prerequisites before a fast slab pass so activation loops can run on up-to-date structural metadata.
 
 Parameters:
+
 - `network` - Target network.
 - `internalNet` - Internal slab runtime shape.
 - `reindexNodes` - Callback used to reindex nodes when needed.
@@ -1465,6 +1549,7 @@ _propagateFastSlabActivations(
 Propagate activations through topological order using packed slab arrays so weighted fan-out executes with contiguous memory access patterns and deterministic node-to-node accumulation behavior.
 
 Parameters:
+
 - `network` - Target network.
 - `internalNet` - Internal slab runtime shape.
 - `topoOrder` - Topological node order.
@@ -1491,6 +1576,7 @@ _propagateNodeOutgoingEdges(
 Propagates one node activation over all outgoing slab edges.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 - `nodeIndex` - Source node index.
 - `activationBuffer` - Activation buffer.
@@ -1513,6 +1599,7 @@ _recomputeTopologyOrder(
 Recomputes topological order on demand.
 
 Parameters:
+
 - `network` - Target network.
 
 Returns: Nothing.
@@ -1529,6 +1616,7 @@ _resolveFastTopoOrder(
 Resolve the node iteration order used by fast slab propagation, preferring cached topological order and falling back to node storage order when needed.
 
 Parameters:
+
 - `network` - Target network.
 - `internalNet` - Internal slab runtime shape.
 
@@ -1547,6 +1635,7 @@ _resolveWeightedConnectionValue(
 Resolves effective connection weight including optional gain.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 - `weightArray` - Weight slab.
 - `connectionIndex` - Connection index.
@@ -1566,6 +1655,7 @@ _seedFastInputLayer(
 Seed input-layer activation values into the working buffer and mirror those values onto runtime node fields before hidden-layer propagation begins.
 
 Parameters:
+
 - `network` - Target network.
 - `input` - Activation input.
 - `activationBuffer` - Activation buffer.
@@ -1584,6 +1674,7 @@ _tryFastSlabFallbackForGating(
 Attempt an immediate fallback to legacy activation when gating structures are present because gated connections violate the slab fast-path assumptions.
 
 Parameters:
+
 - `network` - Target network.
 - `input` - Activation input.
 
@@ -1602,6 +1693,7 @@ _tryFastSlabFallbackForMissingPrerequisites(
 Attempt an immediate fallback to legacy activation when required slab arrays or adjacency prerequisites are missing from runtime state so incomplete slab snapshots never execute unsafe fast-path logic.
 
 Parameters:
+
 - `network` - Target network.
 - `internalNet` - Internal slab runtime shape.
 - `input` - Activation input.
@@ -1620,6 +1712,7 @@ _writeInputNodeRuntime(
 Writes runtime activation/state for one input node.
 
 Parameters:
+
 - `node` - Input node.
 - `inputValue` - Input activation value.
 
@@ -1636,6 +1729,7 @@ resolveFastSlabActivationPrecision(
 Read the resolved runtime activation precision for slab output pooling.
 
 Parameters:
+
 - `network` - Target network.
 
 Returns: Active per-network activation precision when present.
@@ -1651,6 +1745,7 @@ resolveFastSlabBufferPrecision(
 Read the resolved runtime activation precision for fast slab working buffers.
 
 Parameters:
+
 - `internalNet` - Internal slab runtime shape.
 
 Returns: Active per-network activation precision when present.

@@ -5,8 +5,8 @@ import { createMockGPUDevice } from './__mocks__/gpu.mock';
 import { activateGPU } from './network.gpu.activate';
 
 const SMALL_INPUTS: [number, number] = [0.1, 0.2];
-const ABSOLUTE_TOLERANCE = 0.5;
-const MEAN_ABSOLUTE_ERROR_TOLERANCE = 0.1;
+const MAX_ABS_TOLERANCE = 1e-3;
+const MEAN_ABS_TOLERANCE = 1e-4;
 
 describe('network.gpu.parity', () => {
   describe('small feed-forward network', () => {
@@ -26,16 +26,16 @@ describe('network.gpu.parity', () => {
       expect(gpuOutput.length).toBe(cpuOutput.length);
     });
 
-    it('keeps per-element absolute difference within 5e-1', async () => {
+    it('keeps per-element absolute difference within 1e-3', async () => {
       const gpuOutput = await activateGPU(device, network, SMALL_INPUTS);
       const maxAbsoluteDifference = Math.max(
         ...cpuOutput.map((value, index) => Math.abs(value - gpuOutput[index])),
       );
 
-      expect(maxAbsoluteDifference).toBeLessThanOrEqual(ABSOLUTE_TOLERANCE);
+      expect(maxAbsoluteDifference).toBeLessThanOrEqual(MAX_ABS_TOLERANCE);
     });
 
-    it('keeps mean absolute error within 1e-1', async () => {
+    it('keeps mean absolute error within 1e-4', async () => {
       const gpuOutput = await activateGPU(device, network, SMALL_INPUTS);
       const meanAbsoluteError =
         cpuOutput.reduce(
@@ -43,9 +43,7 @@ describe('network.gpu.parity', () => {
           0,
         ) / cpuOutput.length;
 
-      expect(meanAbsoluteError).toBeLessThanOrEqual(
-        MEAN_ABSOLUTE_ERROR_TOLERANCE,
-      );
+      expect(meanAbsoluteError).toBeLessThanOrEqual(MEAN_ABS_TOLERANCE);
     });
   });
 
@@ -67,16 +65,16 @@ describe('network.gpu.parity', () => {
       expect(gpuOutput.length).toBe(cpuOutput.length);
     });
 
-    it('keeps per-element absolute difference within 5e-1', async () => {
+    it('keeps per-element absolute difference within 1e-3', async () => {
       const gpuOutput = await activateGPU(device, network, SMALL_INPUTS);
       const maxAbsoluteDifference = Math.max(
         ...cpuOutput.map((value, index) => Math.abs(value - gpuOutput[index])),
       );
 
-      expect(maxAbsoluteDifference).toBeLessThanOrEqual(ABSOLUTE_TOLERANCE);
+      expect(maxAbsoluteDifference).toBeLessThanOrEqual(MAX_ABS_TOLERANCE);
     });
 
-    it('keeps mean absolute error within 1e-1', async () => {
+    it('keeps mean absolute error within 1e-4', async () => {
       const gpuOutput = await activateGPU(device, network, SMALL_INPUTS);
       const meanAbsoluteError =
         cpuOutput.reduce(
@@ -84,9 +82,7 @@ describe('network.gpu.parity', () => {
           0,
         ) / cpuOutput.length;
 
-      expect(meanAbsoluteError).toBeLessThanOrEqual(
-        MEAN_ABSOLUTE_ERROR_TOLERANCE,
-      );
+      expect(meanAbsoluteError).toBeLessThanOrEqual(MEAN_ABS_TOLERANCE);
     });
   });
 
@@ -109,16 +105,16 @@ describe('network.gpu.parity', () => {
       expect(gpuOutput.length).toBe(cpuOutput.length);
     });
 
-    it('keeps per-element absolute difference within 5e-1', async () => {
+    it('keeps per-element absolute difference within 1e-3', async () => {
       const gpuOutput = await activateGPU(device, network, SMALL_INPUTS);
       const maxAbsoluteDifference = Math.max(
         ...cpuOutput.map((value, index) => Math.abs(value - gpuOutput[index])),
       );
 
-      expect(maxAbsoluteDifference).toBeLessThanOrEqual(ABSOLUTE_TOLERANCE);
+      expect(maxAbsoluteDifference).toBeLessThanOrEqual(MAX_ABS_TOLERANCE);
     });
 
-    it('keeps mean absolute error within 1e-1', async () => {
+    it('keeps mean absolute error within 1e-4', async () => {
       const gpuOutput = await activateGPU(device, network, SMALL_INPUTS);
       const meanAbsoluteError =
         cpuOutput.reduce(
@@ -126,9 +122,7 @@ describe('network.gpu.parity', () => {
           0,
         ) / cpuOutput.length;
 
-      expect(meanAbsoluteError).toBeLessThanOrEqual(
-        MEAN_ABSOLUTE_ERROR_TOLERANCE,
-      );
+      expect(meanAbsoluteError).toBeLessThanOrEqual(MEAN_ABS_TOLERANCE);
     });
   });
 

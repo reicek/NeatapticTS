@@ -161,7 +161,6 @@ CREATE TABLE IF NOT EXISTS term_embeddings (
   dimension INTEGER NOT NULL,
   frequency INTEGER NOT NULL,
   doc_family_count INTEGER NOT NULL,
-  embedded_at TEXT NOT NULL,
   PRIMARY KEY (term, model_id)
 );
 

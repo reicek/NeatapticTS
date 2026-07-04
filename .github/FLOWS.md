@@ -142,19 +142,19 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 2 | `helping-gap-resolution-coordinator` |
-| 3 | `Skill Inventory Auditor` |
-| 3 | `Plan Scout` |
+| Tier | Specialist                           |
+| ---- | ------------------------------------ |
+| 2    | `helping-gap-resolution-coordinator` |
+| 3    | `Skill Inventory Auditor`            |
+| 3    | `Plan Scout`                         |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `learning-event` | Validates learning event was recorded |
-| `agent-graph` | Verifies agent delegation graph integrity |
+| Gate ID          | Purpose                                   |
+| ---------------- | ----------------------------------------- |
+| `plan-sync`      | Confirms plan tracker alignment           |
+| `learning-event` | Validates learning event was recorded     |
+| `agent-graph`    | Verifies agent delegation graph integrity |
 
 #### Post-Phase Fanout
 
@@ -189,18 +189,18 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 2 | `helping-gap-resolution-coordinator` |
-| 2 | `helping-agent-maintenance-coordinator` |
-| 3 | `Plan Scout` |
-| 3 | `failure-triage-specialist` |
+| Tier | Specialist                              |
+| ---- | --------------------------------------- |
+| 2    | `helping-gap-resolution-coordinator`    |
+| 2    | `helping-agent-maintenance-coordinator` |
+| 3    | `Plan Scout`                            |
+| 3    | `failure-triage-specialist`             |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
+| Gate ID          | Purpose                               |
+| ---------------- | ------------------------------------- |
+| `plan-sync`      | Confirms plan tracker alignment       |
 | `learning-event` | Validates learning event was recorded |
 
 #### Post-Phase Fanout
@@ -212,7 +212,7 @@ Select this flow when:
 
 ```text
 "Implementation step blocked by MCP tool failure — diagnose root cause."
-"Three consecutive gate failures — escalate to 00-helping."
+"Gate failure with no viable forward path — escalate to 00-helping."
 "Model routing conflict in agent frontmatter — resolve or route."
 ```
 
@@ -229,24 +229,24 @@ Select this flow when:
 Select this flow when:
 
 - Numbered agent (01–07) emits `SUGGESTED_NEXT_AGENT: 00-helping`
-- Three consecutive gate failures trigger escalation
+- Gate failure with no viable forward path triggers escalation
 - Agent cannot resolve a model-routing, frontmatter, or skill-gap blocker
 - Cross-tier helper call explicitly named in a step packet or fan-out list
 - Agent system gap requires a fix outside the requesting agent's scope
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 2 | `helping-gap-resolution-coordinator` |
-| 2 | `helping-agent-maintenance-coordinator` |
-| 3 | `failure-triage-specialist` |
+| Tier | Specialist                              |
+| ---- | --------------------------------------- |
+| 2    | `helping-gap-resolution-coordinator`    |
+| 2    | `helping-agent-maintenance-coordinator` |
+| 3    | `failure-triage-specialist`             |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
+| Gate ID                      | Purpose                               |
+| ---------------------------- | ------------------------------------- |
+| `plan-sync`                  | Confirms plan tracker alignment       |
 | `output-resolution-evidence` | Validates blocker resolution evidence |
 
 #### Post-Phase Fanout
@@ -285,20 +285,20 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 2 | `planning-risk-coordinator` |
-| 2 | `planning-test-strategy-coordinator` |
-| 4 | `acceptance-criteria-writer` |
-| 3 | `Plan Scout` |
+| Tier | Specialist                           |
+| ---- | ------------------------------------ |
+| 2    | `planning-risk-coordinator`          |
+| 2    | `planning-test-strategy-coordinator` |
+| 4    | `acceptance-criteria-writer`         |
+| 3    | `Plan Scout`                         |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `step-packet` | Validates step packet structure |
-| `planning-output-contract` | Verifies planning output shape |
+| Gate ID                    | Purpose                         |
+| -------------------------- | ------------------------------- |
+| `plan-sync`                | Confirms plan tracker alignment |
+| `step-packet`              | Validates step packet structure |
+| `planning-output-contract` | Verifies planning output shape  |
 
 #### Post-Phase Fanout
 
@@ -326,24 +326,24 @@ Select this flow when:
 
 - Blocker recorded in active step with no clear next action
 - `TASK_STATUS: PARTIAL` or `FAILED` in the previous agent output
-- Three consecutive gate failures trigger `00-helping` escalation
+- Gate failure with no viable forward path triggers `00-helping` escalation
 - User asks to triage or unblock a stalled plan step
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Plan Scout` |
-| 2 | `planning-risk-coordinator` |
-| 2 | `helping-gap-resolution-coordinator` |
-| 3 | `research-synthesis-specialist` |
+| Tier | Specialist                           |
+| ---- | ------------------------------------ |
+| 3    | `Plan Scout`                         |
+| 2    | `planning-risk-coordinator`          |
+| 2    | `helping-gap-resolution-coordinator` |
+| 3    | `research-synthesis-specialist`      |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `planning-output-contract` | Verifies planning output shape |
+| Gate ID                    | Purpose                         |
+| -------------------------- | ------------------------------- |
+| `plan-sync`                | Confirms plan tracker alignment |
+| `planning-output-contract` | Verifies planning output shape  |
 
 #### Post-Phase Fanout
 
@@ -377,21 +377,21 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Plan Scout` |
-| 2 | `planning-risk-coordinator` |
-| 2 | `planning-test-strategy-coordinator` |
-| 3 | `Plan Registration Auditor` |
+| Tier | Specialist                           |
+| ---- | ------------------------------------ |
+| 3    | `Plan Scout`                         |
+| 2    | `planning-risk-coordinator`          |
+| 2    | `planning-test-strategy-coordinator` |
+| 3    | `Plan Registration Auditor`          |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `step-packet` | Validates step packet structure |
-| `planning-output-contract` | Verifies planning output shape |
-| `phase-compression` | Confirms prior phase history compressed |
+| Gate ID                    | Purpose                                 |
+| -------------------------- | --------------------------------------- |
+| `plan-sync`                | Confirms plan tracker alignment         |
+| `step-packet`              | Validates step packet structure         |
+| `planning-output-contract` | Verifies planning output shape          |
+| `phase-compression`        | Confirms prior phase history compressed |
 
 #### Post-Phase Fanout
 
@@ -425,17 +425,17 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Plan Registration Auditor` |
-| 3 | `Plan Scout` |
+| Tier | Specialist                  |
+| ---- | --------------------------- |
+| 3    | `Plan Registration Auditor` |
+| 3    | `Plan Scout`                |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `planning-output-contract` | Verifies planning output shape |
+| Gate ID                    | Purpose                         |
+| -------------------------- | ------------------------------- |
+| `plan-sync`                | Confirms plan tracker alignment |
+| `planning-output-contract` | Verifies planning output shape  |
 
 #### Post-Phase Fanout
 
@@ -468,18 +468,18 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Plan Scout` |
-| 2 | `helping-gap-resolution-coordinator` |
+| Tier | Specialist                           |
+| ---- | ------------------------------------ |
+| 3    | `Plan Scout`                         |
+| 2    | `helping-gap-resolution-coordinator` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `step-packet` | Validates step packet structure |
-| `planning-output-contract` | Verifies planning output shape |
+| Gate ID                    | Purpose                         |
+| -------------------------- | ------------------------------- |
+| `plan-sync`                | Confirms plan tracker alignment |
+| `step-packet`              | Validates step packet structure |
+| `planning-output-contract` | Verifies planning output shape  |
 
 #### Post-Phase Fanout
 
@@ -516,17 +516,17 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Boundary Mapper` |
-| 3 | `implementation-pattern-scout` |
-| 2 | `research-codebase-coordinator` |
+| Tier | Specialist                      |
+| ---- | ------------------------------- |
+| 3    | `Boundary Mapper`               |
+| 3    | `implementation-pattern-scout`  |
+| 2    | `research-codebase-coordinator` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
+| Gate ID                      | Purpose                                    |
+| ---------------------------- | ------------------------------------------ |
+| `plan-sync`                  | Confirms plan tracker alignment            |
 | `research-findings-evidence` | Validates research findings are documented |
 
 #### Post-Phase Fanout
@@ -560,17 +560,17 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Boundary Mapper` |
-| 3 | `MCP Runtime Scout` |
-| 2 | `research-codebase-coordinator` |
+| Tier | Specialist                      |
+| ---- | ------------------------------- |
+| 3    | `Boundary Mapper`               |
+| 3    | `MCP Runtime Scout`             |
+| 2    | `research-codebase-coordinator` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
+| Gate ID                      | Purpose                                    |
+| ---------------------------- | ------------------------------------------ |
+| `plan-sync`                  | Confirms plan tracker alignment            |
 | `research-findings-evidence` | Validates research findings are documented |
 
 #### Post-Phase Fanout
@@ -605,16 +605,16 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Plan Scout` |
-| 3 | `MCP Runtime Scout` |
+| Tier | Specialist          |
+| ---- | ------------------- |
+| 3    | `Plan Scout`        |
+| 3    | `MCP Runtime Scout` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
+| Gate ID                      | Purpose                                    |
+| ---------------------------- | ------------------------------------------ |
+| `plan-sync`                  | Confirms plan tracker alignment            |
 | `research-findings-evidence` | Validates research findings are documented |
 
 #### Post-Phase Fanout
@@ -649,17 +649,17 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `implementation-pattern-scout` |
-| 2 | `research-codebase-coordinator` |
-| 3 | `Boundary Mapper` |
+| Tier | Specialist                      |
+| ---- | ------------------------------- |
+| 3    | `implementation-pattern-scout`  |
+| 2    | `research-codebase-coordinator` |
+| 3    | `Boundary Mapper`               |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
+| Gate ID                      | Purpose                                    |
+| ---------------------------- | ------------------------------------------ |
+| `plan-sync`                  | Confirms plan tracker alignment            |
 | `research-findings-evidence` | Validates research findings are documented |
 
 #### Post-Phase Fanout
@@ -697,17 +697,17 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 4 | `unit-test-writer` |
-| 4 | `acceptance-criteria-writer` |
-| 2 | `planning-test-strategy-coordinator` |
+| Tier | Specialist                           |
+| ---- | ------------------------------------ |
+| 4    | `unit-test-writer`                   |
+| 4    | `acceptance-criteria-writer`         |
+| 2    | `planning-test-strategy-coordinator` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
+| Gate ID                 | Purpose                         |
+| ----------------------- | ------------------------------- |
+| `plan-sync`             | Confirms plan tracker alignment |
 | `red-test-confirmation` | Validates test is failing (red) |
 
 #### Post-Phase Fanout
@@ -741,16 +741,16 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 4 | `unit-test-writer` |
-| 3 | `Coverage Scout` |
+| Tier | Specialist         |
+| ---- | ------------------ |
+| 4    | `unit-test-writer` |
+| 3    | `Coverage Scout`   |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
+| Gate ID                 | Purpose                         |
+| ----------------------- | ------------------------------- |
+| `plan-sync`             | Confirms plan tracker alignment |
 | `red-test-confirmation` | Validates test is failing (red) |
 
 #### Post-Phase Fanout
@@ -784,16 +784,16 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 4 | `unit-test-writer` |
-| 4 | `acceptance-criteria-writer` |
+| Tier | Specialist                   |
+| ---- | ---------------------------- |
+| 4    | `unit-test-writer`           |
+| 4    | `acceptance-criteria-writer` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
+| Gate ID                 | Purpose                         |
+| ----------------------- | ------------------------------- |
+| `plan-sync`             | Confirms plan tracker alignment |
 | `red-test-confirmation` | Validates test is failing (red) |
 
 #### Post-Phase Fanout
@@ -827,16 +827,16 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 4 | `unit-test-writer` |
-| 3 | `failure-triage-specialist` |
+| Tier | Specialist                  |
+| ---- | --------------------------- |
+| 4    | `unit-test-writer`          |
+| 3    | `failure-triage-specialist` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
+| Gate ID                 | Purpose                         |
+| ----------------------- | ------------------------------- |
+| `plan-sync`             | Confirms plan tracker alignment |
 | `red-test-confirmation` | Validates test is failing (red) |
 
 #### Post-Phase Fanout
@@ -922,20 +922,20 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Coverage Scout` |
-| 3 | `Coverage Guard` |
-| 4 | `unit-test-writer` |
-| 3 | `test-coverage-analyst` |
+| Tier | Specialist              |
+| ---- | ----------------------- |
+| 3    | `Coverage Scout`        |
+| 3    | `Coverage Guard`        |
+| 4    | `unit-test-writer`      |
+| 3    | `test-coverage-analyst` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `agent-graph` | Verifies agent delegation graph integrity |
-| `learning-event` | Validates learning event was recorded |
+| Gate ID          | Purpose                                   |
+| ---------------- | ----------------------------------------- |
+| `plan-sync`      | Confirms plan tracker alignment           |
+| `agent-graph`    | Verifies agent delegation graph integrity |
+| `learning-event` | Validates learning event was recorded     |
 
 #### Post-Phase Fanout
 
@@ -968,19 +968,19 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Boundary Mapper` |
-| 3 | `Coverage Guard` |
-| 2 | `implementation-pattern-coordinator` |
-| 2 | `implementation-executor` |
+| Tier | Specialist                           |
+| ---- | ------------------------------------ |
+| 3    | `Boundary Mapper`                    |
+| 3    | `Coverage Guard`                     |
+| 2    | `implementation-pattern-coordinator` |
+| 2    | `implementation-executor`            |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `step-packet` | Validates step packet structure |
+| Gate ID       | Purpose                                   |
+| ------------- | ----------------------------------------- |
+| `plan-sync`   | Confirms plan tracker alignment           |
+| `step-packet` | Validates step packet structure           |
 | `agent-graph` | Verifies agent delegation graph integrity |
 
 #### Post-Phase Fanout
@@ -1014,20 +1014,20 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Coverage Guard` |
-| 3 | `failure-triage-specialist` |
-| 3 | `implementation-pattern-scout` |
-| 2 | `implementation-executor` |
+| Tier | Specialist                     |
+| ---- | ------------------------------ |
+| 3    | `Coverage Guard`               |
+| 3    | `failure-triage-specialist`    |
+| 3    | `implementation-pattern-scout` |
+| 2    | `implementation-executor`      |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `agent-graph` | Verifies agent delegation graph integrity |
-| `learning-event` | Validates learning event was recorded |
+| Gate ID          | Purpose                                   |
+| ---------------- | ----------------------------------------- |
+| `plan-sync`      | Confirms plan tracker alignment           |
+| `agent-graph`    | Verifies agent delegation graph integrity |
+| `learning-event` | Validates learning event was recorded     |
 
 #### Post-Phase Fanout
 
@@ -1065,18 +1065,18 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 4 | `unit-test-runner` |
-| 2 | `green-test-failure-triage-coordinator` |
+| Tier | Specialist                              |
+| ---- | --------------------------------------- |
+| 4    | `unit-test-runner`                      |
+| 2    | `green-test-failure-triage-coordinator` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `step-packet` | Validates step packet structure |
-| `green-validation-evidence` | Validates green test evidence |
+| Gate ID                     | Purpose                         |
+| --------------------------- | ------------------------------- |
+| `plan-sync`                 | Confirms plan tracker alignment |
+| `step-packet`               | Validates step packet structure |
+| `green-validation-evidence` | Validates green test evidence   |
 
 #### Post-Phase Fanout
 
@@ -1109,18 +1109,18 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Coverage Guard` |
-| 3 | `Coverage Scout` |
-| 3 | `test-coverage-analyst` |
+| Tier | Specialist              |
+| ---- | ----------------------- |
+| 3    | `Coverage Guard`        |
+| 3    | `Coverage Scout`        |
+| 3    | `test-coverage-analyst` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `green-validation-evidence` | Validates green test evidence |
+| Gate ID                     | Purpose                         |
+| --------------------------- | ------------------------------- |
+| `plan-sync`                 | Confirms plan tracker alignment |
+| `green-validation-evidence` | Validates green test evidence   |
 
 #### Post-Phase Fanout
 
@@ -1153,17 +1153,17 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 4 | `unit-test-runner` |
-| 3 | `failure-triage-specialist` |
+| Tier | Specialist                  |
+| ---- | --------------------------- |
+| 4    | `unit-test-runner`          |
+| 3    | `failure-triage-specialist` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `green-validation-evidence` | Validates green test evidence |
+| Gate ID                     | Purpose                         |
+| --------------------------- | ------------------------------- |
+| `plan-sync`                 | Confirms plan tracker alignment |
+| `green-validation-evidence` | Validates green test evidence   |
 
 #### Post-Phase Fanout
 
@@ -1196,19 +1196,19 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `failure-triage-specialist` |
-| 2 | `green-test-failure-triage-coordinator` |
-| 3 | `code-quality-auditor` |
-| 3 | `test-coverage-analyst` |
+| Tier | Specialist                              |
+| ---- | --------------------------------------- |
+| 3    | `failure-triage-specialist`             |
+| 2    | `green-test-failure-triage-coordinator` |
+| 3    | `code-quality-auditor`                  |
+| 3    | `test-coverage-analyst`                 |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `green-validation-evidence` | Validates green test evidence |
+| Gate ID                     | Purpose                         |
+| --------------------------- | ------------------------------- |
+| `plan-sync`                 | Confirms plan tracker alignment |
+| `green-validation-evidence` | Validates green test evidence   |
 
 #### Post-Phase Fanout
 
@@ -1304,17 +1304,17 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Academic Docs Auditor` |
-| 3 | `Docs Scout` |
+| Tier | Specialist              |
+| ---- | ----------------------- |
+| 3    | `Academic Docs Auditor` |
+| 3    | `Docs Scout`            |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `docs-artifact-reference` | Validates docs artifact exists |
+| Gate ID                   | Purpose                         |
+| ------------------------- | ------------------------------- |
+| `plan-sync`               | Confirms plan tracker alignment |
+| `docs-artifact-reference` | Validates docs artifact exists  |
 
 #### Post-Phase Fanout
 
@@ -1347,17 +1347,17 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Browser Runtime Scout` |
-| 3 | `Visualizer Scout` |
+| Tier | Specialist              |
+| ---- | ----------------------- |
+| 3    | `Browser Runtime Scout` |
+| 3    | `Visualizer Scout`      |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `docs-artifact-reference` | Validates docs artifact exists |
+| Gate ID                   | Purpose                         |
+| ------------------------- | ------------------------------- |
+| `plan-sync`               | Confirms plan tracker alignment |
+| `docs-artifact-reference` | Validates docs artifact exists  |
 
 #### Post-Phase Fanout
 
@@ -1390,17 +1390,17 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Docs Scout` |
-| 4 | `docs-example-writer` |
+| Tier | Specialist            |
+| ---- | --------------------- |
+| 3    | `Docs Scout`          |
+| 4    | `docs-example-writer` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `docs-artifact-reference` | Validates docs artifact exists |
+| Gate ID                   | Purpose                         |
+| ------------------------- | ------------------------------- |
+| `plan-sync`               | Confirms plan tracker alignment |
+| `docs-artifact-reference` | Validates docs artifact exists  |
 
 #### Post-Phase Fanout
 
@@ -1433,16 +1433,16 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 3 | `Docs Scout` |
+| Tier | Specialist   |
+| ---- | ------------ |
+| 3    | `Docs Scout` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `docs-artifact-reference` | Validates docs artifact exists |
+| Gate ID                   | Purpose                         |
+| ------------------------- | ------------------------------- |
+| `plan-sync`               | Confirms plan tracker alignment |
+| `docs-artifact-reference` | Validates docs artifact exists  |
 
 #### Post-Phase Fanout
 
@@ -1479,18 +1479,18 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 4 | `learning-event-capturer` |
-| 2 | `helping-gap-resolution-coordinator` |
+| Tier | Specialist                           |
+| ---- | ------------------------------------ |
+| 4    | `learning-event-capturer`            |
+| 2    | `helping-gap-resolution-coordinator` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `learning-event` | Validates learning event was recorded |
-| `log-completion-marker` | Confirms log entry complete |
+| Gate ID                 | Purpose                               |
+| ----------------------- | ------------------------------------- |
+| `plan-sync`             | Confirms plan tracker alignment       |
+| `learning-event`        | Validates learning event was recorded |
+| `log-completion-marker` | Confirms log entry complete           |
 
 #### Post-Phase Fanout
 
@@ -1523,16 +1523,16 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 4 | `file-change-summarizer` |
+| Tier | Specialist               |
+| ---- | ------------------------ |
+| 4    | `file-change-summarizer` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `log-completion-marker` | Confirms log entry complete |
+| Gate ID                 | Purpose                         |
+| ----------------------- | ------------------------------- |
+| `plan-sync`             | Confirms plan tracker alignment |
+| `log-completion-marker` | Confirms log entry complete     |
 
 #### Post-Phase Fanout
 
@@ -1565,20 +1565,20 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist |
-|------|------------|
-| 4 | `file-change-summarizer` |
-| 3 | `phase-handoff-designer` |
+| Tier | Specialist               |
+| ---- | ------------------------ |
+| 4    | `file-change-summarizer` |
+| 3    | `phase-handoff-designer` |
 
 #### Gate Contracts
 
-| Gate ID | Purpose |
-|---------|---------|
-| `plan-sync` | Confirms plan tracker alignment |
-| `step-packet` | Validates step packet structure |
-| `log-completion-marker` | Confirms log entry complete |
-| `phase-compression` | Confirms prior phase history compressed |
-| `stale-wip-plans` | Validates no stale WIP plans remain |
+| Gate ID                 | Purpose                                 |
+| ----------------------- | --------------------------------------- |
+| `plan-sync`             | Confirms plan tracker alignment         |
+| `step-packet`           | Validates step packet structure         |
+| `log-completion-marker` | Confirms log entry complete             |
+| `phase-compression`     | Confirms prior phase history compressed |
+| `stale-wip-plans`       | Validates no stale WIP plans remain     |
 
 #### Post-Phase Fanout
 
@@ -1711,25 +1711,25 @@ flowchart TD
 
 All flows declare exit gates that must pass before completion. The Tier-1 gate catalog includes:
 
-| Gate ID | Owner | Purpose |
-|---------|-------|---------|
-| `plan-sync` | `01-planning` | Confirms plan tracker alignment with `plans/README.md` and `plans/Roadmap.md` |
-| `step-packet` | `01-planning` | Validates step packet structure and required fields |
-| `agent-graph` | `00-helping` | Verifies agent delegation graph integrity and frontmatter consistency |
-| `learning-event` | `07-logging` | Validates learning event was recorded in `.github/ai-learning/learning-log.jsonl` |
-| `planning-output-contract` | `01-planning` | Verifies planning output shape and completeness |
-| `phase-compression` | `07-logging` | Confirms prior phase history compressed before new phase begins |
-| `red-test-confirmation` | `03-red-testing` | Validates test is failing (red) before implementation |
-| `green-validation-evidence` | `05-green-testing` | Validates green test evidence and coverage confirmation |
-| `docs-artifact-reference` | `06-documenting` | Validates docs artifact exists and is up-to-date |
-| `log-completion-marker` | `07-logging` | Confirms log entry complete with required fields |
-| `output-resolution-evidence` | `00-helping` | Validates blocker resolution evidence |
-| `research-findings-evidence` | `02-researching` | Validates research findings are documented |
-| `stale-wip-plans` | `01-planning` | Validates no stale WIP plans remain before closure |
-| `routing-table-freshness` | `00-helping` | Confirms routing table hash matches source files |
-| `tier-enforcement` | `00-helping` | Validates no Tier 1 agent performs delegated work |
-| `cortex-index` | `02-researching` | Validates Cortex index freshness and MCP availability |
-| `cortex-first-search` | `02-researching` | Confirms Cortex-first search policy followed |
+| Gate ID                      | Owner              | Purpose                                                                           |
+| ---------------------------- | ------------------ | --------------------------------------------------------------------------------- |
+| `plan-sync`                  | `01-planning`      | Confirms plan tracker alignment with `plans/README.md` and `plans/Roadmap.md`     |
+| `step-packet`                | `01-planning`      | Validates step packet structure and required fields                               |
+| `agent-graph`                | `00-helping`       | Verifies agent delegation graph integrity and frontmatter consistency             |
+| `learning-event`             | `07-logging`       | Validates learning event was recorded in `.github/ai-learning/learning-log.jsonl` |
+| `planning-output-contract`   | `01-planning`      | Verifies planning output shape and completeness                                   |
+| `phase-compression`          | `07-logging`       | Confirms prior phase history compressed before new phase begins                   |
+| `red-test-confirmation`      | `03-red-testing`   | Validates test is failing (red) before implementation                             |
+| `green-validation-evidence`  | `05-green-testing` | Validates green test evidence and coverage confirmation                           |
+| `docs-artifact-reference`    | `06-documenting`   | Validates docs artifact exists and is up-to-date                                  |
+| `log-completion-marker`      | `07-logging`       | Confirms log entry complete with required fields                                  |
+| `output-resolution-evidence` | `00-helping`       | Validates blocker resolution evidence                                             |
+| `research-findings-evidence` | `02-researching`   | Validates research findings are documented                                        |
+| `stale-wip-plans`            | `01-planning`      | Validates no stale WIP plans remain before closure                                |
+| `routing-table-freshness`    | `00-helping`       | Confirms routing table hash matches source files                                  |
+| `tier-enforcement`           | `00-helping`       | Validates no Tier 1 agent performs delegated work                                 |
+| `cortex-index`               | `02-researching`   | Validates Cortex index freshness and MCP availability                             |
+| `cortex-first-search`        | `02-researching`   | Confirms Cortex-first search policy followed                                      |
 
 **External Reference:** Gate contract patterns follow [continuous integration gate mechanisms](https://docs.github.com/en/actions/using-workflows/about-workflows) and [formal verification contracts](https://dl.acm.org/doi/10.1145/3510003) for agent coordination.
 
@@ -1740,19 +1740,19 @@ All flows declare exit gates that must pass before completion. The Tier-1 gate c
 All flows conform to the schema defined in `.github/flows/flow.schema.yml`:
 
 ```yaml
-id: '<agent-prefix>.<slug>'           # Required: Unique flow identifier
-name: '<Human-readable name>'          # Required: Display name
-agent: '<numbered-agent-name>'         # Required: Owning Tier 1 agent
-triggers:                              # Required: Natural-language conditions
+id: '<agent-prefix>.<slug>' # Required: Unique flow identifier
+name: '<Human-readable name>' # Required: Display name
+agent: '<numbered-agent-name>' # Required: Owning Tier 1 agent
+triggers: # Required: Natural-language conditions
   - '<Trigger condition 1>'
-gates:                                 # Required: Gate IDs that must pass
+gates: # Required: Gate IDs that must pass
   - '<gate-id>'
-post-phase-fanout:                     # Required: Agents/actions after completion
+post-phase-fanout: # Required: Agents/actions after completion
   - '<agent-or-action>'
-description: ''                        # Optional: Brief explanation
-skills: []                             # Optional: Skill names to load
-specialists: []                        # Optional: Hidden agent names for delegation
-timeout-minutes: 30                    # Optional: Execution budget hint
+description: '' # Optional: Brief explanation
+skills: [] # Optional: Skill names to load
+specialists: [] # Optional: Hidden agent names for delegation
+timeout-minutes: 30 # Optional: Execution budget hint
 ```
 
 ---
@@ -1769,8 +1769,8 @@ timeout-minutes: 30                    # Optional: Execution budget hint
 
 ## Version History
 
-| Version | Date | Change |
-|---------|------|--------|
-| 1.0 | 2024 | Initial flow catalog with all 30 flows documented |
+| Version | Date | Change                                            |
+| ------- | ---- | ------------------------------------------------- |
+| 1.0     | 2024 | Initial flow catalog with all 30 flows documented |
 
 **Note:** This document is atemporal — it describes the current flow system without reference to internal roadmap phases, PR numbers, or session history. For historical rollout context, see `plans/Agentic_Flows_and_Gates_Upgrade.plans.md` (archived).

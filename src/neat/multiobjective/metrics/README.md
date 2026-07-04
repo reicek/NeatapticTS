@@ -14,6 +14,7 @@ has been written onto genomes and archive arrays, how should inspection code
 read it back in a compact, stable way?
 
 The helpers fall into four small families:
+
 - per-genome metrics for dashboards and quick diagnostics,
 - front reconstruction from stored rank annotations,
 - bounded archive slicing for recent-history views,
@@ -43,8 +44,9 @@ few structural summary fields so callers can inspect competitive position and
 genome size in one pass.
 
 Parameters:
+
 - `population` - Ranked population with optional multi-objective
-annotations.
+  annotations.
 
 Returns: Compact metrics aligned with the current population order.
 
@@ -86,6 +88,7 @@ easy to stream, diff, or feed into external tooling without inventing another
 archive-specific export format.
 
 Parameters:
+
 - `archive` - Archive collection ordered from oldest to newest.
 - `maxEntries` - Maximum number of recent entries to export.
 
@@ -111,10 +114,11 @@ When multi-objective mode is disabled, the function falls back to one front
 containing the whole population so callers can keep a uniform read path.
 
 Parameters:
+
 - `population` - Current population with optional `_moRank` annotations.
 - `maxFronts` - Maximum number of fronts to reconstruct.
 - `isMultiObjectiveEnabled` - Whether the controller is currently using
-multi-objective ranking.
+  multi-objective ranking.
 
 Returns: Reconstructed fronts in ascending rank order.
 
@@ -134,6 +138,7 @@ the freshest frontier history rather than the earliest snapshots from a long
 run. This helper therefore keeps the slicing rule explicit and reusable.
 
 Parameters:
+
 - `archive` - Archive collection ordered from oldest to newest.
 - `maxEntries` - Maximum number of recent entries to keep.
 

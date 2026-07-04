@@ -67,6 +67,7 @@ Self-adaptive per-genome mutation tuning.
 This function implements several strategies to adjust each genome's
 internal mutation rate (`g._mutRate`) and optionally its mutation
 amount (`g._mutAmount`) over time. Strategies include:
+
 - `twoTier`: push top and bottom halves in opposite directions to
   create exploration/exploitation balance.
 - `exploreLow`: preferentially increase mutation for lower-scoring
@@ -146,6 +147,7 @@ strategy. Two modes are supported:
   the budget from `maxNodesStart` to `maxNodesEnd` over a horizon.
 
 Internal state used/maintained on the `this` object:
+
 - `_cbHistory`: rolling window of best scores used to compute trends.
 - `_cbMaxNodes`: current complexity budget for nodes.
 - `_cbMaxConns`: current complexity budget for connections (optional).
@@ -183,6 +185,7 @@ zeroing scores below the accepted bar. It therefore changes the selection
 landscape for the same generation without redefining canonical fitness.
 
 Behavior summary:
+
 - Initializes `_mcThreshold` from configuration if undefined.
 - Computes the proportion of genomes with score >= threshold.
 - Adjusts threshold multiplicatively by `adjustRate` to move the

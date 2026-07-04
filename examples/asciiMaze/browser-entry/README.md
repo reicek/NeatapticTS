@@ -208,6 +208,7 @@ start(
 Start the browser-hosted ASCII Maze curriculum demo.
 
 Parameters:
+
 - `container` - Element id or host element for the browser demo.
 - `opts` - Optional cooperative cancellation settings.
 
@@ -250,6 +251,7 @@ composeBrowserEntryAbortSignal(
 Compose an internal and external abort signal into one cooperative signal.
 
 Parameters:
+
 - `internalController` - Internal controller owned by the browser run handle.
 - `externalSignal` - Optional caller-provided signal.
 
@@ -287,6 +289,7 @@ createBrowserEntryHostServices(
 Create the browser host services used by one ASCII Maze demo run.
 
 Parameters:
+
 - `hostElements` - Resolved host elements for live output, archive output, and resize observation.
 
 Returns: Dashboard, telemetry hub, runtime dashboard adapter, and resize cleanup.
@@ -303,6 +306,7 @@ installBrowserEntryGlobals(
 Install browser globals and one-time auto-start compatibility hooks.
 
 Parameters:
+
 - `start` - Public browser entry function to expose on the window namespace.
 - `runtimeWindow` - Optional runtime window override used by tests or embedding hosts.
 
@@ -319,6 +323,7 @@ runBrowserEntryCurriculum(
 Run the progressive browser curriculum across increasingly larger mazes.
 
 Parameters:
+
 - `context` - Runtime dashboard, cancellation, and completion callbacks for one browser session.
 
 Returns: Nothing.
@@ -405,6 +410,7 @@ createBrowserEntryHostServices(
 Create the browser host services used by one ASCII Maze demo run.
 
 Parameters:
+
 - `hostElements` - Resolved host elements for live output, archive output, and resize observation.
 
 Returns: Dashboard, telemetry hub, runtime dashboard adapter, and resize cleanup.
@@ -430,6 +436,7 @@ escapeHtml(
 Escapes HTML special characters in a plain-text string.
 
 Parameters:
+
 - `text` - Input text.
 
 Returns: HTML-safe string.
@@ -445,6 +452,7 @@ hideTooltip(
 Hides the tooltip element.
 
 Parameters:
+
 - `tooltipElement` - DOM tooltip div.
 
 ### installHoverTooltip
@@ -461,6 +469,7 @@ Installs mousemove and mouseleave handlers on the network canvas to show
 educational hover tooltips above the current pointer position.
 
 Parameters:
+
 - `canvasElement` - Canvas element to attach listeners to.
 - `getHitAreas` - Getter for the latest hit areas from the last render.
 
@@ -479,6 +488,7 @@ installResizeRedraw(
 Attach dashboard redraw behavior to host resizes and return a cleanup function.
 
 Parameters:
+
 - `observeTarget` - Element whose width should trigger redraw checks.
 - `runtimeDashboard` - Shared dashboard presentation adapter with redraw support.
 
@@ -495,6 +505,7 @@ isVisualizationCompatibleNetwork(
 Guard that checks whether a runtime network can be exported as VisualizationGraphV1.
 
 Parameters:
+
 - `networkCandidate` - Runtime candidate from dashboard updates.
 
 Returns: True when the candidate exposes required visualization fields.
@@ -513,6 +524,7 @@ renderBrowserLiveMazeSnapshot(
 Renders the current maze into the browser live pane without the terminal dashboard frame.
 
 Parameters:
+
 - `latestMaze` - Maze currently being evolved.
 - `latestResult` - Latest run result used for path highlighting.
 - `clearLiveMazeOutput` - Live-pane clear callback.
@@ -536,6 +548,7 @@ Returns hit areas from the render so the hover system can update without
 a re-render on every pointer event.
 
 Parameters:
+
 - `networkCanvasElement` - Canvas target in the browser host.
 - `networkCandidate` - Current best network candidate from dashboard updates.
 
@@ -552,6 +565,7 @@ resetBrowserEntryHostPresentation(
 Clears stale browser-host presentation state before a fresh session starts.
 
 Parameters:
+
 - `hostElements` - Resolved host elements for the current browser session.
 
 Returns: Nothing.
@@ -569,6 +583,7 @@ resolveHoveredHitArea(
 Finds the first hit area that contains the given canvas-space point.
 
 Parameters:
+
 - `canvasX` - X coordinate in canvas backing-store pixels.
 - `canvasY` - Y coordinate in canvas backing-store pixels.
 - `hitAreas` - Hit areas from the last render pass.
@@ -588,6 +603,7 @@ resolvePointToAreaDistancePx(
 Resolves the shortest Euclidean distance from a point to a rectangle.
 
 Parameters:
+
 - `canvasX` - X coordinate in canvas pixels.
 - `canvasY` - Y coordinate in canvas pixels.
 - `hitArea` - Candidate hit area rectangle.
@@ -605,6 +621,7 @@ resolveTooltipHtml(
 Builds the inner HTML string for a tooltip from a hit area.
 
 Parameters:
+
 - `hitArea` - Source hit area.
 
 Returns: Safe HTML string for the tooltip body.
@@ -620,6 +637,7 @@ safelyRedrawDashboard(
 Safely request a dashboard redraw without letting host issues break the run.
 
 Parameters:
+
 - `runtimeDashboard` - Shared dashboard presentation adapter with optional redraw support.
 
 ### showTooltip
@@ -636,6 +654,7 @@ showTooltip(
 Positions and reveals the tooltip element near the current pointer.
 
 Parameters:
+
 - `tooltipElement` - DOM tooltip div.
 - `hitArea` - Hit area providing heading and body paragraphs.
 - `clientX` - Pointer X in viewport coordinates.
@@ -660,6 +679,7 @@ composeBrowserEntryAbortSignal(
 Compose an internal and external abort signal into one cooperative signal.
 
 Parameters:
+
 - `internalController` - Internal controller owned by the browser run handle.
 - `externalSignal` - Optional caller-provided signal.
 
@@ -705,6 +725,7 @@ installBrowserEntryGlobals(
 Install browser globals and one-time auto-start compatibility hooks.
 
 Parameters:
+
 - `start` - Public browser entry function to expose on the window namespace.
 - `runtimeWindow` - Optional runtime window override used by tests or embedding hosts.
 
@@ -769,6 +790,7 @@ runBrowserEntryCurriculum(
 Run the progressive browser curriculum across increasingly larger mazes.
 
 Parameters:
+
 - `context` - Runtime dashboard, cancellation, and completion callbacks for one browser session.
 
 Returns: Nothing.
@@ -793,6 +815,7 @@ family. Clicking a button that is not currently selected calls `onSelect`
 with the chosen profile id.
 
 Parameters:
+
 - `containerElement` - Element whose children will be replaced with the selector buttons.
 - `selectedProfileId` - Initially selected architecture profile id.
 - `onSelect` - Callback invoked with the newly selected profile id on click.
@@ -827,6 +850,7 @@ resolveTooltipBodyLines(
 Resolve the educational tooltip body lines for one ASCII Maze architecture profile.
 
 Parameters:
+
 - `profile` - Architecture profile to describe.
 
 Returns: Array of short explanatory sentences shown below the heading.
@@ -842,6 +866,7 @@ resolveTooltipHeading(
 Resolve the punchy tooltip heading for one ASCII Maze architecture profile.
 
 Parameters:
+
 - `profile` - Architecture profile to describe.
 
 Returns: Short heading string shown above the tooltip body.
@@ -880,6 +905,7 @@ The reveal sequence is deliberately simple:
 5. wait one final host tick before resolving.
 
 Parameters:
+
 - `input` - Live host element, maze layout, and solved path to reveal.
 
 Returns: Promise that resolves after the full path and final pause complete.
@@ -924,6 +950,7 @@ maze size, while `BROWSER_ENTRY_CONSTANTS` decides how much movement budget,
 mutation assistance, and generational time each phase receives.
 
 Parameters:
+
 - `dimension` - Side length in cells for the procedural square maze.
 
 Returns: Per-phase evolution settings consumed by the curriculum runtime.
@@ -939,6 +966,7 @@ didSolveBrowserMaze(
 Determine whether a reported progress value counts as solved for curriculum advancement.
 
 Parameters:
+
 - `progress` - Runtime progress emitted by the evolution layer.
 
 Returns: Whether the maze phase should advance to the next dimension.
@@ -958,6 +986,7 @@ helper is the single-browser-entry answer to “how quickly do hosted mazes get
 larger?”
 
 Parameters:
+
 - `currentDimension` - Current maze side length.
 
 Returns: Next side length to use.
@@ -973,6 +1002,7 @@ resolveBrowserEntryHostElements(
 Resolve the browser host elements used by the demo logger and dashboard.
 
 Parameters:
+
 - `container` - Element id or host element provided by the caller.
 
 Returns: Resolved host, archive, live, and resize-observer targets.
@@ -988,4 +1018,5 @@ scheduleBrowserEntryFrame(
 Schedule follow-up curriculum work on the next animation tick when possible.
 
 Parameters:
+
 - `callback` - Follow-up phase callback.

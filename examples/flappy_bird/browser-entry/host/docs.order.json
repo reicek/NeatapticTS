@@ -9,7 +9,5 @@
     "host.stats.service.ts",
     "host.resize.service.ts"
   ],
-  "folderOrder": [
-    "resize"
-  ]
+  "folderOrder": ["resize"]
 }

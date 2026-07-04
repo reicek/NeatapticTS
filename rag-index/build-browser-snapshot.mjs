@@ -29,7 +29,6 @@ export async function buildBrowserSnapshot(options = {}) {
   const documents = await readSnapshotDocumentsWithClient(client);
   const snapshot = {
     schema_version: SNAPSHOT_SCHEMA_VERSION,
-    generated_at: new Date().toISOString(),
     families: [...new Set(documents.map(({ family }) => family))].toSorted(),
     documents,
   };
@@ -47,7 +46,6 @@ export async function buildBrowserSnapshot(options = {}) {
     outputPath,
     databasePath,
     schema_version: snapshot.schema_version,
-    generated_at: snapshot.generated_at,
     families: snapshot.families,
     documents: snapshot.documents.length,
     chunks: snapshot.documents.reduce(
@@ -67,7 +65,6 @@ export async function createBrowserSnapshot(
   const documents = await readSnapshotDocumentsWithClient(client);
   return {
     schema_version: SNAPSHOT_SCHEMA_VERSION,
-    generated_at: new Date().toISOString(),
     families: [...new Set(documents.map(({ family }) => family))].toSorted(),
     documents,
   };

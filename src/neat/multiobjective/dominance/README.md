@@ -62,11 +62,13 @@ If the candidate dominates the opponent, the opponent index is appended to
 the opponent, `dominationCounts[candidateIndex]` is incremented.
 
 That asymmetry is the key bookkeeping contract for the later frontier peel:
+
 - the count answers whether the candidate can join the current front yet,
 - the dominated-neighbor list tells later passes which counts to relax once
   the candidate is removed as a blocker.
 
 Parameters:
+
 - `dominanceState` - Dominance bookkeeping.
 - `valuesMatrixInput` - Matrix of objective values.
 - `descriptors` - Objective descriptors.
@@ -85,11 +87,13 @@ buildDominanceState(
 Builds dominance bookkeeping structures used by fast non-dominated sorting.
 
 This computes (pairwise):
+
 - `dominationCounts[i]`: how many genomes dominate genome `i`.
 - `dominatedIndicesByIndex[i]`: which genomes are dominated by genome `i`.
 - `firstFrontIndices`: genomes with `dominationCounts[i] === 0`.
 
 Conceptually the pass works in four steps:
+
 1. allocate empty bookkeeping aligned to matrix row order,
 2. build a stable candidate-index range,
 3. compare every candidate against every opponent,
@@ -100,15 +104,18 @@ fly. That makes the resulting state safe for `fronts/` and `crowding/`,
 which both rely on matrix row `i` continuing to refer to the same genome.
 
 Complexity:
+
 - Time: $O(n^2 \cdot m)$ where $n$ is population size and $m$ is objective
   count.
 - Space: $O(n^2)$ in the worst case for the dominated adjacency lists.
 
 Assumptions:
+
 - Each row in `valuesMatrixInput` is a vector aligned with `descriptors`.
 - Genome ordering in later steps is expected to match the matrix ordering.
 
 Parameters:
+
 - `valuesMatrixInput` - Matrix of objective values (row = genome).
 - `descriptors` - Objective descriptors (direction semantics).
 
@@ -130,6 +137,7 @@ dominance state compact and guarantees later frontier code can look up rows
 and genomes with the same integer keys.
 
 Parameters:
+
 - `populationSize` - Number of genomes.
 
 Returns: Array of indices `0..populationSize-1`.
@@ -154,6 +162,7 @@ on this objective, another decides whether it is strictly better, and the
 outer vector fold turns those flags into a whole-pair outcome.
 
 Parameters:
+
 - `direction` - Objective direction.
 - `candidateValue` - Candidate objective value.
 - `opponentValue` - Opponent objective value.
@@ -175,6 +184,7 @@ the ranking pass. Initializing the structure once keeps later comparison
 helpers focused on bookkeeping updates rather than allocation details.
 
 Parameters:
+
 - `populationSize` - Number of genomes.
 
 Returns: An initialized dominance state with zeroed counts.
@@ -188,6 +198,7 @@ matrix) and then consumed to build Pareto fronts.
 
 They form the compact handoff between pairwise comparison mechanics and the
 later frontier-construction pass:
+
 - `dominationCounts` records how many opponents currently sit above each row
 - `dominatedIndicesByIndex` records which rows should be relaxed when a
   front is peeled away
@@ -210,6 +221,7 @@ For dominance, being worse on one objective makes the candidate unable to
 dominate the opponent.
 
 Parameters:
+
 - `direction` - Objective direction.
 - `candidateValue` - Candidate objective value.
 - `opponentValue` - Opponent objective value.
@@ -233,6 +245,7 @@ Strict improvement in at least one objective is required for Pareto
 dominance when the candidate is not worse on a single objective.
 
 Parameters:
+
 - `direction` - Objective direction.
 - `candidateValue` - Candidate objective value.
 - `opponentValue` - Opponent objective value.
@@ -255,6 +268,7 @@ finding a dominating opponent, which is exactly the criterion for first-front
 membership before frontier peeling begins.
 
 Parameters:
+
 - `dominanceState` - Dominance bookkeeping.
 - `candidateIndex` - Candidate genome index.
 
@@ -273,6 +287,7 @@ resolveDominanceOutcome(
 Resolves dominance outcome between two objective vectors.
 
 Outcome meanings:
+
 - `'dominates'`: candidate dominates opponent.
 - `'dominated'`: candidate is dominated by opponent.
 - `'indifferent'`: neither dominates the other.
@@ -283,6 +298,7 @@ multi-objective population are intentionally incomparable rather than simply
 "better" or "worse."
 
 Parameters:
+
 - `candidateVector` - Candidate objective values.
 - `opponentVector` - Opponent objective values.
 - `descriptors` - Objective descriptors.
@@ -305,6 +321,7 @@ Keeping that default here ensures every comparison helper downstream reads
 one normalized direction rule instead of repeating fallback logic.
 
 Parameters:
+
 - `descriptors` - Objective descriptors.
 - `objectiveIndex` - Objective index.
 
@@ -328,6 +345,7 @@ preserves the invariant that every stored relationship refers to two distinct
 matrix rows.
 
 Parameters:
+
 - `candidateIndex` - Candidate genome index.
 - `opponentIndex` - Opponent genome index.
 
@@ -356,6 +374,7 @@ discovery to the outer orchestration once all opponent evidence has been
 accumulated.
 
 Parameters:
+
 - `dominanceState` - Dominance bookkeeping.
 - `valuesMatrixInput` - Matrix of objective values.
 - `descriptors` - Objective descriptors.
@@ -375,9 +394,10 @@ Accumulates whether the candidate has a strict improvement across
 objectives.
 
 Parameters:
+
 - `hasStrictImprovement` - Current strict-improvement flag.
 - `isStrictlyBetter` - Whether the candidate strictly improves on the
-current objective.
+  current objective.
 
 Returns: Updated strict-improvement flag.
 
@@ -394,6 +414,7 @@ vectorDominates(
 Determines whether vector A Pareto-dominates vector B.
 
 A dominates B iff:
+
 - A is **no worse** than B in every objective (respecting each objective’s
   direction: maximize/minimize), and
 - A is **strictly better** in at least one objective.
@@ -403,11 +424,13 @@ know anything about fronts; it only answers the comparison question that the
 wider bookkeeping pass repeats across every pair of matrix rows.
 
 Assumptions:
+
 - `valuesA` and `valuesB` are aligned and have the same length.
 - `descriptors` provides a descriptor for each objective index.
 - If a descriptor has no `direction`, it defaults to `'max'`.
 
 Parameters:
+
 - `valuesA` - Objective values for candidate A.
 - `valuesB` - Objective values for candidate B.
 - `descriptors` - Objective descriptors defining direction semantics.
@@ -418,9 +441,13 @@ Example:
 
 ```ts
 // Maximize accuracy, minimize latency:
-vectorDominates([0.9, 120], [0.9, 150], [
-  { accessor: () => 0, direction: 'max' },
-  { accessor: () => 0, direction: 'min' },
-]);
+vectorDominates(
+  [0.9, 120],
+  [0.9, 150],
+  [
+    { accessor: () => 0, direction: 'max' },
+    { accessor: () => 0, direction: 'min' },
+  ],
+);
 // => true (equal accuracy, lower latency)
 ```

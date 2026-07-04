@@ -266,7 +266,7 @@ function prepareActivationContext(network: Network): { restore: () => void } {
  * @param device - WebGPU device used to create the bind group.
  * @param pipeline - Compiled activation pipeline.
  * @param bufferSet - Uploaded network slab buffers.
- * @returns A bind group wired to the four struct-packed storage-buffer and
+ * @returns A bind group wired to the six struct-packed storage-buffer and
  *   uniform bindings.
  */
 function createBindGroup(
@@ -294,6 +294,14 @@ function createBindGroup(
       {
         binding: GPU_BUFFER_BINDING.params,
         resource: { buffer: bufferSet.params },
+      },
+      {
+        binding: GPU_BUFFER_BINDING.topoLevels,
+        resource: { buffer: bufferSet.topoLevels },
+      },
+      {
+        binding: GPU_BUFFER_BINDING.inStart,
+        resource: { buffer: bufferSet.inStart },
       },
     ],
   });
@@ -464,4 +472,117 @@ export async function batchActivate(
       destroyGPUBufferSet(device, bufferSet);
     }
   }
+}
+
+/**
+ * Single job queued for deferred batched GPU inference.
+ */
+export interface BatchInferenceJob {
+  network: Network;
+  inputs: Float32Array | number[];
+}
+
+/**
+ * Queue that accumulates inference jobs and flushes them as one GPU batch.
+ *
+ * The queue is intentionally not backed by persistent storage; it exists only
+ * to amortize GPU dispatch overhead across many small inference requests.
+ */
+export interface BatchInferenceQueue {
+  /** Number of jobs currently in the queue. */
+  size: number;
+  /** Add a job to the queue and return a stable job id. */
+  enqueue(job: BatchInferenceJob): number;
+  /** Dispatch all queued jobs in a single GPU pass and return outputs in order. */
+  flush(): Promise<Float32Array[]>;
+}
+
+/**
+ * Concrete queue that accumulates inference jobs and flushes them as one GPU batch.
+ *
+ * The queue reuses `batchActivate` for the actual dispatch, so pipeline sharing,
+ * struct-packed buffer uploads, and single-pass submission are inherited. Jobs are
+ * kept in enqueue order and the per-job outputs are returned in the same order.
+ */
+class BatchInferenceQueueImpl implements BatchInferenceQueue {
+  /** Stored jobs waiting for the next flush. */
+  private jobs: BatchInferenceJob[] = [];
+
+  /** Monotonically increasing job id counter. */
+  private nextId = 0;
+
+  /**
+   * @param device - WebGPU device used to run the batched dispatch.
+   */
+  constructor(private readonly device: GPUDevice) {}
+
+  /** Number of jobs currently in the queue. */
+  get size(): number {
+    return this.jobs.length;
+  }
+
+  /**
+   * Add a job to the queue and return a stable job id.
+   *
+   * @param job - Network plus inputs to evaluate.
+   * @returns Stable id for this job; ids increase by one for each enqueue.
+   */
+  enqueue(job: BatchInferenceJob): number {
+    this.jobs.push(job);
+    const id = this.nextId;
+    this.nextId += 1;
+    return id;
+  }
+
+  /**
+   * Dispatch all queued jobs in a single GPU pass and return outputs in order.
+   *
+   * @returns Promise resolving to one output array per job, in enqueue order.
+   */
+  async flush(): Promise<Float32Array[]> {
+    const pendingJobs = this.jobs.splice(0);
+    if (pendingJobs.length === 0) {
+      return [];
+    }
+
+    const networks = pendingJobs.map((job) => job.network);
+    const inputCount = networks[0].input;
+    const inputMatrix = new Float32Array(pendingJobs.length * inputCount);
+    let writeOffset = 0;
+    for (const job of pendingJobs) {
+      const inputs = new Float32Array(job.inputs);
+      inputMatrix.set(inputs, writeOffset);
+      writeOffset += inputs.length;
+    }
+
+    const result = await batchActivate(this.device, networks, inputMatrix);
+
+    const outputs: Float32Array[] = [];
+    for (let index = 0; index < pendingJobs.length; index += 1) {
+      outputs.push(
+        result.outputs.slice(
+          index * result.colCount,
+          (index + 1) * result.colCount,
+        ),
+      );
+    }
+    return outputs;
+  }
+}
+
+/**
+ * Create a queue that batches inference jobs for parallel GPU dispatch.
+ *
+ * The returned queue accumulates jobs via `enqueue()` and dispatches them all
+ * together on the next `flush()`, sharing compiled pipelines across networks
+ * with identical topology and returning one output per job in enqueue order.
+ * An empty queue resolves to an empty array without issuing GPU work.
+ *
+ * @param device - WebGPU device used to run the batched dispatch.
+ * @returns A queue ready to accept inference jobs.
+ */
+export function createBatchInferenceQueue(
+  device: GPUDevice,
+): BatchInferenceQueue {
+  return new BatchInferenceQueueImpl(device);
 }

@@ -110,6 +110,7 @@ Ordering the genome ids ensures the pair `(A, B)` lands in the same cache
 slot as `(B, A)` instead of duplicating work or storing conflicting entries.
 
 Parameters:
+
 - `firstGenome` - First genome in the pair.
 - `secondGenome` - Second genome in the pair.
 
@@ -134,6 +135,7 @@ only measured for matching genes because that is the only case where the two
 genomes clearly refer to the same structural gene.
 
 Parameters:
+
 - `firstList` - Sorted innovation list for the first genome.
 - `secondList` - Sorted innovation list for the second genome.
 
@@ -157,6 +159,7 @@ larger topologies do not inflate distance merely because they contain more
 possible genes.
 
 Parameters:
+
 - `neatContext` - NEAT context providing compatibility coefficients.
 - `metrics` - Aggregated comparison metrics.
 
@@ -188,6 +191,7 @@ createMissingInnovationError(
 Build the fail-fast error for native genomes missing explicit innovations.
 
 Parameters:
+
 - `genome` - Genome that failed compatibility normalization.
 - `connection` - Connection missing its explicit innovation id.
 - `connectionIndex` - Stable connection position used for diagnostics.
@@ -211,6 +215,7 @@ the safety boundary that drops stale cache state before later helpers assume
 a cache map exists.
 
 Parameters:
+
 - `neatContext` - Current NEAT context holding generation and caches.
 
 Returns: Nothing. The helper resets caches when the generation changes.
@@ -231,6 +236,7 @@ It keeps the later flow focused on comparison logic rather than repeated null
 checks or map initialization details.
 
 Parameters:
+
 - `neatContext` - Current NEAT context with the cache map.
 
 Returns: Map storing cached distances for genome pairs this generation.
@@ -253,6 +259,7 @@ connections. This helper normalizes that surface into sorted
 returns the stable view that the merge comparison depends on.
 
 Parameters:
+
 - `neatContext` - NEAT context used for fallback innovation numbers.
 - `genome` - Genome to derive a sorted innovation list for.
 
@@ -280,6 +287,7 @@ genomes must opt into `allow-fallback` deliberately before compatibility can
 synthesize alignment ids from endpoints.
 
 Parameters:
+
 - `genome` - Genome whose compatibility mode should be read.
 
 Returns: Effective compatibility-innovation mode.
@@ -302,6 +310,7 @@ Native compatibility reads require explicit innovations. The fallback path is
 reserved for genomes that deliberately opt into legacy or partial comparison.
 
 Parameters:
+
 - `neatContext` - NEAT context providing the fallback innovation resolver.
 - `genome` - Genome currently being normalized for comparison.
 - `connection` - Connection whose innovation id must be resolved.
@@ -326,6 +335,7 @@ the remaining unmatched genes are no longer in-range mismatches; they are the
 structural tail that NEAT treats as excess.
 
 Parameters:
+
 - `list` - Sorted innovation list for a genome.
 
 Returns: Highest innovation id or `0` when the list is empty.

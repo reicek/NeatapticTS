@@ -42,15 +42,17 @@ readout.describe({
 
 Node (Neuron)
 =============
+
 Fundamental computational unit: aggregates weighted inputs, applies an activation
 function (squash) and emits an activation value. Supports:
- - Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
- - Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
- - Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
-   a variety of learning rules beyond simple backprop).
- - Optional descriptors via `describe({ label, intent, metadata })` when a
-   low-level node should keep a stable human-facing identity inside a larger
-   architecture story.
+
+- Types: 'input' | 'hidden' | 'output' (affects bias initialization & error handling)
+- Recurrent self‑connections & gated connections (for dynamic / RNN behavior)
+- Dropout mask (`mask`), momentum terms, eligibility & extended traces (for
+  a variety of learning rules beyond simple backprop).
+- Optional descriptors via `describe({ label, intent, metadata })` when a
+  low-level node should keep a stable human-facing identity inside a larger
+  architecture story.
 
 Educational note: Traces (`eligibility` and `xtrace`) illustrate how recurrent credit
 assignment works in algorithms like RTRL / policy gradients. They are updated only when
@@ -151,6 +153,7 @@ _activateCore(
 Internal shared implementation for activate/noTraceActivate.
 
 Parameters:
+
 - `withTrace` - Whether to update eligibility traces.
 - `input` - Optional externally supplied activation (bypasses weighted sum if provided).
 
@@ -191,6 +194,7 @@ Activates the node, calculating its output value based on inputs and state.
 This method also calculates eligibility traces (`xtrace`) used for training recurrent connections.
 
 The activation process involves:
+
 1. Calculating the node's internal state (`this.state`) based on:
    - Incoming connections' weighted activations.
    - The recurrent self-connection's weighted state from the previous timestep (`this.old`).
@@ -202,6 +206,7 @@ The activation process involves:
 6. Calculating and updating eligibility traces for incoming connections.
 
 Parameters:
+
 - `input` - Optional input value. If provided, sets the node's activation directly (used for input nodes).
 
 Returns: The calculated activation value of the node.
@@ -223,6 +228,7 @@ Uses momentum in a Nesterov-compatible way: currentDelta = accumulated + momentu
 Resets accumulators after applying. Safe to call on every node type.
 
 Parameters:
+
 - `momentum` - Momentum factor (0 to disable)
 
 #### applyBatchUpdatesWithOptimizer
@@ -241,39 +247,43 @@ SGD (with Nesterov-style momentum via preceding propagate logic) and a collectio
 optimizers. After applying an update, gradient accumulators are reset to 0.
 
 Supported optimizers (type):
- - 'sgd'      : Standard gradient descent with optional momentum.
- - 'rmsprop'  : Exponential moving average of squared gradients (cache) to normalize step.
- - 'adagrad'  : Accumulate squared gradients; learning rate effectively decays per weight.
- - 'adam'     : Bias‑corrected first (m) & second (v) moment estimates.
- - 'adamw'    : Adam with decoupled weight decay (applied after adaptive step).
- - 'amsgrad'  : Adam variant maintaining a maximum of past v (vhat) to enforce non‑increasing step size.
- - 'adamax'   : Adam variant using the infinity norm (u) instead of second moment.
- - 'nadam'    : Adam + Nesterov momentum style update (lookahead on first moment).
- - 'radam'    : Rectified Adam – warms up variance by adaptively rectifying denominator when sample size small.
- - 'lion'     : Uses sign of combination of two momentum buffers (beta1 & beta2) for update direction only.
- - 'adabelief': Adam-like but second moment on (g - m) (gradient surprise) for variance reduction.
- - 'lookahead': Wrapper; performs k fast optimizer steps then interpolates (alpha) towards a slow (shadow) weight.
+
+- 'sgd' : Standard gradient descent with optional momentum.
+- 'rmsprop' : Exponential moving average of squared gradients (cache) to normalize step.
+- 'adagrad' : Accumulate squared gradients; learning rate effectively decays per weight.
+- 'adam' : Bias‑corrected first (m) & second (v) moment estimates.
+- 'adamw' : Adam with decoupled weight decay (applied after adaptive step).
+- 'amsgrad' : Adam variant maintaining a maximum of past v (vhat) to enforce non‑increasing step size.
+- 'adamax' : Adam variant using the infinity norm (u) instead of second moment.
+- 'nadam' : Adam + Nesterov momentum style update (lookahead on first moment).
+- 'radam' : Rectified Adam – warms up variance by adaptively rectifying denominator when sample size small.
+- 'lion' : Uses sign of combination of two momentum buffers (beta1 & beta2) for update direction only.
+- 'adabelief': Adam-like but second moment on (g - m) (gradient surprise) for variance reduction.
+- 'lookahead': Wrapper; performs k fast optimizer steps then interpolates (alpha) towards a slow (shadow) weight.
 
 Options:
- - momentum     : (SGD) momentum factor (Nesterov handled in propagate when update=true).
- - beta1/beta2  : Exponential decay rates for first/second moments (Adam family, Lion, AdaBelief, etc.).
- - eps          : Numerical stability epsilon added to denominator terms.
- - weightDecay  : Decoupled weight decay (AdamW) or additionally applied after main step when adamw selected.
- - lrScale      : Learning rate scalar already scheduled externally (passed as currentRate).
- - t            : Global step (1-indexed) for bias correction / rectification.
- - baseType     : Underlying optimizer for lookahead (not itself lookahead).
- - la_k         : Lookahead synchronization interval (number of fast steps).
- - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
+
+- momentum : (SGD) momentum factor (Nesterov handled in propagate when update=true).
+- beta1/beta2 : Exponential decay rates for first/second moments (Adam family, Lion, AdaBelief, etc.).
+- eps : Numerical stability epsilon added to denominator terms.
+- weightDecay : Decoupled weight decay (AdamW) or additionally applied after main step when adamw selected.
+- lrScale : Learning rate scalar already scheduled externally (passed as currentRate).
+- t : Global step (1-indexed) for bias correction / rectification.
+- baseType : Underlying optimizer for lookahead (not itself lookahead).
+- la_k : Lookahead synchronization interval (number of fast steps).
+- la_alpha : Interpolation factor towards slow (shadow) weights/bias at sync points.
 
 Internal per-connection temp fields (created lazily):
- - firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
- - gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
- - previousDeltaWeight : For classic SGD momentum.
- - lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
+
+- firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
+- gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
+- previousDeltaWeight : For classic SGD momentum.
+- lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
 
 Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
 
 Parameters:
+
 - `opts` - Optimizer configuration (see above).
 
 #### bias
@@ -303,6 +313,7 @@ connect(
 Creates a connection from this node to a target node or all nodes in a group.
 
 Parameters:
+
 - `target` - The target Node or a group object containing a `nodes` array.
 - `weight` - The weight for the new connection(s). If undefined, a default or random weight might be assigned by the Connection constructor (currently defaults to 0, consider changing).
 
@@ -335,6 +346,7 @@ Reach for this when the node is still the right abstraction but a later
 reader should not have to infer its purpose from connection order alone.
 
 Parameters:
+
 - `descriptor` - Optional label, intent, and scalar metadata to merge.
 
 Returns: Nothing.
@@ -361,6 +373,7 @@ disconnect(
 Removes the connection from this node to the target node.
 
 Parameters:
+
 - `target` - The target node to disconnect from.
 - `twosided` - If true, also removes the connection from the target node back to this node (if it exists). Defaults to false.
 
@@ -379,6 +392,7 @@ fromJSON(
 Creates a Node instance from a JSON object.
 
 Parameters:
+
 - `json` - The JSON object containing node configuration.
 
 Returns: A new Node instance configured according to the JSON object.
@@ -395,6 +409,7 @@ Makes this node gate the provided connection(s).
 The connection's gain will be controlled by this node's activation value.
 
 Parameters:
+
 - `connections` - A single Connection object or an array of Connection objects to be gated.
 
 #### geneId
@@ -424,6 +439,7 @@ isConnectedTo(
 Checks if this node is connected to another node.
 
 Parameters:
+
 - `target` - The target node to check the connection with.
 
 Returns: True if connected, otherwise false.
@@ -440,6 +456,7 @@ Checks if the given node has a direct outgoing connection to this node.
 Considers both regular incoming connections and the self-connection.
 
 Parameters:
+
 - `node` - The potential source node.
 
 Returns: True if the given node projects to this node, false otherwise.
@@ -456,6 +473,7 @@ Checks if this node has a direct outgoing connection to the given node.
 Considers both regular outgoing connections and the self-connection.
 
 Parameters:
+
 - `node` - The potential target node.
 
 Returns: True if this node projects to the target node, false otherwise.
@@ -486,6 +504,7 @@ This allows modifying the node's properties, such as its activation function or 
 based on predefined mutation methods.
 
 Parameters:
+
 - `method` - A mutation method object, typically from `methods.mutation`. It should define the type of mutation and its parameters (e.g., allowed functions, modification range).
 
 #### noTraceActivate
@@ -501,6 +520,7 @@ This is a performance optimization used during inference (when the network
 is just making predictions, not learning) as trace calculations are only needed for training.
 
 Parameters:
+
 - `input` - Optional input value. If provided, sets the node's activation directly (used for input nodes).
 
 Returns: The calculated activation value of the node.
@@ -528,6 +548,7 @@ propagate(
 Back-propagates the error signal through the node and calculates weight/bias updates.
 
 This method implements the backpropagation algorithm, including:
+
 1. Calculating the node's error responsibility based on errors from subsequent nodes (`projected` error)
    and errors from connections it gates (`gated` error).
 2. Calculating the gradient for each incoming connection's weight using eligibility traces (`xtrace`).
@@ -538,6 +559,7 @@ This method implements the backpropagation algorithm, including:
 4. Optionally applying the calculated updates immediately or accumulating them for batch training.
 
 Parameters:
+
 - `rate` - The learning rate (controls the step size of updates).
 - `momentum` - The momentum factor (helps accelerate learning and overcome local minima). Uses NAG.
 - `update` - If true, apply the calculated weight/bias updates immediately. If false, accumulate them in `totalDelta*` properties for batch updates.
@@ -566,6 +588,7 @@ setActivation(
 Sets a custom activation function for this node at runtime.
 
 Parameters:
+
 - `fn` - The activation function (should handle derivative if needed).
 
 #### squash
@@ -581,6 +604,7 @@ The activation function (squashing function) applied to the node's state.
 Maps the internal state to the node's output (activation).
 
 Parameters:
+
 - `x` - The node's internal state (sum of weighted inputs + bias).
 - `derivate` - If true, returns the derivative of the function instead of the function value.
 
@@ -604,6 +628,7 @@ Restore flows use this after hydrating persisted genomes so the next freshly
 created node cannot collide with an older serialized `geneId`.
 
 Parameters:
+
 - `maxObservedGeneId` - Highest restored node gene id currently in memory.
 
 Returns: Nothing.
@@ -641,6 +666,7 @@ Removes this node's gating control over the specified connection(s).
 Resets the connection's gain to 1 and removes it from the `connections.gated` list.
 
 Parameters:
+
 - `connections` - A single Connection object or an array of Connection objects to ungate.
 
 ## architecture/node/node.errors.ts

@@ -17,13 +17,14 @@ export type GPURequestAdapterOptionsType = GPURequestAdapterOptions;
 /**
  * Stable WebGPU binding indices for the struct-packed network upload contract.
  *
- * The activation kernel binds exactly four buffers: a struct array of
- * connections, a struct array of nodes, the per-node output buffer, and the
- * small per-dispatch params uniform. Packing fields into structs improves cache
- * locality: reading one connection fetches `from_node`, `to_node`, `weight`, and
+ * The activation kernel binds six buffers: a struct array of connections, a
+ * struct array of nodes, the per-node output buffer, a small per-dispatch
+ * params uniform, the per-node topological level array, and the incoming-CSR
+ * start-offset array. Packing fields into structs improves cache locality:
+ * reading one connection fetches `from_node`, `to_node`, `weight`, and
  * `flags` from one contiguous 16-byte region, and reading one node fetches
  * `activation_state`, `derivative_state`, `error`, and `flags` from one
- * contiguous 16-byte region. The four-buffer layout sits below the WebGPU
+ * contiguous 16-byte region. The six-buffer layout still sits below the WebGPU
  * default `maxStorageBuffersPerShaderStage` limit, so the code does not request
  * a custom limit for that resource.
  *
@@ -41,6 +42,10 @@ export const GPU_BUFFER_BINDING = {
   outputs: 2,
   /** Per-dispatch level and dimension uniform. */
   params: 3,
+  /** Per-node topological level array. */
+  topoLevels: 4,
+  /** Incoming-CSR start-offset array (length `nodeCount + 1`). */
+  inStart: 5,
 } as const;
 
 /**
@@ -56,12 +61,12 @@ export type GPUBufferName = keyof typeof GPU_BUFFER_BINDING;
  * This count matches the length of `GPU_BUFFER_BINDING` and the number
  * of entries in the kernel bind-group layout.
  */
-export const GPU_BUFFER_BINDING_COUNT = 4;
+export const GPU_BUFFER_BINDING_COUNT = 6;
 
 /**
  * GPU-side buffer handles and metadata produced by uploading a network slab.
  *
- * The implementation creates exactly four WebGPU buffers and records
+ * The implementation creates exactly six WebGPU buffers and records
  * `nodeCount`/`connectionCount` so the compute pipeline can size its dispatches
  * without re-reading CPU structures. The `topoLevelsArray` is kept here because
  * the CPU dispatch loop still needs to know how many levels to launch.
@@ -75,6 +80,10 @@ export interface GPUBufferSet {
   outputs: GPUBuffer;
   /** Per-dispatch params uniform. */
   params: GPUBuffer;
+  /** Per-node topological level array. */
+  topoLevels: GPUBuffer;
+  /** Incoming-CSR start-offset array (length `nodeCount + 1`). */
+  inStart: GPUBuffer;
   /** Number of nodes in the uploaded network. */
   nodeCount: number;
   /** Number of connections in the uploaded network. */

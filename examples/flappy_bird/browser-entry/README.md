@@ -94,12 +94,14 @@ start(
 Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
 
 This function is intentionally orchestration-focused:
-1) resolve runtime dependencies (DOM host, worker, host UI),
-2) initialize worker and telemetry plumbing,
-3) run the evolve -> playback -> HUD fold loop until stopped,
-4) expose a small stop/isRunning/done handle for callers.
+
+1. resolve runtime dependencies (DOM host, worker, host UI),
+2. initialize worker and telemetry plumbing,
+3. run the evolve -> playback -> HUD fold loop until stopped,
+4. expose a small stop/isRunning/done handle for callers.
 
 Parameters:
+
 - `container` - Element id or HTMLElement to host the demo.
 
 Returns: Run handle for stop/state control.
@@ -134,6 +136,7 @@ the neighboring runtime, playback, host, worker-channel, and visualization
 folders when you want the actual implementation story.
 
 Browser runtime map:
+
 ```mermaid
 flowchart TB
     PublicTypes["browser-entry.types"] --> Runtime["runtime types\nstart/stop lifecycle"]
@@ -818,6 +821,7 @@ create canvases, wire resize behavior, render placeholders, then return the
 handles the runtime will mutate during execution.
 
 Parameters:
+
 - `containerElement` - Root host container.
 
 Returns: Canvas handles, stats cells and network render callback.
@@ -837,6 +841,7 @@ The runtime writes HUD values incrementally, so the host exposes a narrow
 partial-update helper rather than requiring full table redraws.
 
 Parameters:
+
 - `statsValueByKey` - Lookup of stat keys to value cells.
 - `partialValues` - Subset of values to write this tick.
 
@@ -856,6 +861,7 @@ applyAlphaToHexColor(
 Converts a six-digit hex color to rgba with the requested alpha.
 
 Parameters:
+
 - `hexColor` - Color in `#RRGGBB` form.
 - `alphaValue` - Alpha value to apply.
 
@@ -874,6 +880,7 @@ clamp(
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
 Parameters:
+
 - `value` - Candidate value.
 - `min` - Inclusive lower bound.
 - `max` - Inclusive upper bound.
@@ -891,6 +898,7 @@ clamp01(
 Clamps a numeric value to the inclusive `[0, 1]` interval.
 
 Parameters:
+
 - `value` - Candidate value.
 
 Returns: Value clamped between 0 and 1.
@@ -908,6 +916,7 @@ interpolateValue(
 Linear interpolation helper.
 
 Parameters:
+
 - `startValue` - Start value at progress `0`.
 - `endValue` - End value at progress `1`.
 - `progress` - Normalized interpolation progress.
@@ -928,6 +937,7 @@ createBirdColor(
 Resolves deterministic bird color from palette index.
 
 Parameters:
+
 - `birdIndex` - Bird index in current population.
 - `totalBirds` - Population size.
 
@@ -949,6 +959,7 @@ keep browser playback distribution aligned with trainer/evaluation defaults,
 while still supporting smaller world heights.
 
 Parameters:
+
 - `worldHeightPx` - Current world height.
 
 Returns: Exclusive upper bound for `nextInt(minInclusive, maxExclusive)`.
@@ -967,6 +978,7 @@ resolveNextSpawnGapCenterY(
 Resolves next gap center with bounded per-pipe delta.
 
 Parameters:
+
 - `previousGapCenterYPx` - Previous spawn gap center.
 - `rng` - Deterministic RNG.
 - `currentGapSizePx` - Actual gap size for the pipe being placed.
@@ -987,6 +999,7 @@ resolveNextSpawnGapSize(
 Resolves next spawn gap size using progressive shrink and jitter.
 
 Parameters:
+
 - `previousSpawnGapPx` - Previous spawn gap size.
 - `difficultyProfile` - Active difficulty profile.
 - `rng` - Deterministic RNG.
@@ -1005,6 +1018,7 @@ resolveNextSpawnIntervalFrames(
 Resolves next spawn interval using progressive shrink.
 
 Parameters:
+
 - `previousSpawnIntervalFrames` - Previous spawn interval.
 - `difficultyProfile` - Active difficulty profile.
 
@@ -1023,6 +1037,7 @@ sampleGapCenterY(
 Samples a random gap center y-position.
 
 Parameters:
+
 - `rng` - Deterministic RNG.
 - `currentGapSizePx` - Actual gap size for the pipe being placed.
 - `worldHeightPx` - World height used to derive valid gap-center bounds.
@@ -1042,6 +1057,7 @@ createFlappyStatsTableRows(
 Builds stats table rows and returns value-cell lookup by key.
 
 Parameters:
+
 - `input` - Table construction inputs.
 
 Returns: Mapping from stat key to value cell.
@@ -1057,6 +1073,7 @@ formatArchitectureStatsValue(
 Splits architecture suffix onto a second line for readability in the stats table.
 
 Parameters:
+
 - `architectureValue` - Full architecture label.
 
 Returns: Line-broken label value.
@@ -1088,6 +1105,7 @@ The implementation is shared with the public entry so legacy imports and the
 newer folderized surface behave identically.
 
 Parameters:
+
 - `canvas` - Target playback canvas.
 - `context` - Canvas 2D context.
 - `evolutionWorker` - Worker owning playback simulation state.
@@ -1109,6 +1127,7 @@ resolvePipeSpawnXPx(
 Resolves the world-space x spawn position for new pipes.
 
 Parameters:
+
 - `visibleWorldWidthPx` - Current visible world width.
 - `overflowPx` - Additional offset relative to the visible right edge.
 
@@ -1129,6 +1148,7 @@ The current viewport model uses a 1:1 mapping between canvas pixels and
 world-space pixels, so visible height is the canvas height directly.
 
 Parameters:
+
 - `canvas` - Playback canvas.
 
 Returns: Visible height in world-space pixels.
@@ -1148,6 +1168,7 @@ The current viewport model uses a 1:1 mapping between canvas pixels and
 world-space pixels, so visible width is the canvas width directly.
 
 Parameters:
+
 - `canvas` - Playback canvas.
 
 Returns: Visible width in world-space pixels.
@@ -1163,6 +1184,7 @@ resolveWorldViewport(
 Resolves world viewport transformation based on canvas size.
 
 Parameters:
+
 - `canvas` - Playback canvas.
 
 Returns: Viewport scale and offsets.
@@ -1180,6 +1202,7 @@ createMinorGcObserver(
 Creates a PerformanceObserver that tracks minor GC events when supported.
 
 Parameters:
+
 - `minorGcTimestampsMs` - Mutable minor-GC timestamp buffer.
 
 Returns: Observer when supported; otherwise `undefined`.
@@ -1195,6 +1218,7 @@ resolveEventsPerMinute(
 Resolves events per minute from the latest sample window.
 
 Parameters:
+
 - `samples` - Event timestamps.
 
 Returns: Events-per-minute estimate.
@@ -1210,6 +1234,7 @@ resolveHudUpdatesPerSecond(
 Resolves HUD updates per second from the latest sample window.
 
 Parameters:
+
 - `samples` - HUD update timestamps.
 
 Returns: Updates-per-second estimate.
@@ -1227,6 +1252,7 @@ trimSamplesToWindow(
 Trims timestamp samples to a sliding time window.
 
 Parameters:
+
 - `samples` - Mutable timestamp buffer.
 - `windowMs` - Window width in milliseconds.
 - `nowMs` - Current timestamp.
@@ -1247,6 +1273,7 @@ buildCenteredTitleBoxLines(
 Builds an ASCII centered title box.
 
 Parameters:
+
 - `centeredColumns` - Available centered column count.
 - `titleText` - Title text.
 
@@ -1264,6 +1291,7 @@ buildOuterBoxLines(
 Builds an ASCII outer frame with closed borders.
 
 Parameters:
+
 - `centeredColumns` - Centered column count.
 - `totalRows` - Total row count.
 
@@ -1280,6 +1308,7 @@ renderClosedOuterBox(
 Renders a complete closed outer glyph box.
 
 Parameters:
+
 - `input` - Rendering input object.
 
 Returns: Nothing.
@@ -1295,6 +1324,7 @@ renderStandaloneTitleBox(
 Renders only the centered title box.
 
 Parameters:
+
 - `input` - Rendering input object.
 
 Returns: Nothing.
@@ -1310,6 +1340,7 @@ resolveGlyphWidthPx(
 Resolves a stable glyph width used for frame-column math.
 
 Parameters:
+
 - `context` - Rendering context used to measure text.
 
 Returns: Floored glyph width clamped to a minimum pixel value.
@@ -1329,6 +1360,7 @@ resolveTextFrameMetrics(
 Resolves core text-frame metrics for glyph box rendering.
 
 Parameters:
+
 - `frameWidthPx` - Frame width.
 - `frameHeightPx` - Frame height.
 - `glyphWidthPx` - Measured glyph width.
@@ -1352,6 +1384,7 @@ commitObservationMemoryStep(
 Commits one browser decision step into the shared compatibility memory surface.
 
 Parameters:
+
 - `observationMemoryState` - Mutable memory state for one bird.
 - `observationFeatures` - Structured features used for this decision.
 - `shouldFlap` - Action selected by the policy.
@@ -1369,6 +1402,7 @@ hasAliveBirds(
 Checks whether at least one bird remains alive.
 
 Parameters:
+
 - `birds` - Population birds.
 
 Returns: True when any bird is alive.
@@ -1384,6 +1418,7 @@ resolveAliveBirdCount(
 Counts birds that are still alive.
 
 Parameters:
+
 - `birds` - Population birds.
 
 Returns: Alive bird count.
@@ -1399,6 +1434,7 @@ resolveFlapDecision(
 Resolves flap/no-flap decision from network outputs.
 
 Parameters:
+
 - `rawOutputs` - Activation output payload.
 
 Returns: True when flap should trigger.
@@ -1415,6 +1451,7 @@ resolveFramePrimaryWinnerIndex(
 Resolves winner index for current frame.
 
 Parameters:
+
 - `birds` - Population birds.
 - `includeAliveOnly` - When true, ignores dead birds.
 
@@ -1431,6 +1468,7 @@ resolveLeaderPipesPassed(
 Resolves leading pipes-passed score in the population.
 
 Parameters:
+
 - `birds` - Population birds.
 
 Returns: Maximum pipes passed.
@@ -1453,6 +1491,7 @@ resolveObservationVector(
 Builds the normalized observation vector consumed by bird networks.
 
 Parameters:
+
 - `birdYPx` - Bird y position.
 - `velocityYPxPerFrame` - Bird vertical velocity.
 - `pipes` - Current pipe list.
@@ -1475,6 +1514,7 @@ resolveUpcomingPipes(
 Resolves the next two upcoming pipes in front of the bird.
 
 Parameters:
+
 - `pipes` - Current pipe list.
 
 Returns: Tuple of first and second upcoming pipes.
@@ -1506,6 +1546,7 @@ Conceptually, this is the main fold from network object to finished panel:
 resolve scene state, compute layout, paint the graph, then paint overlays.
 
 Parameters:
+
 - `context` - Canvas 2D drawing context.
 - `network` - Network to visualize.
 - `inputSize` - Input-layer size.
@@ -1544,6 +1585,7 @@ a non-standard activation contract such as recurrent execution or cycle
 fallback behavior.
 
 Parameters:
+
 - `network` - Network to describe.
 - `inputSize` - Configured input size.
 - `outputSize` - Configured output size.
@@ -1566,6 +1608,7 @@ Dense or deeper networks need more vertical room to stay readable, so panel
 height is driven by topology rather than fixed to a single constant.
 
 Parameters:
+
 - `network` - Network to visualize.
 - `inputSize` - Input-layer size.
 - `outputSize` - Output-layer size.
@@ -1591,6 +1634,7 @@ resolveNetworkVisualizationLayers(
 Resolves layered node groups for network-view layout and rendering.
 
 Parameters:
+
 - `network` - Runtime network instance.
 - `inputSize` - Input count fallback.
 - `outputSize` - Output count fallback.
@@ -1619,6 +1663,7 @@ Each row describes one closed numeric interval and the swatch used to paint
 it, making the dynamic color scale legible to a human reader.
 
 Parameters:
+
 - `scale` - Dynamic color scale containing bounds, tiers, and overflow color.
 - `symbol` - Label symbol.
 
@@ -1639,6 +1684,7 @@ around zero. Negative and positive values should feel visually related, but
 not identical.
 
 Parameters:
+
 - `input` - Tier creation options.
 
 Returns: Ordered tier list.
@@ -1661,6 +1707,7 @@ The node layer pairs each rectangle with a compact bias label so the panel can
 show both topology and a lightweight hint of parameter state.
 
 Parameters:
+
 - `context` - Render context.
 - `positionedNodes` - Positioned nodes.
 - `nodeDimensions` - Node dimensions.
@@ -1686,6 +1733,7 @@ instrument: it tells the viewer what each weight and bias color actually
 means numerically.
 
 Parameters:
+
 - `context` - Render context.
 - `architectureLabel` - Compact architecture description.
 - `colorScales` - Connection and bias color scales.
@@ -1707,6 +1755,7 @@ The header gives viewers a compact architecture summary before they inspect
 individual nodes and edges.
 
 Parameters:
+
 - `context` - Render context.
 - `architectureLabel` - Header label.
 
@@ -1732,6 +1781,7 @@ while dash patterns help distinguish disabled or negative
 edges in a way that still reads quickly on a dense graph.
 
 Parameters:
+
 - `context` - Render context.
 - `runtimeConnections` - Runtime connection list.
 - `positionByNodeIndex` - Node layout map.
@@ -1754,6 +1804,7 @@ Two decimal places keep the compact node labels scannable while still giving
 enough precision to distinguish meaningfully different activation values.
 
 Parameters:
+
 - `activation` - Node activation value.
 
 Returns: Label text.
@@ -1772,6 +1823,7 @@ Bias colors follow the same diverging logic as connection colors so the legend
 remains conceptually consistent across channels.
 
 Parameters:
+
 - `nodeBias` - Node bias.
 
 Returns: Tier color.
@@ -1790,6 +1842,7 @@ This small helper is useful when one-off drawing code wants the same color
 semantics as the full dynamic scale machinery.
 
 Parameters:
+
 - `connectionWeight` - Connection weight.
 
 Returns: Tier color.
@@ -1810,6 +1863,7 @@ currently active network and does not need to assemble the intermediate rows
 manually.
 
 Parameters:
+
 - `context` - Render context.
 - `network` - Active network instance.
 
@@ -1832,6 +1886,7 @@ panel can stay informative on smaller viewports without swallowing the whole
 canvas.
 
 Parameters:
+
 - `context` - Render context.
 - `connectionLegendRows` - Connection legend rows.
 - `biasLegendRows` - Bias legend rows.
@@ -1853,6 +1908,7 @@ value range, so the legend adapts to what is currently present instead of
 always rendering a fixed generic scale.
 
 Parameters:
+
 - `network` - Active network.
 
 Returns: Dynamic scales used by graph drawing and legend rows.
@@ -1870,6 +1926,7 @@ resolveNetworkVisualizationLayers(
 Resolves layered node groups for network-view layout and rendering.
 
 Parameters:
+
 - `network` - Runtime network instance.
 - `inputSize` - Input count fallback.
 - `outputSize` - Output count fallback.
@@ -1892,6 +1949,7 @@ This is the final classification step that maps one numeric weight or bias to
 the swatch color the renderer should paint.
 
 Parameters:
+
 - `value` - Numeric value to classify.
 - `tiers` - Ordered tier list.
 - `aboveTierColor` - Fallback color for values above the last tier.
@@ -1921,6 +1979,7 @@ requestWorkerGeneration(
 Waits for the next generation payload emitted by the evolution worker.
 
 Parameters:
+
 - `evolutionWorker` - Worker emitting generation-ready messages.
 
 Returns: Next generation payload.
@@ -1937,6 +1996,7 @@ requestWorkerPlaybackStep(
 Requests one playback batch step from the worker.
 
 Parameters:
+
 - `evolutionWorker` - Worker that owns playback simulation state.
 - `playbackStepRequest` - Requested simulation budget and viewport width.
 

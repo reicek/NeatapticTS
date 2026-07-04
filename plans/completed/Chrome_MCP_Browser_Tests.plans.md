@@ -2,8 +2,8 @@
 
 **Status:** [DONE]
 
-**Claim:** `07-logging` @ 2026-07-02 — all seven phases complete; plan and log
-archived to `plans/completed/`.
+**Claim:** `07-logging` — all seven phases complete; plan and log archived
+to `plans/completed/`.
 
 ## Scope
 
@@ -38,12 +38,14 @@ scoped phase.
    execute a browser scenario that asserts WebGPU inference produces the same
    outputs as the CPU path.
 2. The `browser-testing-harness` skill contains durable workflows for:
-   - starting the local server,
-   - navigating to a scenario URL,
-   - waiting for a readiness signal,
-   - delegating to `performance-trace-specialist`, `browser-ui-specialist`, or
-     `browser-memory-specialist` as appropriate,
-   - capturing and returning a concise metric summary.
+
+- starting the local server,
+- navigating to a scenario URL,
+- waiting for a readiness signal,
+- delegating to `performance-trace-specialist`, `browser-ui-specialist`, or
+  `browser-memory-specialist` as appropriate,
+- capturing and returning a concise metric summary.
+
 3. The `browser-harness-specialist` agent is callable from `03-red-testing`,
    `04-implementing`, `05-green-testing`, and `06-documenting` and owns
    multi-step browser scenario execution.
@@ -80,18 +82,18 @@ scoped phase.
 
 ## Decision records
 
-- **DR-2026-07-02-01 — New skill name:** `browser-testing-harness` (chosen).
+- **DR-012 — New skill name:** `browser-testing-harness` (chosen).
   Rationale: the skill orchestrates the full browser-test lifecycle, not merely
   a single tool. Alternatives considered: `browser-test-harness` (too close to
   generic Jest terminology), `chrome-mcp-browser-tests` (too tool-specific). The
   chosen name aligns with the existing `chrome-devtools-mcp` skill as a
   higher-level consumer.
-- **DR-2026-07-02-02 — New specialist name:** `browser-harness-specialist`
+- **DR-013 — New specialist name:** `browser-harness-specialist`
   (chosen). Rationale: it is the single point of delegation for multi-step
   browser scenarios, distinct from the three lower-level tool specialists. It
   will be Tier 3, `user-invocable: false`, and carry the new skill plus the
   `chrome-devtools-mcp` skill.
-- **DR-2026-07-02-03 — Test URL hiding strategy:** Place test pages under
+- **DR-014 — Test URL hiding strategy:** Place test pages under
   `docs/browser-tests/`. Rationale: the source-driven docs pipeline only targets
   `src`, `asciiMaze`, `flappy-bird`, and `racing-curriculum`; it never scans
   `docs/browser-tests/`, so hand-maintained HTML pages there are rendered by the
@@ -395,17 +397,16 @@ acceptance_criteria:
 
 ```yaml
 closure:
-  status: done
-  closer: 07-logging
-  timestamp: 2026-07-02T16:07:23-04:00
-  archived_plan: 'plans/completed/Chrome_MCP_Browser_Tests.plans.md'
-  archived_log: 'plans/completed/Chrome_MCP_Browser_Tests.logs.md'
-  phases: [1, 2, 3, 4, 5, 6, 7]
-  note: >
-    All phases complete. Plan and log archived. README/Roadmap updated to [DONE].
-    Lingering exception: devtools-coverage.gate.mjs naming mismatch
-    (expects skill 'devtools', canonical skill is 'chrome-devtools-mcp')
-    remains unresolved and is carried as a pre-existing defect.
+ status: done
+ closer: 07-logging
+ archived_plan: 'plans/completed/Chrome_MCP_Browser_Tests.plans.md'
+ archived_log: 'plans/completed/Chrome_MCP_Browser_Tests.logs.md'
+ phases: [1, 2, 3, 4, 5, 6, 7]
+ note: >
+ All phases complete. Plan and log archived. README/Roadmap updated to [DONE].
+ Lingering exception: devtools-coverage.gate.mjs naming mismatch
+ (expects skill 'devtools', canonical skill is 'chrome-devtools-mcp')
+ remains unresolved and is carried as a pre-existing defect.
 ```
 
 ## Reopen conditions

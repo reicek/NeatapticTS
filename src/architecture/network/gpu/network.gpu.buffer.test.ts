@@ -45,6 +45,8 @@ function createFakeBufferSet(): GPUBufferSet {
     nodes: makeBuffer(),
     outputs: makeBuffer(),
     params: makeBuffer(),
+    topoLevels: makeBuffer(),
+    inStart: makeBuffer(),
     topoLevelsArray: new Uint32Array(6),
     topoLevelCount: 1,
     nodeCount: 6,
@@ -152,8 +154,10 @@ describe('network.gpu.buffer', () => {
           nodes: 1,
           outputs: 2,
           params: 3,
+          topoLevels: 4,
+          inStart: 5,
         },
-        count: 4,
+        count: 6,
       });
     });
   });
@@ -176,7 +180,7 @@ describe('network.gpu.buffer', () => {
 
       uploadNetworkToGPU(device, network);
 
-      expect(device.recorded.buffers.length).toBe(4);
+      expect(device.recorded.buffers.length).toBe(6);
     });
 
     it('sizes each buffer to the byteLength of its struct array', () => {
@@ -193,12 +197,16 @@ describe('network.gpu.buffer', () => {
         nodes: nodeCount * 16,
         outputs: nodeCount * Float32Array.BYTES_PER_ELEMENT,
         params: 4 * Uint32Array.BYTES_PER_ELEMENT,
+        topoLevels: nodeCount * Uint32Array.BYTES_PER_ELEMENT,
+        inStart: (nodeCount + 1) * Uint32Array.BYTES_PER_ELEMENT,
       };
       const recordedSizes = {
         connections: device.recorded.buffers[0]?.size ?? 0,
         nodes: device.recorded.buffers[1]?.size ?? 0,
         outputs: device.recorded.buffers[2]?.size ?? 0,
         params: device.recorded.buffers[3]?.size ?? 0,
+        topoLevels: device.recorded.buffers[4]?.size ?? 0,
+        inStart: device.recorded.buffers[5]?.size ?? 0,
       };
 
       expect(recordedSizes).toEqual(expectedSizes);
@@ -211,7 +219,8 @@ describe('network.gpu.buffer', () => {
 
       uploadNetworkToGPU(device, network);
 
-      const [connections, nodes, outputs, params] = device.recorded.buffers;
+      const [connections, nodes, outputs, params, topoLevels, inStart] =
+        device.recorded.buffers;
       const storageUsage = GPU_BUFFER_USAGE_STORAGE | GPU_BUFFER_USAGE_COPY_DST;
       const uniformUsage = GPU_BUFFER_USAGE_UNIFORM | GPU_BUFFER_USAGE_COPY_DST;
 
@@ -219,6 +228,8 @@ describe('network.gpu.buffer', () => {
       expect(nodes?.usage).toBe(storageUsage);
       expect(outputs?.usage).toBe(storageUsage | GPU_BUFFER_USAGE_COPY_SRC);
       expect(params?.usage).toBe(uniformUsage);
+      expect(topoLevels?.usage).toBe(storageUsage);
+      expect(inStart?.usage).toBe(storageUsage);
     });
 
     it('returns a GPUBufferSet with the created buffers and metadata', () => {
@@ -234,6 +245,8 @@ describe('network.gpu.buffer', () => {
           nodes: device.recorded.buffers[1],
           outputs: device.recorded.buffers[2],
           params: device.recorded.buffers[3],
+          topoLevels: device.recorded.buffers[4],
+          inStart: device.recorded.buffers[5],
           nodeCount: network.nodes.length,
           connectionCount: network.connections.length,
         }),
@@ -247,7 +260,7 @@ describe('network.gpu.buffer', () => {
 
       uploadNetworkToGPU(device, network);
 
-      expect(device.recorded.writeBuffers.length).toBe(4);
+      expect(device.recorded.writeBuffers.length).toBe(6);
     });
 
     it('produces deterministic buffer bookkeeping across repeated uploads', () => {
@@ -258,7 +271,7 @@ describe('network.gpu.buffer', () => {
       uploadNetworkToGPU(device, network);
       uploadNetworkToGPU(device, network);
 
-      expect(device.recorded.buffers.length).toBe(8);
+      expect(device.recorded.buffers.length).toBe(12);
     });
     it('uploads a network with no connections', () => {
       const device = createMockGPUDevice();
@@ -313,6 +326,8 @@ describe('network.gpu.buffer', () => {
           bufferSet.nodes,
           bufferSet.outputs,
           bufferSet.params,
+          bufferSet.topoLevels,
+          bufferSet.inStart,
         ].every(
           (buffer) =>
             ((buffer as unknown as { destroy: jest.Mock }).destroy.mock?.calls
@@ -334,7 +349,7 @@ describe('network.gpu.buffer', () => {
 
       uploadNetworkToGPU(device, network);
 
-      expect(device.recorded.buffers.length).toBe(4);
+      expect(device.recorded.buffers.length).toBe(6);
     });
 
     it('falls back to MAX_SAFE_INTEGER when both geneId and index are missing', () => {
@@ -353,7 +368,7 @@ describe('network.gpu.buffer', () => {
 
       uploadNetworkToGPU(device, network);
 
-      expect(device.recorded.buffers.length).toBe(4);
+      expect(device.recorded.buffers.length).toBe(6);
     });
   });
 

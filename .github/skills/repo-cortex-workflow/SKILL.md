@@ -176,7 +176,8 @@ Escalate to `00-helping` when:
 - a required script or gate is missing from the checkout,
 - workflow or corpus MCP self-checks keep failing after the binding is
   corrected,
-- the same gate fails three consecutive times in the same session,
+- a gate or workflow issue cannot be resolved through normal repair and a true
+  technical limit has been reached,
 - manual host intervention is required to restart an MCP server or repair local
   toolchain state.
 

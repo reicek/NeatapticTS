@@ -6,7 +6,7 @@
 
 ## Phase 1 — Morph Applier [DONE]
 
-**Compressed:** 2026-06-26T21:34:00Z
+**Compressed:**
 
 **Phase objective:** Create the morph applier that translates `NgeMorphDelta[]` into `network.mutate()` calls, establishing the missing link between morph planning and network modification.
 
@@ -257,21 +257,22 @@ VALIDATION_EVIDENCE:
 - plan-sync gate: pass: true (all WIP plans registered in README and Roadmap)
 - Step 03 confirmed [DONE] in plan file
 - All 9 acceptance criteria verified:
-  1. All 7 red tests pass ✓
-  2. 100% coverage on neat.nge-juvenile.apply.ts ✓
-  3. edgeDensify calls network.mutate(ADD_CONN) N times (lines 188-190) ✓
-  4. nodeAdd calls network.mutate(ADD_NODE) (line 215) ✓
-  5. edgePrune disconnects specific connection by candidateId (lines 245-250) ✓
-  6. compact calls network.mutate(SUB_NODE) (line 275) ✓
-  7. slotExpand is documented no-op (lines 113-118) ✓
-  8. Budget re-validation occurs before mutating (assertGrowthBudget/assertPruneBudget) ✓
-  9. TypeScript, lint, quality:folder all pass ✓
+
+1.  All 7 red tests pass ✓
+2.  100% coverage on neat.nge-juvenile.apply.ts ✓
+3.  edgeDensify calls network.mutate(ADD_CONN) N times (lines 188-190) ✓
+4.  nodeAdd calls network.mutate(ADD_NODE) (line 215) ✓
+5.  edgePrune disconnects specific connection by candidateId (lines 245-250) ✓
+6.  compact calls network.mutate(SUB_NODE) (line 275) ✓
+7.  slotExpand is documented no-op (lines 113-118) ✓
+8.  Budget re-validation occurs before mutating (assertGrowthBudget/assertPruneBudget) ✓
+9.  TypeScript, lint, quality:folder all pass ✓
 
 ---
 
 ## Phase 2 — Lifecycle Wiring [DONE]
 
-**Compressed:** 2026-06-26T21:57:00Z
+**Compressed:**
 
 **Phase objective:** Wire `runNgeLifecycle` to call `applyMorphDeltas` after `planGrowthMorphs`, and call `commitGrowth` after morph application so hysteresis state stays in sync.
 
@@ -306,10 +307,11 @@ VALIDATION_EVIDENCE:
 - Hysteresis: growthPositiveWindowCount=2 (≥ window=2), cooldownWindowsRemaining=0
 - Config: cooldownWindowCount=3 for commitGrowth assertion
 - 4/4 tests FAIL for correct reasons:
-  1. `mutates the network by applying planned growth morphs` — Expected >7, Received 7
-  2. `returns apply outcomes from applyMorphDeltas in the lifecycle result` — Expected true, Received undefined
-  3. `updates hysteresis via commitGrowth after morph application` — Expected 3, Received undefined
-  4. `passes the growth budget through to applyMorphDeltas` — Expected >8, Received 8
+
+1.  `mutates the network by applying planned growth morphs` — Expected >7, Received 7
+2.  `returns apply outcomes from applyMorphDeltas in the lifecycle result` — Expected true, Received undefined
+3.  `updates hysteresis via commitGrowth after morph application` — Expected 3, Received undefined
+4.  `passes the growth budget through to applyMorphDeltas` — Expected >8, Received 8
 
 ### Step 07 — Implement lifecycle wiring [DONE]
 
@@ -335,7 +337,7 @@ VALIDATION_EVIDENCE:
 
 ## Phase 3 — Runtime Integration [DONE]
 
-**Compressed:** 2026-06-26T22:21:00Z
+**Compressed:**
 
 **Phase objective:** Bridge `adaptOnTick` to call `runNgeLifecycle` instead of using random operations, removing the standalone proposal engine in the same step (No Deferred Cleanup policy).
 
@@ -402,7 +404,7 @@ VALIDATION_EVIDENCE:
 
 ## Phase 4 — Capacity and Limits [DONE]
 
-**Compressed:** 2026-06-26T22:49:00Z
+**Compressed:**
 
 **Phase objective:** Raise runtime adaptation limits from 256 nodes / 1024 connections to 8000 nodes / 32000+ connections, and ensure growth throttling preserves real-time performance at scale.
 
@@ -472,7 +474,7 @@ VALIDATION_EVIDENCE:
 
 ## Phase 5 — End-to-End Growth Verification [DONE]
 
-**Compressed:** 2026-06-27T03:07:00Z
+**Compressed:**
 
 **Phase objective:** Prove the complete growth engine pipeline works as a single continuous system by writing an end-to-end integration test that starts from a small seed network, runs multiple ticks of `adaptOnTick`, and verifies the network grows organically through the full chain: `adaptOnTick` → `computeGrowthThrottle` → `runNgeLifecycle` → `computeFocusScores` → `planGrowthMorphs` → `applyMorphDeltas` → `commitGrowth`.
 

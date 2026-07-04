@@ -680,7 +680,6 @@ async function main() {
 
   const output = {
     benchmark: 'repo-cortex-mcp-latency',
-    timestamp: new Date().toISOString(),
     environment: {
       database_path: databaseUrl,
       TURSO_DATABASE_URL: maskEnv(process.env.TURSO_DATABASE_URL),

@@ -16,8 +16,8 @@ compact while retaining durable audit coverage.
 - Outcome: authored the full set of step packets for Phases 2–7 using the canonical
   YAML schema; registered the plan in `plans/README.md` and `plans/Roadmap.md`.
 - Validation evidence:
-  - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/Chrome_MCP_Browser_Tests.plans.md` → PASS
-  - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Chrome_MCP_Browser_Tests.plans.md` → PASS
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/Chrome_MCP_Browser_Tests.plans.md` → PASS
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Chrome_MCP_Browser_Tests.plans.md` → PASS
 
 ---
 
@@ -25,7 +25,7 @@ compact while retaining durable audit coverage.
 
 **Step 02 — Research docs generation hiding and WebGPU test surfaces**
 
-- Research date: 2026-07-02
+- Research date:
 - Specialists used: `docs-scout`, `browser-runtime-scout`, `plan-scout`
 
 ### 1. Docs generation and hiding
@@ -104,13 +104,13 @@ compact while retaining durable audit coverage.
 - File: `docs/browser-tests/webgpu-inference-smoke.html`
 - Loads: `../../dist/neataptic.browser.iife.js` (requires `npm run build:browser`)
 - Logic:
-  - Build `Neataptic.Network.createMLP(2, [3], 1)`.
-  - Run CPU reference: `network.activate([0.1, 0.2])`.
-  - Request `navigator.gpu` adapter/device, assign `network.gpuDevice = device`.
-  - Run GPU path: `await network.activate([0.1, 0.2], { useGPU: true })`.
-  - Assert parity: max abs diff ≤ 0.5, MAE ≤ 0.1.
-  - Emit `window.webgpuSmokeResult = { success, cpuOutput, gpuOutput, maxAbsDiff,
-    meanAbsDiff, gpuDeviceBound }`.
+- Build `Neataptic.Network.createMLP(2, [3], 1)`.
+- Run CPU reference: `network.activate([0.1, 0.2])`.
+- Request `navigator.gpu` adapter/device, assign `network.gpuDevice = device`.
+- Run GPU path: `await network.activate([0.1, 0.2], { useGPU: true })`.
+- Assert parity: max abs diff ≤ 0.5, MAE ≤ 0.1.
+- Emit `window.webgpuSmokeResult = { success, cpuOutput, gpuOutput, maxAbsDiff,
+meanAbsDiff, gpuDeviceBound }`.
 - This reuses the parity contract already in `WebGPU.md` and
   `network.gpu.parity.test.ts`.
 
@@ -132,7 +132,7 @@ compact while retaining durable audit coverage.
 
 **Step 03 — Write red tests and contracts for the harness**
 
-- Red date: 2026-07-02
+- Red date:
 - Specialist used: `unit-test-writer`
 
 ### Files created
@@ -187,7 +187,7 @@ red failures.
 
 **Step 04 — Implement the browser testing harness skill and specialist agent**
 
-- Implementation date: 2026-07-02
+- Implementation date:
 - Specialists used: `implementation-pattern-scout` (via `04-implementing`),
   `browser-harness-specialist`
 
@@ -279,9 +279,9 @@ red failures.
 - `npm run lint` → pass.
 - Mermaid validation (extracted from each Markdown file and run with
   `node ./dist-docs/scripts/mermaid-cli.js validate --input <path>`):
-  - `Browser_Tests.md` harness workflow → "Valid diagram".
-  - `WebGPU.md` GPU eligibility flow → "Valid diagram".
-  - `SKILL.md` workflow + decision tree → "Valid diagram" (×2).
+- `Browser_Tests.md` harness workflow → "Valid diagram".
+- `WebGPU.md` GPU eligibility flow → "Valid diagram".
+- `SKILL.md` workflow + decision tree → "Valid diagram" (×2).
 - `npx prettier --check/write` → all touched Markdown/TypeScript files formatted.
 - `validate-plan-phase-packets.mjs --json --plan=plans/Chrome_MCP_Browser_Tests.plans.md`
   → PASS (0 errors, 0 warnings).

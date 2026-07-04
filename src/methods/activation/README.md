@@ -6,7 +6,7 @@ Runtime registry of built-in and custom activation functions.
 
 Without a non-linear activation at each neuron, a network of any depth
 collapses to a single affine transformation — it could be replaced by one
-layer. Activation functions are the source of *representational power*: they
+layer. Activation functions are the source of _representational power_: they
 let stacked layers compose non-linear features that no linear model can
 capture.
 
@@ -58,7 +58,7 @@ for a broader survey of the design space and historical progression.
 Runtime registry of built-in and custom activation functions.
 
 The chosen activation function determines what each neuron in the network
-can *represent* — whether it can learn smooth boundaries, sparse features,
+can _represent_ — whether it can learn smooth boundaries, sparse features,
 periodic patterns, or gated on/off signals. In NEAT, the evolutionary
 controller can assign different activations to different nodes, so this
 registry is the complete vocabulary of expressible neuron behaviors.
@@ -79,7 +79,7 @@ gelu(x)      ≈ x · Φ(x)                 Gaussian CDF gating
 The derivative of each activation function determines how gradient
 information flows backward through the network during training. Saturating
 functions (`logistic`, `tanh`) have vanishingly small derivatives far from
-the origin — this is the *vanishing gradient problem* that motivated
+the origin — this is the _vanishing gradient problem_ that motivated
 ReLU-family activations. See Wikipedia contributors,
 [Vanishing gradient problem](https://en.wikipedia.org/wiki/Vanishing_gradient_problem),
 for the historical context.
@@ -212,6 +212,7 @@ default hidden-layer choice, but it can be useful in experiments where the
 intensity of a signal matters more than whether it was positive or negative.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -262,6 +263,7 @@ organized around reusable transfer-curve families instead of separate forward
 and derivative tables.
 
 Parameters:
+
 - `inputValue` - Input to the activation function.
 - `shouldComputeDerivative` - Whether to compute the derivative instead of the value.
 
@@ -283,6 +285,7 @@ non-linearity near the origin. It is useful when pure identity feels too weak
 but a strongly saturating activation would distort the signal too early.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -304,6 +307,7 @@ This is the sign-function version of a hard classifier: values collapse to
 diagnostic contrast against smoother bounded activations.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -325,6 +329,7 @@ it is another route to a tanh-like curve, but the explicit bipolar naming is
 helpful when comparing older NEAT-era literature or porting legacy settings.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -346,6 +351,7 @@ which makes them useful when you want a node to behave more like a localized
 detector than a broad monotonic amplifier.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -368,6 +374,7 @@ approximation, which is fast enough for ordinary training code while staying
 close to the exact GELU shape used in many transformer-era models.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -390,6 +397,7 @@ practical compromise when you want bounded outputs without paying for a full
 smooth tanh evaluation.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -411,6 +419,7 @@ common in regression-style output layers or in experiments where the upstream
 topology already provides the non-linearity and you only need a value relay.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -433,6 +442,7 @@ part of the method vocabulary's legacy and experimentation shelf rather than
 as a recommended first-choice default.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -455,6 +465,7 @@ activation to saturate if pre-activation values become too large in
 magnitude.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -478,6 +489,7 @@ strategy so the helper behaves sensibly in the far positive and negative
 tails.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -500,6 +512,7 @@ convention of returning `0` for the derivative at exactly `0`, even though
 the mathematical derivative is not uniquely defined there.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -523,6 +536,7 @@ whole hidden stack is designed around SELU rather than mixed casually with
 unrelated activation families.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -544,6 +558,7 @@ either the mathematically explicit `logistic` name or the more common
 deep-learning alias `sigmoid` without creating two separate implementations.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -565,6 +580,7 @@ sinusoidal response can encode cycles and phase relationships that ordinary
 squashing activations tend to smooth away.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -588,6 +604,7 @@ piecewise. The threshold checks keep the implementation numerically stable in
 the extreme tails.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -610,6 +627,7 @@ gradually, which can make it a useful comparison point when tanh feels too
 eager to saturate.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -631,6 +649,7 @@ negative from positive evidence, but its zero derivative almost everywhere
 makes it a poor default for gradient-based training.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -652,6 +671,7 @@ smoothly instead of snapping to zero as ReLU does. That makes it a useful
 comparison point when experimenting with smoother hidden-layer behavior.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 
@@ -673,6 +693,7 @@ zero-centered, which often makes hidden activations easier to interpret when
 positive and negative evidence should balance around zero.
 
 Parameters:
+
 - `inputValue` - Input to evaluate.
 - `shouldComputeDerivative` - Whether to compute the derivative.
 

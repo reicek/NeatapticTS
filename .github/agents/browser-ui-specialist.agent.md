@@ -77,7 +77,7 @@ Run `cortex-index` gate before searching for demo docs.
 
 ## If Blocked
 
-If blocked, return PARTIAL status with blocker description. Escalate to `00-helping` via `00.cross-tier-helper` if 3 consecutive attempts fail.
+If blocked, return PARTIAL status with blocker description. Continue retrying until the issue is resolved or a true technical limit is reached. Only escalate to `00-helping` via `00.cross-tier-helper` when a genuine, documented technical limit blocks further progress. No concessions.
 
 ## Output format
 

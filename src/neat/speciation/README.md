@@ -8,7 +8,7 @@ In a purely competitive population, a genome with a temporarily strong
 topology would rapidly clone itself and crowd out every structurally different
 solution. New topologies — which often need several generations to tune their
 weights — would be eliminated before they had a chance to prove useful. NEAT
-solves this with *speciation*: genomes are grouped by structural similarity,
+solves this with _speciation_: genomes are grouped by structural similarity,
 and fitness is shared within each group rather than globally. A new topology
 that scores below the population average still earns enough shared fitness to
 survive long enough to refine itself.
@@ -23,7 +23,7 @@ for the original motivation and formal definition.
 
 ## Compatibility Distance
 
-Two genomes belong to the same species when their *compatibility distance* δ
+Two genomes belong to the same species when their _compatibility distance_ δ
 falls below the current threshold:
 
 ```
@@ -54,7 +54,7 @@ helper chapters:
 The two-phase ownership matters: assignment and threshold tuning establish
 canonical species identity (which determines crossover alignment and replay
 semantics). The history and sharing stages are controller-policy overlays
-applied *after* grouping; they rewrite fitness views and bookkeeping without
+applied _after_ grouping; they rewrite fitness views and bookkeeping without
 changing identity or innovation-number alignment.
 
 ```mermaid
@@ -112,6 +112,7 @@ bookkeeping without immediately renormalizing scores, while others use
 sharing as a deliberate second pass after assignment has stabilized.
 
 Parameters:
+
 - `this` - Neat instance context with species array and compatibility distance function.
 
 Example:
@@ -140,6 +141,7 @@ Even though the implementation is tiny, the helper exists as a named boundary
 because multiple speciation flows need the same ordering rule.
 
 Parameters:
+
 - `species` - Species to sort.
 
 Example:
@@ -168,6 +170,7 @@ as selection, pruning, telemetry, and archive inspection can reason about a
 stable notion of species identity.
 
 Parameters:
+
 - `this` - Speciation harness context.
 
 Returns: Nothing.
@@ -201,6 +204,7 @@ and the other decides whether a species has stopped earning its place in the
 run.
 
 Parameters:
+
 - `this` - Neat instance context with species array and generation counter.
 
 Example:

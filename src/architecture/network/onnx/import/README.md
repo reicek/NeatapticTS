@@ -5,6 +5,7 @@ ONNX import orchestration for rebuilding a NeatapticTS runtime network.
 This file is the chapter-level tour guide for the import folder. The import
 path is intentionally staged so a reader can follow the same questions the
 runtime asks while restoring a model:
+
 1. What architecture should be rebuilt?
 2. Which runtime factories should own the scaffold?
 3. How do dense weights and activations map back onto nodes?
@@ -15,6 +16,7 @@ the flow file makes the generated folder README read like an import pipeline
 instead of an alphabetical pile of helper files.
 
 Example:
+
 ```ts
 const restored = runOnnxImportFlow(onnxModel);
 const output = restored.activate([0.2, 0.8]);
@@ -33,11 +35,13 @@ runExternalOnnxImportFlow(
 Execute the external binary ONNX import flow for the first supported dense lane.
 
 High-level behavior:
- 1. Decode and normalize one accepted binary `ModelProto` into an importer-owned dense chain.
- 2. Fold that chain into the JSON-first model shape used by the existing import flow.
- 3. Reuse the same reconstruction pipeline to build the runtime network.
+
+1.  Decode and normalize one accepted binary `ModelProto` into an importer-owned dense chain.
+2.  Fold that chain into the JSON-first model shape used by the existing import flow.
+3.  Reuse the same reconstruction pipeline to build the runtime network.
 
 Parameters:
+
 - `binaryModel` - Binary `ModelProto` payload.
 
 Returns: Reconstructed network instance.
@@ -53,11 +57,13 @@ runOnnxImportFlow(
 Execute the complete ONNX import flow and reconstruct a runtime network.
 
 High-level behavior:
- 1. Extract architecture dimensions and build a perceptron scaffold.
- 2. Restore dense parameters and activation functions.
- 3. Reconstruct recurrent/pooling metadata and rebuild connection caches.
+
+1.  Extract architecture dimensions and build a perceptron scaffold.
+2.  Restore dense parameters and activation functions.
+3.  Reconstruct recurrent/pooling metadata and rebuild connection caches.
 
 Parameters:
+
 - `onnx` - ONNX-like model payload to reconstruct.
 
 Returns: Reconstructed network instance.
@@ -71,6 +77,7 @@ flow uses to rebuild a perceptron scaffold and attach recurrent layer
 constructors without making the parser own a hard-coded constructor shape.
 
 Example:
+
 ```ts
 const runtimeFactories: OnnxRuntimeFactories = {
   perceptronFactory,
@@ -127,6 +134,7 @@ buildPerceptronNetwork(
 Build a perceptron network from size-extraction context.
 
 Parameters:
+
 - `buildContext` - Perceptron build context.
 
 Returns: Reconstructed network instance.
@@ -142,6 +150,7 @@ createPerceptronBuildContext(
 Build perceptron-network construction context.
 
 Parameters:
+
 - `sizes` - Layer-size payload.
 
 Returns: Build context.
@@ -167,6 +176,7 @@ createPerceptronSizeValidationContext(
 Build perceptron-size validation context.
 
 Parameters:
+
 - `sizes` - Layer-size payload.
 
 Returns: Validation context.
@@ -193,6 +203,7 @@ foldRuntimeFactories(
 Fold runtime perceptron and layer module into a transport payload.
 
 Parameters:
+
 - `perceptronFactory` - Perceptron factory function.
 - `layerModule` - Runtime recurrent-layer constructors.
 
@@ -210,6 +221,7 @@ foldRuntimeLayerModule(
 Fold LSTM/GRU factories into a runtime layer module payload.
 
 Parameters:
+
 - `lstmFactory` - Runtime LSTM layer factory.
 - `gruFactory` - Runtime GRU layer factory.
 
@@ -236,6 +248,7 @@ resolveLayerFactory(
 Resolve one runtime layer factory by module key.
 
 Parameters:
+
 - `layerKey` - Runtime layer key.
 
 Returns: Matching layer factory.
@@ -251,6 +264,7 @@ validatePerceptronSizes(
 Validate perceptron size-list constraints.
 
 Parameters:
+
 - `validationContext` - Validation context.
 
 Returns: Nothing. Throws on invalid size-list.
@@ -269,6 +283,7 @@ read like a reconstruction guide instead of scattering the execution model
 across the root compatibility barrel.
 
 Example:
+
 ```ts
 const assignmentContext: OnnxImportWeightAssignmentContext = {
   onnx,
@@ -381,6 +396,7 @@ applyAggregatedLayerWeights(
 Apply aggregated dense tensor assignments for one layer.
 
 Parameters:
+
 - `aggregatedContext` - Aggregated assignment context.
 
 Returns: Nothing.
@@ -396,6 +412,7 @@ applyAggregatedNeuronAssignment(
 Apply aggregated dense row weights and bias for one target neuron.
 
 Parameters:
+
 - `neuronContext` - Aggregated neuron assignment context.
 
 Returns: Nothing.
@@ -411,6 +428,7 @@ applyConvCoordinateAssignment(
 Apply Conv bias and kernel weights for one output coordinate.
 
 Parameters:
+
 - `coordinateContext` - Conv coordinate assignment context.
 
 Returns: Nothing.
@@ -426,6 +444,7 @@ applyConvLayerReconstruction(
 Apply Conv reconstruction for one validated Conv layer context.
 
 Parameters:
+
 - `layerContext` - Conv layer context.
 
 Returns: Nothing.
@@ -441,6 +460,7 @@ applyDenseWeightAssignments(
 Apply dense/per-neuron assignments for all sorted layer indices.
 
 Parameters:
+
 - `assignmentContext` - Shared assignment context.
 
 Returns: Nothing.
@@ -456,6 +476,7 @@ applyOptionalConvReconstruction(
 Apply optional Conv2D reconstruction pass from metadata payloads.
 
 Parameters:
+
 - `assignmentContext` - Shared assignment context.
 
 Returns: Nothing.
@@ -471,6 +492,7 @@ applyPerNeuronAssignment(
 Apply one per-neuron weight vector and bias assignment.
 
 Parameters:
+
 - `perNeuronAssignmentContext` - Per-neuron assignment context.
 
 Returns: Nothing.
@@ -486,6 +508,7 @@ applyPerNeuronLayerWeights(
 Apply per-neuron tensor assignments for one layer.
 
 Parameters:
+
 - `perNeuronContext` - Per-neuron layer assignment context.
 
 Returns: Nothing.
@@ -501,6 +524,7 @@ assignConvKernelWeight(
 Assign one Conv kernel weight to the matching inbound neuron connection.
 
 Parameters:
+
 - `kernelAssignmentContext` - Conv kernel assignment context.
 
 Returns: Nothing.
@@ -517,6 +541,7 @@ assignLayerWeights(
 Assign one layer's weights using aggregated or per-neuron tensors.
 
 Parameters:
+
 - `initializerMap` - ONNX initializer map.
 - `nodePair` - Current/previous node slices.
 
@@ -546,6 +571,7 @@ buildConvLayerContext(
 Build one Conv layer reconstruction context.
 
 Parameters:
+
 - `params` - Conv context input params.
 
 Returns: Conv layer context when valid.
@@ -562,6 +588,7 @@ buildConvNeuronLinearIndex(
 Build flattened linear index for one Conv output coordinate.
 
 Parameters:
+
 - `coordinate` - Conv output coordinate.
 - `convSpec` - Conv mapping spec.
 
@@ -578,6 +605,7 @@ buildConvNodeSlices(
 Build Conv current/previous node slices for one layer context.
 
 Parameters:
+
 - `layerContext` - Conv layer context.
 
 Returns: Node slice payload.
@@ -593,6 +621,7 @@ buildConvTensorContext(
 Build validated Conv tensor context for one layer.
 
 Parameters:
+
 - `layerContext` - Conv layer context.
 
 Returns: Conv tensor context when valid.
@@ -609,6 +638,7 @@ buildHiddenLayerSizesFromBuckets(
 Build hidden-layer sizes from weight buckets while excluding output layer.
 
 Parameters:
+
 - `layerWeightBuckets` - Layer-weight buckets.
 - `sortedLayerIndices` - Ascending layer indices.
 
@@ -625,6 +655,7 @@ buildInboundConnectionMap(
 Build inbound connection lookup map for one neuron.
 
 Parameters:
+
 - `neuronInternal` - Neuron internals.
 
 Returns: Inbound connection map keyed by source node.
@@ -641,6 +672,7 @@ buildInitializerMap(
 Build ONNX initializer map keyed by tensor name.
 
 Parameters:
+
 - `initializers` - ONNX initializer list.
 
 Returns: Tensor map by name.
@@ -656,6 +688,7 @@ buildInputCoordinate(
 Build input-space coordinate for one Conv kernel element.
 
 Parameters:
+
 - `kernelAssignmentContext` - Conv kernel assignment context.
 
 Returns: Input coordinate when in bounds.
@@ -674,6 +707,7 @@ buildInputFeatureLinearIndex(
 Build linear feature index in input feature space.
 
 Parameters:
+
 - `convSpec` - Conv mapping spec.
 - `inChannelIndex` - Input channel index.
 - `inputRow` - Input row index.
@@ -693,6 +727,7 @@ buildLayerNodePair(
 Build current/previous node slices for one sequential import layer pass.
 
 Parameters:
+
 - `assignmentContext` - Shared assignment context.
 - `params` - Sequential traversal params.
 
@@ -709,6 +744,7 @@ buildLayerTensorNames(
 Build dense weight/bias tensor names for one layer index.
 
 Parameters:
+
 - `layerIndex` - Export layer index.
 
 Returns: Layer tensor names.
@@ -725,6 +761,7 @@ buildPerNeuronTensorNames(
 Build per-neuron tensor names for one layer and neuron index.
 
 Parameters:
+
 - `layerIndex` - Export layer index.
 - `neuronIndex` - Neuron index in layer.
 
@@ -741,6 +778,7 @@ buildWeightAssignmentContext(
 Build the shared assignment context for import weight restoration.
 
 Parameters:
+
 - `params` - Assignment context input params.
 
 Returns: Shared assignment context.
@@ -758,6 +796,7 @@ collectConvKernelCoordinates(
 Collect all kernel traversal coordinates for one Conv output position.
 
 Parameters:
+
 - `inChannels` - Input channel count.
 - `kernelHeight` - Kernel height.
 - `kernelWidth` - Kernel width.
@@ -776,6 +815,7 @@ collectConvOutputCoordinates(
 Collect all output traversal coordinates for one Conv layer.
 
 Parameters:
+
 - `convSpec` - Conv mapping spec.
 - `outChannels` - Output channel count.
 
@@ -792,6 +832,7 @@ collectLayerWeightBuckets(
 Collect ONNX weight tensor buckets grouped by export layer index.
 
 Parameters:
+
 - `initializers` - ONNX initializer tensors.
 
 Returns: Layer-weight buckets keyed by export layer index.
@@ -808,6 +849,7 @@ collectNodesByType(
 Collect nodes by runtime node type discriminator.
 
 Parameters:
+
 - `nodes` - Network nodes.
 - `nodeType` - Runtime node type.
 
@@ -824,6 +866,7 @@ collectSortedLayerIndices(
 Collect sorted layer indices from weight buckets.
 
 Parameters:
+
 - `layerWeightBuckets` - Layer-weight buckets.
 
 Returns: Ascending export layer indices.
@@ -839,6 +882,7 @@ collectSortedUniqueLayerIndices(
 Collect unique sorted layer indices from initializer weight tensors.
 
 Parameters:
+
 - `initializerMap` - Initializer map keyed by tensor name.
 
 Returns: Unique sorted layer indices.
@@ -855,6 +899,7 @@ deriveHiddenLayerSizes(
 Derive hidden-layer sizes from ONNX weight initializers in export order.
 
 Parameters:
+
 - `initializers` - ONNX initializer tensors.
 - `metadataProps` - Optional ONNX metadata properties.
 
@@ -871,6 +916,7 @@ hasAggregatedLayerWeights(
 Determine whether the layer has aggregated weight tensor data.
 
 Parameters:
+
 - `aggregatedContext` - Aggregated assignment context.
 
 Returns: True when aggregated tensor exists.
@@ -897,6 +943,7 @@ parseConvMetadata(
 Parse Conv reconstruction metadata payload.
 
 Parameters:
+
 - `metadataProps` - ONNX metadata properties.
 
 Returns: Parsed Conv metadata.
@@ -912,6 +959,7 @@ parseLayerIndexFromWeightTensor(
 Parse layer index from dense/per-neuron weight tensor name.
 
 Parameters:
+
 - `tensorName` - Tensor name.
 
 Returns: Parsed layer index or null.
@@ -927,6 +975,7 @@ parseMetadataLayerSizes(
 Parse explicit metadata-driven hidden layer sizes.
 
 Parameters:
+
 - `metadataProps` - ONNX metadata properties.
 
 Returns: Parsed hidden layer sizes when available.
@@ -952,6 +1001,7 @@ parseWeightTensorName(
 Parse layer/neuron components from a weight tensor name.
 
 Parameters:
+
 - `tensorName` - Tensor name.
 
 Returns: Parsed layer+neuron components when matched.
@@ -967,6 +1017,7 @@ readConvKernelWeight(
 Read one Conv kernel weight from flattened ONNX tensor payload.
 
 Parameters:
+
 - `kernelAssignmentContext` - Conv kernel assignment context.
 
 Returns: Kernel weight.
@@ -982,6 +1033,7 @@ resetInboundConnectionWeights(
 Reset all inbound weights so Conv reconstruction can write only receptive edges.
 
 Parameters:
+
 - `neuronInternal` - Target neuron internals.
 
 Returns: Nothing.
@@ -998,6 +1050,7 @@ resolveCurrentLayerNodes(
 Resolve current layer nodes for one sequential layer assignment pass.
 
 Parameters:
+
 - `assignmentContext` - Shared assignment context.
 - `params` - Sequential traversal params.
 
@@ -1015,6 +1068,7 @@ resolveLayerHiddenSize(
 Resolve one hidden-layer size from its weight bucket.
 
 Parameters:
+
 - `layerWeightBuckets` - Layer-weight buckets.
 - `layerIndex` - Export layer index.
 
@@ -1032,6 +1086,7 @@ resolvePreviousLayerNodes(
 Resolve previous layer nodes for one sequential layer assignment pass.
 
 Parameters:
+
 - `assignmentContext` - Shared assignment context.
 - `params` - Sequential traversal params.
 
@@ -1049,6 +1104,7 @@ sumHiddenSizesToIndex(
 Sum hidden-layer sizes from index `0` to `exclusiveEndIndex`.
 
 Parameters:
+
 - `hiddenLayerSizes` - Hidden-layer size list.
 - `exclusiveEndIndex` - Exclusive end index.
 
@@ -1069,6 +1125,7 @@ appendOperationToLayer(
 Append one operation to the lookup bucket for a layer.
 
 Parameters:
+
 - `operationsByLayer` - Layer-indexed operation lookup.
 - `layerIndex` - Export-layer index.
 - `operation` - Supported activation operation.
@@ -1086,6 +1143,7 @@ applyHiddenLayerActivations(
 Apply imported activation operations to hidden layer nodes.
 
 Parameters:
+
 - `context` - Shared assignment context.
 
 Returns: Nothing.
@@ -1101,6 +1159,7 @@ applyHiddenLayerTraversalActivation(
 Apply activation operations for one hidden-layer traversal context.
 
 Parameters:
+
 - `traversalContext` - Hidden-layer traversal context.
 
 Returns: Nothing.
@@ -1116,6 +1175,7 @@ applyHiddenLayerTraversalContexts(
 Apply hidden-layer activation assignment for each traversal context.
 
 Parameters:
+
 - `traversalContexts` - Ordered hidden-layer traversal contexts.
 
 Returns: Nothing.
@@ -1132,6 +1192,7 @@ applyHiddenNeuronActivation(
 Apply one hidden neuron activation if the target node exists.
 
 Parameters:
+
 - `traversalContext` - Hidden-layer traversal context.
 - `neuronIndex` - Neuron index in current hidden layer.
 
@@ -1148,6 +1209,7 @@ applyOutputLayerActivation(
 Apply imported activation to all output nodes.
 
 Parameters:
+
 - `context` - Shared assignment context.
 
 Returns: Nothing.
@@ -1163,6 +1225,7 @@ asNodeInternals(
 Cast one public node instance to runtime node internals.
 
 Parameters:
+
 - `node` - Source node object.
 
 Returns: Runtime node internals.
@@ -1180,6 +1243,7 @@ assignActivationFunctions(
 Assign runtime node activation functions from ONNX activation graph operations.
 
 Parameters:
+
 - `network` - Target network to mutate.
 - `onnx` - Source ONNX model.
 - `hiddenLayerSizes` - Hidden layer size list.
@@ -1197,6 +1261,7 @@ asSupportedActivationOperation(
 Convert an ONNX op type to a supported activation operation.
 
 Parameters:
+
 - `operationName` - ONNX graph node operation type.
 
 Returns: Supported activation operation or null when unsupported.
@@ -1214,6 +1279,7 @@ buildActivationAssignmentContext(
 Build immutable assignment context for hidden/output activation import.
 
 Parameters:
+
 - `sourceNetwork` - Target network to mutate.
 - `sourceOnnx` - Source ONNX model.
 - `sourceHiddenLayerSizes` - Hidden layer widths in export order.
@@ -1231,6 +1297,7 @@ buildHiddenLayerTraversalContexts(
 Build traversal contexts for each hidden layer.
 
 Parameters:
+
 - `context` - Shared assignment context.
 
 Returns: Ordered hidden-layer traversal contexts.
@@ -1246,6 +1313,7 @@ buildHiddenNeuronIndices(
 Build contiguous hidden-neuron index list for one layer.
 
 Parameters:
+
 - `hiddenLayerSize` - Hidden-layer width.
 
 Returns: Ordered neuron indices.
@@ -1262,6 +1330,7 @@ collectNodeInternalsByType(
 Collect node internals by runtime node type.
 
 Parameters:
+
 - `sourceNetwork` - Network with runtime nodes.
 - `targetType` - Runtime node type to collect.
 
@@ -1278,6 +1347,7 @@ collectOperationsByLayer(
 Collect ONNX activation operations grouped by export-layer index.
 
 Parameters:
+
 - `sourceOnnx` - Source ONNX model.
 
 Returns: Layer-indexed activation operation lookup.
@@ -1293,6 +1363,7 @@ parseActivationNode(
 Parse one ONNX activation node name.
 
 Parameters:
+
 - `nodeName` - ONNX graph node name.
 
 Returns: Parsed layer/neuron metadata or null when not a supported activation node.
@@ -1308,6 +1379,7 @@ resolveActivationFunction(
 Resolve runtime activation function from operation context.
 
 Parameters:
+
 - `context` - Operation-resolution context.
 
 Returns: Runtime activation function.
@@ -1324,6 +1396,7 @@ resolveHiddenNode(
 Resolve one hidden node by traversal/offset metadata.
 
 Parameters:
+
 - `traversalContext` - Hidden-layer traversal context.
 - `neuronIndex` - Neuron index in current hidden layer.
 
@@ -1340,6 +1413,7 @@ resolveLayerOperations(
 Resolve operations list for one hidden layer.
 
 Parameters:
+
 - `traversalContext` - Hidden-layer traversal context.
 
 Returns: Ordered operations for target export layer.
@@ -1355,6 +1429,7 @@ resolveOperationByPriority(
 Resolve activation operation by neuron-first then layer-default fallback.
 
 Parameters:
+
 - `context` - Operation-resolution context.
 
 Returns: Supported activation operation.
@@ -1370,6 +1445,7 @@ resolveOutputOperations(
 Resolve output-layer operations from shared lookup.
 
 Parameters:
+
 - `context` - Output-layer assignment context.
 
 Returns: Ordered output-layer operations.
@@ -1472,6 +1548,7 @@ applyLayerSelfConnections(
 Apply one hidden layer diagonal recurrent self-weights.
 
 Parameters:
+
 - `layerConnectionContext` - Layer connection context.
 
 Returns: Nothing.
@@ -1494,6 +1571,7 @@ the exporter detected so later residual, concat, and attention passes have a
 deterministic seam to reuse.
 
 Parameters:
+
 - `network` - Target network.
 - `metadata` - ONNX metadata.
 
@@ -1512,6 +1590,7 @@ Attach optional pooling metadata from ONNX model to network instance.
 The importer keeps pooling metadata as additive diagnostics state so later runtime or visualization tooling can reason about spatial stages without modifying core graph wiring.
 
 Parameters:
+
 - `network` - Target network.
 - `metadata` - ONNX metadata.
 
@@ -1529,6 +1608,7 @@ attachParsedPoolingMetadata(
 Attach parsed pooling metadata to imported network instance.
 
 Parameters:
+
 - `network` - Target network.
 - `poolingMetadata` - Parsed pooling metadata payload.
 
@@ -1545,6 +1625,7 @@ buildArchitectureContext(
 Build architecture extraction context from ONNX graph state.
 
 Parameters:
+
 - `onnx` - Source ONNX model.
 
 Returns: Normalized architecture extraction context.
@@ -1560,6 +1641,7 @@ buildHiddenLayerSpans(
 Build hidden-layer spans with one-based layer numbering and global offsets.
 
 Parameters:
+
 - `hiddenLayerSizes` - Hidden-layer size list.
 
 Returns: Hidden-layer span payload list.
@@ -1588,6 +1670,7 @@ buildVirtualPoolingShape(
 Build one virtual pooled shape from the pre-pool Conv output shape.
 
 Parameters:
+
 - `poolingSpec` - Pool metadata describing the virtual pooling step.
 - `convSpec` - Conv metadata describing the pre-pool spatial shape.
 - `flattenLayerSet` - Layer indices marked with flatten-after-pool metadata.
@@ -1609,6 +1692,7 @@ calculateSpatialOutputSize(
 Calculate one pooled spatial output size from kernel, stride, and padding metadata.
 
 Parameters:
+
 - `inputSize` - Pre-pool spatial size.
 - `kernelSize` - Pool kernel size.
 - `strideSize` - Pool stride size.
@@ -1628,6 +1712,7 @@ collectAvailableConvSpecs(
 Collect explicit and inferred Conv specs that can anchor pooling shape simulation.
 
 Parameters:
+
 - `metadata` - ONNX metadata entries.
 
 Returns: Layer-indexed Conv specs, preferring explicit specs over inferred ones.
@@ -1644,6 +1729,7 @@ collectDiagonalRecurrentWeights(
 Collect diagonal recurrent weights from flattened layer tensor data.
 
 Parameters:
+
 - `recurrentTensorWeights` - Flattened recurrent tensor weights.
 - `hiddenLayerSize` - Hidden-layer width.
 
@@ -1662,6 +1748,7 @@ collectFlattenConsistencyAudit(
 Collect flatten-consistency audit records for virtual pooled shapes with flatten metadata.
 
 Parameters:
+
 - `virtualShapes` - Derived virtual pooled shapes.
 - `hiddenLayerSizes` - Hidden-layer widths from ONNX metadata.
 - `outputCount` - Imported output width.
@@ -1680,6 +1767,7 @@ collectFusedRecurrentGateWeights(
 Collect diagonal recurrent weights from the recurrent gate block inside a fused tensor.
 
 Parameters:
+
 - `recurrentTensorWeights` - Flattened fused recurrent tensor weights.
 - `unitSize` - Fused recurrent unit size.
 
@@ -1697,6 +1785,7 @@ collectNodesByType(
 Collect nodes matching one runtime node-type discriminator.
 
 Parameters:
+
 - `nodes` - Node list.
 - `nodeType` - Runtime node type.
 
@@ -1713,6 +1802,7 @@ collectPerceptronBoundaryNodes(
 Collect input and output boundary nodes for perceptron imports.
 
 Parameters:
+
 - `nodes` - Full network node list.
 
 Returns: Input/output-only node list.
@@ -1728,6 +1818,7 @@ collectRecurrentLayerSpans(
 Resolve recurrent-target hidden-layer spans from metadata + hidden sizes.
 
 Parameters:
+
 - `restorationContext` - Recurrent restoration context.
 
 Returns: Hidden-layer spans requiring recurrent restoration.
@@ -1745,6 +1836,7 @@ collectVirtualPoolingShapes(
 Derive virtual pooled shapes from Conv and Pool metadata without changing weights.
 
 Parameters:
+
 - `poolingSpecs` - Imported pooling metadata specs.
 - `convSpecs` - Available explicit/inferred Conv specs.
 - `flattenLayers` - Layer indices marked with flatten-after-pool metadata.
@@ -1763,6 +1855,7 @@ Extract input/output counts and hidden layer sizes from ONNX model.
 This architecture probe normalizes graph terminal dimensions and initializer-derived hidden spans into one deterministic result contract used by all downstream reconstruction passes.
 
 Parameters:
+
 - `onnx` - Source ONNX model.
 
 Returns: Parsed architecture dimensions.
@@ -1778,6 +1871,7 @@ findFusedRecurrentInitializer(
 Resolve a fused recurrent tensor for one hidden-layer span when generic `Rk` is absent.
 
 Parameters:
+
 - `layerConnectionContext` - Layer connection context.
 
 Returns: Matching fused recurrent tensor when present.
@@ -1794,6 +1888,7 @@ findMetadataProperty(
 Find one ONNX metadata property by key.
 
 Parameters:
+
 - `metadata` - ONNX metadata array.
 - `metadataKey` - Metadata key.
 
@@ -1810,6 +1905,7 @@ findRecurrentInitializer(
 Resolve recurrent initializer tensor for one hidden-layer span.
 
 Parameters:
+
 - `layerConnectionContext` - Layer connection context.
 
 Returns: Recurrent initializer tensor when available.
@@ -1826,6 +1922,7 @@ inferRecurrentLayerIndicesFromInitializers(
 Infer recurrent layer indices from plain recurrent tensors when metadata is absent.
 
 Parameters:
+
 - `hiddenLayerSizes` - Hidden-layer size list used to bound valid layer indices.
 - `onnx` - Source ONNX model.
 
@@ -1842,6 +1939,7 @@ isAdvancedGraphCrossLayerConnection(
 Validate one parsed cross-layer audit record.
 
 Parameters:
+
 - `value` - Parsed JSON value.
 
 Returns: Whether the value matches the expected metadata shape.
@@ -1887,6 +1985,7 @@ isSingleLayerPerceptronImport(
 Determine whether import shape corresponds to a single-layer perceptron.
 
 Parameters:
+
 - `hiddenLayerSizes` - Hidden-layer size list.
 
 Returns: True when no hidden layers exist.
@@ -1902,6 +2001,7 @@ normalizeRecurrentLayerIndices(
 Normalize recurrent layer indices parsed from metadata JSON.
 
 Parameters:
+
 - `parsedMetadataValue` - Parsed metadata JSON value.
 
 Returns: Recurrent layer indices.
@@ -1928,6 +2028,7 @@ parseAdvancedGraphMetadata(
 Parse advanced-graph cross-layer metadata from ONNX metadata.
 
 Parameters:
+
 - `metadata` - ONNX metadata entries.
 
 Returns: Parsed advanced-graph metadata, or null when absent or invalid.
@@ -1955,6 +2056,7 @@ parseOptionalConvSpecs(
 Parse one optional Conv spec metadata field.
 
 Parameters:
+
 - `metadata` - ONNX metadata entries.
 - `metadataKey` - Metadata key carrying Conv spec JSON.
 
@@ -1972,6 +2074,7 @@ parseOptionalLayerIndicesMetadata(
 Parse one optional layer-index metadata field.
 
 Parameters:
+
 - `metadata` - ONNX metadata entries.
 - `metadataKey` - Metadata key carrying a JSON array of layer indices.
 
@@ -1989,6 +2092,7 @@ parsePoolingMetadata(
 Parse pooling metadata payload from ONNX metadata.
 
 Parameters:
+
 - `metadata` - ONNX metadata entries.
 
 Returns: Parsed pooling metadata payload.
@@ -2004,6 +2108,7 @@ parseRecurrentLayerIndices(
 Parse recurrent layer indices metadata.
 
 Parameters:
+
 - `rawMetadataValue` - Raw metadata JSON string.
 
 Returns: Normalized recurrent layer indices.
@@ -2040,6 +2145,7 @@ pruneSingleLayerHiddenPlaceholders(
 Remove placeholder hidden nodes that arise from single-layer perceptron imports.
 
 Parameters:
+
 - `network` - Target network.
 - `hiddenLayerSizes` - Hidden layer sizes.
 
@@ -2056,6 +2162,7 @@ readLastDimensionValue(
 Read the terminal ONNX shape dimension value from one shape array.
 
 Parameters:
+
 - `dimensions` - ONNX shape dimensions.
 
 Returns: Terminal `dim_value` payload.
@@ -2087,6 +2194,7 @@ resolveConsumerLayerWidth(
 Resolve the width of the next dense consumer after one flattened pooling site.
 
 Parameters:
+
 - `consumerLayerIndex` - One-based export-layer index for the next dense consumer.
 - `hiddenLayerSizes` - Hidden-layer widths from ONNX metadata.
 - `outputCount` - Imported output width.
@@ -2106,6 +2214,7 @@ resolveRecurrentLayerIndices(
 Resolve recurrent layer indices from ONNX metadata.
 
 Parameters:
+
 - `metadata` - ONNX metadata payload.
 
 Returns: Parsed recurrent layer indices.
@@ -2154,6 +2263,7 @@ exporter recorded both the residual merge intent and the exact cross-layer
 edge list, and when the residual branch tensor is still present.
 
 Parameters:
+
 - `network` - Target network.
 - `onnx` - Source ONNX model.
 - `hiddenLayerSizes` - Hidden layer sizes from architecture extraction.
@@ -2186,6 +2296,7 @@ sliceLayerHiddenNodes(
 Slice hidden nodes for one hidden-layer span.
 
 Parameters:
+
 - `layerConnectionContext` - Layer connection context.
 
 Returns: Hidden nodes belonging to the span.
@@ -2213,6 +2324,7 @@ upsertSelfConnection(
 Upsert one node self-connection for recurrent import restoration.
 
 Parameters:
+
 - `selfConnectionContext` - Self-connection upsert context.
 
 Returns: Nothing.
@@ -2282,6 +2394,7 @@ applyGateWeights(
 Apply imported gate parameters to a reconstructed fused layer.
 
 Parameters:
+
 - `context` - Gate application context.
 
 Returns: Nothing.
@@ -2297,6 +2410,7 @@ assignGateRow(
 Assign one gate-neuron row parameters.
 
 Parameters:
+
 - `context` - Gate-row assignment context.
 
 Returns: Nothing.
@@ -2313,6 +2427,7 @@ assignIncomingWeightAtColumn(
 Assign one incoming connection weight by source-column index.
 
 Parameters:
+
 - `context` - Incoming-weight assignment context.
 - `columnIndex` - Source column index.
 
@@ -2329,6 +2444,7 @@ assignIncomingWeights(
 Assign dense incoming weights for one gate neuron.
 
 Parameters:
+
 - `context` - Incoming-weight assignment context.
 
 Returns: Nothing.
@@ -2344,6 +2460,7 @@ assignRecurrentDiagonalWeight(
 Assign one recurrent diagonal self-weight.
 
 Parameters:
+
 - `context` - Gate-row assignment context.
 
 Returns: Nothing.
@@ -2361,6 +2478,7 @@ Assign one recurrent incoming weight from the native GRU previous-output
 carrier into the current gate neuron.
 
 Parameters:
+
 - `context` - Gate-row assignment context.
 - `columnIndex` - Recurrent source column index.
 
@@ -2377,6 +2495,7 @@ assignRecurrentWeights(
 Assign recurrent weights for one fused gate row.
 
 Parameters:
+
 - `context` - Gate-row assignment context.
 
 Returns: Nothing.
@@ -2394,6 +2513,7 @@ buildContiguousGateGroups(
 Build contiguous gate groups from one fused node list.
 
 Parameters:
+
 - `fusedNodes` - Fused node list.
 - `gateOrder` - Gate order.
 - `unitSize` - Units per gate.
@@ -2413,6 +2533,7 @@ createFusedLayerRuntime(
 Create one fused recurrent runtime layer instance.
 
 Parameters:
+
 - `layerFactory` - Dynamic layer module.
 - `spec` - Fused family spec.
 - `unitSize` - Unit count.
@@ -2441,6 +2562,7 @@ createHiddenLayerRange(
 Create hidden-range boundaries for one hidden-layer index.
 
 Parameters:
+
 - `hiddenLayerSizes` - Hidden-layer widths.
 - `hiddenLayerIndex` - Hidden-layer index.
 
@@ -2461,6 +2583,7 @@ Create an immutable spliced copy, with a compatibility fallback when ES2023
 `toSpliced` is typed as optional in ambient declarations.
 
 Parameters:
+
 - `source` - Source array.
 - `start` - Start index.
 - `deleteCount` - Number of removed items.
@@ -2480,6 +2603,7 @@ Create a source group compatible with both runtime Layer input wiring and
 the existing mock fused-layer tests.
 
 Parameters:
+
 - `previousLayerNodes` - Previous-layer node slice.
 
 Returns: Group-like source wrapper.
@@ -2497,6 +2621,7 @@ deriveLayerNeighborhood(
 Derive hidden-layer neighborhood slices for replacement traversal.
 
 Parameters:
+
 - `network` - Target network.
 - `hiddenLayerSizes` - Hidden-layer widths.
 - `hiddenLayerIndex` - Hidden-layer index.
@@ -2517,6 +2642,7 @@ deriveNextLayerNodes(
 Derive next-layer nodes for a hidden layer.
 
 Parameters:
+
 - `network` - Target network.
 - `hiddenLayerSizes` - Hidden-layer widths.
 - `hiddenLayerIndex` - Hidden-layer index.
@@ -2538,6 +2664,7 @@ derivePreviousLayerNodes(
 Derive previous-layer nodes for a hidden layer.
 
 Parameters:
+
 - `network` - Target network.
 - `hiddenLayerSizes` - Hidden-layer widths.
 - `hiddenLayerIndex` - Hidden-layer index.
@@ -2557,6 +2684,7 @@ deriveUnitSize(
 Derive hidden unit size from recurrent row count and gate count.
 
 Parameters:
+
 - `rows` - Recurrent rows.
 - `gateCount` - Gate count.
 
@@ -2574,6 +2702,7 @@ detachOldLayerConnections(
 Detach all connections touching replaced hidden-layer nodes.
 
 Parameters:
+
 - `network` - Target network.
 - `neighborhood` - Layer neighborhood.
 
@@ -2591,6 +2720,7 @@ filterNodesByType(
 Filter network nodes by semantic type.
 
 Parameters:
+
 - `network` - Target network.
 - `nodeType` - Node type name.
 
@@ -2610,6 +2740,7 @@ findInitializerTensor(
 Find one initializer tensor by fused family naming convention.
 
 Parameters:
+
 - `onnx` - Source ONNX model.
 - `kind` - Fused family kind.
 - `suffix` - Tensor suffix.
@@ -2629,6 +2760,7 @@ isValidHiddenLayerIndex(
 Validate hidden-layer index boundaries.
 
 Parameters:
+
 - `hiddenLayerSizes` - Hidden-layer widths.
 - `hiddenLayerIndex` - Hidden-layer index.
 
@@ -2646,6 +2778,7 @@ parseEmittedLayerIndices(
 Parse exported layer indices from metadata for one fused family.
 
 Parameters:
+
 - `metadata` - ONNX metadata properties.
 - `spec` - Fused family spec.
 
@@ -2662,6 +2795,7 @@ parseMetadataJsonArray(
 Parse metadata JSON payload as an array of indices.
 
 Parameters:
+
 - `metadataValue` - Serialized metadata payload.
 
 Returns: Parsed index array.
@@ -2678,6 +2812,7 @@ reconstructAllFusedFamilies(
 Reconstruct all fused recurrent families declared by metadata.
 
 Parameters:
+
 - `scope` - Import scope.
 - `specs` - Fused family specs.
 
@@ -2709,6 +2844,7 @@ reconstructOneFusedFamily(
 Reconstruct one fused family across all emitted layer indices.
 
 Parameters:
+
 - `scope` - Import scope.
 - `spec` - Fused family spec.
 
@@ -2726,6 +2862,7 @@ reconstructOneFusedLayer(
 Reconstruct one fused layer from metadata and ONNX initializers.
 
 Parameters:
+
 - `scope` - Import scope.
 - `context` - Layer reconstruction context.
 
@@ -2744,6 +2881,7 @@ replaceHiddenNodes(
 Replace hidden node segment with reconstructed fused layer nodes.
 
 Parameters:
+
 - `network` - Target network.
 - `neighborhood` - Layer neighborhood.
 - `replacementNodes` - Replacement nodes.
@@ -2762,6 +2900,7 @@ resolveFusedTensors(
 Resolve ONNX fused tensors for one hidden layer.
 
 Parameters:
+
 - `onnx` - Source ONNX model.
 - `context` - Layer reconstruction context.
 
@@ -2780,6 +2919,7 @@ resolveGateGroups(
 Resolve gate groups and recurrent source nodes from one fused runtime layout.
 
 Parameters:
+
 - `fusedNodes` - Fused node list.
 - `spec` - Fused family specification.
 - `unitSize` - Units per gate.
@@ -2799,6 +2939,7 @@ Resolve GRU gate groups for either the native six-group layout or the
 compact three-gate mock layout used by owner-local tests.
 
 Parameters:
+
 - `fusedNodes` - Fused node list.
 - `unitSize` - Units per gate.
 
@@ -2817,6 +2958,7 @@ sumHiddenLayerSizes(
 Sum hidden-layer sizes over a half-open range.
 
 Parameters:
+
 - `hiddenLayerSizes` - Hidden-layer widths.
 - `startIndex` - Inclusive start.
 - `endIndex` - Exclusive end.
@@ -2834,6 +2976,7 @@ toHiddenLayerIndex(
 Convert export-layer index to hidden-layer index.
 
 Parameters:
+
 - `exportLayerIndex` - Export-layer index.
 
 Returns: Hidden-layer index.
@@ -2851,6 +2994,7 @@ wireFusedLayer(
 Wire fused layer between previous and next layer slices.
 
 Parameters:
+
 - `fusedLayerRuntime` - Reconstructed fused layer runtime.
 - `previousLayerNodes` - Previous-layer nodes.
 - `nextLayerNodes` - Next-layer nodes.
@@ -2942,6 +3086,7 @@ attachOnnxConcatMergeMetadata(
 Attach validated concat-merge audit metadata to an imported network instance.
 
 Parameters:
+
 - `network` - Target network.
 - `metadata` - ONNX metadata payload.
 - `onnx` - Source ONNX model used for same-family validation.
@@ -3068,6 +3213,7 @@ using the widened dense weight tensor tail while the ordinary adjacent-layer
 slice remains assigned by the baseline dense import path.
 
 Parameters:
+
 - `network` - Target network.
 - `onnx` - Source ONNX model.
 - `hiddenLayerSizes` - Hidden layer sizes from architecture extraction.
@@ -3112,6 +3258,7 @@ normalizeExternalBinaryOnnxModel(
 Normalize the first supported external binary ONNX subset into an importer-owned model.
 
 Parameters:
+
 - `binaryModel` - Binary `ModelProto` payload.
 
 Returns: Canonical JSON-first model that the existing import flow can reconstruct.
@@ -3127,6 +3274,7 @@ normalizeExternalDenseChain(
 Normalize the first supported external binary ONNX subset into a canonical dense chain.
 
 Parameters:
+
 - `binaryModel` - Binary `ModelProto` payload.
 
 Returns: Canonical dense-chain payload for importer reconstruction.

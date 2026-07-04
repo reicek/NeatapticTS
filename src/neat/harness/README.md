@@ -63,6 +63,7 @@ flowchart LR
 ```
 
 Practical reading order:
+
 1. Start with `LineageTrackedNetwork` when a test needs to inspect the
    metadata written onto a child genome.
 2. Continue to `NeatLineageHarness` when a test needs the minimal controller

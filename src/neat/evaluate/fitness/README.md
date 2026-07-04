@@ -56,6 +56,7 @@ nothing; if enabled, it applies the caller-provided clear action across the
 current population.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `evaluationOptions` - Options object for the current evaluation pass.
 - `clearAction` - Action that clears a genome's internal state.
@@ -84,6 +85,7 @@ Read this as the contract that converts "an evaluation delegate exists" into
 "the controller now has fresh scores to build on."
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `evaluationOptions` - Options object for the current evaluation pass.
 

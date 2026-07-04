@@ -11,9 +11,7 @@
     "neat.nge-juvenile.errors.ts",
     "neat.nge-juvenile.utils.ts"
   ],
-  "hiddenFiles": [
-    "neat.nge-juvenile.ts"
-  ],
+  "hiddenFiles": ["neat.nge-juvenile.ts"],
   "hiddenSymbols": [
     "applyEdgeDensify",
     "applyNodeAdd",

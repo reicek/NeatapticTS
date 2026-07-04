@@ -32,9 +32,9 @@
 ## Controls and evidence
 
 - Validation used:
-  - npx tsc --noEmit -p tsconfig.test.json
-  - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatChat/neatChat.test.ts
-  - npm run docs
+- npx tsc --noEmit -p tsconfig.test.json
+- npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatChat/neatChat.test.ts
+- npm run docs
 
 ## Reopen triggers
 

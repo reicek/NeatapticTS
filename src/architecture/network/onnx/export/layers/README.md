@@ -34,6 +34,7 @@ appendConvBiasInitializer(
 Append Conv bias initializer.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `convTensorNames` - Conv tensor names.
 - `biasValues` - Conv bias values.
@@ -51,6 +52,7 @@ appendConvExportMetadata(
 Append Conv export metadata entries.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Nothing.
@@ -68,6 +70,7 @@ appendConvWeightInitializer(
 Append Conv weight initializer.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `convTensorNames` - Conv tensor names.
 - `weightValues` - Conv weight values.
@@ -86,6 +89,7 @@ buildKernelCoordinatesForInputChannel(
 Build kernel coordinates for one input channel.
 
 Parameters:
+
 - `convSpec` - Conv mapping spec.
 - `inputChannelIndex` - Input channel index.
 
@@ -106,6 +110,7 @@ calculateSpatialOutputSize(
 Calculate one spatial output size from kernel, stride, and padding metadata.
 
 Parameters:
+
 - `inputSize` - Pre-op spatial size.
 - `kernelSize` - Kernel size.
 - `strideSize` - Stride size.
@@ -125,6 +130,7 @@ collectConvBiasValues(
 Collect Conv bias values from representative neurons.
 
 Parameters:
+
 - `representativeNeuronInternals` - Representative internals.
 
 Returns: Bias values.
@@ -140,6 +146,7 @@ collectConvParameters(
 Collect flattened Conv weights and biases.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Conv initializer parameters.
@@ -156,6 +163,7 @@ collectConvWeightValues(
 Collect flattened Conv weight values.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `representativeNeuronInternals` - Representative internals.
 
@@ -173,6 +181,7 @@ collectRepresentativeNeuronInternals(
 Collect representative neuron internals for each output channel.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `outputChannelIndices` - Output channel indices.
 
@@ -189,6 +198,7 @@ createConvPaddingValues(
 Create ONNX pads values for Conv node.
 
 Parameters:
+
 - `convSpec` - Conv mapping spec.
 
 Returns: Padding values in ONNX order.
@@ -204,6 +214,7 @@ createConvTensorNames(
 Create deterministic Conv parameter tensor names.
 
 Parameters:
+
 - `layerIndex` - Layer index.
 
 Returns: Conv tensor names.
@@ -219,6 +230,7 @@ createKernelCoordinates(
 Create all Conv kernel coordinates across input channels.
 
 Parameters:
+
 - `convSpec` - Conv mapping spec.
 
 Returns: Kernel coordinates.
@@ -234,6 +246,7 @@ createOutputChannelIndices(
 Create output channel index list.
 
 Parameters:
+
 - `convSpec` - Conv mapping spec.
 
 Returns: Output channel indices.
@@ -249,6 +262,7 @@ derivePooledTensorWidth(
 Fold one derived pooled input shape to its flattened width.
 
 Parameters:
+
 - `derivedPooledInputShape` - Derived pooled geometry.
 
 Returns: Flattened pooled tensor width.
@@ -266,6 +280,7 @@ emitActivationNode(
 Emit activation node for Conv output.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `convOutputName` - Conv output tensor name.
 - `activationOutputName` - Activation output tensor name.
@@ -284,6 +299,7 @@ emitConvAndActivationGraph(
 Emit Conv and activation nodes and return activation output name.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `convTensorNames` - Conv tensor names.
 
@@ -303,6 +319,7 @@ emitConvNode(
 Emit ONNX Conv node.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `convTensorNames` - Conv tensor names.
 - `convOutputName` - Conv output tensor name.
@@ -322,6 +339,7 @@ emitConvParameterInitializers(
 Emit Conv parameter initializers and return tensor names.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `convParameters` - Conv parameters.
 
@@ -339,6 +357,7 @@ emitFlattenReshapeBridge(
 Emit a reshape bridge that restores `[N,C,H,W]` input rank after flatten.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `flattenedPoolingShape` - Supported flattened pooled shape.
 
@@ -356,6 +375,7 @@ emitOptionalPoolingAndFlattenForConv(
 Emit optional pooling and flatten nodes for Conv output.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `activationOutputName` - Activation output name.
 
@@ -372,6 +392,7 @@ getActualPreviousTensorWidth(
 Resolve the actual graph-input width seen by this Conv layer.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Previous tensor width after optional pooling.
@@ -387,6 +408,7 @@ getExpectedCurrentWidth(
 Get expected current-layer width for Conv mapping.
 
 Parameters:
+
 - `convSpec` - Conv mapping spec.
 
 Returns: Expected current-layer width.
@@ -402,6 +424,7 @@ getExpectedPreviousWidth(
 Get expected previous-layer width for Conv mapping.
 
 Parameters:
+
 - `convSpec` - Conv mapping spec.
 
 Returns: Expected previous-layer width.
@@ -417,6 +440,7 @@ isConvShapeCompatible(
 Determine whether declared Conv dimensions match layer widths.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Whether Conv dimensions match the network layers.
@@ -432,6 +456,7 @@ logConvShapeMismatch(
 Log Conv mapping shape mismatch warning.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Nothing.
@@ -447,6 +472,7 @@ resolveActivationPayload(
 Resolve activation operator for Conv output.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Activation operator name.
@@ -462,6 +488,7 @@ resolveConvInputName(
 Resolve the tensor name that should feed the Conv node.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Previous output name, or a reshape bridge output for the narrow flatten subset.
@@ -478,6 +505,7 @@ resolveConvSourceLayout(
 Resolve the source layout used when this Conv layer consumes a pooled predecessor.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `convSpec` - Conv mapping spec.
 
@@ -495,6 +523,7 @@ resolveConvSourceNode(
 Resolve source node referenced by one kernel coordinate.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `kernelCoordinate` - Kernel coordinate.
 
@@ -511,6 +540,7 @@ resolveDerivedPooledInputShape(
 Resolve pooled input geometry from the immediately previous Conv + Pool metadata.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Derived pooled shape, or undefined when the metadata is unusable.
@@ -527,6 +557,7 @@ resolveInboundWeightOrZero(
 Resolve inbound weight or zero when missing.
 
 Parameters:
+
 - `representativeNeuronInternal` - Representative neuron internals.
 - `sourceNode` - Source node.
 
@@ -545,6 +576,7 @@ resolveInputFeatureIndex(
 Resolve flattened input feature index for one kernel coordinate.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `convSpec` - Conv mapping spec.
 - `kernelCoordinate` - Kernel coordinate.
@@ -562,6 +594,7 @@ resolvePoolingSpec(
 Resolve pooling spec for current layer.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Pool mapping spec, if configured.
@@ -578,6 +611,7 @@ resolveRepresentativeNeuronIndex(
 Resolve representative neuron index for one output channel.
 
 Parameters:
+
 - `convSpec` - Conv mapping spec.
 - `outputChannelIndex` - Output channel index.
 
@@ -595,6 +629,7 @@ resolveRepresentativeNeuronInternal(
 Resolve representative neuron internals for one output channel.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `outputChannelIndex` - Output channel index.
 
@@ -611,6 +646,7 @@ resolveSupportedFlattenedPoolingShape(
 Resolve the narrow supported flatten-after-pool bridge shape, when present.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Supported flattened pooled shape for the later Conv bridge.
@@ -627,6 +663,7 @@ resolveUpstreamPoolingSpec(
 Resolve pooling configured immediately after the previous layer.
 
 Parameters:
+
 - `options` - Export options.
 - `layerIndex` - Current Conv layer index.
 
@@ -645,6 +682,7 @@ resolveWeightForCoordinate(
 Resolve weight for one kernel coordinate.
 
 Parameters:
+
 - `context` - Conv emission context.
 - `representativeNeuronInternal` - Representative neuron internals.
 - `kernelCoordinate` - Kernel coordinate.
@@ -673,6 +711,7 @@ pooling, flatten-after-pooling, and the metadata hints required for import to
 rebuild the same semantic interpretation.
 
 Parameters:
+
 - `params` - Conv emission parameters.
 
 Returns: New output tensor name when handled, otherwise undefined.
@@ -683,7 +722,16 @@ Example:
 const outputName = tryEmitConvLayer({
   model,
   options: {
-    conv2dMappings: [{ layerIndex: 1, inHeight: 28, inWidth: 28, inChannels: 1, outChannels: 8, kernelSize: 3 }],
+    conv2dMappings: [
+      {
+        layerIndex: 1,
+        inHeight: 28,
+        inWidth: 28,
+        inChannels: 1,
+        outChannels: 8,
+        kernelSize: 3,
+      },
+    ],
   },
   layerIndex: 1,
   previousOutputName: 'input',
@@ -703,6 +751,7 @@ validateConvShapeOrWarn(
 Validate Conv dimensions and log mismatch details when invalid.
 
 Parameters:
+
 - `context` - Conv emission context.
 
 Returns: Whether Conv shape is compatible.
@@ -722,6 +771,7 @@ appendDenseBiasInitializer(
 Append dense bias initializer.
 
 Parameters:
+
 - `layerContext` - Dense layer context.
 - `biasTensorName` - Bias tensor name.
 - `biasVector` - Bias vector values.
@@ -740,6 +790,7 @@ appendDenseNodes(
 Append ordered dense nodes to the model graph.
 
 Parameters:
+
 - `model` - Target model.
 - `orderedNodes` - Ordered dense nodes.
 
@@ -758,6 +809,7 @@ appendDenseWeightInitializer(
 Append dense weight initializer.
 
 Parameters:
+
 - `layerContext` - Dense layer context.
 - `weightTensorName` - Weight tensor name.
 - `weightMatrixValues` - Weight values.
@@ -776,6 +828,7 @@ buildSingleNeuronWeightRow(
 Build one neuron's incoming weight row against previous layer.
 
 Parameters:
+
 - `targetNodeInternal` - Target node internals.
 - `previousLayerNodes` - Previous layer nodes.
 
@@ -792,6 +845,7 @@ collectDenseInitializerValues(
 Collect dense weight matrix and bias vector values.
 
 Parameters:
+
 - `layerContext` - Dense layer context.
 
 Returns: Dense initializer values.
@@ -807,6 +861,7 @@ createActivationNode(
 Create dense activation node definition.
 
 Parameters:
+
 - `denseActivationContext` - Dense activation context.
 
 Returns: ONNX activation node payload.
@@ -832,6 +887,7 @@ createDenseTensorNames(
 Build dense tensor names for initializer emission.
 
 Parameters:
+
 - `layerIndex` - Layer index.
 
 Returns: Dense tensor names.
@@ -847,6 +903,7 @@ createGemmNode(
 Create dense Gemm node definition.
 
 Parameters:
+
 - `denseActivationContext` - Dense activation context.
 
 Returns: ONNX Gemm node payload.
@@ -862,6 +919,7 @@ createSharedActivationNodePayload(
 Build a shared activation node payload.
 
 Parameters:
+
 - `params` - Shared activation build parameters.
 
 Returns: Activation node payload.
@@ -877,6 +935,7 @@ createSharedGemmNodePayload(
 Build a shared Gemm node payload.
 
 Parameters:
+
 - `params` - Shared Gemm build parameters.
 
 Returns: Gemm node payload.
@@ -893,6 +952,7 @@ emitDenseActivationSubgraph(
 Emit Gemm and activation nodes using requested ordering.
 
 Parameters:
+
 - `model` - Target ONNX model.
 - `denseActivationContext` - Dense activation context.
 
@@ -909,6 +969,7 @@ emitDenseInitializers(
 Emit dense initializers and return tensor names.
 
 Parameters:
+
 - `layerContext` - Dense layer context.
 
 Returns: Tensor names.
@@ -930,6 +991,7 @@ whole layer. The same helper also preserves the library's legacy node-ordering
 compatibility mode when older snapshots need deterministic graph ordering.
 
 Parameters:
+
 - `params` - Dense emission parameters.
 
 Returns: Output tensor name.
@@ -959,6 +1021,7 @@ emitOptionalLayerOutput(
 Emit optional pooling and flatten output fold.
 
 Parameters:
+
 - `params` - Optional output parameters.
 
 Returns: Output tensor name.
@@ -980,6 +1043,7 @@ The graph is larger, but it preserves mixed activation behavior that a single
 layer-wide activation node cannot express.
 
 Parameters:
+
 - `params` - Per-neuron emission parameters.
 
 Returns: Output tensor name.
@@ -1008,6 +1072,7 @@ emitPerNeuronSubgraph(
 Emit per-neuron Gemm + activation subgraph.
 
 Parameters:
+
 - `perNeuronSubgraphContext` - Per-neuron subgraph context.
 
 Returns: Per-neuron activation output name.
@@ -1028,6 +1093,7 @@ bias term, and the skipped source layer emits a bias-free branch whose output
 is summed before the layer activation.
 
 Parameters:
+
 - `params` - Residual-add emission parameters.
 
 Returns: Output tensor name.
@@ -1045,6 +1111,7 @@ resolveDenseNodeOrder(
 Resolve dense node order for legacy and current exports.
 
 Parameters:
+
 - `gemmNode` - Gemm node.
 - `activationNode` - Activation node.
 - `legacyNodeOrdering` - Whether legacy ordering is required.
@@ -1063,6 +1130,7 @@ resolveSingleNeuronInboundWeight(
 Resolve one inbound connection weight for a source node.
 
 Parameters:
+
 - `targetNodeInternal` - Target node internals.
 - `sourceNode` - Source node.
 
@@ -1093,6 +1161,7 @@ buildInputBranchGemmEmissionContext(
 Build Gemm emission context for the feed-forward branch.
 
 Parameters:
+
 - `context` - Recurrent layer execution context.
 - `initializerNames` - Recurrent initializer names.
 - `graphNames` - Recurrent graph names.
@@ -1112,6 +1181,7 @@ buildRecurrentBranchGemmEmissionContext(
 Build Gemm emission context for the recurrent hidden-state branch.
 
 Parameters:
+
 - `context` - Recurrent layer execution context.
 - `initializerNames` - Recurrent initializer names.
 - `graphNames` - Recurrent graph names.
@@ -1129,6 +1199,7 @@ buildRecurrentGraphNames(
 Build deterministic graph names for recurrent-node emission.
 
 Parameters:
+
 - `context` - Recurrent layer execution context.
 
 Returns: Graph-name group for branch and activation nodes.
@@ -1144,6 +1215,7 @@ buildRecurrentInitializerNames(
 Build deterministic tensor names for recurrent initializer emission.
 
 Parameters:
+
 - `context` - Recurrent layer execution context.
 
 Returns: Tensor-name group for initializer emission.
@@ -1159,6 +1231,7 @@ buildRecurrentLayerEmissionContext(
 Build derived recurrent-layer context from input params.
 
 Parameters:
+
 - `params` - User-provided recurrent layer params.
 
 Returns: Derived context with cached dimensions and layer slot.
@@ -1174,6 +1247,7 @@ collectRecurrentInitializerValues(
 Collect recurrent initializer vectors for one layer.
 
 Parameters:
+
 - `context` - Recurrent layer execution context.
 
 Returns: Dense and recurrent initializer vectors.
@@ -1189,6 +1263,7 @@ emitRecurrentActivationNode(
 Emit activation node for recurrent branch sum output.
 
 Parameters:
+
 - `context` - Activation emission context.
 
 Returns: Nothing.
@@ -1205,6 +1280,7 @@ emitRecurrentAddNode(
 Emit Add node that fuses feed-forward and recurrent branch outputs.
 
 Parameters:
+
 - `model` - Target ONNX model.
 - `graphNames` - Deterministic graph names for this layer.
 
@@ -1221,6 +1297,7 @@ emitRecurrentGemmNode(
 Emit one recurrent Gemm node with shared ONNX attributes.
 
 Parameters:
+
 - `context` - Gemm emission context.
 
 Returns: Nothing.
@@ -1236,6 +1313,7 @@ emitRecurrentInitializers(
 Emit dense and recurrent initializer tensors.
 
 Parameters:
+
 - `context` - Initializer emission context.
 
 Returns: Nothing.
@@ -1262,6 +1340,7 @@ supported on this path because the single activation node is applied after
 the input and recurrent branches are summed.
 
 Parameters:
+
 - `params` - Recurrent emission parameters.
 
 Returns: Output tensor name.
@@ -1289,6 +1368,7 @@ readNodeInternals(
 Normalize runtime node shape to recurrent-export internals contract.
 
 Parameters:
+
 - `node` - Runtime node instance.
 
 Returns: Node internals used by ONNX emission helpers.
@@ -1304,6 +1384,7 @@ resolvePreviousHiddenInputName(
 Resolve recurrent branch hidden-state input for one layer.
 
 Parameters:
+
 - `layerIndex` - Current recurrent layer index.
 
 Returns: Hidden-state tensor input name.
@@ -1321,6 +1402,7 @@ collectActivationNames(
 Collect activation names for current-layer nodes.
 
 Parameters:
+
 - `currentLayerNodes` - Current layer nodes.
 
 Returns: Activation name set.
@@ -1336,6 +1418,7 @@ createLayerActivationContext(
 Build activation analysis context for non-convolution branches.
 
 Parameters:
+
 - `traversalContext` - Layer traversal context.
 
 Returns: Activation analysis context.
@@ -1351,6 +1434,7 @@ createLayerTraversalContext(
 Build a compact traversal context with adjacent layers.
 
 Parameters:
+
 - `input` - Base layer build context.
 
 Returns: Traversal context.
@@ -1366,6 +1450,7 @@ createRecurrentDecisionContext(
 Build recurrent decision context with no extra parameters.
 
 Parameters:
+
 - `traversalContext` - Layer traversal context.
 
 Returns: Recurrent decision context.
@@ -1382,6 +1467,7 @@ detectMixedActivations(
 Determine whether a layer has mixed activation functions.
 
 Parameters:
+
 - `currentLayerNodes` - Current layer nodes.
 - `options` - Export options.
 
@@ -1398,6 +1484,7 @@ emitDenseBranch(
 Emit standard dense layer branch.
 
 Parameters:
+
 - `traversalContext` - Layer traversal context.
 
 Returns: Dense output tensor name.
@@ -1414,6 +1501,7 @@ emitDenseFamilyBranch(
 Emit dense or per-neuron layer branch from activation analysis.
 
 Parameters:
+
 - `traversalContext` - Layer traversal context.
 - `activationContext` - Activation analysis context.
 
@@ -1431,6 +1519,7 @@ Emit one export layer graph segment by routing the layer through the correct
 ONNX emission strategy.
 
 Dispatch order matters:
+
 - explicit Conv mappings win first,
 - recurrent single-step export is considered only for hidden layers with
   self-connections,
@@ -1438,12 +1527,14 @@ Dispatch order matters:
   per-neuron decomposition.
 
 Important invariants:
+
 - recurrent mixed activations are rejected elsewhere rather than silently
   decomposed here,
 - `allowMixedActivations` only affects the dense-family fallback path,
 - the returned tensor name is the canonical input for the next layer.
 
 Parameters:
+
 - `context` - Layer build context.
 
 Returns: Output tensor name produced by this layer.
@@ -1475,6 +1566,7 @@ emitNonConvolutionBranch(
 Emit recurrent or dense/per-neuron branch output.
 
 Parameters:
+
 - `traversalContext` - Layer traversal context.
 - `activationContext` - Activation analysis context.
 
@@ -1491,6 +1583,7 @@ emitPerNeuronBranch(
 Emit per-neuron decomposition branch for mixed activations.
 
 Parameters:
+
 - `traversalContext` - Layer traversal context.
 
 Returns: Per-neuron output tensor name.
@@ -1507,6 +1600,7 @@ emitRecurrentBranch(
 Emit recurrent layer branch with mixed-activation validation.
 
 Parameters:
+
 - `traversalContext` - Layer traversal context.
 - `activationContext` - Activation analysis context.
 
@@ -1524,6 +1618,7 @@ ensureRecurrentSupportsActivations(
 Ensure recurrent layers do not use unsupported mixed activations.
 
 Parameters:
+
 - `layerIndex` - Layer index.
 - `activationContext` - Activation analysis context.
 
@@ -1540,6 +1635,7 @@ resolveActivationName(
 Resolve the activation name for one node.
 
 Parameters:
+
 - `node` - Current layer node.
 
 Returns: Activation name when present.
@@ -1555,6 +1651,7 @@ shouldEmitRecurrentBranch(
 Determine whether recurrent single-step emission applies.
 
 Parameters:
+
 - `decisionContext` - Recurrent branch decision context.
 
 Returns: Whether recurrent branch should be emitted.
@@ -1570,6 +1667,7 @@ tryEmitConvolutionBranch(
 Attempt convolution emission and return produced output when mapped.
 
 Parameters:
+
 - `traversalContext` - Layer traversal context.
 
 Returns: Convolution output name when emitted; otherwise null.
@@ -1585,6 +1683,7 @@ tryEmitExplicitConcatMergeBranch(
 Attempt the narrow explicit concat subset before residual fallback.
 
 Parameters:
+
 - `traversalContext` - Layer traversal context.
 
 Returns: Concat-merge output tensor name when emitted; otherwise undefined.
@@ -1600,6 +1699,7 @@ tryEmitResidualAddBranch(
 Attempt the narrow one-hop residual-add subset before falling back.
 
 Parameters:
+
 - `traversalContext` - Layer traversal context.
 
 Returns: Residual-add output tensor name when emitted; otherwise null.
@@ -1619,6 +1719,7 @@ appendIndexedMetadata(
 Append a layer index to a JSON-array metadata field on the ONNX model.
 
 Parameters:
+
 - `model` - Target model.
 - `key` - Metadata key.
 - `layerIndex` - Layer index to append.
@@ -1638,6 +1739,7 @@ appendMetadataSpec(
 Append a structured metadata object to a JSON-array metadata field safely.
 
 Parameters:
+
 - `model` - Target model.
 - `key` - Metadata key.
 - `spec` - Metadata object.
@@ -1657,6 +1759,7 @@ Append pooling-layer metadata after a pooling node is emitted.
 Stores both the layer index list and the serialized pooling specification.
 
 Parameters:
+
 - `context` - Pooling emission context.
 
 Returns: Nothing.
@@ -1675,6 +1778,7 @@ This cast is intentionally localized so collection helpers stay strongly
 typed without repeating assertions at each call site.
 
 Parameters:
+
 - `node` - Source node.
 
 Returns: Internal runtime-facing node representation.
@@ -1697,6 +1801,7 @@ still be represented in a deterministic rectangular tensor layout.
 Biases are collected in the same destination-neuron order.
 
 Parameters:
+
 - `previousLayerNodes` - Source layer nodes.
 - `currentLayerNodes` - Destination layer nodes.
 
@@ -1726,6 +1831,7 @@ carry as one-step self-feedback for each destination neuron. Off-diagonal
 entries are emitted as zero to keep the matrix rectangular and deterministic.
 
 Parameters:
+
 - `currentLayerNodes` - Layer nodes.
 
 Returns: Flattened row-major recurrent matrix.
@@ -1742,6 +1848,7 @@ buildIndexedMetadataProperty(
 Build a metadata property whose value is a JSON array of layer indexes.
 
 Parameters:
+
 - `key` - Metadata key.
 - `layerIndex` - Layer index.
 
@@ -1759,6 +1866,7 @@ buildSpecMetadataProperty(
 Build a metadata property whose value is a JSON array of mapping specs.
 
 Parameters:
+
 - `key` - Metadata key.
 - `spec` - Mapping spec.
 
@@ -1775,6 +1883,7 @@ collectDenseRows(
 Collect dense rows for each target node in current layer.
 
 Parameters:
+
 - `context` - Dense row collection context.
 
 Returns: Dense rows containing per-target weights and bias.
@@ -1793,6 +1902,7 @@ Missing inbound edges are encoded as zeros to preserve a full rectangular
 matrix even for sparse connectivity.
 
 Parameters:
+
 - `context` - Dense row collection context.
 
 Returns: Row weights in source-node order.
@@ -1811,6 +1921,7 @@ Optional pad fields default to zero so exported nodes always carry explicit
 2D padding metadata.
 
 Parameters:
+
 - `poolSpec` - Pooling spec.
 
 Returns: Pooling attributes for ONNX node payload.
@@ -1829,6 +1940,7 @@ Diagonal entries read the neuron's self-connection weight; all other
 coordinates remain zero.
 
 Parameters:
+
 - `context` - Row collection context.
 
 Returns: Recurrent row values.
@@ -1847,6 +1959,7 @@ Each row corresponds to one destination neuron and is assembled with
 diagonal-only recurrent semantics.
 
 Parameters:
+
 - `context` - Recurrent matrix build context.
 
 Returns: Recurrent row collection.
@@ -1864,6 +1977,7 @@ Conditionally emit a `Flatten` node after pooling.
 When disabled, the pooled tensor name is returned unchanged.
 
 Parameters:
+
 - `context` - Flatten emission context.
 
 Returns: Output tensor name after optional flatten.
@@ -1879,6 +1993,7 @@ emitOptionalPoolingAndFlatten(
 Emit optional pooling and flatten nodes after a layer output.
 
 Parameters:
+
 - `params` - Pooling parameters.
 
 Returns: Final output tensor name after optional pooling/flatten.
@@ -1894,6 +2009,7 @@ emitPoolingNode(
 Emit one pooling node and return its output tensor name.
 
 Parameters:
+
 - `context` - Pooling emission context.
 
 Returns: Pooling output tensor name.
@@ -1911,6 +2027,7 @@ Ensure the ONNX model metadata registry exists and return it.
 The returned array is mutable and shared with `model.metadata_props`.
 
 Parameters:
+
 - `model` - Target model.
 
 Returns: Mutable metadata registry.
@@ -1927,6 +2044,7 @@ findMetadataProperty(
 Find a metadata property by key.
 
 Parameters:
+
 - `metadataRegistry` - Metadata registry.
 - `key` - Metadata key.
 
@@ -1946,6 +2064,7 @@ The fold preserves row-major order by destination neuron so downstream
 tensor shapes remain stable across exports of the same topology.
 
 Parameters:
+
 - `denseRows` - Dense rows.
 
 Returns: Flattened dense initializer result.
@@ -1963,6 +2082,7 @@ Parse a metadata JSON array value safely.
 Returns `undefined` when parsing fails or when the payload is not an array.
 
 Parameters:
+
 - `metadataValue` - Metadata JSON string.
 
 Returns: Parsed array when valid, otherwise undefined.
@@ -1979,6 +2099,7 @@ resolveDiagonalRecurrentWeight(
 Resolve recurrent weight value for one matrix coordinate.
 
 Parameters:
+
 - `context` - Row collection context.
 - `columnIndex` - Column index in row.
 
@@ -1996,6 +2117,7 @@ resolveInboundWeight(
 Resolve source-to-target inbound connection weight.
 
 Parameters:
+
 - `targetNodeInternal` - Target node internals.
 - `sourceNode` - Source node.
 
@@ -2013,6 +2135,7 @@ serializeIndexedMetadataValue(
 Serialize index metadata after appending one unique index.
 
 Parameters:
+
 - `currentValue` - Existing JSON value.
 - `layerIndex` - Layer index.
 
@@ -2030,6 +2153,7 @@ serializeSpecMetadataValue(
 Serialize spec metadata after appending one spec object.
 
 Parameters:
+
 - `currentValue` - Existing JSON value.
 - `spec` - Mapping spec.
 
@@ -2048,6 +2172,7 @@ Resolve a normalized pooling emission context from optional export parameters.
 This helper centralizes optional-to-required conversion before node emission.
 
 Parameters:
+
 - `params` - Optional pooling and flatten parameters.
 
 Returns: Pooling emission context.

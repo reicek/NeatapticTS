@@ -28,7 +28,7 @@ This skill owns the durable knowledge surface for routing policy in this reposit
 - The canonical routing table at `.github/agent-skill-routing-table.md` is stale or has not been validated via `npm run agents:routing-table:gate`.
 - A `.github/agents/*.agent.md` file is missing the `skills: [...]` frontmatter field.
 - A skill and companion agent overlap in ownership; the agent needs updating to follow the skill's durable policy.
-- Three consecutive gate failures have occurred in a session without escalation to `00-helping`.
+- Gate failures are being routed back for continued repair without an artificial retry threshold.
 
 ## When NOT to use
 
@@ -89,7 +89,7 @@ Every numbered SDLC agent selects a named flow from `.github/flows/` to execute 
 
 - Gate failures are recorded via `scripts/agent-customization/gates/record-gate-exception.mjs`.
 - Exceptions append to `.github/ai-learning/learning-log.jsonl`.
-- Three consecutive gate failures in a session trigger automatic escalation to `00-helping` via `00.cross-tier-helper`.
+- Gate failures are recorded for audit and routed back for continued repair without an artificial retry threshold.
 
 ### Post-Phase Fanout
 
@@ -138,7 +138,9 @@ The routing table is the authoritative catalog of all agents and skills.
 3. **Check flow-and-gate compliance.**
    - Verify the numbered agent selected a named flow from `.github/flows/`.
    - Verify exit gates ran and returned the structured contract.
-   - If gates failed, confirm exceptions were recorded and escalation occurred after three consecutive failures.
+   - If gates failed, confirm exceptions were recorded and routed back for
+     continued repair without an artificial retry threshold. Continue retrying
+     until resolved or a true technical limit is reached. No concessions.
 
 4. **Audit routing-table freshness.**
    - Run `npm run agents:routing-table:gate` to confirm the routing table reflects current agent/skill inventory.
@@ -208,8 +210,9 @@ Validate: node scripts/agent-customization/validate-agent-frontmatter.mjs --json
 ```text
 Use routing-optimization-policy to enforce gate protocol.
 Agent: 05-green-testing
-Gate failures: 2 recorded, no escalation.
-Expected: on third consecutive failure, escalate to 00-helping via 00.cross-tier-helper.
+Gate failures: recorded, no escalation.
+Expected: continue retrying the gate or routing the failure back for repair
+until resolved or a true technical limit is reached. No artificial threshold.
 Validate: grep .github/ai-learning/learning-log.jsonl for gate_exception entries.
 ```
 
@@ -241,7 +244,8 @@ A strong routing-optimization pass should produce:
 - confirmation that Tier 0 routed all substantive work to the smallest relevant Tier 1 orchestrator,
 - validation that no Tier 2/3/4 agent delegated upward without `00.cross-tier-helper`,
 - evidence that numbered agents selected named flows and ran exit gates with structured JSON contracts,
-- confirmation that gate exceptions were logged and escalation occurred after three consecutive failures,
+- confirmation that gate exceptions were logged and routed back for continued
+  repair without an artificial retry threshold,
 - routing-table freshness validation via `npm run agents:routing-table:gate`,
 - updated agent frontmatter with `skills: [...]` fields where missing,
 - alignment fixes where companion agents overlapped with skill-owned durable policy.

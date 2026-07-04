@@ -13,7 +13,7 @@ description: >
 triggers:
   - 'Blocker recorded in active step with no clear next action'
   - 'TASK_STATUS: PARTIAL or FAILED in the previous agent output'
-  - 'Three consecutive gate failures trigger 00-helping escalation'
+  - 'Gate failure with no viable forward path triggers 00-helping escalation'
   - 'User asks to triage or unblock a stalled plan step'
 
 gates:

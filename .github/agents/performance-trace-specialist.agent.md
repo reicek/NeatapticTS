@@ -67,7 +67,7 @@ Run `cortex-index` gate before searching for trace-related docs.
 
 2. Use Chrome DevTools MCP `performance_start_trace` to start a performance trace.
 3. Trigger the action to measure (e.g., navigate to demo, click button, run evaluation).
-4. Stop the trace with `performance_stop_trace` and save raw JSON to `tmp/traces/<name>-<timestamp>.json` using the `filePath` parameter.
+4. Stop the trace with `performance_stop_trace` and save raw JSON to `tmp/traces/<name>.json` using the `filePath` parameter.
 5. Compress: `node scripts/trace-compress.mjs tmp/traces/<name>.json tmp/traces/<name>.json.gz`
 6. Summarize: `node scripts/trace-summarize.mjs tmp/traces/<name>.json --json` → produces < 2000 char summary with CPU time, layout thrashing, JS execution, paint events, memory peak, dropped frames, long task counts.
 7. Optional detailed analysis: `npm run trace:analyze -- tmp/traces/<name>.json --top=15`
@@ -100,7 +100,7 @@ Example summary produced by `scripts/trace-summarize.mjs --json`:
 
 ## If Blocked
 
-If blocked, return PARTIAL status with blocker description. Escalate to `00-helping` via `00.cross-tier-helper` if 3 consecutive attempts fail.
+If blocked, return PARTIAL status with blocker description. Continue retrying until the issue is resolved or a true technical limit is reached. Only escalate to `00-helping` via `00.cross-tier-helper` when a genuine, documented technical limit blocks further progress. No concessions.
 
 ## Output format
 

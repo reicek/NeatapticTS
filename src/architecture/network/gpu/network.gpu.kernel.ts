@@ -1,23 +1,9 @@
 import type Network from '../network';
-import { buildIncomingCSR, buildTopoLevels } from './network.gpu.buffer';
 import {
   buildActivationRegistry,
   formatActivationFunctionsWgsl,
   SUPPORTED_ACTIVATION_INDICES,
 } from './network.gpu.activation.wgsl';
-
-/**
- * Raw connection slab used to build GPU-friendly adjacency arrays.
- *
- * The cast is intentional: GPU kernel generation is a consumer of the same
- * private layout that slab activation uses.
- */
-interface ConnectionSlab {
-  from: Uint32Array;
-  to: Uint32Array;
-  weights: Float32Array | Float64Array;
-  flags: Uint8Array;
-}
 
 /**
  * WebGPU shader-stage bit for compute visibility.
@@ -77,12 +63,11 @@ const WORKGROUP_SIZE = 64;
 /**
  * Build the WGSL source for the struct-packed forward-pass activation kernel.
  *
- * The shader exposes four bindings: a read-only connection struct array, a
- * read-write node struct array, a read-write output array, and a per-dispatch
- * params uniform. The incoming-CSR offsets and the per-node topological level
- * are baked into the shader as constants, which is what keeps the binding count
- * at four instead of ten. One thread is dispatched per node and threads that
- * do not belong to the current level early-exit.
+ * The shader exposes six bindings: a read-only connection struct array, a
+ * read-write node struct array, a read-write output array, a per-dispatch
+ * params uniform, a read-only per-node topological level array, and a
+ * read-only incoming-CSR start-offset array. One thread is dispatched per node
+ * and threads that do not belong to the current level early-exit.
  *
  * @param network - Network whose activation index, topology, and slab arrays
  *   drive the generated shader.
@@ -101,11 +86,6 @@ function generateActivationSource(network: Network): string {
     .join('\n');
 
   const activationIndex = readActivationIndex(network);
-  const nodeCount = network.nodes.length;
-  const connectionCount = network.connections.length;
-  const slab = network.getConnectionSlab() as unknown as ConnectionSlab;
-  const { inStart } = buildIncomingCSR(slab, nodeCount, connectionCount);
-  const topoLevels = buildTopoLevels(slab, nodeCount, connectionCount);
 
   return `const WORKGROUP_SIZE: u32 = ${WORKGROUP_SIZE}u;
 const ACTIVATION_INDEX: i32 = ${activationIndex}i;
@@ -135,9 +115,8 @@ struct Params {
 @group(0) @binding(1) var<storage, read_write> nodes: array<Node>;
 @group(0) @binding(2) var<storage, read_write> outputs: array<f32>;
 @group(0) @binding(3) var<uniform> params: Params;
-
-const topoLevels = array<u32, ${nodeCount}>(${topoLevels.join(',')});
-const inStart = array<u32, ${nodeCount + 1}>(${inStart.join(',')});
+@group(0) @binding(4) var<storage, read> topoLevels: array<u32>;
+@group(0) @binding(5) var<storage, read> inStart: array<u32>;
 
 ${activationFunctions}
 
@@ -181,7 +160,7 @@ fn forward(@builtin(global_invocation_id) global_invocation_id: vec3<u32>) {
 /**
  * Generate the WGSL source for the activation kernel of a supported network.
  *
- * The returned source is a real, bindable compute shader: it declares four
+ * The returned source is a real, bindable compute shader: it declares six
  * storage-buffer/uniform bindings, the connection and node structs, one f32
  * activation function per supported worker index, and a `forward` entry point
  * that dispatches one thread per node for the current topological level.
@@ -332,12 +311,13 @@ export function compileActivationKernel(
 /**
  * Create the bind-group layout used by the GPU forward-pass kernel.
  *
- * The layout exposes four entries in the exact order expected by the
+ * The layout exposes six entries in the exact order expected by the
  * struct-packed upload contract: the connection struct array, the node struct
- * array, the per-node output buffer, and the per-dispatch params uniform.
+ * array, the per-node output buffer, the per-dispatch params uniform, the
+ * per-node topological level array, and the incoming-CSR start-offset array.
  *
  * @param device - WebGPU device used to create the layout.
- * @returns A bind-group layout with four entries.
+ * @returns A bind-group layout with six entries.
  *
  * @example
  * ```ts
@@ -366,6 +346,16 @@ export function createBindGroupLayout(device: GPUDevice): GPUBindGroupLayout {
         binding: 3,
         visibility: GPU_SHADER_STAGE_COMPUTE,
         buffer: { type: 'uniform' },
+      },
+      {
+        binding: 4,
+        visibility: GPU_SHADER_STAGE_COMPUTE,
+        buffer: { type: 'read-only-storage' },
+      },
+      {
+        binding: 5,
+        visibility: GPU_SHADER_STAGE_COMPUTE,
+        buffer: { type: 'read-only-storage' },
       },
     ],
   });

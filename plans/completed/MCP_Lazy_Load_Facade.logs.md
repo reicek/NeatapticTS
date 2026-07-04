@@ -4,7 +4,7 @@
 
 ## Phase 1 — Deploy lightweight lazy-load MCP facades
 
-[DONE] Phase 1 completed and compressed on 2026-06-28.
+[DONE] Phase 1 completed and compressed.
 
 - Step 01: Chose tool facade over hook/script alternatives; named servers `cortex` and `devtools`; documented contract, adoption map, and stop/reset checkpoint.
 - Step 02: Finalized single router-tool contract with `operation`/`args` envelope; created lightweight snapshots.

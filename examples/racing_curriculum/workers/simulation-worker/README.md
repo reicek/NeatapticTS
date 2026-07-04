@@ -6,7 +6,7 @@ This module owns the `routeRacingWorkerProtocolMessage` function, which maps
 one host-to-worker message onto the next FSM state and an optional response.
 It enforces the forward-only lifecycle:
 
-  idle → initialised → generation-ready → racing → (stopped)
+idle → initialised → generation-ready → racing → (stopped)
 
 The lifecycle is a straightforward finite-state machine; see
 [Finite-state machine (Wikipedia)](https://en.wikipedia.org/wiki/Finite-state_machine)
@@ -16,7 +16,7 @@ confusion between a host and a worker.
 ## Protocol FSM
 
 The diagram below shows the host-to-worker message contract as a state
-machine.  Each transition is triggered by a single inbound message.  The
+machine. Each transition is triggered by a single inbound message. The
 worker never advances simulation time unless the host asks for a race step,
 and the host never mutates population state.
 
@@ -36,7 +36,7 @@ stateDiagram-v2
 
 ## Host/worker authority boundary
 
-This router runs **inside the worker**.  The host calls `worker.postMessage`
+This router runs **inside the worker**. The host calls `worker.postMessage`
 with an `RacingWorkerInboundMessage`; the worker calls this router to
 determine the next FSM state and the outbound payload to send back.
 The host never advances simulation ticks directly — it only requests steps
@@ -46,23 +46,23 @@ and renders the snapshots it receives.
 
 When SharedArrayBuffer or nested worker pools are unavailable (e.g., the
 host document lacks the required COOP/COEP headers), the same FSM and packed
-snapshot types work over a single `Worker` with `postMessage`.  No
-SharedArrayBuffer dependency exists in this module.  The transport layer can
+snapshot types work over a single `Worker` with `postMessage`. No
+SharedArrayBuffer dependency exists in this module. The transport layer can
 be upgraded to a SharedArrayBuffer ring-buffer by wrapping the `postMessage`
-call site without changing this router.  See
+call site without changing this router. See
 [Transferable objects (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects)
 for the zero-copy transfer semantics used by the generation-ready response.
 
 ## Extension points
 
-| Hook | Where to extend | Current seam |
-| --- | --- | --- |
-| Frozen opponent selection | `simulation-worker.opponent-snapshot.service.ts` | Swap or weight the snapshot sampler |
-| Generation lifecycle | `simulation-worker.coevolution.service.ts` | Add elitism, diversity pressure, or Lamarckian updates |
-| Race pack layout | `simulation-worker.race-pack.service.ts` | Add track geometry, curricula, or sensor channels |
-| Transfer transport | Wrap the `postMessage` caller | Replace structured clone with a ring buffer or batched frames |
-| Neuromodulation / plasticity | `ModulatorBroadcaster` (not available in Tier 0) | Extend the protocol when dynamic activation or synaptic change primitives are available |
-| Strategy-divergence analytics | `simulation-worker.strategy-divergence.service.ts` | Adjust classifier thresholds or add new divergence metrics |
+| Hook                          | Where to extend                                    | Current seam                                                                            |
+| ----------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Frozen opponent selection     | `simulation-worker.opponent-snapshot.service.ts`   | Swap or weight the snapshot sampler                                                     |
+| Generation lifecycle          | `simulation-worker.coevolution.service.ts`         | Add elitism, diversity pressure, or Lamarckian updates                                  |
+| Race pack layout              | `simulation-worker.race-pack.service.ts`           | Add track geometry, curricula, or sensor channels                                       |
+| Transfer transport            | Wrap the `postMessage` caller                      | Replace structured clone with a ring buffer or batched frames                           |
+| Neuromodulation / plasticity  | `ModulatorBroadcaster` (not available in Tier 0)   | Extend the protocol when dynamic activation or synaptic change primitives are available |
+| Strategy-divergence analytics | `simulation-worker.strategy-divergence.service.ts` | Adjust classifier thresholds or add new divergence metrics                              |
 
 ## Multi-generation evaluation loop
 
@@ -132,7 +132,7 @@ computeSharedEqualTeamFitness(
 Computes shared-equal team fitness as the average of all team members' fitness.
 
 Each car on a team shares equal fitness — the team's fitness is the arithmetic
-mean of all member fitness scores.  This cooperative pressure ensures a team
+mean of all member fitness scores. This cooperative pressure ensures a team
 is only as strong as its average member, not its single best performer.
 
 See [Coevolution (Wikipedia)](https://en.wikipedia.org/wiki/Coevolution) for
@@ -140,6 +140,7 @@ background on why shared-equal fitness promotes cooperative team strategies
 over free-rider exploitation.
 
 Parameters:
+
 - `carFitnessScores` - Per-car fitness scores (one entry per car).
 - `teamLayout` - Team id per car: 0 for blue (Team A), 1 for red (Team B).
 - `teamId` - 0 for Team A (blue), 1 for Team B (red).
@@ -149,7 +150,11 @@ Returns: Average fitness of all team members, or 0 when the team has no members.
 Example:
 
 ```ts
-const teamFitness = computeSharedEqualTeamFitness([10, 20, 30, 40], [0, 0, 1, 1], 0);
+const teamFitness = computeSharedEqualTeamFitness(
+  [10, 20, 30, 40],
+  [0, 0, 1, 1],
+  0,
+);
 // → 15 (average of 10 and 20 — blue team members)
 ```
 
@@ -184,6 +189,7 @@ extractCarFitnessScores(
 Extracts per-car fitness scores from a race episode runner.
 
 Priority:
+
 1. When the runner exposes a `computeFitness` method (the real race episode
    runner or a mock that provides it), per-car fitness is read directly.
 2. When the runner exposes lap-completion data (`lapCompleted`,
@@ -195,6 +201,7 @@ Priority:
    feedback is never absent after a completed race.
 
 Parameters:
+
 - `runner` - Race episode runner (may be a mock without computeFitness).
 - `carCount` - Number of cars in the race pack.
 
@@ -213,6 +220,7 @@ real operator (which returns `{ offspring }`) and test mocks that return the
 envelope directly.
 
 Parameters:
+
 - `result` - Raw operator return value.
 
 Returns: The offspring canonical envelope.
@@ -229,17 +237,19 @@ routeRacingWorkerProtocolMessage(
 Routes one inbound host-to-worker message through the evolution protocol FSM.
 
 Messages that arrive in a phase where they are not allowed return an error
-string and leave `nextState` unchanged.  The `stop` message is always
+string and leave `nextState` unchanged. The `stop` message is always
 accepted from any phase and unconditionally transitions to `stopped`.
 
 Lifecycle transitions:
-- idle        + init             → initialised
+
+- idle + init → initialised
 - initialised + request-generation → generation-ready
-- generation-ready + start-race  → racing
-- racing      + request-race-step → racing (or generation-ready when done)
-- any phase   + stop             → stopped
+- generation-ready + start-race → racing
+- racing + request-race-step → racing (or generation-ready when done)
+- any phase + stop → stopped
 
 Parameters:
+
 - `message` - Inbound host-to-worker protocol message.
 - `state` - Current FSM state.
 
@@ -264,6 +274,7 @@ Returns `null` when the runner does not expose the required lap-data fields,
 so callers can fall back to raw fitness scores.
 
 Parameters:
+
 - `runner` - Race episode runner (may be a mock without lap data).
 - `carCount` - Number of cars in the race pack.
 
@@ -281,9 +292,9 @@ tryExtractFinishPositions(
 Derives per-car fitness from real finish positions when lap data is available.
 
 Cars that completed at least one lap (`lapCompleted[car] === 1`) are ranked
-by lap time ascending (fewer ticks = better finish).  Cars that did not
+by lap time ascending (fewer ticks = better finish). Cars that did not
 complete a lap are ranked by track progress descending (further along =
-better finish).  Each car receives a base fitness of
+better finish). Each car receives a base fitness of
 `(carCount - rank) * FINISH_POSITION_FITNESS_SCALE` plus a
 `LAP_COMPLETION_FITNESS_BONUS` when the lap was completed.
 
@@ -291,6 +302,7 @@ Returns `null` when the runner does not expose the required lap-data fields,
 signalling the caller to use a fallback strategy.
 
 Parameters:
+
 - `runner` - Race episode runner (may be a mock without lap data).
 - `carCount` - Number of cars in the race pack.
 
@@ -303,11 +315,11 @@ Typed message union for the worker-authoritative racing evolution protocol.
 The racing benchmark follows a strict host/worker authority split: the host
 owns DOM rendering and user interaction; the worker owns environment state,
 controller inference, Team A/B population containers, and race-step snapshot
-production.  This file defines the typed envelope for every message that
+production. This file defines the typed envelope for every message that
 crosses the host↔worker boundary.
 
 The two-team, frozen-snapshot evaluation model follows the competitive
-coevolution pattern.  See [Coevolution (Wikipedia)](https://en.wikipedia.org/wiki/Coevolution)
+coevolution pattern. See [Coevolution (Wikipedia)](https://en.wikipedia.org/wiki/Coevolution)
 and Stanley & Miikkulainen (2002) on
 [Neuroevolution of augmenting topologies](https://en.wikipedia.org/wiki/Neuroevolution_of_augmenting_topologies)
 for the algorithmic background.
@@ -324,7 +336,7 @@ idle → (init) → initialised → (request-generation) → generation-ready
 
 Messages that arrive in a phase where they are not permitted return an error
 string from `routeRacingWorkerProtocolMessage` and leave the FSM state
-unchanged.  See [Finite-state machine (Wikipedia)](https://en.wikipedia.org/wiki/Finite-state_machine)
+unchanged. See [Finite-state machine (Wikipedia)](https://en.wikipedia.org/wiki/Finite-state_machine)
 for background on the state-machine pattern.
 
 ## Worker-owned responsibilities
@@ -338,7 +350,7 @@ for background on the state-machine pattern.
 - Race episode lifecycle: build a deterministic race pack → tick simulation →
   run controller inference per car per tick → stream packed `race-step`
   typed-array snapshots.
-- Transfer-list resolution for zero-copy `postMessage` frame delivery.  See
+- Transfer-list resolution for zero-copy `postMessage` frame delivery. See
   [Transferable objects (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects)
   for the transfer-list semantics.
 
@@ -404,7 +416,7 @@ Host-to-worker messages for the racing evolution protocol.
 Messages are accepted only in the phase where they are permitted.
 Sending `request-generation` before `init`, or `start-race` before a
 generation has completed, produces a rejection error instead of a
-transition.  The `stop` message is always accepted and transitions to
+transition. The `stop` message is always accepted and transitions to
 `stopped` unconditionally.
 
 ### RacingWorkerOutboundMessage
@@ -413,6 +425,7 @@ Worker-to-host outbound messages for the racing evolution protocol.
 
 These represent the compact, streaming payloads the worker sends back to the
 host after each protocol event:
+
 - `generation-ready` — emitted after a full evolution generation completes;
   carries per-team best fitness and optionally the best genome payload.
 - `race-step` — compact typed-array snapshot for one or more simulation
@@ -422,7 +435,7 @@ host after each protocol event:
   user and consider stopping.
 
 Note: `race-step` snapshots must be transferred with a transfer list so that
-typed-array buffers are zero-copy handed to the host thread.  See
+typed-array buffers are zero-copy handed to the host thread. See
 `resolveRaceStepTransferList` in the race-pack service.
 
 ### RacingWorkerPhase
@@ -430,7 +443,7 @@ typed-array buffers are zero-copy handed to the host thread.  See
 Lifecycle phases for the racing worker protocol FSM.
 
 Phases advance strictly forward: `idle` → `initialised` → `generation-ready`
-→ `racing`.  The `stopped` phase is terminal and reachable from any phase
+→ `racing`. The `stopped` phase is terminal and reachable from any phase
 via a `stop` message.
 
 ### StrategyDivergenceClassifierResult
@@ -459,20 +472,21 @@ and classifies the resulting time series.
 Team A/B coevolution container for the racing curriculum benchmark.
 
 Each call to `createCoevolutionContainer` allocates two independent
-population handles — one for Team A and one for Team B.  Team-level fitness
+population handles — one for Team A and one for Team B. Team-level fitness
 is routed through the reusable NGE core evaluator, using the racing policy
 "best (lowest) finishing position among that team's cars."
 
 The two-population shape follows the competitive coevolution pattern: each
 team is evaluated against frozen snapshots of the other, so neither side
-optimizes against a stationary target.  This helps keep the search from
-collapsing into a one-sided arms race.  See
+optimizes against a stationary target. This helps keep the search from
+collapsing into a one-sided arms race. See
 [Coevolution (Wikipedia)](https://en.wikipedia.org/wiki/Coevolution)
 for background, and
 [Neuroevolution of augmenting topologies (Wikipedia)](https://en.wikipedia.org/wiki/Neuroevolution_of_augmenting_topologies)
 for the NEAT algorithm that underpins the population containers.
 
 Extension points:
+
 - Extend this container to broadcast neuromodulation across team members
   when `ModulatorBroadcaster` and `EpisodicSlot` primitives are available.
 - Extend this container with polyandric reproduction (`modeIsEvolvable`)
@@ -483,7 +497,7 @@ Extension points:
 Handle for one car's independent genome.
 
 Each car genome is a fully independent network with its own evolution state.
-Mutating one car's genome must not affect any other car's genome.  Each car
+Mutating one car's genome must not affect any other car's genome. Each car
 gets a distinct `Network` instance seeded with a car-specific seed so
 activation outputs differ from the first generation onward.
 
@@ -519,6 +533,7 @@ This keeps every car NGE-enabled so that polyandric reproduction can read
 its `envelope` at the generation boundary.
 
 Parameters:
+
 - `options` - Car genome configuration.
 
 Returns: A car genome handle with a materialized runtime network.
@@ -535,6 +550,7 @@ Creates a paired Team A/B coevolution container with independent population
 handles and a best-position team-fitness resolver.
 
 The `tier` field in the config controls two dimension switches:
+
 - **Car count:** Tier 1–2 allocates 2 cars (one per team); Tier 3+ allocates
   4 cars (two per team) using the `[0, 0, 1, 1]` team layout.
 - **Controller input dimension:** Tier 1–2 produces 4-input networks; Tier 3
@@ -547,6 +563,7 @@ base `rngSeed` plus the car index so activation outputs differ from
 generation 1 onward.
 
 Parameters:
+
 - `_config` - Container configuration (population size, seed, tier).
 
 Returns: Paired coevolution container with distinct team handles.
@@ -554,14 +571,22 @@ Returns: Paired coevolution container with distinct team handles.
 Examples:
 
 ```ts
-const container = createCoevolutionContainer({ populationSize: 50, rngSeed: 1, tier: 1 });
+const container = createCoevolutionContainer({
+  populationSize: 50,
+  rngSeed: 1,
+  tier: 1,
+});
 // container.teamA.populationId !== container.teamB.populationId
 const fitness = container.resolveTeamFitness(0, [3, 7]); // → 3
 ```
 
 ```ts
 // Tier 4: 2v2 with 95-input / 9-output controller networks.
-const container = createCoevolutionContainer({ populationSize: 50, rngSeed: 42, tier: 4 });
+const container = createCoevolutionContainer({
+  populationSize: 50,
+  rngSeed: 42,
+  tier: 4,
+});
 const genomes = container.getCarGenomes();
 // genomes.length === 4 (two blue, two red)
 ```
@@ -585,6 +610,7 @@ materialization. Per-car distinctness is then introduced by seeding each
 materialized network and applying a deterministic weight-perturbation pass.
 
 Parameters:
+
 - `inputSize` - Controller network input dimension.
 - `outputSize` - Controller network output dimension.
 
@@ -602,6 +628,7 @@ createRacingTeamResultGroup(
 Convert one racing team's finish positions into the generic team-group seam.
 
 Parameters:
+
 - `teamId` - Racing-local team index.
 - `carFinishPositions` - Finish positions for this team's cars.
 
@@ -612,7 +639,7 @@ Returns: Generic team-result group ready for the core evaluator.
 Result of queen selection for one team.
 
 The queen is the best-finishing car on the team — the one whose individual
-finishing position is lowest (best).  This selection drives polyandric
+finishing position is lowest (best). This selection drives polyandric
 reproduction: the queen's genome becomes the template, and the other team
 cars become drones.
 
@@ -638,6 +665,7 @@ Lower finishing positions are better, so this policy selects the minimum
 recorded `rawScore`. Empty groups preserve the existing `Infinity` fallback.
 
 Parameters:
+
 - `group` - Generic team group routed through the core evaluator seam.
 
 Returns: Best finishing position, or `Infinity` when the group is empty.
@@ -667,6 +695,7 @@ split policy lets queen selection reward the winning car's DNA without
 destabilizing the cooperative fitness signal that drives team coordination.
 
 Parameters:
+
 - `carFinishPositions` - Finish positions for all cars, indexed by carIndex.
 - `teamLayout` - Team assignment per car (0 for Team A, 1 for Team B).
 
@@ -694,8 +723,9 @@ racing benchmark can track each team's progress independently.
 Rolling opponent snapshot store for the racing curriculum benchmark.
 
 The store enforces two guards before applying a snapshot update:
+
 1. Generation barrier — updates are rejected while an evaluation episode is
-   active.  `beginEvaluation()` sets the barrier; `endEvaluation()` releases
+   active. `beginEvaluation()` sets the barrier; `endEvaluation()` releases
    it.
 2. Generation boundary — updates are only applied at multiples of
    `updateEveryNGenerations` (i.e. when `generation % updateEveryNGenerations === 0`).
@@ -703,10 +733,11 @@ The store enforces two guards before applying a snapshot update:
 The hall-of-fame / recent-pool sampling mirrors the common coevolution
 stabilization technique of evaluating candidates against both strong historical
 opponents and the current adversary, rather than against a single moving
-target.  See [Coevolution (Wikipedia)](https://en.wikipedia.org/wiki/Coevolution)
+target. See [Coevolution (Wikipedia)](https://en.wikipedia.org/wiki/Coevolution)
 for background.
 
 Extension point:
+
 - Extend the snapshot payload format to include episodic context and hard
   task-switch state when `EpisodicSlot` and `GatingRouter` primitives are
   available.
@@ -728,6 +759,7 @@ adapter bridges the two so snapshots accumulated in the core
 `OpponentSnapshotPool` can be consumed by the race-pack racing pipeline.
 
 Parameters:
+
 - `core` - Core collective snapshot to convert.
 
 Returns: Race-pack-shaped opponent snapshot.
@@ -751,6 +783,7 @@ Creates a rolling opponent snapshot store that respects the generation
 barrier and the configured update boundary.
 
 Parameters:
+
 - `config` - Snapshot update policy.
 
 Returns: Opponent snapshot store with barrier-enforced update semantics.
@@ -795,6 +828,7 @@ per-car fitness from finish positions, and resolving the zero-copy transfer
 list for streaming packed `race-step` frames to the host.
 
 Key concepts:
+
 - **Deterministic race pack**: identical seed + identical opponent snapshot
   produce identical starting frames, making race episodes replayable and
   comparative fitness claims fair.
@@ -869,6 +903,7 @@ adapter bridges the two so snapshots accumulated in the core
 `OpponentSnapshotPool` can be consumed by the race-pack racing pipeline.
 
 Parameters:
+
 - `core` - Core collective snapshot to convert.
 
 Returns: Race-pack-shaped opponent snapshot.
@@ -890,15 +925,16 @@ createDeterministicRacePack(
 ```
 
 Constructs an initial race frame deterministically from a seed and a frozen
-opponent snapshot.  Identical seed + identical snapshot → identical frame.
+opponent snapshot. Identical seed + identical snapshot → identical frame.
 
 All cars start on the inner-lane centerline of the deterministic medium
 simple track so that full-throttle episodes produce comparable lap times.
 
 Parameters:
+
 - `seed` - Deterministic race-pack seed.
 - `_opponentSnapshot` - Frozen opponent snapshot for the episode (reserved
-for future episodic context wiring; currently unused for determinism).
+  for future episodic context wiring; currently unused for determinism).
 
 Returns: Packed `RacingRenderFrame` with `schemaVersion: 'racing-packed-v1'`.
 
@@ -931,9 +967,10 @@ inner-lane centerline, detects lap completion, and invokes every provided
 network exactly once.
 
 Parameters:
+
 - `seed` - Deterministic race-pack seed.
 - `_opponentSnapshot` - Frozen opponent snapshot for the episode (reserved
-for future episodic context wiring; currently unused for determinism).
+  for future episodic context wiring; currently unused for determinism).
 - `networks` - One controller network per car slot.
 
 Returns: Runnable race episode with an initial packed frame.
@@ -961,6 +998,7 @@ extractNetworkPayloadsFromSnapshot(
 Extracts a network-payloads array from a core snapshot payload record.
 
 Parameters:
+
 - `snapshot` - Generic payload record from a core opponent snapshot.
 
 Returns: The `networkPayloads` array when present, otherwise an empty array.
@@ -986,6 +1024,7 @@ Handles mock runners gracefully: when the runner does not expose
 an empty array is returned.
 
 Parameters:
+
 - `runner` - Race episode runner after the episode has completed
 - `teamId` - 0 for Team A, 1 for Team B
 
@@ -1003,12 +1042,13 @@ console.log(teamADistribution); // [2, 0, 4] — car 0 pitted on lap 2, etc.
 Frozen opponent snapshot used as deterministic race-pack input.
 
 Identical seed + identical snapshot produce identical starting frames, which
-makes race episodes replayable and comparative fitness claims fair.  The
+makes race episodes replayable and comparative fitness claims fair. The
 zero-copy transfer path uses `ArrayBuffer` transfer lists supported by Web
 Workers; see [Transferable objects (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects)
 for details.
 
 Extension point:
+
 - Extend the snapshot payload format to include episodic context and hard
   task-switch state when `EpisodicSlot` and `GatingRouter` primitives are
   available.
@@ -1055,6 +1095,7 @@ owned by this service boundary so race-step streaming follows the same
 zero-copy ownership contract.
 
 Rules:
+
 - Every typed-array field contributes exactly one buffer entry.
 - Shared buffers are deduplicated (listed only once).
 - A standard pack without `pitStatus` produces exactly
@@ -1062,6 +1103,7 @@ Rules:
 - The local-only `progress01` field is never transferred.
 
 Parameters:
+
 - `frame` - Packed render frame whose buffers will be transferred.
 
 Returns: Ordered list of `ArrayBuffer` references for postMessage transfer.
@@ -1091,6 +1133,7 @@ version mismatch is caught at the boundary rather than silently
 misinterpreting the packed bytes.
 
 Parameters:
+
 - `frame` - Incoming message payload (or any object with `schemaVersion`).
 
 Example:
@@ -1112,6 +1155,7 @@ Collects every `ArrayBuffer` backing a typed-array field in `frame` into a
 transfer list for zero-copy `postMessage` transfer.
 
 Rules enforced by the real implementation:
+
 - Every typed-array field must contribute exactly one buffer entry.
 - If two typed arrays share the same underlying buffer they must be listed
   only once.
@@ -1120,6 +1164,7 @@ Rules enforced by the real implementation:
   11 when Tier 4 adds the optional `pitStatus` array).
 
 Parameters:
+
 - `frame` - The packed render frame whose buffers will be transferred.
 
 Returns: Ordered list of `ArrayBuffer` references for postMessage transfer.
@@ -1174,13 +1219,17 @@ contributors,
 [Forward compatibility](https://en.wikipedia.org/wiki/Forward_compatibility).
 
 Parameters:
+
 - `pack` - Object with a `schemaVersion` field.
 - `expectedVersion` - Expected schema-version sentinel.
 
 Example:
 
 ```ts
-assertRacingPackSchemaVersion({ schemaVersion: 'eval-pack-v1' }, 'eval-pack-v1');
+assertRacingPackSchemaVersion(
+  { schemaVersion: 'eval-pack-v1' },
+  'eval-pack-v1',
+);
 // no error
 ```
 
@@ -1206,6 +1255,7 @@ uses pure functions (copy constructors and modulo), the same generic pack and
 racing configuration always produce the same frame fields.
 
 Parameters:
+
 - `pack` - Generic deterministic evaluation pack from Layer 2.
 - `racingConfig` - Racing-specific frame inputs.
 
@@ -1244,6 +1294,7 @@ Docs,
 [Transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects_from_one_worker_to_another).
 
 Parameters:
+
 - `frame` - Packed racing render frame.
 
 Returns: Ordered list of distinct `ArrayBuffer` references.
@@ -1275,6 +1326,7 @@ layout (three per team); the packed frame projects that into this compact
 form for zero-copy transfer.
 
 Zero-copy transfer contract:
+
 - Every `ArrayBuffer` backing a typed-array field must appear exactly once in
   the postMessage transfer list.
 - A buffer that appears in the transfer list is detached after transfer;
@@ -1302,6 +1354,7 @@ layout (three per team); the packed frame projects that into this compact
 form for zero-copy transfer.
 
 Zero-copy transfer contract:
+
 - Every `ArrayBuffer` backing a typed-array field must appear exactly once in
   the postMessage transfer list.
 - A buffer that appears in the transfer list is detached after transfer;
@@ -1360,6 +1413,7 @@ walks the packed frame and returns only indices whose `carTeam` matches the
 querying car.
 
 Parameters:
+
 - `frame` - Current packed race frame.
 - `carIndex` - Zero-based index of the querying car.
 
@@ -1423,6 +1477,7 @@ Tier 4 keeps the exact Tier 3 readability contract: Team A reads rows
 `[0, 1]`, Team B reads rows `[2, 3]`.
 
 Parameters:
+
 - `frame` - Current packed race frame.
 - `carIndex` - Zero-based index of the querying car.
 
@@ -1486,6 +1541,7 @@ roster `[A0, A1, A2, B0, B1, B2]`. Visibility stays team-local and includes the
 querying car row for parity with the Tier 3 helper contract.
 
 Parameters:
+
 - `frame` - Current packed race frame.
 - `carIndex` - Zero-based index of the querying car.
 
@@ -1534,9 +1590,10 @@ When the GPU hint is passed but the network is not actually GPU-ready
 falls back to the CPU path and returns a plain number array.
 
 Parameters:
+
 - `network` - Network that will drive one car.
 - `agentCount` - Total number of cars / networks in the batch. Used to
-apply the Phase 2 crossover threshold.
+  apply the Phase 2 crossover threshold.
 
 Returns: A controller handle that internally decides whether to pass
 `useGPU: true`.
@@ -1561,6 +1618,7 @@ the batched GPU seam so worker-side batch planning can decide before a
 device is bound.
 
 Parameters:
+
 - `network` - Network to inspect.
 
 Returns: True when the network has no gating, self-connections, or
@@ -1592,6 +1650,7 @@ Device readiness is intentionally checked at activation time by
 without requiring a live WebGPU device.
 
 Parameters:
+
 - `agentCount` - Number of cars / networks in the batch.
 - `network` - Representative network from the batch.
 
@@ -1608,6 +1667,7 @@ do NOT change fitness or reproduction. The queen selection function in the
 coevolution service handles reproductive consequences separately.
 
 Key concepts:
+
 - **blockerDelta**: leave-one-out contribution to the team's best-finishing
   position. Computed as `teamBestWithCar - teamBestWithoutCar`. A non-zero
   delta means removing this car would change the team's best-finishing
@@ -1646,6 +1706,7 @@ the next-best finisher. Blockers (worst finishers) typically have a zero
 delta because their removal does not change the team's best position.
 
 Parameters:
+
 - `carFinishPositions` - Finish positions for all cars.
 - `teamCarIndices` - Car indices on this car's team (including this car).
 - `carIndex` - The car being evaluated.
@@ -1670,11 +1731,12 @@ trigger reproduction. Use `selectQueenPerTeam` from the coevolution service
 for queen-based reproduction wiring.
 
 Parameters:
+
 - `carFinishPositions` - Finish positions for all cars, indexed by carIndex.
-Lower numbers are better (1 = first place).
+  Lower numbers are better (1 = first place).
 - `teamLayout` - Team assignment per car (0 for Team A, 1 for Team B).
 - `teamScores` - Team scores indexed by teamId. Higher scores are better.
-Used to determine the winning team for role classification.
+  Used to determine the winning team for role classification.
 
 Returns: One `RoleDivergenceMetric` per car, ordered by carIndex.
 
@@ -1709,12 +1771,14 @@ inferRole(
 Infers a car's role based on within-team finishing rank and team outcome.
 
 Role assignment logic:
+
 - `queen` — best (lowest) individual finishing position on the team.
 - `blocker` — worst (highest) individual position on a winning or tied team.
 - `pacer` — mid-range individual position (not best, not worst).
 - `undifferentiated` — worst finisher on a losing team.
 
 Parameters:
+
 - `carIndex` - The car being classified.
 - `teamCarIndices` - Car indices on this car's team.
 - `carFinishPositions` - Finish positions for all cars.
@@ -1737,6 +1801,7 @@ time series to detect whether the two teams' strategies are diverging in an
 alternating arms-race pattern or one team is consistently dominant.
 
 Key concepts:
+
 - **Advantage**: `teamAFitness - teamBFitness` at each generation boundary.
   Positive means Team A leads; negative means Team B leads.
 - **isAlternating**: true when every consecutive advantage pair flips sign,
@@ -1795,6 +1860,7 @@ classifyTrajectory(
 Classify a team-fitness time series and compute divergence metrics.
 
 Algorithm:
+
 1. Compute per-generation advantage (teamAFitness - teamBFitness).
 2. Compute sign flips between consecutive advantage values.
 3. isAlternating = true when all consecutive pairs flip sign.
@@ -1803,6 +1869,7 @@ Algorithm:
 6. divergenceScore = advantageAmplitude / maxFitness, clamped to [0, 1].
 
 Parameters:
+
 - `trajectory` - Read-only array of strategy-divergence snapshots
 
 Returns: Classifier result with isAlternating, dominantPeriod,
@@ -1868,10 +1935,11 @@ and computes read-only classifier results. It does not modify the
 snapshots it receives.
 
 Parameters:
+
 - `config` - Configuration object
 - `config` - Number of cars per team (e.g. 3 for a 6-car pack)
 - `config` - Minimum snapshots before classify() returns
-a non-zero result. Defaults to 2 when omitted or less than 2.
+  a non-zero result. Defaults to 2 when omitted or less than 2.
 
 Returns: A `StrategyDivergenceTracker` with recordSnapshot, classify, and
 getTrajectory methods

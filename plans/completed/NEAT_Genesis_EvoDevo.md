@@ -260,9 +260,9 @@ One designated "queen" parent provides the primary DNA template. Multiple second
 ```
 offspring.DNA = deepCopy(queen.DNA)
 for each drone Bᵢ in [B₁, B₂, ..., Bₙ]:
-    region = assignedRegion(i, policy.assignedRegionStrategy)
-    patch  = extractDNAPatch(Bᵢ, region)
-    offspring.DNA = applyPatch(offspring.DNA, patch, priority: secondary)
+ region = assignedRegion(i, policy.assignedRegionStrategy)
+ patch = extractDNAPatch(Bᵢ, region)
+ offspring.DNA = applyPatch(offspring.DNA, patch, priority: secondary)
 offspring.DNA = mutate(offspring.DNA, rate: policy.standardMutationRate)
 ```
 
@@ -290,17 +290,17 @@ Classic two-parent crossover aligned to NEAT innovation markers. Fitter parent p
 
 ```
 reproductionPolicy:
-  mode: 'parthenogenesis' | 'polyandric' | 'sexual'
-  parthenogenesisMutationRate: float           # 0.0 = true clone
-  polyandricDroneCount: int                    # secondary donor count
-  polyandricDroneContributionFraction: float   # fraction of DNA regions patchable by drones
-  queenBias: float                             # 0.5 = equal weight; 1.0 = queen wins all
-  assignedRegionStrategy:
-    'roundRobin' | 'byFitness' | 'bySpecialization'
-  modeIsEvolvable: boolean                     # can evolution mutate this field itself
-  seedPolicy:
-    siblingsDifferBySeed: boolean              # default: true
-    twinsAllowed: boolean                      # identical DNA + identical seed
+ mode: 'parthenogenesis' | 'polyandric' | 'sexual'
+ parthenogenesisMutationRate: float # 0.0 = true clone
+ polyandricDroneCount: int # secondary donor count
+ polyandricDroneContributionFraction: float # fraction of DNA regions patchable by drones
+ queenBias: float # 0.5 = equal weight; 1.0 = queen wins all
+ assignedRegionStrategy:
+ 'roundRobin' | 'byFitness' | 'bySpecialization'
+ modeIsEvolvable: boolean # can evolution mutate this field itself
+ seedPolicy:
+ siblingsDifferBySeed: boolean # default: true
+ twinsAllowed: boolean # identical DNA + identical seed
 ```
 
 When `modeIsEvolvable: true`, the reproduction mode is subject to selection pressure. Lineages that discover parthenogenesis in stable phases and polyandry in diverse phases gain a fitness edge through reproductive efficiency — directly mirroring how ant colonies shift reproductive strategies across colony maturity stages.
@@ -411,35 +411,35 @@ DNA is a dedicated class with explicit schema versioning, canonical lossless enc
 ### High-level Schema (conceptual)
 
 - **Identity & compatibility**
-  - `schemaVersion`, `compatibilityVersion`, `encodingMode`, `fingerprint`
+- `schemaVersion`, `compatibilityVersion`, `encodingMode`, `fingerprint`
 - **Reproduction policy**
-  - `reproductionPolicy` (see Reproduction System section)
+- `reproductionPolicy` (see Reproduction System section)
 - **Substrate & coordinate system**
-  - dimensions, normalization, zone partitioning strategy
+- dimensions, normalization, zone partitioning strategy
 - **Developmental program**
-  - rule passes (replicate/symmetry/hierarchy/differentiate)
-  - one or more CPPN programs (optionally per module archetype)
-  - substrate modifiers (scale/rotation/etc.)
+- rule passes (replicate/symmetry/hierarchy/differentiate)
+- one or more CPPN programs (optionally per module archetype)
+- substrate modifiers (scale/rotation/etc.)
 - **Module system**
-  - module archetypes with mandatory `computationType`
-  - `WeightSharedCohort` assignments
-  - per-module `receivesCoordinates` flag
-  - module addressing scheme (stable IDs and ordering)
-  - per-module directives (optional, may be compressed)
+- module archetypes with mandatory `computationType`
+- `WeightSharedCohort` assignments
+- per-module `receivesCoordinates` flag
+- module addressing scheme (stable IDs and ordering)
+- per-module directives (optional, may be compressed)
 - **Memory tiers**
-  - short-term parameters per zone (`GatedRecurrentCell`: `hiddenDim`, `decayRate`)
-  - medium-term parameters per zone (`EpisodicSlot`: `slotCount`, `evictionPolicy`)
+- short-term parameters per zone (`GatedRecurrentCell`: `hiddenDim`, `decayRate`)
+- medium-term parameters per zone (`EpisodicSlot`: `slotCount`, `evictionPolicy`)
 - **Neuromodulator zones**
-  - position, broadcast radius, input source spec, output dimensionality per zone
+- position, broadcast radius, input source spec, output dimensionality per zone
 - **Governance**
-  - stage/substage schedule and goal checks
-  - budgets (nodes/edges/bytes/time)
-  - wiring-cost preferences (soft pressure, evolvable)
-  - probe schedule (cheap every epoch; expensive on life events)
-  - morph policy knobs (growth/prune cooldowns, hysteresis)
+- stage/substage schedule and goal checks
+- budgets (nodes/edges/bytes/time)
+- wiring-cost preferences (soft pressure, evolvable)
+- probe schedule (cheap every epoch; expensive on life events)
+- morph policy knobs (growth/prune cooldowns, hysteresis)
 - **Payloads (optional)**
-  - compressed matrices/tables and quantized parameter blocks
-  - alternative encodings ("OR parts") for viability-first decode
+- compressed matrices/tables and quantized parameter blocks
+- alternative encodings ("OR parts") for viability-first decode
 
 ### Module Addressing and Zones
 
@@ -961,18 +961,18 @@ validation:
 
 - Create `src/neat/nge-evolution/` and land the following files (no behavior logic beyond
   type-level checks and error constructors):
-  - `neat.nge-evolution.types.ts`: reproduction-mode result types, compatibility-distance term
-    types, epigenetic prior operator input/output types, polyandric region-assignment result types.
-  - `neat.nge-evolution.constants.ts`: default alpha weights (`α_t = 0.40`, `α_c = 0.20`,
-    `α_m = 0.20`, `α_l = 0.20`), default epigenetic decay rate (`λ = 0.05`), default polyandric
-    drone contribution fraction (`0.1`), default polyandric queen bias (`1.0`).
-  - `neat.nge-evolution.errors.ts`: `NgeEvolution_ModeError`, `NgeEvolution_RegionError`,
-    `NgeEvolution_BudgetError`.
+- `neat.nge-evolution.types.ts`: reproduction-mode result types, compatibility-distance term
+  types, epigenetic prior operator input/output types, polyandric region-assignment result types.
+- `neat.nge-evolution.constants.ts`: default alpha weights (`α_t = 0.40`, `α_c = 0.20`,
+  `α_m = 0.20`, `α_l = 0.20`), default epigenetic decay rate (`λ = 0.05`), default polyandric
+  drone contribution fraction (`0.1`), default polyandric queen bias (`1.0`).
+- `neat.nge-evolution.errors.ts`: `NgeEvolution_ModeError`, `NgeEvolution_RegionError`,
+  `NgeEvolution_BudgetError`.
 - Red tests for error-constructor coverage land in `neat.nge-evolution.test.ts` alongside the
   errors file.
 - No crossover, mutation, distance, or operator logic in this step.
 
-**Closure note (2026-05-28):**
+**Closure note:**
 
 - Landed `src/neat/nge-evolution/neat.nge-evolution.types.ts`,
   `src/neat/nge-evolution/neat.nge-evolution.constants.ts`,
@@ -1011,15 +1011,15 @@ validation:
 ```
 
 - Implement `neat.nge-evolution.distance.ts`: composite NGE compatibility-distance calculator.
-  - Composite formula: `δ = α_t·δ_topology + α_c·δ_computation + α_m·δ_memory + α_l·δ_lifecycle`.
-  - Each term is normalized independently (min-max per population slice) before summation.
-  - `δ_topology` aligns with the classic NEAT innovation-and-topology distance (unmodified).
-  - `δ_computation` covers `computationType` mix and motif counts across archetypes.
-  - `δ_memory` covers memory tier presence and capacity bins (`hiddenDim`, `slotCount`).
-  - `δ_lifecycle` covers reproduction policy mode, assimilation cadence, and wiring-cost preference knobs from DNA.
-  - When NGE is disabled, all NGE-only terms (`δ_computation`, `δ_memory`, `δ_lifecycle`) must
-    collapse to zero so classic NEAT speciation is behaviorally unchanged.
-  - Alpha weights are injectable via a context parameter; fall back to constants defaults when absent.
+- Composite formula: `δ = α_t·δ_topology + α_c·δ_computation + α_m·δ_memory + α_l·δ_lifecycle`.
+- Each term is normalized independently (min-max per population slice) before summation.
+- `δ_topology` aligns with the classic NEAT innovation-and-topology distance (unmodified).
+- `δ_computation` covers `computationType` mix and motif counts across archetypes.
+- `δ_memory` covers memory tier presence and capacity bins (`hiddenDim`, `slotCount`).
+- `δ_lifecycle` covers reproduction policy mode, assimilation cadence, and wiring-cost preference knobs from DNA.
+- When NGE is disabled, all NGE-only terms (`δ_computation`, `δ_memory`, `δ_lifecycle`) must
+  collapse to zero so classic NEAT speciation is behaviorally unchanged.
+- Alpha weights are injectable via a context parameter; fall back to constants defaults when absent.
 - Red tests first (in `neat.nge-evolution.test.ts`): verify each distance term independently,
   verify zero-collapse when NGE disabled, verify normalized summation does not exceed `1.0`.
 - Validation: clean typecheck + 100% owner-local coverage including the distance calculator.
@@ -1028,8 +1028,8 @@ validation:
 - Done: preserved the closed `nge-dna` boundary by accepting lifecycle cadence and wiring-cost
   preferences as an owner-local comparison sidecar until those knobs gain canonical DNA fields.
 - Validation completed on Windows:
-  - `npx tsc --noEmit -p tsconfig.json`
-  - `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=nge-evolution`
+- `npx tsc --noEmit -p tsconfig.json`
+- `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=nge-evolution`
 
 **Required validation:**
 
@@ -1054,19 +1054,19 @@ validation:
 ```
 
 - Implement `neat.nge-evolution.reproduction.ts`: all three reproduction mode operators.
-  - **Parthenogenesis:** single-parent mutation-only; `parthenogenesisMutationRate: 0.0` yields
-    a true clone; low rate yields bud variation; standard rate yields exploratory asexual.
-    Must produce mutation-only variation with no crossover path.
-  - **Polyandric:** queen DNA deep-copied as the base template; each drone patches its assigned
-    non-overlapping region; queen contributions win all conflicts. Supports all three
-    `assignedRegionStrategy` values: `roundRobin`, `byFitness`, `bySpecialization`.
-    `polyandricDroneContributionFraction` caps the total fraction of regions patchable.
-  - **Standard sexual (A × B):** NEAT-aligned two-parent crossover on innovation markers;
-    fitter parent preferentially contributes disjoint/excess genes; both parents contribute to
-    matching regions via uniform crossover or arithmetic blend per DNA part type (see DNA
-    recombination table in the plan).
-  - When NGE is disabled, only standard sexual (A × B) is available; calls to parthenogenesis
-    or polyandric operators return `NgeEvolution_ModeError`.
+- **Parthenogenesis:** single-parent mutation-only; `parthenogenesisMutationRate: 0.0` yields
+  a true clone; low rate yields bud variation; standard rate yields exploratory asexual.
+  Must produce mutation-only variation with no crossover path.
+- **Polyandric:** queen DNA deep-copied as the base template; each drone patches its assigned
+  non-overlapping region; queen contributions win all conflicts. Supports all three
+  `assignedRegionStrategy` values: `roundRobin`, `byFitness`, `bySpecialization`.
+  `polyandricDroneContributionFraction` caps the total fraction of regions patchable.
+- **Standard sexual (A × B):** NEAT-aligned two-parent crossover on innovation markers;
+  fitter parent preferentially contributes disjoint/excess genes; both parents contribute to
+  matching regions via uniform crossover or arithmetic blend per DNA part type (see DNA
+  recombination table in the plan).
+- When NGE is disabled, only standard sexual (A × B) is available; calls to parthenogenesis
+  or polyandric operators return `NgeEvolution_ModeError`.
 - Red tests first: parthenogenesis mutation-only assertion (no crossover), polyandric
   queen-wins-conflict assertion, all three region-assignment strategy paths covered,
   sexual NEAT-alignment assertion (disjoint/excess from fitter parent).
@@ -1078,8 +1078,8 @@ validation:
   NGE-disabled mode guards, all three polyandric assignment strategies, queen-wins-conflict
   patching, fitter-parent sexual disjoint inheritance, and the parthenogenesis identity-mutation fallback.
 - Validation completed on Windows:
-  - `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=nge-evolution`
-  - `npx tsc --noEmit -p tsconfig.json`
+- `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=nge-evolution`
+- `npx tsc --noEmit -p tsconfig.json`
 
 **Required validation:**
 
@@ -1104,14 +1104,14 @@ validation:
 ```
 
 - Implement `neat.nge-evolution.epigenetic.ts`: optional two-parent reference prior operator.
-  - Formula: `θ ← θ + Δθ_mutation + λ·(θ* - θ)` where `θ*` is the two-parent reference blend
-    and `λ` is intentionally small (default `NGE_EVOLUTION_DEFAULT_EPIGENETIC_DECAY`).
-  - References are birth-time nudges applied once at offspring creation; they must not persist
-    as weights and must not be serialized into long-term DNA.
-  - Deterministic: same two-parent references + same child seed → same λ-scaled nudge.
-  - `λ` is injectable via options; falls back to the constants default.
-  - Operator is strictly opt-in: when `reproductionPolicy` carries no epigenetic reference
-    config, the operator must be a no-op and must not allocate any ephemeral state.
+- Formula: `θ ← θ + Δθ_mutation + λ·(θ* - θ)` where `θ*` is the two-parent reference blend
+  and `λ` is intentionally small (default `NGE_EVOLUTION_DEFAULT_EPIGENETIC_DECAY`).
+- References are birth-time nudges applied once at offspring creation; they must not persist
+  as weights and must not be serialized into long-term DNA.
+- Deterministic: same two-parent references + same child seed → same λ-scaled nudge.
+- `λ` is injectable via options; falls back to the constants default.
+- Operator is strictly opt-in: when `reproductionPolicy` carries no epigenetic reference
+  config, the operator must be a no-op and must not allocate any ephemeral state.
 - Red tests first: no-op when unconfigured (zero allocation), deterministic nudge when
   configured, λ-scaled decay verification, two-parent reference blend assertion.
 - Validation: clean typecheck + 100% owner-local coverage including epigenetic operator.
@@ -1123,8 +1123,8 @@ validation:
   and the shorter-shelf fallback path; `src/neat/nge-evolution/neat.nge-evolution.epigenetic.ts`
   now holds 100% statements, branches, functions, and lines inside the allowlisted slice.
 - Validation completed on Windows:
-  - `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=nge-evolution`
-  - `npx tsc --noEmit -p tsconfig.json`
+- `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=nge-evolution`
+- `npx tsc --noEmit -p tsconfig.json`
 
 **Required validation:**
 
@@ -1151,19 +1151,21 @@ validation:
 ```
 
 - Phase E owner boundary is complete:
-  - `src/neat/nge-evolution/neat.nge-evolution.ts` landed as the public orchestration facade for
-    distance, reproduction, and epigenetic operators.
-  - `src/neat/nge-evolution/neat.nge-evolution.utils.ts` landed the shared helper namespaces used
-    by the owner-local runtime surface.
-- The full allowlisted Phase E closure gate reran through direct-MCP validation on 2026-05-28 and
+- `src/neat/nge-evolution/neat.nge-evolution.ts` landed as the public orchestration facade for
+  distance, reproduction, and epigenetic operators.
+- `src/neat/nge-evolution/neat.nge-evolution.utils.ts` landed the shared helper namespaces used
+  by the owner-local runtime surface.
+- The full allowlisted Phase E closure gate reran through direct-MCP validation and
   all four commands passed:
-  1. `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=nge-evolution`
-     — PASS through `run_allowlisted_validation`.
-  2. `npx tsc --noEmit -p tsconfig.json` — PASS through `run_allowlisted_validation`.
-  3. `npm run test:silent` — PASS through `run_allowlisted_validation`; repo-wide coverage stayed
-     green at 100% across `src/`.
-  4. `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo.md`
-     — PASS through `run_allowlisted_validation` (`ok: true`, `errors: 0`, `warnings: 0`).
+
+1.  `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=nge-evolution`
+    — PASS through `run_allowlisted_validation`.
+2.  `npx tsc --noEmit -p tsconfig.json` — PASS through `run_allowlisted_validation`.
+3.  `npm run test:silent` — PASS through `run_allowlisted_validation`; repo-wide coverage stayed
+    green at 100% across `src/`.
+4.  `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo.md`
+    — PASS through `run_allowlisted_validation` (`ok: true`, `errors: 0`, `warnings: 0`).
+
 - The direct-MCP workflow snapshot and validation allowlist matched `active-step.validation`
   before the rerun; structured evidence is archived in
   `artifacts/phase-e-step06-mcp-rerun.json`.
@@ -1325,7 +1327,7 @@ ending.
 **Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested
 `Copy-paste prompt` subsection.
 
-**Closure resolution note (2026-05-28):**
+**Closure resolution note:**
 
 - Compressed Steps 01-06 into the archived summary above and refreshed
   `plans/NEAT_Genesis_EvoDevo.logs.md` with the durable Phase F checkpoint record.
@@ -1355,14 +1357,14 @@ boundary or the earlier closed NGE runtime phases.
 
 - Step 01 [DONE] packetized the phase and confirmed `src/neat/nge-collective/` as the smallest
   honest primary owner boundary; listed explicit non-goals excluding benchmark-specific world logic;
-  plan-sync passed on 2026-05-28.
+  plan-sync passed .
 - Step 02 [DONE] mapped existing repo seams, confirmed no cross-boundary edits were needed, and
   converted the seam map into a concrete Step 03 red target and Step 04 file shelf; plan-sync
-  passed on 2026-05-28.
+  passed .
 - Step 03 [DONE] authored three owner-local failing test files under `src/neat/nge-collective/`
-  on 2026-05-29 covering shared-field semantics, ordered multi-agent evaluation, role-divergence
+  covering shared-field semantics, ordered multi-agent evaluation, role-divergence
   observability, and rolling opponent-snapshot behavior. All three suites failed with
-  `Cannot find module` — durable and specific; plan-sync passed on 2026-05-29.
+  `Cannot find module` — durable and specific; plan-sync passed .
 - Step 04 [DONE] landed the full `src/neat/nge-collective/` shelf with all 7 approved files:
   `neat.nge-collective.ts`, `neat.nge-collective.types.ts`, `neat.nge-collective.constants.ts`,
   `neat.nge-collective.errors.ts`, `neat.nge-collective.shared-field.ts`,
@@ -1373,7 +1375,7 @@ boundary or the earlier closed NGE runtime phases.
   (`constants`, `errors`, `evaluation`, `metrics`, `shared-field`); resolved coverage gaps for
   the `neighborCount === 0` diffusion branch, `evaluators.length < agentCount` skip branch, and
   distribution-length edge cases in role-divergence metric; `npm run test:silent` → 438 suites /
-  5032 tests passing; plan-sync passed on 2026-05-29.
+  5032 tests passing; plan-sync passed .
 - Step 06 [DONE] improved JSDoc across all 6 implementation files with Mermaid diagrams (field
   lifecycle, tick sequence, FIFO pool, architecture graph); `npm run docs` → exit 0;
   `src/neat/nge-collective/README.md` regenerated; surgical benchmark handoff updates landed in
@@ -1461,7 +1463,7 @@ validation:
 
 ### Phase G validation gate (closed)
 
-All four Phase G closure-gate commands passed on 2026-05-29 (Steps 05-07):
+All four Phase G closure-gate commands passed (Steps 05-07):
 
 1. `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=nge-collective`
    — 100% statements/branches/functions/lines for all `src/neat/nge-collective/*.ts` runtime files.
@@ -1472,7 +1474,7 @@ All four Phase G closure-gate commands passed on 2026-05-29 (Steps 05-07):
 
 ### Phase G Step 03 red-test evidence (closed)
 
-- Step 03 authored three owner-local failing test files under `src/neat/nge-collective/` on 2026-05-29.
+- Step 03 authored three owner-local failing test files under `src/neat/nge-collective/` .
 - `npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=nge-collective`
   → 3 suites FAIL (Cannot find module), 0 tests ran. Durable and specific.
 - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo.md`
@@ -1487,13 +1489,13 @@ All four Phase G closure-gate commands passed on 2026-05-29 (Steps 05-07):
   shared-field diffusion/decay, ordered multi-agent lifecycle, role-divergence observability, and
   rolling opponent-snapshot semantics as the only approved acceptance focus.
 - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo.md`
-  — PASS on 2026-05-28 after closing Step 02 and promoting Step 03.
+  — PASS after closing Step 02 and promoting Step 03.
 
 ### Phase G Step 01 planning evidence
 
 - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo.md`
-  — PASS on 2026-05-28 after authoring the Step 02-07 packets.
-- Non-blocking script gap noted on 2026-05-28: `validate-plan-phase-packets.mjs` still reports
+  — PASS after authoring the Step 02-07 packets.
+- Non-blocking script gap noted : `validate-plan-phase-packets.mjs` still reports
   pre-existing false negatives against this plan's alphanumeric phase labels and older historical
   packets, so do not treat it as a Phase G gate until `00-helping` resolves the script-plan drift.
 

@@ -539,10 +539,10 @@ half-moved.
    Update the tracker with `tracker-handoff` before doing more extraction work.
 6. **Repeated gate or workflow failures**  
    Record the failure with
-   `node scripts/agent-customization/gates/record-gate-exception.mjs`. After
-   three consecutive gate failures in one session, escalate via
-   `00.cross-tier-helper` and `00-helping` instead of normalizing a broken
-   workflow edge.
+   `node scripts/agent-customization/gates/record-gate-exception.mjs`. Continue
+   retrying until resolved or a true technical limit is reached. No
+   concessions, no threshold. Only stop when a documented theoretical or
+   practical absolute blocks further progress.
 7. **Session must stop early**  
    Leave the boundary compiling or otherwise stable, mark the blocker
    explicitly in the plan, and provide a fenced `text` handoff prompt that says

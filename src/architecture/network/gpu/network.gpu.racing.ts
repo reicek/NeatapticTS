@@ -152,3 +152,35 @@ export async function evaluateRacingGeneration(
 
   return evaluateOnCPU(networks, inputMatrix);
 }
+
+/**
+ * Single concurrent racing evaluation request.
+ */
+export interface RacingAgentRequest {
+  network: Network;
+  inputs: Float32Array | number[];
+}
+
+/**
+ * Evaluate many racing agents in parallel on the GPU.
+ *
+ * This is a stub export that satisfies the compile-time contract for the red
+ * testing phase. The implementation will dispatch all requests concurrently,
+ * avoid pipeline collisions when the same network instance appears multiple
+ * times, and return one output array per request.
+ *
+ * @param device - WebGPU device used to run the concurrent dispatch.
+ * @param requests - One request per agent to evaluate.
+ * @param options - Threshold and policy options.
+ * @returns Promise resolving to one output array per request, in request order.
+ */
+export async function evaluateConcurrentRacingAgents(
+  device: GPUDevice,
+  requests: RacingAgentRequest[],
+  options?: RacingBatchOptions,
+): Promise<Float32Array[]> {
+  void device;
+  void requests;
+  void options;
+  throw new Error('evaluateConcurrentRacingAgents: not implemented');
+}

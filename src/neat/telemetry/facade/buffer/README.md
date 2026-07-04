@@ -43,6 +43,7 @@ Reach for this when you want a fresh telemetry observation window between
 experiment phases without rebuilding the rest of the controller.
 
 Parameters:
+
 - `host` - `Neat` instance whose telemetry buffer should be reset.
 
 Returns: Nothing. The helper mutates the host buffer in place.
@@ -63,6 +64,7 @@ recent telemetry window in a spreadsheet or quick table view without having
 to parse nested JSON structures.
 
 Parameters:
+
 - `host` - `Neat` instance whose telemetry buffer should be exported.
 - `maxEntries` - Maximum number of recent entries to include.
 
@@ -90,6 +92,7 @@ append-and-pipe workflow simple: one generation snapshot per line, easy to
 write to disk, ingest from scripts, or scan in notebooks.
 
 Parameters:
+
 - `host` - `Neat` instance whose telemetry buffer should be serialized.
 
 Returns: JSONL payload with one telemetry object per line.
@@ -116,6 +119,7 @@ so callers can treat "inspect the buffer" and "serialize the buffer" as one
 concept cluster inside the broader telemetry facade.
 
 Parameters:
+
 - `host` - `Neat` instance storing generation telemetry snapshots.
 
 Returns: Telemetry entries captured so far, or an empty array when telemetry

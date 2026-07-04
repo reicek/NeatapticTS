@@ -36,24 +36,24 @@ import { Architect } from '@reicek/neataptic-ts';
 const network = Architect.lstm(1, 4, 1);
 
 // Run first sequence from fresh state.
-const run1 = [0.1, 0.3, 0.7].map(input => network.activate([input])[0]);
+const run1 = [0.1, 0.3, 0.7].map((input) => network.activate([input])[0]);
 
 // Reset all accumulated state.
 network.clear();
 
 // Run same sequence again — produces identical outputs.
-const run2 = [0.1, 0.3, 0.7].map(input => network.activate([input])[0]);
+const run2 = [0.1, 0.3, 0.7].map((input) => network.activate([input])[0]);
 
 console.log(run1[0] === run2[0]); // true — clear() restored fresh-start behavior
 ```
 
 ## When To Call `clear()`
 
-| Scenario | Call `clear()`? |
-|---|---|
-| New episode or independent evaluation example | Yes — before each new sequence |
-| Rolling window / online learning across one continuous stream | No — state should carry forward |
+| Scenario                                                         | Call `clear()`?                    |
+| ---------------------------------------------------------------- | ---------------------------------- |
+| New episode or independent evaluation example                    | Yes — before each new sequence     |
+| Rolling window / online learning across one continuous stream    | No — state should carry forward    |
 | Evaluating NEAT population (each genome is an independent agent) | Yes — before each genome's episode |
-| Training with BPTT across one contiguous batch | No — state is part of the sequence |
+| Training with BPTT across one contiguous batch                   | No — state is part of the sequence |
 
 The example deliberately shows both cases side-by-side so the distinction stays concrete.

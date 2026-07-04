@@ -9,6 +9,7 @@ facade explains how that evidence comes back out as compact snapshots,
 species summaries, objective views, diversity reads, and export-friendly logs.
 
 A useful way to read the module is by inspection workflow:
+
 - buffer views answer "what happened recently?" via `getTelemetry()` and telemetry exports
 - objective and Pareto helpers answer "what tradeoffs are active right now?"
 - species and lineage helpers answer "which families are growing, stalling, or inheriting together?"
@@ -58,6 +59,7 @@ window, for example between experiments or before capturing a focused new
 frontier snapshot.
 
 Parameters:
+
 - `host` - `Neat` instance whose Pareto archive should be emptied.
 
 Returns: Nothing. The archive buffer is reset in place.
@@ -77,6 +79,7 @@ It is especially useful in notebooks, UI sessions, or targeted experiments
 where older telemetry would otherwise drown out the next few generations.
 
 Parameters:
+
 - `host` - `Neat` instance whose telemetry buffer should be reset.
 
 Returns: Nothing. The helper mutates the host buffer in place.
@@ -96,6 +99,7 @@ useful when one inspection session temporarily added custom objectives and the
 caller wants to return the controller to its simpler baseline objective view.
 
 Parameters:
+
 - `host` - `Neat` instance whose objective registry should be cleared.
 
 Returns: Nothing. The helper mutates the objective registry in place.
@@ -117,6 +121,7 @@ regression fixtures, or notebook-driven frontier inspection. Compared with
 in-memory inspection.
 
 Parameters:
+
 - `host` - `Neat` instance storing Pareto objective snapshots.
 - `maxEntries` - Maximum number of entries to serialize.
 
@@ -138,6 +143,7 @@ the quickest path from species history into spreadsheets, ad-hoc inspection,
 or lightweight experiment notes.
 
 Parameters:
+
 - `host` - `Neat` instance whose species history should be exported.
 - `maxEntries` - Maximum number of recent history entries to include.
 
@@ -159,6 +165,7 @@ file sink. JSONL keeps each generation independently parseable while still
 preserving the richer row structure that CSV flattens away.
 
 Parameters:
+
 - `host` - `Neat` instance whose species history should be serialized.
 - `maxEntries` - Maximum number of recent history entries to include.
 
@@ -180,6 +187,7 @@ parsing nested JSON. The helper intentionally focuses on a recent window so a
 long run can still produce a compact worksheet.
 
 Parameters:
+
 - `host` - `Neat` instance whose telemetry buffer should be exported.
 - `maxEntries` - Maximum number of recent entries to include.
 
@@ -205,6 +213,7 @@ easy to append to a file, easy to pipe into scripts, and stable enough for
 notebook or CLI post-processing.
 
 Parameters:
+
 - `host` - `Neat` instance whose telemetry buffer should be serialized.
 
 Returns: JSONL payload with one telemetry object per line.
@@ -225,6 +234,7 @@ The resulting snapshot is especially useful when you need to judge whether a
 run is still exploring many structural alternatives or converging too hard.
 
 Parameters:
+
 - `host` - `Neat` instance exposing cached diversity state.
 
 Returns: Diversity metrics for the current population.
@@ -254,6 +264,7 @@ for it when you want a fast sanity check on inheritance patterns without
 paying the cost of a larger lineage report.
 
 Parameters:
+
 - `host` - `Neat` instance whose population lineage should be sampled.
 - `limit` - Maximum number of genomes to include in the snapshot.
 
@@ -277,6 +288,7 @@ rank layers, crowding pressure, and rough structural size, but not so much
 detail that dashboards or quick diagnostics have to unpack whole genomes.
 
 Parameters:
+
 - `host` - `Neat` instance whose population should be summarized.
 
 Returns: Rank, crowding, score, and size metrics per genome.
@@ -296,6 +308,7 @@ not need descriptor payloads, only a quick sense of whether novelty search is
 still collecting distinct behaviors or has gone quiet.
 
 Parameters:
+
 - `host` - `Neat` instance tracking novelty behavior descriptors.
 
 Returns: Number of archived novelty descriptors.
@@ -316,6 +329,7 @@ is "when did the objective set change?" rather than "what are the active
 objectives right now?"
 
 Parameters:
+
 - `host` - `Neat` instance storing objective lifecycle events.
 
 Returns: Shallow copy of the recorded objective events.
@@ -335,6 +349,7 @@ only need to confirm which objectives are active, not the full descriptor
 payload.
 
 Parameters:
+
 - `host` - `Neat` instance exposing objective descriptors.
 
 Returns: Ordered list of active objective keys.
@@ -355,6 +370,7 @@ debugging output: the key and whether the objective is minimized or
 maximized.
 
 Parameters:
+
 - `host` - `Neat` instance exposing objective descriptors.
 
 Returns: Compact objective summaries in evaluation order.
@@ -379,6 +395,7 @@ they paying off?" without digging through raw telemetry rows generation by
 generation.
 
 Parameters:
+
 - `host` - `Neat` instance recording operator attempts and successes.
 
 Returns: Operator summaries suitable for dashboards and debugging.
@@ -400,6 +417,7 @@ evolving. It is better suited for replaying how the frontier changed over
 time.
 
 Parameters:
+
 - `host` - `Neat` instance storing archived Pareto metadata.
 - `maxEntries` - Maximum number of archive entries to return.
 
@@ -421,6 +439,7 @@ exist right now, and how many genomes are sitting on each layer of the
 current tradeoff surface?
 
 Parameters:
+
 - `host` - `Neat` instance whose population should be partitioned.
 - `maxFronts` - Maximum number of fronts to reconstruct.
 
@@ -440,6 +459,7 @@ These timings are intentionally simple. They answer "which phase was expensive
 last time?" without pretending to replace a profiler.
 
 Parameters:
+
 - `host` - `Neat` instance tracking performance timings.
 
 Returns: Snapshot of the last evaluation and evolution durations.
@@ -464,6 +484,7 @@ snapshot. It is the better surface for plots, regressions, and post-run
 analysis of stagnation or speciation churn.
 
 Parameters:
+
 - `host` - `Neat` instance storing species history snapshots.
 
 Returns: Historical species entries for each recorded generation.
@@ -488,6 +509,7 @@ population is still split across several improving families or collapsing
 toward one dominant cluster.
 
 Parameters:
+
 - `host` - `Neat` instance whose live species registry should be summarized.
 
 Returns: Array of current species summaries.
@@ -512,6 +534,7 @@ diversity changes, objective snapshots, and timing evidence exactly as they
 were recorded generation by generation.
 
 Parameters:
+
 - `host` - `Neat` instance storing generation telemetry snapshots.
 
 Returns: Telemetry entries captured so far, or an empty array when telemetry
@@ -521,9 +544,9 @@ Example:
 
 const telemetryWindow = getTelemetry(neat).slice(-5);
 console.table(telemetryWindow.map((entry) => ({
-  generation: entry.generation,
-  bestScore: entry.bestScore,
-  species: entry.species,
+generation: entry.generation,
+bestScore: entry.bestScore,
+species: entry.species,
 })));
 
 ### NeatTelemetryFacadeHost
@@ -556,6 +579,7 @@ archive surfaces to start tracking a new tradeoff dimension without dropping
 into the lower-level objective modules first.
 
 Parameters:
+
 - `host` - `Neat` instance whose multi-objective registry should change.
 - `key` - Unique objective key.
 - `direction` - Whether lower or higher values are considered better.
@@ -577,6 +601,7 @@ This is useful when a caller wants to restart the novelty observation window
 without also resetting the rest of telemetry or the broader controller state.
 
 Parameters:
+
 - `host` - `Neat` instance whose novelty archive should be reset.
 
 Returns: Nothing. The archive is mutated in place.

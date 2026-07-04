@@ -260,8 +260,10 @@ describe('network.gpu.kernel', () => {
           nodes: 1,
           outputs: 2,
           params: 3,
+          topoLevels: 4,
+          inStart: 5,
         },
-        count: 4,
+        count: 6,
       });
     });
   });
@@ -285,12 +287,12 @@ describe('network.gpu.kernel', () => {
       expect(device.createBindGroupLayout).toHaveBeenCalledTimes(1);
     });
 
-    it('creates four struct-buffer and uniform entries', () => {
+    it('creates six struct-buffer and uniform entries', () => {
       createBindGroupLayout(device);
       const descriptor = (device.createBindGroupLayout as jest.Mock).mock
         .calls[0][0];
 
-      expect(descriptor.entries.length).toBe(4);
+      expect(descriptor.entries.length).toBe(6);
     });
 
     it('sets compute visibility on every entry', () => {
@@ -306,7 +308,7 @@ describe('network.gpu.kernel', () => {
       ).toBe(true);
     });
 
-    it('orders entries as connections, nodes, outputs, params', () => {
+    it('orders entries as connections, nodes, outputs, params, topoLevels, inStart', () => {
       createBindGroupLayout(device);
       const descriptor = (device.createBindGroupLayout as jest.Mock).mock
         .calls[0][0];
@@ -322,6 +324,8 @@ describe('network.gpu.kernel', () => {
         { binding: 1, type: 'storage' },
         { binding: 2, type: 'storage' },
         { binding: 3, type: 'uniform' },
+        { binding: 4, type: 'read-only-storage' },
+        { binding: 5, type: 'read-only-storage' },
       ]);
     });
   });

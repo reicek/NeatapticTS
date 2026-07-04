@@ -1,5 +1,8 @@
 import Network from '../network';
-import { evaluateRacingGeneration } from './network.gpu.racing';
+import {
+  evaluateConcurrentRacingAgents,
+  evaluateRacingGeneration,
+} from './network.gpu.racing';
 import { createMockGPUDevice } from './__mocks__/gpu.mock';
 
 const DEFAULT_THRESHOLD = 4;
@@ -130,6 +133,64 @@ describe('network.gpu.racing', () => {
       );
 
       expect(result.length).toBe(batchSize * network.output);
+    });
+  });
+
+  describe('evaluateConcurrentRacingAgents', () => {
+    it('does not collide when multiple requests target the same network instance', async () => {
+      const network = Network.createMLP(2, [3], 1);
+      const firstInputs = [0.1, 0.2];
+      const secondInputs = [0.3, 0.4];
+      const requests = [
+        { network, inputs: firstInputs },
+        { network, inputs: secondInputs },
+      ];
+      const device = createMockGPUDevice({ emulateNetwork: network });
+
+      const outputs = await evaluateConcurrentRacingAgents(device, requests);
+
+      expect(outputs).toEqual([
+        new Float32Array(network.activate(firstInputs)),
+        new Float32Array(network.activate(secondInputs)),
+      ]);
+    });
+
+    it('returns one correct output per request across different network instances', async () => {
+      const network = Network.createMLP(2, [3], 1);
+      const firstInputs = [0.1, 0.2];
+      const secondInputs = [0.3, 0.4];
+      const requests = [
+        { network: network.clone(), inputs: firstInputs },
+        { network: network.clone(), inputs: secondInputs },
+      ];
+      const device = createMockGPUDevice({ emulateNetwork: network });
+
+      const outputs = await evaluateConcurrentRacingAgents(device, requests);
+
+      expect({
+        length: outputs.length,
+        first: outputs[0],
+        second: outputs[1],
+      }).toEqual({
+        length: requests.length,
+        first: new Float32Array(network.activate(firstInputs)),
+        second: new Float32Array(network.activate(secondInputs)),
+      });
+    });
+
+    it('creates only one pipeline per unique topology for interleaved requests', async () => {
+      const networkA = Network.createMLP(2, [3], 1);
+      const networkB = Network.createMLP(2, [4], 1);
+      const requests = [
+        { network: networkA.clone(), inputs: [0.1, 0.2] },
+        { network: networkB.clone(), inputs: [0.3, 0.4] },
+        { network: networkA.clone(), inputs: [0.5, 0.6] },
+      ];
+      const device = createMockGPUDevice();
+
+      await evaluateConcurrentRacingAgents(device, requests);
+
+      expect(device.recorded.pipelines.length).toBe(2);
     });
   });
 });

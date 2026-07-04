@@ -114,6 +114,7 @@ changed the memory story in the expected direction, or teach why reserved and
 used bytes can diverge even when the active connection count stays stable.
 
 Parameters:
+
 - `targetNetworks` - Optional single network or array. If omitted, uses registered networks.
 
 Returns: MemoryStats heuristic snapshot.
@@ -132,7 +133,7 @@ console.log(snapshot.estimatedTotalBytes, snapshot.slabs.fragmentationPct);
 Detailed statistics describing the current estimated memory footprint of
 tracked networks plus supporting pools.
 
-Important: All byte counts here are *estimates*. JavaScript engine object
+Important: All byte counts here are _estimates_. JavaScript engine object
 overhead varies; once slab (Structure of Arrays) storage dominates, these
 estimates get closer to real usage. Treat values as relative metrics for
 comparing configurations (e.g. before / after enabling pooling) rather than
@@ -172,6 +173,7 @@ can opt into tracking once, then ask for snapshots later without threading a
 network list through every call site.
 
 Parameters:
+
 - `network` - Network instance (loose shape, validated at runtime).
 
 Returns: void
@@ -211,6 +213,7 @@ Use this when the chapter's tracked set should follow the active lifetime of
 a network instead of accumulating historical references.
 
 Parameters:
+
 - `network` - Network instance to remove.
 
 Returns: void
@@ -223,6 +226,7 @@ Use this helper when the runtime baseline may expose `structuredClone`, but a
 plain-data fallback is still required for older or constrained environments.
 
 Behavior of the JSON fallback path:
+
 - **Throws** on circular references and `BigInt` values (JSON serialization error).
 - **Lossy** for `undefined`, functions, and symbols — these are silently
   dropped or coerced to `null` by `JSON.stringify`, so callers should not
@@ -248,12 +252,14 @@ Use this helper when the runtime baseline may expose `structuredClone`, but a
 plain-data fallback is still required for older or constrained environments.
 
 Behavior of the JSON fallback path:
+
 - **Throws** on circular references and `BigInt` values (JSON serialization error).
 - **Lossy** for `undefined`, functions, and symbols — these are silently
   dropped or coerced to `null` by `JSON.stringify`, so callers should not
   rely on strict value preservation through the fallback path.
 
 Parameters:
+
 - `value` - Value to clone.
 
 Returns: Deep-cloned value.
@@ -308,6 +314,7 @@ accumulateCapacitySlices(
 Track reserved vs used bytes based on connection capacity slices.
 
 Parameters:
+
 - `accumulators` - Running totals for the memory snapshot.
 - `network` - Network exposing capacity metadata.
 
@@ -323,6 +330,7 @@ accumulateSlabArrays(
 Sum slab-backed array counts and byte sizes into the accumulator.
 
 Parameters:
+
 - `accumulators` - Running totals for the memory snapshot.
 - `typedArrays` - Connection-parallel arrays to measure.
 
@@ -350,6 +358,7 @@ pairs them with slab and capacity hints when those newer storage paths are
 present.
 
 Parameters:
+
 - `networksToSummarize` - Networks to include in the snapshot.
 - `heuristics` - Heuristic byte weights for connections and nodes.
 
@@ -366,11 +375,12 @@ buildFlagSnapshot(
 
 Build flag snapshot derived from config and allocator stats.
 
-Flag snapshots explain *why* the memory picture may look the way it does by
+Flag snapshots explain _why_ the memory picture may look the way it does by
 capturing the small set of runtime options that materially alter pooling,
 slab layout, and feature-gated storage paths.
 
 Parameters:
+
 - `configSnapshot` - Relevant configuration values.
 - `allocationStats` - Allocator stats (nullable on failure).
 
@@ -398,6 +408,7 @@ already happened, so the builder can stay focused on turning those pieces
 into a readable teaching payload.
 
 Parameters:
+
 - `input` - Structured inputs collected by the orchestrator.
 
 Returns: Complete MemoryStats snapshot.
@@ -415,6 +426,7 @@ buildSlabStats(
 Assemble slab-related statistics for the MemoryStats payload.
 
 Parameters:
+
 - `accumulators` - Running totals collected during aggregation.
 - `networksToSummarize` - Networks included in the snapshot.
 - `allocationStats` - Optional allocator stats for pooled fraction.
@@ -432,6 +444,7 @@ calculateFragmentation(
 Compute fragmentation percentage from reserved vs used connection bytes.
 
 Parameters:
+
 - `accumulators` - Running totals holding reserved and used bytes.
 
 Returns: Fragmentation percent (0-100) or null when undefined.
@@ -447,6 +460,7 @@ calculatePooledFraction(
 Calculate pooled fraction from allocator stats with four-decimal precision.
 
 Parameters:
+
 - `allocationStats` - Allocator snapshot or null when unavailable.
 
 Returns: Fraction of pooled allocations or null if indeterminate.
@@ -478,6 +492,7 @@ captureVersionMetadata(
 Capture slab metadata (version and async builds) once across all networks.
 
 Parameters:
+
 - `accumulators` - Running totals with metadata slots.
 - `network` - Network providing slab metadata fields.
 
@@ -492,6 +507,7 @@ collectConnectionTypedArrays(
 Gather all typed arrays that represent connection-parallel data on a network.
 
 Parameters:
+
 - `network` - Network providing connection state arrays.
 
 Returns: Typed arrays aligned to connections.
@@ -507,6 +523,7 @@ computeCounts(
 Capture simple counts for nodes and connections on a network view.
 
 Parameters:
+
 - `network` - Network being summarized.
 
 Returns: Connection and node counts.
@@ -544,6 +561,7 @@ describeConnectionBytes(
 Determine bytes per connection using typed-array width or heuristic fallback.
 
 Parameters:
+
 - `network` - Network whose storage format drives the byte width.
 
 Returns: Estimated bytes per connection entry.
@@ -582,6 +600,7 @@ This helper keeps the public entrypoint flexible without making later
 aggregation code branch on every call path.
 
 Parameters:
+
 - `targets` - Optional single network or array.
 - `trackedNetworks` - Internal registry of tracked networks.
 
@@ -602,6 +621,7 @@ snapshot gracefully instead of turning diagnostics into a source of runtime
 failures.
 
 Parameters:
+
 - `getSlabAllocationStats` - Provider function returning allocator stats.
 
 Returns: Slab allocation stats or null on failure.

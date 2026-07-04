@@ -68,10 +68,10 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - Example: If the error log says "index out of date," boundary is index freshness. If "MCP unreachable," boundary is corpus MCP reachability.
 4. **Collect the minimum evidence needed:**
    - Use only index-validation output, snapshot metadata, MCP config, and nearby source files.
-   - Example: Run `cat rag-index/snapshots/semantic-snapshot.json | grep "timestamp"` to check snapshot currency.
+   - Example: Run `cat rag-index/snapshots/semantic-snapshot.json | grep "families"` to verify snapshot structure.
    - Example: Run `cat .github/mcp-config.yml` to check MCP binding.
 5. **Summarize the failure surface, strongest evidence, and smallest useful handoff into `repo-cortex-workflow`.**
-   - Example: "Index validation failed, snapshot timestamp is 3 days old, MCP config unchanged. Handoff to repo-cortex-workflow."
+   - Example: "Index validation failed, snapshot freshness proof is stale, MCP config unchanged. Handoff to repo-cortex-workflow."
 
 ## Cortex Health Check Checklist
 

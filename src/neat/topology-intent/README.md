@@ -59,6 +59,7 @@ Move back to `mutation/` when you want the broader operator-policy story,
 want the provenance and population-entry flows that reuse this bridge.
 
 Example:
+
 ```ts
 const shouldPromote = usesFeedForwardMutationPolicy(neat.options.mutation);
 promoteGenomeToFeedForwardIntentWhenEligible(genome, shouldPromote);
@@ -83,6 +84,7 @@ in through `allowRecurrent` and the genome is not currently under the
 feed-forward topology contract.
 
 Parameters:
+
 - `genome` - Genome candidate whose topology contract is being inspected.
 - `allowRecurrent` - Whether the controller configuration permits recurrent growth.
 
@@ -113,6 +115,7 @@ willing to say "not yet" to valid genomes, because false positives would be
 worse than conservative misses at this boundary.
 
 Parameters:
+
 - `genome` - Genome candidate.
 
 Returns: True when the genome can safely adopt feed-forward intent.
@@ -138,6 +141,7 @@ for readers and users instead of letting near-matches silently acquire a
 stronger runtime meaning than they asked for.
 
 Parameters:
+
 - `configuredPool` - Mutation pool configured on the NEAT instance.
 - `canonicalPool` - Canonical feed-forward mutation pool.
 
@@ -170,6 +174,7 @@ cloned genomes, but they should not quietly reinterpret a graph that still
 contains recurrent features.
 
 Parameters:
+
 - `genome` - Genome candidate being inserted into a population.
 - `shouldPromote` - Whether the active NEAT options request feed-forward semantics.
 
@@ -241,6 +246,7 @@ legacy and canonical configuration shapes into one yes-or-no answer that the
 rest of the controller can reuse consistently.
 
 Parameters:
+
 - `mutationConfig` - Configured mutation option.
 
 Returns: True when the option expresses canonical feed-forward intent.

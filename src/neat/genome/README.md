@@ -480,6 +480,7 @@ owns three structural decisions:
 3. apply the explicit disabled-gene re-enable rule through the inherited RNG.
 
 Parameters:
+
 - `context` - Pure genome heredity context.
 
 Returns: Ordered inherited connection genes plus their source-parent labels.
@@ -537,6 +538,7 @@ Assert that one strict genome contract is valid and throw a rich validation erro
 This guard keeps downstream genome operators free from repetitive defensive contract checks.
 
 Parameters:
+
 - `genome` - Strict structural genome contract.
 
 Returns: Nothing.
@@ -556,6 +558,7 @@ contract. Deliberate fallback-innovation flows remain on the legacy runtime
 edge path so compatibility can keep using endpoint-derived synthetic ids.
 
 Parameters:
+
 - `source` - Runtime genome or strict genome contract.
 
 Returns: Compatibility-layer genome view.
@@ -576,6 +579,7 @@ runtime-only state and keeps only structural identity plus portable gene
 attributes.
 
 Parameters:
+
 - `network` - Executable phenotype.
 - `captureOptions` - Optional opt-in runtime-to-genome extension capture settings.
 
@@ -594,6 +598,7 @@ Convert one versioned network JSON payload into the strict NEAT genome contract 
 This conversion isolates phenotype serialization details from genome-native heredity and compatibility workflows.
 
 Parameters:
+
 - `networkJson` - Versioned phenotype JSON payload.
 - `captureOptions` - Optional opt-in runtime-to-genome extension capture settings.
 
@@ -612,6 +617,7 @@ Materialize one executable phenotype from the strict genome contract after valid
 Runtime-only hints and optional extension-derived knobs are applied after structural materialization completes.
 
 Parameters:
+
 - `genome` - Strict structural genome contract.
 - `runtimeHints` - Optional phenotype-only metadata to preserve.
 
@@ -630,6 +636,7 @@ Convert one strict genome contract into the versioned network JSON payload under
 The mapping preserves historical identifiers so roundtrips remain deterministic for replay and checkpoint lanes.
 
 Parameters:
+
 - `genome` - Strict structural genome contract.
 - `runtimeHints` - Optional phenotype-only metadata to preserve.
 
@@ -647,6 +654,7 @@ Validate one strict genome contract and return a structured report covering size
 Callers can use the report for diagnostics-first flows without throwing on first failure.
 
 Parameters:
+
 - `genome` - Strict structural genome contract.
 
 Returns: Structured validation report.

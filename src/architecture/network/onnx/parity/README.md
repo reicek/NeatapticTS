@@ -92,6 +92,7 @@ assignDeterministicParameters(
 Apply deterministic scalar parameters to a network fixture.
 
 Parameters:
+
 - `network` - Target network fixture.
 - `parameterSeed` - Arithmetic progression used for weights and biases.
 
@@ -110,6 +111,7 @@ buildExecutedResult(
 Build the executed runtime-parity result packet for one fixture.
 
 Parameters:
+
 - `fixtureDescriptor` - Executed deterministic fixture descriptor.
 - `inputNames` - Resolved runtime input names.
 - `outputNames` - Resolved runtime output names.
@@ -130,6 +132,7 @@ calculateMaxAbsoluteDifference(
 Calculate the maximum absolute scalar difference for one parity comparison.
 
 Parameters:
+
 - `nativeOutput` - Native runtime output.
 - `runtimeOutput` - ONNX Runtime output.
 
@@ -147,6 +150,7 @@ calculateMeanSquaredError(
 Calculate mean squared error for one parity comparison.
 
 Parameters:
+
 - `nativeOutput` - Native runtime output.
 - `runtimeOutput` - ONNX Runtime output.
 
@@ -195,6 +199,7 @@ createRandomizedDenseFixture(
 Create one seeded same-family dense randomized fixture.
 
 Parameters:
+
 - `fixtureDescriptor` - Base dense execute fixture.
 - `sampleSeed` - Deterministic seed for this randomized case.
 
@@ -213,6 +218,7 @@ createRandomizedNumericVector(
 Create a reproducible numeric vector for one randomized parity sample.
 
 Parameters:
+
 - `sampleGenerator` - Deterministic unit-interval generator.
 - `vectorLength` - Target vector length.
 - `numericRange` - Numeric range for each sampled value.
@@ -231,6 +237,7 @@ createRandomizedParameterSeed(
 Create a reproducible arithmetic parameter seed packet.
 
 Parameters:
+
 - `sampleGenerator` - Deterministic unit-interval generator.
 - `parameterSeedBounds` - Numeric ranges for each parameter-seed component.
 
@@ -249,6 +256,7 @@ createRandomizedParityFixture(
 Materialize one lane-approved randomized fixture descriptor.
 
 Parameters:
+
 - `fixtureDescriptor` - Base execute fixture from the frozen Phase 9 inventory.
 - `sampleSeed` - Deterministic seed for this randomized sample.
 
@@ -267,6 +275,7 @@ createRandomizedStatic8BitConvFixture(
 Create one seeded explicit-Conv static-8bit randomized fixture.
 
 Parameters:
+
 - `fixtureDescriptor` - Base explicit-Conv execute fixture.
 - `sampleSeed` - Deterministic seed for this randomized case.
 
@@ -289,6 +298,7 @@ non-`Float32Array` views. This helper normalizes those payloads before they
 reach the standard `Tensor` constructor.
 
 Parameters:
+
 - `arg0` - Raw tensor type or data argument.
 - `arg1` - Raw tensor data argument.
 - `arg2` - Optional tensor dimensions.
@@ -306,6 +316,7 @@ createSeededUnitIntervalGenerator(
 Create one reproducible unit-interval generator from a 32-bit seed.
 
 Parameters:
+
 - `initialSeed` - Seed used for the linear congruential generator.
 
 Returns: Deterministic floating-point generator in the range [0, 1).
@@ -352,6 +363,7 @@ cycleIntegerRangeBySampleIndex(
 Cycle deterministically through an inclusive integer range by sample index.
 
 Parameters:
+
 - `sampleIndex` - Zero-based randomized sample index.
 - `numericRange` - Inclusive integer range.
 
@@ -373,6 +385,7 @@ validation and Phase 9 parity execution do not compete over native addon
 initialization order.
 
 Parameters:
+
 - `binaryModel` - Binary `.onnx` payload produced by `exportToONNXBinary()`.
 - `fixtureDescriptor` - Deterministic runtime-parity descriptor.
 
@@ -389,6 +402,7 @@ findPhase9RuntimeParityFixture(
 Resolve one named Phase 9 runtime-parity fixture from the frozen inventory.
 
 Parameters:
+
 - `fixtureId` - Named fixture identifier from the frozen Phase 9A inventory.
 
 Returns: The matching deterministic fixture descriptor.
@@ -419,6 +433,7 @@ isArrayBufferLike(
 Check whether one runtime payload should be treated as an ArrayBuffer source.
 
 Parameters:
+
 - `tensorData` - Raw tensor payload from the native binding.
 
 Returns: True when the payload is a plain or shared ArrayBuffer-like object.
@@ -434,6 +449,7 @@ resolveRuntimeSubprocessError(
 Resolve a stable parity-subprocess error message from stderr, stdout, or fallback text.
 
 Parameters:
+
 - `subprocessResult` - Child-process execution result.
 
 Returns: Human-readable error message.
@@ -449,6 +465,7 @@ resolveRuntimeTensorDimensions(
 Resolve runtime feed dimensions from the fixture packet or session metadata.
 
 Parameters:
+
 - `runtimeInputValues` - Numeric runtime feed values.
 - `inputShape` - Runtime metadata shape reported by ONNX Runtime.
 
@@ -465,6 +482,7 @@ resolveValidatedRandomizedSampleCount(
 Resolve the allowed randomized sample count for Phase 9C.
 
 Parameters:
+
 - `sampleCount` - Requested randomized sample count.
 
 Returns: Validated sample count within the supported Phase 9C bounds.
@@ -485,6 +503,7 @@ Skipped fixtures are returned with their explicit reason instead of being
 executed implicitly.
 
 Parameters:
+
 - `fixtureDescriptor` - Deterministic runtime-parity fixture descriptor.
 
 Returns: Either a skipped result or an executed comparison packet.
@@ -505,6 +524,7 @@ evidence from one named golden sample into several seeded randomized cases.
 The runner keeps the subset narrow by generating only lane-approved shapes.
 
 Parameters:
+
 - `fixtureDescriptor` - Approved Phase 9 runtime-parity fixture descriptor.
 - `randomizedRunOptions` - Seed and sample-count packet for this randomized pass.
 
@@ -522,6 +542,7 @@ sampleNumberInRange(
 Sample one rounded floating-point value inside a numeric range.
 
 Parameters:
+
 - `sampleGenerator` - Deterministic unit-interval generator.
 - `numericRange` - Inclusive numeric range.
 

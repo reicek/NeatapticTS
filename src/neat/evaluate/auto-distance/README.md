@@ -16,6 +16,7 @@ cycle can respond to whether topology size is converging too quickly or
 spreading too wildly.
 
 Read this chapter when you want to answer questions such as:
+
 - Why does evaluation tune excess and disjoint coefficients from connection
   variance instead of hard-coding them forever?
 - Why does this policy compare against a moving baseline instead of a single
@@ -25,6 +26,7 @@ Read this chapter when you want to answer questions such as:
   speciation reads?
 
 The mental model is a four-step loop:
+
 1. collect connection counts from the freshly evaluated population,
 2. reduce them into a mean and variance,
 3. compare the new variance with the last stored baseline,
@@ -76,11 +78,12 @@ tracks the population's recent structural spread and responds to drift,
 rather than forcing every problem domain toward one global variance number.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `autoDistanceCoeffOptions` - Tuning options that define adjustment rate
-and coefficient bounds.
+  and coefficient bounds.
 - `connectionVariance` - Freshly observed variance of population
-connection counts.
+  connection counts.
 
 ### applyDistanceCoefficientDecrease
 
@@ -99,6 +102,7 @@ topology sizes are already spreading, which helps keep the controller from
 over-fragmenting species on the next pass.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `bounds` - Min and max coefficient bounds.
 - `adjustRate` - Adjustment rate.
@@ -120,6 +124,7 @@ and disjoint structural differences as more important, which helps push back
 when topology sizes are collapsing toward one narrow profile.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `bounds` - Min and max coefficient bounds.
 - `adjustRate` - Adjustment rate.
@@ -139,6 +144,7 @@ connection counts first, then summarize them before making policy
 decision.
 
 Parameters:
+
 - `values` - Input values.
 
 Returns: Mean of the values.
@@ -159,6 +165,7 @@ notice when topology sizes are collapsing toward one narrow shape or
 spreading apart more aggressively than before.
 
 Parameters:
+
 - `values` - Input values.
 - `meanValue` - Precomputed mean.
 
@@ -179,6 +186,7 @@ pressure until compatibility becomes toothless, or increasing it until small
 topology edits dominate every comparison.
 
 Parameters:
+
 - `autoDistanceCoeffOptions` - Tuning options.
 
 Returns: Min and max coefficient bounds.
@@ -202,6 +210,7 @@ the policy immediately visible instead of waiting one extra generation before
 a coefficient change is possible.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `connectionVariance` - Current connection variance.
 - `bounds` - Min and max coefficient bounds.
@@ -224,6 +233,7 @@ resulting coefficients are only meaningful when later compatibility reads are
 still part of the runtime policy.
 
 The helper preserves several important controller assumptions:
+
 - genome scores are already complete and are not recomputed here,
 - live species assignments are left intact,
 - population order is left intact,
@@ -231,6 +241,7 @@ The helper preserves several important controller assumptions:
   updated for future passes.
 
 Parameters:
+
 - `controller` - NEAT controller instance for evaluation.
 - `evaluationOptions` - Options object for the current evaluation pass.
 

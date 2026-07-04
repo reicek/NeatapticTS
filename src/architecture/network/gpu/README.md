@@ -46,6 +46,7 @@ activateGPU(
 Run a single-network forward pass on the supplied WebGPU device.
 
 Parameters:
+
 - `device` - WebGPU device used to run the forward kernel.
 - `network` - Network whose fast-slab topology will be uploaded.
 - `inputs` - Input vector of length `network.input`.
@@ -218,6 +219,7 @@ reject networks whose nodes carry any index. Restoring the original value
 keeps the mutation scoped to this seam.
 
 Parameters:
+
 - `network` - Network whose first node squash will be temporarily annotated.
 
 Returns: A context object with the resolved index and a `restore()` callback.
@@ -254,6 +256,7 @@ activation functions so that thin wrappers around supported activations are
 still dispatchable.
 
 Parameters:
+
 - `squash` - Activation function attached to a node.
 
 Returns: The corresponding worker index, or `undefined` when the function is
@@ -292,10 +295,11 @@ lost devices, networks with float32 weights disabled, and structurally
 unsupported networks.
 
 Parameters:
+
 - `network` - Network to activate.
 - `inputs` - Input vector of length `network.input`.
 - `device` - Optional WebGPU device. When null, missing, lost, or the
-network is ineligible, the CPU path is used.
+  network is ineligible, the CPU path is used.
 
 Returns: Promise resolving to the network output.
 
@@ -330,6 +334,7 @@ This keeps the fallback decision in one place so the public CPU seam and the
 standalone dispatch seam agree on when the GPU path is safe to use.
 
 Parameters:
+
 - `network` - Network to evaluate for GPU inference.
 - `device` - WebGPU device, or null/undefined when WebGPU is unavailable.
 
@@ -374,13 +379,14 @@ device readiness and the float32 slab flag. Most callers should use
 `isGPUEligible` rather than calling `canUseGPU` directly.
 
 Parameters:
+
 - `network` - Network to evaluate for GPU inference.
 - `device` - WebGPU device, or null when WebGPU is unavailable.
 - `supportedActivations` - Worker-registry activation indices the GPU
-kernel supports. Nodes without an explicit index are skipped so networks
-built from high-level constructors can still be evaluated; nodes without a
-squash function are also skipped so `activateGPU` can report the
-missing-squash error with its own message.
+  kernel supports. Nodes without an explicit index are skipped so networks
+  built from high-level constructors can still be evaluated; nodes without a
+  squash function are also skipped so `activateGPU` can report the
+  missing-squash error with its own message.
 
 Returns: True when the network is structurally eligible for the GPU path.
 
@@ -417,6 +423,7 @@ the module-local WeakMap populated by `requestGPUDevice` and by lazy
 attachment on the first call to this function.
 
 Parameters:
+
 - `device` - WebGPU device to check, or a falsy value when no GPU exists.
 
 Returns: `true` only when a non-null device is available and not lost.
@@ -476,6 +483,7 @@ built from the supplied bind-group layout. It is the factory used by
 `compileActivationKernel` to materialize the compiled GPU path.
 
 Parameters:
+
 - `device` - WebGPU device used to create the pipeline layout and pipeline.
 - `shaderModule` - Shader module containing the `forward` entry point.
 - `bindGroupLayout` - Layout describing the kernel's storage buffers.
@@ -506,6 +514,7 @@ live inference. The shader module, bind-group layout, and pipeline creation
 calls remain observable through a mock device for unit testing.
 
 Parameters:
+
 - `device` - WebGPU device used to compile the compute pipeline.
 - `network` - Network whose topology and activation index drive the kernel.
 
@@ -534,6 +543,7 @@ key, which is exactly the condition that lets the pipeline cache reuse the
 same compiled shader.
 
 Parameters:
+
 - `network` - Network whose topology will be hashed.
 - `activationIndex` - Activation index that changes the generated shader.
 
@@ -564,6 +574,7 @@ Unsupported activations or ineligible topologies are rejected before any
 source is emitted.
 
 Parameters:
+
 - `network` - Network whose activation index and topology are inspected.
 
 Returns: Non-empty WGSL source string.
@@ -590,6 +601,7 @@ struct-packed upload contract: the connection struct array, the node struct
 array, the per-node output buffer, and the per-dispatch params uniform.
 
 Parameters:
+
 - `device` - WebGPU device used to create the layout.
 
 Returns: A bind-group layout with four entries.
@@ -618,8 +630,9 @@ at four instead of ten. One thread is dispatched per node and threads that
 do not belong to the current level early-exit.
 
 Parameters:
+
 - `network` - Network whose activation index, topology, and slab arrays
-drive the generated shader.
+  drive the generated shader.
 
 Returns: WGSL source string.
 
@@ -665,8 +678,9 @@ The fast-slab CPU path assigns a stable activation-function index to every
 node's `squash` function. The GPU kernel mirrors that index in a WGSL switch.
 
 Parameters:
+
 - `network` - Network whose first node's activation index will drive the
-kernel switch.
+  kernel switch.
 
 Returns: The activation index stored on the first node's squash function.
 
@@ -701,9 +715,10 @@ GPU gather kernel the same rounded result as the CPU push path instead of
 relying on looser tolerances.
 
 Parameters:
+
 - `network` - Network whose nodes and connection slab will be packed.
 - `connectionCount` - Number of active connections to pack. The slab may
-over-allocate, so only this many entries are uploaded.
+  over-allocate, so only this many entries are uploaded.
 
 Returns: An `ArrayBuffer` ready for `queue.writeBuffer`.
 
@@ -724,6 +739,7 @@ lists connection indices feeding into `node`. The ordering is deterministic
 because it follows the connection index order returned by the slab.
 
 Parameters:
+
 - `slab` - Connection slab with `from`/`to` source/target arrays.
 - `nodeCount` - Number of nodes in the network.
 - `connectionCount` - Number of connections in the network.
@@ -747,6 +763,7 @@ error: f32, flags: u32 }`. The forward-pass kernel reads the bias from the
 `derivative_state` field as the per-node bias while the kernel is running.
 
 Parameters:
+
 - `network` - Network whose node state will be packed.
 
 Returns: An `ArrayBuffer` ready for `queue.writeBuffer`.
@@ -764,6 +781,7 @@ buildOutgoingCSR(
 Build the outgoing-CSR adjacency arrays used for topological level sorting.
 
 Parameters:
+
 - `slab` - Connection slab with `from`/`to` source/target arrays.
 - `nodeCount` - Number of nodes in the network.
 - `connectionCount` - Number of connections in the network.
@@ -790,6 +808,7 @@ in that same order, the GPU gather kernel sums the exact same f32 terms in the
 exact same order, eliminating cross-path rounding drift.
 
 Parameters:
+
 - `network` - Network whose nodes supply the stable tie-break values.
 - `slab` - Connection slab with `from`/`to` source/target arrays.
 - `nodeCount` - Number of nodes in the network.
@@ -815,6 +834,7 @@ deterministic and produces the same levels for the same topology, which the
 GPU kernel uses to schedule per-level dispatches without cross-thread races.
 
 Parameters:
+
 - `slab` - Connection slab with `from`/`to` source/target arrays.
 - `nodeCount` - Number of nodes in the network.
 - `connectionCount` - Number of connections in the network.
@@ -835,6 +855,7 @@ Levels start at `0` for input nodes, so the number of passes needed by the
 dispatch loop is `max(levels) + 1`.
 
 Parameters:
+
 - `levels` - Per-node topological level array.
 
 Returns: Number of distinct levels.
@@ -865,12 +886,13 @@ validates the request against the device's binding and buffer size limits
 before delegating to `device.createBuffer`.
 
 Parameters:
+
 - `device` - WebGPU device used to allocate the buffer.
 - `byteLength` - Desired buffer size in bytes. Must be finite and
-non-negative.
+  non-negative.
 - `label` - Debug label attached to the buffer.
 - `usage` - Additional usage flags merged with the mandatory
-`STORAGE | COPY_DST` bits. Defaults to no extra flags.
+  `STORAGE | COPY_DST` bits. Defaults to no extra flags.
 
 Returns: A freshly created `GPUBuffer` with the mandatory usage bits set.
 
@@ -892,9 +914,10 @@ limited by `maxUniformBufferBindingSize`, which is much smaller than the
 storage-buffer limit, so this helper validates against the correct limit.
 
 Parameters:
+
 - `device` - WebGPU device used to allocate the buffer.
 - `byteLength` - Desired buffer size in bytes. Must be finite and
-non-negative.
+  non-negative.
 - `label` - Debug label attached to the buffer.
 
 Returns: A freshly created `GPUBuffer` with `UNIFORM | COPY_DST` usage.
@@ -911,8 +934,9 @@ destroyGPUBufferSet(
 Destroy every GPU buffer in a previously uploaded buffer set.
 
 Parameters:
+
 - `device` - WebGPU device that owns the buffers (unused by this helper,
-kept in the signature for API symmetry).
+  kept in the signature for API symmetry).
 - `bufferSet` - Buffer set returned by `uploadNetworkToGPU`.
 
 ### GPU_NODE_STRUCT_BYTES
@@ -948,6 +972,7 @@ wave with this same rule, so matching it exactly lets the GPU pack incoming
 edges in the same source-node order.
 
 Parameters:
+
 - `node` - Node whose stable gene id or index will be read.
 
 Returns: Deterministic scalar for ordering.
@@ -972,6 +997,7 @@ whole nodes buffer are rewritten. Topology metadata does not change here;
 callers recreate the full `GPUBufferSet` when the topology changes.
 
 Parameters:
+
 - `device` - WebGPU device that owns the buffers.
 - `bufferSet` - Topology buffers created by `uploadNetworkToGPU`.
 - `network` - Network whose current weights and bias will be uploaded.
@@ -994,6 +1020,7 @@ storage buffers per shader stage and removes the need to request a custom
 `maxStorageBuffersPerShaderStage` limit.
 
 Parameters:
+
 - `device` - Mock or real WebGPU device used to allocate buffers.
 - `network` - Network whose fast-slab layout will be uploaded.
 
@@ -1019,6 +1046,7 @@ one helper prevents contiguous-write bugs when multiple upload paths need to
 seed the node buffer with input values.
 
 Parameters:
+
 - `device` - WebGPU device whose queue will perform the write.
 - `nodesBuffer` - GPU node buffer created by `uploadNetworkToGPU`.
 - `inputs` - Input vector to scatter into the node struct array.
@@ -1057,11 +1085,12 @@ into a row-major result matrix. The CPU path remains the default; this seam
 is opt-in and gated by `canUseGPU`.
 
 Parameters:
+
 - `device` - WebGPU device used to run the forward kernel.
 - `networks` - Networks to evaluate as a batch. All networks must have the
-same input and output dimensions.
+  same input and output dimensions.
 - `inputMatrix` - Flattened row-major inputs, length
-`networks.length * networks[0].input`.
+  `networks.length * networks[0].input`.
 
 Returns: Promise resolving to a row-major output matrix.
 
@@ -1070,7 +1099,11 @@ Example:
 ```ts
 const networks = Array.from({ length: 4 }, () => Network.createMLP(2, [3], 1));
 const inputs = new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]);
-const { outputs, rowCount, colCount } = await batchActivate(device, networks, inputs);
+const { outputs, rowCount, colCount } = await batchActivate(
+  device,
+  networks,
+  inputs,
+);
 ```
 
 ### BatchedGPUResult
@@ -1095,6 +1128,7 @@ Create the bind group for the supplied compiled pipeline and uploaded buffer
 set.
 
 Parameters:
+
 - `device` - WebGPU device used to create the bind group.
 - `pipeline` - Compiled activation pipeline.
 - `bufferSet` - Uploaded network slab buffers.
@@ -1122,6 +1156,7 @@ so `compileActivationKernel` can generate the correct WGSL switch, then
 restore the original value.
 
 Parameters:
+
 - `network` - Network whose first node squash will be temporarily annotated.
 
 Returns: A context object with a `restore()` callback.
@@ -1143,6 +1178,7 @@ identity, then the runtime-registry symbol key, then falls back to the
 function name.
 
 Parameters:
+
 - `squash` - Activation function attached to a node.
 
 Returns: The corresponding worker index, or `undefined` when the function is
@@ -1161,6 +1197,7 @@ validateBatchInputs(
 Validate the batching contract before any GPU work is issued.
 
 Parameters:
+
 - `device` - WebGPU device that will run the dispatch.
 - `networks` - Networks to evaluate as a batch.
 - `inputMatrix` - Flattened row-major input matrix.
@@ -1179,6 +1216,7 @@ The result matrix is row-major with one column count for the entire batch, so
 mixed shapes would corrupt the layout.
 
 Parameters:
+
 - `networks` - Networks to validate.
 
 ## architecture/network/gpu/network.gpu.racing.ts
@@ -1199,6 +1237,7 @@ contains the output values returned by `network.activate()` for the
 corresponding input slice.
 
 Parameters:
+
 - `networks` - Networks to evaluate in CPU mode.
 - `inputMatrix` - Flattened row-major input matrix.
 
@@ -1223,9 +1262,10 @@ every network is GPU-eligible, and a valid device is supplied; otherwise falls
 back to per-network CPU `network.activate()` calls.
 
 Parameters:
+
 - `networks` - One network per car / genome in the generation.
 - `inputMatrix` - Flattened row-major inputs, length
-`networks.length * networks[0].input`.
+  `networks.length * networks[0].input`.
 - `device` - WebGPU device, or null when GPU inference is unavailable.
 - `options` - Threshold and policy options.
 
@@ -1247,6 +1287,7 @@ real devices report loss asynchronously through `device.lost`, while this
 predicate gives a synchronous yes/no answer for the current call site.
 
 Parameters:
+
 - `device` - Device to inspect, or null/undefined when WebGPU is absent.
 
 Returns: True when the device is present and not marked lost.
@@ -1268,6 +1309,7 @@ shouldUseGPUPath(
 Decide whether the racing generation can use the batched GPU path.
 
 All of the following must hold:
+
 1. The batch size is strictly greater than the configured threshold.
 2. Every network in the batch is structurally GPU-eligible.
 
@@ -1275,6 +1317,7 @@ Callers must already have verified the device is usable with
 `isDeviceUsable` before invoking this predicate.
 
 Parameters:
+
 - `networks` - Generation of networks to evaluate.
 - `device` - Verified WebGPU device.
 - `threshold` - Minimum batch size that justifies GPU dispatch.
@@ -1408,6 +1451,7 @@ formatActivationFunctionsWgsl(
 Format the registry as a block of WGSL function declarations.
 
 Parameters:
+
 - `registry` - Activation entries from `buildActivationRegistry`.
 
 Returns: WGSL source containing one `fn activation_<index>(x: f32) -> f32`

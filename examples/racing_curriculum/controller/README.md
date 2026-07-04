@@ -25,6 +25,7 @@ clampControlValue(
 Clamps controller outputs into the accepted environment range.
 
 Parameters:
+
 - `value` - Raw controller output.
 
 Returns: Value clamped to [-1, 1].
@@ -42,6 +43,7 @@ Creates the owner-local NGE controller wrapper around the public `activate(...)`
 inference surface.
 
 Parameters:
+
 - `network` - Public network object that exposes `activate(...)`.
 - `options` - Optional tier and radio-channel overrides.
 
@@ -58,6 +60,7 @@ createSingleCarRadioChannel(
 Creates the owner-local single-car radio seam used by Tier 2 self-monitoring.
 
 Parameters:
+
 - `radioDim` - Number of channels retained in the radio buffer.
 
 Returns: Read/write self-monitoring radio channel.
@@ -98,6 +101,7 @@ clamped to finite values so downstream splitting stays safe regardless of
 network width.
 
 Parameters:
+
 - `controllerOutputs` - Raw network output.
 
 Returns: Finite controller output vector.
@@ -116,6 +120,7 @@ Enriches the environment snapshot with the current self-radio field when Tier 2
 is active.
 
 Parameters:
+
 - `envState` - Current environment snapshot.
 - `controllerTier` - Active controller tier.
 - `radioChannel` - Single-car self-monitoring seam.
@@ -144,6 +149,7 @@ Resolves the optimal-line overlay alpha for each curriculum tier.
   hint once the radio seam is live.
 
 Parameters:
+
 - `tier` - Curriculum tier index (0 = scripted baseline, 1 = solo NGE, 2 = radio-augmented).
 
 Returns: Overlay alpha in [0, 1].
@@ -159,6 +165,7 @@ resolveSelfMonitoringPayload(
 Builds the seven-channel self-monitoring payload consumed by the Tier 2 radio seam.
 
 Parameters:
+
 - `envState` - Current environment snapshot.
 
 Returns: Ordered seven-channel self-monitoring payload.
@@ -174,6 +181,7 @@ resolveTickEvidence(
 Extracts Tier 1 center-guide evidence channels from one normalized observation vector.
 
 Parameters:
+
 - `observationVector` - Active normalized observation vector.
 
 Returns: Lateral error, heading alignment, and combined guidance-need signal.
@@ -196,6 +204,7 @@ buildGrowthBudget(
 Build a growth budget from the runtime limits and live network.
 
 Parameters:
+
 - `network` - Live controller network.
 - `limits` - Runtime adaptation limits.
 
@@ -213,6 +222,7 @@ buildModuleMetricsSnapshot(
 Build a module metrics snapshot from the runtime evidence window.
 
 Parameters:
+
 - `network` - Live controller network.
 - `evidenceWindow` - Filtered rolling score history.
 
@@ -229,6 +239,7 @@ buildPruneBudget(
 Build a prune budget from the live network.
 
 Parameters:
+
 - `network` - Live controller network.
 
 Returns: NGE prune budget for the lifecycle apply phase.
@@ -250,6 +261,7 @@ progressively longer back-off intervals. This preserves real-time
 performance by preventing the lifecycle from running every tick at scale.
 
 Parameters:
+
 - `network` - Live controller network whose size determines throttling.
 - `tick` - Current fixed-timestep tick used for interval gating.
 
@@ -267,12 +279,13 @@ createPerCarAdaptationEngines(
 Creates one independent runtime adaptation engine per car index.
 
 Each car in a multi-car racing simulation maintains its own adaptation
-state, cooldowns, and cadence boundaries.  This factory creates a
+state, cooldowns, and cadence boundaries. This factory creates a
 `Map<number, RuntimeAdaptationEngine>` keyed by car index (0 to
 `carCount - 1`) where every engine has fully independent closure-scoped
 state — no shared mutable state across cars.
 
 Parameters:
+
 - `carCount` - Number of cars to create engines for.
 - `options` - Optional engine options applied identically to every car's engine.
 
@@ -299,6 +312,7 @@ createRuntimeAdaptationEngine(
 Creates a reusable per-tick adaptation engine for racing runtime loops.
 
 Parameters:
+
 - `options` - Optional cadence, bounds, and evaluation policy.
 
 Returns: Stateful runtime adaptation engine.
@@ -315,6 +329,7 @@ evaluateRollingScoreWindow(
 Lightweight default evaluator for rolling score history windows.
 
 Parameters:
+
 - `network` - Candidate network.
 - `scoreHistory` - Rolling score window.
 
@@ -331,6 +346,7 @@ mapOutcomesToOperations(
 Map lifecycle apply outcomes to runtime adaptation operations.
 
 Parameters:
+
 - `outcomes` - Apply outcomes from the lifecycle result.
 
 Returns: Runtime operations for telemetry, excluding skipped morphs.
@@ -386,6 +402,7 @@ computeScriptedControl(
 Produces a control output that steers the car toward its next track waypoint.
 
 Algorithm:
+
 1. Check whether the car is within `WAYPOINT_ADVANCE_RADIUS_WORLD` of the
    current lane-center spline target — if so, advance to the next segment.
 2. Compute the heading error from the car's current heading to the angle
@@ -396,6 +413,7 @@ Algorithm:
 Mutates `controllerState.targetSegmentIndex` in place.
 
 Parameters:
+
 - `envState` - Current physics state.
 - `trackSpec` - Frozen track geometry.
 - `controllerState` - Mutable controller state (target index advances in place).
@@ -444,6 +462,7 @@ wrapAngleToMinusPiPi(
 Wraps an angle in radians to the range [-π, π].
 
 Parameters:
+
 - `angleRadians` - Raw angle in radians (any value).
 
 Returns: Equivalent angle in [-π, π].
@@ -462,6 +481,7 @@ appendOwnTireState(
 Appends the querying car's tire-health tuple to a base observation vector.
 
 Parameters:
+
 - `baseVector` - Base observation vector.
 - `tireState` - Four-channel tire-health tuple ordered by wheel corner.
 
@@ -480,6 +500,7 @@ assembleNormalizedObservationVector(
 Builds the flat normalized observation vector used by the racing NGE controller.
 
 The Tier 1 base vector contains 70 channels:
+
 1. Twenty scalar channels describing the car and immediate driving context.
 2. Forty channels describing five look-ahead track segments.
 3. Ten recurrent memory-trace channels.
@@ -490,6 +511,7 @@ seven-channel teammate-radio slots. Tier 4 and 5 both keep the 95-channel tail
 shape that appends the querying car's four tire channels.
 
 Parameters:
+
 - `envState` - Current environment snapshot plus optional Tier 1–5 fields.
 - `trackSpec` - Frozen track geometry used to derive look-ahead features.
 - `options` - Tier selector that decides which radio or tire tail is appended.
@@ -518,6 +540,7 @@ rows are populated, so the unused tail remains silent rather than
 fabricating extra agents.
 
 Parameters:
+
 - `envState` - Current environment snapshot plus optional teammate radio rows.
 - `trackSpec` - Frozen track geometry used to derive look-ahead features.
 
@@ -558,6 +581,7 @@ That keeps every pre-existing Tier 3 feature aligned while exposing only the
 querying car's four tire channels as the new Tier 4 sensory delta.
 
 Parameters:
+
 - `envState` - Current environment snapshot plus optional Tier 4 tire state.
 - `trackSpec` - Frozen track geometry used to derive look-ahead features.
 
@@ -587,6 +611,7 @@ assembleTier5Observation(
 Builds the Tier 5 observation vector with the canonical 95-channel 3v3 layout.
 
 Channel layout:
+
 - `[0..69]` — 70-channel base observation containing pose, speed, track geometry,
   and recurrent memory trace.
 - `[70..90]` — team radio (`3 × 7 = 21` channels). In 3v3 all three rows can be
@@ -597,6 +622,7 @@ Tier 5 is byte-stable with Tier 4: both tiers emit the same 95 floats in the
 same order. The difference is radio population, not vector shape.
 
 Parameters:
+
 - `envState` - Current environment snapshot plus optional Tier 5 teammate radio rows and tire state.
 - `trackSpec` - Frozen track geometry used to derive look-ahead features.
 
@@ -651,6 +677,7 @@ In a 2v2 layout only one teammate exists, so slot 0 is populated and
 slots 1–2 are zero-padded.
 
 Parameters:
+
 - `cars` - Ordered car roster from the environment state.
 - `focalCarIndex` - Index of the focal car.
 - `focalTeamIndex` - Team index of the focal car.
@@ -677,6 +704,7 @@ Channel layout: [posX, posY, headingSin, speed, relOffsetX, relOffsetY, relHeadi
 All channels are normalized to [-1, 1].
 
 Parameters:
+
 - `teammate` - The teammate car state to encode.
 - `focalCarX` - Focal car X position in world units.
 - `focalCarY` - Focal car Y position in world units.
@@ -695,6 +723,7 @@ clamp01(
 Clamps a probability-like scalar to [0, 1].
 
 Parameters:
+
 - `value` - Source scalar.
 
 Returns: Value clamped to [0, 1].
@@ -710,6 +739,7 @@ clampNormalizedValue(
 Clamps any scalar into the controller's accepted normalized range.
 
 Parameters:
+
 - `value` - Source scalar.
 
 Returns: Value clamped to [-1, 1].
@@ -725,6 +755,7 @@ collectLookAheadChannels(
 Collects the 40 look-ahead segment channels used for track anticipation.
 
 Parameters:
+
 - `observationContext` - Resolved controller context.
 
 Returns: Forty normalized channels describing five upcoming segments.
@@ -740,6 +771,7 @@ collectMemoryTraceChannels(
 Collects the 10-channel recurrent memory trace.
 
 Parameters:
+
 - `observationContext` - Resolved controller context.
 
 Returns: Ten normalized recurrent channels.
@@ -755,6 +787,7 @@ collectScalarChannels(
 Collects the 20 scalar channels that describe the current car state.
 
 Parameters:
+
 - `observationContext` - Resolved controller context.
 
 Returns: Twenty normalized scalar channels.
@@ -771,6 +804,7 @@ createObservationContext(
 Creates the resolved controller context used by the assembler helpers.
 
 Parameters:
+
 - `envState` - Current environment snapshot.
 - `trackSpec` - Frozen track geometry.
 
@@ -820,7 +854,11 @@ Example:
 
 ```ts
 const options = createTier5ObservationOptions();
-const observation = assembleNormalizedObservationVector(envState, trackSpec, options);
+const observation = assembleNormalizedObservationVector(
+  envState,
+  trackSpec,
+  options,
+);
 
 options.tier; // 5
 observation.length; // TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT + TIRE_CHANNEL_COUNT
@@ -845,6 +883,7 @@ team-aware optimal-line offset will automatically follow the selected car's
 team because `teamIndex` is taken from the car rather than the top-level state.
 
 Parameters:
+
 - `envState` - Current multi-car environment snapshot plus observation extensions.
 - `carIndex` - Index of the car to observe within `envState.cars`.
 
@@ -854,11 +893,9 @@ Example:
 
 ```ts
 const blueState = derivePerCarObservationState(envState, 0);
-const blueVector = assembleNormalizedObservationVector(
-  blueState,
-  trackSpec,
-  { tier: 1 },
-);
+const blueVector = assembleNormalizedObservationVector(blueState, trackSpec, {
+  tier: 1,
+});
 ```
 
 ### findClosestSplineSampleIndex
@@ -873,6 +910,7 @@ findClosestSplineSampleIndex(
 Finds the shared spline sample whose lane-center point is closest to the car.
 
 Parameters:
+
 - `envState` - Current environment snapshot.
 - `trackSpec` - Frozen track geometry.
 
@@ -890,6 +928,7 @@ Converts a probability-style scalar in [0, 1] to the controller's symmetric
 [-1, 1] range.
 
 Parameters:
+
 - `probabilityValue` - Probability-like scalar.
 
 Returns: Symmetric normalized value.
@@ -906,6 +945,7 @@ normalizeSignedValue(
 Converts a signed scalar into the normalized [-1, 1] range.
 
 Parameters:
+
 - `value` - Signed source scalar.
 - `scale` - Absolute scale corresponding to magnitude 1.
 
@@ -924,6 +964,7 @@ Converts an unsigned scalar into the normalized [0, 1] range while keeping the
 result inside the controller's accepted bounds.
 
 Parameters:
+
 - `value` - Unsigned source scalar.
 - `scale` - Maximum reference scale for value 1.
 
@@ -971,6 +1012,7 @@ Computes the signed left-versus-right balance used by the controller to judge
 how centered the car is within the lane.
 
 Parameters:
+
 - `boundaryDistanceLeftWorld` - Distance from the car to the left boundary.
 - `boundaryDistanceRightWorld` - Distance from the car to the right boundary.
 
@@ -989,6 +1031,7 @@ resolveLookAheadSplineSample(
 Resolves one look-ahead spline sample by wrapping around the closed loop.
 
 Parameters:
+
 - `trackSpec` - Frozen track geometry.
 - `closestSplineSampleIndex` - Nearest spline sample index for the car.
 - `lookAheadOffset` - Positive offset from the nearest segment.
@@ -1006,6 +1049,7 @@ resolveMemoryTrace(
 Resolves the recurrent memory trace while preserving a fixed width.
 
 Parameters:
+
 - `memoryTrace` - Incoming recurrent trace values, if any.
 
 Returns: Ten-value trace ready for normalization.
@@ -1024,6 +1068,7 @@ Resolves all optional Tier 1–2 observation fields, deriving safe defaults when
 the live environment has not produced them yet.
 
 Parameters:
+
 - `envState` - Current environment snapshot.
 - `trackSpec` - Frozen track geometry.
 - `closestSegmentIndex` - Segment nearest to the car position.
@@ -1041,6 +1086,7 @@ resolveRadioTail(
 Resolves the raw Tier 2 radio tail without applying any additional normalization.
 
 Parameters:
+
 - `radioField` - Current self-radio buffer.
 
 Returns: Seven-channel radio tail in the original order.
@@ -1056,6 +1102,7 @@ resolveTrackBounds(
 Resolves the track bounds used to normalize car position channels.
 
 Parameters:
+
 - `trackSpec` - Frozen track geometry.
 
 Returns: Bounding box plus center point.
@@ -1071,6 +1118,7 @@ wrapAngleToMinusPiPi(
 Wraps an angle to the closed interval [-π, π].
 
 Parameters:
+
 - `angleRadians` - Raw angle in radians.
 
 Returns: Wrapped angle in [-π, π].
@@ -1092,6 +1140,7 @@ buildSplineSamples(
 Builds the sampled Catmull-Rom centerline that the renderer currently draws.
 
 Parameters:
+
 - `trackSpec` - Frozen track geometry.
 
 Returns: Ordered spline samples with segment ownership metadata.
@@ -1118,6 +1167,7 @@ createEnvironmentState(
 Creates a minimal base environment state for owner-local controller tests.
 
 Parameters:
+
 - `overrides` - Environment fields to override for a specific scenario.
 
 Returns: Deterministic environment state for the red tests.
@@ -1146,6 +1196,7 @@ resolveOffsetObservationProbe(
 Places the observation probe slightly toward the left boundary of one spline sample.
 
 Parameters:
+
 - `splineSamples` - Ordered sampled centerline points.
 - `focalSampleIndex` - Global index of the selected spline sample.
 
@@ -1163,6 +1214,7 @@ resolveSampleFrame(
 Resolves the local tangent frame for one sampled spline point.
 
 Parameters:
+
 - `splineSamples` - Ordered sampled centerline points.
 - `focalSampleIndex` - Global index of the sample to inspect.
 
@@ -1179,6 +1231,7 @@ selectControllerFocalSample(
 Selects the owner-local spline sample with the strongest endpoint-vs-tangent gap.
 
 Parameters:
+
 - `trackSpec` - Frozen curved-track fixture.
 
 Returns: The strongest controller seam sample plus its tangent frame.
@@ -1194,6 +1247,7 @@ selectObservationFocalSample(
 Selects the owner-local spline sample with the strongest chord-midpoint gap.
 
 Parameters:
+
 - `trackSpec` - Frozen curved-track fixture.
 
 Returns: The strongest observation seam sample plus its tangent frame.
@@ -1217,6 +1271,7 @@ wrapAngleToMinusPiPi(
 Wraps an angle into the closed interval `[-π, π]`.
 
 Parameters:
+
 - `angleRadians` - Raw angle in radians.
 
 Returns: Wrapped angle in `[-π, π]`.

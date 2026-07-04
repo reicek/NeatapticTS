@@ -468,23 +468,25 @@ acceptance_criteria:
 
 - **File created:** `src/neat/nge-dna/neat.nge-dna.bridge.test.ts` (18 tests across 5 describe blocks)
 - **Bridge API defined by tests:**
-  - `materializeNetworkFromPhenotype(envelope, plan, descriptor, runtimeHints?) → Network`
-  - `extractCanonicalEnvelopeFromNetwork(network) → NgeDnaCanonicalEnvelope`
+- `materializeNetworkFromPhenotype(envelope, plan, descriptor, runtimeHints?) → Network`
+- `extractCanonicalEnvelopeFromNetwork(network) → NgeDnaCanonicalEnvelope`
 - **Validation command:** `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="src/neat/nge-dna/.*bridge.*test"`
 - **Red result:** Exit code 1 — `TS2307: Cannot find module './neat.nge-dna.bridge' or its corresponding type declarations.` All 18 tests blocked by the missing module (correct red-phase failure — missing implementation, not syntax error or bad fixture).
 - **Test breakdown:**
-  - `materializeNetworkFromPhenotype` (6 tests): node count, connection count, zero-module throw, z=0→input designation, z=1→output designation, extension carrier schema
-  - `extractCanonicalEnvelopeFromNetwork` (2 tests): schemaVersion matching, fingerprint matching
-  - `round-trip fidelity` (6 tests): node count, connection count, phenotypeFingerprint, dnaFingerprint, residualStreamAssignments, weightSharedCohortAssignments
-  - `determinism` (2 tests): same DNA+seed → identical topology, same DNA different seeds → same topology
-  - `opt-in isolation` (2 tests): no NGE extensions when ngeEnabled not true, classic Network unchanged
+- `materializeNetworkFromPhenotype` (6 tests): node count, connection count, zero-module throw, z=0→input designation, z=1→output designation, extension carrier schema
+- `extractCanonicalEnvelopeFromNetwork` (2 tests): schemaVersion matching, fingerprint matching
+- `round-trip fidelity` (6 tests): node count, connection count, phenotypeFingerprint, dnaFingerprint, residualStreamAssignments, weightSharedCohortAssignments
+- `determinism` (2 tests): same DNA+seed → identical topology, same DNA different seeds → same topology
+- `opt-in isolation` (2 tests): no NGE extensions when ngeEnabled not true, classic Network unchanged
 - **Open decisions resolved in test header comments:**
-  1. Input/output designation: z=0 → input, z=1 → output, 0<z<1 → hidden
-  2. Deterministic innovation: stable hash of (sourceModuleId, targetModuleId)
-  3. computationType → squash map: DenseFeedForward→relu, AttentionHead→sigmoid, GatedRecurrentCell→tanh, EpisodicSlot→identity, ModulatorBroadcaster→identity, GatingRouter→sigmoid
-  4. Extension carrier: { version: 1, ngeDescriptor, ngeEnvelope } inside NetworkJSONExtensions.values
-  5. Residual-stream/weight-sharing shelves: descriptor-only extension metadata, tested for round-trip survival
-  6. Seed semantics: seed is fingerprint-only, never affects topology
+
+1.  Input/output designation: z=0 → input, z=1 → output, 0<z<1 → hidden
+2.  Deterministic innovation: stable hash of (sourceModuleId, targetModuleId)
+3.  computationType → squash map: DenseFeedForward→relu, AttentionHead→sigmoid, GatedRecurrentCell→tanh, EpisodicSlot→identity, ModulatorBroadcaster→identity, GatingRouter→sigmoid
+4.  Extension carrier: { version: 1, ngeDescriptor, ngeEnvelope } inside NetworkJSONExtensions.values
+5.  Residual-stream/weight-sharing shelves: descriptor-only extension metadata, tested for round-trip survival
+6.  Seed semantics: seed is fingerprint-only, never affects topology
+
 - **Fixture strategy:** Real NGE_DNA pipeline (buildVirtualPlan + realizePhenotype) for topology tests; synthetic descriptor for shelf round-trip tests; empty descriptor for error-path test
 
 ---
@@ -513,118 +515,118 @@ source_of_truth: 'plans/NGE_Core_Algorithm_Workstream.plans.md'
 copy_paste: true
 next_step: 'Step 05 — Green validation and coverage guard'
 skills:
-  - 'implementation-standards'
-  - 'nge-core-algorithm'
-  - 'reproducibility-contracts'
+ - 'implementation-standards'
+ - 'nge-core-algorithm'
+ - 'reproducibility-contracts'
 specialists:
-  - 'implementation-executor'
-  - 'implementation-pattern-scout'
+ - 'implementation-executor'
+ - 'implementation-pattern-scout'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/neat/nge-dna/.*bridge.*test'
-  - 'npm run lint'
+ - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/neat/nge-dna/.*bridge.*test'
+ - 'npm run lint'
 acceptance_criteria:
-  - 'All red tests from Step 03 pass'
-  - 'materializeNetworkFromPhenotype(envelope, plan, seed) produces a runtime Network with correct topology'
-  - 'extractCanonicalEnvelopeFromNetwork(network) produces a valid NgeDnaCanonicalEnvelope'
-  - 'Network → envelope → Network round-trip preserves identity and substrate metadata'
-  - 'Same DNA + same seed produces identical Network topology'
-  - 'Classic NEAT is unchanged when the bridge is not invoked (opt-in isolation)'
-  - '100% statements, branches, functions, lines on all touched src/neat/ files'
-  - 'No backward-compatibility wrappers or dual-path code (old placeholder removed in same step)'
+ - 'All red tests from Step 03 pass'
+ - 'materializeNetworkFromPhenotype(envelope, plan, seed) produces a runtime Network with correct topology'
+ - 'extractCanonicalEnvelopeFromNetwork(network) produces a valid NgeDnaCanonicalEnvelope'
+ - 'Network → envelope → Network round-trip preserves identity and substrate metadata'
+ - 'Same DNA + same seed produces identical Network topology'
+ - 'Classic NEAT is unchanged when the bridge is not invoked (opt-in isolation)'
+ - '100% statements, branches, functions, lines on all touched src/neat/ files'
+ - 'No backward-compatibility wrappers or dual-path code (old placeholder removed in same step)'
 slices:
-  - slice_id: '04-red-tests'
-    title: 'Red tests for phenotype→Network bridge and Network→envelope extraction'
-    status: '[DONE]'
-    goal: 'red-testing'
-    estimate_hours: 4
-    files_to_change:
-      - 'src/neat/nge-dna/neat.nge-dna.bridge.test.ts'
-    acceptance_criteria:
-      - 'Red test: materializeNetworkFromPhenotype(envelope, plan, seed) returns a runtime Network with correct node and connection count'
-      - 'Red test: extractCanonicalEnvelopeFromNetwork(network) returns NgeDnaCanonicalEnvelope with matching identity fields'
-      - 'Red test: Network → envelope → Network round-trip preserves topology'
-      - 'Red test: same DNA + same seed produces identical Network topology (determinism)'
-      - 'Red test: classic NEAT unchanged when bridge not invoked (opt-in isolation)'
-      - 'Red test: invalid/empty phenotype descriptor throws'
-      - 'All tests fail for the right reason (missing implementation)'
-    parallelizable: false
-    dependencies: []
-    next_slice: '04-impl'
-    evidence: 'Completed in Step 03 — 18 red tests in src/neat/nge-dna/neat.nge-dna.bridge.test.ts, all failing with TS2307 (module not found)'
-  - slice_id: '04-impl'
-    title: 'Implement phenotype→Network materialization and Network→envelope extraction'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 8
-    files_to_change:
-      - 'src/neat/nge-dna/neat.nge-dna.bridge.ts'
-      - 'src/neat/nge-dna/neat.nge-dna.bridge.test.ts'
-      - 'src/neat/nge-dna/neat.nge-dna.errors.ts'
-    acceptance_criteria:
-      - 'materializeNetworkFromPhenotype(envelope, plan, descriptor, runtimeHints?) returns a runtime Network with correct topology'
-      - 'extractCanonicalEnvelopeFromNetwork(network) returns a valid NgeDnaCanonicalEnvelope'
-      - 'Identity fields (schemaVersion, fingerprint) preserved across round-trip via extension carrier'
-      - 'Substrate metadata preserved from network'
-      - 'Invalid/empty phenotype descriptor throws NGE_DNA_BridgeError'
-      - 'No placeholder, no-op, or dual-path code remains in the bridge module'
-    parallelizable: false
-    dependencies:
-      - '04-red-tests'
-    next_slice: '04-green'
-    evidence: |
-      Created src/neat/nge-dna/neat.nge-dna.bridge.ts with materializeNetworkFromPhenotype
-      and extractCanonicalEnvelopeFromNetwork. Added NGE_DNA_BridgeError to errors.ts.
-      Added 2 coverage tests (hidden-node designation, missing-extension throw) to bridge.test.ts.
-      All 20 bridge tests pass. bridge.ts + errors.ts at 100% statements/branches/functions/lines.
-      tsc: OK. ESLint: 0 errors. Prettier: clean. JSDoc: 18/18 exported symbols documented.
-  - slice_id: '04-green'
-    title: 'Green validation: round-trip, determinism, opt-in isolation, coverage guard'
-    status: '[DONE]'
-    goal: 'green-testing'
-    estimate_hours: 4
-    files_to_change:
-      - 'src/neat/nge-dna/neat.nge-dna.bridge.test.ts'
-      - 'coverage/lcov.info'
-    acceptance_criteria:
-      - 'Network → envelope → Network round-trip preserves node count, connection count, and topology'
-      - 'Same DNA + same seed produces identical Network topology (determinism)'
-      - 'Classic NEAT Network is unchanged when the bridge is not invoked (opt-in isolation)'
-      - '100% statements, branches, functions, lines on all touched src/neat/ files'
-      - 'Coverage guard passes on src/neat/nge-dna/neat.nge-dna.bridge.ts'
-    parallelizable: false
-    dependencies:
-      - '04-impl'
-    next_slice: null
+ - slice_id: '04-red-tests'
+ title: 'Red tests for phenotype→Network bridge and Network→envelope extraction'
+ status: '[DONE]'
+ goal: 'red-testing'
+ estimate_hours: 4
+ files_to_change:
+ - 'src/neat/nge-dna/neat.nge-dna.bridge.test.ts'
+ acceptance_criteria:
+ - 'Red test: materializeNetworkFromPhenotype(envelope, plan, seed) returns a runtime Network with correct node and connection count'
+ - 'Red test: extractCanonicalEnvelopeFromNetwork(network) returns NgeDnaCanonicalEnvelope with matching identity fields'
+ - 'Red test: Network → envelope → Network round-trip preserves topology'
+ - 'Red test: same DNA + same seed produces identical Network topology (determinism)'
+ - 'Red test: classic NEAT unchanged when bridge not invoked (opt-in isolation)'
+ - 'Red test: invalid/empty phenotype descriptor throws'
+ - 'All tests fail for the right reason (missing implementation)'
+ parallelizable: false
+ dependencies: []
+ next_slice: '04-impl'
+ evidence: 'Completed in Step 03 — 18 red tests in src/neat/nge-dna/neat.nge-dna.bridge.test.ts, all failing with TS2307 (module not found)'
+ - slice_id: '04-impl'
+ title: 'Implement phenotype→Network materialization and Network→envelope extraction'
+ status: '[DONE]'
+ goal: 'implementing'
+ estimate_hours: 8
+ files_to_change:
+ - 'src/neat/nge-dna/neat.nge-dna.bridge.ts'
+ - 'src/neat/nge-dna/neat.nge-dna.bridge.test.ts'
+ - 'src/neat/nge-dna/neat.nge-dna.errors.ts'
+ acceptance_criteria:
+ - 'materializeNetworkFromPhenotype(envelope, plan, descriptor, runtimeHints?) returns a runtime Network with correct topology'
+ - 'extractCanonicalEnvelopeFromNetwork(network) returns a valid NgeDnaCanonicalEnvelope'
+ - 'Identity fields (schemaVersion, fingerprint) preserved across round-trip via extension carrier'
+ - 'Substrate metadata preserved from network'
+ - 'Invalid/empty phenotype descriptor throws NGE_DNA_BridgeError'
+ - 'No placeholder, no-op, or dual-path code remains in the bridge module'
+ parallelizable: false
+ dependencies:
+ - '04-red-tests'
+ next_slice: '04-green'
+ evidence: |
+ Created src/neat/nge-dna/neat.nge-dna.bridge.ts with materializeNetworkFromPhenotype
+ and extractCanonicalEnvelopeFromNetwork. Added NGE_DNA_BridgeError to errors.ts.
+ Added 2 coverage tests (hidden-node designation, missing-extension throw) to bridge.test.ts.
+ All 20 bridge tests pass. bridge.ts + errors.ts at 100% statements/branches/functions/lines.
+ tsc: OK. ESLint: 0 errors. Prettier: clean. JSDoc: 18/18 exported symbols documented.
+ - slice_id: '04-green'
+ title: 'Green validation: round-trip, determinism, opt-in isolation, coverage guard'
+ status: '[DONE]'
+ goal: 'green-testing'
+ estimate_hours: 4
+ files_to_change:
+ - 'src/neat/nge-dna/neat.nge-dna.bridge.test.ts'
+ - 'coverage/lcov.info'
+ acceptance_criteria:
+ - 'Network → envelope → Network round-trip preserves node count, connection count, and topology'
+ - 'Same DNA + same seed produces identical Network topology (determinism)'
+ - 'Classic NEAT Network is unchanged when the bridge is not invoked (opt-in isolation)'
+ - '100% statements, branches, functions, lines on all touched src/neat/ files'
+ - 'Coverage guard passes on src/neat/nge-dna/neat.nge-dna.bridge.ts'
+ parallelizable: false
+ dependencies:
+ - '04-impl'
+ next_slice: null
 ```
 
 #### PlanUpdate — Step 04 slice `04-impl` [DONE]
 
 ```yaml
 PlanUpdate:
-  slice_id: '04-impl'
-  changed_files:
-    - 'src/neat/nge-dna/neat.nge-dna.bridge.ts'
-    - 'src/neat/nge-dna/neat.nge-dna.bridge.test.ts'
-    - 'src/neat/nge-dna/neat.nge-dna.errors.ts'
-  preflight:
-    - 'npx tsc --noEmit -p tsconfig.json'
-    - 'npm run quality:folder -- --folder=src/neat/nge-dna'
-    - 'npx prettier --check src/neat/nge-dna/neat.nge-dna.bridge.ts src/neat/nge-dna/neat.nge-dna.bridge.test.ts src/neat/nge-dna/neat.nge-dna.errors.ts'
-  validation:
-    - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/.*bridge.*test'
-      expected_exit: 0
-      result: '20 passed, 20 total'
-    - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/'
-      expected_exit: 0
-      result: '87 passed, 87 total; bridge.ts 100/100/100/100; errors.ts 100/100/100/100'
-  coverage_guard:
-    files:
-      - 'src/neat/nge-dna/neat.nge-dna.bridge.ts'
-      - 'src/neat/nge-dna/neat.nge-dna.errors.ts'
-    summary: 'statements:100, branches:100, functions:100, lines:100'
-  rollback:
-    - 'git checkout -- src/neat/nge-dna/neat.nge-dna.bridge.ts src/neat/nge-dna/neat.nge-dna.bridge.test.ts src/neat/nge-dna/neat.nge-dna.errors.ts'
-  next: 'Run 05-green-testing slice 04-green: round-trip, determinism, opt-in isolation, coverage guard'
+ slice_id: '04-impl'
+ changed_files:
+ - 'src/neat/nge-dna/neat.nge-dna.bridge.ts'
+ - 'src/neat/nge-dna/neat.nge-dna.bridge.test.ts'
+ - 'src/neat/nge-dna/neat.nge-dna.errors.ts'
+ preflight:
+ - 'npx tsc --noEmit -p tsconfig.json'
+ - 'npm run quality:folder -- --folder=src/neat/nge-dna'
+ - 'npx prettier --check src/neat/nge-dna/neat.nge-dna.bridge.ts src/neat/nge-dna/neat.nge-dna.bridge.test.ts src/neat/nge-dna/neat.nge-dna.errors.ts'
+ validation:
+ - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/.*bridge.*test'
+ expected_exit: 0
+ result: '20 passed, 20 total'
+ - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/'
+ expected_exit: 0
+ result: '87 passed, 87 total; bridge.ts 100/100/100/100; errors.ts 100/100/100/100'
+ coverage_guard:
+ files:
+ - 'src/neat/nge-dna/neat.nge-dna.bridge.ts'
+ - 'src/neat/nge-dna/neat.nge-dna.errors.ts'
+ summary: 'statements:100, branches:100, functions:100, lines:100'
+ rollback:
+ - 'git checkout -- src/neat/nge-dna/neat.nge-dna.bridge.ts src/neat/nge-dna/neat.nge-dna.bridge.test.ts src/neat/nge-dna/neat.nge-dna.errors.ts'
+ next: 'Run 05-green-testing slice 04-green: round-trip, determinism, opt-in isolation, coverage guard'
 ```
 
 VALIDATION_EVIDENCE (04-impl):
@@ -641,38 +643,38 @@ VALIDATION_EVIDENCE (04-impl):
 
 ```yaml
 PlanUpdate:
-  slice_id: '04-green'
-  changed_files:
-    - 'plans/NGE_Core_Algorithm_Workstream.plans.md'
-  validation:
-    - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/.*bridge.*test'
-      expected_exit: 0
-      result: '20 passed, 20 total; bridge.ts 100/100/100/100'
-    - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/'
-      expected_exit: 0
-      result: '87 passed, 87 total (2 suites); bridge.ts 100/100/100/100; errors.ts 100/100/100/100'
-    - command: 'npx tsc --noEmit -p tsconfig.json'
-      expected_exit: 0
-      result: '0 diagnostics'
-    - command: 'npm run lint'
-      expected_exit: 0
-      result: '0 errors'
-    - command: 'npm run quality:folder -- --folder=src/neat/nge-dna'
-      expected_exit: 0
-      result: 'FAIL — 6 pre-existing missing sibling test files (cppn, errors, realize, rules, substrate, utils); 0 in-folder TS diagnostics, 0 ESLint errors, 18/18 JSDoc, 0 lcov entries below 100%'
-  coverage_guard:
-    files:
-      - 'src/neat/nge-dna/neat.nge-dna.bridge.ts'
-      - 'src/neat/nge-dna/neat.nge-dna.errors.ts'
-    summary: 'statements:100, branches:100, functions:100, lines:100 (both files)'
-  acceptance_criteria_check:
-    round_trip: 'PASS — Network→envelope→Network round-trip preserves node count, connection count, topology'
-    determinism: 'PASS — same DNA + same seed produces identical Network topology'
-    opt_in_isolation: 'PASS — classic NEAT Network unchanged when bridge not invoked'
-    coverage_100: 'PASS — bridge.ts 100/100/100/100, errors.ts 100/100/100/100'
-  gate_results:
-    plan_sync: 'pass: true — all WIP plans registered in README and Roadmap'
-  next: 'Step 04 complete — advance to Step 05 (green validation and coverage guard) or phase compression'
+ slice_id: '04-green'
+ changed_files:
+ - 'plans/NGE_Core_Algorithm_Workstream.plans.md'
+ validation:
+ - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/.*bridge.*test'
+ expected_exit: 0
+ result: '20 passed, 20 total; bridge.ts 100/100/100/100'
+ - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/'
+ expected_exit: 0
+ result: '87 passed, 87 total (2 suites); bridge.ts 100/100/100/100; errors.ts 100/100/100/100'
+ - command: 'npx tsc --noEmit -p tsconfig.json'
+ expected_exit: 0
+ result: '0 diagnostics'
+ - command: 'npm run lint'
+ expected_exit: 0
+ result: '0 errors'
+ - command: 'npm run quality:folder -- --folder=src/neat/nge-dna'
+ expected_exit: 0
+ result: 'FAIL — 6 pre-existing missing sibling test files (cppn, errors, realize, rules, substrate, utils); 0 in-folder TS diagnostics, 0 ESLint errors, 18/18 JSDoc, 0 lcov entries below 100%'
+ coverage_guard:
+ files:
+ - 'src/neat/nge-dna/neat.nge-dna.bridge.ts'
+ - 'src/neat/nge-dna/neat.nge-dna.errors.ts'
+ summary: 'statements:100, branches:100, functions:100, lines:100 (both files)'
+ acceptance_criteria_check:
+ round_trip: 'PASS — Network→envelope→Network round-trip preserves node count, connection count, topology'
+ determinism: 'PASS — same DNA + same seed produces identical Network topology'
+ opt_in_isolation: 'PASS — classic NEAT Network unchanged when bridge not invoked'
+ coverage_100: 'PASS — bridge.ts 100/100/100/100, errors.ts 100/100/100/100'
+ gate_results:
+ plan_sync: 'pass: true — all WIP plans registered in README and Roadmap'
+ next: 'Step 04 complete — advance to Step 05 (green validation and coverage guard) or phase compression'
 ```
 
 VALIDATION_EVIDENCE (04-green):
@@ -730,8 +732,7 @@ acceptance_criteria:
 
 #### PlanUpdate — Step 05 [DONE]
 
-Claim: 05-green-testing @ 2026-06-27T15:16:15Z
-
+Claim: 05-green-testing
 **Broader test run (no regressions):**
 
 - `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/.*test|src/neat/genome/.*utils.*test|src/architecture/network/.*serialize.*test`
@@ -1026,23 +1027,23 @@ touch `examples/` or wire the racing FSM (that is P3, Phase 6).
 **Reproduction pipeline flow (queenBias gap marked):**
 
 ```
-reproducePolyandric(input)                                    [L143, exported]
-  ├─ resolveOperatorPolicy(input.policy ?? queen.reproductionPolicy, 'polyandric')  [L146]
-  │     ↳ returns full NgeReproductionPolicy INCLUDING queenBias
-  │     ⚠ GAP: queenBias returned but never read downstream
-  ├─ collectPolyandricRegionIds(input.queen)                  [L158]
-  ├─ patchableRegionIds = queenRegionIds.slice(0, ceil(len * polyandricDroneContributionFraction))  [L159]
-  ├─ eligibleDrones = input.drones.slice(0, polyandricDroneCount)  [L166]
-  ├─ assignPolyandricRegions(patchableRegionIds, eligibleDrones, resolvedPolicy)  [L170]
-  │     ↳ uses assignedRegionStrategy (roundRobin|byFitness|bySpecialization) — NOT queenBias
-  ├─ applyPolyandricAssignments(input.queen, eligibleDrones, regionAssignment)  [L178]
-  │     └─ patchPolyandricRegion(currentEnvelope, drone.dna, regionId)  [L315]
-  │          ├─ moduleArchetypes: mergeModuleArchetypeWithQueenPriority(queen, drone)  [L564, L482]
-  │          │    ⚠ GAP: hard {...drone, ...queen} = queen wins ALL (≡ queenBias=1.0 always)
-  │          └─ cppnPrograms | rulePasses: {...droneRegion, ...queenRegion}  [L571-574]
-  │               ⚠ GAP: hard queen-wins-all (≡ queenBias=1.0 always)
-  ├─ buildCanonicalEnvelope(patched, { reproductionPolicy: resolvedPolicy })  [L177]
-  └─ return { offspring, outcome:'queen-template-patched', parentContributions, policy, regionAssignment }
+reproducePolyandric(input) [L143, exported]
+ ├─ resolveOperatorPolicy(input.policy ?? queen.reproductionPolicy, 'polyandric') [L146]
+ │ ↳ returns full NgeReproductionPolicy INCLUDING queenBias
+ │ ⚠ GAP: queenBias returned but never read downstream
+ ├─ collectPolyandricRegionIds(input.queen) [L158]
+ ├─ patchableRegionIds = queenRegionIds.slice(0, ceil(len * polyandricDroneContributionFraction)) [L159]
+ ├─ eligibleDrones = input.drones.slice(0, polyandricDroneCount) [L166]
+ ├─ assignPolyandricRegions(patchableRegionIds, eligibleDrones, resolvedPolicy) [L170]
+ │ ↳ uses assignedRegionStrategy (roundRobin|byFitness|bySpecialization) — NOT queenBias
+ ├─ applyPolyandricAssignments(input.queen, eligibleDrones, regionAssignment) [L178]
+ │ └─ patchPolyandricRegion(currentEnvelope, drone.dna, regionId) [L315]
+ │ ├─ moduleArchetypes: mergeModuleArchetypeWithQueenPriority(queen, drone) [L564, L482]
+ │ │ ⚠ GAP: hard {...drone, ...queen} = queen wins ALL (≡ queenBias=1.0 always)
+ │ └─ cppnPrograms | rulePasses: {...droneRegion, ...queenRegion} [L571-574]
+ │ ⚠ GAP: hard queen-wins-all (≡ queenBias=1.0 always)
+ ├─ buildCanonicalEnvelope(patched, { reproductionPolicy: resolvedPolicy }) [L177]
+ └─ return { offspring, outcome:'queen-template-patched', parentContributions, policy, regionAssignment }
 ```
 
 P5 seam: thread `resolvedPolicy.queenBias` from `reproducePolyandric` (L146) through `applyPolyandricAssignments` → `patchPolyandricRegion` → `mergeModuleArchetypeWithQueenPriority` and the non-archetype spread branch. Single-file internal plumbing edit.
@@ -1061,37 +1062,36 @@ P5 seam: thread `resolvedPolicy.queenBias` from `reproducePolyandric` (L146) thr
 
 ```yaml
 decision_record:
-  id: 'DR-2026-06-27-P2'
-  context: >
-    The Phase 2 phase-level packet originally listed "3 previously-skipped
-    polyandric tests un-skip and pass" as an acceptance criterion. The 3
-    skip-contracts live in examples/racing_curriculum/workers/simulation-worker/
-    simulation-worker.race-pack.tier5.test.ts (L179, L188, L197). Reconnaissance
-    shows they require P3 (racing FSM wiring — Phase 6) to select a queen and
-    call reproducePolyandric, and test #3 also references assignedRegionStrategy
-    =non-overlapping and seedPolicy=queen-weighted which are P4 (Phase 5) schema
-    values that do not exist in the current NgeAssignedRegionStrategy enum.
-    Phase 7 owns the final "All previously-skipped polyandric tests pass"
-    criterion. Phase 2 is a library-core src/neat/ phase and must not touch
-    examples/ or wire the racing FSM.
-  options:
-    - id: optA
-      desc: 'Keep "un-skip 3 tests" in Phase 2 and force examples/ + FSM wiring into Phase 2 (scope creep into P3/P4).'
-    - id: optB
-      desc: 'Revise Phase 2 criteria to library-core only; add library-level queenBias=0.85 test mirroring skip-contract #3; leave the 3 example tests skipped for Phase 6/7.'
-  chosen: optB
-  rationale: >
-    optB preserves the workstream scope boundary (library-core, no examples/
-    until Phase 7), avoids conflating P2/P5 with P3/P4, and still delivers the
-    spirit of skip-contract #3 (queenBias=0.85 honoring) at the library level
-    where Phase 7 can lift it unchanged. optA would violate the "no demo work
-    until Phase 7" rule and create a false-green gate.
-  owner: '01-planning'
-  rollback_plan: >
-    Revert the Phase 2 acceptance_criteria block to the original 6-item list and
-    delete DR-2026-06-27-P2. Only do this if the user explicitly wants Phase 2
-    to absorb P3/P4 scope.
-  created_at: '2026-06-27T15:32:49-04:00'
+ id: 'DR-001'
+ context: >
+ The Phase 2 phase-level packet originally listed "3 previously-skipped
+ polyandric tests un-skip and pass" as an acceptance criterion. The 3
+ skip-contracts live in examples/racing_curriculum/workers/simulation-worker/
+ simulation-worker.race-pack.tier5.test.ts (L179, L188, L197). Reconnaissance
+ shows they require P3 (racing FSM wiring — Phase 6) to select a queen and
+ call reproducePolyandric, and test #3 also references assignedRegionStrategy
+ =non-overlapping and seedPolicy=queen-weighted which are P4 (Phase 5) schema
+ values that do not exist in the current NgeAssignedRegionStrategy enum.
+ Phase 7 owns the final "All previously-skipped polyandric tests pass"
+ criterion. Phase 2 is a library-core src/neat/ phase and must not touch
+ examples/ or wire the racing FSM.
+ options:
+ - id: optA
+ desc: 'Keep "un-skip 3 tests" in Phase 2 and force examples/ + FSM wiring into Phase 2 (scope creep into P3/P4).'
+ - id: optB
+ desc: 'Revise Phase 2 criteria to library-core only; add library-level queenBias=0.85 test mirroring skip-contract #3; leave the 3 example tests skipped for Phase 6/7.'
+ chosen: optB
+ rationale: >
+ optB preserves the workstream scope boundary (library-core, no examples/
+ until Phase 7), avoids conflating P2/P5 with P3/P4, and still delivers the
+ spirit of skip-contract #3 (queenBias=0.85 honoring) at the library level
+ where Phase 7 can lift it unchanged. optA would violate the "no demo work
+ until Phase 7" rule and create a false-green gate.
+ owner: '01-planning'
+ rollback_plan: >
+ Revert the Phase 2 acceptance_criteria block to the original 6-item list and
+ delete DR-001. Only do this if the user explicitly wants Phase 2
+ to absorb P3/P4 scope.
 ```
 
 ### Phase 2 Step Packets
@@ -1128,11 +1128,11 @@ acceptance_criteria:
 ```
 
 **Step objective:** Activate Phase 2, produce the boundary map, record the scope-conflict
-decision (DR-2026-06-27-P2), and author the remaining six step packets.
+decision (DR-001), and author the remaining six step packets.
 
 **Outcome:** Boundary map produced via Cortex RAG + boundary-mapper specialist. Acceptance
 criteria authored via acceptance-criteria-writer specialist. The original "3 skipped tests
-un-skip" criterion was revised to a library-core criterion set per DR-2026-06-27-P2. Step
+un-skip" criterion was revised to a library-core criterion set per DR-001. Step
 02-07 packets authored below. Gates to be run after the plan edit.
 
 #### Step 02: Research polyandric export surface and queenBias merge path [DONE]
@@ -1216,38 +1216,38 @@ all fresh, dense_state=warm, DiskANN active) + direct source verification of
 ##### 1. Full Polyandric Reproduction Pipeline Flow (with function signatures)
 
 ```
-reproducePolyandric(input: NgePolyandricInput): NgeEvolutionReproductionResult    [L143, exported]
-  │
-  ├─ resolveOperatorPolicy(policy: NgeReproductionPolicy, mode): NgeReproductionPolicy  [L577, internal]
-  │    ↳ returns { ...policy, mode } — INCLUDES queenBias but ⚠ NEVER READ DOWNSTREAM
-  │
-  ├─ collectPolyandricRegionIds(queen: NgeDnaCanonicalEnvelope): string[]  [L432, internal]
-  │    ↳ produces region IDs: "cppnPrograms:0", "moduleArchetypes:0", "rulePasses:0", etc.
-  │
-  ├─ patchableRegionIds = queenRegionIds.slice(0, ceil(len * polyandricDroneContributionFraction))  [L159]
-  ├─ eligibleDrones = input.drones.slice(0, polyandricDroneCount)  [L166]
-  │
-  ├─ assignPolyandricRegions(patchableRegionIds, drones, policy): NgeEvolutionPolyandricRegionAssignmentResult  [L324, internal]
-  │    ├─ uses policy.assignedRegionStrategy ('roundRobin'|'byFitness'|'bySpecialization')  [L332]
-  │    ├─ selectPolyandricDroneForRegion(regionId, index, drones, policy): NgePolyandricDroneInput | undefined  [L587]
-  │    └─ returns { assignedRegions, patchableRegionIds, strategy, unassignedRegionIds }
-  │
-  ├─ applyPolyandricAssignments(queen, drones, regionAssignment): NgeDnaCanonicalEnvelope  [L304, internal]
-  │    └─ regionAssignment.assignedRegions.reduce → patchPolyandricRegion(current, drone.dna, regionId)  [L315]
-  │         ⚠ DOES NOT receive queenBias or resolvedPolicy — P5 gap
-  │
-  ├─ patchPolyandricRegion(queenEnvelope, droneEnvelope, regionId): NgeDnaCanonicalEnvelope  [L514, internal]
-  │    ├─ parsePolyandricRegionId(regionId): { family, index }  [L496]
-  │    ├─ if family === 'moduleArchetypes':
-  │    │    └─ mergeModuleArchetypeWithQueenPriority(queenRegion, droneRegion): NgeDnaModuleArchetype  [L482]
-  │    │         ⚠ HARD {...drone, ...queen} = queen wins ALL (≡ queenBias=1.0 always) — P5 gap
-  │    │         ⚠ parameterSchema: {...dronePS, ...queenPS} = queen wins ALL sub-merge — P5 gap
-  │    └─ else (cppnPrograms | rulePasses):
-  │         └─ {...structuredClone(droneRegion), ...structuredClone(queenRegion)}  [L571-574]
-  │              ⚠ HARD queen-wins-all spread (≡ queenBias=1.0 always) — P5 gap
-  │
-  ├─ buildCanonicalEnvelope(patched, { reproductionPolicy: resolvedPolicy }): NgeDnaCanonicalEnvelope  [L373, internal]
-  └─ return { offspring, outcome:'queen-template-patched', parentContributions, policy, regionAssignment }
+reproducePolyandric(input: NgePolyandricInput): NgeEvolutionReproductionResult [L143, exported]
+ │
+ ├─ resolveOperatorPolicy(policy: NgeReproductionPolicy, mode): NgeReproductionPolicy [L577, internal]
+ │ ↳ returns { ...policy, mode } — INCLUDES queenBias but ⚠ NEVER READ DOWNSTREAM
+ │
+ ├─ collectPolyandricRegionIds(queen: NgeDnaCanonicalEnvelope): string[] [L432, internal]
+ │ ↳ produces region IDs: "cppnPrograms:0", "moduleArchetypes:0", "rulePasses:0", etc.
+ │
+ ├─ patchableRegionIds = queenRegionIds.slice(0, ceil(len * polyandricDroneContributionFraction)) [L159]
+ ├─ eligibleDrones = input.drones.slice(0, polyandricDroneCount) [L166]
+ │
+ ├─ assignPolyandricRegions(patchableRegionIds, drones, policy): NgeEvolutionPolyandricRegionAssignmentResult [L324, internal]
+ │ ├─ uses policy.assignedRegionStrategy ('roundRobin'|'byFitness'|'bySpecialization') [L332]
+ │ ├─ selectPolyandricDroneForRegion(regionId, index, drones, policy): NgePolyandricDroneInput | undefined [L587]
+ │ └─ returns { assignedRegions, patchableRegionIds, strategy, unassignedRegionIds }
+ │
+ ├─ applyPolyandricAssignments(queen, drones, regionAssignment): NgeDnaCanonicalEnvelope [L304, internal]
+ │ └─ regionAssignment.assignedRegions.reduce → patchPolyandricRegion(current, drone.dna, regionId) [L315]
+ │ ⚠ DOES NOT receive queenBias or resolvedPolicy — P5 gap
+ │
+ ├─ patchPolyandricRegion(queenEnvelope, droneEnvelope, regionId): NgeDnaCanonicalEnvelope [L514, internal]
+ │ ├─ parsePolyandricRegionId(regionId): { family, index } [L496]
+ │ ├─ if family === 'moduleArchetypes':
+ │ │ └─ mergeModuleArchetypeWithQueenPriority(queenRegion, droneRegion): NgeDnaModuleArchetype [L482]
+ │ │ ⚠ HARD {...drone, ...queen} = queen wins ALL (≡ queenBias=1.0 always) — P5 gap
+ │ │ ⚠ parameterSchema: {...dronePS, ...queenPS} = queen wins ALL sub-merge — P5 gap
+ │ └─ else (cppnPrograms | rulePasses):
+ │ └─ {...structuredClone(droneRegion), ...structuredClone(queenRegion)} [L571-574]
+ │ ⚠ HARD queen-wins-all spread (≡ queenBias=1.0 always) — P5 gap
+ │
+ ├─ buildCanonicalEnvelope(patched, { reproductionPolicy: resolvedPolicy }): NgeDnaCanonicalEnvelope [L373, internal]
+ └─ return { offspring, outcome:'queen-template-patched', parentContributions, policy, regionAssignment }
 ```
 
 **P5 seam (single-file internal plumbing):** Thread `resolvedPolicy.queenBias` from
@@ -1308,7 +1308,7 @@ export interface NgeReproductionPolicy {
   parthenogenesisMutationRate: number; // L69
   polyandricDroneCount: number; // L71
   polyandricDroneContributionFraction: number; // L73
-  queenBias: number; // L75  ← P5 target
+  queenBias: number; // L75 ← P5 target
   assignedRegionStrategy: NgeAssignedRegionStrategy; // L77
   modeIsEvolvable: boolean; // L79
   seedPolicy: NgeSeedPolicy; // L81
@@ -1425,9 +1425,9 @@ function hashRegionIdToUnitInterval(regionId: string): number {
   no platform-dependent primitives.
 - **Uniform in [0,1):** The `>>> 0` converts to unsigned 32-bit; division by 2^32 maps to [0,1).
 - **Gate semantics:** `hash < queenBias` → queen wins; `hash >= queenBias` → drone wins.
-  - `queenBias=1.0`: `hash < 1.0` is always true (hash ∈ [0,1), 1.0 ∉ [0,1)) → queen always wins. ✓
-  - `queenBias=0.0`: `hash < 0.0` is never true → drone always wins. ✓
-  - `queenBias=0.85`: queen wins ~85% of regions, deterministically per regionId. ✓
+- `queenBias=1.0`: `hash < 1.0` is always true (hash ∈ [0,1), 1.0 ∉ [0,1)) → queen always wins. ✓
+- `queenBias=0.0`: `hash < 0.0` is never true → drone always wins. ✓
+- `queenBias=0.85`: queen wins ~85% of regions, deterministically per regionId. ✓
 
 **Determinism contract update:** The regionId→[0,1) hash is a pure function of the regionId
 string using FNV-1a 32-bit. Same queen + same drones + same queenBias + same seed → identical
@@ -1458,14 +1458,14 @@ the merge priority for the entire region, including parameterSchema.
 
 ```typescript
 { ...structuredClone(droneRegion), ...structuredClone(queenRegion),
-  parameterSchema: { ...(droneRegion.parameterSchema ?? {}), ...(queenRegion.parameterSchema ?? {}) } }
+ parameterSchema: { ...(droneRegion.parameterSchema ?? {}), ...(queenRegion.parameterSchema ?? {}) } }
 ```
 
 When drone wins the region gate:
 
 ```typescript
 { ...structuredClone(queenRegion), ...structuredClone(droneRegion),
-  parameterSchema: { ...(queenRegion.parameterSchema ?? {}), ...(droneRegion.parameterSchema ?? {}) } }
+ parameterSchema: { ...(queenRegion.parameterSchema ?? {}), ...(droneRegion.parameterSchema ?? {}) } }
 ```
 
 ##### 9. Assumption A3 Confirmation — Deep-equals for queenBias=1.0
@@ -1673,7 +1673,7 @@ acceptance_criteria:
 
 **Step objective:** Create failing library-level tests in `src/neat/nge-evolution/` that define
 the expected export visibility and queenBias honoring behavior. These replace the placeholder
-skip-contracts at the library level (the example skip-contracts stay skipped per DR-2026-06-27-P2).
+skip-contracts at the library level (the example skip-contracts stay skipped per DR-001).
 
 **Context the agent must know:**
 
@@ -1802,7 +1802,7 @@ Validation evidence:
 - TypeScript: `npx tsc --noEmit -p tsconfig.json` → 0 diagnostics.
 - ESLint: `npx eslint src/neat/nge-evolution/neat.nge-evolution.reproduction.ts src/neat/nge-evolution/neat.nge-evolution.ts src/neat/nge-evolution/neat.nge-evolution.reproduction.queen-bias.test.ts` → 0 issues.
 - Prettier: `npx prettier --check` on touched files → all matched.
-- Scope boundary: no `examples/` files changed; the 3 racing-worker skip-contracts remain `.skip` (Phase 6/7 ownership preserved per DR-2026-06-27-P2).
+- Scope boundary: no `examples/` files changed; the 3 racing-worker skip-contracts remain `.skip` (Phase 6/7 ownership preserved per DR-001).
 
 No deferred cleanup: the old unconditional `{...drone, ...queen}` spread was replaced in the same step, not wrapped or retained.
 
@@ -1819,12 +1819,12 @@ PlanUpdate:
     - 'npx prettier --check src/neat/nge-evolution/neat.nge-evolution.reproduction.ts src/neat/nge-evolution/neat.nge-evolution.ts src/neat/nge-evolution/neat.nge-evolution.reproduction.queen-bias.test.ts'
   validation:
     - command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-evolution --collectCoverageFrom="src/neat/nge-evolution/**/*.ts"'
-      expected_exit: 0
-      coverage_guard:
-        files:
-          - src/neat/nge-evolution/neat.nge-evolution.reproduction.ts
-          - src/neat/nge-evolution/neat.nge-evolution.ts
-        summary: 'statements:100,branches:100,functions:100,lines:100'
+  expected_exit: 0
+  coverage_guard:
+  files:
+    - src/neat/nge-evolution/neat.nge-evolution.reproduction.ts
+    - src/neat/nge-evolution/neat.nge-evolution.ts
+  summary: 'statements:100,branches:100,functions:100,lines:100'
   rollback:
     - 'git checkout -- src/neat/nge-evolution/neat.nge-evolution.reproduction.ts src/neat/nge-evolution/neat.nge-evolution.ts src/neat/nge-evolution/neat.nge-evolution.reproduction.queen-bias.test.ts'
   next: 'Hand off to Step 05 (05-green-testing) for broader regression sweep and final coverage-guard sign-off.'
@@ -1847,71 +1847,71 @@ source_of_truth: 'plans/NGE_Core_Algorithm_Workstream.plans.md'
 copy_paste: true
 next_step: 'Step 06 — Document the polyandric contract'
 skills:
-  - 'green-validation-gates'
-  - 'coverage-guard'
+ - 'green-validation-gates'
+ - 'coverage-guard'
 specialists:
-  - 'nge-core-scout'
+ - 'nge-core-scout'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-evolution --collectCoverageFrom=src/neat/nge-evolution/**/*.ts'
-  - 'npx eslint src/neat/nge-evolution'
+ - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-evolution --collectCoverageFrom=src/neat/nge-evolution/**/*.ts'
+ - 'npx eslint src/neat/nge-evolution'
 acceptance_criteria:
-  - 'All Step 03/04 tests remain green; zero regressions in the nge-evolution suite'
-  - '100% statements/branches/functions/lines on touched src/neat/nge-evolution/ files'
-  - 'Opt-in isolation: ngeEnabled=false still throws; no examples/ file touched'
-  - 'Lint exit code 0 on touched files'
-  - 'Scope boundary confirmed: the 3 racing-worker skip-contracts remain .skip'
+ - 'All Step 03/04 tests remain green; zero regressions in the nge-evolution suite'
+ - '100% statements/branches/functions/lines on touched src/neat/nge-evolution/ files'
+ - 'Opt-in isolation: ngeEnabled=false still throws; no examples/ file touched'
+ - 'Lint exit code 0 on touched files'
+ - 'Scope boundary confirmed: the 3 racing-worker skip-contracts remain .skip'
 VALIDATION_EVIDENCE:
-  tests: '51 passed, 0 failed across 4 nge-evolution suites'
-  coverage_summary:
-    neat.nge-evolution.constants.ts:
-      { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.distance.ts:
-      { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.epigenetic.ts:
-      { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.errors.ts:
-      { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.reproduction.ts:
-      { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.ts:
-      { statements: 100, branches: 100, functions: 100, lines: 100 }
-    neat.nge-evolution.utils.ts:
-      { statements: 100, branches: 100, functions: 100, lines: 100 }
-  lint: 'npx eslint src/neat/nge-evolution → exit 0, 0 issues'
-  scope_boundary:
-    examples_touched: false
-    skip_contracts_intact:
-      - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts:179 (it.skip queen selection)'
-      - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts:188 (it.skip polyandric call site)'
-      - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts:197 (it.skip queenBias=0.85 policy)'
-  opt_in_isolation: 'ngeEnabled=false still throws NgeEvolution_ModeError (covered by neat.nge-evolution.test.ts lines 499, 770, 1342, 1349)'
-  full_suite: 'intentionally skipped — user/step packet restricted to targeted nge-evolution slice only'
-  gates:
-    plan_sync:
-      pass: true
-      owner: 'validate-plan-sync.mjs'
-      evidence: '0 errors, 0 warnings; plan status WIP; downstream trackers resolved'
-    step_packet:
-      pass: true
-      owner: 'step-packet.gate.mjs'
-      evidence: 'plans/NGE_Core_Algorithm_Workstream.plans.md:yaml@8838 conforms; 0 violations'
-    agent_graph:
-      pass: true
-      owner: 'validate-agent-graph.mjs'
-      evidence: '65 agents; 0 issues; delegation graph valid'
-    learning_event:
-      pass: true
-      owner: '.github/ai-learning/learning-log.jsonl'
-      evidence: 'learning log exists with 11456 events; gate-exception category present (cortex-index index_fresh=false recorded and resolved)'
-    cortex_index:
-      pass: true
-      owner: '00-helping'
-      evidence: 'index rebuilt with node rag-index/build-index.mjs (3 docs indexed); fresh=true; snapshot_age_seconds reset'
-      note: 'Initial check failed with index_fresh=false; resolved by rebuilding the semantic index and re-verifying. Gate exception recorded in .github/ai-learning/learning-log.jsonl.'
-  gate:
-    pass: true
-    owner: '05-green-testing'
-    fixHint: null
+ tests: '51 passed, 0 failed across 4 nge-evolution suites'
+ coverage_summary:
+ neat.nge-evolution.constants.ts:
+ { statements: 100, branches: 100, functions: 100, lines: 100 }
+ neat.nge-evolution.distance.ts:
+ { statements: 100, branches: 100, functions: 100, lines: 100 }
+ neat.nge-evolution.epigenetic.ts:
+ { statements: 100, branches: 100, functions: 100, lines: 100 }
+ neat.nge-evolution.errors.ts:
+ { statements: 100, branches: 100, functions: 100, lines: 100 }
+ neat.nge-evolution.reproduction.ts:
+ { statements: 100, branches: 100, functions: 100, lines: 100 }
+ neat.nge-evolution.ts:
+ { statements: 100, branches: 100, functions: 100, lines: 100 }
+ neat.nge-evolution.utils.ts:
+ { statements: 100, branches: 100, functions: 100, lines: 100 }
+ lint: 'npx eslint src/neat/nge-evolution → exit 0, 0 issues'
+ scope_boundary:
+ examples_touched: false
+ skip_contracts_intact:
+ - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts:179 (it.skip queen selection)'
+ - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts:188 (it.skip polyandric call site)'
+ - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts:197 (it.skip queenBias=0.85 policy)'
+ opt_in_isolation: 'ngeEnabled=false still throws NgeEvolution_ModeError (covered by neat.nge-evolution.test.ts lines 499, 770, 1342, 1349)'
+ full_suite: 'intentionally skipped — user/step packet restricted to targeted nge-evolution slice only'
+ gates:
+ plan_sync:
+ pass: true
+ owner: 'validate-plan-sync.mjs'
+ evidence: '0 errors, 0 warnings; plan status WIP; downstream trackers resolved'
+ step_packet:
+ pass: true
+ owner: 'step-packet.gate.mjs'
+ evidence: 'plans/NGE_Core_Algorithm_Workstream.plans.md:yaml@8838 conforms; 0 violations'
+ agent_graph:
+ pass: true
+ owner: 'validate-agent-graph.mjs'
+ evidence: '65 agents; 0 issues; delegation graph valid'
+ learning_event:
+ pass: true
+ owner: '.github/ai-learning/learning-log.jsonl'
+ evidence: 'learning log exists with 11456 events; gate-exception category present (cortex-index index_fresh=false recorded and resolved)'
+ cortex_index:
+ pass: true
+ owner: '00-helping'
+ evidence: 'index rebuilt with node rag-index/build-index.mjs (3 docs indexed); fresh=true; snapshot_age_seconds reset'
+ note: 'Initial check failed with index_fresh=false; resolved by rebuilding the semantic index and re-verifying. Gate exception recorded in .github/ai-learning/learning-log.jsonl.'
+ gate:
+ pass: true
+ owner: '05-green-testing'
+ fixHint: null
 ```
 
 **User instruction:** Paste this full step packet.
@@ -1942,15 +1942,15 @@ regressions, no scope creep into examples/, and 100% coverage on touched files.
 
 ```text
 PlanUpdate:
-  step: 'Step 05 — Green validation and coverage guard'
-  action: 'mark_done'
-  evidence:
-    - 'Targeted nge-evolution suite: 51/51 tests pass, 0 regressions'
-    - 'Coverage on all src/neat/nge-evolution/ files: 100% statements/branches/functions/lines'
-    - 'ESLint on src/neat/nge-evolution: exit 0, 0 issues'
-    - 'Scope boundary: no examples/ files in git diff; all 3 racing-worker polyandric contracts still .skip'
-    - 'Opt-in isolation: ngeEnabled=false throws NgeEvolution_ModeError (existing test coverage)'
-  next_step: 'Step 06 — Document the polyandric contract'
+ step: 'Step 05 — Green validation and coverage guard'
+ action: 'mark_done'
+ evidence:
+ - 'Targeted nge-evolution suite: 51/51 tests pass, 0 regressions'
+ - 'Coverage on all src/neat/nge-evolution/ files: 100% statements/branches/functions/lines'
+ - 'ESLint on src/neat/nge-evolution: exit 0, 0 issues'
+ - 'Scope boundary: no examples/ files in git diff; all 3 racing-worker polyandric contracts still .skip'
+ - 'Opt-in isolation: ngeEnabled=false throws NgeEvolution_ModeError (existing test coverage)'
+ next_step: 'Step 06 — Document the polyandric contract'
 ```
 
 #### Step 06: Document the polyandric contract [DONE]
@@ -2011,17 +2011,17 @@ JSDoc, Mermaid, and the generated README.
 
 ```text
 PlanUpdate:
-  step: 'Step 06 — Document the polyandric contract'
-  action: 'mark_done'
-  evidence:
-    - 'JSDoc added to NgePolyandricInput and NgePolyandricDroneInput in src/neat/nge-evolution/neat.nge-evolution.reproduction.ts with examples and citations'
-    - 'JSDoc expanded on reproducePolyandric and the queenBias merge helpers (applyPolyandricAssignments, hashRegionIdToUnitInterval, mergeModuleArchetypeWithQueenPriority, patchPolyandricRegion)'
-    - 'Module-level JSDoc with Mermaid flowchart added to src/neat/nge-evolution/neat.nge-evolution.ts; docs.order.json introFile set to neat.nge-evolution.ts'
-    - 'Queen-bias/drone-contribution default constants documented with FNV-1a deterministic gate semantics and Wikipedia citations'
-    - 'npm run docs exit 0; generated src/neat/nge-evolution/README.md reflects the polyandric types, queenBias gate, citations, and Mermaid diagram'
-    - 'npm run lint exit 0, 0 issues'
-    - 'cortex-index gate: remains fail/stale even after node rag-index/build-index.mjs (1475 docs, 5 indexed); not a Step 06 acceptance blocker, but needs 00-helping follow-up'
-  next_step: 'Step 07 — Compress Phase 2 into logs'
+ step: 'Step 06 — Document the polyandric contract'
+ action: 'mark_done'
+ evidence:
+ - 'JSDoc added to NgePolyandricInput and NgePolyandricDroneInput in src/neat/nge-evolution/neat.nge-evolution.reproduction.ts with examples and citations'
+ - 'JSDoc expanded on reproducePolyandric and the queenBias merge helpers (applyPolyandricAssignments, hashRegionIdToUnitInterval, mergeModuleArchetypeWithQueenPriority, patchPolyandricRegion)'
+ - 'Module-level JSDoc with Mermaid flowchart added to src/neat/nge-evolution/neat.nge-evolution.ts; docs.order.json introFile set to neat.nge-evolution.ts'
+ - 'Queen-bias/drone-contribution default constants documented with FNV-1a deterministic gate semantics and Wikipedia citations'
+ - 'npm run docs exit 0; generated src/neat/nge-evolution/README.md reflects the polyandric types, queenBias gate, citations, and Mermaid diagram'
+ - 'npm run lint exit 0, 0 issues'
+ - 'cortex-index gate: remains fail/stale even after node rag-index/build-index.mjs (1475 docs, 5 indexed); not a Step 06 acceptance blocker, but needs 00-helping follow-up'
+ next_step: 'Step 07 — Compress Phase 2 into logs'
 ```
 
 #### Step 07: Compress Phase 2 into logs [DONE]
@@ -2081,13 +2081,13 @@ compact [DONE] marker in the plan file, then advance to Phase 3.
 
 ---
 
-## Phase 3 — modeIsEvolvable Activation & Phenotype→Network Operator (DR-2026-06-27-05) [DONE]
+## Phase 3 — modeIsEvolvable Activation & Phenotype→Network Operator (DR-008) [DONE]
 
-### Phase 3 — modeIsEvolvable Activation & Phenotype→Network Operator (DR-2026-06-27-05) [WIP]
+### Phase 3 — modeIsEvolvable Activation & Phenotype→Network Operator (DR-008) [WIP]
 
 ```yaml
 phase: 3
-title: 'modeIsEvolvable Activation & Phenotype→Network Operator (DR-2026-06-27-05)'
+title: 'modeIsEvolvable Activation & Phenotype→Network Operator (DR-008)'
 status: '[WIP]'
 goal: 'planning'
 expansion: 'steps'
@@ -2127,7 +2127,7 @@ placeholder_steps:
 operator that reads `reproductionPolicy.modeIsEvolvable`, enables the NGE evolution
 path when true, and exposes a single canonical operator that turns an
 `NgeDnaCanonicalEnvelope` into a runtime `Network`. This resolves
-DR-2026-06-27-05 and scopes the descriptor-only neuromodulation primitives
+DR-008 and scopes the descriptor-only neuromodulation primitives
 for a later phase.
 
 **Stop conditions:**
@@ -2206,7 +2206,7 @@ green validation can proceed in fresh sessions.
 **Execution steps:**
 
 1. Read `plans/NGE_Core_Algorithm_Workstream.plans.md` and the carry-forward
-   blocker DR-2026-06-27-05 context.
+   blocker DR-008 context.
 2. Search `src/neat/` for all `modeIsEvolvable` call sites and for the
    neuromodulation primitive descriptors.
 3. Confirm that `materializeNetworkFromPhenotype` from Phase 1 satisfies the
@@ -2425,11 +2425,13 @@ decide whether to activate the NGE evolution path.
 1. Read the Step 02 research brief and the existing bridge tests for fixtures.
 2. Create `src/neat/nge-dna/neat.nge-dna.operator.test.ts`.
 3. Write tests for:
-   - `modeIsEvolvable=true` → NGE extension attached, deterministic network
-     produced.
-   - `modeIsEvolvable=false` → no NGE extension, classic NEAT network.
-   - Same DNA + same seed → identical `toJSON()`.
-   - Operator throws on empty envelope / zero modules.
+
+- `modeIsEvolvable=true` → NGE extension attached, deterministic network
+  produced.
+- `modeIsEvolvable=false` → no NGE extension, classic NEAT network.
+- Same DNA + same seed → identical `toJSON()`.
+- Operator throws on empty envelope / zero modules.
+
 4. Run the tests and confirm they fail for the right reason (missing module or
    missing operator function), not for fixture/syntax errors.
 5. Record the red-test evidence in the plan.
@@ -2459,7 +2461,7 @@ decide whether to activate the NGE evolution path.
 
 #### Step 04 — Implement the operator and phenotype→Network bridge [DONE]
 
-> Claim: implementation-executor @ 2026-06-29T16:15:00Z
+> Claim: implementation-executor
 
 ```yaml
 phase: 3
@@ -2475,91 +2477,91 @@ source_of_truth: 'plans/NGE_Core_Algorithm_Workstream.plans.md'
 copy_paste: true
 next_step: 'Step 05 — Green validation and coverage guard [PLANNED]'
 skills:
-  - 'implementation-standards'
-  - 'nge-core-algorithm'
-  - 'reproducibility-contracts'
-  - 'coverage-guard'
-  - 'execute'
+ - 'implementation-standards'
+ - 'nge-core-algorithm'
+ - 'reproducibility-contracts'
+ - 'coverage-guard'
+ - 'execute'
 specialists:
-  - 'implementation-pattern-coordinator'
-  - 'nge-core-scout'
-  - 'boundary-mapper'
+ - 'implementation-pattern-coordinator'
+ - 'nge-core-scout'
+ - 'boundary-mapper'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-dna/neat.nge-dna.operator.test.ts'
-  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-dna/neat.nge-dna.cleanup.test.ts'
-  - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.operator.test.ts'
-  - 'npm run lint'
-  - 'npx tsc --noEmit -p tsconfig.json'
-  - 'npx tsc -p tsconfig.test.json --noEmit'
+ - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-dna/neat.nge-dna.operator.test.ts'
+ - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-dna/neat.nge-dna.cleanup.test.ts'
+ - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.operator.test.ts'
+ - 'npm run lint'
+ - 'npx tsc --noEmit -p tsconfig.json'
+ - 'npx tsc -p tsconfig.test.json --noEmit'
 acceptance_criteria:
-  - 'All red tests from Step 03 pass'
-  - 'modeIsEvolvable is read by a real operator; dead placeholder code is removed or replaced'
-  - 'Phenotype→Network operator materializes a Network from the canonical envelope'
-  - 'Neuromodulation primitives are either activated or scoped with a recorded blocker'
-  - '100% statements, branches, functions, lines on touched src/neat/ files'
+ - 'All red tests from Step 03 pass'
+ - 'modeIsEvolvable is read by a real operator; dead placeholder code is removed or replaced'
+ - 'Phenotype→Network operator materializes a Network from the canonical envelope'
+ - 'Neuromodulation primitives are either activated or scoped with a recorded blocker'
+ - '100% statements, branches, functions, lines on touched src/neat/ files'
 slices:
-  - slice_id: '04-red'
-    title: 'Red tests for dead-field cleanup and primitive scoping'
-    status: '[DONE]'
-    goal: 'red-testing'
-    estimate_hours: 1
-    files_to_change:
-      - 'src/neat/nge-dna/neat.nge-dna.operator.test.ts'
-      - 'src/neat/nge-dna/neat.nge-dna.cleanup.test.ts'
-    acceptance_criteria:
-      - 'Red tests assert no dead no-op modeIsEvolvable references remain after cleanup'
-      - 'Red tests assert neuromodulation primitives are either activated or explicitly scoped with a recorded blocker'
-      - 'Tests fail before the cleanup/primitive slices run'
-    parallelizable: false
-    dependencies: []
-    next_slice: '04-impl'
-    validation_evidence:
-      - 'cleanup tests pass (2/2) and assert modeIsEvolvable is read + blocker id recorded'
-  - slice_id: '04-impl'
-    title: 'Implement the envelope-to-Network operator and remove dead code'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 5
-    files_to_change:
-      - 'src/neat/nge-dna/neat.nge-dna.operator.ts'
-    acceptance_criteria:
-      - 'Operator function exists and calls buildVirtualPlan → realizePhenotype → materializeNetworkFromPhenotype'
-      - 'Operator derives ngeEnabled from modeIsEvolvable'
-      - 'Dead modeIsEvolvable placeholder code is removed or replaced (no dual-path)'
-      - 'Either a minimal neuromodulation primitive is added or a decision record is added under Deferred questions'
-    parallelizable: false
-    dependencies:
-      - '04-red'
-    next_slice: '04-green'
-    implementation_notes:
-      - 'Created src/neat/nge-dna/neat.nge-dna.operator.ts exporting activateNgeNetworkFromEnvelope and NGE_NEUROMODULATION_BLOCKER_ID'
-      - 'Reuses materializeNetworkFromPhenotype from the Phase 1 bridge; no topology builder duplication'
-      - 'ngeEnabled derived strictly from envelope.reproductionPolicy.modeIsEvolvable === true'
-      - 'No actual dead placeholder functions existed for modeIsEvolvable; the operator makes the field live, satisfying No Deferred Cleanup'
-      - 'Neuromodulation primitives remain descriptor-only and scoped to blocker DR-2026-06-27-05-NM'
-  - slice_id: '04-green'
-    title: 'Green validation for operator, cleanup, and primitive scoping'
-    status: '[DONE]'
-    goal: 'green-testing'
-    estimate_hours: 3
-    files_to_change:
-      - 'coverage/lcov.info'
-      - 'plans/NGE_Core_Algorithm_Workstream.plans.md'
-    acceptance_criteria:
-      - 'All red tests from slices 04-red and Step 03 pass'
-      - 'Targeted operator and cleanup suites remain green'
-      - 'Coverage guard passes on touched src/neat/ files'
-    parallelizable: false
-    dependencies:
-      - '04-impl'
-    next_slice: null
-    validation_evidence:
-      - 'operator tests: 7/7 pass'
-      - 'cleanup tests: 2/2 pass'
-      - 'coverage: neat.nge-dna.operator.ts statements 100%, branches 100% (0/0), functions 100%, lines 100%'
-      - 'npm run lint: 0 issues'
-      - 'npx tsc --noEmit -p tsconfig.json: OK'
-      - 'npx tsc -p tsconfig.test.json --noEmit: pre-existing racing-curriculum duplicate-identifier errors unrelated to this step'
+ - slice_id: '04-red'
+ title: 'Red tests for dead-field cleanup and primitive scoping'
+ status: '[DONE]'
+ goal: 'red-testing'
+ estimate_hours: 1
+ files_to_change:
+ - 'src/neat/nge-dna/neat.nge-dna.operator.test.ts'
+ - 'src/neat/nge-dna/neat.nge-dna.cleanup.test.ts'
+ acceptance_criteria:
+ - 'Red tests assert no dead no-op modeIsEvolvable references remain after cleanup'
+ - 'Red tests assert neuromodulation primitives are either activated or explicitly scoped with a recorded blocker'
+ - 'Tests fail before the cleanup/primitive slices run'
+ parallelizable: false
+ dependencies: []
+ next_slice: '04-impl'
+ validation_evidence:
+ - 'cleanup tests pass (2/2) and assert modeIsEvolvable is read + blocker id recorded'
+ - slice_id: '04-impl'
+ title: 'Implement the envelope-to-Network operator and remove dead code'
+ status: '[DONE]'
+ goal: 'implementing'
+ estimate_hours: 5
+ files_to_change:
+ - 'src/neat/nge-dna/neat.nge-dna.operator.ts'
+ acceptance_criteria:
+ - 'Operator function exists and calls buildVirtualPlan → realizePhenotype → materializeNetworkFromPhenotype'
+ - 'Operator derives ngeEnabled from modeIsEvolvable'
+ - 'Dead modeIsEvolvable placeholder code is removed or replaced (no dual-path)'
+ - 'Either a minimal neuromodulation primitive is added or a decision record is added under Deferred questions'
+ parallelizable: false
+ dependencies:
+ - '04-red'
+ next_slice: '04-green'
+ implementation_notes:
+ - 'Created src/neat/nge-dna/neat.nge-dna.operator.ts exporting activateNgeNetworkFromEnvelope and NGE_NEUROMODULATION_BLOCKER_ID'
+ - 'Reuses materializeNetworkFromPhenotype from the Phase 1 bridge; no topology builder duplication'
+ - 'ngeEnabled derived strictly from envelope.reproductionPolicy.modeIsEvolvable === true'
+ - 'No actual dead placeholder functions existed for modeIsEvolvable; the operator makes the field live, satisfying No Deferred Cleanup'
+ - 'Neuromodulation primitives remain descriptor-only and scoped to blocker DR-008-NM'
+ - slice_id: '04-green'
+ title: 'Green validation for operator, cleanup, and primitive scoping'
+ status: '[DONE]'
+ goal: 'green-testing'
+ estimate_hours: 3
+ files_to_change:
+ - 'coverage/lcov.info'
+ - 'plans/NGE_Core_Algorithm_Workstream.plans.md'
+ acceptance_criteria:
+ - 'All red tests from slices 04-red and Step 03 pass'
+ - 'Targeted operator and cleanup suites remain green'
+ - 'Coverage guard passes on touched src/neat/ files'
+ parallelizable: false
+ dependencies:
+ - '04-impl'
+ next_slice: null
+ validation_evidence:
+ - 'operator tests: 7/7 pass'
+ - 'cleanup tests: 2/2 pass'
+ - 'coverage: neat.nge-dna.operator.ts statements 100%, branches 100% (0/0), functions 100%, lines 100%'
+ - 'npm run lint: 0 issues'
+ - 'npx tsc --noEmit -p tsconfig.json: OK'
+ - 'npx tsc -p tsconfig.test.json --noEmit: pre-existing racing-curriculum duplicate-identifier errors unrelated to this step'
 ```
 
 **User instruction:** Paste this full step packet.
@@ -3294,7 +3296,7 @@ zero regressions; 100% coverage on touched `src/neat/nge-dna/` and
 `src/neat/nge-evolution/` files; `npm run docs` and `npm run lint` clean;
 plan-sync and step-packet gates pass.
 
-**Decision record:** DR-2025-07-05-01 (core-accepts-racing-values while keeping
+**Decision record:** DR-019 (core-accepts-racing-values while keeping
 canonical envelope shape; no worker-side adapter in Phase 5; worker integration
 deferred to Phase 7).
 
@@ -3363,24 +3365,23 @@ consistent across core and worker.
 - **Blocked:** If schema alignment requires changing the reference spec semantics, record a decision with the user.
 - **Route-back:** If the mismatch is actually a polyandric type export issue (Phase 2), merge into Phase 2.
 
-**Decision record — DR-2025-07-05-01: Schema alignment strategy for racing worker P4**
+**Decision record — DR-019: Schema alignment strategy for racing worker P4**
 
 ```yaml
 decision_record:
-  id: 'DR-2025-07-05-01'
-  context: 'Core NGE types define NgeAssignedRegionStrategy as roundRobin|byFitness|bySpecialization and NgeSeedPolicy as an object { siblingsDifferBySeed, twinsAllowed }. The racing worker reference spec (examples/racing_curriculum/reference.plans.md) expects non-overlapping strategy and seedPolicy: queen-weighted shorthand.'
-  options:
-    - id: coreWins
-      desc: 'Keep core object shapes; add adapter in worker to translate values.'
-    - id: workerWins
-      desc: 'Change core types to match racing spec strings; remove canonical object shape.'
-    - id: coreAccepts
-      desc: 'Extend core types to accept racing values at input boundaries, keep canonical object shape internally, and remove the old mismatch in the same step.'
-  chosen: coreAccepts
-  rationale: 'Preserves canonical NGE_DNA envelope serialization (object shape), keeps racing spec compatibility at the constructor/runtime boundary, and follows the No-Deferred-Cleanup policy by removing the old string/object gap in the same implementation step. No worker-side adapter is needed in Phase 5; worker changes are deferred to Phase 7.'
-  owner: '01-planning'
-  rollback_plan: 'Revert src/neat/nge-dna/neat.nge-dna.types.ts, src/neat/nge-dna/neat.nge-dna.ts, and src/neat/nge-evolution/neat.nge-evolution.reproduction.ts to pre-Phase 5 state and restore any removed old strategy/seed policy strings.'
-  created_at: '2025-07-05T00:00:00Z'
+ id: 'DR-019'
+ context: 'Core NGE types define NgeAssignedRegionStrategy as roundRobin|byFitness|bySpecialization and NgeSeedPolicy as an object { siblingsDifferBySeed, twinsAllowed }. The racing worker reference spec (examples/racing_curriculum/reference.plans.md) expects non-overlapping strategy and seedPolicy: queen-weighted shorthand.'
+ options:
+ - id: coreWins
+ desc: 'Keep core object shapes; add adapter in worker to translate values.'
+ - id: workerWins
+ desc: 'Change core types to match racing spec strings; remove canonical object shape.'
+ - id: coreAccepts
+ desc: 'Extend core types to accept racing values at input boundaries, keep canonical object shape internally, and remove the old mismatch in the same step.'
+ chosen: coreAccepts
+ rationale: 'Preserves canonical NGE_DNA envelope serialization (object shape), keeps racing spec compatibility at the constructor/runtime boundary, and follows the No-Deferred-Cleanup policy by removing the old string/object gap in the same implementation step. No worker-side adapter is needed in Phase 5; worker changes are deferred to Phase 7.'
+ owner: '01-planning'
+ rollback_plan: 'Revert src/neat/nge-dna/neat.nge-dna.types.ts, src/neat/nge-dna/neat.nge-dna.ts, and src/neat/nge-evolution/neat.nge-evolution.reproduction.ts to pre-Phase 5 state and restore any removed old strategy/seed policy strings.'
 ```
 
 **Required validation:** `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md`
@@ -3419,7 +3420,7 @@ validation:
   - 'neataptic-gate-mcp:run_gate_check --gate=agent-graph --json'
 acceptance_criteria:
   - 'Phase 5 Step 02–07 packets are authored and machine-readable'
-  - 'Schema-alignment decision record DR-2025-07-05-01 is present'
+  - 'Schema-alignment decision record DR-019 is present'
   - 'Handoff query names Step 02 as the active next step'
   - 'plan-sync, step-packet, and agent-graph gates pass'
   - 'No source code edits occur in Step 01'
@@ -3429,8 +3430,10 @@ acceptance_criteria:
 
 - Phase 5 targets the P4 schema mismatch between `src/neat/nge-dna/` / `src/neat/nge-evolution/` and `examples/racing_curriculum/reference.plans.md`.
 - Two confirmed mismatches:
-  1. `NgeAssignedRegionStrategy` core values: `'roundRobin' | 'byFitness' | 'bySpecialization'`; racing expects `'non-overlapping'`.
-  2. `NgeSeedPolicy` core shape: object `{ siblingsDifferBySeed: boolean; twinsAllowed: boolean }`; racing expects string `'queen-weighted'`.
+
+1.  `NgeAssignedRegionStrategy` core values: `'roundRobin' | 'byFitness' | 'bySpecialization'`; racing expects `'non-overlapping'`.
+2.  `NgeSeedPolicy` core shape: object `{ siblingsDifferBySeed: boolean; twinsAllowed: boolean }`; racing expects string `'queen-weighted'`.
+
 - Specialists `boundary-mapper` and `acceptance-criteria-writer` produced aligned briefs during Step 01.
 - Decision: extend core input schema to accept racing values while keeping the canonical object envelope internally; remove old mismatch in Step 04.
 
@@ -3438,7 +3441,7 @@ acceptance_criteria:
 
 1. Read Phase 5 placeholder, Roadmap lane, and prior phase packet format from logs.
 2. Delegate boundary mapping and acceptance-criteria authoring to specialists.
-3. Synthesize decision record DR-2025-07-05-01.
+3. Synthesize decision record DR-019.
 4. Author Step 02–07 packets using the canonical step-packet schema.
 5. Update `## Current state`, `## Immediate next steps`, and `## Handoff query`.
 6. Run plan-shape and sync gates.
@@ -3521,42 +3524,43 @@ Two independent specialists (`nge-core-scout`, `boundary-mapper`) traced the mis
 Source-of-truth hierarchy: static TypeScript source > racing reference spec > plan decision record.
 
 - **Canonical type definitions**
-  - `NgeAssignedRegionStrategy` is defined in `src/neat/nge-dna/neat.nge-dna.types.ts:77` as
-    `'roundRobin' | 'byFitness' | 'bySpecialization'`; it does not include `'non-overlapping'`.
-  - `NgeSeedPolicy` is defined in `src/neat/nge-dna/neat.nge-dna.types.ts:95` as the object envelope
-    `{ siblingsDifferBySeed: boolean; twinsAllowed: boolean }`; it does not accept the string shorthand.
+- `NgeAssignedRegionStrategy` is defined in `src/neat/nge-dna/neat.nge-dna.types.ts:77` as
+  `'roundRobin' | 'byFitness' | 'bySpecialization'`; it does not include `'non-overlapping'`.
+- `NgeSeedPolicy` is defined in `src/neat/nge-dna/neat.nge-dna.types.ts:95` as the object envelope
+  `{ siblingsDifferBySeed: boolean; twinsAllowed: boolean }`; it does not accept the string shorthand.
 
 - **Racing-worker reference spec expectations**
-  - `examples/racing_curriculum/reference.plans.md:297` sets `assignedRegionStrategy: "non-overlapping"`.
-  - `examples/racing_curriculum/reference.plans.md:299` sets `seedPolicy: "queen-weighted"`.
+- `examples/racing_curriculum/reference.plans.md:297` sets `assignedRegionStrategy: "non-overlapping"`.
+- `examples/racing_curriculum/reference.plans.md:299` sets `seedPolicy: "queen-weighted"`.
 
 - **Policy flow from DNA construction to polyandric reproduction**
-  - `NGE_DNA` constructor normalizes input through `resolveCanonicalEnvelope`
-    (`src/neat/nge-dna/neat.nge-dna.ts:102-105`).
-  - `resolveReproductionPolicy` (`src/neat/nge-dna/neat.nge-dna.ts:289-322`) is the single site that
-    materializes the canonical `seedPolicy` object from defaults and any partial input.
-  - `reproducePolyandric` receives the policy via `input.policy ?? input.queen.reproductionPolicy`
-    (`src/neat/nge-evolution/neat.nge-evolution.reproduction.ts:229-235`).
-  - `assignPolyandricRegions` (`src/neat/nge-evolution/neat.nge-evolution.reproduction.ts:448-495`) and
-    `selectPolyandricDroneForRegion` (`src/neat/nge-evolution/neat.nge-evolution.reproduction.ts:790-812`)
-    dispatch the strategy. The fallback path (`regionIndex % orderedDrones.length`) already assigns each
-    patchable region to exactly one drone, so it is semantically equivalent to `'non-overlapping'`.
+- `NGE_DNA` constructor normalizes input through `resolveCanonicalEnvelope`
+  (`src/neat/nge-dna/neat.nge-dna.ts:102-105`).
+- `resolveReproductionPolicy` (`src/neat/nge-dna/neat.nge-dna.ts:289-322`) is the single site that
+  materializes the canonical `seedPolicy` object from defaults and any partial input.
+- `reproducePolyandric` receives the policy via `input.policy ?? input.queen.reproductionPolicy`
+  (`src/neat/nge-evolution/neat.nge-evolution.reproduction.ts:229-235`).
+- `assignPolyandricRegions` (`src/neat/nge-evolution/neat.nge-evolution.reproduction.ts:448-495`) and
+  `selectPolyandricDroneForRegion` (`src/neat/nge-evolution/neat.nge-evolution.reproduction.ts:790-812`)
+  dispatch the strategy. The fallback path (`regionIndex % orderedDrones.length`) already assigns each
+  patchable region to exactly one drone, so it is semantically equivalent to `'non-overlapping'`.
 
 - **Insertion points for Step 04 implementation (core-accepts strategy)**
-  1. Extend `NgeAssignedRegionStrategy` in `src/neat/nge-dna/neat.nge-dna.types.ts:77` with `'non-overlapping'`.
-  2. Route `'non-overlapping'` through the existing deterministic single-drone-per-region path in
-     `assignPolyandricRegions` / `selectPolyandricDroneForRegion`
-     (`src/neat/nge-evolution/neat.nge-evolution.reproduction.ts:448-495, 790-812`).
-  3. Widen the `NGE_DNA` constructor input (`src/neat/nge-dna/neat.nge-dna.ts:52-69`) so
-     `seedPolicy` accepts `Partial<NgeSeedPolicy> | 'queen-weighted'`.
-  4. Normalize `'queen-weighted'` to the canonical `{ siblingsDifferBySeed: true, twinsAllowed: false }`
-     inside `resolveSeedPolicy` (`src/neat/nge-dna/neat.nge-dna.ts:327-329`).
+
+1.  Extend `NgeAssignedRegionStrategy` in `src/neat/nge-dna/neat.nge-dna.types.ts:77` with `'non-overlapping'`.
+2.  Route `'non-overlapping'` through the existing deterministic single-drone-per-region path in
+    `assignPolyandricRegions` / `selectPolyandricDroneForRegion`
+    (`src/neat/nge-evolution/neat.nge-evolution.reproduction.ts:448-495, 790-812`).
+3.  Widen the `NGE_DNA` constructor input (`src/neat/nge-dna/neat.nge-dna.ts:52-69`) so
+    `seedPolicy` accepts `Partial<NgeSeedPolicy> | 'queen-weighted'`.
+4.  Normalize `'queen-weighted'` to the canonical `{ siblingsDifferBySeed: true, twinsAllowed: false }`
+    inside `resolveSeedPolicy` (`src/neat/nge-dna/neat.nge-dna.ts:327-329`).
 
 - **Decision-record amendment**
-  - No contradictions with DR-2025-07-05-01 were found. The decision record correctly identifies the
-    two mismatches and the `coreAccepts` strategy remains valid: extend core input types to accept racing
-    values, keep the canonical object envelope internally, and remove the old mismatch in the same
-    implementation step. **No amendment required.**
+- No contradictions with DR-019 were found. The decision record correctly identifies the
+  two mismatches and the `coreAccepts` strategy remains valid: extend core input types to accept racing
+  values, keep the canonical object envelope internally, and remove the old mismatch in the same
+  implementation step. **No amendment required.**
 
 **Required validation:**
 
@@ -3572,16 +3576,16 @@ Source-of-truth hierarchy: static TypeScript source > racing reference spec > pl
 **Step 03 evidence:**
 
 - New test files created:
-  - `src/neat/nge-dna/neat.nge-dna.schema.test.ts`
-  - `src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.test.ts`
+- `src/neat/nge-dna/neat.nge-dna.schema.test.ts`
+- `src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.test.ts`
 - Focused Jest command:
   `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test`
 - Result: `Test Suites: 2 failed, 2 total` — failures are TypeScript diagnostics rejecting the new schema values, which is the expected red reason.
-  - `neat.nge-dna.schema.test.ts`:
-    - `seedPolicy: 'queen-weighted' as const` → `TS2559: Type '"queen-weighted"' has no properties in common with type 'Partial<NgeSeedPolicy>'.`
-    - `assignedRegionStrategy: 'non-overlapping' as const` → `TS2322: Type '"non-overlapping"' is not assignable to type 'NgeAssignedRegionStrategy | undefined'.`
-  - `neat.nge-evolution.reproduction.schema.test.ts`:
-    - `assignedRegionStrategy: 'non-overlapping' as const` → `TS2322: Type '"non-overlapping"' is not assignable to type 'NgeAssignedRegionStrategy | undefined'`.
+- `neat.nge-dna.schema.test.ts`:
+- `seedPolicy: 'queen-weighted' as const` → `TS2559: Type '"queen-weighted"' has no properties in common with type 'Partial<NgeSeedPolicy>'.`
+- `assignedRegionStrategy: 'non-overlapping' as const` → `TS2322: Type '"non-overlapping"' is not assignable to type 'NgeAssignedRegionStrategy | undefined'.`
+- `neat.nge-evolution.reproduction.schema.test.ts`:
+- `assignedRegionStrategy: 'non-overlapping' as const` → `TS2322: Type '"non-overlapping"' is not assignable to type 'NgeAssignedRegionStrategy | undefined'`.
 - `neataptic-gate-mcp:run_gate_check --gate=step-packet` → PASS.
 - Note: `node scripts/agent-customization/gates/red-test-contract.gate.mjs` is not present in the worktree, so the required Step 03 red-test-contract gate could not be executed. The focused Jest failure and `step-packet` gate pass serve as the red evidence.
 - No `examples/` files were modified. No production source files were modified.
@@ -3645,9 +3649,8 @@ acceptance_criteria:
 
 #### Step 04: Align schemas (remove old mismatched code in the same step) [DONE]
 
-Claim: 04-implementing @ 2026-06-29T23:38:48Z
-
-**Step objective:** Implement the schema extensions decided in DR-2025-07-05-01: add `non-overlapping` to `NgeAssignedRegionStrategy` and `queen-weighted` shorthand to `NgeSeedPolicy`, while removing the old mismatch in the same step.
+Claim: 04-implementing
+**Step objective:** Implement the schema extensions decided in DR-019: add `non-overlapping` to `NgeAssignedRegionStrategy` and `queen-weighted` shorthand to `NgeSeedPolicy`, while removing the old mismatch in the same step.
 
 **Delegation:** `04-implementing`.
 
@@ -3681,93 +3684,93 @@ source_of_truth: 'plans/NGE_Core_Algorithm_Workstream.plans.md'
 copy_paste: true
 next_step: 'Step 05 — Green validation and coverage guard'
 skills:
-  - 'implementation-standards'
-  - 'nge-core-algorithm'
-  - 'reproducibility-contracts'
+ - 'implementation-standards'
+ - 'nge-core-algorithm'
+ - 'reproducibility-contracts'
 specialists:
-  - 'implementation-executor'
-  - 'implementation-pattern-scout'
+ - 'implementation-executor'
+ - 'implementation-pattern-scout'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test'
-  - 'npm run lint'
+ - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test'
+ - 'npm run lint'
 acceptance_criteria:
-  - 'All red tests from Step 03 pass'
-  - 'NgeAssignedRegionStrategy type accepts non-overlapping'
-  - 'assignPolyandricRegions handles non-overlapping with the same deterministic non-overlapping behavior as roundRobin'
-  - 'NgeSeedPolicy input accepts queen-weighted and normalizes to canonical object'
-  - 'No backward-compatibility wrappers or dual-path code remain'
-  - '100% statements, branches, functions, lines on all touched src/neat/ files'
+ - 'All red tests from Step 03 pass'
+ - 'NgeAssignedRegionStrategy type accepts non-overlapping'
+ - 'assignPolyandricRegions handles non-overlapping with the same deterministic non-overlapping behavior as roundRobin'
+ - 'NgeSeedPolicy input accepts queen-weighted and normalizes to canonical object'
+ - 'No backward-compatibility wrappers or dual-path code remain'
+ - '100% statements, branches, functions, lines on all touched src/neat/ files'
 slices:
-  - slice_id: '04-red-tests'
-    title: 'Red tests for schema alignment'
-    status: '[DONE]'
-    goal: 'red-testing'
-    estimate_hours: 3
-    files_to_change:
-      - 'src/neat/nge-dna/neat.nge-dna.schema.test.ts'
-      - 'src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.test.ts'
-    acceptance_criteria:
-      - 'Red tests exist and fail before implementation'
-    parallelizable: false
-    dependencies: []
-    next_slice: '04-impl-non-overlapping'
-  - slice_id: '04-impl-non-overlapping'
-    title: 'Implement non-overlapping assigned region strategy'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'src/neat/nge-dna/neat.nge-dna.types.ts'
-      - 'src/neat/nge-evolution/neat.nge-evolution.reproduction.ts'
-      - 'src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.test.ts'
-    acceptance_criteria:
-      - 'NgeAssignedRegionStrategy includes non-overlapping'
-      - 'assignPolyandricRegions dispatches non-overlapping deterministically to non-overlapping regions'
-      - 'All red tests for non-overlapping pass'
-    parallelizable: false
-    dependencies:
-      - '04-red-tests'
-    next_slice: '04-impl-seed-policy'
-  - slice_id: '04-impl-seed-policy'
-    title: 'Implement queen-weighted seed policy shorthand'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'src/neat/nge-dna/neat.nge-dna.types.ts'
-      - 'src/neat/nge-dna/neat.nge-dna.ts'
-      - 'src/neat/nge-dna/neat.nge-dna.schema.test.ts'
-    acceptance_criteria:
-      - 'NgeSeedPolicy input type accepts queen-weighted shorthand'
-      - 'resolveReproductionPolicy / NgeDna constructor normalizes queen-weighted to a canonical object'
-      - 'Canonical object preserves siblingsDifferBySeed=true, twinsAllowed=false semantics'
-      - 'All red tests for seed policy pass'
-    parallelizable: false
-    dependencies:
-      - '04-impl-non-overlapping'
-    next_slice: '04-green'
-  - slice_id: '04-green'
-    title: 'Green validation and coverage guard'
-    status: '[PLANNED]'
-    goal: 'green-testing'
-    estimate_hours: 2
-    files_to_change:
-      - 'src/neat/nge-dna/neat.nge-dna.schema.test.ts'
-      - 'src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.test.ts'
-      - 'coverage/lcov.info'
-    acceptance_criteria:
-      - 'All schema alignment tests pass'
-      - '100% coverage on touched src/neat/ files'
-      - 'npm run lint passes'
-    parallelizable: false
-    dependencies:
-      - '04-impl-seed-policy'
-    next_slice: null
+ - slice_id: '04-red-tests'
+ title: 'Red tests for schema alignment'
+ status: '[DONE]'
+ goal: 'red-testing'
+ estimate_hours: 3
+ files_to_change:
+ - 'src/neat/nge-dna/neat.nge-dna.schema.test.ts'
+ - 'src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.test.ts'
+ acceptance_criteria:
+ - 'Red tests exist and fail before implementation'
+ parallelizable: false
+ dependencies: []
+ next_slice: '04-impl-non-overlapping'
+ - slice_id: '04-impl-non-overlapping'
+ title: 'Implement non-overlapping assigned region strategy'
+ status: '[DONE]'
+ goal: 'implementing'
+ estimate_hours: 3
+ files_to_change:
+ - 'src/neat/nge-dna/neat.nge-dna.types.ts'
+ - 'src/neat/nge-evolution/neat.nge-evolution.reproduction.ts'
+ - 'src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.test.ts'
+ acceptance_criteria:
+ - 'NgeAssignedRegionStrategy includes non-overlapping'
+ - 'assignPolyandricRegions dispatches non-overlapping deterministically to non-overlapping regions'
+ - 'All red tests for non-overlapping pass'
+ parallelizable: false
+ dependencies:
+ - '04-red-tests'
+ next_slice: '04-impl-seed-policy'
+ - slice_id: '04-impl-seed-policy'
+ title: 'Implement queen-weighted seed policy shorthand'
+ status: '[DONE]'
+ goal: 'implementing'
+ estimate_hours: 3
+ files_to_change:
+ - 'src/neat/nge-dna/neat.nge-dna.types.ts'
+ - 'src/neat/nge-dna/neat.nge-dna.ts'
+ - 'src/neat/nge-dna/neat.nge-dna.schema.test.ts'
+ acceptance_criteria:
+ - 'NgeSeedPolicy input type accepts queen-weighted shorthand'
+ - 'resolveReproductionPolicy / NgeDna constructor normalizes queen-weighted to a canonical object'
+ - 'Canonical object preserves siblingsDifferBySeed=true, twinsAllowed=false semantics'
+ - 'All red tests for seed policy pass'
+ parallelizable: false
+ dependencies:
+ - '04-impl-non-overlapping'
+ next_slice: '04-green'
+ - slice_id: '04-green'
+ title: 'Green validation and coverage guard'
+ status: '[PLANNED]'
+ goal: 'green-testing'
+ estimate_hours: 2
+ files_to_change:
+ - 'src/neat/nge-dna/neat.nge-dna.schema.test.ts'
+ - 'src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.test.ts'
+ - 'coverage/lcov.info'
+ acceptance_criteria:
+ - 'All schema alignment tests pass'
+ - '100% coverage on touched src/neat/ files'
+ - 'npm run lint passes'
+ parallelizable: false
+ dependencies:
+ - '04-impl-seed-policy'
+ next_slice: null
 ```
 
 **Context the agent must know:**
 
-- Follow DR-2025-07-05-01: core accepts racing values at input, keeps canonical shape internally.
+- Follow DR-019: core accepts racing values at input, keeps canonical shape internally.
 - No deferred cleanup: remove any old mismatching string/object code in the same step.
 - Keep changes in `src/neat/nge-dna/` and `src/neat/nge-evolution/` only.
 
@@ -3880,9 +3883,9 @@ acceptance_criteria:
 - Focused schema alignment tests: `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/neat.nge-dna.schema.*test|src/neat/nge-evolution/neat.nge-evolution.reproduction.schema.*test` → PASS, exit 0, 2 suites, 5 tests.
 - Broader `src/neat/nge-dna/` + `src/neat/nge-evolution/` regression suites: `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-dna/|src/neat/nge-evolution/` → PASS, exit 0, 10 suites, 152 tests, zero regressions.
 - Coverage on touched `src/` files (from broader suite):
-  - `src/neat/nge-dna/neat.nge-dna.ts`: statements 100%, branches 100%, functions 100%, lines 100%.
-  - `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts`: statements 100%, branches 100%, functions 100%, lines 100%.
-  - `src/neat/nge-dna/neat.nge-dna.types.ts`: type-only file, no executable coverage metric required.
+- `src/neat/nge-dna/neat.nge-dna.ts`: statements 100%, branches 100%, functions 100%, lines 100%.
+- `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts`: statements 100%, branches 100%, functions 100%, lines 100%.
+- `src/neat/nge-dna/neat.nge-dna.types.ts`: type-only file, no executable coverage metric required.
 - TypeScript: `npx tsc --noEmit -p tsconfig.json` → exit 0, 0 diagnostics.
 - Lint: `npm run lint` → exit 0, 0 errors.
 - `plan-sync` gate → pass; `step-packet` gate → pass; `validate-plan-phase-packets` → pass.
@@ -3890,8 +3893,7 @@ acceptance_criteria:
 
 #### Step 06: Document the aligned schema contract [DONE]
 
-Claim: 06-documenting @ 2026-06-29T23:58:28Z
-
+Claim: 06-documenting
 **Step objective:** Update the NGE_DNA and NGE evolution README/JSDoc to reflect the aligned schema, including the decision record and the input/canonical shape distinction.
 
 **Delegation:** `06-documenting`.
@@ -3922,7 +3924,7 @@ validation:
 acceptance_criteria:
   - 'JSDoc for NgeAssignedRegionStrategy and NgeSeedPolicy explains racing-worker compatibility'
   - 'README / generated docs describe the input shorthand vs canonical envelope distinction'
-  - 'Decision record DR-2025-07-05-01 is referenced in source JSDoc or README'
+  - 'Decision record DR-019 is referenced in source JSDoc or README'
   - 'No examples/ documentation is modified'
   - 'npm run docs exits 0'
 ```
@@ -3932,21 +3934,21 @@ acceptance_criteria:
 - Docs generation: `npm run docs` → exit 0; regenerated `src/neat/nge-dna/README.md` and `src/neat/nge-evolution/README.md`.
 - Lint: `npm run lint` → exit 0, 0 errors across `src/`, `testing/`, `benchmarks/`, `examples/`.
 - Source JSDoc updated:
-  - `src/neat/nge-dna/neat.nge-dna.types.ts`: module-level schema-alignment prose, `NgeAssignedRegionStrategy` racing-worker note, and `NgeSeedPolicyShorthand` expansion note.
-  - `src/neat/nge-dna/neat.nge-dna.ts`: module-level shorthand-normalization prose referencing DR-2025-07-05-01.
-  - `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts`: module-level racing-worker compatibility prose referencing DR-2025-07-05-01.
+- `src/neat/nge-dna/neat.nge-dna.types.ts`: module-level schema-alignment prose, `NgeAssignedRegionStrategy` racing-worker note, and `NgeSeedPolicyShorthand` expansion note.
+- `src/neat/nge-dna/neat.nge-dna.ts`: module-level shorthand-normalization prose referencing DR-019.
+- `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts`: module-level racing-worker compatibility prose referencing DR-019.
 - Generated READMEs now contain:
-  - `## Input shorthand vs. canonical envelope` section under `neat/nge-dna/neat.nge-dna.types.ts`.
-  - `## Shorthand normalization` section under `neat/nge-dna/neat.nge-dna.ts`.
-  - `## Racing-worker compatibility` section under `neat/nge-evolution/neat.nge-evolution.reproduction.ts`.
-  - `NgeSeedPolicyShorthand` symbol entry under `neat/nge-dna/neat.nge-dna.types.ts`.
+- `## Input shorthand vs. canonical envelope` section under `neat/nge-dna/neat.nge-dna.types.ts`.
+- `## Shorthand normalization` section under `neat/nge-dna/neat.nge-dna.ts`.
+- `## Racing-worker compatibility` section under `neat/nge-evolution/neat.nge-evolution.reproduction.ts`.
+- `NgeSeedPolicyShorthand` symbol entry under `neat/nge-dna/neat.nge-dna.types.ts`.
 - Constraints preserved: `examples/` untouched; 3 racing-worker `.skip` contracts untouched; 27 pre-existing `tsconfig.test.json` duplicate-identifier errors remain out of scope.
 
 **Context the agent must know:**
 
 - Documentation should live in `src/neat/nge-dna/` and `src/neat/nge-evolution/`.
 - Keep the examples/racing_curriculum docs untouched (Phase 7).
-- Reference decision record DR-2025-07-05-01.
+- Reference decision record DR-019.
 
 **Execution steps:**
 
@@ -4076,7 +4078,7 @@ reproduction meets the racing benchmark.
 
 **Required validation:** `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md`
 
-[DONE] Step 01: Plan Phase 6 — Step 02–07 packets authored, decision record DR-2026-07-06-01 recorded, plan-sync/step-packet/agent-graph gates passed.
+[DONE] Step 01: Plan Phase 6 — Step 02–07 packets authored, decision record DR-020 recorded, plan-sync/step-packet/agent-graph gates passed.
 
 [DONE] Step 02: Research the racing FSM reproduction step and call site.
 
@@ -4113,7 +4115,7 @@ acceptance_criteria:
 
 **Expected deliverables:**
 
-- Updated decision record DR-2026-07-06-01 if new evidence changes the chosen option.
+- Updated decision record DR-020 if new evidence changes the chosen option.
 - Research brief naming the files/lines for `transitionToGenerationReady`, `selectQueenPerTeam`, `CarGenome`, and `createCarGenome`.
 - Seed derivation formula for offspring materialization (e.g. `seed = initConfig.rngSeed + generation * teamCount + teamIndex + carIndex`).
 - Lower-tier reproduction fallback design (Tier 1–4 teams with fewer than 3 cars).
@@ -4122,60 +4124,62 @@ acceptance_criteria:
 
 - **Call site:** `examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts`, function `transitionToGenerationReady` (lines 590–684). Insert the reproduction block after the Step 4b team-fitness extraction (lines 632–646) and before Step 4c pit-lap extraction (line 648), so offspring are produced before `buildGenerationReadyResponse` is invoked at line 675.
 - **Placeholder path:** the current implementation only increments `nextGeneration`, advances per-team generation counters, stores opponent snapshots / hall-of-fame entries, extracts fitness, records strategy divergence, and returns the same `carGenomes` unchanged. No offspring are produced (lines 599–665).
-- **CarGenome refactor (DR-2026-07-06-01 Option A):**
-  - Current shape in `simulation-worker.coevolution.service.ts:56–71` stores a plain `Network`.
-  - Required shape: add `readonly ngeDnaEnvelope: NgeDnaCanonicalEnvelope` and `readonly seed: number`; keep `activate`, `mutate`, `serialize`, and `getNetwork`. `createCarGenome` (lines 157–186) must build a canonical envelope (e.g., via `new NGE_DNA({ moduleArchetypes, rulePasses, cppnPrograms, reproductionPolicy, substrate })`) and materialize the runtime `Network` with `activateNgeNetworkFromEnvelope(envelope, baseSeed + carIndex)`.
+- **CarGenome refactor (DR-020 Option A):**
+- Current shape in `simulation-worker.coevolution.service.ts:56–71` stores a plain `Network`.
+- Required shape: add `readonly ngeDnaEnvelope: NgeDnaCanonicalEnvelope` and `readonly seed: number`; keep `activate`, `mutate`, `serialize`, and `getNetwork`. `createCarGenome` (lines 157–186) must build a canonical envelope (e.g., via `new NGE_DNA({ moduleArchetypes, rulePasses, cppnPrograms, reproductionPolicy, substrate })`) and materialize the runtime `Network` with `activateNgeNetworkFromEnvelope(envelope, baseSeed + carIndex)`.
 - **Queen selection:** `selectQueenPerTeam` already exists in `simulation-worker.coevolution.service.ts:457–494` and is observability-only. The protocol service should import it and call it with `carFinishPositions` (lower-is-better) and `teamLayout`.
 - **Imports needed from the protocol service (leaf imports, consistent with existing `examples/` → `src/` conventions):**
-  - `import { reproducePolyandric } from '../../../../src/neat/nge-evolution/neat.nge-evolution';`
-  - `import { activateNgeNetworkFromEnvelope } from '../../../../src/neat/nge-dna/neat.nge-dna.operator';`
-  - `import type { NgeDnaCanonicalEnvelope } from '../../../../src/neat/nge-dna/neat.nge-dna.types';` (only if a local type annotation is needed)
-  - `import { selectQueenPerTeam, type QueenSelectionResult } from './simulation-worker.coevolution.service';`
+- `import { reproducePolyandric } from '../../../../src/neat/nge-evolution/neat.nge-evolution';`
+- `import { activateNgeNetworkFromEnvelope } from '../../../../src/neat/nge-dna/neat.nge-dna.operator';`
+- `import type { NgeDnaCanonicalEnvelope } from '../../../../src/neat/nge-dna/neat.nge-dna.types';` (only if a local type annotation is needed)
+- `import { selectQueenPerTeam, type QueenSelectionResult } from './simulation-worker.coevolution.service';`
 - **Reproduction call shape:**
-  ```ts
-  reproducePolyandric({
-    ngeEnabled: true,
-    queen: queenEnvelope,
-    queenId: `${populationId}-queen-${queenIndex}`,
-    drones: droneEnvelopes.map((envelope, i) => ({
-      dna: envelope,
-      parentId: `${populationId}-drone-${droneIndices[i]}`,
-      fitness: 1 / carFinishPositions[droneIndices[i]],
-    })),
-    policy: {
-      mode: 'polyandric',
-      polyandricDroneCount: 2,
-      polyandricDroneContributionFraction: 0.25,
-      queenBias: 0.85,
-      assignedRegionStrategy: 'non-overlapping',
-      modeIsEvolvable: true,
-      seedPolicy: 'queen-weighted',
-    },
-  });
-  ```
-  Offspring are then materialized with `activateNgeNetworkFromEnvelope(offspringEnvelope, seed)`.
+
+```ts
+reproducePolyandric({
+  ngeEnabled: true,
+  queen: queenEnvelope,
+  queenId: `${populationId}-queen-${queenIndex}`,
+  drones: droneEnvelopes.map((envelope, i) => ({
+    dna: envelope,
+    parentId: `${populationId}-drone-${droneIndices[i]}`,
+    fitness: 1 / carFinishPositions[droneIndices[i]],
+  })),
+  policy: {
+    mode: 'polyandric',
+    polyandricDroneCount: 2,
+    polyandricDroneContributionFraction: 0.25,
+    queenBias: 0.85,
+    assignedRegionStrategy: 'non-overlapping',
+    modeIsEvolvable: true,
+    seedPolicy: 'queen-weighted',
+  },
+});
+```
+
+Offspring are then materialized with `activateNgeNetworkFromEnvelope(offspringEnvelope, seed)`.
+
 - **Offspring seed formula:** `seed = initConfig.rngSeed + generation * 10000 + teamIndex * 1000 + carIndex`. This is deterministic, stable across generations, and gives each team car a unique slot.
 - **Lower-tier fallback design (Tier 1–4):** Call the same `reproducePolyandric` operator with the available team cars as drones. Tier 1–2 has one car per team → pass `drones: []`; the operator returns a queen-template offspring (clone). Tier 3–4 has two cars per team → pass one drone. Tier 5 has three cars per team → pass two drones, matching the default `polyandricDroneCount`. No operator switch to parthenogenesis is required because capping `drones` to the available count is deterministic and preserves the queen's envelope.
 - **Contradiction found:** Step 04 acceptance criterion line 576 says "2 drone envelopes from the opposing team," but the three existing `.skip` contracts in `simulation-worker.race-pack.tier5.test.ts:179–205` and the worker README say drones are the other two cars on the queen's own team. The same-team rule is used here; the acceptance criterion has been updated below to match.
 - **README drift:** `simulation-worker/README.md:434–437` still describes each CarGenome as "a fully independent network." This will become stale after the CarGenome envelope refactor and should be regenerated from JSDoc in Phase 7 documentation cleanup.
 - **Coverage gaps noted:** tests that define local `CarGenome` interfaces (`simulation-worker.coevolution.test.ts`, `simulation-worker.independent-genomes.test.ts`, `simulation-worker.evolution.protocol.test.ts`) will need the new `ngeDnaEnvelope` and `seed` fields when the refactor lands.
 
-**Decision Record — DR-2026-07-06-01: Racing CarGenome envelope sourcing**
+**Decision Record — DR-020: Racing CarGenome envelope sourcing**
 
 ```yaml
 decision_record:
-  id: 'DR-2026-07-06-01'
-  context: 'Racing worker CarGenome stores a plain NEAT Network, but polyandric reproduction requires NgeDnaCanonicalEnvelope. How do we supply envelopes at the FSM call site?'
-  options:
-    - id: optA
-      desc: 'Refactor CarGenome/createCarGenome to build and store NgeDnaCanonicalEnvelope, using activateNgeNetworkFromEnvelope for the runtime Network'
-    - id: optB
-      desc: 'Add a reverse bridge helper that synthesizes NgeDnaCanonicalEnvelope from a plain Network'
-  chosen: optA
-  rationale: 'Aligns with the workstream NGE_DNA adoption direction (P1), avoids lossy reverse engineering of network topology into rule descriptors, and keeps a single source of truth. The bridge module (Phase 1) already provides Network→envelope extraction for networks that were materialized from envelopes; classic-only networks remain unsupported by design. Reverse synthesis would reintroduce the P1 gap.'
-  owner: '01-planning'
-  rollback_plan: 'If CarGenome refactor breaks the existing activation path, restore the previous CarGenome shape and implement optB behind a documented adapter, revising this decision record.'
-  created_at: '2026-07-06'
+ id: 'DR-020'
+ context: 'Racing worker CarGenome stores a plain NEAT Network, but polyandric reproduction requires NgeDnaCanonicalEnvelope. How do we supply envelopes at the FSM call site?'
+ options:
+ - id: optA
+ desc: 'Refactor CarGenome/createCarGenome to build and store NgeDnaCanonicalEnvelope, using activateNgeNetworkFromEnvelope for the runtime Network'
+ - id: optB
+ desc: 'Add a reverse bridge helper that synthesizes NgeDnaCanonicalEnvelope from a plain Network'
+ chosen: optA
+ rationale: 'Aligns with the workstream NGE_DNA adoption direction (P1), avoids lossy reverse engineering of network topology into rule descriptors, and keeps a single source of truth. The bridge module (Phase 1) already provides Network→envelope extraction for networks that were materialized from envelopes; classic-only networks remain unsupported by design. Reverse synthesis would reintroduce the P1 gap.'
+ owner: '01-planning'
+ rollback_plan: 'If CarGenome refactor breaks the existing activation path, restore the previous CarGenome shape and implement optB behind a documented adapter, revising this decision record.'
 ```
 
 [DONE] Step 03: Red tests for FSM reproduction integration.
@@ -4196,39 +4200,39 @@ next_step: 'Step 04 — Wire the FSM reproduction step to reproducePolyandric'
 owner: '03-red-testing'
 reviewer: '01-planning'
 skills:
-  - 'nge-core-algorithm'
-  - 'nge-benchmark-workflow'
-  - 'reproducibility-contracts'
+ - 'nge-core-algorithm'
+ - 'nge-benchmark-workflow'
+ - 'reproducibility-contracts'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction (expect failures)'
+ - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction (expect failures)'
 acceptance_criteria:
-  - 'Red test file exists and fails before implementation'
-  - 'Tests assert queen selection per team via selectQueenPerTeam'
-  - 'Tests assert reproducePolyandric called once per team with queen + up to 2 drone envelopes from the same team (capped to available cars for lower tiers)'
-  - 'Tests assert activateNgeNetworkFromEnvelope materializes each offspring Network'
-  - 'Tests assert polyandric policy values: queenBias=0.85, polyandricDroneCount=2, polyandricDroneContributionFraction=0.25, assignedRegionStrategy=non-overlapping, modeIsEvolvable=true, seedPolicy=queen-weighted'
-  - 'Tests assert determinism via cloned FSM state replay'
-  - '3 existing .skip contracts in simulation-worker.race-pack.tier5.test.ts remain untouched'
+ - 'Red test file exists and fails before implementation'
+ - 'Tests assert queen selection per team via selectQueenPerTeam'
+ - 'Tests assert reproducePolyandric called once per team with queen + up to 2 drone envelopes from the same team (capped to available cars for lower tiers)'
+ - 'Tests assert activateNgeNetworkFromEnvelope materializes each offspring Network'
+ - 'Tests assert polyandric policy values: queenBias=0.85, polyandricDroneCount=2, polyandricDroneContributionFraction=0.25, assignedRegionStrategy=non-overlapping, modeIsEvolvable=true, seedPolicy=queen-weighted'
+ - 'Tests assert determinism via cloned FSM state replay'
+ - '3 existing .skip contracts in simulation-worker.race-pack.tier5.test.ts remain untouched'
 slices:
-  - slice_id: '03-red-tests'
-    title: 'Write red tests for FSM polyandric reproduction wiring'
-    status: '[DONE]'
-    goal: 'red-testing'
-    estimate_hours: 4
-    files_to_change:
-      - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.polyandric-reproduction.test.ts'
-    acceptance_criteria:
-      - 'New red test file compiles and fails when run against current code'
-      - 'Mocked RaceEpisodeRunner keeps tests fast and deterministic'
-      - 'Each test has a single expect; no broad E2E racing runs'
-    parallelizable: false
-    dependencies: []
-    next_slice: null
+ - slice_id: '03-red-tests'
+ title: 'Write red tests for FSM polyandric reproduction wiring'
+ status: '[DONE]'
+ goal: 'red-testing'
+ estimate_hours: 4
+ files_to_change:
+ - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.polyandric-reproduction.test.ts'
+ acceptance_criteria:
+ - 'New red test file compiles and fails when run against current code'
+ - 'Mocked RaceEpisodeRunner keeps tests fast and deterministic'
+ - 'Each test has a single expect; no broad E2E racing runs'
+ parallelizable: false
+ dependencies: []
+ next_slice: null
 ```
 
 **Evidence:** Owner-local red test file created at `examples/racing_curriculum/workers/simulation-worker/simulation-worker.polyandric-reproduction.test.ts`. Focused run executed with `npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction`. Result: 1 passing (determinism contract is vacuously true while `reproducePolyandric` is called 0 times), 8 failing honestly because `selectQueenPerTeam`, `reproducePolyandric`, and `activateNgeNetworkFromEnvelope` are not yet wired into `transitionToGenerationReady`. Typical failure: `Expected number of calls: 2` for `reproducePolyandric`, received `0`. The 3 existing `.skip` contracts in `simulation-worker.race-pack.tier5.test.ts` were left untouched.
 
-**Handoff from Step 02:** Research findings are captured above. The reproduction block should be inserted into `transitionToGenerationReady` after fitness extraction, `CarGenome` must be refactored to carry `NgeDnaCanonicalEnvelope` per DR-2026-07-06-01 Option A, and lower-tier teams should use the same `reproducePolyandric` operator with a capped drone list. The three existing `.skip` contracts in `simulation-worker.race-pack.tier5.test.ts` remain untouched.
+**Handoff from Step 02:** Research findings are captured above. The reproduction block should be inserted into `transitionToGenerationReady` after fitness extraction, `CarGenome` must be refactored to carry `NgeDnaCanonicalEnvelope` per DR-020 Option A, and lower-tier teams should use the same `reproducePolyandric` operator with a capped drone list. The three existing `.skip` contracts in `simulation-worker.race-pack.tier5.test.ts` remain untouched.
 
 **Red-test boundary:** Create a new owner-local test file that drives the public protocol router with a mocked completed `RaceEpisodeRunner`. Spy on the real `reproducePolyandric` and `activateNgeNetworkFromEnvelope` implementations; mock only the runner. The 3 existing `.skip` contracts in `simulation-worker.race-pack.tier5.test.ts` may be read as documentation but must stay skipped.
 
@@ -4249,69 +4253,69 @@ copy_paste: true
 next_step: 'Step 05 — Green validation and coverage guard'
 owner: '04-implementing'
 reviewer: '01-planning'
-Claim: 04-implementing @ 2026-06-30T01:43:21-04:00
+Claim: 04-implementing
 handoff_brief: |
-  Insert polyandric reproduction block inside transitionToGenerationReady after
-  fitness extraction (line ~632-646) and before buildGenerationReadyResponse
-  (line ~675). Required imports:
-    - selectQueenPerTeam from './simulation-worker.coevolution.service'
-    - reproducePolyandric from '../../../../src/neat/nge-evolution/neat.nge-evolution'
-    - activateNgeNetworkFromEnvelope from '../../../../src/neat/nge-dna/neat.nge-dna.operator'
-  CarGenome must be refactored to carry NgeDnaCanonicalEnvelope (Option A from
-  DR-2026-07-06-01) so the FSM can read ngeDnaEnvelope on each car. Per-car
-  offspring seed formula: initConfig.rngSeed + generation * 10000 + teamIndex *
-  1000 + carIndex. Lower-tier fallback rule: call reproducePolyandric once per
-  team with drones capped to available same-team non-queen cars (0 for Tier 1-2,
-  1 for Tier 3-4, 2 for Tier 5). Validation:
-    npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction
+ Insert polyandric reproduction block inside transitionToGenerationReady after
+ fitness extraction (line ~632-646) and before buildGenerationReadyResponse
+ (line ~675). Required imports:
+ - selectQueenPerTeam from './simulation-worker.coevolution.service'
+ - reproducePolyandric from '../../../../src/neat/nge-evolution/neat.nge-evolution'
+ - activateNgeNetworkFromEnvelope from '../../../../src/neat/nge-dna/neat.nge-dna.operator'
+ CarGenome must be refactored to carry NgeDnaCanonicalEnvelope (Option A from
+ DR-020) so the FSM can read ngeDnaEnvelope on each car. Per-car
+ offspring seed formula: initConfig.rngSeed + generation * 10000 + teamIndex *
+ 1000 + carIndex. Lower-tier fallback rule: call reproducePolyandric once per
+ team with drones capped to available same-team non-queen cars (0 for Tier 1-2,
+ 1 for Tier 3-4, 2 for Tier 5). Validation:
+ npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction
 skills:
-  - 'nge-core-algorithm'
-  - 'nge-benchmark-workflow'
-  - 'reproducibility-contracts'
+ - 'nge-core-algorithm'
+ - 'nge-benchmark-workflow'
+ - 'reproducibility-contracts'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction (expect pass)'
+ - 'npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.polyandric-reproduction (expect pass)'
 acceptance_criteria:
-  - 'selectQueenPerTeam is invoked with correct carFinishPositions and teamLayout'
-  - 'reproducePolyandric called once per team with queen NgeDnaCanonicalEnvelope and up to 2 drone envelopes from the same team (other same-team cars; capped to available cars for lower tiers)'
-  - 'activateNgeNetworkFromEnvelope materializes each offspring Network before buildGenerationReadyResponse'
-  - 'Generation-ready response carries post-reproduction serialized payloads and the real incremented generation index'
-  - 'Placeholder counter-only path removed; no dual-path or backward-compatibility wrapper'
-  - 'Lower-tier teams (<3 cars) handled deterministically'
+ - 'selectQueenPerTeam is invoked with correct carFinishPositions and teamLayout'
+ - 'reproducePolyandric called once per team with queen NgeDnaCanonicalEnvelope and up to 2 drone envelopes from the same team (other same-team cars; capped to available cars for lower tiers)'
+ - 'activateNgeNetworkFromEnvelope materializes each offspring Network before buildGenerationReadyResponse'
+ - 'Generation-ready response carries post-reproduction serialized payloads and the real incremented generation index'
+ - 'Placeholder counter-only path removed; no dual-path or backward-compatibility wrapper'
+ - 'Lower-tier teams (<3 cars) handled deterministically'
 slices:
-  - slice_id: '04-wire-reproduction'
-    title: 'Wire FSM reproduction step with NGE-enabled CarGenome'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 8
-    files_to_change:
-      - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts'
-      - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts'
-      - 'src/neat/nge-dna/neat.nge-dna.operator.ts'
-    acceptance_criteria:
-      - 'CarGenome stores NgeDnaCanonicalEnvelope and materializes its runtime Network via activateNgeNetworkFromEnvelope'
-      - 'Existing car activation path still returns valid outputs'
-      - 'No lossy Network→envelope reverse bridge introduced'
-      - 'reproducePolyandric called between fitness extraction and buildGenerationReadyResponse'
-      - 'Offspring envelopes materialized into Networks and assigned to team car slots with deterministic per-slot seeds'
-      - 'Placeholder reproduction path (counter-only, return same genomes) removed'
-    parallelizable: false
-    dependencies: []
-    next_slice: '04-self-check'
-  - slice_id: '04-self-check'
-    title: 'Implementation self-check and red-test green flip'
-    status: '[DONE]'
-    goal: 'green-testing'
-    estimate_hours: 2
-    files_to_change:
-      - 'tmp/'
-    acceptance_criteria:
-      - 'Red tests from Step 03 now pass'
-      - 'No new tsconfig.test.json duplicate-identifier errors'
-      - 'Lint passes on touched files'
-    parallelizable: false
-    dependencies:
-      - '04-wire-reproduction'
-    next_slice: null
+ - slice_id: '04-wire-reproduction'
+ title: 'Wire FSM reproduction step with NGE-enabled CarGenome'
+ status: '[DONE]'
+ goal: 'implementing'
+ estimate_hours: 8
+ files_to_change:
+ - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts'
+ - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts'
+ - 'src/neat/nge-dna/neat.nge-dna.operator.ts'
+ acceptance_criteria:
+ - 'CarGenome stores NgeDnaCanonicalEnvelope and materializes its runtime Network via activateNgeNetworkFromEnvelope'
+ - 'Existing car activation path still returns valid outputs'
+ - 'No lossy Network→envelope reverse bridge introduced'
+ - 'reproducePolyandric called between fitness extraction and buildGenerationReadyResponse'
+ - 'Offspring envelopes materialized into Networks and assigned to team car slots with deterministic per-slot seeds'
+ - 'Placeholder reproduction path (counter-only, return same genomes) removed'
+ parallelizable: false
+ dependencies: []
+ next_slice: '04-self-check'
+ - slice_id: '04-self-check'
+ title: 'Implementation self-check and red-test green flip'
+ status: '[DONE]'
+ goal: 'green-testing'
+ estimate_hours: 2
+ files_to_change:
+ - 'tmp/'
+ acceptance_criteria:
+ - 'Red tests from Step 03 now pass'
+ - 'No new tsconfig.test.json duplicate-identifier errors'
+ - 'Lint passes on touched files'
+ parallelizable: false
+ dependencies:
+ - '04-wire-reproduction'
+ next_slice: null
 ```
 
 **No-deferred-cleanup note:** The old counter-only reproduction path in `transitionToGenerationReady` must be deleted in the same step that introduces `reproducePolyandric`. No backward-compatibility wrapper, no feature flag, no dual-path code.
@@ -4394,8 +4398,8 @@ acceptance_criteria:
 - `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts` coverage: 100/100/100/100.
 - `examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts`: 96.38/81.57/91.3/96.29. Coverage-guard analysis confirms all new/touched branches are fully covered; remaining gaps (lines 313-316, 547) are pre-existing.
 - `examples/racing_curriculum/workers/simulation-worker/simulation-worker.evolution.protocol.service.ts`: 78.46/53.15/84.37/80.22. New/touched code has reachable live uncovered paths and dead-code branches that must be closed before the step is green:
-  - Reachable live uncovered (add smallest owner-local test): line 297 (runner-without-lap-data null-return), lines 312-317 (mixed `lapCompleted` sorting branches), line 345 (`{ offspring }` envelope extraction branch), line 785-ish (`finishPositionRanks ?? carFitnessScores` fallback).
-  - Likely dead code (remove): lines 306-308 (defensive `?? 0` fallbacks after `lapCompleted`/`lapTimeTicks`/`progress01` indexing), line 810-ish (`currentState.initConfig?.rngSeed ?? 0`), line 839-ish (`container?.getCarGenomes() ?? carGenomes`).
+- Reachable live uncovered (add smallest owner-local test): line 297 (runner-without-lap-data null-return), lines 312-317 (mixed `lapCompleted` sorting branches), line 345 (`{ offspring }` envelope extraction branch), line 785-ish (`finishPositionRanks ?? carFitnessScores` fallback).
+- Likely dead code (remove): lines 306-308 (defensive `?? 0` fallbacks after `lapCompleted`/`lapTimeTicks`/`progress01` indexing), line 810-ish (`currentState.initConfig?.rngSeed ?? 0`), line 839-ish (`container?.getCarGenomes() ?? carGenomes`).
 - Plan/customization gates: plan-sync pass; step-packet pass; agent-graph pass; validate-plan-phase-packets pass (0 errors, 0 warnings); learning-event pass; cortex-index was stale, rebuilt with `node rag-index/build-index.mjs`, now pass.
 - **STATUS: Step 05 remains [WIP]** because the acceptance criterion "100% statements/branches/functions/lines on new/touched branches in the two example service files" is not yet met for `simulation-worker.evolution.protocol.service.ts`. Route back to a fresh `04-implementing` instance to add the listed owner-local tests and remove the dead-code branches, then re-run green validation.
 
@@ -4496,22 +4500,22 @@ acceptance_criteria:
   - 'Handoff query refreshed to point at Step 02'
 ```
 
-**Owner:** 01-planning  
+**Owner:** 01-planning
 **Reviewer:** user
 
 **Evidence gathered during Step 01:**
 
 - Read the active plan, compressed logs, and source boundary. Growth-curve harness is at `src/neat/nge-juvenile/neat.nge-juvenile.growth-curve.test.ts`; `runNgeLifecycle` is seed-deterministic; the 3 racing-worker skip contracts are at `examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts` lines 179–205.
 - Ran a local growth feasibility benchmark (`tmp/growth-benchmark.ts`) with `npx tsx` to scope Step 02/04. Key findings:
-  - Default growth config: 80 windows → ~246 nodes / ~643 edges in ~136 ms; 400 windows → ~1,206 nodes / ~3,203 edges in ~25 s. Reaching 8,000 nodes with defaults is too slow for CI.
-  - Accelerated node growth (`nodeAdditionCount=20`, `hysteresisWindowCount=1`, `cooldownWindowCount=0`, `edgeDensificationCount=0`): 400 windows → 8,000 nodes / ~8,002 edges in ~883 ms. The 8,000-neuron target is easily reachable on CPU in under one second.
-  - Edge target is the hard part: adding `edgeDensificationCount=10` made 80 windows take ~163 s because `ADD_CONN` saturates on a dense graph. Reaching the 32,000+ edge target will require either a long-running standalone benchmark or a targeted edge-densification performance optimization in `applyEdgeDensify`. Step 02 must make this decision.
+- Default growth config: 80 windows → ~246 nodes / ~643 edges in ~136 ms; 400 windows → ~1,206 nodes / ~3,203 edges in ~25 s. Reaching 8,000 nodes with defaults is too slow for CI.
+- Accelerated node growth (`nodeAdditionCount=20`, `hysteresisWindowCount=1`, `cooldownWindowCount=0`, `edgeDensificationCount=0`): 400 windows → 8,000 nodes / ~8,002 edges in ~883 ms. The 8,000-neuron target is easily reachable on CPU in under one second.
+- Edge target is the hard part: adding `edgeDensificationCount=10` made 80 windows take ~163 s because `ADD_CONN` saturates on a dense graph. Reaching the 32,000+ edge target will require either a long-running standalone benchmark or a targeted edge-densification performance optimization in `applyEdgeDensify`. Step 02 must make this decision.
 - Delegation attempted: `nge-core-scout` and `acceptance-criteria-writer` did not produce responses, so the boundary investigation was performed directly. Recorded as a planning risk.
 - **Validation gate outputs:**
-  - `validate-plan-phase-packets`: PASS — 0 errors, 0 warnings.
-  - `plan-sync`: PASS — all WIP plans correctly registered in README and Roadmap.
-  - `step-packet`: PASS — active WIP phase/step packets conform to required format.
-  - `agent-graph`: PASS — agent delegation graph valid, 65 agents, 0 issues.
+- `validate-plan-phase-packets`: PASS — 0 errors, 0 warnings.
+- `plan-sync`: PASS — all WIP plans correctly registered in README and Roadmap.
+- `step-packet`: PASS — active WIP phase/step packets conform to required format.
+- `agent-graph`: PASS — agent delegation graph valid, 65 agents, 0 issues.
 
 #### Step 02 — Research the verification harness boundary [DONE]
 
@@ -4545,7 +4549,7 @@ acceptance_criteria:
   - 'Confirm the 3 skipped polyandric contracts can be implemented without new production wiring (Phase 6 already wired the FSM)'
 ```
 
-**Owner:** 02-researching  
+**Owner:** 02-researching
 **Reviewer:** user
 
 **User instruction:** Use the Phase 1–6 logs and the Step 01 benchmark to decide the verification artifact, the growth-config tuning, and whether the edge target needs a performance optimization. The racing-worker polyandric skip contracts are implementation-only (real assertions + removing placeholders); no new production wiring is required because `transitionToGenerationReady` already calls `reproducePolyandric` with `RACING_POLYANDRIC_POLICY`.
@@ -4559,11 +4563,12 @@ acceptance_criteria:
 2. **Tuned growth configuration for 8,000+ nodes.** `resolveFocusConfig({ hysteresisWindowCount: 1, cooldownWindowCount: 0, nodeAdditionCount: 20, focusWeights: default })`. With `edgeDensificationCount=0`, 400 windows reach 8,000 nodes / ~8,000 edges in ~977 ms (verified locally). This satisfies the node-growth target in under one second and gives headroom for CI timeouts. The prune budget can stay permissive (`minEdges=0`, `minNodes=1`) for the monotonic growth stream.
 
 3. **Edge-count strategy — scoped optimization, not a long-running benchmark.** The current `applyEdgeDensify` (`src/neat/nge-juvenile/neat.nge-juvenile.apply.ts`) loops `network.mutate(mutation.ADD_CONN)` N times. The `addConn` handler enumerates all forward source/target pairs (O(N²)) on every call, so the loop costs O(additions × N²) per window. Local measurement shows `edgeDensificationCount=1` already makes 160 windows take ~144 s; `edgeDensificationCount=10` does not finish in minutes. The recommended fix is a batch fast path isolated inside `applyEdgeDensify`:
-   - Clamp planned additions to `maxEdges - currentEdgeCount` so the budget cap does not throw.
-   - Use the network's seeded RNG (`network._rand`) to sample missing forward node pairs, enforcing the same forward-only constraints and deduplicating within the batch.
-   - Call `network.connectBatch` once instead of repeated `mutate(ADD_CONN)`.
-   - This preserves seed determinism and leaves classic NEAT unchanged because the change is behind the NGE juvenile applier only.
-   - After the optimization, use a test override `edgeDensificationCount=80` and run ~300 windows to reach the 32,000-edge target. If the optimized fast path still misses the target in CI time, the standalone telemetry script becomes the documented long-running proof artifact.
+
+- Clamp planned additions to `maxEdges - currentEdgeCount` so the budget cap does not throw.
+- Use the network's seeded RNG (`network._rand`) to sample missing forward node pairs, enforcing the same forward-only constraints and deduplicating within the batch.
+- Call `network.connectBatch` once instead of repeated `mutate(ADD_CONN)`.
+- This preserves seed determinism and leaves classic NEAT unchanged because the change is behind the NGE juvenile applier only.
+- After the optimization, use a test override `edgeDensificationCount=80` and run ~300 windows to reach the 32,000-edge target. If the optimized fast path still misses the target in CI time, the standalone telemetry script becomes the documented long-running proof artifact.
 
 4. **Polyandric skip contracts — ready to unblock.** Phase 6 already wired the racing FSM: `transitionToGenerationReady` (lines 742–870 of `simulation-worker.evolution.protocol.service.ts`) calls `reproducePolyandric` with `RACING_POLYANDRIC_POLICY` (`queenBias: 0.85`). `selectQueenPerTeam` is implemented in `simulation-worker.coevolution.service.ts`. `createCarGenome` carries a canonical `NgeDnaCanonicalEnvelope`. The required input types `NgePolyandricInput` and `NgePolyandricDroneInput` are exported from `src/neat/nge-evolution/neat.nge-evolution` (re-exported from `neat.nge-evolution.reproduction.ts`). The 3 skipped tests in `simulation-worker.race-pack.tier5.test.ts` lines 179–205 are stale placeholders with resolved P1/P2 blockers; Step 04 only needs to remove the `it.skip`/`expect(true).toBe(true)` placeholders and their blocker comments and write real assertions against the existing wiring.
 
@@ -4612,7 +4617,7 @@ acceptance_criteria:
   - 'No placeholder red tests for polyandric wiring: Phase 6 already implemented the FSM call site; those tests are added as green validation in Step 04/05'
 ```
 
-**Owner:** 03-red-testing  
+**Owner:** 03-red-testing
 **Reviewer:** user
 
 **User instruction:** Write red tests for the new scale verification harness. Do not write placeholder red tests for the polyandric wiring; because `simulation-worker.evolution.protocol.service.ts` already calls `reproducePolyandric` and `selectQueenPerTeam` is already implemented, no honest failing red test can be written for that wiring. The skipped contracts will be enabled and converted to real assertions in Step 04, then validated in Step 05.
@@ -4636,8 +4641,8 @@ acceptance_criteria:
 - Result: `1 failed, 2 passed, 3 total`
 - Active red contract: `grows from seed to at least 32000 edges in 300 windows with edge densification` fails with `Expected: >= 32000` / `Received: 3292`.
 - Green protective contracts:
-  - `grows from seed to at least 8000 nodes in 400 windows with tuned continuous adaptation` passes (tuned config already reaches 8,000+ nodes).
-  - `reproduces identical topology from the same seed and experience stream at scale` passes (topology fingerprint is reproducible at 8,000-node scale).
+- `grows from seed to at least 8000 nodes in 400 windows with tuned continuous adaptation` passes (tuned config already reaches 8,000+ nodes).
+- `reproduces identical topology from the same seed and experience stream at scale` passes (topology fingerprint is reproducible at 8,000-node scale).
 - Handoff to Step 04: implement the batch fast path inside `applyEdgeDensify` in `src/neat/nge-juvenile/neat.nge-juvenile.apply.ts`; preserve seed determinism and classic-NEAT isolation; keep the node-scale and determinism contracts green.
 
 #### Step 04 — Implement the verification harness, tune growth config, and unblock skipped polyandric tests [DONE]
@@ -4656,68 +4661,68 @@ source_of_truth: 'plans/NGE_Core_Algorithm_Workstream.plans.md'
 copy_paste: true
 next_step: 'Step 05 — Green validation: seed→8,000+ neurons demonstrated and captured'
 skills:
-  - 'implementation-standards'
-  - 'nge-core-algorithm'
-  - 'performance-optimization'
-  - 'reproducibility-contracts'
+ - 'implementation-standards'
+ - 'nge-core-algorithm'
+ - 'performance-optimization'
+ - 'reproducibility-contracts'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts'
-  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts'
+ - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts'
+ - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts'
 acceptance_criteria:
-  - 'Verification harness reaches 8,000+ nodes and 32,000+ edges from a seed with continuous adaptation'
-  - 'Same seed + metrics stream reproduces identical topology and innovation IDs'
-  - 'Classic NEAT remains unchanged when NGE is disabled'
-  - '3 previously-skipped polyandric tests are enabled and pass'
-  - 'Placeholder skip-contract bodies and P1/P2 blocker comments are removed in the same step'
-  - 'All production edits are covered by tests; no deferred cleanup'
+ - 'Verification harness reaches 8,000+ nodes and 32,000+ edges from a seed with continuous adaptation'
+ - 'Same seed + metrics stream reproduces identical topology and innovation IDs'
+ - 'Classic NEAT remains unchanged when NGE is disabled'
+ - '3 previously-skipped polyandric tests are enabled and pass'
+ - 'Placeholder skip-contract bodies and P1/P2 blocker comments are removed in the same step'
+ - 'All production edits are covered by tests; no deferred cleanup'
 slices:
-  - slice_id: '04-confirm-red'
-    title: 'Confirm red tests still fail before implementation'
-    status: '[DONE]'
-    goal: 'red-testing'
-    estimate_hours: 1
-    files_to_change: []
-    acceptance_criteria:
-      - 'Scale and determinism red tests fail for the expected reasons before code/tuning changes'
-    parallelizable: false
-    dependencies: []
-    next_slice: '04-impl'
-  - slice_id: '04-impl'
-    title: 'Implement edge densification batch fast path and unblock polyandric skip contracts'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 14
-    files_to_change:
-      - 'src/neat/nge-juvenile/neat.nge-juvenile.apply.ts'
-      - 'src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts'
-      - 'src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts'
-      - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts'
-    acceptance_criteria:
-      - 'applyEdgeDensify adds distinct forward edges via network.connectBatch in a single seeded sample'
-      - 'Growth config reaches 32,000+ edges in 300 windows without breaking classic NEAT or NGE opt-out behavior'
-      - '3 polyandric it.skip contracts have real assertions against existing Phase 6 wiring'
-    parallelizable: false
-    dependencies:
-      - '04-confirm-red'
-    next_slice: '04-green-smoke'
-  - slice_id: '04-green-smoke'
-    title: 'Focused green smoke: scale and polyandric tests pass after implementation'
-    status: '[NEXT]'
-    goal: 'green-testing'
-    estimate_hours: 2
-    files_to_change:
-      - 'src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts'
-      - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts'
-    acceptance_criteria:
-      - 'Scale verification test passes (nodes >= 8,000, edges >= 32,000 or documented adjustment)'
-      - 'Determinism test passes'
-      - '3 polyandric contracts pass'
-    parallelizable: false
-    dependencies:
-      - '04-impl'
+ - slice_id: '04-confirm-red'
+ title: 'Confirm red tests still fail before implementation'
+ status: '[DONE]'
+ goal: 'red-testing'
+ estimate_hours: 1
+ files_to_change: []
+ acceptance_criteria:
+ - 'Scale and determinism red tests fail for the expected reasons before code/tuning changes'
+ parallelizable: false
+ dependencies: []
+ next_slice: '04-impl'
+ - slice_id: '04-impl'
+ title: 'Implement edge densification batch fast path and unblock polyandric skip contracts'
+ status: '[DONE]'
+ goal: 'implementing'
+ estimate_hours: 14
+ files_to_change:
+ - 'src/neat/nge-juvenile/neat.nge-juvenile.apply.ts'
+ - 'src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts'
+ - 'src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts'
+ - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts'
+ acceptance_criteria:
+ - 'applyEdgeDensify adds distinct forward edges via network.connectBatch in a single seeded sample'
+ - 'Growth config reaches 32,000+ edges in 300 windows without breaking classic NEAT or NGE opt-out behavior'
+ - '3 polyandric it.skip contracts have real assertions against existing Phase 6 wiring'
+ parallelizable: false
+ dependencies:
+ - '04-confirm-red'
+ next_slice: '04-green-smoke'
+ - slice_id: '04-green-smoke'
+ title: 'Focused green smoke: scale and polyandric tests pass after implementation'
+ status: '[NEXT]'
+ goal: 'green-testing'
+ estimate_hours: 2
+ files_to_change:
+ - 'src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts'
+ - 'examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts'
+ acceptance_criteria:
+ - 'Scale verification test passes (nodes >= 8,000, edges >= 32,000 or documented adjustment)'
+ - 'Determinism test passes'
+ - '3 polyandric contracts pass'
+ parallelizable: false
+ dependencies:
+ - '04-impl'
 ```
 
-**Owner:** 04-implementing  
+**Owner:** 04-implementing
 **Reviewer:** user
 
 **User instruction:** Implement the scale verification harness and tune the growth configuration so the red tests pass. If the 32,000-edge target cannot be met by config tuning alone, add a scoped edge-densification fast path inside the NGE apply boundary (no classic-NEAT behavior change). In the same step, remove the 3 placeholder skip contracts and their P1/P2 blocker comments, replacing them with real assertions that exercise `selectQueenPerTeam`, the `reproducePolyandric` call shape, and `queenBias = 0.85`.
@@ -4735,7 +4740,7 @@ slices:
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts`
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts`
 
-Claim: 04-implementing @ 2026-07-01T12:00:00Z
+Claim: 04-implementing
 
 ```yaml
 PlanUpdate:
@@ -4800,7 +4805,7 @@ acceptance_criteria:
   - 'Lint clean'
 ```
 
-**Owner:** 05-green-testing  
+**Owner:** 05-green-testing
 **Reviewer:** user
 
 **User instruction:** Run the verification harness and focused test suites, capture the final node/edge counts and runtime telemetry, and enforce 100% coverage on all touched `src/neat/` files.
@@ -4824,27 +4829,27 @@ acceptance_criteria:
 **VALIDATION_EVIDENCE (Step 05 green run):**
 
 - `npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts`
-  - Result: PASS
-  - Evidence: 1 suite, 11 tests passed, 0 failed (see `artifacts/slice-apply-test.log`)
+- Result: PASS
+- Evidence: 1 suite, 11 tests passed, 0 failed (see `artifacts/slice-apply-test.log`)
 - `npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts`
-  - Result: FAIL (suite does not run)
-  - Evidence: TS2322 at `simulation-worker.race-pack.tier5.test.ts:254` — `policy` object with `seedPolicy: 'queen-weighted'` is not assignable to `NgeReproductionPolicy` because `NgeReproductionPolicy.seedPolicy` expects the canonical `NgeSeedPolicy` object `{ siblingsDifferBySeed: boolean; twinsAllowed: boolean; }`, not the `'queen-weighted'` shorthand string. The shorthand expansion at the `reproducePolyandric` input boundary is missing.
-  - Impact: the three polyandric `.skip` contracts cannot be enabled or validated until the type/input mismatch is fixed.
+- Result: FAIL (suite does not run)
+- Evidence: TS2322 at `simulation-worker.race-pack.tier5.test.ts:254` — `policy` object with `seedPolicy: 'queen-weighted'` is not assignable to `NgeReproductionPolicy` because `NgeReproductionPolicy.seedPolicy` expects the canonical `NgeSeedPolicy` object `{ siblingsDifferBySeed: boolean; twinsAllowed: boolean; }`, not the `'queen-weighted'` shorthand string. The shorthand expansion at the `reproducePolyandric` input boundary is missing.
+- Impact: the three polyandric `.skip` contracts cannot be enabled or validated until the type/input mismatch is fixed.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts`
-  - Result: INCONCLUSIVE / TIME-EXCEEDED
-  - Evidence: command started but did not complete within the bounded runtime window and was terminated after ~10 minutes. The deterministic scale test runs 800 windows total (400 node scale + 2x400 determinism). It likely requires a longer timeout or performance tuning; no artifact log was produced.
+- Result: INCONCLUSIVE / TIME-EXCEEDED
+- Evidence: command started but did not complete within the bounded runtime window and was terminated after ~10 minutes. The deterministic scale test runs 800 windows total (400 node scale + 2x400 determinism). It likely requires a longer timeout or performance tuning; no artifact log was produced.
 - `npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom='src/neat/nge-juvenile/neat.nge-juvenile.apply.ts' --testPathPatterns "src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts"`
-  - Result: FAIL coverage-guard
-  - Evidence: `neat.nge-juvenile.apply.ts` coverage is 100/88/100/100 (statements/branches/functions/lines). Uncovered branches at lines 187 (`(delta.detail.proposedAdditions as number) ?? 1` fallback) and 219-222 (`network.getRandomFn() ?? Math.random` plus `pairsToAdd.length > 0` defensive branch). See `artifacts/coverage-apply.log`.
+- Result: FAIL coverage-guard
+- Evidence: `neat.nge-juvenile.apply.ts` coverage is 100/88/100/100 (statements/branches/functions/lines). Uncovered branches at lines 187 (`(delta.detail.proposedAdditions as number) ?? 1` fallback) and 219-222 (`network.getRandomFn() ?? Math.random` plus `pairsToAdd.length > 0` defensive branch). See `artifacts/coverage-apply.log`.
 - `npm run lint`
-  - Result: PASS
-  - Evidence: 0 errors, 0 warnings (see `artifacts/lint-step05.log`).
+- Result: PASS
+- Evidence: 0 errors, 0 warnings (see `artifacts/lint-step05.log`).
 - Plan/workflow gates:
-  - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
 
 **BLOCKERS:**
 
@@ -4857,25 +4862,25 @@ Per workflow, `05-green-testing` does not edit production code; these observatio
 **VALIDATION_EVIDENCE (Step 05 slice-fix by 04-implementing):**
 
 - `npx tsc --noEmit -p tsconfig.json`
-  - Result: PASS
-  - Evidence: 0 diagnostics across the repo (production config).
+- Result: PASS
+- Evidence: 0 diagnostics across the repo (production config).
 - `npx tsc --noEmit -p tsconfig.test.json`
-  - Result: FAIL (pre-existing, out of scope for this slice)
-  - Evidence: 27 duplicate-identifier / missing-property diagnostics in `examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.test.ts`, `simulation-worker.evolution.protocol.test.ts`, and `simulation-worker.independent-genomes.test.ts`. These errors existed before the slice-fix and are unrelated to the touched `src/neat/` files.
+- Result: FAIL (pre-existing, out of scope for this slice)
+- Evidence: 27 duplicate-identifier / missing-property diagnostics in `examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.test.ts`, `simulation-worker.evolution.protocol.test.ts`, and `simulation-worker.independent-genomes.test.ts`. These errors existed before the slice-fix and are unrelated to the touched `src/neat/` files.
 - `npm run lint -- --no-cache src/neat/nge-juvenile/neat.nge-juvenile.apply.ts src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts src/neat/nge-evolution/neat.nge-evolution.reproduction.ts src/neat/nge-dna/neat.nge-dna.types.ts`
-  - Result: PASS
-  - Evidence: 0 errors, 0 warnings.
+- Result: PASS
+- Evidence: 0 errors, 0 warnings.
 - `npx prettier --check` on the same touched files
-  - Result: PASS
-  - Evidence: all matched files use Prettier code style.
+- Result: PASS
+- Evidence: all matched files use Prettier code style.
 - `node scripts/folder-quality-metrics.mjs --folder=src/neat/nge-juvenile`, `--folder=src/neat/nge-evolution`, `--folder=src/neat/nge-dna`
-  - Result: TypeScript 0 diagnostics, ESLint 0 errors, JSDoc 100% documented for all exported symbols in each folder. FAIL only on pre-existing missing-sibling-test-file smells (6 in nge-juvenile, 5 in nge-evolution, 6 in nge-dna) which are not introduced by this slice.
+- Result: TypeScript 0 diagnostics, ESLint 0 errors, JSDoc 100% documented for all exported symbols in each folder. FAIL only on pre-existing missing-sibling-test-file smells (6 in nge-juvenile, 5 in nge-evolution, 6 in nge-dna) which are not introduced by this slice.
 - Code changes:
-  - `src/neat/nge-dna/neat.nge-dna.types.ts`: added `NgeReproductionPolicyInput` exported type that accepts `seedPolicy: NgeSeedPolicy | NgeSeedPolicyShorthand` at operator input boundaries while keeping the canonical object shape on `NgeReproductionPolicy`.
-  - `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts`: updated `NgeParthenogenesisInput`, `NgePolyandricInput`, and `NgeSexualInput` to use `NgeReproductionPolicyInput`; added `expandSeedPolicy` helper that maps `'queen-weighted'` to `{ siblingsDifferBySeed: true, twinsAllowed: false }`; updated `resolveOperatorPolicy` to canonicalize the seed policy before downstream use. This fixes the TS2322 at `simulation-worker.race-pack.tier5.test.ts:254` without modifying the test file.
-  - `src/neat/nge-juvenile/neat.nge-juvenile.apply.ts`: removed the unreachable `if (pairsToAdd.length > 0)` defensive branch in `applyEdgeDensify`; kept the `network.getRandomFn() ?? Math.random` fallback for unseeded networks.
-  - `src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts`: added focused tests for `edgeDensify` default addition count when `detail.proposedAdditions` is omitted, `edgeDensify` fallback to `Math.random` on unseeded networks, and `nodeAdd` default addition count when `detail.proposedAdditions` is omitted. These target the previously uncovered branches at lines 187 and 219-222.
-  - `src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts`: added `jest.setTimeout(180_000)` so the deterministic 800-window scale run has enough bounded time to complete.
+- `src/neat/nge-dna/neat.nge-dna.types.ts`: added `NgeReproductionPolicyInput` exported type that accepts `seedPolicy: NgeSeedPolicy | NgeSeedPolicyShorthand` at operator input boundaries while keeping the canonical object shape on `NgeReproductionPolicy`.
+- `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts`: updated `NgeParthenogenesisInput`, `NgePolyandricInput`, and `NgeSexualInput` to use `NgeReproductionPolicyInput`; added `expandSeedPolicy` helper that maps `'queen-weighted'` to `{ siblingsDifferBySeed: true, twinsAllowed: false }`; updated `resolveOperatorPolicy` to canonicalize the seed policy before downstream use. This fixes the TS2322 at `simulation-worker.race-pack.tier5.test.ts:254` without modifying the test file.
+- `src/neat/nge-juvenile/neat.nge-juvenile.apply.ts`: removed the unreachable `if (pairsToAdd.length > 0)` defensive branch in `applyEdgeDensify`; kept the `network.getRandomFn() ?? Math.random` fallback for unseeded networks.
+- `src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts`: added focused tests for `edgeDensify` default addition count when `detail.proposedAdditions` is omitted, `edgeDensify` fallback to `Math.random` on unseeded networks, and `nodeAdd` default addition count when `detail.proposedAdditions` is omitted. These target the previously uncovered branches at lines 187 and 219-222.
+- `src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts`: added `jest.setTimeout(180_000)` so the deterministic 800-window scale run has enough bounded time to complete.
 
 **BLOCKERS after slice-fix:**
 
@@ -4888,32 +4893,32 @@ Per workflow, `05-green-testing` does not edit production code; these observatio
 **VALIDATION_EVIDENCE (Step 05 rerun after slice-fix by 05-green-testing):**
 
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts`
-  - Result: PASS
-  - Evidence: 1 suite, 14 tests passed, 0 failed (the 04-implementing fix added 3 focused tests for default-addition and unseeded-rng branches).
+- Result: PASS
+- Evidence: 1 suite, 14 tests passed, 0 failed (the 04-implementing fix added 3 focused tests for default-addition and unseeded-rng branches).
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts`
-  - Result: PASS
-  - Evidence: 1 suite, 5 tests passed, 3 skipped (compile-time TS2322 boundary resolved by `NgeReproductionPolicyInput`/`expandSeedPolicy` in `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts`; the 3 polyandric `.skip` contracts remain skipped because the scale/coverage blockers prevent marking Step 05 done).
+- Result: PASS
+- Evidence: 1 suite, 5 tests passed, 3 skipped (compile-time TS2322 boundary resolved by `NgeReproductionPolicyInput`/`expandSeedPolicy` in `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts`; the 3 polyandric `.skip` contracts remain skipped because the scale/coverage blockers prevent marking Step 05 done).
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts`
-  - Result: FAIL / HANG / TIME-EXCEEDED
-  - Evidence: process did not produce output within 300 s and was still running; had to be terminated. The scale file adds `jest.setTimeout(180_000)`, but every test/hook in the file also carries an explicit 60 s timeout argument that overrides the default. The deterministic 1100-window workload (400 node-scale + 300 edge-scale + 400 determinism) is CPU-bound and synchronous, so Jest's timeout timers cannot interrupt it. The harness is estimated to need well over 300 s with the current implementation.
+- Result: FAIL / HANG / TIME-EXCEEDED
+- Evidence: process did not produce output within 300 s and was still running; had to be terminated. The scale file adds `jest.setTimeout(180_000)`, but every test/hook in the file also carries an explicit 60 s timeout argument that overrides the default. The deterministic 1100-window workload (400 node-scale + 300 edge-scale + 400 determinism) is CPU-bound and synchronous, so Jest's timeout timers cannot interrupt it. The harness is estimated to need well over 300 s with the current implementation.
 - `npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom='src/neat/nge-juvenile/neat.nge-juvenile.apply.ts' --testPathPatterns="src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts"`
-  - Result: FAIL coverage-guard
-  - Evidence: `neat.nge-juvenile.apply.ts` is 100/95.65/100/100 (statements/branches/functions/lines). LCOV BRDA shows the only uncovered branch is at `neat.nge-juvenile.apply.ts:219` (`network.getRandomFn() ?? Math.random`), specifically the right-hand fallback (`Math.random`) which is never evaluated. In practice `Network.getRandomFn()` returns a function even for unseeded networks, so the `?? Math.random` branch is unreachable dead code. Per the coverage-guard dead-code rule it should be removed rather than covered by a contrived test.
+- Result: FAIL coverage-guard
+- Evidence: `neat.nge-juvenile.apply.ts` is 100/95.65/100/100 (statements/branches/functions/lines). LCOV BRDA shows the only uncovered branch is at `neat.nge-juvenile.apply.ts:219` (`network.getRandomFn() ?? Math.random`), specifically the right-hand fallback (`Math.random`) which is never evaluated. In practice `Network.getRandomFn()` returns a function even for unseeded networks, so the `?? Math.random` branch is unreachable dead code. Per the coverage-guard dead-code rule it should be removed rather than covered by a contrived test.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.growth-curve.test.ts`
-  - Result: PASS
-  - Evidence: 1 suite, 7 tests passed, 0 failed.
+- Result: PASS
+- Evidence: 1 suite, 7 tests passed, 0 failed.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="src/neat/nge-juvenile|src/neat/nge-evolution|src/neat/nge-dna" --testPathIgnorePatterns="neat.nge-juvenile.scale.test.ts"`
-  - Result: PASS
-  - Evidence: 13 suites, 304 tests passed, 0 failed (scale test excluded from this regression sweep to avoid the hang).
+- Result: PASS
+- Evidence: 13 suites, 304 tests passed, 0 failed (scale test excluded from this regression sweep to avoid the hang).
 - `npm run lint -- --no-cache src/neat/nge-juvenile/neat.nge-juvenile.apply.ts src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts src/neat/nge-evolution/neat.nge-evolution.reproduction.ts src/neat/nge-dna/neat.nge-dna.types.ts`
-  - Result: PASS
-  - Evidence: 0 errors, 0 warnings.
+- Result: PASS
+- Evidence: 0 errors, 0 warnings.
 - Plan/workflow gates:
-  - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
 
 **BLOCKERS after 05-green-testing rerun:**
 
@@ -4941,77 +4946,80 @@ source_of_truth: plans/NGE_Core_Algorithm_Workstream.plans.md
 copy_paste: true
 next_step: 'Document the NGE core completion contract'
 skills:
-  - implementation-standards
+ - implementation-standards
 validation:
-  - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md'
+ - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md'
 acceptance_criteria:
-  - 'Phase/step metadata validates with the new plan-phase-step schema.'
+ - 'Phase/step metadata validates with the new plan-phase-step schema.'
 slices:
-  - slice_id: step-5-red-tests
-    title: 'Write red tests'
-    status: '[PLANNED]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Red tests exist and fail for the expected behavior.'
-    parallelizable: false
-    dependencies:
-    next_slice: step-5-core
-  - slice_id: step-5-core
-    title: 'Implement the core behavior'
-    status: '[PLANNED]'
-    goal: implementing
-    estimate_hours: 8
-    files_to_change:
-      - TBD
-    acceptance_criteria:
-      - 'Implementation satisfies the red tests and design.'
-    parallelizable: false
-    dependencies:
-      - step-5-red-tests
-    next_slice: step-5-green
-  - slice_id: step-5-green
-    title: 'Green validation and coverage guard'
-    status: '[PLANNED]'
-    goal: green-testing
-    estimate_hours: 4
-    files_to_change:
-      - coverage/lcov.info
-    acceptance_criteria:
-      - 'All tests pass and coverage guard is satisfied.'
-    parallelizable: false
-    dependencies:
-      - step-5-core
+ - slice_id: step-5-red-tests
+ title: 'Write red tests'
+ status: '[PLANNED]'
+ goal: red-testing
+ estimate_hours: 4
+ files_to_change:
+ - TBD
+ acceptance_criteria:
+ - 'Red tests exist and fail for the expected behavior.'
+ parallelizable: false
+ dependencies:
+ next_slice: step-5-core
+ - slice_id: step-5-core
+ title: 'Implement the core behavior'
+ status: '[PLANNED]'
+ goal: implementing
+ estimate_hours: 8
+ files_to_change:
+ - TBD
+ acceptance_criteria:
+ - 'Implementation satisfies the red tests and design.'
+ parallelizable: false
+ dependencies:
+ - step-5-red-tests
+ next_slice: step-5-green
+ - slice_id: step-5-green
+ title: 'Green validation and coverage guard'
+ status: '[PLANNED]'
+ goal: green-testing
+ estimate_hours: 4
+ files_to_change:
+ - coverage/lcov.info
+ acceptance_criteria:
+ - 'All tests pass and coverage guard is satisfied.'
+ parallelizable: false
+ dependencies:
+ - step-5-core
 ```
 
 **Code changes:**
 
 1. `src/neat/nge-juvenile/neat.nge-juvenile.apply.ts`:
-   - Removed the unreachable `?? Math.random` fallback in `applyEdgeDensify` (line 219).
-   - Replaced with `network.getRandomFn()!` non-null assertion because `Network._rand` defaults to `Math.random`, so a live network always has an RNG function in practice; no runtime branch is needed.
-   - This eliminates the dead-code branch that kept branch coverage at 95.65%.
+
+- Removed the unreachable `?? Math.random` fallback in `applyEdgeDensify` (line 219).
+- Replaced with `network.getRandomFn()!` non-null assertion because `Network._rand` defaults to `Math.random`, so a live network always has an RNG function in practice; no runtime branch is needed.
+- This eliminates the dead-code branch that kept branch coverage at 95.65%.
 
 2. `src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts`:
-   - Updated the unseeded-network `edgeDensify` test name/comment from "falls back to Math.random" to "applies edgeDensify when the network has no seed" so the test documentation matches the production contract after the fallback removal.
+
+- Updated the unseeded-network `edgeDensify` test name/comment from "falls back to Math.random" to "applies edgeDensify when the network has no seed" so the test documentation matches the production contract after the fallback removal.
 
 3. `src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts`:
-   - Introduced `SCALE_DETERMINISM_WINDOW_COUNT = 300` and used it for the topology-determinism test, reducing the deterministic workload from 1500 windows (400 node + 300 edge + 2×400 determinism) to 1300 windows (400 node + 300 edge + 2×300 determinism).
-   - Raised every per-test/hook timeout from `60_000` to `180_000` so the synchronous CPU-bound growth streams have a bounded ceiling that matches `jest.setTimeout(180_000)`.
-   - Kept `SCALE_NODE_WINDOW_COUNT = 400` (required to reach 8,000 nodes) and `SCALE_EDGE_WINDOW_COUNT = 300` (required to reach 32,000 edges).
+
+- Introduced `SCALE_DETERMINISM_WINDOW_COUNT = 300` and used it for the topology-determinism test, reducing the deterministic workload from 1500 windows (400 node + 300 edge + 2×400 determinism) to 1300 windows (400 node + 300 edge + 2×300 determinism).
+- Raised every per-test/hook timeout from `60_000` to `180_000` so the synchronous CPU-bound growth streams have a bounded ceiling that matches `jest.setTimeout(180_000)`.
+- Kept `SCALE_NODE_WINDOW_COUNT = 400` (required to reach 8,000 nodes) and `SCALE_EDGE_WINDOW_COUNT = 300` (required to reach 32,000 edges).
 
 **VALIDATION_EVIDENCE (second slice-fix preflight):**
 
 - `npx tsc --noEmit -p tsconfig.json`
-  - Result: PASS
-  - Evidence: 0 diagnostics across the repo (production config).
+- Result: PASS
+- Evidence: 0 diagnostics across the repo (production config).
 - `npm run lint -- --no-cache src/neat/nge-juvenile/neat.nge-juvenile.apply.ts src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts`
-  - Result: PASS
-  - Evidence: 0 errors, 0 warnings.
+- Result: PASS
+- Evidence: 0 errors, 0 warnings.
 - `npx prettier --check src/neat/nge-juvenile/neat.nge-juvenile.apply.ts src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts`
-  - Result: PASS
-  - Evidence: all matched files use Prettier code style.
+- Result: PASS
+- Evidence: all matched files use Prettier code style.
 
 **BLOCKERS after second slice-fix:**
 
@@ -5024,40 +5032,41 @@ slices:
 **VALIDATION_EVIDENCE (Step 05 third green run by 05-green-testing):**
 
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts`
-  - Result: PASS
-  - Evidence: 1 suite, 14 tests passed, 0 failed.
+- Result: PASS
+- Evidence: 1 suite, 14 tests passed, 0 failed.
 - `npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=src/neat/nge-juvenile/neat.nge-juvenile.apply.ts --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts`
-  - Result: PASS (coverage-guard)
-  - Evidence: `src/neat/nge-juvenile/neat.nge-juvenile.apply.ts` is 100/100/100/100 (statements/branches/functions/lines). No uncovered lines or branches.
+- Result: PASS (coverage-guard)
+- Evidence: `src/neat/nge-juvenile/neat.nge-juvenile.apply.ts` is 100/100/100/100 (statements/branches/functions/lines). No uncovered lines or branches.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts` (after removing `.skip` from the 3 polyandric contracts)
-  - Result: PASS
-  - Evidence: 1 suite, 8 tests passed, 0 skipped, 0 failed. The 3 previously-skipped polyandric contracts (`selects the best-finishing car as queen`, `calls reproducePolyandric with queen envelope and 2 drone envelopes`, `passes queenBias = 0.85`) all pass.
+- Result: PASS
+- Evidence: 1 suite, 8 tests passed, 0 skipped, 0 failed. The 3 previously-skipped polyandric contracts (`selects the best-finishing car as queen`, `calls reproducePolyandric with queen envelope and 2 drone envelopes`, `passes queenBias = 0.85`) all pass.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.growth-curve.test.ts`
-  - Result: PASS
-  - Evidence: 1 suite, 7 tests passed, 0 failed.
+- Result: PASS
+- Evidence: 1 suite, 7 tests passed, 0 failed.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="src/neat/nge-juvenile|src/neat/nge-evolution|src/neat/nge-dna" --testPathIgnorePatterns="neat.nge-juvenile.scale.test.ts"`
-  - Result: PASS
-  - Evidence: 13 suites, 304 tests passed, 0 failed.
+- Result: PASS
+- Evidence: 13 suites, 304 tests passed, 0 failed.
 - `npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=src/neat/nge-dna/neat.nge-dna.types.ts --collectCoverageFrom=src/neat/nge-evolution/neat.nge-evolution.reproduction.ts --collectCoverageFrom=src/neat/nge-juvenile/neat.nge-juvenile.apply.ts --testPathPatterns="src/neat/nge-dna|src/neat/nge-evolution|src/neat/nge-juvenile|examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts" --testPathIgnorePatterns=neat.nge-juvenile.scale.test.ts`
-  - Result: PASS (coverage-guard on all touched `src/neat/` production files)
-  - Evidence: 14 suites, 312 tests passed, 0 failed. `neat.nge-juvenile.apply.ts` is 100/100/100/100; `neat.nge-evolution.reproduction.ts` is 100/100/100/100; `neat.nge-dna.types.ts` is type-only and has no runtime coverage obligation. All touched `src/neat/` production files meet the 100% coverage contract.
+- Result: PASS (coverage-guard on all touched `src/neat/` production files)
+- Evidence: 14 suites, 312 tests passed, 0 failed. `neat.nge-juvenile.apply.ts` is 100/100/100/100; `neat.nge-evolution.reproduction.ts` is 100/100/100/100; `neat.nge-dna.types.ts` is type-only and has no runtime coverage obligation. All touched `src/neat/` production files meet the 100% coverage contract.
 - `npm run lint -- --no-cache src/neat/nge-juvenile/neat.nge-juvenile.apply.ts src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts`
-  - Result: PASS
-  - Evidence: 0 errors, 0 warnings.
+- Result: PASS
+- Evidence: 0 errors, 0 warnings.
 - Plan/workflow gates:
-  - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
 
 **BLOCKERS after third green run:**
 
 1. `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts`
-   - Result: FAIL / HANG / TIME-EXCEEDED
-   - Evidence: process did not produce output within 600 s and was still running; terminated. Two node worker processes had consumed ~1500 CPU-seconds each and held ~3.5–4.0 GB working set. The 1300-window deterministic workload (400 node-scale + 300 edge-scale + 2×300 determinism) is CPU-bound and synchronous, so Jest's 180 s per-test timers cannot interrupt it. Despite reducing determinism windows and raising per-test timeouts in the second slice-fix, the harness still exceeds any practical bounded runtime.
-   - Impact: the seed→8,000+ neuron verification cannot be captured as an automated Jest test in its current form. The acceptance criterion "NGE demonstrably grows a network from seed to 8,000+ neurons" is not yet proven in CI.
-   - Owner: 04-implementing (third slice-fix) or 00-helping (escalation if a third slice-fix also fails).
+
+- Result: FAIL / HANG / TIME-EXCEEDED
+- Evidence: process did not produce output within 600 s and was still running; terminated. Two node worker processes had consumed ~1500 CPU-seconds each and held ~3.5–4.0 GB working set. The 1300-window deterministic workload (400 node-scale + 300 edge-scale + 2×300 determinism) is CPU-bound and synchronous, so Jest's 180 s per-test timers cannot interrupt it. Despite reducing determinism windows and raising per-test timeouts in the second slice-fix, the harness still exceeds any practical bounded runtime.
+- Impact: the seed→8,000+ neuron verification cannot be captured as an automated Jest test in its current form. The acceptance criterion "NGE demonstrably grows a network from seed to 8,000+ neurons" is not yet proven in CI.
+- Owner: 04-implementing (third slice-fix) or 00-helping (escalation if a third slice-fix also fails).
 
 **Owner after third green run:** 04-implementing (diagnose and bound the scale-test runtime so the 1300-window harness completes within the per-test timeouts, or replace it with a deterministic standalone script/CLI verification that can run outside Jest's timeout model). If a third slice-fix fails to resolve the same issue, escalate to `00-helping` via `00.cross-tier-helper`.
 
@@ -5066,35 +5075,35 @@ slices:
 **VALIDATION_EVIDENCE (Step 05 rerun after apply sampler optimization by 05-green-testing):**
 
 - `npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=neat.nge-juvenile.scale.test.ts --verbose`
-  - Result: **FAIL** (edge-scale contract)
-  - Evidence: 1 suite, 3 tests. Node-scale (≥ 8,000 nodes) **PASS**; topology determinism **PASS**. Edge-scale test failed: final edges = `31,922`, expected ≥ `32,000` (`NGE_MAX_EDGE_CAPACITY`). Shortfall = 78 edges.
+- Result: **FAIL** (edge-scale contract)
+- Evidence: 1 suite, 3 tests. Node-scale (≥ 8,000 nodes) **PASS**; topology determinism **PASS**. Edge-scale test failed: final edges = `31,922`, expected ≥ `32,000` (`NGE_MAX_EDGE_CAPACITY`). Shortfall = 78 edges.
 - `npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=neat.nge-juvenile.apply.test.ts --verbose`
-  - Result: **PASS**
-  - Evidence: 1 suite, 15 tests passed, 0 failed.
+- Result: **PASS**
+- Evidence: 1 suite, 15 tests passed, 0 failed.
 - `npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=simulation-worker.race-pack.tier5.test.ts --verbose`
-  - Result: **PASS**
-  - Evidence: 1 suite, 8 tests passed, 0 skipped, 0 failed. The 3 polyandric contracts are enabled and pass.
+- Result: **PASS**
+- Evidence: 1 suite, 8 tests passed, 0 skipped, 0 failed. The 3 polyandric contracts are enabled and pass.
 - `npx jest --config=jest.config.mjs --no-cache --runInBand --testPathPatterns=neat.nge-juvenile.growth-curve.test.ts --verbose`
-  - Result: **PASS**
-  - Evidence: 1 suite, 7 tests passed, 0 failed.
+- Result: **PASS**
+- Evidence: 1 suite, 7 tests passed, 0 failed.
 - Coverage guard on touched `src/neat/` production files:
-  - Result: **FAIL** branch coverage on `neat.nge-juvenile.apply.ts`
-  - Evidence: combined run (`src/neat/nge-dna|nge-evolution|nge-juvenile` + race-pack tier5, scale excluded) produced 14 suites / 313 tests passed. `neat.nge-juvenile.apply.ts` = `100 / 96.29 / 100 / 100` (statements/branches/functions/lines); uncovered line `220` is the right-hand fallback of `network.getRandomFn() ?? Math.random`, which is dead code in practice because a live network always has an RNG function. Per the coverage-guard dead-code rule it should be removed rather than covered by a contrived test. `neat.nge-evolution.reproduction.ts` = `100 / 100 / 100 / 100`. `neat.nge-dna.types.ts` is type-only and has no runtime coverage obligation.
+- Result: **FAIL** branch coverage on `neat.nge-juvenile.apply.ts`
+- Evidence: combined run (`src/neat/nge-dna|nge-evolution|nge-juvenile` + race-pack tier5, scale excluded) produced 14 suites / 313 tests passed. `neat.nge-juvenile.apply.ts` = `100 / 96.29 / 100 / 100` (statements/branches/functions/lines); uncovered line `220` is the right-hand fallback of `network.getRandomFn() ?? Math.random`, which is dead code in practice because a live network always has an RNG function. Per the coverage-guard dead-code rule it should be removed rather than covered by a contrived test. `neat.nge-evolution.reproduction.ts` = `100 / 100 / 100 / 100`. `neat.nge-dna.types.ts` is type-only and has no runtime coverage obligation.
 - Broader NGE regression (`src/neat/.*\.test\.ts$`, scale test excluded):
-  - Result: **FAIL** (1 unrelated failure)
-  - Evidence: 137 suites passed, 1 failed; `src/neat/evolve/population/evolve.population.test.ts` fails with `NeatGenomeValidationError: Connection innovations must stay unique across one strict genome`. This appears to be a pre-existing or upstream regression tied to the seeded-network innovation-counter reset in `src/architecture/network/network.ts`; it is outside the `src/neat/nge-juvenile/` slice touched by the latest fix.
+- Result: **FAIL** (1 unrelated failure)
+- Evidence: 137 suites passed, 1 failed; `src/neat/evolve/population/evolve.population.test.ts` fails with `NeatGenomeValidationError: Connection innovations must stay unique across one strict genome`. This appears to be a pre-existing or upstream regression tied to the seeded-network innovation-counter reset in `src/architecture/network/network.ts`; it is outside the `src/neat/nge-juvenile/` slice touched by the latest fix.
 - `npx tsc --noEmit -p tsconfig.json`
-  - Result: **PASS**
-  - Evidence: 0 diagnostics across the production TypeScript config.
+- Result: **PASS**
+- Evidence: 0 diagnostics across the production TypeScript config.
 - `npm run lint`
-  - Result: **PASS**
-  - Evidence: 0 errors, 0 warnings.
+- Result: **PASS**
+- Evidence: 0 errors, 0 warnings.
 - Plan/workflow gates:
-  - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
 
 **BLOCKERS resolved by slice-fix `04-impl-step05-slice-fix`:**
 
@@ -5109,39 +5118,39 @@ slices:
 **VALIDATION_EVIDENCE (Step 05 final green run by 05-green-testing):**
 
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.scale.test.ts`
-  - Result: **PASS**
-  - Evidence: 1 suite, 3 tests passed, 0 failed, 24.36 s. Node-scale contract: ≥ 8,000 nodes (actual: 8,000). Edge-scale contract: ≥ 32,000 edges (actual: 32,000). Topology determinism at scale: identical node/edge/innovation fingerprints reproduced from the same seed + experience stream.
+- Result: **PASS**
+- Evidence: 1 suite, 3 tests passed, 0 failed, 24.36 s. Node-scale contract: ≥ 8,000 nodes (actual: 8,000). Edge-scale contract: ≥ 32,000 edges (actual: 32,000). Topology determinism at scale: identical node/edge/innovation fingerprints reproduced from the same seed + experience stream.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.apply.test.ts`
-  - Result: **PASS**
-  - Evidence: 1 suite, 14 tests passed, 0 failed, 14.62 s.
+- Result: **PASS**
+- Evidence: 1 suite, 14 tests passed, 0 failed, 14.62 s.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts`
-  - Result: **PASS**
-  - Evidence: 1 suite, 8 tests passed, 0 skipped, 0 failed, 15.75 s. All 3 polyandric contracts pass.
+- Result: **PASS**
+- Evidence: 1 suite, 8 tests passed, 0 skipped, 0 failed, 15.75 s. All 3 polyandric contracts pass.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/nge-juvenile/neat.nge-juvenile.growth-curve.test.ts`
-  - Result: **PASS**
-  - Evidence: 1 suite, 7 tests passed, 0 failed, 14.82 s.
+- Result: **PASS**
+- Evidence: 1 suite, 7 tests passed, 0 failed, 14.82 s.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/neat/evolve/population/evolve.population.test.ts`
-  - Result: **PASS**
-  - Evidence: 1 suite, 28 tests passed, 0 failed, 15.64 s. The seeded-network innovation-counter regression is resolved.
+- Result: **PASS**
+- Evidence: 1 suite, 28 tests passed, 0 failed, 15.64 s. The seeded-network innovation-counter regression is resolved.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="src/neat/.*\.test\.ts$"`
-  - Result: **PASS**
-  - Evidence: 139 suites, 1709 tests passed, 0 failed, 76.8 s. Full NGE regression surface is green.
+- Result: **PASS**
+- Evidence: 139 suites, 1709 tests passed, 0 failed, 76.8 s. Full NGE regression surface is green.
 - `npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=src/neat/nge-dna/neat.nge-dna.types.ts --collectCoverageFrom=src/neat/nge-evolution/neat.nge-evolution.reproduction.ts --collectCoverageFrom=src/neat/nge-juvenile/neat.nge-juvenile.apply.ts --testPathPatterns="src/neat/nge-dna|src/neat/nge-evolution|src/neat/nge-juvenile|examples/racing_curriculum/workers/simulation-worker/simulation-worker.race-pack.tier5.test.ts" --testPathIgnorePatterns=neat.nge-juvenile.scale.test.ts`
-  - Result: **PASS (coverage-guard)**
-  - Evidence: 14 suites, 312 tests passed, 0 failed, 47.5 s. Coverage table: `neat.nge-juvenile.apply.ts` 100/100/100/100; `neat.nge-evolution.reproduction.ts` 100/100/100/100; `neat.nge-dna.types.ts` is type-only and has no runtime coverage obligation. All four categories are 100% for every touched production file.
+- Result: **PASS (coverage-guard)**
+- Evidence: 14 suites, 312 tests passed, 0 failed, 47.5 s. Coverage table: `neat.nge-juvenile.apply.ts` 100/100/100/100; `neat.nge-evolution.reproduction.ts` 100/100/100/100; `neat.nge-dna.types.ts` is type-only and has no runtime coverage obligation. All four categories are 100% for every touched production file.
 - `npx tsc --noEmit -p tsconfig.json`
-  - Result: **PASS**
-  - Evidence: 0 diagnostics across the production TypeScript config.
+- Result: **PASS**
+- Evidence: 0 diagnostics across the production TypeScript config.
 - `npm run lint`
-  - Result: **PASS**
-  - Evidence: 0 errors, 0 warnings.
+- Result: **PASS**
+- Evidence: 0 errors, 0 warnings.
 - Plan/workflow gates:
-  - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=cortex-index --json` → PASS after rebuilding the semantic index with `node rag-index/build-index.mjs`.
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=cortex-index --json` → PASS after rebuilding the semantic index with `node rag-index/build-index.mjs`.
 
 **Independent specialist confirmations:**
 
@@ -5178,7 +5187,7 @@ acceptance_criteria:
   - 'Generated docs are clean and lint passes'
 ```
 
-**Owner:** 06-documenting  
+**Owner:** 06-documenting
 **Reviewer:** user
 
 **User instruction:** Update README/roadmap and the racing-worker README to reflect that the NGE core is complete, the verification results, and the WebGPU acceleration future lane.
@@ -5199,33 +5208,33 @@ acceptance_criteria:
 **DOCUMENTATION_EVIDENCE (Step 06 pass by 06-documenting):**
 
 - JSDoc/source alignment fixes applied:
-  - `src/neat/nge-juvenile/neat.nge-juvenile.apply.ts` — `applyEdgeDensify` and `applyMorphDeltas` JSDoc updated to describe the bounded lazy sampler + `network.connectBatch()` path, replacing the outdated "ADD_CONN N times" description.
-  - `src/architecture/network/network.ts` — corrupted module-header JSDoc repaired; `Network` constructor JSDoc expanded to document the seeded-construction innovation-counter snapshot/restore behavior; added NEAT paper reference to `addNodeBetween`.
-  - `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts` — internal `expandSeedPolicy` helper documented for maintainers; public shorthand behavior remains covered by `NgeReproductionPolicyInput` in `src/neat/nge-dna/neat.nge-dna.types.ts`; removed decision-record label from public JSDoc.
-  - `src/neat/nge-evolution/neat.nge-evolution.types.ts` and `neat.nge-evolution.distance.ts` — replaced all "Phase E" references with "NGE".
-  - `src/neat/nge-dna/neat.nge-dna.ts`, `neat.nge-dna.types.ts`, `neat.nge-dna.constants.ts`, `neat.nge-dna.errors.ts`, `neat.nge-dna.operator.ts`, `neat.nge-dna.realize.ts`, `neat.nge-dna.substrate.ts` — removed "Phase A", "Step 03/04", "development passes", and "future phase" labels from public JSDoc; pointed the NEAT background reference to the canonical paper URL.
-  - `src/architecture/network/network.types.ts` and `network.temporal.extensions.utils.ts` — removed "Step 7.2b" and "Step 7.4" process labels from public JSDoc.
-  - `src/neat/nge-juvenile/docs.order.json` and `src/neat/nge-evolution/docs.order.json` — added `hiddenSymbols` to keep internal non-exported helpers out of generated READMEs.
-  - `examples/racing_curriculum/workers/simulation-worker/README.md` and `examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier3.ts` — replaced Wikipedia-only NEAT links with the canonical paper URL; reworded process language.
-  - `examples/racing_curriculum/workers/simulation-worker/README.md` — added a verification note that polyandric contracts (queen/drone merging, `queenBias`, `'non-overlapping'` alias, `'queen-weighted'` seed-policy shorthand) are validated end-to-end.
-  - `README.md` — added NGE core and WebGPU target bullets; replaced compatibility-distance Wikipedia citation with the canonical NEAT paper; added `nn.jpg` caption/alt text; removed roadmap/process wording from the WebGPU line.
-  - `plans/Roadmap.md` — updated Phase 7 summary and the NGE Core Algorithm Workstream entry to state that Phase 7 verification is complete and Step 07 close-out is next; WebGPU acceleration remains a future lane.
+- `src/neat/nge-juvenile/neat.nge-juvenile.apply.ts` — `applyEdgeDensify` and `applyMorphDeltas` JSDoc updated to describe the bounded lazy sampler + `network.connectBatch()` path, replacing the outdated "ADD_CONN N times" description.
+- `src/architecture/network/network.ts` — corrupted module-header JSDoc repaired; `Network` constructor JSDoc expanded to document the seeded-construction innovation-counter snapshot/restore behavior; added NEAT paper reference to `addNodeBetween`.
+- `src/neat/nge-evolution/neat.nge-evolution.reproduction.ts` — internal `expandSeedPolicy` helper documented for maintainers; public shorthand behavior remains covered by `NgeReproductionPolicyInput` in `src/neat/nge-dna/neat.nge-dna.types.ts`; removed decision-record label from public JSDoc.
+- `src/neat/nge-evolution/neat.nge-evolution.types.ts` and `neat.nge-evolution.distance.ts` — replaced all "Phase E" references with "NGE".
+- `src/neat/nge-dna/neat.nge-dna.ts`, `neat.nge-dna.types.ts`, `neat.nge-dna.constants.ts`, `neat.nge-dna.errors.ts`, `neat.nge-dna.operator.ts`, `neat.nge-dna.realize.ts`, `neat.nge-dna.substrate.ts` — removed "Phase A", "Step 03/04", "development passes", and "future phase" labels from public JSDoc; pointed the NEAT background reference to the canonical paper URL.
+- `src/architecture/network/network.types.ts` and `network.temporal.extensions.utils.ts` — removed "Step 7.2b" and "Step 7.4" process labels from public JSDoc.
+- `src/neat/nge-juvenile/docs.order.json` and `src/neat/nge-evolution/docs.order.json` — added `hiddenSymbols` to keep internal non-exported helpers out of generated READMEs.
+- `examples/racing_curriculum/workers/simulation-worker/README.md` and `examples/racing_curriculum/workers/simulation-worker/simulation-worker.tier3.ts` — replaced Wikipedia-only NEAT links with the canonical paper URL; reworded process language.
+- `examples/racing_curriculum/workers/simulation-worker/README.md` — added a verification note that polyandric contracts (queen/drone merging, `queenBias`, `'non-overlapping'` alias, `'queen-weighted'` seed-policy shorthand) are validated end-to-end.
+- `README.md` — added NGE core and WebGPU target bullets; replaced compatibility-distance Wikipedia citation with the canonical NEAT paper; added `nn.jpg` caption/alt text; removed roadmap/process wording from the WebGPU line.
+- `plans/Roadmap.md` — updated Phase 7 summary and the NGE Core Algorithm Workstream entry to state that Phase 7 verification is complete and Step 07 close-out is next; WebGPU acceleration remains a future lane.
 - `npm run docs`
-  - Result: **PASS**
-  - Evidence: exit 0; generated `docs/neat/nge-juvenile/README.md`, `docs/neat/nge-evolution/README.md`, `docs/neat/nge-dna/README.md`, and `docs/architecture/network/README.md` reflect the updated JSDoc.
+- Result: **PASS**
+- Evidence: exit 0; generated `docs/neat/nge-juvenile/README.md`, `docs/neat/nge-evolution/README.md`, `docs/neat/nge-dna/README.md`, and `docs/architecture/network/README.md` reflect the updated JSDoc.
 - `npm run lint`
-  - Result: **PASS**
-  - Evidence: 0 errors, 0 warnings across `src/`, `testing/`, `benchmarks/`, `examples/`.
+- Result: **PASS**
+- Evidence: 0 errors, 0 warnings across `src/`, `testing/`, `benchmarks/`, `examples/`.
 - Plan/workflow gates:
-  - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
-  - `neataptic-gate-mcp:run_gate_check --gate=cortex-index --json` → PASS after rebuilding the semantic index with `node rag-index/build-index.mjs`.
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NGE_Core_Algorithm_Workstream.plans.md` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=plan-sync --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=step-packet --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=agent-graph --json` → PASS
+- `neataptic-gate-mcp:run_gate_check --gate=cortex-index --json` → PASS after rebuilding the semantic index with `node rag-index/build-index.mjs`.
 - Specialist audit follow-up:
-  - Delegated drift/citation verification to `docs-scout` and `academic-docs-auditor`.
-  - NGE generated READMEs and hand-written docs now pass atemporal-language and canonical-citation checks.
+- Delegated drift/citation verification to `docs-scout` and `academic-docs-auditor`.
+- NGE generated READMEs and hand-written docs now pass atemporal-language and canonical-citation checks.
 
 **BLOCKERS after documentation pass:**
 
@@ -5289,7 +5298,7 @@ acceptance_criteria:
   - 'Stale-wip-plans gate confirms no top-level WIP tracker remains for a completed workstream'
 ```
 
-**Owner:** 07-logging  
+**Owner:** 07-logging
 **Reviewer:** user
 
 **User instruction:** Compress the completed Phase 7 history into a concise coverage note, update the same-boundary log, and move the plan/log pair to `plans/completed/`.

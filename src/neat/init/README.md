@@ -98,9 +98,10 @@ the bootstrap attempt has finished. Treat this helper as the constructor's
 setup pipeline, not as a general-purpose runtime entrypoint.
 
 Parameters:
+
 - `host` - `Neat` instance receiving constructor-time side effects.
 - `request` - Mutable options bag, raw constructor intent, and public
-default values exported by the facade.
+  default values exported by the facade.
 
 Returns: Nothing. The helper mutates `host` and `request.optionBag` in place.
 
@@ -171,6 +172,7 @@ population, causing `assertValidGenomeContract` to reject a parent during
 crossover with a duplicate-innovation error.
 
 Parameters:
+
 - `tracker` - Live innovation tracker to seed.
 
 Returns: Nothing.

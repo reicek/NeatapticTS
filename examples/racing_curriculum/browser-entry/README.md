@@ -77,6 +77,7 @@ createCurriculumEnvironmentState(
 Creates the tier-aware starting environment state for the browser shell.
 
 Parameters:
+
 - `trackSpec` - Frozen track specification for the current tier.
 - `curriculumTier` - Active curriculum tier.
 
@@ -94,6 +95,7 @@ createCurriculumEpisodeState(
 Creates the tier-aware track and environment state used by the browser shell.
 
 Parameters:
+
 - `curriculumTier` - Active curriculum tier.
 - `trackViewport` - Optional canvas-aware viewport used for track shaping.
 
@@ -149,7 +151,8 @@ Falls back to {@link DEFAULT_CURRICULUM_TIER} when the caller omits `tier`
 or passes a value outside the valid `CurriculumTier` range.
 
 Parameters:
-- `options` - Caller options passed to  {@link start} .
+
+- `options` - Caller options passed to {@link start} .
 
 Returns: The validated curriculum tier to launch.
 
@@ -165,6 +168,7 @@ resolveNetworkHudStatus(
 Resolves the short status label shown in the network panel HUD strip.
 
 Parameters:
+
 - `adaptationEnabled` - Whether runtime adaptation is currently active.
 - `recentTrend` - Latest improvement trend telemetry value.
 
@@ -183,6 +187,7 @@ Applies the racing-curriculum fallback promotion rule:
 advance one tier whenever the winner completes at least three laps.
 
 Parameters:
+
 - `currentTier` - Active curriculum tier.
 - `completedLaps` - Completed laps within the current tier race window.
 
@@ -202,6 +207,7 @@ Tier 4 and above use the large course so the multi-agent pack has enough
 lateral room to read clearly in the browser demo.
 
 Parameters:
+
 - `curriculumTier` - Active curriculum tier.
 
 Returns: Track size bucket for the tier.
@@ -221,6 +227,7 @@ The browser shell now keeps live tire wear untouched so renderer corner colors
 can reflect the active simulation for every curriculum tier.
 
 Parameters:
+
 - `envState` - Newly stepped environment state.
 - `curriculumTier` - Active curriculum tier.
 
@@ -249,10 +256,11 @@ sidebar stays in sync with the viewport through
 {@link drawRacingNetworkVisualization} racing adapter.
 
 Parameters:
+
 - `container` - Host element or element id.
 - `options` - Optional launch configuration; `tier` overrides the default
-curriculum tier so callers can start directly at Tier 3 (four-car 2v2) or
-higher without waiting for auto-promotion.
+  curriculum tier so callers can start directly at Tier 3 (four-car 2v2) or
+  higher without waiting for auto-promotion.
 
 Returns: Lightweight run handle.
 

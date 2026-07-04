@@ -150,7 +150,6 @@ Every assimilation run must append a structured event to
 
 ```json
 {
-  "timestamp": "<ISO timestamp>",
   "eventType": "external-tool-assimilated",
   "triggeringTask": "/assimilate <repo-url>",
   "externalRepo": "<owner>/<repo>",

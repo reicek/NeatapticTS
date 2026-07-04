@@ -57,7 +57,6 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ```json
 {
-  "timestamp": "<ISO 8601 timestamp>",
   "category": "agent-system-gap|routing-update|skill-update|model-update|output-contract-fix",
   "description": "<concise description of the gap or change>",
   "evidence": "<evidence supporting the event>",

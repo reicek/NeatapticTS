@@ -33,6 +33,7 @@ applySeedOption(
 Applies the optional deterministic seed from constructor options.
 
 Parameters:
+
 - `network` - Network instance being constructed.
 - `options` - Optional constructor options.
 
@@ -54,6 +55,7 @@ public topology-policy resolution, runtime flag initialization, pooled memory
 warmup, and synthesis of the initial fully connected IO graph.
 
 Parameters:
+
 - `network` - Network instance being constructed.
 - `bootstrapContext` - Constructor inputs and resolved topology policy.
 
@@ -73,6 +75,7 @@ The initial weight scaling mirrors the existing Network constructor behavior
 so this split remains a pure structural refactor.
 
 Parameters:
+
 - `network` - Network instance being constructed.
 
 Returns: Nothing.
@@ -92,6 +95,7 @@ This relies on the public node-split mutation flow so the constructor and the
 evolutionary runtime keep growing hidden structure the same way.
 
 Parameters:
+
 - `network` - Network instance being constructed.
 - `minimumHiddenNodes` - Requested minimum hidden-node count.
 
@@ -111,6 +115,7 @@ When node pooling is enabled, each acquired node is reset before use so the
 freshly constructed graph still starts from deterministic runtime state.
 
 Parameters:
+
 - `network` - Network instance being constructed.
 
 Returns: Nothing.
@@ -131,6 +136,7 @@ initializeRuntimeState(
 Initializes core runtime state for a new network instance.
 
 Parameters:
+
 - `network` - Network instance being constructed.
 - `input` - Number of input nodes.
 - `output` - Number of output nodes.
@@ -154,6 +160,7 @@ Pool configuration errors remain non-fatal because allocation policy is an
 optimization layer, not a correctness requirement for constructing a graph.
 
 Parameters:
+
 - `output` - Number of output nodes.
 
 Returns: Nothing.
@@ -173,6 +180,7 @@ The semantic topology intent remains the source of truth unless the caller
 explicitly opted into the legacy boolean toggle.
 
 Parameters:
+
 - `options` - Optional constructor options.
 - `topologyIntent` - Resolved public topology intent.
 
@@ -192,6 +200,7 @@ Prefer this semantic contract over the legacy low-level acyclic flag when
 both are available.
 
 Parameters:
+
 - `options` - Optional constructor options.
 
 Returns: Resolved topology intent.
@@ -210,6 +219,7 @@ This protects callers from creating a constructor packet that says
 "feed-forward" in one field and "cyclic is allowed" in another.
 
 Parameters:
+
 - `options` - Optional constructor options.
 
 Returns: Nothing.

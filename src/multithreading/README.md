@@ -461,6 +461,7 @@ negated gradient for negative inputs. Useful where magnitude matters but
 sign does not.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: |value|.
@@ -481,6 +482,7 @@ Activates a serialized network and produces outputs.
 This interpreter executes the compact numeric encoding used by worker threads, including self-gated recurrent state updates and per-edge gating, so predictions can run without rehydrating full object graphs.
 
 Parameters:
+
 - `inputValues` - Inputs to feed into the network.
 - `activationValues` - Mutable activation register shared across runs.
 - `stateValues` - Mutable state register shared across runs.
@@ -512,6 +514,7 @@ Outputs approximately x for large |x| but introduces a small nonlinear
 bend near zero. Formula: (sqrt(x² + 1) − 1) / 2 + x.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: Bent identity output.
@@ -530,6 +533,7 @@ A hard threshold centered at zero. Useful as a binary decision unit where
 outputs must be exactly ±1 rather than 0/1.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: 1 if value > 0, otherwise −1.
@@ -548,6 +552,7 @@ Formula: 2 / (1 + exp(−x)) − 1. Equivalent to tanh in range but computed
 differently; retains the zero-crossing property of bipolar functions.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: Activation output in the range (−1, 1).
@@ -564,6 +569,7 @@ Deserializes a dataset from its flat representation.
 The deserializer reverses `serializeDataSet` by reconstructing fixed-width sample rows from the shared header, preserving deterministic sample order for batch evaluation.
 
 Parameters:
+
 - `serializedSet` - Flat serialized dataset array.
 
 Returns: Array of input/output sample pairs.
@@ -583,6 +589,7 @@ when x = 0 and decays to 0 for large |x|. Useful in radial basis function
 style networks.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: exp(−value²).
@@ -603,6 +610,7 @@ smooth, non-monotonic behavior. Widely used in transformer architectures.
 See Hendrycks and Gimpel, 2016.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: GELU-activated output.
@@ -621,6 +629,7 @@ A piecewise linear approximation of tanh that is free of exponential
 operations. Output is exactly −1, identity, or +1 depending on the input.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: Clamped value in [−1, 1].
@@ -638,6 +647,7 @@ Identity (linear) activation — passes the input through unchanged.
 Useful for output nodes in regression networks where no squashing is desired.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: The same value, unmodified.
@@ -656,6 +666,7 @@ Formula: 1 − x. Useful when a node's output should represent the
 complementary probability or the negated contribution of its input.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: 1 − value.
@@ -675,6 +686,7 @@ squashing function. See Wikipedia contributors,
 [Sigmoid function](https://en.wikipedia.org/wiki/Sigmoid_function).
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: Activation output in the range (0, 1).
@@ -694,6 +706,7 @@ Mish avoids hard zero-saturation and provides better gradient flow than ReLU
 in many deep architectures. See Misra, 2019, "Mish: A Self Regularized Non-Monotonic Activation Function".
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: Mish-activated output.
@@ -710,9 +723,10 @@ Rectified Linear Unit (ReLU) activation — passes positive values, zeros negati
 
 The most widely used hidden-layer activation in deep learning due to its
 computational simplicity and resistance to vanishing gradients. See Wikipedia
-contributors, [Rectifier](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)).
+contributors, [Rectifier](<https://en.wikipedia.org/wiki/Rectifier_(neural_networks)>).
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: value if value > 0, otherwise 0.
@@ -733,6 +747,7 @@ Constants α and λ from Klambauer et al., 2017. See Wikipedia contributors,
 [SELU](https://en.wikipedia.org/wiki/Activation_function#Scaled_exponential_linear_unit).
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: Scaled activation output.
@@ -749,6 +764,7 @@ Serializes a dataset into a flat numeric array.
 The flattened layout minimizes worker message overhead by encoding one header followed by contiguous input and output rows for each sample.
 
 Parameters:
+
 - `dataSet` - Collection of samples with input and output arrays.
 
 Returns: Flat serialized representation [inputCount, outputCount, ...samples].
@@ -767,6 +783,7 @@ Produces periodic, bounded output in [−1, 1]. Useful for networks that
 need to learn cyclic or frequency-based patterns.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: sin(value).
@@ -786,6 +803,7 @@ for large negative x. Uses numerical approximations at the tails to avoid
 overflow.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: log(1 + exp(value)), with tail approximations for stability.
@@ -804,6 +822,7 @@ Outputs range in (−1, 1) but with gentler saturation than tanh, preserving
 gradient flow further from zero. Formula: x / (1 + |x|).
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: Activation output in the range (−1, 1).
@@ -822,6 +841,7 @@ A hard threshold function with zero gradient almost everywhere. Rarely used
 in gradient-based training but useful for binary thresholding in evaluation.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: 1 if value > 0, otherwise 0.
@@ -841,6 +861,7 @@ non-monotonic, and smooth. Empirically outperforms ReLU on deeper
 architectures. Proposed by Ramachandran et al., 2017.
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: value · sigmoid(value).
@@ -859,6 +880,7 @@ Zero-centered and saturating; a common choice for hidden layers. See Wikipedia
 contributors, [Hyperbolic functions](https://en.wikipedia.org/wiki/Hyperbolic_functions).
 
 Parameters:
+
 - `value` - Pre-activation input value.
 
 Returns: Activation output in the range (−1, 1).
@@ -880,6 +902,7 @@ Tests a serialized dataset using a cost function.
 Each sample is evaluated through the serialized-network interpreter and accumulated into an average finite cost, returning `NaN` when any sample or score violates numeric validity.
 
 Parameters:
+
 - `serializedSampleSet` - Serialized dataset samples.
 - `costFunction` - Cost function comparing expected and actual outputs.
 - `activationValues` - Mutable activation register.

@@ -13,13 +13,19 @@
         <p class="eyebrow">Starter Browser Demo</p>
         <h1>Sequence Reset</h1>
         <p>
-          Sequence Reset shows how recurrent state changes the meaning of repeated inputs:
-          one run starts fresh, one run starts after <code>network.clear()</code>, and one run
-          carries state forward so the same sequence produces a different response.
+          Sequence Reset shows how recurrent state changes the meaning of
+          repeated inputs: one run starts fresh, one run starts after
+          <code>network.clear()</code>, and one run carries state forward so the
+          same sequence produces a different response.
         </p>
       </section>
 
-      <p id="sequence-reset-status" class="load-status" role="status" aria-live="polite">
+      <p
+        id="sequence-reset-status"
+        class="load-status"
+        role="status"
+        aria-live="polite"
+      >
         Loading Sequence Reset browser bundle...
       </p>
       <section id="sequence-reset-output" class="starter-demo-shell"></section>
@@ -28,7 +34,9 @@
     <script>
       (function loadSequenceResetBundle() {
         const statusElement = document.getElementById('sequence-reset-status');
-        const isRepositoryExamplePath = /\/examples\//.test(window.location.pathname);
+        const isRepositoryExamplePath = /\/examples\//.test(
+          window.location.pathname,
+        );
         const bundleSrc = isRepositoryExamplePath
           ? '../../docs/assets/sequence-reset.bundle.js'
           : '../../assets/sequence-reset.bundle.js';
@@ -37,7 +45,8 @@
         scriptElement.src = bundleSrc;
         scriptElement.defer = true;
         scriptElement.onload = () => {
-          const startFunction = window.sequenceResetStart || window.sequenceReset?.start;
+          const startFunction =
+            window.sequenceResetStart || window.sequenceReset?.start;
 
           if (!startFunction) {
             if (statusElement) {
@@ -55,16 +64,14 @@
             })
             .catch((error) => {
               if (statusElement) {
-                statusElement.textContent = error instanceof Error
-                  ? error.message
-                  : String(error);
+                statusElement.textContent =
+                  error instanceof Error ? error.message : String(error);
               }
             });
         };
         scriptElement.onerror = () => {
           if (statusElement) {
-            statusElement.textContent =
-              `Failed to load sequence-reset.bundle.js from ${bundleSrc}. Run npm run build:sequence-reset.`;
+            statusElement.textContent = `Failed to load sequence-reset.bundle.js from ${bundleSrc}. Run npm run build:sequence-reset.`;
           }
         };
 

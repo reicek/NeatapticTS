@@ -102,14 +102,15 @@ The runtime enforcement path now adds structured events to
 
 Those events are correlated by `sessionId` and `actionId` where applicable.
 
-## Consecutive failure escalation
+## Retry behavior (no consecutive-failure threshold)
 
-`gate-exception-counter.mjs` now supports durable counting from the learning
-log, and `record-gate-exception.mjs` appends a `gate-escalation` event when the
-same session reaches **three consecutive gate exceptions** without an
-intervening runtime pass event.
-
-The escalation target remains `00-helping`.
+`gate-exception-counter.mjs` supports durable counting from the learning
+log for visibility and audit purposes only. Gate exceptions are recorded but
+**do not trigger an automatic escalation** after a fixed number of failures.
+Continue retrying the failing gate, workflow step, or validation until the
+issue is fully resolved or a true technical limit is reached. The only valid
+stopping condition is a documented theoretical or practical absolute, not an
+arbitrary retry count. No concessions.
 
 ## Workflow-gap audit coverage
 

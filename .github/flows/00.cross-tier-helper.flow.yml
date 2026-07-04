@@ -15,7 +15,7 @@ description: >
 
 triggers:
   - 'Numbered agent (01-07) emits SUGGESTED_NEXT_AGENT: 00-helping'
-  - 'Three consecutive gate failures trigger escalation in the active session'
+  - 'Gate failure with no viable forward path triggers escalation in the active session'
   - 'Agent cannot resolve a model-routing, frontmatter, or skill-gap blocker'
   - 'Cross-tier helper call explicitly named in a step packet or fan-out list'
   - "Agent system gap requires a fix outside the requesting agent's scope"

@@ -47,7 +47,6 @@ interface BenchmarkArtifactHistoryEntry {
     exists?: boolean;
     hash?: string;
   };
-  generatedAt?: string;
   summary?: BenchmarkArtifactHistorySummaryEntry[];
 }
 
@@ -56,7 +55,6 @@ interface BenchmarkArtifactDeterminismReplay {
     passed?: boolean;
     scenario?: string;
   }>;
-  generatedAt?: string;
   passed?: boolean;
 }
 
@@ -66,7 +64,6 @@ interface BenchmarkArtifactDeterminismReplay {
 export interface BenchmarkReleaseGateArtifact {
   aggregated?: BenchmarkArtifactAggregateEntry[];
   determinismReplay?: BenchmarkArtifactDeterminismReplay;
-  generatedAt?: string;
   history?: BenchmarkArtifactHistoryEntry[];
   meta?: {
     distBundle?: {
@@ -251,16 +248,6 @@ function evaluateDeterminismFailures(
     ];
   }
 
-  if (!determinismReplay.generatedAt) {
-    return [
-      {
-        message:
-          'Determinism gate requires determinismReplay.generatedAt for auditability.',
-        name: 'determinism',
-      },
-    ];
-  }
-
   if (!determinismReplay.passed) {
     return [
       {
@@ -304,32 +291,10 @@ function evaluateAuditFailures(
   const latestHistoryEntry = historyEntries.at(-1);
   const currentDistBundle = artifact.meta?.distBundle;
 
-  if (!artifact.generatedAt) {
-    return [
-      {
-        message: 'Audit gate requires a top-level generatedAt timestamp.',
-        name: 'audit',
-      },
-    ];
-  }
-
   if (!latestHistoryEntry) {
     return [
       {
         message: 'Audit gate requires at least one history snapshot.',
-        name: 'audit',
-      },
-    ];
-  }
-
-  if (
-    !latestHistoryEntry.generatedAt ||
-    latestHistoryEntry.generatedAt !== artifact.generatedAt
-  ) {
-    return [
-      {
-        message:
-          'Audit gate requires the latest history snapshot timestamp to match the current artifact timestamp.',
         name: 'audit',
       },
     ];

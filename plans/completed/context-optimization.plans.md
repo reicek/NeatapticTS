@@ -18,8 +18,8 @@ Phase 1 complete. All seven steps are [DONE] and green validation has passed. De
 - `skill` tool catalog replaced with a pointer to `.github/agent-skill-routing-table.md`; invalid `devtools` skill references repaired to `chrome-devtools-mcp`.
 - Long playbooks moved into canonical skills; Mermaid diagrams pruned from always-loaded prompt and agent/skill files, preserved in generated README sources.
 - Two runtime-dependent spikes recorded with owner `00-helping`:
-  - Lazy-load agent/skill definitions.
-  - Schema-split `task`/`skill` tool catalogs.
+- Lazy-load agent/skill definitions.
+- Schema-split `task`/`skill` tool catalogs.
 
 ## Reopen conditions
 
@@ -27,5 +27,5 @@ Reopen if Copilot CLI exposes lazy-load or schema-split hooks, or if a new alway
 
 ## Audit log
 
-- Phase 1 compressed and archived by `07-logging` on 2026-06-28.
+- Phase 1 compressed and archived by `07-logging` .
 - See `plans/completed/context-optimization.logs.md` for full Phase 1 history.

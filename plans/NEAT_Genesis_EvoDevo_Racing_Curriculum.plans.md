@@ -32,51 +32,51 @@ valid only when the phase's focused tests, build, and quality gates pass.
 
 ## Current state
 
-Claim: 01-planning @ 2026-06-24T19:53:57-04:00
-Claim: 07-logging @ 2026-06-25T06:35:45-04:00 — Step 04 compressed to logs, Step 05 opened as [WIP] for user visual confirmation.
-Claim: 04-implementing @ 2026-06-25T06:44:11-04:00 — Fixing Tier 1 race-pack layout to render two cars (Team A cyan / Team B magenta).
-Claim: 01-planning @ 2026-06-25T07:05:05-04:00 — Step 05 marked [DONE] after browser-ui-specialist visual confirmation; Step 06 opened as [WIP] for Tier 1 contract docs.
+Claim: 01-planning
+Claim: 07-logging — Step 04 compressed to logs, Step 05 opened as [WIP] for user visual confirmation.
+Claim: 04-implementing — Fixing Tier 1 race-pack layout to render two cars (Team A cyan / Team B magenta).
+Claim: 01-planning — Step 05 marked [DONE] after browser-ui-specialist visual confirmation; Step 06 opened as [WIP] for Tier 1 contract docs.
 Claim: 06-documenting — Step 06 Tier 1 contract documentation complete; validation evidence recorded; Step 07 opened as [WIP].
-Claim: 05-green-testing @ 2026-06-25T18:56:48-04:00 — Step 05 green validation passed; Step 06 opened as [WIP] for Tier 2 contract documentation.
+Claim: 05-green-testing — Step 05 green validation passed; Step 06 opened as [WIP] for Tier 2 contract documentation.
 Claim: 07-logging — Step 07 compressed Phase 3 into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`, advanced Phase 4 Step 01 to [WIP], and all required gates passed.
-Claim: 04-implementing @ 2026-06-25T20:00:00-04:00 — Implementing Step 09 Tier 1/Tier 2 racing baseline rules in `examples/racing_curriculum/renderer`, `browser-entry`, `track`, and `environment`.
-Claim: 04-implementing @ 2026-06-25T20:44:00-04:00 — Step 09 implementation complete; all four focused Jest slices pass, build and plan validators pass; handoff to 05-green-testing for Step 10.
-Claim: 05-green-testing @ 2026-06-25T20:18:31-04:00 — Step 10 green validation and regression triage passed; all focused and regression Jest slices, build, lint, and plan validators green; handoff to 06-documenting for Step 11.
-Claim: 04-implementing @ 2026-08-13T22:45:00Z — Step 13 implementation slice `p3-s13-impl-renderer` complete; per-car guide lines and team-color tire trails fixed; all renderer/browser-entry tests, build, lint, tsc, and plan validators pass; handoff to 05-green-testing for `p3-s13-green-renderer`.
-Claim: 04-implementing @ 2026-08-14T02:40:00Z — Step 14 slices `p3-s14-impl-physics` and `p3-s14-green-physics` complete; off-track penalty, wrong-direction detection, and car-vs-car pushing implemented in browser step and worker race-pack; all focused tests, build, lint, tsc, and plan validators pass; handoff to Step 15 planning.
-Claim: 01-planning @ 2026-06-25T22:02:22-04:00 — Authoring Step 15 packet: Tier 1 default start + minimal Tier 3 4-car fallback; decision to start at Tier 1 and use `[0, 0, 1, 1]` layout recorded.
-Claim: 04-implementing @ 2026-06-25T22:09:23-04:00 — Implementing slice p3-s15-impl-tier-layout: change ACTIVE_CURRICULUM_TIER default to 1 and add Tier 3 [0, 0, 1, 1] layout branch.
-Claim: 04-implementing @ 2026-06-25T22:18:00-04:00 — Slice p3-s15-impl-tier-layout complete; all focused and regression Jest slices pass (69 + 249 tests), build, lint, tsc, and plan validators green; handoff to 05-green-testing for p3-s15-green-tier-layout.
-Claim: 04-implementing @ 2026-06-26T15:24:25-04:00 — Slice p3-s19-impl-obs-team-offset complete; team-aware optimal-line offset implemented in observation.assembler.ts; focused Jest slice passes (8/8), tsc and lint green; handoff to 05-green-testing for p3-s19-green-obs-team-offset.
-Claim: 05-green-testing @ 2026-06-26T15:27:32-04:00 — Slice p3-s19-green-obs-team-offset passed; focused observation.assembler tests (8/8), browser-entry regression (69/69), tsc (tsconfig.json + tsconfig.test.json), lint, plan-sync, and plan-phase-packets validators all green; slice marked [DONE]; handoff to p3-s19-red-browser-per-car.
-Claim: 04-implementing @ 2026-06-26T16:15:37-04:00 — Slice p3-s19-impl-per-car-observation complete; exported `derivePerCarObservationState` in observation.assembler.ts; focused Jest slice 12/12, tsc, lint, plan-sync, and plan-phase-packets validators green; handoff to 05-green-testing for p3-s19-green-per-car-observation.
-Claim: 01-planning @ 2026-06-26T19:45:00-04:00 — Phase 4 Step 01 complete: advanced Phase 4 to [WIP], recorded Tier 3 2v2 boundary decisions (team layout [0, 0, 1, 1], per-car observation with teammate awareness, role-divergence seam, shared-equal team-fitness default with DR-2026-06-26-02, NGE primitive risk assessment), authored Step 02-07 packets with red-green slices.
-Claim: 04-implementing @ 2026-06-26T20:30:00Z — Implementing slice p4-s04-impl-teammate-obs: teammate observation + four-genome coevolution in observation.assembler.ts and simulation-worker.coevolution.service.ts.
-Claim: 04-implementing @ 2026-08-15T01:30:00Z — Slice p4-s04-impl-browser-4car complete; start() accepts tier options, 4-car rendering at tier>=3, visualizer on car 0 only; browser-entry tests 77/77, renderer cleanup 16/16, tsc/lint/build/prettier all green; handoff to 05-green-testing for p4-s04-green-browser-4car.
-Claim: 04-implementing @ 2026-06-27T11:19:04-04:00 — Phase 6 Step 04 implementation: 6-car coevolution, full radio population, role-divergence observables, race-pack 6-car fixes, renderer pit-overlay fix. Polyandric reproduction DEFERRED (P1/P2 blockers).
-Claim: 05-green-testing @ 2026-06-27T11:33:03-04:00 — Phase 6 Step 05 green validation PASSED: 46 suites / 394 tests pass (3 skipped polyandric P1/P2), tsc clean, lint 0, build OK, Chrome DevTools MCP visual confirms Tier 5 simulation (0 console errors), plan-sync + agent-graph + plan-phase-packets gates all PASS. Step 03 status mismatch fixed.
-Claim: 07-logging @ 2026-06-27T11:51:37-04:00 — Phase 6 Step 07 complete: Phase 6 compressed into logs, marked [DONE], Phase 7 advanced to [WIP]. phase-compression and stale-wip-plans gates run.
-Claim: 03-red-testing @ 2026-06-27T12:00:00Z — Phase 7 Step 03 red tests complete: 15 red tests across 3 files (7 multi-generation + 3 tier6 HoF/adapter + 5 strategy-divergence). All 15 fail for the right reasons. Types imported from source modules (not local redeclarations). Validation commands updated to --testPathPatterns. Handoff to Step 04.
-Claim: 05-green-testing @ 2026-06-27T13:39:40-04:00 — Phase 7 Step 05 green validation PASSED: 68 suites / 502 tests pass (3 skipped polyandric P1/P2), tsc (tsconfig.json) clean, 27 tsc.test.json carry-forward errors unchanged, lint 0, build:racing-curriculum OK (719.9kb), plan-sync gate PASS. No regressions from Step 04 changes. Step 04 + Step 05 marked [DONE]. Handoff to Step 06 documenting.
-Claim: 06-documenting @ 2026-06-27T17:30:00Z — Phase 7 Step 06 documentation PASSED: Tier 6 contract documented across 4 source files (strategy-divergence, evolution protocol, race-pack, evolution types); 3 Mermaid diagrams + 3 citations added; modeIsEvolvable blocker recorded with nge-core-algorithm escalation reference; worker README regenerated 1258→1739 lines; reference readiness checklist 6 items marked [x]; tsc clean, lint 0. Handoff to Step 07 logging.
+Claim: 04-implementing — Implementing Step 09 Tier 1/Tier 2 racing baseline rules in `examples/racing_curriculum/renderer`, `browser-entry`, `track`, and `environment`.
+Claim: 04-implementing — Step 09 implementation complete; all four focused Jest slices pass, build and plan validators pass; handoff to 05-green-testing for Step 10.
+Claim: 05-green-testing — Step 10 green validation and regression triage passed; all focused and regression Jest slices, build, lint, and plan validators green; handoff to 06-documenting for Step 11.
+Claim: 04-implementing — Step 13 implementation slice `p3-s13-impl-renderer` complete; per-car guide lines and team-color tire trails fixed; all renderer/browser-entry tests, build, lint, tsc, and plan validators pass; handoff to 05-green-testing for `p3-s13-green-renderer`.
+Claim: 04-implementing — Step 14 slices `p3-s14-impl-physics` and `p3-s14-green-physics` complete; off-track penalty, wrong-direction detection, and car-vs-car pushing implemented in browser step and worker race-pack; all focused tests, build, lint, tsc, and plan validators pass; handoff to Step 15 planning.
+Claim: 01-planning — Authoring Step 15 packet: Tier 1 default start + minimal Tier 3 4-car fallback; decision to start at Tier 1 and use `[0, 0, 1, 1]` layout recorded.
+Claim: 04-implementing — Implementing slice p3-s15-impl-tier-layout: change ACTIVE_CURRICULUM_TIER default to 1 and add Tier 3 [0, 0, 1, 1] layout branch.
+Claim: 04-implementing — Slice p3-s15-impl-tier-layout complete; all focused and regression Jest slices pass (69 + 249 tests), build, lint, tsc, and plan validators green; handoff to 05-green-testing for p3-s15-green-tier-layout.
+Claim: 04-implementing — Slice p3-s19-impl-obs-team-offset complete; team-aware optimal-line offset implemented in observation.assembler.ts; focused Jest slice passes (8/8), tsc and lint green; handoff to 05-green-testing for p3-s19-green-obs-team-offset.
+Claim: 05-green-testing — Slice p3-s19-green-obs-team-offset passed; focused observation.assembler tests (8/8), browser-entry regression (69/69), tsc (tsconfig.json + tsconfig.test.json), lint, plan-sync, and plan-phase-packets validators all green; slice marked [DONE]; handoff to p3-s19-red-browser-per-car.
+Claim: 04-implementing — Slice p3-s19-impl-per-car-observation complete; exported `derivePerCarObservationState` in observation.assembler.ts; focused Jest slice 12/12, tsc, lint, plan-sync, and plan-phase-packets validators green; handoff to 05-green-testing for p3-s19-green-per-car-observation.
+Claim: 01-planning — Phase 4 Step 01 complete: advanced Phase 4 to [WIP], recorded Tier 3 2v2 boundary decisions (team layout [0, 0, 1, 1], per-car observation with teammate awareness, role-divergence seam, shared-equal team-fitness default with DR-001, NGE primitive risk assessment), authored Step 02-07 packets with red-green slices.
+Claim: 04-implementing — Implementing slice p4-s04-impl-teammate-obs: teammate observation + four-genome coevolution in observation.assembler.ts and simulation-worker.coevolution.service.ts.
+Claim: 04-implementing — Slice p4-s04-impl-browser-4car complete; start() accepts tier options, 4-car rendering at tier>=3, visualizer on car 0 only; browser-entry tests 77/77, renderer cleanup 16/16, tsc/lint/build/prettier all green; handoff to 05-green-testing for p4-s04-green-browser-4car.
+Claim: 04-implementing — Phase 6 Step 04 implementation: 6-car coevolution, full radio population, role-divergence observables, race-pack 6-car fixes, renderer pit-overlay fix. Polyandric reproduction DEFERRED (P1/P2 blockers).
+Claim: 05-green-testing — Phase 6 Step 05 green validation PASSED: 46 suites / 394 tests pass (3 skipped polyandric P1/P2), tsc clean, lint 0, build OK, Chrome DevTools MCP visual confirms Tier 5 simulation (0 console errors), plan-sync + agent-graph + plan-phase-packets gates all PASS. Step 03 status mismatch fixed.
+Claim: 07-logging — Phase 6 Step 07 complete: Phase 6 compressed into logs, marked [DONE], Phase 7 advanced to [WIP]. phase-compression and stale-wip-plans gates run.
+Claim: 03-red-testing — Phase 7 Step 03 red tests complete: 15 red tests across 3 files (7 multi-generation + 3 tier6 HoF/adapter + 5 strategy-divergence). All 15 fail for the right reasons. Types imported from source modules (not local redeclarations). Validation commands updated to --testPathPatterns. Handoff to Step 04.
+Claim: 05-green-testing — Phase 7 Step 05 green validation PASSED: 68 suites / 502 tests pass (3 skipped polyandric P1/P2), tsc (tsconfig.json) clean, 27 tsc.test.json carry-forward errors unchanged, lint 0, build:racing-curriculum OK (719.9kb), plan-sync gate PASS. No regressions from Step 04 changes. Step 04 + Step 05 marked [DONE]. Handoff to Step 06 documenting.
+Claim: 06-documenting — Phase 7 Step 06 documentation PASSED: Tier 6 contract documented across 4 source files (strategy-divergence, evolution protocol, race-pack, evolution types); 3 Mermaid diagrams + 3 citations added; modeIsEvolvable blocker recorded with nge-core-algorithm escalation reference; worker README regenerated 1258→1739 lines; reference readiness checklist 6 items marked [x]; tsc clean, lint 0. Handoff to Step 07 logging.
 
-Claim: 04-implementing @ 2026-06-30T01:35:55-04:00 — Loop-back fix for Phase 6 Step 04 slice `04-wire-reproduction`: removed duplicate FSM `activateNgeNetworkFromEnvelope` call, updated red-test expectation to 12 (6 initial materializations + 6 reproduction materializations), and cleaned 3 lint errors. tsc (tsconfig.json) clean, lint 0, focused jest slice 9/9 pass.
-Claim: 04-implementing @ 2026-06-30T02:07:00-04:00 — Coverage-repair loop-back for slice `04-wire-reproduction-loopback`: removed three unreachable defensive fallback branches in `simulation-worker.evolution.protocol.service.ts` (?? 0 in rank extraction, initConfig fallback, container fallback); added focused tests in `simulation-worker.polyandric-reproduction.test.ts` for null rank extraction fallback, mixed lap-completion sorting arms, and `{ offspring }` envelope extraction. tsc (tsconfig.json) clean, lint 0, prettier clean. Focused Jest slice NOT run per Step 04 mandate; handoff to 05-green-testing.
-Claim: 04-implementing @ 2026-06-30T07:15:00-04:00 — Slice-fix for `04-wire-reproduction-coverage-repair`: replaced brittle `mockReturnValueOnce` runner injection with a mutable `activeRaceRunnerFactory` so `createNoLapDataRunner`/`createMixedCompletionRunner` actually reach production code; made mixed-completion expected ranking distinctive ([1, 2, 4, 3]); removed additional genuinely unreachable defensive branches in `simulation-worker.evolution.protocol.service.ts` (`container?.` fallbacks, `generation ?? 0` in transitionToGenerationReady, `?? carIndex + 1` in computeFitness branch, `?? 0` in `tryExtractFinishPositions`). tsc (tsconfig.json) clean, 27 tsconfig.test.json errors unchanged, lint 0, prettier clean. Focused Jest slice NOT run per Step 04 mandate; handoff to 05-green-testing for re-validation.
+Claim: 04-implementing — Loop-back fix for Phase 6 Step 04 slice `04-wire-reproduction`: removed duplicate FSM `activateNgeNetworkFromEnvelope` call, updated red-test expectation to 12 (6 initial materializations + 6 reproduction materializations), and cleaned 3 lint errors. tsc (tsconfig.json) clean, lint 0, focused jest slice 9/9 pass.
+Claim: 04-implementing — Coverage-repair loop-back for slice `04-wire-reproduction-loopback`: removed three unreachable defensive fallback branches in `simulation-worker.evolution.protocol.service.ts` (?? 0 in rank extraction, initConfig fallback, container fallback); added focused tests in `simulation-worker.polyandric-reproduction.test.ts` for null rank extraction fallback, mixed lap-completion sorting arms, and `{ offspring }` envelope extraction. tsc (tsconfig.json) clean, lint 0, prettier clean. Focused Jest slice NOT run per Step 04 mandate; handoff to 05-green-testing.
+Claim: 04-implementing — Slice-fix for `04-wire-reproduction-coverage-repair`: replaced brittle `mockReturnValueOnce` runner injection with a mutable `activeRaceRunnerFactory` so `createNoLapDataRunner`/`createMixedCompletionRunner` actually reach production code; made mixed-completion expected ranking distinctive ([1, 2, 4, 3]); removed additional genuinely unreachable defensive branches in `simulation-worker.evolution.protocol.service.ts` (`container?.` fallbacks, `generation ?? 0` in transitionToGenerationReady, `?? carIndex + 1` in computeFitness branch, `?? 0` in `tryExtractFinishPositions`). tsc (tsconfig.json) clean, 27 tsconfig.test.json errors unchanged, lint 0, prettier clean. Focused Jest slice NOT run per Step 04 mandate; handoff to 05-green-testing for re-validation.
 
 - **Phase 1 is [DONE].** Step 01-04 and all slices passed green validation. User confirmed the right-side network panel live-value refresh and the inner-track guidance overlay. Archive is in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 - **Phase 2 — Tier 1: Single agent on simple track** is [DONE]. Step 01-07 all passed; Phase 2 history is compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
-- **Phase 3 — Tier 2: 1v1 with radio (one car per team)** is [DONE]. All steps (Step 08 through Step 19) passed green validation. Step 19 pivoted from shared-controller fan-out to independent per-car NEAT agents (DR-2026-06-26-01); 22 red-green slices all [DONE]; 348 tests pass, lint clean, tsc clean. Phase 3 step/slice details are compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
+- **Phase 3 — Tier 2: 1v1 with radio (one car per team)** is [DONE]. All steps (Step 08 through Step 19) passed green validation. Step 19 pivoted from shared-controller fan-out to independent per-car NEAT agents (DR-011); 22 red-green slices all [DONE]; 348 tests pass, lint clean, tsc clean. Phase 3 step/slice details are compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 - **Phase 4 — Tier 3: 2v2 no pits** is [DONE]. All steps (Step 01-07) passed green validation. 4-car coevolution with independent genomes, shared-equal team fitness, 4-car browser rendering, and worker-side continuous adaptation all implemented. Chrome DevTools MCP visual validation confirmed 4-car Tier 3 simulation with network growth (N76/C288 → N97/C372). 3 pre-existing race-pack test failures triaged as carry-forward debt (resolveTeamFitness unimplemented, team layout [0,0,1,1] not applied). Phase 4 step/slice details are compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 - **Phase 5 — Tier 4: 2v2 tires and pits** is [DONE]. All steps (Step 01-07) passed green validation. 45 suites / 385 tests all pass. Tire decay, pit lifecycle, and grip multiplier wired into worker race-pack. Chrome DevTools MCP visual confirmed Tier 4 simulation. Phase 5 step/slice details compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 - **Phase 6 — Tier 5: 3v3 full** is [DONE]. All steps (Step 01-07) passed green validation. 6-car coevolution with TIER_FIVE_CAR_COUNT=6, full 3-row radio population with self-broadcast, role-divergence observables (blockerDelta, inferredRole), 6-element pitStatus with layout-aware stride, renderer pit-overlay fix. 46 suites / 394 tests pass, 3 skipped (polyandric P1/P2). Chrome DevTools MCP confirmed Tier 5 (N101/C388, STABLE, 0 console errors). Polyandric reproduction DEFERRED (P1/P2 blockers — nge-core-algorithm ownership). Phase 6 step/slice details compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
-- **Phase 7 — Tier 6: 3v3 advanced strategy** is [DONE]. All steps (Step 01-07) passed green validation. Analytics-only fallback per DR-2026-06-27-05 (modeIsEvolvable BLOCKED — nge-core-algorithm ownership). FSM 5-bug fix completed (DR-2026-06-27-06). OpponentSnapshotPool wired into racing coevolution loop. Strategy-divergence analytics module created. 68 suites / 502 tests pass (3 skipped polyandric P1/P2). Worker README regenerated 1258→1739 lines. Carry-forward blockers (P1-P5, modeIsEvolvable) documented for nge-core-algorithm handoff. Phase 7 step/slice details compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
+- **Phase 7 — Tier 6: 3v3 advanced strategy** is [DONE]. All steps (Step 01-07) passed green validation. Analytics-only fallback per DR-008 (modeIsEvolvable BLOCKED — nge-core-algorithm ownership). FSM 5-bug fix completed (DR-009). OpponentSnapshotPool wired into racing coevolution loop. Strategy-divergence analytics module created. 68 suites / 502 tests pass (3 skipped polyandric P1/P2). Worker README regenerated 1258→1739 lines. Carry-forward blockers (P1-P5, modeIsEvolvable) documented for nge-core-algorithm handoff. Phase 7 step/slice details compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 
 - **Step 05 visual confirmation:** Browser-ui-specialist confirmed two cars render with cyan (Team A) and magenta (Team B) guiding lines, no Phase 1 regressions, and only minor viewport/alpha observations (see Step 05 evidence block).
 - Tier 1—6 ladder, promotion rules, and carry/reset policy are defined in this plan and sourced from `examples/racing_curriculum/reference.plans.md`.
 - Upper-tier features still depend on NGE primitives that may be experimental or missing (`ModulatorBroadcaster`, `EpisodicSlot`, `GatingRouter`, polyandric reproduction wiring). Those are routed to `nge-core-algorithm`, not compensated for locally.
 
-### User-reported Tier 2 demo defects — 02-research findings (2026-06-25)
+### User-reported Tier 2 demo defects — 02-research findings
 
 User observed three symptoms in the browser demo:
 
@@ -104,7 +104,7 @@ User observed three symptoms in the browser demo:
 
 **Next agent:** 03-red-testing should write failing tests for the subtitle copy, per-car control wiring, and off-track boundary enforcement before 04-implementing changes any code.
 
-### NGE shared-controller architectural audit — 02-research findings (2026-06-26)
+### NGE shared-controller architectural audit — 02-research findings
 
 **Scope:** Audit every NGE (NEAT Genesis EvoDeVo / continuous-evolution) demo in the repository for violations of the independent-agent architecture: a single shared neural-network controller fanned out to multiple visual agents. This applies to all NGE demos, not only the racing demo.
 
@@ -198,12 +198,12 @@ band: 800–3,000 synapses/neuron.
   to advance together. A team that is far ahead holds at the current tier until the
   opponent catches up within a threshold, or until a maximum wait generation is
   reached.
-- **Capacity floor gate** (DR-2026-06-26-03): in addition to reliability, the
+- **Capacity floor gate** (DR-003): in addition to reliability, the
   team's median hidden-node count must meet or exceed the tier's `N_floor` before
   promotion is granted. This makes structural growth a necessary condition for
   advancement, not merely a side effect. A team that is reliable but undersized
   holds at the current tier until its median node count reaches the floor.
-- **Growth-velocity gate** (DR-2026-06-26-03): advancement also requires a
+- **Growth-velocity gate** (DR-003): advancement also requires a
   minimum growth-velocity floor (median nodes gained per generation over the tier
   window). When growth stalls — velocity drops below the floor while the team is
   still below `N_floor` — the tier duration auto-extends and the per-tier
@@ -232,7 +232,7 @@ band: 800–3,000 synapses/neuron.
 - current team radio field (cleared at race start)
 - other race-local episode state
 
-## Growth-drive policy (DR-2026-06-26-03)
+## Growth-drive policy (DR-003)
 
 NGE networks start at ~90 nodes and need a strong drive to grow toward ant-brain
 complexity (~250k neurons). Current tier advancement is reliability-only with no
@@ -285,7 +285,7 @@ at 250k nodes/30fps is infeasible, so the architecture is scale-agnostic.
 
 **Browser performance caps:** 8,000 hidden nodes is the practical browser racing
 ceiling at 30fps. If performance degrades, cap at 2,000. Tiers requiring more than
-8k nodes run headless/offline. See "User vision clarification (2026-06-26)" above.
+8k nodes run headless/offline. See "User vision clarification" above.
 
 ### Density band
 
@@ -302,7 +302,7 @@ naturally under the new growth pressure. Revisit D1 (depth-motif reward) only if
 width saturates before reaching a tier's `N_floor`. D2 (add-layer mutation) is
 premature and risks determinism contracts.
 
-## Worker integration policy (DR-2026-06-26-04)
+## Worker integration policy (DR-002)
 
 The racing curriculum browser demo runs continuous per-tick host-side Network
 mutation via `RuntimeAdaptationEngine.adaptOnTick`. The user explicitly wants
@@ -335,7 +335,7 @@ main thread handles UI/render only.
 Revert to host-main-thread synchronous activation + host-side adaptation. Remove
 worker protocol wiring. The POC physics-only worker path remains as fallback.
 
-## User vision clarification (2026-06-26)
+## User vision clarification
 
 The user has clarified the fundamental NGE vision. This section is authoritative
 for all downstream implementation and must not be contradicted by prior NGE core
@@ -516,7 +516,7 @@ intent, threat level). No pit/tire complexity yet.
 
 #### Step 19 — Tier 1 independent-agent architecture pivot [DONE]
 
-- Pivoted from shared-controller fan-out to independent per-car NEAT agents. All 22 red-green slices [DONE]; 348 tests pass, lint clean, tsc clean. Decision Record DR-2026-06-26-01 recorded. Detailed content archived in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
+- Pivoted from shared-controller fan-out to independent per-car NEAT agents. All 22 red-green slices [DONE]; 348 tests pass, lint clean, tsc clean. Decision Record DR-011 recorded. Detailed content archived in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 
 #### Step 17 — Logging and tracker handoff [DONE]
 
@@ -559,7 +559,7 @@ placeholder_steps:
 **Stop conditions:**
 
 - ~~Done: Phase 3 is [DONE] and Tier 3 green gate passes.~~ **RESOLVED:** Phase 3 [DONE], Tier 3 green gate passed (Step 05).
-- ~~Hold: user must confirm team-fitness semantics for 2v2.~~ **RESOLVED:** User approved shared-equal team fitness (2026-06-26).
+- ~~Hold: user must confirm team-fitness semantics for 2v2.~~ **RESOLVED:** User approved shared-equal team fitness.
 - **Blocked:** upstream NGE primitive missing; route to `nge-core-algorithm`.
 
 **Required validation:**
@@ -570,7 +570,7 @@ placeholder_steps:
 
 #### Step 01 — Plan Tier 3 boundary [DONE]
 
-- Recorded Tier 3 2v2 boundary decisions (team layout `[0, 0, 1, 1]`, 91-dim observation, role-divergence seam, shared-equal team-fitness DR-2026-06-26-02, NGE primitive risk assessment). Authored Step 02-07 packets. Detailed content archived in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
+- Recorded Tier 3 2v2 boundary decisions (team layout `[0, 0, 1, 1]`, 91-dim observation, role-divergence seam, shared-equal team-fitness DR-001, NGE primitive risk assessment). Authored Step 02-07 packets. Detailed content archived in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 
 #### Step 02 — Research 2v2 coevolution and role-divergence contracts [DONE]
 
@@ -582,7 +582,7 @@ placeholder_steps:
 
 #### Step 04 — Implement 2v2 worker evaluation loop [DONE]
 
-- 4 implementation slices executed: teammate observation + four-genome coevolution, shared-equal team fitness, 4-car browser rendering with per-car controllers, worker-side continuous adaptation relocation (DR-2026-06-26-04/05). Detailed content archived in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
+- 4 implementation slices executed: teammate observation + four-genome coevolution, shared-equal team fitness, 4-car browser rendering with per-car controllers, worker-side continuous adaptation relocation (DR-002/05). Detailed content archived in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 
 #### Step 05 — Green validation and regression triage [DONE]
 
@@ -639,7 +639,7 @@ rather than compensate locally.
 **Stop conditions:**
 
 - ~~Done: Phase 4 is [DONE] and Tier 4 green gate passes.~~ **RESOLVED:** Phase 4 [DONE], Tier 4 green gate passed (Step 05 — 45 suites / 385 tests all pass).
-- ~~Hold: required NGE primitives are not yet available.~~ **RESOLVED:** DR-2026-06-27-02-CORRECTION — EpisodicSlot/GatingRouter DO exist as genome-level computation motifs; environment mechanics proceed without wiring them (optB). Episode-level composition evaluation deferred to nge-core-algorithm.
+- ~~Hold: required NGE primitives are not yet available.~~ **RESOLVED:** DR-005-CORRECTION — EpisodicSlot/GatingRouter DO exist as genome-level computation motifs; environment mechanics proceed without wiring them (optB). Episode-level composition evaluation deferred to nge-core-algorithm.
 - **Blocked:** upstream NGE primitive missing and escalation unresolved; route to `nge-core-algorithm`.
 
 **Required validation:**
@@ -650,11 +650,11 @@ rather than compensate locally.
 
 #### Step 01 — Plan Tier 4 boundary [DONE]
 
-- Recorded Tier 4 boundary decisions: tire degradation model (pinned Tier 4 formula, exponential decay, grip multiplier `sqrt(meanTireHealth)`), pit-stop mechanics (4-tick duration, 3 slots per team per DR-2026-06-27-01, own-team entry, tire restoration), pit-entrance blocking (emergent from car separation physics), NGE primitive dependency assessment (DR-2026-06-27-02). Authored Step 02-07 packets. Detailed content archived in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
+- Recorded Tier 4 boundary decisions: tire degradation model (pinned Tier 4 formula, exponential decay, grip multiplier `sqrt(meanTireHealth)`), pit-stop mechanics (4-tick duration, 3 slots per team per DR-004, own-team entry, tire restoration), pit-entrance blocking (emergent from car separation physics), NGE primitive dependency assessment (DR-005). Authored Step 02-07 packets. Detailed content archived in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 
 #### Step 02 — Research tire/pit mechanics and NGE primitive dependencies [DONE]
 
-- Source-grounded research brief with 6 findings: confirmed 95-channel Tier 4 observation (91 + 4 own-car tire health), identified GAPs (tire decay/pit lifecycle NOT wired into worker race-pack), corrected DR-2026-06-27-02 via DR-2026-06-27-02-CORRECTION (EpisodicSlot/GatingRouter DO exist as genome-level computation motifs), identified 4 files needing modification. Detailed content archived in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
+- Source-grounded research brief with 6 findings: confirmed 95-channel Tier 4 observation (91 + 4 own-car tire health), identified GAPs (tire decay/pit lifecycle NOT wired into worker race-pack), corrected DR-005 via DR-005-CORRECTION (EpisodicSlot/GatingRouter DO exist as genome-level computation motifs), identified 4 files needing modification. Detailed content archived in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 
 #### Step 03 — Red tests for tire/pit contracts [DONE]
 
@@ -719,11 +719,11 @@ pacer roles must emerge from experience, polyandric reproduction active.
 - **Radio field:** 42-float shared slab (6 cars × 7 channels). Each car reads 3 same-team rows × 7 = 21 channels and writes 1 row of 7.
 - **Tire/pit mechanics:** Carry forward from Tier 4. No changes needed.
 - **Pit-entrance blocking:** Handled by existing collision physics. No new 6-car logic needed.
-- **6-car rendering:** Structurally supported. Colors are blue (Team A) and red (Team B) per DR-2026-06-27-04.
+- **6-car rendering:** Structurally supported. Colors are blue (Team A) and red (Team B) per DR-007.
 - **Role divergence:** Implemented as observability-only metrics (blockerDelta, inferredRole). Does NOT change fitness.
 - **Polyandric reproduction:** Core primitive `reproducePolyandric` confirmed AVAILABLE but benchmark wiring DEFERRED (P1/P2 blockers — nge-core-algorithm ownership).
 - **Coevolution container gap:** Resolved — `TIER_FIVE_CAR_COUNT=6` branch added.
-- **Fitness policy conflict:** Resolved via DR-2026-06-27-03 split policy.
+- **Fitness policy conflict:** Resolved via DR-006 split policy.
 
 **NGE primitive assessment (Step 01):**
 
@@ -739,8 +739,8 @@ pacer roles must emerge from experience, polyandric reproduction active.
 
 **Decision Records (Phase 6):**
 
-- **DR-2026-06-27-03:** Fitness policy split — best-finishing for queen selection (aligns with reference "queen = best-finishing car"), shared-equal for population fitness (preserves Tier 3/4 DR-2026-06-26-02). Rollback: switch to best-finishing for both if split policy causes evolutionary instability. Owner: 01-planning.
-- **DR-2026-06-27-04:** Renderer team colors — blue (#0000ff) and red (#ff0000) are canonical (match implemented code), not cyan/magenta. No color change needed. Owner: 01-planning.
+- **DR-006:** Fitness policy split — best-finishing for queen selection (aligns with reference "queen = best-finishing car"), shared-equal for population fitness (preserves Tier 3/4 DR-001). Rollback: switch to best-finishing for both if split policy causes evolutionary instability. Owner: 01-planning.
+- **DR-007:** Renderer team colors — blue (#0000ff) and red (#ff0000) are canonical (match implemented code), not cyan/magenta. No color change needed. Owner: 01-planning.
 
 **Stop conditions:**
 
@@ -778,8 +778,8 @@ validation:
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
 acceptance_criteria:
   - 'Tier 6 green gate passes: multi-generation hall-of-fame opponent snapshots wired into the racing coevolution loop, sustained co-evolutionary arms race observable (alternating-advantage trajectory classifier), and team-level fitness telemetry across generations.'
-  - 'modeIsEvolvable engagement is either confirmed available or deferred with a recorded blocker escalated to nge-core-algorithm (DR-2026-06-27-05).'
-  - 'FSM multi-generation loop bug is fixed and validated against Tier 1-5 regression (DR-2026-06-27-06).'
+  - 'modeIsEvolvable engagement is either confirmed available or deferred with a recorded blocker escalated to nge-core-algorithm (DR-008).'
+  - 'FSM multi-generation loop bug is fixed and validated against Tier 1-5 regression (DR-009).'
   - 'Phase 6 is [DONE] before Phase 7 starts.'
 placeholder_steps:
   - 'Step 01 — Plan Tier 6 boundary'
@@ -800,7 +800,7 @@ compensate locally.
 
 ### Step 01 — Plan Tier 6 boundary [DONE]
 
-[DONE] Step 01: Tier 6 boundary defined as analytics-only fallback (DR-2026-06-27-05). modeIsEvolvable BLOCKED (dead field, no operator — nge-core-algorithm ownership). Hall-of-fame via OpponentSnapshotPool to be wired. FSM 5-bug fix planned (DR-2026-06-27-06). Polyandric reproduction DEFERRED (P1-P5). NGE primitive assessment table recorded (14 primitives). Step 02-07 packets authored. plan-sync + step-packet gates PASS. See plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md Phase 7 section for full boundary decisions and decision records.
+[DONE] Step 01: Tier 6 boundary defined as analytics-only fallback (DR-008). modeIsEvolvable BLOCKED (dead field, no operator — nge-core-algorithm ownership). Hall-of-fame via OpponentSnapshotPool to be wired. FSM 5-bug fix planned (DR-009). Polyandric reproduction DEFERRED (P1-P5). NGE primitive assessment table recorded (14 primitives). Step 02-07 packets authored. plan-sync + step-packet gates PASS. See plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md Phase 7 section for full boundary decisions and decision records.
 
 ### Step 02 — Research hall-of-fame wiring, analytics seams, and NGE dependencies [DONE]
 
@@ -844,23 +844,23 @@ See plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md Phase 7 section for ful
 
 ## Latest validation evidence
 
-- 2026-06-27: Phase 7 Step 07 completed — Phase 7 marked [DONE], compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`. Workstream marked [DONE]. Carry-forward blockers (P1-P5, modeIsEvolvable, 27 tsc errors, 3 skipped polyandric tests) documented for nge-core-algorithm handoff. `phase-compression.gate`: pass. `stale-wip-plans.gate`: pass. `log-completion-marker.gate`: pass. `validate-plan-sync`: PASS.
-- 2026-06-27: Phase 7 Step 06 completed — Tier 6 contract documented across 4 source files, 3 Mermaid diagrams + 3 citations, worker README regenerated 1258→1739 lines, reference readiness checklist 6 items marked [x]. tsc clean, lint 0.
-- 2026-06-27: Phase 7 Step 05 completed — 68 suites / 502 tests ALL PASS (3 skipped polyandric P1/P2). tsc (tsconfig.json) clean. 27 tsc.test.json carry-forward errors unchanged. Lint 0. Build 719.9kb OK. plan-sync PASS. No regressions from Step 04.
-- 2026-06-27: Phase 7 Step 04 completed — 3 implementation slices: fsm-bugfix (5 FSM bugs fixed), hof-wiring (OpponentSnapshotPool + type adapter), analytics (strategy-divergence module). 68 suites / 502 tests pass. tsc clean, lint 0, build 719.9kb OK.
-- 2026-06-27: Phase 7 Step 03 completed — 15 red tests across 3 files (7 multi-generation + 3 tier6 HoF/adapter + 5 strategy-divergence). All 15 fail for the right reasons. Types imported from source modules. Validation commands updated to --testPathPatterns (plural).
-- 2026-06-27: Phase 7 Step 02 completed — Research brief with 9 findings (R1-R9). FSM 5 compounding bugs identified. Tire physics FULLY IMPLEMENTED (false positive). Strategy-divergence = NEW module. 27 tsc errors confirmed.
-- 2026-06-27: Phase 6 Step 07 completed — Phase 6 marked [DONE], compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`; Phase 7 — Tier 6: 3v3 advanced strategy advanced to [WIP]. `phase-compression.gate`: pass. `stale-wip-plans.gate`: pass. `validate-plan-sync`: PASS. `validate-plan-phase-packets`: PASS.
-- 2026-06-27: Phase 6 Step 06 completed — Tier 5 contract documented in README with ~385 lines, 3 Mermaid diagrams, 95-channel observation table. JSDoc improved on 5 files. `npm run docs` and `npm run lint` passed. cortex-index PASS, routing-table-freshness PASS.
-- 2026-06-27: Phase 6 Step 05 completed — 46 suites / 394 tests ALL PASS (3 skipped polyandric P1/P2). tsc (tsconfig.json) clean. Lint 0 issues. Build 719.9kb OK. Chrome DevTools MCP visual: Tier 5 simulation confirmed (N101/C388, STABLE, 0 console errors). plan-sync, agent-graph, plan-phase-packets gates all PASS. 27 tsc.test.json carry-forward errors verified.
-- 2026-06-27: Phase 6 Step 04 completed — 6-car coevolution, full radio, role-divergence observables, race-pack 6-car fixes, renderer pit-overlay fix. Polyandric reproduction DEFERRED (P1/P2). 16 suites, 152 tests pass, 3 skipped. tsc clean, lint 0, build 719.9kb OK.
-- 2026-06-27: Phase 6 Step 03 completed — 12 red tests (4 coevolution + 8 race-pack tier5). All non-skipped fail for right reasons. 3 polyandric tests skipped (P1/P2 blockers).
-- 2026-06-27: Phase 6 Step 02 completed — Research brief with 9 findings (R1-R9). 5 polyandric blockers identified (P1-P5). 4 role-divergence metrics defined. 8 implementation seams decomposed.
-- 2026-06-27: Phase 6 Step 01 completed — Tier 5 boundary decisions recorded. DR-2026-06-27-03 and DR-2026-06-27-04 recorded. Step 02-07 packets authored. plan-sync and step-packet gates PASS.
-- 2026-06-27: Phase 5 Step 07 completed — Phase 5 marked [DONE], compressed into logs; Phase 6 advanced to [WIP]. `phase-compression.gate`: pass. `stale-wip-plans.gate`: pass.
-- 2026-06-27: Phase 4 Step 07 completed — Phase 4 marked [DONE], compressed into logs, Phase 5 advanced to [WIP]. `phase-compression.gate`: pass.
-- 2026-06-25: Step 07 completed — Phase 3 marked [DONE], compressed into logs; Phase 4 Step 01 opened as [WIP]. `phase-compression.gate`: pass.
-- 2026-06-25: Step 07 completed — Phase 2 marked [DONE], compressed into logs, Phase 3 Step 01 advanced to [WIP]. `phase-compression.gate`: pass.
+- Phase 7 Step 07 completed — Phase 7 marked [DONE], compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`. Workstream marked [DONE]. Carry-forward blockers (P1-P5, modeIsEvolvable, 27 tsc errors, 3 skipped polyandric tests) documented for nge-core-algorithm handoff. `phase-compression.gate`: pass. `stale-wip-plans.gate`: pass. `log-completion-marker.gate`: pass. `validate-plan-sync`: PASS.
+- Phase 7 Step 06 completed — Tier 6 contract documented across 4 source files, 3 Mermaid diagrams + 3 citations, worker README regenerated 1258→1739 lines, reference readiness checklist 6 items marked [x]. tsc clean, lint 0.
+- Phase 7 Step 05 completed — 68 suites / 502 tests ALL PASS (3 skipped polyandric P1/P2). tsc (tsconfig.json) clean. 27 tsc.test.json carry-forward errors unchanged. Lint 0. Build 719.9kb OK. plan-sync PASS. No regressions from Step 04.
+- Phase 7 Step 04 completed — 3 implementation slices: fsm-bugfix (5 FSM bugs fixed), hof-wiring (OpponentSnapshotPool + type adapter), analytics (strategy-divergence module). 68 suites / 502 tests pass. tsc clean, lint 0, build 719.9kb OK.
+- Phase 7 Step 03 completed — 15 red tests across 3 files (7 multi-generation + 3 tier6 HoF/adapter + 5 strategy-divergence). All 15 fail for the right reasons. Types imported from source modules. Validation commands updated to --testPathPatterns (plural).
+- Phase 7 Step 02 completed — Research brief with 9 findings (R1-R9). FSM 5 compounding bugs identified. Tire physics FULLY IMPLEMENTED (false positive). Strategy-divergence = NEW module. 27 tsc errors confirmed.
+- Phase 6 Step 07 completed — Phase 6 marked [DONE], compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`; Phase 7 — Tier 6: 3v3 advanced strategy advanced to [WIP]. `phase-compression.gate`: pass. `stale-wip-plans.gate`: pass. `validate-plan-sync`: PASS. `validate-plan-phase-packets`: PASS.
+- Phase 6 Step 06 completed — Tier 5 contract documented in README with ~385 lines, 3 Mermaid diagrams, 95-channel observation table. JSDoc improved on 5 files. `npm run docs` and `npm run lint` passed. cortex-index PASS, routing-table-freshness PASS.
+- Phase 6 Step 05 completed — 46 suites / 394 tests ALL PASS (3 skipped polyandric P1/P2). tsc (tsconfig.json) clean. Lint 0 issues. Build 719.9kb OK. Chrome DevTools MCP visual: Tier 5 simulation confirmed (N101/C388, STABLE, 0 console errors). plan-sync, agent-graph, plan-phase-packets gates all PASS. 27 tsc.test.json carry-forward errors verified.
+- Phase 6 Step 04 completed — 6-car coevolution, full radio, role-divergence observables, race-pack 6-car fixes, renderer pit-overlay fix. Polyandric reproduction DEFERRED (P1/P2). 16 suites, 152 tests pass, 3 skipped. tsc clean, lint 0, build 719.9kb OK.
+- Phase 6 Step 03 completed — 12 red tests (4 coevolution + 8 race-pack tier5). All non-skipped fail for right reasons. 3 polyandric tests skipped (P1/P2 blockers).
+- Phase 6 Step 02 completed — Research brief with 9 findings (R1-R9). 5 polyandric blockers identified (P1-P5). 4 role-divergence metrics defined. 8 implementation seams decomposed.
+- Phase 6 Step 01 completed — Tier 5 boundary decisions recorded. DR-006 and DR-007 recorded. Step 02-07 packets authored. plan-sync and step-packet gates PASS.
+- Phase 5 Step 07 completed — Phase 5 marked [DONE], compressed into logs; Phase 6 advanced to [WIP]. `phase-compression.gate`: pass. `stale-wip-plans.gate`: pass.
+- Phase 4 Step 07 completed — Phase 4 marked [DONE], compressed into logs, Phase 5 advanced to [WIP]. `phase-compression.gate`: pass.
+- Step 07 completed — Phase 3 marked [DONE], compressed into logs; Phase 4 Step 01 opened as [WIP]. `phase-compression.gate`: pass.
+- Step 07 completed — Phase 2 marked [DONE], compressed into logs, Phase 3 Step 01 advanced to [WIP]. `phase-compression.gate`: pass.
 
 ## Phase 8 — Racing Curriculum v2 (BLOCKED on NGE Core Algorithm Workstream)
 
@@ -903,7 +903,7 @@ the next round is ready to plan when the blocker clears.
 - **Primary blocker:** `plans/NGE_Core_Algorithm_Workstream.plans.md` must reach Phase 7
   verification (seed → 8,000+ neurons demonstrated, polyandric reproduction producing
   valid offspring, continuous adaptation working without generation boundaries).
-- **Carry-forward blockers P1–P5 and DR-2026-06-27-05 (modeIsEvolvable)** are owned by
+- **Carry-forward blockers P1–P5 and DR-008 (modeIsEvolvable)** are owned by
   the NGE Core Algorithm Workstream. Racing v2 cannot proceed until they are resolved.
 - **3 skipped polyandric tests** (simulation-worker.race-pack.tier5.test.ts lines 179,
   188, 197) must be un-skipped and passing before v2 work begins.
@@ -933,8 +933,8 @@ remains [DONE] until the NGE core workstream completes Phase 7 verification.
 
 What is already covered:
 - All 7 phases (Tier 1-6 ladder) complete and green-gated. 68 suites / 502 tests pass.
-- Phase 7: FSM 5-bug fix (DR-2026-06-27-06), OpponentSnapshotPool wired with type adapter, strategy-divergence analytics module created, multi-generation loop working, README regenerated 1258 to 1739 lines.
-- Analytics-only fallback per DR-2026-06-27-05 (modeIsEvolvable BLOCKED).
+- Phase 7: FSM 5-bug fix (DR-009), OpponentSnapshotPool wired with type adapter, strategy-divergence analytics module created, multi-generation loop working, README regenerated 1258 to 1739 lines.
+- Analytics-only fallback per DR-008 (modeIsEvolvable BLOCKED).
 - Phase 8 v2 gap inventory documented (pit strategy, independent agents, growth stall, coevolution, visualizer).
 
 Carry-forward blockers (owned by NGE Core Algorithm Workstream — NOT this workstream):
@@ -943,7 +943,7 @@ Carry-forward blockers (owned by NGE Core Algorithm Workstream — NOT this work
 - P3: Racing FSM reproduction step not wired (polyandric call site). Owner: nge-benchmark-workflow.
 - P4: Schema mismatch — reference spec uses non-overlapping/queen-weighted, implemented uses roundRobin/byFitness/bySpecialization.
 - P5: queenBias not honored by merge logic.
-- DR-2026-06-27-05: modeIsEvolvable is a dead boolean field, no operator reads it. ModulatorBroadcaster/EpisodicSlot/GatingRouter are descriptor-only. No phenotype to Network bridge.
+- DR-008: modeIsEvolvable is a dead boolean field, no operator reads it. ModulatorBroadcaster/EpisodicSlot/GatingRouter are descriptor-only. No phenotype to Network bridge.
 - 27 tsc.test.json duplicate-identifier errors in 3 test files (pre-existing carry-forward debt).
 - 3 polyandric tests remain skipped in simulation-worker.race-pack.tier5.test.ts (lines 179, 188, 197) until P1/P2 resolved.
 - cortex-index gate reports stale index (owner: 00-helping).
@@ -1004,7 +1004,6 @@ next: 'Handoff to 05-green-testing for focused slice validation and coverage-gua
 blockers: - 'None for this slice.'
 VALIDATION_EVIDENCE:
 status: NOT_GREEN
-validation_timestamp: '2026-06-30T06:30:00-04:00'
 agent: 05-green-testing
 tsc_tsconfig_json: 'PASS (exit 0, 0 errors in touched files; 27 tsconfig.test.json carry-forward errors unchanged)'
 lint: 'PASS (0 issues)'
@@ -1076,7 +1075,6 @@ rollback:
 - 'None for this slice.'
   VALIDATION_EVIDENCE:
   status: GREEN
-  validation_timestamp: '2026-06-30T07:04:00-04:00'
   agent: 05-green-testing
   tsc_tsconfig_json: 'PASS (exit 0, 0 errors in touched files; 27 tsconfig.test.json carry-forward errors unchanged)'
   lint: 'PASS (0 issues after removing unused import/variable left by coverage-guard)'

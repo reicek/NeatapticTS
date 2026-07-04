@@ -99,6 +99,7 @@ observation is meaningful immediately. That avoids a cold-start phase where a
 policy would receive mostly empty-space inputs.
 
 Parameters:
+
 - `rng` - Random source used to generate initial pipe configuration.
 
 Returns: Initial state for one deterministic rollout.
@@ -128,6 +129,7 @@ This is the simplest stepping surface: one logical frame and one flap choice.
 More advanced callers can use the control-substep variant below.
 
 Parameters:
+
 - `state` - Mutable state object to update in-place.
 - `rng` - Random source used to spawn pipes.
 - `flap` - If true, applies an upward velocity impulse.
@@ -161,6 +163,7 @@ For background reading, the Wikipedia article on "numerical integration"
 provides the general idea behind updating continuous motion in small steps.
 
 Parameters:
+
 - `state` - Mutable state object to update in-place.
 - `rng` - Random source used to spawn pipes.
 - `shouldFlapForSubstep` - Callback deciding flap action per substep.
@@ -188,6 +191,7 @@ path while allowing the control decision to come from an async boundary such
 as a persistent worker-hosted inference channel.
 
 Parameters:
+
 - `state` - Mutable state object to update in-place.
 - `rng` - Random source used to spawn pipes.
 - `shouldFlapForSubstep` - Async callback deciding flap action per substep.
@@ -215,6 +219,7 @@ place helps the environment avoid inconsistent "passed but also collided"
 edge cases.
 
 Parameters:
+
 - `state` - Mutable simulation state to update in-place.
 
 Returns: Nothing.
@@ -239,14 +244,16 @@ training, and browser playback all derive their policy inputs from the same
 feature definitions.
 
 Observation (6 numbers):
- 1) bird y position normalized to [0, 1]
- 2) bird vertical velocity normalized to [-1, 1]
- 3) distance to next pipe normalized to [0, 1]
- 4) delta (bird y - gap center y) normalized to [-1, 1]
- 5) next pipe gap top normalized to [0, 1]
- 6) next pipe gap bottom normalized to [0, 1]
+
+1.  bird y position normalized to [0, 1]
+2.  bird vertical velocity normalized to [-1, 1]
+3.  distance to next pipe normalized to [0, 1]
+4.  delta (bird y - gap center y) normalized to [-1, 1]
+5.  next pipe gap top normalized to [0, 1]
+6.  next pipe gap bottom normalized to [0, 1]
 
 Parameters:
+
 - `state` - Current state.
 - `difficultyScale` - Curriculum difficulty scale in [0, 1].
 
@@ -264,6 +271,7 @@ getFlappyObservationFeatures(
 Resolve structured observation features for policy input and reward shaping.
 
 Parameters:
+
 - `state` - Current state.
 - `difficultyScale` - Curriculum difficulty scale in [0, 1].
 

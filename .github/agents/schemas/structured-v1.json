@@ -27,8 +27,7 @@
                 "required": ["source"],
                 "properties": {
                   "source": { "type": "string" },
-                  "path": { "type": "string" },
-                  "timestamp": { "type": "string", "format": "date-time" }
+                  "path": { "type": "string" }
                 },
                 "additionalProperties": false
               }
@@ -64,7 +63,6 @@
     "PHASE_COMPLETE": { "type": "boolean" },
     "SUB_ORCHESTRATORS_USED": { "type": "array", "items": { "type": "string" } },
     "SUMMARY": { "type": "string" },
-    "TIMESTAMP": { "type": "string", "format": "date-time" },
     "DURATION_MS": { "type": "integer", "minimum": 0 }
   },
   "additionalProperties": false,

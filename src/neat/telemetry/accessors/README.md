@@ -11,6 +11,7 @@ telemetry chapter of their own instead of staying as a flat root utility
 file.
 
 The design goal is separation of audience:
+
 - `facade/` answers end-user questions in `Neat` vocabulary
 - `accessors/` answers internal telemetry questions with tiny, reusable read models
 
@@ -43,6 +44,7 @@ debugging while still exposing the key teaching signal: which genomes share
 ancestry and how recent offspring connect back to parents.
 
 Parameters:
+
 - `population` - Population slice containing optional runtime lineage metadata.
 - `limit` - Maximum number of genomes to sample from the front of the population.
 
@@ -68,6 +70,7 @@ helpers need one consistent reset primitive when starting a fresh observation
 window.
 
 Parameters:
+
 - `host` - Telemetry host whose in-memory buffer should be reset.
 
 Returns: Nothing. The host buffer is replaced with an empty array.
@@ -87,6 +90,7 @@ the last cached snapshot so callers can distinguish between "no diversity has
 been computed yet" and "diversity was computed and here is the result."
 
 Parameters:
+
 - `host` - Telemetry host exposing an optional cached diversity snapshot.
 
 Returns: Cached diversity statistics when available, otherwise `undefined`.
@@ -106,6 +110,7 @@ accessor returns a copy so readers can inspect that lifecycle without
 accidentally mutating the host's event log.
 
 Parameters:
+
 - `host` - Telemetry host storing objective add/remove events.
 
 Returns: Shallow copy of the current objective event list.
@@ -130,6 +135,7 @@ simple dashboards, and regression tests that need to know which phase was
 recently expensive, but they are not meant to replace a profiler trace.
 
 Parameters:
+
 - `host` - Telemetry host storing the last evaluation and evolution durations.
 
 Returns: Object containing the most recent evaluation and evolution timings.
@@ -154,6 +160,7 @@ a stable way to inspect the current in-memory buffer without forcing every
 consumer to reimplement null checks.
 
 Parameters:
+
 - `host` - Telemetry host that may or may not have initialized its buffer.
 
 Returns: Telemetry entries recorded so far, or an empty array when telemetry

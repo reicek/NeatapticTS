@@ -31,6 +31,7 @@ applyMazeMovementEpsilonExploration(
 Apply epsilon-greedy exploration to the current action choice.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `encodedMaze` - Maze grid used for move validity checks.
 - `coordinateScratch` - Reused coordinate scratch buffer.
@@ -48,6 +49,7 @@ applyMazeMovementForcedExploration(
 Force a random valid move when the policy has stalled with repeated no-move outputs.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `encodedMaze` - Maze grid used for move validity checks.
 - `coordinateScratch` - Reused coordinate scratch buffer.
@@ -66,6 +68,7 @@ applyMazeMovementProximityGreedy(
 Apply the short-horizon proximity-greedy override near the maze exit.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `encodedMaze` - Maze grid used for move validity checks.
 - `distanceMap` - Optional precomputed distance map.
@@ -85,6 +88,7 @@ applyMazeMovementSaturationAndBiasAdjust(
 Detect saturation and optionally damp output-node biases.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `outputs` - Raw network logits for the current step.
 - `network` - Policy network that produced the logits.
@@ -104,6 +108,7 @@ computeMazeMovementEpsilon(
 Compute the adaptive epsilon used for policy exploration.
 
 Parameters:
+
 - `stepNumber` - Global step number inside the active simulation.
 - `stepsSinceImprovement` - Number of steps without improvement.
 - `distHere` - Current distance to goal for the active position.
@@ -124,6 +129,7 @@ decideMazeMovementDirection(
 Activate the network, record output history, and choose the next direction.
 
 Parameters:
+
 - `state` - Mutable simulation state for the active run.
 - `network` - Policy network used for the current step.
 
@@ -138,6 +144,7 @@ selectMazeMovementDirection(
 Convert raw network outputs into a chosen direction plus diagnostics.
 
 Parameters:
+
 - `outputs` - Raw action logits for the four maze directions.
 
 Returns: Chosen direction plus softmax and entropy diagnostics.

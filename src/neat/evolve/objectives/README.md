@@ -8,6 +8,7 @@ question: while generations advance, when should that objective set change,
 and which controller-owned traces must stay synchronized when it does?
 
 This boundary owns the evolve-time policy layer around objectives:
+
 - clear the cached resolved objective list when policy changes,
 - schedule new objectives such as complexity or entropy,
 - drop and later re-add entropy when stagnation rules say it should leave,
@@ -56,6 +57,7 @@ Callers should therefore treat it as a policy update step rather than a pure
 read.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 - `currentObjectiveKeys` - Keys of active objectives.
 - `config` - Scheduling constants.
@@ -78,6 +80,7 @@ rest of the dynamic-objective machinery into test-specific code. Production
 runs should normally ignore this path entirely.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: void.
@@ -99,6 +102,7 @@ explain why an objective may be a good candidate for pruning or why a newly
 added objective is not yet influencing search strongly.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: void.
@@ -119,6 +123,7 @@ can stay declarative while preserving the existing expectation that entropy
 scheduling only makes sense on hosts exposing that hook.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: Accessor that reads structural entropy from one genome.
@@ -141,6 +146,7 @@ that lifecycle in one place so the evolve loop can reason about entropy as a
 deliberate scheduled objective rather than a one-way configuration toggle.
 
 The important state transitions are:
+
 - remove `entropy` from the configured objective set when stagnation crosses
   the configured drop generation,
 - mark the removal generation in `_entropyDropped`,
@@ -149,6 +155,7 @@ The important state transitions are:
   marker.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 - `currentObjectiveKeys` - Active objective keys.
 - `dynamicConfig` - Dynamic objective config.
@@ -172,6 +179,7 @@ or suppresses an objective, this cache must be cleared so the next
 earlier generation's list.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 
 Returns: void.
@@ -197,6 +205,7 @@ tracking is useful metadata, not a requirement for the rest of evolution to
 continue.
 
 Parameters:
+
 - `internal` - NEAT controller instance.
 - `helpers` - Helper callbacks used by scheduling logic.
 - `helpers` - Dynamic objective scheduler.

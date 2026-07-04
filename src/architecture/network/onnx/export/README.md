@@ -237,6 +237,7 @@ Tensor names generated for Conv parameters, holding weight and bias initializer 
 Dynamic uint8 quantization request packet for the landed dense-guidance lane only.
 
 The current subset is intentionally narrow:
+
 - target only the same-family dense baseline,
 - keep the affine and activation compute on the existing float32 path,
 - use `metadata-only` when the graph should stay structurally unchanged, or
@@ -271,6 +272,7 @@ These options trade off strictness, portability, and fidelity:
   focuses on a constrained single-step representation and optional fused heuristics.
 
 Key fields (high-level):
+
 - `includeMetadata`: includes `metadata_props` with architecture hints.
 - `opset`: numeric opset version stored in the exported model metadata (default is
   resolved by the exporter; commonly 18 in this codebase).
@@ -296,7 +298,7 @@ Key fields (high-level):
   explicit float-domain bias bridge plus the exporter-owned unary
   activation node when present, while the closed 7E Conv subset lowers
   supported spatial paths into `QuantizeLinear -> QLinearConv ->
-  DequantizeLinear`, emits one `int32` fused-bias value per output channel,
+DequantizeLinear`, emits one `int32` fused-bias value per output channel,
   and returns to float32 before pooling, flatten, reshape, or downstream
   dense boundaries. The closed 7F dynamic lane now adds dense-only guidance:
   supported same-family dense paths can either record `metadata-only`
@@ -409,6 +411,7 @@ Resolved quantization packet for build orchestration, covering unresolved, stati
 Static 8-bit quantization request packet for the current Phase 7 qlinear subset.
 
 The landed exporter-owned subset is deliberately narrow:
+
 - same-family one-output dense targets can lower through `QLinearMatMul`,
 - the current explicit Conv subset can lower through `QLinearConv`, and
 - both paths return to float32 before unsupported graph families or runtime
@@ -570,6 +573,7 @@ appendMetadataEntry(
 Append one metadata entry to the model-level metadata registry.
 
 Parameters:
+
 - `model` - Built ONNX model.
 - `key` - Metadata key.
 - `value` - Metadata value.
@@ -589,6 +593,7 @@ appendPhaseSevenRequestMetadata(
 Append Phase 7 request metadata without implying that reduced-precision lowering has landed.
 
 Parameters:
+
 - `model` - Built ONNX model.
 - `networkLayers` - Layered network nodes.
 - `sourceOptions` - Raw export options.
@@ -608,6 +613,7 @@ appendQuantizationRequestMetadata(
 Append quantization request metadata and explicit float32 fallback reasons.
 
 Parameters:
+
 - `model` - Built ONNX model.
 - `networkLayers` - Layered network nodes.
 - `sourceOptions` - Raw export options.
@@ -626,6 +632,7 @@ buildPrecisionFallbackReasons(
 Build the explicit float32 fallback reasons for a Phase 7 precision request.
 
 Parameters:
+
 - `networkLayers` - Layered network nodes.
 - `sourceOptions` - Raw export options.
 
@@ -644,6 +651,7 @@ buildQuantizationFallbackReasons(
 Build the explicit float32 fallback reasons for a Phase 7 quantization request.
 
 Parameters:
+
 - `networkLayers` - Layered network nodes.
 - `sourceOptions` - Raw export options.
 
@@ -660,6 +668,7 @@ hasAdvancedGraphBoundary(
 Detect whether the current export request crosses the explicit advanced-graph boundary.
 
 Parameters:
+
 - `sourceOptions` - Raw export options.
 
 Returns: True when explicit merge or attention mappings are requested.
@@ -676,6 +685,7 @@ hasRecurrentBoundary(
 Detect whether the current export request crosses the recurrent boundary.
 
 Parameters:
+
 - `networkLayers` - Layered network nodes.
 - `sourceOptions` - Raw export options.
 
@@ -692,6 +702,7 @@ hasSpatialBoundary(
 Detect whether the current export request crosses the spatial boundary.
 
 Parameters:
+
 - `sourceOptions` - Raw export options.
 
 Returns: True when explicit Conv or pooling mappings are requested.
@@ -708,6 +719,7 @@ hasUnsupportedMultiOutputDenseQuantizationTarget(
 Detect whether the current static request includes any targeted multi-output dense layer that stayed on float32.
 
 Parameters:
+
 - `model` - Built ONNX model.
 - `quantizationPacket` - Raw static quantization request.
 
@@ -725,6 +737,7 @@ resolveDenseQuantizationOutputWidth(
 Resolve the dense output width for one targeted layer from its bias initializer.
 
 Parameters:
+
 - `model` - Built ONNX model.
 - `layerIndex` - Dense export layer index.
 
@@ -742,6 +755,7 @@ resolveEffectiveExportOptions(
 Resolve effective export options without mutating caller-owned state.
 
 Parameters:
+
 - `networkLayers` - Layered network nodes.
 - `sourceOptions` - Raw export options.
 
@@ -760,6 +774,7 @@ resolveEffectiveQuantizationMode(
 Resolve the effective quantization mode from the emitted graph payload.
 
 Parameters:
+
 - `model` - Built ONNX model.
 - `requestedQuantizationMode` - Requested quantization mode.
 
@@ -776,6 +791,7 @@ resolveStaticQuantizationFallbackReasons(
 Resolve static quantization fallback reasons after checking whether qlinear lowering landed.
 
 Parameters:
+
 - `model` - Built ONNX model.
 
 Returns: Ordered static-quantization fallback reasons.
@@ -792,12 +808,14 @@ runOnnxExportFlow(
 Execute the complete ONNX export flow for one network instance.
 
 High-level behavior:
- 1. Rebuild runtime connection caches and assign stable export indices.
- 2. Infer layered ordering and collect recurrent-pattern stubs.
- 3. Validate structural constraints for the requested export options.
- 4. Build ONNX graph payload and append inference-oriented metadata.
+
+1.  Rebuild runtime connection caches and assign stable export indices.
+2.  Infer layered ordering and collect recurrent-pattern stubs.
+3.  Validate structural constraints for the requested export options.
+4.  Build ONNX graph payload and append inference-oriented metadata.
 
 Parameters:
+
 - `network` - Source network to serialize.
 - `options` - Optional ONNX export controls.
 
@@ -818,6 +836,7 @@ buildOnnxModel(
 Construct ONNX graph (initializers + nodes) from validated layered network structure.
 
 Parameters:
+
 - `network` - Source network (retained for API compatibility).
 - `layers` - Layered nodes including input and output layers.
 - `options` - Export options.
@@ -838,6 +857,7 @@ appendRecurrentGraphInput(
 Append one recurrent previous-state graph input for a hidden layer.
 
 Parameters:
+
 - `model` - Target ONNX model.
 - `traversalContext` - Hidden layer traversal context.
 
@@ -855,6 +875,7 @@ appendRecurrentLayerIndex(
 Append one recurrent layer index to the collected index list.
 
 Parameters:
+
 - `recurrentLayerIndices` - Collected recurrent layer indices.
 - `traversalContext` - Hidden layer traversal context.
 
@@ -872,6 +893,7 @@ Attach producer, opset, and documentation metadata to a model when metadata emis
 Fallback values keep metadata deterministic even when optional producer fields are omitted.
 
 Parameters:
+
 - `context` - Metadata application context.
 
 Returns: Nothing.
@@ -888,6 +910,7 @@ Detect hidden layers with self-recurrence and add matching previous-state graph 
 Collected indices are reused by metadata and recurrent post-processing lanes.
 
 Parameters:
+
 - `context` - Recurrent collection context.
 
 Returns: Export-layer indices with recurrent self-connections.
@@ -904,6 +927,7 @@ Create the base ONNX model shell with graph input and output declarations before
 Initializer and node arrays are intentionally empty so later export phases append deterministic content.
 
 Parameters:
+
 - `context` - Base model build context.
 
 Returns: Initialized ONNX model with empty initializer/node lists.
@@ -920,6 +944,7 @@ Build tensor dimensions for model input and output boundaries, optionally prepen
 The result is reused by value-info generation so shape contracts stay deterministic.
 
 Parameters:
+
 - `context` - Dimension construction context.
 
 Returns: Input and output dimension arrays for ONNX value info.
@@ -936,6 +961,7 @@ createGraphValueInfo(
 Create ONNX value info payload for one graph boundary tensor.
 
 Parameters:
+
 - `valueName` - Tensor value name.
 - `dimensions` - Tensor dimensions.
 
@@ -952,6 +978,7 @@ createHiddenLayerIndices(
 Build hidden layer indices excluding input and output layers.
 
 Parameters:
+
 - `totalLayerCount` - Total number of network layers.
 
 Returns: Hidden layer indices.
@@ -967,6 +994,7 @@ createHiddenLayerTraversalContexts(
 Build traversal contexts for all hidden layers.
 
 Parameters:
+
 - `context` - Recurrent collection context.
 
 Returns: Hidden layer traversal contexts.
@@ -982,6 +1010,7 @@ createRecurrentInputValueInfo(
 Build one recurrent previous-state graph input payload.
 
 Parameters:
+
 - `context` - Recurrent input value-info context.
 
 Returns: ONNX value info payload for recurrent state input.
@@ -997,6 +1026,7 @@ createRecurrentInputValueInfoContext(
 Build recurrent input context for one hidden recurrent layer.
 
 Parameters:
+
 - `traversalContext` - Hidden layer traversal context.
 
 Returns: Recurrent input value-info context.
@@ -1013,6 +1043,7 @@ createTensorDimensions(
 Build one tensor shape dimension payload for dense vectors.
 
 Parameters:
+
 - `width` - Vector width.
 - `batchDimension` - Whether symbolic batch dimension is enabled.
 
@@ -1033,6 +1064,7 @@ hasLayerSelfRecurrence(
 Detect whether a hidden layer contains at least one self-recurrent node.
 
 Parameters:
+
 - `hiddenLayerNodes` - Hidden layer nodes.
 
 Returns: True when a node has a self-connection.
@@ -1048,6 +1080,7 @@ isRecurrentCollectionEnabled(
 Determine whether recurrent layer collection should execute.
 
 Parameters:
+
 - `context` - Recurrent collection context.
 
 Returns: True when recurrent collection is enabled.
@@ -1075,6 +1108,7 @@ processHiddenLayerRecurrence(
 Process one hidden layer for recurrent self-connections.
 
 Parameters:
+
 - `context` - Hidden layer recurrent processing context.
 
 Returns: Nothing.
@@ -1101,6 +1135,7 @@ deterministic ONNX attention subgraph without replacing the stable dense path
 that the importer already round-trips.
 
 Parameters:
+
 - `model` - Target ONNX model.
 - `layers` - Resolved layered network ordering.
 - `options` - Export options.
@@ -1511,6 +1546,7 @@ The pass is a metadata-guided postprocess step: it inspects hidden-layer widths,
 emits compatible recurrent operators, and keeps legacy output-name threading intact.
 
 Parameters:
+
 - `model` - Mutable ONNX model receiving emitted recurrent nodes.
 - `layers` - Layered network nodes used for hidden-layer traversal.
 - `allowRecurrent` - Gate that enables recurrent heuristic emission.
@@ -1552,6 +1588,7 @@ finalizeExportMetadata(
 Finalize model metadata after graph emission, including alias reuse and optional Conv sharing diagnostics.
 
 Parameters:
+
 - `model` - Mutable ONNX model receiving metadata properties.
 - `layers` - Layered network nodes used for Conv sharing checks.
 - `options` - Export options controlling optional validation passes.
@@ -1602,6 +1639,7 @@ hasNoIgnoredSourceWeights(
 Ensure weights outside the Conv-addressable source slice remain zero.
 
 Parameters:
+
 - `context` - Conv layer pair context.
 
 Returns: True when ignored dense source nodes carry no extra weight.
@@ -1630,6 +1668,7 @@ isConvMappingWeightShared(
 Determine whether one Conv mapping behaves like a shared kernel layer.
 
 Parameters:
+
 - `layers` - Layered network nodes.
 - `convSpec` - Conv mapping to evaluate.
 
@@ -1887,6 +1926,7 @@ pruneIdentityActivationNodes(
 Remove exporter-owned Identity activation nodes and rewire all dependent consumers.
 
 Parameters:
+
 - `model` - ONNX-like model to optimize in place.
 
 Returns: Nothing.
@@ -1905,6 +1945,7 @@ resolveBuildOptions(
 Resolve export options with all defaults required by model construction.
 
 Parameters:
+
 - `sourceOptions` - Raw export options.
 
 Returns: Resolved options used by this builder.
@@ -1920,6 +1961,7 @@ resolvePrecisionOptions(
 Resolve precision options with stable defaults and supported modes only.
 
 Parameters:
+
 - `sourceOptions` - Raw export options.
 
 Returns: Normalized precision packet.
@@ -1936,6 +1978,7 @@ resolveQuantizationOptions(
 Resolve quantization options with stable defaults and supported first-wave modes only.
 
 Parameters:
+
 - `sourceOptions` - Raw export options.
 
 Returns: Normalized quantization packet.
@@ -1956,6 +1999,7 @@ Append heuristic conv inference metadata when requested.
 Inferred metadata records spatial interpretation hints for downstream tooling while leaving declared mapping behavior untouched, so diagnostics can improve without silently changing emitted operator topology.
 
 Parameters:
+
 - `model` - Target ONNX model.
 - `layers` - Layered network nodes.
 - `options` - Export options.
@@ -1975,6 +2019,7 @@ Append LSTM pattern stub metadata.
 Stub metadata gives import-side or diagnostics tools a lightweight recurrent hint surface when full fused recurrent emission is not enabled for the active export pass.
 
 Parameters:
+
 - `model` - Target ONNX model.
 - `lstmPatternStubs` - Pattern stubs.
 
@@ -1992,6 +2037,7 @@ appendMetadataProperties(
 Append metadata properties in a single, normalized path.
 
 Parameters:
+
 - `model` - Target ONNX model.
 - `metadataProperties` - Metadata properties to append.
 
@@ -2008,6 +2054,7 @@ applyExportNodeIndexAssignments(
 Apply prepared node/index assignment contexts.
 
 Parameters:
+
 - `assignmentContexts` - Prepared contexts.
 
 Returns: Nothing.
@@ -2023,6 +2070,7 @@ applySingleExportNodeIndexAssignment(
 Apply one export index assignment.
 
 Parameters:
+
 - `assignmentContext` - Assignment context.
 
 Returns: Nothing.
@@ -2038,6 +2086,7 @@ assignExportNodeIndices(
 Assign stable sequential index values to nodes for ONNX export diagnostics.
 
 Parameters:
+
 - `network` - Source network.
 
 Returns: Nothing.
@@ -2057,6 +2106,7 @@ calculateSpatialOutputSize(
 Calculate one spatial output size from kernel, stride, and padding metadata.
 
 Parameters:
+
 - `inputSize` - Pre-op spatial size.
 - `kernelSize` - Kernel size.
 - `strideSize` - Stride size.
@@ -2083,6 +2133,7 @@ Pooling and flatten boundaries are resolved earlier during inference so
 only spatially valid candidates reach this step.
 
 Parameters:
+
 - `layers` - Layered network nodes.
 - `options` - Export options.
 - `convSpec` - Inferred Conv specification candidate.
@@ -2100,6 +2151,7 @@ collectCandidateInputChannelCounts(
 Collect candidate input-channel counts that evenly partition the previous width.
 
 Parameters:
+
 - `previousWidth` - Previous-layer width.
 
 Returns: Candidate input-channel counts.
@@ -2115,6 +2167,7 @@ collectInferredConvMetadata(
 Collect inferred Conv metadata from hidden-layer traversals.
 
 Parameters:
+
 - `context` - Conv traversal context.
 
 Returns: Inferred Conv metadata result.
@@ -2132,6 +2185,7 @@ Collect heuristic LSTM grouping stubs from hidden layers.
 Stub collection is intentionally conservative and side-effect free so exporter metadata can communicate likely recurrent structure without committing to fused recurrent graph emission.
 
 Parameters:
+
 - `layers` - Layered network nodes.
 - `allowRecurrent` - Whether recurrent export heuristics are enabled.
 
@@ -2148,6 +2202,7 @@ collectLstmPatternStubsFromLayers(
 Collect LSTM pattern stubs from hidden layers.
 
 Parameters:
+
 - `layers` - Layered network nodes.
 
 Returns: LSTM pattern stubs.
@@ -2163,6 +2218,7 @@ createConvInferenceEvaluationContext(
 Create one width/square-evaluation context for a specific channel partition.
 
 Parameters:
+
 - `params` - Evaluation parameters.
 
 Returns: Conv evaluation context when the per-channel input width is square.
@@ -2178,6 +2234,7 @@ createConvInferenceEvaluationContexts(
 Create width/square-evaluation contexts for Conv inference.
 
 Parameters:
+
 - `traversalContext` - Conv traversal context.
 
 Returns: Conv evaluation contexts.
@@ -2193,6 +2250,7 @@ createConvTraversalContexts(
 Create Conv traversal contexts for hidden layers.
 
 Parameters:
+
 - `context` - Conv traversal source context.
 
 Returns: Conv traversal contexts.
@@ -2208,6 +2266,7 @@ createExportNodeIndexAssignmentContexts(
 Create node/index assignment contexts for export diagnostics.
 
 Parameters:
+
 - `network` - Source network.
 
 Returns: Assignment contexts.
@@ -2223,6 +2282,7 @@ createHiddenLayerTraversalContexts(
 Create traversal contexts for hidden layers only.
 
 Parameters:
+
 - `layers` - Layered network nodes.
 
 Returns: Hidden layer contexts.
@@ -2238,6 +2298,7 @@ createLstmCandidateContext(
 Build LSTM candidate context for one hidden layer.
 
 Parameters:
+
 - `hiddenLayerContext` - Hidden layer context.
 
 Returns: LSTM candidate context.
@@ -2253,6 +2314,7 @@ createPooledConvInferenceEvaluationContext(
 Resolve one pooled previous-layer evaluation context when pooling keeps the graph spatial.
 
 Parameters:
+
 - `traversalContext` - Conv traversal context.
 
 Returns: Evaluation context anchored to the derived pooled shape, if usable.
@@ -2268,6 +2330,7 @@ hasInferredConvMetadata(
 Check whether inferred Conv metadata exists.
 
 Parameters:
+
 - `inferenceResult` - Inferred Conv result.
 
 Returns: True when inferred metadata exists.
@@ -2283,6 +2346,7 @@ hasRequiredSelfConnectionCount(
 Check whether one node has the required self-connection count.
 
 Parameters:
+
 - `nodeItem` - Node to inspect.
 
 Returns: True when self-connection count matches requirement.
@@ -2298,6 +2362,7 @@ hasUpstreamPoolingBoundary(
 Check whether the immediately previous layer has pooling configured.
 
 Parameters:
+
 - `traversalContext` - Conv traversal context.
 
 Returns: True when the previous layer changes spatial shape through pooling.
@@ -2313,6 +2378,7 @@ isConvInferenceEvaluationContext(
 Type guard for defined Conv inference evaluation contexts.
 
 Parameters:
+
 - `evaluationContext` - Candidate evaluation context.
 
 Returns: True when the context is defined.
@@ -2328,6 +2394,7 @@ isDeclaredConvLayer(
 Check whether a traversal layer already has declared Conv mapping.
 
 Parameters:
+
 - `traversalContext` - Conv traversal context.
 
 Returns: True when mapping is already declared.
@@ -2343,6 +2410,7 @@ isInferredConvSpec(
 Type guard for inferred Conv specifications.
 
 Parameters:
+
 - `specification` - Conv specification candidate.
 
 Returns: True when specification is defined.
@@ -2358,6 +2426,7 @@ isValidLstmCandidateContext(
 Determine whether a candidate context satisfies heuristic LSTM conditions.
 
 Parameters:
+
 - `candidateContext` - Candidate context.
 
 Returns: True when the candidate is a valid LSTM stub.
@@ -2373,6 +2442,7 @@ mapLstmCandidateToStub(
 Map a valid candidate context to metadata stub.
 
 Parameters:
+
 - `candidateContext` - Valid candidate context.
 
 Returns: LSTM pattern stub.
@@ -2388,6 +2458,7 @@ resolveConvInferenceForLayer(
 Resolve inferred Conv specification for one hidden layer.
 
 Parameters:
+
 - `traversalContext` - Conv traversal context.
 
 Returns: Inferred Conv specification when matched.
@@ -2404,6 +2475,7 @@ resolveConvSpecForKernel(
 Resolve Conv specification for one kernel candidate.
 
 Parameters:
+
 - `kernelContext` - Kernel-evaluation context.
 
 Returns: Inferred Conv specification when matched.
@@ -2419,6 +2491,7 @@ resolveConvSpecFromKernelCandidates(
 Resolve Conv specification using ordered kernel candidates.
 
 Parameters:
+
 - `evaluationContext` - Conv evaluation context.
 
 Returns: Inferred Conv specification when matched.
@@ -2436,6 +2509,7 @@ Resolve the effective Conv mapping list after optional heuristic promotion.
 Promotion merges user-declared mappings with vetted inferred candidates only when safety gates pass, preserving explicit caller intent while enabling ergonomic auto-discovery for compatible layouts.
 
 Parameters:
+
 - `layers` - Layered network nodes.
 - `options` - Export options.
 
@@ -2452,6 +2526,7 @@ resolveSingleInferredConvSpec(
 Keep multi-channel Conv inference conservative when multiple layouts fit.
 
 Parameters:
+
 - `inferredSpecs` - All inferred Conv specs for the layer.
 
 Returns: The single usable spec, otherwise undefined.
@@ -2468,6 +2543,7 @@ resolveSquareSpatialWidth(
 Resolve the per-channel square width when a dense width can be partitioned evenly.
 
 Parameters:
+
 - `previousWidth` - Previous-layer dense width.
 - `inputChannels` - Candidate channel count.
 
@@ -2484,6 +2560,7 @@ safelyCollectLstmPatternStubs(
 Collect LSTM pattern stubs with heuristic error isolation.
 
 Parameters:
+
 - `layers` - Layered network nodes.
 
 Returns: LSTM pattern stubs.
@@ -2499,6 +2576,7 @@ stripInferredConvNote(
 Remove inference-only note fields before promoted specs become real mappings.
 
 Parameters:
+
 - `convSpec` - Inferred Conv specification.
 
 Returns: Clean Conv mapping suitable for real Conv emission.
@@ -2517,6 +2595,7 @@ supportsFlattenedPostPoolConvSubset(
 Check whether the current flatten-after-pool bridge fits the narrow supported subset.
 
 Parameters:
+
 - `traversalContext` - Conv traversal context.
 - `previousConvSpec` - Previously resolved Conv spec.
 - `inputHeight` - Derived pooled input height.
@@ -2546,6 +2625,7 @@ feed-forward edges that later residual, concat, and attention passes can
 promote into explicit ONNX graph structure.
 
 Parameters:
+
 - `model` - Target ONNX model.
 - `network` - Source network.
 - `layers` - Resolved layered ordering.
@@ -2567,6 +2647,7 @@ Append concat-merge metadata for an emitted explicit concat branch while preserv
 The fallback parsing logic guarantees concat records stay recoverable even after unexpected metadata payload drift.
 
 Parameters:
+
 - `model` - Target ONNX model.
 - `concatMerge` - Emitted concat metadata record.
 - `includeMetadata` - Whether metadata emission is enabled.
@@ -2585,6 +2666,7 @@ appendMetadataProperty(
 Append one metadata property to the ONNX model.
 
 Parameters:
+
 - `model` - Target model.
 - `metadataProperty` - Metadata property.
 
@@ -2604,6 +2686,7 @@ Append residual-add metadata for an emitted one-hop merge while preserving exist
 This keeps advanced graph records append-only and resilient when previous metadata payloads are malformed.
 
 Parameters:
+
 - `model` - Target ONNX model.
 - `residualAdd` - Emitted residual-add metadata record.
 - `includeMetadata` - Whether metadata emission is enabled.
@@ -2621,6 +2704,7 @@ buildBranchTensorName(
 Build the reserved branch tensor name for one cross-layer edge.
 
 Parameters:
+
 - `context` - Branch-name context.
 
 Returns: Deterministic branch tensor name.
@@ -2638,6 +2722,7 @@ Build the deterministic concat merge node name for one layer pair in the explici
 Consistent naming makes emitted merge structure easier to audit from metadata and exported graph nodes.
 
 Parameters:
+
 - `sourceLayerIndex` - Skipped source layer index.
 - `targetLayerIndex` - Concat target layer index.
 
@@ -2656,6 +2741,7 @@ Build the deterministic concat merge output tensor name for one layer pair used 
 The output name contract allows import diagnostics to map concat merges back to source and target layers.
 
 Parameters:
+
 - `sourceLayerIndex` - Skipped source layer index.
 - `targetLayerIndex` - Concat target layer index.
 
@@ -2672,6 +2758,7 @@ buildLayerIndexByNode(
 Build a stable node->layer index lookup for the resolved layered ordering.
 
 Parameters:
+
 - `layers` - Resolved layered ordering.
 
 Returns: Node-to-layer lookup.
@@ -2688,6 +2775,7 @@ buildMetadataProperty(
 Build one metadata property with a JSON payload.
 
 Parameters:
+
 - `key` - Metadata key.
 - `value` - Metadata value.
 
@@ -2706,6 +2794,7 @@ Build the reserved residual-branch tensor name for one layer pair in the explici
 Deterministic naming keeps metadata, emitted nodes, and import reconstruction aligned across repeated exports.
 
 Parameters:
+
 - `sourceLayerIndex` - Residual source layer index.
 - `targetLayerIndex` - Residual target layer index.
 
@@ -2723,6 +2812,7 @@ Build the deterministic residual merge node name for one target layer in the res
 Stable node identifiers simplify metadata correlation and reduce ambiguity during diagnostics.
 
 Parameters:
+
 - `targetLayerIndex` - Target layer index.
 
 Returns: Residual merge node name.
@@ -2739,6 +2829,7 @@ Build the deterministic residual merge output tensor name for one target layer i
 The naming contract ensures import-side residual mapping can trace merged outputs without heuristics.
 
 Parameters:
+
 - `targetLayerIndex` - Target layer index.
 
 Returns: Residual merge output tensor name.
@@ -2755,6 +2846,7 @@ collectCrossLayerConnections(
 Collect deterministic cross-layer feed-forward edges.
 
 Parameters:
+
 - `network` - Source network.
 - `layers` - Resolved layered ordering.
 
@@ -2772,6 +2864,7 @@ collectSourceNodeCrossLayerConnections(
 Collect cross-layer feed-forward edges from one source node.
 
 Parameters:
+
 - `sourceNode` - Source node.
 - `layerIndexByNode` - Node-to-layer lookup.
 
@@ -2789,6 +2882,7 @@ compareCrossLayerConnections(
 Keep metadata emission order deterministic.
 
 Parameters:
+
 - `left` - Left descriptor.
 - `right` - Right descriptor.
 
@@ -2808,6 +2902,7 @@ createCrossLayerConnectionDescriptor(
 Create one cross-layer descriptor when the target is non-adjacent.
 
 Parameters:
+
 - `sourceNodeInternal` - Source-node internals.
 - `sourceLayerIndex` - Source-layer index.
 - `targetNode` - Target node.
@@ -2826,6 +2921,7 @@ isAdvancedGraphCrossLayerConnection(
 Type guard for optional cross-layer descriptors.
 
 Parameters:
+
 - `descriptor` - Optional descriptor.
 
 Returns: Whether the descriptor exists.
@@ -2841,6 +2937,7 @@ resolveNodeIndex(
 Resolve a stable node export index.
 
 Parameters:
+
 - `nodeInternal` - Node internals.
 
 Returns: Stable export index.
@@ -2862,6 +2959,7 @@ exactly one non-adjacent source layer may feed the target layer, and that
 source must skip exactly one intermediate layer.
 
 Parameters:
+
 - `currentLayerNodes` - Target-layer nodes.
 - `layers` - Resolved layered ordering.
 - `targetLayerIndex` - Target-layer index.
@@ -2887,6 +2985,7 @@ coherent across dense, residual, concat, recurrent, spatial, and attention
 helper paths.
 
 Parameters:
+
 - `model` - ONNX-like model to validate.
 
 Returns: Nothing.

@@ -15,6 +15,7 @@ stream, append, or inspect the data without first reconstructing one large
 array document.
 
 Read this chapter when you want to answer questions such as:
+
 - Why does species history export live in its own tiny boundary?
 - Why is JSONL a better fit here than one large JSON array for many tooling
   workflows?
@@ -22,6 +23,7 @@ Read this chapter when you want to answer questions such as:
 - Which part of the species story is preserved versus trimmed during export?
 
 The mental model is intentionally simple:
+
 1. take the most recent slice of species history,
 2. serialize each history row independently,
 3. join the rows into a newline-delimited stream.
@@ -75,6 +77,7 @@ The export sequence is intentionally small:
 3. join those serialized rows with newline separators.
 
 Parameters:
+
 - `speciesHistory` - Recorded species history entries to serialize.
 - `maxEntries` - Maximum number of recent entries to include.
 

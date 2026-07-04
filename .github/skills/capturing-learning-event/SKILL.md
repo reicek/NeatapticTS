@@ -67,7 +67,6 @@ Schema:
 
 ```json
 {
-  "timestamp": "<ISO timestamp>",
   "eventType": "agent-system-gap|agent-update|skill-update|routing-update|output-contract-fix",
   "triggeringTask": "<brief>",
   "gap": "<what was missing>",
@@ -79,6 +78,8 @@ Schema:
   "resumeAction": "<how work continued>"
 }
 ```
+
+Timestamps may be used transiently in-memory but MUST NEVER be persisted to log output.
 
 ## Why This Matters
 
@@ -109,7 +110,6 @@ Flowchart summary: "Learning event" → "Event type?"; "Event type?" → "Record
 
 ```json
 {
-  "timestamp": "2026-06-20T21:43:58Z",
   "eventType": "routing-update",
   "triggeringTask": "delegate to new specialist",
   "gap": "new specialist missing from routing table",
@@ -124,6 +124,7 @@ Flowchart summary: "Learning event" → "Event type?"; "Event type?" → "Record
 
 ## Guardrails
 
+- **NEVER include timestamps in permanent log output.** Timestamps may be used transiently in-memory but must be deleted before persisting.
 - Do not claim ISO-42001 certification or compliance; this is a local evidence log, not a certified system.
 - Do not delete or rewrite existing log entries; always append.
 - Do not include private or chat-only detail that is not relevant to future session continuity.

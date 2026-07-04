@@ -25,7 +25,7 @@ describe('WebGPU smoke scenario page', () => {
   it('emits window.webgpuSmokeResult with the required schema fields', async () => {
     const html = await readFile(SCENARIO_HTML_PATH, 'utf8');
 
-        // The page assembles the canonical result object via runWebGPUSmoke and
+    // The page assembles the canonical result object via runWebGPUSmoke and
     // assigns it to the window global for the harness to read.
     expect(html).toContain('window.webgpuSmokeResult = result;');
     expect(html).toContain('runWebGPUSmoke');

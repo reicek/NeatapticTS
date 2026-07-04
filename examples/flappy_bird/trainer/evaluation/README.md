@@ -10,6 +10,7 @@ The point is not only speed. The point is to spend rollout budget where it
 improves ranking confidence the most.
 
 Stage funnel:
+
 ```mermaid
 flowchart LR
     Population["full population"] --> Quick["quick stage\nsmall shared seed batch"]
@@ -65,6 +66,7 @@ them without mutating the genomes too early. This helper performs the final
 write-back once staged evaluation is complete.
 
 Parameters:
+
 - `population` - Current population.
 - `provisionalScoresByGenome` - Final provisional score map.
 
@@ -90,6 +92,7 @@ survives into it, but the survivors receive a more trustworthy estimate than
 the quick screen alone can provide.
 
 Parameters:
+
 - `population` - Current population.
 - `generationEvaluationPlan` - Per-generation staged evaluation plan.
 - `aggregateByGenome` - Mutable aggregate cache keyed by genome.
@@ -118,6 +121,7 @@ small shared seed batch so the trainer can discard obviously weak candidates
 before spending more rollout budget on them.
 
 Parameters:
+
 - `population` - Current population.
 - `generationEvaluationPlan` - Per-generation staged evaluation plan.
 - `aggregateByGenome` - Mutable aggregate cache keyed by genome.
@@ -157,6 +161,7 @@ are tested again on a larger shared seed batch so leaderboard positions are
 less sensitive to a fortunate early sample.
 
 Parameters:
+
 - `population` - Current population.
 - `generationEvaluationPlan` - Per-generation staged evaluation plan.
 - `aggregateByGenome` - Mutable aggregate cache keyed by genome.
@@ -181,6 +186,7 @@ enough to preserve competitive diversity while still shrinking meaningfully
 relative to the full population.
 
 Parameters:
+
 - `populationSize` - Population size.
 - `elitismCount` - Configured elitism count.
 
@@ -208,6 +214,7 @@ turns a stage request into three steps: pick candidates, evaluate them across
 shared seeds, then refresh the provisional ranking for the whole population.
 
 Parameters:
+
 - `population` - Current population.
 - `populationStageEvaluationRequest` - Candidate-stage evaluation request.
 - `aggregateByGenome` - Mutable aggregate cache keyed by genome.
@@ -246,6 +253,7 @@ fallback behavior, and population-level assignment now flow through the same
 reusable library helper that other NEAT callers can adopt.
 
 Parameters:
+
 - `genomes` - Genomes selected for evaluation.
 - `sharedSeeds` - Shared deterministic seeds.
 - `rolloutOptions` - Rollout options for this stage.
@@ -294,6 +302,7 @@ progress, survival, and stability into a provisional score so early-stage
 selection remains robust when several genomes are close in quality.
 
 Parameters:
+
 - `population` - Current population.
 - `aggregateByGenome` - Aggregate cache keyed by genome.
 - `provisionalScoresByGenome` - Mutable provisional score map.
@@ -316,6 +325,7 @@ scoring helpers distinguish between genuinely weak genomes and genomes that
 simply have not yet reached a later stage.
 
 Parameters:
+
 - `population` - Current population.
 - `aggregateByGenome` - Aggregate cache keyed by genome.
 
@@ -336,6 +346,7 @@ if a genome is far behind the current pipe leader, it falls back to a simpler
 progress-first score.
 
 Parameters:
+
 - `aggregateValues` - Aggregate values currently available.
 
 Returns: Highest mean pipe-progress value.
@@ -355,6 +366,7 @@ This precomputation step keeps the per-genome scoring loop lean and avoids
 recomputing population-wide maxima for every genome.
 
 Parameters:
+
 - `population` - Current population.
 - `aggregateByGenome` - Aggregate cache keyed by genome.
 
@@ -377,6 +389,7 @@ many pipes but has wildly inconsistent fitness across seeds is treated more
 cautiously than a similarly strong but steadier genome.
 
 Parameters:
+
 - `aggregate` - Aggregate evaluation result.
 - `maximumMeanPipesPassed` - Best mean pipe progress in the population.
 

@@ -70,9 +70,18 @@ bench-browser/tmp-*.html
 benchmarks/asciiMaze.benchmark.results.
 .tmp_liquidcarrot_flappy
 
-# Trace storage (Chrome DevTools MCP performance traces)
+# Trace storage (Chrome DevTools MCP performance traces) and temporal session output
 tmp/
 tmp-feedback-*/
 tmp_*/
 tmp*
-# artifacts/*
+artifacts/
+freshness-proof-*/
+coverage-export-utils/
+scripts/temp/
+lcov-detail-output.txt
+lcov-detail-parse.cjs
+lcov-parse.cjs
+missing-semantic-index.sqlite
+test-feedback-debug.mjs
+verify-results.mjs

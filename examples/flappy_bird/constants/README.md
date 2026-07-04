@@ -22,6 +22,7 @@ knob am I trying to change?"
 - If the network panel is hard to read, start with network-view and palette.
 
 Quick import example:
+
 ```ts
 import {
   FLAPPY_GRAVITY_PX_PER_FRAME2,
@@ -30,6 +31,7 @@ import {
 ```
 
 Constant-family map:
+
 ```mermaid
 flowchart TB
     Constants["constants.ts"] --> World["world\ncourse geometry"]
@@ -462,10 +464,10 @@ body-state check before any pipe geometry matters.
 **Next gap (4):** distance to the pipe exit, signed vertical offset from the
 gap center, normalized top and bottom boundaries of the safe corridor.
 
-**Look-ahead (3):** signed distance to the pipe *entrance* (goes negative
+**Look-ahead (3):** signed distance to the pipe _entrance_ (goes negative
 while the bird is traversing the pipe body, giving a clear in-pipe signal),
 signed gap clearance (how centered the bird currently is inside the opening),
-and signed vertical offset from the *second* upcoming gap center (gives
+and signed vertical offset from the _second_ upcoming gap center (gives
 the network a reason to plan ahead instead of staying level).
 
 ### FLAPPY_MEMORY_STACKED_FRAME_COUNT
@@ -1747,10 +1749,10 @@ body-state check before any pipe geometry matters.
 **Next gap (4):** distance to the pipe exit, signed vertical offset from the
 gap center, normalized top and bottom boundaries of the safe corridor.
 
-**Look-ahead (3):** signed distance to the pipe *entrance* (goes negative
+**Look-ahead (3):** signed distance to the pipe _entrance_ (goes negative
 while the bird is traversing the pipe body, giving a clear in-pipe signal),
 signed gap clearance (how centered the bird currently is inside the opening),
-and signed vertical offset from the *second* upcoming gap center (gives
+and signed vertical offset from the _second_ upcoming gap center (gives
 the network a reason to plan ahead instead of staying level).
 
 ### FLAPPY_MEMORY_STACKED_FRAME_COUNT

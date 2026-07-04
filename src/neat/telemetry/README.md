@@ -10,6 +10,7 @@ reader can learn how NeatapticTS turns that hidden runtime state into a
 readable stream of snapshots, summaries, and exportable artifacts.
 
 The telemetry subtree has two complementary halves:
+
 - write path: `recorder/`, `metrics/`, and `runtime/` build one generation
   snapshot, enrich it with derived signals, and store or stream it safely
 - read path: `facade/`, `accessors/`, and `exports/` expose that captured
@@ -22,6 +23,7 @@ unless another controller loop explicitly consumes the evidence and chooses
 to react to it.
 
 Read this chapter when you want to answer questions such as:
+
 - why is a run improving or stalling?
 - how much structural diversity is left in the population?
 - which species are growing, shrinking, or stagnating?
@@ -40,6 +42,7 @@ flowchart LR
 ```
 
 Recommended reading inside telemetry:
+
 - `./recorder/README.md` for the write-side orchestration path
 - `./metrics/README.md` for the derived-signal builders attached to each entry
 - `./runtime/README.md` for buffer and stream safety mechanics

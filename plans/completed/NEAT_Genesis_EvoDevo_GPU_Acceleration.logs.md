@@ -85,6 +85,7 @@ acceptance_criteria:
 Step 01 produced this plan, registered it in the index and roadmap, and
 prepared all downstream phase/step packets. Phase 1 is compressed to the
 observations above; the active frontier is Phase 2 research.
+
 ### Phase 2 — WebGPU feasibility and CPU parity baseline [DONE]
 
 ```yaml
@@ -337,54 +338,54 @@ baseline that GPU output will be compared against.
 **Evidence:**
 
 - **Scale targets (source-grounded):**
-  - `racing-browser` demo default controller: 70 inputs, hidden `[4]`, 2 outputs
-    → 76 nodes and 288 connections; hidden activation `relu`, output `tanh`
-    (`examples/racing_curriculum/browser-entry/browser-entry.ts` lines 136-137,
-    1492-1550; `examples/racing_curriculum/controller/observation.assembler.ts`
-    lines 15-25).
-  - `racing-worker` coevolution tiers: Tier 1-2 = 4 inputs / 2 outputs; Tier 3 =
-    91 inputs / 9 outputs; Tier 4+ = 95 inputs / 9 outputs
-    (`examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts`
-    lines 158-167).
-  - NGE growth ceiling: 8,000 nodes / 32,000 connections
-    (`src/neat/nge-juvenile/neat.nge-juvenile.constants.ts` lines 125, 134;
-    `examples/racing_curriculum/controller/runtime.adaptation.ts` lines 139-142).
-    A dense MLP brushing that ceiling: 95 inputs, `[135, 135]` hidden, 9 outputs
-    → 374 nodes and ~32,265 connections.
+- `racing-browser` demo default controller: 70 inputs, hidden `[4]`, 2 outputs
+  → 76 nodes and 288 connections; hidden activation `relu`, output `tanh`
+  (`examples/racing_curriculum/browser-entry/browser-entry.ts` lines 136-137,
+  1492-1550; `examples/racing_curriculum/controller/observation.assembler.ts`
+  lines 15-25).
+- `racing-worker` coevolution tiers: Tier 1-2 = 4 inputs / 2 outputs; Tier 3 =
+  91 inputs / 9 outputs; Tier 4+ = 95 inputs / 9 outputs
+  (`examples/racing_curriculum/workers/simulation-worker/simulation-worker.coevolution.service.ts`
+  lines 158-167).
+- NGE growth ceiling: 8,000 nodes / 32,000 connections
+  (`src/neat/nge-juvenile/neat.nge-juvenile.constants.ts` lines 125, 134;
+  `examples/racing_curriculum/controller/runtime.adaptation.ts` lines 139-142).
+  A dense MLP brushing that ceiling: 95 inputs, `[135, 135]` hidden, 9 outputs
+  → 374 nodes and ~32,265 connections.
 - **CPU baseline determinism:**
-  - `src/architecture/network/deterministic/network.deterministic.test.ts`
-    verifies that two networks constructed with the same seed produce identical
-    activations within `1e-12` for the same input (lines 58-74).
-  - Default CPU inference uses `f64` (`src/config.ts` `float32Mode: false`). The
-    fast slab path also has bitwise-parity coverage against the legacy activation
-    path, confirming deterministic scheduling.
+- `src/architecture/network/deterministic/network.deterministic.test.ts`
+  verifies that two networks constructed with the same seed produce identical
+  activations within `1e-12` for the same input (lines 58-74).
+- Default CPU inference uses `f64` (`src/config.ts` `float32Mode: false`). The
+  fast slab path also has bitwise-parity coverage against the legacy activation
+  path, confirming deterministic scheduling.
 - **f32-vs-f64 tolerance threshold:**
-  - A temporary Jest micro-benchmark compared f64 CPU reference against (a) f32
-    activation buffers with f64 weights/activations and (b) f32-quantized
-    weights + f32 activation math (closest to a GPU implementation). Over 50
-    random input trials per shape the observed worst-case absolute drift was:
-    - `racing-browser`: max 0.21, p95 0.18, mean 0.07.
-    - `nge-cap-edges` (32k connections): max 0.51, p95 0.28, mean 0.11.
-    - `nge-tier3` (26k connections): max 0.51, p95 0.26, mean 0.11.
-  - **Resolved threshold:** CPU-vs-GPU parity tests use an **absolute tolerance
-    of `5e-1` (0.5)** as the hard gate, with a soft diagnostic target of **mean
-    absolute error `≤ 1e-1`**. Relative tolerance is not used because controller
-    outputs near zero make relative error unstable.
+- A temporary Jest micro-benchmark compared f64 CPU reference against (a) f32
+  activation buffers with f64 weights/activations and (b) f32-quantized
+  weights + f32 activation math (closest to a GPU implementation). Over 50
+  random input trials per shape the observed worst-case absolute drift was:
+- `racing-browser`: max 0.21, p95 0.18, mean 0.07.
+- `nge-cap-edges` (32k connections): max 0.51, p95 0.28, mean 0.11.
+- `nge-tier3` (26k connections): max 0.51, p95 0.26, mean 0.11.
+- **Resolved threshold:** CPU-vs-GPU parity tests use an **absolute tolerance
+  of `5e-1` (0.5)** as the hard gate, with a soft diagnostic target of **mean
+  absolute error `≤ 1e-1`**. Relative tolerance is not used because controller
+  outputs near zero make relative error unstable.
 - **Speed-up / latency threshold:**
-  - CPU per-activation latency measured on this machine (Node/Jest, f64 path):
-    `racing-browser` ≈ 0.008 ms, `nge-cap-edges` ≈ 0.184 ms, `nge-tier3` ≈
-    0.152 ms.
-  - The 6-car racing demo at 60 Hz with 4 physics catch-up steps costs roughly
-    `6 × 4 × 0.008 ms ≈ 0.19 ms` of inference per frame on CPU, so the GPU path
-    is **not required** for the browser demo.
-  - GPU becomes worthwhile when a single batch of CPU inferences exceeds ~1 ms
-    of frame budget. At current CPU costs this is the crossover point:
-    - `nge-cap-edges`: ≥ 6 agents per batch.
-    - `racing-browser`: ≥ 130 agents per batch.
-  - **Resolved threshold:** GPU path must demonstrate **≥ 2× speed-up** _and_
-    keep total per-frame inference **under 4 ms** for the target workload. The
-    NGE population-evaluation workload (≥ 10 agents of cap shape) is the primary
-    GPU target; the racing browser demo remains CPU-first.
+- CPU per-activation latency measured on this machine (Node/Jest, f64 path):
+  `racing-browser` ≈ 0.008 ms, `nge-cap-edges` ≈ 0.184 ms, `nge-tier3` ≈
+  0.152 ms.
+- The 6-car racing demo at 60 Hz with 4 physics catch-up steps costs roughly
+  `6 × 4 × 0.008 ms ≈ 0.19 ms` of inference per frame on CPU, so the GPU path
+  is **not required** for the browser demo.
+- GPU becomes worthwhile when a single batch of CPU inferences exceeds ~1 ms
+  of frame budget. At current CPU costs this is the crossover point:
+- `nge-cap-edges`: ≥ 6 agents per batch.
+- `racing-browser`: ≥ 130 agents per batch.
+- **Resolved threshold:** GPU path must demonstrate **≥ 2× speed-up** _and_
+  keep total per-frame inference **under 4 ms** for the target workload. The
+  NGE population-evaluation workload (≥ 10 agents of cap shape) is the primary
+  GPU target; the racing browser demo remains CPU-first.
 
 **Required validation:**
 
@@ -542,61 +543,69 @@ test throws, returns `undefined`, or routes to CPU because the GPU branch is not
 yet present.
 
 1. **`src/architecture/network/gpu/network.gpu.capability.test.ts`** — GPU capability predicate
-   - `canUseGPU(network, null)` returns `false` when no WebGPU device is supplied.
-   - `canUseGPU(network, mockDevice)` returns `false` for a gated network (`network.gates.length > 0`), because slab eligibility fails.
-   - `canUseGPU(network, mockDevice)` returns `false` for a network with self-connections, recurrent structure, or active regularization (dropout / weight noise / stochastic depth).
-   - `canUseGPU(network, mockDevice)` returns `false` when the network contains an activation function outside the first WGSL-supported subset.
-   - `canUseGPU(network, mockDevice)` returns `false` when the estimated buffer size exceeds `mockDevice.limits.maxStorageBufferBindingSize`.
-   - `canUseGPU(network, mockDevice)` returns `true` only when the network is slab-eligible, activations are supported, and the device is present and not lost.
+
+- `canUseGPU(network, null)` returns `false` when no WebGPU device is supplied.
+- `canUseGPU(network, mockDevice)` returns `false` for a gated network (`network.gates.length > 0`), because slab eligibility fails.
+- `canUseGPU(network, mockDevice)` returns `false` for a network with self-connections, recurrent structure, or active regularization (dropout / weight noise / stochastic depth).
+- `canUseGPU(network, mockDevice)` returns `false` when the network contains an activation function outside the first WGSL-supported subset.
+- `canUseGPU(network, mockDevice)` returns `false` when the estimated buffer size exceeds `mockDevice.limits.maxStorageBufferBindingSize`.
+- `canUseGPU(network, mockDevice)` returns `true` only when the network is slab-eligible, activations are supported, and the device is present and not lost.
 
 2. **`src/architecture/network/gpu/network.gpu.device.test.ts`** — adapter / device probe and device-lost handling
-   - `requestGPUDevice()` calls `navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })`.
-   - `requestGPUDevice()` passes `requiredLimits` derived from the adapter limits (`maxStorageBufferBindingSize`, `maxBufferSize`).
-   - `requestGPUDevice()` returns `null` when `navigator.gpu` is undefined.
-   - `requestGPUDevice()` returns `null` when no adapter is available.
-   - `requestGPUDevice()` attaches a device-lost handler that records the lost reason.
-   - `isDeviceReady(device)` returns `false` after the fake device reports lost.
+
+- `requestGPUDevice()` calls `navigator.gpu.requestAdapter({ powerPreference: 'high-performance' })`.
+- `requestGPUDevice()` passes `requiredLimits` derived from the adapter limits (`maxStorageBufferBindingSize`, `maxBufferSize`).
+- `requestGPUDevice()` returns `null` when `navigator.gpu` is undefined.
+- `requestGPUDevice()` returns `null` when no adapter is available.
+- `requestGPUDevice()` attaches a device-lost handler that records the lost reason.
+- `isDeviceReady(device)` returns `false` after the fake device reports lost.
 
 3. **`src/architecture/network/gpu/network.gpu.buffer.test.ts`** — slab-to-GPU upload contract
-   - `uploadNetworkToGPU(device, network)` creates at least one `GPUBuffer` per slab array (`weights`, `from`, `to`, `flags`, `outStart`, `outOrder`, `topoOrder`, plus bias/activation metadata).
-   - Each created buffer is a `storage` buffer with `COPY_DST` and, where needed, `COPY_SRC`.
-   - `queue.writeBuffer` is called with the exact byte length and offset for each slab array.
-   - Upload order matches the bind-group layout declared in the WGSL kernel so that no re-indexing happens on the GPU.
-   - Test fails before implementation because `uploadNetworkToGPU` is undefined or throws "not implemented".
+
+- `uploadNetworkToGPU(device, network)` creates at least one `GPUBuffer` per slab array (`weights`, `from`, `to`, `flags`, `outStart`, `outOrder`, `topoOrder`, plus bias/activation metadata).
+- Each created buffer is a `storage` buffer with `COPY_DST` and, where needed, `COPY_SRC`.
+- `queue.writeBuffer` is called with the exact byte length and offset for each slab array.
+- Upload order matches the bind-group layout declared in the WGSL kernel so that no re-indexing happens on the GPU.
+- Test fails before implementation because `uploadNetworkToGPU` is undefined or throws "not implemented".
 
 4. **`src/architecture/network/gpu/network.gpu.kernel.test.ts`** — WGSL activation kernel compile contract
-   - `compileActivationKernel(device, activationRegistry)` calls `device.createShaderModule` with a WGSL source string.
-   - The source contains a `switch` over the same activation indices used by the worker serialization contract (`src/multithreading/multi.utils.ts`).
-   - The source declares the storage buffers in the same order as `uploadNetworkToGPU`.
-   - The compute entry point uses `@compute @workgroup_size(...)` and threads dispatch over nodes.
-   - `createComputePipelineAsync` (or `createComputePipeline`) is called once per unique topology and cached.
-   - Test fails before implementation because the kernel compiler is undefined.
+
+- `compileActivationKernel(device, activationRegistry)` calls `device.createShaderModule` with a WGSL source string.
+- The source contains a `switch` over the same activation indices used by the worker serialization contract (`src/multithreading/multi.utils.ts`).
+- The source declares the storage buffers in the same order as `uploadNetworkToGPU`.
+- The compute entry point uses `@compute @workgroup_size(...)` and threads dispatch over nodes.
+- `createComputePipelineAsync` (or `createComputePipeline`) is called once per unique topology and cached.
+- Test fails before implementation because the kernel compiler is undefined.
 
 5. **`src/architecture/network/gpu/network.gpu.parity.test.ts`** — single-network CPU-vs-GPU parity
-   - For a small slab-eligible MLP, `network.activate(input, { useGPU: true })` returns an output array within an absolute tolerance of `5e-1` of `network.activate(input, { useGPU: false })` for the same input.
-   - For the racing-browser scale network (76 nodes / 288 connections, `relu`/`tanh`), the mean absolute error across 50 random inputs is `≤ 1e-1`.
-   - For the NGE-cap shape (~374 nodes / ~32,265 connections), the mean absolute error across 20 random inputs is `≤ 1e-1` and the max absolute error is `≤ 5e-1`.
-   - Test fails before implementation because the GPU path falls back to CPU or because `useGPU` is ignored.
+
+- For a small slab-eligible MLP, `network.activate(input, { useGPU: true })` returns an output array within an absolute tolerance of `5e-1` of `network.activate(input, { useGPU: false })` for the same input.
+- For the racing-browser scale network (76 nodes / 288 connections, `relu`/`tanh`), the mean absolute error across 50 random inputs is `≤ 1e-1`.
+- For the NGE-cap shape (~374 nodes / ~32,265 connections), the mean absolute error across 20 random inputs is `≤ 1e-1` and the max absolute error is `≤ 5e-1`.
+- Test fails before implementation because the GPU path falls back to CPU or because `useGPU` is ignored.
 
 6. **`src/architecture/network/gpu/network.gpu.batched.test.ts`** — multi-agent batched inference
-   - `batchActivate(device, networks, inputs)` returns one output array per network.
-   - Output count equals `networks.length`.
-   - When `networks` is empty the function returns an empty array without submitting a GPU command.
-   - When networks differ only in weights but share topology, one pipeline is reused.
-   - Test fails before implementation because `batchActivate` is undefined.
+
+- `batchActivate(device, networks, inputs)` returns one output array per network.
+- Output count equals `networks.length`.
+- When `networks` is empty the function returns an empty array without submitting a GPU command.
+- When networks differ only in weights but share topology, one pipeline is reused.
+- Test fails before implementation because `batchActivate` is undefined.
 
 7. **`src/architecture/network/gpu/network.gpu.fallback.test.ts`** — transparent fallback rules
-   - When `useGPU: true` but `navigator.gpu` is missing, `Network.activate` returns the same result as the CPU slab path (no error).
-   - When the device is lost mid-call, the implementation recovers by re-probing or falls back to CPU.
-   - When the network uses an unsupported activation, the GPU branch is skipped and the CPU path runs.
-   - When `config.float32Mode` is disabled, the GPU path may still run but the parity tolerance remains `5e-1`; the test asserts no exception.
-   - Test fails before implementation because no fallback wiring exists.
+
+- When `useGPU: true` but `navigator.gpu` is missing, `Network.activate` returns the same result as the CPU slab path (no error).
+- When the device is lost mid-call, the implementation recovers by re-probing or falls back to CPU.
+- When the network uses an unsupported activation, the GPU branch is skipped and the CPU path runs.
+- When `config.float32Mode` is disabled, the GPU path may still run but the parity tolerance remains `5e-1`; the test asserts no exception.
+- Test fails before implementation because no fallback wiring exists.
 
 8. **`examples/racing_curriculum/workers/simulation-worker/simulation-worker.gpu.test.ts`** — racing demo seam
-   - The worker controller exposes a function `shouldUseGPUForBatch(agentCount, network)` that returns `true` when the batch is large enough to beat CPU overhead (≥ 6 NGE-cap agents or ≥ 130 racing-browser agents, per Step 04 thresholds).
-   - `shouldUseGPUForBatch` returns `false` for single-agent or small batches where GPU overhead exceeds CPU latency.
-   - The worker calls `network.activate(...)` with a per-network `useGPU` hint when the batch is eligible.
-   - Test fails before implementation because the helper is undefined or always returns `false`.
+
+- The worker controller exposes a function `shouldUseGPUForBatch(agentCount, network)` that returns `true` when the batch is large enough to beat CPU overhead (≥ 6 NGE-cap agents or ≥ 130 racing-browser agents, per Step 04 thresholds).
+- `shouldUseGPUForBatch` returns `false` for single-agent or small batches where GPU overhead exceeds CPU latency.
+- The worker calls `network.activate(...)` with a per-network `useGPU` hint when the batch is eligible.
+- Test fails before implementation because the helper is undefined or always returns `false`.
 
 ### GPU-capability predicate
 
@@ -754,7 +763,7 @@ function createMockGPUDevice(
 
 ## Research brief
 
-### Sources captured (2026-06-30)
+### Sources captured
 
 - `https://webgpu.org/` — community landing page with implementation-status links, samples, best-practice guides, and language bindings.
 - `https://www.w3.org/TR/webgpu/` — normative W3C specification; the public API surface is defined by WebIDL for `navigator.gpu`, `GPUAdapter`, `GPUDevice`, `GPUQueue`, `GPUBuffer`, `GPUBindGroup`, `GPUShaderModule`, `GPUComputePipeline`, `GPUCommandEncoder`, `GPUComputePassEncoder`, and the supported-limits table.
@@ -926,76 +935,76 @@ source_of_truth: plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
 copy_paste: true
 next_step: 'Phase 3 Step 02 — Red tests: GPU buffer upload contract'
 skills:
-  - red-testing
-  - webgpu
-  - planning-test-strategy-coordinator
+ - red-testing
+ - webgpu
+ - planning-test-strategy-coordinator
 validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts
-  - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.device.test.ts
+ - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts
+ - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.device.test.ts
 acceptance_criteria:
-  - Red tests exist in src/architecture/network/gpu/network.gpu.capability.test.ts
-  - Red tests exist in src/architecture/network/gpu/network.gpu.device.test.ts
-  - Both test files fail before any GPU implementation
-  - createMockGPUDevice helper is shared or duplicated consistently across files
+ - Red tests exist in src/architecture/network/gpu/network.gpu.capability.test.ts
+ - Red tests exist in src/architecture/network/gpu/network.gpu.device.test.ts
+ - Both test files fail before any GPU implementation
+ - createMockGPUDevice helper is shared or duplicated consistently across files
 slices:
-  - slice_id: '03-01-red'
-    title: 'Write red tests for GPU capability predicate and device probe'
-    status: '[DONE]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.capability.test.ts
-      - src/architecture/network/gpu/network.gpu.device.test.ts
-    acceptance_criteria:
-      - 'canUseGPU(network, null) returns false when no device is supplied'
-      - 'canUseGPU(network, mockDevice) returns false for gated, recurrent, self-connected, or regularized networks'
-      - 'canUseGPU(network, mockDevice) returns false when an activation is unsupported'
-      - 'canUseGPU(network, mockDevice) returns false when estimated buffer size exceeds device limits'
-      - 'canUseGPU(network, mockDevice) returns true only for fully eligible networks'
-      - 'requestGPUDevice calls navigator.gpu.requestAdapter with high-performance preference'
-      - 'requestGPUDevice forwards requiredLimits from adapter limits'
-      - 'requestGPUDevice returns null when navigator.gpu or adapter is missing'
-      - 'Device-lost state is detected by isDeviceReady(device)'
-    parallelizable: false
-    dependencies: []
-    next_slice: '03-01-impl'
-  - slice_id: '03-01-impl'
-    title: 'Implement mock-device helper and wire test imports'
-    status: '[DONE]'
-    goal: implementing
-    estimate_hours: 2
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.capability.test.ts
-      - src/architecture/network/gpu/network.gpu.device.test.ts
-      - src/architecture/network/gpu/__mocks__/gpu.mock.ts
-      - src/architecture/network/gpu/gpu.types.d.ts
-      - src/architecture/network/gpu/network.gpu.capability.ts
-      - src/architecture/network/gpu/network.gpu.device.ts
-    acceptance_criteria:
-      - 'createMockGPUDevice records createBuffer, createBindGroupLayout, createPipelineLayout, createShaderModule, and queue.writeBuffer calls'
-      - 'Test files import the GPU capability/device functions and the mock helper without import errors'
-      - 'The focused Jest suites run to failure rather than failing at module resolution'
-    parallelizable: false
-    dependencies:
-      - '03-01-red'
-    next_slice: '03-01-green'
-  - slice_id: '03-01-green'
-    title: 'Green check: confirm red tests fail for the right reason'
-    status: '[DONE]'
-    goal: green-testing
-    estimate_hours: 1
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.capability.test.ts
-      - src/architecture/network/gpu/network.gpu.device.test.ts
-    acceptance_criteria:
-      - 'Run the focused Jest suites and capture failing assertions'
-      - 'Confirm failures target missing GPU functions, not syntax/setup errors'
-    parallelizable: false
-    dependencies:
-      - '03-01-impl'
-    next_slice: 'Phase 3 Step 02'
+ - slice_id: '03-01-red'
+ title: 'Write red tests for GPU capability predicate and device probe'
+ status: '[DONE]'
+ goal: red-testing
+ estimate_hours: 4
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.capability.test.ts
+ - src/architecture/network/gpu/network.gpu.device.test.ts
+ acceptance_criteria:
+ - 'canUseGPU(network, null) returns false when no device is supplied'
+ - 'canUseGPU(network, mockDevice) returns false for gated, recurrent, self-connected, or regularized networks'
+ - 'canUseGPU(network, mockDevice) returns false when an activation is unsupported'
+ - 'canUseGPU(network, mockDevice) returns false when estimated buffer size exceeds device limits'
+ - 'canUseGPU(network, mockDevice) returns true only for fully eligible networks'
+ - 'requestGPUDevice calls navigator.gpu.requestAdapter with high-performance preference'
+ - 'requestGPUDevice forwards requiredLimits from adapter limits'
+ - 'requestGPUDevice returns null when navigator.gpu or adapter is missing'
+ - 'Device-lost state is detected by isDeviceReady(device)'
+ parallelizable: false
+ dependencies: []
+ next_slice: '03-01-impl'
+ - slice_id: '03-01-impl'
+ title: 'Implement mock-device helper and wire test imports'
+ status: '[DONE]'
+ goal: implementing
+ estimate_hours: 2
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.capability.test.ts
+ - src/architecture/network/gpu/network.gpu.device.test.ts
+ - src/architecture/network/gpu/__mocks__/gpu.mock.ts
+ - src/architecture/network/gpu/gpu.types.d.ts
+ - src/architecture/network/gpu/network.gpu.capability.ts
+ - src/architecture/network/gpu/network.gpu.device.ts
+ acceptance_criteria:
+ - 'createMockGPUDevice records createBuffer, createBindGroupLayout, createPipelineLayout, createShaderModule, and queue.writeBuffer calls'
+ - 'Test files import the GPU capability/device functions and the mock helper without import errors'
+ - 'The focused Jest suites run to failure rather than failing at module resolution'
+ parallelizable: false
+ dependencies:
+ - '03-01-red'
+ next_slice: '03-01-green'
+ - slice_id: '03-01-green'
+ title: 'Green check: confirm red tests fail for the right reason'
+ status: '[DONE]'
+ goal: green-testing
+ estimate_hours: 1
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.capability.test.ts
+ - src/architecture/network/gpu/network.gpu.device.test.ts
+ acceptance_criteria:
+ - 'Run the focused Jest suites and capture failing assertions'
+ - 'Confirm failures target missing GPU functions, not syntax/setup errors'
+ parallelizable: false
+ dependencies:
+ - '03-01-impl'
+ next_slice: 'Phase 3 Step 02'
 ```
 
 VALIDATION_EVIDENCE:
@@ -1043,73 +1052,73 @@ source_of_truth: plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
 copy_paste: true
 next_step: 'Phase 3 Step 03 — Red tests: WGSL activation kernel compile contract'
 skills:
-  - red-testing
-  - webgpu
-  - implementation-pattern-scout
+ - red-testing
+ - webgpu
+ - implementation-pattern-scout
 validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.buffer.test.ts
+ - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.buffer.test.ts
 acceptance_criteria:
-  - Red tests exist in src/architecture/network/gpu/network.gpu.buffer.test.ts
-  - Placeholder uploadNetworkToGPU implementation passes all red tests
-  - 'Tests assert the exact buffer set, usage flags, and writeBuffer offsets for the slab layout'
-  - 'src/architecture/network/gpu/network.gpu.buffer.ts coverage is 100% statements/branches/functions/lines'
+ - Red tests exist in src/architecture/network/gpu/network.gpu.buffer.test.ts
+ - Placeholder uploadNetworkToGPU implementation passes all red tests
+ - 'Tests assert the exact buffer set, usage flags, and writeBuffer offsets for the slab layout'
+ - 'src/architecture/network/gpu/network.gpu.buffer.ts coverage is 100% statements/branches/functions/lines'
 slices:
-  - slice_id: '03-02-red'
-    title: 'Write red tests for slab-to-GPU buffer upload'
-    status: '[DONE]'
-    goal: red-testing
-    estimate_hours: 3
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.buffer.test.ts
-    acceptance_criteria:
-      - 'uploadNetworkToGPU(device, network) creates one storage buffer per slab array'
-      - 'Each buffer has COPY_DST and matching bind-group layout usage'
-      - 'queue.writeBuffer is called with exact byte length and offset per array'
-      - 'Upload order matches the WGSL bind-group layout'
-    parallelizable: false
-    dependencies:
-      - 'Phase 3 Step 01'
-    next_slice: '03-02-impl'
-  - slice_id: '03-02-impl'
-    title: 'Implement buffer-upload test fixtures and mock recorder'
-    status: '[DONE]'
-    goal: implementing
-    estimate_hours: 2
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.buffer.ts
-      - src/architecture/network/gpu/__mocks__/gpu.mock.ts
-    acceptance_criteria:
-      - 'uploadNetworkToGPU placeholder exists, imports canUseGPU, and throws on ineligible networks'
-      - 'uploadNetworkToGPU creates one GPUBuffer per slab using device.createBuffer'
-      - 'Buffer sizes equal source array byteLength, usage includes STORAGE and COPY_DST'
-      - 'uploadNetworkToGPU issues device.queue.writeBuffer for each slab'
-      - 'uploadNetworkToGPU returns a GPUBufferSet with buffer handles and metadata'
-      - 'destroyGPUBufferSet exists and calls destroy() on each recorded buffer'
-      - 'Focused Jest suite now fails only on real contract assertions, not not-implemented'
-    parallelizable: false
-    dependencies:
-      - '03-02-red'
-    next_slice: '03-02-green'
-  - slice_id: '03-02-green'
-    title: 'Green check: validate the buffer upload placeholder implementation'
-    status: '[DONE]'
-    goal: green-testing
-    estimate_hours: 1
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.buffer.test.ts
-      - src/architecture/network/gpu/network.gpu.buffer.ts
-      - src/architecture/network/gpu/__mocks__/gpu.mock.ts
-    acceptance_criteria:
-      - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.buffer.test.ts passes 9/9'
-      - 'Coverage for src/architecture/network/gpu/network.gpu.buffer.ts is 100% statements/branches/functions/lines'
-      - 'No syntax or setup errors in the focused suite'
-      - 'Plan tracker updated: slice 03-02-green [DONE]'
-    parallelizable: false
-    dependencies:
-      - '03-02-impl'
-    next_slice: 'Phase 3 Step 03'
+ - slice_id: '03-02-red'
+ title: 'Write red tests for slab-to-GPU buffer upload'
+ status: '[DONE]'
+ goal: red-testing
+ estimate_hours: 3
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.buffer.test.ts
+ acceptance_criteria:
+ - 'uploadNetworkToGPU(device, network) creates one storage buffer per slab array'
+ - 'Each buffer has COPY_DST and matching bind-group layout usage'
+ - 'queue.writeBuffer is called with exact byte length and offset per array'
+ - 'Upload order matches the WGSL bind-group layout'
+ parallelizable: false
+ dependencies:
+ - 'Phase 3 Step 01'
+ next_slice: '03-02-impl'
+ - slice_id: '03-02-impl'
+ title: 'Implement buffer-upload test fixtures and mock recorder'
+ status: '[DONE]'
+ goal: implementing
+ estimate_hours: 2
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.buffer.ts
+ - src/architecture/network/gpu/__mocks__/gpu.mock.ts
+ acceptance_criteria:
+ - 'uploadNetworkToGPU placeholder exists, imports canUseGPU, and throws on ineligible networks'
+ - 'uploadNetworkToGPU creates one GPUBuffer per slab using device.createBuffer'
+ - 'Buffer sizes equal source array byteLength, usage includes STORAGE and COPY_DST'
+ - 'uploadNetworkToGPU issues device.queue.writeBuffer for each slab'
+ - 'uploadNetworkToGPU returns a GPUBufferSet with buffer handles and metadata'
+ - 'destroyGPUBufferSet exists and calls destroy() on each recorded buffer'
+ - 'Focused Jest suite now fails only on real contract assertions, not not-implemented'
+ parallelizable: false
+ dependencies:
+ - '03-02-red'
+ next_slice: '03-02-green'
+ - slice_id: '03-02-green'
+ title: 'Green check: validate the buffer upload placeholder implementation'
+ status: '[DONE]'
+ goal: green-testing
+ estimate_hours: 1
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.buffer.test.ts
+ - src/architecture/network/gpu/network.gpu.buffer.ts
+ - src/architecture/network/gpu/__mocks__/gpu.mock.ts
+ acceptance_criteria:
+ - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.buffer.test.ts passes 9/9'
+ - 'Coverage for src/architecture/network/gpu/network.gpu.buffer.ts is 100% statements/branches/functions/lines'
+ - 'No syntax or setup errors in the focused suite'
+ - 'Plan tracker updated: slice 03-02-green [DONE]'
+ parallelizable: false
+ dependencies:
+ - '03-02-impl'
+ next_slice: 'Phase 3 Step 03'
 ```
 
 **User instruction:** Write honest failing tests for the slab-to-GPU upload seam
@@ -1165,65 +1174,65 @@ source_of_truth: plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
 copy_paste: true
 next_step: 'Phase 3 Step 04 — Red tests: single-network CPU-vs-GPU parity'
 skills:
-  - red-testing
-  - webgpu
-  - implementation-pattern-scout
+ - red-testing
+ - webgpu
+ - implementation-pattern-scout
 validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/architecture/network/gpu/network.gpu.kernel.test.ts
+ - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/architecture/network/gpu/network.gpu.kernel.test.ts
 acceptance_criteria:
-  - Red tests exist in src/architecture/network/gpu/network.gpu.kernel.test.ts
-  - 'Tests fail because createActivationKernel or buildGPUPipeline is undefined or throws not-implemented'
-  - 'Tests assert WGSL source includes activation stubs and correct bind-group layout'
+ - Red tests exist in src/architecture/network/gpu/network.gpu.kernel.test.ts
+ - 'Tests fail because createActivationKernel or buildGPUPipeline is undefined or throws not-implemented'
+ - 'Tests assert WGSL source includes activation stubs and correct bind-group layout'
 slices:
-  - slice_id: '03-03-red'
-    title: 'Write red tests for WGSL activation kernel compile'
-    status: '[DONE]'
-    goal: red-testing
-    estimate_hours: 3
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.kernel.test.ts
-    acceptance_criteria:
-      - 'createActivationKernel(network) returns a WGSL shader module with expected entry point'
-      - 'Generated WGSL includes a function stub for every supported activation'
-      - 'buildGPUPipeline(device, shaderModule, bindGroupLayout) creates compute pipeline with correct layout'
-    parallelizable: false
-    dependencies:
-      - 'Phase 3 Step 02'
-    next_slice: '03-03-impl'
-  - slice_id: '03-03-impl'
-    title: 'Implement kernel compile test fixtures and mock pipeline recorder'
-    status: '[DONE]'
-    goal: implementing
-    estimate_hours: 2
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.kernel.test.ts
-      - src/architecture/network/gpu/__mocks__/gpu.mock.ts
-    acceptance_criteria:
-      - 'Mock device records createShaderModule, createComputePipeline, and createBindGroupLayout calls'
-      - 'Test file imports kernel placeholders and compiles under jsdom'
-      - 'Focused Jest suite runs to failure at the right assertion'
-    parallelizable: false
-    dependencies:
-      - '03-03-red'
-    next_slice: '03-03-green'
-  - slice_id: '03-03-green'
-    title: 'Green check: confirm kernel placeholder satisfies red-test contracts at 100% coverage'
-    status: '[DONE]'
-    goal: green-testing
-    estimate_hours: 1
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.kernel.test.ts
-    acceptance_criteria:
-      - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts passes 17/17'
-      - 'Coverage for src/architecture/network/gpu/network.gpu.kernel.ts is 100% statements/branches/functions/lines'
-      - 'No syntax or setup errors in the focused suite'
-      - 'plan-sync and step-packet gates pass'
-    parallelizable: false
-    dependencies:
-      - '03-03-impl'
-    next_slice: 'Phase 3 Step 04'
+ - slice_id: '03-03-red'
+ title: 'Write red tests for WGSL activation kernel compile'
+ status: '[DONE]'
+ goal: red-testing
+ estimate_hours: 3
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.kernel.test.ts
+ acceptance_criteria:
+ - 'createActivationKernel(network) returns a WGSL shader module with expected entry point'
+ - 'Generated WGSL includes a function stub for every supported activation'
+ - 'buildGPUPipeline(device, shaderModule, bindGroupLayout) creates compute pipeline with correct layout'
+ parallelizable: false
+ dependencies:
+ - 'Phase 3 Step 02'
+ next_slice: '03-03-impl'
+ - slice_id: '03-03-impl'
+ title: 'Implement kernel compile test fixtures and mock pipeline recorder'
+ status: '[DONE]'
+ goal: implementing
+ estimate_hours: 2
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.kernel.test.ts
+ - src/architecture/network/gpu/__mocks__/gpu.mock.ts
+ acceptance_criteria:
+ - 'Mock device records createShaderModule, createComputePipeline, and createBindGroupLayout calls'
+ - 'Test file imports kernel placeholders and compiles under jsdom'
+ - 'Focused Jest suite runs to failure at the right assertion'
+ parallelizable: false
+ dependencies:
+ - '03-03-red'
+ next_slice: '03-03-green'
+ - slice_id: '03-03-green'
+ title: 'Green check: confirm kernel placeholder satisfies red-test contracts at 100% coverage'
+ status: '[DONE]'
+ goal: green-testing
+ estimate_hours: 1
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.kernel.test.ts
+ acceptance_criteria:
+ - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/architecture/network/gpu/network.gpu.kernel.test.ts passes 17/17'
+ - 'Coverage for src/architecture/network/gpu/network.gpu.kernel.ts is 100% statements/branches/functions/lines'
+ - 'No syntax or setup errors in the focused suite'
+ - 'plan-sync and step-packet gates pass'
+ parallelizable: false
+ dependencies:
+ - '03-03-impl'
+ next_slice: 'Phase 3 Step 04'
 ```
 
 **User instruction:** Write honest failing tests for the WGSL activation kernel
@@ -1279,68 +1288,68 @@ source_of_truth: plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
 copy_paste: true
 next_step: 'Phase 3 Step 05 — Red tests: batched multi-agent GPU inference'
 skills:
-  - red-testing
-  - webgpu
-  - implementation-pattern-scout
+ - red-testing
+ - webgpu
+ - implementation-pattern-scout
 validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/architecture/network/gpu/network.gpu.parity.test.ts
+ - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/architecture/network/gpu/network.gpu.parity.test.ts
 acceptance_criteria:
-  - Red tests exist in src/architecture/network/gpu/network.gpu.parity.test.ts
-  - 'activateGPU returns a promise that resolves to the same output shape as CPU activate'
-  - 'CPU-vs-GPU output difference stays inside absolute tolerance 5e-1 (mean ≤ 1e-1)'
+ - Red tests exist in src/architecture/network/gpu/network.gpu.parity.test.ts
+ - 'activateGPU returns a promise that resolves to the same output shape as CPU activate'
+ - 'CPU-vs-GPU output difference stays inside absolute tolerance 5e-1 (mean ≤ 1e-1)'
 slices:
-  - slice_id: '03-04-red'
-    title: 'Write red tests for single-network CPU-vs-GPU parity'
-    status: '[DONE]'
-    goal: red-testing
-    estimate_hours: 3
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.parity.test.ts
-      - src/architecture/network/gpu/network.gpu.activate.ts
-    acceptance_criteria:
-      - 'activateGPU(device, network, inputs) placeholder is imported and throws not implemented'
-      - 'activateGPU returns a Float32Array or number[] of the same length as CPU output'
-      - 'CPU and GPU outputs match within absolute tolerance 5e-1 for feed-forward networks'
-      - 'Mean absolute error between CPU and GPU outputs is ≤ 1e-1'
-    parallelizable: false
-    dependencies:
-      - 'Phase 3 Step 03'
-    next_slice: '03-04-impl'
-  - slice_id: '03-04-impl'
-    title: 'Implement parity test fixtures and deterministic network builder'
-    status: '[DONE]'
-    goal: implementing
-    estimate_hours: 2
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.parity.test.ts
-      - src/architecture/network/gpu/__mocks__/gpu.mock.ts
-    acceptance_criteria:
-      - 'Deterministic feed-forward network fixtures are available for parity tests'
-      - 'activateGPU placeholder is imported and the test compiles under jsdom'
-      - 'Focused Jest suite runs to failure at the right assertion'
-    parallelizable: false
-    dependencies:
-      - '03-04-red'
-    next_slice: '03-04-green'
-    notes:
-      - 'Actual seam work required editing network.gpu.activate.ts, network.gpu.capability.ts, and network.gpu.kernel.ts because canUseGPU was still a throwing stub.'
-  - slice_id: '03-04-green'
-    title: 'Green check: confirm red tests fail for the right reason'
-    status: '[DONE]'
-    goal: green-testing
-    estimate_hours: 1
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.parity.test.ts
-      - src/architecture/network/gpu/network.gpu.capability.test.ts
-    acceptance_criteria:
-      - 'Run the focused Jest suite and capture failing assertions'
-      - 'Confirm failures target missing GPU functions, not syntax/setup errors'
-    parallelizable: false
-    dependencies:
-      - '03-04-impl'
-    next_slice: 'Phase 3 Step 05'
+ - slice_id: '03-04-red'
+ title: 'Write red tests for single-network CPU-vs-GPU parity'
+ status: '[DONE]'
+ goal: red-testing
+ estimate_hours: 3
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.parity.test.ts
+ - src/architecture/network/gpu/network.gpu.activate.ts
+ acceptance_criteria:
+ - 'activateGPU(device, network, inputs) placeholder is imported and throws not implemented'
+ - 'activateGPU returns a Float32Array or number[] of the same length as CPU output'
+ - 'CPU and GPU outputs match within absolute tolerance 5e-1 for feed-forward networks'
+ - 'Mean absolute error between CPU and GPU outputs is ≤ 1e-1'
+ parallelizable: false
+ dependencies:
+ - 'Phase 3 Step 03'
+ next_slice: '03-04-impl'
+ - slice_id: '03-04-impl'
+ title: 'Implement parity test fixtures and deterministic network builder'
+ status: '[DONE]'
+ goal: implementing
+ estimate_hours: 2
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.parity.test.ts
+ - src/architecture/network/gpu/__mocks__/gpu.mock.ts
+ acceptance_criteria:
+ - 'Deterministic feed-forward network fixtures are available for parity tests'
+ - 'activateGPU placeholder is imported and the test compiles under jsdom'
+ - 'Focused Jest suite runs to failure at the right assertion'
+ parallelizable: false
+ dependencies:
+ - '03-04-red'
+ next_slice: '03-04-green'
+ notes:
+ - 'Actual seam work required editing network.gpu.activate.ts, network.gpu.capability.ts, and network.gpu.kernel.ts because canUseGPU was still a throwing stub.'
+ - slice_id: '03-04-green'
+ title: 'Green check: confirm red tests fail for the right reason'
+ status: '[DONE]'
+ goal: green-testing
+ estimate_hours: 1
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.parity.test.ts
+ - src/architecture/network/gpu/network.gpu.capability.test.ts
+ acceptance_criteria:
+ - 'Run the focused Jest suite and capture failing assertions'
+ - 'Confirm failures target missing GPU functions, not syntax/setup errors'
+ parallelizable: false
+ dependencies:
+ - '03-04-impl'
+ next_slice: 'Phase 3 Step 05'
 ```
 
 **User instruction:** Write honest failing parity tests that compare
@@ -1380,45 +1389,45 @@ VALIDATION_EVIDENCE:
 - Tolerance assertions: absolute difference ≤ 5e-1 per output element; mean absolute error ≤ 1e-1
 - Handoff: slice `03-04-green` is next; run the focused parity suite and confirm failures target missing GPU accuracy, not syntax/setup/errors.
 - Slice `03-04-green` focused validation (this run):
-  - `npx tsc --noEmit -p tsconfig.json` → PASS (exit 0)
-  - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts` → PASS (6/6)
-  - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.parity.test.ts` → FAIL (4 passed, 6 failed, 10 total). Failures:
-    - `small feed-forward network > keeps mean absolute error within 1e-1` (numerical mismatch)
-    - `racing-browser scale network > keeps per-element absolute difference within 5e-1` (numerical mismatch)
-    - `racing-browser scale network > keeps mean absolute error within 1e-1` (numerical mismatch)
-    - `NGE-cap scale network > keeps per-element absolute difference within 5e-1` (numerical mismatch)
-    - `NGE-cap scale network > keeps mean absolute error within 1e-1` (numerical mismatch)
-    - `ineligible network > rejects activation for ineligible networks` → **seam error**: promise resolved to `[0]` instead of throwing because `Network.createMLP` sets feed-forward topology, which silently rejects the attempted `network.connect(hiddenNode, hiddenNode)` self-connection, so `canUseGPU` still returns `true`.
-  - Combined coverage (`parity+capability` tests, collectCoverageFrom activate+capability) → activate.ts 88.88% lines (line 31 throw branch uncovered), capability.ts 95.23% lines (line 41 explicit self-connection branch uncovered). The uncovered branches are the same root cause: the parity ineligible fixture cannot create a real ineligible network under the feed-forward createMLP contract.
-  - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS
-  - `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS
-  - Gate exception recorded: `03-04-green` ineligible-network rejection contract is not satisfied after the placeholder implementation.
+- `npx tsc --noEmit -p tsconfig.json` → PASS (exit 0)
+- `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts` → PASS (6/6)
+- `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.parity.test.ts` → FAIL (4 passed, 6 failed, 10 total). Failures:
+- `small feed-forward network > keeps mean absolute error within 1e-1` (numerical mismatch)
+- `racing-browser scale network > keeps per-element absolute difference within 5e-1` (numerical mismatch)
+- `racing-browser scale network > keeps mean absolute error within 1e-1` (numerical mismatch)
+- `NGE-cap scale network > keeps per-element absolute difference within 5e-1` (numerical mismatch)
+- `NGE-cap scale network > keeps mean absolute error within 1e-1` (numerical mismatch)
+- `ineligible network > rejects activation for ineligible networks` → **seam error**: promise resolved to `[0]` instead of throwing because `Network.createMLP` sets feed-forward topology, which silently rejects the attempted `network.connect(hiddenNode, hiddenNode)` self-connection, so `canUseGPU` still returns `true`.
+- Combined coverage (`parity+capability` tests, collectCoverageFrom activate+capability) → activate.ts 88.88% lines (line 31 throw branch uncovered), capability.ts 95.23% lines (line 41 explicit self-connection branch uncovered). The uncovered branches are the same root cause: the parity ineligible fixture cannot create a real ineligible network under the feed-forward createMLP contract.
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS
+- Gate exception recorded: `03-04-green` ineligible-network rejection contract is not satisfied after the placeholder implementation.
 - Slice `03-04-green-fix`: repaired `src/architecture/network/gpu/network.gpu.parity.test.ts`.
-  - The ineligible-network fixture now gates an existing connection (feed-forward-legal) so `canUseGPU` returns `false` and `activateGPU` throws.
-  - Added an explicit self-connection fixture to cover the defensive `connection.from === connection.to` branch in `canUseGPU`.
-  - Preflight passes: `tsc`, `eslint`, `prettier`. Tests not run by `04-implementing`; hand off to `05-green-testing`.
+- The ineligible-network fixture now gates an existing connection (feed-forward-legal) so `canUseGPU` returns `false` and `activateGPU` throws.
+- Added an explicit self-connection fixture to cover the defensive `connection.from === connection.to` branch in `canUseGPU`.
+- Preflight passes: `tsc`, `eslint`, `prettier`. Tests not run by `04-implementing`; hand off to `05-green-testing`.
 - **Slice `03-04-green` retry after fixture fix:**
-  - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts` → PASS (6/6)
-  - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.parity.test.ts` → FAIL (6 passed, 5 failed, 11 total). The two ineligible-network rejection tests pass; all three `matches CPU output length` tests pass; the five absolute-tolerance and MAE assertions fail with numerical mismatch as the red-test seam requires.
-  - `npx tsc --noEmit -p tsconfig.json` → PASS (exit 0)
-  - `npx eslint src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.capability.ts src/architecture/network/gpu/network.gpu.parity.test.ts` → PASS (exit 0)
-  - `npx prettier --check src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.capability.ts src/architecture/network/gpu/network.gpu.parity.test.ts plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS (exit 0)
-  - Plan gates: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS; `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS; `neataptic-gate-mcp:run_gate_check --gate=plan-sync` → pass; `neataptic-gate-mcp:run_gate_check --gate=step-packet` → pass.
-  - Combined coverage run (`--collectCoverageFrom=network.gpu.activate.ts` and `--collectCoverageFrom=network.gpu.capability.ts`, `--testPathPatterns=network.gpu.parity.test.ts` and `--testPathPatterns=network.gpu.capability.test.ts`) → `activate.ts` 100/100/100/100; `capability.ts` 100/93.75/100/100. Uncovered branch at `src/architecture/network/gpu/network.gpu.capability.ts:56` (`device.limits.maxStorageBufferBindingSize ?? 0`). Coverage-guard classified this fallback as dead code because `maxStorageBufferBindingSize` is a required WebGPU limit and is always supplied by both `createMockGPUDevice` and real adapters.
-  - Gate exception recorded in `.github/ai-learning/learning-log.jsonl` (`coverage-guard-03-04-green`).
-  - **Status:** coverage-guard NOT OK; slice `03-04-green` remains `[WIP]`.
-  - **Next:** route back to `04-implementing` (fresh instance) with a `slice-fix` packet to remove the unreachable `?? 0` fallback at `src/architecture/network/gpu/network.gpu.capability.ts:56`, then re-run `05-green-testing` for focused parity/capability/coverage confirmation.
+- `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts` → PASS (6/6)
+- `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.parity.test.ts` → FAIL (6 passed, 5 failed, 11 total). The two ineligible-network rejection tests pass; all three `matches CPU output length` tests pass; the five absolute-tolerance and MAE assertions fail with numerical mismatch as the red-test seam requires.
+- `npx tsc --noEmit -p tsconfig.json` → PASS (exit 0)
+- `npx eslint src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.capability.ts src/architecture/network/gpu/network.gpu.parity.test.ts` → PASS (exit 0)
+- `npx prettier --check src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.capability.ts src/architecture/network/gpu/network.gpu.parity.test.ts plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS (exit 0)
+- Plan gates: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS; `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS; `neataptic-gate-mcp:run_gate_check --gate=plan-sync` → pass; `neataptic-gate-mcp:run_gate_check --gate=step-packet` → pass.
+- Combined coverage run (`--collectCoverageFrom=network.gpu.activate.ts` and `--collectCoverageFrom=network.gpu.capability.ts`, `--testPathPatterns=network.gpu.parity.test.ts` and `--testPathPatterns=network.gpu.capability.test.ts`) → `activate.ts` 100/100/100/100; `capability.ts` 100/93.75/100/100. Uncovered branch at `src/architecture/network/gpu/network.gpu.capability.ts:56` (`device.limits.maxStorageBufferBindingSize ?? 0`). Coverage-guard classified this fallback as dead code because `maxStorageBufferBindingSize` is a required WebGPU limit and is always supplied by both `createMockGPUDevice` and real adapters.
+- Gate exception recorded in `.github/ai-learning/learning-log.jsonl` (`coverage-guard-03-04-green`).
+- **Status:** coverage-guard NOT OK; slice `03-04-green` remains `[WIP]`.
+- **Next:** route back to `04-implementing` (fresh instance) with a `slice-fix` packet to remove the unreachable `?? 0` fallback at `src/architecture/network/gpu/network.gpu.capability.ts:56`, then re-run `05-green-testing` for focused parity/capability/coverage confirmation.
 - **Slice `03-04-green` final validation (this run):**
-  - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts` → PASS (6/6)
-  - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.parity.test.ts` → FAIL (6 passed, 5 failed, 11 total). The two ineligible-network rejection tests pass; all three `matches CPU output length` tests pass; the five absolute-tolerance and MAE assertions fail with numerical mismatch as the red-test seam requires.
-  - Combined coverage run (`--collectCoverageFrom=src/architecture/network/gpu/network.gpu.activate.ts` and `--collectCoverageFrom=src/architecture/network/gpu/network.gpu.capability.ts`, `--testPathPatterns=src/architecture/network/gpu/network.gpu.parity.test.ts` and `--testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts`) → `network.gpu.activate.ts` 100/100/100/100; `network.gpu.capability.ts` 100/100/100/100. Dead-code branch at line 56 removed by `04-implementing` slice `03-04-green-fix-deadcode`.
-  - `npx tsc --noEmit -p tsconfig.json` → PASS (exit 0)
-  - `npx eslint src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.capability.ts src/architecture/network/gpu/network.gpu.parity.test.ts src/architecture/network/gpu/network.gpu.capability.test.ts` → PASS (exit 0)
-  - `npx prettier --check src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.capability.ts src/architecture/network/gpu/network.gpu.parity.test.ts src/architecture/network/gpu/network.gpu.capability.test.ts plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS (exit 0). Note: `05-green-testing` applied a non-semantic Prettier format fix to `src/architecture/network/gpu/network.gpu.capability.test.ts` to satisfy the quality gate.
-  - Plan gates: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS; `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS; `neataptic-gate-mcp:run_gate_check --gate=plan-sync` → pass; `neataptic-gate-mcp:run_gate_check --gate=step-packet` → pass; `neataptic-gate-mcp:run_gate_check --gate=agent-graph` → pass.
-  - `neataptic-gate-mcp:run_gate_check --gate=cortex-index` → pass after `node rag-index/build-index.mjs --json` (3 indexed, 1483 skipped, 62 chunks, 1323 ms).
-  - `npx tsc --noEmit -p tsconfig.test.json` → not run; pre-existing duplicate-identifier errors in `examples/racing_curriculum/workers/simulation-worker/` are outside this slice.
-  - **Status:** all acceptance criteria met; slice `03-04-green` is `[DONE]`.
+- `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts` → PASS (6/6)
+- `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.parity.test.ts` → FAIL (6 passed, 5 failed, 11 total). The two ineligible-network rejection tests pass; all three `matches CPU output length` tests pass; the five absolute-tolerance and MAE assertions fail with numerical mismatch as the red-test seam requires.
+- Combined coverage run (`--collectCoverageFrom=src/architecture/network/gpu/network.gpu.activate.ts` and `--collectCoverageFrom=src/architecture/network/gpu/network.gpu.capability.ts`, `--testPathPatterns=src/architecture/network/gpu/network.gpu.parity.test.ts` and `--testPathPatterns=src/architecture/network/gpu/network.gpu.capability.test.ts`) → `network.gpu.activate.ts` 100/100/100/100; `network.gpu.capability.ts` 100/100/100/100. Dead-code branch at line 56 removed by `04-implementing` slice `03-04-green-fix-deadcode`.
+- `npx tsc --noEmit -p tsconfig.json` → PASS (exit 0)
+- `npx eslint src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.capability.ts src/architecture/network/gpu/network.gpu.parity.test.ts src/architecture/network/gpu/network.gpu.capability.test.ts` → PASS (exit 0)
+- `npx prettier --check src/architecture/network/gpu/network.gpu.activate.ts src/architecture/network/gpu/network.gpu.capability.ts src/architecture/network/gpu/network.gpu.parity.test.ts src/architecture/network/gpu/network.gpu.capability.test.ts plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS (exit 0). Note: `05-green-testing` applied a non-semantic Prettier format fix to `src/architecture/network/gpu/network.gpu.capability.test.ts` to satisfy the quality gate.
+- Plan gates: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS; `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md` → PASS; `neataptic-gate-mcp:run_gate_check --gate=plan-sync` → pass; `neataptic-gate-mcp:run_gate_check --gate=step-packet` → pass; `neataptic-gate-mcp:run_gate_check --gate=agent-graph` → pass.
+- `neataptic-gate-mcp:run_gate_check --gate=cortex-index` → pass after `node rag-index/build-index.mjs --json` (3 indexed, 1483 skipped, 62 chunks, 1323 ms).
+- `npx tsc --noEmit -p tsconfig.test.json` → not run; pre-existing duplicate-identifier errors in `examples/racing_curriculum/workers/simulation-worker/` are outside this slice.
+- **Status:** all acceptance criteria met; slice `03-04-green` is `[DONE]`.
 
 #### Step 05 — Red tests: batched multi-agent GPU inference [WIP]
 
@@ -1436,66 +1445,66 @@ source_of_truth: plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
 copy_paste: true
 next_step: 'Phase 3 Step 06 — Red tests: transparent fallback and racing demo seam'
 skills:
-  - red-testing
-  - webgpu
-  - implementation-pattern-scout
+ - red-testing
+ - webgpu
+ - implementation-pattern-scout
 validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.batched.test.ts
+ - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.batched.test.ts
 acceptance_criteria:
-  - Red tests exist in src/architecture/network/gpu/network.gpu.batched.test.ts
-  - 'Tests fail because batchActivate is undefined or throws not-implemented'
-  - 'Tests assert dispatch grid and buffer reads scale with batch size'
+ - Red tests exist in src/architecture/network/gpu/network.gpu.batched.test.ts
+ - 'Tests fail because batchActivate is undefined or throws not-implemented'
+ - 'Tests assert dispatch grid and buffer reads scale with batch size'
 slices:
-  - slice_id: '03-05-red'
-    title: 'Write red tests for batched multi-agent GPU inference'
-    status: '[DONE]'
-    goal: red-testing
-    estimate_hours: 3
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.batched.test.ts
-      - src/architecture/network/gpu/network.gpu.batched.ts
-      - src/architecture/network/gpu/__mocks__/gpu.mock.ts
-    acceptance_criteria:
-      - 'batchActivate(device, networks, inputMatrix) dispatches one compute pass per eligible agent'
-      - 'Workgroup count scales with batch size and network size'
-      - 'Mapped result buffers are read back into a Float32Array result matrix'
-    parallelizable: false
-    dependencies:
-      - 'Phase 3 Step 04'
-    next_slice: '03-05-impl'
-  - slice_id: '03-05-impl'
-    title: 'Implement batched inference test fixtures and mock dispatch recorder'
-    status: '[DONE]'
-    goal: implementing
-    estimate_hours: 2
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.batched.ts
-      - src/architecture/network/gpu/network.gpu.batched.test.ts
-      - src/architecture/network/gpu/__mocks__/gpu.mock.ts
-    acceptance_criteria:
-      - 'Mock command encoder records dispatchWorkgroup calls and pass labels'
-      - 'Test file imports batchActivate placeholder and compiles under jsdom'
-      - 'Focused Jest suite runs to failure at the right assertion'
-    parallelizable: false
-    dependencies:
-      - '03-05-red'
-    next_slice: '03-05-green'
-  - slice_id: '03-05-green'
-    title: 'Green check: confirm red tests fail for the right reason'
-    status: '[DONE]'
-    goal: green-testing
-    estimate_hours: 1
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.batched.test.ts
-    acceptance_criteria:
-      - 'Run the focused Jest suite and capture failing assertions'
-      - 'Confirm failures target missing GPU functions, not syntax/setup errors'
-    parallelizable: false
-    dependencies:
-      - '03-05-impl'
-    next_slice: 'Phase 3 Step 06'
+ - slice_id: '03-05-red'
+ title: 'Write red tests for batched multi-agent GPU inference'
+ status: '[DONE]'
+ goal: red-testing
+ estimate_hours: 3
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.batched.test.ts
+ - src/architecture/network/gpu/network.gpu.batched.ts
+ - src/architecture/network/gpu/__mocks__/gpu.mock.ts
+ acceptance_criteria:
+ - 'batchActivate(device, networks, inputMatrix) dispatches one compute pass per eligible agent'
+ - 'Workgroup count scales with batch size and network size'
+ - 'Mapped result buffers are read back into a Float32Array result matrix'
+ parallelizable: false
+ dependencies:
+ - 'Phase 3 Step 04'
+ next_slice: '03-05-impl'
+ - slice_id: '03-05-impl'
+ title: 'Implement batched inference test fixtures and mock dispatch recorder'
+ status: '[DONE]'
+ goal: implementing
+ estimate_hours: 2
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.batched.ts
+ - src/architecture/network/gpu/network.gpu.batched.test.ts
+ - src/architecture/network/gpu/__mocks__/gpu.mock.ts
+ acceptance_criteria:
+ - 'Mock command encoder records dispatchWorkgroup calls and pass labels'
+ - 'Test file imports batchActivate placeholder and compiles under jsdom'
+ - 'Focused Jest suite runs to failure at the right assertion'
+ parallelizable: false
+ dependencies:
+ - '03-05-red'
+ next_slice: '03-05-green'
+ - slice_id: '03-05-green'
+ title: 'Green check: confirm red tests fail for the right reason'
+ status: '[DONE]'
+ goal: green-testing
+ estimate_hours: 1
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.batched.test.ts
+ acceptance_criteria:
+ - 'Run the focused Jest suite and capture failing assertions'
+ - 'Confirm failures target missing GPU functions, not syntax/setup errors'
+ parallelizable: false
+ dependencies:
+ - '03-05-impl'
+ next_slice: 'Phase 3 Step 06'
 ```
 
 VALIDATION_EVIDENCE:
@@ -1557,77 +1566,77 @@ source_of_truth: plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
 copy_paste: true
 next_step: 'Phase 3 Step 07 — Green check on red tests and tracker handoff'
 skills:
-  - red-testing
-  - webgpu
-  - implementation-pattern-scout
+ - red-testing
+ - webgpu
+ - implementation-pattern-scout
 validation:
-  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
-  - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.fallback.test.ts
-  - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.racing.test.ts
-  - npx tsc --noEmit -p tsconfig.json
-  - npx eslint src/architecture/network/gpu/network.gpu.fallback.ts src/architecture/network/gpu/network.gpu.racing.ts src/architecture/network/gpu/network.gpu.fallback.test.ts src/architecture/network/gpu/network.gpu.racing.test.ts
-  - npx prettier --check src/architecture/network/gpu/network.gpu.fallback.ts src/architecture/network/gpu/network.gpu.racing.ts src/architecture/network/gpu/network.gpu.fallback.test.ts src/architecture/network/gpu/network.gpu.racing.test.ts
-  - neataptic-gate-mcp:run_gate_check --gate=plan-sync
-  - neataptic-gate-mcp:run_gate_check --gate=step-packet
+ - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md
+ - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.fallback.test.ts
+ - npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/network.gpu.racing.test.ts
+ - npx tsc --noEmit -p tsconfig.json
+ - npx eslint src/architecture/network/gpu/network.gpu.fallback.ts src/architecture/network/gpu/network.gpu.racing.ts src/architecture/network/gpu/network.gpu.fallback.test.ts src/architecture/network/gpu/network.gpu.racing.test.ts
+ - npx prettier --check src/architecture/network/gpu/network.gpu.fallback.ts src/architecture/network/gpu/network.gpu.racing.ts src/architecture/network/gpu/network.gpu.fallback.test.ts src/architecture/network/gpu/network.gpu.racing.test.ts
+ - neataptic-gate-mcp:run_gate_check --gate=plan-sync
+ - neataptic-gate-mcp:run_gate_check --gate=step-packet
 acceptance_criteria:
-  - Red tests exist in src/architecture/network/gpu/network.gpu.fallback.test.ts
-  - Red tests exist in src/architecture/network/gpu/network.gpu.racing.test.ts
-  - 'Tests fail because dispatchActivation or racing GPU integration is undefined or guarded'
-  - 'Tests assert CPU fallback is used when GPU eligibility is false'
+ - Red tests exist in src/architecture/network/gpu/network.gpu.fallback.test.ts
+ - Red tests exist in src/architecture/network/gpu/network.gpu.racing.test.ts
+ - 'Tests fail because dispatchActivation or racing GPU integration is undefined or guarded'
+ - 'Tests assert CPU fallback is used when GPU eligibility is false'
 slices:
-  - slice_id: '03-06-red'
-    title: 'Write red tests for transparent fallback and racing demo seam'
-    status: '[DONE]'
-    goal: red-testing
-    estimate_hours: 4
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.fallback.ts
-      - src/architecture/network/gpu/network.gpu.fallback.test.ts
-      - src/architecture/network/gpu/network.gpu.racing.ts
-      - src/architecture/network/gpu/network.gpu.racing.test.ts
-    acceptance_criteria:
-      - 'dispatchActivation(network, inputs) uses the GPU path only when canUseGPU is true'
-      - 'dispatchActivation falls back to CPU activate when GPU is ineligible or device is lost'
-      - 'Racing demo controller can request GPU batch inference for a generation of genomes'
-      - 'Racing controller falls back to CPU when batch is below GPU threshold or device unavailable'
-    parallelizable: false
-    dependencies:
-      - 'Phase 3 Step 05'
-    next_slice: '03-06-impl'
-  - slice_id: '03-06-impl'
-    title: 'Implement fallback and racing test fixtures and demo stubs'
-    status: '[DONE]'
-    goal: implementing
-    estimate_hours: 2
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.fallback.ts
-      - src/architecture/network/gpu/network.gpu.racing.ts
-      - src/architecture/network/gpu/network.gpu.fallback.test.ts
-      - src/architecture/network/gpu/network.gpu.racing.test.ts
-    acceptance_criteria:
-      - 'Mock genome/population fixtures are available for racing seam tests'
-      - 'dispatchActivation and racing GPU placeholders are imported and compile under jsdom'
-      - 'Focused Jest suites run to failure at the right assertion'
-    parallelizable: false
-    dependencies:
-      - '03-06-red'
-    next_slice: '03-06-green'
-  - slice_id: '03-06-green'
-    title: 'Green check: confirm red tests fail for the right reason'
-    status: '[DONE]'
-    goal: green-testing
-    estimate_hours: 1
-    files_to_change:
-      - src/architecture/network/gpu/network.gpu.fallback.test.ts
-      - src/architecture/network/gpu/network.gpu.racing.test.ts
-    acceptance_criteria:
-      - 'Run the focused Jest suites and capture failing assertions'
-      - 'Confirm failures target missing GPU functions, not syntax/setup errors'
-    parallelizable: false
-    dependencies:
-      - '03-06-impl'
-    next_slice: 'Phase 3 Step 07'
+ - slice_id: '03-06-red'
+ title: 'Write red tests for transparent fallback and racing demo seam'
+ status: '[DONE]'
+ goal: red-testing
+ estimate_hours: 4
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.fallback.ts
+ - src/architecture/network/gpu/network.gpu.fallback.test.ts
+ - src/architecture/network/gpu/network.gpu.racing.ts
+ - src/architecture/network/gpu/network.gpu.racing.test.ts
+ acceptance_criteria:
+ - 'dispatchActivation(network, inputs) uses the GPU path only when canUseGPU is true'
+ - 'dispatchActivation falls back to CPU activate when GPU is ineligible or device is lost'
+ - 'Racing demo controller can request GPU batch inference for a generation of genomes'
+ - 'Racing controller falls back to CPU when batch is below GPU threshold or device unavailable'
+ parallelizable: false
+ dependencies:
+ - 'Phase 3 Step 05'
+ next_slice: '03-06-impl'
+ - slice_id: '03-06-impl'
+ title: 'Implement fallback and racing test fixtures and demo stubs'
+ status: '[DONE]'
+ goal: implementing
+ estimate_hours: 2
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.fallback.ts
+ - src/architecture/network/gpu/network.gpu.racing.ts
+ - src/architecture/network/gpu/network.gpu.fallback.test.ts
+ - src/architecture/network/gpu/network.gpu.racing.test.ts
+ acceptance_criteria:
+ - 'Mock genome/population fixtures are available for racing seam tests'
+ - 'dispatchActivation and racing GPU placeholders are imported and compile under jsdom'
+ - 'Focused Jest suites run to failure at the right assertion'
+ parallelizable: false
+ dependencies:
+ - '03-06-red'
+ next_slice: '03-06-green'
+ - slice_id: '03-06-green'
+ title: 'Green check: confirm red tests fail for the right reason'
+ status: '[DONE]'
+ goal: green-testing
+ estimate_hours: 1
+ files_to_change:
+ - src/architecture/network/gpu/network.gpu.fallback.test.ts
+ - src/architecture/network/gpu/network.gpu.racing.test.ts
+ acceptance_criteria:
+ - 'Run the focused Jest suites and capture failing assertions'
+ - 'Confirm failures target missing GPU functions, not syntax/setup errors'
+ parallelizable: false
+ dependencies:
+ - '03-06-impl'
+ next_slice: 'Phase 3 Step 07'
 ````
 
 **Latest validation evidence (slice `03-06-green`):**
@@ -1717,7 +1726,6 @@ implementation begins.
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=src/architecture/network/gpu/`
 - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/racing_curriculum/workers/simulation-worker/simulation-worker.gpu.test.ts`
 
-
 ---
 
 ### Phase 4 — WebGPU inference implementation [DONE]
@@ -1759,4 +1767,3 @@ Key outcomes:
 ### Phase 7 — Tracker closure [DONE]
 
 [DONE] Phase 7 — Tracker closure. Completed the final tracker-closure pass: Phase 1 detailed planning evidence moved to this log, plan file reduced to concise [DONE] coverage notes for Phases 1–6, all compression and log-completion-marker gates passed, `plans/README.md` and `plans/Roadmap.md` updated to point to the archived plan/log pair under `plans/completed/`, and the plan/log pair moved to `plans/completed/NEAT_Genesis_EvoDevo_GPU_Acceleration.{plans,logs}.md`.
-

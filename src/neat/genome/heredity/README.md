@@ -46,6 +46,7 @@ owns three structural decisions:
 3. apply the explicit disabled-gene re-enable rule through the inherited RNG.
 
 Parameters:
+
 - `context` - Pure genome heredity context.
 
 Returns: Ordered inherited connection genes plus their source-parent labels.

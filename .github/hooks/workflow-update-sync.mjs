@@ -13,7 +13,7 @@
  * - Minimal maintenance burden — runs automatically without manual intervention
  * - Idempotent — running multiple times does not cause state corruption
  * - Boundary-aware — updates only the immediate next step, not future-phase steps
- * - Evidence trail — logs all state updates with timestamp to plan validation section
+ * - Evidence trail — logs all state updates to plan validation section
  *
  * Implementation approach:
  * 1. Read the active plan file from `neataptic-workflow-mcp`
@@ -22,7 +22,7 @@
  * 4. Detect if the MCP snapshot shows a different active step than the plan
  * 5. If they diverge, update the plan file to align with MCP state
  * 6. Record the sync event in the validation evidence section
- * 7. Return structured evidence { pass, evidence, timestamp, syncedSteps, downstreamTrackers }
+ * 7. Return structured evidence { pass, evidence, syncedSteps, downstreamTrackers }
  *
  * Limitations:
  * - Only advances a single step per invocation (idempotent boundary)
@@ -36,7 +36,6 @@
  *   {
  *     "ok": true|false,
  *     "pass": true|false,
- *     "timestamp": "ISO-8601",
  *     "plan": { "path": "...", "status": "[WIP]|[PLANNED]|[DONE]" },
  *     "syncEvent": {
  *       "currentWipStep": "Phase N Step MM",
@@ -447,7 +446,7 @@ function applySyncToPlanText(text, currentWip, nextPlanned) {
  * Append a validation evidence entry to the plan.
  * Looks for "### Latest validation evidence" section and appends a new bullet.
  */
-function appendValidationEvidence(text, evidence, timestamp) {
+function appendValidationEvidence(text, evidence) {
   const section = '### Latest validation evidence';
   const sectionIndex = text.indexOf(section);
 
@@ -456,11 +455,11 @@ function appendValidationEvidence(text, evidence, timestamp) {
     const handoffIndex = text.indexOf('## Handoff query');
     if (handoffIndex === -1) {
       // Append to end
-      return `${text}\n\n${section}\n\n- ${timestamp}: ${evidence}\n`;
+      return `${text}\n\n${section}\n\n- ${evidence}\n`;
     }
     const before = text.slice(0, handoffIndex);
     const after = text.slice(handoffIndex);
-    return `${before}\n${section}\n\n- ${timestamp}: ${evidence}\n\n${after}`;
+    return `${before}\n${section}\n\n- ${evidence}\n\n${after}`;
   }
 
   // Section exists; find the first bullet line after it, then insert our entry
@@ -468,14 +467,15 @@ function appendValidationEvidence(text, evidence, timestamp) {
   const firstBulletIndex = afterSection.indexOf('\n-');
   if (firstBulletIndex === -1) {
     // No bullet yet; add one
-    return text.replace(section, `${section}\n\n- ${timestamp}: ${evidence}`);
+    return text.replace(section, `${section}\n\n- ${evidence}`);
   }
 
   // Insert before the first bullet
   const insertPos = sectionIndex + section.length + firstBulletIndex + 1; // +1 for the \n
+
   return (
     text.slice(0, insertPos) +
-    `- ${timestamp}: ${evidence}\n` +
+    `- ${evidence}\n` +
     text.slice(insertPos)
   );
 }
@@ -509,7 +509,6 @@ Options:
   options.plan ??= resolveWorkflowPlanPath();
 
   try {
-    const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const planText = await readWorkspaceFile(options.plan);
     const planStatus = extractStatus(planText);
     const downstreamTrackers = await extractDownstreamTrackers(
@@ -564,11 +563,7 @@ Options:
         evidence = `Workflow sync: ${summary}`;
 
         // Then append validation evidence to the updated text
-        updatedPlanText = appendValidationEvidence(
-          updatedPlanText,
-          evidence,
-          timestamp,
-        );
+        updatedPlanText = appendValidationEvidence(updatedPlanText, evidence);
         changesMade = true;
       }
     } else if (action === 'already-in-sync') {
@@ -591,7 +586,6 @@ Options:
     const report = {
       ok: action !== 'blocked',
       pass: action === 'advance' ? changesMade : action !== 'blocked',
-      timestamp,
       plan: { path: options.plan, status: planStatus },
       syncEvent,
       evidence,

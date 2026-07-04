@@ -2,10 +2,10 @@
 
 Measurement helpers for species-history augmentation.
 
-The surrounding `species/core` chapter decides *when* older history rows may
+The surrounding `species/core` chapter decides _when_ older history rows may
 be enriched. This shared chapter answers the narrower question underneath
-that policy gate: *what compact evidence should the controller extract from a
-live species once enrichment is allowed?*
+that policy gate: _what compact evidence should the controller extract from a
+live species once enrichment is allowed?_
 
 The answer is intentionally small. Instead of persisting every connection for
 every member genome, the read-side history pipeline reduces one species to a
@@ -74,6 +74,7 @@ Read the fold in three stages:
 3. reduce the seen ids and enabled flags into one compact summary.
 
 The fold preserves three small rules:
+
 - connection innovation ids come from the connection itself when present,
 - only genomes that opt into `_compatInnovationMode = 'allow-fallback'` may
   use the supplied innovation resolver,
@@ -81,6 +82,7 @@ The fold preserves three small rules:
   inputs fail fast instead of silently inventing structure.
 
 Parameters:
+
 - `members` - Detailed member genomes for a single species.
 - `fallbackInnov` - Optional innovation resolver for legacy connections that do not carry a direct innovation id.
 
@@ -89,6 +91,9 @@ Returns: Compact innovation-range and enabled-ratio telemetry for the species.
 Example:
 
 ```ts
-const summary = summarizeSpeciesConnections(species.members, neat._fallbackInnov);
+const summary = summarizeSpeciesConnections(
+  species.members,
+  neat._fallbackInnov,
+);
 console.log(summary.innovationRange, summary.enabledRatio);
 ```

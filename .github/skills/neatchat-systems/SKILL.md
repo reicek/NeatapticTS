@@ -139,8 +139,8 @@ every feature into one undebuggable recurrent blob.
 - Keep episodic memory distinct from semantic or profile memory.
 - Promote stable facts from repeated episodic evidence instead of writing every
   turn directly into durable profile state.
-- Store provenance for every durable memory: source turn, branch, timestamp,
-  score, and any approval status if relevant.
+- Store provenance for every durable memory: source turn, branch, score, and
+  any approval status if relevant.
 - Make branch reset and hard reset explicit product behaviors, not hidden debug
   utilities.
 

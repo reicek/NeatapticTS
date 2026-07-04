@@ -14,8 +14,8 @@
   `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=network.gpu.parity-large.red`
 - Result: 1 failed suite, 2 failed tests (expected red).
 - Sample failure:
-  - maxAbsDiff received `0.03698859398476356` (expected `< 0.001`).
-  - meanAbsDiff received `0.05352582391539734` (expected `< 0.0001`).
+- maxAbsDiff received `0.03698859398476356` (expected `< 0.001`).
+- meanAbsDiff received `0.05352582391539734` (expected `< 0.0001`).
 - Handoff: Step 02 implementer should fix `src/architecture/network/gpu/network.gpu.kernel.ts`
   so the shader accumulates weighted incoming contributions before applying the
   activation function.

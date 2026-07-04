@@ -43,6 +43,7 @@ Because `writeCell` mutates the shared field in-place, sequential evaluators
 within the same tick can observe writes committed by prior agents.
 
 Parameters:
+
 - `agentIndex` - Zero-based index of the agent being evaluated.
 - `field` - Live shared field; sequential evaluators see writes from prior agents.
 
@@ -96,6 +97,7 @@ ant-hive own the scoring policy and can swap it without rewriting the
 evaluator pipeline itself.
 
 Parameters:
+
 - `group` - Team-local member results to aggregate.
 
 Returns: Scalar team-level fitness score.
@@ -121,7 +123,7 @@ let multiple agents share a stigmergy field, collect per-tick results, track
 divergence metrics, and stand up the smallest honest two-team harness. It
 re-exports four cooperating sub-modules as one cohesive boundary so consumers
 only need a single import path.
-*Design contract:** classic NEAT behavior is entirely unaffected when this
+_Design contract:_* classic NEAT behavior is entirely unaffected when this
 module is not imported. No global state is mutated at import time.
 
 ## Architecture
@@ -141,6 +143,7 @@ graph TD
 ## Sub-modules
 
 ### shared-field
+
 A `Float32Array`-backed 2D grid (`SharedField`) shared across all agents during one
 evaluation tick. Agents write signals with `writeCell` and read them with `readCell`.
 Because the backing array is passed by reference, sequential evaluators within the same
@@ -149,12 +152,14 @@ and racing benchmarks. Between ticks, `applyDecay` and `applyDiffusion` evolve f
 dynamics; `clearField` resets it for the next generation.
 
 ### evaluation
+
 `createCollectiveEvaluationContext` initialises a generation counter and binds the shared
 field. `runCollectiveEvaluationTick` invokes each `AgentEvaluator` in declared order and
 returns per-agent fitness plus the evaluation order. `resetCollectiveEvaluationState`
 advances the generation tick and zeros the field, ready for the next generation.
 
 ### metrics
+
 `computeRoleDivergenceMetric` measures structural divergence between two agents using the
 L1 (Manhattan) distance over their module-size distributions — a zero score means identical
 compositions. `createOpponentSnapshotPool` and `addOpponentSnapshot` maintain a rolling
@@ -162,12 +167,14 @@ fixed-capacity buffer of deep-cloned opponent payloads for tournament evaluation
 snapshot is evicted FIFO when the pool reaches capacity.
 
 ### team-fitness
+
 `createTeamFitnessEvaluator` keeps team/group aggregation reusable and policy-bound. NGE core
 owns the orchestration that maps generic team groups into reusable team-fitness results, while
 each benchmark injects its own aggregation rule such as "best finisher wins" or a richer
 support-weighted collective score.
 
 ### two-population
+
 `createTwoPopulationHarness` builds the smallest honest 2v2 scaffold: two isolated team
 controllers, one shared four-row radio field, and one evaluation context that can partition
 the race pack back into team-local slices. `runTwoTeamEvaluationTick` keeps the public seam
@@ -176,6 +183,7 @@ honest by returning those slices without inventing later-stage game theory, whil
 rolling history of opponent champions rather than only the opponent's latest mutable state.
 
 ## Determinism contract
+
 Same agent count + same evaluator array + same initial field ⇒ identical
 `CollectiveTickResult` for every call. `applyDecay` and `applyDiffusion` are both
 deterministic pure functions that produce new `SharedField` instances without mutating
@@ -206,31 +214,49 @@ const context = createCollectiveEvaluationContext(3, field);
 
 // 2. Run one evaluation tick — agent 0 writes a signal; agent 1 reads it.
 const result = runCollectiveEvaluationTick(context, [
-  (_idx, f) => { writeCell(f, 0, 0, 1.0); return 10; },
-  (_idx, f) => readCell(f, 0, 0) * 5,   // sees agent 0's write
+  (_idx, f) => {
+    writeCell(f, 0, 0, 1.0);
+    return 10;
+  },
+  (_idx, f) => readCell(f, 0, 0) * 5, // sees agent 0's write
   () => 0,
 ]);
 // result.agentFitness === [10, 5, 0]
 
 // 3. Advance to the next generation with decay applied.
 const decayed = applyDecay(context.field, 0.95);
-const nextContext = resetCollectiveEvaluationState({ ...context, field: decayed });
+const nextContext = resetCollectiveEvaluationState({
+  ...context,
+  field: decayed,
+});
 
 // 4. Measure role divergence between two agents' module distributions.
 const divergence = computeRoleDivergenceMetric([10, 5, 0], [0, 5, 10]); // 20
 
 // 5. Maintain a rolling opponent pool for tournament selection.
 let pool = createOpponentSnapshotPool(5);
-pool = addOpponentSnapshot(pool, 'agent:alpha', { fitness: 42 }, nextContext.generationTick);
+pool = addOpponentSnapshot(
+  pool,
+  'agent:alpha',
+  { fitness: 42 },
+  nextContext.generationTick,
+);
 
 // 6. Stand up the smallest honest 2v2 harness.
 const harness = createTwoPopulationHarness({}, {});
-advanceTwoPopulations(harness, [{ genomeId: 'a0', fitness: 5 }], [{ genomeId: 'b0', fitness: 4 }]);
+advanceTwoPopulations(
+  harness,
+  [{ genomeId: 'a0', fitness: 5 }],
+  [{ genomeId: 'b0', fitness: 4 }],
+);
 
 // 7. Aggregate team fitness through the shared policy-injection evaluator seam.
 //    Racing and Ant Hive each supply their own policy; NGE core owns the fold structure.
-const evaluateTeamFitness = createTeamFitnessEvaluator<'team-a', { score: number }>(
-  (group) => group.memberResults.reduce((total, member) => total + member.score, 0),
+const evaluateTeamFitness = createTeamFitnessEvaluator<
+  'team-a',
+  { score: number }
+>((group) =>
+  group.memberResults.reduce((total, member) => total + member.score, 0),
 );
 const teamResults = evaluateTeamFitness([
   { teamId: 'team-a', memberResults: [{ score: 4 }, { score: 6 }] },
@@ -257,6 +283,7 @@ post-registration mutations to the original object are **not** reflected in the 
 Returns a **new** `OpponentSnapshotPool`; the original pool is **not** mutated.
 
 Parameters:
+
 - `pool` - Current snapshot pool.
 - `agentId` - Stable identifier for the agent being snapshotted.
 - `payload` - Arbitrary agent state to freeze at registration time.
@@ -303,6 +330,7 @@ Transport-neutral by design: this function does not depend on packed
 deferred to Phase 4 transport normalization.
 
 Parameters:
+
 - `harness` - Active two-population harness.
 - `resultsA` - Team A evaluation results for the completed race.
 - `resultsB` - Team B evaluation results for the completed race.
@@ -345,6 +373,7 @@ Because `writeCell` mutates the shared field in-place, sequential evaluators
 within the same tick can observe writes committed by prior agents.
 
 Parameters:
+
 - `agentIndex` - Zero-based index of the agent being evaluated.
 - `field` - Live shared field; sequential evaluators see writes from prior agents.
 
@@ -365,6 +394,7 @@ Returns a **new** `SharedField`; the original is **not** mutated.
 Each cell's new value is: `oldValue × factor`.
 
 Parameters:
+
 - `field` - Source field to decay.
 - `factor` - Decay multiplier in `[0, 1]`. A value of `0.95` retains 95% per tick.
 
@@ -393,6 +423,7 @@ grid neighbors and retains `cellValue × (1 − rate)`. Deterministic: identical
 inputs always produce byte-identical outputs.
 
 Parameters:
+
 - `field` - Source field to diffuse.
 - `rate` - Diffusion rate in `[0, 1]`. A value of `0.5` spreads half the cell's value.
 
@@ -416,6 +447,7 @@ Zeros every cell in the field and returns a **new** `SharedField`.
 The original field is **not** mutated.
 
 Parameters:
+
 - `field` - Source field to clear.
 
 Returns: A new `SharedField` with all cells set to `0`.
@@ -451,6 +483,7 @@ A value of `0` indicates identical distributions. Larger values indicate greater
 structural divergence between the two agents' module compositions.
 
 Parameters:
+
 - `distributionA` - Ordered module-size counts for agent A.
 - `distributionB` - Ordered module-size counts for agent B.
 
@@ -475,6 +508,7 @@ createCollectiveEvaluationContext(
 Creates a new collective evaluation context with an initial generation tick of zero.
 
 Parameters:
+
 - `agentCount` - Number of agents participating in collective evaluation.
 - `field` - Shared field visible to all agent evaluators within the current tick.
 
@@ -502,6 +536,7 @@ The pool is a rolling circular buffer: when at capacity, the oldest snapshot is
 evicted in FIFO order to make room for each new addition.
 
 Parameters:
+
 - `capacity` - Maximum number of snapshots retained at any time.
 
 Returns: A new `OpponentSnapshotPool` with an empty snapshot list.
@@ -528,6 +563,7 @@ The backing store is a `Float32Array` of `width × height` elements, all initial
 Cell `(x, y)` maps to flat index `y * width + x` (row-major order).
 
 Parameters:
+
 - `width` - Number of columns in the 2D grid.
 - `height` - Number of rows in the 2D grid.
 
@@ -556,6 +592,7 @@ racing, ant-hive, and future consumers on one shared evaluator contract
 without leaking benchmark-local compensation into the core.
 
 Parameters:
+
 - `policy` - Consumer-owned aggregation rule for one team group.
 
 Returns: Evaluator that folds each team group into one reusable team-fitness result.
@@ -611,6 +648,7 @@ Use `injected` for owner-local tests or deterministic fixtures that need to
 provide prebuilt controllers instead of allocating fresh ones.
 
 Parameters:
+
 - `configA` - Team A controller configuration.
 - `configB` - Team B controller configuration.
 - `injected` - Optional prebuilt team controllers for owner-local testing.
@@ -650,6 +688,7 @@ readCell(
 Reads the value stored at cell `(x, y)` in the shared field.
 
 Parameters:
+
 - `field` - The shared field to read from.
 - `x` - Column index (0-based).
 - `y` - Row index (0-based).
@@ -676,6 +715,7 @@ Returns a **new** `CollectiveEvaluationContext` with the generation tick increme
 and the shared field zeroed via `clearField`. The original context is **not** mutated.
 
 Parameters:
+
 - `context` - Context from the generation that just completed.
 
 Returns: A new context ready for the next generation's evaluation tick.
@@ -704,6 +744,7 @@ passed by reference and `writeCell` mutates in-place, each evaluator observes wr
 committed by all earlier evaluators within the same tick.
 
 Parameters:
+
 - `context` - Current collective evaluation context carrying field and agent count.
 - `evaluators` - Ordered array of evaluator functions, one per agent.
 
@@ -713,7 +754,10 @@ Example:
 
 ```ts
 const result = runCollectiveEvaluationTick(context, [
-  (_idx, field) => { writeCell(field, 0, 0, 1.0); return 10; },
+  (_idx, field) => {
+    writeCell(field, 0, 0, 1.0);
+    return 10;
+  },
   (_idx, field) => readCell(field, 0, 0) * 5,
 ]);
 // result.agentFitness === [10, 5]
@@ -737,6 +781,7 @@ evaluation already exists. Richer payoff shaping, opponent modeling, and
 role-specialized coevolution stay Phase 4+ concerns.
 
 Parameters:
+
 - `harness` - Active two-population harness.
 - `raceState` - Current race state propagated to the placeholder results.
 
@@ -781,6 +826,7 @@ ant-hive own the scoring policy and can swap it without rewriting the
 evaluator pipeline itself.
 
 Parameters:
+
 - `group` - Team-local member results to aggregate.
 
 Returns: Scalar team-level fitness score.
@@ -845,6 +891,7 @@ within the same collective tick observe each other's writes via the shared refer
 Returns the same `field` reference for fluent chaining.
 
 Parameters:
+
 - `field` - The shared field to write into.
 - `x` - Column index (0-based).
 - `y` - Row index (0-based).
@@ -872,7 +919,10 @@ that callers can chain underlying exceptions for full stack attribution.
 Example:
 
 ```ts
-import { NgeCollective_FieldDimensionError, NgeCollective_EvaluationError } from './neat.nge-collective.errors';
+import {
+  NgeCollective_FieldDimensionError,
+  NgeCollective_EvaluationError,
+} from './neat.nge-collective.errors';
 
 // Raised when width or height is non-positive or non-integer.
 throw new NgeCollective_FieldDimensionError('width must be a positive integer');
@@ -923,6 +973,7 @@ post-registration mutations to the original object are **not** reflected in the 
 Returns a **new** `OpponentSnapshotPool`; the original pool is **not** mutated.
 
 Parameters:
+
 - `pool` - Current snapshot pool.
 - `agentId` - Stable identifier for the agent being snapshotted.
 - `payload` - Arbitrary agent state to freeze at registration time.
@@ -954,6 +1005,7 @@ A value of `0` indicates identical distributions. Larger values indicate greater
 structural divergence between the two agents' module compositions.
 
 Parameters:
+
 - `distributionA` - Ordered module-size counts for agent A.
 - `distributionB` - Ordered module-size counts for agent B.
 
@@ -980,6 +1032,7 @@ The pool is a rolling circular buffer: when at capacity, the oldest snapshot is
 evicted in FIFO order to make room for each new addition.
 
 Parameters:
+
 - `capacity` - Maximum number of snapshots retained at any time.
 
 Returns: A new `OpponentSnapshotPool` with an empty snapshot list.
@@ -1015,11 +1068,11 @@ the recommended starting points, not to impose fixed behaviour.
 
 ### Tuning guidance
 
-| Constant | Increase effect | Decrease effect |
-|---|---|---|
-| `NGE_COLLECTIVE_DEFAULT_DECAY_FACTOR` | Signals persist longer, agents rely on older traces | Signals fade quickly, agents must reinforce paths more often |
-| `NGE_COLLECTIVE_DEFAULT_DIFFUSION_RATE` | Signals spread wider, less spatial specificity | Signals stay local, stronger spatial gradients |
-| `NGE_COLLECTIVE_DEFAULT_SNAPSHOT_POOL_CAPACITY` | More diverse opponent history; higher memory cost | Recency-biased selection; lower memory cost |
+| Constant                                        | Increase effect                                     | Decrease effect                                              |
+| ----------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------ |
+| `NGE_COLLECTIVE_DEFAULT_DECAY_FACTOR`           | Signals persist longer, agents rely on older traces | Signals fade quickly, agents must reinforce paths more often |
+| `NGE_COLLECTIVE_DEFAULT_DIFFUSION_RATE`         | Signals spread wider, less spatial specificity      | Signals stay local, stronger spatial gradients               |
+| `NGE_COLLECTIVE_DEFAULT_SNAPSHOT_POOL_CAPACITY` | More diverse opponent history; higher memory cost   | Recency-biased selection; lower memory cost                  |
 
 ### NGE_COLLECTIVE_DEFAULT_DECAY_FACTOR
 
@@ -1067,6 +1120,7 @@ createCollectiveEvaluationContext(
 Creates a new collective evaluation context with an initial generation tick of zero.
 
 Parameters:
+
 - `agentCount` - Number of agents participating in collective evaluation.
 - `field` - Shared field visible to all agent evaluators within the current tick.
 
@@ -1094,6 +1148,7 @@ Returns a **new** `CollectiveEvaluationContext` with the generation tick increme
 and the shared field zeroed via `clearField`. The original context is **not** mutated.
 
 Parameters:
+
 - `context` - Context from the generation that just completed.
 
 Returns: A new context ready for the next generation's evaluation tick.
@@ -1122,6 +1177,7 @@ passed by reference and `writeCell` mutates in-place, each evaluator observes wr
 committed by all earlier evaluators within the same tick.
 
 Parameters:
+
 - `context` - Current collective evaluation context carrying field and agent count.
 - `evaluators` - Ordered array of evaluator functions, one per agent.
 
@@ -1131,7 +1187,10 @@ Example:
 
 ```ts
 const result = runCollectiveEvaluationTick(context, [
-  (_idx, field) => { writeCell(field, 0, 0, 1.0); return 10; },
+  (_idx, field) => {
+    writeCell(field, 0, 0, 1.0);
+    return 10;
+  },
   (_idx, field) => readCell(field, 0, 0) * 5,
 ]);
 // result.agentFitness === [10, 5]
@@ -1154,6 +1213,7 @@ Returns a **new** `SharedField`; the original is **not** mutated.
 Each cell's new value is: `oldValue × factor`.
 
 Parameters:
+
 - `field` - Source field to decay.
 - `factor` - Decay multiplier in `[0, 1]`. A value of `0.95` retains 95% per tick.
 
@@ -1182,6 +1242,7 @@ grid neighbors and retains `cellValue × (1 − rate)`. Deterministic: identical
 inputs always produce byte-identical outputs.
 
 Parameters:
+
 - `field` - Source field to diffuse.
 - `rate` - Diffusion rate in `[0, 1]`. A value of `0.5` spreads half the cell's value.
 
@@ -1205,6 +1266,7 @@ Zeros every cell in the field and returns a **new** `SharedField`.
 The original field is **not** mutated.
 
 Parameters:
+
 - `field` - Source field to clear.
 
 Returns: A new `SharedField` with all cells set to `0`.
@@ -1230,6 +1292,7 @@ Collects the 4-connected neighbor coordinates for a given grid cell,
 filtering out coordinates that fall outside the grid boundaries.
 
 Parameters:
+
 - `col` - Column index of the source cell.
 - `row` - Row index of the source cell.
 - `width` - Grid width used as the column boundary.
@@ -1252,6 +1315,7 @@ The backing store is a `Float32Array` of `width × height` elements, all initial
 Cell `(x, y)` maps to flat index `y * width + x` (row-major order).
 
 Parameters:
+
 - `width` - Number of columns in the 2D grid.
 - `height` - Number of rows in the 2D grid.
 
@@ -1276,6 +1340,7 @@ readCell(
 Reads the value stored at cell `(x, y)` in the shared field.
 
 Parameters:
+
 - `field` - The shared field to read from.
 - `x` - Column index (0-based).
 - `y` - Row index (0-based).
@@ -1320,6 +1385,7 @@ within the same collective tick observe each other's writes via the shared refer
 Returns the same `field` reference for fluent chaining.
 
 Parameters:
+
 - `field` - The shared field to write into.
 - `x` - Column index (0-based).
 - `y` - Row index (0-based).
@@ -1348,6 +1414,7 @@ buildTeamFitnessResult(
 Create one immutable team-fitness result from one generic team group.
 
 Parameters:
+
 - `group` - Team-local member results.
 - `policy` - Consumer-owned aggregation rule for this group.
 
@@ -1370,6 +1437,7 @@ racing, ant-hive, and future consumers on one shared evaluator contract
 without leaking benchmark-local compensation into the core.
 
 Parameters:
+
 - `policy` - Consumer-owned aggregation rule for one team group.
 
 Returns: Evaluator that folds each team group into one reusable team-fitness result.
@@ -1430,6 +1498,7 @@ Transport-neutral by design: this function does not depend on packed
 deferred to Phase 4 transport normalization.
 
 Parameters:
+
 - `harness` - Active two-population harness.
 - `resultsA` - Team A evaluation results for the completed race.
 - `resultsB` - Team B evaluation results for the completed race.
@@ -1485,6 +1554,7 @@ Use `injected` for owner-local tests or deterministic fixtures that need to
 provide prebuilt controllers instead of allocating fresh ones.
 
 Parameters:
+
 - `configA` - Team A controller configuration.
 - `configB` - Team B controller configuration.
 - `injected` - Optional prebuilt team controllers for owner-local testing.
@@ -1519,6 +1589,7 @@ evaluation already exists. Richer payoff shaping, opponent modeling, and
 role-specialized coevolution stay Phase 4+ concerns.
 
 Parameters:
+
 - `harness` - Active two-population harness.
 - `raceState` - Current race state propagated to the placeholder results.
 

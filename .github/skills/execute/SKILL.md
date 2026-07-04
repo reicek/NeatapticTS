@@ -489,9 +489,11 @@ Each slice is a bounded unit of work with these fields:
   context contamination. A implementer that failed once must not carry its
   failed context into the retry. Each new instance must be dispatched via
   a fresh `build_dispatch_packet` call.
-- **If 3 consecutive loop-backs fail to resolve the same issue**,
-  escalate to `00-helping` via `00.cross-tier-helper`. Three failures
-  signals a scope or plan boundary problem, not an implementation bug.
+- **No loop-back threshold.** Continue loop-backs until the issue is
+  fully resolved or a true technical limit is reached. Slow progress is
+  still progress — no concessions. The orchestrator must keep dispatching
+  fresh `04-implementing` / `05-green-testing` iterations without an
+  artificial attempt limit.
 - **The orchestrator MUST NOT perform code edits itself.** The
   orchestrator's job is to classify, dispatch, wait, and advance — never
   to implement.

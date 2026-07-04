@@ -10,6 +10,7 @@ reads can project just the fields that report needs instead of importing the
 entire `Neat` runtime surface.
 
 Read the chapter in this order:
+
 - `GenomeWithMetrics` describes the minimal per-genome projection.
 - `CompatComputer` supplies the one expensive cross-genome measurement.
 - `DiversityStats` names the aggregated output fields that consumers compare
@@ -106,6 +107,7 @@ narrow family of similar genomes or whether structural experimentation is
 still producing spread.
 
 Parameters:
+
 - `population` - Population genomes exposing nodes, connections, and optional `_depth`.
 - `compatibilityComputer` - Object exposing `_compatibilityDistance(a, b)`.
 
@@ -137,6 +139,7 @@ entropy read adds a lightweight topology fingerprint beside the raw size
 aggregates.
 
 Parameters:
+
 - `graph` - Network instance to evaluate.
 
 Returns: Shannon-style entropy value.
@@ -158,6 +161,7 @@ genomes along that depth axis?" Sampling keeps that pairwise comparison
 cheap enough for repeated telemetry reads.
 
 Parameters:
+
 - `values` - Values to compare.
 - `sampleLimit` - Maximum number of sampled values to include.
 
@@ -181,6 +185,7 @@ a prefix of genomes, then averaging the pair distances so callers get a
 stable separation trend instead of an exhaustive matrix.
 
 Parameters:
+
 - `genomes` - Population genomes to compare.
 - `compatibilityComputer` - Compatibility-distance provider.
 - `sampleLimit` - Maximum number of genomes to include.
@@ -219,6 +224,7 @@ average lineage depth, average node count, average connection count, and the
 mean entropy across genomes.
 
 Parameters:
+
 - `values` - Values to average.
 
 Returns: Arithmetic mean, or `0` when the array is empty.
@@ -241,6 +247,7 @@ one genome exists, so the input array is always non-empty at the current
 public boundary.
 
 Parameters:
+
 - `values` - Non-empty values to evaluate.
 
 Returns: Population variance.

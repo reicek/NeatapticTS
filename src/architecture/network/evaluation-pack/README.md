@@ -12,6 +12,7 @@ worker boundary, but each benchmark should not invent its own pack,
 transfer, and versioning rules.
 
 This module owns the generic contract:
+
 - `createDeterministicEvaluationPack(seed, inputs)` builds a pack from a
   seed and transport-neutral inputs. The same reproducibility tuple
   `(seed, agentCount, schemaVersion)` produces byte-identical arrays on the
@@ -45,7 +46,7 @@ flowchart TD
 ```
 
 For background on the PRNG family used to fill the arrays, see Marsaglia,
-G. (2003), "Xorshift RNGs," *Journal of Statistical Software*, 8(14), 1–6,
+G. (2003), "Xorshift RNGs," _Journal of Statistical Software_, 8(14), 1–6,
 https://www.jstatsoft.org/article/view/v008i14, and Wikipedia contributors,
 [Pseudorandom number generator](https://en.wikipedia.org/wiki/Pseudorandom_number_generator).
 For background on the worker boundary where the zero-copy transfer list is
@@ -92,7 +93,7 @@ assertSchemaVersion(
 ```
 
 Asserts that the `schemaVersion` field of a pack matches the expected
-version string.  Consumers must call this before reading any typed-array
+version string. Consumers must call this before reading any typed-array
 field so that a version mismatch is caught at the boundary rather than
 silently misinterpreting the packed bytes.
 
@@ -103,6 +104,7 @@ are a common forward-compatibility technique; see Wikipedia contributors,
 [Forward compatibility](https://en.wikipedia.org/wiki/Forward_compatibility).
 
 Parameters:
+
 - `pack` - Object with a `schemaVersion` field.
 - `expectedVersion` - Expected schema-version sentinel.
 
@@ -123,15 +125,15 @@ createDeterministicEvaluationPack(
 ```
 
 Constructs a deterministic evaluation pack from a seed and transport-neutral
-inputs.  Identical `(seed, inputs)` → identical pack on the same runtime
+inputs. Identical `(seed, inputs)` → identical pack on the same runtime
 (same Node or browser build).
 
 The pack's typed arrays are filled by a self-contained xorshift32 PRNG
 seeded from `seed`. The PRNG algorithm matches the same family used in
 `src/neat/rng/core/` but is duplicated here to avoid a cross-layer
 dependency — Layer 2 must not import NEAT core internals. For background
-on xorshift32, see Marsaglia, G. (2003), "Xorshift RNGs," *Journal of
-Statistical Software*, 8(14), 1–6,
+on xorshift32, see Marsaglia, G. (2003), "Xorshift RNGs," _Journal of
+Statistical Software_, 8(14), 1–6,
 https://www.jstatsoft.org/article/view/v008i14.
 
 Generic reproducibility tuple: `(seed, agentCount, schemaVersion)`. Same
@@ -139,8 +141,9 @@ tuple → identical pack on the same runtime. Cross-runtime byte identity is
 not promised.
 
 Parameters:
+
 - `seed` - Deterministic pack seed (non-negative integer; zero falls
-back to a non-zero constant because xorshift32 cannot advance from zero).
+  back to a non-zero constant because xorshift32 cannot advance from zero).
 - `inputs` - Transport-neutral inputs (agent count, schema version).
 
 Returns: A `DeterministicEvaluationPack` whose typed arrays are
@@ -179,7 +182,7 @@ Transport-neutral inputs consumed by `createDeterministicEvaluationPack`.
 
 Captures the reproducibility tuple components that are NOT the seed:
 `agentCount` (determines typed-array sizes) and `schemaVersion` (forward-
-compatibility sentinel).  Benchmark-specific inputs (opponent snapshots,
+compatibility sentinel). Benchmark-specific inputs (opponent snapshots,
 track physics, etc.) are injected by the benchmark's own wrapper, not by
 this generic type.
 
@@ -198,6 +201,7 @@ Collects every distinct `ArrayBuffer` backing a typed-array field in `pack`
 into a transfer list for zero-copy `postMessage` transfer.
 
 Rules:
+
 - Every typed-array field contributes exactly one buffer entry.
 - Shared buffers are deduplicated (listed only once).
 
@@ -208,6 +212,7 @@ and Wikipedia contributors,
 [Web Workers](https://en.wikipedia.org/wiki/Web_Workers).
 
 Parameters:
+
 - `pack` - The deterministic evaluation pack whose buffers will transfer.
 
 Returns: Ordered list of `ArrayBuffer` references for postMessage transfer.
