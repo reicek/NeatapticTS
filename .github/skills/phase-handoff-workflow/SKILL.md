@@ -19,9 +19,10 @@ or when a plan file needs its phase structure brought into conformance with the
 standard seven-step shape.
 
 This skill owns the durable rules for phase ordering, step packet authoring,
-gate contracts, tracker updates, and escalation behavior. It does not own the
-content of any particular phase's work — that belongs to the relevant domain
-skill.
+gate contracts, tracker updates, and escalation behavior. Handoffs rely on
+append-only convergence in the tracker so phase history remains reconstructible.
+It does not own the content of any particular phase's work — that belongs to
+the relevant domain skill.
 
 ## When to Use
 
@@ -149,6 +150,10 @@ complete. Post-phase fan-out from the flow definition runs after the flow body.
   step with `goal: red-testing` or `goal: implementing`. The gate checks for a
   green-light marker recorded by a fresh `01-planning` verification pass in the
   plan's `## Latest validation evidence` section.
+- The `spec-checklist` skill is a **pre-implementation quality gate**. Before
+  any dispatch to `04-implementing`, run it read-only to validate prose quality,
+  traceability coverage (≥ 80%), and ID coverage; block dispatch until any
+  `missing`, `partial`, `contradicts`, or `unrequested` gaps are resolved.
 - Gate exceptions are recorded via
   `scripts/agent-customization/gates/record-gate-exception.mjs` and appended to
   `.github/ai-learning/learning-log.jsonl`.
@@ -173,20 +178,21 @@ packets, before execution continues.
 
 ### Field Definitions
 
-| Field             | Required | Description                                                                                                                                                  |
-| ----------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `phase`           | Yes      | Phase number (integer)                                                                                                                                       |
-| `step`            | Yes      | Step number within the phase (integer)                                                                                                                       |
-| `goal`            | Yes      | What outcome this step needs. Must be one of: `planning`, `researching`, `red-testing`, `implementing`, `green-testing`, `documenting`, `logging`, `helping` |
-| `tdd_sequence`    | No       | How the orchestrator should decompose this step across phases. Must be one of: `red-green`, `green-only`. When absent, single-phase dispatch                 |
-| `status`          | Yes      | Step status: `[PLANNED]`, `[WIP]`, or `[DONE]`                                                                                                               |
-| `mode`            | Yes      | Session mode: `fresh-session` or `perpetual`                                                                                                                 |
-| `source_of_truth` | Yes      | Path to the authoritative plan file                                                                                                                          |
-| `copy_paste`      | Yes      | Whether the step packet is a paste-ready prompt (`true`/`false`)                                                                                             |
-| `next_step`       | Yes      | Description of the next step, or `null` for terminal steps                                                                                                   |
-| `skills`          | Yes      | List of skill names the agent should load                                                                                                                    |
-| `specialists`     | No       | List of hidden specialist agent names for delegation                                                                                                         |
-| `validation`      | Yes      | List of validation commands or evidence gates                                                                                                                |
+| Field                | Required | Description                                                                                                                                                  |
+| -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `phase`              | Yes      | Phase number (integer)                                                                                                                                       |
+| `step`               | Yes      | Step number within the phase (integer)                                                                                                                       |
+| `goal`               | Yes      | What outcome this step needs. Must be one of: `planning`, `researching`, `red-testing`, `implementing`, `green-testing`, `documenting`, `logging`, `helping` |
+| `tdd_sequence`       | No       | How the orchestrator should decompose this step across phases. Must be one of: `red-green`, `green-only`. When absent, single-phase dispatch                 |
+| `status`             | Yes      | Step status: `[PLANNED]`, `[WIP]`, or `[DONE]`                                                                                                               |
+| `mode`               | Yes      | Session mode: `fresh-session` or `perpetual`                                                                                                                 |
+| `source_of_truth`    | Yes      | Path to the authoritative plan file                                                                                                                          |
+| `copy_paste`         | Yes      | Whether the step packet is a paste-ready prompt (`true`/`false`)                                                                                             |
+| `next_step`          | Yes      | Description of the next step, or `null` for terminal steps                                                                                                   |
+| `skills`             | Yes      | List of skill names the agent should load                                                                                                                    |
+| `specialists`        | No       | List of hidden specialist agent names for delegation                                                                                                         |
+| `validation`         | Yes      | List of validation commands or evidence gates                                                                                                                |
+| `constitution_check` | No       | Stable principle identifiers from `plans/constitution.md` that this step exercises. Informational; preserved by plan-sync and reported in handoffs.          |
 
 The orchestrator resolves `goal` to the dispatched agent using the routing
 table in `.github/copilot-instructions.md` §3. When `tdd_sequence` is present,
@@ -264,6 +270,29 @@ work, validation evidence, and the next active step before ending.
 **Whole-step copy rule:** The entire step block above is the prompt. Do not
 append a second nested `Copy-paste prompt` subsection.
 ````
+
+### Traceability Table (recommended)
+
+For steps whose acceptance criteria map to concrete file changes and validation commands, include a `traceability` table in the step packet or in the plan's `VALIDATION_EVIDENCE` section. The table makes every `AC-###` criterion machine-traceable and supports the test-backed / gate-backed change principle in `plans/constitution.md`.
+
+Use this shape:
+
+```yaml
+traceability:
+  - id: AC-001
+    criterion: 'buildMLP() default config produces 5-node network'
+    files_changed:
+      - 'src/architecture/network/builders/mlp/*.ts'
+    validation_command: 'npx jest --testPathPattern=builders/mlp'
+  - id: AC-002
+    criterion: 'buildMLP() rejects empty hiddenLayers with actionable error'
+    files_changed:
+      - 'src/architecture/network/builders/mlp/*.ts'
+      - 'src/architecture/network/builders/mlp/*.errors.ts'
+    validation_command: 'npx jest --testPathPattern=builders/mlp'
+```
+
+Each row must reference one `AC-###` identifier, the concrete criterion text, the exact files changed, and the validation command that proves it. Gap types to flag while authoring the table: `missing` (no `AC-###` for a file change), `partial` (criterion lacks a validation command), `contradicts` (command does not cover the listed files), or `unrequested` (validation command present but no matching criterion).
 
 Completed phases **must** have their history compressed to a concise coverage
 note before the next phase is started or the workstream is closed. The

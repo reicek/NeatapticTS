@@ -46,7 +46,7 @@ handoffs:
 
 ## Purpose
 
-Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps.
+Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps. Session logs and learning events follow append-only convergence so every done-state stays reconstructible.
 
 ## Cortex-First Search Policy
 
@@ -148,6 +148,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
       "resumeAction": "Resume with manual review"
     }
     ```
+- Record constitution updates (`constitution-update`), spec-checklist runs (`spec-checklist`), and gate-run events (`gate-run`) in `learning-log.jsonl` when they affect durable workflow evidence.
 - Gate exceptions use `record-gate-exception.mjs` structure; never rewrite historical entries.
 - Format evolution must be backward-compatible.
   - Example: If adding a new field, ensure old entries remain valid. If required field changes, record migration in tracker and escalate via 00-cross-tier-helper before mixing records.
@@ -229,6 +230,11 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
   - Example: "Log format migration required, TASK_STATUS: PARTIAL, escalation initiated."
 - **For unresolvable archive or handoff conflicts, set TASK_STATUS: PARTIAL and escalate via 00-cross-tier-helper.**
   - Example: "Archive conflict, TASK_STATUS: PARTIAL, escalation initiated."
+
+## References
+
+Reference: summarizing-session-log — canonical session summary structure and fields.
+Reference: capturing-learning-event — canonical ISO-42001-style learning event schema.
 
 ## Output format
 

@@ -697,6 +697,7 @@ M10. [completed/Folder_Quality_Gate_and_Racing_Hotfix.plans.md](completed/Folder
 M11. [Step_Packet_Goal_Redesign.plans.md](Step_Packet_Goal_Redesign.plans.md) [WIP]
 M12. [completed/turso-rag-migration.plans.md](completed/turso-rag-migration.plans.md) [DONE]
 M13. [Remove_Timestamps_From_Permanent_Logs.plans.md](Remove_Timestamps_From_Permanent_Logs.plans.md) [WIP] — remove wall-clock timestamps from agent/skill templates, writer scripts, and persisted artifacts.
+M14. [Spec-Kit_Assimilation.plans.md](completed/Spec-Kit_Assimilation.plans.md) [DONE] — cherry-pick Spec Kit governance and workflow patterns (constitution, clarification cap, traceability IDs, task templates, spec checklist, bug triage, research artifacts, extension catalog, verbatim phrases) into the existing agent/gate/skill architecture.
 
 ### Phase 0 inventory
 

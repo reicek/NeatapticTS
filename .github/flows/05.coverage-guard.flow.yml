@@ -17,6 +17,8 @@ gates:
   - 'plan-sync'
   - 'green-validation-evidence'
   - 'cortex-first-search'
+  - 'constitution_check'
+  - 'spec-checklist'
 
 post-phase-fanout:
   - '07-logging'

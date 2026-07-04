@@ -13,8 +13,12 @@ pnpm-debug.log*
 *.tsbuildinfo
 
 # Generated documentation output (CI builds & deploys)
-/docs/
 /dist-docs/
+/docs/*
+
+# Research artifacts are manual pre-design evidence, not generated docs.
+!/docs/research/
+!/docs/research/README.md
 
 # RAG generated artifacts
 rag-index/data/*.sqlite

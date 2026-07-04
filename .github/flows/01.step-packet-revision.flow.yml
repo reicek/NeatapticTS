@@ -20,6 +20,7 @@ gates:
   - 'plan-sync'
   - 'step-packet'
   - 'planning-output-contract'
+  - 'spec-checklist'
 
 post-phase-fanout:
   - '<next-active-step-agent>'

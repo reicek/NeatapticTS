@@ -412,12 +412,15 @@ next_phase: 'Phase 4 — Tier 3: 2v2 no pits'
 skills:
   - 'plan-alignment'
   - 'nge-benchmark-scout'
+constitution_check:
+  - 'development-workflow'
+  - 'breadth-first-recoverable'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
 acceptance_criteria:
-  - 'Tier 2 green gate passes: two cars (one per team) run a full episode; the self-radio field is wired as a 77-dim observation and 9-dim action seam; no pits, no tire degradation.'
-  - 'Phase 2 is [DONE] before Phase 3 starts.'
+  - 'AC-RC-001: Tier 2 green gate passes: two cars (one per team) run a full episode; the self-radio field is wired as a 77-dim observation and 9-dim action seam; no pits, no tire degradation.'
+  - 'AC-RC-002: Phase 2 is [DONE] before Phase 3 starts.'
 placeholder_steps:
   - 'Step 09 — Implement Tier 1/Tier 2 racing baseline rules'
   - 'Step 10 — Green validation and regression triage'
@@ -538,12 +541,15 @@ next_phase: 'Phase 5 — Tier 4: 2v2 tires and pits'
 skills:
   - 'plan-alignment'
   - 'nge-benchmark-scout'
+constitution_check:
+  - 'development-workflow'
+  - 'breadth-first-recoverable'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
 acceptance_criteria:
-  - 'Tier 3 green gate passes: two independently-evolving teammates per team (four distinct NEAT genomes/networks) develop distinct behavioral specializations through experience; each car has its own observation, controller, and adaptation state; no pits.'
-  - 'Phase 3 is [DONE] before Phase 4 starts.'
+  - 'AC-RC-003: Tier 3 green gate passes: two independently-evolving teammates per team (four distinct NEAT genomes/networks) develop distinct behavioral specializations through experience; each car has its own observation, controller, and adaptation state; no pits.'
+  - 'AC-RC-004: Phase 3 is [DONE] before Phase 4 starts.'
 placeholder_steps:
   - 'Step 01 — Plan Tier 3 boundary'
   - 'Step 02 — Research 2v2 coevolution and role-divergence contracts'
@@ -613,13 +619,16 @@ skills:
   - 'plan-alignment'
   - 'nge-benchmark-scout'
   - 'nge-core-scout'
+constitution_check:
+  - 'development-workflow'
+  - 'breadth-first-recoverable'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
 acceptance_criteria:
-  - 'Tier 4 green gate passes: tire degradation, one pit per team, pit-entrance blocking, and EpisodicSlot pit-timing motivation are observable and deterministic.'
-  - 'Missing NGE primitives (EpisodicSlot, GatingRouter) are either confirmed available or escalated to nge-core-algorithm with a recorded blocker.'
-  - 'Phase 4 is [DONE] before Phase 5 starts.'
+  - 'AC-RC-005: Tier 4 green gate passes: tire degradation, one pit per team, pit-entrance blocking, and EpisodicSlot pit-timing motivation are observable and deterministic.'
+  - 'AC-RC-006: Missing NGE primitives (EpisodicSlot, GatingRouter) are either confirmed available or escalated to nge-core-algorithm with a recorded blocker.'
+  - 'AC-RC-007: Phase 4 is [DONE] before Phase 5 starts.'
 placeholder_steps:
   - 'Step 01 — Plan Tier 4 boundary'
   - 'Step 02 — Research tire/pit mechanics and NGE primitive dependencies'
@@ -692,12 +701,15 @@ next_phase: 'Phase 7 — Tier 6: 3v3 advanced strategy'
 skills:
   - 'plan-alignment'
   - 'nge-benchmark-scout'
+constitution_check:
+  - 'development-workflow'
+  - 'breadth-first-recoverable'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
 acceptance_criteria:
-  - 'Tier 5 green gate passes: three cars per team, full radio, tire/pit mechanics, queen/blocker/pacer role divergence, and polyandric reproduction active.'
-  - 'Phase 5 is [DONE] before Phase 6 starts.'
+  - 'AC-RC-008: Tier 5 green gate passes: three cars per team, full radio, tire/pit mechanics, queen/blocker/pacer role divergence, and polyandric reproduction active.'
+  - 'AC-RC-009: Phase 5 is [DONE] before Phase 6 starts.'
 placeholder_steps:
   - 'Step 01 — Plan Tier 5 boundary'
   - 'Step 02 — Research 3v3 full-team contracts'
@@ -773,14 +785,17 @@ skills:
   - 'plan-alignment'
   - 'nge-benchmark-scout'
   - 'neatchat-scout'
+constitution_check:
+  - 'development-workflow'
+  - 'breadth-first-recoverable'
 validation:
   - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
 acceptance_criteria:
-  - 'Tier 6 green gate passes: multi-generation hall-of-fame opponent snapshots wired into the racing coevolution loop, sustained co-evolutionary arms race observable (alternating-advantage trajectory classifier), and team-level fitness telemetry across generations.'
-  - 'modeIsEvolvable engagement is either confirmed available or deferred with a recorded blocker escalated to nge-core-algorithm (DR-008).'
-  - 'FSM multi-generation loop bug is fixed and validated against Tier 1-5 regression (DR-009).'
-  - 'Phase 6 is [DONE] before Phase 7 starts.'
+  - 'AC-RC-010: Tier 6 green gate passes: multi-generation hall-of-fame opponent snapshots wired into the racing coevolution loop, sustained co-evolutionary arms race observable (alternating-advantage trajectory classifier), and team-level fitness telemetry across generations.'
+  - 'AC-RC-011: modeIsEvolvable engagement is either confirmed available or deferred with a recorded blocker escalated to nge-core-algorithm (DR-008).'
+  - 'AC-RC-012: FSM multi-generation loop bug is fixed and validated against Tier 1-5 regression (DR-009).'
+  - 'AC-RC-013: Phase 6 is [DONE] before Phase 7 starts.'
 placeholder_steps:
   - 'Step 01 — Plan Tier 6 boundary'
   - 'Step 02 — Research hall-of-fame wiring, analytics seams, and NGE dependencies'

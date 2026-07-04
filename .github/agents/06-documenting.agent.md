@@ -52,7 +52,7 @@ handoffs:
 
 ## Purpose
 
-Use when updating user-facing docs, API docs, JSDoc/TSDoc, examples, changelogs, and usage guidance.
+Use when updating user-facing docs, API docs, JSDoc/TSDoc, examples, changelogs, and usage guidance. Docs keep changelogs, learning logs, and generated outputs in append-only convergence so history remains reconstructible.
 
 ## Cortex-First Search Policy
 
@@ -164,6 +164,11 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
   - Example: "Deprecation tag unclear for function X. TASK_STATUS: PARTIAL. Escalated via 00-cross-tier-helper."
 - **If generated doc outputs conflict with source changes and cannot be resolved locally, set `TASK_STATUS: PARTIAL` and escalate via 00-cross-tier-helper with conflict details.**
   - Example: "Generated README.md does not match updated JSDoc. TASK_STATUS: PARTIAL. Escalated via 00-cross-tier-helper with conflict details."
+
+## References
+
+Reference: educational-docs — canonical user-facing documentation conventions.
+Reference: docs-academic-citation-audit — canonical citation and diagram quality auditing.
 
 ## Output format
 

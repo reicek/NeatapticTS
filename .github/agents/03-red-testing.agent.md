@@ -58,7 +58,7 @@ handoffs:
 
 ## Purpose
 
-Use when creating failing tests, test plans, fixtures, assertions, mocks, and coverage strategy before implementation.
+Use when creating failing tests, test plans, fixtures, assertions, mocks, and coverage strategy before implementation. Red tests are the unit tests for English that describe expected behavior before implementation.
 
 ## Cortex-First Search Policy
 
@@ -271,6 +271,11 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
   - Example: "Test type ambiguous, fixture unstable, cleanup missing. TASK_STATUS: PARTIAL. Documenting and escalating via '00-cross-tier-helper'."
 - **Behavior cannot be isolated to a single failing assertion:**
   - Example: "Multiple behaviors fail together, cannot isolate single assertion. TASK_STATUS: PARTIAL. Documenting and escalating via '00-cross-tier-helper'."
+
+## References
+
+Reference: red-test-contracts — canonical red-test contract shapes and value-gate rules.
+Reference: creating-unit-tests — canonical test authoring conventions for focused failures.
 
 ## Output format
 

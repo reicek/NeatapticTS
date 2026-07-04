@@ -43,6 +43,7 @@ skills:
     'coverage-guard',
     'test-fix-workflow',
     'plan-sync-validation',
+    'spec-checklist',
     'trace-audit-reporting',
     'research-methodology',
     'execute',
@@ -59,7 +60,7 @@ handoffs:
 
 ## Purpose
 
-Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation.
+Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation. Green validation confirms the unit tests for English pass and that tracker evidence supports append-only convergence.
 
 ## Cortex-First Search Policy
 
@@ -289,6 +290,11 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
   - Example: "Test 'should save agent' failed 2/3 times. TASK_STATUS: PARTIAL. Evidence and logs attached. Routed to failure-triage-specialist."
 - **If a required gate tool is unavailable or ambiguous, set TASK_STATUS: PARTIAL, document the stall, and escalate via 00-cross-tier-helper.**
   - Example: "coverage-guard tool not found. TASK_STATUS: PARTIAL. Escalated via 00-cross-tier-helper."
+
+## References
+
+Reference: green-validation-gates — canonical green validation gate contracts.
+Reference: coverage-guard — canonical coverage enforcement for touched src/ files.
 
 ## Output format
 

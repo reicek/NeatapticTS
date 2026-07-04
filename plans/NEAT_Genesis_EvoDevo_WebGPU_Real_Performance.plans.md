@@ -2906,80 +2906,6 @@ mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md'
 copy_paste: true
 next_step: 'Slice 02-05a-batched — implement batched GPU inference dispatch and submission ordering'
-
-- **05-green-testing validation for slice `02-05a-batched` — NOT OK / RED.**
-- Focused Jest: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="network.gpu.batched" --coverage --collectCoverageFrom="src/architecture/network/gpu/network.gpu.batched.ts"` → 1 suite passed, 27 tests passed, 0 failures.
-- Coverage-guard: `src/architecture/network/gpu/network.gpu.batched.ts` at 100% statements, 100% branches, 100% functions, 100% lines.
-- TypeScript: `npx tsc --noEmit -p tsconfig.json` → OK (exit 0).
-- Lint: `npm run lint` → OK (exit 0, 0 issues).
-- Prettier: `npx prettier --check src/architecture/network/gpu/network.gpu.batched.ts` → OK (exit 0).
-- Build: `npm run build` → OK; `npm run build:browser` → OK.
-- Tier-1 gates: `plan-sync`: PASS, `agent-graph`: PASS, `learning-event`: PASS (gate exception recorded for `gpu-real-device-batch-queue`).
-- Real visible-window GPU validation (delegated to `browser-harness-specialist`): **FAILED parity / zero-output bug** on NVIDIA Lovelace.
-- `browserVisibility`: `visible-foreground` (Chrome launched headless:false, brought to front, `document.visibilityState==='visible'`, `document.hidden===false`).
-- `gpuAdapterInfo`: vendor=nvidia, architecture=lovelace.
-- `gpuDeviceBound`: true.
-- Scenario URL: `http://localhost:8080/docs/browser-tests/webgpu-batched-queue-smoke.html` (source-level esbuild bundle because `createBatchInferenceQueue` is not exported in the public IIFE).
-- Submission-order checks:
-  - `submitCount`: 1 (single combined command encoder as required).
-  - `emptyFlushOk`: true (flushing an empty queue does not throw).
-  - `orderedOutputsMatch`: false (GPU outputs are all zeros while CPU references are non-zero).
-- Parity: `maxAbsDiff` ≈ 0.532, `meanAbsDiff` ≈ 0.523 — **FAIL** against strict thresholds `maxAbsDiff < 1e-3`, `meanAbsDiff < 1e-4`.
-- Existing single-network WebGPU smoke (`docs/browser-tests/webgpu-inference-smoke.html`) still passes, isolating the bug to the batched path.
-- Root cause (preliminary): `batchActivate()` in `src/architecture/network/gpu/network.gpu.batched.ts` dispatches **one compute pass per network** and never advances `params.level` per topological level, so only level-0 nodes run. The single-network path in `network.gpu.activate.ts` dispatches per level; the batched path should mirror that behavior.
-- Suggested fix: make `batchActivate()` dispatch per topological level (or update `params.level` with proper synchronization) so that real-GPU outputs match CPU reference outputs across all depth levels.
-- Slice `02-05a-batched` status remains `[WIP]` / `[IN PROGRESS]`; **DO NOT mark `[DONE]`** until real visible-window GPU parity passes.
-- Suggested next agent: `04-implementing` with focused `slice-fix` packet touching `src/architecture/network/gpu/network.gpu.batched.ts`.
-
-```json
-{
-  "pass": false,
-  "slice_id": "02-05a-batched",
-  "evidence": {
-    "focused_gpu_jest": {
-      "suites": "1 passed / 0 failed / 1 total",
-      "tests": "27 passed / 0 failed / 27 total",
-      "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='network.gpu.batched' --coverage --collectCoverageFrom='src/architecture/network/gpu/network.gpu.batched.ts'"
-    },
-    "coverage_summary": {
-      "network.gpu.batched.ts": {
-        "statements": 100,
-        "branches": 100,
-        "functions": 100,
-        "lines": 100
-      }
-    },
-    "preflight": {
-      "tsc": "OK (exit 0)",
-      "lint": "OK (exit 0, 0 issues)",
-      "prettier": "OK (exit 0)",
-      "build": "OK (npm run build)",
-      "build_browser": "OK (npm run build:browser)"
-    },
-    "real_gpu_validation": {
-      "browserVisibility": "visible-foreground",
-      "gpuAdapterInfo": { "vendor": "nvidia", "architecture": "lovelace" },
-      "gpuDeviceBound": true,
-      "scenarioUrl": "http://localhost:8080/docs/browser-tests/webgpu-batched-queue-smoke.html",
-      "strictThresholds": { "maxAbsDiff": "< 1e-3", "meanAbsDiff": "< 1e-4" },
-      "submitCount": 1,
-      "emptyFlushOk": true,
-      "orderedOutputsMatch": false,
-      "maxAbsDiff": 0.5320148437402766,
-      "meanAbsDiff": 0.5232320994506168,
-      "singleNetworkSmokePassed": true,
-      "status": "NOT OK — batch queue GPU outputs all zeros while CPU references non-zero"
-    },
-    "tier1_gates": {
-      "plan-sync": "PASS",
-      "agent-graph": "PASS",
-      "learning-event": "PASS (gate exception recorded)"
-    }
-  },
-  "fixHint": "Make batchActivate() dispatch per topological level (or update params.level with proper synchronization) so that all node levels are evaluated. Re-run the real visible-window GPU smoke in docs/browser-tests/webgpu-batched-queue-smoke.html and verify maxAbsDiff < 1e-3, meanAbsDiff < 1e-4, submitCount === 1, emptyFlushOk === true, and orderedOutputsMatch === true.",
-  "owner": "05-green-testing"
-}
-```
 skills:
   - 'implementation-standards'
   - 'webgpu'
@@ -3065,6 +2991,86 @@ slices:
     parallelizable: false
     dependencies:
       - '02-05c-benchmark-parallel'
+```
+
+#### 05-green-testing validation (slice 02-05a-batched) — NOT OK / RED
+
+> Relocated out of the step-packet YAML block so the gate parser sees a
+> contiguous `skills`/`validation`/`acceptance_criteria`/`slices` block. All
+> measurements and evidence below are preserved verbatim — nothing was deleted.
+
+- **05-green-testing validation for slice `02-05a-batched` — NOT OK / RED.**
+- Focused Jest: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns="network.gpu.batched" --coverage --collectCoverageFrom="src/architecture/network/gpu/network.gpu.batched.ts"` → 1 suite passed, 27 tests passed, 0 failures.
+- Coverage-guard: `src/architecture/network/gpu/network.gpu.batched.ts` at 100% statements, 100% branches, 100% functions, 100% lines.
+- TypeScript: `npx tsc --noEmit -p tsconfig.json` → OK (exit 0).
+- Lint: `npm run lint` → OK (exit 0, 0 issues).
+- Prettier: `npx prettier --check src/architecture/network/gpu/network.gpu.batched.ts` → OK (exit 0).
+- Build: `npm run build` → OK; `npm run build:browser` → OK.
+- Tier-1 gates: `plan-sync`: PASS, `agent-graph`: PASS, `learning-event`: PASS (gate exception recorded for `gpu-real-device-batch-queue`).
+- Real visible-window GPU validation (delegated to `browser-harness-specialist`): **FAILED parity / zero-output bug** on NVIDIA Lovelace.
+- `browserVisibility`: `visible-foreground` (Chrome launched headless:false, brought to front, `document.visibilityState==='visible'`, `document.hidden===false`).
+- `gpuAdapterInfo`: vendor=nvidia, architecture=lovelace.
+- `gpuDeviceBound`: true.
+- Scenario URL: `http://localhost:8080/docs/browser-tests/webgpu-batched-queue-smoke.html` (source-level esbuild bundle because `createBatchInferenceQueue` is not exported in the public IIFE).
+- Submission-order checks:
+  - `submitCount`: 1 (single combined command encoder as required).
+  - `emptyFlushOk`: true (flushing an empty queue does not throw).
+  - `orderedOutputsMatch`: false (GPU outputs are all zeros while CPU references are non-zero).
+- Parity: `maxAbsDiff` ≈ 0.532, `meanAbsDiff` ≈ 0.523 — **FAIL** against strict thresholds `maxAbsDiff < 1e-3`, `meanAbsDiff < 1e-4`.
+- Existing single-network WebGPU smoke (`docs/browser-tests/webgpu-inference-smoke.html`) still passes, isolating the bug to the batched path.
+- Root cause (preliminary): `batchActivate()` in `src/architecture/network/gpu/network.gpu.batched.ts` dispatches **one compute pass per network** and never advances `params.level` per topological level, so only level-0 nodes run. The single-network path in `network.gpu.activate.ts` dispatches per level; the batched path should mirror that behavior.
+- Suggested fix: make `batchActivate()` dispatch per topological level (or update `params.level` with proper synchronization) so that real-GPU outputs match CPU reference outputs across all depth levels.
+- Slice `02-05a-batched` status remains `[WIP]` / `[IN PROGRESS]`; **DO NOT mark `[DONE]`** until real visible-window GPU parity passes.
+- Suggested next agent: `04-implementing` with focused `slice-fix` packet touching `src/architecture/network/gpu/network.gpu.batched.ts`.
+
+```json
+{
+  "pass": false,
+  "slice_id": "02-05a-batched",
+  "evidence": {
+    "focused_gpu_jest": {
+      "suites": "1 passed / 0 failed / 1 total",
+      "tests": "27 passed / 0 failed / 27 total",
+      "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='network.gpu.batched' --coverage --collectCoverageFrom='src/architecture/network/gpu/network.gpu.batched.ts'"
+    },
+    "coverage_summary": {
+      "network.gpu.batched.ts": {
+        "statements": 100,
+        "branches": 100,
+        "functions": 100,
+        "lines": 100
+      }
+    },
+    "preflight": {
+      "tsc": "OK (exit 0)",
+      "lint": "OK (exit 0, 0 issues)",
+      "prettier": "OK (exit 0)",
+      "build": "OK (npm run build)",
+      "build_browser": "OK (npm run build:browser)"
+    },
+    "real_gpu_validation": {
+      "browserVisibility": "visible-foreground",
+      "gpuAdapterInfo": { "vendor": "nvidia", "architecture": "lovelace" },
+      "gpuDeviceBound": true,
+      "scenarioUrl": "http://localhost:8080/docs/browser-tests/webgpu-batched-queue-smoke.html",
+      "strictThresholds": { "maxAbsDiff": "< 1e-3", "meanAbsDiff": "< 1e-4" },
+      "submitCount": 1,
+      "emptyFlushOk": true,
+      "orderedOutputsMatch": false,
+      "maxAbsDiff": 0.5320148437402766,
+      "meanAbsDiff": 0.5232320994506168,
+      "singleNetworkSmokePassed": true,
+      "status": "NOT OK — batch queue GPU outputs all zeros while CPU references non-zero"
+    },
+    "tier1_gates": {
+      "plan-sync": "PASS",
+      "agent-graph": "PASS",
+      "learning-event": "PASS (gate exception recorded)"
+    }
+  },
+  "fixHint": "Make batchActivate() dispatch per topological level (or update params.level with proper synchronization) so that all node levels are evaluated. Re-run the real visible-window GPU smoke in docs/browser-tests/webgpu-batched-queue-smoke.html and verify maxAbsDiff < 1e-3, meanAbsDiff < 1e-4, submitCount === 1, emptyFlushOk === true, and orderedOutputsMatch === true.",
+  "owner": "05-green-testing"
+}
 ```
 
 **User instruction:** Paste this full step packet.

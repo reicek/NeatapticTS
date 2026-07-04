@@ -68,7 +68,7 @@ handoffs:
 
 ## Purpose
 
-Use when making scoped code changes through focused implementation specialists, reusing project patterns, and avoiding unrelated refactors.
+Use when making scoped code changes through focused implementation specialists, reusing project patterns, and avoiding unrelated refactors. Implementation respects the constitution authority encoded in the active step packet and stays inside the slice boundary.
 
 ## Cortex-First Search Policy
 
@@ -381,6 +381,11 @@ These are high-value automation items to consider adding outside this agent doc 
 - A small automation that parses the `Claim:` line and prevents concurrent edits by blocking updates when active.
 
 Document these automation items in the plan as `NEXT:` work if you want to mature the flow further.
+
+## References
+
+Reference: implementation-standards — canonical repo implementation conventions and validation gates.
+Reference: tracker-handoff — canonical plan update and handoff payload shape.
 
 ## Output format
 

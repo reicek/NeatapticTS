@@ -832,19 +832,19 @@ examples/ant_hive/
 
 ## Acceptance Criteria
 
-- Colony of 50–100 ants + 5–10 Angels runs at 30+ fps in display mode.
-- Pheromone field gradients are visibly concentrated in productive foraging corridors after 200+ episode ticks.
-- Alarm pheromone visibly triggers behavioral mode shifts — agents in alarm zones exhibit measurably different movement patterns than baseline.
-- GeoFront wall damage occurs when soldiers fail to intercept Angels. Damage is visually obvious (amber gap on the border).
-- Worker repair restores damaged wall sections when food storage is sufficient.
-- Colony fitness improves over generations (food throughput increases; GeoFront integrity at episode end increases).
-- By adult stage, forager agents have measurably larger foodTrail/nestTrail processing zones than soldier agents from the same colony DNA.
-- By adult stage, soldier agents have measurably larger alarmPheromone/recruitmentPheromone processing zones than forager agents from the same colony DNA.
-- Tunnel-flanking Angels succeed more often in colonies without perimeter patrol than in colonies that develop tunnel-coverage soldiers.
-- Colonies with wiring economy pressure develop more compact agent networks than colonies without it, at no significant fitness cost.
-- Polyandric reproduction produces measurably more diverse module size distributions across a worker cohort than parthenogenetic reproduction.
-- Total pheromone field memory cost stays within slab budget (no per-cell JS object allocation).
-- Full-screen canvas fills available viewport and rescales correctly on window resize.
+- AC-ANT-001: Colony of 50–100 ants + 5–10 Angels runs at 30+ fps in display mode.
+- AC-ANT-002: Pheromone field gradients are visibly concentrated in productive foraging corridors after 200+ episode ticks.
+- AC-ANT-003: Alarm pheromone visibly triggers behavioral mode shifts — agents in alarm zones exhibit measurably different movement patterns than baseline.
+- AC-ANT-004: GeoFront wall damage occurs when soldiers fail to intercept Angels. Damage is visually obvious (amber gap on the border).
+- AC-ANT-005: Worker repair restores damaged wall sections when food storage is sufficient.
+- AC-ANT-006: Colony fitness improves over generations (food throughput increases; GeoFront integrity at episode end increases).
+- AC-ANT-007: By adult stage, forager agents have measurably larger foodTrail/nestTrail processing zones than soldier agents from the same colony DNA.
+- AC-ANT-008: By adult stage, soldier agents have measurably larger alarmPheromone/recruitmentPheromone processing zones than forager agents from the same colony DNA.
+- AC-ANT-009: Tunnel-flanking Angels succeed more often in colonies without perimeter patrol than in colonies that develop tunnel-coverage soldiers.
+- AC-ANT-010: Colonies with wiring economy pressure develop more compact agent networks than colonies without it, at no significant fitness cost.
+- AC-ANT-011: Polyandric reproduction produces measurably more diverse module size distributions across a worker cohort than parthenogenetic reproduction.
+- AC-ANT-012: Total pheromone field memory cost stays within slab budget (no per-cell JS object allocation).
+- AC-ANT-013: Full-screen canvas fills available viewport and rescales correctly on window resize.
 
 ---
 

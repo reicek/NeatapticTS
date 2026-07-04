@@ -937,18 +937,18 @@ SCREAM_DURATION_TICKS = 30; // ticks scream persists after last visual contact
 
 ## Acceptance Criteria
 
-- Both populations run at 30+ fps on canvas with 20–40 prey and 10–20 predators.
-- Prey fitness improves over generations (longer survival, more pellets gathered).
-- Predator fitness improves over generations (more prey caught per episode).
-- Arms race metric chart shows meaningful non-trivial trajectory (not immediate fixed-point convergence, not pure random walk).
-- Predator and prey populations develop measurably different `computationType` module compositions by generation 50+.
-- Voice scream signals are measurably used by receivers — mean reaction to heard screams differs statistically from baseline behavior (verifiable by ablation: disable voice input channels and compare fitness trajectory).
-- Chem trail following is measurably used by predators — ghost path correlation with prey trail concentration is above chance (verifiable by ablation: disable trail input channels).
-- Predator pursuit coordination emerges (two predators approach a prey from different directions more often than random by generation 30+).
-- Reproduction mode distribution shifts are observable and correlated with arms race phase transitions when `modeIsEvolvable: true`.
-- Rolling opponent snapshot prevents trivial one-generation fitness collapse in either population.
-- Total agent network wiring cost declines over generations relative to task performance (compact specialists emerge).
-- Full-screen canvas fills the available viewport and rescales correctly on window resize.
+- AC-PP-001: Both populations run at 30+ fps on canvas with 20–40 prey and 10–20 predators.
+- AC-PP-002: Prey fitness improves over generations (longer survival, more pellets gathered).
+- AC-PP-003: Predator fitness improves over generations (more prey caught per episode).
+- AC-PP-004: Arms race metric chart shows meaningful non-trivial trajectory (not immediate fixed-point convergence, not pure random walk).
+- AC-PP-005: Predator and prey populations develop measurably different `computationType` module compositions by generation 50+.
+- AC-PP-006: Voice scream signals are measurably used by receivers — mean reaction to heard screams differs statistically from baseline behavior (verifiable by ablation: disable voice input channels and compare fitness trajectory).
+- AC-PP-007: Chem trail following is measurably used by predators — ghost path correlation with prey trail concentration is above chance (verifiable by ablation: disable trail input channels).
+- AC-PP-008: Predator pursuit coordination emerges (two predators approach a prey from different directions more often than random by generation 30+).
+- AC-PP-009: Reproduction mode distribution shifts are observable and correlated with arms race phase transitions when `modeIsEvolvable: true`.
+- AC-PP-010: Rolling opponent snapshot prevents trivial one-generation fitness collapse in either population.
+- AC-PP-011: Total agent network wiring cost declines over generations relative to task performance (compact specialists emerge).
+- AC-PP-012: Full-screen canvas fills the available viewport and rescales correctly on window resize.
 
 ---
 
@@ -1023,11 +1023,21 @@ phase: '1'
 step: 1
 agent: '01-planning'
 agent_file: '.github/agents/01-planning.agent.md'
+title: 'Planning packet'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md'
 copy_paste: 'true'
+goal: 'planning'
 next_step: 'Step 02 — Research boundary mapping'
+skills:
+  - 'plan-alignment'
+  - 'research-methodology'
+constitution_check:
+  - 'development-workflow'
+  - 'breadth-first-recoverable'
+acceptance_criteria:
+  - 'AC-PP-001 through AC-PP-012 (see Acceptance Criteria section above)'
 validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md
 ```
@@ -1094,7 +1104,7 @@ Plan-sync gate for this plan's active step.
 
 ### Latest validation evidence
 
-- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` → PASS (plan status `WIP`, Phase 1 Step 01 `[WIP]`, no errors, no warnings). Section added to satisfy MCP `IMPLEMENTATION_SECTION_PATTERN` lookahead requirement for workflow-MCP binding.
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` → PASS (plan status `PLANNED`, Phase 1 Step 01 `[PLANNED]`, no errors, no warnings). Section added to satisfy MCP `IMPLEMENTATION_SECTION_PATTERN` lookahead requirement for workflow-MCP binding.
 
 ## Handoff query
 

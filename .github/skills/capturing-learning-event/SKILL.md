@@ -54,7 +54,7 @@ Resume action: <how work continues after this event>
 
 ## Required Workflow
 
-1. Identify the event type: `agent-system-gap`, `agent-update`, `skill-update`, `routing-update`, or `output-contract-fix`.
+1. Identify the event type: `agent-system-gap`, `agent-update`, `skill-update`, `routing-update`, `output-contract-fix`, `constitution-update`, `spec-checklist`, or `gate-run`.
 2. Summarize the triggering task in one brief phrase.
 3. Describe the gap (what was missing or wrong) and the resolution (what changed) concisely and factually.
 4. List all files changed, agents affected, and skills affected.
@@ -67,7 +67,7 @@ Schema:
 
 ```json
 {
-  "eventType": "agent-system-gap|agent-update|skill-update|routing-update|output-contract-fix",
+  "eventType": "agent-system-gap|agent-update|skill-update|routing-update|output-contract-fix|constitution-update|spec-checklist|gate-run",
   "triggeringTask": "<brief>",
   "gap": "<what was missing>",
   "resolution": "<what changed>",
@@ -91,11 +91,56 @@ The learning event log creates an ISO-42001-style evidence trail for workflow im
 - **skill**: A skill was missing guidance on when NOT to use it, causing confusion.
 - **model**: A model string was stale or invalid, causing silent delegation failures.
 - **output contract**: A structured-v1 output block was missing a required field.
+- **constitution**: `plans/constitution.md` or a constitution check field was added or amended, affecting how plans/skills/gates are authored.
+- **spec-checklist**: A spec-quality checklist run produced a gap or update that should be traceable.
+- **gate-run**: A validation gate run produced an exception, failure, or notable result worth recording.
+
+## Expanded Event Examples
+
+```jsonl
+{
+  "eventType": "spec-checklist",
+  "triggeringTask": "Validate spec quality",
+  "gap": "Spec checklist below 80% traceability",
+  "resolution": "Added traceability IDs and reran checklist",
+  "filesChanged": [
+    "plans/spec-kit-assimilation.plans.md"
+  ],
+  "agentsAffected": [
+    "01-planning"
+  ],
+  "skillsAffected": [
+    "spec-checklist"
+  ],
+  "confirmation": "user-confirmed",
+  "resumeAction": "Proceed to 04-implementing slice"
+}
+```
+
+```jsonl
+{
+  "eventType": "gate-run",
+  "triggeringTask": "Validate slice gate",
+  "gap": "plan-readiness gate failed",
+  "resolution": "Fixed step packet and reran gate",
+  "filesChanged": [
+    "plans/spec-kit-assimilation.plans.md"
+  ],
+  "agentsAffected": [
+    "05-green-testing"
+  ],
+  "skillsAffected": [
+    "green-validation-gates"
+  ],
+  "confirmation": "not-required",
+  "resumeAction": "Continue green validation"
+}
+```
 
 ## Decision Tree
 
 ```text
-Flowchart summary: "Learning event" → "Event type?"; "Event type?" → "Record as agent-system-gap" (Workflow gap), "Record as routing-update" (Routing change), "Record as skill-update" (Skill updated), "Record as output-contract-fix" (Output contract fix); "Record as agent-system-gap" → "Append to learning-log.jsonl"; "Record as routing-update" → "Append to learning-log.jsonl"; "Record as skill-update" → "Append to learning-log.jsonl"; "Record as output-contract-fix" → "Append to learning-log.jsonl"; "Append to learning-log.jsonl".
+Flowchart summary: "Learning event" → "Event type?"; "Event type?" → "Record as agent-system-gap" (Workflow gap), "Record as routing-update" (Routing change), "Record as skill-update" (Skill updated), "Record as output-contract-fix" (Output contract fix), "Record as constitution-update" (Constitution or constitution_check change), "Record as spec-checklist" (Spec checklist run), "Record as gate-run" (Gate run); "Record as agent-system-gap" → "Append to learning-log.jsonl"; "Record as routing-update" → "Append to learning-log.jsonl"; "Record as skill-update" → "Append to learning-log.jsonl"; "Record as output-contract-fix" → "Append to learning-log.jsonl"; "Record as constitution-update" → "Append to learning-log.jsonl"; "Record as spec-checklist" → "Append to learning-log.jsonl"; "Record as gate-run" → "Append to learning-log.jsonl".
 ```
 
 ## Before / After Examples

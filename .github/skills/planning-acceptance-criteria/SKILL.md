@@ -14,7 +14,7 @@ skills:
 
 # Planning Acceptance Criteria
 
-This skill converts user intent into a precise, testable acceptance criteria set. Each criterion is tied to an observable behavior or validation method, non-goals are made explicit to prevent scope creep, and open assumptions are surfaced before implementation begins.
+This skill converts user intent into a precise, testable acceptance criteria set. Acceptance criteria are the unit tests for English that turn intent into observable, implementation-agnostic contracts. Each criterion is tied to an observable behavior or validation method, non-goals are made explicit to prevent scope creep, and open assumptions are surfaced before implementation begins.
 
 ## When to Use
 
@@ -51,7 +51,7 @@ Done-state: <what must be true for this to be complete>
 ## Required Workflow
 
 1. Restate the user intent in your own words to confirm understanding before defining criteria.
-2. Write each acceptance criterion as an observable behavior: "Given X, when Y, then Z" or an equivalent concrete statement.
+2. Write each acceptance criterion as an observable behavior: "Given X, when Y, then Z" or an equivalent concrete statement. Optionally give each acceptance criterion a stable, unique `id: AC-###` (for example `id: AC-001`). The `id` field is optional for acceptance criteria but recommended for any criterion that maps to a specific file change or validation command, so it can be referenced from traceability tables, gate evidence, and phase-compression notes.
 3. Tie each criterion to a validation method: a Jest command, a `node` script, a manual check, or a visible output.
 4. Add at least one edge-case criterion for each failure mode or boundary condition that is easy to overlook.
 5. Write an explicit non-goals list: capabilities that are adjacent to the task but should not be addressed in this pass.
@@ -75,19 +75,25 @@ that were deleted, not just "old code removed."
 
 ## Before/After Examples: Vague to Precise
 
-**Before (vague):**
+**Before (vague, no numbered identifier):**
 
 ```md
 - The builder should work correctly.
 ```
 
-**After (precise):**
+**After (precise, with optional AC-### IDs):**
 
 ```md
-- buildMLP() with default config produces a network with exactly 5 nodes
+- id: AC-001
+  text: buildMLP() with default config produces a network with exactly 5 nodes
   (2 inputs, 2 hidden, 1 output) and 6 connections.
-- buildMLP() with empty hiddenLayers throws an error naming the field.
-- Same config + same seed produces identical network shape.
+  validation: npx jest --testPathPattern=builders/mlp
+- id: AC-002
+  text: buildMLP() with empty hiddenLayers throws an error naming the field.
+  validation: npx jest --testPathPattern=builders/mlp
+- id: AC-003
+  text: Same config + same seed produces identical network shape.
+  validation: npx jest --testPathPattern=builders/mlp
 ```
 
 ## Decision Tree: Splitting Work

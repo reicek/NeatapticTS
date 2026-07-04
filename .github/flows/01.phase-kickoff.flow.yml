@@ -28,6 +28,13 @@ gates:
   - 'planning-output-contract'
   - 'phase-compression'
 
+entry-checks:
+  - 'Spec-Kit clarification cap: active plan/spec contains no more than 3 `NEEDS CLARIFICATION` markers; otherwise halt and run `01.acceptance-criteria` or escalate via `00.cross-tier-helper`.'
+
+exit-checks:
+  - 'Five-question limit: at most 5 focused clarification questions have been asked; all accepted answers are appended to the append-only `## Clarifications` section for append-only convergence.'
+  - 'constitution_check: the phase objective and placeholder steps align with plans/constitution.md before the phase is considered kicked off.'
+
 post-phase-fanout:
   - '02-researching'
   - '04-implementing'

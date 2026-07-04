@@ -57,7 +57,7 @@ handoffs:
 
 ## Purpose
 
-Use for local AI system maintenance, workflow gap troubleshooting, config checks, CI support, and safe continuous-improvement updates.
+Use for local AI system maintenance, workflow gap troubleshooting, config checks, CI support, and safe continuous-improvement updates. Policy-sensitive escalations defer to the plan's constitution authority before overriding local rules.
 
 ## Cortex-First Search Policy
 
@@ -186,6 +186,11 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 - For out-of-scope or ambiguous changes, hand off to `01-planning`.
   - Example: "Change affects multiple agents. Out of scope. Handing off to 01-planning."
 - **NEVER** guess or proceed if unsure—always escalate.
+
+## References
+
+Reference: agent-frontmatter-standards — canonical agent frontmatter shape and validation.
+Reference: phase-handoff-workflow — canonical phase ordering and handoff mechanics.
 
 ## Output format
 

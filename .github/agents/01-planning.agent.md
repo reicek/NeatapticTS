@@ -41,6 +41,7 @@ skills:
     'license-attribution-audit',
     'planning-acceptance-criteria',
     'plan-sync-validation',
+    'spec-checklist',
     'research-methodology',
     'execute',
   ]
@@ -89,6 +90,17 @@ Transform an approved phase objective into a clear, step-by-step, machine-readab
 - Step-level blocks require: `phase`, `step`, `title`, `status`, `goal`, `expansion`, `auto_expand`, `mode`, `source_of_truth`, `copy_paste`, `next_step`, `skills`, `validation`, `acceptance_criteria`. Steps that use TDD must also declare `tdd_sequence: red-green|green-only`. Large implementation steps must include a `slices` list.
 - Capture and prepare evidence required for signoff. **Agents MUST NOT create commits, branches, or PRs.** Instead, prepare the exact git commands, PR title/body, and artifact paths for the user to run locally; the user will execute the commands and then attach the resulting commit SHA(s), PR URL, CI run URL(s), and full gate output JSON to the plan's `VALIDATION_EVIDENCE`.
 - Timebox reviews: reviewers have 48 hours to respond; if not, escalate automatically to `00.cross-tier-helper` with TASK_STATUS: PARTIAL.
+- **Spec-Kit clarification discipline:** If the spec or objective is ambiguous, mark ambiguity with `NEEDS CLARIFICATION`. An active plan/spec must contain no more than 3 NEEDS CLARIFICATION markers at any time. Ask at most 5 focused questions before proceeding, and record every answer in an append-only `## Clarifications` section for append-only convergence. If ambiguity remains after 5 questions or exceeds 3 markers, stop and escalate via `00.cross-tier-helper` with a decision record. This discipline is grounded in `plans/constitution.md` as the constitution authority.
+
+## Clarification Discipline
+
+When operating in clarification mode (for example during `01.acceptance-criteria` or when a pasted step packet is ambiguous):
+
+1. **Start from the constitution authority.** Read `plans/constitution.md` and ensure the clarification stays within project principles.
+2. **Surface ambiguity with `NEEDS CLARIFICATION` markers.** Add the marker inline in the active plan/spec where the ambiguity lives.
+3. **Cap markers and questions.** No active plan/spec may carry no more than 3 `NEEDS CLARIFICATION` markers. Ask at most 5 focused questions per clarification pass.
+4. **Append answers.** For each accepted answer, append a bullet `- Q: <question> → A: <answer>` under the plan's `## Clarifications` section. Never overwrite earlier clarifications; this is append-only convergence.
+5. **Stop if unresolved.** If the cap is exceeded or answers remain insufficient after 5 questions, stop, record a decision record, and escalate via `00.cross-tier-helper`.
 
 ## Flow Selection
 
@@ -162,7 +174,12 @@ skills:
 validation:
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/PlanName.plans.md'
 acceptance_criteria:
-  - 'Step packets for the phase are authored and pass step-packet gate'
+  - id: AC-001
+    text: 'Step packets for the phase are authored and pass step-packet gate'
+    validation: 'neataptic-gate-mcp:run_gate_check --gate=step-packet --json'
+constitution_check:
+  - 'principle-1-thinking-partner'
+  - 'principle-3-verbatim-binding'
 placeholder_steps:
   - 'Step 01 — Planning the phase'
   - 'Step 02 — Research'
@@ -189,8 +206,15 @@ skills:
 validation:
   - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/architecture/activate'
 acceptance_criteria:
-  - 'Logger tests pass'
-  - '100% coverage on touched src/ files'
+  - id: AC-001
+    text: 'Logger tests pass'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/architecture/activate'
+  - id: AC-002
+    text: '100% coverage on touched src/ files'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/architecture/activate'
+constitution_check:
+  - 'principle-4-small-slices'
+  - 'principle-5-unique-ids'
 ```
 
 ### Step-Level Block with Slices
@@ -213,7 +237,9 @@ skills:
 validation:
   - 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/PlanName.plans.md'
 acceptance_criteria:
-  - 'All slices pass validation'
+  - id: AC-001
+    text: 'All slices pass validation'
+    validation: 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/PlanName.plans.md'
 slices:
   - slice_id: '03-red-tests'
     title: 'Write red tests for activation fast path'
@@ -223,7 +249,9 @@ slices:
     files_to_change:
       - 'src/architecture/activate/*.test.ts'
     acceptance_criteria:
-      - 'Red tests exist and fail before implementation'
+      - id: AC-002
+        text: 'Red tests exist and fail before implementation'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/architecture/activate'
     parallelizable: false
     dependencies: []
     next_slice: '03-impl'
@@ -235,8 +263,12 @@ slices:
     files_to_change:
       - 'src/architecture/activate/*'
     acceptance_criteria:
-      - 'All red tests pass'
-      - '100% coverage on touched src/ files'
+      - id: AC-003
+        text: 'All red tests pass'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/architecture/activate'
+      - id: AC-004
+        text: '100% coverage on touched src/ files'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/architecture/activate'
     parallelizable: false
     dependencies:
       - '03-red-tests'
@@ -249,14 +281,28 @@ slices:
     files_to_change:
       - 'coverage/lcov.info'
     acceptance_criteria:
-      - 'Targeted suites remain green; full suite only when explicitly required, and then only as separate batched calls (never npm test in a single shell invocation)'
-      - 'Coverage guard passes on touched src/ files'
+      - id: AC-005
+        text: 'Targeted suites remain green; full suite only when explicitly required, and then only as separate batched calls (never npm test in a single shell invocation)'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/architecture/activate'
+      - id: AC-006
+        text: 'Coverage guard passes on touched src/ files'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/architecture/activate'
     parallelizable: false
     dependencies:
       - '03-impl'
 ```
 
 Use the schemas above as the canonical reference for every new or revised plan block. Do not use the deprecated `agent` or `agent_file` fields; use `goal` instead.
+
+### `constitution_check` field
+
+Both phase-level and step-level blocks may include an optional `constitution_check`
+list. Each entry is a stable principle identifier from `plans/constitution.md`.
+`01-planning` should populate the list when the workstream directly affects
+plan/skill/agent architecture or when it exercises one of the five core
+principles. The field is informational: it does not gate execution, but it
+must be preserved by plan-sync and reported in handoffs so downstream agents
+can verify alignment.
 
 ## Acceptance Criteria (examples and automation mapping)
 
@@ -470,6 +516,12 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 - If roadmap/context ambiguous, delegate to Plan Scout and attach Decision Record with TASK_STATUS: PARTIAL.
 - If plan tracker is malformed, attempt bounded recovery using the latest plan history; if unresolved, escalate immediately and set TASK_STATUS: PARTIAL.
 - When agent/skill gaps prevent completion, call `helping-gap-resolution-coordinator` and attach its response.
+
+## References
+
+Reference: planning-acceptance-criteria — canonical acceptance-criteria authoring and scope boundaries.
+Reference: phase-handoff-workflow — canonical phase ordering and step packet shape.
+Reference: plan-sync-validation — canonical plan tracker sync and shape validation.
 
 ## Output format
 

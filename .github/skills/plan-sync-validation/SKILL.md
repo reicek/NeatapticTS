@@ -19,8 +19,10 @@ that the plan file, its index entry in `plans/README.md`, and its roadmap
 placement in `plans/Roadmap.md` are all consistent with each other.
 
 This skill is invoked automatically as a gate inside agent workflow flows, and
-can also be invoked explicitly before marking a plan step `[DONE]`. When tracker
-shape or closure rules are needed, `tracker-handoff` is the canonical skill.
+can also be invoked explicitly before marking a plan step `[DONE]`. Plan sync
+enforces the constitution authority of the tracker shape across README, Roadmap,
+and the active plan. When tracker shape or closure rules are needed,
+`tracker-handoff` is the canonical skill.
 
 ## When to Use
 
