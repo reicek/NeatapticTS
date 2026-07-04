@@ -6,8 +6,8 @@
  * episode. It bundles deterministic typed arrays with the seed and schema
  * version that produced them, so a worker can recreate the exact same starting
  * point on the same runtime. The boundary exists because benchmarks such as
- * racing, predator/prey, and ant-hive all need to ship initial state across a
- * worker boundary, but each benchmark should not invent its own pack,
+ * multi-agent, competitive, and cooperative tasks all need to ship initial state
+ * across a worker boundary, but each benchmark should not invent its own pack,
  * transfer, and versioning rules.
  *
  * This module owns the generic contract:
@@ -21,8 +21,8 @@
  * - `assertSchemaVersion(pack, expectedVersion)` rejects incompatible pack
  *   shapes at the boundary with a clear `RangeError`.
  *
- * The pack is intentionally transport-neutral. It does not know about racing
- * frames, opponent snapshots, or track physics; the benchmark's Layer 3 wrapper
+ * The pack is intentionally transport-neutral. It does not know about domain
+ * frames, opponent snapshots, or simulation physics; the benchmark's Layer 3 wrapper
  * injects that state after the pack arrives. This split lets Layer 2 stay
  * reusable while each benchmark keeps its own frame format and lifecycle.
  *
@@ -39,8 +39,8 @@
  *
  *   Core[Layer 1 — NGE core<br/>collective evaluation]:::base --> Pack[Layer 2 — generic pack<br/>seed + agentCount + schemaVersion]:::accent
  *   Pack --> Transfer[postMessage + transfer list<br/>zero-copy worker handoff]:::base
- *   Transfer --> Wrap[Layer 3 — benchmark wrapper<br/>populateRacingFrame, etc.]:::base
- *   Wrap --> Frame[benchmark frame<br/>RacingRenderFrame]:::accent
+ *   Transfer --> Wrap[Layer 3 — benchmark wrapper<br/>populateEvaluationFrame, etc.]:::base
+ *   Wrap --> Frame[benchmark frame<br/>EvaluationFrame]:::accent
  * ```
  *
  * For background on the PRNG family used to fill the arrays, see Marsaglia,
@@ -113,7 +113,7 @@ export type DeterministicEvaluationPack = {
  * Captures the reproducibility tuple components that are NOT the seed:
  * `agentCount` (determines typed-array sizes) and `schemaVersion` (forward-
  * compatibility sentinel).  Benchmark-specific inputs (opponent snapshots,
- * track physics, etc.) are injected by the benchmark's own wrapper, not by
+ * simulation physics, etc.) are injected by the benchmark's own wrapper, not by
  * this generic type.
  *
  * Generic reproducibility tuple: `(seed, agentCount, schemaVersion)`. Same
@@ -213,8 +213,8 @@ export function resolveTransferList(
  * field so that a version mismatch is caught at the boundary rather than
  * silently misinterpreting the packed bytes.
  *
- * This is the generic version of the racing-specific
- * `assertRacingSchemaVersion` — the expected version is passed as a parameter
+ * This is the generic version of the domain-specific schema-version guards used
+ * by individual benchmarks — the expected version is passed as a parameter
  * so any benchmark can use the same boundary guard. Schema-version sentinels
  * are a common forward-compatibility technique; see Wikipedia contributors,
  * [Forward compatibility](https://en.wikipedia.org/wiki/Forward_compatibility).

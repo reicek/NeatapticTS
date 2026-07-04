@@ -10,7 +10,7 @@
  * The runner is deliberately narrow: it expects the caller to supply metrics,
  * budgets, hysteresis, and an optional network. No `examples/` or demo
  * scaffolding is required; a headless test can drive the same growth engine
- * that a racing curriculum or ant hive would use at runtime.
+ * that a benchmark curriculum or collective application would use at runtime.
  *
  * ```mermaid
  * stateDiagram-v2

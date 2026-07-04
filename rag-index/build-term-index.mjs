@@ -338,8 +338,8 @@ async function buildTermEmbeddingsWithClient(
     await client.execute({
       sql: `INSERT INTO term_embeddings (
           term, embedding, term_sha256, model_id, model_sha256,
-          dimension, frequency, doc_family_count
-        ) VALUES (?, vector8(?), ?, ?, ?, ?, ?, ?)`,
+          dimension, frequency, doc_family_count, embedded_at
+        ) VALUES (?, vector8(?), ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         term,
         embeddingBuffer,
@@ -349,6 +349,7 @@ async function buildTermEmbeddingsWithClient(
         dimension,
         frequency,
         docFamilyCount,
+        new Date().toISOString(),
       ],
     });
 

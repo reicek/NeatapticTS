@@ -28,7 +28,7 @@ export interface BrowserWorkerAssetUrlOptions {
  * @example
  * ```ts
  * const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
- *   'flappy-shared-inference.worker.bundle.js',
+ *   'shared-inference.worker.bundle.js',
  * );
  * ```
  *

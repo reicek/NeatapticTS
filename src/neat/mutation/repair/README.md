@@ -6,7 +6,6 @@ This file owns the connectivity half of the mutation-repair chapter.
 
 The surrounding `repair/` folder preserves one structural-viability policy
 with two complementary concerns:
-
 - this file repairs nodes that have become stranded with no legal inbound or
   outbound path,
 - `mutation.min-hidden.ts` enforces a minimum hidden-node floor when the
@@ -19,7 +18,6 @@ practical set of connections that makes inputs, outputs, and hidden nodes
 usable again.
 
 The repair flow is easiest to retain in four steps:
-
 1. split the network into input, output, and hidden node groups,
 2. repair stranded inputs,
 3. repair stranded outputs,
@@ -53,7 +51,6 @@ one reconnection target or source without imposing another ranking policy on
 the maintenance path.
 
 Parameters:
-
 - `candidates` - candidate nodes
 - `internal` - neat controller context
 
@@ -74,7 +71,6 @@ same structural question from different angles, so grouping the nodes once
 keeps the repair flow declarative and avoids repeating node-type scans.
 
 Parameters:
-
 - `networkToInspect` - network to inspect
 
 Returns: grouped node arrays
@@ -99,7 +95,6 @@ requested direction and now routes that edit through the canonical
 add-connection identity policy instead of using a raw runtime connect.
 
 Parameters:
-
 - `networkToEdit` - network to edit
 - `anchorNode` - node to connect from/to
 - `candidates` - candidate nodes for connection
@@ -126,7 +121,6 @@ is structural dead weight, so this helper repairs the missing side without
 disturbing hidden nodes that are already participating in a path.
 
 Parameters:
-
 - `networkToEdit` - network to edit
 - `nodeGroupsToUse` - grouped node arrays
 - `internal` - neat controller context
@@ -151,7 +145,6 @@ into hidden nodes when they exist and falls back to direct output links when
 the network has no hidden layer yet.
 
 Parameters:
-
 - `networkToEdit` - network to edit
 - `nodeGroupsToUse` - grouped node arrays
 - `internal` - neat controller context
@@ -176,7 +169,6 @@ helper therefore reconnects it from hidden nodes first and from inputs when
 no hidden layer exists.
 
 Parameters:
-
 - `networkToEdit` - network to edit
 - `nodeGroupsToUse` - grouped node arrays
 - `internal` - neat controller context
@@ -198,7 +190,6 @@ local question "can an upstream node currently reach this one?" before the
 higher-level repair helpers decide whether to reconnect it.
 
 Parameters:
-
 - `node` - node to inspect
 
 Returns: true when incoming connections exist
@@ -217,7 +208,6 @@ Dead-end repair uses this as the smallest possible structural predicate: if
 the outgoing list is empty, the node cannot currently send signal forward.
 
 Parameters:
-
 - `node` - node to inspect
 
 Returns: true when outgoing connections exist
@@ -237,7 +227,6 @@ immediately usable?
 Read this file when the network may be structurally valid in the narrowest
 sense but still too shallow for the controller's configured maintenance
 policy. The helpers here turn policy into concrete edits:
-
 1. resolve the allowed size and minimum hidden requirement,
 2. create hidden nodes until the floor is met,
 3. wire those hidden nodes into usable inbound and outbound paths,
@@ -259,7 +248,6 @@ enforcement policy-light: once a legal candidate pool exists, choose one
 using the controller RNG and keep the maintenance pass moving.
 
 Parameters:
-
 - `candidates` - candidate nodes
 - `internal` - neat controller context
 
@@ -280,7 +268,6 @@ can reason about endpoints and hidden nodes without repeatedly rescanning the
 whole network.
 
 Parameters:
-
 - `networkToInspect` - network to inspect
 
 Returns: grouped node arrays
@@ -303,7 +290,6 @@ immediately; otherwise the helper derives a hidden target from the visible
 endpoint count and the configured multiplier.
 
 Parameters:
-
 - `inputCount` - Number of input nodes in the network.
 - `outputCount` - Number of output nodes in the network.
 - `explicitMinimumHidden` - Optional explicit minimum hidden count.
@@ -329,7 +315,6 @@ pass so newly added nodes and previously under-connected nodes both leave the
 function with usable inbound and outbound links.
 
 Parameters:
-
 - `networkToEdit` - network to edit
 - `nodeGroupsToUse` - grouped node arrays
 - `internal` - neat controller context
@@ -355,7 +340,6 @@ helper to create fresh hidden structure until the configured floor is met and
 stops early when the broader maximum-node cap would be violated.
 
 Parameters:
-
 - `networkToEdit` - network to edit
 - `nodeGroupsToEdit` - grouped node arrays
 - `minimumHidden` - minimum hidden nodes required
@@ -383,7 +367,6 @@ node is allowed to become the new source through the canonical add-connection
 identity path.
 
 Parameters:
-
 - `networkToEdit` - network to edit
 - `nodeGroupsToUse` - grouped node arrays
 - `hiddenNode` - hidden node to connect
@@ -410,7 +393,6 @@ no downstream effect on outputs or later hidden nodes, again through the
 canonical add-connection identity path.
 
 Parameters:
-
 - `networkToEdit` - network to edit
 - `nodeGroupsToUse` - grouped node arrays
 - `hiddenNode` - hidden node to connect
@@ -433,7 +415,6 @@ path to support. If either side is missing, the helper chapter stops before
 creating hidden nodes that would have nowhere useful to connect.
 
 Parameters:
-
 - `nodeGroupsToCheck` - grouped node arrays
 
 Returns: true when inputs and outputs are present
@@ -457,7 +438,6 @@ Rebuilding cached connection views here keeps later mutation, evaluation, and
 repair helpers aligned with the newly edited topology.
 
 Parameters:
-
 - `networkToEdit` - network to rebuild
 
 Returns: Promise resolving after rebuild completes
@@ -477,7 +457,6 @@ helper centralizes that read so later creation logic can treat "unbounded"
 and "explicitly capped" networks with one consistent limit value.
 
 Parameters:
-
 - `internal` - neat controller context
 
 Returns: maximum node limit
@@ -500,7 +479,6 @@ current network. The result respects both the configured minimum-hidden rule
 and the remaining room beneath the maximum-node limit.
 
 Parameters:
-
 - `networkToInspect` - network to inspect
 - `maxNodesLimit` - maximum allowed nodes
 - `multiplier` - optional size multiplier

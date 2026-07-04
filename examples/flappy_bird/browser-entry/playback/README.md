@@ -8,7 +8,6 @@ this layer mirrors enough state locally to animate those snapshots at browser
 frame cadence, render trails and backgrounds, and emit HUD telemetry.
 
 Minimal usage sketch:
-
 ```ts
 const summary = await animatePopulationEpisode(
   canvas,
@@ -38,7 +37,6 @@ Conceptually, this answers: "play one worker-produced episode on the canvas
 until it is done, and tell me what happened along the way".
 
 Parameters:
-
 - `canvas` - Target playback canvas.
 - `context` - Canvas 2D context.
 - `evolutionWorker` - Worker owning playback simulation state.
@@ -75,7 +73,6 @@ The implementation is shared with the public entry so legacy imports and the
 newer folderized surface behave identically.
 
 Parameters:
-
 - `canvas` - Target playback canvas.
 - `context` - Canvas 2D context.
 - `evolutionWorker` - Worker owning playback simulation state.
@@ -148,7 +145,6 @@ orchestration.
 Session initialization and summary-folding helpers for playback.
 
 These services answer three orchestration questions:
-
 1. What viewport is the browser currently showing?
 2. What local mirror state should exist before the first worker snapshot?
 3. How should mutable loop state be folded back into a public summary?
@@ -181,7 +177,6 @@ can assume the object graph exists even before the worker has emitted any
 population geometry.
 
 Parameters:
-
 - `viewportDimensions` - Current visible world dimensions.
 
 Returns: Initialized population render state.
@@ -215,7 +210,6 @@ browser sends the initial viewport dimensions to the worker, then builds the
 local render and summary mirrors that will be updated as snapshots arrive.
 
 Parameters:
-
 - `canvas` - Target playback canvas.
 - `evolutionWorker` - Worker owning playback simulation state.
 
@@ -235,7 +229,6 @@ The public summary is intentionally smaller than the internal loop state. It
 exposes the outcome, not the browser's intermediate bookkeeping.
 
 Parameters:
-
 - `summary` - Mutable loop summary accumulated during playback.
 
 Returns: Public playback episode summary.
@@ -256,7 +249,6 @@ real backing size. When that placeholder size is still active, the playback
 worker uses the canonical Flappy world dimensions instead of waiting.
 
 Parameters:
-
 - `canvas` - Target playback canvas.
 
 Returns: Visible world width and height in pixels.
@@ -276,7 +268,6 @@ Playback can continue while the canvas size changes, so the browser refreshes
 its local viewport mirror rather than assuming dimensions stay fixed.
 
 Parameters:
-
 - `canvas` - Target playback canvas.
 - `renderState` - Mutable render state updated in place.
 
@@ -318,7 +309,6 @@ applyPlaybackStepSnapshot(
 Applies the latest worker snapshot to render state and trail caches.
 
 Parameters:
-
 - `sessionContext` - Shared mutable playback session state.
 - `snapshot` - Worker snapshot for the current playback batch.
 
@@ -339,7 +329,6 @@ previously displayed champion index. This keeps the side panel aligned with
 the red bird even when leadership changes because the old champion dies.
 
 Parameters:
-
 - `iterationContext` - Shared loop dependencies and mutable playback state.
 
 Returns: Nothing.
@@ -356,7 +345,6 @@ emitPlaybackChampionChanged(
 Calls the optional playback champion-changed callback with a structured payload.
 
 Parameters:
-
 - `onChampionChanged` - Optional runtime callback.
 - `championBirdIndex` - Current champion bird index.
 
@@ -374,7 +362,6 @@ emitPlaybackFrameStats(
 Resolves leader telemetry and emits the public frame-stats callback.
 
 Parameters:
-
 - `iterationContext` - Shared loop dependencies and mutable playback state.
 - `playbackStepPayload` - Worker playback result for the current iteration.
 
@@ -391,7 +378,6 @@ requestPlaybackStepPayload(
 Requests one playback step batch from the evolution worker.
 
 Parameters:
-
 - `iterationContext` - Shared loop dependencies and mutable playback state.
 
 Returns: Worker playback step payload for the current iteration.
@@ -407,7 +393,6 @@ runPlaybackIteration(
 Executes one playback iteration from viewport sync through render pacing.
 
 Parameters:
-
 - `iterationContext` - Shared loop dependencies and mutable playback state.
 
 Returns: Nothing.
@@ -423,7 +408,6 @@ runPlaybackLoop(
 Runs playback iterations until the worker reports that the episode is done.
 
 Parameters:
-
 - `iterationContext` - Shared loop dependencies and mutable playback state.
 
 Returns: Nothing.
@@ -440,7 +424,6 @@ updatePlaybackLoopCompletion(
 Updates the loop summary when the worker reports playback completion.
 
 Parameters:
-
 - `loopState` - Mutable playback loop state.
 - `playbackStepPayload` - Worker playback result for the current iteration.
 
@@ -469,7 +452,6 @@ The render order matters: background first, then pipes, then birds, then
 trails and overlays that should visually sit on top.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `renderState` - Mutable simulation state snapshot.
 - `trailState` - Leader trail render cache.
@@ -498,7 +480,6 @@ history for every bird, which keeps the visual emphasis clear and the per-frame
 work small.
 
 Parameters:
-
 - `trailState` - Mutable trail state.
 - `renderState` - Current render state.
 
@@ -527,7 +508,6 @@ drawPipeNeonOutline(
 Draws a simplified neon outline around a pipe rectangle.
 
 Parameters:
-
 - `context` - Canvas 2D context.
 - `rectangleLeftPx` - Rectangle left position.
 - `rectangleTopPx` - Rectangle top position.
@@ -554,7 +534,6 @@ resolveBirdRenderStyle(
 Resolves opacity, body color, and champion marker for one bird.
 
 Parameters:
-
 - `birdIndex` - Index of the bird currently being rendered.
 - `championBirdIndex` - Resolved champion index for the frame.
 
@@ -574,7 +553,6 @@ Champion selection first prefers the primary winner resolver and then
 falls back to the first alive bird when no winner index is available.
 
 Parameters:
-
 - `renderState` - Current frame render snapshot.
 
 Returns: Champion index or `-1` when no bird is alive.
@@ -596,7 +574,6 @@ utility local to the module makes the intent obvious: every opacity channel
 must remain safe for direct canvas alpha use.
 
 Parameters:
-
 - `value` - Candidate value.
 
 Returns: Clamped value.
@@ -619,7 +596,6 @@ the call site instead of scattering champion-specific retention numbers
 through the playback renderer.
 
 Parameters:
-
 - `trailPoints` - Mutable champion trail collection.
 - `frameIndex` - Source frame index.
 - `yPosition` - Bird y position.
@@ -645,7 +621,6 @@ old turns from dominating the current frame, and avoids per-frame growth in a
 long-running browser session.
 
 Parameters:
-
 - `trailPoints` - Mutable trail collection.
 - `frameIndex` - Source frame index.
 - `yPosition` - Bird y position.
@@ -680,7 +655,6 @@ Returns 0 exactly on or beyond an edge and rises to 1 once distance exceeds
 the configured fade band.
 
 Parameters:
-
 - `pointXPx` - Point x position.
 - `pointYPx` - Point y position.
 - `edgeBounds` - Visible world bounds used for edge distance checks.
@@ -713,7 +687,6 @@ away smoothly so the viewer's eye stays anchored to the current flock motion.
 Oldest retained history approaches 0 opacity; newest approaches 1.
 
 Parameters:
-
 - `frameOffset` - Frames between this point and newest trail point.
 - `maxTrailFrameOffset` - Oldest age offset currently retained by trail.
 
@@ -839,7 +812,6 @@ resolveStarfieldTiles(
 Resolves (and lazily creates) cached starfield tile layers for the viewport.
 
 Parameters:
-
 - `visibleWorldHeightPx` - Viewport height in world pixels.
 
 Returns: Ordered far/mid/near starfield tiles.
@@ -857,7 +829,6 @@ createCanvasSizeFallback(
 Creates a size-only fallback so non-browser tests can skip rendering safely.
 
 Parameters:
-
 - `canvasDimensions` - Already-normalized pixel dimensions.
 
 Returns: Minimal canvas-shaped object cast to the compatible return type.
@@ -874,7 +845,6 @@ createCompatibleCanvas(
 Creates a browser-compatible canvas with clamped integer dimensions.
 
 Parameters:
-
 - `widthPx` - Requested tile width in pixels.
 - `heightPx` - Requested tile height in pixels.
 
@@ -891,7 +861,6 @@ createDocumentCanvasIfSupported(
 Creates a DOM canvas when document APIs are available.
 
 Parameters:
-
 - `canvasDimensions` - Already-normalized pixel dimensions.
 
 Returns: DOM canvas instance or `null` when unavailable.
@@ -907,7 +876,6 @@ createOffscreenCanvasIfSupported(
 Creates an offscreen canvas when the current runtime supports it.
 
 Parameters:
-
 - `canvasDimensions` - Already-normalized pixel dimensions.
 
 Returns: Offscreen canvas instance or `null` when unavailable.
@@ -923,7 +891,6 @@ createStarTileCanvas(
 Pre-renders a deterministic tile that can be reused across animation frames.
 
 Parameters:
-
 - `options` - Declarative drawing recipe for one parallax layer.
 
 Returns: Canvas image source containing the rendered star strip.
@@ -939,7 +906,6 @@ initializeStarTileContext(
 Clears the canvas and applies the neutral settings shared by all rendered stars.
 
 Parameters:
-
 - `options` - Context initialization dependencies.
 
 Returns: Nothing. The provided context is mutated in place.
@@ -956,7 +922,6 @@ normalizeCanvasDimensions(
 Normalizes requested canvas dimensions into positive integer pixel sizes.
 
 Parameters:
-
 - `widthPx` - Requested width in pixels.
 - `heightPx` - Requested height in pixels.
 
@@ -973,7 +938,6 @@ renderSeededStars(
 Draws all stars for one tile using a seeded random source.
 
 Parameters:
-
 - `options` - Drawing context, seed source, and tile recipe.
 
 Returns: Nothing. The provided context is mutated in place.
@@ -989,7 +953,6 @@ resetStarTileContext(
 Restores neutral drawing state so later canvas consumers start from defaults.
 
 Parameters:
-
 - `tileContext` - 2D context used to render the star tile.
 
 Returns: Nothing. The provided context is mutated in place.
@@ -1005,7 +968,6 @@ resolveStarPlacement(
 Resolves one deterministic star placement and appearance from the seeded RNG.
 
 Parameters:
-
 - `options` - Random source and star placement bounds.
 
 Returns: Pixel location, square size, and alpha for one rendered star.
@@ -1021,7 +983,6 @@ resolveStarTileContext(
 Resolves the rendering context used for star tile pre-rendering.
 
 Parameters:
-
 - `canvas` - Compatible canvas returned by the runtime-specific factory.
 
 Returns: A 2D drawing context when rendering is supported.
@@ -1040,7 +1001,6 @@ createStarTile(
 Creates one cached tile layer from a declarative layer specification.
 
 Parameters:
-
 - `layerSpec` - Density and motion contract for a starfield layer.
 - `tileHeightPx` - Height of the visible sky band in pixels.
 
@@ -1063,7 +1023,6 @@ drawPipeNeonOutline(
 Draws a simplified neon outline around a pipe rectangle.
 
 Parameters:
-
 - `context` - Canvas 2D context.
 - `rectangleLeftPx` - Rectangle left position.
 - `rectangleTopPx` - Rectangle top position.
@@ -1083,7 +1042,6 @@ resolveAlignedPipeOutlineRectangle(
 Resolves a pixel-aligned rectangle used by the pipe outline renderer.
 
 Parameters:
-
 - `input` - Raw pipe rectangle values.
 
 Returns: Aligned rectangle ready for outline rendering.
@@ -1099,7 +1057,6 @@ resolvePipeOutlinePath(
 Resolves the reusable outline path for one pipe body and its entrance rim.
 
 Parameters:
-
 - `alignedRectangle` - Pixel-aligned rectangle used by the outline renderer.
 
 Returns: Path containing the outer pipe outline and optional entrance rim.
@@ -1127,7 +1084,6 @@ then synchronize packed pipe and bird arrays into reusable browser-side
 objects.
 
 Parameters:
-
 - `renderState` - Mutable render state mirror used by the browser.
 - `snapshot` - Worker playback snapshot for the current render tick.
 
@@ -1147,7 +1103,6 @@ This is the "leader frames survived" view of the current frame: the best raw
 frame count among all birds currently represented in the render state.
 
 Parameters:
-
 - `renderState` - Current render state.
 
 Returns: Maximum frames survived by any bird.
@@ -1165,7 +1120,6 @@ createSeededRandom(
 Creates a deterministic pseudo-random generator for starfield tile layouts.
 
 Parameters:
-
 - `seed` - Unsigned integer seed.
 
 Returns: Function that yields values in the range [0, 1).
@@ -1182,7 +1136,6 @@ positiveModulo(
 Resolves positive modulo suitable for horizontal tiling offsets.
 
 Parameters:
-
 - `value` - Input value to wrap.
 - `modulo` - Modulus base.
 
@@ -1221,7 +1174,6 @@ browser falls back to the latest leader values it has already observed during
 playback.
 
 Parameters:
-
 - `playbackStepPayload` - Playback payload returned by worker.
 - `latestLeaderPipesPassed` - Last observed leader pipes passed fallback.
 - `latestLeaderFramesSurvived` - Last observed leader frames fallback.
@@ -1246,7 +1198,6 @@ The frame-stats payload combines browser-derived leader information with any
 instrumentation values provided by the worker.
 
 Parameters:
-
 - `playbackStepPayload` - Playback payload returned by worker.
 - `frameIndex` - Current render frame index.
 - `activeBirdCount` - Number of alive birds in current frame.
@@ -1271,7 +1222,6 @@ fractional remainder so long-term playback speed stays closer to the intended
 emulation rate.
 
 Parameters:
-
 - `input` - Current frame budget and viewport dimensions.
 
 Returns: Request payload plus carried-over fractional frame budget.

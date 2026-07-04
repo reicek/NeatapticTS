@@ -1,4 +1,4 @@
-# architecture/network/gpu/**mocks**
+# architecture/network/gpu/__mocks__
 
 Reusable WebGPU mock helpers for owner-local GPU tests.
 
@@ -7,7 +7,7 @@ implementation is expected to make without pulling in a real WebGPU backend.
 Optionally, a mock device can emulate a CPU forward pass so that parity
 tests can compare GPU read-back values against the CPU source of truth.
 
-## architecture/network/gpu/**mocks**/gpu.mock.ts
+## architecture/network/gpu/__mocks__/gpu.mock.ts
 
 ### computeMockForwardPass
 
@@ -53,7 +53,6 @@ createMockGPUDevice(
 Build a fake WebGPU device that records every call made by the inference path.
 
 Parameters:
-
 - `options` - Optional limits, emulator network, or output generator.
 
 ### createMockNavigatorGPU

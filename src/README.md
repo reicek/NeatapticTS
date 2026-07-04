@@ -120,7 +120,6 @@ await restarted.evolve();
 ```
 
 Recommended reading after this root chapter:
-
 - `./neat/evaluate/README.md` for scoring flow and objective handling
 - `./neat/evolve/README.md` for reproduction orchestration
 - `./neat/speciation/README.md` for compatibility distance and sharing
@@ -302,7 +301,6 @@ _compatibilityDistance(
 Compute compatibility distance between two networks (delegates to compat module).
 
 Parameters:
-
 - `netA` - First network for comparison.
 - `netB` - Second network for comparison.
 
@@ -333,7 +331,6 @@ _fallbackInnov(
 Fallback innovation id resolver used when reuse mapping is absent.
 
 Parameters:
-
 - `conn` - Connection metadata used to derive the innovation id.
 
 Returns: Innovation id for the connection.
@@ -373,7 +370,6 @@ _invalidateGenomeCaches(
 Invalidate per-genome caches (compatibility distance, forward pass, etc.).
 
 Parameters:
-
 - `genome` - Genome instance whose caches should be cleared.
 
 #### _lastEvalDuration
@@ -403,7 +399,6 @@ _mutateAddConnReuse(
 Add-connection mutation that reuses global innovation ids when possible.
 
 Parameters:
-
 - `genome` - Genome receiving the mutation.
 
 Returns: Mutated genome with added connection.
@@ -419,7 +414,6 @@ _mutateAddNodeReuse(
 Add-node mutation that reuses global innovation ids when possible.
 
 Parameters:
-
 - `genome` - Genome receiving the mutation.
 
 Returns: Mutated genome with added node.
@@ -477,7 +471,6 @@ _sortSpeciesMembers(
 Sort members within a species according to fitness and lineage rules.
 
 Parameters:
-
 - `sp` - Species whose members should be sorted.
 
 Returns: Sorted species members.
@@ -507,7 +500,6 @@ _structuralEntropy(
 Compatibility wrapper retained for tests that reach `_structuralEntropy` through loose controller casts.
 
 Parameters:
-
 - `genome` - Genome whose structural entropy is calculated.
 
 Returns: Structural entropy score for the genome.
@@ -546,7 +538,6 @@ addGenome(
 Register an externally-created genome into the `Neat` population.
 
 Parameters:
-
 - `genome` - Genome to append into the population.
 - `parents` - Optional lineage metadata recorded for teaching and telemetry.
 
@@ -627,7 +618,6 @@ start from a known architecture template instead of relying on whatever setup
 a surrounding example or harness applies for you.
 
 Parameters:
-
 - `network` - Optional template network copied into the initial pool.
 
 #### ensureMinHiddenNodes
@@ -734,7 +724,6 @@ for namespaced consumers and does not change the light checkpoint's
 bootstrap semantics.
 
 Parameters:
-
 - `exportOptions` - Policy describing how many elite genomes to retain.
 
 Returns: Light-checkpoint snapshot for approximate restart.
@@ -744,7 +733,7 @@ Example:
 ```ts
 const checkpoint = neat.exportLightState({ eliteCount: 12 });
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     branchId: 'draft-1',
   },
 };
@@ -764,7 +753,6 @@ This is the easiest way to persist frontier history for offline analysis or
 later replay in notebooks and visualization tools.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent archive entries to export.
 
 Returns: JSONL payload for the requested Pareto archive window.
@@ -793,7 +781,6 @@ This is useful when you want to chart species growth, collapse, or
 stagnation in a spreadsheet or notebook without writing a custom parser.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent history entries to export.
 
 Returns: CSV payload representing recent species history snapshots.
@@ -812,7 +799,6 @@ Choose this when you want machine-friendly archival output instead of the
 flatter spreadsheet-oriented CSV export.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent history entries to export.
 
 Returns: JSONL payload describing recent species-history entries.
@@ -841,7 +827,7 @@ Example:
 ```ts
 const checkpoint = neat.exportState();
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     memoryBankId: 'memory-bank-1',
   },
 };
@@ -858,7 +844,6 @@ exportTelemetryCSV(
 Export recent telemetry entries as CSV.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent telemetry entries to export.
 
 Returns: CSV string for quick spreadsheet or notebook analysis.
@@ -896,7 +881,6 @@ neat.export()`, followed later by `Neat.fromJSON(meta, fitness)` and
 `restored.import(population)`.
 
 Parameters:
-
 - `json` - Serialized controller metadata produced by `toJSON()`.
 - `fitness` - Fitness function to attach to the reconstructed controller.
 
@@ -953,7 +937,6 @@ getLineageSnapshot(
 Return an array of {id, parents} for the first `limit` genomes in population.
 
 Parameters:
-
 - `limit` - Maximum number of lineage records to return.
 
 Returns: Compact lineage snapshot for debugging and teaching inheritance flow.
@@ -1076,7 +1059,6 @@ what front snapshots were retained over time without exporting the full JSONL
 payload first.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent archive entries to return.
 
 Returns: Recent Pareto archive metadata entries.
@@ -1092,7 +1074,6 @@ getParetoFronts(
 Reconstruct Pareto fronts for the current population snapshot.
 
 Parameters:
-
 - `maxFronts` - Maximum number of fronts to materialize.
 
 Returns: Fronts ordered from most to least dominant under the active objectives.
@@ -1171,7 +1152,6 @@ checkpoint paths when you need to preserve a larger future population target
 separately from the imported genome count.
 
 Parameters:
-
 - `json` - Serialized population to import into the current controller.
 
 Returns: Promise resolving after the population is loaded.
@@ -1204,7 +1184,6 @@ the bundle and then relies on the ordinary evolution path to refill toward
 the saved restart-scale population target.
 
 Parameters:
-
 - `bundle` - Serialized light-checkpoint bundle.
 - `fitness` - Fitness function to attach to the restored controller.
 
@@ -1230,7 +1209,6 @@ importRNGState(
 Import an RNG state (alias for restore; kept for compatibility).
 
 Parameters:
-
 - `state` - Numeric RNG state.
 
 Returns: Nothing. This is a compatibility alias for `restoreRNGState()`.
@@ -1257,7 +1235,6 @@ must still carry replay-critical runtime and speciation state. Use
 restore that should keep running without claiming deterministic replay.
 
 Parameters:
-
 - `bundle` - Serialized object with the shape `{ neat, population }`.
 - `fitness` - Fitness function to attach to the restored controller.
 - `restoreOptions` - Explicit restore-mode override. Defaults to strict exact resume.
@@ -1309,7 +1286,6 @@ behavior you want. The controller can then reason about tradeoffs such as raw
 score versus simplicity, novelty, or domain-specific constraints.
 
 Parameters:
-
 - `key` - Stable objective identifier used in exports and telemetry.
 - `direction` - Whether the objective should be minimized or maximized.
 - `accessor` - Function extracting the objective value from a genome.
@@ -1337,7 +1313,6 @@ Restore a previously-snapshotted RNG state. This restores the internal
 seed but does not re-create the RNG function until next use.
 
 Parameters:
-
 - `state` - Opaque numeric RNG state produced by `snapshotRNGState()`.
 
 Returns: Nothing. The controller will resume from the restored RNG state on next use.
@@ -1353,7 +1328,6 @@ sampleRandom(
 Produce deterministic random samples using the instance RNG.
 
 Parameters:
-
 - `sampleCount` - Number of random values to generate.
 
 Returns: Array of deterministic random samples.
@@ -1370,7 +1344,6 @@ selectMutationMethod(
 Selects a mutation method for a given genome based on constraints.
 
 Parameters:
-
 - `genome` - Genome being considered for mutation.
 - `rawReturnForTest` - Whether to expose raw selection output for test visibility.
 
@@ -1407,7 +1380,6 @@ spawnFromParent(
 Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
 
 Parameters:
-
 - `parent` - Parent genome to clone and mutate.
 - `mutateCount` - Number of mutation passes to apply to the child.
 
@@ -1504,24 +1476,21 @@ Global NeatapticTS configuration contract & default instance.
 
 WHY THIS EXISTS
 --------------
-
 A central `config` object offers a convenient, documented surface for end-users (and tests)
 to tweak library behaviour without digging through scattered constants. Centralization also
 lets us validate & evolve feature flags in a single place.
 
 USAGE PATTERN
 ------------
-
-import { config } from 'neataptic-ts';
-config.warnings = true; // enable runtime warnings
-config.deterministicChainMode = true // opt into deterministic deep path construction
+  import { config } from 'neataptic-ts';
+  config.warnings = true;              // enable runtime warnings
+  config.deterministicChainMode = true // opt into deterministic deep path construction
 
 Adjust BEFORE constructing networks / invoking evolutionary loops so that subsystems read
 the intended values while initializing internal buffers / metadata.
 
 DESIGN NOTES
 ------------
-
 - We intentionally avoid setters / proxies to keep this a plain serializable object.
 - Optional flags are conservative by default (disabled) to preserve legacy stochastic
   behaviour unless a test or user explicitly opts in.
@@ -1540,24 +1509,21 @@ Global NeatapticTS configuration contract & default instance.
 
 WHY THIS EXISTS
 --------------
-
 A central `config` object offers a convenient, documented surface for end-users (and tests)
 to tweak library behaviour without digging through scattered constants. Centralization also
 lets us validate & evolve feature flags in a single place.
 
 USAGE PATTERN
 ------------
-
-import { config } from 'neataptic-ts';
-config.warnings = true; // enable runtime warnings
-config.deterministicChainMode = true // opt into deterministic deep path construction
+  import { config } from 'neataptic-ts';
+  config.warnings = true;              // enable runtime warnings
+  config.deterministicChainMode = true // opt into deterministic deep path construction
 
 Adjust BEFORE constructing networks / invoking evolutionary loops so that subsystems read
 the intended values while initializing internal buffers / metadata.
 
 DESIGN NOTES
 ------------
-
 - We intentionally avoid setters / proxies to keep this a plain serializable object.
 - Optional flags are conservative by default (disabled) to preserve legacy stochastic
   behaviour unless a test or user explicitly opts in.
@@ -1587,7 +1553,6 @@ activation precision wins, otherwise the legacy global float32 flag decides
 between f32 and the default f64 path.
 
 Parameters:
-
 - `overrides` - Optional caller-owned precision overrides.
 - `precisionFlags` - Config-like flag source exposing legacy float32 mode.
 
@@ -1685,7 +1650,10 @@ readoutBlock.describe({
   metadata: { stage: 'readout' },
 });
 
-sensorBlock.connect(readoutBlock, methods.groupConnection.ALL_TO_ALL);
+sensorBlock.connect(
+  readoutBlock,
+  methods.groupConnection.ALL_TO_ALL,
+);
 ```
 
 ```ts
@@ -1741,7 +1709,6 @@ Shifts all node x-coordinates so the leftmost and rightmost nodes
 are balanced around the center of available space.
 
 Parameters:
-
 - `positionedNodes` - Positioned nodes.
 - `drawableWidthPx` - Drawable width.
 
@@ -1772,7 +1739,6 @@ scores the whole population in one async call and writes ordered results back
 onto the genomes in place.
 
 Parameters:
-
 - `options` - Boolean-first population-evaluation options plus advanced worker overrides.
 
 Returns: Population fitness delegate compatible with `fitnessPopulation: true`.
@@ -1784,8 +1750,7 @@ const evaluatePopulation = createNeatParallelPopulationEvaluator({
   parallel: true,
   evaluateGenome: async (genome) => genome.score ?? 0,
   openWorker: (payload) => openSharedInferenceWorker(payload),
-  evaluateWithWorker: async (worker, genome) =>
-    worker.infer(genome.activate([0, 1])),
+  evaluateWithWorker: async (worker, genome) => worker.infer(genome.activate([0, 1])),
 });
 ```
 
@@ -1804,7 +1769,6 @@ a script; it only combines runtime facts and delivery availability so callers
 can decide whether to use shared-memory, channel, or transferable fallback.
 
 Parameters:
-
 - `options` - Runtime and delivery facts for the current host.
 
 Returns: Capability snapshot describing the usable transport tiers.
@@ -1876,7 +1840,6 @@ console.log('fitness after persistence:', lamarckian.fitness);
 ```
 
 Parameters:
-
 - `network` - Live candidate selected by the caller's fitness delegate.
 - `dataset` - Ordered training samples passed to `fineTuneVector(...)` when training runs.
 - `options` - Explicit policy, training settings, and scoring callback.
@@ -1906,7 +1869,6 @@ opening plus task execution when they want parallelism, and they also provide
 a local fallback when they need the same semantics in worker-less hosts.
 
 Parameters:
-
 - `options` - Ordered inputs plus worker and fallback execution hooks.
 
 Returns: Ordered batch results with elapsed time and stable task ids.
@@ -1966,14 +1928,12 @@ with no circular references. It can be passed to a canvas renderer, terminal
 renderer, or serialized to disk.
 
 **Ordering guarantees:**
-
 - `nodes` are sorted by stable gene id ascending.
 - `edges` are sorted by (from gene id, to gene id) ascending.
 - `io.inputNodeIds` and `io.outputNodeIds` preserve the network's explicit
   I/O ordering (same as {@link Network.inputNodeIds} / {@link Network.outputNodeIds}).
 
 Parameters:
-
 - `network` - The network instance to export.
 - `options` - Optional flags controlling which fields are included.
 
@@ -2080,7 +2040,6 @@ console.log('training error:', metrics?.error);
 ```
 
 Parameters:
-
 - `baseNetwork` - Topology source cloned for the isolated working copy.
 - `vector` - Ordered parameter payload applied to the working copy only.
 - `dataset` - Ordered training samples consumed without shuffling.
@@ -2103,7 +2062,6 @@ snapshot so tooling can log or display one stable explanation of the built
 graph without reading mutable `Network` internals.
 
 Parameters:
-
 - `constructResult` - Construct result returned by `Network.construct(...)`.
 
 Returns: Multi-line summary string suitable for logs, diagnostics panels, or snapshots.
@@ -2138,7 +2096,6 @@ and also rejects version, entry-count, values-length, or descriptor mismatch
 before mutation.
 
 Parameters:
-
 - `network` - Live target network instance.
 - `parameterVector` - Versioned payload to apply.
 
@@ -2159,7 +2116,6 @@ After the transfer completes, the sending-side typed arrays are neutered and
 must not be read again.
 
 Parameters:
-
 - `payload` - Transferable inference payload whose buffers should move.
 
 Returns: ArrayBuffer transfer list aligned to the payload's typed shelves.
@@ -2369,7 +2325,6 @@ _compatibilityDistance(
 Compute compatibility distance between two networks (delegates to compat module).
 
 Parameters:
-
 - `netA` - First network for comparison.
 - `netB` - Second network for comparison.
 
@@ -2400,7 +2355,6 @@ _fallbackInnov(
 Fallback innovation id resolver used when reuse mapping is absent.
 
 Parameters:
-
 - `conn` - Connection metadata used to derive the innovation id.
 
 Returns: Innovation id for the connection.
@@ -2440,7 +2394,6 @@ _invalidateGenomeCaches(
 Invalidate per-genome caches (compatibility distance, forward pass, etc.).
 
 Parameters:
-
 - `genome` - Genome instance whose caches should be cleared.
 
 #### _lastEvalDuration
@@ -2470,7 +2423,6 @@ _mutateAddConnReuse(
 Add-connection mutation that reuses global innovation ids when possible.
 
 Parameters:
-
 - `genome` - Genome receiving the mutation.
 
 Returns: Mutated genome with added connection.
@@ -2486,7 +2438,6 @@ _mutateAddNodeReuse(
 Add-node mutation that reuses global innovation ids when possible.
 
 Parameters:
-
 - `genome` - Genome receiving the mutation.
 
 Returns: Mutated genome with added node.
@@ -2544,7 +2495,6 @@ _sortSpeciesMembers(
 Sort members within a species according to fitness and lineage rules.
 
 Parameters:
-
 - `sp` - Species whose members should be sorted.
 
 Returns: Sorted species members.
@@ -2574,7 +2524,6 @@ _structuralEntropy(
 Compatibility wrapper retained for tests that reach `_structuralEntropy` through loose controller casts.
 
 Parameters:
-
 - `genome` - Genome whose structural entropy is calculated.
 
 Returns: Structural entropy score for the genome.
@@ -2613,7 +2562,6 @@ addGenome(
 Register an externally-created genome into the `Neat` population.
 
 Parameters:
-
 - `genome` - Genome to append into the population.
 - `parents` - Optional lineage metadata recorded for teaching and telemetry.
 
@@ -2694,7 +2642,6 @@ start from a known architecture template instead of relying on whatever setup
 a surrounding example or harness applies for you.
 
 Parameters:
-
 - `network` - Optional template network copied into the initial pool.
 
 #### ensureMinHiddenNodes
@@ -2801,7 +2748,6 @@ for namespaced consumers and does not change the light checkpoint's
 bootstrap semantics.
 
 Parameters:
-
 - `exportOptions` - Policy describing how many elite genomes to retain.
 
 Returns: Light-checkpoint snapshot for approximate restart.
@@ -2811,7 +2757,7 @@ Example:
 ```ts
 const checkpoint = neat.exportLightState({ eliteCount: 12 });
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     branchId: 'draft-1',
   },
 };
@@ -2831,7 +2777,6 @@ This is the easiest way to persist frontier history for offline analysis or
 later replay in notebooks and visualization tools.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent archive entries to export.
 
 Returns: JSONL payload for the requested Pareto archive window.
@@ -2860,7 +2805,6 @@ This is useful when you want to chart species growth, collapse, or
 stagnation in a spreadsheet or notebook without writing a custom parser.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent history entries to export.
 
 Returns: CSV payload representing recent species history snapshots.
@@ -2879,7 +2823,6 @@ Choose this when you want machine-friendly archival output instead of the
 flatter spreadsheet-oriented CSV export.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent history entries to export.
 
 Returns: JSONL payload describing recent species-history entries.
@@ -2908,7 +2851,7 @@ Example:
 ```ts
 const checkpoint = neat.exportState();
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     memoryBankId: 'memory-bank-1',
   },
 };
@@ -2925,7 +2868,6 @@ exportTelemetryCSV(
 Export recent telemetry entries as CSV.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent telemetry entries to export.
 
 Returns: CSV string for quick spreadsheet or notebook analysis.
@@ -2963,7 +2905,6 @@ neat.export()`, followed later by `Neat.fromJSON(meta, fitness)` and
 `restored.import(population)`.
 
 Parameters:
-
 - `json` - Serialized controller metadata produced by `toJSON()`.
 - `fitness` - Fitness function to attach to the reconstructed controller.
 
@@ -3020,7 +2961,6 @@ getLineageSnapshot(
 Return an array of {id, parents} for the first `limit` genomes in population.
 
 Parameters:
-
 - `limit` - Maximum number of lineage records to return.
 
 Returns: Compact lineage snapshot for debugging and teaching inheritance flow.
@@ -3143,7 +3083,6 @@ what front snapshots were retained over time without exporting the full JSONL
 payload first.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent archive entries to return.
 
 Returns: Recent Pareto archive metadata entries.
@@ -3159,7 +3098,6 @@ getParetoFronts(
 Reconstruct Pareto fronts for the current population snapshot.
 
 Parameters:
-
 - `maxFronts` - Maximum number of fronts to materialize.
 
 Returns: Fronts ordered from most to least dominant under the active objectives.
@@ -3238,7 +3176,6 @@ checkpoint paths when you need to preserve a larger future population target
 separately from the imported genome count.
 
 Parameters:
-
 - `json` - Serialized population to import into the current controller.
 
 Returns: Promise resolving after the population is loaded.
@@ -3271,7 +3208,6 @@ the bundle and then relies on the ordinary evolution path to refill toward
 the saved restart-scale population target.
 
 Parameters:
-
 - `bundle` - Serialized light-checkpoint bundle.
 - `fitness` - Fitness function to attach to the restored controller.
 
@@ -3297,7 +3233,6 @@ importRNGState(
 Import an RNG state (alias for restore; kept for compatibility).
 
 Parameters:
-
 - `state` - Numeric RNG state.
 
 Returns: Nothing. This is a compatibility alias for `restoreRNGState()`.
@@ -3324,7 +3259,6 @@ must still carry replay-critical runtime and speciation state. Use
 restore that should keep running without claiming deterministic replay.
 
 Parameters:
-
 - `bundle` - Serialized object with the shape `{ neat, population }`.
 - `fitness` - Fitness function to attach to the restored controller.
 - `restoreOptions` - Explicit restore-mode override. Defaults to strict exact resume.
@@ -3376,7 +3310,6 @@ behavior you want. The controller can then reason about tradeoffs such as raw
 score versus simplicity, novelty, or domain-specific constraints.
 
 Parameters:
-
 - `key` - Stable objective identifier used in exports and telemetry.
 - `direction` - Whether the objective should be minimized or maximized.
 - `accessor` - Function extracting the objective value from a genome.
@@ -3404,7 +3337,6 @@ Restore a previously-snapshotted RNG state. This restores the internal
 seed but does not re-create the RNG function until next use.
 
 Parameters:
-
 - `state` - Opaque numeric RNG state produced by `snapshotRNGState()`.
 
 Returns: Nothing. The controller will resume from the restored RNG state on next use.
@@ -3420,7 +3352,6 @@ sampleRandom(
 Produce deterministic random samples using the instance RNG.
 
 Parameters:
-
 - `sampleCount` - Number of random values to generate.
 
 Returns: Array of deterministic random samples.
@@ -3437,7 +3368,6 @@ selectMutationMethod(
 Selects a mutation method for a given genome based on constraints.
 
 Parameters:
-
 - `genome` - Genome being considered for mutation.
 - `rawReturnForTest` - Whether to expose raw selection output for test visibility.
 
@@ -3474,7 +3404,6 @@ spawnFromParent(
 Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
 
 Parameters:
-
 - `parent` - Parent genome to clone and mutate.
 - `mutateCount` - Number of mutation passes to apply to the child.
 
@@ -3604,7 +3533,6 @@ then reuses the worker-side predictor state for every later `predict()` or
 `reset()` request sent over one dedicated `MessageChannel` port pair.
 
 Parameters:
-
 - `payload` - Transferable inference payload used to bootstrap the worker predictor.
 - `options` - Channel concurrency and worker delivery options.
 
@@ -3639,7 +3567,6 @@ the library files. Bundled or CSP-constrained hosts can override that entry
 with `workerUrl`.
 
 Parameters:
-
 - `payload` - Transferable inference payload used to bootstrap the shared worker predictor.
 - `options` - Shared worker delivery options.
 
@@ -3658,8 +3585,8 @@ await sharedWorker.release();
 
 Optional hook functions that demos can use to inject custom overlays.
 
-Flappy Bird injects input-group label bands and per-input descriptions.
-ASCII Maze could inject custom layer labels, or leave hooks undefined.
+A consumer can inject input-group label bands and per-input descriptions,
+or custom layer labels, or leave hooks undefined.
 
 ### ParallelInferencePool
 
@@ -3708,7 +3635,6 @@ The pool schedules work FIFO, lets each slot consume tasks until the queue
 is empty, and returns results in the same order as the input payloads.
 
 Parameters:
-
 - `payloads` - Ordered payload shelf to evaluate.
 - `evaluator` - Caller-owned evaluation logic for one warm worker slot.
 
@@ -3728,7 +3654,6 @@ Existing workers are released before the new shelf becomes active so slot
 reuse stays deterministic across generations or evaluation batches.
 
 Parameters:
-
 - `payloads` - Ordered payload shelf that may be evaluated next.
 
 Returns: Nothing.
@@ -3841,7 +3766,6 @@ available vertical space. Nodes in earlier layers are placed left; nodes
 in later layers are placed right.
 
 Parameters:
-
 - `networkLayers` - Resolved network layers (each layer is a list of nodes).
 - `leftPaddingPx` - Left graph padding.
 - `topPaddingPx` - Top graph padding.
@@ -3870,7 +3794,6 @@ This is the main public entry point. It accepts a `VisualizationGraphV1` (from
 demo-specific overlays.
 
 **Typical usage:**
-
 ```ts
 const graph = exportVisualizationGraph(network);
 const canvas = document.getElementById('network-canvas') as HTMLCanvasElement;
@@ -3882,7 +3805,6 @@ const frame = renderNetworkView(canvas, graph, {
 ```
 
 Parameters:
-
 - `canvas` - Canvas element to render onto.
 - `graph` - Visualization graph (from `exportVisualizationGraph`).
 - `options` - Optional render settings (dimensions, padding, colors, overlays).
@@ -3907,7 +3829,6 @@ The priority order matches the current transport ladder: shared-memory first,
 then persistent channels, then transferable payload fallback.
 
 Parameters:
-
 - `capabilities` - Capability snapshot returned by the probe.
 
 Returns: Best automatic transport choice for the current host.
@@ -3938,7 +3859,6 @@ emitted worker asset they expect, while the library handles the common URL
 math for browser demos, nested workers, and side-by-side bundle delivery.
 
 Parameters:
-
 - `workerAssetPath` - Relative worker asset path emitted by the bundler.
 - `options` - Optional explicit base URL override.
 
@@ -3948,7 +3868,7 @@ Example:
 
 ```ts
 const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
-  'flappy-shared-inference.worker.bundle.js',
+  'shared-inference.worker.bundle.js',
 );
 ```
 
@@ -3980,7 +3900,6 @@ For recurrent networks, this detects temporal modules and creates annotations.
 For feed-forward networks, this creates a simple acyclic plan.
 
 Parameters:
-
 - `network` - Runtime network instance (or undefined for fallback).
 - `inputSize` - Input count (used if network is undefined).
 - `outputSize` - Output count (used if network is undefined).
@@ -4050,7 +3969,6 @@ The output can be pasted into any DOT renderer (e.g.
 a visual graph diagram.
 
 Node shapes:
-
 - **Inputs** — inverted triangle (`invtriangle`).
 - **Outputs** — double circle (`doublecircle`).
 - **Hidden** — circle (`circle`).
@@ -4059,8 +3977,7 @@ Edge labels show weights when they are present in the graph.
 Disabled edges are rendered as dashed lines.
 
 Parameters:
-
-- `graph` - Versioned visualization graph produced by {@link exportVisualizationGraph} .
+- `graph` - Versioned visualization graph produced by  {@link exportVisualizationGraph} .
 
 Returns: Graphviz DOT string.
 
@@ -4094,7 +4011,6 @@ instead of flattening those deferred families into the weights-and-biases v1
 payload.
 
 Parameters:
-
 - `network` - Live network instance to export.
 
 Returns: Ordered layout metadata plus aligned scalar values for same-runtime deterministic roundtrips.
@@ -4183,7 +4099,6 @@ _activateCore(
 Internal shared implementation for activate/noTraceActivate.
 
 Parameters:
-
 - `withTrace` - Whether to update eligibility traces.
 - `input` - Optional externally supplied activation (bypasses weighted sum if provided).
 
@@ -4235,7 +4150,6 @@ Acquire a connection from the internal pool, or construct a fresh one when the p
 This is the low-allocation path used by topology mutation and other edge-churn heavy flows.
 
 Parameters:
-
 - `from` - Source node.
 - `to` - Target node.
 - `weight` - Optional initial weight.
@@ -4260,7 +4174,6 @@ path is used only when an options bag with `useGPU: true` is supplied,
 the standard CPU `network.activate()` implementation runs.
 
 Parameters:
-
 - `input` - Input vector of length `this.input`.
 - `trainingOrOptions` - Boolean training flag or options bag.
 - `_maxActivationDepth` - Unused; kept for signature compatibility.
@@ -4279,7 +4192,6 @@ Activates the node, calculating its output value based on inputs and state.
 This method also calculates eligibility traces (`xtrace`) used for training recurrent connections.
 
 The activation process involves:
-
 1. Calculating the node's internal state (`this.state`) based on:
    - Incoming connections' weighted activations.
    - The recurrent self-connection's weighted state from the previous timestep (`this.old`).
@@ -4291,7 +4203,6 @@ The activation process involves:
 6. Calculating and updating eligibility traces for incoming connections.
 
 Parameters:
-
 - `input` - Optional input value. If provided, sets the node's activation directly (used for input nodes).
 
 Returns: The calculated activation value of the node.
@@ -4315,7 +4226,6 @@ During training, layer-level dropout is applied, masking all nodes in the layer 
 During inference, all masks are set to 1.
 
 Parameters:
-
 - `value` - An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
 - `training` - A boolean indicating whether the layer is in training mode. Defaults to false.
 
@@ -4332,7 +4242,6 @@ activate(
 Activates all nodes in the group.
 
 Parameters:
-
 - `value` - Optional array of input values. Its length must match the number of nodes in the group.
 
 Returns: Activation value of each node in the group, in order.
@@ -4353,7 +4262,6 @@ fast-path allocations. Outputs are cloned number[] arrays for API
 compatibility. Future optimizations can vectorize this path.
 
 Parameters:
-
 - `inputs` - Array of input vectors, each length must equal this.input
 - `training` - Whether to run with training-time stochastic features
 
@@ -4373,7 +4281,6 @@ Raw activation that can return a reusable typed array when pooling is enabled.
 If `reuseActivationArrays` is disabled this falls back to the standard plain-array activation path.
 
 Parameters:
-
 - `input` - Input vector.
 - `training` - Whether to enable training-time stochastic paths.
 - `maxActivationDepth` - Maximum graph depth for activation.
@@ -4434,7 +4341,6 @@ Uses momentum in a Nesterov-compatible way: currentDelta = accumulated + momentu
 Resets accumulators after applying. Safe to call on every node type.
 
 Parameters:
-
 - `momentum` - Momentum factor (0 to disable)
 
 #### applyBatchUpdatesWithOptimizer
@@ -4453,43 +4359,39 @@ SGD (with Nesterov-style momentum via preceding propagate logic) and a collectio
 optimizers. After applying an update, gradient accumulators are reset to 0.
 
 Supported optimizers (type):
-
-- 'sgd' : Standard gradient descent with optional momentum.
-- 'rmsprop' : Exponential moving average of squared gradients (cache) to normalize step.
-- 'adagrad' : Accumulate squared gradients; learning rate effectively decays per weight.
-- 'adam' : Bias‑corrected first (m) & second (v) moment estimates.
-- 'adamw' : Adam with decoupled weight decay (applied after adaptive step).
-- 'amsgrad' : Adam variant maintaining a maximum of past v (vhat) to enforce non‑increasing step size.
-- 'adamax' : Adam variant using the infinity norm (u) instead of second moment.
-- 'nadam' : Adam + Nesterov momentum style update (lookahead on first moment).
-- 'radam' : Rectified Adam – warms up variance by adaptively rectifying denominator when sample size small.
-- 'lion' : Uses sign of combination of two momentum buffers (beta1 & beta2) for update direction only.
-- 'adabelief': Adam-like but second moment on (g - m) (gradient surprise) for variance reduction.
-- 'lookahead': Wrapper; performs k fast optimizer steps then interpolates (alpha) towards a slow (shadow) weight.
+ - 'sgd'      : Standard gradient descent with optional momentum.
+ - 'rmsprop'  : Exponential moving average of squared gradients (cache) to normalize step.
+ - 'adagrad'  : Accumulate squared gradients; learning rate effectively decays per weight.
+ - 'adam'     : Bias‑corrected first (m) & second (v) moment estimates.
+ - 'adamw'    : Adam with decoupled weight decay (applied after adaptive step).
+ - 'amsgrad'  : Adam variant maintaining a maximum of past v (vhat) to enforce non‑increasing step size.
+ - 'adamax'   : Adam variant using the infinity norm (u) instead of second moment.
+ - 'nadam'    : Adam + Nesterov momentum style update (lookahead on first moment).
+ - 'radam'    : Rectified Adam – warms up variance by adaptively rectifying denominator when sample size small.
+ - 'lion'     : Uses sign of combination of two momentum buffers (beta1 & beta2) for update direction only.
+ - 'adabelief': Adam-like but second moment on (g - m) (gradient surprise) for variance reduction.
+ - 'lookahead': Wrapper; performs k fast optimizer steps then interpolates (alpha) towards a slow (shadow) weight.
 
 Options:
-
-- momentum : (SGD) momentum factor (Nesterov handled in propagate when update=true).
-- beta1/beta2 : Exponential decay rates for first/second moments (Adam family, Lion, AdaBelief, etc.).
-- eps : Numerical stability epsilon added to denominator terms.
-- weightDecay : Decoupled weight decay (AdamW) or additionally applied after main step when adamw selected.
-- lrScale : Learning rate scalar already scheduled externally (passed as currentRate).
-- t : Global step (1-indexed) for bias correction / rectification.
-- baseType : Underlying optimizer for lookahead (not itself lookahead).
-- la_k : Lookahead synchronization interval (number of fast steps).
-- la_alpha : Interpolation factor towards slow (shadow) weights/bias at sync points.
+ - momentum     : (SGD) momentum factor (Nesterov handled in propagate when update=true).
+ - beta1/beta2  : Exponential decay rates for first/second moments (Adam family, Lion, AdaBelief, etc.).
+ - eps          : Numerical stability epsilon added to denominator terms.
+ - weightDecay  : Decoupled weight decay (AdamW) or additionally applied after main step when adamw selected.
+ - lrScale      : Learning rate scalar already scheduled externally (passed as currentRate).
+ - t            : Global step (1-indexed) for bias correction / rectification.
+ - baseType     : Underlying optimizer for lookahead (not itself lookahead).
+ - la_k         : Lookahead synchronization interval (number of fast steps).
+ - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
 
 Internal per-connection temp fields (created lazily):
-
-- firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
-- gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
-- previousDeltaWeight : For classic SGD momentum.
-- lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
+ - firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
+ - gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
+ - previousDeltaWeight : For classic SGD momentum.
+ - lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
 
 Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
 
 Parameters:
-
 - `opts` - Optimizer configuration (see above).
 
 #### attention
@@ -4504,7 +4406,6 @@ attention(
 Creates a multi-head self-attention layer (stub implementation).
 
 Parameters:
-
 - `size` - Number of output nodes.
 - `heads` - Number of attention heads (default 1).
 
@@ -4522,7 +4423,6 @@ Creates a batch normalization layer.
 Applies batch normalization to the activations of the nodes in this layer during activation.
 
 Parameters:
-
 - `size` - The number of nodes in this layer.
 
 Returns: A new Layer instance configured as a batch normalization layer.
@@ -4579,7 +4479,6 @@ configurePruning(
 Configure scheduled pruning during training.
 
 Parameters:
-
 - `cfg` - Pruning schedule and strategy configuration.
 
 #### configureSparsityBudget
@@ -4593,7 +4492,6 @@ configureSparsityBudget(
 Configure a structural connection-growth budget for future mutations.
 
 Parameters:
-
 - `cfg` - Absolute connection cap plus optional grace headroom.
 
 #### connect
@@ -4624,7 +4522,6 @@ connect(
 Creates a connection from this node to a target node or all nodes in a group.
 
 Parameters:
-
 - `target` - The target Node or a group object containing a `nodes` array.
 - `weight` - The weight for the new connection(s). If undefined, a default or random weight might be assigned by the Connection constructor (currently defaults to 0, consider changing).
 
@@ -4647,7 +4544,6 @@ or the target layer's `input` method. It establishes the forward connections
 necessary for signal propagation.
 
 Parameters:
-
 - `target` - The destination Layer, Group, or Node to connect to.
 - `method` - The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
 - `weight` - An optional fixed weight to assign to all created connections.
@@ -4667,7 +4563,6 @@ connect(
 Establishes connections from all nodes in this group to a target group, layer, or node.
 
 Parameters:
-
 - `target` - Destination entity to connect to.
 - `method` - Connection pattern to use.
 - `weight` - Optional fixed weight for all created connections.
@@ -4689,7 +4584,6 @@ behavior as repeated `connect()` calls, but it reserves network-level
 storage once for the whole request shelf.
 
 Parameters:
-
 - `requests` - Ordered connection requests.
 
 Returns: Flattened created connection objects in request order.
@@ -4714,7 +4608,6 @@ runtime, preserving explicit input/output ordering and then rebuilding the
 scheduling cache in either acyclic or recurrent mode.
 
 Parameters:
-
 - `parts` - Mixed architecture parts to flatten.
 - `options` - Optional construct-time validation, ordering, and runtime flags.
 
@@ -4750,7 +4643,6 @@ connections they reference, infers input/output counts from node types, and
 folds the result into one normalized network object.
 
 Parameters:
-
 - `list` - Building blocks that are already interconnected.
 
 Returns: A network representing the supplied architecture.
@@ -4769,7 +4661,6 @@ conv1d(
 Creates a 1D convolutional layer (stub implementation).
 
 Parameters:
-
 - `size` - Number of output nodes (filters).
 - `kernelSize` - Size of the convolution kernel.
 - `stride` - Stride of the convolution (default 1).
@@ -4824,7 +4715,6 @@ Dense layers also stamp default descriptor metadata (`family: 'dense'`) so
 later tooling can recognize the block even when the caller never names it.
 
 Parameters:
-
 - `size` - The number of nodes (neurons) in this layer.
 - `nodeType` - Optional primitive role assigned to the dense block.
 
@@ -4861,7 +4751,6 @@ Reach for this when the node is still the right abstraction but a later
 reader should not have to infer its purpose from connection order alone.
 
 Parameters:
-
 - `descriptor` - Optional label, intent, and scalar metadata to merge.
 
 Returns: Nothing.
@@ -4983,7 +4872,6 @@ disconnect(
 Removes the connection from this node to the target node.
 
 Parameters:
-
 - `target` - The target node to disconnect from.
 - `twosided` - If true, also removes the connection from the target node back to this node (if it exists). Defaults to false.
 
@@ -4999,7 +4887,6 @@ disconnect(
 Removes connections between this layer's nodes and a target Group or Node.
 
 Parameters:
-
 - `target` - The Group or Node to disconnect from.
 - `twosided` - If true, removes connections in both directions (from this layer to target, and from target to this layer). Defaults to false.
 
@@ -5015,7 +4902,6 @@ disconnect(
 Removes connections between nodes in this group and a target group or node.
 
 Parameters:
-
 - `target` - Group or node to disconnect from.
 - `twosided` - Whether to also remove reciprocal connections.
 
@@ -5048,7 +4934,6 @@ enableDropConnect(
 Enable DropConnect with a probability in $[0,1)$.
 
 Parameters:
-
 - `p` - DropConnect probability.
 
 #### enableWeightNoise
@@ -5062,7 +4947,6 @@ enableWeightNoise(
 Enable weight noise using either a global standard deviation or per-hidden-layer values.
 
 Parameters:
-
 - `stdDev` - Global standard deviation or hidden-layer schedule.
 
 #### enforceMinimumHiddenLayerSizes
@@ -5076,7 +4960,6 @@ enforceMinimumHiddenLayerSizes(
 Enforces the minimum hidden layer size rule on a network.
 
 Parameters:
-
 - `network` - The network to normalize.
 
 Returns: The same network with hidden layers grown to the minimum size when needed.
@@ -5101,7 +4984,6 @@ orchestration-first while population search, mutation policy, and stopping
 criteria remain chapter-owned.
 
 Parameters:
-
 - `set` - Evaluation samples with `input` and `output` vectors.
 - `options` - Evolution options controlling population search and stopping criteria.
 
@@ -5118,7 +5000,6 @@ fastSlabActivate(
 Public wrapper for fast slab forward pass.
 
 Parameters:
-
 - `input` - Input vector.
 
 Returns: Activation output.
@@ -5143,7 +5024,6 @@ adding bounded window callbacks and an opt-out from collecting the full
 output matrix when the caller wants lower sequence-retention pressure.
 
 Parameters:
-
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Optional windowed activation settings.
 
@@ -5164,7 +5044,6 @@ Browser runtimes can use this to yield after a configurable number of
 emitted windows so long-running sequence inference remains responsive.
 
 Parameters:
-
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Optional async windowed activation settings.
 
@@ -5195,7 +5074,6 @@ fromJSON(
 Creates a Node instance from a JSON object.
 
 Parameters:
-
 - `json` - The JSON object containing node configuration.
 
 Returns: A new Node instance configured according to the JSON object.
@@ -5229,7 +5107,6 @@ Makes this node gate the provided connection(s).
 The connection's gain will be controlled by this node's activation value.
 
 Parameters:
-
 - `connections` - A single Connection object or an array of Connection objects to be gated.
 
 #### gate
@@ -5247,7 +5124,6 @@ Gating allows the activity of nodes in this layer (specifically, the output grou
 to modulate the flow of information through the specified `connections`.
 
 Parameters:
-
 - `connections` - An array of connection objects to be gated.
 - `method` - The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
 
@@ -5263,7 +5139,6 @@ gate(
 Configures nodes within this group to act as gates for the specified connection set.
 
 Parameters:
-
 - `connections` - Single connection or list of connections to gate.
 - `method` - Gating mechanism to use.
 
@@ -5446,7 +5321,6 @@ simpler than LSTMs but achieving similar performance on many tasks.
 They use an update gate and a reset gate to manage information flow.
 
 Parameters:
-
 - `size` - The number of GRU units (and nodes in each gate/cell group).
 
 Returns: A new Layer instance configured as a GRU layer.
@@ -5486,7 +5360,6 @@ Common pitfalls:
 - shuffling timesteps rather than whole sequences.
 
 Parameters:
-
 - `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed GRU network.
@@ -5496,7 +5369,9 @@ Example:
 ```ts
 const network = Architect.gru(1, 3, 1, { inputToOutput: true });
 
-const outputs = [0.1, 0.4, 0.2].map((value) => network.activate([value])[0]);
+const outputs = [0.1, 0.4, 0.2].map(
+  (value) => network.activate([value])[0],
+);
 
 network.clear();
 
@@ -5518,7 +5393,6 @@ hopfield(
 Creates a Hopfield network.
 
 Parameters:
-
 - `size` - The number of nodes in the network.
 
 Returns: The constructed Hopfield network.
@@ -5549,7 +5423,6 @@ Use it when you need a stable edge identifier without relying on the mutable
 auto-increment counter.
 
 Parameters:
-
 - `sourceNodeId` - Source node integer id or index.
 - `targetNodeId` - Target node integer id or index.
 
@@ -5575,15 +5448,14 @@ input(
 ): default[]
 ```
 
-Handles the connection logic when this layer is the _target_ of a connection.
+Handles the connection logic when this layer is the *target* of a connection.
 
 It connects the output of the `from` layer or group to this layer's primary
 input mechanism (which is often the `output` group itself, but depends on the layer type).
 This method is usually called by the `connect` method of the source layer/group.
 
 Parameters:
-
-- `from` - The source Layer or Group connecting _to_ this layer.
+- `from` - The source Layer or Group connecting *to* this layer.
 - `method` - The connection method (e.g., `ALL_TO_ALL`). Defaults to `ALL_TO_ALL`.
 - `weight` - An optional fixed weight for the connections.
 
@@ -5617,7 +5489,6 @@ isConnectedTo(
 Checks if this node is connected to another node.
 
 Parameters:
-
 - `target` - The target node to check the connection with.
 
 Returns: True if connected, otherwise false.
@@ -5634,7 +5505,6 @@ Checks if the given node has a direct outgoing connection to this node.
 Considers both regular incoming connections and the self-connection.
 
 Parameters:
-
 - `node` - The potential source node.
 
 Returns: True if the given node projects to this node, false otherwise.
@@ -5651,7 +5521,6 @@ Checks if this node has a direct outgoing connection to the given node.
 Considers both regular outgoing connections and the self-connection.
 
 Parameters:
-
 - `node` - The potential target node.
 
 Returns: True if this node projects to the target node, false otherwise.
@@ -5676,7 +5545,6 @@ Creates a layer normalization layer.
 Applies layer normalization to the activations of the nodes in this layer during activation.
 
 Parameters:
-
 - `size` - The number of nodes in this layer.
 
 Returns: A new Layer instance configured as a layer normalization layer.
@@ -5704,7 +5572,6 @@ long-range dependencies. This implementation uses standard LSTM architecture
 with input, forget, and output gates, and a memory cell.
 
 Parameters:
-
 - `size` - The number of LSTM units (and nodes in each gate/cell group).
 
 Returns: A new Layer instance configured as an LSTM layer.
@@ -5745,7 +5612,6 @@ Common pitfalls:
   the recurrent block is supposed to learn.
 
 Parameters:
-
 - `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed LSTM network.
@@ -5755,11 +5621,15 @@ Example:
 ```ts
 const network = Architect.lstm(1, 4, 1, { inputToOutput: false });
 
-const firstPass = [0.1, 0.4, 0.2].map((value) => network.activate([value])[0]);
+const firstPass = [0.1, 0.4, 0.2].map(
+  (value) => network.activate([value])[0],
+);
 
 network.clear();
 
-const secondPass = [0.1, 0.4, 0.2].map((value) => network.activate([value])[0]);
+const secondPass = [0.1, 0.4, 0.2].map(
+  (value) => network.activate([value])[0],
+);
 
 console.log(firstPass, secondPass);
 ```
@@ -5789,7 +5659,6 @@ information propagates backward through the blocks. The layer's output
 concatenates the states of all memory blocks.
 
 Parameters:
-
 - `size` - The number of nodes in each memory block (must match the input size).
 - `memory` - The number of time steps to remember (number of memory blocks).
 
@@ -5818,7 +5687,6 @@ after calling `mutate` so it can report the outcome truthfully as applied or
 skipped rather than claiming growth that did not happen.
 
 Parameters:
-
 - `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
   Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
 
@@ -5836,7 +5704,6 @@ This allows modifying the node's properties, such as its activation function or 
 based on predefined mutation methods.
 
 Parameters:
-
 - `method` - A mutation method object, typically from `methods.mutation`. It should define the type of mutation and its parameters (e.g., allowed functions, modification range).
 
 #### narx
@@ -5887,7 +5754,6 @@ the same runtime without clearing it, the delay lines intentionally carry
 their terminal state into the next activation stream.
 
 Parameters:
-
 - `inputSize` - The exogenous input size at each time step.
 - `hiddenLayers` - Hidden layer sizes, or zero / empty for none.
 - `outputSize` - The prediction output size.
@@ -5952,7 +5818,6 @@ This is a performance optimization used during inference (when the network
 is just making predictions, not learning) as trace calculations are only needed for training.
 
 Parameters:
-
 - `input` - Optional input value. If provided, sets the node's activation directly (used for input nodes).
 
 Returns: The calculated activation value of the node.
@@ -6002,9 +5867,8 @@ Common pitfalls:
   when some order randomization would reduce training bias.
 
 Parameters:
-
 - `layers` - Layer sizes starting with input, followed by hidden layers,
-  and ending with output.
+and ending with output.
 
 Returns: The constructed MLP network.
 
@@ -6081,7 +5945,6 @@ propagate(
 Back-propagates the error signal through the node and calculates weight/bias updates.
 
 This method implements the backpropagation algorithm, including:
-
 1. Calculating the node's error responsibility based on errors from subsequent nodes (`projected` error)
    and errors from connections it gates (`gated` error).
 2. Calculating the gradient for each incoming connection's weight using eligibility traces (`xtrace`).
@@ -6092,7 +5955,6 @@ This method implements the backpropagation algorithm, including:
 4. Optionally applying the calculated updates immediately or accumulating them for batch training.
 
 Parameters:
-
 - `rate` - The learning rate (controls the step size of updates).
 - `momentum` - The momentum factor (helps accelerate learning and overcome local minima). Uses NAG.
 - `update` - If true, apply the calculated weight/bias updates immediately. If false, accumulate them in `totalDelta*` properties for batch updates.
@@ -6120,7 +5982,6 @@ to calculate the initial error for each node. Otherwise, nodes calculate
 their error based on the error propagated from subsequent layers.
 
 Parameters:
-
 - `rate` - The learning rate, controlling the step size of weight adjustments.
 - `momentum` - The momentum factor, used to smooth weight updates and escape local minima.
 - `target` - An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
@@ -6154,12 +6015,11 @@ independent of a training-iteration schedule. For schedule-based
 pruning during gradient training, use `configureSparsityBudget()`.
 
 Parameters:
-
 - `targetSparsity` - Fraction of original connections to remove,
-  in the open interval `(0, 1)`. Values close to 1 produce very
-  sparse networks.
+in the open interval `(0, 1)`. Values close to 1 produce very
+sparse networks.
 - `method` - Ranking strategy: `'magnitude'` or `'snip'`.
-  Defaults to `'magnitude'`.
+Defaults to `'magnitude'`.
 
 Example:
 
@@ -6188,7 +6048,6 @@ while forwarding to the stricter `randomSparse()` builder that uses the
 sparse-profile vocabulary.
 
 Parameters:
-
 - `input` - The number of input nodes.
 - `hidden` - The number of hidden nodes to add.
 - `output` - The number of output nodes.
@@ -6231,12 +6090,11 @@ Common pitfalls:
   little left to discover.
 
 Parameters:
-
 - `input` - The number of input nodes.
 - `hidden` - The number of hidden nodes to add.
 - `output` - The number of output nodes.
 - `options` - Optional sparse-structure counts for forward connections,
-  back connections, self connections, gates, and an optional deterministic seed.
+back connections, self connections, gates, and an optional deterministic seed.
 
 Returns: The constructed sparse random network.
 
@@ -6266,7 +6124,7 @@ This ensures that the network.connections array is consistent with the actual
 outgoing connections of all nodes. Useful after manual wiring or node manipulation.
 
 Returns: Example usage:
-Network.rebuildConnections(net);
+  Network.rebuildConnections(net);
 
 #### rebuildConnectionSlab
 
@@ -6279,7 +6137,6 @@ rebuildConnectionSlab(
 Rebuild slab structures for fast activation.
 
 Parameters:
-
 - `force` - Whether to force a rebuild.
 
 Returns: Slab rebuild result.
@@ -6310,7 +6167,6 @@ Return a connection instance to the internal pool for later reuse.
 Treat the instance as surrendered after calling this method.
 
 Parameters:
-
 - `conn` - The connection instance to recycle.
 
 Returns: Nothing.
@@ -6325,14 +6181,13 @@ remove(
 
 Removes a node from the network.
 This involves:
-
 1. Disconnecting all incoming and outgoing connections associated with the node.
 2. Removing self-connections.
 3. Removing the node from the `nodes` array.
 4. Attempting to reconnect the node's direct predecessors to its direct successors
    to maintain network flow, if possible and configured.
-5. Handling gates involving the removed node (ungating connections gated _by_ this node,
-   and potentially re-gating connections that were gated _by other nodes_ onto the removed node's connections).
+5. Handling gates involving the removed node (ungating connections gated *by* this node,
+   and potentially re-gating connections that were gated *by other nodes* onto the removed node's connections).
 
 #### resetDropoutMasks
 
@@ -6355,7 +6210,6 @@ Reset the monotonic innovation counter used for newly constructed or pooled conn
 You usually call this at the start of an experiment or before rebuilding a whole population.
 
 Parameters:
-
 - `value` - New starting value.
 
 Returns: Nothing.
@@ -6379,7 +6233,6 @@ restoreRNG(
 Restore deterministic RNG function from a snapshot source.
 
 Parameters:
-
 - `fn` - RNG function to restore.
 
 #### score
@@ -6432,7 +6285,6 @@ or node type. If a node within the `nodes` array is actually a `Group` (e.g., in
 the configuration is applied recursively to the nodes within that group.
 
 Parameters:
-
 - `values` - An object containing the properties and their values to set.
   Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
 
@@ -6447,7 +6299,6 @@ setActivation(
 Sets a custom activation function for this node at runtime.
 
 Parameters:
-
 - `fn` - The activation function (should handle derivative if needed).
 
 #### setEnforceAcyclic
@@ -6461,7 +6312,6 @@ setEnforceAcyclic(
 Enable or disable acyclic topology enforcement.
 
 Parameters:
-
 - `flag` - Whether to enforce acyclic connectivity.
 
 #### setRandom
@@ -6475,7 +6325,6 @@ setRandom(
 Replace the network random number generator.
 
 Parameters:
-
 - `fn` - RNG function returning values in $[0,1)$.
 
 #### setRNGState
@@ -6489,7 +6338,6 @@ setRNGState(
 Set the raw deterministic RNG state word.
 
 Parameters:
-
 - `state` - RNG state value.
 
 #### setSeed
@@ -6510,7 +6358,6 @@ IDs for newly created connections. Omitting the seed leaves the network
 using its default non-deterministic RNG.
 
 Parameters:
-
 - `seed` - Seed value.
 
 #### setStochasticDepth
@@ -6524,7 +6371,6 @@ setStochasticDepth(
 Configure stochastic depth with survival probabilities per hidden layer.
 
 Parameters:
-
 - `survival` - Survival probabilities for hidden layers.
 
 #### setStochasticDepthSchedule
@@ -6538,7 +6384,6 @@ setStochasticDepthSchedule(
 Set stochastic-depth schedule function.
 
 Parameters:
-
 - `fn` - Function mapping step and current schedule to next schedule.
 
 #### setTopologyIntent
@@ -6552,7 +6397,6 @@ setTopologyIntent(
 Sets the public topology intent and keeps acyclic enforcement aligned.
 
 Parameters:
-
 - `topologyIntent` - Desired topology intent.
 
 Returns: Nothing.
@@ -6568,7 +6412,6 @@ setWeightNoiseSchedule(
 Set a dynamic scheduler for global weight noise.
 
 Parameters:
-
 - `fn` - Function mapping training step to noise standard deviation.
 
 #### snapshotRNG
@@ -6594,7 +6437,6 @@ The activation function (squashing function) applied to the node's state.
 Maps the internal state to the node's output (activation).
 
 Parameters:
-
 - `x` - The node's internal state (sum of weighted inputs + bias).
 - `derivate` - If true, returns the derivative of the function instead of the function value.
 
@@ -6632,7 +6474,6 @@ Restore flows use this after hydrating persisted genomes so the next freshly
 created node cannot collide with an older serialized `geneId`.
 
 Parameters:
-
 - `maxObservedGeneId` - Highest restored node gene id currently in memory.
 
 Returns: Nothing.
@@ -6651,7 +6492,6 @@ This keeps import and clone paths monotonic: once a payload brings in a high
 innovation id, newly created edges continue from above that value.
 
 Parameters:
-
 - `maxObservedInnovation` - Highest restored innovation id currently in memory.
 
 Returns: Nothing.
@@ -6769,7 +6609,6 @@ helpers own batching, optimizer steps, regularization, and mixed-precision
 runtime behavior.
 
 Parameters:
-
 - `set` - Supervised samples with `input` and `output` vectors.
 - `options` - Training options such as learning rate, iteration limits, batching, and optimizer settings.
 
@@ -6808,7 +6647,6 @@ Removes this node's gating control over the specified connection(s).
 Resets the connection's gain to 1 and removes it from the `connections.gated` list.
 
 Parameters:
-
 - `connections` - A single Connection object or an array of Connection objects to ungate.
 
 #### weight
@@ -6866,7 +6704,10 @@ readoutBlock.describe({
   metadata: { stage: 'readout' },
 });
 
-sensorBlock.connect(readoutBlock, methods.groupConnection.ALL_TO_ALL);
+sensorBlock.connect(
+  readoutBlock,
+  methods.groupConnection.ALL_TO_ALL,
+);
 ```
 
 ```ts
@@ -6896,7 +6737,6 @@ activateGPU(
 Run a single-network forward pass on the supplied WebGPU device.
 
 Parameters:
-
 - `device` - WebGPU device used to run the forward kernel.
 - `network` - Network whose fast-slab topology will be uploaded.
 - `inputs` - Input vector of length `network.input`.
@@ -6929,17 +6769,16 @@ Batched GPU activation for multi-agent evaluation.
 
 Uploads the input matrix and every network's fast-slab topology to the GPU,
 reuses compiled pipelines for networks that share topology, dispatches all
-networks in a single compute pass, and reads back one output row per network
-into a row-major result matrix. The CPU path remains the default; this seam
-is opt-in and gated by `canUseGPU`.
+networks in a single compute pass once per topological level, and reads back
+one output row per network into a row-major result matrix. The CPU path
+remains the default; this seam is opt-in and gated by `canUseGPU`.
 
 Parameters:
-
 - `device` - WebGPU device used to run the forward kernel.
 - `networks` - Networks to evaluate as a batch. All networks must have the
-  same input and output dimensions.
+same input and output dimensions.
 - `inputMatrix` - Flattened row-major inputs, length
-  `networks.length * networks[0].input`.
+`networks.length * networks[0].input`.
 
 Returns: Promise resolving to a row-major output matrix.
 
@@ -6948,12 +6787,41 @@ Example:
 ```ts
 const networks = Array.from({ length: 4 }, () => Network.createMLP(2, [3], 1));
 const inputs = new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]);
-const { outputs, rowCount, colCount } = await batchActivate(
-  device,
-  networks,
-  inputs,
-);
+const { outputs, rowCount, colCount } = await batchActivate(device, networks, inputs);
 ```
+
+### buildOverheadArtifact
+
+```ts
+buildOverheadArtifact(
+  tierResults: ProfilingResult[],
+  options: { tiers?: number[] | undefined; inputCount?: number | undefined; outputCount?: number | undefined; timestampQuerySupported?: boolean | undefined; gpuTimestampQueryNs?: number | null | undefined; gpuAdapterInfo?: Record<string, unknown> | null | undefined; gpuProbedLimits?: Record<string, number> | null | undefined; referenceHardware?: { processor: string; memory: string; os: string; gpu_vendor: string; gpu_architecture: string; maxStorageBuffersPerShaderStage: number; } | undefined; browserVisibility?: string | undefined; },
+): Record<string, unknown>
+```
+
+Build the overhead-breakdown artifact consumed by the browser scenario.
+
+Parameters:
+- `tierResults` - Per-tier profiling results.
+- `options` - Benchmark options and probed environment values.
+- `options` - Visibility label, e.g. 'visible-foreground'.
+
+Returns: JSON-serializable artifact object.
+
+### computeOverheadBreakdown
+
+```ts
+computeOverheadBreakdown(
+  timings: Record<string, number>,
+): ProfilingPhaseTiming[]
+```
+
+Compute the percentage share of each overhead phase relative to the total.
+
+Parameters:
+- `timings` - Milliseconds per phase.
+
+Returns: Phase timings with percentages, sorted by descending share.
 
 ### formatConstructSummary
 
@@ -6970,7 +6838,6 @@ snapshot so tooling can log or display one stable explanation of the built
 graph without reading mutable `Network` internals.
 
 Parameters:
-
 - `constructResult` - Construct result returned by `Network.construct(...)`.
 
 Returns: Multi-line summary string suitable for logs, diagnostics panels, or snapshots.
@@ -6981,6 +6848,84 @@ Example:
 const construction = Network.construct([sensor, hidden, readout]);
 const summary = formatConstructSummary(construction);
 ```
+
+### GpuProfilingTimer
+
+Simple high-resolution timer for named overhead phases.
+
+Uses `performance.now()` so the same instrumentation works in the browser
+and in Node test environments. A phase may be started and stopped multiple
+times; reported durations are accumulated.
+
+Example:
+
+```ts
+const timer = new GpuProfilingTimer();
+timer.start('bufferUpload');
+// ... GPU upload work ...
+const ms = timer.stop('bufferUpload');
+```
+
+#### durations
+
+Accumulated durations keyed by phase name.
+
+#### get
+
+```ts
+get(
+  name: string,
+): number
+```
+
+Return the accumulated milliseconds for a phase.
+
+Parameters:
+- `name` - Phase identifier.
+
+Returns: Accumulated milliseconds, or `0` when the phase was never timed.
+
+#### marks
+
+In-flight start marks keyed by phase name.
+
+#### reset
+
+```ts
+reset(): void
+```
+
+Clear all marks and accumulated durations.
+
+#### start
+
+```ts
+start(
+  name: string,
+): void
+```
+
+Record the start time for a named phase.
+
+Parameters:
+- `name` - Phase identifier.
+
+#### stop
+
+```ts
+stop(
+  name: string,
+): number
+```
+
+Stop a phase and return the elapsed milliseconds.
+
+If the phase was never started, returns `0` and records nothing.
+
+Parameters:
+- `name` - Phase identifier that was previously passed to `start`.
+
+Returns: Accumulated milliseconds for the phase, including this interval.
 
 ### Neat
 
@@ -7034,7 +6979,6 @@ _compatibilityDistance(
 Compute compatibility distance between two networks (delegates to compat module).
 
 Parameters:
-
 - `netA` - First network for comparison.
 - `netB` - Second network for comparison.
 
@@ -7065,7 +7009,6 @@ _fallbackInnov(
 Fallback innovation id resolver used when reuse mapping is absent.
 
 Parameters:
-
 - `conn` - Connection metadata used to derive the innovation id.
 
 Returns: Innovation id for the connection.
@@ -7105,7 +7048,6 @@ _invalidateGenomeCaches(
 Invalidate per-genome caches (compatibility distance, forward pass, etc.).
 
 Parameters:
-
 - `genome` - Genome instance whose caches should be cleared.
 
 #### _lastEvalDuration
@@ -7135,7 +7077,6 @@ _mutateAddConnReuse(
 Add-connection mutation that reuses global innovation ids when possible.
 
 Parameters:
-
 - `genome` - Genome receiving the mutation.
 
 Returns: Mutated genome with added connection.
@@ -7151,7 +7092,6 @@ _mutateAddNodeReuse(
 Add-node mutation that reuses global innovation ids when possible.
 
 Parameters:
-
 - `genome` - Genome receiving the mutation.
 
 Returns: Mutated genome with added node.
@@ -7209,7 +7149,6 @@ _sortSpeciesMembers(
 Sort members within a species according to fitness and lineage rules.
 
 Parameters:
-
 - `sp` - Species whose members should be sorted.
 
 Returns: Sorted species members.
@@ -7239,7 +7178,6 @@ _structuralEntropy(
 Compatibility wrapper retained for tests that reach `_structuralEntropy` through loose controller casts.
 
 Parameters:
-
 - `genome` - Genome whose structural entropy is calculated.
 
 Returns: Structural entropy score for the genome.
@@ -7278,7 +7216,6 @@ addGenome(
 Register an externally-created genome into the `Neat` population.
 
 Parameters:
-
 - `genome` - Genome to append into the population.
 - `parents` - Optional lineage metadata recorded for teaching and telemetry.
 
@@ -7359,7 +7296,6 @@ start from a known architecture template instead of relying on whatever setup
 a surrounding example or harness applies for you.
 
 Parameters:
-
 - `network` - Optional template network copied into the initial pool.
 
 #### ensureMinHiddenNodes
@@ -7466,7 +7402,6 @@ for namespaced consumers and does not change the light checkpoint's
 bootstrap semantics.
 
 Parameters:
-
 - `exportOptions` - Policy describing how many elite genomes to retain.
 
 Returns: Light-checkpoint snapshot for approximate restart.
@@ -7476,7 +7411,7 @@ Example:
 ```ts
 const checkpoint = neat.exportLightState({ eliteCount: 12 });
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     branchId: 'draft-1',
   },
 };
@@ -7496,7 +7431,6 @@ This is the easiest way to persist frontier history for offline analysis or
 later replay in notebooks and visualization tools.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent archive entries to export.
 
 Returns: JSONL payload for the requested Pareto archive window.
@@ -7525,7 +7459,6 @@ This is useful when you want to chart species growth, collapse, or
 stagnation in a spreadsheet or notebook without writing a custom parser.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent history entries to export.
 
 Returns: CSV payload representing recent species history snapshots.
@@ -7544,7 +7477,6 @@ Choose this when you want machine-friendly archival output instead of the
 flatter spreadsheet-oriented CSV export.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent history entries to export.
 
 Returns: JSONL payload describing recent species-history entries.
@@ -7573,7 +7505,7 @@ Example:
 ```ts
 const checkpoint = neat.exportState();
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     memoryBankId: 'memory-bank-1',
   },
 };
@@ -7590,7 +7522,6 @@ exportTelemetryCSV(
 Export recent telemetry entries as CSV.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent telemetry entries to export.
 
 Returns: CSV string for quick spreadsheet or notebook analysis.
@@ -7628,7 +7559,6 @@ neat.export()`, followed later by `Neat.fromJSON(meta, fitness)` and
 `restored.import(population)`.
 
 Parameters:
-
 - `json` - Serialized controller metadata produced by `toJSON()`.
 - `fitness` - Fitness function to attach to the reconstructed controller.
 
@@ -7685,7 +7615,6 @@ getLineageSnapshot(
 Return an array of {id, parents} for the first `limit` genomes in population.
 
 Parameters:
-
 - `limit` - Maximum number of lineage records to return.
 
 Returns: Compact lineage snapshot for debugging and teaching inheritance flow.
@@ -7808,7 +7737,6 @@ what front snapshots were retained over time without exporting the full JSONL
 payload first.
 
 Parameters:
-
 - `maxEntries` - Maximum number of recent archive entries to return.
 
 Returns: Recent Pareto archive metadata entries.
@@ -7824,7 +7752,6 @@ getParetoFronts(
 Reconstruct Pareto fronts for the current population snapshot.
 
 Parameters:
-
 - `maxFronts` - Maximum number of fronts to materialize.
 
 Returns: Fronts ordered from most to least dominant under the active objectives.
@@ -7903,7 +7830,6 @@ checkpoint paths when you need to preserve a larger future population target
 separately from the imported genome count.
 
 Parameters:
-
 - `json` - Serialized population to import into the current controller.
 
 Returns: Promise resolving after the population is loaded.
@@ -7936,7 +7862,6 @@ the bundle and then relies on the ordinary evolution path to refill toward
 the saved restart-scale population target.
 
 Parameters:
-
 - `bundle` - Serialized light-checkpoint bundle.
 - `fitness` - Fitness function to attach to the restored controller.
 
@@ -7962,7 +7887,6 @@ importRNGState(
 Import an RNG state (alias for restore; kept for compatibility).
 
 Parameters:
-
 - `state` - Numeric RNG state.
 
 Returns: Nothing. This is a compatibility alias for `restoreRNGState()`.
@@ -7989,7 +7913,6 @@ must still carry replay-critical runtime and speciation state. Use
 restore that should keep running without claiming deterministic replay.
 
 Parameters:
-
 - `bundle` - Serialized object with the shape `{ neat, population }`.
 - `fitness` - Fitness function to attach to the restored controller.
 - `restoreOptions` - Explicit restore-mode override. Defaults to strict exact resume.
@@ -8041,7 +7964,6 @@ behavior you want. The controller can then reason about tradeoffs such as raw
 score versus simplicity, novelty, or domain-specific constraints.
 
 Parameters:
-
 - `key` - Stable objective identifier used in exports and telemetry.
 - `direction` - Whether the objective should be minimized or maximized.
 - `accessor` - Function extracting the objective value from a genome.
@@ -8069,7 +7991,6 @@ Restore a previously-snapshotted RNG state. This restores the internal
 seed but does not re-create the RNG function until next use.
 
 Parameters:
-
 - `state` - Opaque numeric RNG state produced by `snapshotRNGState()`.
 
 Returns: Nothing. The controller will resume from the restored RNG state on next use.
@@ -8085,7 +8006,6 @@ sampleRandom(
 Produce deterministic random samples using the instance RNG.
 
 Parameters:
-
 - `sampleCount` - Number of random values to generate.
 
 Returns: Array of deterministic random samples.
@@ -8102,7 +8022,6 @@ selectMutationMethod(
 Selects a mutation method for a given genome based on constraints.
 
 Parameters:
-
 - `genome` - Genome being considered for mutation.
 - `rawReturnForTest` - Whether to expose raw selection output for test visibility.
 
@@ -8139,7 +8058,6 @@ spawnFromParent(
 Spawn a new genome derived from a single parent while preserving Neat bookkeeping.
 
 Parameters:
-
 - `parent` - Parent genome to clone and mutate.
 - `mutateCount` - Number of mutation passes to apply to the child.
 
@@ -8174,6 +8092,70 @@ const restored = Neat.fromJSON(meta, fitness);
 await restored.import(population);
 ```
 
+### prepareActivationContext
+
+```ts
+prepareActivationContext(
+  network: default,
+): { index: number; restore: () => void; }
+```
+
+Temporarily annotate the first node's squash with its worker-registry index
+so `compileActivationKernel` can generate the correct WGSL switch, then restore
+the original value.
+
+Parameters:
+- `network` - Network whose first node squash will be temporarily annotated.
+
+Returns: A context object with the resolved index and a `restore()` callback.
+
+### profileGPUActivation
+
+```ts
+profileGPUActivation(
+  device: GPUDevice,
+  network: default,
+  inputs: number[] | Float32Array<ArrayBufferLike>,
+): Promise<ProfilingResult>
+```
+
+Profile a single GPU forward pass, measuring every major cold-path overhead.
+
+This function deliberately bypasses the production `activateGPU` caches so it
+can time buffer allocation, pipeline compilation, and bind-group creation.
+It creates and destroys a fresh `GPUBufferSet` per call. The returned result
+includes a per-phase percentage breakdown, the dominant bottleneck, and an
+overhead ratio.
+
+Parameters:
+- `device` - WebGPU device used to run the forward pass.
+- `network` - Network whose topology will be uploaded.
+- `inputs` - Input vector of length `network.input`.
+
+Returns: A `ProfilingResult` with timing breakdowns and the output vector.
+
+Example:
+
+```ts
+const result = await profileGPUActivation(device, network, [0.5, -0.2]);
+console.log(result.dominantBottleneck, result.overheadRatio);
+```
+
+### rankWeakPoints
+
+```ts
+rankWeakPoints(
+  phases: ProfilingPhaseTiming[],
+): { name: "cpuPreparation" | "bufferUpload" | "pipeline" | "bindGroup" | "dynamicBufferUpload" | "queueSubmission" | "gpuCompletionWait" | "outputReadback"; impactPct: number; strategy: string; }[]
+```
+
+Rank measured overhead phases by impact and attach a strategy to each.
+
+Parameters:
+- `phases` - Phase timings from one or more profile runs.
+
+Returns: Weak points sorted by descending percentage share.
+
 ### default
 
 #### _activateCore
@@ -8188,7 +8170,6 @@ _activateCore(
 Internal shared implementation for activate/noTraceActivate.
 
 Parameters:
-
 - `withTrace` - Whether to update eligibility traces.
 - `input` - Optional externally supplied activation (bypasses weighted sum if provided).
 
@@ -8240,7 +8221,6 @@ Acquire a connection from the internal pool, or construct a fresh one when the p
 This is the low-allocation path used by topology mutation and other edge-churn heavy flows.
 
 Parameters:
-
 - `from` - Source node.
 - `to` - Target node.
 - `weight` - Optional initial weight.
@@ -8265,7 +8245,6 @@ path is used only when an options bag with `useGPU: true` is supplied,
 the standard CPU `network.activate()` implementation runs.
 
 Parameters:
-
 - `input` - Input vector of length `this.input`.
 - `trainingOrOptions` - Boolean training flag or options bag.
 - `_maxActivationDepth` - Unused; kept for signature compatibility.
@@ -8284,7 +8263,6 @@ Activates the node, calculating its output value based on inputs and state.
 This method also calculates eligibility traces (`xtrace`) used for training recurrent connections.
 
 The activation process involves:
-
 1. Calculating the node's internal state (`this.state`) based on:
    - Incoming connections' weighted activations.
    - The recurrent self-connection's weighted state from the previous timestep (`this.old`).
@@ -8296,7 +8274,6 @@ The activation process involves:
 6. Calculating and updating eligibility traces for incoming connections.
 
 Parameters:
-
 - `input` - Optional input value. If provided, sets the node's activation directly (used for input nodes).
 
 Returns: The calculated activation value of the node.
@@ -8320,7 +8297,6 @@ During training, layer-level dropout is applied, masking all nodes in the layer 
 During inference, all masks are set to 1.
 
 Parameters:
-
 - `value` - An optional array of activation values to set for the layer's nodes. The length must match the number of nodes.
 - `training` - A boolean indicating whether the layer is in training mode. Defaults to false.
 
@@ -8337,7 +8313,6 @@ activate(
 Activates all nodes in the group.
 
 Parameters:
-
 - `value` - Optional array of input values. Its length must match the number of nodes in the group.
 
 Returns: Activation value of each node in the group, in order.
@@ -8358,7 +8333,6 @@ fast-path allocations. Outputs are cloned number[] arrays for API
 compatibility. Future optimizations can vectorize this path.
 
 Parameters:
-
 - `inputs` - Array of input vectors, each length must equal this.input
 - `training` - Whether to run with training-time stochastic features
 
@@ -8378,7 +8352,6 @@ Raw activation that can return a reusable typed array when pooling is enabled.
 If `reuseActivationArrays` is disabled this falls back to the standard plain-array activation path.
 
 Parameters:
-
 - `input` - Input vector.
 - `training` - Whether to enable training-time stochastic paths.
 - `maxActivationDepth` - Maximum graph depth for activation.
@@ -8439,7 +8412,6 @@ Uses momentum in a Nesterov-compatible way: currentDelta = accumulated + momentu
 Resets accumulators after applying. Safe to call on every node type.
 
 Parameters:
-
 - `momentum` - Momentum factor (0 to disable)
 
 #### applyBatchUpdatesWithOptimizer
@@ -8458,43 +8430,39 @@ SGD (with Nesterov-style momentum via preceding propagate logic) and a collectio
 optimizers. After applying an update, gradient accumulators are reset to 0.
 
 Supported optimizers (type):
-
-- 'sgd' : Standard gradient descent with optional momentum.
-- 'rmsprop' : Exponential moving average of squared gradients (cache) to normalize step.
-- 'adagrad' : Accumulate squared gradients; learning rate effectively decays per weight.
-- 'adam' : Bias‑corrected first (m) & second (v) moment estimates.
-- 'adamw' : Adam with decoupled weight decay (applied after adaptive step).
-- 'amsgrad' : Adam variant maintaining a maximum of past v (vhat) to enforce non‑increasing step size.
-- 'adamax' : Adam variant using the infinity norm (u) instead of second moment.
-- 'nadam' : Adam + Nesterov momentum style update (lookahead on first moment).
-- 'radam' : Rectified Adam – warms up variance by adaptively rectifying denominator when sample size small.
-- 'lion' : Uses sign of combination of two momentum buffers (beta1 & beta2) for update direction only.
-- 'adabelief': Adam-like but second moment on (g - m) (gradient surprise) for variance reduction.
-- 'lookahead': Wrapper; performs k fast optimizer steps then interpolates (alpha) towards a slow (shadow) weight.
+ - 'sgd'      : Standard gradient descent with optional momentum.
+ - 'rmsprop'  : Exponential moving average of squared gradients (cache) to normalize step.
+ - 'adagrad'  : Accumulate squared gradients; learning rate effectively decays per weight.
+ - 'adam'     : Bias‑corrected first (m) & second (v) moment estimates.
+ - 'adamw'    : Adam with decoupled weight decay (applied after adaptive step).
+ - 'amsgrad'  : Adam variant maintaining a maximum of past v (vhat) to enforce non‑increasing step size.
+ - 'adamax'   : Adam variant using the infinity norm (u) instead of second moment.
+ - 'nadam'    : Adam + Nesterov momentum style update (lookahead on first moment).
+ - 'radam'    : Rectified Adam – warms up variance by adaptively rectifying denominator when sample size small.
+ - 'lion'     : Uses sign of combination of two momentum buffers (beta1 & beta2) for update direction only.
+ - 'adabelief': Adam-like but second moment on (g - m) (gradient surprise) for variance reduction.
+ - 'lookahead': Wrapper; performs k fast optimizer steps then interpolates (alpha) towards a slow (shadow) weight.
 
 Options:
-
-- momentum : (SGD) momentum factor (Nesterov handled in propagate when update=true).
-- beta1/beta2 : Exponential decay rates for first/second moments (Adam family, Lion, AdaBelief, etc.).
-- eps : Numerical stability epsilon added to denominator terms.
-- weightDecay : Decoupled weight decay (AdamW) or additionally applied after main step when adamw selected.
-- lrScale : Learning rate scalar already scheduled externally (passed as currentRate).
-- t : Global step (1-indexed) for bias correction / rectification.
-- baseType : Underlying optimizer for lookahead (not itself lookahead).
-- la_k : Lookahead synchronization interval (number of fast steps).
-- la_alpha : Interpolation factor towards slow (shadow) weights/bias at sync points.
+ - momentum     : (SGD) momentum factor (Nesterov handled in propagate when update=true).
+ - beta1/beta2  : Exponential decay rates for first/second moments (Adam family, Lion, AdaBelief, etc.).
+ - eps          : Numerical stability epsilon added to denominator terms.
+ - weightDecay  : Decoupled weight decay (AdamW) or additionally applied after main step when adamw selected.
+ - lrScale      : Learning rate scalar already scheduled externally (passed as currentRate).
+ - t            : Global step (1-indexed) for bias correction / rectification.
+ - baseType     : Underlying optimizer for lookahead (not itself lookahead).
+ - la_k         : Lookahead synchronization interval (number of fast steps).
+ - la_alpha     : Interpolation factor towards slow (shadow) weights/bias at sync points.
 
 Internal per-connection temp fields (created lazily):
-
-- firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
-- gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
-- previousDeltaWeight : For classic SGD momentum.
-- lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
+ - firstMoment / secondMoment / maxSecondMoment / infinityNorm : Moment / variance / max variance / infinity norm caches.
+ - gradientAccumulator : Single accumulator (RMSProp / AdaGrad).
+ - previousDeltaWeight : For classic SGD momentum.
+ - lookaheadShadowWeight / _la_shadowBias : Lookahead shadow copies.
 
 Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
 
 Parameters:
-
 - `opts` - Optimizer configuration (see above).
 
 #### attention
@@ -8509,7 +8477,6 @@ attention(
 Creates a multi-head self-attention layer (stub implementation).
 
 Parameters:
-
 - `size` - Number of output nodes.
 - `heads` - Number of attention heads (default 1).
 
@@ -8527,7 +8494,6 @@ Creates a batch normalization layer.
 Applies batch normalization to the activations of the nodes in this layer during activation.
 
 Parameters:
-
 - `size` - The number of nodes in this layer.
 
 Returns: A new Layer instance configured as a batch normalization layer.
@@ -8584,7 +8550,6 @@ configurePruning(
 Configure scheduled pruning during training.
 
 Parameters:
-
 - `cfg` - Pruning schedule and strategy configuration.
 
 #### configureSparsityBudget
@@ -8598,7 +8563,6 @@ configureSparsityBudget(
 Configure a structural connection-growth budget for future mutations.
 
 Parameters:
-
 - `cfg` - Absolute connection cap plus optional grace headroom.
 
 #### connect
@@ -8629,7 +8593,6 @@ connect(
 Creates a connection from this node to a target node or all nodes in a group.
 
 Parameters:
-
 - `target` - The target Node or a group object containing a `nodes` array.
 - `weight` - The weight for the new connection(s). If undefined, a default or random weight might be assigned by the Connection constructor (currently defaults to 0, consider changing).
 
@@ -8652,7 +8615,6 @@ or the target layer's `input` method. It establishes the forward connections
 necessary for signal propagation.
 
 Parameters:
-
 - `target` - The destination Layer, Group, or Node to connect to.
 - `method` - The connection method (e.g., `ALL_TO_ALL`, `ONE_TO_ONE`) defining the connection pattern. See `methods.groupConnection`.
 - `weight` - An optional fixed weight to assign to all created connections.
@@ -8672,7 +8634,6 @@ connect(
 Establishes connections from all nodes in this group to a target group, layer, or node.
 
 Parameters:
-
 - `target` - Destination entity to connect to.
 - `method` - Connection pattern to use.
 - `weight` - Optional fixed weight for all created connections.
@@ -8694,7 +8655,6 @@ behavior as repeated `connect()` calls, but it reserves network-level
 storage once for the whole request shelf.
 
 Parameters:
-
 - `requests` - Ordered connection requests.
 
 Returns: Flattened created connection objects in request order.
@@ -8719,7 +8679,6 @@ runtime, preserving explicit input/output ordering and then rebuilding the
 scheduling cache in either acyclic or recurrent mode.
 
 Parameters:
-
 - `parts` - Mixed architecture parts to flatten.
 - `options` - Optional construct-time validation, ordering, and runtime flags.
 
@@ -8755,7 +8714,6 @@ connections they reference, infers input/output counts from node types, and
 folds the result into one normalized network object.
 
 Parameters:
-
 - `list` - Building blocks that are already interconnected.
 
 Returns: A network representing the supplied architecture.
@@ -8774,7 +8732,6 @@ conv1d(
 Creates a 1D convolutional layer (stub implementation).
 
 Parameters:
-
 - `size` - Number of output nodes (filters).
 - `kernelSize` - Size of the convolution kernel.
 - `stride` - Stride of the convolution (default 1).
@@ -8829,7 +8786,6 @@ Dense layers also stamp default descriptor metadata (`family: 'dense'`) so
 later tooling can recognize the block even when the caller never names it.
 
 Parameters:
-
 - `size` - The number of nodes (neurons) in this layer.
 - `nodeType` - Optional primitive role assigned to the dense block.
 
@@ -8866,7 +8822,6 @@ Reach for this when the node is still the right abstraction but a later
 reader should not have to infer its purpose from connection order alone.
 
 Parameters:
-
 - `descriptor` - Optional label, intent, and scalar metadata to merge.
 
 Returns: Nothing.
@@ -8988,7 +8943,6 @@ disconnect(
 Removes the connection from this node to the target node.
 
 Parameters:
-
 - `target` - The target node to disconnect from.
 - `twosided` - If true, also removes the connection from the target node back to this node (if it exists). Defaults to false.
 
@@ -9004,7 +8958,6 @@ disconnect(
 Removes connections between this layer's nodes and a target Group or Node.
 
 Parameters:
-
 - `target` - The Group or Node to disconnect from.
 - `twosided` - If true, removes connections in both directions (from this layer to target, and from target to this layer). Defaults to false.
 
@@ -9020,7 +8973,6 @@ disconnect(
 Removes connections between nodes in this group and a target group or node.
 
 Parameters:
-
 - `target` - Group or node to disconnect from.
 - `twosided` - Whether to also remove reciprocal connections.
 
@@ -9053,7 +9005,6 @@ enableDropConnect(
 Enable DropConnect with a probability in $[0,1)$.
 
 Parameters:
-
 - `p` - DropConnect probability.
 
 #### enableWeightNoise
@@ -9067,7 +9018,6 @@ enableWeightNoise(
 Enable weight noise using either a global standard deviation or per-hidden-layer values.
 
 Parameters:
-
 - `stdDev` - Global standard deviation or hidden-layer schedule.
 
 #### enforceMinimumHiddenLayerSizes
@@ -9081,7 +9031,6 @@ enforceMinimumHiddenLayerSizes(
 Enforces the minimum hidden layer size rule on a network.
 
 Parameters:
-
 - `network` - The network to normalize.
 
 Returns: The same network with hidden layers grown to the minimum size when needed.
@@ -9106,7 +9055,6 @@ orchestration-first while population search, mutation policy, and stopping
 criteria remain chapter-owned.
 
 Parameters:
-
 - `set` - Evaluation samples with `input` and `output` vectors.
 - `options` - Evolution options controlling population search and stopping criteria.
 
@@ -9123,7 +9071,6 @@ fastSlabActivate(
 Public wrapper for fast slab forward pass.
 
 Parameters:
-
 - `input` - Input vector.
 
 Returns: Activation output.
@@ -9148,7 +9095,6 @@ adding bounded window callbacks and an opt-out from collecting the full
 output matrix when the caller wants lower sequence-retention pressure.
 
 Parameters:
-
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Optional windowed activation settings.
 
@@ -9169,7 +9115,6 @@ Browser runtimes can use this to yield after a configurable number of
 emitted windows so long-running sequence inference remains responsive.
 
 Parameters:
-
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Optional async windowed activation settings.
 
@@ -9200,7 +9145,6 @@ fromJSON(
 Creates a Node instance from a JSON object.
 
 Parameters:
-
 - `json` - The JSON object containing node configuration.
 
 Returns: A new Node instance configured according to the JSON object.
@@ -9234,7 +9178,6 @@ Makes this node gate the provided connection(s).
 The connection's gain will be controlled by this node's activation value.
 
 Parameters:
-
 - `connections` - A single Connection object or an array of Connection objects to be gated.
 
 #### gate
@@ -9252,7 +9195,6 @@ Gating allows the activity of nodes in this layer (specifically, the output grou
 to modulate the flow of information through the specified `connections`.
 
 Parameters:
-
 - `connections` - An array of connection objects to be gated.
 - `method` - The gating method (e.g., `INPUT`, `OUTPUT`, `SELF`) specifying how the gate influences the connection. See `methods.gating`.
 
@@ -9268,7 +9210,6 @@ gate(
 Configures nodes within this group to act as gates for the specified connection set.
 
 Parameters:
-
 - `connections` - Single connection or list of connections to gate.
 - `method` - Gating mechanism to use.
 
@@ -9451,7 +9392,6 @@ simpler than LSTMs but achieving similar performance on many tasks.
 They use an update gate and a reset gate to manage information flow.
 
 Parameters:
-
 - `size` - The number of GRU units (and nodes in each gate/cell group).
 
 Returns: A new Layer instance configured as a GRU layer.
@@ -9491,7 +9431,6 @@ Common pitfalls:
 - shuffling timesteps rather than whole sequences.
 
 Parameters:
-
 - `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed GRU network.
@@ -9501,7 +9440,9 @@ Example:
 ```ts
 const network = Architect.gru(1, 3, 1, { inputToOutput: true });
 
-const outputs = [0.1, 0.4, 0.2].map((value) => network.activate([value])[0]);
+const outputs = [0.1, 0.4, 0.2].map(
+  (value) => network.activate([value])[0],
+);
 
 network.clear();
 
@@ -9523,7 +9464,6 @@ hopfield(
 Creates a Hopfield network.
 
 Parameters:
-
 - `size` - The number of nodes in the network.
 
 Returns: The constructed Hopfield network.
@@ -9554,7 +9494,6 @@ Use it when you need a stable edge identifier without relying on the mutable
 auto-increment counter.
 
 Parameters:
-
 - `sourceNodeId` - Source node integer id or index.
 - `targetNodeId` - Target node integer id or index.
 
@@ -9580,15 +9519,14 @@ input(
 ): default[]
 ```
 
-Handles the connection logic when this layer is the _target_ of a connection.
+Handles the connection logic when this layer is the *target* of a connection.
 
 It connects the output of the `from` layer or group to this layer's primary
 input mechanism (which is often the `output` group itself, but depends on the layer type).
 This method is usually called by the `connect` method of the source layer/group.
 
 Parameters:
-
-- `from` - The source Layer or Group connecting _to_ this layer.
+- `from` - The source Layer or Group connecting *to* this layer.
 - `method` - The connection method (e.g., `ALL_TO_ALL`). Defaults to `ALL_TO_ALL`.
 - `weight` - An optional fixed weight for the connections.
 
@@ -9622,7 +9560,6 @@ isConnectedTo(
 Checks if this node is connected to another node.
 
 Parameters:
-
 - `target` - The target node to check the connection with.
 
 Returns: True if connected, otherwise false.
@@ -9639,7 +9576,6 @@ Checks if the given node has a direct outgoing connection to this node.
 Considers both regular incoming connections and the self-connection.
 
 Parameters:
-
 - `node` - The potential source node.
 
 Returns: True if the given node projects to this node, false otherwise.
@@ -9656,7 +9592,6 @@ Checks if this node has a direct outgoing connection to the given node.
 Considers both regular outgoing connections and the self-connection.
 
 Parameters:
-
 - `node` - The potential target node.
 
 Returns: True if this node projects to the target node, false otherwise.
@@ -9681,7 +9616,6 @@ Creates a layer normalization layer.
 Applies layer normalization to the activations of the nodes in this layer during activation.
 
 Parameters:
-
 - `size` - The number of nodes in this layer.
 
 Returns: A new Layer instance configured as a layer normalization layer.
@@ -9709,7 +9643,6 @@ long-range dependencies. This implementation uses standard LSTM architecture
 with input, forget, and output gates, and a memory cell.
 
 Parameters:
-
 - `size` - The number of LSTM units (and nodes in each gate/cell group).
 
 Returns: A new Layer instance configured as an LSTM layer.
@@ -9750,7 +9683,6 @@ Common pitfalls:
   the recurrent block is supposed to learn.
 
 Parameters:
-
 - `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed LSTM network.
@@ -9760,11 +9692,15 @@ Example:
 ```ts
 const network = Architect.lstm(1, 4, 1, { inputToOutput: false });
 
-const firstPass = [0.1, 0.4, 0.2].map((value) => network.activate([value])[0]);
+const firstPass = [0.1, 0.4, 0.2].map(
+  (value) => network.activate([value])[0],
+);
 
 network.clear();
 
-const secondPass = [0.1, 0.4, 0.2].map((value) => network.activate([value])[0]);
+const secondPass = [0.1, 0.4, 0.2].map(
+  (value) => network.activate([value])[0],
+);
 
 console.log(firstPass, secondPass);
 ```
@@ -9794,7 +9730,6 @@ information propagates backward through the blocks. The layer's output
 concatenates the states of all memory blocks.
 
 Parameters:
-
 - `size` - The number of nodes in each memory block (must match the input size).
 - `memory` - The number of time steps to remember (number of memory blocks).
 
@@ -9823,7 +9758,6 @@ after calling `mutate` so it can report the outcome truthfully as applied or
 skipped rather than claiming growth that did not happen.
 
 Parameters:
-
 - `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
   Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
 
@@ -9841,7 +9775,6 @@ This allows modifying the node's properties, such as its activation function or 
 based on predefined mutation methods.
 
 Parameters:
-
 - `method` - A mutation method object, typically from `methods.mutation`. It should define the type of mutation and its parameters (e.g., allowed functions, modification range).
 
 #### narx
@@ -9892,7 +9825,6 @@ the same runtime without clearing it, the delay lines intentionally carry
 their terminal state into the next activation stream.
 
 Parameters:
-
 - `inputSize` - The exogenous input size at each time step.
 - `hiddenLayers` - Hidden layer sizes, or zero / empty for none.
 - `outputSize` - The prediction output size.
@@ -9957,7 +9889,6 @@ This is a performance optimization used during inference (when the network
 is just making predictions, not learning) as trace calculations are only needed for training.
 
 Parameters:
-
 - `input` - Optional input value. If provided, sets the node's activation directly (used for input nodes).
 
 Returns: The calculated activation value of the node.
@@ -10007,9 +9938,8 @@ Common pitfalls:
   when some order randomization would reduce training bias.
 
 Parameters:
-
 - `layers` - Layer sizes starting with input, followed by hidden layers,
-  and ending with output.
+and ending with output.
 
 Returns: The constructed MLP network.
 
@@ -10086,7 +10016,6 @@ propagate(
 Back-propagates the error signal through the node and calculates weight/bias updates.
 
 This method implements the backpropagation algorithm, including:
-
 1. Calculating the node's error responsibility based on errors from subsequent nodes (`projected` error)
    and errors from connections it gates (`gated` error).
 2. Calculating the gradient for each incoming connection's weight using eligibility traces (`xtrace`).
@@ -10097,7 +10026,6 @@ This method implements the backpropagation algorithm, including:
 4. Optionally applying the calculated updates immediately or accumulating them for batch training.
 
 Parameters:
-
 - `rate` - The learning rate (controls the step size of updates).
 - `momentum` - The momentum factor (helps accelerate learning and overcome local minima). Uses NAG.
 - `update` - If true, apply the calculated weight/bias updates immediately. If false, accumulate them in `totalDelta*` properties for batch updates.
@@ -10125,7 +10053,6 @@ to calculate the initial error for each node. Otherwise, nodes calculate
 their error based on the error propagated from subsequent layers.
 
 Parameters:
-
 - `rate` - The learning rate, controlling the step size of weight adjustments.
 - `momentum` - The momentum factor, used to smooth weight updates and escape local minima.
 - `target` - An optional array of target values (expected outputs) for the layer's nodes. The length must match the number of nodes.
@@ -10159,12 +10086,11 @@ independent of a training-iteration schedule. For schedule-based
 pruning during gradient training, use `configureSparsityBudget()`.
 
 Parameters:
-
 - `targetSparsity` - Fraction of original connections to remove,
-  in the open interval `(0, 1)`. Values close to 1 produce very
-  sparse networks.
+in the open interval `(0, 1)`. Values close to 1 produce very
+sparse networks.
 - `method` - Ranking strategy: `'magnitude'` or `'snip'`.
-  Defaults to `'magnitude'`.
+Defaults to `'magnitude'`.
 
 Example:
 
@@ -10193,7 +10119,6 @@ while forwarding to the stricter `randomSparse()` builder that uses the
 sparse-profile vocabulary.
 
 Parameters:
-
 - `input` - The number of input nodes.
 - `hidden` - The number of hidden nodes to add.
 - `output` - The number of output nodes.
@@ -10236,12 +10161,11 @@ Common pitfalls:
   little left to discover.
 
 Parameters:
-
 - `input` - The number of input nodes.
 - `hidden` - The number of hidden nodes to add.
 - `output` - The number of output nodes.
 - `options` - Optional sparse-structure counts for forward connections,
-  back connections, self connections, gates, and an optional deterministic seed.
+back connections, self connections, gates, and an optional deterministic seed.
 
 Returns: The constructed sparse random network.
 
@@ -10271,7 +10195,7 @@ This ensures that the network.connections array is consistent with the actual
 outgoing connections of all nodes. Useful after manual wiring or node manipulation.
 
 Returns: Example usage:
-Network.rebuildConnections(net);
+  Network.rebuildConnections(net);
 
 #### rebuildConnectionSlab
 
@@ -10284,7 +10208,6 @@ rebuildConnectionSlab(
 Rebuild slab structures for fast activation.
 
 Parameters:
-
 - `force` - Whether to force a rebuild.
 
 Returns: Slab rebuild result.
@@ -10315,7 +10238,6 @@ Return a connection instance to the internal pool for later reuse.
 Treat the instance as surrendered after calling this method.
 
 Parameters:
-
 - `conn` - The connection instance to recycle.
 
 Returns: Nothing.
@@ -10330,14 +10252,13 @@ remove(
 
 Removes a node from the network.
 This involves:
-
 1. Disconnecting all incoming and outgoing connections associated with the node.
 2. Removing self-connections.
 3. Removing the node from the `nodes` array.
 4. Attempting to reconnect the node's direct predecessors to its direct successors
    to maintain network flow, if possible and configured.
-5. Handling gates involving the removed node (ungating connections gated _by_ this node,
-   and potentially re-gating connections that were gated _by other nodes_ onto the removed node's connections).
+5. Handling gates involving the removed node (ungating connections gated *by* this node,
+   and potentially re-gating connections that were gated *by other nodes* onto the removed node's connections).
 
 #### resetDropoutMasks
 
@@ -10360,7 +10281,6 @@ Reset the monotonic innovation counter used for newly constructed or pooled conn
 You usually call this at the start of an experiment or before rebuilding a whole population.
 
 Parameters:
-
 - `value` - New starting value.
 
 Returns: Nothing.
@@ -10384,7 +10304,6 @@ restoreRNG(
 Restore deterministic RNG function from a snapshot source.
 
 Parameters:
-
 - `fn` - RNG function to restore.
 
 #### score
@@ -10437,7 +10356,6 @@ or node type. If a node within the `nodes` array is actually a `Group` (e.g., in
 the configuration is applied recursively to the nodes within that group.
 
 Parameters:
-
 - `values` - An object containing the properties and their values to set.
   Example: `{ bias: 0.5, squash: methods.Activation.ReLU }`
 
@@ -10452,7 +10370,6 @@ setActivation(
 Sets a custom activation function for this node at runtime.
 
 Parameters:
-
 - `fn` - The activation function (should handle derivative if needed).
 
 #### setEnforceAcyclic
@@ -10466,7 +10383,6 @@ setEnforceAcyclic(
 Enable or disable acyclic topology enforcement.
 
 Parameters:
-
 - `flag` - Whether to enforce acyclic connectivity.
 
 #### setRandom
@@ -10480,7 +10396,6 @@ setRandom(
 Replace the network random number generator.
 
 Parameters:
-
 - `fn` - RNG function returning values in $[0,1)$.
 
 #### setRNGState
@@ -10494,7 +10409,6 @@ setRNGState(
 Set the raw deterministic RNG state word.
 
 Parameters:
-
 - `state` - RNG state value.
 
 #### setSeed
@@ -10515,7 +10429,6 @@ IDs for newly created connections. Omitting the seed leaves the network
 using its default non-deterministic RNG.
 
 Parameters:
-
 - `seed` - Seed value.
 
 #### setStochasticDepth
@@ -10529,7 +10442,6 @@ setStochasticDepth(
 Configure stochastic depth with survival probabilities per hidden layer.
 
 Parameters:
-
 - `survival` - Survival probabilities for hidden layers.
 
 #### setStochasticDepthSchedule
@@ -10543,7 +10455,6 @@ setStochasticDepthSchedule(
 Set stochastic-depth schedule function.
 
 Parameters:
-
 - `fn` - Function mapping step and current schedule to next schedule.
 
 #### setTopologyIntent
@@ -10557,7 +10468,6 @@ setTopologyIntent(
 Sets the public topology intent and keeps acyclic enforcement aligned.
 
 Parameters:
-
 - `topologyIntent` - Desired topology intent.
 
 Returns: Nothing.
@@ -10573,7 +10483,6 @@ setWeightNoiseSchedule(
 Set a dynamic scheduler for global weight noise.
 
 Parameters:
-
 - `fn` - Function mapping training step to noise standard deviation.
 
 #### snapshotRNG
@@ -10599,7 +10508,6 @@ The activation function (squashing function) applied to the node's state.
 Maps the internal state to the node's output (activation).
 
 Parameters:
-
 - `x` - The node's internal state (sum of weighted inputs + bias).
 - `derivate` - If true, returns the derivative of the function instead of the function value.
 
@@ -10637,7 +10545,6 @@ Restore flows use this after hydrating persisted genomes so the next freshly
 created node cannot collide with an older serialized `geneId`.
 
 Parameters:
-
 - `maxObservedGeneId` - Highest restored node gene id currently in memory.
 
 Returns: Nothing.
@@ -10656,7 +10563,6 @@ This keeps import and clone paths monotonic: once a payload brings in a high
 innovation id, newly created edges continue from above that value.
 
 Parameters:
-
 - `maxObservedInnovation` - Highest restored innovation id currently in memory.
 
 Returns: Nothing.
@@ -10774,7 +10680,6 @@ helpers own batching, optimizer steps, regularization, and mixed-precision
 runtime behavior.
 
 Parameters:
-
 - `set` - Supervised samples with `input` and `output` vectors.
 - `options` - Training options such as learning rate, iteration limits, batching, and optimizer settings.
 
@@ -10813,7 +10718,6 @@ Removes this node's gating control over the specified connection(s).
 Resets the connection's gain to 1 and removes it from the `connections.gated` list.
 
 Parameters:
-
 - `connections` - A single Connection object or an array of Connection objects to ungate.
 
 #### weight

@@ -55,7 +55,6 @@ generation to the next. Waiting a few generations between adjustments keeps
 the threshold from chattering.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `paretoFronts` - Non-dominated fronts.
 - `config` - Epsilon tuning constants.
@@ -86,7 +85,6 @@ solution in that degenerate case. Larger fronts accumulate normalized
 neighbor distance objective by objective.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `populationSnapshot` - Current population reference.
 - `paretoFronts` - Non-dominated fronts.
@@ -112,7 +110,6 @@ adjusts dominance epsilon to keep the frontier size useful, and prunes
 objectives that have gone flat for long enough to stop influencing search.
 
 Conceptually, this helper owns the post-ranking reaction layer:
-
 1. compute fresh fronts and crowding evidence,
 2. convert that evidence into stable population order,
 3. persist compact history for later reads,
@@ -123,7 +120,6 @@ ordering, archive state, and adaptive settings immediately for the rest of
 the generation loop.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `config` - Multi-objective tuning constants.
 
@@ -146,14 +142,12 @@ structurally inactive when its observed range stays below the configured
 epsilon for enough consecutive generations.
 
 The pruning pass is intentionally conservative:
-
 - protected objectives such as `fitness` and `complexity` are never removed,
 - stale counters must persist for a full window before removal,
 - objective-cache invalidation happens only after an actual removal so later
   reads rebuild the descriptor list from the surviving objective set.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `config` - Pruning constants.
 
@@ -182,7 +176,6 @@ just enough evidence for telemetry and retrospective inspection without
 retaining every dominated genome in every generation.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `paretoFronts` - Non-dominated fronts.
 - `objectives` - Active objectives.
@@ -208,7 +201,6 @@ aligned with NSGA-II style selection pressure while preserving one stable
 index map from the pre-sort snapshot to the later crowding write-back.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `populationSnapshot` - Current population reference.
 - `crowdingDistances` - Crowding distances aligned with population order.

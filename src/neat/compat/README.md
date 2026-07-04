@@ -133,7 +133,6 @@ different question: not whether structures are close, but whether recent
 ancestry is still meaningfully shared.
 
 Parameters:
-
 - `this` - NEAT context holding generation state, options, and caches.
 - `genomeA` - First genome to compare.
 - `genomeB` - Second genome to compare.
@@ -177,7 +176,6 @@ slot" rather than "these two genes are proven to share the same historical
 innovation event."
 
 Parameters:
-
 - `this` - NEAT context kept for symmetry with the other compatibility helpers.
 - `connection` - Connection object expected to contain `from.index` and `to.index`.
 

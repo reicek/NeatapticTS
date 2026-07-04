@@ -8,7 +8,6 @@ one value per objective, preserve schema order, and assemble population-wide
 vectors and matrices that the dominance and crowding helpers can consume.
 
 Read this chapter when you want to answer questions such as:
-
 - How does the controller turn objective descriptors into numeric vectors?
 - Why does value extraction stay separate from dominance and front building?
 - What happens if one objective accessor throws during a long run?
@@ -16,7 +15,6 @@ Read this chapter when you want to answer questions such as:
   multi-objective pipeline?
 
 The mental model is a small three-step data-preparation flow:
-
 1. read one safe value per objective descriptor,
 2. assemble those values into one vector per genome,
 3. assemble genome vectors into a population-wide matrix.
@@ -55,7 +53,6 @@ the dominance and crowding pipeline assumes that the same objective occupies
 the same index in every vector.
 
 Parameters:
-
 - `genomeItem` - Genome to evaluate.
 - `descriptors` - Objective descriptors (vector schema).
 
@@ -79,7 +76,6 @@ This matrix is the handoff format for the rest of the multi-objective stack:
 rows preserve population order, columns preserve objective-schema order.
 
 Parameters:
-
 - `population` - Genomes to evaluate (population order is preserved).
 - `descriptors` - Objective descriptors (column schema).
 
@@ -100,13 +96,11 @@ This wraps the descriptor `accessor` in a `try/catch` so that a buggy
 objective function cannot crash multi-objective ranking.
 
 Notes:
-
 - If the accessor throws, this returns `0` (a neutral-ish fallback).
 - Callers should prefer to surface accessor errors during development;
   this helper is intentionally defensive for long-running training loops.
 
 Parameters:
-
 - `genomeItem` - Genome to evaluate.
 - `descriptor` - Objective descriptor providing an accessor.
 

@@ -91,7 +91,6 @@ aligned with the protection rule without redefining raw task evaluation or
 compatibility identity.
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 - `options` - Speciation options.
 
@@ -116,7 +115,6 @@ Record the current species history snapshot.
 
 This writes the per-generation memory row that later chapters inspect. The
 helper deliberately supports two levels of detail:
-
 - a compact format for lightweight species history,
 - an extended format that adds structural and innovation summaries when the
   caller has opted into a richer teaching or telemetry surface.
@@ -151,7 +149,6 @@ flowchart LR
 ```
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 - `options` - Speciation options.
 
@@ -187,7 +184,6 @@ strength, and the structural clues that explain why the species looks the way
 it does.
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 - `species` - Species to snapshot.
 
@@ -221,7 +217,6 @@ genomes that deliberately opt into `_compatInnovationMode = 'allow-fallback'`
 may synthesize innovation ids through the fallback resolver.
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 - `members` - Members to summarize.
 
@@ -245,7 +240,6 @@ Even tiny helpers matter in educational telemetry code: one unstable average
 can turn a readable chapter into a confusing table full of exceptional cases.
 
 Parameters:
-
 - `values` - Numeric values to average.
 
 Returns: Mean of the values or zero.
@@ -269,7 +263,6 @@ to teach the trend, but not so much that yesterday's data overwhelms today's
 run.
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 
 Returns: Nothing.

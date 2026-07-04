@@ -6,10 +6,9 @@ This module provides the shared canvas renderer for demos and external users
 who want to visualize neural networks in the browser. It accepts a
 `VisualizationGraphV1` (from `exportVisualizationGraph`) and lays out/draws
 the network with optional demo-specific overlay hooks.
-_Main entry point:_*
-
+*Main entry point:**
 - `renderNetworkView(canvas, graph, options)` — render a network on a canvas
-  _Shared infrastructure:_*
+*Shared infrastructure:**
 - `positionNetworkNodes()` — generic layer-based node positioning
 - `centerPositionedNodesInDrawableArea()` — centering logic
 - `resolveNetworkVisualizationTopologyPlan()` — topology inference
@@ -19,11 +18,7 @@ _Main entry point:_*
 Drop-in minimal usage — no overlay config required:
 
 ```ts
-import {
-  Network,
-  exportVisualizationGraph,
-  renderNetworkView,
-} from 'neataptic';
+import { Network, exportVisualizationGraph, renderNetworkView } from 'neataptic';
 
 const network = Network.createMLP(2, [4], 1);
 const graph = exportVisualizationGraph(network);
@@ -38,13 +33,8 @@ To inject demo-specific overlays (e.g. sensor-band labels), pass an
 ```ts
 const frame = renderNetworkView(canvas, graph, {
   nodeDimensions: { widthPx: 28, heightPx: 28 },
-  colorScales: {
-    weightPositive: '#00ff88',
-    weightNegative: '#ff0088',
-    activationHot: '#ffcc00',
-    activationCold: '#0088ff',
-    bias: '#8800ff',
-  },
+  colorScales: { weightPositive: '#00ff88', weightNegative: '#ff0088',
+                 activationHot: '#ffcc00', activationCold: '#0088ff', bias: '#8800ff' },
   overlayFactory: {
     createDemoOverlayScenes: (positionedNodes, nodeDimensions) => {
       // return your custom overlay scene objects here
@@ -98,7 +88,6 @@ Shifts all node x-coordinates so the leftmost and rightmost nodes
 are balanced around the center of available space.
 
 Parameters:
-
 - `positionedNodes` - Positioned nodes.
 - `drawableWidthPx` - Drawable width.
 
@@ -141,8 +130,8 @@ semantic annotations for overlays.
 
 Optional hook functions that demos can use to inject custom overlays.
 
-Flappy Bird injects input-group label bands and per-input descriptions.
-ASCII Maze could inject custom layer labels, or leave hooks undefined.
+A consumer can inject input-group label bands and per-input descriptions,
+or custom layer labels, or leave hooks undefined.
 
 ### PositionedNetworkNode
 
@@ -170,7 +159,6 @@ available vertical space. Nodes in earlier layers are placed left; nodes
 in later layers are placed right.
 
 Parameters:
-
 - `networkLayers` - Resolved network layers (each layer is a list of nodes).
 - `leftPaddingPx` - Left graph padding.
 - `topPaddingPx` - Top graph padding.
@@ -199,7 +187,6 @@ This is the main public entry point. It accepts a `VisualizationGraphV1` (from
 demo-specific overlays.
 
 **Typical usage:**
-
 ```ts
 const graph = exportVisualizationGraph(network);
 const canvas = document.getElementById('network-canvas') as HTMLCanvasElement;
@@ -211,7 +198,6 @@ const frame = renderNetworkView(canvas, graph, {
 ```
 
 Parameters:
-
 - `canvas` - Canvas element to render onto.
 - `graph` - Visualization graph (from `exportVisualizationGraph`).
 - `options` - Optional render settings (dimensions, padding, colors, overlays).
@@ -235,7 +221,6 @@ resolveNetworkVisualizationLayers(
 Resolve ordered layered node groups from the topology plan, used by canvas layout and topology-aware rendering helpers.
 
 Parameters:
-
 - `network` - Runtime network instance (or undefined for fallback).
 - `inputSize` - Input count (used if network is undefined).
 - `outputSize` - Output count (used if network is undefined).
@@ -258,7 +243,6 @@ For recurrent networks, this detects temporal modules and creates annotations.
 For feed-forward networks, this creates a simple acyclic plan.
 
 Parameters:
-
 - `network` - Runtime network instance (or undefined for fallback).
 - `inputSize` - Input count (used if network is undefined).
 - `outputSize` - Output count (used if network is undefined).

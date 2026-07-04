@@ -8,7 +8,6 @@ step. The point is to keep the rest of the UI code thinking in terms of
 intent rather than raw `postMessage` plumbing.
 
 Minimal usage sketch:
-
 ```ts
 const evolutionWorker = createEvolutionWorker();
 const generation = await requestWorkerGeneration(evolutionWorker);
@@ -37,7 +36,6 @@ requestWorkerGeneration(
 Waits for the next generation payload emitted by the evolution worker.
 
 Parameters:
-
 - `evolutionWorker` - Worker emitting generation-ready messages.
 
 Returns: Next generation payload.
@@ -54,7 +52,6 @@ requestWorkerPlaybackStep(
 Requests one playback batch step from the worker.
 
 Parameters:
-
 - `evolutionWorker` - Worker that owns playback simulation state.
 - `playbackStepRequest` - Requested simulation budget and viewport width.
 
@@ -122,7 +119,6 @@ waiting for, and this helper handles transient listeners, protocol errors,
 and runtime worker failures.
 
 Parameters:
-
 - `options` - Worker request options and response resolver callback.
 
 Returns: Promise resolving with the matched worker response payload.
@@ -176,7 +172,6 @@ exchange: ask for the next playable population and wait for the next
 first full recurrent `evolve()` batch.
 
 Parameters:
-
 - `evolutionWorker` - Worker emitting generation-ready messages.
 
 Returns: Next generation payload.
@@ -209,7 +204,6 @@ tagged with a monotonically increasing request id so stale or out-of-order
 replies can be ignored safely.
 
 Parameters:
-
 - `evolutionWorker` - Worker that owns playback simulation state.
 - `playbackStepRequest` - Requested simulation budget and viewport size.
 
@@ -240,7 +234,6 @@ That single-flight rule keeps the protocol simple and avoids ambiguous frame
 ordering on the browser side.
 
 Parameters:
-
 - `evolutionWorker` - Worker that owns playback simulation state.
 
 Returns: Persistent playback worker-channel state for the worker.
@@ -291,7 +284,6 @@ Using a dedicated error class makes it easier for browser code to distinguish
 "worker rejected my request" from "the worker crashed".
 
 Parameters:
-
 - `message` - Message supplied by the worker error payload.
 
 Returns: Typed worker-channel protocol error.
@@ -312,7 +304,6 @@ this helper converts the event payload into a predictable error shape before
 it escapes the channel layer.
 
 Parameters:
-
 - `errorLike` - Optional `event.error` payload.
 - `fallbackMessage` - Fallback message from `event.message`.
 

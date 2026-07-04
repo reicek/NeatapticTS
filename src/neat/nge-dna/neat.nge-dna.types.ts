@@ -8,21 +8,21 @@
  *
  * ## Input shorthand vs. canonical envelope
  *
- * The core NGE boundary accepts a small set of racing-worker shorthand
- * values at input time, but the canonical envelope always stores the
- * expanded object shape. This keeps external call sites terse while
- * guaranteeing that serialization, hashing, and round-trips always see the
- * same canonical structure.
+ * The core NGE boundary accepts a small set of input shorthand values at
+ * input time, but the canonical envelope always stores the expanded object
+ * shape. This keeps external call sites terse while guaranteeing that
+ * serialization, hashing, and round-trips always see the same canonical
+ * structure.
  *
- * - {@link NgeAssignedRegionStrategy} accepts `'non-overlapping'` as the
- *   racing-worker reference name for the deterministic single-drone-per-region
- *   assignment that the core already implements under `'roundRobin'`.
+ * - {@link NgeAssignedRegionStrategy} accepts `'non-overlapping'` as input
+ *   shorthand for the deterministic single-drone-per-region assignment that the
+ *   core already implements under `'roundRobin'`.
  * - {@link NgeSeedPolicyShorthand} `'queen-weighted'` expands to the canonical
  *   `{ siblingsDifferBySeed: true, twinsAllowed: false }` object inside the
  *   `NGE_DNA` constructor.
  *
- * This design follows the envelope-normalization contract: core accepts racing
- * values at input and keeps a canonical shape internally.
+ * This design follows the envelope-normalization contract: core accepts
+ * shorthand values at input and keeps a canonical shape internally.
  */
 import type {
   NeatGenomeComputationType,
@@ -67,9 +67,9 @@ export type NgeReproductionPolicyMode =
  * Region-assignment strategies used for polyandric drone patch selection among donors.
  * Determines how the queen distributes writable DNA regions among secondary drone contributors.
  *
- * ## Racing-worker compatibility
+ * ## Input shorthand compatibility
  *
- * `'non-overlapping'` is the racing-worker reference name for the deterministic
+ * `'non-overlapping'` is input shorthand for the deterministic
  * single-drone-per-region assignment that the core already implements under
  * `'roundRobin'`. Both values resolve to identical behavior; only the canonical
  * string stored in the envelope differs.
@@ -128,8 +128,8 @@ export interface NgeReproductionPolicy {
  * is expanded to the canonical object before the policy is stored in the
  * envelope.
  *
- * This follows the envelope-normalization contract: core accepts racing values at
- * input and keeps a canonical shape internally.
+ * This follows the envelope-normalization contract: core accepts shorthand values
+ * at input and keeps a canonical shape internally.
  */
 export type NgeReproductionPolicyInput = Omit<
   NgeReproductionPolicy,

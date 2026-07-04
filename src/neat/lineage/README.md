@@ -163,7 +163,6 @@ debugging parent tracking, or validating that speciation and reproduction are
 still producing multiple recent family branches.
 
 Parameters:
-
 - `this` - NEAT lineage context providing the current population.
 - `genome` - Genome whose shallow ancestor set should be computed.
 
@@ -202,7 +201,6 @@ focusing on ancestry overlap rather than structural size or compatibility
 distance.
 
 Parameters:
-
 - `this` - NEAT lineage context exposing the population and RNG provider.
 
 Returns: Mean sampled Jaccard distance across shallow ancestor sets.

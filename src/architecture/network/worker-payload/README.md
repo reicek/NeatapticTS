@@ -314,7 +314,6 @@ scores the whole population in one async call and writes ordered results back
 onto the genomes in place.
 
 Parameters:
-
 - `options` - Boolean-first population-evaluation options plus advanced worker overrides.
 
 Returns: Population fitness delegate compatible with `fitnessPopulation: true`.
@@ -326,8 +325,7 @@ const evaluatePopulation = createNeatParallelPopulationEvaluator({
   parallel: true,
   evaluateGenome: async (genome) => genome.score ?? 0,
   openWorker: (payload) => openSharedInferenceWorker(payload),
-  evaluateWithWorker: async (worker, genome) =>
-    worker.infer(genome.activate([0, 1])),
+  evaluateWithWorker: async (worker, genome) => worker.infer(genome.activate([0, 1])),
 });
 ```
 
@@ -346,7 +344,6 @@ a script; it only combines runtime facts and delivery availability so callers
 can decide whether to use shared-memory, channel, or transferable fallback.
 
 Parameters:
-
 - `options` - Runtime and delivery facts for the current host.
 
 Returns: Capability snapshot describing the usable transport tiers.
@@ -376,7 +373,6 @@ opening plus task execution when they want parallelism, and they also provide
 a local fallback when they need the same semantics in worker-less hosts.
 
 Parameters:
-
 - `options` - Ordered inputs plus worker and fallback execution hooks.
 
 Returns: Ordered batch results with elapsed time and stable task ids.
@@ -445,7 +441,6 @@ After the transfer completes, the sending-side typed arrays are neutered and
 must not be read again.
 
 Parameters:
-
 - `payload` - Transferable inference payload whose buffers should move.
 
 Returns: ArrayBuffer transfer list aligned to the payload's typed shelves.
@@ -616,7 +611,6 @@ then reuses the worker-side predictor state for every later `predict()` or
 `reset()` request sent over one dedicated `MessageChannel` port pair.
 
 Parameters:
-
 - `payload` - Transferable inference payload used to bootstrap the worker predictor.
 - `options` - Channel concurrency and worker delivery options.
 
@@ -651,7 +645,6 @@ the library files. Bundled or CSP-constrained hosts can override that entry
 with `workerUrl`.
 
 Parameters:
-
 - `payload` - Transferable inference payload used to bootstrap the shared worker predictor.
 - `options` - Shared worker delivery options.
 
@@ -713,7 +706,6 @@ The pool schedules work FIFO, lets each slot consume tasks until the queue
 is empty, and returns results in the same order as the input payloads.
 
 Parameters:
-
 - `payloads` - Ordered payload shelf to evaluate.
 - `evaluator` - Caller-owned evaluation logic for one warm worker slot.
 
@@ -733,7 +725,6 @@ Existing workers are released before the new shelf becomes active so slot
 reuse stays deterministic across generations or evaluation batches.
 
 Parameters:
-
 - `payloads` - Ordered payload shelf that may be evaluated next.
 
 Returns: Nothing.
@@ -810,7 +801,6 @@ The priority order matches the current transport ladder: shared-memory first,
 then persistent channels, then transferable payload fallback.
 
 Parameters:
-
 - `capabilities` - Capability snapshot returned by the probe.
 
 Returns: Best automatic transport choice for the current host.
@@ -841,7 +831,6 @@ emitted worker asset they expect, while the library handles the common URL
 math for browser demos, nested workers, and side-by-side bundle delivery.
 
 Parameters:
-
 - `workerAssetPath` - Relative worker asset path emitted by the bundler.
 - `options` - Optional explicit base URL override.
 
@@ -851,7 +840,7 @@ Example:
 
 ```ts
 const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
-  'flappy-shared-inference.worker.bundle.js',
+  'shared-inference.worker.bundle.js',
 );
 ```
 
@@ -940,7 +929,6 @@ scores the whole population in one async call and writes ordered results back
 onto the genomes in place.
 
 Parameters:
-
 - `options` - Boolean-first population-evaluation options plus advanced worker overrides.
 
 Returns: Population fitness delegate compatible with `fitnessPopulation: true`.
@@ -952,8 +940,7 @@ const evaluatePopulation = createNeatParallelPopulationEvaluator({
   parallel: true,
   evaluateGenome: async (genome) => genome.score ?? 0,
   openWorker: (payload) => openSharedInferenceWorker(payload),
-  evaluateWithWorker: async (worker, genome) =>
-    worker.infer(genome.activate([0, 1])),
+  evaluateWithWorker: async (worker, genome) => worker.infer(genome.activate([0, 1])),
 });
 ```
 
@@ -1021,7 +1008,6 @@ The pool schedules work FIFO, lets each slot consume tasks until the queue
 is empty, and returns results in the same order as the input payloads.
 
 Parameters:
-
 - `payloads` - Ordered payload shelf to evaluate.
 - `evaluator` - Caller-owned evaluation logic for one warm worker slot.
 
@@ -1041,7 +1027,6 @@ Existing workers are released before the new shelf becomes active so slot
 reuse stays deterministic across generations or evaluation batches.
 
 Parameters:
-
 - `payloads` - Ordered payload shelf that may be evaluated next.
 
 Returns: Nothing.
@@ -1087,7 +1072,6 @@ opening plus task execution when they want parallelism, and they also provide
 a local fallback when they need the same semantics in worker-less hosts.
 
 Parameters:
-
 - `options` - Ordered inputs plus worker and fallback execution hooks.
 
 Returns: Ordered batch results with elapsed time and stable task ids.
@@ -1130,7 +1114,6 @@ worker API already exposes an async boundary. Node keeps the native bulk copy
 path because there is no UI thread to protect.
 
 Parameters:
-
 - `dataView` - Shared numeric shelf covering inputs and outputs.
 - `inputValues` - Caller-provided numeric input vector.
 - `inputOffset` - Start index of the shared input shelf.
@@ -1150,7 +1133,6 @@ copySharedNumericValuesInChunks(
 Copy one large numeric conversion in browser-friendly chunks.
 
 Parameters:
-
 - `valueCount` - Total numeric slots to copy.
 - `copyChunk` - Callback that copies one contiguous chunk range.
 
@@ -1170,7 +1152,6 @@ copySharedOutputValues(
 Detach one shared-memory output shelf into a standalone typed array.
 
 Parameters:
-
 - `dataView` - Shared numeric shelf covering inputs and outputs.
 - `outputOffset` - Start index of the output shelf.
 - `outputCount` - Number of output values to copy.
@@ -1198,7 +1179,6 @@ the library files. Bundled or CSP-constrained hosts can override that entry
 with `workerUrl`.
 
 Parameters:
-
 - `payload` - Transferable inference payload used to bootstrap the shared worker predictor.
 - `options` - Shared worker delivery options.
 
@@ -1241,7 +1221,6 @@ shouldChunkSharedNumericConversion(
 Decide whether one shared numeric copy should yield between browser-sized chunks.
 
 Parameters:
-
 - `valueCount` - Number of numeric slots involved in the conversion.
 - `useChunkedConversion` - True when the current call path wants cooperative chunking.
 
@@ -1275,7 +1254,6 @@ then reuses the worker-side predictor state for every later `predict()` or
 `reset()` request sent over one dedicated `MessageChannel` port pair.
 
 Parameters:
-
 - `payload` - Transferable inference payload used to bootstrap the worker predictor.
 - `options` - Channel concurrency and worker delivery options.
 
@@ -1315,7 +1293,6 @@ emitted worker asset they expect, while the library handles the common URL
 math for browser demos, nested workers, and side-by-side bundle delivery.
 
 Parameters:
-
 - `workerAssetPath` - Relative worker asset path emitted by the bundler.
 - `options` - Optional explicit base URL override.
 
@@ -1325,7 +1302,7 @@ Example:
 
 ```ts
 const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
-  'flappy-shared-inference.worker.bundle.js',
+  'shared-inference.worker.bundle.js',
 );
 ```
 
@@ -1372,7 +1349,6 @@ a script; it only combines runtime facts and delivery availability so callers
 can decide whether to use shared-memory, channel, or transferable fallback.
 
 Parameters:
-
 - `options` - Runtime and delivery facts for the current host.
 
 Returns: Capability snapshot describing the usable transport tiers.
@@ -1440,7 +1416,6 @@ The priority order matches the current transport ladder: shared-memory first,
 then persistent channels, then transferable payload fallback.
 
 Parameters:
-
 - `capabilities` - Capability snapshot returned by the probe.
 
 Returns: Best automatic transport choice for the current host.
@@ -1500,7 +1475,6 @@ activatePortableNode(
 Activate one portable node using no-trace runtime semantics.
 
 Parameters:
-
 - `activationContext` - Predictor context for this activation step.
 
 Returns: Nothing.
@@ -1516,7 +1490,6 @@ activateTransferableNode(
 Activate one transferable node using no-trace runtime semantics.
 
 Parameters:
-
 - `activationContext` - Predictor context for this activation step.
 
 Returns: Nothing.
@@ -1532,7 +1505,6 @@ buildInferenceIrEdge(
 Build one deterministic non-self edge snapshot for the inference IR.
 
 Parameters:
-
 - `connectionReference` - Runtime connection.
 
 Returns: Edge IR snapshot.
@@ -1548,7 +1520,6 @@ buildInferenceIrNode(
 Build one deterministic node snapshot for the inference IR.
 
 Parameters:
-
 - `nodeReference` - Runtime node.
 
 Returns: Node IR snapshot.
@@ -1564,7 +1535,6 @@ buildPortableInferencePayloadEdge(
 Build one portable edge payload record from the inference IR.
 
 Parameters:
-
 - `inferenceEdge` - Inference IR edge snapshot.
 
 Returns: Structured-clone-safe edge payload record.
@@ -1580,7 +1550,6 @@ buildPortableInferencePayloadNode(
 Build one portable node payload record from the inference IR.
 
 Parameters:
-
 - `inferenceNode` - Inference IR node snapshot.
 
 Returns: Structured-clone-safe node payload record.
@@ -1596,7 +1565,6 @@ createEdgeIndexesByGaterIndex(
 Build gated forward-edge indexes keyed by gater node index.
 
 Parameters:
-
 - `portableEdges` - Portable payload edges.
 
 Returns: Gated edge indexes keyed by gater node index.
@@ -1613,7 +1581,6 @@ createIncomingEdgesByTargetIndex(
 Build incoming-edge indexes keyed by target node index.
 
 Parameters:
-
 - `portableEdges` - Portable payload edges.
 - `nodeCount` - Portable node count.
 
@@ -1631,7 +1598,6 @@ createIncomingTransferableEdgesByTargetIndex(
 Build incoming transferable-edge indexes keyed by target node index.
 
 Parameters:
-
 - `edgeTo` - Transferable edge target-node shelf.
 - `nodeCount` - Transferable node count.
 
@@ -1659,7 +1625,6 @@ Create a reusable local predictor from either portable or transferable inference
 The factory normalizes both transport strategies into one inference interface so callers can benchmark or run fallback execution paths without special-case runtime branching.
 
 Parameters:
-
 - `payload` - Portable or transferable inference payload.
 
 Returns: Predictor that mirrors runtime no-trace activation semantics.
@@ -1683,7 +1648,6 @@ createNodesByGeneId(
 Build a stable node lookup keyed by runtime gene id.
 
 Parameters:
-
 - `nodes` - Runtime nodes in deterministic index order.
 
 Returns: Node lookup keyed by gene id.
@@ -1699,7 +1663,6 @@ createPortableInferencePredictor(
 Create a reusable local predictor from a portable inference payload.
 
 Parameters:
-
 - `payload` - Portable inference payload.
 
 Returns: Predictor that mirrors runtime no-trace activation semantics.
@@ -1715,7 +1678,6 @@ createSelfNodeIndexesByGaterIndex(
 Build gated self-connection indexes keyed by gater node index.
 
 Parameters:
-
 - `portableNodes` - Portable payload nodes.
 
 Returns: Self-connection node indexes keyed by gater node index.
@@ -1731,7 +1693,6 @@ createTransferableEdgeIndexesByGaterIndex(
 Build gated transferable forward-edge indexes keyed by gater node index.
 
 Parameters:
-
 - `edgeGaterIndices` - Transferable edge gater shelf.
 
 Returns: Gated edge indexes keyed by gater node index.
@@ -1747,7 +1708,6 @@ createTransferableInferencePredictor(
 Create a reusable local predictor from a transferable inference payload.
 
 Parameters:
-
 - `payload` - Transferable inference payload.
 
 Returns: Predictor that mirrors runtime no-trace activation semantics.
@@ -1764,7 +1724,6 @@ createTransferableNumericArray(
 Create one numeric typed array using the requested transferable precision.
 
 Parameters:
-
 - `values` - Numeric values to pack.
 - `numericPrecision` - Requested precision mode.
 
@@ -1781,7 +1740,6 @@ createTransferableSelfNodeIndexesByGaterIndex(
 Build gated transferable self-connection indexes keyed by gater node index.
 
 Parameters:
-
 - `nodeSelfGaterIndices` - Transferable self-gater shelf.
 
 Returns: Self-connection node indexes keyed by gater node index.
@@ -1798,7 +1756,6 @@ Export one structured-clone-safe inference payload from a live runtime network.
 The resulting payload keeps deterministic activation ordering, stable node or edge indexing, and canonical activation names so a worker can replay inference semantics without shipping live graph objects.
 
 Parameters:
-
 - `network` - Runtime network to serialize for worker transport.
 
 Returns: Portable inference payload.
@@ -1823,7 +1780,6 @@ Export one typed-array inference payload optimized for low-copy worker transport
 This variant preserves the same deterministic IR semantics as the portable payload while flattening fields into transfer-friendly typed shelves that can be moved across worker boundaries efficiently.
 
 Parameters:
-
 - `network` - Runtime network to serialize for worker transport.
 - `options` - Transferable export configuration.
 
@@ -1850,7 +1806,6 @@ Extract a deterministic inference IR from one live network snapshot.
 This extraction pass captures exactly the runtime data required for worker-side forward execution, including node scalars, filtered forward edges, grouped activation steps, and stable output indexing.
 
 Parameters:
-
 - `network` - Runtime network to snapshot.
 
 Returns: Worker-friendly inference IR.
@@ -1873,7 +1828,6 @@ flattenActivationStepsForTransferablePayload(
 Build the transferable activation-step packing from grouped IR steps.
 
 Parameters:
-
 - `activationSteps` - Grouped activation steps from the inference IR.
 
 Returns: Flat activation-step data plus per-step start offsets.
@@ -1893,7 +1847,6 @@ After the transfer completes, the sending-side typed arrays are neutered and
 must not be read again.
 
 Parameters:
-
 - `payload` - Transferable inference payload whose buffers should move.
 
 Returns: ArrayBuffer transfer list aligned to the payload's typed shelves.
@@ -1933,7 +1886,6 @@ resolveActivationSteps(
 Resolve grouped activation steps from the compiled runtime schedule when available.
 
 Parameters:
-
 - `network` - Runtime network.
 - `generationContext` - Standalone generation context with fallback traversal order.
 - `nodesByGeneId` - Stable node lookup by gene id.
@@ -1951,7 +1903,6 @@ resolveActiveSelfConnection(
 Resolve the active self-connection for one runtime node.
 
 Parameters:
-
 - `nodeReference` - Runtime node.
 
 Returns: Active self-connection or undefined.
@@ -1968,7 +1919,6 @@ resolveCompiledActivationSteps(
 Resolve grouped activation steps from the compiled activation schedule.
 
 Parameters:
-
 - `network` - Runtime network.
 - `nodesByGeneId` - Stable node lookup by gene id.
 
@@ -1985,7 +1935,6 @@ resolveInferenceActivationId(
 Resolve the supported activation id for one runtime node.
 
 Parameters:
-
 - `nodeReference` - Runtime node.
 
 Returns: Stable activation id.
@@ -2001,7 +1950,6 @@ resolveNodeIndexOrThrow(
 Resolve a required node index from the seeded standalone surface.
 
 Parameters:
-
 - `nodeReference` - Runtime node.
 
 Returns: Stable node index.
@@ -2017,7 +1965,6 @@ resolveOptionalNodeIndex(
 Resolve an optional node index for gater references.
 
 Parameters:
-
 - `nodeReference` - Optional runtime node.
 
 Returns: Stable node index or `-1` when absent.
@@ -2034,7 +1981,6 @@ resolvePortableActivationFunction(
 Resolve the activation function for one portable node.
 
 Parameters:
-
 - `portableNode` - Portable node payload record.
 - `activationTable` - Portable activation table.
 
@@ -2051,7 +1997,6 @@ resolvePortableNodesByIndex(
 Resolve portable nodes in strict node-index order.
 
 Parameters:
-
 - `payload` - Portable inference payload.
 
 Returns: Portable nodes aligned to index order.
@@ -2067,7 +2012,6 @@ resolveTransferableActivationFunctions(
 Resolve activation functions directly from the transferable activation-id shelf.
 
 Parameters:
-
 - `payload` - Transferable inference payload.
 
 Returns: Activation functions aligned to the transferable node order.
@@ -2084,7 +2028,6 @@ resolveTransferableActivationStepNodeIndex(
 Resolve one transferable activation-step node index or throw when the step data is truncated.
 
 Parameters:
-
 - `activationStepsData` - Flat activation-step node shelf.
 - `activationDataIndex` - Index inside the flat activation-step shelf.
 
@@ -2103,7 +2046,6 @@ seedPredictorInputActivations(
 Seed the public input activations for one prediction pass.
 
 Parameters:
-
 - `activationValues` - Mutable activation buffer.
 - `inputValues` - Caller-provided input vector.
 - `inputCount` - Public input width.
@@ -2121,7 +2063,6 @@ shouldIncludeConnection(
 Determine whether a connection contributes to inference regardless of shape.
 
 Parameters:
-
 - `connectionReference` - Runtime connection.
 
 Returns: True when the connection is enabled for inference.
@@ -2137,7 +2078,6 @@ shouldIncludeForwardEdge(
 Determine whether a connection contributes to inference.
 
 Parameters:
-
 - `connectionReference` - Runtime connection.
 
 Returns: True when the connection should appear in the IR.
@@ -2153,7 +2093,6 @@ shouldIncludeSelfConnection(
 Determine whether a self-connection contributes to inference.
 
 Parameters:
-
 - `connectionReference` - Runtime self-connection.
 
 Returns: True when the self-connection should appear in the IR node snapshot.
@@ -2170,7 +2109,6 @@ validatePredictorInputSize(
 Validate input vector width for one prediction call.
 
 Parameters:
-
 - `inputValues` - Caller-provided input vector.
 - `expectedInputCount` - Required input width.
 
@@ -2187,7 +2125,6 @@ validateTransferableActivationTableLength(
 Validate that the transferable activation shelf matches the runtime registry.
 
 Parameters:
-
 - `activationTableLength` - Activation shelf length encoded in the payload.
 
 Returns: Nothing.
@@ -2205,7 +2142,6 @@ validateTransferableFieldLength(
 Validate one transferable shelf length against the expected payload count.
 
 Parameters:
-
 - `fieldName` - Payload field name.
 - `actualLength` - Actual typed-array length.
 - `expectedLength` - Expected aligned length.
@@ -2223,7 +2159,6 @@ validateTransferableFieldLengths(
 Validate that every transferable typed shelf stays aligned to the payload contract.
 
 Parameters:
-
 - `payload` - Transferable inference payload.
 
 Returns: Nothing.
@@ -2239,7 +2174,6 @@ validateTransferableNodeIds(
 Validate that transferable node ids remain aligned to typed-shelf order.
 
 Parameters:
-
 - `nodeIds` - Transferable node-id shelf.
 
 Returns: Nothing.

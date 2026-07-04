@@ -75,7 +75,6 @@ Use this when you need to inspect or debug the exact objective set a run will
 evaluate rather than the raw options that happened to be configured earlier.
 
 Parameters:
-
 - `this` - NEAT host exposing multi-objective options and the cached objective list.
 
 Returns: Objective descriptors in the order they should be applied.
@@ -101,7 +100,6 @@ clears the user-defined objective layer and invalidates the cached resolved
 list so the next read rebuilds it from the remaining controller defaults.
 
 Parameters:
-
 - `this` - NEAT host exposing multi-objective options and the cached objective list.
 
 Returns: Nothing. Registered user objectives and the cached objective list are cleared.
@@ -135,7 +133,6 @@ cached resolved list. The final ordered objective set is rebuilt lazily the
 next time {@link _getObjectives} runs.
 
 Parameters:
-
 - `this` - NEAT host exposing multi-objective options and the cached objective list.
 - `key` - Unique name for the objective.
 - `direction` - Whether the objective should be minimized or maximized.

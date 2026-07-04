@@ -76,7 +76,6 @@ current controller options allow it, so callers get a more useful historical
 surface without having to coordinate that enrichment manually.
 
 Parameters:
-
 - `this` - NEAT host exposing species history, species records, fallback innovation logic, and options.
 
 Returns: Generation-stamped species history snapshots.
@@ -102,7 +101,6 @@ recent improvement timestamps, or the best score per species without pulling
 the heavier generation-by-generation history buffer.
 
 Parameters:
-
 - `this` - NEAT host exposing the internal species registry.
 
 Returns: Compact per-species summaries suitable for reporting.

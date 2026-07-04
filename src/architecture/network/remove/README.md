@@ -63,25 +63,23 @@ while attempting to preserve overall functional connectivity. The removal proced
 legacy Neataptic logic but augments it with clearer documentation and explicit invariants.
 
 High‑level algorithm (removeNode):
-
-1.  Guard: ensure the node exists and is not an input or output (those are structural anchors).
-2.  Ungate: detach connections gated BY the node (we don't currently reassign gater roles).
-3.  Snapshot inbound / outbound connections (before mutation of adjacency lists).
-4.  Disconnect all inbound, outbound, and self connections.
-5.  Physically remove the node from the network's node array.
-6.  Simple path repair heuristic: for every former inbound source and outbound target, add a
+ 1. Guard: ensure the node exists and is not an input or output (those are structural anchors).
+ 2. Ungate: detach connections gated BY the node (we don't currently reassign gater roles).
+ 3. Snapshot inbound / outbound connections (before mutation of adjacency lists).
+ 4. Disconnect all inbound, outbound, and self connections.
+ 5. Physically remove the node from the network's node array.
+ 6. Simple path repair heuristic: for every former inbound source and outbound target, add a
     direct connection if (a) both endpoints still exist, (b) they are distinct, and (c) no
     direct connection already exists. This keeps forward information flow possibilities.
-7.  Mark topology / caches dirty so that subsequent activation / ordering passes rebuild state.
+ 7. Mark topology / caches dirty so that subsequent activation / ordering passes rebuild state.
 
 Notes / Limitations:
-
-- We do NOT attempt to clone weights or distribute the removed node's function across new
-  connections (more sophisticated strategies could average or compose weights).
-- Gating effects involving the removed node as a gater are dropped; downstream behavior may
-  change—callers relying heavily on gating may want a custom remap strategy.
-- Self connections are simply removed; no attempt is made to emulate recursion via alternative
-  structures.
+ - We do NOT attempt to clone weights or distribute the removed node's function across new
+   connections (more sophisticated strategies could average or compose weights).
+ - Gating effects involving the removed node as a gater are dropped; downstream behavior may
+   change—callers relying heavily on gating may want a custom remap strategy.
+ - Self connections are simply removed; no attempt is made to emulate recursion via alternative
+   structures.
 
 ### networkRemoveUtils
 
@@ -101,7 +99,6 @@ removeNode(
 Remove a hidden node from the network while minimally repairing connectivity.
 
 Parameters:
-
 - `this` - Network instance (bound implicitly via method-style call).
 - `node` - The node object to remove (must be of type 'hidden').
 
@@ -118,7 +115,6 @@ clearConnectionGater(
 Clears gater reference so legacy checks treat connection as ungated.
 
 Parameters:
-
 - `candidateConnection` - Connection to clear.
 
 Returns: Nothing.
@@ -134,7 +130,6 @@ detachGatesOwnedByNode(
 Removes gate records gated by target node and nulls their gater field.
 
 Parameters:
-
 - `removalContext` - Immutable removal context.
 
 Returns: Nothing.
@@ -151,7 +146,6 @@ isGatedByRemovedNode(
 Checks whether a gate candidate is currently gated by removed node.
 
 Parameters:
-
 - `candidateConnection` - Gate candidate.
 - `removedNode` - Removed node reference.
 
@@ -169,7 +163,6 @@ keepGateConnectionAfterNodeRemoval(
 Filters one gate connection while clearing removed-node gater ownership.
 
 Parameters:
-
 - `candidateConnection` - Gate candidate.
 - `removedNode` - Removed node reference.
 
@@ -188,7 +181,6 @@ markNetworkRemovalDirtyFlags(
 Marks all cached removal-sensitive network structures as dirty after node removal.
 
 Parameters:
-
 - `internalNetwork` - Internal mutable network props.
 
 Returns: Nothing.
@@ -204,7 +196,6 @@ releaseRemovedNodeWhenPoolingEnabled(
 Releases removed node to object pool when pooling is enabled.
 
 Parameters:
-
 - `removedNode` - Removed node instance.
 
 Returns: Nothing.
@@ -220,7 +211,6 @@ removeNodeFromNetworkStorage(
 Removes node from network storage and conditionally releases it to pool.
 
 Parameters:
-
 - `removalContext` - Immutable removal context.
 
 Returns: Nothing.
@@ -236,7 +226,6 @@ spliceNodeFromNetwork(
 Splices node out of network list using validated index.
 
 Parameters:
-
 - `removalContext` - Immutable removal context.
 
 Returns: Removed node or undefined.
@@ -254,7 +243,6 @@ cloneInboundConnections(
 Clones inbound connections for safe traversal after mutation.
 
 Parameters:
-
 - `targetNode` - Node being removed.
 
 Returns: Inbound connection snapshot.
@@ -270,7 +258,6 @@ cloneOutboundConnections(
 Clones outbound connections for safe traversal after mutation.
 
 Parameters:
-
 - `targetNode` - Node being removed.
 
 Returns: Outbound connection snapshot.
@@ -286,7 +273,6 @@ countSelfConnections(
 Counts self-loop connections currently attached to node.
 
 Parameters:
-
 - `targetNode` - Node being removed.
 
 Returns: Self-loop count.
@@ -302,7 +288,6 @@ createNodeConnectionSnapshot(
 Creates immutable snapshots of all node adjacency lists before mutation.
 
 Parameters:
-
 - `removalContext` - Immutable removal context.
 
 Returns: Snapshot context.
@@ -319,7 +304,6 @@ disconnectAllNodeConnections(
 Disconnects all inbound, outbound, and self-loop edges for removed node.
 
 Parameters:
-
 - `removalContext` - Immutable removal context.
 - `snapshotContext` - Immutable adjacency snapshot.
 
@@ -337,7 +321,6 @@ disconnectConnectionGroup(
 Disconnects each connection in a single connection list.
 
 Parameters:
-
 - `network` - Target network.
 - `connectionsToDisconnect` - Connection list.
 
@@ -356,7 +339,6 @@ disconnectSelfLoops(
 Disconnects node self-loop connections using deterministic count traversal.
 
 Parameters:
-
 - `network` - Target network.
 - `targetNode` - Node whose self-loop is removed.
 - `selfConnectionCount` - Number of self-loops to remove.
@@ -376,7 +358,6 @@ collectReconnectEndpointPairs(
 Collects all valid source/target reconnect endpoint pairs.
 
 Parameters:
-
 - `snapshotContext` - Immutable adjacency snapshot.
 
 Returns: Valid reconnect endpoint pairs.
@@ -393,7 +374,6 @@ connectPairWhenMissing(
 Connects one endpoint pair only when direct edge does not already exist.
 
 Parameters:
-
 - `network` - Target network.
 - `reconnectPair` - Source/target pair.
 
@@ -411,7 +391,6 @@ createReconnectEndpointPair(
 Creates one reconnect endpoint pair when endpoints are valid.
 
 Parameters:
-
 - `inboundConnection` - Inbound edge from snapshot.
 - `outboundConnection` - Outbound edge from snapshot.
 
@@ -429,7 +408,6 @@ doesDirectConnectionExist(
 Checks whether a direct connection already exists for reconnect pair.
 
 Parameters:
-
 - `network` - Target network.
 - `reconnectPair` - Source/target pair.
 
@@ -447,7 +425,6 @@ isReconnectPairValid(
 Validates reconnect pair endpoints.
 
 Parameters:
-
 - `inboundConnection` - Inbound edge from snapshot.
 - `outboundConnection` - Outbound edge from snapshot.
 
@@ -465,7 +442,6 @@ reconnectBridgedPaths(
 Reconnects paths from former inbound sources to former outbound targets.
 
 Parameters:
-
 - `removalContext` - Immutable removal context.
 - `snapshotContext` - Immutable adjacency snapshot.
 
@@ -485,7 +461,6 @@ createValidatedNodeRemovalContext(
 Create a validated immutable context object for one node-removal operation.
 
 Parameters:
-
 - `network` - Target network.
 - `targetNode` - Node requested for removal.
 
@@ -502,7 +477,6 @@ ensureNodeIsNotStructuralAnchor(
 Ensures removal target is not an input/output anchor node.
 
 Parameters:
-
 - `targetNode` - Node under validation.
 
 Returns: Nothing.
@@ -518,7 +492,6 @@ isStructuralAnchorNode(
 Checks whether node is an input/output structural anchor.
 
 Parameters:
-
 - `targetNode` - Node under evaluation.
 
 Returns: True when node is an anchor.
@@ -535,7 +508,6 @@ resolveNodeIndexOrThrow(
 Resolves node index and throws when missing.
 
 Parameters:
-
 - `network` - Target network.
 - `targetNode` - Node being removed.
 

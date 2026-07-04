@@ -14,7 +14,6 @@ Assert that one strict genome contract satisfies the Step 7.1 structural
 identity rules.
 
 Parameters:
-
 - `genome` - Strict structural genome contract.
 
 Returns: Nothing.
@@ -33,7 +32,6 @@ This is the fail-fast convenience wrapper for dev/test callers that prefer an
 exception over manually checking `report.isValid`.
 
 Parameters:
-
 - `genome` - Network-shaped native genome candidate.
 
 Returns: Nothing.
@@ -82,7 +80,7 @@ Native-genome validation for the proper-NEAT contract.
 
 This validator is the controller's "trust but verify" seam.
 
-Most internal algorithms assume a _native_ genome has already committed to
+Most internal algorithms assume a *native* genome has already committed to
 explicit identity fields:
 
 - every node has a finite `geneId`
@@ -109,7 +107,6 @@ Validate one strict genome contract without requiring a live `Network`
 phenotype.
 
 Parameters:
-
 - `genome` - Strict structural genome contract.
 
 Returns: Structured genome validation report.
@@ -135,7 +132,6 @@ to fail near the write path that created them rather than much later inside a
 compatibility walk or crossover materialization pass.
 
 Parameters:
-
 - `genome` - Network-shaped native genome candidate to inspect.
 
 Returns: Structured report listing all discovered invariant violations.

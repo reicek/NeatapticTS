@@ -137,7 +137,6 @@ actual completion signal is the later `generation-ready` or `error` message
 posted back to the host.
 
 Parameters:
-
 - `workerMutableRuntimeState` - Mutable worker runtime state.
 
 Returns: Nothing.
@@ -157,7 +156,6 @@ The worker retains the initialization promise so later generation requests can
 await setup completion instead of racing against it.
 
 Parameters:
-
 - `workerMutableRuntimeState` - Mutable worker runtime state.
 - `initPayload` - Initialization payload.
 
@@ -179,7 +177,6 @@ current population. Each new session resets playback RNG and world state so
 the host can replay generations cleanly.
 
 Parameters:
-
 - `workerMutableRuntimeState` - Mutable worker runtime state.
 - `payload` - Playback start payload.
 
@@ -201,7 +198,6 @@ keeps the worker-local direct evaluator, which avoids a chatty nested-worker
 path on ordinary local servers without COOP/COEP isolation.
 
 Parameters:
-
 - `initPayload` - Worker initialization payload with the selected profile.
 
 Returns: Shared-memory pool when the host can support it; otherwise undefined.
@@ -221,7 +217,6 @@ delegated to the router service so the worker entrypoint stays readable as a
 high-level orchestration module.
 
 Parameters:
-
 - `workerMutableRuntimeState` - Mutable worker runtime state.
 
 Returns: Worker message handler.
@@ -262,7 +257,6 @@ worker runtime. Each callback closes over the same mutable state bag so the
 protocol layer can remain small and declarative.
 
 Parameters:
-
 - `workerMutableRuntimeState` - Mutable worker runtime state.
 
 Returns: Protocol handler bundle.
@@ -305,7 +299,6 @@ playback and it does not evolve a generation yet; those remain separate
 protocol steps so the host can control them explicitly.
 
 Parameters:
-
 - `initPayload` - Initialization values from the browser host.
 
 Returns: Promise resolved when runtime setup is complete.
@@ -322,7 +315,6 @@ logWorkerEvaluationPoolFallback(
 Logs why recurrent evaluation stayed on the direct worker-local evaluator.
 
 Parameters:
-
 - `architectureProfileId` - Selected recurrent profile id.
 - `reasons` - Capability probe explanations for unavailable transports.
 
@@ -343,7 +335,6 @@ This is the narrowest possible transport helper: all message construction is
 done elsewhere so the README can point to one stable worker-to-host boundary.
 
 Parameters:
-
 - `workerMessage` - Outbound worker response payload.
 - `transferList` - Optional transferable buffers moved with the payload.
 
@@ -360,7 +351,6 @@ postWorkerRuntimeStatus(
 Posts an informational runtime-status update from worker to browser host.
 
 Parameters:
-
 - `payload` - Phase and display text for the HUD status row.
 
 Returns: Nothing.
@@ -385,7 +375,6 @@ Importantly, the worker remains authoritative for deciding when the run is
 over and which bird should be treated as the playback winner.
 
 Parameters:
-
 - `playbackStepPayload` - Host-selected simulation-step budget and viewport.
 
 Returns: Nothing.
@@ -401,7 +390,6 @@ resolveWorkerEvaluationRuntimeStatusPayload(
 Resolves the status payload for the active recurrent evaluation transport.
 
 Parameters:
-
 - `evaluationWorkerPool` - Optional shared-memory evaluation pool.
 
 Returns: Runtime-status payload for the HUD.
@@ -610,7 +598,6 @@ buildWorkerSharedRolloutSeedBatch(
 Builds the deterministic rollout seed batch used by the pipe-first worker objective.
 
 Parameters:
-
 - `workerInitSeed` - Deterministic worker seed.
 
 Returns: Shared rollout seed batch.
@@ -641,7 +628,6 @@ is exercising, even though the repository implements its own detailed runtime
 behavior and modern extensions.
 
 Parameters:
-
 - `initPayload` - Initialization values from the browser host.
 
 Returns: Initialized NEAT runtime.
@@ -674,7 +660,6 @@ because the tiny interactive population is otherwise too willing to overfit
 one lucky rollout and stall at a zero-pipe local optimum.
 
 Parameters:
-
 - `architectureProfileId` - Resolved worker architecture profile id.
 - `workerInitSeed` - Deterministic worker seed.
 
@@ -693,7 +678,6 @@ logWorkerFitnessTransportMode(
 Logs the worker-side fitness transport selection.
 
 Parameters:
-
 - `architectureProfileId` - Resolved worker architecture profile id.
 - `usesPipeFirstSharedSeeds` - Whether the profile uses the shared-seed aggregate evaluator.
 - `inferenceChannelWorkerUrl` - Nested worker bundle URL when persistent channels are available.
@@ -711,7 +695,6 @@ resolveFirstSharedRolloutSeedBatch(
 Resolves the cheap first-seed batch used before full recurrent scoring.
 
 Parameters:
-
 - `sharedRolloutSeeds` - Full deterministic seed batch for the generation.
 
 Returns: One-seed batch used for the progressive gate.
@@ -728,7 +711,6 @@ resolveRequiredFirstSeedAggregate(
 Resolves the required first-seed aggregate for a genome.
 
 Parameters:
-
 - `aggregateByGenome` - First-seed aggregate map.
 - `genome` - Genome whose evidence should exist.
 
@@ -749,7 +731,6 @@ profiles because the heavier gated controller was still regressing after
 generation-zero warm-start when browser selection only saw one static lane.
 
 Parameters:
-
 - `architectureProfileId` - Resolved worker architecture profile id.
 
 Returns: Shared-seed batch size for worker fitness.
@@ -776,7 +757,6 @@ resolveWorkerSeedNetwork(
 Resolves the worker seed network from a saved champion override or the shared profile template.
 
 Parameters:
-
 - `initPayload` - Initialization values from the browser host.
 - `architectureProfileId` - Resolved architecture profile id.
 
@@ -798,7 +778,6 @@ scalar therefore promotes mean pipe progress first, then uses survival and
 stability as tie-breakers inside the same shared-seed batch.
 
 Parameters:
-
 - `aggregateEvaluation` - Shared-seed evaluation evidence.
 
 Returns: Scalar fitness consumed by the browser worker NEAT loop.
@@ -814,7 +793,6 @@ shouldSpendFullWorkerSeedBatch(
 Resolves whether one genome should receive the full recurrent seed batch.
 
 Parameters:
-
 - `aggregateEvaluation` - First-seed evidence for one genome.
 
 Returns: True when the genome showed enough pipe progress to justify full scoring.
@@ -835,7 +813,6 @@ Routes one inbound worker request message to the corresponding runtime action.
 Educational note:
 This router is the protocol gatekeeper for the worker. It enforces the two
 important sequencing rules in the demo:
-
 - playback requires a previously evolved population,
 - playback stepping requires an active playback session.
 
@@ -844,7 +821,6 @@ conceptual refresher, the Wikipedia article on "finite-state machine" maps
 well onto the worker's init -> evolve -> start playback -> step playback flow.
 
 Parameters:
-
 - `workerMessage` - Inbound worker request payload.
 - `handlers` - Runtime action callbacks and state probes.
 
@@ -881,7 +857,6 @@ buildGenerationReadyMessage(
 Builds the generation-ready worker response from a population snapshot.
 
 Parameters:
-
 - `options` - Generation metadata plus selected best network and population.
 
 Returns: Generation-ready worker response payload.
@@ -906,7 +881,6 @@ transferable inference payloads for playback, and the temporary JSON
 visualization bridge used by the host network panel.
 
 Parameters:
-
 - `options` - Evolution dependencies and runtime state accessors.
 
 Returns: Generation-ready worker response payload.
@@ -934,7 +908,6 @@ resolveBestNetworkFromPopulation(
 Chooses the best network from a population snapshot using available scores.
 
 Parameters:
-
 - `population` - Population snapshot to scan.
 
 Returns: Highest-scored network, falling back to the first network when scores are equal.
@@ -954,7 +927,6 @@ payloads. The temporary JSON visualization bridge remains structured-clone
 data so the browser can continue rebuilding network-view models separately.
 
 Parameters:
-
 - `workerMessage` - Generation-ready worker response payload.
 
 Returns: Transfer list for `postMessage(...)`.
@@ -971,7 +943,6 @@ resolveRuntimePopulation(
 Resolves the current runtime population with an optional best-network fallback.
 
 Parameters:
-
 - `runtimeNeat` - Runtime population holder.
 - `fallbackNetwork` - Best network returned by an evolution pass.
 
@@ -989,7 +960,6 @@ runBestEffortWarmStart(
 Runs generation-zero warm-start as an optional assist before regular evolution.
 
 Parameters:
-
 - `warmStartGenerationZeroIfNeeded` - Warm-start callback for the active runtime.
 - `neatRuntime` - Runtime that should evolve even when warm-start fails.
 
@@ -1008,7 +978,6 @@ shouldPublishStartupPopulationBeforeEvolution(
 Resolves whether the worker should release generation zero before evolving.
 
 Parameters:
-
 - `generation` - Current NEAT generation index.
 - `population` - Current worker population snapshot.
 - `publishStartupPopulationBeforeFirstEvolution` - Caller startup-release flag.
@@ -1043,7 +1012,6 @@ population, then playback freezes that population into a deterministic
 simulation state that the host can step frame-by-frame for rendering.
 
 Parameters:
-
 - `currentPopulation` - Current evolved population.
 - `payload` - Playback start viewport payload.
 - `createPopulationRenderState` - Callback that builds initial simulation state.
@@ -1076,7 +1044,6 @@ future generations only. This keeps the demo responsive once an architecture
 has already demonstrated that it can clear the live pipe target.
 
 Parameters:
-
 - `neatRuntime` - Worker-local NEAT runtime.
 - `winnerPipesPassed` - Winning playback pipe count for the completed generation.
 
@@ -1099,7 +1066,6 @@ control of simulation correctness, winner selection, and packed snapshot
 publishing.
 
 Parameters:
-
 - `options` - Playback step dependencies and mutable runtime state.
 
 Returns: Updated playback runtime state after processing this step.
@@ -1128,7 +1094,6 @@ createFloat32SnapshotArray(
 Creates one packed float column for snapshot transport.
 
 Parameters:
-
 - `elementCount` - Number of elements in the column.
 - `useSharedBuffer` - Whether to allocate reusable shared memory.
 
@@ -1146,7 +1111,6 @@ createUint32SnapshotArray(
 Creates one packed uint32 column for snapshot transport.
 
 Parameters:
-
 - `elementCount` - Number of elements in the column.
 - `useSharedBuffer` - Whether to allocate reusable shared memory.
 
@@ -1164,7 +1128,6 @@ createUint8SnapshotArray(
 Creates one packed uint8 column for snapshot transport.
 
 Parameters:
-
 - `elementCount` - Number of elements in the column.
 - `useSharedBuffer` - Whether to allocate reusable shared memory.
 
@@ -1195,7 +1158,6 @@ reference for why packed columns are often friendlier to hot-path data
 movement than arrays of rich objects.
 
 Parameters:
-
 - `playbackState` - Current mutable playback state.
 
 Returns: Immutable frame snapshot for the host.
@@ -1213,7 +1175,6 @@ createWorkerPlaybackSnapshotBuffers(
 Creates typed-array storage for one packed snapshot.
 
 Parameters:
-
 - `pipeCount` - Number of visible pipes to pack.
 - `birdCount` - Number of playback birds to pack.
 - `useSharedBuffers` - Whether buffers should be reusable shared memory.
@@ -1231,7 +1192,6 @@ isTransferableArrayBuffer(
 Narrows transfer-list candidates to transferable ArrayBuffers.
 
 Parameters:
-
 - `buffer` - Typed-array backing buffer.
 
 Returns: True when the buffer can be passed through postMessage transfer list.
@@ -1249,7 +1209,6 @@ resolveWorkerPlaybackSnapshotBuffers(
 Resolves snapshot column storage for one playback state.
 
 Parameters:
-
 - `playbackState` - Current mutable playback state.
 - `pipeCount` - Number of visible pipes to pack.
 - `birdCount` - Number of playback birds to pack.
@@ -1275,7 +1234,6 @@ population snapshots without forcing the main thread to pay unnecessary copy
 costs every frame.
 
 Parameters:
-
 - `snapshot` - Packed playback snapshot posted back to the browser host.
 
 Returns: Transfer list used to move typed-array buffers without copying.
@@ -1305,7 +1263,6 @@ closeWorkerPopulationRenderState(
 Closes any persistent inference channels carried by a playback state.
 
 Parameters:
-
 - `playbackState` - Playback state being retired.
 
 Returns: Promise resolved after all bird channels are closed.
@@ -1330,7 +1287,6 @@ simulation service mutates the returned state on every step, but only this
 helper decides how a fresh population is placed into the world at time zero.
 
 Parameters:
-
 - `networks` - Population to visualize.
 - `rng` - Deterministic random source.
 - `initialVisibleWorldWidthPx` - Initial viewport width from host.
@@ -1362,7 +1318,6 @@ advanceBirdPhysics(
 Integrates bird velocity and vertical motion for one control substep.
 
 Parameters:
-
 - `frameContext` - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -1378,7 +1333,6 @@ advancePipes(
 Advances all visible pipes and culls those that have left the camera window.
 
 Parameters:
-
 - `frameContext` - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -1395,7 +1349,6 @@ commitPassedPipeProgress(
 Commits one passed-pipe progress increment for a bird when eligible.
 
 Parameters:
-
 - `bird` - Mutable bird state.
 - `pipe` - Pipe candidate to mark as passed.
 
@@ -1412,7 +1365,6 @@ incrementLivingBirdFrameCounters(
 Increments survival counters for birds that remain active at frame start.
 
 Parameters:
-
 - `renderState` - Mutable playback state.
 
 Returns: Nothing.
@@ -1430,7 +1382,6 @@ resolveBirdCollisionAgainstPipe(
 Resolves whether a bird collides with one pipe corridor during this substep.
 
 Parameters:
-
 - `bird` - Mutable bird state.
 - `pipe` - Pipe candidate to test.
 - `frameContext` - Shared frame context for this logical frame.
@@ -1448,7 +1399,6 @@ resolveBirdControlActions(
 Runs policy evaluation and commits the resulting observation memory updates.
 
 Parameters:
-
 - `frameContext` - Shared frame context for this logical frame.
 
 Returns: Number of activation calls performed in the substep.
@@ -1465,7 +1415,6 @@ resolveBirdOutOfBounds(
 Resolves whether a bird has exceeded the vertical play area.
 
 Parameters:
-
 - `bird` - Mutable bird state.
 - `visibleWorldHeightPx` - Current visible world height.
 
@@ -1482,7 +1431,6 @@ resolveBirdTerminationAndProgress(
 Resolves bird deaths and passed-pipe progress after motion is applied.
 
 Parameters:
-
 - `frameContext` - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -1498,7 +1446,6 @@ resolveCameraLeftXPx(
 Resolves the current left-edge of the visible world in world-space pixels.
 
 Parameters:
-
 - `visibleWorldWidthPx` - Current visible world width.
 
 Returns: Left edge x-position in world coordinates.
@@ -1514,7 +1461,6 @@ runWorkerPopulationControlSubstep(
 Advances one control substep of the worker playback simulation.
 
 Parameters:
-
 - `frameContext` - Shared frame context for this logical frame.
 
 Returns: Number of activation calls performed in the substep.
@@ -1530,7 +1476,6 @@ spawnPipeIfNeeded(
 Spawns a new pipe when the substep budget crosses the spawn boundary.
 
 Parameters:
-
 - `frameContext` - Shared frame context for this logical frame.
 
 Returns: Nothing.
@@ -1558,7 +1503,6 @@ The companion `simulation.utils` file creates initial state; this service is
 responsible for mutating that state over time.
 
 Parameters:
-
 - `renderState` - Mutable simulation state.
 - `rng` - Deterministic random source for spawn variation.
 - `difficultyProfile` - Active dynamic difficulty profile.
@@ -1580,7 +1524,6 @@ applyTeacherWarmStart(
 Applies the teacher phase that best matches the selected architecture family.
 
 Parameters:
-
 - `templateNetwork` - Template network cloned from the current population.
 - `trainingSet` - Synthetic heuristic dataset.
 - `architectureProfileId` - Selected shared Flappy profile id.
@@ -1605,7 +1548,6 @@ The template network gives generation 0 a shared prior, while the noise terms
 restore diversity so the population is still worth evolving.
 
 Parameters:
-
 - `genome` - Target genome to mutate in-place.
 - `template` - Trained template source network.
 - `rng` - Deterministic random source for noise sampling.
@@ -1626,7 +1568,6 @@ applyWarmStartGenerationZero(
 Applies the generation-zero warm-start body when the runtime is still eligible.
 
 Parameters:
-
 - `neatController` - Initialized NEAT runtime.
 - `warmStartState` - Mutable warm-start lifecycle state.
 - `dependencies` - Injectable warm-start seams.
@@ -1652,7 +1593,6 @@ The critical rule is that the teacher must only read the same compact
 current-frame controller shelf that the live network will later receive.
 
 Parameters:
-
 - `rng` - Deterministic random source.
 - `sampleCount` - Requested number of synthetic samples.
 
@@ -1670,7 +1610,6 @@ buildWarmStartRolloutSeedBatch(
 Builds the deterministic shared rollout seed batch used during warm-start refinement.
 
 Parameters:
-
 - `rng` - Deterministic random source.
 - `seedCount` - Requested seed count.
 
@@ -1687,7 +1626,6 @@ composeWarmStartSeedBatchEvaluation(
 Composes the completed warm-start rollouts into aggregate evidence.
 
 Parameters:
-
 - `episodeResults` - Completed rollout results before the deadline fired.
 
 Returns: Aggregate warm-start evaluation metrics.
@@ -1704,7 +1642,6 @@ createWarmStartDeadline(
 Creates the optional deadline used by recurrent warm-start refinement.
 
 Parameters:
-
 - `architectureProfileId` - Selected shared Flappy profile id.
 - `resolveCurrentTimeMs` - Clock source used for deadline checks.
 
@@ -1724,7 +1661,6 @@ evaluateWarmStartTemplateAcrossRollouts(
 Evaluates one warm-start template across the shared rollout seed batch.
 
 Parameters:
-
 - `templateNetwork` - Candidate template to score.
 - `sharedRolloutSeeds` - Shared rollout seeds used for stable comparison.
 - `warmStartDeadline` - Deadline that can stop seed evaluation early.
@@ -1745,7 +1681,6 @@ interpolateValue(
 Linearly interpolates between two scalar values.
 
 Parameters:
-
 - `startValue` - Value at ratio `0`.
 - `endValue` - Value at ratio `1`.
 - `ratio` - Interpolation ratio.
@@ -1763,7 +1698,6 @@ isWarmStartDeadlineExpired(
 Resolves whether rollout refinement should yield to regular NEAT evolution.
 
 Parameters:
-
 - `warmStartDeadline` - Deadline contract for the current warm-start pass.
 
 Returns: True when the warm-start assist has spent its allowed budget.
@@ -1785,7 +1719,6 @@ survival act as deterministic tie-breakers so upgrades remain stable when the
 robust score is identical.
 
 Parameters:
-
 - `candidateEvaluation` - Newly scored candidate aggregate.
 - `bestEvaluation` - Current best aggregate.
 - `architectureProfileId` - Selected shared Flappy profile id.
@@ -1813,7 +1746,6 @@ rollout fitness so the first visible generation starts closer to competent
 control.
 
 Parameters:
-
 - `templateNetwork` - Heuristic-pretrained template network.
 - `workerInitSeed` - Deterministic worker seed.
 - `architectureProfileId` - Selected shared Flappy profile id.
@@ -1839,7 +1771,6 @@ candidate template directly so the rollout optimizer can evaluate one local
 parameter move at a time while keeping the topology unchanged.
 
 Parameters:
-
 - `network` - Candidate template to perturb.
 - `rng` - Deterministic random source.
 - `noise` - Standard deviations for weight and bias perturbations.
@@ -1865,7 +1796,6 @@ same compact 6-value controller vector used by regular training and playback.
 Extra legacy-derived features must not influence generation-zero labels.
 
 Parameters:
-
 - `observationVector` - Compact current-frame controller input vector.
 
 Returns: True when the teacher says to flap.
@@ -1882,7 +1812,6 @@ resolveWarmStartAnnealRatio(
 Resolves the annealing ratio for rollout-guided warm-start refinement.
 
 Parameters:
-
 - `optimizationStepIndex` - Zero-based optimization step index.
 - `totalOptimizationSteps` - Total number of optimization steps.
 
@@ -1904,7 +1833,6 @@ real pipe progress over a dense-shaping local optimum before the browser
 NEAT loop begins.
 
 Parameters:
-
 - `aggregateEvaluation` - Shared-seed rollout evidence for one template.
 - `architectureProfileId` - Selected shared Flappy profile id.
 
@@ -1925,7 +1853,6 @@ the browser worker stays responsive after the Flappy-specific readout
 shortcut expands the recurrent seed.
 
 Parameters:
-
 - `architectureProfileId` - Selected shared Flappy profile id.
 
 Returns: Shared-seed count, optimization-step budget, and optional time cap.
@@ -1941,7 +1868,6 @@ resolveWorkerWarmStartTeacherStrategy(
 Resolves which teacher path should run before rollout refinement.
 
 Parameters:
-
 - `architectureProfileId` - Selected shared Flappy profile id.
 
 Returns: Teacher strategy best matched to the architecture family.
@@ -1962,7 +1888,6 @@ here because it is deterministic, dependency-light, and good enough for small
 noise injection during warm-start diversification.
 
 Parameters:
-
 - `rng` - Deterministic random source.
 
 Returns: One approximately standard-normal random value.
@@ -1989,7 +1914,6 @@ background, the Wikipedia article on "imitation learning" is a helpful bridge
 between the heuristic teacher used here and the later evolutionary search.
 
 Parameters:
-
 - `neatController` - Initialized NEAT runtime.
 - `warmStartState` - Mutable warm-start lifecycle state.
 - `dependencies` - Injectable warm-start seams for tests and runtime customization.
@@ -2056,7 +1980,6 @@ createWorkerErrorMessage(
 Creates a typed worker error response payload from a message string.
 
 Parameters:
-
 - `message` - Error message text.
 
 Returns: Worker error response message.
@@ -2084,7 +2007,6 @@ regular exceptions, while the browser host still receives one predictable
 `WorkerErrorMessage` shape.
 
 Parameters:
-
 - `error` - Unknown thrown value.
 
 Returns: Worker error response message.
@@ -2126,7 +2048,6 @@ Normalizing that value here gives the rest of the protocol a simple
 `string`-only error surface.
 
 Parameters:
-
 - `error` - Unknown error value thrown by worker logic.
 
 Returns: Normalized error message string.

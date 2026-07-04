@@ -71,7 +71,6 @@ answers the first practical question after loading or editing a network:
 continue?"
 
 Recommended reading inside maintenance:
-
 - `./facade/README.md` for the public wrapper semantics and host contract
 - `../mutation/repair/README.md` for the lower-level repair mechanics that
   the facade delegates to when work is actually needed

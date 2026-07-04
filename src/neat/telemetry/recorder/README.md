@@ -7,20 +7,17 @@ how readers inspect telemetry after it exists, the recorder explains how one
 generation snapshot comes into existence in the first place.
 
 The recorder owns the end-to-end write path:
-
 - start from the current generation, fittest genome, and cached controller state
 - build one telemetry entry that summarizes what just happened
 - optionally filter that entry down to a caller-selected surface
 - persist the result to the in-memory buffer and stream it out when configured
 
 The neighboring chapters keep this boundary clean:
-
 - `metrics/` computes the evidence attached to the entry
 - `runtime/` handles safe buffer initialization, callback streaming, and trimming
 - `facade/` exposes the recorded history back to `Neat` callers later
 
 Read this chapter when you want to answer questions such as:
-
 - what exactly gets captured at the end of one generation?
 - where do multi-objective and mono-objective telemetry paths diverge?
 - when does telemetry selection happen relative to buffering and streaming?
@@ -38,7 +35,6 @@ flowchart LR
 ```
 
 A useful reading order is:
-
 1. `buildTelemetryEntry()` to understand the overall snapshot shape
 2. `recordTelemetryEntry()` to understand the write path and safety rules
 3. `applyTelemetrySelect()` to understand how callers can narrow the surface
@@ -60,7 +56,6 @@ applySharedTelemetrySnapshots(
 Attach objective, species, and RNG snapshots shared by both telemetry modes.
 
 Parameters:
-
 - `telemetryContext` - Neat-like context with cached telemetry state.
 - `telemetryOptions` - Options controlling telemetry behavior.
 - `generation` - Generation index for this snapshot.
@@ -84,7 +79,6 @@ retained on the produced entry. Core fields (generation, best score and
 species count) are always preserved.
 
 Parameters:
-
 - `entry` - Raw telemetry object to be filtered in-place.
 
 Returns: The filtered telemetry object (same reference as input).
@@ -111,7 +105,6 @@ buildMonoObjectiveEntry(
 Build a telemetry entry for mono-objective mode.
 
 Parameters:
-
 - `telemetryContext` - Neat-like context with population state.
 - `telemetryOptions` - Options controlling telemetry behavior.
 - `generation` - Generation index for this snapshot.
@@ -133,7 +126,6 @@ buildMultiObjectiveEntry(
 Build a telemetry entry for multi-objective mode.
 
 Parameters:
-
 - `telemetryContext` - Neat-like context with population state.
 - `telemetryOptions` - Options controlling telemetry behavior.
 - `generation` - Generation index for this snapshot.
@@ -161,7 +153,6 @@ This function intentionally mirrors the legacy in-loop telemetry construction
 to preserve behavior relied upon by tests and consumers.
 
 Parameters:
-
 - `fittest` - The currently fittest genome (used to report `best` score).
 
 Returns: A TelemetryEntry object suitable for recording/streaming.
@@ -175,7 +166,6 @@ neat.recordTelemetryEntry(snapshot);
 ```
 
 The function has two internal paths:
-
 - multi-objective mode adds Pareto-front and hypervolume-oriented signals
 - mono-objective mode keeps the payload smaller while preserving the same core fields
 
@@ -218,7 +208,6 @@ createGenerationTelemetryBase(
 Create the common telemetry base for one generation snapshot.
 
 Parameters:
-
 - `telemetryContext` - Neat-like context with species state.
 - `generation` - Generation index for this snapshot.
 - `fittestGenome` - Fittest genome record with score.
@@ -239,7 +228,6 @@ createMonoObjectiveTelemetryEntry(
 Create the initial mono-objective telemetry payload before optional expansions are attached.
 
 Parameters:
-
 - `telemetryContext` - Neat-like context with species state.
 - `generation` - Generation index for this snapshot.
 - `fittestGenome` - Fittest genome record with score.
@@ -263,7 +251,6 @@ createMultiObjectiveTelemetryEntry(
 Create the initial multi-objective telemetry payload before optional expansions are attached.
 
 Parameters:
-
 - `telemetryContext` - Neat-like context with species state.
 - `generation` - Generation index for this snapshot.
 - `fittestGenome` - Fittest genome record with score.
@@ -289,7 +276,6 @@ This helper centralizes defaults so downstream telemetry producers can
 extend the entry while keeping the strict `TelemetryEntry` contract.
 
 Parameters:
-
 - `generationIndex` - Generation index for the telemetry snapshot.
 - `bestScore` - Best fitness value observed in the generation.
 - `speciesCount` - Number of extant species.
@@ -312,14 +298,12 @@ predictable: honor field selection, keep the history buffer initialized,
 optionally notify observers, and cap memory growth.
 
 Write order:
-
 1. apply telemetry selection without breaking the evolution loop
 2. append the entry to the in-memory history buffer
 3. stream the entry when the host opts into runtime callbacks
 4. trim history to a bounded window
 
 Parameters:
-
 - `entry` - Telemetry entry to record.
 
 Returns: Nothing. The entry is persisted by side effect on the host.
@@ -328,10 +312,7 @@ Example:
 
 ```ts
 // record a simple telemetry entry from inside the evolve loop
-neat.recordTelemetryEntry({
-  gen: neat.generation,
-  best: neat.population[0].score,
-});
+neat.recordTelemetryEntry({ gen: neat.generation, best: neat.population[0].score });
 ```
 
 ### resolveFittestScore
@@ -345,7 +326,6 @@ resolveFittestScore(
 Resolve the best score from the current fittest genome snapshot.
 
 Parameters:
-
 - `fittestGenome` - Fittest genome record with optional score.
 
 Returns: Best score value.
@@ -361,7 +341,6 @@ resolveTelemetryBuildOptions(
 Resolve telemetry build options from the current recorder context.
 
 Parameters:
-
 - `telemetryContext` - Neat-like context with telemetry settings.
 
 Returns: Telemetry build options.
@@ -377,7 +356,6 @@ resolveTelemetryPopulation(
 Resolve the current population snapshot used by telemetry builders.
 
 Parameters:
-
 - `telemetryContext` - Neat-like context with population state.
 
 Returns: Population snapshot.
@@ -398,7 +376,6 @@ The result is cached on the graph object for the current generation in
 `_entropyVal` to avoid repeated expensive recomputation.
 
 Parameters:
-
 - `graph` - A genome-like object with `nodes` and `connections` arrays.
 
 Returns: A non-negative number approximating structural entropy.

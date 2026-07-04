@@ -3,7 +3,7 @@
  *
  * These types define the generic layout, positioning, and scene contracts
  * that any demo or external user can implement. Demo-specific overlays
- * (Flappy input bands, ASCII Maze labels, etc.) are injected as optional
+ * (input-group label bands, layer labels, etc.) are injected as optional
  * callback hooks rather than baked into this core layer.
  */
 
@@ -78,13 +78,13 @@ export interface NetworkVisualizationResolvedFrame {
 /**
  * Optional hook functions that demos can use to inject custom overlays.
  *
- * Flappy Bird injects input-group label bands and per-input descriptions.
- * ASCII Maze could inject custom layer labels, or leave hooks undefined.
+ * A consumer can inject input-group label bands and per-input descriptions,
+ * or custom layer labels, or leave hooks undefined.
  */
 export interface OverlayFactoryHooks {
   /**
    * Optional factory that creates demo-specific overlay scenes drawn on top of the base network graph
-   * after each rendering pass; for example, Flappy Bird uses this hook to add input-group label bands.
+   * after each rendering pass; for example, a consumer can use this hook to add input-group label bands.
    */
   createDemoOverlayScenes?: (
     positionedNodes: PositionedNetworkNode[],

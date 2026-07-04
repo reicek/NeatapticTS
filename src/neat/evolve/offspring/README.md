@@ -60,7 +60,6 @@ telemetry, and inbreeding reads without forcing the crossover call itself to
 know about controller-level bookkeeping.
 
 Parameters:
-
 - `context` - NEAT-like host containing population and options.
 - `offspring` - Newly crossed child genome.
 - `parentOne` - First selected parent.
@@ -86,7 +85,6 @@ lineage depth, and finally reapplies minimum structural invariants so the new
 child is ready for the rest of the evolve loop.
 
 Parameters:
-
 - `context` - NEAT-like host containing population and options.
 - `selectParent` - Callback to select a parent genome.
 
@@ -109,7 +107,6 @@ helper keeps that cleanup local to offspring creation so later population code
 can treat returned children as already normalized.
 
 Parameters:
-
 - `context` - NEAT-like host containing population and options.
 - `offspring` - Newly crossed child genome.
 
@@ -142,7 +139,6 @@ abort offspring creation immediately, this helper first falls back to a known
 stable population index and then to a random population read when needed.
 
 Parameters:
-
 - `context` - NEAT-like host containing population and options.
 - `selectParent` - Callback to select a parent genome.
 - `populationFallback` - Optional alternate population to read from.

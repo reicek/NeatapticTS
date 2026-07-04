@@ -76,7 +76,7 @@ Pruning mechanics used by scheduled and adaptive NEAT pruning.
 This chapter holds the policy resolution and metric math that sit underneath
 the public pruning entrypoints.
 
-The public pruning chapter explains _when_ pruning is invoked. This file
+The public pruning chapter explains *when* pruning is invoked. This file
 explains how both pruning modes reduce to one shared pipeline:
 
 1. resolve the active policy block,
@@ -118,7 +118,6 @@ shared prune level, and this helper applies that single controller decision
 uniformly across genomes that support sparsity pruning.
 
 Parameters:
-
 - `host` - NEAT host exposing the population.
 - `pruneLevel` - Prune level to apply.
 
@@ -141,7 +140,6 @@ is simply to fan the computed scheduled sparsity target out across genomes
 that actually implement pruning support.
 
 Parameters:
-
 - `host` - NEAT host exposing the population.
 - `options` - Active scheduled pruning options.
 - `targetSparsity` - Target sparsity to apply.
@@ -163,7 +161,6 @@ control. Like node count, it is reduced to a population mean so the adaptive
 controller reacts to trend rather than to one outlier genome.
 
 Parameters:
-
 - `host` - NEAT host exposing the population.
 
 Returns: Average number of connections per genome.
@@ -183,7 +180,6 @@ watch. It is intentionally averaged so population size changes do not by
 themselves distort the pruning signal.
 
 Parameters:
-
 - `host` - NEAT host exposing the population.
 
 Returns: Average number of nodes per genome.
@@ -207,7 +203,6 @@ Higher-than-target complexity tightens pruning; lower-than-target complexity
 relaxes it.
 
 Parameters:
-
 - `options` - Adaptive pruning options.
 - `currentPruneLevel` - Current shared prune level.
 - `currentMetricValue` - Current observed metric value.
@@ -231,7 +226,6 @@ helpers use to decide whether complexity is drifting away from the desired
 sparsity target.
 
 Parameters:
-
 - `host` - NEAT host exposing the population.
 
 Returns: Summary of mean node and connection counts.
@@ -252,7 +246,6 @@ the controller phase sparsity in gradually over several generations so the
 population does not experience one abrupt structural shock.
 
 Parameters:
-
 - `host` - NEAT host exposing generation state.
 - `options` - Active scheduled pruning options.
 
@@ -275,7 +268,6 @@ translating the baseline metric into the remaining amount of structure the
 controller wants to keep.
 
 Parameters:
-
 - `options` - Adaptive pruning options.
 - `adaptivePruneBaseline` - Baseline metric value.
 
@@ -297,7 +289,6 @@ snapping there immediately. This helper converts the current ramp progress
 into the exact target sparsity the active generation should use.
 
 Parameters:
-
 - `host` - NEAT host exposing generation state.
 - `options` - Active scheduled pruning options.
 
@@ -319,7 +310,6 @@ that state once, rather than making every downstream helper repeat the same
 initialization guard.
 
 Parameters:
-
 - `host` - NEAT host exposing adaptive pruning state.
 
 Returns: Nothing. The shared prune level is initialized when missing.
@@ -339,7 +329,6 @@ rest of the adaptive helpers read linearly by collapsing disabled or missing
 configuration into one `null` check.
 
 Parameters:
-
 - `host` - NEAT host exposing adaptive pruning options.
 
 Returns: Adaptive pruning options when enabled, otherwise `null`.
@@ -359,7 +348,6 @@ the public pruning wrapper simple by answering one precise question: does the
 current generation actually belong to the configured pruning schedule?
 
 Parameters:
-
 - `host` - NEAT host exposing generation and pruning options.
 
 Returns: Evolution pruning options when active, otherwise `null`.
@@ -380,7 +368,6 @@ when the controller first engaged. Later drift calculations are measured
 against that remembered baseline rather than against a moving target.
 
 Parameters:
-
 - `host` - NEAT host exposing adaptive baseline state.
 - `currentMetricValue` - Currently observed metric value.
 
@@ -402,7 +389,6 @@ turns the configured metric name into the actual observed value that the rest
 of the controller math will compare with the target remaining complexity.
 
 Parameters:
-
 - `options` - Adaptive pruning options.
 - `metrics` - Population metric summary.
 
@@ -426,7 +412,6 @@ around the target are ignored so the prune level does not chatter on every
 minor metric wobble.
 
 Parameters:
-
 - `options` - Adaptive pruning options.
 - `currentMetricValue` - Current observed metric value.
 - `targetRemainingMetric` - Target remaining metric value.

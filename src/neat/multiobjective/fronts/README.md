@@ -8,7 +8,6 @@ blocks, this file peels the population into ordered Pareto fronts and writes
 the `_moRank` annotations that later selection and telemetry reads expect.
 
 The boundary is intentionally narrow:
-
 - `objectives/` owns safe value extraction and matrix assembly
 - `dominance/` owns pairwise comparison and first-front discovery
 - this file owns frontier peeling and rank annotation
@@ -21,7 +20,6 @@ file therefore works only with index lists and one shared population array;
 it does not rebuild the matrix or recompute pairwise dominance.
 
 Conceptually, the pass answers three questions:
-
 1. Which indices already belong to the first front?
 2. When a front is removed, which domination counts should drop to zero next?
 3. Which genomes should be annotated with the current Pareto rank before the
@@ -63,7 +61,6 @@ archive helpers can read one stable annotation instead of carrying a parallel
 rank table beside the population.
 
 Parameters:
-
 - `population` - Genome population.
 - `genomeIndex` - Index of the genome to annotate.
 - `frontRank` - Pareto front rank (0 = best front).
@@ -87,7 +84,6 @@ stable indices to genome references happens only after the current layer has
 been fully identified.
 
 Parameters:
-
 - `paretoFronts` - Accumulator for Pareto fronts.
 - `population` - Genome population.
 - `currentFrontIndices` - Indices for the current front.
@@ -110,7 +106,6 @@ current front with the same rank, then remove each genome's blocking
 influence so newly non-dominated neighbors can surface as the next front.
 
 Parameters:
-
 - `population` - Genome population.
 - `dominanceState` - Dominance bookkeeping.
 - `currentFrontIndices` - Indices for the current front.
@@ -131,7 +126,6 @@ buildParetoFronts(
 Builds Pareto fronts from a precomputed dominance state.
 
 This performs the “peeling” phase of fast non-dominated sorting:
-
 - Start with the first front (all non-dominated genomes).
 - For each front, reduce domination counts of the genomes it dominates.
 - Each genome whose domination count becomes zero moves to the next front.
@@ -141,19 +135,16 @@ comparisons; instead it trusts the dominance-state handoff and repeatedly
 relaxes domination counts until the next layer becomes visible.
 
 Side effects:
-
 - Annotates each genome in `population` with `_moRank` (0 = best front).
 
 Guard:
-
 - Stops when `currentFrontRank > maxFrontRankGuard` to avoid pathological
   infinite/degenerate runs. If the guard triggers, the returned fronts may
   be incomplete.
 
 Parameters:
-
 - `population` - Genome population (same ordering used by dominance
-  bookkeeping).
+bookkeeping).
 - `dominanceState` - Dominance bookkeeping.
 - `maxFrontRankGuard` - Safety guard for ranking iterations.
 
@@ -178,7 +169,6 @@ removing that blocker. When the count reaches zero, the neighbor has no
 remaining dominating opponents and can join the next frontier.
 
 Parameters:
-
 - `dominanceState` - Dominance bookkeeping.
 - `genomeIndex` - Index of the current genome.
 - `nextFrontIndices` - Accumulator for the next front.
@@ -197,7 +187,6 @@ Keeping rank advancement in its own helper makes the frontier loop easier to
 read and keeps the guard check phrased in terms of the next rank value.
 
 Parameters:
-
 - `currentFrontRank` - Current front rank.
 
 Returns: Incremented front rank.
@@ -227,7 +216,6 @@ configured maximum rank, the function stops and returns the fronts collected
 so far rather than risking a pathological or corrupted infinite loop.
 
 Parameters:
-
 - `currentFrontRank` - Current front rank after increment.
 - `maxFrontRankGuard` - Safety guard for ranking iterations.
 

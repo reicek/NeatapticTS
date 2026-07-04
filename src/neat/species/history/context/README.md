@@ -70,7 +70,6 @@ focused on serving historical data, while this helper owns the one-time host
 translation from controller internals into a stable read-side context.
 
 Parameters:
-
 - `host` - NEAT host exposing species history, species records, explicit legacy/import fallback innovation logic, and options.
 
 Returns: Normalized history-read context for the species facade.

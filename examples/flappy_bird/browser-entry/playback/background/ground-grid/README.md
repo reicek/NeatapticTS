@@ -31,7 +31,6 @@ final effect reads as depth and motion rather than as a collection of loose
 line helpers.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `sourceScene` - Shared lower-band geometry from the background module.
 - `request` - Shared parallax scroll input for the current frame.
@@ -447,7 +446,6 @@ drawGroundGridFog(
 Draws the lower-band atmospheric wash behind the neon line work.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `resolvedScene` - Geometry and style for the current viewport.
 
@@ -466,7 +464,6 @@ drawGroundGridPulse(
 Draws one pulse square above the grid lines and below gameplay entities.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `pulse` - Visible pulse square for the current frame.
 - `fillColor` - Core neon fill color.
@@ -485,7 +482,6 @@ drawGroundGridSegmentBatch(
 Draws one batch of neon line segments that share one render style.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `batch` - Ordered line-segment batch that shares one render style.
 
@@ -504,7 +500,6 @@ drawGroundGridSegmentBatches(
 Draws one ordered collection of neon segment batches.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `batches` - Ordered line-segment batches to render.
 - `lineColor` - Core neon stroke color.
@@ -524,7 +519,6 @@ drawPlaybackGroundGrid(
 Draws the resolved neon ground grid inside the lower background band.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `resolvedScene` - Geometry and style for the current viewport.
 - `geometry` - Precomputed horizontal and vertical line segments.
@@ -544,7 +538,6 @@ resolvePlaybackGroundGridSceneContext(
 Resolves the shared scene context used by the ground-grid renderer.
 
 Parameters:
-
 - `sceneContext` - Lower-band geometry provided by the background module.
 
 Returns: Narrow scene contract consumed by grid-specific helpers.
@@ -563,7 +556,6 @@ drawGroundGridFog(
 Draws the lower-band atmospheric wash behind the neon line work.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `resolvedScene` - Geometry and style for the current viewport.
 
@@ -582,7 +574,6 @@ drawGroundGridPulse(
 Draws one pulse square above the grid lines and below gameplay entities.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `pulse` - Visible pulse square for the current frame.
 - `fillColor` - Core neon fill color.
@@ -605,7 +596,6 @@ The ground grid is derived from viewport width and total scene height, so a
 page resize invalidates every cached geometry variant and fog gradient.
 
 Parameters:
-
 - `sceneContext` - Current lower-band scene geometry.
 
 Returns: Stable viewport-size cache key for the current frame.
@@ -624,7 +614,6 @@ resolveCachedGroundGridFogGradient(
 Resolves a cached fog gradient for one canvas and local scene.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `sceneCacheKey` - Stable scene key for the active viewport.
 - `sceneContext` - Current lower-band scene geometry.
@@ -644,7 +633,6 @@ resolveCachedGroundGridHorizontalGeometry(
 Resolves cached horizontal geometry for one scene.
 
 Parameters:
-
 - `sceneCacheKey` - Stable scene key for the active viewport.
 - `factory` - Lazy geometry builder used when the cache misses.
 
@@ -662,7 +650,6 @@ resolveCachedGroundGridVerticalGeometry(
 Resolves cached vertical geometry for one scene and wrapped offset cycle.
 
 Parameters:
-
 - `cycleCacheKey` - Scene-and-offset cache key for the active frame.
 - `factory` - Lazy geometry builder used when the cache misses.
 
@@ -680,7 +667,6 @@ resolveCachedGroundGridVerticalSceneMetrics(
 Resolves cached scene metrics for one vertical-grid layout.
 
 Parameters:
-
 - `sceneCacheKey` - Stable scene key for the active viewport.
 - `factory` - Lazy scene-metrics builder used when the cache misses.
 
@@ -697,7 +683,6 @@ resolveGroundGridSceneCacheKey(
 Resolves the stable local-scene cache key for ground-grid geometry.
 
 Parameters:
-
 - `sceneContext` - Current lower-band scene geometry.
 
 Returns: Scene key suitable for static horizontal and vertical cache entries.
@@ -714,7 +699,6 @@ resolveGroundGridVerticalCycleCacheKey(
 Resolves the cache key for one wrapped vertical-geometry cycle.
 
 Parameters:
-
 - `sceneCacheKey` - Stable scene key for the active viewport.
 - `wrappedOffsetPx` - Wrapped offset within one lane cycle.
 
@@ -731,7 +715,6 @@ resolveGroundGridViewportCacheKey(
 Resolves the viewport-size cache key used by the ground-grid caches.
 
 Parameters:
-
 - `sceneContext` - Current lower-band scene geometry.
 
 Returns: Cache key that changes whenever the page size changes.
@@ -750,7 +733,6 @@ drawGroundGridSegmentBatch(
 Draws one batch of neon line segments that share one render style.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `batch` - Ordered line-segment batch that shares one render style.
 
@@ -769,7 +751,6 @@ drawGroundGridSegmentBatches(
 Draws one ordered collection of neon segment batches.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `batches` - Ordered line-segment batches to render.
 - `lineColor` - Core neon stroke color.
@@ -788,7 +769,6 @@ strokePlaybackGroundGridBatch(
 Strokes one ground-grid batch using a cached path when the environment supports it.
 
 Parameters:
-
 - `context` - Canvas 2D drawing context.
 - `batch` - Ordered line-segment batch that shares one render style.
 
@@ -809,7 +789,6 @@ resolvePlaybackGroundGridGeometry(
 Builds the line geometry for the neon ground grid.
 
 Parameters:
-
 - `sceneContext` - Lower-band geometry for the current viewport.
 - `frameIndex` - Current deterministic playback frame index.
 - `scrollBasePx` - Shared world scroll used for parallax motion.
@@ -829,7 +808,6 @@ groupPlaybackGroundGridSegmentsByStyle(
 Groups line segments into ordered style batches for lower-overhead drawing.
 
 Parameters:
-
 - `segments` - Ordered line segments that should preserve draw grouping.
 
 Returns: Ordered style batches that can be stroked with fewer state changes.
@@ -845,7 +823,6 @@ resolvePlaybackGroundGridBatchPath(
 Resolves one cached draw-ready path for a grouped segment batch.
 
 Parameters:
-
 - `segments` - Ordered line segments that belong to one style batch.
 
 Returns: Cached Path2D when available, otherwise null.
@@ -861,7 +838,6 @@ resolvePlaybackGroundGridPreferredHorizontalPulsePaths(
 Prefers the nearer, thicker horizontal tracks when picking a pulse lane.
 
 Parameters:
-
 - `horizontalLines` - Visible horizontal grid bands.
 
 Returns: Pulse-eligible horizontal paths biased toward the foreground.
@@ -879,7 +855,6 @@ buildPlaybackGroundGridVerticalSceneMetrics(
 Builds the static scene metrics reused across one viewport-sized grid layout.
 
 Parameters:
-
 - `sceneContext` - Lower-band geometry for the current viewport.
 
 Returns: Stable anchor bounds and lane spacing for vertical-ray reuse.
@@ -896,7 +871,6 @@ isPlaybackGroundGridVerticalPulsePathVisible(
 Resolves whether one vertical pulse path is safely visible in the viewport.
 
 Parameters:
-
 - `pulsePath` - Candidate vertical pulse path.
 - `sceneContext` - Current lower-band scene geometry.
 
@@ -913,7 +887,6 @@ projectPlaybackGroundGridProjectedXToAnchorX(
 Projects one visible x-position at an arbitrary y-level to the anchor line.
 
 Parameters:
-
 - `input` - Projected target and scene geometry.
 
 Returns: Bottom anchor x-position whose ray reaches the projected point.
@@ -929,7 +902,6 @@ resolvePlaybackGroundGridAnchorBounds(
 Projects one visible horizontal span back onto the floor anchor line.
 
 Parameters:
-
 - `input` - Visible span bounds and scene geometry.
 
 Returns: Bottom-anchor bounds required to cover the chosen projected span.
@@ -951,7 +923,6 @@ lane width at any y-position is just the bottom-anchor spacing multiplied by
 the remaining width ratio between the bottom edge and the vanishing point.
 
 Parameters:
-
 - `lowerBandBottomYPx` - Bottom edge of the visible ground band.
 - `vanishingPointYPx` - Shared vanishing-point y-position.
 - `targetYPx` - Projected y-position whose retained width should be measured.
@@ -971,7 +942,6 @@ resolvePlaybackGroundGridVerticalCycleContext(
 Resolves the wrapped vertical-geometry cycle for the current scroll value.
 
 Parameters:
-
 - `safeLaneSpacingPx` - Stable lane spacing used by current viewport metrics.
 - `lowerBandBottomYPx` - Lower edge of the visible ground-grid band.
 - `scrollBasePx` - Shared world scroll used for parallax motion.
@@ -993,7 +963,6 @@ appendPlaybackGroundGridVerticalLineSegments(
 Appends tapered style segments for one perspective ray.
 
 Parameters:
-
 - `targetSegments` - Target line-segment buffer.
 - `startIndex` - Current insertion index within the target buffer.
 - `input` - Geometry and depth context for one ray.
@@ -1011,7 +980,6 @@ buildPlaybackGroundGridHorizontalGeometry(
 Builds the screen-horizontal depth bands for the lower neon plane.
 
 Parameters:
-
 - `sceneContext` - Lower-band geometry for the current viewport.
 
 Returns: Ordered far-to-near line segments and pulse subsets.
@@ -1029,7 +997,6 @@ buildPlaybackGroundGridVerticalGeometry(
 Builds the perspective rays that converge to the centered horizon point.
 
 Parameters:
-
 - `sceneContext` - Lower-band geometry for the current viewport.
 - `safeLaneSpacingPx` - Stable lane spacing used for ray anchors.
 - `wrappedOffsetPx` - Wrapped offset used for cache reuse and ray placement.
@@ -1047,7 +1014,6 @@ resolvePlaybackGroundGridHorizontalGeometry(
 Resolves cached screen-horizontal depth bands for the lower neon plane.
 
 Parameters:
-
 - `sceneContext` - Lower-band geometry for the current viewport.
 
 Returns: Ordered far-to-near line segments and pulse subsets.
@@ -1064,7 +1030,6 @@ resolvePlaybackGroundGridVerticalGeometry(
 Resolves cached perspective rays that converge to the centered horizon point.
 
 Parameters:
-
 - `sceneContext` - Lower-band geometry for the current viewport.
 - `scrollBasePx` - Shared world scroll used for parallax motion.
 
@@ -1087,7 +1052,6 @@ interpolatePlaybackGroundGridPoint(
 Interpolates one point along a perspective ray.
 
 Parameters:
-
 - `startXPx` - Bottom anchor x-position.
 - `startYPx` - Bottom anchor y-position.
 - `endXPx` - Vanishing-point x-position.
@@ -1115,7 +1079,6 @@ resolvePlaybackGroundGridDepthCurve(
 Maps a normalized depth ratio into a stronger synthwave spacing curve.
 
 Parameters:
-
 - `depthRatio` - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Curved depth ratio used for line placement and styling.
@@ -1132,7 +1095,6 @@ resolvePlaybackGroundGridDepthFromHorizonDistance(
 Resolves normalized depth from a vertical distance away from the horizon.
 
 Parameters:
-
 - `distanceToHorizonPx` - Vertical distance from the vanishing horizon.
 - `maximumDistanceToHorizonPx` - Largest visible vertical horizon distance.
 
@@ -1149,7 +1111,6 @@ resolvePlaybackGroundGridLineAlpha(
 Resolves neon alpha for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Opacity for the rendered line.
@@ -1165,7 +1126,6 @@ resolvePlaybackGroundGridLineBlur(
 Resolves glow blur for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Blur radius for the rendered line.
@@ -1181,7 +1141,6 @@ resolvePlaybackGroundGridLineThickness(
 Resolves stroke thickness for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Stroke width in pixels.
@@ -1202,7 +1161,6 @@ perspective rays so their lateral motion matches the pipe speed exactly at
 that same projected height.
 
 Parameters:
-
 - `visibleWorldHeightPx` - Current visible world height in pixels.
 
 Returns: Pipe-floor y-position plus the matching vertical-ray scroll ratio.
@@ -1221,7 +1179,6 @@ rememberPlaybackGroundGridVerticalPulseSelection(
 Stores the resolved pulse center for continuation on the next frame.
 
 Parameters:
-
 - `pulseSlotIndex` - Zero-based pulse slot index.
 - `continuationState` - Latest visible pulse position for the slot.
 
@@ -1238,7 +1195,6 @@ resolveContinuedVerticalPulsePath(
 Resolves the nearest continued vertical pulse path for an active slot.
 
 Parameters:
-
 - `input` - Continuation input for the current frame.
 
 Returns: Continued pulse path when one can be matched, otherwise null.
@@ -1259,7 +1215,6 @@ This helper first prefers the nearest continuation of the previous frame's
 pulse position, then falls back to deterministic slot-based selection.
 
 Parameters:
-
 - `verticalPulsePaths` - Full vertical ray paths for the current frame.
 - `visibleVerticalPulsePaths` - Visible subset preferred for on-screen pulses.
 - `pulseSlotIndex` - Zero-based pulse slot index.
@@ -1281,7 +1236,6 @@ resolveStableVerticalPulsePathCandidates(
 Resolves a stable vertical pulse-candidate set for one frame.
 
 Parameters:
-
 - `verticalPulsePaths` - Full vertical ray paths for the current frame.
 - `visibleVerticalPulsePaths` - Midpoint-visible subset used as fallback.
 
@@ -1298,7 +1252,6 @@ trimCachedVerticalPulseContinuationState(
 Trims cached continuation state so only the current or previous pulse slots remain.
 
 Parameters:
-
 - `currentPulseSlotIndex` - Pulse slot currently being resolved.
 
 Returns: Nothing.
@@ -1317,7 +1270,6 @@ resolvePlaybackGroundGridHorizontalPulsePath(
 Selects one thick-enough horizontal band for the current pulse slot.
 
 Parameters:
-
 - `horizontalPulsePaths` - Cached horizontal pulse paths eligible for travel.
 - `pulseSlotIndex` - Zero-based pulse slot index.
 
@@ -1334,7 +1286,6 @@ resolvePlaybackGroundGridPulseOrientation(
 Resolves pulse orientation for one deterministic pulse slot.
 
 Parameters:
-
 - `pulseSlotIndex` - Zero-based pulse slot index.
 
 Returns: Horizontal or vertical pulse travel orientation.
@@ -1350,7 +1301,6 @@ resolvePlaybackGroundGridPulseTiming(
 Resolves timing state for the currently active deterministic pulse slot.
 
 Parameters:
-
 - `frameIndex` - Current deterministic playback frame index.
 
 Returns: Pulse timing state, or null when no pulse is active in this frame.
@@ -1366,7 +1316,6 @@ resolvePlaybackGroundGridPulseTravelRatio(
 Resolves the pulse travel ratio along its chosen line.
 
 Parameters:
-
 - `input` - Pulse timing direction and orientation.
 
 Returns: Normalized 0..1 travel ratio along the chosen line.
@@ -1383,7 +1332,6 @@ resolvePlaybackGroundGridUnitHash(
 Resolves a deterministic unit-interval hash from a slot index and salt.
 
 Parameters:
-
 - `seed` - Slot-local seed value.
 - `salt` - Small integer salt used to pick a stable random stream.
 
@@ -1402,7 +1350,6 @@ resolvePlaybackGroundGridPulse(
 Resolves one rare, deterministic pulse square for the current frame.
 
 Parameters:
-
 - `input` - Current frame timing and visible pulse path candidates.
 
 Returns: Visible pulse square, or null when the current slot is inactive.
@@ -1418,7 +1365,6 @@ resolvePlaybackGroundGridPulseTrackThickness(
 Resolves the local track thickness at the pulse position.
 
 Parameters:
-
 - `input` - Pulse position, path, and scene geometry.
 
 Returns: Thickness of the current line under the pulse.
@@ -1440,7 +1386,6 @@ interpolatePlaybackGroundGridPoint(
 Interpolates one point along a perspective ray.
 
 Parameters:
-
 - `startXPx` - Bottom anchor x-position.
 - `startYPx` - Bottom anchor y-position.
 - `endXPx` - Vanishing-point x-position.
@@ -1460,7 +1405,6 @@ resolvePlaybackGroundGridDepthCurve(
 Maps a normalized depth ratio into a stronger synthwave spacing curve.
 
 Parameters:
-
 - `depthRatio` - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Curved depth ratio used for line placement and styling.
@@ -1477,7 +1421,6 @@ resolvePlaybackGroundGridDepthFromHorizonDistance(
 Resolves normalized depth from a vertical distance away from the horizon.
 
 Parameters:
-
 - `distanceToHorizonPx` - Vertical distance from the vanishing horizon.
 - `maximumDistanceToHorizonPx` - Largest visible vertical horizon distance.
 
@@ -1496,7 +1439,6 @@ resolvePlaybackGroundGridGeometry(
 Builds the line geometry for the neon ground grid.
 
 Parameters:
-
 - `sceneContext` - Lower-band geometry for the current viewport.
 - `frameIndex` - Current deterministic playback frame index.
 - `scrollBasePx` - Shared world scroll used for parallax motion.
@@ -1514,7 +1456,6 @@ resolvePlaybackGroundGridLineAlpha(
 Resolves neon alpha for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Opacity for the rendered line.
@@ -1530,7 +1471,6 @@ resolvePlaybackGroundGridLineBlur(
 Resolves glow blur for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Blur radius for the rendered line.
@@ -1546,7 +1486,6 @@ resolvePlaybackGroundGridLineThickness(
 Resolves stroke thickness for one line based on its normalized depth.
 
 Parameters:
-
 - `depthRatio` - Normalized 0..1 depth where 0 is far and 1 is near.
 
 Returns: Stroke width in pixels.
@@ -1562,7 +1501,6 @@ resolvePlaybackGroundGridSceneContext(
 Resolves the shared scene context used by the ground-grid renderer.
 
 Parameters:
-
 - `sceneContext` - Lower-band geometry provided by the background module.
 
 Returns: Narrow scene contract consumed by grid-specific helpers.

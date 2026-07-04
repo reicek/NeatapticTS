@@ -342,3 +342,23 @@ describe('reproducePolyandric queenBias honoring (P5)', () => {
     });
   });
 });
+
+describe('seed policy shorthand expansion (P5)', () => {
+  it('expands queen-weighted shorthand to canonical seed policy in offspring', () => {
+    const result = reproducePolyandric({
+      drones: [{ dna: buildSharedDrone(), parentId: 'drone:seed' }],
+      ngeEnabled: true,
+      policy: {
+        ...createReproductionPolicy({ mode: 'polyandric' }),
+        seedPolicy: 'queen-weighted',
+      },
+      queen: buildSharedQueen(),
+      queenId: 'queen:seed',
+    });
+
+    expect(result.offspring.reproductionPolicy.seedPolicy).toEqual({
+      siblingsDifferBySeed: true,
+      twinsAllowed: false,
+    });
+  });
+});

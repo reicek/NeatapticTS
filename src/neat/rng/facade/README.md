@@ -42,7 +42,6 @@ handoff. Compared with `snapshotRNGState()`, the emphasis here is portability
 rather than momentary inspection.
 
 Parameters:
-
 - `host` - `Neat` instance exposing RNG state.
 
 Returns: Numeric RNG state or `undefined` when the RNG has not been initialized.
@@ -65,7 +64,6 @@ Read this as a compatibility alias, not a second persistence model. New
 readers should understand it as the same replay boundary with older naming.
 
 Parameters:
-
 - `host` - `Neat` instance exposing RNG state.
 - `state` - Numeric or string seed snapshot to restore.
 
@@ -102,7 +100,6 @@ prove that two runs consume the same future subsequence. The wrapper does not
 draw a random number itself; it only repositions the next draw.
 
 Parameters:
-
 - `host` - `Neat` instance exposing RNG state.
 - `state` - Numeric or string seed snapshot to restore.
 
@@ -127,7 +124,6 @@ snapshot-then-restore pattern when the caller wants to inspect a sequence
 without permanently consuming that portion of the run's randomness budget.
 
 Parameters:
-
 - `host` - `Neat` instance exposing RNG state.
 - `sampleCount` - Number of random values to generate.
 
@@ -161,7 +157,6 @@ test session. It captures the current numeric position without implying that
 the token is about to cross a persistence boundary.
 
 Parameters:
-
 - `host` - `Neat` instance exposing RNG state.
 
 Returns: Numeric RNG state or `undefined` when the RNG has not been initialized.

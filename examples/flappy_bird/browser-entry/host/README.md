@@ -28,7 +28,6 @@ Builds the browser demo host tree and returns rendering handles.
 This is the public host entrypoint used by the runtime startup path.
 
 Parameters:
-
 - `containerElement` - Root host container.
 
 Returns: Canvas handles, stats cells and network render callback.
@@ -49,7 +48,6 @@ create canvases, wire resize behavior, render placeholders, then return the
 handles the runtime will mutate during execution.
 
 Parameters:
-
 - `containerElement` - Root host container.
 
 Returns: Canvas handles, stats cells and network render callback.
@@ -66,7 +64,6 @@ createHeaderFrameRenderer(
 Creates the reusable title-frame renderer for the header canvas.
 
 Parameters:
-
 - `headerCanvas` - Header canvas element.
 - `headerContext` - Header canvas 2D context.
 
@@ -86,7 +83,6 @@ The host manages three canvas surfaces with different jobs: a title/header
 frame, the main simulation view, and the side-panel network visualization.
 
 Parameters:
-
 - `hostVisualPrimitives` - Shared visual primitives for border and shadow styling.
 
 Returns: Simulation, header, and network canvases with required contexts.
@@ -105,7 +101,6 @@ This creates the structural DOM only. Canvases, stats content, and
 visualization wiring are layered on afterward.
 
 Parameters:
-
 - `hostVisualPrimitives` - Shared visual primitives for border and shadow styling.
 
 Returns: Layout elements grouped by host responsibility.
@@ -123,7 +118,6 @@ createHostNetworkVisualizationController(
 Creates the network visualization renderer and redraw controller.
 
 Parameters:
-
 - `networkCanvasHost` - Host element wrapping the network canvas.
 - `networkCanvas` - Network visualization canvas.
 - `networkContext` - Network visualization 2D context.
@@ -145,7 +139,6 @@ installCanvasHostResizeHooks(
 Installs responsive resize hooks for the simulation canvas and side panel.
 
 Parameters:
-
 - `canvas` - Simulation canvas.
 - `hostLayoutElements` - Prepared layout containers.
 - `networkCanvas` - Network visualization canvas.
@@ -170,7 +163,6 @@ mountCanvasHostTree(
 Mounts the completed host DOM tree into the container in final order.
 
 Parameters:
-
 - `containerElement` - Root host container.
 - `hostLayoutElements` - Prepared layout containers.
 - `headerCanvas` - Header title canvas.
@@ -191,7 +183,6 @@ renderInitialCanvasHostState(
 Renders the initial header and placeholder network visualization state.
 
 Parameters:
-
 - `drawHeaderFrame` - Callback that redraws the header title.
 - `renderNetworkArchitecture` - Network visualization renderer.
 
@@ -211,7 +202,6 @@ The demo rebuilds the host from scratch on each startup so repeated runs begin
 from a known clean DOM state.
 
 Parameters:
-
 - `containerElement` - Root host container.
 
 Returns: Nothing.
@@ -244,7 +234,6 @@ The runtime writes HUD values incrementally, so the host exposes a narrow
 partial-update helper rather than requiring full table redraws.
 
 Parameters:
-
 - `statsValueByKey` - Lookup of stat keys to value cells.
 - `partialValues` - Subset of values to write this tick.
 
@@ -346,7 +335,6 @@ Browser canvases have both backing-store dimensions and CSS box dimensions;
 this helper updates both together.
 
 Parameters:
-
 - `canvas` - Target canvas element.
 - `widthPx` - Desired backing-store width in pixels.
 - `heightPx` - Desired backing-store height in pixels.
@@ -369,7 +357,6 @@ The main simulation canvas uses fixed bounds because the world renderer is
 tuned for a controlled viewport rather than fluid DOM stretching.
 
 Parameters:
-
 - `canvas` - Simulation canvas element.
 - `widthPx` - Desired width in pixels.
 - `heightPx` - Desired height in pixels.
@@ -391,7 +378,6 @@ The side-panel network view needs the drawable size after panel insets are
 accounted for, not just the raw host client box.
 
 Parameters:
-
 - `networkCanvasHost` - Host element wrapping the network canvas.
 - `hostInsetPx` - Total inset to subtract from both dimensions.
 
@@ -419,7 +405,6 @@ Resolves a required 2D context from a canvas element.
 Failing early here keeps later rendering code free from repeated null checks.
 
 Parameters:
-
 - `canvas` - Target canvas element.
 - `errorMessage` - Error message when 2D context is unavailable.
 
@@ -450,7 +435,6 @@ summary metrics wait on worker playback completion, and instrumentation rows
 stay explicit about whether runtime telemetry is enabled.
 
 Parameters:
-
 - `statsTableHost` - DOM host that receives the table.
 
 Returns: Lookup map for future incremental stat updates.
@@ -470,7 +454,6 @@ This keeps HUD writes cheap and explicit: only supplied keys are rewritten,
 and architecture values receive their display formatting in one place.
 
 Parameters:
-
 - `statsValueByKey` - Lookup of stat keys to value cells.
 - `partialValues` - Subset of values to write this tick.
 
@@ -501,7 +484,6 @@ creates the deferred redraw policy, runs the first layout pass, and installs
 ongoing resize listeners.
 
 Parameters:
-
 - `canvas` - Simulation canvas to resize.
 - `containerElement` - Width/height source.
 - `mainSplitContainer` - Main split panel host.
@@ -539,7 +521,6 @@ Input descriptions and input nodes intentionally share the same tooltip copy,
 while semantic group bands resolve a broader group-level teaching tooltip.
 
 Parameters:
-
 - `canvasPoint` - Hover point in network-canvas coordinates.
 - `positionedScene` - Rendered positioned scene reused for hover hit testing.
 
@@ -561,7 +542,6 @@ applyArchitectureSelectorButtonPresentation(
 Applies the neon-outline presentation for one architecture selector button.
 
 Parameters:
-
 - `buttonElement` - Target button element.
 - `selectorItem` - Render-ready selector state.
 - `disabled` - Whether the selector is disabled.
@@ -582,7 +562,6 @@ createArchitectureSelectorItemElement(
 Creates one selector item element with hover glow and optional best-score caption.
 
 Parameters:
-
 - `selectorItem` - Render-ready button state.
 - `disabled` - Whether the selector is temporarily disabled.
 - `onClick` - Click callback invoked for fresh-run selection.
@@ -600,7 +579,6 @@ createArchitectureSelectorTooltipElement(
 Creates the neon tooltip shown above one architecture selector button.
 
 Parameters:
-
 - `selectorItem` - Render-ready selector item with heading and teaching copy.
 
 Returns: Tooltip element positioned above the button.
@@ -620,7 +598,6 @@ architecture profiles, exposes a narrow click callback, and lets the runtime
 update local-record captions without rebuilding the whole host tree.
 
 Parameters:
-
 - `options` - Initial selector items and restart callback.
 
 Returns: Imperative controller for selector item and disabled-state updates.
@@ -640,7 +617,6 @@ language while using a muted amber accent to signal that it is a clearing
 action rather than a selection.
 
 Parameters:
-
 - `onResetScores` - Callback invoked when the button is clicked.
 
 Returns: Styled reset button element.
@@ -658,7 +634,6 @@ resolveArchitectureSelectorBoxShadow(
 Resolves the neon glow stack for the architecture selector button state.
 
 Parameters:
-
 - `selected` - Whether the button is the active profile.
 - `hovered` - Whether the button is hovered.
 - `hoverGlowColor` - Primary glow color for the current button state.

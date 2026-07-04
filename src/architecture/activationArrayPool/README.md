@@ -101,7 +101,6 @@ createActivationArray(
 Create one fresh activation buffer using the shared precision owner.
 
 Parameters:
-
 - `size` - Required activation-array length.
 - `precisionFlags` - Config-like precision flags for the current runtime.
 
@@ -119,7 +118,6 @@ createActivationArrayBucketKey(
 Build the pool key for one activation-array bucket.
 
 Parameters:
-
 - `size` - Required activation-array length.
 - `activationPrecision` - Resolved precision for this bucket.
 
@@ -136,7 +134,6 @@ resolveActivationArrayPrecision(
 Infer the retained precision for one released activation array.
 
 Parameters:
-
 - `activationArray` - Activation buffer being returned to the pool.
 
 Returns: Precision bucket that owns this array.

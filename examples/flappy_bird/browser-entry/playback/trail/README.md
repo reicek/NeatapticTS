@@ -7,7 +7,6 @@ afterimage. The policy is intentionally simple: keep only a short recent
 window, and keep the champion trail even shorter and denser.
 
 Minimal usage sketch:
-
 ```ts
 const trailPoints = [{ frameIndex: 10, yPx: 140 }];
 pushTrailPoint(trailPoints, 11, 136, 2);
@@ -33,7 +32,6 @@ the call site instead of scattering champion-specific retention numbers
 through the playback renderer.
 
 Parameters:
-
 - `trailPoints` - Mutable champion trail collection.
 - `frameIndex` - Source frame index.
 - `yPosition` - Bird y position.
@@ -59,7 +57,6 @@ old turns from dominating the current frame, and avoids per-frame growth in a
 long-running browser session.
 
 Parameters:
-
 - `trailPoints` - Mutable trail collection.
 - `frameIndex` - Source frame index.
 - `yPosition` - Bird y position.
@@ -83,7 +80,6 @@ distance-to-edge. These helpers keep that math isolated so the draw path can
 stay focused on painting rather than re-deriving normalization rules.
 
 Minimal usage sketch:
-
 ```ts
 const edgeOpacity = resolveEdgeOpacityFactor(120, 140, edgeBounds);
 const ageOpacity = resolveTrailLifetimeOpacityFactor(3, 12);
@@ -105,7 +101,6 @@ utility local to the module makes the intent obvious: every opacity channel
 must remain safe for direct canvas alpha use.
 
 Parameters:
-
 - `value` - Candidate value.
 
 Returns: Clamped value.
@@ -130,7 +125,6 @@ Returns 0 exactly on or beyond an edge and rises to 1 once distance exceeds
 the configured fade band.
 
 Parameters:
-
 - `pointXPx` - Point x position.
 - `pointYPx` - Point y position.
 - `edgeBounds` - Visible world bounds used for edge distance checks.
@@ -163,7 +157,6 @@ away smoothly so the viewer's eye stays anchored to the current flock motion.
 Oldest retained history approaches 0 opacity; newest approaches 1.
 
 Parameters:
-
 - `frameOffset` - Frames between this point and newest trail point.
 - `maxTrailFrameOffset` - Oldest age offset currently retained by trail.
 

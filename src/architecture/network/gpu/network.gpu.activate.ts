@@ -46,6 +46,7 @@ import {
   SUPPORTED_ACTIVATION_INDICES,
 } from './network.gpu.kernel';
 import {
+  createConcurrentBufferSet,
   destroyGPUBufferSet,
   uploadDynamicNetworkBuffers,
   uploadNetworkToGPU,
@@ -67,7 +68,10 @@ interface NetworkGPUState {
   device: GPUDevice;
   topologyHash: string;
   bufferSet: GPUBufferSet;
-  bindGroup: GPUBindGroup;
+  /** Per-level params uniforms so every dispatch level can use a fixed value. */
+  levelParamsBuffers: (GPUBuffer | undefined)[];
+  /** Per-level bind groups selecting the matching params buffer. */
+  levelBindGroups: (GPUBindGroup | undefined)[];
 }
 
 /** Per-network cache of uploaded GPU state, keyed by the live network object. */
@@ -88,11 +92,13 @@ const activationBindGroupLayoutCache = new WeakMap<
 /**
  * Per-device cache for compiled activation pipelines.
  *
- * The cache key is the generated WGSL source string, which now depends on both
- * the activation function switch and the embedded topology constants.
- * Identical WGSL implies an identical `GPUComputePipeline` and
+ * The cache key is the generated WGSL source string. Topology-specific data
+ * such as `topoLevels` and `inStart` are supplied through read-only storage
+ * buffers at runtime rather than embedded in the shader, so the generated WGSL
+ * depends only on the activation function switch and the fixed storage-buffer
+ * layout. Identical WGSL implies an identical `GPUComputePipeline` and
  * `GPUPipelineLayout`, so the same compiled pipeline can drive any network that
- * shares the same topology and activation.
+ * shares the same activation function.
  */
 const activationPipelineCache = new WeakMap<
   GPUDevice,
@@ -206,22 +212,29 @@ function ensureNetworkGPUState(
 
   if (cached) {
     destroyGPUBufferSet(device, cached.bufferSet);
+    destroyLevelParamsBuffers(cached.levelParamsBuffers);
   }
 
   const bufferSet = uploadNetworkToGPU(device, network);
   const pipeline = getOrCreateActivationPipeline(device, network);
-  const bindGroupLayout = getActivationBindGroupLayout(device);
-  const bindGroup = createActivationBindGroup(
+  const levelParamsBuffers = createLevelParamsBuffers(
     device,
-    bindGroupLayout,
     bufferSet,
+    network.output,
+  );
+  const levelBindGroups = createLevelBindGroups(
+    device,
+    pipeline,
+    bufferSet,
+    levelParamsBuffers,
   );
 
   const state: NetworkGPUState = {
     device,
     topologyHash,
     bufferSet,
-    bindGroup,
+    levelParamsBuffers,
+    levelBindGroups,
   };
 
   networkGPUStateCache.set(network, state);
@@ -279,19 +292,100 @@ export async function activateGPU(
   }
 
   const { state, pipeline } = ensureNetworkGPUState(device, network);
-  const { bufferSet, bindGroup } = state;
+  const { bufferSet, levelBindGroups } = state;
 
   uploadDynamicNetworkBuffers(device, bufferSet, network);
   writeInputValuesToNodeStruct(device, bufferSet.nodes, typedInputs);
-  await dispatchActivationKernel(
-    device,
-    bufferSet,
-    pipeline,
-    bindGroup,
-    network.output,
+
+  const commandEncoder = device.createCommandEncoder({
+    label: 'network_activation',
+  });
+  encodeActivationKernel(commandEncoder, bufferSet, pipeline, levelBindGroups);
+
+  return readOutputValues(commandEncoder, device, network, bufferSet);
+}
+
+/**
+ * Run a single-network forward pass on the GPU without caching the buffer set.
+ *
+ * This is the concurrent-safe counterpart to {@link activateGPU}. Every call
+ * uploads a fresh slab and creates a new bind group, so multiple requests that
+ * target the same `Network` instance cannot overwrite each other's node or
+ * output buffers. Pipelines are still shared through the per-device pipeline
+ * cache, so identical topologies reuse a single compiled kernel.
+ *
+ * @param device - WebGPU device used to run the forward kernel.
+ * @param network - Network whose fast-slab topology will be uploaded.
+ * @param inputs - Input vector of length `network.input`.
+ * @returns A promise resolving to a Float32Array of output-node values.
+ * @throws Error when the network is ineligible for GPU inference.
+ * @throws Error when the network has no nodes or the first node's activation
+ *   cannot be mapped to a supported worker-registry index.
+ *
+ * @example
+ * ```ts
+ * const output = await activateGPUWithFreshState(device, network, [0.5, -0.2]);
+ * ```
+ */
+export async function activateGPUWithFreshState(
+  device: GPUDevice,
+  network: Network,
+  inputs: Float32Array | number[],
+): Promise<Float32Array> {
+  const supportedActivations = new Set<number>(
+    SUPPORTED_ACTIVATION_INDICES as unknown as number[],
   );
 
-  return readOutputValues(device, network, bufferSet);
+  if (!canUseGPU(network, device, supportedActivations)) {
+    throw new Error(
+      'activateGPUWithFreshState: network is not eligible for GPU inference (gated topology, self-connection, unsupported activation, or missing device)',
+    );
+  }
+
+  if (network.nodes.length === 0) {
+    throw new Error('activateGPUWithFreshState: network has no nodes');
+  }
+
+  const typedInputs =
+    inputs instanceof Float32Array ? inputs : new Float32Array(inputs);
+
+  if (typedInputs.length !== network.input) {
+    throw new Error(
+      `activateGPUWithFreshState: expected ${network.input} inputs, received ${typedInputs.length}`,
+    );
+  }
+
+  const bufferSet = createConcurrentBufferSet(device, network);
+  const pipeline = getOrCreateActivationPipeline(device, network);
+  const levelParamsBuffers = createLevelParamsBuffers(
+    device,
+    bufferSet,
+    network.output,
+  );
+  const levelBindGroups = createLevelBindGroups(
+    device,
+    pipeline,
+    bufferSet,
+    levelParamsBuffers,
+  );
+
+  uploadDynamicNetworkBuffers(device, bufferSet, network);
+  writeInputValuesToNodeStruct(device, bufferSet.nodes, typedInputs);
+
+  const commandEncoder = device.createCommandEncoder({
+    label: 'network_activation_fresh',
+  });
+  encodeActivationKernel(commandEncoder, bufferSet, pipeline, levelBindGroups);
+
+  const outputs = await readOutputValues(
+    commandEncoder,
+    device,
+    network,
+    bufferSet,
+  );
+  destroyLevelParamsBuffers(levelParamsBuffers);
+  destroyGPUBufferSet(device, bufferSet);
+  return outputs;
 }
 
 /**
@@ -519,11 +613,15 @@ function prepareActivationContext(network: Network): {
  * Build the bind group that wires the six struct-packed kernel buffers into
  * the pipeline layout. The bind group can be reused across activations as long
  * as the underlying buffers are the same.
+ *
+ * @param paramsBuffer - Optional params uniform buffer. When omitted, the
+ *   buffer set's default params buffer is used.
  */
 function createActivationBindGroup(
   device: GPUDevice,
   layout: GPUBindGroupLayout,
   bufferSet: GPUBufferSet,
+  paramsBuffer?: GPUBuffer,
 ): GPUBindGroup {
   return device.createBindGroup({
     layout,
@@ -542,7 +640,7 @@ function createActivationBindGroup(
       },
       {
         binding: GPU_BUFFER_BINDING.params,
-        resource: { buffer: bufferSet.params },
+        resource: { buffer: paramsBuffer ?? bufferSet.params },
       },
       {
         binding: GPU_BUFFER_BINDING.topoLevels,
@@ -557,37 +655,136 @@ function createActivationBindGroup(
 }
 
 /**
- * Dispatch the activation kernel once per topological level.
- *
- * The params uniform carries the current level, total node count, connection
- * count, and output-node start index. Threads for nodes that do not belong to
- * the current level early-exit, so the same global dispatch size can be reused
- * for every level while still guaranteeing that all source values are available
- * from previous levels.
+ * WebGPU buffer usage flag for uniform buffers.
  */
-async function dispatchActivationKernel(
+const GPU_BUFFER_USAGE_UNIFORM = 0x0040;
+
+/** Byte size of the per-dispatch params uniform buffer. */
+const GPU_PARAMS_BYTES = 16;
+
+/**
+ * Create one params uniform buffer per topological level that needs a GPU
+ * dispatch.
+ *
+ * Level 0 is skipped because input nodes are seeded directly by the caller.
+ * Each buffer stores a fixed level index plus the dimension constants from the
+ * uploaded buffer set so the kernel can early-exit threads that do not belong
+ * to the current level. Keeping the params buffer immutable per level lets the
+ * single-network path record every level into one command encoder without
+ * serializing queue writes between dispatches.
+ *
+ * @param device - WebGPU device used to allocate buffers.
+ * @param bufferSet - Uploaded network slab buffers.
+ * @param outputNodeCount - Number of output nodes in the network.
+ * @returns Array of params buffers indexed by level. Index 0 is `undefined`
+ *   because level 0 is not dispatched.
+ */
+function createLevelParamsBuffers(
   device: GPUDevice,
   bufferSet: GPUBufferSet,
-  pipeline: GPUComputePipeline,
-  bindGroup: GPUBindGroup,
   outputNodeCount: number,
-): Promise<void> {
+): (GPUBuffer | undefined)[] {
+  const levelCount = bufferSet.topoLevelCount;
+  const levelParamsBuffers: (GPUBuffer | undefined)[] = new Array(levelCount);
+  levelParamsBuffers[0] = undefined;
+
+  for (let level = 1; level < levelCount; level++) {
+    const paramsBuffer = device.createBuffer({
+      label: `network_activation_params_level_${level}`,
+      size: GPU_PARAMS_BYTES,
+      usage: GPU_BUFFER_USAGE_UNIFORM | GPU_BUFFER_USAGE_COPY_DST,
+    });
+    const params = new Uint32Array([
+      level,
+      bufferSet.nodeCount,
+      bufferSet.connectionCount,
+      bufferSet.nodeCount - outputNodeCount,
+    ]);
+    device.queue.writeBuffer(paramsBuffer, 0, params);
+    levelParamsBuffers[level] = paramsBuffer;
+  }
+
+  return levelParamsBuffers;
+}
+
+/**
+ * Destroy params buffers created for per-level dispatch.
+ *
+ * @param levelParamsBuffers - Array of per-level params buffers.
+ */
+function destroyLevelParamsBuffers(
+  levelParamsBuffers: (GPUBuffer | undefined)[],
+): void {
+  for (const buffer of levelParamsBuffers) {
+    if (buffer !== undefined) {
+      buffer.destroy();
+    }
+  }
+}
+
+/**
+ * Create per-level bind groups that wire the kernel buffers and the matching
+ * level params uniform together.
+ *
+ * @param device - WebGPU device used to create bind groups.
+ * @param pipeline - Compiled activation pipeline.
+ * @param bufferSet - Uploaded network slab buffers.
+ * @param levelParamsBuffers - Per-level params buffers from
+ *   `createLevelParamsBuffers`.
+ * @returns Array of bind groups indexed by level. Index 0 is `undefined`.
+ */
+function createLevelBindGroups(
+  device: GPUDevice,
+  pipeline: GPUComputePipeline,
+  bufferSet: GPUBufferSet,
+  levelParamsBuffers: (GPUBuffer | undefined)[],
+): (GPUBindGroup | undefined)[] {
+  const bindGroupLayout = pipeline.getBindGroupLayout(0);
+  const levelBindGroups: (GPUBindGroup | undefined)[] = new Array(
+    levelParamsBuffers.length,
+  );
+
+  for (let level = 1; level < levelParamsBuffers.length; level++) {
+    const paramsBuffer = levelParamsBuffers[level];
+    if (paramsBuffer !== undefined) {
+      levelBindGroups[level] = createActivationBindGroup(
+        device,
+        bindGroupLayout,
+        bufferSet,
+        paramsBuffer,
+      );
+    }
+  }
+
+  return levelBindGroups;
+}
+
+/**
+ * Record the activation kernel dispatches for every topological level into the
+ * supplied command encoder.
+ *
+ * The params uniform is supplied by a per-level bind group, so no queue writes or
+ * intermediate submissions are needed between levels. The caller must submit
+ * the encoder and wait on `device.queue.onSubmittedWorkDone()` before reading
+ * any output buffer.
+ */
+function encodeActivationKernel(
+  commandEncoder: GPUCommandEncoder,
+  bufferSet: GPUBufferSet,
+  pipeline: GPUComputePipeline,
+  levelBindGroups: (GPUBindGroup | undefined)[],
+): void {
   const levelCount = bufferSet.topoLevelCount;
   const workgroupCount = Math.ceil(
     bufferSet.nodeCount / ACTIVATION_WORKGROUP_SIZE,
   );
-  const params = new Uint32Array(4);
-  params[1] = bufferSet.nodeCount;
-  params[2] = bufferSet.connectionCount;
-  params[3] = bufferSet.nodeCount - outputNodeCount;
 
   for (let level = 1; level < levelCount; level++) {
-    params[0] = level;
-    device.queue.writeBuffer(bufferSet.params, 0, params);
+    const bindGroup = levelBindGroups[level];
+    if (!bindGroup) {
+      throw new Error(`activateGPU: missing bind group for level ${level}`);
+    }
 
-    const commandEncoder = device.createCommandEncoder({
-      label: `network_activation_level_${level}`,
-    });
     const pass = commandEncoder.beginComputePass({
       label: `network_activation_pass_level_${level}`,
     });
@@ -595,17 +792,16 @@ async function dispatchActivationKernel(
     pass.setBindGroup(0, bindGroup);
     pass.dispatchWorkgroups(workgroupCount);
     pass.end();
-
-    device.queue.submit([commandEncoder.finish()]);
-    await device.queue.onSubmittedWorkDone();
   }
 }
 
 /**
  * Copy the output-node slice of the GPU output buffer to a mappable staging
- * buffer, await the mapping, and return a detached Float32Array copy.
+ * buffer using the supplied command encoder, submit the encoder, await GPU
+ * completion, and return a detached Float32Array copy.
  */
 async function readOutputValues(
+  commandEncoder: GPUCommandEncoder,
   device: GPUDevice,
   network: Network,
   bufferSet: GPUBufferSet,
@@ -621,9 +817,7 @@ async function readOutputValues(
     usage: GPU_BUFFER_USAGE_MAP_READ | GPU_BUFFER_USAGE_COPY_DST,
   });
 
-  const copyEncoder = device.createCommandEncoder({
-    label: 'network_outputs_copy',
-  }) as unknown as GPUCommandEncoderCopy;
+  const copyEncoder = commandEncoder as unknown as GPUCommandEncoderCopy;
   copyEncoder.copyBufferToBuffer(
     bufferSet.outputs,
     outputStartOffset,
@@ -631,7 +825,7 @@ async function readOutputValues(
     0,
     outputByteLength,
   );
-  device.queue.submit([copyEncoder.finish()]);
+  device.queue.submit([commandEncoder.finish()]);
   await device.queue.onSubmittedWorkDone();
 
   await stagingBuffer.mapAsync(GPU_MAP_MODE_READ);

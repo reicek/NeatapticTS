@@ -189,7 +189,6 @@ clamp(
 Internal clamp primitive.
 
 Parameters:
-
 - `value` - Candidate value.
 - `min` - Inclusive lower bound.
 - `max` - Inclusive upper bound.
@@ -207,7 +206,6 @@ clamp01(
 Clamps a numeric value to the inclusive `[0, 1]` interval.
 
 Parameters:
-
 - `value` - Candidate value.
 
 Returns: Value clamped between 0 and 1.
@@ -225,7 +223,6 @@ clampValue(
 Clamps a numeric value to the inclusive `[min, max]` interval.
 
 Parameters:
-
 - `value` - Candidate value.
 - `min` - Inclusive lower bound.
 - `max` - Inclusive upper bound.
@@ -245,7 +242,6 @@ interpolateValue(
 Linear interpolation helper.
 
 Parameters:
-
 - `startValue` - Start value at progress `0`.
 - `endValue` - End value at progress `1`.
 - `progress` - Normalized interpolation progress.
@@ -275,7 +271,6 @@ task dominate early, then the example interpolates toward the harder target
 settings as progress increases.
 
 Parameters:
-
 - `pipesPassed` - Number of passed pipes.
 - `difficultyScale` - Curriculum scale in `[0, 1]`.
 
@@ -300,7 +295,6 @@ opening. This prevents the gap from clipping the canvas boundary even when the
 initial wide gap is active.
 
 Parameters:
-
 - `currentGapSizePx` - Actual gap size for the pipe being placed.
 - `maximumGapCenterYPx` - Viewport-derived or default upper center bound.
 
@@ -324,7 +318,6 @@ The center is additionally bounded so the gap opening always keeps at least
 `FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO` of world height as solid pipe on each side.
 
 Parameters:
-
 - `previousGapCenterYPx` - Previous spawn gap center.
 - `rng` - Deterministic RNG.
 - `currentGapSizePx` - Actual gap size for the pipe being placed.
@@ -349,7 +342,6 @@ active difficulty profile with a small amount of deterministic jitter so runs
 do not feel mechanically repetitive.
 
 Parameters:
-
 - `previousSpawnGapPx` - Previous spawn gap size.
 - `difficultyProfile` - Active difficulty profile.
 - `rng` - Deterministic RNG.
@@ -372,7 +364,6 @@ spacing contracts toward the current difficulty target as the episode settles
 into its harder rhythm.
 
 Parameters:
-
 - `previousSpawnIntervalFrames` - Previous spawn interval.
 - `difficultyProfile` - Active difficulty profile.
 
@@ -395,7 +386,6 @@ visible play area and at least `FLAPPY_PIPE_GAP_EDGE_MARGIN_RATIO` of the
 world height remains as solid pipe on each side.
 
 Parameters:
-
 - `rng` - Deterministic RNG.
 - `currentGapSizePx` - Actual gap size for the pipe being placed.
 - `maximumGapCenterYPx` - Optional inclusive upper bound for smaller viewports.
@@ -433,7 +423,6 @@ input uses `resolveObservationVectorFromFeatures(features)` directly and does
 not stack these core frames.
 
 Parameters:
-
 - `features` - Structured observation features.
 
 Returns: Core per-frame vector.
@@ -462,7 +451,6 @@ observation policy and network-shape concerns can evolve independently.
 
 The features deliberately mix two kinds of control signal plus a small set of
 shaping-oriented derived hints:
-
 1. Current state, such as bird height and vertical velocity.
 2. Immediate next-gap geometry, such as distance, offset, and corridor
    bounds.
@@ -476,7 +464,6 @@ For broader context, the Wikipedia article on "feature engineering" is a
 good companion reference.
 
 Parameters:
-
 - `input` - Observation input bundle.
 
 Returns: Structured observation features.
@@ -528,7 +515,6 @@ against one input layout, silent channel reshuffles would invalidate learned
 behavior.
 
 Parameters:
-
 - `features` - Structured feature object.
 
 Returns: Ordered feature vector.
@@ -560,7 +546,6 @@ Keeping this helper small and explicit makes it easy for callers to choose
 how much near-future geometry they actually want.
 
 Parameters:
-
 - `pipes` - Current pipe list.
 - `birdCenterXPx` - Bird center x-position.
 - `birdRadiusPx` - Bird radius.
@@ -602,7 +587,6 @@ flexibility makes the helper reusable across experiments without forcing every
 caller to reshape its outputs first.
 
 Parameters:
-
 - `rawOutputs` - Activation output payload.
 - `flapThreshold` - Scalar threshold for single-output policies.
 
@@ -629,7 +613,6 @@ no-op, but the stable hook prevents those runtimes from drifting apart if an
 opt-in history experiment returns later.
 
 Parameters:
-
 - `observationMemoryState` - Mutable temporal memory for the active bird.
 - `features` - Structured observation features used for the decision.
 - `didFlap` - Decision taken at this step.
@@ -674,7 +657,6 @@ hand-authored memory from all architectures so recurrent profiles must learn
 temporal state internally instead of receiving it as extra inputs.
 
 Parameters:
-
 - `features` - Structured observation features for the current decision step.
 - `observationMemoryState` - Mutable temporal memory for the active bird.
 
@@ -694,7 +676,6 @@ compareNumbersAscending(
 Compares two numeric values in ascending order.
 
 Parameters:
-
 - `leftValue` - Left numeric value.
 - `rightValue` - Right numeric value.
 
@@ -711,7 +692,6 @@ computeMean(
 Computes arithmetic mean for numeric samples.
 
 Parameters:
-
 - `values` - Numeric samples.
 
 Returns: Arithmetic mean.
@@ -731,7 +711,6 @@ Percentiles are useful in the trainer because they reveal whether strong
 performance is broad across the population or concentrated in a single outlier.
 
 Parameters:
-
 - `values` - Numeric samples.
 - `percentile` - Percentile in [0, 1].
 
@@ -753,7 +732,6 @@ is summarizing the whole evolved population for that generation, not estimating
 a larger hidden distribution from a subsample.
 
 Parameters:
-
 - `values` - Numeric samples.
 - `meanValue` - Precomputed mean.
 
@@ -788,7 +766,6 @@ the error surface human-readable even when the thrown value is not an
 `Error` instance.
 
 Parameters:
-
 - `error` - Unknown error value.
 
 Returns: Readable error message.

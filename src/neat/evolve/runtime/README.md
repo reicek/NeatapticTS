@@ -54,7 +54,6 @@ can inspect, serialize, or replay the champion without depending on mutable
 controller-owned references.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 
 Returns: A detached best-network snapshot for the current generation.
@@ -75,7 +74,6 @@ clearing per-genome scores so the next call into the evolve or evaluate path
 cannot accidentally treat structurally changed genomes as already evaluated.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 
 Returns: Nothing.
@@ -95,7 +93,6 @@ bookkeeping rather than as a telemetry export concern. The helper mirrors the
 start-time environment fallback so timing stays comparable across runtimes.
 
 Parameters:
-
 - `startTimestamp` - Start time resolved earlier.
 
 Returns: The elapsed runtime for the generation step.
@@ -117,7 +114,6 @@ genome still lacks a score, which preserves the common fast path for already
 scored generations.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 
 Returns: A promise that resolves once evaluation is guaranteed.
@@ -165,7 +161,6 @@ the stagnation clock tied to the stable artifact returned by evolve rather than
 to genomes that may be mutated or replaced later in the loop.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `snapshot` - Best network snapshot.
 
@@ -188,7 +183,6 @@ whether a fresh improvement occurred without conflating score bookkeeping with
 network serialization.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 
 Returns: Nothing.

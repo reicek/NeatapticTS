@@ -37,7 +37,7 @@ flowchart TD
 
 For compact background on why mutation pressure matters in evolutionary
 search, see Wikipedia contributors,
-[Mutation (genetic algorithm)](<https://en.wikipedia.org/wiki/Mutation_(genetic_algorithm)>).
+[Mutation (genetic algorithm)](https://en.wikipedia.org/wiki/Mutation_(genetic_algorithm)).
 
 Example: keep a feedforward-safe shelf for searches that must remain simple
 and acyclic.

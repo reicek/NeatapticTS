@@ -33,7 +33,6 @@ recordSolvedMaze(
 Record and emit a newly solved maze archive block when the layout has not been seen before.
 
 Parameters:
-
 - `context` - Dashboard runtime context containing archive state and callbacks.
 - `maze` - Solved maze layout.
 - `result` - Successful run result used for archive stats.

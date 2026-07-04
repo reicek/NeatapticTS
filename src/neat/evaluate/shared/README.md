@@ -9,7 +9,6 @@ controller state, diversity evidence, novelty archive rows, and dynamic
 objectives.
 
 Read this chapter when you want to answer questions such as:
-
 - Which genome shape is considered sufficient for evaluation helpers?
 - What controller fields are shared across fitness, novelty, and tuning
   stages?
@@ -19,7 +18,6 @@ Read this chapter when you want to answer questions such as:
   tuning, selection, or multi-objective reads?
 
 The exports below fall into five small families:
-
 - genome evidence contracts,
 - novelty archive memory,
 - diversity-stat summaries,
@@ -90,7 +88,6 @@ the helper chapters consume these values as stable defaults for novelty,
 entropy-sharing, entropy-compatibility, and auto-distance tuning.
 
 Read this chapter when you want to answer questions such as:
-
 - Which defaults shape novelty exploration before the user configures
   anything?
 - What target values and bands anchor the entropy-based tuning loops?
@@ -99,7 +96,6 @@ Read this chapter when you want to answer questions such as:
   one another?
 
 The exports below group into four families:
-
 - novelty defaults,
 - entropy-sharing defaults,
 - entropy-compatibility defaults,

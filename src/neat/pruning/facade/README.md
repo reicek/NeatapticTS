@@ -26,7 +26,6 @@ Read this file when you want the stable wrapper story:
   into a mandatory runtime dependency.
 
 Read the symbols in this order:
-
 - `NeatPruningFacadeHost` defines the narrow host seam preserved by the
   public `Neat` methods,
 - `applyEvolutionPruning()` covers predictable schedule-driven pruning,
@@ -63,7 +62,6 @@ enough to matter." That makes it the better fit for maintenance-style runs
 where pruning should respond to observed complexity rather than the calendar.
 
 Parameters:
-
 - `host` - `Neat` instance exposing adaptive pruning state and population metrics.
 
 Returns: Promise that resolves after the best-effort adaptive pruning attempt finishes.
@@ -98,7 +96,6 @@ That makes it the better fit for orchestrated evolve loops and deterministic
 experiments where pruning should follow a known calendar.
 
 Parameters:
-
 - `host` - `Neat` instance exposing pruning options, generation state, and population.
 
 Returns: Promise that resolves after the best-effort pruning attempt finishes.

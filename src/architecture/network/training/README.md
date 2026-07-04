@@ -3,19 +3,17 @@
 Training pipeline utilities (migrated from legacy architecture/network.train.ts).
 
 Provides:
-
-- Gradient clipping (global / layerwise; norm / percentile variants).
-- Mini & micro-batch gradient accumulation.
-- Optimizer step dispatch (SGD + adaptive optimizers + lookahead wrapper).
-- Simple mixed precision dynamic loss scaling (overflow detection heuristic).
-- Multiple moving-average smoothing strategies for error monitoring (SMA, EMA, adaptive EMA,
-  median, gaussian, trimmed mean, WMA) plus separate plateau averaging.
-- Early stopping, schedule hooks, pruning hooks, and checkpoint callbacks.
+ - Gradient clipping (global / layerwise; norm / percentile variants).
+ - Mini & micro-batch gradient accumulation.
+ - Optimizer step dispatch (SGD + adaptive optimizers + lookahead wrapper).
+ - Simple mixed precision dynamic loss scaling (overflow detection heuristic).
+ - Multiple moving-average smoothing strategies for error monitoring (SMA, EMA, adaptive EMA,
+   median, gaussian, trimmed mean, WMA) plus separate plateau averaging.
+ - Early stopping, schedule hooks, pruning hooks, and checkpoint callbacks.
 
 Notes:
-
-- This module intentionally keeps imperative style for clarity/perf (avoids heap churn in hot loops).
-- Refactor changes here are documentation & naming only; numerical behavior preserved.
+ - This module intentionally keeps imperative style for clarity/perf (avoids heap churn in hot loops).
+ - Refactor changes here are documentation & naming only; numerical behavior preserved.
 
 ## architecture/network/training/network.training.utils.ts
 
@@ -42,7 +40,6 @@ Apply gradient clipping to a network using a normalized runtime configuration.
 This is a small wrapper that forwards to the concrete implementation used by training.
 
 Parameters:
-
 - `net` - Network instance to update.
 - `cfg` - Normalized clipping settings.
 
@@ -62,7 +59,6 @@ clearState(): void
 Clear all accumulated per-node runtime traces and saved activation states.
 
 Parameters:
-
 - `this` - Bound network instance.
 
 ### CostFunction
@@ -80,7 +76,6 @@ A cost function compares an expected `target` vector with the network's produced
 vector, returning a scalar error where **lower is better**.
 
 Design notes:
-
 - This is called frequently (often once per training sample), so implementations should be
   **pure** and **allocation-light**.
 - Most built-in training loops assume the returned value is non-negative.
@@ -105,7 +100,6 @@ Clipping prevents rare large gradients from causing unstable weight updates.
 It is most useful for recurrent networks and noisy datasets.
 
 Conceptual modes:
-
 - `norm`: clip by a global $L_2$ norm threshold.
 - `percentile`: clip using a running percentile estimate (robust to outliers).
 - `layerwise*`: apply the same idea per-layer (useful when layers have very different scales).
@@ -159,18 +153,11 @@ Example:
 net.train(set, {
   iterations: 1_000,
   rate: 0.001,
-  optimizer: {
-    type: 'adamw',
-    beta1: 0.9,
-    beta2: 0.999,
-    eps: 1e-8,
-    weightDecay: 0.01,
-  },
+  optimizer: { type: 'adamw', beta1: 0.9, beta2: 0.999, eps: 1e-8, weightDecay: 0.01 },
 });
 ```
 
 Notes:
-
 - Exact supported `type` values are validated by training utilities.
 - Unspecified fields fall back to sensible defaults per optimizer.
 
@@ -220,11 +207,10 @@ Contract for trainImpl.
 Public training options accepted by the high-level training orchestration.
 
 Training in this codebase is conceptually:
-
-1. forward activation
-2. backward propagation
-3. optimizer update
-   repeated until a stopping condition is met.
+1) forward activation
+2) backward propagation
+3) optimizer update
+repeated until a stopping condition is met.
 
 Minimal example:
 
@@ -238,7 +224,6 @@ net.train(set, {
 ```
 
 Stopping conditions:
-
 - Provide at least one of `iterations` or `error`.
 - `earlyStopPatience` adds an additional "stop when no improvement" guard.
 
@@ -264,7 +249,6 @@ Returns mean cost across processed samples.
 This is the core "one epoch" primitive used by higher-level training orchestration.
 
 Parameters:
-
 - `net` - Network instance receiving training updates.
 - `set` - Training samples.
 - `batchSize` - Mini-batch size (use 1 for pure SGD).
@@ -301,7 +285,6 @@ This keeps call sites declarative by normalizing all monitored-smoothing
 fields into one explicit configuration object.
 
 Parameters:
-
 - `type` - Selected monitored smoothing mode.
 - `window` - Monitored smoothing window length.
 - `emaAlpha` - Optional monitored EMA alpha.
@@ -370,7 +353,6 @@ When the caller omits a valid explicit alpha, this helper applies the
 standard EMA conversion `2 / (window + 1)`.
 
 Parameters:
-
 - `smoothingWindow` - Window length for moving average operations.
 - `explicitAlpha` - Optional user-provided alpha override.
 
@@ -396,7 +378,6 @@ trainFinalizeCore(
 Run the full training orchestration loop with smoothing, callbacks, and early stopping.
 
 Parameters:
-
 - `net` - Network instance to train.
 - `set` - Training dataset.
 - `options` - Training options.
@@ -418,7 +399,6 @@ clearNodeState(
 Clear runtime state for a single node.
 
 Parameters:
-
 - `node` - Node to clear.
 
 ### clearState
@@ -430,7 +410,6 @@ clearState(): void
 Clear all accumulated per-node runtime traces and saved activation states.
 
 Parameters:
-
 - `this` - Bound network instance.
 
 ### createPropagationContext
@@ -449,7 +428,6 @@ createPropagationContext(
 Build the shared propagation context consumed by layer helpers.
 
 Parameters:
-
 - `network` - Network instance receiving backpropagation.
 - `rate` - Learning rate.
 - `momentum` - Momentum factor.
@@ -470,7 +448,6 @@ getLastNodeIndex(
 Resolve the last node index in the network.
 
 Parameters:
-
 - `network` - Network instance.
 
 Returns: Last valid node index.
@@ -486,7 +463,6 @@ getOutputLayerStartIndex(
 Resolve the first index of the output layer.
 
 Parameters:
-
 - `network` - Network instance.
 
 Returns: Index at which output nodes begin.
@@ -517,7 +493,6 @@ propagateHiddenLayer(
 Propagate all hidden nodes in reverse topological order.
 
 Parameters:
-
 - `context` - Shared propagation context.
 
 ### propagateOutputLayer
@@ -532,7 +507,6 @@ propagateOutputLayer(
 Propagate all output nodes with explicit targets.
 
 Parameters:
-
 - `context` - Shared propagation context.
 - `target` - Output target vector.
 
@@ -550,7 +524,6 @@ propagateOutputNodeWithCostDerivative(
 Propagate one output node using a custom cost derivative override.
 
 Parameters:
-
 - `node` - Output node to propagate.
 - `context` - Shared propagation context.
 - `targetValue` - Expected output value for this node.
@@ -568,7 +541,6 @@ propagateSingleHiddenNode(
 Propagate a single hidden node without a target value.
 
 Parameters:
-
 - `context` - Shared propagation context.
 - `node` - Hidden node to propagate.
 
@@ -585,7 +557,6 @@ propagateSingleOutputNode(
 Propagate a single output node with a target value.
 
 Parameters:
-
 - `context` - Shared propagation context.
 - `node` - Output node to propagate.
 - `targetValue` - Expected output value for this node.
@@ -602,7 +573,6 @@ validateTargetLength(
 Validate that target output count matches the network output width.
 
 Parameters:
-
 - `network` - Network instance receiving backpropagation.
 - `target` - Output target vector.
 
@@ -648,7 +618,6 @@ For stateful modes (`ema`, `adaptive-ema`), the provided state object is
 updated in place so callers can keep continuity across iterations.
 
 Parameters:
-
 - `trainError` - Raw training error for the current iteration.
 - `recentErrors` - Chronological recent error window (oldest to newest).
 - `cfg` - Monitored smoothing configuration.
@@ -673,7 +642,6 @@ This metric is intentionally independent from the primary monitored metric so
 plateau detection can use a different noise profile.
 
 Parameters:
-
 - `trainError` - Raw training error for the current iteration.
 - `plateauErrors` - Plateau window of recent raw errors.
 - `cfg` - Plateau smoothing configuration.
@@ -695,7 +663,6 @@ applyGradientClippingCore(
 Apply gradient clipping to accumulated connection and bias delta buffers.
 
 Parameters:
-
 - `net` - Network instance whose accumulated gradients are clipped.
 - `cfg` - Runtime clipping configuration.
 
@@ -817,7 +784,6 @@ console.log('training error:', metrics?.error);
 ```
 
 Parameters:
-
 - `baseNetwork` - Topology source cloned for the isolated working copy.
 - `vector` - Ordered parameter payload applied to the working copy only.
 - `dataset` - Ordered training samples consumed without shuffling.

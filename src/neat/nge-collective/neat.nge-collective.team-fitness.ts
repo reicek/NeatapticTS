@@ -6,8 +6,8 @@
  * This module provides the core orchestration that maps generic team groups into
  * reusable team-fitness results using an injected aggregation policy. NGE core owns
  * the fold structure; each benchmark consumer injects its own scoring rule so that
- * racing, ant-hive, and future collective benchmarks share one evaluator contract
- * without hard-coding benchmark-local compensation into the core.
+ * collective and multi-agent benchmarks share one evaluator contract without
+ * hard-coding benchmark-local compensation into the core.
  *
  * ## Design contract
  *
@@ -17,16 +17,16 @@
  *   classDef consumer fill:#0f1f33,stroke:#00e5ff,color:#d8f6ff,stroke-width:2px;
  *   classDef result fill:#001522,stroke:#00c47a,color:#b8ffdf,stroke-width:1.5px;
  *
- *   Racing["Racing\n(first proven consumer)"]:::consumer -->|"inject best-finisher policy"| Core
- *   AntHive["Ant Hive\n(planned consumer)"]:::consumer -->|"inject collective-score policy"| Core
+ *   ConsumerA["Consumer A\n(example benchmark)"]:::consumer -->|"inject best-finisher policy"| Core
+ *   ConsumerB["Consumer B\n(example benchmark)"]:::consumer -->|"inject collective-score policy"| Core
  *   Core["createTeamFitnessEvaluator\nNGE core seam"]:::core -->|"folds each group once"| Output
  *   Output["TeamFitnessResult[ ]\nteamId · memberResults · teamFitness"]:::result
  * ```
  *
- * Racing is the **first proven consumer**: it converts finishing positions into the
- * generic `TeamResultGroup` shape and resolves team fitness through this evaluator with
- * a racing-local best-finisher policy. Ant Hive is the **planned second consumer** and
- * follows the same injection pattern once it advances from `[PLANNED]` to `[WIP]`.
+ * Consumer A and Consumer B are representative benchmark consumers: each converts
+ * its own result shape into the generic `TeamResultGroup` shape and resolves team
+ * fitness through this evaluator with a consumer-local aggregation policy. Any future
+ * benchmark follows the same injection pattern without modifying the core fold.
  *
  * ## What this module does NOT include
  *
@@ -53,7 +53,7 @@ import type {
  * The returned evaluator preserves the planning seam: NGE core owns the
  * orchestration that maps generic team groups into reusable team-fitness
  * results, while each benchmark injects its own aggregation policy. That keeps
- * racing, ant-hive, and future consumers on one shared evaluator contract
+ * collective and multi-agent consumers on one shared evaluator contract
  * without leaking benchmark-local compensation into the core.
  *
  * @typeParam TTeamId - Stable identifier for the team being scored.

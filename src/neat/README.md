@@ -351,7 +351,6 @@ debugging parent tracking, or validating that speciation and reproduction are
 still producing multiple recent family branches.
 
 Parameters:
-
 - `this` - NEAT lineage context providing the current population.
 - `genome` - Genome whose shallow ancestor set should be computed.
 
@@ -390,7 +389,6 @@ focusing on ancestry overlap rather than structural size or compatibility
 distance.
 
 Parameters:
-
 - `this` - NEAT lineage context exposing the population and RNG provider.
 
 Returns: Mean sampled Jaccard distance across shallow ancestor sets.
@@ -574,7 +572,6 @@ whose shape matches ordinary diversity output without pretending that real
 real sampling work has happened yet.
 
 Parameters:
-
 - `populationSize` - Population size to echo into the empty snapshot.
 
 Returns: Diversity stats object with zeroed aggregates.
@@ -606,7 +603,6 @@ for comparing generations, spotting collapse, or validating that speciation
 and mutation pressure are still producing variety.
 
 Parameters:
-
 - `population` - Population genomes exposing nodes, connections, and optional lineage depth.
 - `compatibilityComputer` - Compatibility-distance provider used for pair sampling.
 
@@ -677,7 +673,6 @@ generally mean connectivity is spread across more nodes instead of being
 concentrated into a few hubs.
 
 Parameters:
-
 - `graph` - Network to summarize structurally.
 
 Returns: Shannon-style entropy of the out-degree distribution.
@@ -747,7 +742,7 @@ through the assimilation boundary.
 The runner is deliberately narrow: it expects the caller to supply metrics,
 budgets, hysteresis, and an optional network. No `examples/` or demo
 scaffolding is required; a headless test can drive the same growth engine
-that a racing curriculum or ant hive would use at runtime.
+that a benchmark curriculum or collective application would use at runtime.
 
 ```mermaid
 stateDiagram-v2
@@ -780,7 +775,6 @@ Used to determine whether `commitGrowth` should be called and which morph
 kind to report. Prune-only or all-skipped outcome sets return `undefined`.
 
 Parameters:
-
 - `outcomes` - Apply outcomes produced by `applyMorphDeltas`.
 
 Returns: The first applied growth morph kind, or `undefined` when none applied.
@@ -815,7 +809,6 @@ assimilation, and adult cooling as the provided stage requires.
   policy, producing a structural-prior delta while remaining in the adult stage.
 
 Parameters:
-
 - `input` - Runtime inputs for the selected lifecycle stage.
 
 Returns: The lifecycle result naming the reached stage and any stage-specific outputs.
@@ -857,8 +850,7 @@ network state, so the same seed + experience stream yields bitwise-identical
 innovation assignments for newly grown edges.
 
 Parameters:
-
 - `network` - Live network whose current connection innovations define the
-  deterministic starting point.
+deterministic starting point.
 
 Returns: Nothing.

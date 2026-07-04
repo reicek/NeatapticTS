@@ -11,7 +11,7 @@ export type { SharedField };
  * evaluation tick. Because the backing `Float32Array` is passed by reference through the
  * `CollectiveEvaluationContext`, writes committed by an earlier evaluator are immediately
  * visible to every later evaluator in the same tick — exactly the indirect coordination
- * contract required by ant-hive pheromone trails and racing team-radio channels.
+ * contract required by collective signal fields and multi-agent coordination channels.
  *
  * ## Cell layout
  *

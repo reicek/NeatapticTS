@@ -1,14 +1,14 @@
 import Network from '../network';
 import {
-  evaluateConcurrentRacingAgents,
-  evaluateRacingGeneration,
-} from './network.gpu.racing';
+  evaluateConcurrentAgents,
+  evaluateBatchGeneration,
+} from './network.gpu.batch-evaluation';
 import { createMockGPUDevice } from './__mocks__/gpu.mock';
 
 const DEFAULT_THRESHOLD = 4;
 
-describe('network.gpu.racing', () => {
-  describe('evaluateRacingGeneration', () => {
+describe('network.gpu.batch-evaluation', () => {
+  describe('evaluateBatchGeneration', () => {
     it('GPU batch path returns a zero placeholder that fails parity with CPU output', async () => {
       const network = Network.createMLP(2, [3], 1);
       const batchSize = DEFAULT_THRESHOLD + 1;
@@ -16,7 +16,7 @@ describe('network.gpu.racing', () => {
       const inputMatrix = new Float32Array(batchSize * network.input).fill(0.5);
       const device = createMockGPUDevice();
 
-      const result = await evaluateRacingGeneration(
+      const result = await evaluateBatchGeneration(
         networks,
         inputMatrix,
         device,
@@ -29,7 +29,7 @@ describe('network.gpu.racing', () => {
     });
 
     it('returns an empty output matrix for an empty generation', async () => {
-      const result = await evaluateRacingGeneration(
+      const result = await evaluateBatchGeneration(
         [],
         new Float32Array(0),
         createMockGPUDevice(),
@@ -47,7 +47,7 @@ describe('network.gpu.racing', () => {
       const inputMatrix = new Float32Array(batchSize * network.input).fill(0.5);
       const device = createMockGPUDevice();
 
-      await evaluateRacingGeneration(networks, inputMatrix, device);
+      await evaluateBatchGeneration(networks, inputMatrix, device);
 
       expect(activateSpy).toHaveBeenCalledTimes(batchSize);
     });
@@ -60,7 +60,7 @@ describe('network.gpu.racing', () => {
       const inputMatrix = new Float32Array(batchSize * network.input).fill(0.5);
       const device = createMockGPUDevice();
 
-      await evaluateRacingGeneration(networks, inputMatrix, device, {
+      await evaluateBatchGeneration(networks, inputMatrix, device, {
         gpuBatchThreshold: DEFAULT_THRESHOLD,
       });
 
@@ -80,7 +80,7 @@ describe('network.gpu.racing', () => {
       ).fill(0.5);
       const device = createMockGPUDevice();
 
-      await evaluateRacingGeneration(networks, inputMatrix, device, {
+      await evaluateBatchGeneration(networks, inputMatrix, device, {
         gpuBatchThreshold: DEFAULT_THRESHOLD,
       });
 
@@ -95,7 +95,7 @@ describe('network.gpu.racing', () => {
       const networks = Array.from({ length: batchSize }, () => network);
       const inputMatrix = new Float32Array(batchSize * network.input).fill(0.5);
 
-      await evaluateRacingGeneration(networks, inputMatrix, null, {
+      await evaluateBatchGeneration(networks, inputMatrix, null, {
         gpuBatchThreshold: DEFAULT_THRESHOLD,
       });
 
@@ -111,7 +111,7 @@ describe('network.gpu.racing', () => {
       const device = createMockGPUDevice();
       device.fakeLose();
 
-      await evaluateRacingGeneration(networks, inputMatrix, device, {
+      await evaluateBatchGeneration(networks, inputMatrix, device, {
         gpuBatchThreshold: DEFAULT_THRESHOLD,
       });
 
@@ -125,7 +125,7 @@ describe('network.gpu.racing', () => {
       const inputMatrix = new Float32Array(batchSize * network.input).fill(0.5);
       const device = createMockGPUDevice();
 
-      const result = await evaluateRacingGeneration(
+      const result = await evaluateBatchGeneration(
         networks,
         inputMatrix,
         device,
@@ -136,7 +136,13 @@ describe('network.gpu.racing', () => {
     });
   });
 
-  describe('evaluateConcurrentRacingAgents', () => {
+  describe('evaluateConcurrentAgents', () => {
+    it('returns an empty array for an empty request list', async () => {
+      const result = await evaluateConcurrentAgents(createMockGPUDevice(), []);
+
+      expect(result).toEqual([]);
+    });
+
     it('does not collide when multiple requests target the same network instance', async () => {
       const network = Network.createMLP(2, [3], 1);
       const firstInputs = [0.1, 0.2];
@@ -147,7 +153,7 @@ describe('network.gpu.racing', () => {
       ];
       const device = createMockGPUDevice({ emulateNetwork: network });
 
-      const outputs = await evaluateConcurrentRacingAgents(device, requests);
+      const outputs = await evaluateConcurrentAgents(device, requests);
 
       expect(outputs).toEqual([
         new Float32Array(network.activate(firstInputs)),
@@ -165,7 +171,7 @@ describe('network.gpu.racing', () => {
       ];
       const device = createMockGPUDevice({ emulateNetwork: network });
 
-      const outputs = await evaluateConcurrentRacingAgents(device, requests);
+      const outputs = await evaluateConcurrentAgents(device, requests);
 
       expect({
         length: outputs.length,
@@ -188,9 +194,11 @@ describe('network.gpu.racing', () => {
       ];
       const device = createMockGPUDevice();
 
-      await evaluateConcurrentRacingAgents(device, requests);
+      await evaluateConcurrentAgents(device, requests);
 
-      expect(device.recorded.pipelines.length).toBe(2);
+      // Topology constants now live in storage buffers, so the generated WGSL is
+      // identical for both topologies and only one compiled pipeline is needed.
+      expect(device.recorded.pipelines.length).toBe(1);
     });
   });
 });

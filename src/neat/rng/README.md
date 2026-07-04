@@ -106,7 +106,6 @@ case: the returned token is meant to leave the immediate call site and later
 come back through `restoreRngState()` or `importRngState()`.
 
 Parameters:
-
 - `host` - Object holding RNG state.
 
 Returns: The numeric RNG state or undefined when not set.
@@ -139,7 +138,6 @@ deliberate opt-out from the internal xorshift lifecycle, not just another
 fallback.
 
 Parameters:
-
 - `host` - Object holding RNG state and configuration.
 
 Returns: A function that yields a uniform random value in [0, 1).
@@ -167,7 +165,6 @@ This exists so older callers can keep using the import-style name while the
 underlying behavior remains the same replay boundary as `restoreRngState()`.
 
 Parameters:
-
 - `host` - Object holding RNG state.
 - `state` - Numeric RNG state to restore.
 
@@ -189,7 +186,6 @@ the restore step changes replay state immediately, while stream recreation is
 deferred until a caller actually needs the next random draw.
 
 Parameters:
-
 - `host` - Object holding RNG state.
 - `state` - Numeric RNG state to restore.
 
@@ -289,7 +285,6 @@ want a "peek" rather than a committed advance should snapshot first, sample,
 then restore the saved state.
 
 Parameters:
-
 - `host` - Object holding RNG state.
 - `sampleCount` - Number of samples to generate.
 
@@ -323,7 +318,6 @@ process. Use `exportRngState()` when the same token is about to cross a wider
 boundary such as JSON serialization, checkpoint files, or fixture snapshots.
 
 Parameters:
-
 - `host` - Object holding RNG state.
 
 Returns: The numeric RNG state or undefined when uninitialized.

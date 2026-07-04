@@ -9,7 +9,6 @@ spacing signal stored in `_moCrowd`, giving the controller a tie-breaker that
 favors spread along the frontier instead of collapsing onto one narrow patch.
 
 The ownership split is intentionally strict:
-
 - `objectives/` builds stable value vectors
 - `dominance/` resolves pairwise wins and losses
 - `fronts/` peels those relations into ordered fronts and writes `_moRank`
@@ -21,7 +20,6 @@ isolated each genome is relative to its immediate neighbors inside one front
 after the frontier structure is already fixed.
 
 The core idea is simple:
-
 1. work one front at a time,
 2. sort that front by one objective at a time,
 3. protect boundary solutions by assigning `Infinity`,
@@ -60,14 +58,12 @@ accumulateCrowdingForObjective(
 Accumulates crowding distance contributions for a single objective.
 
 Pre-conditions / expectations:
-
 - `sortedFront` must be sorted ascending by the selected objective.
 - {@link initializeCrowding} has already set `_moCrowd = 0` for the front.
 - {@link markBoundaryCrowding} is typically called before this to set the
   boundary genomes to `Infinity`.
 
 Edge cases:
-
 - If the front has fewer than 2 genomes, this is a no-op.
 - If the objective range is `0`, a range of `1` is used (see
   {@link resolveObjectiveRange}).
@@ -77,7 +73,6 @@ spacing between neighboring values, so the same frontier width matters
 whether the controller is minimizing or maximizing that objective.
 
 Parameters:
-
 - `sortedFront` - Front sorted by objective.
 - `valuesMatrixInput` - Values matrix.
 - `genomeIndexByReference` - Lookup map.
@@ -105,7 +100,6 @@ much empty objective-space surrounds the current genome, not merely whether
 it differs from one adjacent point.
 
 Parameters:
-
 - `sortedFront` - Front sorted by objective.
 - `valuesMatrixInput` - Values matrix.
 - `genomeIndexByReference` - Lookup map.
@@ -131,7 +125,6 @@ That preserves the boundary-solutions rule while still allowing interior
 genomes to accumulate spacing contributions across many objectives.
 
 Parameters:
-
 - `currentGenome` - Genome to update.
 - `previousValue` - Objective value of previous genome.
 - `nextValue` - Objective value of next genome.
@@ -157,7 +150,6 @@ spacing. Keeping those phases together makes the per-objective flow easy to
 audit in the generated chapter.
 
 Parameters:
-
 - `front` - Pareto front.
 - `valuesMatrixInput` - Values matrix.
 - `genomeIndexByReference` - Lookup map.
@@ -181,25 +173,21 @@ genome in each front receives a `_moCrowd` value representing how isolated
 it is in objective space within its front.
 
 Conceptually this is a nested fold:
-
 1. build one stable reference-to-index map for the population,
 2. iterate each front in Pareto-rank order,
 3. initialize crowding for that front,
 4. accumulate spacing once per objective.
 
 Notes:
-
 - This function sorts each front by each objective (ascending raw values).
   Objective direction (min vs max) does not affect the computed spacing
   magnitude; extrema are treated as boundaries either way.
 - Empty fronts are skipped.
 
 Side effects:
-
 - Writes `_moCrowd` on each genome in each front.
 
 Parameters:
-
 - `fronts` - Pareto fronts.
 - `valuesMatrixInput` - Values matrix.
 - `descriptors` - Objective descriptors (provides objective count).
@@ -223,7 +211,6 @@ crowding fields are initialized, simply walk the objective columns and let
 each one contribute its own spacing signal.
 
 Parameters:
-
 - `front` - Pareto front.
 - `valuesMatrixInput` - Values matrix.
 - `genomeIndexByReference` - Lookup map.
@@ -247,7 +234,6 @@ The map preserves the controller's original population order even while this
 chapter temporarily reorders front-local views for spacing calculations.
 
 Parameters:
-
 - `population` - Genomes in population order.
 
 Returns: Map from genome references to their index.
@@ -266,7 +252,6 @@ Boundary genomes are excluded because their crowding distance is treated as
 infinite.
 
 Parameters:
-
 - `frontLength` - Length of the sorted front.
 
 Returns: Interior indices excluding boundary genomes.
@@ -285,7 +270,6 @@ Keeping objective iteration explicit makes the front-level accumulation order
 easy to inspect and keeps the per-objective helper signatures small.
 
 Parameters:
-
 - `objectiveCount` - Number of objectives.
 
 Returns: Objective indices `0..objectiveCount-1`.
@@ -309,7 +293,6 @@ The original front array remains untouched so Pareto-rank grouping stays
 stable while each objective gets its own temporary geometric view.
 
 Parameters:
-
 - `front` - Pareto front.
 - `valuesMatrixInput` - Values matrix.
 - `genomeIndexByReference` - Lookup map.
@@ -336,7 +319,6 @@ stays consistent with the same objective data used during dominance and
 frontier construction.
 
 Parameters:
-
 - `valuesMatrixInput` - Values matrix.
 - `genomeIndexByReference` - Lookup map.
 - `objectiveIndex` - Objective column index.
@@ -363,7 +345,6 @@ additive and makes the final score easy to interpret as one accumulated
 spacing signal across all objectives.
 
 Parameters:
-
 - `front` - Pareto front.
 
 ### markBoundaryCrowding
@@ -385,7 +366,6 @@ become densely packed, the extreme solutions remain available to later
 selection because they carry unique objective-space coverage.
 
 Parameters:
-
 - `sortedFront` - Front sorted by the current objective.
 
 ### resolveBoundaryGenomes
@@ -399,7 +379,6 @@ resolveBoundaryGenomes(
 Resolves the boundary (first/last) genomes for a sorted front.
 
 Parameters:
-
 - `sortedFront` - Front sorted by objective.
 
 Returns: Boundary genomes, or `null` if the front is empty.
@@ -420,11 +399,8 @@ matrix still lives in population order. This lookup reconnects those two
 views without copying the matrix.
 
 Parameters:
-
 - `genomeIndexByReference` - Lookup map created by
-
-* {@link buildGenomeIndexByReference} .
-
+ *  {@link buildGenomeIndexByReference} .
 - `genomeItem` - Genome to resolve.
 
 Returns: The population index of the genome.
@@ -441,7 +417,6 @@ resolveNeighborPair(
 Resolves the neighbor genomes for an interior element of a sorted front.
 
 Parameters:
-
 - `sortedFront` - Front sorted by objective.
 - `sortedIndex` - Current index in sorted front.
 
@@ -465,7 +440,6 @@ The fallback means a flat objective contributes no spacing signal instead of
 exploding numerically or distorting the remaining objectives.
 
 Parameters:
-
 - `minValue` - Minimum objective value.
 - `maxValue` - Maximum objective value.
 
@@ -489,7 +463,6 @@ Because `sortedFront` is sorted by objective, the first and last genomes are
 the extrema used for range normalization.
 
 Parameters:
-
 - `valuesMatrixInput` - Values matrix.
 - `genomeIndexByReference` - Lookup map.
 - `boundaryGenomes` - Boundary genomes for the front.
@@ -516,7 +489,6 @@ It lets the crowding pass ask "what is this genome's value on the current
 objective?" without assuming the front is still in population order.
 
 Parameters:
-
 - `valuesMatrixInput` - Values matrix indexed by population index.
 - `genomeIndexByReference` - Lookup map from genome reference to index.
 - `genomeItem` - Genome to resolve.
@@ -539,7 +511,6 @@ Empty fronts are ignored because they carry no genomes to annotate and would
 otherwise force needless setup work.
 
 Parameters:
-
 - `front` - Pareto front.
 
 Returns: `true` if the front should be skipped.

@@ -119,9 +119,8 @@ same virtual plan, the same realized phenotype descriptor, and therefore the
 same `Network.toJSON()` output regardless of global counter drift.
 
 Parameters:
-
 - `envelope` - Canonical NGE DNA envelope whose `reproductionPolicy.modeIsEvolvable`
-  selects the NGE evolution path.
+selects the NGE evolution path.
 - `seed` - Deterministic seed folded into the virtual plan and phenotype realization.
 
 Returns: A runtime Network whose topology mirrors the realized phenotype descriptor.
@@ -129,7 +128,6 @@ Returns: A runtime Network whose topology mirrors the realized phenotype descrip
 Examples:
 
 NGE-enabled activation:
-
 ```ts
 const dna = new NGE_DNA({
   moduleArchetypes: [...],
@@ -141,7 +139,6 @@ network.activate([1, 2, 3]);
 ```
 
 Classic-NEAT-compatible activation (the default):
-
 ```ts
 const dna = new NGE_DNA({
   moduleArchetypes: [...],
@@ -318,10 +315,8 @@ example, when the network was materialized without `ngeEnabled: true`, or when
 it is a classic-NEAT network that was never touched by the NGE pipeline.
 
 Parameters:
-
-- `network` - Runtime Network produced by {@link materializeNetworkFromPhenotype} * with `ngeEnabled: true`, or any Network whose serialized extension bag contains
-
-* an `ngeEnvelope` carrier.
+- `network` - Runtime Network produced by  {@link materializeNetworkFromPhenotype} * with `ngeEnabled: true`, or any Network whose serialized extension bag contains
+ * an `ngeEnvelope` carrier.
 
 Returns: A structured clone of the stored canonical NGE DNA envelope.
 
@@ -379,16 +374,15 @@ the extension bag is omitted and every squash function collapses to `identity`,
 producing a plain classic-NEAT network with no NGE surface.
 
 Parameters:
-
 - `envelope` - Canonical NGE DNA envelope carried alongside the descriptor.
-  Stored inside the extension bag when NGE is enabled.
+Stored inside the extension bag when NGE is enabled.
 - `_plan` - Virtual module plan that produced the descriptor (reserved for
-  future governance checks; not required for topology materialization).
+future governance checks; not required for topology materialization).
 - `descriptor` - Realized phenotype descriptor whose modules and edges are
-  translated into network nodes and connections. Must contain at least one module.
+translated into network nodes and connections. Must contain at least one module.
 - `runtimeHints` - Optional materialization hints. When `ngeEnabled` is not
-  `true` the NGE extension bag is omitted so classic NEAT consumers see a plain
-  Network. Defaults to `{}`.
+`true` the NGE extension bag is omitted so classic NEAT consumers see a plain
+Network. Defaults to `{}`.
 
 Returns: A runtime Network whose nodes and connections mirror the descriptor.
 
@@ -442,8 +436,8 @@ Deterministic owner-local DNA boundary for NGE schema identity and canonical enc
 
 `NGE_DNA` builds and stores the canonical {@link NgeDnaCanonicalEnvelope}.
 Its constructor accepts loose input where omitted fields resolve to
-deterministic defaults, and it expands racing-worker shorthand values into
-the canonical envelope shape before serialization.
+deterministic defaults, and it expands input shorthand values into the
+canonical envelope shape before serialization.
 
 ## Shorthand normalization
 
@@ -455,7 +449,7 @@ and {@link NGE_DNA.serialize | serialize()} always emit the same shape
 regardless of how the policy was originally expressed.
 
 This normalization follows the envelope-normalization contract: core accepts
-racing values at input and keeps a canonical shape internally.
+shorthand values at input and keeps a canonical shape internally.
 
 ### NGE_DNA
 
@@ -472,7 +466,6 @@ buildVirtualPlan(
 Build the deterministic virtual module plan for one seed.
 
 Parameters:
-
 - `seed` - Deterministic seed folded into the plan fingerprint.
 
 Returns: Stable in-memory virtual module plan for the current DNA envelope.
@@ -496,7 +489,6 @@ deserialize(
 Deserialize one canonical JSON payload into a DNA instance.
 
 Parameters:
-
 - `json` - Canonical JSON payload.
 
 Returns: New deterministic DNA instance.
@@ -520,7 +512,6 @@ fromCanonical(
 Construct one DNA instance from canonical envelope data.
 
 Parameters:
-
 - `envelope` - Canonical envelope whose identity and fingerprint must already be valid.
 
 Returns: New deterministic DNA instance.
@@ -541,7 +532,6 @@ realizePhenotype(
 Materialize one serializable phenotype descriptor from the current DNA envelope.
 
 Parameters:
-
 - `plan` - Deterministic virtual module plan to realize.
 - `seed` - Deterministic seed folded into the phenotype fingerprint.
 
@@ -596,30 +586,30 @@ runtime boundary.
 
 ## Input shorthand vs. canonical envelope
 
-The core NGE boundary accepts a small set of racing-worker shorthand
-values at input time, but the canonical envelope always stores the
-expanded object shape. This keeps external call sites terse while
-guaranteeing that serialization, hashing, and round-trips always see the
-same canonical structure.
+The core NGE boundary accepts a small set of input shorthand values at
+input time, but the canonical envelope always stores the expanded object
+shape. This keeps external call sites terse while guaranteeing that
+serialization, hashing, and round-trips always see the same canonical
+structure.
 
-- {@link NgeAssignedRegionStrategy} accepts `'non-overlapping'` as the
-  racing-worker reference name for the deterministic single-drone-per-region
-  assignment that the core already implements under `'roundRobin'`.
+- {@link NgeAssignedRegionStrategy} accepts `'non-overlapping'` as input
+  shorthand for the deterministic single-drone-per-region assignment that the
+  core already implements under `'roundRobin'`.
 - {@link NgeSeedPolicyShorthand} `'queen-weighted'` expands to the canonical
   `{ siblingsDifferBySeed: true, twinsAllowed: false }` object inside the
   `NGE_DNA` constructor.
 
-This design follows the envelope-normalization contract: core accepts racing
-values at input and keeps a canonical shape internally.
+This design follows the envelope-normalization contract: core accepts
+shorthand values at input and keeps a canonical shape internally.
 
 ### NgeAssignedRegionStrategy
 
 Region-assignment strategies used for polyandric drone patch selection among donors.
 Determines how the queen distributes writable DNA regions among secondary drone contributors.
 
-## Racing-worker compatibility
+## Input shorthand compatibility
 
-`'non-overlapping'` is the racing-worker reference name for the deterministic
+`'non-overlapping'` is input shorthand for the deterministic
 single-drone-per-region assignment that the core already implements under
 `'roundRobin'`. Both values resolve to identical behavior; only the canonical
 string stored in the envelope differs.
@@ -712,8 +702,8 @@ to be supplied as the {@link NgeSeedPolicyShorthand} `'queen-weighted'`, which
 is expanded to the canonical object before the policy is stored in the
 envelope.
 
-This follows the envelope-normalization contract: core accepts racing values at
-input and keeps a canonical shape internally.
+This follows the envelope-normalization contract: core accepts shorthand values
+at input and keeps a canonical shape internally.
 
 ### NgeReproductionPolicyMode
 
@@ -799,7 +789,6 @@ realizePhenotypeFromPlan(
 Materialize one serializable phenotype descriptor from the deterministic virtual module plan.
 
 Parameters:
-
 - `plan` - Canonical virtual module plan emitted by substrate rule execution.
 - `envelope` - Canonical DNA envelope carrying CPPN programs and archetype metadata.
 - `seed` - Deterministic seed folded into the realized phenotype fingerprint.
@@ -821,7 +810,6 @@ executeRulePasses(
 Execute one deterministic set of rule passes into an in-memory virtual module plan.
 
 Parameters:
-
 - `passes` - Rule passes carried by one canonical DNA envelope.
 - `substrateConfig` - Canonical substrate config used for normalization and zoning.
 - `seed` - Deterministic seed folded into the plan fingerprint only.
@@ -842,7 +830,6 @@ evaluateCppnProgram(
 Evaluate one feedforward CPPN program over the canonical seven-dimensional input vector.
 
 Parameters:
-
 - `program` - Canonical CPPN descriptor carried by the DNA envelope.
 - `inputVector` - Ordered `[x1, y1, z1, x2, y2, z2, dist]` input vector.
 
@@ -862,7 +849,6 @@ assignZone(
 Resolve one deterministic zone id for a normalized substrate coordinate.
 
 Parameters:
-
 - `coord` - Raw or normalized three-axis coordinate.
 - `partition` - Per-axis partition configuration for the substrate grid.
 
@@ -879,7 +865,6 @@ buildSubstrateFingerprint(
 Compute the deterministic SHA-256 fingerprint of one canonical substrate configuration.
 
 Parameters:
-
 - `config` - Canonical substrate configuration to fingerprint.
 
 Returns: SHA-256 fingerprint of the canonical substrate JSON.
@@ -895,7 +880,6 @@ buildZoneMap(
 Build the full deterministic zone map for one unit-cube substrate partition.
 
 Parameters:
-
 - `partition` - Per-axis partition configuration for the substrate grid.
 
 Returns: Map from zone id to resolved zone descriptor.
@@ -911,7 +895,6 @@ normalizeCoordinate(
 Clamp one raw substrate coordinate into the unit cube.
 
 Parameters:
-
 - `raw` - Raw three-axis coordinate to normalize.
 
 Returns: Clamped coordinate whose axes stay within `[0, 1]`.
@@ -963,7 +946,6 @@ canonicalSerialize(
 Serialize one DNA envelope into a deterministic key-sorted JSON string.
 
 Parameters:
-
 - `value` - Canonical value to serialize.
 
 Returns: Stable JSON whose object keys are sorted recursively.
@@ -979,8 +961,7 @@ computeFingerprint(
 Compute the SHA-256 fingerprint for one canonical DNA JSON string.
 
 Parameters:
-
-- `canonical` - Canonical JSON text produced by {@link canonicalSerialize} .
+- `canonical` - Canonical JSON text produced by  {@link canonicalSerialize} .
 
 Returns: Lowercase hexadecimal SHA-256 digest used as the envelope fingerprint.
 
@@ -995,7 +976,6 @@ validateIdentity(
 Validate the identity shelf of one NGE DNA envelope for schema version and completeness.
 
 Parameters:
-
 - `identity` - Identity fields to validate.
 
 Returns: Nothing when the identity is valid.
@@ -1017,7 +997,6 @@ extension bag contains no `ngeEnvelope` carrier. Callers that need to
 distinguish between the two failure modes should inspect the error message.
 
 Parameters:
-
 - `message` - Human-readable bridge validation failure message.
 - `options` - Optional native error options containing the underlying cause.
 

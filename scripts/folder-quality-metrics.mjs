@@ -23,6 +23,8 @@ import { constants as fsConstants } from 'node:fs';
 import { access, readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
 
 import { ESLint } from 'eslint';
 import typescript from 'typescript';
@@ -30,6 +32,7 @@ import typescript from 'typescript';
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIRECTORY, '..');
 const COVERAGE_LCOV_PATH = path.join(REPO_ROOT, 'coverage', 'lcov.info');
+const execAsync = promisify(exec);
 const SOURCE_FILE_SUFFIX = '.ts';
 const DECLARATION_FILE_SUFFIX = '.d.ts';
 const TEST_FILE_SUFFIX = '.test.ts';
@@ -74,8 +77,10 @@ export async function runFolderQualityMetrics({ folderPath }) {
   collectedSmells.push(...jsdocResult.smells);
   evidence.push(jsdocResult.evidence);
 
-  const testPresenceResult =
-    await collectMissingTestFileSmells(moduleFilePaths);
+  const testPresenceResult = await collectMissingTestFileSmells(
+    moduleFilePaths,
+    resolvedFolder.absolutePath,
+  );
   collectedSmells.push(...testPresenceResult.smells);
   evidence.push(testPresenceResult.evidence);
 
@@ -291,6 +296,40 @@ async function collectTypeScriptFiles(folderPath) {
   );
 }
 
+async function collectDeclarationFiles(folderPath) {
+  const discoveredFiles = [];
+  const pendingDirectories = [folderPath];
+
+  while (pendingDirectories.length > 0) {
+    const currentDirectory = pendingDirectories.pop();
+    const directoryEntries = await readdir(currentDirectory, {
+      withFileTypes: true,
+    });
+
+    for (const directoryEntry of directoryEntries) {
+      const entryPath = path.join(currentDirectory, directoryEntry.name);
+      if (directoryEntry.isDirectory()) {
+        if (!IGNORED_DIRECTORY_NAMES.has(directoryEntry.name)) {
+          pendingDirectories.push(entryPath);
+        }
+
+        continue;
+      }
+
+      if (
+        directoryEntry.isFile() &&
+        entryPath.endsWith(DECLARATION_FILE_SUFFIX)
+      ) {
+        discoveredFiles.push(path.normalize(entryPath));
+      }
+    }
+  }
+
+  return discoveredFiles.toSorted((leftPath, rightPath) =>
+    leftPath.localeCompare(rightPath),
+  );
+}
+
 function isModuleOwnedSourceFile(filePath) {
   return (
     !filePath.endsWith(TEST_FILE_SUFFIX) &&
@@ -336,9 +375,14 @@ async function collectTypeScriptSmells(resolvedFolder, sourceFilePaths) {
     undefined,
     configFilePath,
   );
+  const typeScriptRootNames = sourceFilePaths
+    .filter((filePath) => !filePath.endsWith(TEST_FILE_SUFFIX))
+    .concat(await collectDeclarationFiles(resolvedFolder.absolutePath))
+    .toSorted((leftPath, rightPath) => leftPath.localeCompare(rightPath));
+
   const program = typescript.createProgram({
     options: parsedConfig.options,
-    rootNames: sourceFilePaths,
+    rootNames: typeScriptRootNames,
   });
   const inFolderDiagnostics = typescript
     .getPreEmitDiagnostics(program)
@@ -347,7 +391,7 @@ async function collectTypeScriptSmells(resolvedFolder, sourceFilePaths) {
     );
 
   return {
-    evidence: `TypeScript (${configFileName}): ${inFolderDiagnostics.length} in-folder diagnostic(s) across ${sourceFilePaths.length} file(s).`,
+    evidence: `TypeScript (${configFileName}): ${inFolderDiagnostics.length} in-folder diagnostic(s) across ${typeScriptRootNames.length} file(s) (tests excluded, .d.ts included).`,
     smells: inFolderDiagnostics.map((diagnostic) => ({
       detail: flattenDiagnosticMessage(diagnostic.messageText),
       file: normalizePath(
@@ -435,7 +479,10 @@ async function collectJsdocSmells(moduleFilePaths) {
   };
 }
 
-async function collectMissingTestFileSmells(moduleFilePaths) {
+async function collectMissingTestFileSmells(
+  moduleFilePaths,
+  folderAbsolutePath,
+) {
   if (moduleFilePaths.length === 0) {
     return {
       evidence:
@@ -444,28 +491,95 @@ async function collectMissingTestFileSmells(moduleFilePaths) {
     };
   }
 
+  const changedSet = await collectChangedFilePaths(folderAbsolutePath);
   const smells = [];
+  let checkedCount = 0;
+
   for (const moduleFilePath of moduleFilePaths) {
-    const siblingTestFilePath = moduleFilePath.replace(
-      /\.ts$/u,
-      TEST_FILE_SUFFIX,
+    const relativeFilePath = normalizePath(
+      path.relative(REPO_ROOT, moduleFilePath),
     );
-    const siblingTestExists = await pathExists(siblingTestFilePath);
-    if (siblingTestExists) {
+    if (changedSet !== null && !changedSet.has(relativeFilePath)) {
       continue;
     }
 
+    checkedCount += 1;
+    const hasSiblingTest = await hasSiblingTestFile(moduleFilePath);
+    if (hasSiblingTest) {
+      continue;
+    }
+
+    const baseName = path.basename(moduleFilePath, SOURCE_FILE_SUFFIX);
     smells.push({
-      detail: `Missing sibling test file ${path.basename(siblingTestFilePath)}.`,
-      file: normalizePath(path.relative(REPO_ROOT, moduleFilePath)),
+      detail: `Missing sibling test file ${baseName}.*.test.ts.`,
+      file: relativeFilePath,
       kind: 'missing-test-file',
     });
   }
 
+  const evidenceQualifier =
+    changedSet !== null
+      ? `checked ${checkedCount} changed source module(s)`
+      : 'checked all source modules (git status unavailable)';
+
   return {
-    evidence: `Tests: ${smells.length} source module(s) are missing a sibling .test.ts file.`,
+    evidence: `Tests: ${smells.length} source module(s) are missing a sibling .test.ts file (${evidenceQualifier}).`,
     smells,
   };
+}
+
+async function collectChangedFilePaths(folderAbsolutePath) {
+  try {
+    const { stdout } = await execAsync(
+      `git status --short --untracked-files=all -- "${folderAbsolutePath}"`,
+      { cwd: REPO_ROOT },
+    );
+    const changedPaths = new Set();
+    const text = stdout ?? '';
+    if (text.trim() === '') {
+      return null;
+    }
+
+    for (const line of text.split(/\r?\n/u)) {
+      if (line.length < 2) {
+        continue;
+      }
+      const pathSegment = line.slice(2).trim();
+      if (pathSegment === '') {
+        continue;
+      }
+
+      if (pathSegment.includes(' -> ')) {
+        for (const segmentPart of pathSegment.split(' -> ')) {
+          changedPaths.add(normalizePath(segmentPart.trim()));
+        }
+      } else {
+        changedPaths.add(normalizePath(pathSegment));
+      }
+    }
+
+    return changedPaths.size > 0 ? changedPaths : null;
+  } catch {
+    return null;
+  }
+}
+
+async function hasSiblingTestFile(moduleFilePath) {
+  const directory = path.dirname(moduleFilePath);
+  const baseName = path.basename(moduleFilePath, SOURCE_FILE_SUFFIX);
+  const directoryEntries = await readdir(directory, { withFileTypes: true });
+
+  return directoryEntries.some((directoryEntry) => {
+    if (!directoryEntry.isFile()) {
+      return false;
+    }
+
+    const name = directoryEntry.name;
+    return (
+      name === `${baseName}${TEST_FILE_SUFFIX}` ||
+      (name.startsWith(`${baseName}.`) && name.endsWith(TEST_FILE_SUFFIX))
+    );
+  });
 }
 
 async function collectCoverageDeficitSmells(

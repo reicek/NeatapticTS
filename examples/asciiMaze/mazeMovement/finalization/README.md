@@ -31,7 +31,6 @@ computeMazeMovementActionEntropy(
 Compute the normalized action-entropy summary for a finished run.
 
 Parameters:
-
 - `directionCounts` - Per-direction action counts recorded during the run.
 
 Returns: Normalized entropy in the range `[0, 1]`.
@@ -51,7 +50,6 @@ finalizeFailedMazeMovementRun(
 Build the finalized payload for a failed maze run.
 
 Parameters:
-
 - `state` - Completed simulation state for the failed run.
 - `encodedMaze` - Maze grid used to compute fallback geometric progress.
 - `startPos` - Start coordinate for the current episode.
@@ -72,7 +70,6 @@ finalizeSuccessfulMazeMovementRun(
 Build the finalized payload for a successful maze run.
 
 Parameters:
-
 - `state` - Completed simulation state for the successful run.
 - `maxSteps` - Maximum allowed step budget for the run.
 

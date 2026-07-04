@@ -8,7 +8,6 @@ host shape that the core resolution helpers actually need in order to build
 defaults, validate candidates, and manage the cached objective list.
 
 Read this chapter when you want to answer questions such as:
-
 - Which part of the controller state does objective resolution depend on?
 - Why does the core mechanics layer use a narrow host contract instead of the
   full `Neat` surface?
@@ -59,7 +58,6 @@ how the multi-objective container is hydrated lazily, and how replacement by
 key stays non-destructive.
 
 Read this chapter when you want to answer questions such as:
-
 - Why does the controller still expose a fitness objective even before the
   user registers anything custom?
 - What makes a user objective descriptor safe enough to include?
@@ -67,7 +65,6 @@ Read this chapter when you want to answer questions such as:
 - Which helpers are responsible for hydrating missing multi-objective state?
 
 The mental model is a four-step resolution flow:
-
 1. decide whether the default fitness objective should exist,
 2. collect candidate user objectives when multi-objective mode is active,
 3. validate and normalize the candidate list,
@@ -101,8 +98,8 @@ Core resolution builds it on demand so callers do not need a special
 bootstrap path elsewhere.
 
 Keeping this builder separate from the collection logic also makes the core
-flow easier to teach: one helper decides _whether_ the default should exist,
-this helper decides _what_ that default descriptor looks like.
+flow easier to teach: one helper decides *whether* the default should exist,
+this helper decides *what* that default descriptor looks like.
 
 Returns: Default fitness objective descriptor.
 
@@ -125,7 +122,6 @@ the default case and makes suppression an explicit opt-out rather than an
 accidental side effect of enabling richer objective configuration later.
 
 Parameters:
-
 - `neatInstance` - NEAT host exposing objective settings.
 
 Returns: Default objective descriptors.
@@ -149,7 +145,6 @@ contain raw candidates, but the resolved objective list only receives entries
 that are both contextually enabled and structurally safe.
 
 Parameters:
-
 - `neatInstance` - NEAT host exposing objective settings.
 
 Returns: Valid user objective descriptors.
@@ -173,7 +168,6 @@ later logic can assume the container exists without scattering defensive
 object creation throughout the file.
 
 Parameters:
-
 - `neatInstance` - NEAT host receiving the multi-objective container.
 
 Returns: Initialized multi-objective options.
@@ -195,7 +189,6 @@ It exists so registration code can talk about replacing objectives by key
 instead of repeatedly guarding against `undefined` lists.
 
 Parameters:
-
 - `multiObjectiveOptions` - Multi-objective container to hydrate.
 
 Returns: Objectives list ready for non-destructive operations.
@@ -216,7 +209,6 @@ That separation makes the later validation helpers easier to test and easier
 to explain in the generated docs.
 
 Parameters:
-
 - `neatInstance` - NEAT host exposing objective settings.
 
 Returns: Objective candidates from configuration.
@@ -239,7 +231,6 @@ That strictness keeps later helpers simpler because they can assume that a
 `true` result means both the mode and the candidate container are present.
 
 Parameters:
-
 - `neatInstance` - NEAT host exposing objective settings.
 
 Returns: `true` when multi-objective mode is enabled and an objective list exists.
@@ -263,7 +254,6 @@ This is intentionally a safety check, not a semantic ranking policy. It tells
 the controller whether a descriptor is usable, not whether it is a good idea.
 
 Parameters:
-
 - `candidateObjective` - Candidate descriptor to validate.
 
 Returns: `true` when the descriptor can be used safely.
@@ -290,7 +280,6 @@ This is the final fold step in the core flow: once a descriptor is accepted,
 replacement by key turns that decision into a new resolved list.
 
 Parameters:
-
 - `objectivesList` - Existing objectives to update.
 - `objectiveKey` - Key to replace.
 - `objectiveDirection` - Direction for the new objective.

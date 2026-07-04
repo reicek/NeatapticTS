@@ -10,6 +10,7 @@
 --   - chunk_embeddings table merged into chunks as embedding F8_BLOB(384)
 --   - embedding_model TEXT, chunk_sha256 TEXT, embedded_at INTEGER added to chunks
 --   - term_embeddings.embedding changed from BLOB to F8_BLOB(384)
+--   - embedded_at TEXT added to term_embeddings
 --   - DiskANN vector indexes on chunks.embedding and term_embeddings.embedding
 --   - _schema_version table for schema versioning (read-only pragmas not supported on Turso)
 --   - _index_metadata table for application metadata
@@ -161,6 +162,7 @@ CREATE TABLE IF NOT EXISTS term_embeddings (
   dimension INTEGER NOT NULL,
   frequency INTEGER NOT NULL,
   doc_family_count INTEGER NOT NULL,
+  embedded_at TEXT NOT NULL,
   PRIMARY KEY (term, model_id)
 );
 

@@ -62,7 +62,7 @@ materialization.
 
 For compact background reading on the wider idea, see Wikipedia
 contributors,
-[Crossover (genetic algorithm)](<https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)>).
+[Crossover (genetic algorithm)](https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)).
 The implementation here specializes that idea to graph-shaped neural
 networks with gating and disabled genes.
 
@@ -94,7 +94,6 @@ crossOver(
 NEAT-inspired crossover between two parent networks producing a single offspring.
 
 Conceptual model:
-
 - A "gene" corresponds to either a node choice at a structural index or a connection
   keyed by innovation identity.
 - The offspring is assembled in two phases: node assignment first, then connection
@@ -103,48 +102,43 @@ Conceptual model:
   parents contribute symmetrically where possible.
 
 Current simplifications relative to canonical NEAT:
-
-- Node alignment still relies on current index ordering while the broader
-  proper-NEAT lift keeps the public runtime `Network` surface stable.
-- Recurrent and self-connection legality is still finalized during
-  materialization rather than by a separate genotype-first heredity layer.
+ - Node alignment still relies on current index ordering while the broader
+   proper-NEAT lift keeps the public runtime `Network` surface stable.
+ - Recurrent and self-connection legality is still finalized during
+   materialization rather than by a separate genotype-first heredity layer.
 
 Compatibility assumptions:
-
 - Both parents must expose identical input/output counts.
 - Parent node index ordering should represent comparable structural positions.
 - Parent fitness scores are interpreted by setup helpers when deciding fitter-parent inheritance.
 
 High-level algorithm:
-
-1.  Validate that parents have identical I/O dimensionality (required for compatibility).
-2.  Decide offspring node array length:
-    - If equal flag set or scores tied: random length in [minNodes, maxNodes].
-    - Else: length of fitter parent.
-3.  For each index up to chosen size, pick a node gene from parents per rules:
-    - Input indices: always from parent1 (assumes identical input interface).
-    - Output indices (aligned from end): randomly choose if both present else take existing.
-    - Hidden indices: if both present pick randomly; else inherit from fitter (or either if equal).
-4.  Reindex offspring nodes.
-5.  Delegate innovation-keyed connection-gene collection and inheritance
+ 1. Validate that parents have identical I/O dimensionality (required for compatibility).
+ 2. Decide offspring node array length:
+      - If equal flag set or scores tied: random length in [minNodes, maxNodes].
+      - Else: length of fitter parent.
+ 3. For each index up to chosen size, pick a node gene from parents per rules:
+      - Input indices: always from parent1 (assumes identical input interface).
+      - Output indices (aligned from end): randomly choose if both present else take existing.
+      - Hidden indices: if both present pick randomly; else inherit from fitter (or either if equal).
+ 4. Reindex offspring nodes.
+ 5. Delegate innovation-keyed connection-gene collection and inheritance
     choice to the genome heredity boundary.
-6.  For matching genes (present in both parents with the same innovation),
+ 6. For matching genes (present in both parents with the same innovation),
     randomly choose one; if either copy is disabled, apply the explicit
     re-enable policy through the crossover RNG.
-7.  For disjoint/excess genes, inherit only from the fitter parent (or from
+ 7. For disjoint/excess genes, inherit only from the fitter parent (or from
     both parents when `equal` is enabled or scores tie).
-8.  Rebuild the offspring node set from required IO nodes plus inherited
+ 8. Rebuild the offspring node set from required IO nodes plus inherited
     gene identities, then materialize selected connection genes under the
     offspring topology intent.
-9.  Reattach gating if gater node exists in offspring.
+ 9. Reattach gating if gater node exists in offspring.
 
 Enabled reactivation probability:
-
-- Parents may carry disabled connections; offspring may re-enable them with a probability derived
-  from parent-specific _reenableProb (or default 0.25). This allows dormant structures to resurface.
+ - Parents may carry disabled connections; offspring may re-enable them with a probability derived
+   from parent-specific _reenableProb (or default 0.25). This allows dormant structures to resurface.
 
 Parameters:
-
 - `parentNetwork1` - First parent (ties resolved in its favor when scores equal and equal=false for some cases).
 - `parentNetwork2` - Second parent.
 - `equal` - Force symmetric treatment regardless of fitness (true => node count random between sizes and both parents equally contribute disjoint genes).
@@ -176,7 +170,6 @@ keep relying on the runtime-network fallback. The evolve controller uses this he
 when crossover randomness must stay in the same deterministic stream as parent selection.
 
 Parameters:
-
 - `parentNetwork1` - First parent network.
 - `parentNetwork2` - Second parent network.
 - `equal` - Equal-treatment mode flag.
@@ -222,7 +215,6 @@ asGeneticNetwork(
 Coerces a network to the internal genetic runtime shape.
 
 Parameters:
-
 - `network` - Source network.
 
 Returns: Network with runtime genetic properties.
@@ -238,7 +230,6 @@ assignNodeIndexes(
 Assigns contiguous indices to a node list.
 
 Parameters:
-
 - `nodes` - Nodes to reindex.
 
 Returns: Nothing.
@@ -254,7 +245,6 @@ assignOffspringNodes(
 Builds and reindexes offspring nodes using the supplied node-build context.
 
 Parameters:
-
 - `nodeContext` - Node-build context.
 
 Returns: Nothing.
@@ -275,7 +265,6 @@ buildOffspringNodes(
 Builds the offspring node list by selecting genes per slot.
 
 Parameters:
-
 - `parent1` - First parent.
 - `parent2` - Second parent.
 - `parentMetrics` - Parent metrics.
@@ -301,7 +290,6 @@ descriptor consumed by the phenotype builder, without carrying parent-local
 node-index hints across the adapter.
 
 Parameters:
-
 - `context` - Crossover baseline context.
 
 Returns: Chosen connection genes.
@@ -322,7 +310,6 @@ materialization resolve inherited connection endpoints by stable gene identity
 instead of by whatever transient slot the node lands in after reindexing.
 
 Parameters:
-
 - `sourceNode` - Source node gene.
 
 Returns: Cloned node.
@@ -341,7 +328,6 @@ createCrossoverContext(
 Creates the immutable crossover baseline context.
 
 Parameters:
-
 - `parentNetwork1` - First parent network.
 - `parentNetwork2` - Second parent network.
 - `equal` - Equal-treatment mode flag.
@@ -360,7 +346,6 @@ createNodeBuildContext(
 Creates the immutable node-build context used for offspring node selection.
 
 Parameters:
-
 - `context` - Crossover baseline context.
 
 Returns: Node-build context.
@@ -378,7 +363,6 @@ createOffspringScaffold(
 Creates an empty offspring scaffold with reset runtime arrays.
 
 Parameters:
-
 - `inputSize` - Input count.
 - `outputSize` - Output count.
 - `topologyIntent` - Topology policy inherited by the offspring scaffold.
@@ -402,7 +386,6 @@ Reading through per-type partitions keeps output-slot inheritance stable
 without mutating the parent runtime graph.
 
 Parameters:
-
 - `nodes` - Ordered runtime node list.
 
 Returns: Canonical node partitions.
@@ -420,7 +403,6 @@ determineOffspringNodeCount(
 Determines offspring node count from fitness/equality policy.
 
 Parameters:
-
 - `equal` - Whether equal treatment mode is enabled.
 - `parentMetrics` - Parent metrics.
 - `randomGenerator` - Random generator.
@@ -438,7 +420,6 @@ getRandomGenerator(
 Resolves the random generator used by crossover decisions.
 
 Parameters:
-
 - `parentNetwork` - Parent network that may provide a deterministic `_rand` source.
 
 Returns: Random function.
@@ -460,7 +441,6 @@ genes during materialization. The offspring therefore stays feed-forward only
 when both parents advertise the feed-forward contract.
 
 Parameters:
-
 - `parentNetwork1` - First parent network.
 - `parentNetwork2` - Second parent network.
 
@@ -479,7 +459,6 @@ resolveParentMetrics(
 Computes common parent metrics reused across helper functions.
 
 Parameters:
-
 - `parent1` - First parent network.
 - `parent2` - Second parent network.
 - `outputSize` - Shared output size.
@@ -502,7 +481,6 @@ selectHiddenNodeGene(
 Selects a hidden-region node gene.
 
 Parameters:
-
 - `hiddenOrdinal` - Hidden-slot ordinal.
 - `parent1NodeRegions` - First parent node partitions.
 - `parent2NodeRegions` - Second parent node partitions.
@@ -524,7 +502,6 @@ selectInputNodeGene(
 Selects an input-region node gene.
 
 Parameters:
-
 - `nodeIndex` - Slot index.
 - `parent1` - First parent.
 
@@ -547,7 +524,6 @@ selectNodeGeneAtIndex(
 Selects a node gene for a specific offspring slot.
 
 Parameters:
-
 - `nodeIndex` - Slot index.
 - `offspringNodeCount` - Total offspring slots.
 - `parent1NodeRegions` - First parent node partitions.
@@ -576,7 +552,6 @@ structural edits. This runtime shelf therefore reads outputs from canonical
 per-type partitions rather than trusting the raw tail slots on `nodes[]`.
 
 Parameters:
-
 - `outputOrdinal` - Output-slot ordinal.
 - `parent1NodeRegions` - First parent node partitions.
 - `parent2NodeRegions` - Second parent node partitions.
@@ -596,7 +571,6 @@ validateParentCompatibility(
 Validates parent compatibility for crossover.
 
 Parameters:
-
 - `parentNetwork1` - First parent candidate.
 - `parentNetwork2` - Second parent candidate.
 
@@ -630,7 +604,6 @@ Runtime node scaffolding, topology pruning, and gating reattachment remain
 outside this adapter.
 
 Parameters:
-
 - `parent1` - First runtime parent.
 - `parent2` - Second runtime parent.
 - `parentMetrics` - Shared score summary used by heredity policy.
@@ -655,7 +628,6 @@ addInheritedGeneIdWhenRequired(
 Adds one gene id to the required-node set when it is defined.
 
 Parameters:
-
 - `requiredGeneIds` - Mutable required-node set.
 - `currentNodeOrderByGeneId` - Current offspring node order lookup.
 - `sourceNodesByGeneId` - Fallback node-gene lookup.
@@ -675,7 +647,6 @@ applyConnectionGeneToConnection(
 Applies gene properties to a runtime connection.
 
 Parameters:
-
 - `connection` - Runtime connection.
 - `connectionGene` - Gene source.
 
@@ -692,7 +663,6 @@ assignOffspringNodeIndexes(
 Assigns contiguous node indices after rebuilt node ordering is finalized.
 
 Parameters:
-
 - `nodes` - Rebuilt offspring nodes.
 
 Returns: Nothing.
@@ -710,7 +680,6 @@ attachGaterIfAvailable(
 Attaches a gater node when the inherited gater gene exists in the offspring.
 
 Parameters:
-
 - `context` - Materialization context.
 - `connection` - Connection to gate.
 - `gaterGeneId` - Candidate gater node gene id.
@@ -735,7 +704,6 @@ provisional scaffold omitted, this pass rehydrates that node by `geneId`
 before any connection materialization begins.
 
 Parameters:
-
 - `currentOffspringNodes` - Provisional offspring nodes from setup.
 - `chosenGenes` - Chosen inherited connection genes.
 - `sourceNodesByGeneId` - Fallback node-gene lookup.
@@ -753,7 +721,6 @@ cloneSourceNodeGene(
 Clones one fallback source node for materialization-time insertion.
 
 Parameters:
-
 - `sourceNode` - Source node gene.
 
 Returns: Structural clone for the rebuilt offspring node set.
@@ -774,7 +741,6 @@ The offspring always preserves its IO interface, then adds any nodes named by
 inherited connection endpoints or gaters.
 
 Parameters:
-
 - `currentOffspringNodes` - Provisional offspring nodes from setup.
 - `chosenGenes` - Chosen inherited connection genes.
 - `sourceNodesByGeneId` - Fallback node-gene lookup.
@@ -793,7 +759,6 @@ compareMaterializedNodeCandidates(
 Compares rebuilt node candidates using IO/hidden ordering first.
 
 Parameters:
-
 - `leftNodeCandidate` - Left node candidate.
 - `rightNodeCandidate` - Right node candidate.
 
@@ -810,7 +775,6 @@ createConnectionForEndpoints(
 Creates a runtime connection for endpoint nodes.
 
 Parameters:
-
 - `endpointsContext` - Endpoint context.
 
 Returns: Created connection or undefined.
@@ -828,7 +792,6 @@ createMaterializationContext(
 Creates the immutable top-level context used during materialization.
 
 Parameters:
-
 - `targetOffspring` - Offspring receiving concrete edges.
 - `chosenGenes` - Chosen inherited genes.
 - `sourceNetworks` - Parent networks used as fallback node-gene sources.
@@ -853,7 +816,6 @@ Missing inherited nodes are cloned from the first parent/source that still
 exposes the required `geneId`.
 
 Parameters:
-
 - `geneId` - Required stable node gene id.
 - `currentOffspringNodes` - Provisional offspring nodes from setup.
 - `currentNodeOrderByGeneId` - Current offspring node order lookup.
@@ -872,7 +834,6 @@ createNodeOrderLookup(
 Creates a node-order lookup keyed by stable gene id.
 
 Parameters:
-
 - `nodes` - Ordered node list.
 
 Returns: Current node order by gene id.
@@ -891,7 +852,6 @@ createOffspringConnection(
 Creates a single offspring connection edge.
 
 Parameters:
-
 - `offspring` - Offspring network.
 - `fromNode` - Source node.
 - `toNode` - Destination node.
@@ -914,7 +874,6 @@ node array is rebuilt in a different slot order. This map lets the
 materialization pass reattach inherited genes to the right runtime nodes.
 
 Parameters:
-
 - `nodes` - Offspring nodes after node selection and reindexing.
 
 Returns: Gene-id lookup map.
@@ -930,7 +889,6 @@ createSourceInterfaceOrdinalMap(
 Flattens source interface ordinals into a plain lookup keyed by gene id.
 
 Parameters:
-
 - `sourceNodeEntriesByGeneId` - Source-node entries keyed by gene id.
 
 Returns: Plain source interface-ordinal lookup.
@@ -948,7 +906,6 @@ Builds the fallback node-gene lookup used when chosen genes reference nodes
 not present in the provisional offspring scaffold.
 
 Parameters:
-
 - `currentOffspringNodes` - Provisional offspring node genes.
 - `sourceNetworks` - Parent networks that can contribute missing nodes.
 
@@ -965,7 +922,6 @@ createSourceNodeMap(
 Flattens source-node entries into a plain node lookup keyed by gene id.
 
 Parameters:
-
 - `sourceNodeEntriesByGeneId` - Source-node entries keyed by gene id.
 
 Returns: Plain source node lookup.
@@ -982,7 +938,6 @@ createTraversalContexts(
 Builds traversal contexts for each candidate gene.
 
 Parameters:
-
 - `context` - Top-level materialization context.
 - `genes` - Candidate genes.
 
@@ -999,7 +954,6 @@ hasExistingProjection(
 Checks whether the source endpoint already projects to the target endpoint.
 
 Parameters:
-
 - `endpointsContext` - Endpoint context.
 
 Returns: True when projection already exists.
@@ -1019,7 +973,6 @@ offspring keep those genes and let `connect()` register them in the runtime
 self/recurrent collections.
 
 Parameters:
-
 - `endpointsContext` - Resolved endpoints for one inherited gene.
 
 Returns: True when the gene is legal for the offspring topology intent.
@@ -1035,7 +988,6 @@ isRequiredInterfaceNode(
 Resolves whether one node is part of the required public IO contract.
 
 Parameters:
-
 - `node` - Candidate node.
 
 Returns: True when the node is input or output.
@@ -1061,7 +1013,6 @@ pruning is now derived from the offspring topology contract instead of any
 incidental parent ordering hint.
 
 Parameters:
-
 - `offspring` - Offspring network.
 - `chosenGenes` - Chosen connection materialization descriptors.
 - `sourceNetworks` - Parent networks used as fallback node-gene sources.
@@ -1079,7 +1030,6 @@ materializeSingleTraversalContext(
 Materializes one eligible traversal context when no duplicate projection exists.
 
 Parameters:
-
 - `traversalContext` - Traversal context.
 
 Returns: Nothing.
@@ -1095,7 +1045,6 @@ materializeTraversalContexts(
 Materializes each eligible traversal context independently.
 
 Parameters:
-
 - `traversalContexts` - Eligible traversal contexts.
 
 Returns: Nothing.
@@ -1113,7 +1062,6 @@ registerNodeSources(
 Registers one ordered node list as a fallback source for gene-id lookup.
 
 Parameters:
-
 - `sourceNodesByGeneId` - Mutable source-node lookup.
 - `nodes` - Ordered nodes from one source network.
 - `sourcePriority` - Stable priority for this source list.
@@ -1131,7 +1079,6 @@ resolveGeneEndpointsContext(
 Resolves concrete endpoint nodes for a traversal context.
 
 Parameters:
-
 - `traversalContext` - Traversal context.
 
 Returns: Endpoint context or undefined.
@@ -1149,7 +1096,6 @@ resolveInterfaceNodeByOrdinal(
 Resolves one offspring IO node by its stable interface ordinal.
 
 Parameters:
-
 - `context` - Materialization context.
 - `nodeType` - Interface node type to resolve.
 - `interfaceOrdinal` - Ordinal within the source interface partition.
@@ -1168,7 +1114,6 @@ resolveNodeByGeneId(
 Resolves one offspring node by its stable gene id.
 
 Parameters:
-
 - `context` - Materialization context holding the lookup map.
 - `geneId` - Stable node gene id referenced by a connection gene.
 
@@ -1185,7 +1130,6 @@ resolveNodeTypeRank(
 Resolves a stable materialization rank for one node type.
 
 Parameters:
-
 - `node` - Candidate node.
 
 Returns: Type rank used for rebuilt offspring ordering.

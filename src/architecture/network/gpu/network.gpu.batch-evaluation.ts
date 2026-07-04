@@ -1,12 +1,13 @@
 import type Network from '../network';
-import { canUseGPU } from './network.gpu.capability';
+import { activateGPUWithFreshState } from './network.gpu.activate';
 import { batchActivate } from './network.gpu.batched';
+import { canUseGPU } from './network.gpu.capability';
 import { SUPPORTED_ACTIVATION_INDICES } from './network.gpu.kernel';
 
 /**
- * Options controlling batch evaluation in the racing-curriculum worker seam.
+ * Options controlling batch evaluation in the worker seam.
  */
-export interface RacingBatchOptions {
+export interface BatchEvaluationOptions {
   /**
    * Minimum number of networks required before the GPU batch path is chosen.
    * Smaller batches always fall back to per-network CPU activation.
@@ -19,16 +20,16 @@ export interface RacingBatchOptions {
 /**
  * Default threshold below which the per-network CPU path is preferred.
  *
- * The racing-curriculum worker can override this through
- * `RacingBatchOptions.gpuBatchThreshold`; the default is sized for a
- * generation large enough that GPU dispatch overhead is amortized.
+ * The worker seam can override this through
+ * `BatchEvaluationOptions.gpuBatchThreshold`; the default is sized for a
+ * batch generation large enough that GPU dispatch overhead is amortized.
  */
 const DEFAULT_GPU_BATCH_THRESHOLD = 8;
 
 /**
  * Activation indices that the current placeholder GPU kernel understands.
  *
- * Reused from the kernel contract so the racing eligibility check stays in
+ * Reused from the kernel contract so the batch eligibility check stays in
  * sync with the batched GPU seam.
  */
 const SUPPORTED_ACTIVATIONS = new Set<number>(
@@ -57,7 +58,7 @@ function isDeviceUsable(
 }
 
 /**
- * Decide whether the racing generation can use the batched GPU path.
+ * Decide whether the batch generation can use the batched GPU path.
  *
  * All of the following must hold:
  * 1. The batch size is strictly greater than the configured threshold.
@@ -122,14 +123,14 @@ function evaluateOnCPU(
 }
 
 /**
- * Racing-curriculum generation evaluation seam.
+ * Batch generation evaluation seam.
  *
  * Evaluates a generation of controller networks against a row-major input
  * matrix. Uses the batched GPU path when the batch size is above the threshold,
  * every network is GPU-eligible, and a valid device is supplied; otherwise falls
  * back to per-network CPU `network.activate()` calls.
  *
- * @param networks - One network per car / genome in the generation.
+ * @param networks - One network per genome in the generation.
  * @param inputMatrix - Flattened row-major inputs, length
  *   `networks.length * networks[0].input`.
  * @param device - WebGPU device, or null when GPU inference is unavailable.
@@ -137,11 +138,11 @@ function evaluateOnCPU(
  * @returns Promise resolving to a row-major output matrix of length
  *   `networks.length * networks[0].output`.
  */
-export async function evaluateRacingGeneration(
+export async function evaluateBatchGeneration(
   networks: Network[],
   inputMatrix: Float32Array,
   device: GPUDevice | null,
-  options?: RacingBatchOptions,
+  options?: BatchEvaluationOptions,
 ): Promise<Float32Array> {
   const threshold = options?.gpuBatchThreshold ?? DEFAULT_GPU_BATCH_THRESHOLD;
 
@@ -154,33 +155,42 @@ export async function evaluateRacingGeneration(
 }
 
 /**
- * Single concurrent racing evaluation request.
+ * Single concurrent agent evaluation request.
  */
-export interface RacingAgentRequest {
+export interface AgentEvaluationRequest {
   network: Network;
   inputs: Float32Array | number[];
 }
 
 /**
- * Evaluate many racing agents in parallel on the GPU.
+ * Evaluate many agents in parallel on the GPU.
  *
- * This is a stub export that satisfies the compile-time contract for the red
- * testing phase. The implementation will dispatch all requests concurrently,
- * avoid pipeline collisions when the same network instance appears multiple
- * times, and return one output array per request.
+ * Each request receives its own fresh GPU buffer set and bind group, so the
+ * same `Network` instance can appear in multiple requests with different inputs
+ * without any read/write collision. Pipelines are still shared through the
+ * per-device pipeline cache, so identical topologies compile once regardless of
+ * how the requests are interleaved.
  *
  * @param device - WebGPU device used to run the concurrent dispatch.
  * @param requests - One request per agent to evaluate.
- * @param options - Threshold and policy options.
+ * @param options - Threshold and policy options (currently unused; reserved for
+ *   future batch-size tuning).
  * @returns Promise resolving to one output array per request, in request order.
  */
-export async function evaluateConcurrentRacingAgents(
+export async function evaluateConcurrentAgents(
   device: GPUDevice,
-  requests: RacingAgentRequest[],
-  options?: RacingBatchOptions,
+  requests: AgentEvaluationRequest[],
+  options?: BatchEvaluationOptions,
 ): Promise<Float32Array[]> {
-  void device;
-  void requests;
   void options;
-  throw new Error('evaluateConcurrentRacingAgents: not implemented');
+
+  if (requests.length === 0) {
+    return [];
+  }
+
+  return Promise.all(
+    requests.map((request) =>
+      activateGPUWithFreshState(device, request.network, request.inputs),
+    ),
+  );
 }

@@ -7,12 +7,11 @@ An evaluation pack is the transport-neutral initial state for one evaluation
 episode. It bundles deterministic typed arrays with the seed and schema
 version that produced them, so a worker can recreate the exact same starting
 point on the same runtime. The boundary exists because benchmarks such as
-racing, predator/prey, and ant-hive all need to ship initial state across a
-worker boundary, but each benchmark should not invent its own pack,
+multi-agent, competitive, and cooperative tasks all need to ship initial state
+across a worker boundary, but each benchmark should not invent its own pack,
 transfer, and versioning rules.
 
 This module owns the generic contract:
-
 - `createDeterministicEvaluationPack(seed, inputs)` builds a pack from a
   seed and transport-neutral inputs. The same reproducibility tuple
   `(seed, agentCount, schemaVersion)` produces byte-identical arrays on the
@@ -23,8 +22,8 @@ This module owns the generic contract:
 - `assertSchemaVersion(pack, expectedVersion)` rejects incompatible pack
   shapes at the boundary with a clear `RangeError`.
 
-The pack is intentionally transport-neutral. It does not know about racing
-frames, opponent snapshots, or track physics; the benchmark's Layer 3 wrapper
+The pack is intentionally transport-neutral. It does not know about domain
+frames, opponent snapshots, or simulation physics; the benchmark's Layer 3 wrapper
 injects that state after the pack arrives. This split lets Layer 2 stay
 reusable while each benchmark keeps its own frame format and lifecycle.
 
@@ -41,12 +40,12 @@ flowchart TD
 
   Core[Layer 1 — NGE core<br/>collective evaluation]:::base --> Pack[Layer 2 — generic pack<br/>seed + agentCount + schemaVersion]:::accent
   Pack --> Transfer[postMessage + transfer list<br/>zero-copy worker handoff]:::base
-  Transfer --> Wrap[Layer 3 — benchmark wrapper<br/>populateRacingFrame, etc.]:::base
-  Wrap --> Frame[benchmark frame<br/>RacingRenderFrame]:::accent
+  Transfer --> Wrap[Layer 3 — benchmark wrapper<br/>populateEvaluationFrame, etc.]:::base
+  Wrap --> Frame[benchmark frame<br/>EvaluationFrame]:::accent
 ```
 
 For background on the PRNG family used to fill the arrays, see Marsaglia,
-G. (2003), "Xorshift RNGs," _Journal of Statistical Software_, 8(14), 1–6,
+G. (2003), "Xorshift RNGs," *Journal of Statistical Software*, 8(14), 1–6,
 https://www.jstatsoft.org/article/view/v008i14, and Wikipedia contributors,
 [Pseudorandom number generator](https://en.wikipedia.org/wiki/Pseudorandom_number_generator).
 For background on the worker boundary where the zero-copy transfer list is
@@ -93,18 +92,17 @@ assertSchemaVersion(
 ```
 
 Asserts that the `schemaVersion` field of a pack matches the expected
-version string. Consumers must call this before reading any typed-array
+version string.  Consumers must call this before reading any typed-array
 field so that a version mismatch is caught at the boundary rather than
 silently misinterpreting the packed bytes.
 
-This is the generic version of the racing-specific
-`assertRacingSchemaVersion` — the expected version is passed as a parameter
+This is the generic version of the domain-specific schema-version guards used
+by individual benchmarks — the expected version is passed as a parameter
 so any benchmark can use the same boundary guard. Schema-version sentinels
 are a common forward-compatibility technique; see Wikipedia contributors,
 [Forward compatibility](https://en.wikipedia.org/wiki/Forward_compatibility).
 
 Parameters:
-
 - `pack` - Object with a `schemaVersion` field.
 - `expectedVersion` - Expected schema-version sentinel.
 
@@ -125,15 +123,15 @@ createDeterministicEvaluationPack(
 ```
 
 Constructs a deterministic evaluation pack from a seed and transport-neutral
-inputs. Identical `(seed, inputs)` → identical pack on the same runtime
+inputs.  Identical `(seed, inputs)` → identical pack on the same runtime
 (same Node or browser build).
 
 The pack's typed arrays are filled by a self-contained xorshift32 PRNG
 seeded from `seed`. The PRNG algorithm matches the same family used in
 `src/neat/rng/core/` but is duplicated here to avoid a cross-layer
 dependency — Layer 2 must not import NEAT core internals. For background
-on xorshift32, see Marsaglia, G. (2003), "Xorshift RNGs," _Journal of
-Statistical Software_, 8(14), 1–6,
+on xorshift32, see Marsaglia, G. (2003), "Xorshift RNGs," *Journal of
+Statistical Software*, 8(14), 1–6,
 https://www.jstatsoft.org/article/view/v008i14.
 
 Generic reproducibility tuple: `(seed, agentCount, schemaVersion)`. Same
@@ -141,9 +139,8 @@ tuple → identical pack on the same runtime. Cross-runtime byte identity is
 not promised.
 
 Parameters:
-
 - `seed` - Deterministic pack seed (non-negative integer; zero falls
-  back to a non-zero constant because xorshift32 cannot advance from zero).
+back to a non-zero constant because xorshift32 cannot advance from zero).
 - `inputs` - Transport-neutral inputs (agent count, schema version).
 
 Returns: A `DeterministicEvaluationPack` whose typed arrays are
@@ -182,8 +179,8 @@ Transport-neutral inputs consumed by `createDeterministicEvaluationPack`.
 
 Captures the reproducibility tuple components that are NOT the seed:
 `agentCount` (determines typed-array sizes) and `schemaVersion` (forward-
-compatibility sentinel). Benchmark-specific inputs (opponent snapshots,
-track physics, etc.) are injected by the benchmark's own wrapper, not by
+compatibility sentinel).  Benchmark-specific inputs (opponent snapshots,
+simulation physics, etc.) are injected by the benchmark's own wrapper, not by
 this generic type.
 
 Generic reproducibility tuple: `(seed, agentCount, schemaVersion)`. Same
@@ -201,7 +198,6 @@ Collects every distinct `ArrayBuffer` backing a typed-array field in `pack`
 into a transfer list for zero-copy `postMessage` transfer.
 
 Rules:
-
 - Every typed-array field contributes exactly one buffer entry.
 - Shared buffers are deduplicated (listed only once).
 
@@ -212,7 +208,6 @@ and Wikipedia contributors,
 [Web Workers](https://en.wikipedia.org/wiki/Web_Workers).
 
 Parameters:
-
 - `pack` - The deterministic evaluation pack whose buffers will transfer.
 
 Returns: Ordered list of `ArrayBuffer` references for postMessage transfer.

@@ -33,7 +33,6 @@ edge.enabled = true;
 
 Connection (Synapse / Edge)
 ===========================
-
 Directed weighted link between two nodes. The connection keeps the everyday
 graph fields (`from`, `to`, `weight`, `innovation`) directly on the instance,
 then pushes rarer capabilities behind symbol-backed accessors so large
@@ -87,7 +86,6 @@ Acquire a connection from the internal pool, or construct a fresh one when the p
 This is the low-allocation path used by topology mutation and other edge-churn heavy flows.
 
 Parameters:
-
 - `from` - Source node.
 - `to` - Target node.
 - `weight` - Optional initial weight.
@@ -156,7 +154,6 @@ Use it when you need a stable edge identifier without relying on the mutable
 auto-increment counter.
 
 Parameters:
-
 - `sourceNodeId` - Source node integer id or index.
 - `targetNodeId` - Target node integer id or index.
 
@@ -209,7 +206,6 @@ Return a connection instance to the internal pool for later reuse.
 Treat the instance as surrendered after calling this method.
 
 Parameters:
-
 - `conn` - The connection instance to recycle.
 
 Returns: Nothing.
@@ -226,7 +222,6 @@ Reset the monotonic innovation counter used for newly constructed or pooled conn
 You usually call this at the start of an experiment or before rebuilding a whole population.
 
 Parameters:
-
 - `value` - New starting value.
 
 Returns: Nothing.
@@ -253,7 +248,6 @@ This keeps import and clone paths monotonic: once a payload brings in a high
 innovation id, newly created edges continue from above that value.
 
 Parameters:
-
 - `maxObservedInnovation` - Highest restored innovation id currently in memory.
 
 Returns: Nothing.

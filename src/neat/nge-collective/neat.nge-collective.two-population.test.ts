@@ -28,7 +28,7 @@ interface TwoPopulationHarnessModule {
   ): TwoPopulationHarnessState;
   runTwoTeamEvaluationTick(
     harness: TwoPopulationHarnessState,
-    raceState: unknown,
+    episodeState: unknown,
   ): {
     readonly teamA: readonly unknown[];
     readonly teamB: readonly unknown[];
@@ -117,7 +117,7 @@ describe('two-population harness', () => {
             );
             const evaluationResult = runTwoTeamEvaluationTick(
               harness,
-              createRaceStateFixture(),
+              createEpisodeStateFixture(),
             );
             return {
               teamACount: evaluationResult.teamA.length,
@@ -141,7 +141,7 @@ describe('two-population harness', () => {
             );
             const evaluationResult = runTwoTeamEvaluationTick(
               harness,
-              createRaceStateFixture(),
+              createEpisodeStateFixture(),
             );
             return {
               distinctArrays: evaluationResult.teamA !== evaluationResult.teamB,
@@ -294,13 +294,13 @@ function createHarnessConfig(): NeatOptions {
   return {};
 }
 
-function createRaceStateFixture(): {
+function createEpisodeStateFixture(): {
   readonly tick: number;
-  readonly carOrder: readonly string[];
+  readonly agentOrder: readonly string[];
 } {
   return {
     tick: 12,
-    carOrder: ['A0', 'A1', 'B0', 'B1'],
+    agentOrder: ['A0', 'A1', 'B0', 'B1'],
   };
 }
 

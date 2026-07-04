@@ -23,7 +23,7 @@ import {
 /** Fixed seed for all deterministic pack tests. */
 const SEED = 42;
 
-/** Minimal transport-neutral inputs (no racing-specific fields). */
+/** Minimal transport-neutral inputs (no domain-specific fields). */
 const INPUTS: EvaluationPackInputs = {
   agentCount: 4,
   schemaVersion: 'test-eval-pack-v1',
@@ -122,7 +122,7 @@ describe('network.evaluation-pack', () => {
     });
   });
 
-  describe('resolveTransferList — race-step transport', () => {
+  describe('resolveTransferList — episode-step transport', () => {
     it('collects all distinct buffer entries from a pack', () => {
       // Arrange — a pack with three distinct buffers (no sharing)
       const bufA = new ArrayBuffer(16);

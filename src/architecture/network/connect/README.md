@@ -92,7 +92,6 @@ collectCreatedConnectionBatches(
 Collect created connection groups for one ordered batch request shelf.
 
 Parameters:
-
 - `network` - Network instance owning node ordering.
 - `networkInternal` - Runtime network internals used by connection pipeline.
 - `requests` - Ordered connection requests.
@@ -116,38 +115,34 @@ their {@link Node.connect} is invoked (e.g., expanded recurrent templates). For 
 function always treats the result as an array and appends each edge to the appropriate collection.
 
 Algorithm outline:
-
-1.  (Acyclic guard) If acyclicity is enforced and the source node appears after the target node in
+ 1. (Acyclic guard) If acyclicity is enforced and the source node appears after the target node in
     the network's node ordering, abort early and return an empty array (prevents back‑edge creation).
-2.  Resolve a deterministic default weight from the owning network RNG when no explicit
+ 2. Resolve a deterministic default weight from the owning network RNG when no explicit
     weight was supplied, then delegate to sourceNode.connect(targetNode, weight).
-3.  For each created connection:
-    a. If it's a self‑connection: either ignore (acyclic mode) or store in selfconns.
-    b. Otherwise store in standard connections array.
-4.  If at least one connection was added, mark structural caches dirty (_topoDirty & _slabDirty) so lazy
+ 3. For each created connection:
+      a. If it's a self‑connection: either ignore (acyclic mode) or store in selfconns.
+      b. Otherwise store in standard connections array.
+ 4. If at least one connection was added, mark structural caches dirty (_topoDirty & _slabDirty) so lazy
     rebuild can occur before the next forward pass.
 
 Complexity:
-
-- Time: O(k) where k is the number of low‑level connections returned (typically 1).
-- Space: O(k) new Connection instances (delegated to Node.connect).
+ - Time: O(k) where k is the number of low‑level connections returned (typically 1).
+ - Space: O(k) new Connection instances (delegated to Node.connect).
 
 Edge cases & invariants:
-
-- Acyclic mode silently refuses back‑edges instead of throwing (makes evolutionary search easier).
-- Self‑connections are skipped entirely when acyclicity is enforced.
-- Weight initialization stays deterministic for seeded networks even when callers omit an explicit weight.
-- When the network carries explicit temporal extension metadata, successful edge creation
-  revalidates that descriptor bag immediately so generic structural edits keep the extension lane honest.
+ - Acyclic mode silently refuses back‑edges instead of throwing (makes evolutionary search easier).
+ - Self‑connections are skipped entirely when acyclicity is enforced.
+ - Weight initialization stays deterministic for seeded networks even when callers omit an explicit weight.
+ - When the network carries explicit temporal extension metadata, successful edge creation
+   revalidates that descriptor bag immediately so generic structural edits keep the extension lane honest.
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `from` - Source node (emits signal).
 - `to` - Target node (receives signal).
 - `weight` - Optional explicit initial weight value.
 
-Returns: Array of created {@link Connection} objects (possibly empty if acyclicity rejected the edge).
+Returns: Array of created  {@link Connection} objects (possibly empty if acyclicity rejected the edge).
 
 Example:
 
@@ -168,17 +163,16 @@ policy as repeated {@link connect} calls, but it reserves network-level
 connection storage once for the whole request shelf.
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `requests` - Ordered connection requests.
 
-Returns: Flattened created {@link Connection} objects in request order.
+Returns: Flattened created  {@link Connection} objects in request order.
 
 Example:
 
 const createdConnections = network.connectBatch([
-{ from: network.nodes[0], to: network.nodes[2] },
-{ from: network.nodes[1], to: network.nodes[2], weight: 0.5 },
+  { from: network.nodes[0], to: network.nodes[2] },
+  { from: network.nodes[1], to: network.nodes[2], weight: 0.5 },
 ]);
 
 ### disconnect
@@ -198,18 +192,16 @@ semantics). If the target edge is gated we first call {@link Network.ungate} to 
 gating invariants (ensuring the gater node's internal gate list remains consistent).
 
 Algorithm outline:
-
-1.  Choose the correct list (selfconns vs connections) based on whether from === to.
-2.  Linear scan to find the first edge with matching endpoints.
-3.  If gated, ungate to detach gater bookkeeping.
-4.  Splice the edge out; exit loop (only one expected).
-5.  Delegate per‑node cleanup via from.disconnect(to) (clears reverse references, traces, etc.).
-6.  Mark structural caches dirty for lazy recomputation.
+ 1. Choose the correct list (selfconns vs connections) based on whether from === to.
+ 2. Linear scan to find the first edge with matching endpoints.
+ 3. If gated, ungate to detach gater bookkeeping.
+ 4. Splice the edge out; exit loop (only one expected).
+ 5. Delegate per‑node cleanup via from.disconnect(to) (clears reverse references, traces, etc.).
+ 6. Mark structural caches dirty for lazy recomputation.
 
 Complexity:
-
-- Time: O(m) where m is length of the searched list (connections or selfconns).
-- Space: O(1) extra.
+ - Time: O(m) where m is length of the searched list (connections or selfconns).
+ - Space: O(1) extra.
 
 Idempotence: If no such edge exists we still perform node-level disconnect and flag caches dirty –
 this conservative approach simplifies callers (they need not pre‑check existence).
@@ -217,7 +209,6 @@ When the network carries explicit temporal extension metadata, the disconnect pa
 that descriptor bag immediately so stale module claims do not linger until a later serialize pass.
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `from` - Source node.
 - `to` - Target node.
@@ -249,7 +240,6 @@ Build one or more low-level connection objects from source node to target node.
 When a caller omits an explicit weight, this helper resolves a small symmetric random initialization using the network RNG so connection creation remains deterministic under seeded execution.
 
 Parameters:
-
 - `sourceNode` - Source node.
 - `targetNode` - Target node.
 - `initialWeight` - Optional explicit initial weight.
@@ -270,7 +260,6 @@ Mark topology and slab caches dirty when connection creation occurred.
 Marking both caches together guarantees that downstream activation scheduling and slab allocation logic re-derive their snapshots from the updated graph before the next forward pass.
 
 Parameters:
-
 - `internalState` - Runtime network internals used by connection pipeline.
 - `createdConnectionCount` - Number of created low-level connections.
 
@@ -293,7 +282,6 @@ This preserves the same registration semantics as repeated
 `connections` and `selfconns` arrays one time for the whole batch.
 
 Parameters:
-
 - `network` - Network instance owning connection collections.
 - `internalState` - Runtime network internals used by connection pipeline.
 - `createdConnectionBatches` - Ordered connection groups produced from one batch request shelf.
@@ -316,7 +304,6 @@ Register created connections in either normal-connection or self-connection stor
 The registration step preserves connection ordering guarantees expected by serialization and diagnostics paths while routing self-loops through the dedicated storage shelf when recurrent edges are allowed.
 
 Parameters:
-
 - `network` - Network instance owning connection collections.
 - `internalState` - Runtime network internals used by connection pipeline.
 - `sourceNode` - Source node used during connection creation.
@@ -339,7 +326,6 @@ registerSingleCreatedConnection(
 Register one created connection in the appropriate collection.
 
 Parameters:
-
 - `network` - Network instance owning connection collections.
 - `internalState` - Runtime network internals used by connection pipeline.
 - `isSelfConnection` - Whether source and target nodes are the same.
@@ -359,7 +345,6 @@ resolveConnectionStoragePlan(
 Resolve how much top-level connection storage one batch must reserve.
 
 Parameters:
-
 - `createdConnectionBatches` - Ordered connection groups produced from one batch request shelf.
 - `internalState` - Runtime network internals used by connection pipeline.
 
@@ -380,7 +365,6 @@ Determine whether an edge must be rejected to preserve acyclic ordering.
 This guard enforces the feed-forward structural contract by blocking backward index edges when acyclic mode is active, allowing higher-level connection APIs to fail early before mutating graph state.
 
 Parameters:
-
 - `network` - Network instance owning node ordering.
 - `internalState` - Runtime network internals used by connection pipeline.
 - `sourceNode` - Candidate source node.
@@ -403,7 +387,6 @@ Delegate per-node disconnect cleanup.
 Node-level disconnect ensures inbound and outbound adjacency shelves remain coherent even when top-level network collections are being manipulated by higher-level orchestration.
 
 Parameters:
-
 - `sourceNode` - Source node.
 - `targetNode` - Target node.
 
@@ -422,7 +405,6 @@ findConnectionIndex(
 Find index of the first connection matching source and target nodes.
 
 Parameters:
-
 - `candidateConnections` - Candidate collection to search.
 - `sourceNode` - Source node.
 - `targetNode` - Target node.
@@ -441,7 +423,6 @@ Mark topology/slab caches dirty after structural mutation.
 This invalidation guarantees that both execution ordering and pooled activation storage are recalculated against the post-removal graph before subsequent inference or training calls.
 
 Parameters:
-
 - `internalState` - Runtime network internals used by connection pipeline.
 
 Returns: Nothing.
@@ -459,7 +440,6 @@ removeConnectionAtIndex(
 Remove one connection by index, ungating first if required.
 
 Parameters:
-
 - `network` - Network instance used for ungating.
 - `candidateConnections` - Candidate collection containing target index.
 - `targetConnectionIndex` - Index to remove.
@@ -481,7 +461,6 @@ Remove first connection that matches source and target nodes.
 The helper removes at most one edge per call to preserve historical behavior for APIs that intentionally manage duplicate parallel edges over multiple mutation steps.
 
 Parameters:
-
 - `network` - Network instance used for ungating.
 - `candidateConnections` - Candidate collection to search.
 - `sourceNode` - Source node.
@@ -503,7 +482,6 @@ Select the relevant collection to search for the edge.
 Self-loops live in `selfconns` while all other edges live in `connections`, so this helper centralizes that branching and keeps removal orchestration deterministic.
 
 Parameters:
-
 - `network` - Network instance owning connection collections.
 - `sourceNode` - Source node.
 - `targetNode` - Target node.

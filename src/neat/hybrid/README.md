@@ -207,7 +207,6 @@ console.log('fitness after persistence:', lamarckian.fitness);
 ```
 
 Parameters:
-
 - `network` - Live candidate selected by the caller's fitness delegate.
 - `dataset` - Ordered training samples passed to `fineTuneVector(...)` when training runs.
 - `options` - Explicit policy, training settings, and scoring callback.

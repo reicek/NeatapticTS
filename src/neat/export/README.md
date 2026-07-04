@@ -9,7 +9,6 @@ directly, which keeps the serialization flow reusable across the public
 facade, tests, and static restore entrypoints.
 
 Typical usage follows three tracks:
-
 - export or import just the population when you only need genome payloads;
 - export or import a light checkpoint when you want to restart from retained
   elites without claiming exact future replay;
@@ -17,7 +16,6 @@ Typical usage follows three tracks:
   generation counters, and population data to resume a run faithfully.
 
 A useful way to read this chapter is as a pause-and-resume ladder:
-
 - `exportPopulation()` and `importPopulation()` move only candidate genomes
 - `toJSONImpl()` and `fromJSONImpl()` move only controller meta state
 - `exportLightState()` and `importLightStateImpl()` move retained elites plus
@@ -27,7 +25,7 @@ A useful way to read this chapter is as a pause-and-resume ladder:
 
 Deterministic replay contract (why this boundary exists):
 
-- **Population-only snapshots** are intentionally _not_ a full replay.
+- **Population-only snapshots** are intentionally *not* a full replay.
   They preserve the candidate networks plus controller-owned per-genome
   metadata (stable genome ids, lineage hints, optional per-genome RNG state),
   but they do not promise that a resumed run will make the same future
@@ -62,11 +60,10 @@ if the process had never stopped.
 
 Both full and light checkpoint bundles also reserve a top-level
 `extensions` bag for downstream metadata. That pocket exists so consumers
-such as NEATchat can attach namespaced descriptors without redefining the
-checkpoint semantics that this chapter owns.
+such as a downstream application can attach namespaced descriptors without
+redefining the checkpoint semantics that this chapter owns.
 
 Read the chapter in this order:
-
 - start with `exportPopulation()` and `importPopulation()` when you only need
   candidate genomes,
 - then read `exportLightState()` and `importLightStateImpl()` when you need a
@@ -123,7 +120,6 @@ namespaced add-ons, not for overriding the light checkpoint's bootstrap
 contract.
 
 Parameters:
-
 - `exportOptions` - Export policy describing how many elite genomes to keep.
 
 Returns: Light checkpoint bundle for approximate restart.
@@ -133,7 +129,7 @@ Example:
 ```ts
 const checkpoint = neat.exportLightState({ eliteCount: 4 });
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     branchId: 'draft-1',
   },
 };
@@ -191,7 +187,7 @@ Example:
 ```ts
 const state = neat.exportState();
 state.extensions = {
-  neatchat: {
+  myApp: {
     memoryBankId: 'memory-bank-1',
   },
 };
@@ -201,7 +197,7 @@ const raw = JSON.parse(fs.readFileSync('state.json', 'utf8')) as NeatStateJSON;
 const neat2 = Neat.importState(raw, fitnessFn); // identical evolutionary context
 ```
 
-Returns: A {@link NeatStateJSON} bundle containing meta + population.
+Returns: A  {@link NeatStateJSON} bundle containing meta + population.
 
 ### fromJSONImpl
 
@@ -226,15 +222,12 @@ should be restored from another source.
 Example:
 
 ```ts
-const meta: NeatMetaJSON = JSON.parse(
-  fs.readFileSync('neat-meta.json', 'utf8'),
-);
+const meta: NeatMetaJSON = JSON.parse(fs.readFileSync('neat-meta.json', 'utf8'));
 const neat = Neat.fromJSONImpl(meta, fitnessFn); // empty population, same innovations
 neat.importPopulation(popSnapshot); // optional
 ```
 
 Parameters:
-
 - `neatJSON` - Serialized meta (no population).
 - `fitnessFunction` - Fitness callback used to construct the new instance.
 
@@ -284,8 +277,7 @@ than part of the restart contract. Import therefore ignores that bag while it
 validates the light checkpoint-owned bootstrap fields.
 
 Parameters:
-
-- `stateBundle` - Light checkpoint bundle produced by {@link exportLightState} .
+- `stateBundle` - Light checkpoint bundle produced by  {@link exportLightState} .
 - `fitnessFunction` - Fitness evaluation callback used for the new instance.
 
 Returns: Rehydrated NEAT instance ready for approximate restart.
@@ -307,15 +299,12 @@ existing controller context instead of restoring a full historical checkpoint.
 Example:
 
 ```ts
-const populationData: GenomeJSON[] = JSON.parse(
-  fs.readFileSync('population.json', 'utf8'),
-);
+const populationData: GenomeJSON[] = JSON.parse(fs.readFileSync('population.json', 'utf8'));
 neat.importPopulation(populationData); // population replaced
 neat.evolve(); // continue evolving with new starting genomes
 ```
 
 Edge cases handled:
-
 - Empty array => becomes an empty population (popsize=0).
 - Legacy snapshots without controller genome ids are upgraded by assigning
   fresh ids inside the destination controller.
@@ -323,7 +312,6 @@ Edge cases handled:
   explicit population-validation errors.
 
 Parameters:
-
 - `populationJSON` - Array of serialized genome objects.
 
 Returns: Promise that resolves once all genomes have been rehydrated and the
@@ -354,7 +342,6 @@ allowed to travel with the bundle, but it does not weaken the strict checks
 around replay-critical speciation and runtime state.
 
 Safety and validation:
-
 - Throws if the bundle is not an object.
 - Throws if the bundle omits the full population array.
 - Throws if the population or species payload cannot satisfy the proper-NEAT
@@ -369,8 +356,7 @@ neat.evolve();
 ```
 
 Parameters:
-
-- `stateBundle` - Full state bundle from {@link exportState} .
+- `stateBundle` - Full state bundle from  {@link exportState} .
 - `fitnessFunction` - Fitness evaluation callback used for new instance.
 - `restoreOptions` - Explicit restore-mode override. Defaults to strict exact resume.
 
@@ -466,9 +452,7 @@ Example:
 const meta = neat.toJSONImpl();
 fs.writeFileSync('neat-meta.json', JSON.stringify(meta));
 // ... later ...
-const metaLoaded = JSON.parse(
-  fs.readFileSync('neat-meta.json', 'utf8'),
-) as NeatMetaJSON;
+const metaLoaded = JSON.parse(fs.readFileSync('neat-meta.json', 'utf8')) as NeatMetaJSON;
 const neat2 = Neat.fromJSONImpl(metaLoaded, fitnessFn); // empty population
 ```
 
@@ -668,7 +652,6 @@ payloads do not normalize malformed controller state into a seemingly valid
 snapshot.
 
 Parameters:
-
 - `genome` - Live genome being exported or rehydrated.
 - `genomeIndex` - Stable population index used in error messages.
 - `operation` - Current checkpoint operation for diagnostics.
@@ -692,7 +675,6 @@ and connection identity fields before runtime rehydration can synthesize any
 replacement structure.
 
 Parameters:
-
 - `networkPayload` - Raw network JSON payload from persistence.
 - `genomeIndex` - Stable population index used in diagnostics.
 
@@ -712,7 +694,6 @@ Import paths use this after population restore so future offspring ids remain
 above every stable genome id already present in memory.
 
 Parameters:
-
 - `population` - Restored controller population.
 
 Returns: Next safe genome id after the maximum observed id.
@@ -731,7 +712,6 @@ Missing version tags are treated as the legacy pre-versioned format so the
 export boundary can decide whether to restore or reject older payloads.
 
 Parameters:
-
 - `neatJSON` - Serialized controller meta payload.
 
 Returns: Effective meta format version.
@@ -751,7 +731,6 @@ full restore path can branch cleanly between older payloads and the current
 strict checkpoint contract.
 
 Parameters:
-
 - `stateBundle` - Serialized full-checkpoint payload.
 
 Returns: Effective full-checkpoint format version.
@@ -791,7 +770,6 @@ checkpoint metadata so exported payloads stay compact and omission remains
 meaningful.
 
 Parameters:
-
 - `genome` - Live genome carrying controller-owned annotations.
 
 Returns: Controller metadata object for checkpoint export.
@@ -814,7 +792,6 @@ stable genome ids within the imported population, and returns the next id
 floor that later imports or offspring generation must stay above.
 
 Parameters:
-
 - `genome` - Rehydrated live genome instance.
 - `controllerMeta` - Optional controller metadata from the checkpoint.
 - `seenGenomeIds` - Set tracking stable genome ids already assigned.
@@ -838,7 +815,6 @@ the reserved `controllerMeta` pocket only when the controller has metadata
 worth preserving beside the network JSON.
 
 Parameters:
-
 - `genome` - Live genome from the controller population.
 
 Returns: Serialized genome payload with optional controller metadata.
@@ -858,7 +834,6 @@ everything else is passed through to `Network.fromJSON()` as the raw network
 payload.
 
 Parameters:
-
 - `serializedGenome` - Checkpoint genome object read from persistence.
 
 Returns: Reserved controller metadata plus the raw network payload.
@@ -881,7 +856,6 @@ population object graph; species registries themselves stay reserved for the
 full checkpoint path.
 
 Parameters:
-
 - `neatInstance` - Fresh controller instance being restored.
 - `runtimeMeta` - Optional runtime metadata payload from persistence.
 
@@ -910,7 +884,6 @@ that still diverge immediately because the next structural allocation chooses
 different identities.
 
 Parameters:
-
 - `internal` - Live controller host.
 
 Returns: Serializable runtime metadata payload.
@@ -949,7 +922,6 @@ arrays. Detached placeholders therefore preserve continuity without forcing
 the checkpoint to duplicate every historical genome payload.
 
 Parameters:
-
 - `genomeId` - Stable genome id referenced by the historical species row.
 
 Returns: Minimal carrier exposing the required stable id.
@@ -969,7 +941,6 @@ Full checkpoints refer back to live genomes by id, so species export must
 fail immediately when a referenced genome does not carry one.
 
 Parameters:
-
 - `genome` - Live genome referenced by checkpoint state.
 - `contextLabel` - Human-readable export context for diagnostics.
 
@@ -993,7 +964,6 @@ prior-generation anchor. That anchor must keep its structural graph so the
 next speciation pass can compare new genomes against the same reference.
 
 Parameters:
-
 - `representativeGenome` - Optional serialized representative checkpoint.
 - `liveGenomesById` - Restored current-population genomes keyed by id.
 - `networkClass` - Network class used to rebuild serialized genomes.
@@ -1017,7 +987,6 @@ then rebinds each checkpoint species row onto those live instances while
 restoring the related speciation bookkeeping maps and threshold state.
 
 Parameters:
-
 - `neatInstance` - Controller instance whose population is already restored.
 - `speciationCheckpoint` - Serialized speciation payload from persistence.
 
@@ -1038,7 +1007,6 @@ registry onto freshly rehydrated network instances without relying on array
 position or permissive structural matching.
 
 Parameters:
-
 - `internal` - Live controller host.
 
 Returns: Serializable speciation checkpoint payload.
@@ -1060,7 +1028,6 @@ When that happens, replay needs the representative's full structure because
 the next speciation pass compares the new population against that anchor.
 
 Parameters:
-
 - `representative` - Live representative genome.
 - `livePopulationIds` - Stable genome ids present in the current population.
 

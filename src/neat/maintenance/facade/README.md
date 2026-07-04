@@ -54,7 +54,6 @@ topology-maintenance pass that preserves user intent without exposing the
 larger mutation chapter as the primary public surface for routine upkeep.
 
 Parameters:
-
 - `host` - `Neat` instance exposing mutation constraints and innovation tables.
 - `network` - Network whose hidden-node floor should be enforced.
 - `multiplierOverride` - Optional one-off multiplier overriding the configured policy.
@@ -91,7 +90,6 @@ details; this facade owns the promise that routine cleanup attempts do not
 escalate into user-facing control-flow failures.
 
 Parameters:
-
 - `host` - `Neat` instance exposing mutation constraints and innovation tables.
 - `network` - Network whose endpoint connectivity should be repaired.
 
@@ -117,7 +115,6 @@ story in one place: one helper defines the target size, one enforces it, and
 one cleans up obvious connectivity failures that remain after topology edits.
 
 Parameters:
-
 - `host` - `Neat` instance exposing input/output counts and maintenance options.
 - `multiplierOverride` - Optional one-off multiplier overriding the configured policy.
 

@@ -39,7 +39,6 @@ function for the right-sidebar network panel. It mirrors the Flappy Bird
 controller shape while staying narrow enough for the racing host.
 
 Parameters:
-
 - `networkCanvasHost` - Host element that sizes the network canvas.
 - `networkCanvas` - Network visualization canvas.
 - `networkContext` - 2D rendering context for the network canvas.
@@ -60,7 +59,6 @@ createHudCell(
 Creates one labeled HUD cell with a live-updating value.
 
 Parameters:
-
 - `label` - Small uppercase label for the cell.
 - `valueNode` - Live text node whose content is mutated each frame.
 - `className` - Optional extra CSS class for the value span.
@@ -87,7 +85,6 @@ controls live below the track inside the canvas region; there is no
 visualizer-bottom region.
 
 Parameters:
-
 - `containerElement` - Root element that receives the host tree.
 
 Returns: Stable handles for the Tier 0 browser shell.
@@ -172,7 +169,6 @@ so the canvas still has a positive backing size. The returned `redraw` handle
 is intentionally a no-op; the host schedules redraws through `onResize`.
 
 Parameters:
-
 - `networkCanvas` - Network visualization canvas to resize.
 - `networkCanvasHost` - Host element whose bounds drive the canvas size.
 - `onResize` - Callback invoked after the canvas backing size changes.
@@ -243,7 +239,6 @@ resolveRacingNetworkTooltipScene(
 Resolves the tooltip scene for the current hovered network overlay target.
 
 Hit-test priority, from narrowest to broadest:
-
 1. Hidden-column node hit.
 2. Input node hit.
 3. Hidden-column label region.
@@ -254,7 +249,6 @@ Input descriptions and input nodes intentionally share the same tooltip copy,
 while semantic group bands resolve a broader group-level teaching tooltip.
 
 Parameters:
-
 - `canvasPoint` - Hover point in network-canvas coordinates.
 - `positionedScene` - Rendered positioned scene reused for hover hit testing.
 
@@ -266,11 +260,6 @@ Example:
 const scene = renderNetworkView(networkCanvas, graph, options);
 const tooltip = resolveRacingNetworkTooltipScene({ xPx: 120, yPx: 80 }, scene);
 if (tooltip) {
-  showTooltip(
-    tooltip.heading,
-    tooltip.bodyParagraphs,
-    tooltip.anchorCenterXPx,
-    tooltip.anchorTopPx,
-  );
+  showTooltip(tooltip.heading, tooltip.bodyParagraphs, tooltip.anchorCenterXPx, tooltip.anchorTopPx);
 }
 ```

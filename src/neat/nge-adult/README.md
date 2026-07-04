@@ -33,7 +33,6 @@ advanceAdultState(
 Advance one complete owner-local adult optimization and equilibrium detection cycle.
 
 Parameters:
-
 - `input` - Runtime inputs for the current adult cycle.
 
 Returns: The composed adult transition for the current cycle.
@@ -88,7 +87,6 @@ inter-module edges and longer edges, then resolves which morph kinds are eligibl
 for the cooled budget based on candidate and compact availability.
 
 Parameters:
-
 - `candidates` - Ranked prune candidates visible to the local adult module.
 - `compactEligible` - Whether compact still has headroom in the current window.
 
@@ -98,14 +96,7 @@ Example:
 
 ```ts
 const decision = arbitratePruneCompactDominance(
-  [
-    {
-      candidateId: 'e1',
-      edgeLength: 2,
-      isInterModule: true,
-      isRewardCritical: false,
-    },
-  ],
+  [{ candidateId: 'e1', edgeLength: 2, isInterModule: true, isRewardCritical: false }],
   true,
 );
 console.log(decision.dominantMorphKinds); // ['edgePrune', 'compact']
@@ -129,7 +120,6 @@ fully suppresses adult growth and leaves the entire morph budget for prune and
 compact actions.
 
 Parameters:
-
 - `focusScore` - Normalized adult focus score for the active module.
 - `growthCoolingFactor` - Residual growth fraction preserved by adult cooling.
 - `focusFloor` - Minimum focus score that keeps residual growth alive.
@@ -159,7 +149,6 @@ advancePlateauRecord(
 Advances one rolling plateau record with a new adult reward delta.
 
 Parameters:
-
 - `plateauRecord` - Existing reward-delta evidence for the active adult zone.
 - `rewardDelta` - Latest normalized reward delta observed for the current evaluation window.
 - `marginalEpsilon` - Smallest improvement that still counts as meaningful positive return.
@@ -178,7 +167,6 @@ computeMarginalReturn(
 Resolves one marginal-return score for the current adult structural edit batch.
 
 Parameters:
-
 - `rewardDelta` - Normalized reward improvement produced by the current edit batch.
 - `structuralEditCount` - Number of structural edits responsible for the observed reward delta.
 
@@ -227,7 +215,6 @@ advanceGainStabilityRecord(
 Advances one rolling gain-stability record with a new adult neuromodulator gain sample.
 
 Parameters:
-
 - `gainStabilityRecord` - Existing gain evidence for the active adult zone.
 - `gainMeasurement` - Latest gain measurement observed for the current evaluation window.
 - `gainStabilityTolerance` - Allowed deviation around the rolling mean.
@@ -247,7 +234,6 @@ detectEquilibriumCandidate(
 Detects whether one adult zone is ready to emit an equilibrium candidate.
 
 Parameters:
-
 - `zoneId` - Stable adult-zone identifier under evaluation.
 - `plateauRecord` - Plateau evidence for the current adult zone.
 - `gainStabilityRecord` - Gain-stability evidence for the current adult zone.
@@ -270,7 +256,6 @@ Seeds empty plateau and gain-stability histories, marks the zone as not yet
 in equilibrium, and disables growth cooling until the first adult cycle resolves it.
 
 Parameters:
-
 - `zoneId` - Stable adult-zone identifier that anchors the seeded state.
 
 Returns: Fresh adult state ready for the first `advanceAdultState` cycle.

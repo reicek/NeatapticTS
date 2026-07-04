@@ -37,7 +37,6 @@ flowchart TD
 ```
 
 Reading order:
-
 - start with {@link evolve} for the generation spine,
 - jump into `runtime/` when you need evaluation and timekeeping semantics,
 - jump into `speciation/` and `population/` when parent selection or offspring allocation is the question,
@@ -63,8 +62,8 @@ The contracts naturally group into four layers:
    `ObjectiveDescriptor`, and `MultiObjectiveOptions`,
 4. orchestration host state: `NeatControllerForEvolution`.
 
-Read this chapter when the evolve root chapter tells you _when_ something
-happens but you still need to know _which state_ that step is allowed to
+Read this chapter when the evolve root chapter tells you *when* something
+happens but you still need to know *which state* that step is allowed to
 read or mutate.
 
 ```mermaid
@@ -201,14 +200,12 @@ In other words, call this when you intend to advance the controller, not when yo
 read-only score refresh.
 
 Important side-effects:
-
 - Replaces `this.population` with the newly constructed generation.
 - Increments `this.generation`.
 - May register or remove dynamic objectives via adaptive controllers.
 - Refreshes telemetry, diversity, species-history, and timing snapshots.
 
 Use the surrounding helper folders as the next reading map:
-
 - `runtime/` explains evaluation readiness and loop timing.
 - `adaptive/` explains policy changes that respond to stagnation or controller statistics.
 - `speciation/` explains fitness sharing, compatibility tuning, and species history.

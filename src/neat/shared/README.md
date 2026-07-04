@@ -205,22 +205,20 @@ a genome.
 Examples:
 
 Add a maximisation objective for accuracy
-
 ```ts
 const accuracyObj: ObjectiveDescriptor = {
   key: 'accuracy',
   direction: 'max',
-  accessor: (g) => g.score ?? 0,
+  accessor: g => g.score ?? 0
 };
 ```
 
 Add a minimisation objective for network complexity
-
 ```ts
 const complexityObj: ObjectiveDescriptor = {
   key: 'complexity',
   direction: 'min',
-  accessor: (g) => g.nodes.length + g.connections.length,
+  accessor: g => (g.nodes.length + g.connections.length)
 };
 ```
 
@@ -299,7 +297,6 @@ public `Neat` facade.
 Speciation options for the NEAT speciation controller.
 
 Extends {@link NeatOptions} with speciation-specific configuration used by:
-
 - Compatibility-threshold based species assignment
 - Adaptive threshold controllers (PID-like)
 - Species allocation telemetry (history snapshots)
@@ -372,7 +369,6 @@ into one readable generation snapshot that exporters, dashboards, tests, and
 diagnostics can all share.
 
 Read the fields in families:
-
 - run position and headline outcome: `gen`, `best`, `species`, `hyper`
 - diversity and lineage evidence: `diversity`, `lineage`
 - objective and Pareto context: `objectives`, `objImportance`, `objAges`, `objEvents`, `fronts`

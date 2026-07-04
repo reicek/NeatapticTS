@@ -2,14 +2,14 @@
  * Batched WebGPU activation for multi-agent evaluation.
  *
  * This module evaluates many networks in a single GPU dispatch, which is useful
- * when the racing-curriculum worker or another demo needs to score a whole
- * generation at once. Networks with the same topology share compiled pipelines,
+ * when a worker seam or another batch-evaluation use case needs to evaluate a
+ * whole batch at once. Networks with the same topology share compiled pipelines,
  * and the output is returned as a row-major matrix with one row per network.
  *
  * The seam remains opt-in: callers must supply a usable `GPUDevice` and every
  * network must pass the same structural eligibility checks used by the
  * single-network GPU path. Ineligible networks or missing hardware fall back
- * to per-network CPU activation through `evaluateRacingGeneration` or a
+ * to per-network CPU activation through `evaluateBatchGeneration` or a
  * caller-local fallback.
  *
  * @see [WebGPU](https://en.wikipedia.org/wiki/WebGPU) on Wikipedia for
@@ -35,7 +35,7 @@ import { GPU_BUFFER_BINDING } from './network.gpu.types';
  * Result shape returned by a batched GPU activation pass.
  *
  * The output matrix is stored in row-major order so that downstream consumers
- * (such as the racing-curriculum worker controller) can slice one row per
+ * (such as a worker controller) can slice one row per
  * agent without extra re-layout.
  */
 export interface BatchedGPUResult {
@@ -55,6 +55,12 @@ const GPU_BUFFER_USAGE_MAP_READ = 0x0001;
 
 /** WebGPU buffer usage flag for copy destinations. */
 const GPU_BUFFER_USAGE_COPY_DST = 0x0008;
+
+/** WebGPU buffer usage flag for uniform buffers. */
+const GPU_BUFFER_USAGE_UNIFORM = 0x0040;
+
+/** Byte size of the per-dispatch params uniform buffer. */
+const GPU_PARAMS_BYTES = 16;
 
 /** WebGPU map mode for reading mapped buffers. */
 const GPU_MAP_MODE_READ = 0x0001;
@@ -266,6 +272,8 @@ function prepareActivationContext(network: Network): { restore: () => void } {
  * @param device - WebGPU device used to create the bind group.
  * @param pipeline - Compiled activation pipeline.
  * @param bufferSet - Uploaded network slab buffers.
+ * @param paramsBuffer - Optional params uniform buffer. When omitted, the
+ *   buffer set's default params buffer is used.
  * @returns A bind group wired to the six struct-packed storage-buffer and
  *   uniform bindings.
  */
@@ -273,6 +281,7 @@ function createBindGroup(
   device: GPUDevice,
   pipeline: GPUComputePipeline,
   bufferSet: GPUBufferSet,
+  paramsBuffer?: GPUBuffer,
 ): GPUBindGroup {
   const bindGroupLayout = pipeline.getBindGroupLayout(0);
 
@@ -293,7 +302,7 @@ function createBindGroup(
       },
       {
         binding: GPU_BUFFER_BINDING.params,
-        resource: { buffer: bufferSet.params },
+        resource: { buffer: paramsBuffer ?? bufferSet.params },
       },
       {
         binding: GPU_BUFFER_BINDING.topoLevels,
@@ -306,14 +315,76 @@ function createBindGroup(
     ],
   });
 }
+
+/**
+ * Create one params uniform buffer per topological level that needs a GPU
+ * dispatch.
+ *
+ * Level 0 is skipped because input nodes are seeded directly by the caller.
+ * Each buffer stores the level index plus the dimension constants from the
+ * uploaded buffer set so the kernel can early-exit threads that do not belong
+ * to the current level.
+ *
+ * @param device - WebGPU device used to allocate buffers.
+ * @param bufferSet - Uploaded network slab buffers.
+ * @param levelCount - Total number of topological levels.
+ * @param outputNodeCount - Number of output nodes in the network.
+ * @returns Array of params buffers indexed by level. Index 0 is `undefined`
+ *   because level 0 is not dispatched.
+ */
+function createLevelParamsBuffers(
+  device: GPUDevice,
+  bufferSet: GPUBufferSet,
+  levelCount: number,
+  outputNodeCount: number,
+): (GPUBuffer | undefined)[] {
+  const levelParamsBuffers: (GPUBuffer | undefined)[] = new Array(levelCount);
+  levelParamsBuffers[0] = undefined;
+
+  for (let level = 1; level < levelCount; level += 1) {
+    const paramsBuffer = device.createBuffer({
+      label: `network_batched_params_level_${level}`,
+      size: GPU_PARAMS_BYTES,
+      usage: GPU_BUFFER_USAGE_UNIFORM | GPU_BUFFER_USAGE_COPY_DST,
+    });
+    const params = new Uint32Array([
+      level,
+      bufferSet.nodeCount,
+      bufferSet.connectionCount,
+      bufferSet.nodeCount - outputNodeCount,
+    ]);
+    device.queue.writeBuffer(paramsBuffer, 0, params);
+    levelParamsBuffers[level] = paramsBuffer;
+  }
+
+  return levelParamsBuffers;
+}
+
+/**
+ * Destroy params buffers created for per-level dispatch.
+ *
+ * @param levelParamsBuffers - Array of per-network per-level params buffers.
+ */
+function destroyLevelParamsBuffers(
+  levelParamsBuffers: (GPUBuffer | undefined)[][],
+): void {
+  for (const networkBuffers of levelParamsBuffers) {
+    for (const buffer of networkBuffers) {
+      if (buffer !== undefined) {
+        buffer.destroy();
+      }
+    }
+  }
+}
+
 /**
  * Batched GPU activation for multi-agent evaluation.
  *
  * Uploads the input matrix and every network's fast-slab topology to the GPU,
  * reuses compiled pipelines for networks that share topology, dispatches all
- * networks in a single compute pass, and reads back one output row per network
- * into a row-major result matrix. The CPU path remains the default; this seam
- * is opt-in and gated by `canUseGPU`.
+ * networks in a single compute pass once per topological level, and reads back
+ * one output row per network into a row-major result matrix. The CPU path
+ * remains the default; this seam is opt-in and gated by `canUseGPU`.
  *
  * @param device - WebGPU device used to run the forward kernel.
  * @param networks - Networks to evaluate as a batch. All networks must have the
@@ -365,6 +436,8 @@ export async function batchActivate(
 
   const bufferSets: GPUBufferSet[] = [];
   const pipelines: GPUComputePipeline[] = [];
+  const levelParamsBuffers: (GPUBuffer | undefined)[][] = [];
+  const levelBindGroups: GPUBindGroup[][] = [];
 
   try {
     // Compile or reuse a pipeline for each network. The pipeline cache is keyed
@@ -393,9 +466,45 @@ export async function batchActivate(
       writeInputValuesToNodeStruct(device, bufferSet.nodes, inputSlice);
     }
 
+    // Determine the deepest topology in the batch. Every network is
+    // dispatched once per topological level (level 0 is skipped because inputs
+    // are seeded directly).
+    const maxLevelCount = bufferSets.reduce(
+      (max, bufferSet) => Math.max(max, bufferSet.topoLevelCount),
+      0,
+    );
+
+    // Pre-create per-level params buffers and matching bind groups for each
+    // network. This keeps the single compute pass dispatch deterministic and
+    // avoids mutating a shared params buffer between draws.
+    for (let index = 0; index < networks.length; index += 1) {
+      const network = networks[index];
+      const pipeline = pipelines[index];
+      const bufferSet = bufferSets[index];
+
+      const paramsBuffers = createLevelParamsBuffers(
+        device,
+        bufferSet,
+        maxLevelCount,
+        network.output,
+      );
+      levelParamsBuffers.push(paramsBuffers);
+
+      const bindGroups: GPUBindGroup[] = [];
+      for (let level = 0; level < maxLevelCount; level += 1) {
+        bindGroups[level] = createBindGroup(
+          device,
+          pipeline,
+          bufferSet,
+          paramsBuffers[level],
+        );
+      }
+      levelBindGroups.push(bindGroups);
+    }
+
     // One command encoder and one compute pass dispatch every network in the
-    // batch. Networks with shared topology reuse their cached pipeline inside
-    // the same pass by switching bind groups.
+    // batch once per topological level. Networks with shared topology reuse
+    // their cached pipeline inside the same pass by switching bind groups.
     const commandEncoder = device.createCommandEncoder({
       label: 'network_batched_activation',
     });
@@ -403,17 +512,19 @@ export async function batchActivate(
       label: 'network_batched_activation_pass',
     });
 
-    for (let index = 0; index < networks.length; index += 1) {
-      const pipeline = pipelines[index];
-      const bufferSet = bufferSets[index];
-      const bindGroup = createBindGroup(device, pipeline, bufferSet);
-      const workgroupCount = Math.ceil(
-        bufferSet.nodeCount / ACTIVATION_WORKGROUP_SIZE,
-      );
+    for (let level = 1; level < maxLevelCount; level += 1) {
+      for (let index = 0; index < networks.length; index += 1) {
+        const pipeline = pipelines[index];
+        const bufferSet = bufferSets[index];
+        const bindGroup = levelBindGroups[index][level];
+        const workgroupCount = Math.ceil(
+          bufferSet.nodeCount / ACTIVATION_WORKGROUP_SIZE,
+        );
 
-      computePass.setPipeline(pipeline);
-      computePass.setBindGroup(0, bindGroup);
-      computePass.dispatchWorkgroups(workgroupCount);
+        computePass.setPipeline(pipeline);
+        computePass.setBindGroup(0, bindGroup);
+        computePass.dispatchWorkgroups(workgroupCount);
+      }
     }
 
     computePass.end();
@@ -468,6 +579,7 @@ export async function batchActivate(
       colCount: outputCount,
     };
   } finally {
+    destroyLevelParamsBuffers(levelParamsBuffers);
     for (const bufferSet of bufferSets) {
       destroyGPUBufferSet(device, bufferSet);
     }

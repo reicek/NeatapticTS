@@ -5,22 +5,22 @@ Controller-facing selection helpers for the NEAT lifecycle.
 ## Selection Pressure and the Exploration-Exploitation Tradeoff
 
 Selection is the mechanism by which fitness differences translate into
-reproductive advantage. The central tension it manages is the _exploration-
-exploitation tradeoff_: too much pressure toward the current champion
+reproductive advantage. The central tension it manages is the *exploration-
+exploitation tradeoff*: too much pressure toward the current champion
 collapses the population toward one local optimum (exploitation); too little
 pressure allows fit solutions to be lost to noise (exploration). The right
 balance depends on the problem, the generation count, and how diverse the
 current population already is. See Wikipedia contributors,
-[Selection (genetic algorithm)](<https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)>),
+[Selection (genetic algorithm)](https://en.wikipedia.org/wiki/Selection_(genetic_algorithm)),
 for an overview of the design space.
 
 ## The Three Built-in Selection Strategies
 
-| Strategy                | How parents are chosen                                                    | Selection pressure                 |
-| ----------------------- | ------------------------------------------------------------------------- | ---------------------------------- |
-| `POWER`                 | bias random selection toward higher-ranked genomes using a power function | tunable via `power` parameter      |
-| `FITNESS_PROPORTIONATE` | probability proportional to score ("roulette wheel")                      | moderate, scales with score spread |
-| `TOURNAMENT`            | sample k random genomes, take the best                                    | tunable via tournament size        |
+| Strategy | How parents are chosen | Selection pressure |
+|---|---|---|
+| `POWER` | bias random selection toward higher-ranked genomes using a power function | tunable via `power` parameter |
+| `FITNESS_PROPORTIONATE` | probability proportional to score ("roulette wheel") | moderate, scales with score spread |
+| `TOURNAMENT` | sample k random genomes, take the best | tunable via tournament size |
 
 Tournament selection is generally more robust than fitness-proportionate
 selection because it is invariant to score scaling and handles negative

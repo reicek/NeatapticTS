@@ -16,7 +16,6 @@ trace of the leading fronts so later reads can answer questions such as
 the full population into long-lived telemetry state.
 
 The write path stays compact on purpose:
-
 - keep only the top fronts that are most useful for inspection,
 - store stable genome identifiers instead of genome objects,
 - label each snapshot with the current generation when available,
@@ -54,7 +53,6 @@ dominance; it trusts the incoming ordered `fronts` array and only decides
 whether and how to persist a smaller snapshot.
 
 The saved snapshot is intentionally lightweight:
-
 - stores only genome `_id` values, not full genomes,
 - keeps only the top `MAX_PARETO_ARCHIVE_FRONTS` fronts,
 - labels the snapshot with `generation` when the caller tracks one,
@@ -65,7 +63,6 @@ useful for telemetry, charts, and quick frontier-history questions, but it is
 not designed to reconstruct full genome state later.
 
 Parameters:
-
 - `neatInstance` - Neat instance.
 - `fronts` - Ordered Pareto fronts from the current ranking pass.
 

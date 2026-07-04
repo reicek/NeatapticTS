@@ -32,14 +32,12 @@ start(
 Starts the Flappy Bird NeatapticTS browser demo and returns lifecycle controls.
 
 This function is intentionally orchestration-focused:
-
-1. resolve runtime dependencies (DOM host, worker, host UI),
-2. initialize worker and telemetry plumbing,
-3. run the evolve -> playback -> HUD fold loop until stopped,
-4. expose a small stop/isRunning/done handle for callers.
+1) resolve runtime dependencies (DOM host, worker, host UI),
+2) initialize worker and telemetry plumbing,
+3) run the evolve -> playback -> HUD fold loop until stopped,
+4) expose a small stop/isRunning/done handle for callers.
 
 Parameters:
-
 - `container` - Element id or HTMLElement to host the demo.
 
 Returns: Run handle for stop/state control.
@@ -69,7 +67,6 @@ browser-UI restarts reuse it so architecture button clicks can launch a fresh
 worker-backed run without widening the public API surface.
 
 Parameters:
-
 - `container` - Element id or HTMLElement to host the demo.
 - `runtimeStartOptions` - Internal per-session runtime inputs.
 
@@ -179,7 +176,6 @@ runtime has a host view, a worker channel, telemetry state, and a resolved
 configuration object.
 
 Parameters:
-
 - `container` - Element id or HTMLElement to host the demo.
 
 Returns: Shared runtime start context for setup and loop launch.
@@ -198,7 +194,6 @@ The HUD is seeded immediately so the page communicates that startup is in
 progress rather than appearing blank while the worker and loop are booting.
 
 Parameters:
-
 - `runtimeStartContext` - Shared runtime start context.
 
 Returns: Nothing.
@@ -216,7 +211,6 @@ finalizeRuntimeLegendPreview(
 Waits for a runtime legend preview to finish and then stops its animation loop.
 
 Parameters:
-
 - `legendPreviewHandle` - Active preview handle.
 
 Returns: Nothing.
@@ -233,7 +227,6 @@ paintRuntimeStartupPreviewFrame(
 Paints one full startup-preview frame.
 
 Parameters:
-
 - `context` - Target canvas 2D context.
 - `input` - Render-ready startup-preview frame values.
 
@@ -254,7 +247,6 @@ the startup loading screen, but with a bounded fade-in, hold, and fade-out
 lifecycle that automatically completes before playback starts.
 
 Parameters:
-
 - `options` - Canvas, context, stop-state, and generation legend inputs.
 
 Returns: Nothing.
@@ -271,7 +263,6 @@ renderRuntimeStartupPreviewLegend(
 Draws the centered neon loading legend over the startup preview canvas.
 
 Parameters:
-
 - `context` - Target canvas 2D context.
 - `input` - Canvas geometry and resolved opacity for the legend.
 
@@ -303,7 +294,6 @@ Unlike the first-load startup preview, this one is driven by the request
 lifecycle of the next generation rather than by initial boot.
 
 Parameters:
-
 - `options` - Canvas, context, stop-state, and evolving legend inputs.
 
 Returns: Handle used to fade the overlay out once the next generation is ready.
@@ -323,7 +313,6 @@ generation title cards. The difference is whether the fade-out is scheduled
 up front or started later by calling `complete()`.
 
 Parameters:
-
 - `options` - Canvas, legend text, and preview lifecycle inputs.
 
 Returns: Handle used to complete or stop the preview.
@@ -344,7 +333,6 @@ then fades a centered loading legend out before the first playback session is
 allowed to begin.
 
 Parameters:
-
 - `options` - Canvas, context, and stop-state inputs for the startup preview.
 
 Returns: Handle used to begin the exit transition or stop the preview outright.
@@ -363,7 +351,6 @@ resolveRuntimeStartupPreviewLegendFontSizePx(
 Resolves a responsive legend font size for the startup preview.
 
 Parameters:
-
 - `canvasWidthPx` - Current preview canvas width.
 - `canvasHeightPx` - Current preview canvas height.
 
@@ -385,7 +372,6 @@ the animated background, and a responsive font size that stays readable on
 both compact and wide canvases.
 
 Parameters:
-
 - `input` - Timing, canvas size, and scroll-speed inputs for the preview frame.
 
 Returns: Resolved visual state for the current startup-preview frame.
@@ -431,7 +417,6 @@ just a thin closure layer over the mutable lifecycle state and startup
 context.
 
 Parameters:
-
 - `runtimeStartContext` - Shared runtime start context.
 - `runtimeLifecycleState` - Mutable lifecycle state for stop semantics.
 
@@ -461,7 +446,6 @@ This is the boundary between normal browser startup and the long-running async
 loop that drives evolution plus playback.
 
 Parameters:
-
 - `runtimeStartContext` - Shared runtime start context.
 - `runtimeLifecycleState` - Mutable lifecycle state used for stop checks.
 - `stop` - Idempotent stop function bound to the current runtime handle.
@@ -494,7 +478,6 @@ playback. Keeping them separate from request responses lets long recurrent
 waits explain themselves without changing the generation/playback promises.
 
 Parameters:
-
 - `options` - Worker and HUD cell references.
 
 Returns: Cleanup callback that removes the message listener.
@@ -510,7 +493,6 @@ finalizeStartupPreview(
 Completes and tears down the startup preview when one is active.
 
 Parameters:
-
 - `startupPreviewHandle` - Optional preview handle created for first-load boot.
 
 Returns: Nothing.
@@ -530,7 +512,6 @@ first generation is still booting. Later generations can reuse the same
 canvas style through the separate generation-presentation path.
 
 Parameters:
-
 - `options` - Generation request inputs and preview-gating state.
 
 Returns: The next generation payload from the worker.
@@ -546,7 +527,6 @@ resolveEvolutionWaitLegendText(
 Resolves the centered legend text shown while the worker evolves the next generation.
 
 Parameters:
-
 - `generation` - Next generation number expected from the worker.
 
 Returns: Evolving overlay text.
@@ -567,7 +547,6 @@ order, so the browser can reuse this ordered cache to redraw the network
 panel when the red-bird champion changes.
 
 Parameters:
-
 - `generationPayload` - Worker generation-ready payload.
 - `bestNetwork` - Current generation best-network fallback.
 
@@ -590,7 +569,6 @@ carries the actual serialized population, so the HUD should prefer that real
 size over the startup budget whenever it is available.
 
 Parameters:
-
 - `generationPopulationNetworks` - Browser-side cache of the current generation population.
 - `fallbackPopulationSize` - Startup budget used before a generation payload is available.
 
@@ -607,7 +585,6 @@ resolveGenerationPresentationLegendText(
 Resolves the centered legend text used to present one ready generation.
 
 Parameters:
-
 - `generation` - Ready generation number from the worker payload.
 
 Returns: Generation presentation legend text.
@@ -627,7 +604,6 @@ whole population so the browser can present higher-signal data without doing
 extra aggregation on the main thread.
 
 Parameters:
-
 - `input` - Summary source values for the active generation.
 
 Returns: HUD-ready summary values with placeholders until playback completes.
@@ -643,7 +619,6 @@ resolveRuntimeArchitectureProgressUpdate(
 Resolves the next browser-local architecture record state after one playback run.
 
 Parameters:
-
 - `options` - Current history/champion tables plus the candidate run result.
 
 Returns: Updated history and champion tables plus an improvement flag.
@@ -663,7 +638,6 @@ selected before playback. Persisting the actual playback winner keeps saved
 champions aligned with the score that improved the local history table.
 
 Parameters:
-
 - `input` - Playback summary plus generation-best fallback network.
 
 Returns: Playback winner network JSON when available, otherwise generation-best JSON.
@@ -679,7 +653,6 @@ resolveWorkerInitPayload(
 Resolves the worker init payload for the selected architecture profile.
 
 Parameters:
-
 - `options` - Worker startup values plus the browser-local champion table.
 
 Returns: Worker init payload with an optional champion seed override.
@@ -695,7 +668,6 @@ runRuntimeEvolutionLoop(
 Runs generation orchestration and playback until a stop signal is observed.
 
 The loop alternates between two phases:
-
 1. Wait off-thread until the worker emits the next playable population summary.
 2. Play that population back on the main thread while streaming HUD updates.
 
@@ -703,7 +675,6 @@ This rhythm makes the demo feel like a live training dashboard instead of a
 one-shot batch job.
 
 Parameters:
-
 - `options` - Runtime evolution dependencies and mutable state accessors.
 
 Returns: Nothing.
@@ -751,7 +722,6 @@ This is part of runtime teardown and prevents instrumentation observers from
 lingering after the demo has stopped.
 
 Parameters:
-
 - `telemetryState` - Runtime telemetry state.
 
 Returns: Nothing.
@@ -784,7 +754,6 @@ On each published playback frame, the runtime folds the new telemetry sample
 into rolling windows and emits human-readable HUD strings.
 
 Parameters:
-
 - `frameStats` - Playback frame stats for the current frame.
 - `telemetryState` - Runtime telemetry mutable state.
 
@@ -819,13 +788,11 @@ This keeps the runtime friendly to static docs pages where the bundle may be
 loaded by script tag rather than imported programmatically.
 
 This keeps parity with the asciiMaze entry style:
-
 - `window.flappyBird.start(...)` for explicit invocation,
 - `window.flappyBirdStart(...)` for compatibility,
 - one guarded auto-start for standalone HTML usage.
 
 Parameters:
-
 - `startRuntime` - Runtime entry function.
 
 Returns: Nothing.
@@ -866,7 +833,6 @@ The runtime accepts either a string id or a concrete element so this helper
 folds that loose input into one validated host node.
 
 Parameters:
-
 - `container` - Element id or HTMLElement provided to runtime start.
 
 Returns: Resolved host element.
@@ -885,7 +851,6 @@ The HUD should not need to understand arbitrary thrown values, so this helper
 normalizes anything throwable into one readable status line.
 
 Parameters:
-
 - `error` - Unknown runtime exception value.
 
 Returns: Normalized status string for HUD output.
@@ -915,7 +880,6 @@ targets. The live page keeps MLP at its tiny baseline, gives LSTM a wider
 smaller so initialization and generation turnover stay responsive.
 
 Parameters:
-
 - `architectureProfileId` - Selected shared Flappy profile id.
 
 Returns: Browser-local population and elitism settings.
@@ -942,7 +906,6 @@ isRuntimeArchitectureScoreBetter(
 Resolves whether a candidate browser score should replace the current record.
 
 Parameters:
-
 - `candidateBestScore` - Candidate score being considered.
 - `currentBestScore` - Current stored record for the profile.
 
@@ -960,7 +923,6 @@ persistRuntimeArchitectureChampions(
 Persists the current browser-local champion table when storage exists.
 
 Parameters:
-
 - `championByProfileId` - Champion table to persist.
 - `storage` - Optional storage override for tests.
 
@@ -978,7 +940,6 @@ persistRuntimeArchitectureHistory(
 Persists the current browser-local architecture record table when storage exists.
 
 Parameters:
-
 - `historyByProfileId` - Local history table to persist.
 - `storage` - Optional storage override for tests.
 
@@ -999,7 +960,6 @@ the stored champion seeds they were derived from, so the next session starts
 from the shared architecture template instead of reusing a saved winner.
 
 Parameters:
-
 - `storage` - Optional storage override for tests.
 
 Returns: Nothing.
@@ -1025,7 +985,6 @@ resolveRuntimeArchitectureChampions(
 Reads persisted browser-local champion networks when storage is available.
 
 Parameters:
-
 - `storage` - Optional storage override for tests.
 
 Returns: Previously stored champion table or an empty table.
@@ -1041,7 +1000,6 @@ resolveRuntimeArchitectureHistory(
 Reads persisted local browser architecture records when storage is available.
 
 Parameters:
-
 - `storage` - Optional storage override for tests.
 
 Returns: Previously stored local records or an empty table.
@@ -1057,7 +1015,6 @@ resolveRuntimeArchitectureHistoryLeaderProfileId(
 Resolves the highest-scoring architecture profile from the local history table.
 
 Parameters:
-
 - `historyByProfileId` - Browser-local history table.
 
 Returns: Leading profile id when at least one stored record exists.
@@ -1083,7 +1040,6 @@ resolveRuntimeArchitectureSelectorItems(
 Resolves render-ready selector items from approved profiles and local history.
 
 Parameters:
-
 - `options` - Approved profile set, selected profile id, and local history table.
 
 Returns: Render-ready selector items for the Flappy host UI.
@@ -1099,7 +1055,6 @@ resolveRuntimeArchitectureTooltipBodyLines(
 Resolves the educational tooltip copy shown for one Flappy architecture profile.
 
 Parameters:
-
 - `profile` - Shared Flappy architecture profile.
 
 Returns: Short, punchy tooltip lines for the selector button.
@@ -1115,7 +1070,6 @@ resolveRuntimeArchitectureTooltipHeading(
 Resolves the punchy tooltip heading used by the Flappy architecture selector.
 
 Parameters:
-
 - `profile` - Shared Flappy architecture profile.
 
 Returns: Tooltip heading shown above the selector button.
@@ -1131,7 +1085,6 @@ resolveSelectedRuntimeArchitectureProfile(
 Resolves the selected shared Flappy profile for the next browser session.
 
 Parameters:
-
 - `profileId` - Optional requested profile id.
 
 Returns: Resolved Flappy-ready shared profile.
@@ -1164,7 +1117,6 @@ Records compare by pipes passed first and frames survived as a stable
 tiebreaker so the selector caption reflects the most meaningful browser score.
 
 Parameters:
-
 - `historyByProfileId` - Existing browser-local history table.
 - `profileId` - Shared architecture profile receiving the score update.
 - `candidateBestScore` - Session-best browser score for the profile.

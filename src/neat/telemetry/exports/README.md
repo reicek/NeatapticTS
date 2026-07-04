@@ -74,7 +74,6 @@ so the serializer preserves that multiplicity instead of forcing species data
 into one over-packed cell.
 
 Parameters:
-
 - `recentHistory` - History entries to export.
 - `headers` - Ordered headers for the export window.
 
@@ -100,7 +99,6 @@ keeps top-level run facts first, then nested metric families, then sparse
 optional payload columns that behave more like attachments.
 
 Parameters:
-
 - `info` - Collected header discovery state.
 
 Returns: Ordered header names used for serialization.
@@ -125,7 +123,6 @@ The rest of the CSV path is simpler because this helper commits to one export
 shape before row serialization starts.
 
 Parameters:
-
 - `entries` - Telemetry entries included in the export window.
 
 Returns: Flattened header discovery state.
@@ -200,7 +197,6 @@ species so a reader can inspect turnover, stagnation, and size changes with
 ordinary tabular tools.
 
 Parameters:
-
 - `this` - Neat instance exposing species history and optional live species.
 - `maxEntries` - Maximum number of recent history snapshots to include.
 
@@ -228,7 +224,6 @@ object graph like JSONL does, it discovers a stable column set across the
 sampled window and then flattens grouped metrics into prefixed columns.
 
 Flattening rules:
-
 - nested `complexity`, `perf`, `lineage`, and selected `diversity` fields
   become `group.key` columns,
 - optional arrays and maps are serialized as JSON cells only when present in
@@ -240,7 +235,6 @@ you want to sort, filter, chart, or diff recent runtime behavior in a tool
 that understands rows and columns better than nested objects.
 
 Parameters:
-
 - `this` - Neat instance exposing the internal telemetry buffer.
 - `maxEntries` - Maximum number of recent telemetry rows to include.
 
@@ -267,7 +261,6 @@ file, stream through command-line tools, or reload in notebook code without
 flattening nested structures first.
 
 Parameters:
-
 - `this` - Neat instance exposing the internal telemetry buffer.
 
 Returns: JSONL payload with one telemetry object per line.
@@ -301,7 +294,6 @@ what the table means, and row serialization only answers how one entry fits
 inside that already chosen shape.
 
 Parameters:
-
 - `entry` - Telemetry entry being serialized.
 - `headers` - Ordered headers for the whole export window.
 
@@ -352,7 +344,6 @@ converts those permissive records into one compact export-ready model with
 explicit fallbacks for id, size, score, and last-improved generation.
 
 Parameters:
-
 - `speciesList` - Raw species records to normalize.
 - `defaultSpeciesId` - Default species id when missing.
 - `defaultSpeciesSize` - Default species size when missing.
@@ -383,7 +374,6 @@ while deliberately skipping grouped containers that will later be flattened
 under prefixed columns.
 
 Parameters:
-
 - `entry` - Telemetry entry to inspect.
 - `state` - Mutable header collection state.
 - `frontsHeader` - Header label for fronts column.
@@ -406,7 +396,6 @@ This helper intentionally exports only the lineage-related diversity metrics
 that are useful and stable enough to deserve fixed columns.
 
 Parameters:
-
 - `entry` - Telemetry entry to inspect.
 - `state` - Mutable header collection state.
 
@@ -428,7 +417,6 @@ prefixed CSV columns. This helper discovers those nested keys without mixing
 them into the base top-level header set.
 
 Parameters:
-
 - `entry` - Telemetry entry to inspect.
 - `state` - Mutable header collection state.
 
@@ -451,7 +439,6 @@ field actually appears in the sampled window and only then enables the
 corresponding column.
 
 Parameters:
-
 - `entry` - Telemetry entry to inspect.
 - `state` - Mutable header collection state.
 
@@ -473,7 +460,6 @@ selected history window and builds the union of all encountered stat keys so
 every emitted row follows one shared, predictable column order.
 
 Parameters:
-
 - `history` - Recent species history entries.
 - `generationHeader` - Header label for generation column.
 
@@ -501,7 +487,6 @@ history snapshot so header discovery and CSV output remain deterministic
 instead of depending on whether the first archival step has happened yet.
 
 Parameters:
-
 - `neatInstance` - Neat instance with optional species history and species.
 - `history` - Species history backing array.
 - `fallbackGeneration` - Generation fallback when missing.
@@ -532,7 +517,6 @@ early or partially initialized controller states. It keeps later export code
 focused on serialization instead of defensive host checks.
 
 Parameters:
-
 - `neatInstance` - Neat instance holding species history.
 
 Returns: Species history backing array (ensured on instance).
@@ -555,7 +539,6 @@ not on the species stat itself. All remaining headers are treated as dynamic
 species-stat fields and are read through the same record-style lookup path.
 
 Parameters:
-
 - `historyEntry` - A single generation snapshot.
 - `speciesStat` - A single species stat record.
 - `headerName` - Column header name.
@@ -578,7 +561,6 @@ and nested values all flow through one escaping path. Undefined values remain
 empty cells to preserve the exporter’s existing sparse-column behavior.
 
 Parameters:
-
 - `value` - Value to stringify.
 
 Returns: JSON string or empty string when JSON.stringify returns undefined.
@@ -602,7 +584,6 @@ the same previously collected header order, even when some species records
 omit optional fields.
 
 Parameters:
-
 - `historyEntry` - A single generation snapshot.
 - `speciesStat` - A single species stat record for that generation.
 - `orderedHeaders` - Ordered header list for stable CSV.

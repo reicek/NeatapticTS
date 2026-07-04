@@ -138,7 +138,6 @@ path is used only when an options bag with `useGPU: true` is supplied,
 the standard CPU `network.activate()` implementation runs.
 
 Parameters:
-
 - `input` - Input vector of length `this.input`.
 - `trainingOrOptions` - Boolean training flag or options bag.
 - `_maxActivationDepth` - Unused; kept for signature compatibility.
@@ -161,7 +160,6 @@ fast-path allocations. Outputs are cloned number[] arrays for API
 compatibility. Future optimizations can vectorize this path.
 
 Parameters:
-
 - `inputs` - Array of input vectors, each length must equal this.input
 - `training` - Whether to run with training-time stochastic features
 
@@ -181,7 +179,6 @@ Raw activation that can return a reusable typed array when pooling is enabled.
 If `reuseActivationArrays` is disabled this falls back to the standard plain-array activation path.
 
 Parameters:
-
 - `input` - Input vector.
 - `training` - Whether to enable training-time stochastic paths.
 - `maxActivationDepth` - Maximum graph depth for activation.
@@ -272,7 +269,6 @@ configurePruning(
 Configure scheduled pruning during training.
 
 Parameters:
-
 - `cfg` - Pruning schedule and strategy configuration.
 
 #### configureSparsityBudget
@@ -286,7 +282,6 @@ configureSparsityBudget(
 Configure a structural connection-growth budget for future mutations.
 
 Parameters:
-
 - `cfg` - Absolute connection cap plus optional grace headroom.
 
 #### connect
@@ -320,7 +315,6 @@ behavior as repeated `connect()` calls, but it reserves network-level
 storage once for the whole request shelf.
 
 Parameters:
-
 - `requests` - Ordered connection requests.
 
 Returns: Flattened created connection objects in request order.
@@ -345,7 +339,6 @@ runtime, preserving explicit input/output ordering and then rebuilding the
 scheduling cache in either acyclic or recurrent mode.
 
 Parameters:
-
 - `parts` - Mixed architecture parts to flatten.
 - `options` - Optional construct-time validation, ordering, and runtime flags.
 
@@ -481,7 +474,6 @@ enableDropConnect(
 Enable DropConnect with a probability in $[0,1)$.
 
 Parameters:
-
 - `p` - DropConnect probability.
 
 #### enableWeightNoise
@@ -495,7 +487,6 @@ enableWeightNoise(
 Enable weight noise using either a global standard deviation or per-hidden-layer values.
 
 Parameters:
-
 - `stdDev` - Global standard deviation or hidden-layer schedule.
 
 #### evolve
@@ -514,7 +505,6 @@ orchestration-first while population search, mutation policy, and stopping
 criteria remain chapter-owned.
 
 Parameters:
-
 - `set` - Evaluation samples with `input` and `output` vectors.
 - `options` - Evolution options controlling population search and stopping criteria.
 
@@ -531,7 +521,6 @@ fastSlabActivate(
 Public wrapper for fast slab forward pass.
 
 Parameters:
-
 - `input` - Input vector.
 
 Returns: Activation output.
@@ -552,7 +541,6 @@ adding bounded window callbacks and an opt-out from collecting the full
 output matrix when the caller wants lower sequence-retention pressure.
 
 Parameters:
-
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Optional windowed activation settings.
 
@@ -573,7 +561,6 @@ Browser runtimes can use this to yield after a configurable number of
 emitted windows so long-running sequence inference remains responsive.
 
 Parameters:
-
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Optional async windowed activation settings.
 
@@ -792,7 +779,6 @@ after calling `mutate` so it can report the outcome truthfully as applied or
 skipped rather than claiming growth that did not happen.
 
 Parameters:
-
 - `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
   Some methods might have associated parameters (e.g., `MOD_WEIGHT` uses `min`, `max`).
 
@@ -876,12 +862,11 @@ independent of a training-iteration schedule. For schedule-based
 pruning during gradient training, use `configureSparsityBudget()`.
 
 Parameters:
-
 - `targetSparsity` - Fraction of original connections to remove,
-  in the open interval `(0, 1)`. Values close to 1 produce very
-  sparse networks.
+in the open interval `(0, 1)`. Values close to 1 produce very
+sparse networks.
 - `method` - Ranking strategy: `'magnitude'` or `'snip'`.
-  Defaults to `'magnitude'`.
+Defaults to `'magnitude'`.
 
 Example:
 
@@ -904,7 +889,7 @@ This ensures that the network.connections array is consistent with the actual
 outgoing connections of all nodes. Useful after manual wiring or node manipulation.
 
 Returns: Example usage:
-Network.rebuildConnections(net);
+  Network.rebuildConnections(net);
 
 #### rebuildConnectionSlab
 
@@ -917,7 +902,6 @@ rebuildConnectionSlab(
 Rebuild slab structures for fast activation.
 
 Parameters:
-
 - `force` - Whether to force a rebuild.
 
 Returns: Slab rebuild result.
@@ -946,14 +930,13 @@ remove(
 
 Removes a node from the network.
 This involves:
-
 1. Disconnecting all incoming and outgoing connections associated with the node.
 2. Removing self-connections.
 3. Removing the node from the `nodes` array.
 4. Attempting to reconnect the node's direct predecessors to its direct successors
    to maintain network flow, if possible and configured.
-5. Handling gates involving the removed node (ungating connections gated _by_ this node,
-   and potentially re-gating connections that were gated _by other nodes_ onto the removed node's connections).
+5. Handling gates involving the removed node (ungating connections gated *by* this node,
+   and potentially re-gating connections that were gated *by other nodes* onto the removed node's connections).
 
 #### resetDropoutMasks
 
@@ -975,7 +958,6 @@ restoreRNG(
 Restore deterministic RNG function from a snapshot source.
 
 Parameters:
-
 - `fn` - RNG function to restore.
 
 #### score
@@ -1016,7 +998,6 @@ setEnforceAcyclic(
 Enable or disable acyclic topology enforcement.
 
 Parameters:
-
 - `flag` - Whether to enforce acyclic connectivity.
 
 #### setRandom
@@ -1030,7 +1011,6 @@ setRandom(
 Replace the network random number generator.
 
 Parameters:
-
 - `fn` - RNG function returning values in $[0,1)$.
 
 #### setRNGState
@@ -1044,7 +1024,6 @@ setRNGState(
 Set the raw deterministic RNG state word.
 
 Parameters:
-
 - `state` - RNG state value.
 
 #### setSeed
@@ -1065,7 +1044,6 @@ IDs for newly created connections. Omitting the seed leaves the network
 using its default non-deterministic RNG.
 
 Parameters:
-
 - `seed` - Seed value.
 
 #### setStochasticDepth
@@ -1079,7 +1057,6 @@ setStochasticDepth(
 Configure stochastic depth with survival probabilities per hidden layer.
 
 Parameters:
-
 - `survival` - Survival probabilities for hidden layers.
 
 #### setStochasticDepthSchedule
@@ -1093,7 +1070,6 @@ setStochasticDepthSchedule(
 Set stochastic-depth schedule function.
 
 Parameters:
-
 - `fn` - Function mapping step and current schedule to next schedule.
 
 #### setTopologyIntent
@@ -1107,7 +1083,6 @@ setTopologyIntent(
 Sets the public topology intent and keeps acyclic enforcement aligned.
 
 Parameters:
-
 - `topologyIntent` - Desired topology intent.
 
 Returns: Nothing.
@@ -1123,7 +1098,6 @@ setWeightNoiseSchedule(
 Set a dynamic scheduler for global weight noise.
 
 Parameters:
-
 - `fn` - Function mapping training step to noise standard deviation.
 
 #### snapshotRNG
@@ -1211,7 +1185,6 @@ helpers own batching, optimizer steps, regularization, and mixed-precision
 runtime behavior.
 
 Parameters:
-
 - `set` - Supervised samples with `input` and `output` vectors.
 - `options` - Training options such as learning rate, iteration limits, batching, and optimizer settings.
 
@@ -1256,7 +1229,6 @@ activate(
 Activate a network with one input vector and return the resulting output vector while preserving the standard activation semantics used by compatibility-facing runtime callers.
 
 Parameters:
-
 - `this` - Network instance bound by method call.
 - `inputs` - Input activation vector.
 
@@ -1281,7 +1253,6 @@ vectorized backend that exploits SIMD, GPU kernels, or parallel workers.
 Input validation occurs per row to surface the earliest mismatch with a descriptive index.
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `inputs` - Array of input vectors; each must have length == network.input.
 - `training` - Whether each activation should keep training traces.
@@ -1313,7 +1284,6 @@ the network's resolved activation precision. Callers that also enable
 `returnTypedActivations` may receive that reusable typed buffer directly.
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `input` - Input vector (length == network.input).
 - `training` - Whether to retain training traces / gradients (delegated downstream).
@@ -1338,13 +1308,11 @@ addNodeBetweenImpl(): void
 Split one randomly selected connection by inserting a hidden node.
 
 This preserves the long-standing public `addNodeBetween()` behavior:
-
 - it does not opt into `ADD_NODE` deterministic-chain policy,
 - it preserves the original source-edge weight on the first new connection,
 - it uses `1` for the hidden-to-target edge to keep the split easy to reason about.
 
 Parameters:
-
 - `this` - Target network instance.
 
 Returns: Nothing.
@@ -1363,7 +1331,6 @@ Apply gradient clipping to a network using a normalized runtime configuration.
 This is a small wrapper that forwards to the concrete implementation used by training.
 
 Parameters:
-
 - `net` - Network instance to update.
 - `cfg` - Normalized clipping settings.
 
@@ -1378,7 +1345,6 @@ canUseFastSlab(
 Report whether the network can safely use the slab fast path under current topology and runtime constraints before callers choose between typed-array and node-traversal execution.
 
 Parameters:
-
 - `this` - Network instance bound by method call.
 
 Returns: True when slab fast-path activation is valid.
@@ -1392,7 +1358,6 @@ clearState(): void
 Clear all accumulated per-node runtime traces and saved activation states.
 
 Parameters:
-
 - `this` - Bound network instance.
 
 ### cloneImpl
@@ -1408,7 +1373,6 @@ used by `toJSON()` and `fromJSON()`, so clone semantics stay stable as the
 serialization chapter evolves.
 
 Parameters:
-
 - `this` - Target network instance.
 
 Returns: Deep-cloned network instance.
@@ -1443,7 +1407,6 @@ before mutation or deny the request when the graph cannot stay within the
 allowed envelope.
 
 Parameters:
-
 - `this` - Target network instance.
 - `configuration` - Budget settings for future structural growth.
 
@@ -1466,38 +1429,34 @@ their {@link Node.connect} is invoked (e.g., expanded recurrent templates). For 
 function always treats the result as an array and appends each edge to the appropriate collection.
 
 Algorithm outline:
-
-1.  (Acyclic guard) If acyclicity is enforced and the source node appears after the target node in
+ 1. (Acyclic guard) If acyclicity is enforced and the source node appears after the target node in
     the network's node ordering, abort early and return an empty array (prevents back‑edge creation).
-2.  Resolve a deterministic default weight from the owning network RNG when no explicit
+ 2. Resolve a deterministic default weight from the owning network RNG when no explicit
     weight was supplied, then delegate to sourceNode.connect(targetNode, weight).
-3.  For each created connection:
-    a. If it's a self‑connection: either ignore (acyclic mode) or store in selfconns.
-    b. Otherwise store in standard connections array.
-4.  If at least one connection was added, mark structural caches dirty (_topoDirty & _slabDirty) so lazy
+ 3. For each created connection:
+      a. If it's a self‑connection: either ignore (acyclic mode) or store in selfconns.
+      b. Otherwise store in standard connections array.
+ 4. If at least one connection was added, mark structural caches dirty (_topoDirty & _slabDirty) so lazy
     rebuild can occur before the next forward pass.
 
 Complexity:
-
-- Time: O(k) where k is the number of low‑level connections returned (typically 1).
-- Space: O(k) new Connection instances (delegated to Node.connect).
+ - Time: O(k) where k is the number of low‑level connections returned (typically 1).
+ - Space: O(k) new Connection instances (delegated to Node.connect).
 
 Edge cases & invariants:
-
-- Acyclic mode silently refuses back‑edges instead of throwing (makes evolutionary search easier).
-- Self‑connections are skipped entirely when acyclicity is enforced.
-- Weight initialization stays deterministic for seeded networks even when callers omit an explicit weight.
-- When the network carries explicit temporal extension metadata, successful edge creation
-  revalidates that descriptor bag immediately so generic structural edits keep the extension lane honest.
+ - Acyclic mode silently refuses back‑edges instead of throwing (makes evolutionary search easier).
+ - Self‑connections are skipped entirely when acyclicity is enforced.
+ - Weight initialization stays deterministic for seeded networks even when callers omit an explicit weight.
+ - When the network carries explicit temporal extension metadata, successful edge creation
+   revalidates that descriptor bag immediately so generic structural edits keep the extension lane honest.
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `from` - Source node (emits signal).
 - `to` - Target node (receives signal).
 - `weight` - Optional explicit initial weight value.
 
-Returns: Array of created {@link Connection} objects (possibly empty if acyclicity rejected the edge).
+Returns: Array of created  {@link Connection} objects (possibly empty if acyclicity rejected the edge).
 
 Example:
 
@@ -1518,17 +1477,16 @@ policy as repeated {@link connect} calls, but it reserves network-level
 connection storage once for the whole request shelf.
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `requests` - Ordered connection requests.
 
-Returns: Flattened created {@link Connection} objects in request order.
+Returns: Flattened created  {@link Connection} objects in request order.
 
 Example:
 
 const createdConnections = network.connectBatch([
-{ from: network.nodes[0], to: network.nodes[2] },
-{ from: network.nodes[1], to: network.nodes[2], weight: 0.5 },
+  { from: network.nodes[0], to: network.nodes[2] },
+  { from: network.nodes[1], to: network.nodes[2], weight: 0.5 },
 ]);
 
 ### createMLP
@@ -1544,7 +1502,6 @@ createMLP(
 Build a feed-forward multilayer perceptron with the supplied layer-size sequence so callers can quickly bootstrap a deterministic baseline topology without manual wiring.
 
 Parameters:
-
 - `this` - Network constructor context.
 - `layerSizes` - Ordered input, hidden, and output widths.
 
@@ -1563,7 +1520,6 @@ crossOver(
 NEAT-inspired crossover between two parent networks producing a single offspring.
 
 Conceptual model:
-
 - A "gene" corresponds to either a node choice at a structural index or a connection
   keyed by innovation identity.
 - The offspring is assembled in two phases: node assignment first, then connection
@@ -1572,48 +1528,43 @@ Conceptual model:
   parents contribute symmetrically where possible.
 
 Current simplifications relative to canonical NEAT:
-
-- Node alignment still relies on current index ordering while the broader
-  proper-NEAT lift keeps the public runtime `Network` surface stable.
-- Recurrent and self-connection legality is still finalized during
-  materialization rather than by a separate genotype-first heredity layer.
+ - Node alignment still relies on current index ordering while the broader
+   proper-NEAT lift keeps the public runtime `Network` surface stable.
+ - Recurrent and self-connection legality is still finalized during
+   materialization rather than by a separate genotype-first heredity layer.
 
 Compatibility assumptions:
-
 - Both parents must expose identical input/output counts.
 - Parent node index ordering should represent comparable structural positions.
 - Parent fitness scores are interpreted by setup helpers when deciding fitter-parent inheritance.
 
 High-level algorithm:
-
-1.  Validate that parents have identical I/O dimensionality (required for compatibility).
-2.  Decide offspring node array length:
-    - If equal flag set or scores tied: random length in [minNodes, maxNodes].
-    - Else: length of fitter parent.
-3.  For each index up to chosen size, pick a node gene from parents per rules:
-    - Input indices: always from parent1 (assumes identical input interface).
-    - Output indices (aligned from end): randomly choose if both present else take existing.
-    - Hidden indices: if both present pick randomly; else inherit from fitter (or either if equal).
-4.  Reindex offspring nodes.
-5.  Delegate innovation-keyed connection-gene collection and inheritance
+ 1. Validate that parents have identical I/O dimensionality (required for compatibility).
+ 2. Decide offspring node array length:
+      - If equal flag set or scores tied: random length in [minNodes, maxNodes].
+      - Else: length of fitter parent.
+ 3. For each index up to chosen size, pick a node gene from parents per rules:
+      - Input indices: always from parent1 (assumes identical input interface).
+      - Output indices (aligned from end): randomly choose if both present else take existing.
+      - Hidden indices: if both present pick randomly; else inherit from fitter (or either if equal).
+ 4. Reindex offspring nodes.
+ 5. Delegate innovation-keyed connection-gene collection and inheritance
     choice to the genome heredity boundary.
-6.  For matching genes (present in both parents with the same innovation),
+ 6. For matching genes (present in both parents with the same innovation),
     randomly choose one; if either copy is disabled, apply the explicit
     re-enable policy through the crossover RNG.
-7.  For disjoint/excess genes, inherit only from the fitter parent (or from
+ 7. For disjoint/excess genes, inherit only from the fitter parent (or from
     both parents when `equal` is enabled or scores tie).
-8.  Rebuild the offspring node set from required IO nodes plus inherited
+ 8. Rebuild the offspring node set from required IO nodes plus inherited
     gene identities, then materialize selected connection genes under the
     offspring topology intent.
-9.  Reattach gating if gater node exists in offspring.
+ 9. Reattach gating if gater node exists in offspring.
 
 Enabled reactivation probability:
-
-- Parents may carry disabled connections; offspring may re-enable them with a probability derived
-  from parent-specific _reenableProb (or default 0.25). This allows dormant structures to resurface.
+ - Parents may carry disabled connections; offspring may re-enable them with a probability derived
+   from parent-specific _reenableProb (or default 0.25). This allows dormant structures to resurface.
 
 Parameters:
-
 - `parentNetwork1` - First parent (ties resolved in its favor when scores equal and equal=false for some cases).
 - `parentNetwork2` - Second parent.
 - `equal` - Force symmetric treatment regardless of fitness (true => node count random between sizes and both parents equally contribute disjoint genes).
@@ -1642,13 +1593,11 @@ can rely on the descriptor while still receiving useful output for partially
 specified runtime graphs.
 
 Resolution priority is intentionally explicit:
-
-1. node `layer` metadata (factual when present)
-2. graph-derived feed-forward depth layering (factual for acyclic graphs)
-3. hidden-node count fallback (heuristic inference)
+1) node `layer` metadata (factual when present)
+2) graph-derived feed-forward depth layering (factual for acyclic graphs)
+3) hidden-node count fallback (heuristic inference)
 
 Parameters:
-
 - `network` - Runtime network instance.
 
 Returns: Stable architecture descriptor.
@@ -1677,7 +1626,6 @@ live graph first, then returns a cloned snapshot so consumers never need to
 inspect private runtime properties directly.
 
 Parameters:
-
 - `network` - Runtime network whose temporal structure should be described.
 
 Returns: Read-only recurrent-module and gated-block snapshot.
@@ -1698,7 +1646,6 @@ Use this importer for compact payloads produced by `serialize`.
 Optional `inputSize` and `outputSize` let callers enforce shape overrides at import time.
 
 Parameters:
-
 - `data` - Compact tuple payload.
 - `inputSize` - Optional input-size override that takes precedence over serialized input.
 - `outputSize` - Optional output-size override that takes precedence over serialized output.
@@ -1730,18 +1677,16 @@ semantics). If the target edge is gated we first call {@link Network.ungate} to 
 gating invariants (ensuring the gater node's internal gate list remains consistent).
 
 Algorithm outline:
-
-1.  Choose the correct list (selfconns vs connections) based on whether from === to.
-2.  Linear scan to find the first edge with matching endpoints.
-3.  If gated, ungate to detach gater bookkeeping.
-4.  Splice the edge out; exit loop (only one expected).
-5.  Delegate per‑node cleanup via from.disconnect(to) (clears reverse references, traces, etc.).
-6.  Mark structural caches dirty for lazy recomputation.
+ 1. Choose the correct list (selfconns vs connections) based on whether from === to.
+ 2. Linear scan to find the first edge with matching endpoints.
+ 3. If gated, ungate to detach gater bookkeeping.
+ 4. Splice the edge out; exit loop (only one expected).
+ 5. Delegate per‑node cleanup via from.disconnect(to) (clears reverse references, traces, etc.).
+ 6. Mark structural caches dirty for lazy recomputation.
 
 Complexity:
-
-- Time: O(m) where m is length of the searched list (connections or selfconns).
-- Space: O(1) extra.
+ - Time: O(m) where m is length of the searched list (connections or selfconns).
+ - Space: O(1) extra.
 
 Idempotence: If no such edge exists we still perform node-level disconnect and flag caches dirty –
 this conservative approach simplifies callers (they need not pre‑check existence).
@@ -1749,7 +1694,6 @@ When the network carries explicit temporal extension metadata, the disconnect pa
 that descriptor bag immediately so stale module claims do not linger until a later serialize pass.
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `from` - Source node.
 - `to` - Target node.
@@ -1770,7 +1714,6 @@ ensureGrowthBudget(
 Ensure enough total-connection budget remains before a growth mutation writes.
 
 Behavior:
-
 - allow immediately when the projected total connection count fits the budget,
 - prune lowest-priority connections first when the budget can be satisfied by
   freeing space,
@@ -1780,7 +1723,6 @@ Behavior:
   minimum remaining-connection invariant.
 
 Parameters:
-
 - `currentNetwork` - Network about to grow.
 - `requiredAdditionalConnections` - Net total-connection increase requested by the caller.
 
@@ -1798,20 +1740,17 @@ evolveNetwork(
 Evolves a network with a NEAT-style search loop until an error target or generation limit is reached.
 
 Overview:
-
-- This method treats the current network as a _seed genome_ and explores better variants.
+- This method treats the current network as a *seed genome* and explores better variants.
 - Candidate genomes are scored by prediction error plus a structural complexity penalty.
 - The best discovered genome is copied back into the current instance (in-place upgrade).
 
 Typical usage guidance:
-
 - Use `error` when you care about reaching a quality threshold.
 - Use `iterations` when you need deterministic runtime bounds.
 - Use both when you want "stop when good enough, otherwise cap time" behavior.
 - Increase `threads` only when worker support exists and dataset evaluation is expensive.
 
 Parameters:
-
 - `this` - Bound Network instance that receives the best evolved structure.
 - `set` - Supervised samples; sample input/output dimensions must match network I/O.
 - `options` - Evolution hyperparameters and stop conditions.
@@ -1841,19 +1780,16 @@ fastSlabActivate(
 High‑performance forward pass using packed slabs + CSR adjacency.
 
 Fallback Conditions (auto‑detected):
-
-- Missing slabs / adjacency structures.
-- Topology/gating/stochastic predicates fail (see `_canUseFastSlab`).
-- Gating present, when applicable (explicit guard).
+ - Missing slabs / adjacency structures.
+ - Topology/gating/stochastic predicates fail (see `_canUseFastSlab`).
+ - Gating present, when applicable (explicit guard).
 
 Implementation Notes:
-
-- Reuses internal activation/state buffers to reduce per‑step allocation churn.
-- Applies gain multiplication if optional gain slab exists.
-- Assumes acyclic graph; topological order recomputed on demand if marked dirty.
+ - Reuses internal activation/state buffers to reduce per‑step allocation churn.
+ - Applies gain multiplication if optional gain slab exists.
+ - Assumes acyclic graph; topological order recomputed on demand if marked dirty.
 
 Parameters:
-
 - `input` - Input vector (length must equal `network.input`).
 
 Returns: Output activations (detached plain array) of length `network.output`.
@@ -1875,7 +1811,6 @@ explicit windows so later browser and low-memory follow-up work has one
 stable orchestration boundary.
 
 Parameters:
-
 - `this` - Bound network instance.
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Optional activation-window configuration.
@@ -1898,7 +1833,6 @@ cooperatively yield after a configurable number of completed windows so long
 browser sequences do not monopolize the main thread.
 
 Parameters:
-
 - `this` - Bound network instance.
 - `inputs` - Ordered sequence of input vectors.
 - `options` - Optional async activation-window configuration.
@@ -1919,7 +1853,6 @@ This importer validates payload shape, restores dropout and topology, and then r
 connections, gating relationships, and optional enabled flags.
 
 Parameters:
-
 - `json` - Verbose JSON payload.
 
 Returns: Reconstructed network instance.
@@ -1945,16 +1878,14 @@ Attach a gater node to a connection so that the connection's effective weight
 becomes dynamically modulated by the gater's activation (see {@link Node.gate} for exact math).
 
 Validation / invariants:
-
-- Throws if the gater node is not part of this network (prevents cross-network corruption).
-- If the connection is already gated, function is a no-op (emits warning when enabled).
-- Successful gate attachment revalidates the explicit temporal descriptor bag so generic gating edits
-  cannot leave stale module metadata behind.
+ - Throws if the gater node is not part of this network (prevents cross-network corruption).
+ - If the connection is already gated, function is a no-op (emits warning when enabled).
+ - Successful gate attachment revalidates the explicit temporal descriptor bag so generic gating edits
+   cannot leave stale module metadata behind.
 
 Complexity: O(1)
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `node` - Candidate gater node (must belong to network).
 - `connection` - Connection to gate.
@@ -1982,19 +1913,17 @@ generateStandalone(
 Generate a standalone JavaScript source string that returns an `activate(input:number[])` function.
 
 Implementation Steps:
-
-1.  Validate presence of output nodes (must produce something observable).
-2.  Assign stable sequential indices to nodes (used as array offsets in generated code).
-3.  Collect initial activation/state values into typed array initializers for warm starting.
-4.  For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
+ 1. Validate presence of output nodes (must produce something observable).
+ 2. Assign stable sequential indices to nodes (used as array offsets in generated code).
+ 3. Collect initial activation/state values into typed array initializers for warm starting.
+ 4. For each non-input node, build a line computing S[i] (pre-activation sum with bias) and A[i]
     (post-activation output). Gating multiplies activation by gate activations; self-connection adds
     recurrent term S[i] * weight before activation.
-5.  De-duplicate activation functions: each unique squash name is emitted once; references become
+ 5. De-duplicate activation functions: each unique squash name is emitted once; references become
     indices into array F of function references for compactness.
-6.  Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).
+ 6. Emit an IIFE producing the activate function with internal arrays A (activations) and S (states).
 
 Parameters:
-
 - `net` - Network instance to snapshot.
 
 Returns: Source string (ES5-compatible) – safe to eval in sandbox to obtain activate function.
@@ -2022,7 +1951,6 @@ getCurrentSparsity(): number
 Return the current runtime sparsity ratio for the active connection graph using the pruning baseline so diagnostics and adaptive policies see consistent density measurements.
 
 Parameters:
-
 - `this` - Network instance bound by method call.
 
 Returns: Current sparsity ratio in the closed interval [0, 1].
@@ -2036,13 +1964,11 @@ getRandomFn(): (() => number) | undefined
 Returns the active deterministic RNG function currently attached to the network.
 
 Overview:
-
 - Use this when tooling or diagnostics need direct RNG access.
 - Returning the function allows advanced integration code to inspect or reuse the random stream.
 - For most persistence workflows, prefer `snapshotRNG` and `getRNGState` over direct function plumbing.
 
 Parameters:
-
 - `this` - Bound network instance queried for active RNG function.
 
 Returns: Active RNG function, or `undefined` when deterministic RNG is not initialized.
@@ -2076,13 +2002,11 @@ getRNGState(): number | undefined
 Returns the current deterministic RNG numeric state, when available.
 
 Overview:
-
 - Use this for lightweight checkpointing when full lifecycle snapshots are unnecessary.
 - The value can be persisted and later reapplied through `setRNGState`.
 - This is commonly used by tests that assert deterministic continuity across operations.
 
 Parameters:
-
 - `this` - Bound network instance queried for deterministic RNG numeric state.
 
 Returns: Numeric RNG state value, or `undefined` when no deterministic state exists yet.
@@ -2102,10 +2026,9 @@ getSlabAllocationStats(): { fresh: number; pooled: number; pool: Record<string, 
 Allocation statistics snapshot for slab typed arrays.
 
 Includes:
-
-- fresh: number of newly constructed typed arrays since process start / metrics reset.
-- pooled: number of arrays served from the pool.
-- pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
+ - fresh: number of newly constructed typed arrays since process start / metrics reset.
+ - pooled: number of arrays served from the pool.
+ - pool: per‑key metrics (created, reused, maxRetained) for educational inspection.
 
 NOTE: Stats are cumulative (not auto‑reset); callers may diff successive snapshots.
 
@@ -2122,7 +2045,6 @@ getSparsityBudgetSnapshot(
 Snapshot the configured sparsity budget controls used by pruning and growth guardrails so external telemetry can inspect limits without mutating internal configuration state.
 
 Parameters:
-
 - `this` - Network instance bound by method call.
 
 Returns: Immutable view of current sparsity budget settings.
@@ -2154,7 +2076,6 @@ this iteration should prune, then removes low-ranked connections and can
 optionally regrow a bounded subset.
 
 Parameters:
-
 - `iteration` - Current (0-based or 1-based) training iteration counter used for scheduling.
 
 Returns: Nothing.
@@ -2170,19 +2091,16 @@ mutateImpl(
 Public entry point: apply a single mutation operator to the network.
 
 Runtime flow:
-
 1. Validate mutation input.
 2. Resolve the mutation key from string/object/reference forms.
 3. Resolve a concrete handler from the dispatch table.
 4. Delegate execution and mark topology-derived caches dirty.
 
 Error and warning behavior:
-
 - Throws when no method is provided.
 - Emits a warning and no-ops when an unknown method key is received.
 
 Parameters:
-
 - `this` - Network instance.
 - `method` - Mutation enum value or descriptor object.
 
@@ -2212,29 +2130,26 @@ is currently valid. If that attempt fails (for instance because the slab is stal
 after a structural mutation) execution gracefully falls back to a node‑by‑node loop.
 
 Algorithm outline:
-
 1. (Optional) Refresh the compiled activation schedule when a structural change
    marked topology as dirty.
-2. Validate the input dimensionality.
-3. Try the fast slab path; if it throws, continue with the standard path.
-4. Acquire a pooled output buffer sized to the number of output neurons.
+ 2. Validate the input dimensionality.
+ 3. Try the fast slab path; if it throws, continue with the standard path.
+ 4. Acquire a pooled output buffer sized to the number of output neurons.
 5. Traverse nodes in the compiled activation order when available:
-   - Input nodes: assign values by explicit `inputNodeIds`, not raw node position.
-   - Hidden and recurrent-component nodes: compute activation via
-     Node.noTraceActivate without training traces.
-   - Output nodes: activate in schedule order, then read out results in explicit
-     `outputNodeIds` order so vector semantics stay stable even if storage order drifts.
-6. Copy the pooled buffer into a fresh array (detaches user from the pool) and
-   release the pooled buffer back to the pool.
+     - Input nodes: assign values by explicit `inputNodeIds`, not raw node position.
+     - Hidden and recurrent-component nodes: compute activation via
+       Node.noTraceActivate without training traces.
+     - Output nodes: activate in schedule order, then read out results in explicit
+       `outputNodeIds` order so vector semantics stay stable even if storage order drifts.
+ 6. Copy the pooled buffer into a fresh array (detaches user from the pool) and
+    release the pooled buffer back to the pool.
 
 Complexity considerations:
-
-- Time: O(N + E) where N = number of nodes, E = number of inbound edges processed
-  inside each Node.noTraceActivate call (not explicit here but inside the node).
-- Space: O(O) transient (O = number of outputs) due to the pooled output buffer.
+ - Time: O(N + E) where N = number of nodes, E = number of inbound edges processed
+   inside each Node.noTraceActivate call (not explicit here but inside the node).
+ - Space: O(O) transient (O = number of outputs) due to the pooled output buffer.
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `input` - Flat numeric vector whose length must equal network.input.
 
@@ -2261,7 +2176,6 @@ propagate(
 Run one backward-pass propagation step for the current network state so gradients, weight updates, and optional momentum behavior are applied through one shared training primitive.
 
 Parameters:
-
 - `this` - Network instance bound by method call.
 - `rate` - Learning rate.
 - `momentum` - Optional momentum scalar.
@@ -2284,7 +2198,6 @@ Unlike maybePrune this operates immediately relative to the first invocation's c
 (stored separately as _evoInitialConnCount) and does not implement scheduling or regrowth.
 
 Parameters:
-
 - `targetSparsity` - Requested target sparsity.
 - `method` - Connection ranking heuristic.
 
@@ -2301,7 +2214,6 @@ rebuildConnections(
 Rebuild the canonical connection array from all per-node outgoing lists.
 
 Parameters:
-
 - `networkInstance` - Target network.
 
 ### rebuildConnectionSlab
@@ -2316,7 +2228,6 @@ Build (or refresh) the packed connection slabs for the network synchronously.
 
 ACTIONS
 -------
-
 1. Optionally reindex nodes if structural mutations invalidated indices.
 2. Grow (geometric) or reuse existing typed arrays to ensure capacity >= active connections.
 3. Populate the logical slice [0, connectionCount) with weight/from/to/flag data.
@@ -2326,11 +2237,9 @@ ACTIONS
 
 PERFORMANCE
 -----------
-
 O(C) over active connections with amortized allocation cost due to geometric growth.
 
 Parameters:
-
 - `force` - When true forces rebuild even if network not marked dirty (useful for timing tests).
 
 ### rebuildConnectionSlabAsync
@@ -2344,16 +2253,14 @@ rebuildConnectionSlabAsync(
 Cooperative asynchronous slab rebuild (Browser only).
 
 Strategy:
-
-- Perform capacity decision + allocation up front (mirrors sync path).
-- Populate connection data in timer-backed macrotask slices so the browser can service other queued work between chunks.
-- Adaptive slice sizing for very large graphs if `config.browserSlabChunkTargetMs` set.
+ - Perform capacity decision + allocation up front (mirrors sync path).
+ - Populate connection data in timer-backed macrotask slices so the browser can service other queued work between chunks.
+ - Adaptive slice sizing for very large graphs if `config.browserSlabChunkTargetMs` set.
 
 Metrics: Increments `_slabAsyncBuilds` for observability.
 Fallback: On Node (no `window`) defers to synchronous rebuild for simplicity.
 
 Parameters:
-
 - `chunkSize` - Initial maximum connections per slice (may be reduced adaptively for huge graphs).
 
 Returns: Promise resolving once rebuild completes.
@@ -2369,7 +2276,6 @@ removeNode(
 Remove a hidden node from the network while minimally repairing connectivity.
 
 Parameters:
-
 - `this` - Network instance (bound implicitly via method-style call).
 - `node` - The node object to remove (must be of type 'hidden').
 
@@ -2390,7 +2296,6 @@ owns the live analysis while serialization can optionally hydrate a cached
 descriptor that remains safe to reuse when the runtime graph shape matches.
 
 Parameters:
-
 - `network` - Runtime network instance.
 
 Returns: Public architecture descriptor for telemetry and UI consumers.
@@ -2406,13 +2311,11 @@ restoreRNG(
 Restores deterministic RNG lifecycle behavior from a provided RNG function.
 
 Overview:
-
 - Use this when replaying deterministic flows after custom serialization, hydration, or test setup.
 - The restored RNG function becomes the active random source used by the network lifecycle helpers.
 - This keeps deterministic plumbing explicit when external code owns RNG reconstruction.
 
 Parameters:
-
 - `this` - Bound network instance receiving the restored RNG lifecycle function.
 - `fn` - Deterministic RNG function to install (expected to return values in `[0, 1)`).
 
@@ -2436,7 +2339,6 @@ Use this format when payload size and serialization speed matter more than reada
 The tuple layout is positional and optimized for transport/storage efficiency.
 
 Parameters:
-
 - `this` - Bound network instance.
 
 Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.
@@ -2463,13 +2365,11 @@ setRNGState(
 Applies a deterministic RNG numeric state to continue from a known checkpoint.
 
 Overview:
-
 - Pair this with `getRNGState` to pause/resume deterministic sequences.
 - Useful for reproducible tests, multi-stage training workflows, and deterministic replay.
 - Delegation keeps the write path consistent with the rest of deterministic state utilities.
 
 Parameters:
-
 - `this` - Bound network instance receiving deterministic RNG state.
 - `state` - Numeric RNG state checkpoint to install.
 
@@ -2492,13 +2392,11 @@ setSeed(
 Sets deterministic randomness for a network by installing a seed-backed RNG.
 
 Overview:
-
 - Use this before training, mutation, or stochastic operations when you need repeatable runs.
 - The same seed and operation order produce the same random sequence and reproducible outcomes.
 - This method delegates to setup utilities so behavior stays centralized across deterministic APIs.
 
 Parameters:
-
 - `this` - Bound network instance whose RNG state is being initialized.
 - `seed` - Seed value used to derive deterministic RNG state (low 32 bits are applied).
 
@@ -2519,13 +2417,11 @@ snapshotRNG(): RNGSnapshot
 Captures the current deterministic RNG lifecycle state as a portable snapshot.
 
 Overview:
-
 - Use this before temporary experiments, branching simulations, or stateful debug sessions.
 - The snapshot preserves enough information to resume from the same deterministic point later.
 - This is useful when comparing alternate algorithm branches from an identical random timeline.
 
 Parameters:
-
 - `this` - Bound network instance whose RNG lifecycle state is captured.
 
 Returns: Snapshot containing deterministic progress metadata and RNG state payload.
@@ -2548,7 +2444,6 @@ testNetwork(
 Evaluate a network on test samples and return aggregate diagnostics for error-style reporting, including loss metrics needed by validation and benchmarking workflows.
 
 Parameters:
-
 - `this` - Network instance bound by method call.
 - `set` - Evaluation dataset.
 - `cost` - Optional cost function.
@@ -2567,7 +2462,6 @@ Use this format when you need human-readable snapshots, explicit schema versioni
 and better forward/backward compatibility handling.
 
 Parameters:
-
 - `this` - Bound network instance.
 
 Returns: Versioned JSON payload with shape metadata, nodes, and connections.
@@ -2596,7 +2490,6 @@ trainImpl(
 Train the network over a dataset with configured iteration, batching, and callback controls while returning summary metrics used by callers for stop-condition and progress decisions.
 
 Parameters:
-
 - `this` - Network instance bound by method call.
 - `set` - Training dataset.
 - `options` - Training options.
@@ -2625,7 +2518,6 @@ Returns mean cost across processed samples.
 This is the core "one epoch" primitive used by higher-level training orchestration.
 
 Parameters:
-
 - `net` - Network instance receiving training updates.
 - `set` - Training samples.
 - `batchSize` - Mini-batch size (use 1 for pure SGD).
@@ -2657,7 +2549,6 @@ descriptors do not survive until a later serialize pass.
 Complexity: O(n) where n = number of gated connections (indexOf lookup) – typically small.
 
 Parameters:
-
 - `this` - Bound Network instance.
 - `connection` - Connection to ungate.
 
@@ -2696,7 +2587,6 @@ ActivationFunction(
 Runtime activation function signature used by ONNX activation import/export paths.
 
 Neataptic-style activations support a dual-purpose call pattern:
-
 - `derivate === false | undefined`: return activation output $f(x)$
 - `derivate === true`: return derivative $f'(x)$
 
@@ -2811,7 +2701,9 @@ This named-object form replaces tuple index access in internal orchestration cod
 
 Compact tuple payload used by `serialize` output.
 
-Tuple slots are intentionally positional to reduce payload size: 0) activations, 1) states, 2) squash keys, 3) connections, 4) input size, 5) output size, 6) optional node gene ids, 7) optional topology intent.
+Tuple slots are intentionally positional to reduce payload size:
+0) activations, 1) states, 2) squash keys, 3) connections, 4) input size,
+5) output size, 6) optional node gene ids, 7) optional topology intent.
 
 Example:
 
@@ -3009,7 +2901,6 @@ Mapping declaration for treating a fully-connected layer as a 2D convolution dur
 
 This does **not** magically turn an MLP into a convolutional network at runtime.
 It annotates a particular export-layer index with a conv interpretation so that:
-
 - The exported graph uses conv-shaped tensors/operators, and
 - Import can re-attach pooling/flatten metadata appropriately.
 
@@ -3056,7 +2947,6 @@ A cost function compares an expected `target` vector with the network's produced
 vector, returning a scalar error where **lower is better**.
 
 Design notes:
-
 - This is called frequently (often once per training sample), so implementations should be
   **pure** and **allocation-light**.
 - Most built-in training loops assume the returned value is non-negative.
@@ -3272,7 +3162,6 @@ Clipping prevents rare large gradients from causing unstable weight updates.
 It is most useful for recurrent networks and noisy datasets.
 
 Conceptual modes:
-
 - `norm`: clip by a global $L_2$ norm threshold.
 - `percentile`: clip using a running percentile estimate (robust to outliers).
 - `layerwise*`: apply the same idea per-layer (useful when layers have very different scales).
@@ -3700,7 +3589,6 @@ These options trade off strictness, portability, and fidelity:
   focuses on a constrained single-step representation and optional fused heuristics.
 
 Key fields (high-level):
-
 - `includeMetadata`: includes `metadata_props` with architecture hints.
 - `opset`: numeric opset version stored in the exported model metadata (default is
   resolved by the exporter; commonly 18 in this codebase).
@@ -3726,7 +3614,7 @@ Key fields (high-level):
   explicit float-domain bias bridge plus the exporter-owned unary
   activation node when present, while the closed 7E Conv subset lowers
   supported spatial paths into `QuantizeLinear -> QLinearConv ->
-DequantizeLinear`, emits one `int32` fused-bias value per output channel,
+  DequantizeLinear`, emits one `int32` fused-bias value per output channel,
   and returns to float32 before pooling, flatten, reshape, or downstream
   dense boundaries. The closed 7F dynamic lane now adds dense-only guidance:
   supported same-family dense paths can either record `metadata-only`
@@ -3795,7 +3683,6 @@ repeatedly re-looking up initializers.
 Graph body of an ONNX-like model.
 
 The exporter writes three main collections here:
-
 - `inputs` and `outputs` describe graph boundaries,
 - `initializer` stores constant tensors such as weights and biases,
 - `node` stores the ordered operator payloads that consume those tensors.
@@ -3988,7 +3875,6 @@ const restoredModel = JSON.parse(jsonText) as OnnxModel;
 ```
 
 Notes:
-
 - `metadata_props` contains NeatapticTS-specific keys (layer sizes, recurrent flags,
   conv/pool mappings, etc.). This is where most round-trip hints live.
 - Initializers currently store floating-point weights in `float_data`, and the
@@ -3996,7 +3882,6 @@ Notes:
   while keeping the logical tensor shape stable.
 
 Security/trust boundary:
-
 - Treat this as untrusted input if it comes from outside your process.
 
 ### OnnxModelMetadataContext
@@ -4108,18 +3993,11 @@ Example:
 net.train(set, {
   iterations: 1_000,
   rate: 0.001,
-  optimizer: {
-    type: 'adamw',
-    beta1: 0.9,
-    beta2: 0.999,
-    eps: 1e-8,
-    weightDecay: 0.01,
-  },
+  optimizer: { type: 'adamw', beta1: 0.9, beta2: 0.999, eps: 1e-8, weightDecay: 0.01 },
 });
 ```
 
 Notes:
-
 - Exact supported `type` values are validated by training utilities.
 - Unspecified fields fall back to sensible defaults per optimizer.
 
@@ -4488,11 +4366,10 @@ Runtime node view used by training internals for bias delta accumulation and opt
 Public training options accepted by the high-level training orchestration.
 
 Training in this codebase is conceptually:
-
-1. forward activation
-2. backward propagation
-3. optimizer update
-   repeated until a stopping condition is met.
+1) forward activation
+2) backward propagation
+3) optimizer update
+repeated until a stopping condition is met.
 
 Minimal example:
 
@@ -4506,7 +4383,6 @@ net.train(set, {
 ```
 
 Stopping conditions:
-
 - Provide at least one of `iterations` or `error`.
 - `earlyStopPatience` adds an additional "stop when no improvement" guard.
 
@@ -4557,7 +4433,6 @@ Append one or more temporal descriptors to the runtime extension bag after synch
 This keeps recurrent metadata consistent with the live graph before mutation, export, or diagnostics consumers read it.
 
 Parameters:
-
 - `network` - Runtime network that should retain explicit temporal metadata.
 - `descriptorSet` - Descriptor set to merge into the hydrated extension bag.
 
@@ -4576,7 +4451,6 @@ Build the explicit temporal descriptor set for one runtime GRU block from canoni
 This metadata keeps reconstruction, diagnostics, and visualization aligned with the live recurrent runtime graph.
 
 Parameters:
-
 - `network` - Runtime network carrying the block.
 - `roleNodes` - Canonical GRU role groups.
 
@@ -4595,7 +4469,6 @@ Build the explicit temporal descriptor set for one runtime LSTM block using cano
 The result captures module and gate boundaries so downstream tooling can keep recurrent structure observable and stable.
 
 Parameters:
-
 - `network` - Runtime network carrying the block.
 - `roleNodes` - Canonical LSTM role groups.
 
@@ -4615,7 +4488,6 @@ Build one explicit temporal descriptor set for a NARX delay line using delay-ste
 The descriptor preserves memory-shelf structure so serialization and inheritance retain temporal intent across generations.
 
 Parameters:
-
 - `network` - Runtime network carrying the delay line.
 - `moduleLabel` - Stable label distinguishing multiple delay-line modules.
 - `memoryBlocks` - Ordered memory blocks grouped by delay step.
@@ -4637,7 +4509,6 @@ deletion, so descriptor validation must index every connection that still
 belongs to the runtime graph.
 
 Parameters:
-
 - `network` - Runtime network whose registered connections should be read.
 
 Returns: Registered connections across forward and self-edge shelves.
@@ -4658,7 +4529,6 @@ live graph first, then returns a cloned snapshot so consumers never need to
 inspect private runtime properties directly.
 
 Parameters:
-
 - `network` - Runtime network whose temporal structure should be described.
 
 Returns: Read-only recurrent-module and gated-block snapshot.
@@ -4676,7 +4546,6 @@ Preserve parent temporal descriptors that remain structurally valid on one offsp
 Inherited descriptors are filtered against the offspring runtime graph so stale module or gate references never persist.
 
 Parameters:
-
 - `offspring` - Offspring runtime network produced by crossover.
 - `parents` - Parent runtime networks that may carry temporal descriptors.
 
@@ -4699,7 +4568,6 @@ whole is valid, so repair code should consult this helper before rewiring
 them like generic hidden neurons.
 
 Parameters:
-
 - `network` - Runtime network whose temporal descriptor ownership should be read.
 
 Returns: Gene-id set for hidden nodes protected by live recurrent descriptors.
@@ -4717,7 +4585,6 @@ Split one GRU layer node list into canonical role groups required by recurrent d
 The partition keeps gate ownership deterministic so inheritance and synchronization logic can remain topology-aware.
 
 Parameters:
-
 - `layerNodes` - Flat GRU layer node list in factory order.
 - `blockSize` - Number of nodes allocated per role group.
 
@@ -4736,7 +4603,6 @@ Split one LSTM layer node list into canonical role groups used by temporal descr
 This ensures later descriptor builders can map contiguous runtime node slices back to stable gate semantics.
 
 Parameters:
-
 - `layerNodes` - Flat LSTM layer node list in factory order.
 - `blockSize` - Number of nodes allocated per role group.
 
@@ -4758,7 +4624,6 @@ referenced nodes, connection innovations, or gating ownership disappear from
 the runtime graph, not when one of those genes is merely toggled inactive.
 
 Parameters:
-
 - `network` - Runtime network whose hydrated extension bag should be normalized.
 
 Returns: Nothing.

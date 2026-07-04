@@ -160,7 +160,6 @@ This is the simplest evaluation entrypoint: one policy, one rollout, one
 scalar fitness.
 
 Parameters:
-
 - `network` - Genome/network to evaluate.
 - `rolloutOptions` - Optional rollout controls.
 
@@ -184,7 +183,6 @@ sees the same rollout seeds, which makes the aggregate statistics much more
 useful for selection than a single lucky episode.
 
 Parameters:
-
 - `network` - Genome/network to evaluate.
 - `sharedSeeds` - Shared deterministic seeds used for all genomes.
 - `rolloutOptions` - Optional rollout controls.
@@ -216,7 +214,6 @@ browser worker can reuse warm transport state without leaking recurrent
 memory across rollout boundaries.
 
 Parameters:
-
 - `network` - Network to evaluate through one persistent inference channel.
 - `sharedSeeds` - Shared deterministic seeds used for all genomes.
 - `options` - Rollout controls plus the browser worker bundle URL.
@@ -240,7 +237,6 @@ so the caller can parallelize across genomes without paying one bootstrap
 cost per seeded rollout.
 
 Parameters:
-
 - `sharedInferenceWorker` - Persistent shared-memory predictor for one genome.
 - `sharedSeeds` - Shared deterministic seeds used for the evaluation batch.
 - `options` - Optional rollout controls plus a stable network id for seed mixing.
@@ -262,7 +258,6 @@ This browser-worker-oriented helper reuses one worker-side predictor instead
 of calling `network.activate(...)` directly on the hot rollout path.
 
 Parameters:
-
 - `network` - Network to evaluate through one persistent inference channel.
 - `options` - Rollout controls plus the browser worker bundle URL.
 
@@ -285,7 +280,6 @@ optional `clear()` hook, but recurrent networks use it to avoid leaking state
 across shared-seed evaluations.
 
 Parameters:
-
 - `network` - Network being evaluated.
 - `rolloutOptions` - Rollout controls for this episode.
 
@@ -311,7 +305,6 @@ gives a reasonable intuition for why a few avalanche-style mixing steps help
 nearby ids map to less-correlated seed values.
 
 Parameters:
-
 - `genomeId` - Genome id from NEAT bookkeeping.
 
 Returns: Mixed uint32 seed.
@@ -328,7 +321,6 @@ This is the public evaluation-layer shelf for callers that should not need to
 know about the rollout subfolder layout.
 
 Minimal usage sketch:
-
 ```ts
 const result = rolloutEpisode(network, {
   seed: 123,
@@ -348,7 +340,6 @@ rolloutEpisode(
 Roll out an episode and return details.
 
 Parameters:
-
 - `network` - Genome/network to evaluate.
 - `rolloutOptions` - Optional rollout controls.
 
@@ -381,7 +372,6 @@ shaping semantics as `rolloutEpisode(...)` while sourcing control decisions
 from an async inference boundary such as `InferenceChannel.predict(...)`.
 
 Parameters:
-
 - `options` - Predictor callback plus optional rollout controls.
 
 Returns: Episode result details.
@@ -420,7 +410,6 @@ evaluateGenomesAcrossSeeds(
 Evaluate one genome subset across a shared deterministic seed batch.
 
 Parameters:
-
 - `genomes` - Ordered genome shelf to score.
 - `sharedSeeds` - Shared deterministic seeds used for each genome.
 - `rolloutOptions` - Rollout controls reused across the whole batch.
@@ -438,7 +427,6 @@ initialize(
 Prepares exported payloads and empty slot state for one population shelf.
 
 Parameters:
-
 - `genomes` - Population that may be evaluated during the next generation.
 
 Returns: Nothing.
@@ -458,7 +446,6 @@ resolveOrderedPayloads(
 Resolves the ordered transferable payload shelf for one genome batch.
 
 Parameters:
-
 - `genomes` - Genome batch that may be evaluated next.
 
 Returns: Ordered transferable payload shelf aligned to the input genomes.

@@ -47,7 +47,7 @@ describe('network.gpu.parity', () => {
     });
   });
 
-  describe('racing-browser scale network (76 nodes / 288 connections)', () => {
+  describe('batch-evaluation browser scale network (76 nodes / 288 connections)', () => {
     let network: Network;
     let device: ReturnType<typeof createMockGPUDevice>;
     let cpuOutput: number[];

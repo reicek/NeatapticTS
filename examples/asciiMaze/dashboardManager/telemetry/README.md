@@ -33,7 +33,6 @@ createDetailedStatsSnapshot(
 Build the rich telemetry detail snapshot shown in browser hooks and exported snapshots.
 
 Parameters:
-
 - `state` - Mutable dashboard state with histories and current best candidate.
 - `neat` - Optional NEAT instance used for population-level telemetry.
 
@@ -52,7 +51,6 @@ emitTelemetryPayload(
 Emit the structured telemetry payload used by browser hosts and runtime hooks.
 
 Parameters:
-
 - `state` - Mutable dashboard state used to assemble the payload.
 - `generation` - Current generation number.
 - `telemetryHook` - Optional runtime hook installed by the browser host.
@@ -68,7 +66,6 @@ getDashboardLastTelemetry(
 Produce the latest public telemetry snapshot from current dashboard state.
 
 Parameters:
-
 - `state` - Mutable dashboard state.
 
 Returns: Public telemetry snapshot used by browser hosts.
@@ -84,7 +81,6 @@ recordCurrentBestFitness(
 Record the current best score in the public dashboard history.
 
 Parameters:
-
 - `state` - Mutable dashboard state that owns bounded histories.
 
 ### recordCurrentProgress
@@ -98,7 +94,6 @@ recordCurrentProgress(
 Record the current best progress in the public dashboard history.
 
 Parameters:
-
 - `state` - Mutable dashboard state that owns bounded histories.
 
 ### resolveActivationSchedulingDetails
@@ -112,7 +107,6 @@ resolveActivationSchedulingDetails(
 Resolve compact activation-scheduling details for telemetry export.
 
 Parameters:
-
 - `network` - Current best network instance.
 
 Returns: Compact scheduling detail snapshot or null when unavailable.
@@ -129,6 +123,5 @@ updateTelemetryHistory(
 Pull the latest NEAT telemetry snapshot and update bounded dashboard histories.
 
 Parameters:
-
 - `state` - Mutable dashboard state that owns bounded histories.
 - `neatInstance` - Optional NEAT-like runtime exposing `getTelemetry()`.

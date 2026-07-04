@@ -25,12 +25,11 @@ metrics snapshot recorded during training or evaluation. The internal `_lastStat
 Network instance is read through the local `NetworkStatsProps` bridge and is expected to be
 populated elsewhere in the training loop with
 values such as:
-
-- l1Penalty, l2Penalty
-- dropoutApplied (fraction of units dropped last pass)
-- weightNoiseStd (effective std dev used if noise injected)
-- sparsityRatio, prunedConnections
-- custom user extensions (the object stays intentionally open for experimentation)
+ - l1Penalty, l2Penalty
+ - dropoutApplied (fraction of units dropped last pass)
+ - weightNoiseStd (effective std dev used if noise injected)
+ - sparsityRatio, prunedConnections
+ - custom user extensions (the object stays intentionally open for experimentation)
 
 Design decision: We return a deep copy to prevent external mutation of internal accounting state.
 If the object is large and copying becomes a bottleneck, future versions could offer a freeze
@@ -69,7 +68,6 @@ testNetwork(
 Evaluate a dataset and return average error and elapsed time.
 
 Parameters:
-
 - `this` - Bound network instance.
 - `set` - Evaluation samples.
 - `cost` - Optional cost function override.
@@ -91,7 +89,6 @@ createTestResult(
 Build the final test result payload.
 
 Parameters:
-
 - `cumulativeError` - Cumulative sample error.
 - `sampleCount` - Number of evaluated samples.
 - `startTime` - Evaluation start timestamp.
@@ -109,7 +106,6 @@ disableDropoutForTesting(
 Disable dropout while preserving previous runtime dropout value.
 
 Parameters:
-
 - `network` - Bound network instance.
 
 Returns: Previous dropout value.
@@ -127,7 +123,6 @@ evaluateSamples(
 Evaluate all test samples and accumulate total cost.
 
 Parameters:
-
 - `network` - Bound network instance.
 - `testSet` - Evaluation sample set.
 - `costFunction` - Cost function used for scoring.
@@ -147,7 +142,6 @@ evaluateSingleSample(
 Evaluate a single sample and return its cost.
 
 Parameters:
-
 - `network` - Bound network instance.
 - `sample` - Evaluation sample.
 - `costFunction` - Cost function used for scoring.
@@ -165,7 +159,6 @@ resetHiddenMasks(
 Force hidden-node masks to active state for deterministic testing.
 
 Parameters:
-
 - `network` - Bound network instance.
 
 ### resolveCostFunction
@@ -179,7 +172,6 @@ resolveCostFunction(
 Resolve evaluation cost function with a stable default.
 
 Parameters:
-
 - `cost` - Optional cost override.
 
 Returns: Cost function used for test evaluation.
@@ -196,7 +188,6 @@ restoreDropout(
 Restore dropout value after test evaluation.
 
 Parameters:
-
 - `network` - Bound network instance.
 - `previousDropout` - Dropout value to restore.
 
@@ -212,7 +203,6 @@ testNetwork(
 Evaluate a dataset and return average error and elapsed time.
 
 Parameters:
-
 - `this` - Bound network instance.
 - `set` - Evaluation samples.
 - `cost` - Optional cost function override.
@@ -231,7 +221,6 @@ validateAllSampleDimensions(
 Validate input and output dimensions for every sample.
 
 Parameters:
-
 - `network` - Bound network instance.
 - `testSet` - Evaluation sample set.
 
@@ -247,7 +236,6 @@ validateSampleInputDimensions(
 Validate one sample input vector size.
 
 Parameters:
-
 - `network` - Bound network instance.
 - `sample` - Evaluation sample.
 
@@ -263,7 +251,6 @@ validateSampleOutputDimensions(
 Validate one sample output vector size.
 
 Parameters:
-
 - `network` - Bound network instance.
 - `sample` - Evaluation sample.
 
@@ -279,7 +266,6 @@ validateTestSet(
 Validate that the evaluation set exists and each sample matches network dimensions.
 
 Parameters:
-
 - `network` - Bound network instance.
 - `testSet` - Evaluation sample set.
 
@@ -294,5 +280,4 @@ validateTestSetPresence(
 Validate that the test set is a non-empty array.
 
 Parameters:
-
 - `testSet` - Evaluation sample set.

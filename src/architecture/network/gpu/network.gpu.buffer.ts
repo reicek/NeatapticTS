@@ -1,6 +1,7 @@
 import type Network from '../network';
 import type Node from '../../node/node';
 import { canUseGPU } from './network.gpu.capability';
+import { SUPPORTED_ACTIVATION_INDICES } from './network.gpu.kernel';
 import type { GPUBufferSet } from './network.gpu.types';
 
 export type { GPUBufferSet };
@@ -563,7 +564,13 @@ export function uploadNetworkToGPU(
   network: Network,
 ): GPUBufferSet {
   // Step 1: Reject ineligible networks using the capability predicate.
-  if (!canUseGPU(network, device, new Set<number>())) {
+  // Networks that carry a valid worker-registry activation index are still
+  // eligible for upload; the kernel compiler checks whether that index is
+  // supported when the pipeline is built.
+  const supportedActivations = new Set<number>(
+    SUPPORTED_ACTIVATION_INDICES as unknown as number[],
+  );
+  if (!canUseGPU(network, device, supportedActivations)) {
     throw new Error('Network is not eligible for GPU upload');
   }
 
@@ -690,4 +697,23 @@ export function destroyGPUBufferSet(
   ]) {
     buffer.destroy();
   }
+}
+
+/**
+ * Allocate a fresh, independent GPU buffer set for a single concurrent request.
+ *
+ * Every call creates a new set of WebGPU buffers. This keeps concurrent or
+ * interleaved activations of the same network instance from reading or writing
+ * each other's node/output state, which is the critical requirement for
+ * parallel multi-agent evaluation.
+ *
+ * @param device - WebGPU device that owns the newly created buffers.
+ * @param network - Network whose slab will be uploaded.
+ * @returns A freshly allocated `GPUBufferSet` isolated from any other request.
+ */
+export function createConcurrentBufferSet(
+  device: GPUDevice,
+  network: Network,
+): GPUBufferSet {
+  return uploadNetworkToGPU(device, network);
 }

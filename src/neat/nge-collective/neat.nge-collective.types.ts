@@ -143,9 +143,9 @@ export type AgentEvaluator = (agentIndex: number, field: SharedField) => number;
 /**
  * Aggregation policy injected into the reusable team-level evaluator seam.
  *
- * NGE core owns only the orchestration boundary. Consumers such as racing or
- * ant-hive own the scoring policy and can swap it without rewriting the
- * evaluator pipeline itself.
+ * NGE core owns only the orchestration boundary. Consumers such as collective or
+ * multi-agent benchmarks own the scoring policy and can swap it without rewriting
+ * the evaluator pipeline itself.
  *
  * @typeParam TTeamId - Stable identifier for the team being scored.
  * @typeParam TMemberResult - Benchmark- or policy-specific member result shape.

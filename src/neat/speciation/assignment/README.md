@@ -105,7 +105,6 @@ to answer a later teaching question: which genomes stayed together, and which
 ones split away into a different niche?
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 
 Returns: Nothing.
@@ -137,7 +136,6 @@ roster while keeping each species shell as a comparison anchor for the next
 pass.
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 
 Returns: Nothing.
@@ -170,7 +168,6 @@ neighborhoods that can protect novel structure without turning every
 generation into a fresh clustering problem.
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 - `options` - Speciation options.
 
@@ -210,7 +207,6 @@ perfect niche. In a teaching-oriented NEAT implementation, that tradeoff
 makes the speciation story easier to follow across many generations.
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 - `options` - Speciation options.
 - `genome` - Genome to match.
@@ -241,7 +237,6 @@ structure instead of forcing every mutation to survive inside an already
 dominant family.
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 - `genome` - Genome that starts a new species.
 
@@ -268,7 +263,6 @@ member to stand in for each surviving species during the next generation's
 comparisons.
 
 Parameters:
-
 - `speciationContext` - Speciation harness context.
 
 Returns: Nothing.

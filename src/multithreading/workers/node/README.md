@@ -119,7 +119,6 @@ worker.terminate();
 Handles messages sent to the worker process.
 
 This function listens for messages sent to the worker process and performs one of two actions:
-
 1. If the message contains serialized activations, states, and connections, it evaluates the network using the dataset.
 2. If the message contains a dataset and cost function, it initializes the worker with the provided data.
 

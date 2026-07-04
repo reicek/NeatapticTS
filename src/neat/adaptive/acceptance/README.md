@@ -58,7 +58,6 @@ zeroing scores below the accepted bar. It therefore changes the selection
 landscape for the same generation without redefining canonical fitness.
 
 Behavior summary:
-
 - Initializes `_mcThreshold` from configuration if undefined.
 - Computes the proportion of genomes with score >= threshold.
 - Adjusts threshold multiplicatively by `adjustRate` to move the
@@ -102,7 +101,6 @@ applyRejection(engine, engine._mcThreshold ?? 0);
 ```
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `threshold` - Final MC threshold.
 
@@ -124,7 +122,6 @@ it is still counting. Missing scores are treated as zero so unevaluated or
 explicitly rejected genomes remain part of the acceptance picture.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 
 Returns: Array of scores (missing scores treated as 0).
@@ -146,7 +143,6 @@ to decide whether the threshold is too lenient, too strict, or already close
 enough to the configured target band.
 
 Parameters:
-
 - `scores` - Population score snapshot.
 - `threshold` - Current MC threshold.
 
@@ -169,7 +165,6 @@ later generations reuse the updated value rather than restarting from the
 original configuration each time.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Minimal-criterion adaptive configuration.
 
@@ -189,7 +184,6 @@ This helper centralizes the defaulting rules so later threshold-updating code
 can focus on policy instead of configuration fallback noise.
 
 Parameters:
-
 - `config` - Minimal-criterion adaptive configuration.
 
 Returns: Target settings.
@@ -211,7 +205,6 @@ band. Staying inside the band is treated as success, so the current threshold
 persists and the controller avoids oscillating every generation.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `acceptance` - Observed acceptance proportion.
 - `tuning` - Target acceptance and adjustment settings.
@@ -266,7 +259,6 @@ applyRejection(engine, engine._mcThreshold ?? 0);
 ```
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `threshold` - Final MC threshold.
 
@@ -288,7 +280,6 @@ it is still counting. Missing scores are treated as zero so unevaluated or
 explicitly rejected genomes remain part of the acceptance picture.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 
 Returns: Array of scores (missing scores treated as 0).
@@ -310,7 +301,6 @@ to decide whether the threshold is too lenient, too strict, or already close
 enough to the configured target band.
 
 Parameters:
-
 - `scores` - Population score snapshot.
 - `threshold` - Current MC threshold.
 
@@ -333,7 +323,6 @@ later generations reuse the updated value rather than restarting from the
 original configuration each time.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Minimal-criterion adaptive configuration.
 
@@ -353,7 +342,6 @@ This helper centralizes the defaulting rules so later threshold-updating code
 can focus on policy instead of configuration fallback noise.
 
 Parameters:
-
 - `config` - Minimal-criterion adaptive configuration.
 
 Returns: Target settings.
@@ -375,7 +363,6 @@ band. Staying inside the band is treated as success, so the current threshold
 persists and the controller avoids oscillating every generation.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `acceptance` - Observed acceptance proportion.
 - `tuning` - Target acceptance and adjustment settings.

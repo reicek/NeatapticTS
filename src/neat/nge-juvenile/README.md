@@ -11,11 +11,12 @@ boundary, a breeding cycle, or any example-side scaffolding. Generations are
 for multiplying and fusing successful networks, not a prerequisite for an
 agent to grow.
 
-This boundary exists so the policy that decides _where_ to grow (focus
+This boundary exists so the policy that decides *where* to grow (focus
 scoring, hysteresis, cooldowns, and budgets) stays separate from the lower
 level structural mutations that actually change the network. That separation
-lets the same engine run inside a racing curriculum, an ant hive, a predator
-simulation, or a headless unit test with no dependency on `examples/` or demo
+lets the same engine run inside an application curriculum, a collective
+simulation, an agent-based scenario, or a headless unit test with no dependency
+on `examples/` or demo
 code.
 
 ## The juvenile growth contract
@@ -59,15 +60,15 @@ Most callers can use the seeded defaults. The constants below are the levers
 you actually touch when the default growth personality is too aggressive or
 too conservative.
 
-| Constant                                              | What it controls                                                                        | Default                                         | When to change                                                                               |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| {@link NGE_JUVENILE_DEFAULT_FOCUS_WEIGHTS}            | Relative weight of utilization, reward, novelty, stability, and cost in the focus score | `w_u=0.25, w_r=0.3, w_n=0.2, w_s=0.15, w_c=0.1` | Increase `w_u` when underused modules should grow faster; increase `w_c` to penalize wiring. |
-| {@link NGE_JUVENILE_DEFAULT_HYSTERESIS_WINDOW_COUNT}  | Consecutive positive-focus windows required before growth can commit                    | `2`                                             | Raise to reduce noise, lower to speed up response.                                           |
-| {@link NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT} | Forward edges added by one committed edge-densify step                                  | `5`                                             | Raise for faster saturation escape, lower for fine-grained growth.                           |
-| {@link NGE_JUVENILE_DEFAULT_NODE_ADDITION_COUNT}      | Hidden nodes inserted by one committed node-add step                                    | `2`                                             | Raise to break past local plateaus, lower to keep networks compact.                          |
-| {@link NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR} | Minimum composite growth signal that opens the node-add gate                            | `0.0`                                           | Raise to make node addition rarer and more evidence-gated.                                   |
-| {@link NGE_MAX_NODE_CAPACITY}                         | Absolute node ceiling enforced by the growth budget                                     | `8000`                                          | Match to the memory/performance envelope of your runtime.                                    |
-| {@link NGE_MAX_EDGE_CAPACITY}                         | Absolute edge ceiling enforced by the growth budget                                     | `32000`                                         | Match to the memory/performance envelope of your runtime.                                    |
+| Constant | What it controls | Default | When to change |
+|---|---|---|---|
+| {@link NGE_JUVENILE_DEFAULT_FOCUS_WEIGHTS} | Relative weight of utilization, reward, novelty, stability, and cost in the focus score | `w_u=0.25, w_r=0.3, w_n=0.2, w_s=0.15, w_c=0.1` | Increase `w_u` when underused modules should grow faster; increase `w_c` to penalize wiring. |
+| {@link NGE_JUVENILE_DEFAULT_HYSTERESIS_WINDOW_COUNT} | Consecutive positive-focus windows required before growth can commit | `2` | Raise to reduce noise, lower to speed up response. |
+| {@link NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT} | Forward edges added by one committed edge-densify step | `5` | Raise for faster saturation escape, lower for fine-grained growth. |
+| {@link NGE_JUVENILE_DEFAULT_NODE_ADDITION_COUNT} | Hidden nodes inserted by one committed node-add step | `2` | Raise to break past local plateaus, lower to keep networks compact. |
+| {@link NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR} | Minimum composite growth signal that opens the node-add gate | `0.0` | Raise to make node addition rarer and more evidence-gated. |
+| {@link NGE_MAX_NODE_CAPACITY} | Absolute node ceiling enforced by the growth budget | `8000` | Match to the memory/performance envelope of your runtime. |
+| {@link NGE_MAX_EDGE_CAPACITY} | Absolute edge ceiling enforced by the growth budget | `32000` | Match to the memory/performance envelope of your runtime. |
 
 ## Determinism boundary
 
@@ -91,7 +92,6 @@ deterministic replay fingerprint.
 Examples:
 
 Dry-run the focus scorer and growth planner for one window.
-
 ```ts
 import { nge } from 'neataptic';
 
@@ -109,47 +109,20 @@ const deltas = nge.juvenile.planGrowthMorphs(
   'module:alpha',
   focus.scores[0],
   metrics,
-  {
-    maxNodes: 8000,
-    maxEdges: 32000,
-    maxEpisodicSlots: 100,
-    currentNodeCount: 10,
-    currentEdgeCount: 20,
-    currentEpisodicSlotCount: 0,
-  },
+  { maxNodes: 8000, maxEdges: 32000, maxEpisodicSlots: 100, currentNodeCount: 10, currentEdgeCount: 20, currentEpisodicSlotCount: 0 },
   config,
-  {
-    growthPositiveWindowCount: 2,
-    pruneUnderuseWindowCount: 0,
-    lastMorphKind: 'none',
-    cooldownWindowsRemaining: 0,
-  },
+  { growthPositiveWindowCount: 2, pruneUnderuseWindowCount: 0, lastMorphKind: 'none', cooldownWindowsRemaining: 0 },
 );
 ```
 
 Apply planned growth to a live network with a deterministic seed.
-
 ```ts
 import { nge, Network } from 'neataptic';
 
 const network = new Network(2, 1, { seed: 42 });
 const budget = {
-  growth: {
-    maxNodes: 8000,
-    maxEdges: 32000,
-    maxEpisodicSlots: 100,
-    currentNodeCount: network.nodes.length,
-    currentEdgeCount: network.connections.length,
-    currentEpisodicSlotCount: 0,
-  },
-  prune: {
-    minNodes: 1,
-    minEdges: 1,
-    costExemptEdgeIds: [],
-    currentEdgeCount: network.connections.length,
-    currentNodeCount: network.nodes.length,
-    currentWiringCost: 0,
-  },
+  growth: { maxNodes: 8000, maxEdges: 32000, maxEpisodicSlots: 100, currentNodeCount: network.nodes.length, currentEdgeCount: network.connections.length, currentEpisodicSlotCount: 0 },
+  prune: { minNodes: 1, minEdges: 1, costExemptEdgeIds: [], currentEdgeCount: network.connections.length, currentNodeCount: network.nodes.length, currentWiringCost: 0 },
 };
 const outcomes = nge.juvenile.applyMorphDeltas(network, deltas, budget);
 ```
@@ -349,7 +322,6 @@ probability-like allocation shelf, following the standard temperature-free
 softmax over a discrete option set.
 
 Parameters:
-
 - `snapshots` - Module metrics observed in the active evaluation slice.
 - `config` - Partial or fully resolved juvenile focus configuration.
 
@@ -358,30 +330,11 @@ Returns: A focus vector carrying raw and normalized module scores.
 Example:
 
 ```ts
-const vector = computeFocusScores(
-  [
-    {
-      moduleId: 'policy',
-      utilization: 0.8,
-      rewardDelta: 0.2,
-      novelty: 0.1,
-      stabilityAge: 0.5,
-      wiringCost: 0.3,
-    },
-    {
-      moduleId: 'value',
-      utilization: 0.4,
-      rewardDelta: 0.1,
-      novelty: 0.0,
-      stabilityAge: 0.9,
-      wiringCost: 0.1,
-    },
-  ],
-  {},
-);
-console.log(
-  vector.scores.map((s) => s.normalizedScore).reduce((a, b) => a + b, 0),
-); // 1
+const vector = computeFocusScores([
+  { moduleId: 'policy', utilization: 0.8, rewardDelta: 0.2, novelty: 0.1, stabilityAge: 0.5, wiringCost: 0.3 },
+  { moduleId: 'value', utilization: 0.4, rewardDelta: 0.1, novelty: 0.0, stabilityAge: 0.9, wiringCost: 0.1 },
+], {});
+console.log(vector.scores.map((s) => s.normalizedScore).reduce((a, b) => a + b, 0)); // 1
 ```
 
 ### resolveFocusConfig
@@ -398,7 +351,6 @@ Any omitted field falls back to a conservative default, so callers can tune
 one knob at a time without re-declaring the whole packet.
 
 Parameters:
-
 - `partial` - Partial config whose omitted fields should resolve conservatively.
 
 Returns: A fully resolved config packet ready for deterministic focus scoring.
@@ -427,7 +379,6 @@ advanceGrowthHysteresis(
 Advance the growth-side hysteresis counters for one evaluation window and return fresh state.
 
 Parameters:
-
 - `hysteresis` - Previous hysteresis state.
 - `isPositiveFocusWindow` - Whether the current window carried positive focus evidence.
 
@@ -445,12 +396,11 @@ canGrowNow(
 Check whether juvenile growth may commit in the current window.
 
 The gate opens only after `hysteresisWindowCount` consecutive windows have
-carried positive focus evidence _and_ the previous growth cooldown has
+carried positive focus evidence *and* the previous growth cooldown has
 expired. Once growth commits, `commitGrowth` resets the streak and starts a
 new cooldown, so two morphs cannot fire back-to-back without fresh evidence.
 
 Parameters:
-
 - `hysteresis` - Current hysteresis state tracked across windows.
 - `config` - Resolved juvenile-phase configuration.
 
@@ -459,10 +409,7 @@ Returns: `true` when the positive-focus streak is satisfied and cooldown is clea
 Example:
 
 ```ts
-const hysteresis = {
-  growthPositiveWindowCount: 3,
-  cooldownWindowsRemaining: 0,
-};
+const hysteresis = { growthPositiveWindowCount: 3, cooldownWindowsRemaining: 0 };
 const config = resolveFocusConfig({ hysteresisWindowCount: 3 });
 console.log(canGrowNow(hysteresis, config)); // true
 ```
@@ -480,7 +427,6 @@ commitGrowth(
 Commit one growth-side hysteresis update after a validated morph is applied.
 
 Parameters:
-
 - `hysteresis` - Previous hysteresis state.
 - `morphKind` - Concrete growth morph kind that committed.
 - `config` - Resolved juvenile-phase configuration.
@@ -501,7 +447,6 @@ normalized metric weights that produced the raw focus score. The signal is in
 [-1, 1] and replaces the old raw-reward-delta gate.
 
 Parameters:
-
 - `score` - Focus score for the target module.
 - `config` - Resolved juvenile configuration carrying focus weights.
 
@@ -527,7 +472,6 @@ planEdgeDensification(
 Plan one local edge-densification delta for a single module, validating the DNA edge budget.
 
 Parameters:
-
 - `moduleId` - Module receiving the planned densification.
 - `budget` - DNA-configured growth caps and current live counts.
 - `focusScore` - Focus score for the target module.
@@ -555,7 +499,6 @@ before it is returned. If the hysteresis gate is closed, the function returns
 an empty array without throwing.
 
 Parameters:
-
 - `moduleId` - Module receiving all planned local growth actions.
 - `focusScore` - Focus score for the target module.
 - `metrics` - Module metrics whose utilization and reward delta drive eligibility.
@@ -568,14 +511,7 @@ Returns: Zero or more validated dry-run morph deltas in edge-first priority orde
 Example:
 
 ```ts
-const deltas = planGrowthMorphs(
-  'policy',
-  focus,
-  metrics,
-  budget,
-  config,
-  hysteresis,
-);
+const deltas = planGrowthMorphs('policy', focus, metrics, budget, config, hysteresis);
 console.log(deltas.map((d) => d.kind)); // ['edgeDensify'] (or [] when gated)
 ```
 
@@ -597,7 +533,6 @@ than raw reward delta alone. The planned insertion count honors the DNA
 `nodeAdditionCount` and available node budget.
 
 Parameters:
-
 - `moduleId` - Module receiving the planned node addition.
 - `budget` - DNA-configured growth caps and current live counts.
 - `score` - Focus score carrying normalized metrics and the growth flag.
@@ -623,7 +558,6 @@ This planner uses `metrics.utilization` as the episodic hit-rate proxy until
 a dedicated hit-rate metric is added to the module snapshot.
 
 Parameters:
-
 - `moduleId` - Module receiving the planned slot expansion.
 - `hitRate` - Episodic hit-rate proxy for the target module.
 - `budget` - DNA-configured growth caps and current live counts.
@@ -644,7 +578,6 @@ validateMorphDelta(
 Re-validate one dry-run morph delta against the current structural budget.
 
 Parameters:
-
 - `delta` - Planned morph delta to validate.
 - `budget` - DNA-configured growth caps and current live counts.
 
@@ -696,7 +629,6 @@ guarded by the prune budget floors (`minEdges`, `minNodes`). If a budget
 would be violated, {@link NgeJuvenile_BudgetError} is thrown.
 
 Parameters:
-
 - `network` - The live network to mutate in place.
 - `deltas` - Ordered list of dry-run morph deltas to apply.
 - `budget` - Combined growth and prune budgets for re-validation.
@@ -727,7 +659,6 @@ applyOneDelta(
 Dispatch one morph delta to its handler based on `delta.kind`.
 
 Parameters:
-
 - `network` - The live network to mutate in place.
 - `delta` - One dry-run morph delta.
 - `budget` - Combined growth and prune budgets for re-validation.
@@ -748,7 +679,6 @@ assertGrowthBudget(
 Assert that a projected count does not exceed the DNA growth cap.
 
 Parameters:
-
 - `projectedCount` - The count that would result after the growth mutation.
 - `maxCount` - The DNA-configured maximum allowed count.
 - `kind` - The morph kind label for the error message.
@@ -768,7 +698,6 @@ assertPruneBudget(
 Assert that a projected count does not drop below the DNA prune floor.
 
 Parameters:
-
 - `projectedCount` - The count that would result after the prune mutation.
 - `minCount` - The DNA-configured minimum required count.
 - `kind` - The morph kind label for the error message.
@@ -785,7 +714,6 @@ countHiddenNodes(
 Count the hidden nodes currently in the network.
 
 Parameters:
-
 - `network` - The live network to inspect.
 
 Returns: The number of nodes whose type is `'hidden'`.
@@ -815,7 +743,6 @@ advanceSchedulerState(
 Advance the scheduler state after one measured probe result is available.
 
 Parameters:
-
 - `state` - Previous scheduler state.
 - `epochIndex` - Epoch that produced the new probe result.
 - `entry` - Append-only ledger entry describing the probe outcome.
@@ -836,7 +763,6 @@ appendProbeLedgerEntry(
 Append one probe entry while preserving immutability and the bounded ledger cap.
 
 Parameters:
-
 - `ledger` - Existing append-only probe ledger.
 - `entry` - New entry to append.
 - `maxEntries` - Maximum number of entries preserved in the returned ledger.
@@ -858,7 +784,6 @@ buildProbeLedgerEntry(
 Build one append-only probe ledger entry from caller-measured before and after reward readings.
 
 Parameters:
-
 - `kind` - Probe kind applied to the target module.
 - `targetModuleId` - Module whose local behavior was perturbed.
 - `epochIndex` - Epoch that recorded the probe result.
@@ -879,7 +804,6 @@ computeProbeRewardDelta(
 Compute the mean signed probe delta for one module across the current ledger.
 
 Parameters:
-
 - `ledger` - Append-only probe ledger.
 - `moduleId` - Module whose probe deltas should be averaged.
 
@@ -898,7 +822,6 @@ decideProbe(
 Decide whether the current epoch may execute one expensive perturbation probe.
 
 Parameters:
-
 - `epochIndex` - Current training or evaluation epoch.
 - `state` - Current scheduler state.
 - `config` - Fully resolved scheduler config.
@@ -927,7 +850,6 @@ Deserialize one JSON-serialized probe ledger previously produced by `serializeLe
 Throws `NgeJuvenile_ProbeError` when the payload cannot be parsed or is not a JSON array.
 
 Parameters:
-
 - `json` - JSON string previously produced by `serializeLedger`.
 
 Returns: Parsed probe ledger entries when the payload is a valid JSON array.
@@ -943,7 +865,6 @@ resolveProbeSchedulerConfig(
 Resolve a partial probe scheduler config against the seeded plan defaults.
 
 Parameters:
-
 - `partial` - Partial config whose omitted fields should resolve conservatively.
 
 Returns: A fully resolved probe scheduler config packet.
@@ -959,7 +880,6 @@ serializeLedger(
 Serialize the append-only probe ledger into a stable JSON string for checkpoint storage.
 
 Parameters:
-
 - `ledger` - Probe ledger to serialize.
 
 Returns: JSON string containing the ledger entries in order.
@@ -978,7 +898,6 @@ advancePruneHysteresis(
 Advance the prune-side hysteresis counters for one evaluation window and return fresh state.
 
 Parameters:
-
 - `hysteresis` - Previous hysteresis state.
 - `isUnderuseWindow` - Whether the current window carried prune evidence.
 
@@ -996,7 +915,6 @@ canPruneNow(
 Check whether juvenile prune or compact actions may commit in the current window.
 
 Parameters:
-
 - `hysteresis` - Current prune-side hysteresis state tracked across windows.
 - `config` - Resolved juvenile-phase configuration.
 
@@ -1015,7 +933,6 @@ commitPrune(
 Commit one prune-side hysteresis update after a validated morph is applied.
 
 Parameters:
-
 - `hysteresis` - Previous hysteresis state.
 - `morphKind` - Concrete prune or compact morph kind that committed.
 - `config` - Resolved juvenile-phase configuration.
@@ -1034,7 +951,6 @@ planCompact(
 Plan one dry-run compact delta for a single module, verifying the node floor before returning.
 
 Parameters:
-
 - `moduleId` - Module receiving the planned compact action.
 - `budget` - DNA floors and current structural counts for the module.
 
@@ -1053,7 +969,6 @@ planEdgePrune(
 Plan one dry-run edge-prune delta for a single module, respecting cost-exempt edges and DNA floor.
 
 Parameters:
-
 - `moduleId` - Module receiving the planned edge prune.
 - `candidate` - Candidate edge selected for dry-run pruning.
 - `budget` - DNA floors and prune exemptions for the module.
@@ -1075,7 +990,6 @@ planPruneMorphs(
 Plan all eligible dry-run prune deltas for one module in prune-before-compact order.
 
 Parameters:
-
 - `moduleId` - Module receiving all planned prune-side actions.
 - `budget` - DNA floors, exemptions, and current structural counts.
 - `candidates` - Caller-supplied edge candidates ranked locally within the module.
@@ -1096,7 +1010,6 @@ selectPruneCandidate(
 Select the highest-priority non-exempt prune candidate for one module, sorted by wiring cost.
 
 Parameters:
-
 - `candidates` - Caller-supplied candidate edges for one prune pass.
 - `budget` - DNA floors and permanent prune exemptions for the module.
 
@@ -1114,7 +1027,6 @@ validatePruneDelta(
 Re-validate one dry-run prune delta against the current structural floors.
 
 Parameters:
-
 - `delta` - Planned morph delta to validate.
 - `budget` - DNA floors and current structural counts for the module.
 
@@ -1155,7 +1067,6 @@ Degenerate vectors with a single value or zero range return uniform weights so
 downstream focus math never emits `NaN`.
 
 Parameters:
-
 - `values` - Raw numeric vector to normalize.
 
 Returns: A normalized vector in the `[0, 1]` range or uniform degenerate weights.
@@ -1172,7 +1083,6 @@ softmaxTopK(
 Return the top-k items after softmax normalization of the `score` field.
 
 Parameters:
-
 - `items` - Candidate items carrying one scalar score.
 - `k` - Maximum number of items to return.
 

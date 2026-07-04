@@ -5,11 +5,11 @@ Root orchestration for NEAT mutation operations.
 ## Mutation in NEAT: More Than Weight Perturbation
 
 In a fixed-topology network, mutation only adjusts weights. NEAT expands
-this to include _structural_ mutations — adding nodes by splitting existing
+this to include *structural* mutations — adding nodes by splitting existing
 connections and adding direct connections between previously unlinked nodes.
 These structural changes are the engine of topology evolution.
 
-The challenge structural mutation introduces is _alignment_: when two
+The challenge structural mutation introduces is *alignment*: when two
 genomes with different topologies produce offspring, which genes should
 be crossed over? NEAT solves this with **innovation numbers** — every new
 gene (node or connection) that appears anywhere in the population during a
@@ -128,7 +128,6 @@ identity paths so repair work cannot drift from the innovation tracker or
 the explicit topology-policy bridge.
 
 Parameters:
-
 - `network` - Genome whose hidden-node budget and connectivity should be repaired.
 - `multiplierOverride` - Optional override for the configured hidden-node multiplier.
 
@@ -154,7 +153,6 @@ reconnecting edges so maintenance work still respects the innovation tracker
 and the explicit topology-policy bridge.
 
 Parameters:
-
 - `network` - Genome whose endpoint and hidden-node connectivity should be repaired.
 
 Returns: Nothing. The network may gain repair connections in place.
@@ -181,7 +179,6 @@ per-genome edits stay coherent before later stages such as evaluation or
 speciation inspect the changed population.
 
 Educational notes:
-
 - Adaptive mutation allows per-genome mutation rates/amounts to evolve so
   that successful genomes can reduce or increase plasticity over time.
 - Structural mutations (ADD_NODE, ADD_CONN, etc.) may update global
@@ -211,7 +208,6 @@ Add a connection between two previously unconnected nodes, reusing a
 stable innovation id per exact directed edge when possible.
 
 Notes on behavior:
-
 - The search space consists of node pairs (from, to) where `from` is not
   already projecting to `to`.
 - When recurrent growth is enabled, the candidate pool expands beyond
@@ -225,7 +221,6 @@ Notes on behavior:
   concern elsewhere in the evolutionary flow.
 
 Steps:
-
 - Build a list of all legal (from,to) pairs that don't currently have a
   connection.
 - Prefer pairs which already have a recorded innovation id (reuse
@@ -242,7 +237,6 @@ edit comparable for later crossover and speciation rather than treating it
 as a completely unrelated event.
 
 Parameters:
-
 - `genome` - Genome to modify in place.
 
 Returns: Nothing. The genome may gain one new connection and the controller innovation map may be consulted or extended.
@@ -270,7 +264,6 @@ controller's split-innovation table when this exact split event has never
 been seen before.
 
 Method steps (high-level):
-
 - If the genome has no connections, connect an input to an output to
   bootstrap connectivity.
 - Filter enabled connections and choose one at random.
@@ -284,7 +277,6 @@ Method steps (high-level):
   deterministic position to preserve ordering for downstream algorithms.
 
 Parameters:
-
 - `genome` - Genome to modify in place.
 
 Returns: Promise that resolves after the split has either reused an existing innovation record or created a new one.
@@ -314,7 +306,6 @@ by reestablishing the standard input-hidden-output ordering before any
 repair shelf is evaluated when recurrent growth is not currently allowed.
 
 Parameters:
-
 - `network` - genome whose node ordering may need normalization
 - `allowRecurrent` - controller flag for recurrent growth
 
@@ -342,7 +333,6 @@ Mirrors legacy implementation from `neat.ts` to preserve test expectations.
 returned for identity checks in tests.
 
 Parameters:
-
 - `genome` - Genome whose current structure constrains which operators are legal.
 - `rawReturnForTest` - Preserves legacy array-return behavior for test-only FFW checks.
 

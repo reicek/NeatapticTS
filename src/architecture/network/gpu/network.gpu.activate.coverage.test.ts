@@ -1,6 +1,6 @@
 import Network from '../network';
 import { ACTIVATION_FUNCTIONS } from '../../../multithreading/multi.utils';
-import { activateGPU } from './network.gpu.activate';
+import { activateGPU, activateGPUWithFreshState } from './network.gpu.activate';
 import * as capability from './network.gpu.capability';
 import { createMockGPUDevice } from './__mocks__/gpu.mock';
 
@@ -268,6 +268,61 @@ describe('network.gpu.activate coverage', () => {
       await expect(activateGPU(device, network, [0.1, 0.2])).rejects.toThrow(
         'activateGPU: network is not eligible for GPU inference',
       );
+    });
+  });
+
+  describe('activateGPUWithFreshState input validation', () => {
+    it('throws when the network is not eligible for GPU inference', async () => {
+      const network = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice();
+      jest.spyOn(capability, 'canUseGPU').mockReturnValue(false);
+
+      await expect(
+        activateGPUWithFreshState(device, network, [0.1, 0.2]),
+      ).rejects.toThrow(
+        'activateGPUWithFreshState: network is not eligible for GPU inference',
+      );
+    });
+
+    it('throws when the network has no nodes', async () => {
+      const fakeNetwork = {
+        nodes: [],
+        gates: [],
+        selfconns: [],
+        connections: [],
+        input: 2,
+        output: 1,
+      } as unknown as Network;
+      const device = createMockGPUDevice();
+      jest.spyOn(capability, 'canUseGPU').mockReturnValue(true);
+
+      await expect(
+        activateGPUWithFreshState(device, fakeNetwork, [0, 0]),
+      ).rejects.toThrow('activateGPUWithFreshState: network has no nodes');
+    });
+
+    it('throws when the input length does not match network.input', async () => {
+      const network = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice();
+
+      await expect(
+        activateGPUWithFreshState(device, network, [0]),
+      ).rejects.toThrow(
+        'activateGPUWithFreshState: expected 2 inputs, received 1',
+      );
+    });
+
+    it('accepts a Float32Array input', async () => {
+      const network = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice();
+
+      const result = await activateGPUWithFreshState(
+        device,
+        network,
+        new Float32Array([0.1, 0.2]),
+      );
+
+      expect(result.length).toBe(network.output);
     });
   });
 });

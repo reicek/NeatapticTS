@@ -61,7 +61,6 @@ The design is intentionally conservative:
 - injected genomes still pass through the normal later evolution pipeline.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `helpers` - Helper callbacks for stagnation injection.
 - `helpers` - Genome builder for injection.
@@ -91,7 +90,6 @@ species quotas, or mutate the next population. Its job is to make the current
 ranked generation internally coherent before the evolve loop moves on.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `helpers` - Helper callbacks used for tuning and history.
 - `helpers` - Auto-compatibility adjustment helper.
@@ -118,7 +116,6 @@ injected genome can enter the population without widening into a bespoke
 rebuild path.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 
 Returns: A new genome prepared for bounded stagnation rescue.
@@ -134,7 +131,6 @@ buildSpeciesHistoryStats(
 Build the minimal species-history row shape used by evolve-side snapshots.
 
 Parameters:
-
 - `speciesList` - Live species registry for the current generation.
 
 Returns: Summary rows aligned with the shared species history contract.
@@ -157,7 +153,6 @@ layer at all, preserving the idea that rescue should re-open search space
 rather than only reshuffle minimal direct input-output paths.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `genome` - Genome to adjust.
 
@@ -181,7 +176,6 @@ inspection code can still rely on one bounded row per generation without
 forcing extended history to stay on permanently.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `maxHistory` - Maximum history length.
 
@@ -206,7 +200,6 @@ so evolve can maintain export-friendly evidence without turning this bridge
 into the full history-enrichment layer.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 - `maxHistory` - Maximum history length.
 
@@ -229,7 +222,6 @@ stagnation counters so later allocation and pruning decisions can distinguish
 between active lineages and species that have stopped improving.
 
 Parameters:
-
 - `internal` - NEAT controller instance.
 
 Returns: Nothing.

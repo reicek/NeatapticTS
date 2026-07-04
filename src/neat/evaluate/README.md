@@ -24,7 +24,7 @@ behaviorally diverse solutions. This evaluation boundary supports two
 additional evidence sources that can supplement or replace raw fitness:
 
 - **Novelty search** — scores genomes by how different their behavioral
-  descriptor* is from previously encountered behaviors, rather than by task
+descriptor* is from previously encountered behaviors, rather than by task
   performance. Useful when the fitness landscape is deceptive or has many
   dead-end attractors. See Lehman and Stanley,
   [Abandoning Objectives: Evolution Through the Search for Novelty Alone](http://eplex.cs.ucf.edu/papers/lehman_ecj11.pdf),
@@ -61,7 +61,6 @@ flowchart TD
 ```
 
 Reading order:
-
 - start with {@link evaluate} for the controller-facing flow,
 - jump into `fitness/` for the per-genome vs whole-population scoring split,
 - jump into `novelty/` for descriptor and archive semantics,
@@ -69,7 +68,6 @@ Reading order:
 - jump into `objectives/` for the automatic entropy-objective path.
 
 The exported constants fall into four tuning families:
-
 - novelty defaults for descriptor-based exploration,
 - entropy-sharing defaults for diversity-distribution control,
 - compatibility defaults for speciation pressure,
@@ -97,7 +95,6 @@ The flow has two major halves:
 2. update lightweight controller state that depends on that evidence.
 
 In practice that means:
-
 1. resolve whether fitness runs once per genome or once for the entire population,
 2. optionally clear per-genome runtime state before scoring,
 3. optionally blend novelty search into the resulting scores,
@@ -110,7 +107,6 @@ consumes that evidence to rank, speciate, and rebuild the population. If evaluat
 skipped, the rest of the lifecycle has less trustworthy data to work from.
 
 Important side effects:
-
 - updates genome scores in place,
 - may update novelty values and append to the novelty archive,
 - ensures `_diversityStats` exists before tuning helpers write into it,
@@ -118,7 +114,6 @@ Important side effects:
 - may refresh lightweight speciation state and register the entropy objective.
 
 Read the neighboring chapters like this:
-
 - `fitness/` explains how the scoring delegate is actually invoked,
 - `novelty/` explains the descriptor-distance path and archive writes,
 - `speciation/` explains the lightweight maintenance that can happen after scores land,
@@ -132,9 +127,7 @@ Example:
 await evaluate.call(controller);
 
 // the population is now freshly scored and ready for selection or evolve()
-const bestScore = Math.max(
-  ...controller.population.map((genome) => genome.score ?? 0),
-);
+const bestScore = Math.max(...controller.population.map((genome) => genome.score ?? 0));
 console.log('best score after evaluation:', bestScore);
 ```
 

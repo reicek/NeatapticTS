@@ -21,7 +21,7 @@
  *   D["two-population\nTwoPopulationHarnessState\ncreateTwoPopulationHarness\nadvanceTwoPopulations"] --> B
  *   D --> C
  *   E["team-fitness\ncreateTeamFitnessEvaluator\npolicy-injection evaluator seam"]
- *   Consumers["Racing · Ant Hive\nbenchmark consumers"] -->|"inject scoring policy"| E
+ *   Consumers["Benchmark consumers\ncollective · multi-agent"] -->|"inject scoring policy"| E
  * ```
  *
  * ## Sub-modules
@@ -30,8 +30,8 @@
  * A `Float32Array`-backed 2D grid (`SharedField`) shared across all agents during one
  * evaluation tick. Agents write signals with `writeCell` and read them with `readCell`.
  * Because the backing array is passed by reference, sequential evaluators within the same
- * tick observe each other's writes — exactly the stigmergy contract required by the ant-hive
- * and racing benchmarks. Between ticks, `applyDecay` and `applyDiffusion` evolve field
+ * tick observe each other's writes — exactly the stigmergy contract required by collective
+ * benchmarks. Between ticks, `applyDecay` and `applyDiffusion` evolve field
  * dynamics; `clearField` resets it for the next generation.
  *
  * ### evaluation
@@ -113,7 +113,7 @@
  * advanceTwoPopulations(harness, [{ genomeId: 'a0', fitness: 5 }], [{ genomeId: 'b0', fitness: 4 }]);
  *
  * // 7. Aggregate team fitness through the shared policy-injection evaluator seam.
- * //    Racing and Ant Hive each supply their own policy; NGE core owns the fold structure.
+ * //    Benchmark consumers supply their own policies; NGE core owns the fold structure.
  * const evaluateTeamFitness = createTeamFitnessEvaluator<'team-a', { score: number }>(
  *   (group) => group.memberResults.reduce((total, member) => total + member.score, 0),
  * );
@@ -164,7 +164,7 @@ export {
 // --- Team/group fitness aggregation ---
 export { createTeamFitnessEvaluator } from './neat.nge-collective.team-fitness';
 
-// --- Two-population racing scaffold ---
+// --- Two-population collective scaffold ---
 export {
   advanceTwoPopulations,
   createTwoPopulationHarness,

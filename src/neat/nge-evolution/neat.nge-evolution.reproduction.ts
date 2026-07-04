@@ -5,15 +5,15 @@
  * from a small set of drone donors. Region assignment is controlled by
  * {@link NgeReproductionPolicy.assignedRegionStrategy}.
  *
- * ## Racing-worker compatibility
+ * ## Input shorthand compatibility
  *
- * The strategy `'non-overlapping'` is the racing-worker reference name for the
- * deterministic single-drone-per-region assignment that the core already
- * implements under `'roundRobin'`. Both values resolve to identical behavior;
- * only the canonical string stored in the envelope differs.
+ * The strategy `'non-overlapping'` is input shorthand for the deterministic
+ * single-drone-per-region assignment that the core already implements under
+ * `'roundRobin'`. Both values resolve to identical behavior; only the canonical
+ * string stored in the envelope differs.
  *
- * This alias preserves the racing-worker shorthand while keeping the canonical
- * strategy string stored in the envelope.
+ * This alias preserves the input shorthand while keeping the canonical strategy
+ * string stored in the envelope.
  */
 import { NGE_DNA } from '../nge-dna/neat.nge-dna';
 import type {
@@ -779,7 +779,7 @@ function patchPolyandricRegion(
 }
 
 /**
- * Expand racing-worker seed-governance shorthand into the canonical policy shape.
+ * Expand input seed-governance shorthand into the canonical policy shape.
  *
  * Accepts the {@link NgeSeedPolicyShorthand} `'queen-weighted'` and returns the
  * canonical `{ siblingsDifferBySeed: true, twinsAllowed: false }` object. All

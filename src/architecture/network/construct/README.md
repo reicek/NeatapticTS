@@ -22,7 +22,6 @@ compiles the existing network scheduling cache in either acyclic or recurrent
 mode.
 
 Parameters:
-
 - `this` - Network constructor used to instantiate the runtime graph.
 - `parts` - Mixed architecture parts to flatten.
 - `options` - Optional construct-time validation, ordering, and runtime flags.
@@ -138,7 +137,6 @@ snapshot so tooling can log or display one stable explanation of the built
 graph without reading mutable `Network` internals.
 
 Parameters:
-
 - `constructResult` - Construct result returned by `Network.construct(...)`.
 
 Returns: Multi-line summary string suitable for logs, diagnostics panels, or snapshots.

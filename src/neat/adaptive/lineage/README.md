@@ -94,7 +94,6 @@ and telemetry signal have already been resolved by the time this helper runs,
 so its only job is to send the adjustment into the correct policy surface.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Ancestor uniqueness adaptive configuration.
 - `ancestorUniq` - Current ancestor uniqueness metric.
@@ -118,7 +117,6 @@ represents the latest scored generation. Missing or non-numeric lineage
 evidence simply disables the adjustment for that cycle.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 
 Returns: Ancestor uniqueness value or undefined when missing.
@@ -139,7 +137,6 @@ generation. Once an adjustment has been recorded, later generations must wait
 for the configured gap before another nudge is allowed.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Ancestor uniqueness adaptive configuration.
 
@@ -161,7 +158,6 @@ trees, while values above the upper threshold suggest diversity pressure may
 already be stronger than needed.
 
 Parameters:
-
 - `config` - Ancestor uniqueness adaptive configuration.
 
 Returns: Threshold bounds.
@@ -200,7 +196,6 @@ too uniform or too diffuse. That lets later Pareto comparisons become slightly
 more or less permissive without changing the current generation directly.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `ancestorUniq` - Current ancestor uniqueness metric.
 - `thresholds` - Threshold bounds for decisions.
@@ -225,7 +220,6 @@ settings themselves. Low uniqueness increases spread pressure, while high
 uniqueness relaxes it so the search does not over-penalize related genomes.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `ancestorUniq` - Current ancestor uniqueness metric.
 - `thresholds` - Threshold bounds for decisions.
@@ -251,7 +245,6 @@ and telemetry signal have already been resolved by the time this helper runs,
 so its only job is to send the adjustment into the correct policy surface.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Ancestor uniqueness adaptive configuration.
 - `ancestorUniq` - Current ancestor uniqueness metric.
@@ -275,7 +268,6 @@ minimal spread-oriented state only when lineage-feedback mode actually needs
 one.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 
 Returns: Lineage pressure configuration object.
@@ -295,7 +287,6 @@ represents the latest scored generation. Missing or non-numeric lineage
 evidence simply disables the adjustment for that cycle.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 
 Returns: Ancestor uniqueness value or undefined when missing.
@@ -316,7 +307,6 @@ generation. Once an adjustment has been recorded, later generations must wait
 for the configured gap before another nudge is allowed.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Ancestor uniqueness adaptive configuration.
 
@@ -336,7 +326,6 @@ Recording the adjustment generation is what makes the cooldown guard work on
 later cycles.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 
 Returns: Nothing.
@@ -355,7 +344,6 @@ Magnitude resolution keeps defaulting logic away from the mode-specific
 adjusters so those helpers can focus on policy semantics.
 
 Parameters:
-
 - `config` - Ancestor uniqueness adaptive configuration.
 
 Returns: Adjustment magnitude.
@@ -376,7 +364,6 @@ trees, while values above the upper threshold suggest diversity pressure may
 already be stronger than needed.
 
 Parameters:
-
 - `config` - Ancestor uniqueness adaptive configuration.
 
 Returns: Threshold bounds.

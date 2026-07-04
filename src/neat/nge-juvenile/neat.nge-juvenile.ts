@@ -13,8 +13,9 @@
  * This boundary exists so the policy that decides *where* to grow (focus
  * scoring, hysteresis, cooldowns, and budgets) stays separate from the lower
  * level structural mutations that actually change the network. That separation
- * lets the same engine run inside a racing curriculum, an ant hive, a predator
- * simulation, or a headless unit test with no dependency on `examples/` or demo
+ * lets the same engine run inside an application curriculum, a collective
+ * simulation, an agent-based scenario, or a headless unit test with no dependency
+ * on `examples/` or demo
  * code.
  *
  * ## The juvenile growth contract

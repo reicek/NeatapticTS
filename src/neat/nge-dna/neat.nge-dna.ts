@@ -3,8 +3,8 @@
  *
  * `NGE_DNA` builds and stores the canonical {@link NgeDnaCanonicalEnvelope}.
  * Its constructor accepts loose input where omitted fields resolve to
- * deterministic defaults, and it expands racing-worker shorthand values into
- * the canonical envelope shape before serialization.
+ * deterministic defaults, and it expands input shorthand values into the
+ * canonical envelope shape before serialization.
  *
  * ## Shorthand normalization
  *
@@ -16,7 +16,7 @@
  * regardless of how the policy was originally expressed.
  *
  * This normalization follows the envelope-normalization contract: core accepts
- * racing values at input and keeps a canonical shape internally.
+ * shorthand values at input and keeps a canonical shape internally.
  */
 import {
   NGE_DNA_DEFAULT_BUDGET_MAX_EDGES,

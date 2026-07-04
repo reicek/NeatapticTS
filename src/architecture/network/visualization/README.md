@@ -120,8 +120,8 @@ The schema layer is intentionally renderer-agnostic. It produces data; it
 does not draw anything. Rendering decisions (canvas, terminal, DOT, SVG) are
 left to consumers. This makes the export path useful for:
 
-- In-browser canvas renderers (e.g. the Flappy Bird network panel).
-- Terminal ASCII renderers (e.g. ASCII Maze).
+- In-browser canvas renderers (e.g. an interactive demo panel).
+- Terminal ASCII renderers (e.g. a maze-exploration demo).
 - External visualization tools via the DOT helper.
 - Debugging architectures in issues or docs.
 
@@ -166,14 +166,12 @@ with no circular references. It can be passed to a canvas renderer, terminal
 renderer, or serialized to disk.
 
 **Ordering guarantees:**
-
 - `nodes` are sorted by stable gene id ascending.
 - `edges` are sorted by (from gene id, to gene id) ascending.
 - `io.inputNodeIds` and `io.outputNodeIds` preserve the network's explicit
   I/O ordering (same as {@link Network.inputNodeIds} / {@link Network.outputNodeIds}).
 
 Parameters:
-
 - `network` - The network instance to export.
 - `options` - Optional flags controlling which fields are included.
 
@@ -203,7 +201,6 @@ The output can be pasted into any DOT renderer (e.g.
 a visual graph diagram.
 
 Node shapes:
-
 - **Inputs** — inverted triangle (`invtriangle`).
 - **Outputs** — double circle (`doublecircle`).
 - **Hidden** — circle (`circle`).
@@ -212,8 +209,7 @@ Edge labels show weights when they are present in the graph.
 Disabled edges are rendered as dashed lines.
 
 Parameters:
-
-- `graph` - Versioned visualization graph produced by {@link exportVisualizationGraph} .
+- `graph` - Versioned visualization graph produced by  {@link exportVisualizationGraph} .
 
 Returns: Graphviz DOT string.
 
@@ -248,7 +244,6 @@ detect backward (recurrent) edges without inspecting the full node list on
 each call.
 
 Parameters:
-
 - `sortedNodes` - Node array already sorted by geneId ascending.
 
 Returns: Map from geneId to zero-based position.
@@ -268,7 +263,6 @@ Primary sort key: `from` gene id ascending.
 Secondary sort key: `to` gene id ascending.
 
 Parameters:
-
 - `connections` - Flat connection list (regular + self-connections merged by caller).
 - `includeDisabled` - Whether to retain disabled connections.
 
@@ -287,9 +281,8 @@ connectionToVisualizationDescriptor(
 Convert a runtime connection into the exported edge schema with deterministic edge-kind inference.
 
 Parameters:
-
 - `connection` - Source connection instance.
-- `nodePositionByGeneId` - Sorted position lookup built by {@link buildNodePositionMap} .
+- `nodePositionByGeneId` - Sorted position lookup built by  {@link buildNodePositionMap} .
 - `includeWeight` - Whether the emitted descriptor should preserve the runtime weight.
 
 Returns: Immutable edge descriptor for the visualization schema.
@@ -312,7 +305,6 @@ Infers the edge kind for a directed connection.
 - Returns `'forward'` otherwise.
 
 Parameters:
-
 - `from` - Source node.
 - `to` - Target node.
 - `nodePositionByGeneId` - Map from geneId to sorted position index.
@@ -332,7 +324,6 @@ nodeToVisualizationDescriptor(
 Convert a runtime node into a deterministic visualization node descriptor.
 
 Parameters:
-
 - `node` - Source node instance.
 - `role` - Resolved semantic role for this node.
 - `includeBias` - Whether to include the bias field.
@@ -352,7 +343,6 @@ Infers the human-readable activation name from a squash function.
 Falls back to `'unknown'` when the function reference does not expose a name.
 
 Parameters:
-
 - `squash` - Activation function attached to the node.
 
 Returns: Name string, e.g. `'LOGISTIC'` or `'TANH'`.
@@ -370,7 +360,6 @@ resolveNodeRole(
 Resolve node role by explicit stable-id membership, defaulting to hidden for all remaining nodes.
 
 Parameters:
-
 - `node` - Node to classify.
 - `inputIdSet` - Set of stable gene ids for input-role nodes.
 - `outputIdSet` - Set of stable gene ids for output-role nodes.

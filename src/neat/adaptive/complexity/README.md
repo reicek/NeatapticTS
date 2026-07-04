@@ -51,7 +51,6 @@ budgets so later mutation passes can respond to genuine search progress
 rather than following a fixed calendar.
 
 Parameters:
-
 - `engine` - NEAT engine instance with adaptive state.
 - `config` - Complexity budget configuration.
 
@@ -73,7 +72,6 @@ entrypoint easy to scan by delegating immediately into either the adaptive
 schedule or the linear schedule, depending on the configured policy.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Complexity budget configuration.
 
@@ -95,7 +93,6 @@ It ignores run-time improvement signals and simply interpolates between a
 start and end budget across a configured horizon.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Complexity budget configuration.
 
@@ -117,7 +114,6 @@ phased complexity do not pay for extra runtime state. Once seeded, the phase
 and its start generation persist across later evolve calls.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Phased complexity configuration.
 
@@ -140,7 +136,6 @@ pruning passes to express it for several generations before the controller
 switches direction.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Phased complexity configuration.
 
@@ -170,7 +165,6 @@ phased complexity do not pay for extra runtime state. Once seeded, the phase
 and its start generation persist across later evolve calls.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Phased complexity configuration.
 
@@ -191,7 +185,6 @@ between growth and simplification without inventing additional intermediate
 moods here.
 
 Parameters:
-
 - `currentPhase` - Current phase label.
 
 Returns: Next phase label.
@@ -213,7 +206,6 @@ pruning passes to express it for several generations before the controller
 switches direction.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Phased complexity configuration.
 
@@ -254,7 +246,6 @@ Connection-budget adjustment mirrors the node-budget path so both structural
 ceilings respond coherently to the same improvement and stagnation signals.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Complexity budget configuration.
 - `trends` - Improvement and slope metrics.
@@ -285,7 +276,6 @@ the configured ceiling; when the observation window is full and the search is
 flat, it contracts back toward the configured minimum.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Complexity budget configuration.
 - `trends` - Improvement and slope metrics.
@@ -310,7 +300,6 @@ budgets so later mutation passes can respond to genuine search progress
 rather than following a fixed calendar.
 
 Parameters:
-
 - `engine` - NEAT engine instance with adaptive state.
 - `config` - Complexity budget configuration.
 
@@ -332,7 +321,6 @@ entrypoint easy to scan by delegating immediately into either the adaptive
 schedule or the linear schedule, depending on the configured policy.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Complexity budget configuration.
 
@@ -354,7 +342,6 @@ It ignores run-time improvement signals and simply interpolates between a
 start and end budget across a configured horizon.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Complexity budget configuration.
 
@@ -375,7 +362,6 @@ This final guard keeps the adaptive loop from shrinking below the smallest
 topology the controller can reasonably support.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Complexity budget configuration.
 
@@ -398,7 +384,6 @@ Positive normalized slope boosts growth pressure, while negative slope makes
 stagnation shrinkage more aggressive.
 
 Parameters:
-
 - `config` - Complexity budget configuration.
 - `trends` - Improvement and slope metrics.
 - `history` - Rolling history of best scores.
@@ -420,7 +405,6 @@ novelty archive implies the search is still exploring enough distinct
 behavior to justify the default growth multiplier.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 
 Returns: Novelty multiplier (0.9 if archive small, 1.0 otherwise).
@@ -436,7 +420,6 @@ computeSlope(
 Compute the best-fit trend slope for score history using ordinary least squares.
 
 Parameters:
-
 - `history` - Rolling history of best scores.
 
 Returns: OLS slope estimate.
@@ -457,7 +440,6 @@ window as a whole. The adaptive scheduler uses both so it can distinguish a
 noisy plateau from sustained progress.
 
 Parameters:
-
 - `history` - Rolling history of best scores.
 
 Returns: Trend metrics (improvement and slope).
@@ -477,7 +459,6 @@ Connection budgets are optional, so the helper only seeds this state when the
 configuration explicitly opts into a connection-cap schedule.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Complexity budget configuration.
 
@@ -495,7 +476,6 @@ initializeNodeBudget(
 Initialize the maximum-node complexity budget when it has not been set yet.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Complexity budget configuration.
 
@@ -511,7 +491,6 @@ normalizeSlope(
 Normalize slope magnitude against the initial score for stable comparisons.
 
 Parameters:
-
 - `slope` - Raw OLS slope.
 - `initialScore` - First score in history window.
 
@@ -534,7 +513,6 @@ to the configured window so later slope and delta calculations stay local to
 recent generations.
 
 Parameters:
-
 - `engine` - NEAT engine instance.
 - `config` - Complexity budget configuration.
 

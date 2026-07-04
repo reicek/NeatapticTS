@@ -74,7 +74,6 @@ buildPitBoxes(
 Builds deterministic alternating-team pit metadata from spline progress.
 
 Parameters:
-
 - `splineSamples` - Shared lane-center samples for the generated track.
 
 Returns: Six frozen pit-box descriptors in `[0, 1, 0, 1, 0, 1]` ownership order.
@@ -96,7 +95,6 @@ The entrance corridor is offset half a track width away from the centerline
 so cars on the normal racing line do not accidentally trigger pit stops.
 
 Parameters:
-
 - `teamIndex` - Owning team index.
 - `anchorSample` - Spline sample anchoring the pit location.
 - `normalDirection` - Signed side selector (`1` or `-1`).
@@ -116,7 +114,6 @@ clampNumber(
 Clamps a number to the closed range `[minValue, maxValue]`.
 
 Parameters:
-
 - `value` - Input value.
 - `minValue` - Lower bound.
 - `maxValue` - Upper bound.
@@ -137,7 +134,6 @@ createAxisAlignedBox(
 Creates an axis-aligned rectangle from center-point inputs.
 
 Parameters:
-
 - `centerX` - Rectangle center X coordinate.
 - `centerY` - Rectangle center Y coordinate.
 - `width` - Rectangle width.
@@ -156,7 +152,6 @@ createDeterministicRandom(
 Creates a deterministic xorshift32 PRNG.
 
 Parameters:
-
 - `initialSeed` - Unsigned 32-bit seed.
 
 Returns: Stable pseudo-random number generator in the range [0, 1).
@@ -176,7 +171,6 @@ Call this immediately after generation to satisfy the frozen-at-reset
 contract: once the spec is locked into the race pack it must be immutable.
 
 Parameters:
-
 - `spec` - The `TrackSpec` to freeze.
 
 Returns: A `Readonly<TrackSpec>` that rejects mutation.
@@ -206,7 +200,6 @@ three pit boxes per team (six total) at stable lap-progress anchors, with
 on-ribbon entrance-corridor AABBs and off-line rendered stall rectangles.
 
 Parameters:
-
 - `input` - Determinism key for the generation algorithm.
 
 Returns: A frozen `TrackSpec` whose segments form a valid closed loop.
@@ -214,11 +207,7 @@ Returns: A frozen `TrackSpec` whose segments form a valid closed loop.
 Example:
 
 ```ts
-const spec = generateTrack({
-  seed: 42,
-  layoutVersion: 1,
-  sizeBucket: 'medium',
-});
+const spec = generateTrack({ seed: 42, layoutVersion: 1, sizeBucket: 'medium' });
 spec.segments; // ordered closed-loop centerline segments
 spec.pitBoxes?.length; // 6
 ```
@@ -234,7 +223,6 @@ resolveCombinedSeed(
 Combines the generator determinism tuple into one 32-bit seed.
 
 Parameters:
-
 - `input` - Track generator determinism key.
 
 Returns: Unsigned 32-bit seed for the local PRNG.
@@ -254,7 +242,6 @@ resolveOffsetPoint(
 Resolves an offset point along the supplied local normal vector.
 
 Parameters:
-
 - `x` - Anchor X coordinate.
 - `y` - Anchor Y coordinate.
 - `normalX` - Unit normal X component.
@@ -275,7 +262,6 @@ resolvePitAnchorSample(
 Resolves the spline sample nearest the requested lap progress.
 
 Parameters:
-
 - `splineSamples` - Shared lane-center samples for the generated track.
 - `progress01` - Closed `[0, 1]` lap-progress target.
 
@@ -298,7 +284,6 @@ edge padding and lane-width safety margins are reserved, so generated loops
 fill the visible area while preserving rounded circle/oval geometry.
 
 Parameters:
-
 - `input` - Generator input possibly carrying viewport metadata.
 - `baseRadius` - Size-bucket baseline radius before viewport scaling.
 - `baseWidth` - Size-bucket baseline lane width before viewport scaling.
@@ -316,7 +301,6 @@ roundTrackGeometry(
 Rounds geometry values so serialized specs stay byte-stable.
 
 Parameters:
-
 - `value` - Floating-point geometry value.
 
 Returns: Rounded geometry value.
@@ -335,7 +319,6 @@ areCloseEnough(
 Compares two coordinates using the track closed-loop tolerance.
 
 Parameters:
-
 - `leftValue` - First coordinate.
 - `rightValue` - Second coordinate.
 
@@ -353,7 +336,6 @@ doAxisAlignedBoxesOverlap(
 Returns whether two axis-aligned rectangles overlap.
 
 Parameters:
-
 - `firstBox` - First rectangle.
 - `secondBox` - Second rectangle.
 
@@ -371,7 +353,6 @@ doLineSegmentsIntersect(
 Returns true when two 2D line segments intersect or overlap.
 
 Parameters:
-
 - `firstSegment` - First line segment.
 - `secondSegment` - Second line segment.
 
@@ -391,7 +372,6 @@ Adjacent segments may share an endpoint; non-adjacent segments must not
 cross.
 
 Parameters:
-
 - `spec` - The track geometry to inspect.
 
 Returns: `true` when no self-intersection is found.
@@ -415,7 +395,6 @@ isAdjacentSegmentPair(
 Returns true when a segment pair is adjacent in the closed-loop ordering.
 
 Parameters:
-
 - `firstSegmentIndex` - First segment index.
 - `secondSegmentIndex` - Second segment index.
 - `lastSegmentIndex` - Final segment index in the loop.
@@ -439,7 +418,6 @@ When no spline samples exist (e.g., unit-test fixtures), the check falls back
 to the polygon segment approximation.
 
 Parameters:
-
 - `spec` - Track specification.
 - `corridor` - Candidate pit entrance corridor.
 
@@ -458,7 +436,6 @@ isPointOnSegment(
 Returns true when a collinear point falls within a segment's bounds.
 
 Parameters:
-
 - `startPoint` - Segment start.
 - `point` - Candidate point.
 - `endPoint` - Segment end.
@@ -478,7 +455,6 @@ resolveOrientation(
 Resolves the orientation of three points.
 
 Parameters:
-
 - `startPoint` - First point.
 - `middlePoint` - Second point.
 - `endPoint` - Third point.
@@ -498,7 +474,6 @@ resolvePointToSegmentDistance(
 Resolves the shortest distance from a point to a line segment.
 
 Parameters:
-
 - `point` - Query point.
 - `segmentStart` - Segment start point.
 - `segmentEnd` - Segment end point.
@@ -519,7 +494,6 @@ Pit entry uses each corridor's axis-aligned bounding box directly, so overlap
 would make ownership ambiguous and could invalidate multi-pit team layouts.
 
 Parameters:
-
 - `spec` - Track specification containing optional pit metadata.
 
 Returns: `true` when the pit-corridor layout is valid.
@@ -540,7 +514,6 @@ segment. This keeps the corridor AABB honest: cars must be able to enter it
 from the driveable ribbon instead of teleporting into a detached pit zone.
 
 Parameters:
-
 - `spec` - Track specification containing optional pit metadata.
 
 Returns: `true` when every pit corridor is reachable.
@@ -556,7 +529,6 @@ validateTrackSpec(
 Validates that a `TrackSpec` satisfies all generation invariants.
 
 Invariants checked:
-
 - `segments.length >= 3` (minimum closed-loop polygon)
 - All segments have `width > 0`
 - Closed-loop: last segment end equals first segment start (within tolerance)
@@ -565,7 +537,6 @@ Invariants checked:
 - Tier 4 pit corridors remain reachable from the driveable ribbon
 
 Parameters:
-
 - `spec` - The generated track to validate.
 
 Returns: `true` when all invariants pass.
@@ -590,7 +561,6 @@ buildTrackSplineSamples(
 Builds the shared Catmull-Rom lane-center samples for a closed-loop track.
 
 Parameters:
-
 - `segments` - Ordered closed-loop control segments.
 - `laneCount` - Number of drivable lanes; defaults to 2.
 
@@ -608,7 +578,6 @@ Resolves the lateral distance from the road centerline to the inner-lane
 centerline for one sample.
 
 Parameters:
-
 - `splineSample` - Sample carrying lane geometry metadata.
 
 Returns: Inner-lane centerline offset in world units.
@@ -625,7 +594,6 @@ resolveInnerLaneCenterlinePoint(
 Resolves the world-space point on the inner-lane centerline for one sample.
 
 Parameters:
-
 - `splineSample` - Sample whose centerline anchor is known.
 - `splineSampleFrame` - Local tangent frame for the sample.
 
@@ -643,7 +611,6 @@ resolveSplineSampleFrame(
 Resolves the local tangent frame for one sampled spline point.
 
 Parameters:
-
 - `splineSamples` - Ordered closed-loop spline samples.
 - `sampleIndex` - Global index of the focal sample.
 

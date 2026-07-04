@@ -92,7 +92,6 @@ explore again.
 Formula: `learning_rate = minimumRate + 0.5 * (baseRate - minimumRate) * (1 + cos(pi * current_cycle_iteration / period))`
 
 Parameters:
-
 - `period` - The number of iterations over which the learning rate anneals from `baseRate` to `minimumRate` in one cycle. Defaults to 1000.
 - `minimumRate` - The minimum learning rate value at the end of a cycle. Defaults to 0.
 - `baseRate` - The initial (maximum) learning rate for the cycle.
@@ -118,7 +117,6 @@ exploration should be frequent but later training should settle for longer
 stretches between restarts.
 
 Parameters:
-
 - `initialPeriod` - Length of the first cycle in iterations.
 - `minimumRate` - Minimum learning rate at valley.
 - `periodGrowthMultiplier` - Factor to multiply the period after each restart (>=1).
@@ -143,7 +141,6 @@ about distinct phases and more about a steady fade in aggressiveness.
 Formula: `learning_rate = baseRate * decayFactor ^ iteration`
 
 Parameters:
-
 - `decayFactor` - The decay factor applied at each iteration. Should be less than 1. Defaults to 0.999.
 - `baseRate` - The initial learning rate.
 - `iteration` - The current training iteration.
@@ -164,7 +161,6 @@ optimal for complex problems. Use it when you want the rest of the system,
 not the schedule, to carry the full burden of training stability.
 
 Parameters:
-
 - `baseRate` - The initial learning rate, which will remain constant.
 - `iteration` - The current training iteration (unused in this method, but included for consistency).
 
@@ -190,7 +186,6 @@ too quickly.
 Formula: `learning_rate = baseRate / (1 + decayFactor * iteration ** decayPower)`
 
 Parameters:
-
 - `decayFactor` - Controls the rate of decay. Higher values lead to faster decay. Defaults to 0.001.
 - `decayPower` - The exponent controlling the shape of the decay curve. Defaults to 2.
 - `baseRate` - The initial learning rate.
@@ -216,7 +211,6 @@ This schedule is common when the earliest steps are the most unstable: start
 gentle, reach full speed, then taper predictably.
 
 Parameters:
-
 - `totalStepCount` - Total steps for full schedule (must be > 0).
 - `warmupStepCount` - Steps for warmup (< totalStepCount). Defaults to 10% of totalStepCount.
 - `endRate` - Final rate at totalStepCount.
@@ -241,7 +235,6 @@ calendar, the schedule listens for stalled improvement and responds only when
 the run appears to flatten out.
 
 Parameters:
-
 - `options` - Optional reactive-control settings such as patience, cooldown, and minimum rate floor.
 
 Returns: A stateful schedule function that may lower the learning rate when the monitored error stops improving.
@@ -266,7 +259,6 @@ phases rather than one perfectly smooth curve.
 Formula: `learning_rate = baseRate * decayFactor ^ floor(iteration / decayStepSize)`
 
 Parameters:
-
 - `decayFactor` - The factor by which the learning rate is multiplied at each step. Should be less than 1. Defaults to 0.9.
 - `decayStepSize` - The number of iterations after which the learning rate decays. Defaults to 100.
 - `baseRate` - The initial learning rate.
@@ -288,7 +280,6 @@ createCosineAnnealingRateSchedule(
 Return a cosine-annealing learning-rate schedule that oscillates between base and minimum rates within each period to encourage periodic exploratory updates.
 
 Parameters:
-
 - `period` - Length of a full cosine cycle.
 - `minimumRate` - Minimum rate reached at the end of a cycle.
 
@@ -307,7 +298,6 @@ createCosineAnnealingWarmRestartsSchedule(
 Return a cosine-annealing schedule with warm restarts and optional period growth so each cycle can reset aggressiveness while gradually lengthening exploration windows.
 
 Parameters:
-
 - `initialPeriod` - Length of the initial cycle.
 - `minimumRate` - Minimum learning rate reached at the end of each cycle.
 - `periodGrowthMultiplier` - Multiplier applied to the period after each restart.
@@ -325,7 +315,6 @@ createExponentialRateSchedule(
 Return an exponential-decay learning-rate schedule that scales the base rate every iteration, producing smooth monotonic annealing across long training runs.
 
 Parameters:
-
 - `decayFactor` - Multiplicative decay applied every iteration.
 
 Returns: A learning rate schedule implementing exponential decay.
@@ -352,7 +341,6 @@ createInverseRateSchedule(
 Return an inverse-decay learning-rate schedule whose denominator grows with iteration so decay slows over time while remaining continuous and stable.
 
 Parameters:
-
 - `decayFactor` - Decay factor controlling the decay rate.
 - `decayPower` - Exponent that shapes the decay curve.
 
@@ -371,7 +359,6 @@ createLinearWarmupDecaySchedule(
 Return a linear warmup followed by linear decay schedule so optimization ramps safely from small initial steps before annealing toward a configurable terminal rate.
 
 Parameters:
-
 - `totalStepCount` - Total number of steps in the schedule (must be positive).
 - `warmupStepCount` - Optional number of warmup steps; defaults to 10% of total steps.
 - `endRate` - Final rate once decay completes.
@@ -389,7 +376,6 @@ createReduceOnPlateauSchedule(
 Return a ReduceLROnPlateau-style schedule that lowers the rate when monitored error stops improving, with explicit patience, cooldown, and minimum-rate guardrails for stable adaptive decay.
 
 Parameters:
-
 - `options` - Optional configuration for factor, patience, minDelta, cooldown, and minimum rate.
 
 Returns: A stateful schedule that reacts to lack of improvement.
@@ -406,7 +392,6 @@ createStepRateSchedule(
 Return a step-decay learning-rate schedule that applies multiplicative drops at fixed iteration intervals for predictable staircase-style annealing behavior in long-running optimization loops.
 
 Parameters:
-
 - `decayFactor` - Multiplicative decay applied at each decay step.
 - `decayStepSize` - Number of iterations before applying another decay step.
 

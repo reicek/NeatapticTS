@@ -36,7 +36,6 @@ assimilateEquilibriumCandidate(
 Orchestrate one equilibrium-candidate assimilation pass inside the owner-local Phase D boundary.
 
 Parameters:
-
 - `candidate` - Structured equilibrium candidate prepared by the adult boundary.
 - `policy` - Resolved policy controlling validation, budget handling, and encoding behavior.
 
@@ -80,7 +79,6 @@ applyAssimilationWriteback(
 Apply one slow, deterministic structural-prior write-back pass for a single equilibrium candidate.
 
 Parameters:
-
 - `candidate` - One owner-local equilibrium candidate carrying only structural deltas.
 - `policy` - Resolved write-back policy for the current assimilation pass.
 
@@ -103,7 +101,6 @@ buildAssimilationResult(
 Fold the canonical public result payload for one assimilation attempt.
 
 Parameters:
-
 - `candidate` - Candidate tied to the current owner-local assimilation pass.
 - `status` - Terminal status for the current pass.
 - `policy` - Resolved policy for the current assimilation pass.
@@ -124,7 +121,6 @@ buildAssimilationTelemetry(
 Build the public telemetry payload emitted by the owner-local assimilation boundary.
 
 Parameters:
-
 - `policy` - Resolved policy for the current assimilation pass.
 - `lossy` - Whether lossy compression was used during write-back.
 
@@ -141,7 +137,6 @@ validateAssimilationCandidate(
 Validate that one equilibrium candidate can safely enter the owner-local assimilation path.
 
 Parameters:
-
 - `candidate` - Candidate assembled from the adult equilibrium boundary.
 
 Returns: A schema error when the envelope is inconsistent, otherwise `null`.

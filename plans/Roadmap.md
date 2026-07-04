@@ -648,6 +648,17 @@ archived Repo Cortex layer plans as the baselines this migration builds upon.
 - NGE Predator/Prey Co-evolution — co-evolutionary benchmark (sensory arms race, reproduction modes, non-stationary fitness). NGE Core Algorithm Workstream is now [DONE]; predator/prey demo is unblocked.
 - Plan: [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]
 
+## Standalone Public Library Demo-Agnostic Refactor Lane [DONE]
+
+**Outcome:** remove demo-specific file names, exported symbols, JSDoc, internal identifiers, tests, and generated docs from `src/` so the public library expresses capabilities from the library point of view rather than any specific demo's perspective. This is a deliberate breaking public API refactor; a migration note in `RELEASE.md` maps every removed symbol to its generic replacement.
+
+- Public library demo-agnostic refactor
+- Plan: [completed/Public_Library_Demo_Agnostic_Refactor.plans.md](completed/Public_Library_Demo_Agnostic_Refactor.plans.md) (`plans\completed\Public_Library_Demo_Agnostic_Refactor.plans.md`) [DONE] — all 6 phases complete. Removed demo-specific names from `src/` public APIs, JSDoc, internal identifiers, tests, and generated docs; breaking public API refactor with migration notes in `RELEASE.md`.
+- Archive: [completed/Public_Library_Demo_Agnostic_Refactor.logs.md](completed/Public_Library_Demo_Agnostic_Refactor.logs.md) (`plans\completed\Public_Library_Demo_Agnostic_Refactor.logs.md`) [DONE] — detailed done-state records for all 6 phases.
+- Current internal state: Phases 1–6 [DONE]; plan/log pair archived to `plans/completed/`.
+
+**Coordination rule:** this lane touches `src/architecture/network/gpu/network.gpu.racing.ts`, which is also being edited by the active WebGPU real-performance plan. Do not start Phase 3 implementation until the WebGPU plan's racing-file surface is stable. No `examples/` or `docs/browser-tests/` files should change; those surfaces are intentionally demo-specific and out of scope. Generated `src/**/README.md` files must be refreshed via `npm run docs`, never hand-edited.
+
 **Why last:** this work depends heavily on the Memory Optimization track (Track 2 in that plan) and benefits from stable NEAT correctness, deterministic activation semantics, robust serialization/checkpointing, and a mature enough NGE core that benchmark results reflect the algorithm rather than unstable infrastructure.
 
 ## Summary: Critical Path vs Parallel Lanes
@@ -760,3 +771,8 @@ M14. [Spec-Kit_Assimilation.plans.md](completed/Spec-Kit_Assimilation.plans.md) 
 34. [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
 35. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]
 36. [completed/NGE_Core_Growth_Engine_Wiring.plans.md](completed/NGE_Core_Growth_Engine_Wiring.plans.md) (`plans/completed/NGE_Core_Growth_Engine_Wiring.plans.md`) [DONE] — bridges the two disconnected NGE growth systems into a single pipeline; all 5 phases complete. Racing Curriculum unblocked.\n37. [completed/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md](completed/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md) (`plans/completed/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md`) [DONE] — optional WebGPU inference fast path for slab-eligible acyclic NEAT networks; transparent CPU fallback; racing-curriculum worker is the first consumer.\n38. [NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md](NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md) (`plans/NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md`) [WIP] — NGE WebGPU real-device performance: correct weighted forward kernel, buffer/pipeline caching, batched/parallel inference, and NGE-tier benchmarks past 32k hidden neurons.
+
+### Standalone public library cleanup inventory
+
+- Plan: [completed/Public_Library_Demo_Agnostic_Refactor.plans.md](completed/Public_Library_Demo_Agnostic_Refactor.plans.md) (`plans\\completed\\Public_Library_Demo_Agnostic_Refactor.plans.md`) [DONE] — all 6 phases complete; `src/` public library is demo-agnostic, migration note added to `RELEASE.md`.
+- Archive: [completed/Public_Library_Demo_Agnostic_Refactor.logs.md](completed/Public_Library_Demo_Agnostic_Refactor.logs.md) (`plans\\completed\\Public_Library_Demo_Agnostic_Refactor.logs.md`) [DONE] — full done-state record.

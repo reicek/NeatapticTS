@@ -14,7 +14,6 @@ observed entropy spread and decide whether the next generation should apply
 stronger or weaker sharing pressure.
 
 Read this chapter when you want to answer questions such as:
-
 - Why does evaluation keep `sharingSigma` adaptation separate from the rest
   of the scoring pipeline?
 - What evidence is considered trustworthy enough to tune sigma?
@@ -23,7 +22,6 @@ Read this chapter when you want to answer questions such as:
   speciation reads?
 
 The mental model is a short three-step loop:
-
 1. make sure diversity-stat storage exists,
 2. read the fresh entropy-variance measurement,
 3. nudge `sharingSigma` up or down inside its configured bounds.
@@ -71,11 +69,10 @@ The returned value is always clamped to the configured minimum and maximum,
 which keeps tuning predictable even when entropy measurements swing sharply.
 
 Parameters:
-
 - `entropySharingOptions` - Tuning options that define the target
-  entropy variance, adjustment rate, and clamp bounds.
+entropy variance, adjustment rate, and clamp bounds.
 - `currentVarEntropy` - Freshly observed variance of structural entropy
-  for the current population.
+for the current population.
 - `currentSigma` - Current sharing sigma before this adjustment.
 
 Returns: Next sharing sigma value to carry into later controller passes.
@@ -84,13 +81,7 @@ Example:
 
 ```ts
 const nextSigma = computeNextSharingSigma(
-  {
-    enabled: true,
-    targetEntropyVar: 0.2,
-    adjustRate: 0.1,
-    minSigma: 0.5,
-    maxSigma: 3,
-  },
+  { enabled: true, targetEntropyVar: 0.2, adjustRate: 0.1, minSigma: 0.5, maxSigma: 3 },
   0.28,
   1,
 );
@@ -113,7 +104,6 @@ post-score measurements. The container is created lazily so callers do not
 need to pre-seed optional diversity state during controller construction.
 
 Parameters:
-
 - `controller` - NEAT controller instance for evaluation.
 
 ### runEntropySharingTuning
@@ -133,7 +123,6 @@ intentionally behaves like best-effort maintenance rather than a required
 scoring step.
 
 The helper preserves several important controller assumptions:
-
 - genome scores are treated as complete and are not recomputed here,
 - population order is not changed here,
 - species assignment is not refreshed here,
@@ -144,7 +133,6 @@ evaluated population while still benefiting from a tuned sharing radius on
 the next cycle.
 
 Parameters:
-
 - `controller` - NEAT controller instance for evaluation.
 - `evaluationOptions` - Options object for the current evaluation pass.
 

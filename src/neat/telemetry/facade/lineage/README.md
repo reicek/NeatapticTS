@@ -46,7 +46,6 @@ The helper intentionally clips the result so callers can log or render a
 current ancestry sample without paying for a full-population genealogy dump.
 
 Parameters:
-
 - `host` - `Neat` instance whose population lineage should be sampled.
 - `limit` - Maximum number of genomes to include in the snapshot.
 

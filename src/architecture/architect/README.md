@@ -76,7 +76,6 @@ connections they reference, infers input/output counts from node types, and
 folds the result into one normalized network object.
 
 Parameters:
-
 - `list` - Building blocks that are already interconnected.
 
 Returns: A network representing the supplied architecture.
@@ -92,7 +91,6 @@ enforceMinimumHiddenLayerSizes(
 Enforces the minimum hidden layer size rule on a network.
 
 Parameters:
-
 - `network` - The network to normalize.
 
 Returns: The same network with hidden layers grown to the minimum size when needed.
@@ -132,7 +130,6 @@ Common pitfalls:
 - shuffling timesteps rather than whole sequences.
 
 Parameters:
-
 - `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed GRU network.
@@ -142,7 +139,9 @@ Example:
 ```ts
 const network = Architect.gru(1, 3, 1, { inputToOutput: true });
 
-const outputs = [0.1, 0.4, 0.2].map((value) => network.activate([value])[0]);
+const outputs = [0.1, 0.4, 0.2].map(
+  (value) => network.activate([value])[0],
+);
 
 network.clear();
 
@@ -160,7 +159,6 @@ hopfield(
 Creates a Hopfield network.
 
 Parameters:
-
 - `size` - The number of nodes in the network.
 
 Returns: The constructed Hopfield network.
@@ -201,7 +199,6 @@ Common pitfalls:
   the recurrent block is supposed to learn.
 
 Parameters:
-
 - `layerArgs` - Layer sizes plus an optional trailing options object.
 
 Returns: The constructed LSTM network.
@@ -211,11 +208,15 @@ Example:
 ```ts
 const network = Architect.lstm(1, 4, 1, { inputToOutput: false });
 
-const firstPass = [0.1, 0.4, 0.2].map((value) => network.activate([value])[0]);
+const firstPass = [0.1, 0.4, 0.2].map(
+  (value) => network.activate([value])[0],
+);
 
 network.clear();
 
-const secondPass = [0.1, 0.4, 0.2].map((value) => network.activate([value])[0]);
+const secondPass = [0.1, 0.4, 0.2].map(
+  (value) => network.activate([value])[0],
+);
 
 console.log(firstPass, secondPass);
 ```
@@ -268,7 +269,6 @@ the same runtime without clearing it, the delay lines intentionally carry
 their terminal state into the next activation stream.
 
 Parameters:
-
 - `inputSize` - The exogenous input size at each time step.
 - `hiddenLayers` - Hidden layer sizes, or zero / empty for none.
 - `outputSize` - The prediction output size.
@@ -321,9 +321,8 @@ Common pitfalls:
   when some order randomization would reduce training bias.
 
 Parameters:
-
 - `layers` - Layer sizes starting with input, followed by hidden layers,
-  and ending with output.
+and ending with output.
 
 Returns: The constructed MLP network.
 
@@ -368,7 +367,6 @@ while forwarding to the stricter `randomSparse()` builder that uses the
 sparse-profile vocabulary.
 
 Parameters:
-
 - `input` - The number of input nodes.
 - `hidden` - The number of hidden nodes to add.
 - `output` - The number of output nodes.
@@ -411,12 +409,11 @@ Common pitfalls:
   little left to discover.
 
 Parameters:
-
 - `input` - The number of input nodes.
 - `hidden` - The number of hidden nodes to add.
 - `output` - The number of output nodes.
 - `options` - Optional sparse-structure counts for forward connections,
-  back connections, self connections, gates, and an optional deterministic seed.
+back connections, self connections, gates, and an optional deterministic seed.
 
 Returns: The constructed sparse random network.
 
