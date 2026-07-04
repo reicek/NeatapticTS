@@ -19,6 +19,48 @@ GPU output is expected to agree with the CPU path within an absolute tolerance
 of `1e-3` and a mean absolute error of `≤ 1e-4`. Use the CPU path for
 deterministic replay and cross-machine regression tests.
 
+Real profiling on an RTX 4070 shows that GPU inference is not universally
+faster. For a single small network, the dominant cost is synchronization:
+a 64-node network spends 75.5% of its wall time waiting for the GPU and only
+13.2% preparing CPU-side data. The measured `mapAsync()` round trip after
+`queue.submit()` is 6–25 ms depending on network size, while the actual GPU
+compute work is usually well under 1 ms. The bottleneck is the readback
+barrier, not ALU throughput. At 4k nodes the picture flips: GPU compute is
+the majority of useful work, CPU preparation is 44.9% of wall time, and the
+GPU path is clearly faster than the CPU path. Batching is the best way to
+amortize the fixed synchronization cost locally.
+
+WebGPU exposes three timelines — content (CPU), device (GPU internal), and
+queue (submitted work) — and a buffer-mapping state machine:
+`unmapped → pending map → mapped`. `mapAsync()` resolves on the content
+timeline only after all previously submitted operations on that buffer's
+queue timeline have completed. That guarantee makes an explicit
+`device.queue.onSubmittedWorkDone()` barrier redundant for readback and is
+intentionally omitted here.
+
+The wider WebGPU/ML ecosystem uses a different shape to avoid this trap.
+TensorFlow.js pools GPU buffers in a `Map<string, GPUBuffer[]>` keyed by
+`${size}_${usage}` through `acquireBuffer` / `releaseBuffer` and keeps tensors
+GPU-resident during inference; readback happens only when the caller
+explicitly calls `tensor.data()`. burn's `burn-wgpu` compute server does the
+same with a size-keyed handle pool and batches dispatches into a single
+`queue.submit()`. NeatapticTS still reads back every activation, which is the
+anomaly relative to that pattern. The recommended migration is:
+
+1. Keep per-agent node/output buffers GPU-resident across activations.
+2. Pool staging readback buffers by size, as this module already does.
+3. Use a ring of 2–3 staging buffers so the CPU can map/read frame N while
+   frame N+1 is being copied into another buffer, eliminating the blocking
+   wait between the GPU copy and the CPU read.
+4. Only call `mapAsync()` when an external consumer actually needs the
+   output values.
+
+This path caches the topology buffers, the compiled pipeline, and one output
+staging buffer per output size, which removes buffer churn and recompilation
+overhead. The dominant remaining cost is per-call readback, which the batched
+activation path amortizes through `skipUpload` and repeated `iterations`,
+but does not eliminate.
+
 ```mermaid
 flowchart TD
     A["Network.activate(input, { useGPU: true })"] --> B{isGPUEligible?}
@@ -76,7 +118,7 @@ activateGPUWithFreshState(
 
 Run a single-network forward pass on the GPU without caching the buffer set.
 
-This is the concurrent-safe counterpart to {@link activateGPU}. Every call
+This is the concurrent-safe counterpart to `activateGPU()`. Every call
 uploads a fresh slab and creates a new bind group, so multiple requests that
 target the same `Network` instance cannot overwrite each other's node or
 output buffers. Pipelines are still shared through the per-device pipeline
@@ -117,6 +159,7 @@ createActivationBindGroup(
   device: GPUDevice,
   layout: GPUBindGroupLayout,
   bufferSet: GPUBufferSet,
+  paramsBuffer: GPUBuffer,
 ): GPUBindGroup
 ```
 
@@ -124,25 +167,121 @@ Build the bind group that wires the six struct-packed kernel buffers into
 the pipeline layout. The bind group can be reused across activations as long
 as the underlying buffers are the same.
 
-### dispatchActivationKernel
+Parameters:
+- `paramsBuffer` - Per-level params uniform buffer.
+
+### createLevelBindGroups
 
 ```ts
-dispatchActivationKernel(
+createLevelBindGroups(
   device: GPUDevice,
-  bufferSet: GPUBufferSet,
   pipeline: GPUComputePipeline,
-  bindGroup: GPUBindGroup,
-  outputNodeCount: number,
-): Promise<void>
+  bufferSet: GPUBufferSet,
+  levelParamsBuffers: any[],
+): any[]
 ```
 
-Dispatch the activation kernel once per topological level.
+Create per-level bind groups that wire the kernel buffers and the matching
+level params uniform together.
 
-The params uniform carries the current level, total node count, connection
-count, and output-node start index. Threads for nodes that do not belong to
-the current level early-exit, so the same global dispatch size can be reused
-for every level while still guaranteeing that all source values are available
-from previous levels.
+Parameters:
+- `device` - WebGPU device used to create bind groups.
+- `pipeline` - Compiled activation pipeline.
+- `bufferSet` - Uploaded network slab buffers.
+- `levelParamsBuffers` - Per-level params buffers from
+`createLevelParamsBuffers`.
+
+Returns: Array of bind groups indexed by level. Index 0 is `undefined`.
+
+### createLevelParamsBuffers
+
+```ts
+createLevelParamsBuffers(
+  device: GPUDevice,
+  bufferSet: GPUBufferSet,
+  outputNodeCount: number,
+): any[]
+```
+
+Create one params uniform buffer per topological level that needs a GPU
+dispatch.
+
+Level 0 is skipped because input nodes are seeded directly by the caller.
+Each buffer stores a fixed level index plus the dimension constants from the
+uploaded buffer set so the kernel can early-exit threads that do not belong
+to the current level. Keeping the params buffer immutable per level lets the
+single-network path record every level into one command encoder without
+serializing queue writes between dispatches.
+
+Parameters:
+- `device` - WebGPU device used to allocate buffers.
+- `bufferSet` - Uploaded network slab buffers.
+- `outputNodeCount` - Number of output nodes in the network.
+
+Returns: Array of params buffers indexed by level. Index 0 is `undefined`
+because level 0 is not dispatched.
+
+### destroyLevelParamsBuffers
+
+```ts
+destroyLevelParamsBuffers(
+  levelParamsBuffers: any[],
+): void
+```
+
+Destroy params buffers created for per-level dispatch.
+
+Parameters:
+- `levelParamsBuffers` - Array of per-level params buffers.
+
+### destroyOutputStagingBuffer
+
+```ts
+destroyOutputStagingBuffer(
+  device: GPUDevice,
+  byteLength: number,
+): void
+```
+
+Destroy a cached output staging buffer for the given device and byte size.
+
+Called when a network's cached GPU state is evicted to a different
+`GPUDevice`. The staging buffer is tied to the device that created it, so
+destroying it prevents the old device's resources from outliving the network
+buffers that were recorded for that device.
+
+Parameters:
+- `device` - WebGPU device that owns the cached staging buffer.
+- `byteLength` - Exact byte size of the staging buffer to remove.
+
+### encodeActivationKernel
+
+```ts
+encodeActivationKernel(
+  commandEncoder: GPUCommandEncoder,
+  bufferSet: GPUBufferSet,
+  pipeline: GPUComputePipeline,
+  levelBindGroups: any[],
+): void
+```
+
+Record the activation kernel dispatches for every topological level into the
+supplied command encoder.
+
+The kernel is written as one compute pass per topological level rather than a
+single pass because each level must see the node writes produced by the
+previous level. Compute passes within the same command encoder are still
+submitted together, so the CPU pays for submission only once. The params
+uniform is supplied by a per-level bind group, so no queue writes or
+intermediate submissions are needed between levels. The caller submits the
+encoder; awaiting `mapAsync` on the output staging buffer is sufficient
+synchronization for readback.
+
+Parameters:
+- `commandEncoder` - Encoder that will hold all compute passes.
+- `bufferSet` - Uploaded network slab buffers.
+- `pipeline` - Compiled activation pipeline.
+- `levelBindGroups` - Per-level bind groups from `createLevelBindGroups`.
 
 ### ensureNetworkGPUState
 
@@ -158,7 +297,23 @@ topology, and return the compatible compiled pipeline.
 
 Creates or reuses GPU state as needed. When only the activation function
 changes, the buffer set (which is independent of activation) is kept and only
-the pipeline is replaced.
+the pipeline is replaced. When the network moves to a different `GPUDevice`,
+the old per-device output staging buffer is destroyed so no cross-device
+resource leaks outlive the buffers recorded for that device.
+
+Parameters:
+- `device` - WebGPU device used to run the forward kernel.
+- `network` - Network whose topology must be reflected in GPU buffers.
+
+Returns: Object containing the cached state and the activation pipeline.
+
+Example:
+
+```ts
+const { state, pipeline } = ensureNetworkGPUState(device, network);
+// state.bufferSet holds the uploaded slab; pipeline can be reused across
+// activations as long as the activation function does not change.
+```
 
 ### getActivationBindGroupLayout
 
@@ -196,6 +351,38 @@ The pipeline is keyed by the generated WGSL source, so networks that share an
 activation function share one compiled pipeline even when their topologies
 differ. The temporary activation-index annotation on the first node is
 restored before returning, keeping the mutation scoped to this seam.
+
+### getOrCreateOutputStagingBuffer
+
+```ts
+getOrCreateOutputStagingBuffer(
+  device: GPUDevice,
+  byteLength: number,
+): GPUBuffer
+```
+
+Fetch or create a reusable mappable staging buffer of the requested size.
+
+Buffers are keyed by byte size per device. A cached buffer is recreated only
+when it has been destroyed, so activations that produce the same output size
+(the common case for repeated evaluation of a cohort) reuse a single buffer
+instead of allocating, mapping, and destroying one per call.
+
+Parameters:
+- `device` - WebGPU device that owns the staging buffer.
+- `byteLength` - Required staging buffer size in bytes.
+
+Returns: A GPU buffer with `MAP_READ | COPY_DST` usage.
+
+### getOutputStagingBufferCache
+
+```ts
+getOutputStagingBufferCache(
+  device: GPUDevice,
+): Map<number, GPUBuffer>
+```
+
+Return the per-device staging-buffer size map, creating it on first use.
 
 ### GPUCommandEncoderCopy
 
@@ -257,6 +444,7 @@ Returns: A context object with the resolved index and a `restore()` callback.
 
 ```ts
 readOutputValues(
+  commandEncoder: GPUCommandEncoder,
   device: GPUDevice,
   network: default,
   bufferSet: GPUBufferSet,
@@ -264,7 +452,52 @@ readOutputValues(
 ```
 
 Copy the output-node slice of the GPU output buffer to a mappable staging
-buffer, await the mapping, and return a detached Float32Array copy.
+buffer using the supplied command encoder, submit the encoder, and return a
+detached Float32Array copy.
+
+The staging buffer is reused from the per-device output-staging cache rather
+than allocated per call. After `queue.submit`, `mapAsync` transitions the
+staging buffer from `unmapped` to `pending map`; the WebGPU implementation
+completes the transition to `mapped` only after the queue operations that
+target the buffer have finished. That makes `mapAsync` a sufficient
+synchronization point for readback, so an explicit
+`device.queue.onSubmittedWorkDone()` wait is unnecessary and is omitted to
+reduce CPU-GPU round trips.
+
+This is the function where the readback bottleneck shows up in practice.
+Project measurements on an RTX 4070 put the `queue.submit()` → `mapAsync()`
+round trip at 6–25 ms, while the GPU compute itself is typically under 1 ms
+for the network sizes this library evaluates. For a 64-node network the wait
+accounts for about 75% of wall time. The mitigation recommended in WebGPU
+best-practice guides is a ring of 2–3 staging buffers: the CPU maps and reads
+frame N while the GPU copies the next frame into a different buffer, so the
+CPU never blocks on the GPU's copy completion.
+
+WebGPU's three timelines explain why `mapAsync()` alone is enough. The copy
+command executes on the queue timeline; `mapAsync()` resolves on the content
+timeline only after all previously submitted work on that queue timeline has
+finished. Adding `onSubmittedWorkDone()` would wait for the same signal a
+second time from the CPU side without changing when the buffer becomes
+mappable.
+
+The mapping state machine for the staging buffer is:
+
+```mermaid
+stateDiagram-v2
+  [*] --> unmapped : createBuffer
+  unmapped --> pendingMap : mapAsync(READ)
+  pendingMap --> mapped : queue work finishes
+  mapped --> unmapped : unmap()
+  unmapped --> [*] : destroy()
+```
+
+Parameters:
+- `commandEncoder` - Encoder with the recorded activation passes.
+- `device` - WebGPU device that owns the staging buffer.
+- `network` - Network being evaluated; determines output node count.
+- `bufferSet` - Uploaded network slab buffers.
+
+Returns: Promise resolving to a detached copy of the output values.
 
 ### resolveActivationIndex
 
@@ -490,6 +723,39 @@ whether the device is still usable.
 
 ## architecture/network/gpu/network.gpu.kernel.ts
 
+WGSL kernel generation and pipeline compilation for the WebGPU activation path.
+
+The GPU forward pass is implemented as a gather-reduce compute shader: each
+thread is responsible for one node, gathers its incoming activations by
+walking the incoming-CSR slice of the connection array, applies the network's
+single activation function, and writes the result back to the node and output
+buffers. This design keeps the kernel stateless and topology-agnostic; all
+topology-specific data lives in storage buffers, so the same compiled pipeline
+can drive many networks that share the same activation function.
+
+Work is dispatched with a 1-D workgroup size of 64 threads. On an NVIDIA RTX
+4070 (Ada Lovelace, 46 streaming multiprocessors) 64 threads is two warps,
+which lets the scheduler hide memory latency while keeping occupancy high.
+Larger workgroups do not necessarily help because the kernel is memory-bound
+and the per-node parallelism is already coarse.
+
+Occupancy matters because the kernel is heavily memory-bound. An RTX 4070 has
+46 SMs, each capable of hosting up to 1536 concurrent threads (48 warps).
+With a workgroup size of 64 (2 warps), each SM can theoretically hold 24
+workgroups, or 1,104 workgroups across the whole chip. For 8,192 nodes the
+dispatch launches only 128 workgroups, about 3 per SM, so the GPU is nowhere
+near full occupancy and much of the chip sits idle. At 32,768 nodes the
+dispatch launches 512 workgroups, roughly 11 per SM, which is better but still
+below the hardware ceiling. That is why throughput keeps climbing with network
+size until either memory bandwidth or the maximum dispatch dimension becomes
+the limit. Workgroup size is also chosen as a multiple of 32, the NVIDIA warp
+size, to avoid partially occupied warps.
+
+The kernel binding layout uses six entries, which is below the WebGPU default
+`maxStorageBuffersPerShaderStage` limit of eight and leaves headroom for future
+buffers. Buffer sizes are validated against `maxStorageBufferBindingSize`
+(default 128 MiB) before allocation.
+
 ### buildGPUPipeline
 
 ```ts
@@ -530,11 +796,16 @@ compileActivationKernel(
 
 Compile (or reuse) the activation compute pipeline for a network topology.
 
-The pipeline is created once per unique topology and cached on the supplied
-device. Recompilations with identical topology but different weights reuse
-the cached `GPUComputePipeline`, avoiding redundant compile stalls during
-live inference. The shader module, bind-group layout, and pipeline creation
-calls remain observable through a mock device for unit testing.
+This helper caches pipelines by topology key on the supplied device.
+Recompilations with identical topology but different weights reuse the cached
+`GPUComputePipeline`, avoiding redundant compile stalls during live
+inference. The production single-network path in
+`ensureNetworkGPUState()` uses a per-device cache keyed by the
+generated WGSL source instead, because identical WGSL implies an identical
+pipeline regardless of topology. Both caches avoid redundant compilations.
+
+The shader module, bind-group layout, and pipeline creation calls remain
+observable through a mock device for unit testing.
 
 Parameters:
 - `device` - WebGPU device used to compile the compute pipeline.
@@ -614,6 +885,12 @@ struct-packed upload contract: the connection struct array, the node struct
 array, the per-node output buffer, the per-dispatch params uniform, the
 per-node topological level array, and the incoming-CSR start-offset array.
 
+Six read-only/read-write storage bindings plus one uniform fit comfortably
+within the WebGPU default limit of eight storage buffers per shader stage.
+Buffer sizes are validated separately against `maxStorageBufferBindingSize`,
+which defaults to 128 MiB and is large enough for the networks this library
+is designed to evaluate.
+
 Parameters:
 - `device` - WebGPU device used to create the layout.
 
@@ -639,7 +916,16 @@ The shader exposes six bindings: a read-only connection struct array, a
 read-write node struct array, a read-write output array, a per-dispatch
 params uniform, a read-only per-node topological level array, and a
 read-only incoming-CSR start-offset array. One thread is dispatched per node
-and threads that do not belong to the current level early-exit.
+and threads that do not belong to the current topological level early-exit.
+
+The forward pass is a gather-reduce kernel: each node thread reads its bias
+from `nodes[node].derivative_state`, then loops over the connection indices
+in `[inStart[node], inStart[node+1])`, multiplies each source activation by
+the connection weight, and accumulates the sum. Finally it applies the
+network-wide activation function and writes the result to both the node struct
+and the output buffer. Because the accumulation order is sorted by source
+rank on the CPU, the GPU sum matches the CPU fast-slab order and produces
+the same rounded f32 result.
 
 Parameters:
 - `network` - Network whose activation index, topology, and slab arrays
@@ -705,6 +991,51 @@ all use the same numeric index for the same activation.
 
 ## architecture/network/gpu/network.gpu.buffer.ts
 
+CPU-side preparation and upload for the WebGPU activation path.
+
+Before the GPU can run a forward pass, the network's connection slab,
+node state, topological levels, and incoming-edge CSR offsets must be packed
+into GPU-friendly arrays and copied to the device. This module owns that
+preparation. The work is CPU-bound: on an RTX 4070 the CPU preparation slice
+grows from 13.2% of wall time for a 64-node network to 42.3–44.9% for 4k–8k
+node networks, so this path is also the place to look when optimizing large-
+network latency.
+
+The upload path splits data into static and dynamic buffers. Static buffers
+(the connection array sorted by source rank, topological levels, and CSR
+start offsets) change only when the topology changes. Dynamic buffers (the
+full connection struct array with current weights and the full node struct
+array with current biases) are rewritten on every activation through
+`uploadDynamicNetworkBuffers()`. Keeping the split narrow avoids paying the
+topological-sort cost on every forward pass.
+
+The packed layout uses a compressed sparse row (CSR) representation for
+incoming edges and a Kahn-style topological sort to level nodes. Both are
+standard graph algorithms that keep the GPU kernel simple: one thread per
+node can gather its inputs by walking a contiguous slice of the connection
+array.
+
+WebGPU buffer upload strategy follows the hierarchy Brandon Jones documents in
+the `toji.dev` WebGPU best-practices guide. Data written once and rarely
+changed should be created with `mappedAtCreation: true`, filled directly from
+the CPU, and then unmapped. Data updated every frame should use
+`queue.writeBuffer()`, which queues an asynchronous GPU-side copy and avoids
+stalling the CPU. Mappable buffers and `mapAsync()` should be reserved for
+readback, because mapping waits until the GPU is finished with the buffer.
+Destroying and recreating buffers on the hot path is expensive and is avoided
+here by caching buffer sets and staging buffers. The static upload path uses
+`createBuffer` followed by `queue.writeBuffer()`; a one-shot static upload could
+instead use `mappedAtCreation: true` for the slab. The dynamic weight/bias
+updates already follow the `writeBuffer` rule.
+
+TensorFlow.js codifies this with its `BufferManager`: a pool of
+`GPUBuffer` handles keyed by `${size}_${usage}` with `acquireBuffer` and
+`releaseBuffer` lifecycles, so inference never pays allocation or destruction
+overhead. burn's `burn-wgpu` compute server uses the same idea with a
+size-keyed handle pool. NeatapticTS keeps topology buffer sets alive across
+activations and reuses one staging buffer per output size, which moves in the
+same direction but still re-uploads and reads back every pass.
+
 ### buildConnectionsArray
 
 ```ts
@@ -723,6 +1054,12 @@ is iterated in the same source-node order the CPU fast-slab path uses. Because
 f32 summation is order-dependent, matching the accumulation order gives the
 GPU gather kernel the same rounded result as the CPU push path instead of
 relying on looser tolerances.
+
+This step is part of the dynamic upload set, so it runs on every activation.
+Its cost is linear in the connection count and becomes a measurable fraction
+of wall time for large networks (up to ~44.9% CPU preparation for 4k nodes on
+an RTX 4070). Avoiding it requires keeping the topology unchanged and using
+a weight-only update path, which this module does not provide.
 
 Parameters:
 - `network` - Network whose nodes and connection slab will be packed.
@@ -745,7 +1082,10 @@ Build the incoming-CSR adjacency arrays needed by the gather kernel.
 
 `inStart[node]` and `inStart[node + 1]` bound the slice of `inOrder` that
 lists connection indices feeding into `node`. The ordering is deterministic
-because it follows the connection index order returned by the slab.
+because it follows the connection index order returned by the slab. Using a
+compressed sparse row layout lets the GPU kernel gather a node's inputs with
+one contiguous storage-buffer read per incoming edge instead of chasing
+pointers.
 
 Parameters:
 - `slab` - Connection slab with `from`/`to` source/target arrays.
@@ -766,9 +1106,14 @@ Pack node state into one contiguous struct array.
 
 Each node is laid out as `{ activation_state: f32, derivative_state: f32,
 error: f32, flags: u32 }`. The forward-pass kernel reads the bias from the
-`derivative_state` slot because the plan's node struct keeps `bias` there
-(the slot is unused by the forward pass otherwise). Callers should treat the
+`derivative_state` slot because the node struct stores `bias` there (the slot
+is unused by the forward pass otherwise). Callers should treat the
 `derivative_state` field as the per-node bias while the kernel is running.
+
+Like `buildConnectionsArray()`, this step is part of the dynamic upload
+set and is rewritten on every activation. Its cost is linear in the node
+count and is included in the CPU-preparation share reported in the
+performance guide.
 
 Parameters:
 - `network` - Network whose node state will be packed.
@@ -786,6 +1131,10 @@ buildOutgoingCSR(
 ```
 
 Build the outgoing-CSR adjacency arrays used for topological level sorting.
+
+The outgoing CSR mirrors the incoming CSR but lets the topological walk start
+from source nodes and follow forward edges. It is computed once per topology
+change, so its cost is amortized across many activations.
 
 Parameters:
 - `slab` - Connection slab with `from`/`to` source/target arrays.
@@ -837,6 +1186,8 @@ Input nodes have level `0`; every other node's level is one greater than the
 maximum level among its incoming sources. The Kahn-style traversal is
 deterministic and produces the same levels for the same topology, which the
 GPU kernel uses to schedule per-level dispatches without cross-thread races.
+This step is part of the static upload set and runs only when the topology
+changes.
 
 Parameters:
 - `slab` - Connection slab with `from`/`to` source/target arrays.
@@ -974,10 +1325,26 @@ pass), error, and flags in one contiguous read.
 
 GPU-side buffer handles and metadata produced by uploading a network slab.
 
-The implementation creates exactly six WebGPU buffers and records
-`nodeCount`/`connectionCount` so the compute pipeline can size its dispatches
-without re-reading CPU structures. The `topoLevelsArray` is kept here because
-the CPU dispatch loop still needs to know how many levels to launch.
+The set contains exactly six WebGPU buffers bound to the compute kernel in
+the order described by `GPU_BUFFER_BINDING`: the connection struct
+array, the node struct array, the per-node output buffer, the per-dispatch
+params uniform, the topological level array, and the incoming-CSR start-offset
+array. The `inStart` buffer stores `nodeCount + 1` offsets into the connection
+array so that the gather kernel can read each node's incoming edges as one
+contiguous slice.
+
+The buffers are split by update frequency. Static buffers — `connections`
+(when topology is stable), `topoLevels`, and `inStart` — are uploaded once
+and reused. Dynamic buffers — `connections` weights and `nodes` biases — are
+rewritten every activation through `queue.writeBuffer()`. The `outputs` buffer
+is written by the GPU and then copied to a mappable staging buffer for
+readback, following the rule that `mapAsync()` should be reserved for
+readback while `writeBuffer()` handles CPU-to-GPU updates.
+
+The implementation also records `nodeCount` and `connectionCount` so the
+compute pipeline can size its dispatches without re-reading CPU structures.
+The `topoLevelsArray` is kept here because the CPU dispatch loop still needs
+to know how many levels to launch.
 
 ### resolveStableNodeTieBreak
 
@@ -1017,6 +1384,13 @@ the values live inside struct arrays, the whole connections buffer and the
 whole nodes buffer are rewritten. Topology metadata does not change here;
 callers recreate the full `GPUBufferSet` when the topology changes.
 
+This whole-buffer rewrite is the dynamic-upload cost shown in the performance
+guide. On an RTX 4070 it accounts for a growing share of wall time as the
+network grows, reaching roughly 24–33% of the single-network GPU path for
+1k–8k nodes. Callers that evaluate the same static cohort many times can use
+the batched activation path's `skipUpload` flag to avoid paying this cost on
+every call.
+
 Parameters:
 - `device` - WebGPU device that owns the buffers.
 - `bufferSet` - Topology buffers created by `uploadNetworkToGPU`.
@@ -1039,6 +1413,12 @@ levels, and incoming-CSR start offsets. The six-buffer layout still sits
 below the WebGPU default limit for storage buffers per shader stage and
 removes the need to request a custom `maxStorageBuffersPerShaderStage`
 limit.
+
+This function performs the static upload: the connection array, topological
+levels, and CSR start offsets change only when the topology changes and are
+cached through `ensureNetworkGPUState()`. Callers must still call
+`uploadDynamicNetworkBuffers()` before each activation to refresh
+weights and biases.
 
 Parameters:
 - `device` - Mock or real WebGPU device used to allocate buffers.
@@ -1074,16 +1454,45 @@ Parameters:
 
 Batched WebGPU activation for multi-agent evaluation.
 
-This module evaluates many networks in a single GPU dispatch, which is useful
-when a worker seam or another batch-evaluation use case needs to evaluate a
-whole batch at once. Networks with the same topology share compiled pipelines,
-and the output is returned as a row-major matrix with one row per network.
+Evaluates many networks in a single GPU submission, which is useful for NEAT
+populations and other cohort-based experiments. The function builds a wide
+input matrix and dispatches one row per network, so the GPU stays busy even
+when individual networks are small.
 
-The seam remains opt-in: callers must supply a usable `GPUDevice` and every
-network must pass the same structural eligibility checks used by the
-single-network GPU path. Ineligible networks or missing hardware fall back
-to per-network CPU activation through `evaluateBatchGeneration` or a
-caller-local fallback.
+Real measurements on an RTX 4070 show that the benefit depends strongly on
+network size and batch width. A single 64-node network spends most of its wall
+time waiting for the GPU (75.5%) and copying back outputs, so it is still
+slower than the CPU path. A batch of 16 networks with 64 nodes each reaches
+about 1.8 M inferences/second, while a batch of 6 parallel 4096-node agents
+can exceed 3 M inferences/second. The crossover where the GPU becomes faster
+than the CPU happens around 64–256 nodes per network for parallel evaluation,
+and GPU throughput scales with network size up to the hardware occupancy
+limit.
+
+This module implements several optimization strategies:
+
+- Persistent per-device GPU state cached through `ensureNetworkGPUState()`.
+- One combined command buffer with many compute passes and a single readback.
+- A shared mappable staging buffer for the whole output matrix.
+- Optional `skipUpload` to avoid rewriting unchanged weights and inputs.
+- Optional `iterations` to amortize synchronization over many forward passes.
+- Topology-aware dispatch scheduling so each topological level runs in its own
+  compute pass.
+
+The WebGPU command-encoding model rewards batching. Every `queue.submit()` call
+carries fixed driver/queue overhead, while individual `dispatchWorkgroups()`
+calls inside the same compute pass share the pass begin/end cost and execute
+sequentially in submission order. That sequential ordering is exactly what a
+Kahn-style topological sort needs: nodes at level k are dispatched after nodes
+at level k-1 have written their activations. Because each network uses its own
+bind group (different buffer set), `setPipeline` is called per network here;
+networks that share topology could go further and share one pipeline with only
+bind-group switches, which is the pattern TensorFlow.js and burn use to keep
+GPU-resident tensors batched into a single `queue.submit()`.
+
+CSR input layout and fused activation passes are outside the scope of this
+implementation; the current path keeps each network in its own bind group and
+dispatches one compute pass per topological level.
 
 ### batchActivate
 
@@ -1092,23 +1501,37 @@ batchActivate(
   device: GPUDevice,
   networks: default[],
   inputMatrix: Float32Array<ArrayBufferLike>,
+  options: BatchActivateOptions | undefined,
 ): Promise<BatchedGPUResult>
 ```
 
 Batched GPU activation for multi-agent evaluation.
 
-Uploads the input matrix and every network's fast-slab topology to the GPU,
-reuses compiled pipelines for networks that share topology, dispatches all
-networks in a single compute pass once per topological level, and reads back
-one output row per network into a row-major result matrix. The CPU path
-remains the default; this seam is opt-in and gated by `canUseGPU`.
+Reuses the per-network persistent GPU state managed by
+`ensureNetworkGPUState()`, uploads only the dynamic node/connection data
+and the input matrix each call, dispatches all networks in one or more compute
+passes once per topological level, and reads back the output matrix through a
+single reusable staging buffer. This removes the per-call buffer allocation,
+mapping, and destruction that otherwise make the GPU path slower than the CPU
+path for small networks. The optional `iterations` flag records many
+independent passes inside a single command buffer with only one CPU-GPU
+readback.
+
+Because every pass is recorded before the command buffer is submitted, only
+one `mapAsync` call is needed for the final result. The WebGPU specification
+already guarantees that mapping waits for all previously submitted work on the
+buffer's queue timeline, so an additional `onSubmittedWorkDone()` barrier is
+redundant for readback and is intentionally omitted.
 
 Parameters:
 - `device` - WebGPU device used to run the forward kernel.
 - `networks` - Networks to evaluate as a batch. All networks must have the
 same input and output dimensions.
 - `inputMatrix` - Flattened row-major inputs, length
-`networks.length * networks[0].input`.
+`networks.length * networks[0].input`. Still validated when upload is
+skipped, but not written to the GPU in that case.
+- `options` - Optional tuning flags for repeated static evaluation
+(see `BatchActivateOptions`).
 
 Returns: Promise resolving to a row-major output matrix.
 
@@ -1118,7 +1541,21 @@ Example:
 const networks = Array.from({ length: 4 }, () => Network.createMLP(2, [3], 1));
 const inputs = new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]);
 const { outputs, rowCount, colCount } = await batchActivate(device, networks, inputs);
+
+// Amortize CPU-GPU synchronization across 60 identical static evaluations.
+const batched = await batchActivate(device, networks, inputs, {
+  skipUpload: true,
+  iterations: 60,
+});
 ```
+
+### BatchActivateOptions
+
+Optional tuning flags for `batchActivate()`.
+
+These flags let callers amortize CPU-GPU upload overhead across repeated
+evaluations of the same static cohort. They are opt-in and unsafe when the
+underlying weights or inputs have changed since the previous upload.
 
 ### BatchedGPUResult
 
@@ -1167,70 +1604,33 @@ Parameters:
 
 Returns: A queue ready to accept inference jobs.
 
-### createBindGroup
+### getBatchedOutputStagingBufferCache
 
 ```ts
-createBindGroup(
+getBatchedOutputStagingBufferCache(
   device: GPUDevice,
-  pipeline: GPUComputePipeline,
-  bufferSet: GPUBufferSet,
-  paramsBuffer: any,
-): GPUBindGroup
+): Map<number, GPUBuffer>
 ```
 
-Create the bind group for the supplied compiled pipeline and uploaded buffer
-set.
+Return the per-device batched-output staging-buffer size map.
 
-Parameters:
-- `device` - WebGPU device used to create the bind group.
-- `pipeline` - Compiled activation pipeline.
-- `bufferSet` - Uploaded network slab buffers.
-- `paramsBuffer` - Optional params uniform buffer. When omitted, the
-buffer set's default params buffer is used.
-
-Returns: A bind group wired to the six struct-packed storage-buffer and
-uniform bindings.
-
-### createLevelParamsBuffers
+### getOrCreateBatchedOutputStagingBuffer
 
 ```ts
-createLevelParamsBuffers(
+getOrCreateBatchedOutputStagingBuffer(
   device: GPUDevice,
-  bufferSet: GPUBufferSet,
-  levelCount: number,
-  outputNodeCount: number,
-): any[]
+  byteLength: number,
+): GPUBuffer
 ```
 
-Create one params uniform buffer per topological level that needs a GPU
-dispatch.
-
-Level 0 is skipped because input nodes are seeded directly by the caller.
-Each buffer stores the level index plus the dimension constants from the
-uploaded buffer set so the kernel can early-exit threads that do not belong
-to the current level.
+Fetch or create a reusable mappable staging buffer for the full batched
+output matrix.
 
 Parameters:
-- `device` - WebGPU device used to allocate buffers.
-- `bufferSet` - Uploaded network slab buffers.
-- `levelCount` - Total number of topological levels.
-- `outputNodeCount` - Number of output nodes in the network.
+- `device` - WebGPU device that owns the staging buffer.
+- `byteLength` - Total output matrix size in bytes.
 
-Returns: Array of params buffers indexed by level. Index 0 is `undefined`
-because level 0 is not dispatched.
-
-### destroyLevelParamsBuffers
-
-```ts
-destroyLevelParamsBuffers(
-  levelParamsBuffers: any[][],
-): void
-```
-
-Destroy params buffers created for per-level dispatch.
-
-Parameters:
-- `levelParamsBuffers` - Array of per-network per-level params buffers.
+Returns: A GPU buffer with `MAP_READ | COPY_DST` usage.
 
 ### GPUCommandEncoderCopy
 
@@ -1238,45 +1638,6 @@ Local extension of the ambient GPU command encoder so we can copy a storage
 buffer to a mappable staging buffer. The WebGPU ambient types in this repo
 are intentionally minimal; the cast is justified because `copyBufferToBuffer`
 is part of the actual WebGPU API surface.
-
-### prepareActivationContext
-
-```ts
-prepareActivationContext(
-  network: default,
-): { restore: () => void; }
-```
-
-Temporarily annotate the first node's squash with its worker-registry index
-so `compileActivationKernel` can generate the correct WGSL switch, then
-restore the original value.
-
-Parameters:
-- `network` - Network whose first node squash will be temporarily annotated.
-
-Returns: A context object with a `restore()` callback.
-
-### resolveActivationIndex
-
-```ts
-resolveActivationIndex(
-  squash: (value: number, derivate?: boolean | undefined) => number,
-): number | undefined
-```
-
-Look up the worker-registry activation index for a built-in squash function.
-
-The lookup is intentionally robust across module-loading boundaries and mock
-environments where the same activation may be imported from different source
-files and therefore fails a strict `===` comparison. It first tries strict
-identity, then the runtime-registry symbol key, then falls back to the
-function name.
-
-Parameters:
-- `squash` - Activation function attached to a node.
-
-Returns: The corresponding worker index, or `undefined` when the function is
-not part of the canonical registry.
 
 ### validateBatchInputs
 
@@ -1508,10 +1869,26 @@ Each name maps to a stable binding index in `GPU_BUFFER_BINDING`.
 
 GPU-side buffer handles and metadata produced by uploading a network slab.
 
-The implementation creates exactly six WebGPU buffers and records
-`nodeCount`/`connectionCount` so the compute pipeline can size its dispatches
-without re-reading CPU structures. The `topoLevelsArray` is kept here because
-the CPU dispatch loop still needs to know how many levels to launch.
+The set contains exactly six WebGPU buffers bound to the compute kernel in
+the order described by `GPU_BUFFER_BINDING`: the connection struct
+array, the node struct array, the per-node output buffer, the per-dispatch
+params uniform, the topological level array, and the incoming-CSR start-offset
+array. The `inStart` buffer stores `nodeCount + 1` offsets into the connection
+array so that the gather kernel can read each node's incoming edges as one
+contiguous slice.
+
+The buffers are split by update frequency. Static buffers — `connections`
+(when topology is stable), `topoLevels`, and `inStart` — are uploaded once
+and reused. Dynamic buffers — `connections` weights and `nodes` biases — are
+rewritten every activation through `queue.writeBuffer()`. The `outputs` buffer
+is written by the GPU and then copied to a mappable staging buffer for
+readback, following the rule that `mapAsync()` should be reserved for
+readback while `writeBuffer()` handles CPU-to-GPU updates.
+
+The implementation also records `nodeCount` and `connectionCount` so the
+compute pipeline can size its dispatches without re-reading CPU structures.
+The `topoLevelsArray` is kept here because the CPU dispatch loop still needs
+to know how many levels to launch.
 
 ### GPUDeviceType
 

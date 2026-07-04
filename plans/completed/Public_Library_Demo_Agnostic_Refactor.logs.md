@@ -1292,14 +1292,13 @@ slices:
 
 ---
 
+## Phase 4 ï¿½ Green Validation [DONE]
 
-## Phase 4 — Green Validation [DONE]
-
-[DONE] Phase 4: focused green validation passed — tsc, lint, targeted Jest slices, folder-quality gates, and 100% coverage on all touched `src/` files. Full step packet and validation evidence preserved below.
+[DONE] Phase 4: focused green validation passed ï¿½ tsc, lint, targeted Jest slices, folder-quality gates, and 100% coverage on all touched `src/` files. Full step packet and validation evidence preserved below.
 
 ---
 
-### Phase 4 — Green Validation [DONE]
+### Phase 4 ï¿½ Green Validation [DONE]
 
 ```yaml
 phase: 4
@@ -1319,7 +1318,7 @@ validation:
 acceptance_criteria:
   - 'Plan phase/step YAML blocks pass the step-packet gate.'
 placeholder_steps:
-  - 'Step 04 — Run focused green validation'
+  - 'Step 04 ï¿½ Run focused green validation'
 ```
 
 **Phase objective:** Confirm the refactor compiles, lints, and passes targeted tests for every affected folder.
@@ -1337,7 +1336,7 @@ auto_expand: false
 mode: fresh-session
 source_of_truth: plans/Public_Library_Demo_Agnostic_Refactor.plans.md
 copy_paste: true
-next_step: 'Step 05 — Regenerate docs and write migration note'
+next_step: 'Step 05 ï¿½ Regenerate docs and write migration note'
 skills:
   - green-validation-gates
   - coverage-guard
@@ -1392,13 +1391,13 @@ acceptance_criteria:
 
 ---
 
-## Phase 5 — Documentation [DONE]
+## Phase 5 ï¿½ Documentation [DONE]
 
 [DONE] Phase 5: docs regenerated via `npm run docs`, generated READMEs are demo-free, migration note added to `RELEASE.md`, final typecheck/lint/prettier passed. Full step packet and validation evidence preserved below.
 
 ---
 
-### Phase 5 — Documentation [DONE]
+### Phase 5 ï¿½ Documentation [DONE]
 
 ```yaml
 phase: 5
@@ -1418,7 +1417,7 @@ validation:
 acceptance_criteria:
   - 'Plan phase/step YAML blocks pass the step-packet gate.'
 placeholder_steps:
-  - 'Step 05 — Regenerate docs and write migration note'
+  - 'Step 05 ï¿½ Regenerate docs and write migration note'
 ```
 
 **Phase objective:** Regenerate generated docs from sanitized source and write the breaking-change migration note.
@@ -1437,7 +1436,7 @@ auto_expand: true
 mode: fresh-session
 source_of_truth: plans/Public_Library_Demo_Agnostic_Refactor.plans.md
 copy_paste: true
-next_step: 'Step 06 — Compress phase history and close'
+next_step: 'Step 06 ï¿½ Compress phase history and close'
 skills:
   - educational-docs
 validation:

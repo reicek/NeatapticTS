@@ -18,6 +18,48 @@
  * of `1e-3` and a mean absolute error of `≤ 1e-4`. Use the CPU path for
  * deterministic replay and cross-machine regression tests.
  *
+ * Real profiling on an RTX 4070 shows that GPU inference is not universally
+ * faster. For a single small network, the dominant cost is synchronization:
+ * a 64-node network spends 75.5% of its wall time waiting for the GPU and only
+ * 13.2% preparing CPU-side data. The measured `mapAsync()` round trip after
+ * `queue.submit()` is 6–25 ms depending on network size, while the actual GPU
+ * compute work is usually well under 1 ms. The bottleneck is the readback
+ * barrier, not ALU throughput. At 4k nodes the picture flips: GPU compute is
+ * the majority of useful work, CPU preparation is 44.9% of wall time, and the
+ * GPU path is clearly faster than the CPU path. Batching is the best way to
+ * amortize the fixed synchronization cost locally.
+ *
+ * WebGPU exposes three timelines — content (CPU), device (GPU internal), and
+ * queue (submitted work) — and a buffer-mapping state machine:
+ * `unmapped → pending map → mapped`. `mapAsync()` resolves on the content
+ * timeline only after all previously submitted operations on that buffer's
+ * queue timeline have completed. That guarantee makes an explicit
+ * `device.queue.onSubmittedWorkDone()` barrier redundant for readback and is
+ * intentionally omitted here.
+ *
+ * The wider WebGPU/ML ecosystem uses a different shape to avoid this trap.
+ * TensorFlow.js pools GPU buffers in a `Map<string, GPUBuffer[]>` keyed by
+ * `${size}_${usage}` through `acquireBuffer` / `releaseBuffer` and keeps tensors
+ * GPU-resident during inference; readback happens only when the caller
+ * explicitly calls `tensor.data()`. burn's `burn-wgpu` compute server does the
+ * same with a size-keyed handle pool and batches dispatches into a single
+ * `queue.submit()`. NeatapticTS still reads back every activation, which is the
+ * anomaly relative to that pattern. The recommended migration is:
+ *
+ * 1. Keep per-agent node/output buffers GPU-resident across activations.
+ * 2. Pool staging readback buffers by size, as this module already does.
+ * 3. Use a ring of 2–3 staging buffers so the CPU can map/read frame N while
+ *    frame N+1 is being copied into another buffer, eliminating the blocking
+ *    wait between the GPU copy and the CPU read.
+ * 4. Only call `mapAsync()` when an external consumer actually needs the
+ *    output values.
+ *
+ * This path caches the topology buffers, the compiled pipeline, and one output
+ * staging buffer per output size, which removes buffer churn and recompilation
+ * overhead. The dominant remaining cost is per-call readback, which the batched
+ * activation path amortizes through `skipUpload` and repeated `iterations`,
+ * but does not eliminate.
+ *
  * ```mermaid
  * flowchart TD
  *     A["Network.activate(input, { useGPU: true })"] --> B{isGPUEligible?}
@@ -32,6 +74,23 @@
  *
  * @see [WebGPU](https://en.wikipedia.org/wiki/WebGPU) on Wikipedia for
  * background on the browser GPU compute API.
+ * @see [WebGPU buffer mapping](https://www.w3.org/TR/webgpu/#buffer-mapping)
+ * in the W3C WebGPU specification.
+ * @see [WebGPU buffer map states](https://www.w3.org/TR/webgpu/#enumdef-gpubuffermapstate)
+ *   for the normative `unmapped`/`pending`/`mapped` states.
+ * @see [WebGPU programming-model timelines](https://www.w3.org/TR/webgpu/#programming-model-timelines)
+ *   for the content, device, and queue timelines.
+ * @see [TensorFlow.js BufferManager](https://github.com/tensorflow/tfjs/blob/7f5309fef0a47545e34049903dbdae0f97285f7e/tfjs-backend-webgpu/src/buffer_manager.ts)
+ *   for the size/usage-keyed buffer pool.
+ * @see [TensorFlow.js WebGPU backend](https://github.com/tensorflow/tfjs/blob/7f5309fef0a47545e34049903dbdae0f97285f7e/tfjs-backend-webgpu/src/backend_webgpu.ts)
+ *   for GPU-resident tensors and deferred readback.
+ * @see [toji.dev — WebGPU buffer uploads](https://toji.dev/webgpu-best-practices/buffer-uploads)
+ *   for upload strategy guidance.
+ * @see [webgpufundamentals — efficiently using mappable buffers](https://webgpufundamentals.org/webgpu/lessons/webgpu-copying-data.html#efficiently-using-mappable-buffers)
+ *   for staging-ring best practices.
+ * @see [burn-wgpu compute server](https://github.com/tracel-ai/burn/blob/v0.12.1/burn-wgpu/src/compute/server.rs)
+ *   for a cross-library size-keyed handle pool.
+ * @see [WebGPU Performance Guide](https://github.com/reicek/NeatapticTS/blob/main/docs/webgpu-performance-guide.md)
  *
  * @module
  */
@@ -103,6 +162,19 @@ const activationBindGroupLayoutCache = new WeakMap<
 const activationPipelineCache = new WeakMap<
   GPUDevice,
   Map<string, GPUComputePipeline>
+>();
+
+/**
+ * Per-device cache for reusable output staging buffers.
+ *
+ * `readOutputValues` needs a small mappable buffer for every activation. Creating
+ * and destroying that buffer for every call dominates CPU time when many agents
+ * run on the same device, so this cache keeps one staging buffer per unique output
+ * byte size and reuses it across activations.
+ */
+const activationOutputStagingBufferCache = new WeakMap<
+  GPUDevice,
+  Map<number, GPUBuffer>
 >();
 
 /**
@@ -192,9 +264,22 @@ function getOrCreateActivationPipeline(
  *
  * Creates or reuses GPU state as needed. When only the activation function
  * changes, the buffer set (which is independent of activation) is kept and only
- * the pipeline is replaced.
+ * the pipeline is replaced. When the network moves to a different `GPUDevice`,
+ * the old per-device output staging buffer is destroyed so no cross-device
+ * resource leaks outlive the buffers recorded for that device.
+ *
+ * @param device - WebGPU device used to run the forward kernel.
+ * @param network - Network whose topology must be reflected in GPU buffers.
+ * @returns Object containing the cached state and the activation pipeline.
+ *
+ * @example
+ * ```ts
+ * const { state, pipeline } = ensureNetworkGPUState(device, network);
+ * // state.bufferSet holds the uploaded slab; pipeline can be reused across
+ * // activations as long as the activation function does not change.
+ * ```
  */
-function ensureNetworkGPUState(
+export function ensureNetworkGPUState(
   device: GPUDevice,
   network: Network,
 ): { state: NetworkGPUState; pipeline: GPUComputePipeline } {
@@ -213,6 +298,10 @@ function ensureNetworkGPUState(
   if (cached) {
     destroyGPUBufferSet(device, cached.bufferSet);
     destroyLevelParamsBuffers(cached.levelParamsBuffers);
+    if (cached.device !== device) {
+      const outputByteLength = network.output * Float32Array.BYTES_PER_ELEMENT;
+      destroyOutputStagingBuffer(cached.device, outputByteLength);
+    }
   }
 
   const bufferSet = uploadNetworkToGPU(device, network);
@@ -308,7 +397,7 @@ export async function activateGPU(
 /**
  * Run a single-network forward pass on the GPU without caching the buffer set.
  *
- * This is the concurrent-safe counterpart to {@link activateGPU}. Every call
+ * This is the concurrent-safe counterpart to `activateGPU()`. Every call
  * uploads a fresh slab and creates a new bind group, so multiple requests that
  * target the same `Network` instance cannot overwrite each other's node or
  * output buffers. Pipelines are still shared through the per-device pipeline
@@ -614,14 +703,13 @@ function prepareActivationContext(network: Network): {
  * the pipeline layout. The bind group can be reused across activations as long
  * as the underlying buffers are the same.
  *
- * @param paramsBuffer - Optional params uniform buffer. When omitted, the
- *   buffer set's default params buffer is used.
+ * @param paramsBuffer - Per-level params uniform buffer.
  */
 function createActivationBindGroup(
   device: GPUDevice,
   layout: GPUBindGroupLayout,
   bufferSet: GPUBufferSet,
-  paramsBuffer?: GPUBuffer,
+  paramsBuffer: GPUBuffer,
 ): GPUBindGroup {
   return device.createBindGroup({
     layout,
@@ -640,7 +728,7 @@ function createActivationBindGroup(
       },
       {
         binding: GPU_BUFFER_BINDING.params,
-        resource: { buffer: paramsBuffer ?? bufferSet.params },
+        resource: { buffer: paramsBuffer },
       },
       {
         binding: GPU_BUFFER_BINDING.topoLevels,
@@ -763,12 +851,21 @@ function createLevelBindGroups(
  * Record the activation kernel dispatches for every topological level into the
  * supplied command encoder.
  *
- * The params uniform is supplied by a per-level bind group, so no queue writes or
- * intermediate submissions are needed between levels. The caller must submit
- * the encoder and wait on `device.queue.onSubmittedWorkDone()` before reading
- * any output buffer.
+ * The kernel is written as one compute pass per topological level rather than a
+ * single pass because each level must see the node writes produced by the
+ * previous level. Compute passes within the same command encoder are still
+ * submitted together, so the CPU pays for submission only once. The params
+ * uniform is supplied by a per-level bind group, so no queue writes or
+ * intermediate submissions are needed between levels. The caller submits the
+ * encoder; awaiting `mapAsync` on the output staging buffer is sufficient
+ * synchronization for readback.
+ *
+ * @param commandEncoder - Encoder that will hold all compute passes.
+ * @param bufferSet - Uploaded network slab buffers.
+ * @param pipeline - Compiled activation pipeline.
+ * @param levelBindGroups - Per-level bind groups from `createLevelBindGroups`.
  */
-function encodeActivationKernel(
+export function encodeActivationKernel(
   commandEncoder: GPUCommandEncoder,
   bufferSet: GPUBufferSet,
   pipeline: GPUComputePipeline,
@@ -796,9 +893,131 @@ function encodeActivationKernel(
 }
 
 /**
+ * Return the per-device staging-buffer size map, creating it on first use.
+ */
+function getOutputStagingBufferCache(
+  device: GPUDevice,
+): Map<number, GPUBuffer> {
+  let cache = activationOutputStagingBufferCache.get(device);
+  if (!cache) {
+    cache = new Map();
+    activationOutputStagingBufferCache.set(device, cache);
+  }
+  return cache;
+}
+
+/**
+ * Destroy a cached output staging buffer for the given device and byte size.
+ *
+ * Called when a network's cached GPU state is evicted to a different
+ * `GPUDevice`. The staging buffer is tied to the device that created it, so
+ * destroying it prevents the old device's resources from outliving the network
+ * buffers that were recorded for that device.
+ *
+ * @param device - WebGPU device that owns the cached staging buffer.
+ * @param byteLength - Exact byte size of the staging buffer to remove.
+ */
+function destroyOutputStagingBuffer(
+  device: GPUDevice,
+  byteLength: number,
+): void {
+  const cache = activationOutputStagingBufferCache.get(device);
+  if (!cache) {
+    return;
+  }
+  const buffer = cache.get(byteLength);
+  if (buffer) {
+    buffer.destroy();
+    cache.delete(byteLength);
+  }
+}
+
+/**
+ * Fetch or create a reusable mappable staging buffer of the requested size.
+ *
+ * Buffers are keyed by byte size per device. A cached buffer is recreated only
+ * when it has been destroyed, so activations that produce the same output size
+ * (the common case for repeated evaluation of a cohort) reuse a single buffer
+ * instead of allocating, mapping, and destroying one per call.
+ *
+ * @param device - WebGPU device that owns the staging buffer.
+ * @param byteLength - Required staging buffer size in bytes.
+ * @returns A GPU buffer with `MAP_READ | COPY_DST` usage.
+ */
+function getOrCreateOutputStagingBuffer(
+  device: GPUDevice,
+  byteLength: number,
+): GPUBuffer {
+  const cache = getOutputStagingBufferCache(device);
+  let buffer = cache.get(byteLength);
+  const isDestroyed =
+    buffer !== undefined &&
+    typeof (buffer as unknown as { destroyed?: boolean }).destroyed ===
+      'boolean' &&
+    (buffer as unknown as { destroyed: boolean }).destroyed;
+
+  if (buffer === undefined || isDestroyed) {
+    buffer = device.createBuffer({
+      label: 'network_outputs_staging',
+      size: byteLength,
+      usage: GPU_BUFFER_USAGE_MAP_READ | GPU_BUFFER_USAGE_COPY_DST,
+    });
+    cache.set(byteLength, buffer);
+  }
+
+  return buffer;
+}
+
+/**
  * Copy the output-node slice of the GPU output buffer to a mappable staging
- * buffer using the supplied command encoder, submit the encoder, await GPU
- * completion, and return a detached Float32Array copy.
+ * buffer using the supplied command encoder, submit the encoder, and return a
+ * detached Float32Array copy.
+ *
+ * The staging buffer is reused from the per-device output-staging cache rather
+ * than allocated per call. After `queue.submit`, `mapAsync` transitions the
+ * staging buffer from `unmapped` to `pending map`; the WebGPU implementation
+ * completes the transition to `mapped` only after the queue operations that
+ * target the buffer have finished. That makes `mapAsync` a sufficient
+ * synchronization point for readback, so an explicit
+ * `device.queue.onSubmittedWorkDone()` wait is unnecessary and is omitted to
+ * reduce CPU-GPU round trips.
+ *
+ * This is the function where the readback bottleneck shows up in practice.
+ * Project measurements on an RTX 4070 put the `queue.submit()` → `mapAsync()`
+ * round trip at 6–25 ms, while the GPU compute itself is typically under 1 ms
+ * for the network sizes this library evaluates. For a 64-node network the wait
+ * accounts for about 75% of wall time. The mitigation recommended in WebGPU
+ * best-practice guides is a ring of 2–3 staging buffers: the CPU maps and reads
+ * frame N while the GPU copies the next frame into a different buffer, so the
+ * CPU never blocks on the GPU's copy completion.
+ *
+ * WebGPU's three timelines explain why `mapAsync()` alone is enough. The copy
+ * command executes on the queue timeline; `mapAsync()` resolves on the content
+ * timeline only after all previously submitted work on that queue timeline has
+ * finished. Adding `onSubmittedWorkDone()` would wait for the same signal a
+ * second time from the CPU side without changing when the buffer becomes
+ * mappable.
+ *
+ * The mapping state machine for the staging buffer is:
+ *
+ * ```mermaid
+ * stateDiagram-v2
+ *   [*] --> unmapped : createBuffer
+ *   unmapped --> pendingMap : mapAsync(READ)
+ *   pendingMap --> mapped : queue work finishes
+ *   mapped --> unmapped : unmap()
+ *   unmapped --> [*] : destroy()
+ * ```
+ *
+ * @param commandEncoder - Encoder with the recorded activation passes.
+ * @param device - WebGPU device that owns the staging buffer.
+ * @param network - Network being evaluated; determines output node count.
+ * @param bufferSet - Uploaded network slab buffers.
+ * @returns Promise resolving to a detached copy of the output values.
+ * @see [WebGPU buffer mapping](https://www.w3.org/TR/webgpu/#buffer-mapping)
+ * @see [WebGPU buffer map states](https://www.w3.org/TR/webgpu/#enumdef-gpubuffermapstate)
+ * @see [WebGPU programming-model timelines](https://www.w3.org/TR/webgpu/#programming-model-timelines)
+ * @see [webgpufundamentals — efficiently using mappable buffers](https://webgpufundamentals.org/webgpu/lessons/webgpu-copying-data.html#efficiently-using-mappable-buffers)
  */
 async function readOutputValues(
   commandEncoder: GPUCommandEncoder,
@@ -811,11 +1030,10 @@ async function readOutputValues(
   const outputStartOffset =
     (bufferSet.nodeCount - outputNodeCount) * Float32Array.BYTES_PER_ELEMENT;
 
-  const stagingBuffer = device.createBuffer({
-    label: 'network_outputs_staging',
-    size: outputByteLength,
-    usage: GPU_BUFFER_USAGE_MAP_READ | GPU_BUFFER_USAGE_COPY_DST,
-  });
+  const stagingBuffer = getOrCreateOutputStagingBuffer(
+    device,
+    outputByteLength,
+  );
 
   const copyEncoder = commandEncoder as unknown as GPUCommandEncoderCopy;
   copyEncoder.copyBufferToBuffer(
@@ -826,13 +1044,11 @@ async function readOutputValues(
     outputByteLength,
   );
   device.queue.submit([commandEncoder.finish()]);
-  await device.queue.onSubmittedWorkDone();
 
   await stagingBuffer.mapAsync(GPU_MAP_MODE_READ);
   const mappedRange = stagingBuffer.getMappedRange();
   const output = new Float32Array(mappedRange.slice(0));
   stagingBuffer.unmap();
-  stagingBuffer.destroy();
 
   return output;
 }

@@ -13,6 +13,10 @@
  * also exports pure artifact-assembly helpers so the Node test suite can verify
  * percentage math, bottleneck ranking, and strategy generation.
  *
+ * @see [WebGPU Performance Guide](../../../docs/webgpu-performance-guide.md) for
+ * the measured overhead breakdown and optimization narrative that uses these
+ * profiling primitives.
+ *
  * @module
  */
 

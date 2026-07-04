@@ -4,6 +4,8 @@ import {
   batchActivate,
   createBatchInferenceQueue,
 } from './network.gpu.batched';
+import * as gpuActivate from './network.gpu.activate';
+import * as gpuBuffer from './network.gpu.buffer';
 import { GPU_NODE_STRUCT_BYTES } from './network.gpu.buffer';
 import { createMockGPUDevice } from './__mocks__/gpu.mock';
 
@@ -90,6 +92,34 @@ describe('network.gpu.batched', () => {
       });
     });
 
+    it('skips dynamic uploads when skipUpload is true', async () => {
+      const device = createMockGPUDevice();
+      const network = Network.createMLP(2, [3], 1);
+      const batchSize = 2;
+      const inputMatrix = new Float32Array(batchSize * network.input).fill(0.5);
+      const networks = Array.from({ length: batchSize }, () => network.clone());
+
+      const uploadSpy = jest
+        .spyOn(gpuBuffer, 'uploadDynamicNetworkBuffers')
+        .mockImplementation(() => undefined);
+      const writeSpy = jest
+        .spyOn(gpuBuffer, 'writeInputValuesToNodeStruct')
+        .mockImplementation(() => undefined);
+
+      await batchActivate(device, networks, inputMatrix, { skipUpload: true });
+
+      expect({
+        uploadCalls: uploadSpy.mock.calls.length,
+        writeCalls: writeSpy.mock.calls.length,
+      }).toEqual({
+        uploadCalls: 0,
+        writeCalls: 0,
+      });
+
+      uploadSpy.mockRestore();
+      writeSpy.mockRestore();
+    });
+
     it('reuses one compiled pipeline for networks with shared topology', async () => {
       const device = createMockGPUDevice();
       const network = Network.createMLP(2, [3], 1);
@@ -104,7 +134,7 @@ describe('network.gpu.batched', () => {
       expect(device.recorded.pipelines.length).toBe(1);
     });
 
-    it('schedules one mapAsync readback per network', async () => {
+    it('schedules a single mapAsync readback for the whole batch', async () => {
       const device = createMockGPUDevice();
       const network = Network.createMLP(2, [3], 1);
       const batchSize = 3;
@@ -115,7 +145,7 @@ describe('network.gpu.batched', () => {
         new Float32Array(batchSize * network.input),
       );
 
-      expect(device.recorded.mapAsyncCalls.length).toBe(batchSize);
+      expect(device.recorded.mapAsyncCalls.length).toBe(1);
     });
 
     it('matches CPU reference output for each input row', async () => {
@@ -299,21 +329,21 @@ describe('network.gpu.batched', () => {
 
       await expect(
         batchActivate(device, [network], new Float32Array(network.input)),
-      ).rejects.toThrow('batchActivate: first node has no squash function');
+      ).rejects.toThrow('activateGPU: first node has no squash function');
     });
 
     it('throws when the first node uses an unsupported activation', async () => {
       const device = createMockGPUDevice();
       const network = Network.createMLP(2, [3], 1);
       function unknownActivation(inputValue: number): number {
-        return inputValue;
+        return inputValue * 2 + 1;
       }
       network.nodes[0].squash = unknownActivation;
 
       await expect(
         batchActivate(device, [network], new Float32Array(network.input)),
       ).rejects.toThrow(
-        'batchActivate: first node uses an activation that is not in the worker registry',
+        'activateGPU: first node uses an activation that is not in the worker registry',
       );
     });
 
@@ -343,7 +373,8 @@ describe('network.gpu.batched', () => {
     it('throws for an activation with no symbol key and no function name', async () => {
       const device = createMockGPUDevice();
       const network = Network.createMLP(2, [3], 1);
-      network.nodes[0].squash = ((inputValue: number) => inputValue) as (
+      network.nodes[0].squash = ((inputValue: number) =>
+        inputValue * 2 + 1) as (
         inputValue: number,
         shouldComputeDerivative?: boolean,
       ) => number;
@@ -351,8 +382,219 @@ describe('network.gpu.batched', () => {
       await expect(
         batchActivate(device, [network], new Float32Array(network.input)),
       ).rejects.toThrow(
-        'batchActivate: first node uses an activation that is not in the worker registry',
+        'activateGPU: first node uses an activation that is not in the worker registry',
       );
+    });
+  });
+
+  describe('batchActivate iterations option', () => {
+    it('records the default single pass when iterations is omitted', async () => {
+      const device = createMockGPUDevice();
+      const network = Network.createMLP(2, [3], 1);
+      const batchSize = 2;
+
+      await batchActivate(
+        device,
+        Array.from({ length: batchSize }, () => network.clone()),
+        new Float32Array(batchSize * network.input),
+      );
+
+      expect(device.recorded.mapAsyncCalls.length).toBe(1);
+    });
+
+    it('records multiple compute passes when iterations > 1', async () => {
+      const device = createMockGPUDevice();
+      const network = Network.createMLP(2, [3], 1);
+      const batchSize = 2;
+      const iterations = 3;
+
+      await batchActivate(
+        device,
+        Array.from({ length: batchSize }, () => network.clone()),
+        new Float32Array(batchSize * network.input),
+        { iterations },
+      );
+
+      const singlePassDispatches =
+        batchSize * (network.nodes.length > 0 ? 2 : 0);
+      expect({
+        submissions: device.recorded.submissions.length,
+        mapAsyncCalls: device.recorded.mapAsyncCalls.length,
+      }).toEqual({
+        submissions: singlePassDispatches * iterations,
+        mapAsyncCalls: 1,
+      });
+    });
+
+    it('clamps iterations <= 0 to a single pass', async () => {
+      const device = createMockGPUDevice();
+      const network = Network.createMLP(2, [3], 1);
+      const batchSize = 1;
+
+      await batchActivate(
+        device,
+        Array.from({ length: batchSize }, () => network.clone()),
+        new Float32Array(batchSize * network.input),
+        { iterations: 0 },
+      );
+
+      const singlePassDispatches = batchSize * 2;
+      expect({
+        submissions: device.recorded.submissions.length,
+        mapAsyncCalls: device.recorded.mapAsyncCalls.length,
+      }).toEqual({
+        submissions: singlePassDispatches,
+        mapAsyncCalls: 1,
+      });
+    });
+
+    it('returns an output row for each network when iterations > 1', async () => {
+      const referenceNetwork = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice({
+        emulateNetwork: referenceNetwork,
+      });
+      const inputMatrix = new Float32Array([0.1, 0.2]);
+
+      const result = await batchActivate(
+        device,
+        [referenceNetwork.clone()],
+        inputMatrix,
+        { iterations: 4 },
+      );
+
+      expect(result.outputs.length).toBe(referenceNetwork.output);
+    });
+
+    it('matches CPU reference output when iterations > 1', async () => {
+      const referenceNetwork = Network.createMLP(2, [3], 1);
+      const device = createMockGPUDevice({
+        emulateNetwork: referenceNetwork,
+      });
+      const inputMatrix = new Float32Array([0.1, 0.2]);
+
+      const result = await batchActivate(
+        device,
+        [referenceNetwork.clone()],
+        inputMatrix,
+        { iterations: 4 },
+      );
+
+      const expected = referenceNetwork.activate([0.1, 0.2]);
+      const maxDifference = Math.max(
+        ...expected.map((value, index) =>
+          Math.abs(value - (result.outputs[index] ?? Number.POSITIVE_INFINITY)),
+        ),
+      );
+      expect(maxDifference).toBeLessThan(1e-4);
+    });
+
+    it('combines skipUpload and iterations', async () => {
+      const device = createMockGPUDevice();
+      const network = Network.createMLP(2, [3], 1);
+      const uploadSpy = jest
+        .spyOn(gpuBuffer, 'uploadDynamicNetworkBuffers')
+        .mockImplementation(() => undefined);
+      const writeSpy = jest
+        .spyOn(gpuBuffer, 'writeInputValuesToNodeStruct')
+        .mockImplementation(() => undefined);
+
+      const result = await batchActivate(
+        device,
+        [network],
+        new Float32Array(network.input),
+        { skipUpload: true, iterations: 5 },
+      );
+
+      expect({
+        uploadCalls: uploadSpy.mock.calls.length,
+        writeCalls: writeSpy.mock.calls.length,
+        mapAsyncCalls: device.recorded.mapAsyncCalls.length,
+        outputLength: result.outputs.length,
+      }).toEqual({
+        uploadCalls: 0,
+        writeCalls: 0,
+        mapAsyncCalls: 1,
+        outputLength: network.output,
+      });
+
+      uploadSpy.mockRestore();
+      writeSpy.mockRestore();
+    });
+  });
+
+  describe('batchActivate persistent staging buffer', () => {
+    it('reuses the batched output staging buffer across calls', async () => {
+      const device = createMockGPUDevice();
+      const network = Network.createMLP(2, [3], 1);
+      const batchSize = 2;
+      const inputMatrix = new Float32Array(batchSize * network.input);
+
+      await batchActivate(
+        device,
+        Array.from({ length: batchSize }, () => network.clone()),
+        inputMatrix,
+      );
+      await batchActivate(
+        device,
+        Array.from({ length: batchSize }, () => network.clone()),
+        inputMatrix,
+      );
+
+      expect(
+        device.recorded.buffers.filter(
+          (buffer) => buffer.label === 'network_batched_outputs_staging',
+        ).length,
+      ).toBe(1);
+    });
+
+    it('recreates the batched output staging buffer when it was destroyed', async () => {
+      const device = createMockGPUDevice();
+      const network = Network.createMLP(2, [3], 1);
+      const batchSize = 2;
+      const inputMatrix = new Float32Array(batchSize * network.input);
+
+      await batchActivate(
+        device,
+        Array.from({ length: batchSize }, () => network.clone()),
+        inputMatrix,
+      );
+      const stagingBuffer = device.recorded.buffers.find(
+        (buffer) => buffer.label === 'network_batched_outputs_staging',
+      );
+      (stagingBuffer as unknown as { destroyed: boolean }).destroyed = true;
+
+      await batchActivate(
+        device,
+        Array.from({ length: batchSize }, () => network.clone()),
+        inputMatrix,
+      );
+
+      expect(
+        device.recorded.buffers.filter(
+          (buffer) => buffer.label === 'network_batched_outputs_staging',
+        ).length,
+      ).toBe(2);
+    });
+  });
+
+  describe('batchActivate bind group validation', () => {
+    it('throws when a level bind group is missing', async () => {
+      const device = createMockGPUDevice();
+      const network = Network.createMLP(2, [3], 1);
+      const originalEnsure = gpuActivate.ensureNetworkGPUState;
+      const spy = jest
+        .spyOn(gpuActivate, 'ensureNetworkGPUState')
+        .mockImplementation((dev, net) => {
+          const result = originalEnsure(dev, net);
+          result.state.levelBindGroups[1] = undefined;
+          return result;
+        });
+
+      await expect(
+        batchActivate(device, [network], new Float32Array(network.input)),
+      ).rejects.toThrow('batchActivate: missing bind group for level 1');
+
+      spy.mockRestore();
     });
   });
 

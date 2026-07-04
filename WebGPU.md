@@ -157,58 +157,18 @@ the agent contract.
 
 ## Measured real-device performance
 
-The numbers below were captured on this developer machine with the Chrome
-DevTools MCP browser harness. They reflect the **current** implementation,
-which uploads and destroys every network's GPU buffers on each activation.
+The old per-call upload/destroy implementation made the GPU path slower than
+the CPU for the small, topology-changing networks typical of NEAT. Since then,
+the implementation has gained persistent per-network GPU state, pooled
+staging buffers, single-encoder submission, and fused-iteration batched
+activation. For the current numbers — including the RTX 4070 overhead
+breakdown, single-network and parallel throughput ladders, and CPU/GPU
+crossover map — see the dedicated [WebGPU Performance Guide](./docs/webgpu-performance-guide.md).
 
-**Test hardware**
-
-- Browser: Headless Chrome 149 on Windows 10
-- GPU adapter: NVIDIA Lovelace architecture
-
-**2-3-1 MLP, single-network loop (500 activations)**
-
-| Path | Total | Per activation | Speed-up |
-| ---- | ----- | -------------- | -------- |
-| CPU  | ~4.1 ms | ~0.008 ms | — |
-| GPU  | ~2.7 s | ~5.4 ms | **0.0015×** |
-
-The GPU is ~600× slower here because upload/destroy dominates for a tiny
-network.
-
-**Batched multi-agent inference (same topology, 100 networks × 100 generations)**
-
-| Path | Total | Per activation | Per generation | Speed-up |
-| ---- | ----- | -------------- | ---------------- | -------- |
-| CPU  | ~25 ms | ~0.0025 ms | ~0.25 ms | — |
-| GPU  | ~3.5 s | ~0.35 ms | ~35 ms | **0.007×** |
-
-**Shape sweep (100-1000 activations per shape)**
-
-| Shape | Batch × generations | CPU total | GPU total | Speed-up |
-| ----- | ------------------- | --------- | --------- | -------- |
-| 2-3-1 | 1000 × 10 | ~53 ms | ~3.2 s | 0.016× |
-| 10-32-32-4 | 100 × 10 | ~55 ms | ~399 ms | 0.14× |
-| 10-64-64-4 | 100 × 10 | ~101 ms | ~651 ms | 0.16× |
-| 10-32-32-4 | 500 × 10 | ~187 ms | ~1.6 s | 0.11× |
-
-Parity is good: on the 2-3-1 smoke test the CPU/GPU absolute difference is
-≈0.01, well inside the tolerance bounds.
-
-### What this means
-
-- **Library capability gained:** WebGPU activation now runs on real hardware with
-  CPU/GPU parity. The `activateGPU` and `batchActivate` helpers are exported from
-  the browser bundle.
-- **NGE / racing curriculum:** No speed-up yet. The current implementation is
-  slower than the CPU path for the small, topology-changing networks typical of
-  NEAT because buffer upload and pipeline compilation run on every call.
-- **Next optimization:** Cache uploaded buffers and compiled pipelines across
-  activations, and batch many genomes in a single dispatch. Until that happens,
-  live demos should keep using the CPU path.
-- **Pac-Man-like demos:** Same prognosis — GPU will not help until per-network
-  upload cost is removed. The CPU remains the better default for interactive
-  agents.
+In short: the CPU path remains the safer default for classic NEAT scoring and
+checkpointing. The GPU path is a candidate only when many networks are
+evaluated in parallel, when the network is large, or when outputs are needed
+only at the end of a batched evaluation.
 
 ## See Also
 

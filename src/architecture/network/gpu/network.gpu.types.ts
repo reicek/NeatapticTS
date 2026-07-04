@@ -66,10 +66,27 @@ export const GPU_BUFFER_BINDING_COUNT = 6;
 /**
  * GPU-side buffer handles and metadata produced by uploading a network slab.
  *
- * The implementation creates exactly six WebGPU buffers and records
- * `nodeCount`/`connectionCount` so the compute pipeline can size its dispatches
- * without re-reading CPU structures. The `topoLevelsArray` is kept here because
- * the CPU dispatch loop still needs to know how many levels to launch.
+ * The set contains exactly six WebGPU buffers bound to the compute kernel in
+ * the order described by `GPU_BUFFER_BINDING`: the connection struct
+ * array, the node struct array, the per-node output buffer, the per-dispatch
+ * params uniform, the topological level array, and the incoming-CSR start-offset
+ * array. The `inStart` buffer stores `nodeCount + 1` offsets into the connection
+ * array so that the gather kernel can read each node's incoming edges as one
+ * contiguous slice.
+ *
+ * The buffers are split by update frequency. Static buffers — `connections`
+ * (when topology is stable), `topoLevels`, and `inStart` — are uploaded once
+ * and reused. Dynamic buffers — `connections` weights and `nodes` biases — are
+ * rewritten every activation through `queue.writeBuffer()`. The `outputs` buffer
+ * is written by the GPU and then copied to a mappable staging buffer for
+ * readback, following the rule that `mapAsync()` should be reserved for
+ * readback while `writeBuffer()` handles CPU-to-GPU updates.
+ *
+ * The implementation also records `nodeCount` and `connectionCount` so the
+ * compute pipeline can size its dispatches without re-reading CPU structures.
+ * The `topoLevelsArray` is kept here because the CPU dispatch loop still needs
+ * to know how many levels to launch.
+ * @see [toji.dev — WebGPU buffer uploads](https://toji.dev/webgpu-best-practices/buffer-uploads)
  */
 export interface GPUBufferSet {
   /** Struct array buffer `{ from_node, to_node, weight, flags }`. */

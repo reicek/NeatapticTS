@@ -1,3 +1,46 @@
+/**
+ * WGSL kernel generation and pipeline compilation for the WebGPU activation path.
+ *
+ * The GPU forward pass is implemented as a gather-reduce compute shader: each
+ * thread is responsible for one node, gathers its incoming activations by
+ * walking the incoming-CSR slice of the connection array, applies the network's
+ * single activation function, and writes the result back to the node and output
+ * buffers. This design keeps the kernel stateless and topology-agnostic; all
+ * topology-specific data lives in storage buffers, so the same compiled pipeline
+ * can drive many networks that share the same activation function.
+ *
+ * Work is dispatched with a 1-D workgroup size of 64 threads. On an NVIDIA RTX
+ * 4070 (Ada Lovelace, 46 streaming multiprocessors) 64 threads is two warps,
+ * which lets the scheduler hide memory latency while keeping occupancy high.
+ * Larger workgroups do not necessarily help because the kernel is memory-bound
+ * and the per-node parallelism is already coarse.
+ *
+ * Occupancy matters because the kernel is heavily memory-bound. An RTX 4070 has
+ * 46 SMs, each capable of hosting up to 1536 concurrent threads (48 warps).
+ * With a workgroup size of 64 (2 warps), each SM can theoretically hold 24
+ * workgroups, or 1,104 workgroups across the whole chip. For 8,192 nodes the
+ * dispatch launches only 128 workgroups, about 3 per SM, so the GPU is nowhere
+ * near full occupancy and much of the chip sits idle. At 32,768 nodes the
+ * dispatch launches 512 workgroups, roughly 11 per SM, which is better but still
+ * below the hardware ceiling. That is why throughput keeps climbing with network
+ * size until either memory bandwidth or the maximum dispatch dimension becomes
+ * the limit. Workgroup size is also chosen as a multiple of 32, the NVIDIA warp
+ * size, to avoid partially occupied warps.
+ *
+ * The kernel binding layout uses six entries, which is below the WebGPU default
+ * `maxStorageBuffersPerShaderStage` limit of eight and leaves headroom for future
+ * buffers. Buffer sizes are validated against `maxStorageBufferBindingSize`
+ * (default 128 MiB) before allocation.
+ *
+ * @see [Gather-scatter](https://en.wikipedia.org/wiki/Gather-scatter) pattern
+ * @see [WebGPU compute shader](https://en.wikipedia.org/wiki/WebGPU)
+ * @see [WebGPU limits](https://www.w3.org/TR/webgpu/#limits)
+ * @see [CUDA C programming guide — multiprocessor occupancy](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#compute-capabilities)
+ * @see [GPU occupancy (Wikipedia)](https://en.wikipedia.org/wiki/Thread_block_(CUDA)#Occupancy)
+ * @see [WebGPU Performance Guide](https://github.com/reicek/NeatapticTS/blob/main/docs/webgpu-performance-guide.md)
+ *
+ * @module
+ */
 import type Network from '../network';
 import {
   buildActivationRegistry,
@@ -57,6 +100,12 @@ function readActivationIndex(network: Network): number {
 
 /**
  * Size of the one-dimensional compute workgroup used by the activation kernel.
+ *
+ * 64 threads is two warps on NVIDIA hardware and matches the warp/wavefront
+ * granularity of many GPUs. On an RTX 4070 (46 SMs) this keeps occupancy high
+ * without oversubscribing registers for the simple gather-reduce shader. The
+ * dispatch rounds the node count up to whole workgroups, so the final group may
+ * contain idle threads for small networks.
  */
 const WORKGROUP_SIZE = 64;
 
@@ -67,13 +116,23 @@ const WORKGROUP_SIZE = 64;
  * read-write node struct array, a read-write output array, a per-dispatch
  * params uniform, a read-only per-node topological level array, and a
  * read-only incoming-CSR start-offset array. One thread is dispatched per node
- * and threads that do not belong to the current level early-exit.
+ * and threads that do not belong to the current topological level early-exit.
+ *
+ * The forward pass is a gather-reduce kernel: each node thread reads its bias
+ * from `nodes[node].derivative_state`, then loops over the connection indices
+ * in `[inStart[node], inStart[node+1])`, multiplies each source activation by
+ * the connection weight, and accumulates the sum. Finally it applies the
+ * network-wide activation function and writes the result to both the node struct
+ * and the output buffer. Because the accumulation order is sorted by source
+ * rank on the CPU, the GPU sum matches the CPU fast-slab order and produces
+ * the same rounded f32 result.
  *
  * @param network - Network whose activation index, topology, and slab arrays
  *   drive the generated shader.
  * @returns WGSL source string.
  * @throws Error when the network has no nodes or lacks an indexed squash
  *   function.
+ * @see [Gather-scatter](https://en.wikipedia.org/wiki/Gather-scatter)
  */
 function generateActivationSource(network: Network): string {
   const registry = buildActivationRegistry();
@@ -262,11 +321,16 @@ function computeTopologyKey(network: Network, activationIndex: number): string {
 /**
  * Compile (or reuse) the activation compute pipeline for a network topology.
  *
- * The pipeline is created once per unique topology and cached on the supplied
- * device. Recompilations with identical topology but different weights reuse
- * the cached `GPUComputePipeline`, avoiding redundant compile stalls during
- * live inference. The shader module, bind-group layout, and pipeline creation
- * calls remain observable through a mock device for unit testing.
+ * This helper caches pipelines by topology key on the supplied device.
+ * Recompilations with identical topology but different weights reuse the cached
+ * `GPUComputePipeline`, avoiding redundant compile stalls during live
+ * inference. The production single-network path in
+ * `ensureNetworkGPUState()` uses a per-device cache keyed by the
+ * generated WGSL source instead, because identical WGSL implies an identical
+ * pipeline regardless of topology. Both caches avoid redundant compilations.
+ *
+ * The shader module, bind-group layout, and pipeline creation calls remain
+ * observable through a mock device for unit testing.
  *
  * @param device - WebGPU device used to compile the compute pipeline.
  * @param network - Network whose topology and activation index drive the kernel.
@@ -316,8 +380,15 @@ export function compileActivationKernel(
  * array, the per-node output buffer, the per-dispatch params uniform, the
  * per-node topological level array, and the incoming-CSR start-offset array.
  *
+ * Six read-only/read-write storage bindings plus one uniform fit comfortably
+ * within the WebGPU default limit of eight storage buffers per shader stage.
+ * Buffer sizes are validated separately against `maxStorageBufferBindingSize`,
+ * which defaults to 128 MiB and is large enough for the networks this library
+ * is designed to evaluate.
+ *
  * @param device - WebGPU device used to create the layout.
  * @returns A bind-group layout with six entries.
+ * @see [WebGPU limits](https://www.w3.org/TR/webgpu/#limits)
  *
  * @example
  * ```ts

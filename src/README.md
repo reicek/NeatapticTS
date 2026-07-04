@@ -6762,23 +6762,37 @@ batchActivate(
   device: GPUDevice,
   networks: default[],
   inputMatrix: Float32Array<ArrayBufferLike>,
+  options: BatchActivateOptions | undefined,
 ): Promise<BatchedGPUResult>
 ```
 
 Batched GPU activation for multi-agent evaluation.
 
-Uploads the input matrix and every network's fast-slab topology to the GPU,
-reuses compiled pipelines for networks that share topology, dispatches all
-networks in a single compute pass once per topological level, and reads back
-one output row per network into a row-major result matrix. The CPU path
-remains the default; this seam is opt-in and gated by `canUseGPU`.
+Reuses the per-network persistent GPU state managed by
+`ensureNetworkGPUState()`, uploads only the dynamic node/connection data
+and the input matrix each call, dispatches all networks in one or more compute
+passes once per topological level, and reads back the output matrix through a
+single reusable staging buffer. This removes the per-call buffer allocation,
+mapping, and destruction that otherwise make the GPU path slower than the CPU
+path for small networks. The optional `iterations` flag records many
+independent passes inside a single command buffer with only one CPU-GPU
+readback.
+
+Because every pass is recorded before the command buffer is submitted, only
+one `mapAsync` call is needed for the final result. The WebGPU specification
+already guarantees that mapping waits for all previously submitted work on the
+buffer's queue timeline, so an additional `onSubmittedWorkDone()` barrier is
+redundant for readback and is intentionally omitted.
 
 Parameters:
 - `device` - WebGPU device used to run the forward kernel.
 - `networks` - Networks to evaluate as a batch. All networks must have the
 same input and output dimensions.
 - `inputMatrix` - Flattened row-major inputs, length
-`networks.length * networks[0].input`.
+`networks.length * networks[0].input`. Still validated when upload is
+skipped, but not written to the GPU in that case.
+- `options` - Optional tuning flags for repeated static evaluation
+(see `BatchActivateOptions`).
 
 Returns: Promise resolving to a row-major output matrix.
 
@@ -6788,6 +6802,12 @@ Example:
 const networks = Array.from({ length: 4 }, () => Network.createMLP(2, [3], 1));
 const inputs = new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]);
 const { outputs, rowCount, colCount } = await batchActivate(device, networks, inputs);
+
+// Amortize CPU-GPU synchronization across 60 identical static evaluations.
+const batched = await batchActivate(device, networks, inputs, {
+  skipUpload: true,
+  iterations: 60,
+});
 ```
 
 ### buildOverheadArtifact

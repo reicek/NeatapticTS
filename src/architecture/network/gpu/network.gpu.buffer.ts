@@ -1,3 +1,61 @@
+/**
+ * CPU-side preparation and upload for the WebGPU activation path.
+ *
+ * Before the GPU can run a forward pass, the network's connection slab,
+ * node state, topological levels, and incoming-edge CSR offsets must be packed
+ * into GPU-friendly arrays and copied to the device. This module owns that
+ * preparation. The work is CPU-bound: on an RTX 4070 the CPU preparation slice
+ * grows from 13.2% of wall time for a 64-node network to 42.3–44.9% for 4k–8k
+ * node networks, so this path is also the place to look when optimizing large-
+ * network latency.
+ *
+ * The upload path splits data into static and dynamic buffers. Static buffers
+ * (the connection array sorted by source rank, topological levels, and CSR
+ * start offsets) change only when the topology changes. Dynamic buffers (the
+ * full connection struct array with current weights and the full node struct
+ * array with current biases) are rewritten on every activation through
+ * `uploadDynamicNetworkBuffers()`. Keeping the split narrow avoids paying the
+ * topological-sort cost on every forward pass.
+ *
+ * The packed layout uses a compressed sparse row (CSR) representation for
+ * incoming edges and a Kahn-style topological sort to level nodes. Both are
+ * standard graph algorithms that keep the GPU kernel simple: one thread per
+ * node can gather its inputs by walking a contiguous slice of the connection
+ * array.
+ *
+ * WebGPU buffer upload strategy follows the hierarchy Brandon Jones documents in
+ * the `toji.dev` WebGPU best-practices guide. Data written once and rarely
+ * changed should be created with `mappedAtCreation: true`, filled directly from
+ * the CPU, and then unmapped. Data updated every frame should use
+ * `queue.writeBuffer()`, which queues an asynchronous GPU-side copy and avoids
+ * stalling the CPU. Mappable buffers and `mapAsync()` should be reserved for
+ * readback, because mapping waits until the GPU is finished with the buffer.
+ * Destroying and recreating buffers on the hot path is expensive and is avoided
+ * here by caching buffer sets and staging buffers. The static upload path uses
+ * `createBuffer` followed by `queue.writeBuffer()`; a one-shot static upload could
+ * instead use `mappedAtCreation: true` for the slab. The dynamic weight/bias
+ * updates already follow the `writeBuffer` rule.
+ *
+ * TensorFlow.js codifies this with its `BufferManager`: a pool of
+ * `GPUBuffer` handles keyed by `${size}_${usage}` with `acquireBuffer` and
+ * `releaseBuffer` lifecycles, so inference never pays allocation or destruction
+ * overhead. burn's `burn-wgpu` compute server uses the same idea with a
+ * size-keyed handle pool. NeatapticTS keeps topology buffer sets alive across
+ * activations and reuses one staging buffer per output size, which moves in the
+ * same direction but still re-uploads and reads back every pass.
+ *
+ * @see [Compressed sparse row](https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format))
+ * @see [Topological sorting](https://en.wikipedia.org/wiki/Topological_sorting)
+ * @see [toji.dev — WebGPU buffer uploads](https://toji.dev/webgpu-best-practices/buffer-uploads)
+ *   for the `mappedAtCreation` / `writeBuffer` / `mapAsync` trade-off.
+ * @see [toji.dev — writeBuffer when in doubt](https://toji.dev/webgpu-best-practices/buffer-uploads#when-in-doubt-writebuffer)
+ * @see [toji.dev — buffers written to frequently](https://toji.dev/webgpu-best-practices/buffer-uploads#buffers-that-are-written-to-frequently)
+ * @see [TensorFlow.js BufferManager](https://github.com/tensorflow/tfjs/blob/7f5309fef0a47545e34049903dbdae0f97285f7e/tfjs-backend-webgpu/src/buffer_manager.ts)
+ * @see [burn-wgpu compute server](https://github.com/tracel-ai/burn/blob/v0.12.1/burn-wgpu/src/compute/server.rs)
+ * @see [WebGPU Performance Guide](https://github.com/reicek/NeatapticTS/blob/main/docs/webgpu-performance-guide.md)
+ *
+ * @module
+ */
 import type Network from '../network';
 import type Node from '../../node/node';
 import { canUseGPU } from './network.gpu.capability';
@@ -165,12 +223,16 @@ interface ConnectionSlab {
  *
  * `inStart[node]` and `inStart[node + 1]` bound the slice of `inOrder` that
  * lists connection indices feeding into `node`. The ordering is deterministic
- * because it follows the connection index order returned by the slab.
+ * because it follows the connection index order returned by the slab. Using a
+ * compressed sparse row layout lets the GPU kernel gather a node's inputs with
+ * one contiguous storage-buffer read per incoming edge instead of chasing
+ * pointers.
  *
  * @param slab - Connection slab with `from`/`to` source/target arrays.
  * @param nodeCount - Number of nodes in the network.
  * @param connectionCount - Number of connections in the network.
  * @returns Incoming CSR offsets and connection order arrays.
+ * @see [Compressed sparse row](https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format))
  */
 export function buildIncomingCSR(
   slab: ConnectionSlab,
@@ -207,10 +269,15 @@ export function buildIncomingCSR(
 /**
  * Build the outgoing-CSR adjacency arrays used for topological level sorting.
  *
+ * The outgoing CSR mirrors the incoming CSR but lets the topological walk start
+ * from source nodes and follow forward edges. It is computed once per topology
+ * change, so its cost is amortized across many activations.
+ *
  * @param slab - Connection slab with `from`/`to` source/target arrays.
  * @param nodeCount - Number of nodes in the network.
  * @param connectionCount - Number of connections in the network.
  * @returns Outgoing CSR offsets and connection order arrays.
+ * @see [Compressed sparse row](https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format))
  */
 export function buildOutgoingCSR(
   slab: ConnectionSlab,
@@ -247,11 +314,15 @@ export function buildOutgoingCSR(
  * maximum level among its incoming sources. The Kahn-style traversal is
  * deterministic and produces the same levels for the same topology, which the
  * GPU kernel uses to schedule per-level dispatches without cross-thread races.
+ * This step is part of the static upload set and runs only when the topology
+ * changes.
  *
  * @param slab - Connection slab with `from`/`to` source/target arrays.
  * @param nodeCount - Number of nodes in the network.
  * @param connectionCount - Number of connections in the network.
  * @returns A `nodeCount`-length array of unsigned topological levels.
+ * @see [Topological sorting](https://en.wikipedia.org/wiki/Topological_sorting)
+ * @see [Kahn's algorithm](https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm)
  */
 export function buildTopoLevels(
   slab: ConnectionSlab,
@@ -440,10 +511,17 @@ const GPU_PARAMS_BYTES = 16;
  * GPU gather kernel the same rounded result as the CPU push path instead of
  * relying on looser tolerances.
  *
+ * This step is part of the dynamic upload set, so it runs on every activation.
+ * Its cost is linear in the connection count and becomes a measurable fraction
+ * of wall time for large networks (up to ~44.9% CPU preparation for 4k nodes on
+ * an RTX 4070). Avoiding it requires keeping the topology unchanged and using
+ * a weight-only update path, which this module does not provide.
+ *
  * @param network - Network whose nodes and connection slab will be packed.
  * @param connectionCount - Number of active connections to pack. The slab may
  *   over-allocate, so only this many entries are uploaded.
  * @returns An `ArrayBuffer` ready for `queue.writeBuffer`.
+ * @see [Compressed sparse row](https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format))
  */
 export function buildConnectionsArray(
   network: Network,
@@ -499,9 +577,14 @@ export function buildConnectionsArray(
  *
  * Each node is laid out as `{ activation_state: f32, derivative_state: f32,
  * error: f32, flags: u32 }`. The forward-pass kernel reads the bias from the
- * `derivative_state` slot because the plan's node struct keeps `bias` there
- * (the slot is unused by the forward pass otherwise). Callers should treat the
+ * `derivative_state` slot because the node struct stores `bias` there (the slot
+ * is unused by the forward pass otherwise). Callers should treat the
  * `derivative_state` field as the per-node bias while the kernel is running.
+ *
+ * Like `buildConnectionsArray()`, this step is part of the dynamic upload
+ * set and is rewritten on every activation. Its cost is linear in the node
+ * count and is included in the CPU-preparation share reported in the
+ * performance guide.
  *
  * @param network - Network whose node state will be packed.
  * @returns An `ArrayBuffer` ready for `queue.writeBuffer`.
@@ -552,6 +635,12 @@ export function computeTopoLevelCount(levels: Uint32Array): number {
  * below the WebGPU default limit for storage buffers per shader stage and
  * removes the need to request a custom `maxStorageBuffersPerShaderStage`
  * limit.
+ *
+ * This function performs the static upload: the connection array, topological
+ * levels, and CSR start offsets change only when the topology changes and are
+ * cached through `ensureNetworkGPUState()`. Callers must still call
+ * `uploadDynamicNetworkBuffers()` before each activation to refresh
+ * weights and biases.
  *
  * @param device - Mock or real WebGPU device used to allocate buffers.
  * @param network - Network whose fast-slab layout will be uploaded.
@@ -657,6 +746,13 @@ export function uploadNetworkToGPU(
  * the values live inside struct arrays, the whole connections buffer and the
  * whole nodes buffer are rewritten. Topology metadata does not change here;
  * callers recreate the full `GPUBufferSet` when the topology changes.
+ *
+ * This whole-buffer rewrite is the dynamic-upload cost shown in the performance
+ * guide. On an RTX 4070 it accounts for a growing share of wall time as the
+ * network grows, reaching roughly 24–33% of the single-network GPU path for
+ * 1k–8k nodes. Callers that evaluate the same static cohort many times can use
+ * the batched activation path's `skipUpload` flag to avoid paying this cost on
+ * every call.
  *
  * @param device - WebGPU device that owns the buffers.
  * @param bufferSet - Topology buffers created by `uploadNetworkToGPU`.
