@@ -1,6 +1,6 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: 624cfd9cc045b12ae596d12584d1c8793696c8c3dcb1bc33c4a3cef30c69d794 -->
-<!-- source-file-count: 131 -->
+<!-- source-hash: 07ae1f978e795d3ccf0b1cb5113e4f668e618a88a278eeee410f5d5bd26eddba -->
+<!-- source-file-count: 127 -->
 # Canonical Agent and Skill Routing Table
 
 > Generated file. Do not edit manually.
@@ -90,10 +90,6 @@
 | architecture-builder | skill | - | 04-implementing<br>flappy-architecture-polish | self |
 | auditing-js-docs | skill | - | 06-documenting<br>academic-docs-auditor | self |
 | browser-build | skill | - | browser-runtime-scout | self |
-| browser-testing-harness | skill | - | 03-red-testing<br>04-implementing<br>05-green-testing<br>06-documenting<br>browser-harness-specialist<br>browser-memory-specialist<br>browser-ui-specialist<br>performance-trace-specialist | self |
-| bug-triage | skill | - | - | self |
-| capturing-learning-event | skill | - | 00-helping<br>07-logging<br>assimilator<br>learning-event-capturer | self |
-| checkpointing-persistence | skill | - | checkpoint-scout | self |
 | chrome-devtools-mcp | skill | - | 03-red-testing<br>05-green-testing<br>browser-harness-specialist<br>browser-memory-specialist<br>browser-ui-specialist<br>performance-trace-specialist | self |
 | coverage-guard | skill | - | 05-green-testing<br>coverage-guard<br>coverage-scout<br>implementation-executor<br>test-coverage-analyst | self |
 | coverage-tranche | skill | - | 03-red-testing<br>coverage-scout<br>test-coverage-analyst | self |

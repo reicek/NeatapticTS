@@ -126,6 +126,8 @@ export async function updateRag(options = {}) {
     const startTime = Date.now();
     let stageStatus = dryRun ? 'dry-run' : 'ok';
     let stageError = null;
+    let stageStdout = '';
+    let stageStderr = '';
 
     try {
       const result = spawnRunner({
@@ -134,10 +136,16 @@ export async function updateRag(options = {}) {
         args: stageArgs,
       });
 
+      stageStdout = String(result?.stdout ?? '');
+      stageStderr = String(result?.stderr ?? '');
       const exitStatus = Number(result?.status ?? 1);
       if (exitStatus !== 0) {
         stageStatus = 'failed';
         stageError = `${stageDefinition.name} exited with status ${exitStatus}.`;
+        if (stageStdout.trim() || stageStderr.trim()) {
+          stageError += `\n--- ${stageDefinition.name} stdout ---\n${stageStdout.trim()}`;
+          stageError += `\n--- ${stageDefinition.name} stderr ---\n${stageStderr.trim()}`;
+        }
       }
     } catch (error) {
       stageStatus = 'failed';
@@ -145,11 +153,16 @@ export async function updateRag(options = {}) {
     }
 
     const elapsedMs = Date.now() - startTime;
-    stages.push({
+    const stageReport = {
       name: stageDefinition.name,
       status: stageStatus,
       elapsedMs,
-    });
+    };
+    if (stageStatus === 'failed') {
+      stageReport.stdout = stageStdout;
+      stageReport.stderr = stageStderr;
+    }
+    stages.push(stageReport);
 
     if (stageStatus === 'failed') {
       pipelineError = stageError ?? `${stageDefinition.name} failed.`;
@@ -253,18 +266,23 @@ async function writeCorpusHash(hash) {
 /**
  * Run a single pipeline stage as a Node subprocess.
  *
- * Captures stdout/stderr so the child output does not leak to the orchestrator.
+ * Captures stdout/stderr so the child output can be surfaced when a stage fails.
  *
  * @param {{ name: string, script: string, args: string[] }} stage - Stage to run.
- * @returns {{ status: number | null }} Subprocess result.
+ * @returns {{ status: number | null, stdout: string, stderr: string }} Subprocess result.
  */
 function runStageSubprocess(stage) {
   const scriptPath = path.join(repoRoot, 'rag-index', stage.script);
-  return spawnSync(process.execPath, [scriptPath, ...stage.args], {
+  const result = spawnSync(process.execPath, [scriptPath, ...stage.args], {
     cwd: repoRoot,
     encoding: 'utf8',
     stdio: ['inherit', 'pipe', 'pipe'],
   });
+  return {
+    status: result.status,
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
+  };
 }
 
 /**

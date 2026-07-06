@@ -257,4 +257,48 @@ describe('update-rag.mjs CLI orchestrator', () => {
       });
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Failure log capture contract
+  // ---------------------------------------------------------------------------
+
+  describe('failure log capture', () => {
+    it('surfaces stdout and stderr in the failed stage report', async () => {
+      const { runner, calls } = createMockRunner({
+        validate: 1,
+      });
+      runner.mockOutput = { stdout: 'validate stdout', stderr: 'validate stderr' };
+      const wrappedRunner = (stage) => {
+        const result = runner(stage);
+        return {
+          status: result.status,
+          stdout: runner.mockOutput.stdout,
+          stderr: runner.mockOutput.stderr,
+        };
+      };
+      const hashStore = createMockHashStore();
+
+      const summary = await updateRag({
+        json: true,
+        spawnRunner: wrappedRunner,
+        readHashFile: hashStore.readHashFile,
+        writeHashFile: hashStore.writeHashFile,
+        computeCorpusHash: hashStore.computeCorpusHash,
+      });
+      const validateStage = summary.stages.find(
+        (stage) => stage.name === 'validate',
+      );
+
+      expect(summary.ok).toBe(false);
+      expect(validateStage).toEqual(
+        expect.objectContaining({
+          status: 'failed',
+          stdout: 'validate stdout',
+          stderr: 'validate stderr',
+        }),
+      );
+      expect(summary.error).toContain('validate stdout');
+      expect(summary.error).toContain('validate stderr');
+    });
+  });
 });
