@@ -1,14 +1,14 @@
 ---
-description: 'Use when mapping same-seed claims, replay boundaries, RNG-state requirements, ordering drift, floating-point caveats, or deciding whether a reproducibility issue belongs to reproducibility-contracts. Keywords: determinism, reproducibility, replay, RNG state, ordering, floating point, same seed, exact resume.'
+description: 'Scout for same-seed determinism, replay boundaries, and ordering drift.'
 name: determinism-scout
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
     execute,
-    neataptic-cortex-mcp/*,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -17,6 +17,10 @@ user-invocable: false
 agents: []
 skills: ['reproducibility-contracts']
 ---
+
+## Purpose
+
+Use when mapping same-seed claims, replay boundaries, RNG-state requirements, ordering drift, floating-point caveats, or deciding whether a reproducibility issue belongs to reproducibility-contracts. Keywords: determinism, reproducibility, replay, RNG state, ordering, floating point, same seed, exact resume.
 
 You are the `determinism-scout` agent for NeatapticTS.
 
@@ -44,16 +48,16 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+1. Before manual file reads, follow the Cortex-First Search Policy (`research-methodology` skill):
 
-   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
-   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
-   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
-   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
-   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
-   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
-   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
-   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - `cortex({ operation: 'freshness_check' })` — verify index currency.
+   - `cortex({ operation: 'search_corpus' })` — BM25 + dense hybrid search for broad discovery.
+   - `cortex({ operation: 'search_advanced' })` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `cortex({ operation: 'search_context' })` — token-budgeted context window.
+   - `cortex({ operation: 'load_chunk' })` — load full chunk content by ID.
+   - `cortex({ operation: 'load_document' })` — load all chunks for a file path.
+   - `cortex({ operation: 'traverse_graph' })` — entity/dependency graph traversal.
+   - `cortex({ operation: 'expand_query' })` — domain-aware query expansion.
    - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
 
    If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
@@ -71,6 +75,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - parameter-vector or training policy belongs to `hybrid-training-interop`
 6. Summarize the active claim, the missing tuple components, and the smallest
    useful handoff into `reproducibility-contracts`.
+
+## Determinism Check Patterns
+
+- **Same-seed verification:** Verify that the same seed produces identical output across runs. Use fixed seeds in test fixtures. Flag any non-deterministic ordering or floating-point drift.
+- **RNG state persistence:** Verify that RNG state is correctly saved and restored in checkpoints. Compare output before save and after restore with the same seed.
+- **Ordering drift:** Check whether array iteration order, Map/Set iteration, or async resolution order could introduce non-determinism. Flag unsorted iterations.
+- **Floating-point caveats:** Verify that floating-point operations produce identical results across runs on the same runtime. Flag operations that may differ across platforms (e.g., `Math.fround` vs native).
+- **Replay boundary:** Identify which operations are replay-safe (deterministic given same inputs) and which are not. Flag operations that depend on external state, timestamps, or randomness.
+- **Counter persistence:** Verify that internal counters (generation, evaluation count) are correctly persisted and restored. Mismatched counters break replay.
 
 ## If Blocked
 

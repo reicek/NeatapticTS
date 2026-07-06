@@ -6,17 +6,17 @@ documentation alongside its UI.
 
 ## Modules
 
-| File | Purpose |
-|---|---|
-| `semantic-snapshot-loader.ts` | Fetch and cache the generated snapshot via IndexedDB |
+| File                          | Purpose                                                  |
+| ----------------------------- | -------------------------------------------------------- |
+| `semantic-snapshot-loader.ts` | Fetch and cache the generated snapshot via IndexedDB     |
 | `semantic-snapshot-search.ts` | Heading-weighted lexical search over the loaded snapshot |
-| `semantic-snapshot.types.ts` | Shared TypeScript interfaces |
+| `semantic-snapshot.types.ts`  | Shared TypeScript interfaces                             |
 
 ---
 
 ## Snapshot format
 
-`docs/assets/semantic-snapshot.json` is a **generated artifact** produced by the docs
+`rag-index/snapshots/semantic-snapshot.json` is a **generated artifact** produced by the docs
 pipeline. Never edit it directly — it is regenerated on every `npm run docs` run.
 
 **To update the corpus:**
@@ -24,9 +24,9 @@ pipeline. Never edit it directly — it is regenerated on every `npm run docs` r
 ```sh
 # 1. Edit source documents (READMEs, plans, skills, etc.)
 # 2. Rebuild the SQLite index:
-node scripts/semantic-index/build-index.mjs
+node rag-index/build-index.mjs
 # 3. Publish the snapshot (or let npm run docs do it):
-node scripts/semantic-index/build-browser-snapshot.mjs
+node rag-index/build-browser-snapshot.mjs
 ```
 
 ### Top-level schema
@@ -36,47 +36,48 @@ node scripts/semantic-index/build-browser-snapshot.mjs
   "schema_version": "1",
   "generated_at": "2026-05-23T14:32:00.725Z",
   "families": ["readme", "skill", "agent", "plan", "demo"],
-  "documents": [ /* SemanticSnapshotDocument[] */ ]
+  "documents": [/* SemanticSnapshotDocument[] */],
 }
 ```
 
-| Field | Type | Notes |
-|---|---|---|
-| `schema_version` | `"1"` | Loader rejects payloads with any other value |
-| `generated_at` | ISO timestamp | Cache freshness key — also the IndexedDB primary key |
-| `families` | `string[]` | Corpus families present in this build |
-| `documents` | `SemanticSnapshotDocument[]` | Repository files with nested chunks |
+| Field            | Type                         | Notes                                                |
+| ---------------- | ---------------------------- | ---------------------------------------------------- |
+| `schema_version` | `"1"`                        | Loader rejects payloads with any other value         |
+| `generated_at`   | ISO timestamp                | Cache freshness key — also the IndexedDB primary key |
+| `families`       | `string[]`                   | Corpus families present in this build                |
+| `documents`      | `SemanticSnapshotDocument[]` | Repository files with nested chunks                  |
 
 ### SemanticSnapshotDocument
 
-| Field | Type | Notes |
-|---|---|---|
-| `doc_id` | `number` | Stable SQLite primary key |
-| `file_path` | `string` | Repository-relative path (no absolute local paths) |
-| `family` | `string` | Corpus family: `readme`, `plan`, `skill`, `agent`, or `demo` |
-| `chunks` | `SemanticSnapshotChunk[]` | Ordered by source position |
+| Field       | Type                      | Notes                                                        |
+| ----------- | ------------------------- | ------------------------------------------------------------ |
+| `doc_id`    | `number`                  | Stable SQLite primary key                                    |
+| `file_path` | `string`                  | Repository-relative path (no absolute local paths)           |
+| `family`    | `string`                  | Corpus family: `readme`, `plan`, `skill`, `agent`, or `demo` |
+| `chunks`    | `SemanticSnapshotChunk[]` | Ordered by source position                                   |
 
 ### SemanticSnapshotChunk
 
-| Field | Type | Notes |
-|---|---|---|
-| `chunk_id` | `number` | Stable SQLite primary key |
+| Field          | Type     | Notes                                                             |
+| -------------- | -------- | ----------------------------------------------------------------- |
+| `chunk_id`     | `number` | Stable SQLite primary key                                         |
 | `heading_path` | `string` | Markdown heading trail giving the chunk its documentation context |
-| `body_text` | `string` | Plain text body for lexical search |
-| `char_start` | `number` | Inclusive character offset in the source document |
-| `char_end` | `number` | Exclusive character offset in the source document |
+| `body_text`    | `string` | Plain text body for lexical search                                |
+| `char_start`   | `number` | Inclusive character offset in the source document                 |
+| `char_end`     | `number` | Exclusive character offset in the source document                 |
 
 ---
 
 ## Generated output contract
 
-`docs/assets/semantic-snapshot.json` is published as part of Stage 1 of the docs pipeline
+`rag-index/snapshots/semantic-snapshot.json` is published as part of Stage 1 of the docs pipeline
 (see `scripts/run-docs.ts → runFullDocsWorkflow`). The snapshot generator runs before the
 browser bundles and folder docs are copied, so the served file is always in sync with the
 SQLite index at build time.
 
-**Treat `docs/assets/semantic-snapshot.json` as read-only** — the same rule that applies to
-all generated artifacts under `docs/` (see `Generated README handling` in `CLAUDE.md`).
+**Treat `rag-index/snapshots/semantic-snapshot.json` as read-only** — the same rule that applies to
+all generated artifacts under `docs/` (see the `educational-docs` skill and the
+`implementation-standards` skill for generated-artifact handling).
 
 ---
 
@@ -103,11 +104,11 @@ const snapshot = await loadSemanticSnapshot('/assets/semantic-snapshot.json');
 
 ### Options (`LoadSemanticSnapshotOptions`)
 
-| Option | Type | Default | Notes |
-|---|---|---|---|
-| `databaseName` | `string` | `"neataptic-semantic-snapshot"` | IndexedDB database name |
-| `storeName` | `string` | `"snapshots"` | Object store inside the database |
-| `forceRefresh` | `boolean` | `false` | Bypass cache; always fetch from `url` |
+| Option         | Type      | Default                         | Notes                                 |
+| -------------- | --------- | ------------------------------- | ------------------------------------- |
+| `databaseName` | `string`  | `"neataptic-semantic-snapshot"` | IndexedDB database name               |
+| `storeName`    | `string`  | `"snapshots"`                   | Object store inside the database      |
+| `forceRefresh` | `boolean` | `false`                         | Bypass cache; always fetch from `url` |
 
 ---
 
@@ -140,11 +141,11 @@ above those that mention it only in the body.
 
 ### Result shape (`SemanticSnapshotSearchResult`)
 
-| Field | Type | Notes |
-|---|---|---|
-| `score` | `number` | Heading-weighted lexical match count; higher ranks first |
-| `document` | `SemanticSnapshotDocument` | Parent repository document |
-| `chunk` | `SemanticSnapshotChunk` | Matched chunk inside the document |
+| Field      | Type                       | Notes                                                    |
+| ---------- | -------------------------- | -------------------------------------------------------- |
+| `score`    | `number`                   | Heading-weighted lexical match count; higher ranks first |
+| `document` | `SemanticSnapshotDocument` | Parent repository document                               |
+| `chunk`    | `SemanticSnapshotChunk`    | Matched chunk inside the document                        |
 
 ---
 

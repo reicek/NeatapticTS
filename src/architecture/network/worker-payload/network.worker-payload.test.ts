@@ -1697,8 +1697,7 @@ describe('network worker payload chapter', () => {
             const predictionRequestId =
               (
                 createdChannels[0]?.port1.postedMessages[0]?.message as
-                  | { id?: number }
-                  | undefined
+                  { id?: number } | undefined
               )?.id ?? -1;
             createdChannels[0]?.port1.emit('message', {
               id: predictionRequestId,
@@ -1741,8 +1740,7 @@ describe('network worker payload chapter', () => {
             const predictionRequestId =
               (
                 createdChannels[0]?.port1.postedMessages[0]?.message as
-                  | { id?: number }
-                  | undefined
+                  { id?: number } | undefined
               )?.id ?? -1;
             createdChannels[0]?.port1.emit('message', {
               id: predictionRequestId,
@@ -2056,8 +2054,7 @@ describe('network worker payload chapter', () => {
             const predictRequestId =
               (
                 createdChannels[0]?.port1.postedMessages[0]?.message as
-                  | { id?: number }
-                  | undefined
+                  { id?: number } | undefined
               )?.id ?? -1;
             createdChannels[0]?.port1.emit('message', {
               id: predictRequestId,
@@ -2078,8 +2075,7 @@ describe('network worker payload chapter', () => {
             const resetRequestId =
               (
                 createdChannels[1]?.port1.postedMessages[0]?.message as
-                  | { id?: number }
-                  | undefined
+                  { id?: number } | undefined
               )?.id ?? -1;
             createdChannels[1]?.port1.emit('message', {
               id: resetRequestId,
@@ -4386,8 +4382,7 @@ describe('network worker payload chapter', () => {
         const originalClose = globalThis.close;
         const originalDocument = Reflect.get(globalThis, 'document');
         const originalPostMessage = Reflect.get(globalThis, 'postMessage') as
-          | ((message: unknown) => void)
-          | undefined;
+          ((message: unknown) => void) | undefined;
         let capturedMessageListener: ((event: unknown) => void) | undefined;
         let closeCallCount = 0;
         const postedMessages: unknown[] = [];

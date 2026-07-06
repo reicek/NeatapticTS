@@ -1,10 +1,14 @@
 ---
 name: routing-optimization-policy
-description: 'Enforce routing discipline across the SDLC orchestrator tier graph. Use when validating delegation boundaries, tier enforcement, flow-and-gate protocol compliance, or canonical routing-table freshness. This skill owns durable routing knowledge: tier contracts, delegation rules, gate protocols, and skill-companion boundaries.'
+description: 'Use when: enforcing routing discipline, tier boundaries, or routing-table freshness.'
 argument-hint: 'Describe the routing decision, tier boundary, or gate protocol to validate. Include target agent/skill, suspected violation, and validation command.'
 user-invocable: false
 disable-model-invocation: false
 tools: [neataptic-gate-mcp/*, neataptic-workflow-mcp/*]
+skills:
+  - execute
+  - agent-frontmatter-standards
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -24,7 +28,17 @@ This skill owns the durable knowledge surface for routing policy in this reposit
 - The canonical routing table at `.github/agent-skill-routing-table.md` is stale or has not been validated via `npm run agents:routing-table:gate`.
 - A `.github/agents/*.agent.md` file is missing the `skills: [...]` frontmatter field.
 - A skill and companion agent overlap in ownership; the agent needs updating to follow the skill's durable policy.
-- Three consecutive gate failures have occurred in a session without escalation to `00-helping`.
+- Gate failures are being routed back for continued repair without an artificial retry threshold.
+
+## When NOT to use
+
+Do NOT use for simple routing decisions that `execute` can handle directly. Do NOT use for frontmatter validation - use `agent-frontmatter-standards` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Routing request" → "Classify surface"; "Classify surface" → "Tier boundary?"; "Tier boundary?" → "Check delegation direction" (Yes), "Check gate or freshness" (No); "Check delegation direction" → "Dispatch to correct tier"; "Check gate or freshness" → "Run validation gate"; "Dispatch to correct tier" → "Record evidence"; "Run validation gate" → "Record evidence"; "Record evidence" → "Done"; "Done".
+```
 
 ## Tier Graph Contract
 
@@ -75,7 +89,7 @@ Every numbered SDLC agent selects a named flow from `.github/flows/` to execute 
 
 - Gate failures are recorded via `scripts/agent-customization/gates/record-gate-exception.mjs`.
 - Exceptions append to `.github/ai-learning/learning-log.jsonl`.
-- Three consecutive gate failures in a session trigger automatic escalation to `00-helping` via `00.cross-tier-helper`.
+- Gate failures are recorded for audit and routed back for continued repair without an artificial retry threshold.
 
 ### Post-Phase Fanout
 
@@ -124,7 +138,9 @@ The routing table is the authoritative catalog of all agents and skills.
 3. **Check flow-and-gate compliance.**
    - Verify the numbered agent selected a named flow from `.github/flows/`.
    - Verify exit gates ran and returned the structured contract.
-   - If gates failed, confirm exceptions were recorded and escalation occurred after three consecutive failures.
+   - If gates failed, confirm exceptions were recorded and routed back for
+     continued repair without an artificial retry threshold. Continue retrying
+     until resolved or a true technical limit is reached. No concessions.
 
 4. **Audit routing-table freshness.**
    - Run `npm run agents:routing-table:gate` to confirm the routing table reflects current agent/skill inventory.
@@ -194,8 +210,9 @@ Validate: node scripts/agent-customization/validate-agent-frontmatter.mjs --json
 ```text
 Use routing-optimization-policy to enforce gate protocol.
 Agent: 05-green-testing
-Gate failures: 2 recorded, no escalation.
-Expected: on third consecutive failure, escalate to 00-helping via 00.cross-tier-helper.
+Gate failures: recorded, no escalation.
+Expected: continue retrying the gate or routing the failure back for repair
+until resolved or a true technical limit is reached. No artificial threshold.
 Validate: grep .github/ai-learning/learning-log.jsonl for gate_exception entries.
 ```
 
@@ -204,6 +221,12 @@ Validate: grep .github/ai-learning/learning-log.jsonl for gate_exception entries
 - Use `agent-inventory-auditor` to discover tier violations across the full agent graph.
 - Use `helping-agent-maintenance-coordinator` when agent frontmatter needs repair.
 - Use `helping-gap-resolution-coordinator` when a routing gap reveals a missing specialist or weak skill.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Routing question" → "What kind?"; "What kind?" → "Use execute skill" (Simple delegation), "Use routing-optimization-policy" (Tier/gate enforcement), "Use agent-frontmatter-standards" (Frontmatter validation), "Run npm run agents:routing-table:gate" (Routing table freshness); "Use execute skill"; "Use routing-optimization-policy"; "Use agent-frontmatter-standards"; "Run npm run agents:routing-table:gate".
+```
 
 ## Guardrails
 
@@ -221,7 +244,8 @@ A strong routing-optimization pass should produce:
 - confirmation that Tier 0 routed all substantive work to the smallest relevant Tier 1 orchestrator,
 - validation that no Tier 2/3/4 agent delegated upward without `00.cross-tier-helper`,
 - evidence that numbered agents selected named flows and ran exit gates with structured JSON contracts,
-- confirmation that gate exceptions were logged and escalation occurred after three consecutive failures,
+- confirmation that gate exceptions were logged and routed back for continued
+  repair without an artificial retry threshold,
 - routing-table freshness validation via `npm run agents:routing-table:gate`,
 - updated agent frontmatter with `skills: [...]` fields where missing,
 - alignment fixes where companion agents overlapped with skill-owned durable policy.

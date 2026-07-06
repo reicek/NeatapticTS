@@ -1,8 +1,6 @@
 {
   "introFile": "methods.ts",
-  "fileOrder": [
-    "methods.ts"
-  ],
+  "fileOrder": ["methods.ts"],
   "folderOrder": [
     "activation",
     "cost",

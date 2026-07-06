@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import Database from 'better-sqlite3';
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
@@ -7,10 +6,14 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import {
+  closeTursoClient,
+  getTursoClient,
+} from '../../mcp-semantic/tools/cortex-db.mjs';
+import {
   defaultDatabasePath,
   repoRoot,
-} from '../../semantic-index/init-schema.mjs';
-import { validateDatabase } from '../../semantic-index/validate-index.mjs';
+} from '../../../rag-index/init-schema.mjs';
+import { validateDatabase } from '../../../rag-index/validate-index.mjs';
 import { runCortexMcpSmoke } from './cortex-mcp-smoke.mjs';
 
 const OWNER = '00-helping';
@@ -18,8 +21,8 @@ const DEFAULT_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_SNAPSHOT_PATH = path.join(
   repoRoot,
-  'docs',
-  'assets',
+  'rag-index',
+  'snapshots',
   'semantic-snapshot.json',
 );
 const DEFAULT_WORKFLOW_PLAN_PATH = 'plans/mcp-active-binding.plans.md';
@@ -153,17 +156,14 @@ async function readSnapshotCurrency({
     return fallbackResult;
   }
 
-  const database = new Database(databasePath, {
-    readonly: true,
-    fileMustExist: true,
-  });
+  const client = await getTursoClient(databasePath);
 
   try {
-    const snapshotRow = database
-      .prepare(
-        'SELECT COUNT(*) AS documents, MAX(indexed_at) AS indexed_at FROM documents',
-      )
-      .get();
+    const snapshotResult = await client.execute({
+      sql: 'SELECT COUNT(*) AS documents, MAX(indexed_at) AS indexed_at FROM documents',
+      args: [],
+    });
+    const snapshotRow = snapshotResult.rows[0] ?? {};
     const indexedAtMs = Number(snapshotRow.indexed_at ?? 0);
     const snapshotAgeMs = Math.max(0, indexedAtMs - snapshotGeneratedAtMs);
 
@@ -175,7 +175,7 @@ async function readSnapshotCurrency({
         indexedAtMs > 0 ? new Date(indexedAtMs).toISOString() : null,
     };
   } finally {
-    database.close();
+    await closeTursoClient(databasePath);
   }
 }
 
@@ -233,15 +233,15 @@ function resolveFixHint({
   workflowMcpReport,
 }) {
   if (!indexReport.pass) {
-    return 'Run: node scripts/semantic-index/build-index.mjs to rebuild stale index';
+    return 'Run: node rag-index/build-index.mjs to rebuild stale index';
   }
 
   if (!snapshotCurrency.pass) {
-    return 'Run: npm run docs to regenerate snapshot';
+    return 'Run: npm run index:build-snapshot to regenerate snapshot';
   }
 
   if (!corpusMcpReport.pass) {
-    return 'Check neataptic-cortex-mcp server in .vscode/mcp.json; run cortex-mcp-smoke.mjs for details';
+    return 'Check cortex server in .vscode/mcp.json; run cortex-mcp-smoke.mjs for details';
   }
 
   if (!workflowMcpReport.pass) {

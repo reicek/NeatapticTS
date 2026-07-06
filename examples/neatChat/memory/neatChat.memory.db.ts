@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { createClient, type Client } from '@libsql/client';
 import { tokenizeNeatChatText } from '../core/neatChat.tokenization.utils';
 import {
   DEFAULT_DB_PATH,
@@ -78,30 +78,32 @@ export interface CreateSqliteMemoryAdapterOptions {
  * triggers that keep ranked search aligned with the base table.
  */
 export class SqliteMemoryAdapter implements MemoryAdapter {
-  private readonly database: Database.Database;
+  private readonly client: Client;
+  private readonly ready: Promise<void>;
 
   public constructor(options: CreateSqliteMemoryAdapterOptions = {}) {
-    this.database = new Database(options.databasePath ?? DEFAULT_DB_PATH);
-    this.database.exec(MEMORY_SCHEMA_SQL);
+    this.client = createClient({
+      url: 'file:' + (options.databasePath ?? DEFAULT_DB_PATH),
+    });
+    this.ready = this.client.executeMultiple(MEMORY_SCHEMA_SQL);
   }
 
   /** @inheritdoc */
   public async store(entry: CreateStoredMemoryEntry): Promise<string> {
-    const insertResult = this.database
-      .prepare(
-        `
-          INSERT INTO memory_entries (
-            session_id,
-            entry_type,
-            content,
-            tokens,
-            score,
-            created_at,
-            last_used
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        `,
-      )
-      .run(
+    await this.ready;
+    const insertResult = await this.client.execute({
+      sql: `
+        INSERT INTO memory_entries (
+          session_id,
+          entry_type,
+          content,
+          tokens,
+          score,
+          created_at,
+          last_used
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
         entry.sessionId,
         entry.entryType,
         entry.content,
@@ -109,91 +111,92 @@ export class SqliteMemoryAdapter implements MemoryAdapter {
         entry.score,
         entry.createdAt,
         entry.lastUsed,
-      );
+      ],
+    });
 
     return String(insertResult.lastInsertRowid);
   }
 
   /** @inheritdoc */
   public async list(sessionId: string): Promise<readonly StoredMemoryEntry[]> {
-    const rows = this.database
-      .prepare(
-        `
-          SELECT
-            entry_id,
-            session_id,
-            entry_type,
-            content,
-            tokens,
-            score,
-            created_at,
-            last_used
-          FROM memory_entries
-          WHERE session_id = ?
-          ORDER BY created_at ASC
-        `,
-      )
-      .all(sessionId) as readonly SqliteListRow[];
+    await this.ready;
+    const { rows } = await this.client.execute({
+      sql: `
+        SELECT
+          entry_id,
+          session_id,
+          entry_type,
+          content,
+          tokens,
+          score,
+          created_at,
+          last_used
+        FROM memory_entries
+        WHERE session_id = ?
+        ORDER BY created_at ASC
+      `,
+      args: [sessionId],
+    });
 
-    return rows.map(mapSqliteRowToStoredMemoryEntry);
+    return (rows as unknown as readonly SqliteListRow[]).map(
+      mapSqliteRowToStoredMemoryEntry,
+    );
   }
 
   /** @inheritdoc */
   public async remove(entryIds: readonly string[]): Promise<number> {
+    await this.ready;
     if (entryIds.length === 0) {
       return 0;
     }
 
     const placeholders = entryIds.map(() => '?').join(', ');
-    const deletionResult = this.database
-      .prepare(`DELETE FROM memory_entries WHERE entry_id IN (${placeholders})`)
-      .run(...entryIds);
+    const deletionResult = await this.client.execute({
+      sql: `DELETE FROM memory_entries WHERE entry_id IN (${placeholders})`,
+      args: [...entryIds],
+    });
 
-    return deletionResult.changes;
+    return Number(deletionResult.rowsAffected);
   }
 
   /** @inheritdoc */
   public async search(
     query: MemorySearchQuery,
   ): Promise<readonly MemoryResult[]> {
+    await this.ready;
     const sanitizedQuery = sanitizeFtsQuery(query.query);
 
     if (sanitizedQuery.length === 0) {
       return [];
     }
 
-    const rows = this.database
-      .prepare(
-        `
-          SELECT
-            memory_entries.entry_id,
-            memory_entries.session_id,
-            memory_entries.entry_type,
-            memory_entries.content,
-            memory_entries.tokens,
-            memory_entries.score,
-            memory_entries.created_at,
-            memory_entries.last_used,
-            bm25(memory_fts, ${MEMORY_BM25_B}, ${MEMORY_BM25_K1}) AS bm25_score
-          FROM memory_fts
-          JOIN memory_entries ON memory_entries.entry_id = memory_fts.rowid
-          WHERE memory_entries.session_id = ?
-            AND memory_fts MATCH ?
-          ORDER BY bm25_score ASC, memory_entries.last_used DESC
-          LIMIT ?
-        `,
-      )
-      .all(
-        query.sessionId,
-        sanitizedQuery,
-        query.maxResults,
-      ) as readonly SqliteSearchRow[];
+    const { rows } = await this.client.execute({
+      sql: `
+        SELECT
+          memory_entries.entry_id,
+          memory_entries.session_id,
+          memory_entries.entry_type,
+          memory_entries.content,
+          memory_entries.tokens,
+          memory_entries.score,
+          memory_entries.created_at,
+          memory_entries.last_used,
+          bm25(memory_fts, ${MEMORY_BM25_B}, ${MEMORY_BM25_K1}) AS bm25_score
+        FROM memory_fts
+        JOIN memory_entries ON memory_entries.entry_id = memory_fts.rowid
+        WHERE memory_entries.session_id = ?
+          AND memory_fts MATCH ?
+        ORDER BY bm25_score ASC, memory_entries.last_used DESC
+        LIMIT ?
+      `,
+      args: [query.sessionId, sanitizedQuery, query.maxResults],
+    });
     const queryTokens = tokenizeNeatChatText(
       sanitizedQuery,
       Number.MAX_SAFE_INTEGER,
     );
 
-    return rows.map((row) => {
+    return (rows as unknown as readonly SqliteSearchRow[]).map((row) => {
       const storedEntry = mapSqliteRowToStoredMemoryEntry(row);
       const overlapScore = queryTokens.reduce(
         (matchedTokenCount, queryToken) =>
@@ -213,7 +216,8 @@ export class SqliteMemoryAdapter implements MemoryAdapter {
 
   /** @inheritdoc */
   public async close(): Promise<void> {
-    this.database.close();
+    await this.ready;
+    await this.client.close();
   }
 }
 

@@ -1,9 +1,13 @@
 ---
 name: model-routing-and-budget
-description: 'Choose, validate, and document model routing for NeatapticTS custom agents. Use when assigning GPT-5.4, GPT-5.4-mini, Claude Sonnet 4.6, Claude Haiku 4.6, phase-specific model budgets, or when a model string must be verified before frontmatter changes.'
+description: 'Use when: choosing or validating custom-agent model routing and budget.'
 argument-hint: 'Describe the agent phase, desired model tier, available model names, and whether validation should be advisory or strict.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - customize-cloud-agent
+  - agent-frontmatter-standards
+  - routing-optimization-policy
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -31,6 +35,16 @@ agents.
 - Frontmatter shape needs to be confirmed with `validate-agent-frontmatter.mjs`
   before the agent is used in a gate or handoff.
 
+## When NOT to use
+
+Do NOT use for cloud agent setup - use `customize-cloud-agent` instead. Do NOT use for frontmatter validation - use `agent-frontmatter-standards` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Select model" → "Agent tier?"; "Agent tier?" → "Use high-capability model" (Tier 0-1), "Use mid-capability model" (Tier 2-3), "Use lightweight model" (Tier 4); "Use high-capability model" → "Check context budget"; "Use mid-capability model" → "Check context budget"; "Use lightweight model" → "Check context budget"; "Check context budget" → "Within budget?"; "Within budget?" → "Approve routing" (Yes), "Downgrade model" (No); "Approve routing"; "Downgrade model" → "Check context budget".
+```
+
 ## Task Packet
 
 Pass a compact packet describing the agent, its phase, and the routing decision
@@ -51,11 +65,11 @@ Validation: advisory — confirm qualified name before committing.
 2. Treat session-local availability constraints as controlling for frontmatter
    edits. Under the current cost-tier restriction, `GPT-5.5 (copilot)` must
    not be written to frontmatter.
-3. Use `glm-5.2:cloud (ollama)` for coding-heavy implementation and red-test
+3. Use `glm-5.2:cloud` for coding-heavy implementation and red-test
    synthesis when available.
 4. Use `Claude Sonnet 4.6 (copilot)` for planning, documentation synthesis,
    nuanced maintenance, and ambiguity-heavy coordination when available.
-5. Use `glm-5.2:cloud (ollama)` for bounded research, validation, and subagent
+5. Use `glm-5.2:cloud` for bounded research, validation, and subagent
    work where coding or tool strength still matters.
 6. Use `Claude Haiku 4.6 (copilot)` for narrow checklist, summarization, and
    mechanical assistant work. If the model picker exposes only a different Haiku
@@ -78,6 +92,31 @@ Validation: advisory — confirm qualified name before committing.
 | 05 Green Testing  | Mini / Haiku  | Verification is mostly mechanical.                                        |
 | 06 Documentation  | Sonnet / Mini | Educational docs benefit from stronger writing after facts exist.         |
 | 07 Logging        | Haiku / Mini  | Summarization and tracker updates should be lightweight.                  |
+
+## Decision Tree: Model Selection by Tier
+
+```text
+Flowchart summary: "Need model for agent" → "What tier?"; "What tier?" → "claude-sonnet-4-20250514" (Tier 0 (Agent Zero)), "claude-sonnet-4-20250514" (Tier 1 (SDLC)), "haiku-3.5 or equivalent" (Tier 2 (Coordinators)), "haiku-3.5 or equivalent" (Tier 3 (Scouts)), "Lightest available model" (Tier 4 (Auxiliaries)); "claude-sonnet-4-20250514"; "haiku-3.5 or equivalent"; "Lightest available model".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```yaml
+---
+model: claude-sonnet
+---
+```
+
+**After:**
+
+```yaml
+---
+# Qualified name confirmed in the active Copilot client; tier budget matches phase default.
+model: claude-sonnet-4-20250514
+---
+```
 
 ## Guardrails
 

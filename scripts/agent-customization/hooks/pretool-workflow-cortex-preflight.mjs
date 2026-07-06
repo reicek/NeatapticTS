@@ -40,11 +40,11 @@ const defaultWorkflowPlanPath = 'plans/mcp-active-binding.plans.md';
  * - corpus-bound work if the tool or payload targets repo source/doc/search surfaces.
  */
 const substantiveToolPattern =
-  /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol|rg|glob|view|neataptic-cortex-mcp\.(search_corpus|load_document|freshness_check)|neataptic-workflow-mcp\.get_active_workflow_snapshot)$/i;
+  /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol|rg|glob|view|cortex\.(search_corpus|load_document|freshness_check)|neataptic-workflow-mcp\.get_active_workflow_snapshot)$/i;
 const alwaysPlanBoundToolPattern =
   /^(apply_patch|powershell|task|neataptic-workflow-mcp\.get_active_workflow_snapshot)$/i;
 const alwaysCorpusBoundToolPattern =
-  /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol|rg|glob|neataptic-cortex-mcp\.(search_corpus|load_document|freshness_check))$/i;
+  /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol|rg|glob|cortex\.(search_corpus|load_document|freshness_check))$/i;
 const planPathPattern = /(^|[\\/])plans([\\/]|$)|\.plans\.md\b|\.logs\.md\b/i;
 const corpusPathPattern =
   /(^|[\\/])(src|examples|benchmarks|testing|scripts|\.github|plans)([\\/]|$)|\.(ts|tsx|js|mjs|md|json)\b/i;

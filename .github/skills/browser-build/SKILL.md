@@ -1,9 +1,13 @@
 ---
 name: browser-build
-description: 'Configure, validate, and publish browser runtime artifacts for NeatapticTS. Use when working on scripts/build-browser.mjs, root dist browser bundles, docs/assets example bundles, browser env aliasing, smoke-browser-build validation, CDN/runtime packaging, or CI-sensitive browser build gates.'
+description: 'Use when: configuring or validating browser build artifacts.'
 argument-hint: 'Describe the target artifact (root browser dist / example docs asset / smoke test / size audit / CI gate), the current plan step, and known constraints such as size budget, worker entry delivery, HTML consumer, or browser targets.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - visualizer-workflow
+  - chrome-devtools-mcp
+  - performance-optimization
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -53,6 +57,16 @@ plan/log shape. When roadmap alignment is needed, use `plan-alignment`.
 - Verifying whether the current repo actually exposes a package script for the
   browser build or whether the workflow must call `node scripts/build-browser.mjs`
   directly.
+
+## When NOT to use
+
+Do NOT use for general build or lint tasks - use standard `npm run build` and `npm run lint` instead. Do NOT use for visualizer debugging - use `visualizer-workflow` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Source change" → "Run webpack build"; "Run webpack build" → "Build succeeds?"; "Build succeeds?" → "Check bundle size" (Yes), "Fix build error" (No); "Check bundle size" → "Run smoke test in browser"; "Fix build error" → "Run webpack build"; "Run smoke test in browser" → "Pass?"; "Pass?" → "Done" (Yes), "Debug in browser" (No); "Done"; "Debug in browser" → "Fix build error".
+```
 
 ## Task Packet
 
@@ -152,6 +166,28 @@ The minimum root-artifact smoke gate is the current
 When the task targets a docs-served example bundle instead of the root dist
 artifact, validate the consuming HTML or entry surface that actually loads the
 bundle.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Browser work" → "Which artifact?"; "Which artifact?" → "scripts/build-browser.mjs" (Root dist ESM/IIFE bundle), "Targeted example build script" (docs/assets example bundle), "scripts/smoke-browser-build.mjs" (Load + instantiate smoke), "Bundle size analysis" (Size or tree-shaking audit); "scripts/build-browser.mjs"; "Targeted example build script"; "scripts/smoke-browser-build.mjs"; "Bundle size analysis".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```html
+<script src="docs/assets/flappy.bundle.js"></script>
+<!-- workerUrl still points at stale v1 path -->
+```
+
+**After:**
+
+```html
+<script src="docs/assets/flappy.bundle.js"></script>
+<!-- workerUrl refreshed to dist/neataptic.worker.esm.js (ESM boundary) -->
+```
 
 ## Guardrails
 

@@ -2,7 +2,7 @@
  * Root public entry point for the NeatapticTS library.
  *
  * Import everything you need for NEAT-based neuroevolution from this single
- * surface. The library organizes its exports into four cooperating layers:
+ * surface. The library organizes its exports into five cooperating layers:
  *
  * - **`Neat`** — the NEAT evolutionary controller: population management,
  *   speciation, selection, mutation, and crossover.
@@ -13,21 +13,35 @@
  * - **Namespaces** — `methods` (activation functions, cost functions, mutation
  *   and selection operators), `config` (global library settings), `multi`
  *   (worker-thread parallel evaluation).
+ * - **`nge`** — experimental Genesis EvoDevo (NGE) lifecycle namespace. A narrow,
+ *   unstable preview of adult staging, juvenile growth, lifecycle
+ *   orchestration, and assimilation write-back. Not covered by the stable
+ *   public API contract.
+ *
+ * The NEAT algorithm behind the `Neat` controller was introduced by Stanley
+ * and Miikkulainen,
+ * [Evolving Neural Networks through Augmenting Topologies](https://nn.cs.utexas.edu/?stanley:ec02).
  *
  * ```mermaid
  * flowchart LR
  *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
  *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
  *   classDef entry fill:#0f1f10,stroke:#39d353,color:#d4fcd7,stroke-width:1.5px;
+ *   classDef experimental fill:#1a0f1a,stroke:#ff6b9d,color:#ffd6e5,stroke-width:1.5px;
  *
  *   neataptic[neataptic.ts root entry]:::entry
  *   neataptic --> Neat[Neat evolutionary controller]:::accent
  *   neataptic --> Network[Network graph facade]:::accent
  *   neataptic --> Primitives[Node Connection Group Layer Architect]:::base
  *   neataptic --> Namespaces[methods config multi namespaces]:::base
+ *   neataptic --> nge[nge experimental namespace]:::experimental
  *   Neat --> Network
  *   Network --> Workers[worker inference transport]:::base
  *   Network --> ONNX[ONNX export and import]:::base
+ *   nge --> adult[adult lifecycle]:::experimental
+ *   nge --> juvenile[juvenile growth]:::experimental
+ *   nge --> lifecycle[lifecycle runner]:::experimental
+ *   nge --> assimilation[assimilation write-back]:::experimental
  * ```
  *
  * @example
@@ -172,6 +186,16 @@ export * as methods from './methods/methods';
 export * as config from './config';
 /** Worker-thread parallel genome population evaluation utilities for Node.js runtime environments. */
 export * as multi from './multithreading/multi';
+/**
+ * Experimental NGE lifecycle namespace.
+ *
+ * Re-exports `adult`, `juvenile`, `lifecycle`, and `assimilation` sub-namespaces
+ * from a single unstable entrypoint. This surface may change or be removed
+ * without a major version bump; prefer `Neat` and `Network` for stable work.
+ *
+ * @experimental
+ */
+export * as nge from './neat/nge-experimental';
 export {
   renderNetworkView,
   positionNetworkNodes,

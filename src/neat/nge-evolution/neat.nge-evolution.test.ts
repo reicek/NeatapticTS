@@ -159,7 +159,7 @@ describe('nge evolution Step 02 shelf', () => {
   });
 
   describe('type shelf', () => {
-    it('keeps the downstream Phase E result contracts assignable', () => {
+    it('keeps the downstream NGE result contracts assignable', () => {
       expect({
         decay: epigeneticInputFixture.decay,
         distance: distanceResultFixture.distance,

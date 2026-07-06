@@ -1,0 +1,86 @@
+﻿{
+  "name": "repo-cortex-mcp",
+  "ok": true,
+  "issues": [],
+  "counts": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "summaryText": "PASS repo-cortex-mcp: 0 errors, 0 warnings",
+  "tools_checked": [
+    {
+      "name": "search_corpus",
+      "ok": true
+    },
+    {
+      "name": "search_context",
+      "ok": true
+    },
+    {
+      "name": "search_advanced",
+      "ok": true
+    },
+    {
+      "name": "load_chunk",
+      "ok": true
+    },
+    {
+      "name": "load_parent_chunk",
+      "ok": true
+    },
+    {
+      "name": "load_document",
+      "ok": true
+    },
+    {
+      "name": "freshness_check",
+      "ok": true
+    },
+    {
+      "name": "index_stats",
+      "ok": true
+    },
+    {
+      "name": "ann_build_index",
+      "ok": true
+    },
+    {
+      "name": "list_families",
+      "ok": true
+    },
+    {
+      "name": "scan_code_quality",
+      "ok": true
+    },
+    {
+      "name": "traverse_graph",
+      "ok": true
+    },
+    {
+      "name": "expand_query",
+      "ok": true
+    },
+    {
+      "name": "submit_feedback",
+      "ok": true
+    },
+    {
+      "name": "parallel_search",
+      "ok": true
+    },
+    {
+      "name": "multi_hop_search",
+      "ok": true
+    },
+    {
+      "name": "turso_branch",
+      "ok": true
+    },
+    {
+      "name": "turso_pitr",
+      "ok": true
+    }
+  ],
+  "tool_checks_count": 18,
+  "all_ok": true
+}

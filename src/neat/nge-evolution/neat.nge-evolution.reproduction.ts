@@ -1,8 +1,26 @@
+/**
+ * NGE reproduction operators: parthenogenesis, polyandric, and sexual crossover.
+ *
+ * The polyandric operator merges a queen DNA template with patch contributions
+ * from a small set of drone donors. Region assignment is controlled by
+ * {@link NgeReproductionPolicy.assignedRegionStrategy}.
+ *
+ * ## Input shorthand compatibility
+ *
+ * The strategy `'non-overlapping'` is input shorthand for the deterministic
+ * single-drone-per-region assignment that the core already implements under
+ * `'roundRobin'`. Both values resolve to identical behavior; only the canonical
+ * string stored in the envelope differs.
+ *
+ * This alias preserves the input shorthand while keeping the canonical strategy
+ * string stored in the envelope.
+ */
 import { NGE_DNA } from '../nge-dna/neat.nge-dna';
 import type {
   NgeDnaCanonicalEnvelope,
   NgeDnaModuleArchetype,
   NgeReproductionPolicy,
+  NgeReproductionPolicyInput,
 } from '../nge-dna/neat.nge-dna.types';
 
 import { NgeEvolution_ModeError } from './neat.nge-evolution.errors';
@@ -14,28 +32,82 @@ import type {
 
 type NgeEvolutionSexualSourceParent = 'first-parent' | 'second-parent';
 type NgePolyandricRegionFamily =
-  | 'cppnPrograms'
-  | 'moduleArchetypes'
-  | 'rulePasses';
+  'cppnPrograms' | 'moduleArchetypes' | 'rulePasses';
 
 interface NgeParthenogenesisInput {
   ngeEnabled: boolean;
   parent: NgeDnaCanonicalEnvelope;
   parentId: string;
-  policy?: NgeReproductionPolicy;
+  policy?: NgeReproductionPolicyInput;
 }
 
-interface NgePolyandricDroneInput {
+/**
+ * One drone donor offered to the polyandric reproduction operator.
+ *
+ * A drone carries a full DNA envelope plus optional bookkeeping: its fitness
+ * ranking drives the `byFitness` assignment strategy, and `specializationKey`
+ * drives the `bySpecialization` strategy. Only regions that are actually
+ * assigned to this drone will be patched into the queen template.
+ *
+ * Background reading on multi-parent recombination:
+ * [Wikipedia — Crossover (genetic algorithm)](https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)).
+ *
+ * @example
+ * ```ts
+ * const drone: NgePolyandricDroneInput = {
+ *   dna: donorEnvelope,
+ *   fitness: 0.92,
+ *   parentId: 'donor-a',
+ *   specializationKey: 'moduleArchetypes',
+ * };
+ * ```
+ */
+export interface NgePolyandricDroneInput {
   dna: NgeDnaCanonicalEnvelope;
   fitness?: number;
   parentId: string;
   specializationKey?: string;
 }
 
-interface NgePolyandricInput {
+/**
+ * Input contract for the polyandric reproduction operator.
+ *
+ * The queen DNA is the stable template. Up to
+ * {@link NgeReproductionPolicy.polyandricDroneCount} drone donors compete to
+ * patch a capped subset of the queen's regions, controlled by
+ * {@link NgeReproductionPolicy.polyandricDroneContributionFraction}. The
+ * {@link NgeReproductionPolicy.queenBias} gate then decides, per region,
+ * whether queen or drone data wins the merge.
+ *
+ * Background reading on the biological metaphor:
+ * [Wikipedia — Polyandry](https://en.wikipedia.org/wiki/Polyandry).
+ *
+ * @example
+ * ```ts
+ * const input: NgePolyandricInput = {
+ *   ngeEnabled: true,
+ *   queen: queenEnvelope,
+ *   queenId: 'queen-1',
+ *   drones: [
+ *     {
+ *       dna: donorA,
+ *       parentId: 'drone-a',
+ *       fitness: 0.9,
+ *     },
+ *     {
+ *       dna: donorB,
+ *       parentId: 'drone-b',
+ *       fitness: 0.85,
+ *       specializationKey: 'cppnPrograms',
+ *     },
+ *   ],
+ * };
+ * ```
+ */
+export interface NgePolyandricInput {
   drones: readonly NgePolyandricDroneInput[];
   ngeEnabled: boolean;
-  policy?: NgeReproductionPolicy;
+  policy?: NgeReproductionPolicyInput;
   queen: NgeDnaCanonicalEnvelope;
   queenId: string;
 }
@@ -44,7 +116,7 @@ interface NgeSexualInput {
   firstParent: NgeDnaCanonicalEnvelope;
   firstParentId: string;
   firstParentScore: number;
-  policy?: NgeReproductionPolicy;
+  policy?: NgeReproductionPolicyInput;
   secondParent: NgeDnaCanonicalEnvelope;
   secondParentId: string;
   secondParentScore: number;
@@ -137,8 +209,40 @@ export function reproduceParthenogenesis(
 /**
  * Build one polyandric offspring from a queen DNA template plus optional drone donors.
  *
+ * Polyandric recombination is a multi-parent operator: the queen template keeps
+ * most of its structure, while a small pool of drones patches a capped subset
+ * of its DNA regions. The cap and drone count come from the resolved policy.
+ * For every assigned region a deterministic FNV-1a hash of the region id is
+ * compared against `queenBias`; when the hash is below the bias the queen wins,
+ * otherwise the drone wins. This makes the merge deterministic and
+ * reproducible for the same queen/drone/policy triple.
+ *
+ * See {@link NgePolyandricInput} for the input shape and
+ * {@link NGE_EVOLUTION_DEFAULT_POLYANDRIC_QUEEN_BIAS} for the default bias.
+ *
+ * Background reading:
+ * - Polyandry in evolutionary biology:
+ *   [Wikipedia — Polyandry](https://en.wikipedia.org/wiki/Polyandry).
+ * - Multi-parent recombination in evolutionary computing:
+ *   [Wikipedia — Crossover (genetic algorithm)](https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)).
+ * - The FNV-1a hash function:
+ *   [Wikipedia — Fowler–Noll–Vo hash function](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function).
+ *
  * @param input - Operator context containing the queen DNA, drone donors, and policy overrides.
  * @returns Canonical offspring DNA plus the resolved region-assignment report.
+ *
+ * @example
+ * ```ts
+ * const result = reproducePolyandric({
+ *   ngeEnabled: true,
+ *   queen: queenEnvelope,
+ *   queenId: 'queen-1',
+ *   drones: [
+ *     { dna: donorEnvelope, parentId: 'drone-a', fitness: 0.9 },
+ *   ],
+ * });
+ * console.log(result.outcome); // 'queen-template-patched'
+ * ```
  */
 export function reproducePolyandric(
   input: NgePolyandricInput,
@@ -175,7 +279,12 @@ export function reproducePolyandric(
 
   // Step 2: Patch the queen template with each assigned drone contribution.
   const offspring = buildCanonicalEnvelope(
-    applyPolyandricAssignments(input.queen, eligibleDrones, regionAssignment),
+    applyPolyandricAssignments(
+      input.queen,
+      eligibleDrones,
+      regionAssignment,
+      resolvedPolicy.queenBias,
+    ),
     {
       reproductionPolicy: resolvedPolicy,
     },
@@ -301,10 +410,25 @@ export function reproduceSexual(
   };
 }
 
+/**
+ * Apply every assigned drone patch to the queen template in region order.
+ *
+ * This is the fold that turns the region-assignment report into a concrete
+ * offspring envelope. Each assigned region is passed to
+ * {@link patchPolyandricRegion} with the same `queenBias`, so the queen/drone
+ * winner gate is deterministic across the whole patch set.
+ *
+ * @param queenEnvelope - Queen DNA template.
+ * @param drones - Eligible drone donors in the order supplied by the caller.
+ * @param regionAssignment - Region-to-drone mapping produced by the assignment step.
+ * @param queenBias - Per-region winner bias in [0, 1].
+ * @returns The patched queen envelope ready for canonicalization.
+ */
 function applyPolyandricAssignments(
   queenEnvelope: NgeDnaCanonicalEnvelope,
   drones: readonly NgePolyandricDroneInput[],
   regionAssignment: NgeEvolutionPolyandricRegionAssignmentResult,
+  queenBias: number,
 ): NgeDnaCanonicalEnvelope {
   const dronesById = new Map(
     drones.map((droneInput) => [droneInput.parentId, droneInput]),
@@ -316,6 +440,7 @@ function applyPolyandricAssignments(
         currentEnvelope,
         dronesById.get(assignedRegion.droneId)!.dna,
         assignedRegion.regionId,
+        queenBias,
       ),
     queenEnvelope,
   );
@@ -479,10 +604,64 @@ function createDefaultSexualRandomGenerator(): number {
   return DEFAULT_SEXUAL_RANDOM_SAMPLE;
 }
 
+/**
+ * Deterministically map a DNA region identifier into the unit interval [0, 1).
+ *
+ * Uses the FNV-1a 32-bit hash so the same `regionId` always yields the same
+ * value. The result is combined with `queenBias` to decide whether the queen or
+ * drone wins a patched region.
+ *
+ * See the FNV-1a reference:
+ * [Wikipedia — Fowler–Noll–Vo hash function](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function).
+ *
+ * @param regionId - Stable region identifier emitted by {@link collectPolyandricRegionIds}.
+ * @returns A deterministic number in [0, 1).
+ */
+function hashRegionIdToUnitInterval(regionId: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < regionId.length; i++) {
+    hash ^= regionId.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0) / 4294967296;
+}
+
+/**
+ * Merge one module-archetype region from queen and drone, respecting the queen bias.
+ *
+ * The per-region winner is decided by comparing
+ * {@link hashRegionIdToUnitInterval}(regionId) to the clamped `queenBias`.
+ * When the hash is below the bias the queen wins and its fields override the
+ * drone's; otherwise the drone wins. Both cases shallow-merge the losing region
+ * into the winning region and combine `parameterSchema` maps so no keys are
+ * silently dropped.
+ *
+ * @param queenRegion - Module archetype taken from the queen template.
+ * @param droneRegion - Module archetype taken from the assigned drone.
+ * @param regionId - Stable region identifier used to seed the deterministic gate.
+ * @param queenBias - Bias in [0, 1]; higher values make the queen more likely to win.
+ * @returns The merged module archetype written back into the offspring envelope.
+ */
 function mergeModuleArchetypeWithQueenPriority(
   queenRegion: NgeDnaModuleArchetype,
   droneRegion: NgeDnaModuleArchetype,
+  regionId: string,
+  queenBias: number,
 ): NgeDnaModuleArchetype {
+  const queenWins =
+    hashRegionIdToUnitInterval(regionId) < Math.max(0, Math.min(1, queenBias));
+
+  if (!queenWins) {
+    return {
+      ...structuredClone(queenRegion),
+      ...structuredClone(droneRegion),
+      parameterSchema: {
+        ...(queenRegion.parameterSchema ?? {}),
+        ...(droneRegion.parameterSchema ?? {}),
+      },
+    };
+  }
+
   return {
     ...structuredClone(droneRegion),
     ...structuredClone(queenRegion),
@@ -511,10 +690,27 @@ function passthroughMutation(
   return canonicalEnvelope;
 }
 
+/**
+ * Patch one DNA region of the queen envelope with the matching drone region.
+ *
+ * Reads the region family (`cppnPrograms`, `moduleArchetypes`, or `rulePasses`)
+ * and index from `regionId`, then writes back the merged value. Module
+ * archetypes use {@link mergeModuleArchetypeWithQueenPriority}, which keeps the
+ * queen-bias gate explicit and preserves both parameter schemas. Other families
+ * replace the losing region with the winning region under the same FNV-1a gate.
+ * If either side is missing the region, the queen envelope is returned unchanged.
+ *
+ * @param queenEnvelope - Queen DNA template being patched.
+ * @param droneEnvelope - Drone DNA carrying the candidate replacement region.
+ * @param regionId - Stable region identifier in `family:index` form.
+ * @param queenBias - Bias in [0, 1] that controls how often the queen keeps the region.
+ * @returns A new queen envelope with the region patched, or the original envelope when the region is absent.
+ */
 function patchPolyandricRegion(
   queenEnvelope: NgeDnaCanonicalEnvelope,
   droneEnvelope: NgeDnaCanonicalEnvelope,
   regionId: string,
+  queenBias: number,
 ): NgeDnaCanonicalEnvelope {
   const { family, index } = parsePolyandricRegionId(regionId);
   const regionAccessors = {
@@ -564,23 +760,52 @@ function patchPolyandricRegion(
       mergeModuleArchetypeWithQueenPriority(
         queenRegion as NgeDnaModuleArchetype,
         droneRegion as NgeDnaModuleArchetype,
+        regionId,
+        queenBias,
       ),
     );
   }
 
+  const queenWins =
+    hashRegionIdToUnitInterval(regionId) < Math.max(0, Math.min(1, queenBias));
+  const [losingRegion, winningRegion] = queenWins
+    ? [droneRegion, queenRegion]
+    : [queenRegion, droneRegion];
+
   return resolvedRegionAccessor.write(queenEnvelope, {
-    ...structuredClone(droneRegion),
-    ...structuredClone(queenRegion),
+    ...structuredClone(losingRegion),
+    ...structuredClone(winningRegion),
   } as never);
 }
 
+/**
+ * Expand input seed-governance shorthand into the canonical policy shape.
+ *
+ * Accepts the {@link NgeSeedPolicyShorthand} `'queen-weighted'` and returns the
+ * canonical `{ siblingsDifferBySeed: true, twinsAllowed: false }` object. All
+ * other already-canonical values pass through unchanged so the envelope always
+ * stores a stable object for serialization, hashing, and round-trips.
+ *
+ * @param seedPolicy - Seed policy supplied at an operator input boundary.
+ * @returns Canonical seed policy object for storage in the envelope.
+ */
+function expandSeedPolicy(
+  seedPolicy: NgeReproductionPolicyInput['seedPolicy'],
+): NgeReproductionPolicy['seedPolicy'] {
+  if (seedPolicy === 'queen-weighted') {
+    return { siblingsDifferBySeed: true, twinsAllowed: false };
+  }
+  return seedPolicy;
+}
+
 function resolveOperatorPolicy(
-  policy: NgeReproductionPolicy,
+  policy: NgeReproductionPolicyInput,
   mode: NgeReproductionPolicy['mode'],
 ): NgeReproductionPolicy {
   return {
     ...policy,
     mode,
+    seedPolicy: expandSeedPolicy(policy.seedPolicy),
   };
 }
 
@@ -603,6 +828,8 @@ function selectPolyandricDroneForRegion(
     );
   }
 
+  // `roundRobin`, `non-overlapping`, and `byFitness` (after pre-sorting) all
+  // resolve to one deterministic drone per patchable region.
   return orderedDrones[regionIndex % orderedDrones.length];
 }
 

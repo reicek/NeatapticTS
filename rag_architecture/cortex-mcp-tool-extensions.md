@@ -2,6 +2,8 @@
 
 > Extracted from `plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md` (Step 10) for permanent reference.
 
+> **Backing database.** The Repo Cortex is backed by a single consolidated Turso (libSQL) database accessed via the fully async `@libsql/client` driver (default local embedded replica `data/turso-replica.sqlite`; cloud primary `libsql://<db>.turso.io`). Vectors use native Turso vectors with `F8_BLOB` 8-bit quantization, approximate nearest neighbor search runs server-side via DiskANN (`libsql_vector_idx`, `vector_top_k()`), and hybrid ranking is performed SQL-side via Reciprocal Rank Fusion (RRF, k=60). The historical design content below describes the pre-Turso architecture that was subsequently migrated to this stack.
+
 Complete design for new and extended MCP tools that expose advanced RAG capabilities to agents: search_advanced, search_context, traverse_graph, submit_feedback, and extensions to search_corpus and index_stats.
 
 ---
@@ -748,7 +750,7 @@ FROM documents;
 
 **G.3 Performance considerations.**
 
-- `include_metadata_coverage` is `false` by default to avoid unnecessary computation. When enabled, the tool runs 6–8 additional SQL queries (one per column for coverage, plus distribution/statistics queries). These queries are fast on the typical corpus size (30K+ chunks, < 1MB SQLite database).
+- `include_metadata_coverage` is `false` by default to avoid unnecessary computation. When enabled, the tool runs 6–8 additional SQL queries (one per column for coverage, plus distribution/statistics queries). These queries are fast on the typical corpus size (30K+ chunks, consolidated Turso database).
 - The tool caches metadata coverage results for 60 seconds in a module-level cache to avoid redundant computation when `index_stats` is called repeatedly.
 - Distribution results are capped at 20 most-frequent values per column to keep the response size bounded.
 
@@ -785,7 +787,7 @@ All new and extended MCP tools use a consistent error response format:
 | `MISSING_CHUNK_ID`          | 400         | submit_feedback                                | Required chunk_id missing                                     |
 | `CHUNK_NOT_FOUND`           | 404         | submit_feedback                                | chunk_id does not exist in corpus                             |
 | `SEED_REQUIRED`             | 400         | traverse_graph                                 | Neither seed_query nor seed_names provided                    |
-| `CORPUS_NOT_FOUND`          | 404         | all tools                                      | SQLite database file does not exist                           |
+| `CORPUS_NOT_FOUND`          | 404         | all tools                                      | Turso (libSQL) database not available                         |
 | `GRAPH_NOT_BUILT`           | 200         | traverse_graph                                 | Entity graph tables missing or empty (graceful, not an error) |
 | `RATE_LIMITED`              | 429         | submit_feedback                                | Rate limit exceeded (future extension)                        |
 
@@ -951,8 +953,8 @@ flowchart TD
     SCTX --> AC
     SC_EXT --> CQ
     SC_EXT --> EQ
-    TG --> DB[(SQLite<br/>entities + edges)]
-    SF --> DB2[(SQLite<br/>feedback_events + feedback_scores)]
+    TG --> DB[(Turso libSQL<br/>entities + edges)]
+    SF --> DB2[(Turso libSQL<br/>feedback_events + feedback_scores)]
 
     style SA fill:#0066cc,stroke:#003399,color:#fff
     style SCTX fill:#0066cc,stroke:#003399,color:#fff
@@ -1005,7 +1007,7 @@ Each new tool has targeted eval queries that test both correctness and regressio
 | `search_advanced` MRR@5             | ≥ 0.6 (cross_boundary), ≥ 0.9 (simple_lookup) | Must not regress below single-tool `search_corpus` baseline |
 | `search_context` budget compliance  | 100%                                          | Context must never exceed stated budget                     |
 | `traverse_graph` entity recall      | ≥ 70% at 2 hops                               | Graph must discover most directly-reachable entities        |
-| `traverse_graph` query time         | < 100ms for seed_names                        | SQLite BFS must be fast for small traversals                |
+| `traverse_graph` query time         | < 100ms for seed_names                        | SQL BFS must be fast for small traversals                   |
 | `submit_feedback` recording success | 100%                                          | Every valid signal must be persisted                        |
 | `search_corpus` filter accuracy     | 100%                                          | Metadata filter must not leak non-matching chunks           |
 | `index_stats` coverage completeness | 100%                                          | All metadata columns must appear in coverage when requested |

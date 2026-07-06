@@ -1,18 +1,21 @@
-import { Network, methods } from '../../../src/browser-entry.ts';
+import { Network } from '../../../src/browser-entry.ts';
+import { runNgeLifecycle } from '../../../src/neat/neat.nge-lifecycle';
+import { advanceGrowthHysteresis } from '../../../src/neat/nge-juvenile/neat.nge-juvenile.ts';
+import type { MorphApplyOutcome } from '../../../src/neat/nge-juvenile/neat.nge-juvenile.apply.ts';
+import type {
+  NgeGrowthBudget,
+  NgeHysteresisState,
+  NgeModuleMetricsSnapshot,
+  NgePruneBudget,
+} from '../../../src/neat/nge-juvenile/neat.nge-juvenile.types.ts';
 
 /** Cadence modes supported by the runtime adaptation engine. */
 export type RuntimeAdaptationCadenceMode =
-  | 'every_tick'
-  | 'every_n_ticks'
-  | 'lap_boundary'
-  | 'sector_boundary';
+  'every_tick' | 'every_n_ticks' | 'lap_boundary' | 'sector_boundary';
 
 /** Candidate mutation operations supported by the runtime adaptation engine. */
 export type RuntimeAdaptationOperation =
-  | 'param_nudge'
-  | 'add_edge'
-  | 'add_node'
-  | 'prune_edge';
+  'param_nudge' | 'add_edge' | 'add_node' | 'prune_edge';
 
 /** Per-step network size snapshot used by adaptation telemetry. */
 export interface RuntimeNetworkSizeSnapshot {
@@ -40,6 +43,7 @@ export interface RuntimeAdaptationTelemetry {
     | 'insufficient_evidence'
     | 'mutation_cooldown_active'
     | 'rollback_cooldown_active'
+    | 'growth_throttled'
     | 'no_candidate_operations'
     | 'safety_checks_failed'
     | 'improvement_below_threshold'
@@ -134,14 +138,28 @@ const DEFAULT_CADENCE: RuntimeAdaptationCadenceOptions = {
 
 const DEFAULT_LIMITS: RuntimeAdaptationLimits = {
   maxStructuralEditsPerStep: 1,
-  maxNodes: 256,
-  maxConnections: 1_024,
+  maxNodes: 8_000,
+  maxConnections: 32_000,
   mutationCooldownTicks: 0,
   rollbackCooldownTicks: 0,
 };
 
 const DEFAULT_IMPROVEMENT_THRESHOLD = 0;
 const DEFAULT_MINIMUM_EVIDENCE_WINDOW = 4;
+const RUNTIME_MODULE_ID = 'racing:runtime';
+
+/**
+ * Node count above which the growth throttle engages.
+ * Networks with more nodes than this threshold get progressively longer
+ * back-off intervals to preserve real-time performance at scale.
+ */
+const LARGE_NETWORK_NODE_THRESHOLD = 1_000;
+
+/**
+ * Base throttle interval (in ticks) applied when the network exceeds the
+ * large-network threshold. The effective interval scales with network size.
+ */
+const GROWTH_THROTTLE_BASE_INTERVAL_TICKS = 3;
 
 /**
  * Creates a reusable per-tick adaptation engine for racing runtime loops.
@@ -163,9 +181,13 @@ export function createRuntimeAdaptationEngine(
   );
   const improvementThreshold =
     options.improvementThreshold ?? DEFAULT_IMPROVEMENT_THRESHOLD;
-  const random = options.random ?? Math.random;
 
-  let nextMutationTick = Number.NEGATIVE_INFINITY;
+  let hysteresis: NgeHysteresisState = {
+    growthPositiveWindowCount: 0,
+    pruneUnderuseWindowCount: 0,
+    lastMorphKind: 'none',
+    cooldownWindowsRemaining: 0,
+  };
   let nextRollbackTick = Number.NEGATIVE_INFINITY;
   let lastLapBoundary = Number.NEGATIVE_INFINITY;
   let lastSectorBoundary = Number.NEGATIVE_INFINITY;
@@ -217,7 +239,13 @@ export function createRuntimeAdaptationEngine(
         });
       }
 
-      if (tickInput.tick < nextMutationTick) {
+      // Step 3: Advance lifecycle hysteresis for the current evaluation window.
+      const isPositiveFocusWindow =
+        evidenceWindow.length >= 2 &&
+        (evidenceWindow.at(-1) ?? 0) > (evidenceWindow[0] ?? 0);
+      hysteresis = advanceGrowthHysteresis(hysteresis, isPositiveFocusWindow);
+
+      if (hysteresis.cooldownWindowsRemaining > 0) {
         return createTelemetry({
           tick: tickInput.tick,
           operations: [],
@@ -243,13 +271,56 @@ export function createRuntimeAdaptationEngine(
         });
       }
 
-      // Step 3: Propose bounded candidate operations and snapshot rollback state.
-      const proposedOperations = proposeCandidateOperations(
+      // Step 3.5: Size-based growth throttle — back off lifecycle runs when
+      // the network has grown large to preserve real-time performance.
+      const growthThrottle = computeGrowthThrottle(
         tickInput.network,
-        limits,
-        random,
+        tickInput.tick,
       );
-      if (proposedOperations.length === 0) {
+      if (growthThrottle.shouldThrottle) {
+        return createTelemetry({
+          tick: tickInput.tick,
+          operations: [],
+          scoreBefore: baselineScore,
+          scoreAfter: baselineScore,
+          committed: false,
+          reason: 'growth_throttled',
+          networkSizeBefore,
+          networkSizeAfter: networkSizeBefore,
+        });
+      }
+
+      // Step 4: Build lifecycle inputs from the runtime state.
+      const metrics = buildModuleMetricsSnapshot(
+        tickInput.network,
+        evidenceWindow,
+      );
+      const growthBudget = buildGrowthBudget(tickInput.network, limits);
+      const pruneBudget = buildPruneBudget(tickInput.network);
+
+      // Step 5: Snapshot the network for potential rollback.
+      const rollbackSnapshot = tickInput.network.toJSON();
+
+      // Step 6: Call runNgeLifecycle to plan and apply growth morphs.
+      const lifecycleResult = runNgeLifecycle({
+        stage: 'juvenile',
+        moduleId: RUNTIME_MODULE_ID,
+        metrics,
+        budget: growthBudget,
+        config: {
+          hysteresisWindowCount: 0,
+          cooldownWindowCount: limits.mutationCooldownTicks,
+        },
+        hysteresis,
+        network: tickInput.network,
+        pruneBudget,
+      });
+
+      // Step 7: Check applyOutcomes for applied morphs.
+      const applyOutcomes = lifecycleResult.applyOutcomes ?? [];
+      const operations = mapOutcomesToOperations(applyOutcomes);
+
+      if (operations.length === 0) {
         return createTelemetry({
           tick: tickInput.tick,
           operations: [],
@@ -262,10 +333,7 @@ export function createRuntimeAdaptationEngine(
         });
       }
 
-      const rollbackSnapshot = tickInput.network.toJSON();
-
-      // Step 4: Apply candidate edits, evaluate, and commit/rollback by threshold + safety.
-      applyOperations(tickInput.network, proposedOperations);
+      // Step 8: Evaluate candidate score after lifecycle mutation.
       const rawCandidateSize = resolveNetworkSizeSnapshot(tickInput.network);
       const safetyChecksPass = passesSafetyChecks(rawCandidateSize, limits);
       const candidateScore = evaluateScore(tickInput.network, evidenceWindow);
@@ -273,11 +341,12 @@ export function createRuntimeAdaptationEngine(
       const shouldCommit =
         safetyChecksPass && improvement >= improvementThreshold;
 
+      // Step 9: Commit or rollback based on score improvement.
       if (shouldCommit) {
-        nextMutationTick = tickInput.tick + limits.mutationCooldownTicks;
+        hysteresis = lifecycleResult.hysteresis ?? hysteresis;
         return createTelemetry({
           tick: tickInput.tick,
-          operations: proposedOperations,
+          operations,
           scoreBefore: baselineScore,
           scoreAfter: candidateScore,
           committed: true,
@@ -287,13 +356,14 @@ export function createRuntimeAdaptationEngine(
         });
       }
 
+      // Step 10: Rollback the network and set rollback cooldown.
       restoreNetworkSnapshot(tickInput.network, rollbackSnapshot);
       nextRollbackTick = tickInput.tick + limits.rollbackCooldownTicks;
       const restoredSize = resolveNetworkSizeSnapshot(tickInput.network);
 
       return createTelemetry({
         tick: tickInput.tick,
-        operations: proposedOperations,
+        operations,
         scoreBefore: baselineScore,
         scoreAfter: candidateScore,
         committed: false,
@@ -305,12 +375,52 @@ export function createRuntimeAdaptationEngine(
       });
     },
     reset(): void {
-      nextMutationTick = Number.NEGATIVE_INFINITY;
+      hysteresis = {
+        growthPositiveWindowCount: 0,
+        pruneUnderuseWindowCount: 0,
+        lastMorphKind: 'none',
+        cooldownWindowsRemaining: 0,
+      };
       nextRollbackTick = Number.NEGATIVE_INFINITY;
       lastLapBoundary = Number.NEGATIVE_INFINITY;
       lastSectorBoundary = Number.NEGATIVE_INFINITY;
     },
   };
+}
+
+/**
+ * Creates one independent runtime adaptation engine per car index.
+ *
+ * Each car in a multi-car racing simulation maintains its own adaptation
+ * state, cooldowns, and cadence boundaries.  This factory creates a
+ * `Map<number, RuntimeAdaptationEngine>` keyed by car index (0 to
+ * `carCount - 1`) where every engine has fully independent closure-scoped
+ * state — no shared mutable state across cars.
+ *
+ * @param carCount - Number of cars to create engines for.
+ * @param options - Optional engine options applied identically to every car's engine.
+ * @returns Map keyed by car index of independent adaptation engines.
+ * @example
+ * ```ts
+ * const engines = createPerCarAdaptationEngines(3, {
+ *   limits: { mutationCooldownTicks: 100 },
+ * });
+ * const car0Engine = engines.get(0); // independent state
+ * const car1Engine = engines.get(1); // independent state
+ * ```
+ */
+export function createPerCarAdaptationEngines(
+  carCount: number,
+  options: RuntimeAdaptationEngineOptions = {},
+): Map<number, RuntimeAdaptationEngine> {
+  const engines = new Map<number, RuntimeAdaptationEngine>();
+  const safeCarCount = Math.max(0, Math.floor(carCount));
+
+  for (let carIndex = 0; carIndex < safeCarCount; carIndex++) {
+    engines.set(carIndex, createRuntimeAdaptationEngine(options));
+  }
+
+  return engines;
 }
 
 /**
@@ -437,73 +547,95 @@ function isCadenceReady(
   return sectorDelta >= (cadence.boundaryInterval ?? 1);
 }
 
-function proposeCandidateOperations(
+/**
+ * Build a module metrics snapshot from the runtime evidence window.
+ *
+ * @param network - Live controller network.
+ * @param evidenceWindow - Filtered rolling score history.
+ * @returns NGE module metrics for the lifecycle focus scorer.
+ */
+function buildModuleMetricsSnapshot(
   network: Network,
-  limits: RuntimeAdaptationLimits,
-  random: () => number,
-): RuntimeAdaptationOperation[] {
-  const operationPlan: RuntimeAdaptationOperation[] = ['param_nudge'];
-  const structuralPool = resolveStructuralPool(network, limits);
+  evidenceWindow: readonly number[],
+): NgeModuleMetricsSnapshot {
+  const scoreTrend =
+    evidenceWindow.length >= 2
+      ? (evidenceWindow.at(-1) ?? 0) - (evidenceWindow[0] ?? 0)
+      : 0;
+  const scoreMean =
+    evidenceWindow.length > 0
+      ? evidenceWindow.reduce(
+          (accumulatedScore, scoreValue) => accumulatedScore + scoreValue,
+          0,
+        ) / evidenceWindow.length
+      : 0;
 
-  if (limits.maxStructuralEditsPerStep === 0 || structuralPool.length === 0) {
-    return operationPlan;
-  }
-
-  for (
-    let structuralEditIndex = 0;
-    structuralEditIndex < limits.maxStructuralEditsPerStep;
-    structuralEditIndex++
-  ) {
-    const sampledIndex = Math.floor(random() * structuralPool.length);
-    operationPlan.push(structuralPool[sampledIndex] ?? structuralPool[0]);
-  }
-
-  return operationPlan;
+  return {
+    moduleId: RUNTIME_MODULE_ID,
+    utilization: Math.min(scoreMean, 1),
+    rewardDelta: scoreTrend,
+    novelty: 0,
+    stabilityAge: 0,
+    wiringCost: network.nodes.length + network.connections.length,
+  };
 }
 
-function resolveStructuralPool(
+/**
+ * Build a growth budget from the runtime limits and live network.
+ *
+ * @param network - Live controller network.
+ * @param limits - Runtime adaptation limits.
+ * @returns NGE growth budget for the lifecycle apply phase.
+ */
+function buildGrowthBudget(
   network: Network,
   limits: RuntimeAdaptationLimits,
-): RuntimeAdaptationOperation[] {
-  const structuralPool: RuntimeAdaptationOperation[] = [];
-
-  if (network.connections.length > 0) {
-    structuralPool.push('prune_edge');
-  }
-
-  if (network.connections.length < limits.maxConnections) {
-    structuralPool.push('add_edge');
-  }
-
-  if (network.nodes.length < limits.maxNodes) {
-    structuralPool.push('add_node');
-  }
-
-  return structuralPool;
+): NgeGrowthBudget {
+  return {
+    maxNodes: limits.maxNodes,
+    maxEdges: limits.maxConnections,
+    maxEpisodicSlots: 0,
+    currentNodeCount: network.nodes.length,
+    currentEdgeCount: network.connections.length,
+    currentEpisodicSlotCount: 0,
+  };
 }
 
-function applyOperations(
-  network: Network,
-  operations: readonly RuntimeAdaptationOperation[],
-): void {
-  operations.forEach((operation) => {
-    if (operation === 'param_nudge') {
-      network.mutate(methods.mutation.MOD_WEIGHT);
-      return;
-    }
+/**
+ * Build a prune budget from the live network.
+ *
+ * @param network - Live controller network.
+ * @returns NGE prune budget for the lifecycle apply phase.
+ */
+function buildPruneBudget(network: Network): NgePruneBudget {
+  return {
+    minEdges: 0,
+    minNodes: 1,
+    costExemptEdgeIds: [],
+    currentEdgeCount: network.connections.length,
+    currentNodeCount: network.nodes.length,
+    currentWiringCost: network.nodes.length + network.connections.length,
+  };
+}
 
-    if (operation === 'add_edge') {
-      network.mutate(methods.mutation.ADD_CONN);
-      return;
-    }
-
-    if (operation === 'add_node') {
-      network.mutate(methods.mutation.ADD_NODE);
-      return;
-    }
-
-    network.mutate(methods.mutation.SUB_CONN);
-  });
+/**
+ * Map lifecycle apply outcomes to runtime adaptation operations.
+ *
+ * @param outcomes - Apply outcomes from the lifecycle result.
+ * @returns Runtime operations for telemetry, excluding skipped morphs.
+ */
+function mapOutcomesToOperations(
+  outcomes: readonly MorphApplyOutcome[],
+): RuntimeAdaptationOperation[] {
+  const operations: RuntimeAdaptationOperation[] = [];
+  for (const outcome of outcomes) {
+    if (outcome.status !== 'applied') continue;
+    if (outcome.kind === 'edgeDensify') operations.push('add_edge');
+    else if (outcome.kind === 'nodeAdd') operations.push('add_node');
+    else if (outcome.kind === 'edgePrune' || outcome.kind === 'compact')
+      operations.push('prune_edge');
+  }
+  return operations;
 }
 
 function restoreNetworkSnapshot(
@@ -528,6 +660,35 @@ function passesSafetyChecks(
     networkSize.nodes <= limits.maxNodes &&
     networkSize.connections <= limits.maxConnections
   );
+}
+
+/**
+ * Compute whether the growth lifecycle should be throttled for the current tick.
+ *
+ * When the network exceeds {@link LARGE_NETWORK_NODE_THRESHOLD}, the effective
+ * throttle interval scales with network size so that larger networks get
+ * progressively longer back-off intervals. This preserves real-time
+ * performance by preventing the lifecycle from running every tick at scale.
+ *
+ * @param network - Live controller network whose size determines throttling.
+ * @param tick - Current fixed-timestep tick used for interval gating.
+ * @returns Throttle decision with the computed interval.
+ */
+function computeGrowthThrottle(
+  network: Network,
+  tick: number,
+): { shouldThrottle: boolean; interval: number } {
+  const nodeCount = network.nodes.length;
+  if (nodeCount <= LARGE_NETWORK_NODE_THRESHOLD) {
+    return { shouldThrottle: false, interval: 1 };
+  }
+
+  // Scale the throttle interval based on network size budget.
+  const sizeBudget = Math.ceil(nodeCount / LARGE_NETWORK_NODE_THRESHOLD);
+  const interval = GROWTH_THROTTLE_BASE_INTERVAL_TICKS * sizeBudget;
+  const shouldThrottle = tick % interval !== 0;
+
+  return { shouldThrottle, interval };
 }
 
 function resolveNetworkSizeSnapshot(

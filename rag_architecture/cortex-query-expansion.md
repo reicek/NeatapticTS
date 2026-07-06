@@ -2,6 +2,8 @@
 
 > Extracted from `plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md` (Step 07) for permanent reference.
 
+> **Backing database.** The Repo Cortex is backed by a single consolidated Turso (libSQL) database accessed via the fully async `@libsql/client` driver (default local embedded replica `data/turso-replica.sqlite`; cloud primary `libsql://<db>.turso.io`). Vectors use native Turso vectors with `F8_BLOB` 8-bit quantization, approximate nearest neighbor search runs server-side via DiskANN (`libsql_vector_idx`, `vector_top_k()`), and hybrid ranking is performed SQL-side via Reciprocal Rank Fusion (RRF, k=60). The historical design content below describes the pre-Turso architecture that was subsequently migrated to this stack.
+
 Complete design for embedding-based synonym discovery, domain-specific associations, and query expansion with budget enforcement.
 
 ---
@@ -841,7 +843,7 @@ Where:
 
 1. **Local-first**: All expansion runs locally using the existing ONNX embedding model and a static JSON dictionary. No external API calls (no LLM-based expansion, no cloud synonym service).
 
-2. **Same database**: The `term_embeddings` table is stored in `data/embeddings.sqlite` alongside `chunk_embeddings`. No new database file.
+2. **Same database**: The `term_embeddings` table is stored in the consolidated Turso (libSQL) database alongside `chunk_embeddings`. No new database file.
 
 3. **Backward compatible**: Expansion is opt-in via `expand_query: true`. Default behavior is unchanged. When the `term_embeddings` table does not exist, `expand_query` degrades gracefully (domain associations still work, embedding synonyms are skipped).
 

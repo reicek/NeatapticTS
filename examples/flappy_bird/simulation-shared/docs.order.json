@@ -12,7 +12,5 @@
     "simulation-shared.statistics.utils.ts",
     "simulation-shared.errors.ts"
   ],
-  "folderOrder": [
-    "observation"
-  ]
+  "folderOrder": ["observation"]
 }

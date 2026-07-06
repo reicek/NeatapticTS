@@ -1,9 +1,13 @@
 ---
 name: agent-frontmatter-standards
-description: 'Use when: validating or designing VS Code custom agent frontmatter for NeatapticTS, including tier, skills, tools, agents allow-lists, model routing, visibility, handoffs, migration state, CI validation, or diagnosing silent customization loading failures.'
+description: 'Use when: validating or designing VS Code agent frontmatter (tier, skills, tools, model, visibility).'
 argument-hint: 'Describe the agent file(s), tier and visibility target, tools/skills/agents changes, model routing, migration state, observed failure symptom, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - model-routing-and-budget
+  - agent-inventory-audit
+  - updating-agent-frontmatter
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -21,6 +25,16 @@ This skill governs the design and validation of YAML frontmatter in `.github/age
 - Reviewing whether the eight SDLC orchestrators (`00-helping` through `07-logging`) are correctly surfaced as `user-invocable: true`.
 - Auditing hidden specialists to confirm they carry `user-invocable: false` and bounded `agents: []`.
 - Preparing validation evidence before or after a customization batch, migration step, or CI gate.
+
+## When NOT to use
+
+Do NOT use for skill frontmatter validation - use `skill-frontmatter-standards` instead. Do NOT use for inventory-wide audits - use `agent-inventory-audit` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Agent frontmatter change" → "Validates in CI?"; "Validates in CI?" → "Done" (Yes), "Silent failure?" (No); "Done"; "Silent failure?" → "Check tier/visibility fields" (No error shown), "Fix reported issue" (Error reported); "Check tier/visibility fields" → "user-invocable set?"; "Fix reported issue" → "Fix and re-validate"; "user-invocable set?" → "Check disable-model-invocation" (Yes, but not visible), "Check tier enforcement" (No); "Fix and re-validate" → "Validates in CI?"; "Check disable-model-invocation" → "Fix and re-validate"; "Check tier enforcement" → "Fix and re-validate".
+```
 
 ## Task Packet
 
@@ -88,6 +102,37 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 - Record which frontmatter fields changed, why they changed, and whether the edit was a repair, migration step, or policy alignment.
 - Note the validator commands that were run and whether each passed in normal mode, strict mode, or both.
 - If any residual risk remains, describe the exact boundary and the next validation step instead of leaving a generic warning.
+
+## Before / After Examples
+
+**Before:**
+
+```yaml
+---
+name: my-agent
+description: does stuff
+---
+```
+
+**After:**
+
+```yaml
+---
+name: my-agent
+description: 'Use when: <trigger phrase for the agent role>.'
+argument-hint: 'Describe the task scope and expected output.'
+user-invocable: false
+disable-model-invocation: false
+tier: 3
+skills:
+  - relevant-skill
+agents: []
+model: claude-sonnet-4-20250514
+tools:
+  - grep
+  - view
+---
+```
 
 ## Guardrails
 

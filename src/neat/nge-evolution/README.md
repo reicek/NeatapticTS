@@ -1,87 +1,38 @@
 # neat/nge-evolution
 
-Error thrown when one requested reproduction mode is unavailable for the current evolution context.
+Evolution operators for the NGE (Neuro-evolutionary Genesis Engine) extension.
 
-## neat/nge-evolution/neat.nge-evolution.types.ts
+This boundary owns the three reproduction modes — parthenogenesis, polyandric,
+and sexual crossover — plus the compatibility-distance and epigenetic-prior
+helpers that sit next to them. Callers typically import the stable facade
+exports rather than the leaf modules.
 
-### NgeEvolutionCompatibilityComparisonInput
+The polyandric operator is the multi-parent recombination path: a queen DNA
+template receives patch contributions from a small set of drone donors. The
+{@link NGE_EVOLUTION_DEFAULT_POLYANDRIC_DRONE_CONTRIBUTION_FRACTION} caps how
+many regions may be patched, and the {@link NGE_EVOLUTION_DEFAULT_POLYANDRIC_QUEEN_BIAS}
+gate decides, per region, whether the queen or the drone wins the merge.
+A deterministic FNV-1a hash of the region identifier converts the bias value
+into a repeatable threshold, so the same queen/drone pair and policy always
+produce the same offspring.
 
-One pairwise comparison input evaluated by the Phase E composite compatibility calculator.
+```mermaid
+flowchart LR
+  Queen["Queen DNA template"] --> Cap{"Cap patchable<br/>regions by fraction"}
+  Cap --> Assign["Assign drones to regions"]
+  Assign --> Gate{"FNV-1a hash of regionId<br/>vs queenBias"}
+  Gate -->|queen wins| Keep["Keep queen region"]
+  Gate -->|drone wins| Patch["Patch drone region"]
+  Keep --> Offspring["Canonical offspring"]
+  Patch --> Offspring
+```
 
-### NgeEvolutionCompatibilityDistanceContext
-
-Context bag controlling one Phase E compatibility-distance computation and normalization scope.
-
-### NgeEvolutionCompatibilityDistanceResult
-
-Composite compatibility-distance result returned by the Phase E speciation helper.
-
-### NgeEvolutionCompatibilityDistanceTerm
-
-One weighted compatibility-distance term captured during Phase E speciation scoring.
-
-### NgeEvolutionCompatibilityDistanceTermName
-
-Fixed term names used by the Phase E composite compatibility-distance calculator.
-
-### NgeEvolutionCompatibilityDistanceTerms
-
-Fully expanded term shelf returned by the Phase E compatibility-distance calculator.
-
-### NgeEvolutionCompatibilityDistanceWeights
-
-Alpha weights applied to the four Phase E compatibility-distance terms.
-
-### NgeEvolutionCompatibilityGenomeInput
-
-One genome-side input consumed by the Phase E composite compatibility calculator.
-
-The canonical DNA envelope does not yet own lifecycle cadence or wiring-preference
-knobs, so the calculator accepts those traits as an owner-local sidecar.
-
-### NgeEvolutionCompatibilityWiringCostWeights
-
-Wiring-cost preference knobs compared by the Phase E lifecycle-distance term.
-
-### NgeEvolutionContributionKind
-
-High-level contribution kinds used to describe parent input at the reproduction boundary.
-
-### NgeEvolutionEpigeneticPriorInput
-
-Input contract consumed by the optional Phase E epigenetic prior operator.
-
-### NgeEvolutionEpigeneticPriorResult
-
-Output contract returned by the optional Phase E epigenetic prior operator.
-
-### NgeEvolutionEpigeneticReference
-
-Two-parent weak reference captured for one birth-time epigenetic prior update.
-
-### NgeEvolutionParentContribution
-
-One parent contribution reported by a Phase E reproduction operator.
-
-### NgeEvolutionParentRole
-
-Parent-role labels used when Phase E operators report how one offspring was assembled.
-
-### NgeEvolutionPolyandricAssignedRegion
-
-Region-assignment record for one drone's patching contribution in polyandric offspring reproduction.
-
-### NgeEvolutionPolyandricRegionAssignmentResult
-
-Polyandric region-assignment result reported before any drone patches are applied to offspring.
-
-### NgeEvolutionReproductionOutcome
-
-High-level offspring outcome labels surfaced by the Phase E reproduction operators.
-
-### NgeEvolutionReproductionResult
-
-Shared reproduction result returned by all three Phase E reproduction modes.
+Background reading: the NEAT algorithm
+([Stanley & Miikkulainen (2002)](https://nn.cs.utexas.edu/?stanley:ec02)),
+polyandry in evolutionary biology
+([Wikipedia — Polyandry](https://en.wikipedia.org/wiki/Polyandry)) and the
+FNV-1a hash function
+([Wikipedia — Fowler–Noll–Vo hash function](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function)).
 
 ## neat/nge-evolution/neat.nge-evolution.ts
 
@@ -104,7 +55,7 @@ computeNgeEvolutionCompatibilityDistance(
 ): NgeEvolutionCompatibilityDistanceResult
 ```
 
-Public Phase E compatibility-distance entrypoint exposed from one stable owner-local facade.
+Public NGE evolution compatibility-distance entrypoint exposed from one stable owner-local facade.
 
 ### NGE_EVOLUTION_DEFAULT_ALPHA_COMPUTATION
 
@@ -124,7 +75,7 @@ Default alpha weight for the classic NEAT topology-distance term used in speciat
 
 ### NGE_EVOLUTION_DEFAULT_COMPATIBILITY_DISTANCE_WEIGHTS
 
-Default per-term alpha bag for callers that want the Phase E compatibility defaults.
+Default per-term alpha bag for callers that want the NGE evolution compatibility defaults.
 
 ### NGE_EVOLUTION_DEFAULT_EPIGENETIC_DECAY
 
@@ -134,16 +85,28 @@ Default weak-reference decay used by the optional epigenetic prior operator.
 
 Default fraction of DNA regions that polyandric drone donors may patch.
 
+A value of `0.1` means only the first 10% of the queen's patchable regions
+(rounded up) are exposed to drone contributions.
+
 ### NGE_EVOLUTION_DEFAULT_POLYANDRIC_QUEEN_BIAS
 
-Default queen-bias multiplier where `1.0` means queen data wins all conflicts.
+Default queen-bias multiplier for polyandric region merging.
+
+`1.0` means the queen data wins every conflict; `0.0` means the drone data
+always wins; values in between act as a deterministic threshold keyed by the
+FNV-1a hash of each region id. The same queen/drone pair and bias therefore
+always produce the same offspring region.
+
+See the FNV-1a reference:
+[Wikipedia — Fowler–Noll–Vo hash function](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function).
 
 ### ngeEvolution
 
 Default bundle for the nge-evolution owner boundary.
 
-Import this object when a caller wants the full runtime shelf for Phase E
-from one stable owner-local path instead of stitching together leaf modules.
+Import this object when a caller wants the full runtime shelf for the NGE
+evolution extension from one stable owner-local path instead of stitching
+together leaf modules.
 
 ### NgeEvolution_BudgetError
 
@@ -159,42 +122,42 @@ Public error class thrown when one region-assignment request is invalid.
 
 ### NgeEvolutionCompatibilityComparisonInput
 
-One pairwise comparison input evaluated by the Phase E composite compatibility calculator.
+One pairwise comparison input evaluated by the NGE composite compatibility calculator.
 
 ### NgeEvolutionCompatibilityDistanceContext
 
-Context bag controlling one Phase E compatibility-distance computation and normalization scope.
+Context bag controlling one NGE compatibility-distance computation and normalization scope.
 
 ### NgeEvolutionCompatibilityDistanceResult
 
-Composite compatibility-distance result returned by the Phase E speciation helper.
+Composite compatibility-distance result returned by the NGE speciation helper.
 
 ### NgeEvolutionCompatibilityDistanceTerm
 
-One weighted compatibility-distance term captured during Phase E speciation scoring.
+One weighted compatibility-distance term captured during NGE speciation scoring.
 
 ### NgeEvolutionCompatibilityDistanceTermName
 
-Fixed term names used by the Phase E composite compatibility-distance calculator.
+Fixed term names used by the NGE composite compatibility-distance calculator.
 
 ### NgeEvolutionCompatibilityDistanceTerms
 
-Fully expanded term shelf returned by the Phase E compatibility-distance calculator.
+Fully expanded term shelf returned by the NGE compatibility-distance calculator.
 
 ### NgeEvolutionCompatibilityDistanceWeights
 
-Alpha weights applied to the four Phase E compatibility-distance terms.
+Alpha weights applied to the four NGE compatibility-distance terms.
 
 ### NgeEvolutionCompatibilityGenomeInput
 
-One genome-side input consumed by the Phase E composite compatibility calculator.
+One genome-side input consumed by the NGE composite compatibility calculator.
 
 The canonical DNA envelope does not yet own lifecycle cadence or wiring-preference
 knobs, so the calculator accepts those traits as an owner-local sidecar.
 
 ### NgeEvolutionCompatibilityWiringCostWeights
 
-Wiring-cost preference knobs compared by the Phase E lifecycle-distance term.
+Wiring-cost preference knobs compared by the NGE lifecycle-distance term.
 
 ### NgeEvolutionContributionKind
 
@@ -202,11 +165,11 @@ High-level contribution kinds used to describe parent input at the reproduction 
 
 ### NgeEvolutionEpigeneticPriorInput
 
-Input contract consumed by the optional Phase E epigenetic prior operator.
+Input contract consumed by the optional NGE epigenetic prior operator.
 
 ### NgeEvolutionEpigeneticPriorResult
 
-Output contract returned by the optional Phase E epigenetic prior operator.
+Output contract returned by the optional NGE epigenetic prior operator.
 
 ### NgeEvolutionEpigeneticReference
 
@@ -214,11 +177,11 @@ Two-parent weak reference captured for one birth-time epigenetic prior update.
 
 ### NgeEvolutionParentContribution
 
-One parent contribution reported by a Phase E reproduction operator.
+One parent contribution reported by a NGE reproduction operator.
 
 ### NgeEvolutionParentRole
 
-Parent-role labels used when Phase E operators report how one offspring was assembled.
+Parent-role labels used when NGE operators report how one offspring was assembled.
 
 ### NgeEvolutionPolyandricAssignedRegion
 
@@ -230,11 +193,71 @@ Polyandric region-assignment result reported before any drone patches are applie
 
 ### NgeEvolutionReproductionOutcome
 
-High-level offspring outcome labels surfaced by the Phase E reproduction operators.
+High-level offspring outcome labels surfaced by the NGE reproduction operators.
 
 ### NgeEvolutionReproductionResult
 
-Shared reproduction result returned by all three Phase E reproduction modes.
+Shared reproduction result returned by all three NGE reproduction modes.
+
+### NgePolyandricDroneInput
+
+One drone donor offered to the polyandric reproduction operator.
+
+A drone carries a full DNA envelope plus optional bookkeeping: its fitness
+ranking drives the `byFitness` assignment strategy, and `specializationKey`
+drives the `bySpecialization` strategy. Only regions that are actually
+assigned to this drone will be patched into the queen template.
+
+Background reading on multi-parent recombination:
+[Wikipedia — Crossover (genetic algorithm)](https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)).
+
+Example:
+
+```ts
+const drone: NgePolyandricDroneInput = {
+  dna: donorEnvelope,
+  fitness: 0.92,
+  parentId: 'donor-a',
+  specializationKey: 'moduleArchetypes',
+};
+```
+
+### NgePolyandricInput
+
+Input contract for the polyandric reproduction operator.
+
+The queen DNA is the stable template. Up to
+{@link NgeReproductionPolicy.polyandricDroneCount} drone donors compete to
+patch a capped subset of the queen's regions, controlled by
+{@link NgeReproductionPolicy.polyandricDroneContributionFraction}. The
+{@link NgeReproductionPolicy.queenBias} gate then decides, per region,
+whether queen or drone data wins the merge.
+
+Background reading on the biological metaphor:
+[Wikipedia — Polyandry](https://en.wikipedia.org/wiki/Polyandry).
+
+Example:
+
+```ts
+const input: NgePolyandricInput = {
+  ngeEnabled: true,
+  queen: queenEnvelope,
+  queenId: 'queen-1',
+  drones: [
+    {
+      dna: donorA,
+      parentId: 'drone-a',
+      fitness: 0.9,
+    },
+    {
+      dna: donorB,
+      parentId: 'drone-b',
+      fitness: 0.85,
+      specializationKey: 'cppnPrograms',
+    },
+  ],
+};
+```
 
 ### reproduceParthenogenesis
 
@@ -257,6 +280,23 @@ reproducePolyandric(
 
 Public polyandric reproduction operator exposed from one stable owner-local facade.
 
+Builds a queen-template offspring patched by a capped set of drone donors.
+The per-region winner is decided by a deterministic FNV-1a hash of the
+region id compared against the resolved `queenBias`; values below the bias
+keep the queen region, values above it patch the drone region. See the
+module introduction for the full pipeline diagram.
+
+Example:
+
+```ts
+const offspring = reproducePolyandric({
+  ngeEnabled: true,
+  queen: queenEnvelope,
+  queenId: 'queen-1',
+  drones: [{ dna: donorEnvelope, parentId: 'drone-a', fitness: 0.9 }],
+});
+```
+
 ### reproduceSexual
 
 ```ts
@@ -268,7 +308,399 @@ reproduceSexual(
 
 Public sexual reproduction operator exposed from one stable owner-local facade.
 
+## neat/nge-evolution/neat.nge-evolution.reproduction.ts
+
+NGE reproduction operators: parthenogenesis, polyandric, and sexual crossover.
+
+The polyandric operator merges a queen DNA template with patch contributions
+from a small set of drone donors. Region assignment is controlled by
+{@link NgeReproductionPolicy.assignedRegionStrategy}.
+
+## Input shorthand compatibility
+
+The strategy `'non-overlapping'` is input shorthand for the deterministic
+single-drone-per-region assignment that the core already implements under
+`'roundRobin'`. Both values resolve to identical behavior; only the canonical
+string stored in the envelope differs.
+
+This alias preserves the input shorthand while keeping the canonical strategy
+string stored in the envelope.
+
+### applyPolyandricAssignments
+
+```ts
+applyPolyandricAssignments(
+  queenEnvelope: NgeDnaCanonicalEnvelope,
+  drones: readonly NgePolyandricDroneInput[],
+  regionAssignment: NgeEvolutionPolyandricRegionAssignmentResult,
+  queenBias: number,
+): NgeDnaCanonicalEnvelope
+```
+
+Apply every assigned drone patch to the queen template in region order.
+
+This is the fold that turns the region-assignment report into a concrete
+offspring envelope. Each assigned region is passed to
+{@link patchPolyandricRegion} with the same `queenBias`, so the queen/drone
+winner gate is deterministic across the whole patch set.
+
+Parameters:
+- `queenEnvelope` - Queen DNA template.
+- `drones` - Eligible drone donors in the order supplied by the caller.
+- `regionAssignment` - Region-to-drone mapping produced by the assignment step.
+- `queenBias` - Per-region winner bias in [0, 1].
+
+Returns: The patched queen envelope ready for canonicalization.
+
+### hashRegionIdToUnitInterval
+
+```ts
+hashRegionIdToUnitInterval(
+  regionId: string,
+): number
+```
+
+Deterministically map a DNA region identifier into the unit interval [0, 1).
+
+Uses the FNV-1a 32-bit hash so the same `regionId` always yields the same
+value. The result is combined with `queenBias` to decide whether the queen or
+drone wins a patched region.
+
+See the FNV-1a reference:
+[Wikipedia — Fowler–Noll–Vo hash function](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function).
+
+Parameters:
+- `regionId` - Stable region identifier emitted by  {@link collectPolyandricRegionIds} .
+
+Returns: A deterministic number in [0, 1).
+
+### mergeModuleArchetypeWithQueenPriority
+
+```ts
+mergeModuleArchetypeWithQueenPriority(
+  queenRegion: NgeDnaModuleArchetype,
+  droneRegion: NgeDnaModuleArchetype,
+  regionId: string,
+  queenBias: number,
+): NgeDnaModuleArchetype
+```
+
+Merge one module-archetype region from queen and drone, respecting the queen bias.
+
+The per-region winner is decided by comparing
+{@link hashRegionIdToUnitInterval}(regionId) to the clamped `queenBias`.
+When the hash is below the bias the queen wins and its fields override the
+drone's; otherwise the drone wins. Both cases shallow-merge the losing region
+into the winning region and combine `parameterSchema` maps so no keys are
+silently dropped.
+
+Parameters:
+- `queenRegion` - Module archetype taken from the queen template.
+- `droneRegion` - Module archetype taken from the assigned drone.
+- `regionId` - Stable region identifier used to seed the deterministic gate.
+- `queenBias` - Bias in [0, 1]; higher values make the queen more likely to win.
+
+Returns: The merged module archetype written back into the offspring envelope.
+
+### NgePolyandricDroneInput
+
+One drone donor offered to the polyandric reproduction operator.
+
+A drone carries a full DNA envelope plus optional bookkeeping: its fitness
+ranking drives the `byFitness` assignment strategy, and `specializationKey`
+drives the `bySpecialization` strategy. Only regions that are actually
+assigned to this drone will be patched into the queen template.
+
+Background reading on multi-parent recombination:
+[Wikipedia — Crossover (genetic algorithm)](https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)).
+
+Example:
+
+```ts
+const drone: NgePolyandricDroneInput = {
+  dna: donorEnvelope,
+  fitness: 0.92,
+  parentId: 'donor-a',
+  specializationKey: 'moduleArchetypes',
+};
+```
+
+### NgePolyandricInput
+
+Input contract for the polyandric reproduction operator.
+
+The queen DNA is the stable template. Up to
+{@link NgeReproductionPolicy.polyandricDroneCount} drone donors compete to
+patch a capped subset of the queen's regions, controlled by
+{@link NgeReproductionPolicy.polyandricDroneContributionFraction}. The
+{@link NgeReproductionPolicy.queenBias} gate then decides, per region,
+whether queen or drone data wins the merge.
+
+Background reading on the biological metaphor:
+[Wikipedia — Polyandry](https://en.wikipedia.org/wiki/Polyandry).
+
+Example:
+
+```ts
+const input: NgePolyandricInput = {
+  ngeEnabled: true,
+  queen: queenEnvelope,
+  queenId: 'queen-1',
+  drones: [
+    {
+      dna: donorA,
+      parentId: 'drone-a',
+      fitness: 0.9,
+    },
+    {
+      dna: donorB,
+      parentId: 'drone-b',
+      fitness: 0.85,
+      specializationKey: 'cppnPrograms',
+    },
+  ],
+};
+```
+
+### patchPolyandricRegion
+
+```ts
+patchPolyandricRegion(
+  queenEnvelope: NgeDnaCanonicalEnvelope,
+  droneEnvelope: NgeDnaCanonicalEnvelope,
+  regionId: string,
+  queenBias: number,
+): NgeDnaCanonicalEnvelope
+```
+
+Patch one DNA region of the queen envelope with the matching drone region.
+
+Reads the region family (`cppnPrograms`, `moduleArchetypes`, or `rulePasses`)
+and index from `regionId`, then writes back the merged value. Module
+archetypes use {@link mergeModuleArchetypeWithQueenPriority}, which keeps the
+queen-bias gate explicit and preserves both parameter schemas. Other families
+replace the losing region with the winning region under the same FNV-1a gate.
+If either side is missing the region, the queen envelope is returned unchanged.
+
+Parameters:
+- `queenEnvelope` - Queen DNA template being patched.
+- `droneEnvelope` - Drone DNA carrying the candidate replacement region.
+- `regionId` - Stable region identifier in `family:index` form.
+- `queenBias` - Bias in [0, 1] that controls how often the queen keeps the region.
+
+Returns: A new queen envelope with the region patched, or the original envelope when the region is absent.
+
+### reproduceParthenogenesis
+
+```ts
+reproduceParthenogenesis(
+  input: NgeParthenogenesisInput,
+  mutateOffspring: NgeParthenogenesisMutationApplier,
+): NgeEvolutionReproductionResult<NgeDnaCanonicalEnvelope, readonly number[]>
+```
+
+Build one parthenogenetic offspring from a single NGE DNA parent.
+
+Parameters:
+- `input` - Operator context containing the source parent DNA and mode flags.
+- `mutateOffspring` - Optional mutation callback applied only when the configured rate is non-zero.
+
+Returns: Canonical offspring DNA plus parent-contribution metadata.
+
+### reproducePolyandric
+
+```ts
+reproducePolyandric(
+  input: NgePolyandricInput,
+): NgeEvolutionReproductionResult<NgeDnaCanonicalEnvelope, readonly number[]>
+```
+
+Build one polyandric offspring from a queen DNA template plus optional drone donors.
+
+Polyandric recombination is a multi-parent operator: the queen template keeps
+most of its structure, while a small pool of drones patches a capped subset
+of its DNA regions. The cap and drone count come from the resolved policy.
+For every assigned region a deterministic FNV-1a hash of the region id is
+compared against `queenBias`; when the hash is below the bias the queen wins,
+otherwise the drone wins. This makes the merge deterministic and
+reproducible for the same queen/drone/policy triple.
+
+See {@link NgePolyandricInput} for the input shape and
+{@link NGE_EVOLUTION_DEFAULT_POLYANDRIC_QUEEN_BIAS} for the default bias.
+
+Background reading:
+- Polyandry in evolutionary biology:
+  [Wikipedia — Polyandry](https://en.wikipedia.org/wiki/Polyandry).
+- Multi-parent recombination in evolutionary computing:
+  [Wikipedia — Crossover (genetic algorithm)](https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)).
+- The FNV-1a hash function:
+  [Wikipedia — Fowler–Noll–Vo hash function](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function).
+
+Parameters:
+- `input` - Operator context containing the queen DNA, drone donors, and policy overrides.
+
+Returns: Canonical offspring DNA plus the resolved region-assignment report.
+
+Example:
+
+```ts
+const result = reproducePolyandric({
+  ngeEnabled: true,
+  queen: queenEnvelope,
+  queenId: 'queen-1',
+  drones: [
+    { dna: donorEnvelope, parentId: 'drone-a', fitness: 0.9 },
+  ],
+});
+console.log(result.outcome); // 'queen-template-patched'
+```
+
+### reproduceSexual
+
+```ts
+reproduceSexual(
+  input: NgeSexualInput,
+  randomGenerator: () => number,
+): NgeEvolutionReproductionResult<NgeDnaCanonicalEnvelope, readonly number[]>
+```
+
+Build one sexual offspring using NEAT-aligned fitter-parent handling for disjoint regions.
+
+Parameters:
+- `input` - Operator context containing both parent DNAs and their relative fitness scores.
+- `randomGenerator` - Deterministic selector used for matching-region crossover choices.
+
+Returns: Canonical offspring DNA plus per-parent contribution records.
+
+## neat/nge-evolution/neat.nge-evolution.types.ts
+
+### NgeEvolutionCompatibilityComparisonInput
+
+One pairwise comparison input evaluated by the NGE composite compatibility calculator.
+
+### NgeEvolutionCompatibilityDistanceContext
+
+Context bag controlling one NGE compatibility-distance computation and normalization scope.
+
+### NgeEvolutionCompatibilityDistanceResult
+
+Composite compatibility-distance result returned by the NGE speciation helper.
+
+### NgeEvolutionCompatibilityDistanceTerm
+
+One weighted compatibility-distance term captured during NGE speciation scoring.
+
+### NgeEvolutionCompatibilityDistanceTermName
+
+Fixed term names used by the NGE composite compatibility-distance calculator.
+
+### NgeEvolutionCompatibilityDistanceTerms
+
+Fully expanded term shelf returned by the NGE compatibility-distance calculator.
+
+### NgeEvolutionCompatibilityDistanceWeights
+
+Alpha weights applied to the four NGE compatibility-distance terms.
+
+### NgeEvolutionCompatibilityGenomeInput
+
+One genome-side input consumed by the NGE composite compatibility calculator.
+
+The canonical DNA envelope does not yet own lifecycle cadence or wiring-preference
+knobs, so the calculator accepts those traits as an owner-local sidecar.
+
+### NgeEvolutionCompatibilityWiringCostWeights
+
+Wiring-cost preference knobs compared by the NGE lifecycle-distance term.
+
+### NgeEvolutionContributionKind
+
+High-level contribution kinds used to describe parent input at the reproduction boundary.
+
+### NgeEvolutionEpigeneticPriorInput
+
+Input contract consumed by the optional NGE epigenetic prior operator.
+
+### NgeEvolutionEpigeneticPriorResult
+
+Output contract returned by the optional NGE epigenetic prior operator.
+
+### NgeEvolutionEpigeneticReference
+
+Two-parent weak reference captured for one birth-time epigenetic prior update.
+
+### NgeEvolutionParentContribution
+
+One parent contribution reported by a NGE reproduction operator.
+
+### NgeEvolutionParentRole
+
+Parent-role labels used when NGE operators report how one offspring was assembled.
+
+### NgeEvolutionPolyandricAssignedRegion
+
+Region-assignment record for one drone's patching contribution in polyandric offspring reproduction.
+
+### NgeEvolutionPolyandricRegionAssignmentResult
+
+Polyandric region-assignment result reported before any drone patches are applied to offspring.
+
+### NgeEvolutionReproductionOutcome
+
+High-level offspring outcome labels surfaced by the NGE reproduction operators.
+
+### NgeEvolutionReproductionResult
+
+Shared reproduction result returned by all three NGE reproduction modes.
+
+## neat/nge-evolution/neat.nge-evolution.constants.ts
+
+### NGE_EVOLUTION_DEFAULT_ALPHA_COMPUTATION
+
+Default alpha weight for the NGE computation-motif distance term used in speciation.
+
+### NGE_EVOLUTION_DEFAULT_ALPHA_LIFECYCLE
+
+Default alpha weight for the NGE lifecycle-policy distance term used in speciation.
+
+### NGE_EVOLUTION_DEFAULT_ALPHA_MEMORY
+
+Default alpha weight for the NGE memory-tier distance term used in speciation.
+
+### NGE_EVOLUTION_DEFAULT_ALPHA_TOPOLOGY
+
+Default alpha weight for the classic NEAT topology-distance term used in speciation.
+
+### NGE_EVOLUTION_DEFAULT_COMPATIBILITY_DISTANCE_WEIGHTS
+
+Default per-term alpha bag used when callers do not inject custom weights.
+
+### NGE_EVOLUTION_DEFAULT_EPIGENETIC_DECAY
+
+Default weak-reference decay used by the optional epigenetic prior operator.
+
+### NGE_EVOLUTION_DEFAULT_POLYANDRIC_DRONE_CONTRIBUTION_FRACTION
+
+Default fraction of DNA regions that polyandric drone donors may patch.
+
+A value of `0.1` means only the first 10% of the queen's patchable regions
+(rounded up) are exposed to drone contributions.
+
+### NGE_EVOLUTION_DEFAULT_POLYANDRIC_QUEEN_BIAS
+
+Default queen-bias multiplier for polyandric region merging.
+
+`1.0` means the queen data wins every conflict; `0.0` means the drone data
+always wins; values in between act as a deterministic threshold keyed by the
+FNV-1a hash of each region id. The same queen/drone pair and bias therefore
+always produce the same offspring region.
+
+See the FNV-1a reference:
+[Wikipedia — Fowler–Noll–Vo hash function](https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function).
+
 ## neat/nge-evolution/neat.nge-evolution.errors.ts
+
+Error thrown when one requested reproduction mode is unavailable for the current evolution context.
 
 ### NgeEvolution_BudgetError
 
@@ -451,7 +883,7 @@ computeNgeEvolutionCompatibilityDistance(
 ): NgeEvolutionCompatibilityDistanceResult
 ```
 
-Compute the Phase E composite compatibility distance for one NGE genome pair.
+Compute the NGE composite compatibility distance for one NGE genome pair.
 
 The classic NEAT topology distance stays injected rather than recomputed here.
 The additional NGE-only terms derive from DNA archetype composition, memory
@@ -462,7 +894,7 @@ Parameters:
 - `comparison` - Target pairwise comparison to score.
 - `context` - Optional normalization slice and alpha-weight overrides.
 
-Returns: Composite Phase E compatibility-distance result for the target pair.
+Returns: Composite NGE compatibility-distance result for the target pair.
 
 ### computeRawComputationDistance
 
@@ -563,7 +995,7 @@ resolveCompatibilityDistanceWeights(
 Normalize a weight bag so the enabled composite sum stays bounded by one.
 
 Parameters:
-- `weights` - Optional caller overrides merged onto the Phase E defaults.
+- `weights` - Optional caller overrides merged onto the NGE defaults.
 
 Returns: Normalized alpha weights whose sum is `1` unless every entry is `0`.
 
@@ -616,40 +1048,6 @@ Parameters:
 
 Returns: Stable slice with the target comparison in the first slot.
 
-## neat/nge-evolution/neat.nge-evolution.constants.ts
-
-### NGE_EVOLUTION_DEFAULT_ALPHA_COMPUTATION
-
-Default alpha weight for the NGE computation-motif distance term used in speciation.
-
-### NGE_EVOLUTION_DEFAULT_ALPHA_LIFECYCLE
-
-Default alpha weight for the NGE lifecycle-policy distance term used in speciation.
-
-### NGE_EVOLUTION_DEFAULT_ALPHA_MEMORY
-
-Default alpha weight for the NGE memory-tier distance term used in speciation.
-
-### NGE_EVOLUTION_DEFAULT_ALPHA_TOPOLOGY
-
-Default alpha weight for the classic NEAT topology-distance term used in speciation.
-
-### NGE_EVOLUTION_DEFAULT_COMPATIBILITY_DISTANCE_WEIGHTS
-
-Default per-term alpha bag used when callers do not inject custom weights.
-
-### NGE_EVOLUTION_DEFAULT_EPIGENETIC_DECAY
-
-Default weak-reference decay used by the optional epigenetic prior operator.
-
-### NGE_EVOLUTION_DEFAULT_POLYANDRIC_DRONE_CONTRIBUTION_FRACTION
-
-Default fraction of DNA regions that polyandric drone donors may patch.
-
-### NGE_EVOLUTION_DEFAULT_POLYANDRIC_QUEEN_BIAS
-
-Default queen-bias multiplier where `1.0` means queen data wins all conflicts.
-
 ## neat/nge-evolution/neat.nge-evolution.epigenetic.ts
 
 ### applyNgeEvolutionEpigeneticPrior
@@ -687,66 +1085,15 @@ const result = applyNgeEvolutionEpigeneticPrior({
 });
 ```
 
-## neat/nge-evolution/neat.nge-evolution.reproduction.ts
-
-### reproduceParthenogenesis
-
-```ts
-reproduceParthenogenesis(
-  input: NgeParthenogenesisInput,
-  mutateOffspring: NgeParthenogenesisMutationApplier,
-): NgeEvolutionReproductionResult<NgeDnaCanonicalEnvelope, readonly number[]>
-```
-
-Build one parthenogenetic offspring from a single NGE DNA parent.
-
-Parameters:
-- `input` - Operator context containing the source parent DNA and mode flags.
-- `mutateOffspring` - Optional mutation callback applied only when the configured rate is non-zero.
-
-Returns: Canonical offspring DNA plus parent-contribution metadata.
-
-### reproducePolyandric
-
-```ts
-reproducePolyandric(
-  input: NgePolyandricInput,
-): NgeEvolutionReproductionResult<NgeDnaCanonicalEnvelope, readonly number[]>
-```
-
-Build one polyandric offspring from a queen DNA template plus optional drone donors.
-
-Parameters:
-- `input` - Operator context containing the queen DNA, drone donors, and policy overrides.
-
-Returns: Canonical offspring DNA plus the resolved region-assignment report.
-
-### reproduceSexual
-
-```ts
-reproduceSexual(
-  input: NgeSexualInput,
-  randomGenerator: () => number,
-): NgeEvolutionReproductionResult<NgeDnaCanonicalEnvelope, readonly number[]>
-```
-
-Build one sexual offspring using NEAT-aligned fitter-parent handling for disjoint regions.
-
-Parameters:
-- `input` - Operator context containing both parent DNAs and their relative fitness scores.
-- `randomGenerator` - Deterministic selector used for matching-region crossover choices.
-
-Returns: Canonical offspring DNA plus per-parent contribution records.
-
 ## neat/nge-evolution/neat.nge-evolution.utils.ts
 
 ### ngeEvolutionCompatibilityUtils
 
-Phase E compatibility-distance helpers grouped under one stable owner-local namespace object.
+NGE compatibility-distance helpers grouped under one stable owner-local namespace object.
 
 ### ngeEvolutionConstants
 
-Default Phase E constants grouped under one stable owner-local namespace.
+Default NGE constants grouped under one stable owner-local namespace.
 
 ### ngeEvolutionEpigeneticUtils
 
@@ -754,11 +1101,11 @@ Birth-time epigenetic prior helper grouped under one stable owner-local namespac
 
 ### ngeEvolutionErrors
 
-Phase E evolution error classes grouped under one stable owner-local namespace object.
+NGE evolution error classes grouped under one stable owner-local namespace object.
 
 ### ngeEvolutionReproductionUtils
 
-Phase E reproduction-mode operator helpers grouped under one stable owner-local namespace.
+NGE reproduction-mode operator helpers grouped under one stable owner-local namespace.
 
 ### ngeEvolutionUtils
 

@@ -1,9 +1,14 @@
 ---
 name: solid-split
-description: 'Use when: planning or executing a repo-consistent SOLID split in NeatapticTS across src/, examples/, benchmarks/, testing/, scripts/, or tooling surfaces; mapping seams from a root such as #file:flappy_bird; folderizing an overloaded module; migrating imports directly to new chapter folders; coordinating tracker-handoff, educational-docs, coverage-guard, and plan-alignment follow-up; or continuing one durable split step with stable imports and explicit validations.'
+description: 'Use when: planning or executing a repo-consistent SOLID split.'
 argument-hint: 'Provide split root, mode (map|plan|execute|close), current boundary, plan path, stable import or compatibility requirements, expected validations, documentation follow-up needs, and any blocker or worktree caution.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - splitting-monolithic-agent
+  - educational-docs
+  - tracker-handoff
+  - coverage-guard
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -28,21 +33,8 @@ owned by the companion skill `tracker-handoff`.
 
 ## Workflow At A Glance
 
-```mermaid
-flowchart TD
-    A[Task packet] --> B[README inventory]
-    B --> C[Explicit todo list]
-    C --> D{Mode}
-    D -->|map| E[Map seams and choose plan]
-    D -->|plan| F[Create or refine tracker]
-    D -->|execute| G[Run one durable extraction]
-    D -->|close| H[Compress and archive tracker pair]
-    G --> I[educational-docs follow-up]
-    I --> J[Targeted validation]
-    J --> K[tracker-handoff update]
-    E --> K
-    F --> K
-    H --> K
+```text
+Flowchart summary: Task packet → README inventory; README inventory → Explicit todo list; Explicit todo list → Mode; Mode → Map seams and choose plan (map), Create or refine tracker (plan), Run one durable extraction (execute), Compress and archive tracker pair (close); Map seams and choose plan → tracker-handoff update; Create or refine tracker → tracker-handoff update; Run one durable extraction → educational-docs follow-up; Compress and archive tracker pair → tracker-handoff update; tracker-handoff update; educational-docs follow-up → Targeted validation; Targeted validation → tracker-handoff update.
 ```
 
 ## Core Promise
@@ -76,6 +68,10 @@ The default promise is:
   documentation follow-up, or targeted validation were not explicit enough.
 - Documentation work revealed that the real fix is a boundary split rather than
   more prose on the current shape.
+
+## When NOT to use
+
+Do NOT use for splitting agents - use `splitting-monolithic-agent` instead. Do NOT use for general refactoring - use `implementation-standards` instead.
 
 ## Invocation Pattern
 
@@ -296,16 +292,11 @@ For demos under `examples/`, treat DX gaps as library or runtime evidence
 first. Do not normalize demo-specific workarounds if the real issue is a shared
 API, default, or runtime contract.
 
-## Default Decision Rules
+## Decision Tree
 
-| Situation                                                        | Default action                                                                                   | Why                                                        |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| A public file is overloaded but still the stable entrypoint      | Keep a thin orchestration-first facade and extract focused helpers behind it                     | Stable imports stay readable without preserving a monolith |
-| The generated README is too large or mixed-topic after one split | Continue splitting into chapter folders instead of accepting a monolithic README                 | Discoverability is part of architecture in this repo       |
-| External compatibility needs are unknown                         | Keep the smallest stable facade, record a blocker, and prove consumers before deleting old paths | Honest compatibility handling beats speculative cleanup    |
-| The real problem is documentation quality, not structure         | Use `educational-docs` instead of forcing a code split                                           | Choose the smallest correct tool                           |
-| A validation failure is outside the active boundary              | Stop, stabilize the worktree, and hand off to the right repair workflow                          | Do not strand a half-moved boundary                        |
-| An example reveals awkward library ergonomics                    | Prefer the library-level fix or a planned gap note over a demo-local workaround                  | Examples are probes, not places to normalize poor DX       |
+```text
+Flowchart summary: "Overloaded public file" → "Stable entrypoint?"; "Stable entrypoint?" → "Keep thin facade, extract helpers" (Yes), "Folderize freely" (No — internal); "Keep thin facade, extract helpers" → "README too large?"; "Folderize freely" → "Single split is enough"; "README too large?" → "Split into chapter folders" (Yes), "Single split is enough" (No); "Single split is enough" → "Proceed with code split"; "Split into chapter folders" → "Real problem is docs?"; "Proceed with code split"; "Real problem is docs?" → "Use educational-docs instead" (Yes), "Proceed with code split" (No); "Use educational-docs instead".
+```
 
 ## Required Split Workflow
 
@@ -548,10 +539,10 @@ half-moved.
    Update the tracker with `tracker-handoff` before doing more extraction work.
 6. **Repeated gate or workflow failures**  
    Record the failure with
-   `node scripts/agent-customization/gates/record-gate-exception.mjs`. After
-   three consecutive gate failures in one session, escalate via
-   `00.cross-tier-helper` and `00-helping` instead of normalizing a broken
-   workflow edge.
+   `node scripts/agent-customization/gates/record-gate-exception.mjs`. Continue
+   retrying until resolved or a true technical limit is reached. No
+   concessions, no threshold. Only stop when a documented theoretical or
+   practical absolute blocks further progress.
 7. **Session must stop early**  
    Leave the boundary compiling or otherwise stable, mark the blocker
    explicitly in the plan, and provide a fenced `text` handoff prompt that says
@@ -609,6 +600,37 @@ If a companion agent uses this skill, it should:
    `educational-docs`, and validation repair to the appropriate testing
    workflow instead of broadening the prompt.
 6. Update the agent when this skill changes materially so both remain aligned.
+
+## Before / After Examples
+
+**Before:**
+
+```ts
+// src/neat/mutation.ts — 500-line monolith
+export function mutate(genome: Genome): Genome {
+  // ... 200 lines of ADD mutation logic ...
+  // ... 150 lines of SUB mutation logic ...
+  // ... 150 lines of SWAP mutation logic ...
+}
+```
+
+**After:**
+
+```ts
+// src/neat/mutation/neat.mutation.ts — orchestration
+export function mutate(genome: Genome): Genome {
+  const picked = pickMutationType();
+  return applyMutation(genome, picked);
+}
+
+// src/neat/mutation/neat.mutation.utils.ts — focused helpers
+function applyMutation(genome: Genome, type: MutationType): Genome {
+  /* ... */
+}
+function pickMutationType(): MutationType {
+  /* ... */
+}
+```
 
 ## Guardrails
 

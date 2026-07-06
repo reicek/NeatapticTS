@@ -30,7 +30,8 @@ triggers:
 
 # gates (string[]): Gate IDs that must pass before the flow is considered
 #   complete. At least one gate is required. The Tier-1 gate catalog is:
-#   plan-sync, step-packet, agent-graph, learning-event.
+#   plan-sync, step-packet, agent-graph, learning-event, constitution_check,
+#   spec-checklist.
 gates:
   - '<gate-id>'
 

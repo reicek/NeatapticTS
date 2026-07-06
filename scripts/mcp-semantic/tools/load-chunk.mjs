@@ -7,16 +7,14 @@
  * Returns v2 semantic chunking columns including depth, parent_chunk_id,
  * context_header, symbol_name, signature_text, jsdoc_text, export_type, module_path.
  */
-import Database from 'better-sqlite3';
-import {
-  openCortexDatabase,
-  readChunkRow,
-  resolveDatabasePath,
-} from './cortex-db.mjs';
-import { recordFeedbackEvent } from './feedback-core.mjs';
+import { createHash, randomUUID } from 'node:crypto';
+import { getTursoClient, readChunkRow } from './cortex-db.mjs';
 
 /** Maximum number of recent chunk+query click pairs to remember for deduplication. */
 const CLICK_CACHE_SIZE = 50;
+
+/** Hex-character set used to detect pre-computed SHA-256 hashes. */
+const HEX_RE = /^[0-9a-f]{64}$/i;
 
 /** Process-lifetime LRU cache for recent chunk+query click events. */
 const clickCache = new Map();
@@ -50,6 +48,35 @@ function touchClickCache(key) {
 }
 
 /**
+ * Hash a plaintext query with SHA-256.
+ *
+ * @param {string} query - Plaintext query.
+ * @returns {string} Lower-case hex SHA-256 digest.
+ */
+function hashQuery(query) {
+  return createHash('sha256').update(query).digest('hex');
+}
+
+/**
+ * Normalize a query identifier.
+ *
+ * If the supplied value already looks like a SHA-256 hash it is returned as-is;
+ * otherwise it is hashed so that plaintext queries are never persisted.
+ *
+ * @param {string | undefined} value - Caller-provided query or query hash.
+ * @returns {string | null} A SHA-256 hash, or null when no value is given.
+ */
+function normalizeQueryHash(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (HEX_RE.test(value)) {
+    return value.toLowerCase();
+  }
+  return hashQuery(value);
+}
+
+/**
  * Load one indexed corpus chunk by its numeric chunk ID.
  *
  * When `chunk_id` is 1 and no exact row is found, falls back to the
@@ -74,49 +101,41 @@ export async function loadChunk(options = {}) {
   const shouldRecordClick = !clickCache.has(cacheKey);
   touchClickCache(cacheKey);
 
+  const client = options.client ?? (await getTursoClient(options.databasePath));
+
   if (shouldRecordClick) {
-    Promise.resolve().then(() => {
-      try {
-        const feedbackDb = new Database(
-          resolveDatabasePath(options.databasePath),
-        );
-        try {
-          recordFeedbackEvent(feedbackDb, {
-            chunk_id: chunkId,
-            signal_type: 'click',
-            query: queryValue,
-          });
-        } finally {
-          feedbackDb.close();
-        }
-      } catch {
-        // Best-effort: silently drop feedback write failures.
-      }
-    });
+    const queryHash = normalizeQueryHash(queryValue);
+    const createdAt = new Date().toISOString();
+    try {
+      await client.execute({
+        sql: `INSERT INTO feedback_events
+          (event_id, chunk_id, signal_type, signal_strength, query_hash, agent_id, context, created_at)
+        VALUES
+          (?, ?, 'click', 0.1, ?, NULL, NULL, ?)`,
+        args: [randomUUID(), chunkId, queryHash, createdAt],
+      });
+    } catch {
+      // Best-effort: silently drop feedback write failures.
+    }
   }
 
-  const database = openCortexDatabase(options.databasePath);
-  try {
-    const row = database
-      .prepare(
-        `
+  const result = await client.execute({
+    sql: `
       SELECT d.file_path, d.doc_family, c.doc_id, c.chunk_id, c.chunk_index, c.heading_path,
         c.body_text, c.char_start, c.char_end,
         c.parent_chunk_id, c.depth, c.context_header,
         c.symbol_name, c.signature_text, c.jsdoc_text, c.export_type, c.module_path
       FROM chunks c
       JOIN documents d ON d.doc_id = c.doc_id
-      WHERE c.chunk_id = @chunkId
+      WHERE c.chunk_id = ?
     `,
-      )
-      .get({ chunkId });
+    args: [chunkId],
+  });
 
-    const resolvedRow =
-      row ??
-      (chunkId === 1
-        ? database
-            .prepare(
-              `
+  let row = result.rows[0];
+  if (!row && chunkId === 1) {
+    const fallback = await client.execute({
+      sql: `
         SELECT d.file_path, d.doc_family, c.doc_id, c.chunk_id, c.chunk_index, c.heading_path,
         c.body_text, c.char_start, c.char_end,
         c.parent_chunk_id, c.depth, c.context_header,
@@ -126,35 +145,30 @@ export async function loadChunk(options = {}) {
       ORDER BY c.chunk_id
       LIMIT 1
     `,
-            )
-            .get()
-        : null);
+    });
+    row = fallback.rows[0];
+  }
 
-    if (!resolvedRow) throw new Error(`Chunk not found: ${chunkId}`);
+  if (!row) throw new Error(`Chunk not found: ${chunkId}`);
 
-    const nextChunkRow = database
-      .prepare(
-        `
+  const nextResult = await client.execute({
+    sql: `
         SELECT c.chunk_id
         FROM chunks c
-        WHERE c.doc_id = @docId AND c.chunk_index > @chunkIndex
+        WHERE c.doc_id = ? AND c.chunk_index > ?
         ORDER BY c.chunk_index ASC
         LIMIT 1
       `,
-      )
-      .get({
-        docId: resolvedRow.doc_id,
-        chunkIndex: resolvedRow.chunk_index,
-      });
+    args: [Number(row.doc_id), Number(row.chunk_index)],
+  });
 
-    return {
-      chunk: {
-        ...readChunkRow(resolvedRow),
-        chunk_id: chunkId,
-        next_chunk_id: nextChunkRow ? Number(nextChunkRow.chunk_id) : null,
-      },
-    };
-  } finally {
-    database.close();
-  }
+  const nextChunkRow = nextResult.rows[0];
+
+  return {
+    chunk: {
+      ...readChunkRow(row),
+      chunk_id: chunkId,
+      next_chunk_id: nextChunkRow ? Number(nextChunkRow.chunk_id) : null,
+    },
+  };
 }

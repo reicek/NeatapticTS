@@ -2,6 +2,8 @@
 
 > Extracted from `plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md` (Step 08) for permanent reference.
 
+> **Backing database.** The Repo Cortex is backed by a single consolidated Turso (libSQL) database accessed via the fully async `@libsql/client` driver (default local embedded replica `data/turso-replica.sqlite`; cloud primary `libsql://<db>.turso.io`). Vectors use native Turso vectors with `F8_BLOB` 8-bit quantization, approximate nearest neighbor search runs server-side via DiskANN (`libsql_vector_idx`, `vector_top_k()`), and hybrid ranking is performed SQL-side via Reciprocal Rank Fusion (RRF, k=60). The historical design content below describes the pre-Turso architecture that was subsequently migrated to this stack.
+
 Complete design for relevance feedback collection, scoring, and ranking adjustment from agent interaction signals.
 
 ---
@@ -26,7 +28,7 @@ validation:
 **Step objective:** Design relevance feedback collection and ranking adjustment:
 
 - Feedback signals: chunk loaded, chunk referenced in agent output, explicit positive/negative
-- Storage: feedback events in SQLite alongside corpus index
+- Storage: feedback events in the consolidated Turso (libSQL) database alongside corpus index
 - Ranking adjustment: boost chunks with positive feedback, decay unused chunks
 - Privacy: no content storage, only chunk IDs and signal types
 
@@ -80,7 +82,7 @@ flowchart TD
     F -- positive --> H[Record explicit +1 signal]
     F -- negative --> I[Record explicit -1 signal]
 
-    B --> J[feedback_events SQLite table]
+    B --> J[feedback_events table]
     D --> J
     G --> J
     H --> J
@@ -122,7 +124,7 @@ The `context` field is optional free-text that explains why the agent rated the 
 
 **C.1 Database and table design.**
 
-Feedback events are stored in the same `data/semantic-index.sqlite` database alongside the corpus index. This avoids a separate database file and enables efficient JOIN queries between feedback and chunk/document metadata.
+Feedback events are stored in the same consolidated Turso (libSQL) database alongside the corpus index. This avoids a separate database file and enables efficient JOIN queries between feedback and chunk/document metadata.
 
 **C.2 Schema DDL.**
 
@@ -167,7 +169,7 @@ CREATE INDEX IF NOT EXISTS feedback_events_created_at_idx ON feedback_events(cre
 
 4. **Context is agent-generated**: The `context` field contains only text explicitly provided by the calling agent. It is capped at 500 chars and is never used in ranking computation.
 
-5. **Feedback is locally scoped**: All feedback data is stored in the local SQLite database. It is never transmitted to external services, cloud APIs, or other machines. The feedback database is covered by the same `.gitignore` exclusion as the corpus index (`data/`).
+5. **Feedback is locally scoped**: All feedback data is stored in the consolidated Turso (libSQL) database. It is never transmitted to external services, cloud APIs, or other machines beyond the configured Turso primary. The feedback database is covered by the same `.gitignore` exclusion as the corpus index (`data/`).
 
 **C.5 Aggregation materialized view.**
 
@@ -606,9 +608,9 @@ The feedback system degrades gracefully when components are missing:
 
 **Constraints:**
 
-1. **Local-first**: All feedback storage and computation happens locally in SQLite. No external services, no cloud APIs, no network calls.
+1. **Local-first**: All feedback storage and computation happens in the consolidated Turso (libSQL) database. No external services beyond the configured Turso primary, no third-party cloud APIs.
 
-2. **Same database**: Feedback tables are stored in `data/semantic-index.sqlite` alongside the corpus index. No new database file.
+2. **Same database**: Feedback tables are stored in the consolidated Turso (libSQL) database alongside the corpus index. No new database file.
 
 3. **Privacy-by-design**: Query text is stored as SHA-256 hashes only. No user content, no PII, no session tokens. Agent IDs are nullable and contain only the agent role name.
 

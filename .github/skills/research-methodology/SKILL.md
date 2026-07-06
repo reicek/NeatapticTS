@@ -1,11 +1,13 @@
 ---
 name: research-methodology
-description: 'Execute disciplined discovery workflows in NeatapticTS using Cortex-first search, ordered README reconnaissance, plan-aware execution, and certainty-threshold gating. Use when a task requires structured investigation before implementation, testing, or documentation.'
+description: 'Use when: executing disciplined Cortex-first discovery workflows.'
 argument-hint: 'Describe the investigation target, suspected subsystem, whether Cortex search is needed, known plan files, and whether the goal is reconnaissance only or an implementation brief.'
 user-invocable: false
 disable-model-invocation: false
 skills:
   - plan-alignment
+  - repo-cortex-workflow
+  - plan-sync-validation
 tools:
   - neataptic-cortex-mcp-search_corpus
   - neataptic-cortex-mcp-search_advanced
@@ -15,8 +17,11 @@ tools:
   - neataptic-cortex-mcp-freshness_check
   - neataptic-cortex-mcp-traverse_graph
   - neataptic-cortex-mcp-expand_query
+  - neataptic-cortex-mcp-parallel_search
+  - neataptic-cortex-mcp-multi_hop_search
   - neataptic-workflow-mcp-get_active_workflow_snapshot
 model: anthropic/claude-sonnet-4-20250514
+compatibility: 'Works with all NeatapticTS agents and skills that need codebase reconnaissance.'
 ---
 
 # Research Methodology Playbook
@@ -40,7 +45,7 @@ efficient.
 
 The default promise is:
 
-- Cortex-first search with dense reranking for semantic queries,
+- Cortex-first search with dense reranking and RRF fusion for semantic queries,
 - Ordered README reconnaissance before deep code search,
 - Plan-aware execution that notes which documents informed the change,
 - Certainty-threshold gating that stops investigation below 90%,
@@ -55,6 +60,16 @@ The default promise is:
 - The certainty level for requirements or environment is below 95%.
 - Context window is insufficient and a handoff to a companion agent is needed.
 - A demo symptom may indicate a library-level gap that needs investigation.
+
+## When NOT to use
+
+Do NOT use for implementation work - use `04-implementing` instead. Do NOT use for plan creation - use `01-planning` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Investigation target" → "Check Cortex freshness"; "Check Cortex freshness" → "Index fresh?"; "Index fresh?" → "Search corpus" (Yes), "Fall back to grep/glob" (No); "Search corpus" → "Search context assembly"; "Fall back to grep/glob" → "Read files directly"; "Search context assembly" → "Load chunk by ID"; "Read files directly" → "Report findings"; "Load chunk by ID" → "Traverse dependency graph"; "Report findings"; "Traverse dependency graph" → "Enough certainty?"; "Enough certainty?" → "Report findings" (Yes), "Expand query" (No); "Expand query" → "Search corpus".
+```
 
 ## Discovery Order
 
@@ -79,18 +94,44 @@ NeatapticTS. All investigation, discovery, research, and file-reading work
 should follow this policy before falling back to native tools (`grep`, `glob`,
 `view`).
 
+### Turso-Native Search Architecture
+
+The Cortex RAG system is backed by a Turso (libSQL) database accessed through
+the async `@libsql/client` driver. The search pipeline uses Turso-native
+primitives rather than client-side computation:
+
+- **Native vector search** — embeddings are stored as `F8_BLOB` 8-bit
+  quantized vectors and ranked server-side via `vector_top_k` with a DiskANN
+  approximate-nearest-neighbor index (`libsql_vector_idx`). A brute-force
+  fallback is retained for recall validation.
+- **Server-side Reciprocal Rank Fusion (RRF, k=60)** — hybrid BM25 + dense
+  ranking is fused server-side using the RRF formula `1/(k+rank)`; the legacy
+  alpha-blend approach has been removed.
+- **Parallel multi-query retrieval** — `parallel_search` runs multiple SQL
+  queries concurrently via `Promise.all` with a `TURSO_CONCURRENCY` limiter
+  (default 20) and merges results via RRF with graceful degradation.
+- **Server-side context assembly** — `search_context` assembles
+  token-budgeted context windows via SQL JOINs rather than client-side
+  stitching.
+- **Server-side query expansion** — `expand_query` uses ANN-first synonym
+  discovery against the indexed embedding space.
+- **SQL time-decay** — feedback boosts apply `POWER(0.95, days)` decay
+  server-side.
+
 ### Cortex MCP Tool Reference
 
-| Tool              | Purpose                                                        |
-| ----------------- | -------------------------------------------------------------- |
-| `freshness_check` | Verify index currency before searching.                        |
-| `search_corpus`   | BM25 + dense hybrid search over indexed chunks.                |
-| `search_advanced` | Full pipeline: classify, expand, retrieve, re-rank, assemble.  |
-| `search_context`  | Token-budgeted context window assembly from retrieval results. |
-| `load_chunk`      | Load full chunk content by numeric ID.                         |
-| `load_document`   | Load all ordered chunks for a repository path.                 |
-| `traverse_graph`  | Entity/relationship graph traversal from seed entities.        |
-| `expand_query`    | Domain-aware query expansion with synonym discovery.           |
+| Tool               | Purpose                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| `freshness_check`  | Verify index currency before searching.                        |
+| `search_corpus`    | BM25 + dense hybrid search over indexed chunks.                |
+| `search_advanced`  | Full pipeline: classify, expand, retrieve, re-rank, assemble.  |
+| `search_context`   | Token-budgeted context window assembly from retrieval results. |
+| `load_chunk`       | Load full chunk content by numeric ID.                         |
+| `load_document`    | Load all ordered chunks for a repository path.                 |
+| `traverse_graph`   | Entity/relationship graph traversal from seed entities.        |
+| `expand_query`     | Domain-aware query expansion with synonym discovery.           |
+| `parallel_search`  | Run multiple SQL queries concurrently and merge via RRF.       |
+| `multi_hop_search` | Vector → graph → vector multi-hop composition (1–3 hops).      |
 
 ### 9-Step Search Order
 
@@ -109,8 +150,11 @@ Before manual file reads, follow this ordered search workflow:
 7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph
    traversal.
 8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
-9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is
-   degraded, the target is a known file path, or Cortex returned zero results.
+9. Use `neataptic-cortex-mcp:parallel_search` for concurrent multi-query
+   retrieval (merged via RRF), or `neataptic-cortex-mcp:multi_hop_search` for
+   vector → graph → vector composed discovery.
+10. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is
+    degraded, the target is a known file path, or Cortex returned zero results.
 
 ### Gap Escalation Rule
 
@@ -129,7 +173,12 @@ enhancement. Use native tools as a temporary fallback only.
 7. Use `traverse_graph` for dependency and entity graph exploration.
 8. Use `expand_query` to broaden a query before retrieval when initial results
    are sparse.
-9. Treat BM25 + dense reranking as the default search mode.
+9. Use `parallel_search` to run several SQL queries concurrently and merge
+   them via RRF — ideal when multiple distinct query formulations should be
+   fused in a single pass.
+10. Use `multi_hop_search` for composed vector → graph → vector discovery
+    (1–3 hops) when a single retrieval pass cannot bridge the conceptual gap.
+11. Treat BM25 + dense reranking fused via RRF as the default search mode.
 
 **Example search queries:**
 
@@ -247,6 +296,32 @@ If a companion agent uses this skill, it should:
 4. Avoid restating the full workflow or guardrails that already live here.
 5. Recommend `plan-alignment` explicitly when architecture or roadmap alignment
    is needed.
+
+## Concrete Search Examples
+
+**Finding a specific function:**
+
+```text
+Query: "buildGRU config validation"
+Class: code_specific
+Approach: search_corpus with use_dense=true, use_rerank=true
+```
+
+**Cross-module investigation:**
+
+```text
+Query: "how does checkpointing interact with multithread evaluation"
+Class: cross_boundary
+Approach: search_context with budget=2048, expand_query=true
+```
+
+**Exploratory research:**
+
+```text
+Query: "what patterns exist for worker payload serialization"
+Class: exploratory
+Approach: search_advanced with expand_query=true, read_top_result=true
+```
 
 ## Guardrails
 

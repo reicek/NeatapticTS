@@ -13,8 +13,7 @@ function readPhaseState(target: object): {
   return {
     phase: Reflect.get(target, '_phase') as string | undefined,
     phaseStartGeneration: Reflect.get(target, '_phaseStartGeneration') as
-      | number
-      | undefined,
+      number | undefined,
   };
 }
 

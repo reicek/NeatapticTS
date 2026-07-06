@@ -1,9 +1,14 @@
 ---
 name: nge-benchmark-workflow
-description: 'Design, implement, or validate NGE benchmark environments and demo harnesses in NeatapticTS. Use when working on predator/prey coevolution, ant-hive collective intelligence, racing curriculum tiers, rolling opponent snapshots, shared-field benchmark semantics, benchmark worker topology, observability charts, fairness contracts, or browser simulation methodology that consumes NGE core primitives.'
+description: 'Use when: designing NGE benchmark environments, curricula, or scoring.'
 argument-hint: 'Describe the benchmark family, the active plan file, whether the pass is world design, harness implementation, metrics, or validation, which core primitives are assumed available, and what observable or acceptance criterion must be demonstrated.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - nge-core-algorithm
+  - multithread-evaluation
+  - visualizer-workflow
+  - browser-build
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -102,6 +107,16 @@ boundaries.
 - Validating whether role differentiation or collective behavior is actually
   observable.
 
+## When NOT to use
+
+Do NOT use for core algorithm work - use `nge-core-algorithm` instead. Do NOT use for general performance optimization - use `performance-optimization` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Define benchmark" → "Set up curriculum tiers"; "Set up curriculum tiers" → "Create predator/prey populations"; "Create predator/prey populations" → "Run coevolution"; "Run coevolution" → "Capture rolling snapshots"; "Capture rolling snapshots" → "Score opponents"; "Score opponents" → "Fairness contract met?"; "Fairness contract met?" → "Record results" (Yes), "Adjust fairness" (No); "Record results" → "Report"; "Adjust fairness" → "Run coevolution"; "Report".
+```
+
 ## Task Packet
 
 Pass a compact packet that includes:
@@ -190,6 +205,26 @@ Prefer benchmark observables that expose mechanism instead of only score:
   tunnel-coverage response,
 - racing: blocker emergence, pit-lap distribution, radio mutual information,
   role divergence.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Benchmark work" → "Which layer?"; "Which layer?" → "World setup" (World or environment rules), "Harness implementation" (Episode or coordinator logic), "Metrics and observability" (Charts, ablation, observables), "Fairness validation" (Seed-pack or snapshot fairness); "World setup"; "Harness implementation"; "Metrics and observability"; "Fairness validation".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+opponent: latestPopulation // undefined fairness, live opponent each gen
+```
+
+**After:**
+
+```text
+opponent: rollingSnapshot(generation - 10) // frozen snapshot, deterministic seed pack
+```
 
 ## Guardrails
 

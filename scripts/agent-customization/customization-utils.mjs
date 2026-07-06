@@ -27,6 +27,9 @@ export const knownAgentTools = new Set([
   'search',
   'todo',
   'web',
+  // Lightweight lazy-load MCP facades (router tools that spawn the real server on demand)
+  'cortex/cortex',
+  'devtools/devtools',
 ]);
 
 /**
@@ -645,4 +648,128 @@ export function extractStatus(text) {
     /\*\*Status:\*\* \[(?<status>DONE|WIP|PLANNED)\]/.exec(text)?.groups
       ?.status ?? null
   );
+}
+
+/**
+ * Extract all repo-relative plan links from a block of Markdown text.
+ *
+ * Matches both `.plans.md` tracker plans and `.md` summary plans, keeping the
+ * repo-relative `plans/` prefix so downstream filters can exclude index files,
+ * archived completed plans, and the active plan itself.
+ *
+ * @param text - Markdown text to scan.
+ * @returns Array of repo-relative paths like `plans/...`.
+ */
+function extractPlanLinks(text) {
+  return [
+    ...text.matchAll(/\bplans\/[A-Za-z0-9_\-\/]+(?:\.plans)?\.md\b/g),
+  ].map((match) => normalizePath(match[0]));
+}
+
+/**
+ * Normalize a plan link found in a Roadmap.md section to a repo-relative
+ * `plans/...` path.
+ *
+ * Roadmap links appear in several forms: bare filenames like
+ * `NEAT_Genesis_EvoDevo_AntHive_Demo.md`, completed-archive links like
+ * `completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`, or fully-qualified
+ * paths like `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md`.
+ *
+ * @param link - Raw plan link text from the roadmap.
+ * @returns Repo-relative path under `plans/`.
+ */
+function normalizePlanLink(link) {
+  const normalized = normalizePath(link).replace(/^\.\//, '');
+  if (normalized.startsWith('plans/')) return normalized;
+  if (normalized.startsWith('completed/')) return `plans/${normalized}`;
+  return `plans/${normalized}`;
+}
+
+/**
+ * Extract plan links from the Roadmap.md phase section that contains the active
+ * plan.
+ *
+ * Roadmap phase sections group related active and completed tracker plans. When
+ * a plan body is compressed and no longer lists every downstream tracker inline
+ * (as is normal for archived plans), the Roadmap section remains the durable
+ * source of truth for which tracker plans belong to the same initiative.
+ *
+ * @param activePlanPath - Repo-relative path of the plan being analyzed.
+ * @returns Array of repo-relative plan paths from the same Roadmap section.
+ */
+async function extractPlanLinksFromRoadmap(activePlanPath) {
+  let roadmapText;
+  try {
+    roadmapText = await readWorkspaceFile('plans/Roadmap.md');
+  } catch {
+    return [];
+  }
+
+  const activeBasename = path.basename(activePlanPath);
+
+  // Split on `## ` headings to isolate phase sections, then find the section
+  // that references the active plan by basename.
+  const phaseSections = roadmapText.split(/^## /m);
+  for (const section of phaseSections) {
+    if (!section.includes(activeBasename)) continue;
+
+    // Markdown link targets: `[text](target)`.
+    const markdownTargets = [
+      ...section.matchAll(/\[([^\]]+)\]\(([^)]+)\)/g),
+    ].map((match) => match[2]);
+    // Stand-alone plan-looking paths that may be bare or already prefixed.
+    const planPaths = [
+      ...section.matchAll(/\b(?:plans\/)?[A-Za-z0-9_\-\/]+(?:\.plans)?\.md\b/g),
+    ].map((match) => match[0]);
+
+    return [
+      ...new Set([...markdownTargets, ...planPaths].map(normalizePlanLink)),
+    ];
+  }
+
+  return [];
+}
+
+/**
+ * Extracts downstream tracker plan paths referenced by an active plan.
+ *
+ * Downstream trackers come from two sources:
+ * 1. Repo-relative plan links inside the plan body itself.
+ * 2. Plan links in the same Roadmap.md phase section, which is the durable
+ *    source of truth when a plan body has been compressed.
+ *
+ * Results are filtered to exclude the active plan itself, index files,
+ * completed archive files, and any paths that do not exist on disk.
+ *
+ * @param text - Plan document body text to scan.
+ * @param activePlanPath - Repo-relative path of the plan being analyzed.
+ * @returns Sorted array of downstream tracker paths.
+ */
+export async function extractDownstreamTrackers(text, activePlanPath) {
+  const normalizedActive = normalizePath(activePlanPath).replace(/^\.\//, '');
+  const bodyLinks = extractPlanLinks(text);
+  const roadmapLinks = await extractPlanLinksFromRoadmap(normalizedActive);
+
+  const candidates = [
+    ...new Set(
+      [...bodyLinks, ...roadmapLinks].filter(
+        (link) => link !== normalizedActive,
+      ),
+    ),
+  ];
+
+  const downstream = [];
+  for (const candidate of candidates) {
+    if (candidate === 'plans/README.md' || candidate === 'plans/Roadmap.md') {
+      continue;
+    }
+    if (candidate.includes('plans/completed/')) {
+      continue;
+    }
+    if (await fileExists(candidate)) {
+      downstream.push(candidate);
+    }
+  }
+
+  return downstream.toSorted();
 }

@@ -32,6 +32,9 @@ const MAX_EXPLICIT_SIGNAL_STRENGTH = 1.0;
 /** Time window within which repeated same-session positive signals are normalized. */
 const SAME_SESSION_WINDOW_MS = 60 * 60 * 1000;
 
+/** Maximum number of SQL statements per client.batch() call. */
+const BATCH_SIZE = 1000;
+
 const SIGNAL_STRENGTHS = {
   click: 0.3,
   impression: 0.1,
@@ -74,20 +77,6 @@ function normalizeQueryHash(value) {
 }
 
 /**
- * Convert a feedback event created_at value to milliseconds since epoch.
- *
- * @param {number | string} createdAt - Stored timestamp.
- * @returns {number} Milliseconds since epoch.
- */
-function parseCreatedAt(createdAt) {
-  if (typeof createdAt === 'number') {
-    return createdAt;
-  }
-  const parsed = Date.parse(createdAt);
-  return Number.isNaN(parsed) ? 0 : parsed;
-}
-
-/**
  * Clamp an explicit signal strength to the designed feedback range.
  *
  * @param {number} strength - Raw signal strength.
@@ -100,110 +89,6 @@ function clampSignalStrength(strength) {
   return Math.max(
     MIN_EXPLICIT_SIGNAL_STRENGTH,
     Math.min(MAX_EXPLICIT_SIGNAL_STRENGTH, strength),
-  );
-}
-
-/**
- * Check whether a positive signal for the same chunk and agent was already
- * recorded within the same-session window, regardless of query.
- *
- * @param {import('better-sqlite3').Database} db - SQLite database connection.
- * @param {number} chunkId - Target chunk ID.
- * @param {string | null} agentId - Agent identifier.
- * @param {number} now - Current time in milliseconds since epoch.
- * @returns {boolean} True when a recent same-session positive event exists.
- */
-function hasRecentSameSessionPositive(db, chunkId, agentId, now) {
-  if (!agentId) {
-    return false;
-  }
-  const cutoff = new Date(now - SAME_SESSION_WINDOW_MS).toISOString();
-  const row = db
-    .prepare(
-      `SELECT 1 FROM feedback_events
-       WHERE chunk_id = ? AND signal_type = 'positive'
-         AND agent_id = ? AND created_at >= ?
-       LIMIT 1`,
-    )
-    .get(chunkId, agentId, cutoff);
-  return Boolean(row);
-}
-
-/**
- * Record a feedback event in the feedback_events table.
- *
- * @param {import('better-sqlite3').Database} db - SQLite database connection.
- * @param {object} params - Event parameters.
- * @param {number} params.chunk_id - Target chunk ID.
- * @param {string} params.signal_type - One of impression, click, reference, positive, negative.
- * @param {string} [params.query_hash] - SHA-256 hash of the correlated query, or plaintext to be hashed.
- * @param {string} [params.query] - Plaintext query (hashed before storage).
- * @param {string} [params.agent_id] - Optional agent identifier.
- * @param {string} [params.context] - Optional free-text context (will be truncated to 500 chars).
- * @param {number | string} [params.created_at] - Optional timestamp; defaults to now.
- * @returns {object} The inserted feedback event row, or the existing same-session row when a duplicate positive signal is normalized.
- * @throws {Error} When signal_type is not recognized.
- */
-export function recordFeedbackEvent(db, params) {
-  const eventId = randomUUID();
-  const defaultStrength = SIGNAL_STRENGTHS[params.signal_type];
-  if (defaultStrength === undefined) {
-    throw new Error(`Unknown signal_type: ${params.signal_type}`);
-  }
-  const signalStrength =
-    params.signal_strength !== undefined && params.signal_strength !== null
-      ? clampSignalStrength(Number(params.signal_strength))
-      : defaultStrength;
-
-  const rawQuery = params.query ?? params.query_hash;
-  const queryHash = normalizeQueryHash(rawQuery);
-  const context =
-    params.context === undefined || params.context === null
-      ? null
-      : params.context.slice(0, MAX_CONTEXT_LENGTH);
-  const agentId = params.agent_id ?? null;
-  const createdAt =
-    params.created_at === undefined || params.created_at === null
-      ? new Date().toISOString()
-      : params.created_at;
-
-  // Normalize repeated same-session positive signals so they cannot inflate
-  // the feedback score. Return the existing event without inserting a duplicate.
-  const now = Date.now();
-  if (
-    params.signal_type === 'positive' &&
-    hasRecentSameSessionPositive(db, params.chunk_id, agentId, now)
-  ) {
-    const cutoff = new Date(now - SAME_SESSION_WINDOW_MS).toISOString();
-    const existing = db
-      .prepare(
-        `SELECT * FROM feedback_events
-         WHERE chunk_id = ? AND signal_type = 'positive'
-           AND agent_id = ? AND created_at >= ?
-         ORDER BY created_at DESC
-         LIMIT 1`,
-      )
-      .get(params.chunk_id, agentId, cutoff);
-    return existing;
-  }
-
-  const insert = db.prepare(`
-    INSERT INTO feedback_events
-      (event_id, chunk_id, signal_type, signal_strength, query_hash, agent_id, context, created_at)
-    VALUES
-      (?, ?, ?, ?, ?, ?, ?, ?)
-    RETURNING *
-  `);
-
-  return insert.get(
-    eventId,
-    params.chunk_id,
-    params.signal_type,
-    signalStrength,
-    queryHash,
-    agentId,
-    context,
-    createdAt,
   );
 }
 
@@ -249,51 +134,160 @@ export function computeFeedbackBoost(scores) {
 }
 
 /**
- * Build a feedback score aggregate for a single chunk.
+ * Check whether a positive signal for the same chunk and agent was already
+ * recorded within the same-session window, using a libSQL client.
  *
- * @param {import('better-sqlite3').Database} db - SQLite database connection.
+ * @param {import('@libsql/client').Client} client - libSQL client.
+ * @param {number} chunkId - Target chunk ID.
+ * @param {string | null} agentId - Agent identifier.
+ * @param {number} now - Current time in milliseconds since epoch.
+ * @returns {Promise<boolean>} True when a recent same-session positive event exists.
+ */
+async function hasRecentSameSessionPositiveAsync(
+  client,
+  chunkId,
+  agentId,
+  now,
+) {
+  if (!agentId) {
+    return false;
+  }
+  const cutoff = new Date(now - SAME_SESSION_WINDOW_MS).toISOString();
+  const result = await client.execute({
+    sql: `SELECT 1 FROM feedback_events
+        WHERE chunk_id = ? AND signal_type = 'positive'
+          AND agent_id = ? AND created_at >= ?
+        LIMIT 1`,
+    args: [chunkId, agentId, cutoff],
+  });
+  return result.rows.length > 0;
+}
+
+/**
+ * Record a feedback event in the feedback_events table using a libSQL client.
+ *
+ * @param {import('@libsql/client').Client} client - libSQL client.
+ * @param {object} params - Event parameters.
+ * @returns {Promise<object>} The inserted feedback event row, or the existing same-session row when a duplicate positive signal is normalized.
+ * @throws {Error} When signal_type is not recognized.
+ */
+export async function recordFeedbackEventAsync(client, params) {
+  const eventId = randomUUID();
+  const defaultStrength = SIGNAL_STRENGTHS[params.signal_type];
+  if (defaultStrength === undefined) {
+    throw new Error(`Unknown signal_type: ${params.signal_type}`);
+  }
+  const signalStrength =
+    params.signal_strength !== undefined && params.signal_strength !== null
+      ? Number(params.signal_strength)
+      : defaultStrength;
+
+  const rawQuery = params.query ?? params.query_hash;
+  const queryHash = normalizeQueryHash(rawQuery);
+  const context =
+    params.context === undefined || params.context === null
+      ? null
+      : params.context.slice(0, MAX_CONTEXT_LENGTH);
+  const agentId = params.agent_id ?? null;
+  const createdAt =
+    params.created_at === undefined || params.created_at === null
+      ? new Date().toISOString()
+      : params.created_at;
+
+  const now = Date.now();
+  if (
+    params.signal_type === 'positive' &&
+    (await hasRecentSameSessionPositiveAsync(
+      client,
+      params.chunk_id,
+      agentId,
+      now,
+    ))
+  ) {
+    const cutoff = new Date(now - SAME_SESSION_WINDOW_MS).toISOString();
+    const result = await client.execute({
+      sql: `SELECT * FROM feedback_events
+          WHERE chunk_id = ? AND signal_type = 'positive'
+            AND agent_id = ? AND created_at >= ?
+          ORDER BY created_at DESC
+          LIMIT 1`,
+      args: [params.chunk_id, agentId, cutoff],
+    });
+    return result.rows[0];
+  }
+
+  const batchResults = await client.batch(
+    [
+      {
+        sql: `INSERT INTO feedback_events
+        (event_id, chunk_id, signal_type, signal_strength, query_hash, agent_id, context, created_at)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?)
+      RETURNING *`,
+        args: [
+          eventId,
+          params.chunk_id,
+          params.signal_type,
+          signalStrength,
+          queryHash,
+          agentId,
+          context,
+          createdAt,
+        ],
+      },
+    ],
+    'write',
+  );
+  return batchResults[0].rows[0];
+}
+
+/**
+ * Build a feedback score aggregate for a single chunk using a libSQL client.
+ *
+ * Aggregates feedback events server-side using SQL with `POWER(0.95, days)`
+ * time-decay. This avoids loading all events into JavaScript and applies the
+ * decay formula in the database engine for better performance.
+ *
+ * @param {import('@libsql/client').Client} client - libSQL client.
  * @param {number} chunkId - Chunk to recompute.
  * @param {number} now - Current time in milliseconds since epoch.
- * @returns {object | null} Score counters and boost, or null when no events exist.
+ * @returns {Promise<object | null>} Score counters and boost, or null when no events exist.
  */
-function buildChunkAggregate(db, chunkId, now) {
-  const events = db
-    .prepare('SELECT * FROM feedback_events WHERE chunk_id = ?')
-    .all(chunkId);
-  if (events.length === 0) {
+async function buildChunkAggregateAsync(client, chunkId, now) {
+  const result = await client.execute({
+    sql: `WITH decayed_events AS (
+      SELECT signal_type, signal_strength,
+        CASE
+          WHEN typeof(created_at) IN ('integer', 'real') THEN created_at
+          ELSE (julianday(created_at) - 2440587.5) * 86400000.0
+        END AS created_at_ms
+      FROM feedback_events WHERE chunk_id = ?
+    )
+    SELECT
+      COUNT(*) AS event_count,
+      COALESCE(SUM(CASE WHEN signal_type = 'positive'
+        THEN signal_strength * POWER(0.95, (? - created_at_ms) / 86400000.0)
+        ELSE 0 END), 0) AS total_positive,
+      COALESCE(SUM(CASE WHEN signal_type IN ('negative', 'irrelevant')
+        THEN ABS(signal_strength) * POWER(0.95, (? - created_at_ms) / 86400000.0)
+        ELSE 0 END), 0) AS total_negative,
+      COALESCE(SUM(CASE WHEN signal_type = 'impression' THEN 1 ELSE 0 END), 0) AS total_impressions,
+      COALESCE(SUM(CASE WHEN signal_type = 'click' THEN 1 ELSE 0 END), 0) AS total_clicks,
+      COALESCE(SUM(CASE WHEN signal_type = 'reference' THEN 1 ELSE 0 END), 0) AS total_references
+    FROM decayed_events`,
+    args: [chunkId, now, now],
+  });
+
+  const row = result.rows[0];
+  if (Number(row.event_count) === 0) {
     return null;
   }
 
-  let totalPositive = 0;
-  let totalNegative = 0;
-  let totalImpressions = 0;
-  let totalClicks = 0;
-  let totalReferences = 0;
-
-  for (const event of events) {
-    const age = now - parseCreatedAt(event.created_at);
-    const decay = Math.pow(0.5, age / FEEDBACK_HALF_LIFE_MS);
-    const strength = event.signal_strength * decay;
-
-    switch (event.signal_type) {
-      case 'impression':
-        totalImpressions += 1;
-        break;
-      case 'click':
-        totalClicks += 1;
-        break;
-      case 'reference':
-        totalReferences += 1;
-        break;
-      case 'positive':
-        totalPositive += strength;
-        break;
-      case 'negative':
-      case 'irrelevant':
-        totalNegative += Math.abs(strength);
-        break;
-    }
-  }
+  const totalPositive = Number(row.total_positive);
+  const totalNegative = Number(row.total_negative);
+  const totalImpressions = Number(row.total_impressions);
+  const totalClicks = Number(row.total_clicks);
+  const totalReferences = Number(row.total_references);
 
   const feedbackBoost = computeFeedbackBoost({
     total_positive: totalPositive,
@@ -311,19 +305,19 @@ function buildChunkAggregate(db, chunkId, now) {
     total_clicks: totalClicks,
     total_references: totalReferences,
     feedback_boost: feedbackBoost,
-    last_feedback_at: new Date(now).toISOString(),
+    last_feedback_at: Math.floor(now / 1000),
   };
 }
 
 /**
- * Upsert a feedback_scores row.
+ * Upsert a feedback_scores row using a libSQL client.
  *
- * @param {import('better-sqlite3').Database} db - SQLite database connection.
- * @param {object} score - Score aggregate returned by buildChunkAggregate.
+ * @param {import('@libsql/client').Client} client - libSQL client.
+ * @param {object} score - Score aggregate returned by buildChunkAggregateAsync.
  */
-function upsertFeedbackScore(db, score) {
-  const stmt = db.prepare(`
-    INSERT INTO feedback_scores
+async function upsertFeedbackScoreAsync(client, score) {
+  await client.execute({
+    sql: `INSERT INTO feedback_scores
       (chunk_id, total_positive, total_negative, total_impressions, total_clicks, total_references, last_feedback_at, feedback_boost)
     VALUES
       (?, ?, ?, ?, ?, ?, ?, ?)
@@ -334,53 +328,91 @@ function upsertFeedbackScore(db, score) {
       total_clicks = excluded.total_clicks,
       total_references = excluded.total_references,
       last_feedback_at = excluded.last_feedback_at,
-      feedback_boost = excluded.feedback_boost
-  `);
-  stmt.run(
-    score.chunk_id,
-    score.total_positive,
-    score.total_negative,
-    score.total_impressions,
-    score.total_clicks,
-    score.total_references,
-    score.last_feedback_at,
-    score.feedback_boost,
-  );
+      feedback_boost = excluded.feedback_boost`,
+    args: [
+      score.chunk_id,
+      score.total_positive,
+      score.total_negative,
+      score.total_impressions,
+      score.total_clicks,
+      score.total_references,
+      score.last_feedback_at,
+      score.feedback_boost,
+    ],
+  });
 }
 
 /**
- * Incrementally update feedback_scores for a single chunk after a new event.
+ * Incrementally update feedback_scores for a single chunk after a new event using a libSQL client.
  *
- * @param {import('better-sqlite3').Database} db - SQLite database connection.
+ * @param {import('@libsql/client').Client} client - libSQL client.
  * @param {number} chunkId - Chunk to update.
  * @param {number} [now=Date.now()] - Current time in milliseconds since epoch.
- * @returns {object | null} The upserted score row, or null when no events exist.
+ * @returns {Promise<object | null>} The upserted score row, or null when no events exist.
  */
-export function updateFeedbackScores(db, chunkId, now = Date.now()) {
-  const score = buildChunkAggregate(db, chunkId, now);
+export async function updateFeedbackScoresAsync(
+  client,
+  chunkId,
+  now = Date.now(),
+) {
+  const score = await buildChunkAggregateAsync(client, chunkId, now);
   if (score === null) {
     return null;
   }
-  upsertFeedbackScore(db, score);
+  await upsertFeedbackScoreAsync(client, score);
   return score;
 }
 
 /**
  * Recompute all feedback scores from scratch, applying time decay and impression decay.
  *
- * @param {import('better-sqlite3').Database} db - SQLite database connection.
+ * @param {import('@libsql/client').Client} client - libSQL client.
  * @param {number} [now=Date.now()] - Current time in milliseconds since epoch.
- * @returns {number} Number of chunks whose scores were recomputed.
+ * @returns {Promise<number>} Number of chunks whose scores were recomputed.
  */
-export function recomputeAllFeedbackScores(db, now = Date.now()) {
-  const rows = db
-    .prepare('SELECT DISTINCT chunk_id FROM feedback_events')
-    .all();
-  let count = 0;
-  for (const { chunk_id: chunkId } of rows) {
-    const score = buildChunkAggregate(db, chunkId, now);
-    upsertFeedbackScore(db, score);
-    count += 1;
+export async function recomputeAllFeedbackScores(client, now = Date.now()) {
+  const result = await client.execute({
+    sql: 'SELECT DISTINCT chunk_id FROM feedback_events',
+    args: [],
+  });
+  const scores = [];
+  for (const row of result.rows) {
+    const chunkId = Number(row.chunk_id);
+    const score = await buildChunkAggregateAsync(client, chunkId, now);
+    if (score) {
+      scores.push(score);
+    }
   }
-  return count;
+
+  // Batch-upsert all scores in groups of BATCH_SIZE.
+  for (let i = 0; i < scores.length; i += BATCH_SIZE) {
+    const batchSlice = scores.slice(i, i + BATCH_SIZE);
+    const statements = batchSlice.map((score) => ({
+      sql: `INSERT INTO feedback_scores
+        (chunk_id, total_positive, total_negative, total_impressions, total_clicks, total_references, last_feedback_at, feedback_boost)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(chunk_id) DO UPDATE SET
+        total_positive = excluded.total_positive,
+        total_negative = excluded.total_negative,
+        total_impressions = excluded.total_impressions,
+        total_clicks = excluded.total_clicks,
+        total_references = excluded.total_references,
+        last_feedback_at = excluded.last_feedback_at,
+        feedback_boost = excluded.feedback_boost`,
+      args: [
+        score.chunk_id,
+        score.total_positive,
+        score.total_negative,
+        score.total_impressions,
+        score.total_clicks,
+        score.total_references,
+        score.last_feedback_at,
+        score.feedback_boost,
+      ],
+    }));
+    await client.batch(statements, 'write');
+  }
+
+  return scores.length;
 }

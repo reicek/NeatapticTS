@@ -23,6 +23,16 @@ export { default as Layer } from './architecture/layer';
 export { default as Group } from './architecture/group';
 export { default as Connection } from './architecture/connection';
 export { default as Architect } from './architecture/architect';
+export { batchActivate } from './architecture/network/gpu/network.gpu.batched';
+export { activateGPU } from './architecture/network/gpu/network.gpu.activate';
+export {
+  GpuProfilingTimer,
+  profileGPUActivation,
+  prepareActivationContext,
+  computeOverheadBreakdown,
+  rankWeakPoints,
+  buildOverheadArtifact,
+} from './architecture/network/gpu/network.gpu.profiling';
 /** Activation, cost, crossover, mutation, and selection method objects. Stateless algorithm namespaces for use with {@link Network} and {@link Neat}. */
 export * as methods from './methods/methods';
 /** Global library configuration namespace. Controls backend precision, debug flags, and runtime behavior for browser builds. */

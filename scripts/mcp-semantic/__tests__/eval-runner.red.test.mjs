@@ -6,8 +6,8 @@
  * condition-level aggregation for the Step 22 eval suite.
  */
 
-const RUNNER_PATH = '../../semantic-index/eval-runner.mjs';
-const COMPARE_PATH = '../../semantic-index/eval-compare.mjs';
+const RUNNER_PATH = '../../../rag-index/eval-runner.mjs';
+const COMPARE_PATH = '../../../rag-index/eval-compare.mjs';
 
 function loadRunner() {
   return import(RUNNER_PATH);

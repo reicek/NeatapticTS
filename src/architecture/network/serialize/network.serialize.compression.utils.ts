@@ -676,8 +676,7 @@ async function decompressArchivePayloadBytesWithBrowserStream(
 async function transformArchivePayloadBytesWithStream(
   payloadBytes: Uint8Array,
   streamConstructor:
-    | BrowserCompressionStreamConstructor
-    | BrowserDecompressionStreamConstructor,
+    BrowserCompressionStreamConstructor | BrowserDecompressionStreamConstructor,
 ): Promise<Uint8Array> {
   const normalizedPayloadBytes = Uint8Array.from(payloadBytes);
   const transformedStream = new Blob([normalizedPayloadBytes])
@@ -816,8 +815,7 @@ function resolveNodeCompressionModule(): NodeCompressionModule {
  * @returns Node compression module when available.
  */
 function resolveNodeCompressionModuleOrUndefined():
-  | NodeCompressionModule
-  | undefined {
+  NodeCompressionModule | undefined {
   const builtinModuleLoader =
     typeof process !== 'undefined'
       ? (process as ProcessWithBuiltinModule).getBuiltinModule
@@ -843,8 +841,7 @@ function hasNodeCompressionRuntime(): boolean {
  * @returns Browser compression-stream constructor.
  */
 function resolveBrowserCompressionStreamConstructor():
-  | BrowserCompressionStreamConstructor
-  | undefined {
+  BrowserCompressionStreamConstructor | undefined {
   const compressionStreamConstructor = Reflect.get(
     globalThis,
     'CompressionStream',
@@ -861,8 +858,7 @@ function resolveBrowserCompressionStreamConstructor():
  * @returns Browser decompression-stream constructor.
  */
 function resolveBrowserDecompressionStreamConstructor():
-  | BrowserDecompressionStreamConstructor
-  | undefined {
+  BrowserDecompressionStreamConstructor | undefined {
   const decompressionStreamConstructor = Reflect.get(
     globalThis,
     'DecompressionStream',

@@ -23,6 +23,11 @@ gates:
   - 'phase-compression'
   - 'stale-wip-plans'
 
+exit-checks:
+  - 'Record a constitution-update learning event in .github/ai-learning/learning-log.jsonl whenever a constitution change is part of the closed workstream.'
+  - 'Record a spec-checklist learning event when the spec-checklist gate was run before any implementation dispatch in the workstream.'
+  - 'Record a gate-run learning event for every executed gate so the audit trail remains append-only and complete.'
+
 post-phase-fanout:
   - 'NONE'
 

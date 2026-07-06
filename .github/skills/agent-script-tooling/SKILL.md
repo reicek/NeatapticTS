@@ -1,9 +1,13 @@
 ---
 name: agent-script-tooling
-description: 'Design reusable scripts for NeatapticTS agent customization workflows. Use when adding scripts under scripts/agent-customization, defining --help, JSON output, stderr diagnostics, dry-run behavior, idempotency, or validation exit codes.'
+description: 'Use when: designing or refactoring reusable agent-customization scripts.'
 argument-hint: 'Describe the script purpose, inputs, outputs, failure modes, and whether it reads, validates, or changes files.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - agent-frontmatter-standards
+  - green-validation-gates
+  - implementation-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -12,7 +16,7 @@ disable-model-invocation: false
 
 Use this skill before adding or changing scripts that support agents or skills,
 particularly anything under `scripts/agent-customization/` or
-`scripts/semantic-index/`.
+`rag-index/`.
 
 This skill owns the design standards for agent-supporting Node ES module
 scripts: interface shape, output format, error conventions, idempotency rules,
@@ -21,7 +25,7 @@ and validation exit codes.
 ## When to Use
 
 - A new validation gate, freshness check, or health-summary script is being
-  added under `scripts/agent-customization/` or `scripts/semantic-index/`.
+  added under `scripts/agent-customization/` or `rag-index/`.
 - An existing agent script needs `--json` output, `--help` text, or structured
   stderr diagnostics added.
 - A script is being promoted from ad hoc to a durable gate used in step packet
@@ -32,6 +36,16 @@ and validation exit codes.
   strict gate context.
 - An existing script produces output that agents cannot parse reliably and needs
   a structured output contract.
+
+## When NOT to use
+
+Do NOT use for scripts outside the `scripts/agent-customization/` directory - this skill only covers agent customization tooling.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Script change" → "Run script directly"; "Run script directly" → "Exit code?"; "Exit code?" → "Check stderr for warnings" (0), "Fix reported error" (Non-zero); "Check stderr for warnings" → "Run validate-agent-frontmatter"; "Fix reported error" → "Run script directly"; "Run validate-agent-frontmatter" → "Pass?"; "Pass?" → "Done" (Yes), "Fix validation issue" (No); "Done"; "Fix validation issue" → "Run validate-agent-frontmatter".
+```
 
 ## Task Packet
 
@@ -84,6 +98,42 @@ Read or write: read-only.
 
 - `--dry-run`: show what would change without writing anything.
 - `--verbose`: additional diagnostic detail to stderr.
+
+## Exit Code Reference
+
+| Exit Code | Meaning                 | Action               |
+| --------- | ----------------------- | -------------------- |
+| 0         | Success, no issues      | Proceed              |
+| 1         | Validation errors found | Fix reported issues  |
+| 2         | Usage or argument error | Check command syntax |
+
+## Decision Tree
+
+```text
+Flowchart summary: "Need new script" → "Purpose?"; "Purpose?" → "Create gate script (--json, exit codes)" (Block on pass/fail), "Create reporting script (--json summary)" (Summarize state), "Create utility script (--help)" (One-off helper); "Create gate script (--json, exit codes)" → "Audit in dry-run, then wire to gate"; "Create reporting script (--json summary)" → "Audit in dry-run, then wire to gate"; "Create utility script (--help)" → "Document in top-of-file JSDoc"; "Audit in dry-run, then wire to gate"; "Document in top-of-file JSDoc".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```js
+// ad hoc: no --help, prose on stdout, no exit code contract
+console.log('Index is ' + (stale ? 'stale' : 'fresh'));
+```
+
+**After:**
+
+```js
+/**
+ * Validate semantic index freshness. Exit 0 if fresh, 1 if stale.
+ * @example node validate-index.mjs --json
+ */
+if (process.argv.includes('--json')) {
+  console.log(JSON.stringify({ pass: !stale, evidence, fixHint, owner }));
+}
+process.exit(stale ? 1 : 0);
+```
 
 ## Guardrails
 

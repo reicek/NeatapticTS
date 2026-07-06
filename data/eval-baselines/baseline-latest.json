@@ -1,6 +1,5 @@
 {
   "baseline_id": "baseline-latest",
-  "timestamp": "2026-06-15T20:26:27.650Z",
   "conditions": {
     "bm25_only": {
       "latency_ms": {

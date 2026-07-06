@@ -9,6 +9,28 @@
  * in `dense_state`, `dense_degraded`, and `dense_reason` response fields.
  *
  * @remarks
+ * ### Dense Retrieval Strategy (ANN-first)
+ *
+ * Dense retrieval is delegated to `queryDenseIndex` (from `query-dense.mjs`),
+ * which uses an ANN-first strategy:
+ *
+ * - **ANN path (primary):** `vector_top_k(chunks_embedding_idx, vector8(?), ?)`
+ *   joined with chunks — DiskANN-backed approximate nearest neighbor search.
+ *   The k limit for `vector_top_k(idx, ?, ?)` controls candidate pool size.
+ *   Full SQL: `SELECT ... FROM vector_top_k(chunks_embedding_idx, vector8(?), ?) AS v
+ *   JOIN chunks c ON c.rowid = v.rowid JOIN documents d ON d.doc_id = c.doc_id`
+ *
+ * - **Brute-force fallback:** `vector_distance_cos(c.embedding, vector8(?))`
+ *   ordered by distance — used when the DiskANN index is cold or missing.
+ *
+ * ### Hybrid Ranking: Reciprocal Ranked Fusion (RRF)
+ *
+ * When both BM25 and dense results are available, candidates are merged using
+ * Reciprocal Ranked Fusion (RRF) with the standard formula
+ * `score = sum(1/(k + rank_i))` and default k=60. RRF depends only on rank
+ * positions, not raw scores, avoiding the normalization issues of the former
+ * alpha-blend weighting approach.
+ *
  * ### BM25 vs Dense/Hybrid Decision Flow
  *
  * ```mermaid
@@ -23,38 +45,31 @@
  *   H -- no  --> I[runBm25Search<br/>BM25-only results]
  *   H -- yes --> J{dense warm?}
  *   J -- no  --> K[Degraded BM25 results<br/>dense_degraded=true]
- *   J -- yes --> L[queryDenseIndex<br/>Hybrid dense results]
+ *   J -- yes --> L[queryDenseIndex<br/>RRF hybrid results]
  * ```
  */
-import Database from 'better-sqlite3';
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
-import { queryDenseIndex } from '../../semantic-index/query-dense.mjs';
-import { checkDenseReadiness } from '../../semantic-index/dense-readiness.mjs';
-import { checkRerankerReadiness } from '../../semantic-index/reranker-readiness.mjs';
+import { queryDenseIndex } from '../../../rag-index/query-dense.mjs';
+import { checkDenseReadiness } from '../../../rag-index/dense-readiness.mjs';
+import { checkRerankerReadiness } from '../../../rag-index/reranker-readiness.mjs';
 import {
   rerankCandidates,
   normalizeRerankCandidates,
-} from '../../semantic-index/rerank-index.mjs';
-import {
-  normalizeLimit,
-  openCortexDatabase,
-  readChunkRow,
-  resolveDatabasePath,
-} from './cortex-db.mjs';
-import { sanitizeFtsQuery } from '../../semantic-index/tokenizer.mjs';
-import { classifyForSearchCorpus } from '../../semantic-index/classify-query.mjs';
-import { classifyAndRoute } from '../../semantic-index/routing-table.mjs';
+} from '../../../rag-index/rerank-index.mjs';
+import { getTursoClient, normalizeLimit, readChunkRow } from './cortex-db.mjs';
+import { sanitizeFtsQuery } from '../../../rag-index/tokenizer.mjs';
+import { classifyForSearchCorpus } from '../../../rag-index/classify-query.mjs';
+import { classifyAndRoute } from '../../../rag-index/routing-table.mjs';
 import {
   validateFilter,
   compileFilterToSqlAliased,
-  applyPostRetrievalFilter,
-} from '../../semantic-index/metadata-filter.mjs';
-import { expandQuery } from '../../semantic-index/expand-query.mjs';
-import { recordFeedbackEvent } from './feedback-core.mjs';
+} from '../../../rag-index/metadata-filter.mjs';
+import { expandQuery } from '../../../rag-index/expand-query.mjs';
+import { runParallelQueries } from '../../../rag-index/parallel-search.mjs';
+import { createHash, randomUUID } from 'node:crypto';
 import { ErrorCodes, cortexError } from './cortex-error.mjs';
 import {
   DEFAULT_ANN_THRESHOLD,
-  isHnswAvailable,
   resolveDenseStrategy,
 } from './ann-strategy.mjs';
 
@@ -106,7 +121,7 @@ let cachedRerankerReadiness = null;
  * @param {number} [options.limit=10] - Maximum result count, clamped to [1, 50].
  * @param {string} [options.family] - Optional document family filter.
  * @param {boolean} [options.use_dense=true] - Enable hybrid dense reranking when the index is warm.
- * @param {number} [options.alpha] - BM25/dense blend weight (0 = BM25 only, 1 = dense only); default 0.5.
+ * @param {number} [options.alpha] - Deprecated legacy blend weight; retained for API compatibility but RRF ranking ignores it.
  * @param {string} [options.query_class] - Override query classification for routing. One of: simple_lookup, cross_boundary, multi_hop, exploratory, code_specific, plan_specific.
  * @param {object} [options.classification_hints] - Optional overrides for classification-derived alpha and family.
  * @param {number} [options.classification_hints.alpha] - Override alpha from classification routing.
@@ -114,7 +129,6 @@ let cachedRerankerReadiness = null;
  * @param {object} [options.metadata] - Optional metadata filter with a `filter` predicate tree.
  * @param {object} [options.metadata.filter] - Structured filter predicate tree (14 ops: eq, neq, in, not_in, gt, gte, lt, lte, like, is_null, is_not_null, and, or, not).
  * @param {string} [options.databasePath] - Override corpus SQLite database path.
- * @param {string} [options.embeddingsDatabasePath] - Override embeddings SQLite database path.
  * @param {string} [options.modelDirectory] - Override ONNX model directory path.
  * @param {string} [options.modelId] - Override ONNX model identifier.
  * @param {Function} [options.denseQuery] - Override dense-query implementation (for testing).
@@ -142,7 +156,11 @@ let cachedRerankerReadiness = null;
  * @param {object} readinessReport - Dense readiness report.
  * @returns {number} Chunk count.
  */
-function resolveChunkCountForStrategy(databasePath, readinessReport) {
+async function resolveChunkCountForStrategy(
+  databasePath,
+  readinessReport,
+  client,
+) {
   if (
     readinessReport &&
     typeof readinessReport.chunk_count === 'number' &&
@@ -151,14 +169,13 @@ function resolveChunkCountForStrategy(databasePath, readinessReport) {
     return readinessReport.chunk_count;
   }
 
+  const resolvedClient = client ?? (await getTursoClient(databasePath));
   try {
-    const db = openCortexDatabase(databasePath);
-    try {
-      const row = db.prepare('SELECT COUNT(*) AS count FROM chunks').get();
-      return Number(row?.count ?? 0);
-    } finally {
-      db.close();
-    }
+    const result = await resolvedClient.execute({
+      sql: 'SELECT COUNT(*) AS count FROM chunks',
+      args: [],
+    });
+    return Number(result.rows[0]?.count ?? 0);
   } catch {
     return 0;
   }
@@ -170,12 +187,17 @@ function resolveChunkCountForStrategy(databasePath, readinessReport) {
  * @param {object} options - Strategy inputs.
  * @param {string | undefined} options.databasePath - Corpus database path override.
  * @param {object} options.readinessReport - Dense readiness report.
- * @returns {'brute_force_cached' | 'hnsw' | 'brute_force'} Selected strategy.
+ * @returns {'diskann'} Selected strategy.
  */
-function resolveDenseStrategyForSearch({ databasePath, readinessReport }) {
-  const chunkCount = resolveChunkCountForStrategy(
+async function resolveDenseStrategyForSearch({
+  databasePath,
+  readinessReport,
+  client,
+}) {
+  const chunkCount = await resolveChunkCountForStrategy(
     databasePath,
     readinessReport,
+    client,
   );
   const indexStatus =
     readinessReport?.ann_index_status ??
@@ -185,7 +207,6 @@ function resolveDenseStrategyForSearch({ databasePath, readinessReport }) {
     chunkCount,
     annThreshold: DEFAULT_ANN_THRESHOLD,
     indexStatus,
-    hnswAvailable: isHnswAvailable,
   });
 }
 
@@ -197,6 +218,7 @@ async function searchCorpusImpl(options = {}) {
     typeof options.family === 'string' && options.family.trim()
       ? options.family.trim()
       : null;
+  const skipFamilyClassification = options.skip_family_classification === true;
   const useDense = options.use_dense !== false;
 
   // Validate and compile metadata filter if provided
@@ -231,32 +253,43 @@ async function searchCorpusImpl(options = {}) {
     // Explicit class from caller — use full routing
     const routing = classifyAndRoute(rawQuery, classificationHints);
     effectiveAlpha = hintAlpha ?? explicitAlpha ?? routing.alpha;
-    effectiveFamily = hintFamily ?? explicitFamily ?? routing.strategy.family;
+    effectiveFamily = skipFamilyClassification
+      ? explicitFamily
+      : (hintFamily ?? explicitFamily ?? routing.strategy.family);
     classificationMetadata = {
       query_class: routing.query_class,
       confidence: routing.confidence,
-      classification_fallback: false,
+      classification_fallback: skipFamilyClassification,
+      family_fallback: skipFamilyClassification,
     };
   } else if (explicitAlpha === undefined && hintAlpha === undefined) {
     // No explicit alpha and no explicit class → lightweight classification
     const classification = classifyForSearchCorpus(rawQuery);
     effectiveAlpha = classification.alpha;
-    effectiveFamily = hintFamily ?? explicitFamily ?? classification.family;
+    effectiveFamily = skipFamilyClassification
+      ? explicitFamily
+      : (hintFamily ?? explicitFamily ?? classification.family);
     classificationMetadata = {
       query_class: classification.query_class,
       confidence: classification.confidence,
-      classification_fallback: classification.classification_fallback,
+      classification_fallback:
+        skipFamilyClassification || classification.classification_fallback,
+      family_fallback: skipFamilyClassification,
     };
   } else {
     // Caller supplied explicit alpha/hints without a query_class; still
     // emit classification metadata from lightweight classification.
     const classification = classifyForSearchCorpus(rawQuery);
     effectiveAlpha = hintAlpha ?? explicitAlpha ?? classification.alpha;
-    effectiveFamily = hintFamily ?? explicitFamily ?? classification.family;
+    effectiveFamily = skipFamilyClassification
+      ? explicitFamily
+      : (hintFamily ?? explicitFamily ?? classification.family);
     classificationMetadata = {
       query_class: classification.query_class,
       confidence: classification.confidence,
-      classification_fallback: classification.classification_fallback,
+      classification_fallback:
+        skipFamilyClassification || classification.classification_fallback,
+      family_fallback: skipFamilyClassification,
     };
   }
   // else: caller provided explicit alpha → respect it, no classification
@@ -280,7 +313,6 @@ async function searchCorpusImpl(options = {}) {
       const expansionResult = await expandQueryFn({
         query: rawQuery,
         expandQuery: options.expand_query,
-        embeddingsDatabasePath: options.embeddingsDatabasePath,
         modelDirectory: options.modelDirectory,
         modelId: options.modelId,
         associationsPath: options.associationsPath,
@@ -301,12 +333,13 @@ async function searchCorpusImpl(options = {}) {
 
   // Exact symbol fast path: when the raw query names a known symbol, return
   // the matching chunk(s) directly without running BM25 or dense ranking.
-  const exactSymbolResponse = tryExactSymbolLookup({
+  const exactSymbolResponse = await tryExactSymbolLookup({
     classificationMetadata,
     databasePath: options.databasePath,
     family: classifiedFamily,
     limit,
     rawQuery,
+    client: options.client,
   });
   if (exactSymbolResponse) {
     return exactSymbolResponse;
@@ -325,14 +358,15 @@ async function searchCorpusImpl(options = {}) {
       };
 
     const readinessReport = await getDenseReadiness(options);
-    const denseStrategy = resolveDenseStrategyForSearch({
+    const denseStrategy = await resolveDenseStrategyForSearch({
       databasePath: options.databasePath,
       readinessReport,
+      client: options.client,
     });
 
     if (readinessReport.state !== 'warm') {
       return {
-        ...createDegradedBm25Response({
+        ...(await createDegradedBm25Response({
           alpha,
           classificationMetadata,
           compiledFilter,
@@ -340,7 +374,8 @@ async function searchCorpusImpl(options = {}) {
           limit,
           query: rawQuery,
           readinessReport,
-        }),
+          client: options.client,
+        })),
         ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
         dense_strategy: denseStrategy,
       };
@@ -351,6 +386,8 @@ async function searchCorpusImpl(options = {}) {
       dense_state: 'warm',
       dense_strategy: denseStrategy,
       limit,
+      diskann_used: false,
+      rrf_used: false,
       ...(classifiedFamily ? { family: classifiedFamily } : {}),
       ...(classificationMetadata
         ? {
@@ -358,6 +395,7 @@ async function searchCorpusImpl(options = {}) {
             confidence: classificationMetadata.confidence,
             classification_fallback:
               classificationMetadata.classification_fallback,
+            family_fallback: classificationMetadata.family_fallback ?? false,
           }
         : {}),
       ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
@@ -377,13 +415,14 @@ async function searchCorpusImpl(options = {}) {
 
   if (useDense) {
     const readinessReport = await getDenseReadiness(options);
-    const denseStrategy = resolveDenseStrategyForSearch({
+    const denseStrategy = await resolveDenseStrategyForSearch({
       databasePath: options.databasePath,
       readinessReport,
+      client: options.client,
     });
 
     if (readinessReport.state !== 'warm') {
-      const degradedResponse = createDegradedBm25Response({
+      const degradedResponse = await createDegradedBm25Response({
         alpha,
         classificationMetadata,
         compiledFilter,
@@ -392,6 +431,7 @@ async function searchCorpusImpl(options = {}) {
         limit,
         query: expandedBm25Query ?? query,
         readinessReport,
+        client: options.client,
       });
       const degradedBase = {
         ...degradedResponse,
@@ -437,42 +477,37 @@ async function searchCorpusImpl(options = {}) {
       };
     }
 
-    const denseQuery = options.denseQuery ?? queryDenseIndex;
-    const denseResult = await denseQuery({
+    const denseQueryFn = options.denseQuery ?? queryDenseIndex;
+    const denseResult = await denseQueryFn({
       alpha,
+      compiledFilter,
       corpusDatabasePath: options.databasePath,
       dense: true,
-      embeddingsDatabasePath: options.embeddingsDatabasePath,
       family: classifiedFamily,
       limit,
       modelDirectory: options.modelDirectory,
       modelId: options.modelId,
+      parallelRunner: runParallelQueries,
       query: rawQuery,
     });
 
-    // Apply metadata filter as post-retrieval filter on dense candidates
-    let filteredResults = denseResult.results;
-    if (metadataFilter) {
-      filteredResults = applyPostRetrievalFilter(
-        denseResult.results,
-        metadataFilter,
-      );
-    }
-
     const denseResponse = {
       ...denseResult,
-      results: filteredResults,
+      results: denseResult.results,
       ...(classificationMetadata
         ? {
             query_class: classificationMetadata.query_class,
             confidence: classificationMetadata.confidence,
             classification_fallback:
               classificationMetadata.classification_fallback,
+            family_fallback: classificationMetadata.family_fallback ?? false,
           }
         : {}),
       ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
       dense_state: 'warm',
       dense_strategy: denseStrategy,
+      diskann_used: true,
+      rrf_used: true,
     };
 
     // Cross-encoder re-ranking: when use_rerank is requested, check reranker
@@ -496,7 +531,10 @@ async function searchCorpusImpl(options = {}) {
     }
 
     const rerankerFn = options.rerankerFn ?? rerankCandidates;
-    const candidatesForRerank = filteredResults.slice(0, rerankCandidatesCount);
+    const candidatesForRerank = denseResult.results.slice(
+      0,
+      rerankCandidatesCount,
+    );
     const rerankedResults = await rerankerFn(rawQuery, candidatesForRerank, {
       rerankerModelDirectory: options.rerankerModelDirectory,
       rerankerModelId: options.rerankerModelId,
@@ -512,7 +550,7 @@ async function searchCorpusImpl(options = {}) {
   }
 
   return {
-    ...runBm25Search({
+    ...(await runBm25Search({
       alpha,
       classificationMetadata,
       compiledFilter,
@@ -520,7 +558,8 @@ async function searchCorpusImpl(options = {}) {
       family: classifiedFamily,
       limit,
       query: expandedBm25Query ?? query,
-    }),
+      client: options.client,
+    })),
     ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
   };
 }
@@ -644,7 +683,7 @@ function estimateResponseTokens(results) {
  * @param {Array<{chunk_id?: number}>} [response.results] - Search result chunks.
  * @param {string | undefined} databasePath - Optional corpus database path override.
  */
-function recordSearchImpressions(response, databasePath) {
+async function recordSearchImpressions(response, databasePath, client) {
   const results = response?.results;
   const query = response?.query;
   if (
@@ -655,27 +694,29 @@ function recordSearchImpressions(response, databasePath) {
     return;
   }
 
-  Promise.resolve().then(() => {
-    try {
-      const feedbackDb = new Database(resolveDatabasePath(databasePath));
-      try {
-        for (const result of results) {
-          const chunkId = result?.chunk_id;
-          if (typeof chunkId === 'number') {
-            recordFeedbackEvent(feedbackDb, {
-              chunk_id: chunkId,
-              signal_type: 'impression',
-              query,
-            });
-          }
-        }
-      } finally {
-        feedbackDb.close();
+  const resolvedClient = client ?? (await getTursoClient(databasePath));
+  try {
+    const createdAt = new Date().toISOString();
+    const queryHash = createHash('sha256').update(query).digest('hex');
+    const statements = [];
+    for (const result of results) {
+      const chunkId = result?.chunk_id;
+      if (typeof chunkId === 'number') {
+        statements.push({
+          sql: `INSERT INTO feedback_events
+            (event_id, chunk_id, signal_type, signal_strength, query_hash, agent_id, context, created_at)
+          VALUES
+            (?, ?, 'impression', 0.1, ?, NULL, NULL, ?)`,
+          args: [randomUUID(), chunkId, queryHash, createdAt],
+        });
       }
-    } catch {
-      // Best-effort: silently drop feedback write failures.
     }
-  });
+    if (statements.length > 0) {
+      await resolvedClient.batch(statements, 'write');
+    }
+  } catch {
+    // Best-effort: silently drop feedback write failures.
+  }
 }
 
 /**
@@ -700,7 +741,7 @@ const DEFAULT_FEEDBACK_SIGNALS = {
  * @param {Array<object>} results - Search result list.
  * @param {string | undefined} databasePath - Optional corpus database path override.
  */
-export function attachFeedbackToResults(results, databasePath) {
+export async function attachFeedbackToResults(results, databasePath, client) {
   if (!Array.isArray(results) || results.length === 0) {
     return;
   }
@@ -719,21 +760,16 @@ export function attachFeedbackToResults(results, databasePath) {
 
   /** @type {Map<number, object>} */
   const scoresByChunkId = new Map();
-  try {
-    const database = openCortexDatabase(databasePath);
-    try {
-      const placeholders = chunkIds.map(() => '?').join(',');
-      const rows = database
-        .prepare(
-          `SELECT chunk_id, feedback_boost, total_positive, total_negative, total_impressions, total_clicks, total_references FROM feedback_scores WHERE chunk_id IN (${placeholders})`,
-        )
-        .all(...chunkIds);
 
-      for (const row of rows) {
-        scoresByChunkId.set(row.chunk_id, row);
-      }
-    } finally {
-      database.close();
+  const resolvedClient = client ?? (await getTursoClient(databasePath));
+  try {
+    const placeholders = chunkIds.map(() => '?').join(',');
+    const result = await resolvedClient.execute({
+      sql: `SELECT chunk_id, feedback_boost, total_positive, total_negative, total_impressions, total_clicks, total_references FROM feedback_scores WHERE chunk_id IN (${placeholders})`,
+      args: chunkIds,
+    });
+    for (const row of result.rows) {
+      scoresByChunkId.set(Number(row.chunk_id), row);
     }
   } catch {
     // Best-effort: silently skip feedback enrichment when the table is missing.
@@ -768,46 +804,40 @@ export function attachFeedbackToResults(results, databasePath) {
  * @param {string | undefined} databasePath - Optional corpus database path override.
  * @returns {{ timestamp: number, stale: boolean, last_update_source: string, last_indexed_at?: number, freshness_proof?: object }} Freshness stanza.
  */
-export function buildResponseFreshness(databasePath) {
+export async function buildResponseFreshness(databasePath, client) {
   const timestamp = Date.now();
+
+  const resolvedClient = client ?? (await getTursoClient(databasePath));
   try {
-    const database = openCortexDatabase(databasePath);
-    try {
-      const row = database
-        .prepare(
-          'SELECT COUNT(*) AS count, MAX(indexed_at) AS last_indexed_at FROM documents',
-        )
-        .get();
-      const count = Number(row?.count ?? 0);
-      const lastIndexedAt = row?.last_indexed_at
-        ? Number(row.last_indexed_at)
-        : null;
-      const freshness = {
-        timestamp,
-        stale: count === 0,
-        last_update_source: count === 0 ? 'empty_corpus_index' : 'corpus_index',
-      };
-      if (lastIndexedAt) {
-        freshness.last_indexed_at = lastIndexedAt;
-        const proofRow = database
-          .prepare(
-            'SELECT mtime_ms, file_size, sha256 FROM documents ORDER BY indexed_at DESC LIMIT 1',
-          )
-          .get();
-        if (proofRow) {
-          freshness.freshness_proof = {
-            mtime_ms:
-              proofRow.mtime_ms === null ? null : Number(proofRow.mtime_ms),
-            size:
-              proofRow.file_size === null ? null : Number(proofRow.file_size),
-            sha256: proofRow.sha256 ?? null,
-          };
-        }
+    const result = await resolvedClient.execute(
+      'SELECT COUNT(*) AS count, MAX(indexed_at) AS last_indexed_at FROM documents',
+    );
+    const row = result.rows[0];
+    const count = Number(row?.count ?? 0);
+    const lastIndexedAt = row?.last_indexed_at
+      ? Number(row.last_indexed_at)
+      : null;
+    const freshness = {
+      timestamp,
+      stale: count === 0,
+      last_update_source: count === 0 ? 'empty_corpus_index' : 'corpus_index',
+    };
+    if (lastIndexedAt) {
+      freshness.last_indexed_at = lastIndexedAt;
+      const proofResult = await resolvedClient.execute(
+        'SELECT mtime_ms, file_size, sha256 FROM documents ORDER BY indexed_at DESC LIMIT 1',
+      );
+      const proofRow = proofResult.rows[0];
+      if (proofRow) {
+        freshness.freshness_proof = {
+          mtime_ms:
+            proofRow.mtime_ms === null ? null : Number(proofRow.mtime_ms),
+          size: proofRow.file_size === null ? null : Number(proofRow.file_size),
+          sha256: proofRow.sha256 ?? null,
+        };
       }
-      return freshness;
-    } finally {
-      database.close();
     }
+    return freshness;
   } catch {
     return {
       timestamp,
@@ -831,9 +861,51 @@ export function buildResponseFreshness(databasePath) {
 export async function searchCorpus(options = {}) {
   const startTime = performance.now();
   try {
-    const response = await searchCorpusImpl(options);
-    attachFeedbackToResults(response.results, options?.databasePath);
-    recordSearchImpressions(response, options?.databasePath);
+    let response = await searchCorpusImpl(options);
+
+    // If the classifier-derived family filter produced zero results and the
+    // caller did not request a specific family, broaden the search to the
+    // full corpus once. This prevents rare plan/code misclassifications from
+    // returning empty result sets while still respecting explicit family
+    // filters when the user supplies them.
+    const familyWasDerived =
+      !('family' in options) &&
+      Array.isArray(response.results) &&
+      response.results.length === 0 &&
+      response.family != null;
+    if (familyWasDerived) {
+      const broadResponse = await searchCorpusImpl({
+        ...options,
+        family: null,
+        skip_family_classification: true,
+      });
+      if (
+        Array.isArray(broadResponse.results) &&
+        broadResponse.results.length > 0
+      ) {
+        response = broadResponse;
+      }
+    }
+
+    // BM25 search results already include feedback_boost via the SQL LEFT
+    // JOIN in runBm25Search. Only call attachFeedbackToResults for search
+    // paths that don't (dense, exact-symbol).
+    if (
+      Array.isArray(response.results) &&
+      response.results.length > 0 &&
+      typeof response.results[0]?.feedback_boost !== 'number'
+    ) {
+      await attachFeedbackToResults(
+        response.results,
+        options?.databasePath,
+        options?.client,
+      );
+    }
+    await recordSearchImpressions(
+      response,
+      options?.databasePath,
+      options?.client,
+    );
 
     if (options.compact === true) {
       response.results = (response.results ?? []).map(compactSearchResult);
@@ -842,7 +914,10 @@ export async function searchCorpus(options = {}) {
     response.response_tokens = estimateResponseTokens(response.results ?? []);
 
     response.latency_ms = performance.now() - startTime;
-    response.freshness = buildResponseFreshness(options?.databasePath);
+    response.freshness = await buildResponseFreshness(
+      options?.databasePath,
+      options?.client,
+    );
     return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -871,7 +946,6 @@ export async function searchCorpus(options = {}) {
  *
  * @param {object} options - Options forwarded from {@link searchCorpus}.
  * @param {string} [options.databasePath] - Corpus database path.
- * @param {string} [options.embeddingsDatabasePath] - Embeddings database path.
  * @param {string} [options.modelDirectory] - ONNX model directory.
  * @param {string} [options.modelId] - ONNX model identifier.
  * @param {Function} [options.readinessProbe] - Override probe implementation.
@@ -881,7 +955,6 @@ async function getDenseReadiness(options) {
   const readinessProbe = options.readinessProbe ?? checkDenseReadiness;
   const readinessOptions = {
     corpusDatabasePath: options.databasePath,
-    embeddingsDatabasePath: options.embeddingsDatabasePath,
     modelDirectory: options.modelDirectory,
     modelId: options.modelId,
   };
@@ -937,11 +1010,14 @@ function createEmptyBm25Response({
           confidence: classificationMetadata.confidence,
           classification_fallback:
             classificationMetadata.classification_fallback,
+          family_fallback: classificationMetadata.family_fallback ?? false,
         }
       : {}),
     query: rawQuery,
     results: [],
     use_dense: false,
+    diskann_used: false,
+    rrf_used: false,
   };
 }
 
@@ -956,7 +1032,7 @@ function createEmptyBm25Response({
  * @param {{ classificationMetadata?: object | null, compiledFilter?: { sql: string, params: Array<string | number | null> } | null, databasePath?: string, family: string | null, limit: number, query: string, readinessReport: object }} params - Response parameters.
  * @returns {object} BM25 results with `dense_degraded: true` and degradation details.
  */
-function createDegradedBm25Response({
+async function createDegradedBm25Response({
   alpha,
   classificationMetadata,
   compiledFilter,
@@ -965,9 +1041,10 @@ function createDegradedBm25Response({
   limit,
   query,
   readinessReport,
+  client,
 }) {
   const bm25Response = query
-    ? runBm25Search({
+    ? await runBm25Search({
         alpha,
         classificationMetadata,
         compiledFilter,
@@ -975,6 +1052,7 @@ function createDegradedBm25Response({
         family,
         limit,
         query,
+        client,
       })
     : createEmptyBm25Response({
         classificationMetadata,
@@ -1106,18 +1184,20 @@ function normalizeRerankReason(reason, state) {
  * @param {{ classificationMetadata?: object | null, databasePath?: string, family: string | null, limit: number, rawQuery: string }} params - Lookup parameters.
  * @returns {object | null} Exact-symbol response, or `null` when no symbol matches.
  */
-function tryExactSymbolLookup({
+async function tryExactSymbolLookup({
   classificationMetadata,
   databasePath,
   family,
   limit,
   rawQuery,
+  client,
 }) {
-  const rows = runExactSymbolLookup({
+  const rows = await runExactSymbolLookup({
     databasePath,
     family,
     limit,
     rawQuery,
+    client,
   });
   if (!Array.isArray(rows) || rows.length === 0) {
     return null;
@@ -1129,6 +1209,8 @@ function tryExactSymbolLookup({
     query: rawQuery,
     results: rows,
     use_dense: false,
+    diskann_used: false,
+    rrf_used: false,
     ...(family ? { family } : {}),
     ...(classificationMetadata
       ? {
@@ -1136,6 +1218,7 @@ function tryExactSymbolLookup({
           confidence: classificationMetadata.confidence,
           classification_fallback:
             classificationMetadata.classification_fallback,
+          family_fallback: classificationMetadata.family_fallback ?? false,
         }
       : {}),
   };
@@ -1151,20 +1234,17 @@ function tryExactSymbolLookup({
  * @param {{ databasePath?: string, family: string | null, limit: number, rawQuery: string }} params - Lookup parameters.
  * @returns {Array<object>} Matching chunk rows, or an empty array when no symbol matches.
  */
-function runExactSymbolLookup({ databasePath, family, limit, rawQuery }) {
-  let database;
+async function runExactSymbolLookup({
+  databasePath,
+  family,
+  limit,
+  rawQuery,
+  client,
+}) {
+  const resolvedClient = client ?? (await getTursoClient(databasePath));
   try {
-    database = openCortexDatabase(databasePath);
-  } catch {
-    return [];
-  }
-
-  try {
-    const familyFilter = family ? 'AND d.doc_family = @family' : '';
-
-    const rows = database
-      .prepare(
-        `
+    const familyFilter = family ? 'AND d.doc_family = ?' : '';
+    const sql = `
       SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
         c.body_text, c.char_start, c.char_end,
         c.parent_chunk_id, c.depth, c.context_header,
@@ -1173,19 +1253,19 @@ function runExactSymbolLookup({ databasePath, family, limit, rawQuery }) {
         c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern
       FROM chunks c
       JOIN documents d ON d.doc_id = c.doc_id
-      WHERE c.symbol_name = @symbol ${familyFilter}
+      WHERE c.symbol_name = ? ${familyFilter}
       ORDER BY c.chunk_id
-      LIMIT @limit
-    `,
-      )
-      .all({ family, limit, symbol: rawQuery });
+      LIMIT ?
+    `;
+    const args = family ? [rawQuery, family, limit] : [rawQuery, limit];
 
-    return rows.map((row) => ({
+    const result = await resolvedClient.execute({ sql, args });
+    return result.rows.map((row) => ({
       ...readChunkRow(row),
       body_text: row.body_text,
     }));
-  } finally {
-    database.close();
+  } catch {
+    return [];
   }
 }
 
@@ -1198,14 +1278,13 @@ function runExactSymbolLookup({ databasePath, family, limit, rawQuery }) {
  * the top `limit` rows ordered by descending BM25 score.
  *
  * When a compiled metadata filter is provided, its `?` placeholders are
- * converted to named parameters (`@mf0`, `@mf1`, …) compatible with
- * `better-sqlite3` named-parameter binding, and bound alongside the FTS
- * query and family parameters.
+ * bound as positional parameters alongside the FTS query and family
+ * parameters.
  *
  * @param {{ classificationMetadata?: object | null, compiledFilter?: { sql: string, params: Array<string | number | null> } | null, databasePath?: string, family: string | null, limit: number, query: string }} params - Query parameters.
  * @returns {object} BM25 results payload with `query`, `limit`, `use_dense: false`, and `results`.
  */
-function runBm25Search({
+async function runBm25Search({
   alpha,
   classificationMetadata,
   compiledFilter,
@@ -1213,69 +1292,109 @@ function runBm25Search({
   family,
   limit,
   query,
+  client,
 }) {
-  const database = openCortexDatabase(databasePath);
+  const resolvedClient = client ?? (await getTursoClient(databasePath));
 
-  try {
-    const familyFilter = family ? 'AND d.doc_family = @family' : '';
+  const familyFilter = family ? 'AND d.doc_family = ?' : '';
 
-    // Convert compiled filter ? placeholders to named @mfN parameters for better-sqlite3
-    let metadataFilterSql = '';
-    const namedParams = {};
-    if (compiledFilter) {
-      let namedSql = compiledFilter.sql;
-      for (
-        let paramIndex = 0;
-        paramIndex < compiledFilter.params.length;
-        paramIndex++
-      ) {
-        namedSql = namedSql.replace('?', `@mf${paramIndex}`);
-        namedParams[`mf${paramIndex}`] = compiledFilter.params[paramIndex];
-      }
-      metadataFilterSql = `AND ${namedSql}`;
-    }
-
-    const rows = database
-      .prepare(
-        `
-      SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
-        c.body_text, c.char_start, c.char_end,
-        c.parent_chunk_id, c.depth, c.context_header,
-        c.symbol_name, c.signature_text, c.jsdoc_text, c.export_type, c.module_path,
-        c.arch_layer, c.jsdoc_quality, c.jsdoc_word_count,
-        c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern,
-        bm25(chunks_fts) AS score
-      FROM chunks_fts
-      JOIN chunks c ON c.chunk_id = chunks_fts.rowid
-      JOIN documents d ON d.doc_id = c.doc_id
-      WHERE chunks_fts MATCH @query ${familyFilter} ${metadataFilterSql}
-      ORDER BY score
-      LIMIT @limit
-    `,
-      )
-      .all({ query, family, limit, ...namedParams });
-
-    return {
-      query,
-      limit,
-      alpha,
-      ...(family ? { family } : {}),
-      ...(classificationMetadata
-        ? {
-            query_class: classificationMetadata.query_class,
-            confidence: classificationMetadata.confidence,
-            classification_fallback:
-              classificationMetadata.classification_fallback,
-          }
-        : {}),
-      use_dense: false,
-      results: rows.map((row) => ({
-        ...readChunkRow(row),
-        body_text: row.body_text,
-        score: Number(row.score),
-      })),
-    };
-  } finally {
-    database.close();
+  let metadataFilterSql = '';
+  const metadataArgs = [];
+  if (compiledFilter) {
+    metadataFilterSql = `AND ${compiledFilter.sql}`;
+    metadataArgs.push(...compiledFilter.params);
   }
+
+  // POWER(0.95, days) time-decay is applied in buildChunkAggregateAsync when
+  // computing and storing feedback_boost.  The search query retrieves the
+  // already-decayed stored value directly from feedback_scores.
+  const sqlWithFeedback = `
+    SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
+      c.body_text, c.char_start, c.char_end,
+      c.parent_chunk_id, c.depth, c.context_header,
+      c.symbol_name, c.signature_text, c.jsdoc_text, c.export_type, c.module_path,
+      c.arch_layer, c.jsdoc_quality, c.jsdoc_word_count,
+      c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern,
+      bm25(chunks_fts) AS score,
+      COALESCE(fs.feedback_boost, 0) AS feedback_boost,
+      COALESCE(fs.total_positive, 0) AS fb_total_positive,
+      COALESCE(fs.total_negative, 0) AS fb_total_negative,
+      COALESCE(fs.total_impressions, 0) AS fb_total_impressions,
+      COALESCE(fs.total_clicks, 0) AS fb_total_clicks,
+      COALESCE(fs.total_references, 0) AS fb_total_references
+    FROM chunks_fts
+    JOIN chunks c ON c.chunk_id = chunks_fts.rowid
+    JOIN documents d ON d.doc_id = c.doc_id
+    LEFT JOIN feedback_scores fs ON fs.chunk_id = c.chunk_id
+    WHERE chunks_fts MATCH ? ${familyFilter} ${metadataFilterSql}
+    ORDER BY score
+    LIMIT ?
+  `;
+
+  const sqlNoFeedback = `
+    SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
+      c.body_text, c.char_start, c.char_end,
+      c.parent_chunk_id, c.depth, c.context_header,
+      c.symbol_name, c.signature_text, c.jsdoc_text, c.export_type, c.module_path,
+      c.arch_layer, c.jsdoc_quality, c.jsdoc_word_count,
+      c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern,
+      bm25(chunks_fts) AS score,
+      0 AS feedback_boost,
+      0 AS fb_total_positive,
+      0 AS fb_total_negative,
+      0 AS fb_total_impressions,
+      0 AS fb_total_clicks,
+      0 AS fb_total_references
+    FROM chunks_fts
+    JOIN chunks c ON c.chunk_id = chunks_fts.rowid
+    JOIN documents d ON d.doc_id = c.doc_id
+    WHERE chunks_fts MATCH ? ${familyFilter} ${metadataFilterSql}
+    ORDER BY score
+    LIMIT ?
+  `;
+
+  const args = [query];
+  if (family) args.push(family);
+  args.push(...metadataArgs);
+  args.push(limit);
+
+  let result;
+  try {
+    result = await resolvedClient.execute({ sql: sqlWithFeedback, args });
+  } catch (feedbackErr) {
+    // feedback_scores table may be missing — fall back to no-join query
+    result = await resolvedClient.execute({ sql: sqlNoFeedback, args });
+  }
+
+  return {
+    query,
+    limit,
+    alpha,
+    ...(family ? { family } : {}),
+    ...(classificationMetadata
+      ? {
+          query_class: classificationMetadata.query_class,
+          confidence: classificationMetadata.confidence,
+          classification_fallback:
+            classificationMetadata.classification_fallback,
+          family_fallback: classificationMetadata.family_fallback ?? false,
+        }
+      : {}),
+    use_dense: false,
+    diskann_used: false,
+    rrf_used: false,
+    results: result.rows.map((row) => ({
+      ...readChunkRow(row),
+      body_text: row.body_text,
+      score: Number(row.score),
+      feedback_boost: Number(row.feedback_boost ?? 0),
+      feedback_signals: {
+        total_positive: Number(row.fb_total_positive ?? 0),
+        total_negative: Number(row.fb_total_negative ?? 0),
+        total_impressions: Number(row.fb_total_impressions ?? 0),
+        total_clicks: Number(row.fb_total_clicks ?? 0),
+        total_references: Number(row.fb_total_references ?? 0),
+      },
+    })),
+  };
 }

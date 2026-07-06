@@ -711,8 +711,7 @@ const computeDiversityMetrics = (
   let enabledWeights = 0;
   for (let sampleIndex = 0; sampleIndex < sampledLength; sampleIndex++) {
     const genome = state.scratch.samplePool[sampleIndex] as
-      | GenomeDetailed
-      | undefined;
+      GenomeDetailed | undefined;
     const connections = (
       Array.isArray(genome?.connections) ? genome.connections : EMPTY_VECTOR
     ) as Array<{

@@ -24,6 +24,7 @@ post-phase-fanout:
   - '04-implementing'
 
 skills:
+  - 'execute'
   - 'creating-unit-tests'
   - 'coverage-tranche'
   - 'red-test-contracts'
@@ -31,6 +32,13 @@ skills:
 specialists:
   - 'unit-test-writer'
   - 'Coverage Scout'
+  - 'performance-trace-specialist'
+  - 'browser-ui-specialist'
+  - 'browser-memory-specialist'
+
+browser-red-tests: >
+  For browser-related red tests, delegate to performance-trace-specialist,
+  browser-ui-specialist, or browser-memory-specialist as appropriate.
 
 timeout-minutes: 20
 

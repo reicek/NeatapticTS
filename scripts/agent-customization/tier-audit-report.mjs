@@ -35,7 +35,6 @@ export async function runTierAuditReport({
   return {
     name: 'tier audit report',
     ok: validation.ok,
-    generated_at: inventory.generated_at,
     summary: inventory.summary,
     agents: inventory.agents,
     issues: validation.issues,
@@ -70,7 +69,6 @@ function renderMarkdownReport(report) {
   const markdownLines = [
     '# Tier Audit Report',
     '',
-    `- Generated at: ${report.generated_at}`,
     `- Total agents: ${report.summary.total}`,
     `- Tier counts: Tier 1=${report.summary.by_tier[1]}, Tier 2=${report.summary.by_tier[2]}, Tier 3=${report.summary.by_tier[3]}, Tier 4=${report.summary.by_tier[4]}`,
     `- User-invocable agents: ${report.summary.user_invocable_total}`,

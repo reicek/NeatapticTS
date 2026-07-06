@@ -33,10 +33,10 @@
 - The frozen starter pattern is folder-based under `examples/<example-name>/`, with at minimum an `index.ts` entrypoint plus `README.md`; browser-published examples also need `index.html`.
 - The current docs publication path is explicit rather than automatic: browser examples must be added to `scripts/copy-examples.ts` if they should appear under `docs/examples/`.
 - Decide the smallest stable starter set to implement first:
-  - `Hello Network` for fast inference and public API orientation.
-  - `Evolve XOR` for the smallest NEAT loop with a predictable outcome.
-  - One compact sequence-state example that teaches reset behavior with a recurrent builder.
-  - One minimal browser quickstart that proves the browser path without recreating Flappy Bird.
+- `Hello Network` for fast inference and public API orientation.
+- `Evolve XOR` for the smallest NEAT loop with a predictable outcome.
+- One compact sequence-state example that teaches reset behavior with a recurrent builder.
+- One minimal browser quickstart that proves the browser path without recreating Flappy Bird.
 - Keep the first pass small enough that each example can be validated independently.
 
 Acceptance:

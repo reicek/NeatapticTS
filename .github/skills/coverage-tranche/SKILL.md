@@ -1,9 +1,13 @@
 ---
 name: coverage-tranche
-description: 'Systematically expand test coverage for a specific source boundary in NeatapticTS toward 100% statements, branches, functions, and lines. Use when a source file has a known coverage gap and passing tests, not for fixing test failures.'
+description: 'Use when: expanding test coverage for a specific src/ boundary toward 100%.'
 argument-hint: 'Name the target source file, provide the current coverage % or uncovered line count from lcov.info or a focused run, and state whether this is reconnaissance, implementation, or validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - coverage-guard
+  - creating-unit-tests
+  - red-test-contracts
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -41,6 +45,16 @@ return to coverage expansion.
 - The task is to add the **smallest** owner-local test that exercises an
   uncovered path — not to fix a broken assertion.
 - Dead code should be confirmed and removed as part of the tranche.
+
+## When NOT to use
+
+Do NOT use for post-edit coverage enforcement - use `coverage-guard` instead. Do NOT use for fixing failing tests - use `test-fix-workflow` first.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Read lcov.info" → "Find file below 100%"; "Find file below 100%" → "Identify uncovered lines"; "Identify uncovered lines" → "Dead code?"; "Dead code?" → "Remove branch" (Yes), "Write smallest test" (No); "Remove branch" → "Re-run focused slice"; "Write smallest test" → "Re-run focused slice"; "Re-run focused slice" → "100% now?"; "100% now?" → "Tranche complete" (Yes), "Identify uncovered lines" (No); "Tranche complete".
+```
 
 ## Task Packet
 
@@ -133,6 +147,12 @@ The scout is read-only recon; this skill is the execution workflow.
 Use `coverage-guard` when a code change has just landed and you need to verify
 the touched files have not dropped below 100%. `coverage-tranche` is for
 forward progress; `coverage-guard` is for regression prevention after changes.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Coverage work needed" → "Tests passing?"; "Tests passing?" → "Use test-fix-workflow first" (No — failing), "Use coverage-tranche (this skill)" (Yes, but below 100%), "Use coverage-guard" (Yes, change just landed); "Use test-fix-workflow first" → "Fix failures, then return"; "Use coverage-tranche (this skill)" → "Add smallest test or remove dead code"; "Use coverage-guard" → "Verify touched files at 100%"; "Fix failures, then return"; "Add smallest test or remove dead code"; "Verify touched files at 100%".
+```
 
 ## Guardrails
 

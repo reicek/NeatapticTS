@@ -50,9 +50,9 @@
 - Plan registration sync: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Cortex_RAG_Premium_Primary_Search.plans.md` -> PASS (`0 errors, 0 warnings`).
 - Docs regeneration: `npm run docs` -> PASS (exit 0).
 - Closure gates:
-  - `node scripts/agent-customization/gates/phase-compression.gate.mjs --json` -> PASS.
-  - `node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json` -> PASS.
-  - `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json` -> PASS.
+- `node scripts/agent-customization/gates/phase-compression.gate.mjs --json` -> PASS.
+- `node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json` -> PASS.
+- `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json` -> PASS.
 - No `src/` files were changed in this workstream; coverage guard was vacuously satisfied.
 
 ## Reopen triggers

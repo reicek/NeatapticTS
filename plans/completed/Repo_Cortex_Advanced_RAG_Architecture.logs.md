@@ -1,6 +1,6 @@
 # Repo Cortex Advanced RAG Architecture — Session Log
 
-**Session date:** 2026-06-15
+**Session date:**
 **Workstream:** Repo Cortex Layer 7+ advanced RAG architecture
 **Source tracker:** `plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md`
 
@@ -75,12 +75,12 @@ Ran the full RAG evaluation suite, confirmed no regressions, validated MCP tool 
 - **Step 26 — MCP tool integration validation**: `search_advanced`, `search_context`, `traverse_graph`, `submit_feedback` end-to-end; 5 suites / 53 tests pass.
 - **Step 27 — CI gate integration**: `npm run eval:rag:regression` passes exit 0; synthetic MRR@5 regression correctly exits 1; new `package.json` eval scripts and baseline artifact added.
 - **Step 28 — Performance validation**:
-  - Cross-encoder re-ranking (per pair, 50 candidates): p50=2.72ms, p95=77.10ms → meets P50 <25ms and P99 <100ms budgets.
-  - Context window assembly (25 candidates): p50=0.35ms, p95=0.44ms → meets P50 <50ms budget.
-  - Graph traversal (depth=2, seed sets ≤5): pre-fix p50=~1.6s failed budget; fixed by in-memory graph cache with batched SQL loads; post-fix p50=1.48ms, p95=4.93ms, p99=6.47ms → meets P50 <20ms budget.
-  - Aggregate condition latency recorded via `eval-runner` for `hybrid_rerank` and `advanced_default`.
-  - Traverse-graph focused tests: 2 suites / 25 tests PASS.
-  - Preflight checks: `tsc`, `lint`, `quality:folder` (both folders), `prettier` — all PASS.
+- Cross-encoder re-ranking (per pair, 50 candidates): p50=2.72ms, p95=77.10ms → meets P50 <25ms and P99 <100ms budgets.
+- Context window assembly (25 candidates): p50=0.35ms, p95=0.44ms → meets P50 <50ms budget.
+- Graph traversal (depth=2, seed sets ≤5): pre-fix p50=~1.6s failed budget; fixed by in-memory graph cache with batched SQL loads; post-fix p50=1.48ms, p95=4.93ms, p99=6.47ms → meets P50 <20ms budget.
+- Aggregate condition latency recorded via `eval-runner` for `hybrid_rerank` and `advanced_default`.
+- Traverse-graph focused tests: 2 suites / 25 tests PASS.
+- Preflight checks: `tsc`, `lint`, `quality:folder` (both folders), `prettier` — all PASS.
 - **Step 29 — Plan archive and handoff**: this log created; plan pair moved to `plans/completed/`.
 
 ### Known residual

@@ -24,7 +24,7 @@
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
 import { normalizeLimit } from './cortex-db.mjs';
 import { buildResponseFreshness, searchCorpus } from './search-corpus.mjs';
-import { assembleContext } from '../../semantic-index/assemble-context.mjs';
+import { assembleContext } from '../../../rag-index/assemble-context.mjs';
 
 /**
  * Default token budget for an assembled context window.
@@ -185,19 +185,21 @@ export async function searchContext(options = {}) {
   const budget = validateBudget(options.budget);
   const contextFormat = validateContextFormat(options.context_format);
   const dedupStrategy = options.dedup_strategy ?? 'exact';
+  const fetchLimit = dedupStrategy === 'exact' ? limit * 2 : limit;
   const includeMetadata = options.include_metadata === true;
   const compact = options.compact === true;
   const readTopResult = options.read_top_result === true;
 
   const searchResponse = await searchCorpus({
     query,
-    limit,
+    limit: fetchLimit,
     use_dense: options.use_dense !== false,
     use_rerank: options.use_rerank === true,
     alpha: options.alpha,
     expand_query: options.expand_query,
     rerank_candidates_count: options.rerank_candidates_count,
     databasePath: options.databasePath,
+    client: options.client,
   });
 
   const chunks = (searchResponse.results ?? []).map(
@@ -209,6 +211,7 @@ export async function searchContext(options = {}) {
     budget,
     context_format: contextFormat,
     query_class: searchResponse.query_class,
+    client: options.client,
   });
 
   const denseState =
@@ -226,7 +229,7 @@ export async function searchContext(options = {}) {
     supplementary: 0,
   };
 
-  const selectedChunks = assembled.selectedChunks ?? [];
+  const selectedChunks = (assembled.selectedChunks ?? []).slice(0, limit);
   const tokenCount = assembled.tokenCount ?? 0;
   const budgetRemaining = Math.max(0, budget - tokenCount);
 
@@ -292,7 +295,8 @@ export async function searchContext(options = {}) {
     results,
     ...(searchResponse.dense_degraded === true ? { dense_degraded: true } : {}),
     freshness:
-      searchResponse.freshness ?? buildResponseFreshness(options.databasePath),
+      searchResponse.freshness ??
+      (await buildResponseFreshness(options.databasePath, options.client)),
     metadata: {
       chunkCount: chunks.length,
       totalTokens: tokenCount,

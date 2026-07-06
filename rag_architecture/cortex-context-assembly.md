@@ -2,6 +2,8 @@
 
 > Extracted from `plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md` (Step 05) for permanent reference.
 
+> **Backing database.** The Repo Cortex is backed by a single consolidated Turso (libSQL) database accessed via the fully async `@libsql/client` driver (default local embedded replica `data/turso-replica.sqlite`; cloud primary `libsql://<db>.turso.io`). Vectors use native Turso vectors with `F8_BLOB` 8-bit quantization, approximate nearest neighbor search runs server-side via DiskANN (`libsql_vector_idx`, `vector_top_k()`), and hybrid ranking is performed SQL-side via Reciprocal Rank Fusion (RRF, k=60). The historical design content below describes the pre-Turso architecture that was subsequently migrated to this stack.
+
 Complete design for multi-source context window assembly with deduplication, ordering, and budget management.
 
 ---

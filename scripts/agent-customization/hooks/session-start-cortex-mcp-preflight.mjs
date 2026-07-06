@@ -13,7 +13,7 @@ const repoRoot = path.resolve(__dirname, '..', '..', '..');
 const preflightSteps = Object.freeze([
   {
     name: 'session-start-index',
-    args: ['scripts/semantic-index/session-start-index.mjs', '--json'],
+    args: ['rag-index/session-start-index.mjs', '--json'],
   },
   {
     name: 'cortex-index-gate',

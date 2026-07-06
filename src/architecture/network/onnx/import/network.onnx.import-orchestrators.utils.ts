@@ -523,12 +523,7 @@ function buildHiddenLayerSpans(
  */
 function normalizeRecurrentLayerIndices(
   parsedMetadataValue:
-    | number[]
-    | number
-    | string
-    | boolean
-    | null
-    | Record<string, number>,
+    number[] | number | string | boolean | null | Record<string, number>,
 ): number[] {
   if (Array.isArray(parsedMetadataValue)) {
     return parsedMetadataValue as number[];

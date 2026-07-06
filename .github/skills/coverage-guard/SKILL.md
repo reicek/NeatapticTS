@@ -1,9 +1,13 @@
 ---
 name: coverage-guard
-description: 'Verify that 100% coverage is maintained across all four categories (statements, branches, functions, lines) for every src/ file touched by a code change. Use after any edit to src/ to confirm the coverage baseline has not dropped. This is an enforcement gate, not an expansion workflow.'
+description: 'Use when: verifying 100% coverage on touched src/ files.'
 argument-hint: 'List the src/ files that were changed, provide the most recent green baseline, and state whether this is a post-change check or a regression repair.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - coverage-tranche
+  - red-test-contracts
+  - creating-unit-tests
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -35,6 +39,16 @@ Do **not** use this skill instead of `coverage-tranche`. This skill is the
 post-change gate; `coverage-tranche` is the forward-progress workflow for
 files that are already passing but have not yet reached 100%.
 
+## When NOT to use
+
+Do NOT use for coverage expansion on passing code - use `coverage-tranche` instead. Do NOT use for writing new tests from scratch - use `creating-unit-tests` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "src/ file changed" → "Run focused Jest slice"; "Run focused Jest slice" → "All 4 categories 100%?"; "All 4 categories 100%?" → "Gate passed" (Yes), "Classify gap" (No); "Gate passed"; "Classify gap" → "Reachable?"; "Reachable?" → "Add smallest owner-local test" (Yes), "Remove dead code" (No); "Add smallest owner-local test" → "Re-run focused slice"; "Remove dead code" → "Re-run focused slice"; "Re-run focused slice" → "All 4 categories 100%?".
+```
+
 ## Task Packet
 
 Pass a compact packet that includes:
@@ -54,12 +68,15 @@ Mode: post-change check.
 
 ## Required Workflow
 
-The full test suite (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`,
-`npm run jest:mjs`) is large and slow. **Never run it speculatively.** Start
-with focused Jest slices for each changed file. Only run the repo-wide suite
-when the user or active step packet explicitly requires repo-wide confirmation;
-otherwise, record the focused slice results as the coverage-guard evidence and
-note that the full suite was intentionally skipped.
+The full regression matrix (`npm test`, `npm run test:silent`) chains multiple
+heavy test suites and has crashed the host IDE. **Never run it speculatively and
+never as a single shell invocation.** Start with focused Jest slices for each
+changed file. Only run the repo-wide matrix when the user or active step packet
+explicitly requires repo-wide confirmation; when required, execute it as separate,
+sequential batched calls (`npm run build`, `npm run jest:base`,
+`npm run jest:esm-ts`, `npm run jest:mjs`, `npm run lint`), each in its own shell
+invocation. Otherwise, record the focused slice results as the coverage-guard
+evidence and note that the full matrix was intentionally skipped.
 
 ### Step 1 — Identify changed files
 
@@ -119,15 +136,20 @@ After all changed files are verified at 100%, run the repo-wide suite **only if*
 the active step packet or user explicitly requires repo-wide confirmation:
 
 ```bash
-npm run test:silent
+npm run build
+npm run jest:base -- --no-cache --coverage --collect-coverage --runInBand --testPathIgnorePatterns=.e2e.test.ts --testPathIgnorePatterns=benchmark\..*\.test\.ts$
+npm run jest:esm-ts -- --no-cache --runInBand
+npm run jest:mjs -- --no-cache --runInBand
 ```
 
-If the full suite is required, confirm it is green and that the baseline has not
-regressed. If new failures appear, resolve them with `test-fix-workflow` before
-marking this gate passed.
+If the full matrix is required, run each batch in a separate shell invocation,
+confirm each batch is green before proceeding to the next, and verify that the
+baseline has not regressed. If new failures appear, resolve them with
+`test-fix-workflow` before marking this gate passed. Never invoke the chained
+`npm test` or `npm run test:silent` command as a single shell call.
 
 If repo-wide confirmation is **not** required, report the focused slice results
-as the final coverage-guard evidence and note that the full suite was
+as the final coverage-guard evidence and note that the full regression matrix was
 intentionally skipped.
 
 ### Step 6 — Report
@@ -185,6 +207,30 @@ When a gap is unreachable:
 
 Every new `it()` block must contain **exactly one top-level `expect(...)`**.
 Group by scenario, not by assertion count.
+
+## Before / After Examples
+
+**Before:**
+
+```ts
+// New branch added with no test — branches drop to 83%
+function validate(input: unknown): Result {
+  if (Array.isArray(input)) {
+    return foldArray(input); // uncovered
+  }
+  return foldScalar(input);
+}
+```
+
+**After:**
+
+```ts
+// Smallest owner-local test added to the nearest existing test file — back to 100%
+it('folds array input', () => {
+  const result = validate([1, 2, 3]);
+  expect(result).toEqual(expected);
+});
+```
 
 ## Guardrails
 

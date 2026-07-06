@@ -1283,7 +1283,7 @@ class Neat {
    * ```ts
    * const checkpoint = neat.exportState();
    * checkpoint.extensions = {
-   *   neatchat: {
+   *   myApp: {
    *     memoryBankId: 'memory-bank-1',
    *   },
    * };
@@ -1314,7 +1314,7 @@ class Neat {
    * ```ts
    * const checkpoint = neat.exportLightState({ eliteCount: 12 });
    * checkpoint.extensions = {
-   *   neatchat: {
+   *   myApp: {
    *     branchId: 'draft-1',
    *   },
    * };

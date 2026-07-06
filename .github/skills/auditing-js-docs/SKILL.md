@@ -1,9 +1,14 @@
 ---
 name: auditing-js-docs
-description: 'Use when: auditing JSDoc/TSDoc quality, generated README inputs, missing examples, stale public API docs, or educational documentation gaps.'
+description: 'Use when: auditing JSDoc/README quality, examples, or citations.'
 argument-hint: 'Describe the documentation surface, source files or generated README to inspect, and whether the pass is read-only or should recommend updates.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - educational-docs
+  - docs-academic-citation-audit
+  - updating-js-docs
+  - coverage-guard
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +25,16 @@ This skill performs a structured read-only audit of JSDoc/TSDoc quality across a
 - Checking whether a folder's JSDoc meets the pedagogist-first standard: examples, Mermaid diagrams, citations, formulas.
 - Preparing a documentation improvement plan for a coverage tranche or SDLC phase.
 - Verifying that stale invariant descriptions or removed parameters have been cleaned up.
+
+## When NOT to use
+
+Do NOT use for citation auditing - use `docs-academic-citation-audit` instead. Do NOT use for generating READMEs - use `educational-docs` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Scan exported symbols" → "Check JSDoc presence"; "Check JSDoc presence" → "JSDoc missing?"; "JSDoc missing?" → "Flag for improvement" (Yes), "Check quality: what/why/when" (No); "Flag for improvement" → "Prioritize by export visibility"; "Check quality: what/why/when" → "Adequate?"; "Prioritize by export visibility" → "Report findings"; "Adequate?" → "Flag for improvement" (No), "Pass" (Yes); "Report findings"; "Pass".
+```
 
 ## Task Packet
 
@@ -43,6 +58,48 @@ Standards to check: <examples | citations | Mermaid | formulas | param completen
 7. Produce a prioritized gap list: critical (missing public API docs), major (missing examples or citations), minor (style or completeness gaps).
 8. Recommend `educational-docs` when the gaps require Mermaid diagrams, deep source mapping, or conceptual depth rewrites.
 9. Do not hand-edit generated `src/**/README.md` files; note source files to edit instead.
+
+## Why JSDoc Quality Matters
+
+JSDoc is the source of truth for the generated README pipeline. Weak or missing JSDoc produces poor educational documentation, missing examples, and reduced discoverability. The README generation pipeline (`npm run docs`) extracts JSDoc comments directly - if the JSDoc is thin, the generated README is thin. Auditing JSDoc before documentation generation catches gaps early.
+
+## Before/After JSDoc Examples
+
+**Before (weak):**
+
+```ts
+/** Creates a network. */
+export function buildMLP(config?: MLPConfig): Network { ... }
+```
+
+**After (strong):**
+
+````ts
+/**
+ * Build a multi-layer perceptron network with sensible defaults.
+ *
+ * Produces a feedforward network with configurable hidden layers,
+ * input/output sizes, and activation functions. Zero-argument
+ * calls produce a minimal runnable network.
+ *
+ * @param config - Optional partial config; defaults produce a 2-2-1 MLP
+ * @returns A constructed Network ready for activation
+ * @throws Error when hiddenLayers is empty or units < 1
+ *
+ * @example
+ * ```ts
+ * const net = buildMLP({ hiddenLayers: [4, 4] });
+ * console.log(net.nodes.length);
+ * ```
+ */
+export function buildMLP(config?: MLPConfig): Network { ... }
+````
+
+## Decision Tree
+
+```text
+Flowchart summary: "Doc work needed" → "What kind?"; "What kind?" → "Use auditing-js-docs" (Audit JSDoc quality), "Use updating-js-docs" (Update JSDoc content), "Use educational-docs" (Educational rewrite), "Use coverage-guard" (Coverage check); "Use auditing-js-docs"; "Use updating-js-docs"; "Use educational-docs"; "Use coverage-guard".
+```
 
 ## Guardrails
 

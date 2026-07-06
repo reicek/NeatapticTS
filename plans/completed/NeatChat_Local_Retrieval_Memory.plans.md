@@ -1,7 +1,7 @@
 # NeatChat Local Retrieval and Memory
 
 **Status:** [DONE]
-**Closed:** 2026-05-26
+**Closed:**
 
 ## Scope
 

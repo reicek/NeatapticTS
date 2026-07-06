@@ -676,3 +676,181 @@ Parameters:
 - `graph` - Network to summarize structurally.
 
 Returns: Shannon-style entropy of the out-degree distribution.
+
+## neat/nge-experimental.ts
+
+Experimental Genesis EvoDevo (NGE) public namespace.
+
+This barrel exposes a narrow, unstable preview of NGE lifecycle primitives
+for early integration and benchmarking. The sub-namespaces are not covered
+by the stable public API contract and may change or be removed without a
+major version bump.
+
+The four re-exported sub-surfaces are:
+
+- `adult` — adult-stage lifecycle staging and equilibrium transitions.
+- `juvenile` — juvenile growth and development before equilibrium.
+- `lifecycle` — the runner that sequences juvenile growth, adult staging,
+  and assimilation write-back.
+- `assimilation` — deterministic write-back of an equilibrium candidate
+  into a realized phenotype.
+
+Genesis EvoDevo (NGE) takes its shape from evolutionary developmental
+biology: form emerges from regulated developmental programs rather than a
+fixed parts list. See Wikipedia contributors,
+[Evolutionary developmental biology](https://en.wikipedia.org/wiki/Evolutionary_developmental_biology),
+for background on the evo-devo ideas that inform the lifecycle framing.
+
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+  classDef experimental fill:#1a0f1a,stroke:#ff6b9d,color:#ffd6e5,stroke-width:1.5px;
+
+  nge[nge namespace]:::experimental
+  nge --> juvenile[juvenile growth]:::base
+  nge --> lifecycle[lifecycle runner]:::accent
+  nge --> adult[adult staging]:::base
+  nge --> assimilation[assimilation write-back]:::base
+  juvenile --> lifecycle
+  adult --> lifecycle
+  lifecycle --> assimilation
+```
+
+Example:
+
+```ts
+import { nge } from 'neataptic';
+
+// Access the lifecycle runner and adult helper from the experimental namespace.
+// This surface is unstable and intended for early benchmarking only.
+const { runNgeLifecycle } = nge.lifecycle;
+const { advanceAdultState } = nge.adult;
+console.log(typeof runNgeLifecycle, typeof advanceAdultState);
+```
+
+## neat/neat.nge-lifecycle.ts
+
+NGE lifecycle staging runner.
+
+This module sequences one window of the Neuro-evolutionary Genesis Engine
+(NGE) lifecycle. The `juvenile` stage scores module focus, plans dry-run
+growth morphs, and optionally applies them to a live network. The `adult`
+stage takes an equilibrium candidate and writes it back as structural priors
+through the assimilation boundary.
+
+The runner is deliberately narrow: it expects the caller to supply metrics,
+budgets, hysteresis, and an optional network. No `examples/` or demo
+scaffolding is required; a headless test can drive the same growth engine
+that a benchmark curriculum or collective application would use at runtime.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Juvenile : runNgeLifecycle({ stage: 'juvenile' })
+  Juvenile --> Adult : focus scored, morphs planned or applied
+  Adult --> Assimilation : equilibriumCandidate supplied
+  Assimilation --> [*] : structural priors written
+```
+
+## Determinism note
+
+When a `seed` is supplied with a live network, the runner seeds the network
+RNG and pins the global connection innovation counter to the network's
+current maximum innovation before any morph is applied. That makes the same
+DNA + seed + experience stream reproducible at the level of topology and
+innovation IDs. Omitting the seed leaves the engine non-deterministic but
+does not affect classic NEAT when NGE is disabled.
+
+### extractCommittedGrowthKind
+
+```ts
+extractCommittedGrowthKind(
+  outcomes: readonly MorphApplyOutcome[],
+): NgeGrowthMorphKind | undefined
+```
+
+Find the first applied growth morph kind from apply outcomes.
+
+Used to determine whether `commitGrowth` should be called and which morph
+kind to report. Prune-only or all-skipped outcome sets return `undefined`.
+
+Parameters:
+- `outcomes` - Apply outcomes produced by `applyMorphDeltas`.
+
+Returns: The first applied growth morph kind, or `undefined` when none applied.
+
+### NgeAdultLifecycleInput
+
+Inputs for the adult stage of the NGE lifecycle runner, including an equilibrium
+candidate and the assimilation envelope needed to write back structural priors.
+
+### NgeJuvenileLifecycleInput
+
+Inputs for the juvenile stage of the NGE lifecycle runner.
+
+### NgeLifecycleResult
+
+Result emitted by one call to the NGE lifecycle staging runner.
+
+### runNgeLifecycle
+
+```ts
+runNgeLifecycle(
+  input: NgeJuvenileLifecycleInput | NgeAdultLifecycleInput,
+): NgeLifecycleResult
+```
+
+Run one NGE lifecycle staging step, sequencing juvenile growth, equilibrium
+assimilation, and adult cooling as the provided stage requires.
+
+- `juvenile` recomputes the focus vector and growth morph plan for the supplied
+  module, then transitions to the adult stage.
+- `adult` runs the assimilation pass for the supplied equilibrium candidate and
+  policy, producing a structural-prior delta while remaining in the adult stage.
+
+Parameters:
+- `input` - Runtime inputs for the selected lifecycle stage.
+
+Returns: The lifecycle result naming the reached stage and any stage-specific outputs.
+
+Example:
+
+```ts
+const result = runNgeLifecycle({
+  stage: 'juvenile',
+  moduleId: 'module:alpha',
+  metrics,
+  budget,
+  config,
+  hysteresis,
+  network,
+  pruneBudget,
+});
+console.log(result.stage); // 'adult'
+console.log(result.applyOutcomes?.length); // number of applied morphs
+```
+
+### syncInnovationCounterToNetwork
+
+```ts
+syncInnovationCounterToNetwork(
+  network: default,
+): void
+```
+
+Pin the global connection innovation counter to a deterministic value for the
+current network state.
+
+The NEAT connection allocator assigns monotonic innovation IDs from a shared
+static counter. That counter is not reset per `Network` construction, so two
+identical seeded networks built in the same process receive different absolute
+innovation IDs. Before applying NGE morphs, we reset the counter to
+`max(network connection innovation) + 1`, which is deterministic for a fixed
+network state, so the same seed + experience stream yields bitwise-identical
+innovation assignments for newly grown edges.
+
+Parameters:
+- `network` - Live network whose current connection innovations define the
+deterministic starting point.
+
+Returns: Nothing.

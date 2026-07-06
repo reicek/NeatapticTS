@@ -20,6 +20,14 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const SCRIPTS_DIR = path.join(REPO_ROOT, 'scripts', 'agent-customization');
 const TEMP_DIR = path.join(REPO_ROOT, 'plans', '_test-temp');
 const TEMP_PREFIX = '_plan-workflow-test-';
+const ACTIVE_PLAN =
+  'plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md';
+const DOWNSTREAM_TRACKER_PLANS = [
+  'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md',
+  'plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md',
+  'plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md',
+];
+const WORKFLOW_HOOK_SCRIPT = '../../.github/hooks/workflow-update-sync.mjs';
 
 interface MigrationReport {
   ok: boolean;
@@ -52,6 +60,34 @@ interface ValidatorReport {
   ok: boolean;
   issues: Array<{ severity: string; path: string; message: string }>;
   counts: { errors: number; warnings: number };
+}
+
+interface PlanSyncReport {
+  name: string;
+  ok: boolean;
+  issues: Array<{ severity: string; path: string; message: string }>;
+  counts: { errors: number; warnings: number };
+  summaryText: string;
+  plan: { path: string; status: string | null };
+  downstreamTrackers?: string[];
+}
+
+interface WorkflowSyncReport {
+  ok: boolean;
+  pass: boolean;
+  timestamp: string;
+  plan: { path: string; status: string | null };
+  syncEvent: {
+    currentWipStep: string | null;
+    nextPlannedStep: string | null;
+    actionTaken: string;
+    reason: string;
+    downstreamTrackers?: string[];
+    downstreamHandoff?: Record<string, unknown>;
+  };
+  evidence: string;
+  dryRun?: boolean;
+  summaryText: string;
 }
 
 /** Minimal YAML serializer used for test fixtures. */
@@ -300,6 +336,31 @@ function runValidator(planFile: string): ValidatorReport {
   }
 }
 
+function runPlanSync(planFile: string): PlanSyncReport {
+  const stdout = runScript('validate-plan-sync.mjs', [
+    '--json',
+    `--plan=${planFile}`,
+  ]);
+  try {
+    return JSON.parse(stdout) as PlanSyncReport;
+  } catch {
+    throw new Error(
+      `Failed to parse plan sync output:\n${stdout.slice(0, 500)}`,
+    );
+  }
+}
+
+function runWorkflowHook(args: string[]): WorkflowSyncReport {
+  const stdout = runScript(WORKFLOW_HOOK_SCRIPT, args);
+  try {
+    return JSON.parse(stdout) as WorkflowSyncReport;
+  } catch {
+    throw new Error(
+      `Failed to parse workflow sync output:\n${stdout.slice(0, 500)}`,
+    );
+  }
+}
+
 beforeAll(ensureTempDir);
 afterAll(cleanupTempDir);
 
@@ -440,9 +501,7 @@ describe('legacy-plan-format.gate.mjs', () => {
 
 describe('validate-plan-phase-packets.mjs', () => {
   it('passes on the RAG plan', () => {
-    const report = runValidator(
-      'plans/Cortex_RAG_Premium_Primary_Search.plans.md',
-    );
+    const report = runValidator('plans/completed/turso-rag-migration.plans.md');
     expect(report.ok).toBe(true);
     expect(report.counts.errors).toBe(0);
   });
@@ -476,5 +535,110 @@ describe('validate-plan-phase-packets.mjs', () => {
     } finally {
       await removeTempPlanFile(planFile);
     }
+  });
+});
+
+describe('downstream synchronization contract', () => {
+  describe('validate-plan-sync.mjs', () => {
+    it('reports downstream benchmark trackers in the JSON output', () => {
+      const report = runPlanSync(ACTIVE_PLAN);
+      expect(report.downstreamTrackers).toEqual(
+        expect.arrayContaining(DOWNSTREAM_TRACKER_PLANS),
+      );
+    });
+  });
+
+  describe('workflow-update-sync.mjs', () => {
+    it('includes downstream tracker plans in the sync event JSON output', () => {
+      const report = runWorkflowHook([
+        '--json',
+        '--dry-run',
+        `--plan=${ACTIVE_PLAN}`,
+      ]);
+      expect(report.syncEvent.downstreamTrackers).toEqual(
+        expect.arrayContaining(DOWNSTREAM_TRACKER_PLANS),
+      );
+    });
+
+    it('passes when a phase is [WIP] but no step is [WIP]', async () => {
+      const fileName = `${TEMP_PREFIX}no-step-wip.plans.md`;
+      const filePath = path.join(REPO_ROOT, 'plans', fileName);
+      const relativePath = `plans/${fileName}`;
+      const content = `# Test plan — no step WIP
+
+**Status:** [WIP]
+
+## Scope
+
+This plan is downstream of:
+- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md
+- plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md
+- plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md
+
+## Implementation phases
+
+### Phase 1 — Active phase [WIP]
+
+#### Step 01 — Completed step [DONE]
+
+\`\`\`yaml
+phase: 1
+step: 1
+title: 'Completed step'
+status: '[DONE]'
+goal: planning
+expansion: none
+auto_expand: false
+mode: fresh-session
+source_of_truth: 'plans/_test-temp/placeholder.plans.md'
+copy_paste: true
+next_step: 'null'
+skills:
+  - 'plan-alignment'
+validation:
+  - 'echo ok'
+acceptance_criteria:
+  - 'OK'
+\`\`\`
+
+#### Step 02 — Planned step [PLANNED]
+
+\`\`\`yaml
+phase: 1
+step: 2
+title: 'Planned step'
+status: '[PLANNED]'
+goal: planning
+expansion: none
+auto_expand: false
+mode: fresh-session
+source_of_truth: 'plans/_test-temp/placeholder.plans.md'
+copy_paste: true
+next_step: 'null'
+skills:
+  - 'plan-alignment'
+validation:
+  - 'echo ok'
+acceptance_criteria:
+  - 'OK'
+\`\`\`
+`;
+      await writeFile(filePath, content, 'utf8');
+      try {
+        const report = runWorkflowHook(['--json', `--plan=${relativePath}`]);
+        expect(report).toMatchObject({
+          ok: true,
+          pass: true,
+          syncEvent: {
+            actionTaken: 'between-steps',
+            downstreamTrackers: expect.arrayContaining(
+              DOWNSTREAM_TRACKER_PLANS,
+            ),
+          },
+        });
+      } finally {
+        await unlink(filePath).catch(() => undefined);
+      }
+    });
   });
 });

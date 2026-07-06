@@ -6,12 +6,12 @@ import {
   DOCS_QUALITY_METRIC_VERSION,
   DOCS_QUALITY_SCANNER_VERSION,
   validateDocsQualityManifestV1,
-} from '../../semantic-index/docs-quality/docs-quality.contract.mjs';
+} from '../../../rag-index/docs-quality/docs-quality.contract.mjs';
 import {
   compareDocsQualityRuns,
   REASON_CODES,
-} from '../../semantic-index/docs-quality/docs-quality.compare.mjs';
-import { runDocsQualityMetrics } from '../../semantic-index/docs-quality/docs-quality.metrics.mjs';
+} from '../../../rag-index/docs-quality/docs-quality.compare.mjs';
+import { runDocsQualityMetrics } from '../../../rag-index/docs-quality/docs-quality.metrics.mjs';
 
 const OWNER = '05-green-testing';
 
@@ -83,7 +83,7 @@ export async function runDocsQualityMetricsGate() {
   });
 
   const mcpServer = createRepoCortexMcpServer({
-    databasePath: './data/semantic-index.sqlite',
+    databasePath: './rag-index/data/turso-replica.sqlite',
   });
   const mcpResponse = await mcpServer.dispatch({
     jsonrpc: '2.0',

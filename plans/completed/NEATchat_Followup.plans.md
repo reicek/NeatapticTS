@@ -1,15 +1,14 @@
 # NEATchat Follow-up — Compressed Archive
 
-**Status:** [DONE]  
-**Closed:** 2026-05-22
+**Status:** [DONE]
+**Closed:**
 
 ## Scope
 
 Post-toy conversational-systems lane that built on the closed Phase 3 NEATchat
 toy demo (`plans/completed/NEATchat.plans.md`) and moved NEATchat closer to a
 modern, transparent, persistently owned conversational system without claiming
-transformer parity. Delivered over six workstreams across 2026-05-20 to
-2026-05-22.
+transformer parity. Delivered over six workstreams .
 
 ## Dependency gates satisfied at open
 
@@ -29,7 +28,7 @@ transformer parity. Delivered over six workstreams across 2026-05-20 to
 
 ## Workstream closure summary
 
-### [DONE] W1 — Durable infrastructure substrate (2026-05-20)
+### [DONE] W1 — Durable infrastructure substrate
 
 Session snapshot v2, checkpoint-aware import/export, worker-friendly replay
 hooks, and parameter-vector-safe resume behavior. Touched
@@ -38,7 +37,7 @@ replay guard in `src/architecture/network/serialize/network.serialize.utils.ts`.
 Coverage: `100/100/100/100` on all touched boundaries. Both TypeScript checks,
 owner-local suite, `npm run docs`, and plan sync PASS.
 
-### [DONE] W2 — Stronger pretrained seed import and distillation (2026-05-21)
+### [DONE] W2 — Stronger pretrained seed import and distillation
 
 Honest external-seed contract (single-layer GRU/LSTM, vocab 300-3000, hidden
 8-128, sigmoid+tanh, one-hot); promoted default seed improved
@@ -46,7 +45,7 @@ Honest external-seed contract (single-layer GRU/LSTM, vocab 300-3000, hidden
 and `responseLengthStability = 1`. Stayed inside `examples/neatChat/`.
 Coverage, TypeScript, regression pack, docs, and plan sync PASS.
 
-### [DONE] W3 — Multi-tier memory and retrieval (2026-05-21)
+### [DONE] W3 — Multi-tier memory and retrieval
 
 Episodic memory bank, token-overlap retrieval, snapshot-v2 persistence. Memory
 survives checkpoint round-trips; retrieval leaves network weights byte-identical.
@@ -54,7 +53,7 @@ Defect fix: snapshot normalization strips raw `memoryBank` payloads before
 spread. Stayed inside `examples/neatChat/core/`. Coverage, TypeScript, suite,
 docs, plan sync PASS.
 
-### [DONE] W4 — Background adaptation and candidate search (2026-05-21)
+### [DONE] W4 — Background adaptation and candidate search
 
 `scheduleNeatChatAdaptation` defers fine-tuning via `queueMicrotask`;
 candidates persist in `pendingCandidates`; `candidateLog` survives snapshot
@@ -62,7 +61,7 @@ v2. Design: frozen base vector, explicit promote/reject only, no auto-promote,
 transient ready candidates. Stayed inside `examples/neatChat/`. Coverage,
 TypeScript, suite, docs, plan sync PASS.
 
-### [DONE] W5 — Hybrid routing and specialist submodels (2026-05-22)
+### [DONE] W5 — Hybrid routing and specialist submodels
 
 Base, personalized, and retrieval-grounded paths produce candidates before
 selection; deterministic base-path tie-breaking. `routingLog` records selected
@@ -73,7 +72,7 @@ weight promotion. New files: `neatChat.routing.types.ts`,
 `neatChat.session.services.ts`. Coverage, TypeScript, suite, docs, plan sync
 PASS.
 
-### [DONE] W6 — Evaluation, safety, and publishable product shape (2026-05-22)
+### [DONE] W6 — Evaluation, safety, and publishable product shape
 
 Steps W6-01 through W6-08 delivered:
 

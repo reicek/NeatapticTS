@@ -63,8 +63,7 @@ describe('neatChat memory services', () => {
         records: [],
         maxRecords: (
           defaultSessionRecord.memoryBank as
-            | NeatChatEpisodicMemoryBankLike
-            | undefined
+            NeatChatEpisodicMemoryBankLike | undefined
         )?.maxRecords,
       });
     });

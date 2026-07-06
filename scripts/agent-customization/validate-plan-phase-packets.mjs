@@ -30,6 +30,8 @@ const SLICE_GOAL_VALUES = new Set([
   'red-testing',
   'implementing',
   'green-testing',
+  'documenting',
+  'researching',
   'helping',
 ]);
 
@@ -71,6 +73,9 @@ const STEP_OPTIONAL_KEYS = new Set([
   'auto_expand',
   'slices',
   'specialists',
+  'owner',
+  'reviewer',
+  'evidence',
 ]);
 
 const PHASE_REQUIRED_SECTIONS = [
@@ -645,12 +650,6 @@ async function validateStepPacketInPhase(
       );
     }
 
-    if (metadata.goal === 'planning' && headingStep !== 1) {
-      issues.push(
-        issue('error', stepPath, "Only Step 01 may have goal 'planning'."),
-      );
-    }
-
     if (
       metadata.tdd_sequence !== undefined &&
       !TDD_SEQUENCE_VALUES.has(metadata.tdd_sequence)
@@ -796,10 +795,9 @@ async function validateStepPacketInPhase(
 }
 
 async function validateSlices(slices, stepPath, tddSequence) {
-  const expectedGoals =
-    tddSequence === 'green-only'
-      ? ['implementing', 'green-testing']
-      : ['red-testing', 'implementing', 'green-testing'];
+  const expectedFirstGoal =
+    tddSequence === 'green-only' ? 'implementing' : 'red-testing';
+  const lastSliceIndex = slices.length - 1;
 
   for (const [sliceIndex, slice] of slices.entries()) {
     const slicePath = `${stepPath}-slice-${sliceIndex}`;
@@ -868,13 +866,29 @@ async function validateSlices(slices, stepPath, tddSequence) {
       );
     }
 
-    const expectedGoal = expectedGoals[sliceIndex];
-    if (slice && expectedGoal && slice.goal !== expectedGoal) {
+    // Enforce the TDD boundary: the first slice starts the right phase and the
+    // last slice is green validation. Intermediate slices may decompose the
+    // implementation work without breaking the sequence.
+    if (sliceIndex === 0 && slice && slice.goal !== expectedFirstGoal) {
       issues.push(
         issue(
           'error',
           sliceIdPath,
-          `Expected slice ${sliceIndex} goal to be '${expectedGoal}', found '${String(slice.goal)}'.`,
+          `Expected slice 0 goal to be '${expectedFirstGoal}', found '${String(slice.goal)}'.`,
+        ),
+      );
+    }
+
+    if (
+      sliceIndex === lastSliceIndex &&
+      slice &&
+      slice.goal !== 'green-testing'
+    ) {
+      issues.push(
+        issue(
+          'error',
+          sliceIdPath,
+          `Expected final slice goal to be 'green-testing', found '${String(slice.goal)}'.`,
         ),
       );
     }

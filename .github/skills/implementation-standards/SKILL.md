@@ -1,9 +1,13 @@
 ---
 name: implementation-standards
-description: 'Owns durable code standards for NeatapticTS: ES2023-first syntax, folder-based module architecture, JSDoc requirements, naming conventions, cognitive complexity rules, and validation gates. Use when implementing, reviewing, or refactoring src/ code to ensure consistency with repo patterns and quality gates.'
+description: 'Use when: applying durable code standards (ES2023, JSDoc, architecture, validation).'
 argument-hint: 'Provide the target surface (src/ file or folder), the type of work (implement, refactor, review), and any validation constraints such as build, quality:folder, or coverage requirements.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - coverage-guard
+  - educational-docs
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -53,6 +57,16 @@ Do **not** use this skill for:
 - documentation-only changes (use `educational-docs`),
 - test-only changes without production code (use `coverage-tranche` or `test-fix-workflow`),
 - planning or roadmap alignment (use `plan-alignment`).
+
+## When NOT to use
+
+Do NOT use for scripts or config files - use standard lint and build commands instead. Do NOT use for test-only changes - use `creating-unit-tests` or `coverage-tranche` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "New module" → "Create folder structure"; "Create folder structure" → "Write orchestration file"; "Write orchestration file" → "Extract helpers below fold"; "Extract helpers below fold" → "Add JSDoc to exports"; "Add JSDoc to exports" → "Write tests"; "Write tests" → "Run quality:folder"; "Run quality:folder" → "Pass?"; "Pass?" → "Run coverage-guard" (Yes), "Fix issues" (No); "Run coverage-guard"; "Fix issues" → "Run quality:folder".
+```
 
 ## ES2023-First Policy
 
@@ -520,6 +534,54 @@ List any flagged legacy patterns and intended replacements:
 | `solid-split`                  | When module boundaries need refactoring                |
 | `docs-academic-citation-audit` | When algorithms need academic citations                |
 
+## Decision Tree
+
+```text
+Flowchart summary: "Code task" → "What kind?"; "What kind?" → "Follow folder layout + JSDoc + tests" (New module in src/), "Use solid-split, preserve coverage" (Refactor existing module), "Run quality:folder + coverage-guard" (Review against standards), "Use peer skill (coverage-tranche, educational-docs)" (Test-only or docs-only); "Follow folder layout + JSDoc + tests"; "Use solid-split, preserve coverage"; "Run quality:folder + coverage-guard"; "Use peer skill (coverage-tranche, educational-docs)".
+```
+
+## No Deferred Cleanup Policy
+
+When migrating, refactoring, or replacing any API, the old code MUST be removed
+in the same step that introduces the new code. This is a hard, non-negotiable rule.
+
+- **NEVER** add backward-compatibility wrappers that keep old code alive alongside new code.
+- **NEVER** create dual-path code where both the old and new implementation coexist.
+- **NEVER** defer cleanup of dead code to a later step, phase, or plan.
+- **ALWAYS** remove the old implementation, old imports, old tests, and old type
+  exports in the same commit/slice that introduces the replacement.
+- **ALWAYS** update all call sites in the same step — no transitional shims.
+
+This applies to ALL code in the library: `src/`, `scripts/`, `examples/`,
+`benchmarks/`, and `testing/`. Violations of this policy are planning defects
+that MUST be caught before implementation begins. A slice or step that
+introduces new code alongside old code without removing the old code is a
+defective plan and must be rejected at the planning stage, not tolerated
+during implementation.
+
+Deferred cleanup is extremely expensive: it causes cascading test failures,
+dead code accumulation, EBUSY/resource issues, and multiple triage/fix cycles.
+The cost of doing the replacement in one step is always lower than the cost of
+living with dual code paths.
+
+## Phase Compression Policy
+
+When all steps in a phase are marked `[DONE]` and green validation has passed,
+the orchestrator MUST dispatch `07-logging` to compress the completed phase
+before advancing to the next phase. Compression means:
+
+1. Move detailed step/slice/VALIDATION_EVIDENCE blocks from the plan file to
+   the corresponding `.logs.md` file.
+2. Replace the detailed content in the plan file with a compact `[DONE]`
+   marker and a reference to the logs file.
+3. Keep the phase header, goal, and status as `[DONE]` in the plan file.
+
+This keeps plan files lean and focused on active work. Plan files should never
+carry verbose `[DONE]` phase details — those belong in logs.
+
+Skipping phase compression is a workflow violation. The orchestrator must not
+advance to the next phase until compression is complete.
+
 ## Guardrails
 
 - Do not accept `any` or `unknown` types without explicit justification.
@@ -530,6 +592,7 @@ List any flagged legacy patterns and intended replacements:
 - Do not leave magic numbers in code; extract to named constants.
 - Do not write nested control flow when declarative pipelines are possible.
 - Do not create new test files when owner-local test files exist.
+- Do not introduce backward-compatibility wrappers, dual-path code, or deferred cleanup when migrating or replacing any API; remove old code in the same step.
 
 ## Expected Final Output
 

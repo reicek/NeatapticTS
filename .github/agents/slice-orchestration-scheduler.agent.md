@@ -1,8 +1,8 @@
 ---
-description: 'Prepares per-slice execution packets, tracks slice statuses, collects validation evidence, and produces consolidated PlanUpdate blocks for the parent agent to dispatch.'
+description: 'Scheduler for slice packets, status tracking, and PlanUpdate blocks.'
 name: 'slice-orchestration-scheduler'
 tier: 3
-model: 'glm-5.2:cloud (ollama)'
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -10,7 +10,7 @@ tools:
     edit,
     execute,
     todo,
-    neataptic-cortex-mcp/*,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-workflow-mcp/*,
   ]
@@ -18,24 +18,21 @@ user-invocable: false
 disable-model-invocation: false
 agents: []
 skills:
-  ['subagent-delegation-patterns', 'phase-handoff-workflow', 'tracker-handoff']
+  [
+    'subagent-delegation-patterns',
+    'phase-handoff-workflow',
+    'tracker-handoff',
+    'execute',
+  ]
 ---
+
+## Purpose
+
+Prepares per-slice execution packets, tracks slice statuses, collects validation evidence, and produces consolidated PlanUpdate blocks for the parent agent to dispatch.
 
 ## Cortex-First Search Policy
 
-This agent follows the Cortex-First Search Policy (see `copilot-instructions.md` §10). Before manual file reads:
-
-1. Check `neataptic-cortex-mcp:freshness_check` for index currency.
-2. Use `neataptic-cortex-mcp:search_corpus` for broad BM25 + dense hybrid discovery.
-3. Use `neataptic-cortex-mcp:search_advanced` with `compact: true` for agent-facing queries (includes reranking, ranking explanations, `read_top_result`, `follow_up_refs`).
-4. Use `neataptic-cortex-mcp:search_context` for token-budgeted context window assembly.
-5. Use `neataptic-cortex-mcp:load_chunk` to read full chunk content by ID.
-6. Use `neataptic-cortex-mcp:load_document` to load all chunks for a file path.
-7. Use `neataptic-cortex-mcp:traverse_graph` for entity/dependency graph traversal.
-8. Use `neataptic-cortex-mcp:expand_query` for domain-aware query expansion.
-9. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
-
-If Cortex RAG cannot answer a needed query, report the gap and suggest an RAG enhancement. Use native tools as a temporary fallback only.
+This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
 
 ## Mission
 
@@ -105,13 +102,33 @@ evidence so the parent can route them.
   which dispatches are needed next, so this Tier-3 specialist never calls
   Tier-1 agents directly.
 
-## Output format
+## Slice Packet Template
 
-When invoked, return a `structured-v1` output block with the following fields.
-Use `FILES_READ`/`FILES_CHANGED` for the active plan file and any slice claim
-updates; use `KEY_FINDINGS` to report slice statuses and prepared packets;
-use `HANDOFF` to indicate the parent dispatch required (`assign-slice`,
-`validate-slice`, `finalize-docs`, or `NONE`).
+```yaml
+slice_id: <unique-id>
+title: <human-readable summary>
+status: [PLANNED]
+goal: <implementing|green-testing|red-testing>
+estimate_hours: <number>
+files_to_change:
+  - <path>
+acceptance_criteria:
+  - <observable condition>
+parallelizable: true|false
+dependencies:
+  - <slice_id>
+next_slice: <slice_id>
+```
+
+## Parallelizable Slice Dispatch Rules
+
+- Dispatch all ready parallelizable slices simultaneously when their `dependencies` are all `[DONE]`.
+- Non-parallelizable slices must be dispatched one at a time in dependency order.
+- When a parallelizable slice fails, do NOT block other independent parallel slices — record the failure and continue.
+- Re-check dependency status after each slice completes before dispatching the next batch.
+- Track slice status as `[PLANNED]` → `[WIP]` → `[DONE]` in the step packet.
+
+## Output format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -120,21 +137,21 @@ TIER: 3
 ROLE: slice-orchestration-scheduler
 TASK_RECEIVED: <brief restatement>
 FILES_READ:
-- <plan file path or NONE>
+- <path or NONE>
 FILES_CHANGED:
-- <plan file path or NONE>
+- <path or NONE>
 KEY_FINDINGS:
-- <slice status / packet summary or NONE>
+- <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
-- <artifact or NOT RUN>
-HANDOFF: <assign-slice | validate-slice | finalize-docs | NONE>
+- <command/result or NOT RUN>
+HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:
 - <risk or NONE>
 LEARNING_EVENT_NEEDED: true | false
 SUGGESTED_NEXT_AGENT: <agent name or NONE>
-SUMMARY: <brief summary>
+SUMMARY: <brief truthful summary>
 ```

@@ -58,11 +58,11 @@ Provide a set of **high-quality, preconfigured architecture builders** that are:
 These are intended for tasks where state matters.
 
 - `NARX(input, hiddenSizes, output, inputMemory, outputMemory)`
-  - “Remember last N inputs/outputs” via identity memory blocks.
+- “Remember last N inputs/outputs” via identity memory blocks.
 - `LSTM(input, ...blockSizes, output, options)`
-  - A pedagogical LSTM-like gating structure.
+- A pedagogical LSTM-like gating structure.
 - `GRU(input, ...unitSizes, output)`
-  - A pedagogical GRU-like structure.
+- A pedagogical GRU-like structure.
 
 Important note: these are educational implementations intended to interoperate with evolution; they should be clearly documented as such.
 
@@ -79,18 +79,18 @@ Important note: these are educational implementations intended to interoperate w
 
 ```ts
 export interface BuildOptions {
-  weightInit?: WeightInitializer;
-  biasInit?: BiasInitializer;
-  activation?: Activation;
-  seed?: number;
+ weightInit?: WeightInitializer;
+ biasInit?: BiasInitializer;
+ activation?: Activation;
+ seed?: number;
 }
 
 export const Architect = {
-  Perceptron(...sizes: number[]): Network,
-  RandomSparse(input: number, hidden: number, output: number, options?: RandomSparseOptions): Network,
-  NARX(input: number, hidden: number | number[], output: number, inputMemory: number, outputMemory: number, options?: BuildOptions): Network,
-  LSTM(...sizesAndMaybeOptions: Array<number | LSTMOptions>): Network,
-  GRU(...sizesAndMaybeOptions: Array<number | GRUOptions>): Network,
+ Perceptron(...sizes: number[]): Network,
+ RandomSparse(input: number, hidden: number, output: number, options?: RandomSparseOptions): Network,
+ NARX(input: number, hidden: number | number[], output: number, inputMemory: number, outputMemory: number, options?: BuildOptions): Network,
+ LSTM(...sizesAndMaybeOptions: Array<number | LSTMOptions>): Network,
+ GRU(...sizesAndMaybeOptions: Array<number | GRUOptions>): Network,
 };
 ```
 
@@ -117,9 +117,9 @@ The guiding rule for this closing lane:
 ### [DONE] Step 1 — MLP builder hardening
 
 - Ensure MLP builder:
-  - uses explicit input/output nodes
-  - is fully connected
-  - produces a stable activation order
+- uses explicit input/output nodes
+- is fully connected
+- produces a stable activation order
 
 Acceptance:
 
@@ -173,9 +173,9 @@ Acceptance:
 ### [DONE] Step 5 — Docs and examples
 
 - For each builder, include:
-  - small example
-  - recommended training/evolution knobs
-  - pitfalls (state clearing, dataset shuffling)
+- small example
+- recommended training/evolution knobs
+- pitfalls (state clearing, dataset shuffling)
 
 Completion note:
 
@@ -190,12 +190,12 @@ Acceptance:
 
 - Introduce one explicit architecture-profile contract for demos and tests.
 - A profile should include:
-  - stable profile id
-  - public builder family (`MLP`, `RandomSparse`, `NARX`, `GRU`, `LSTM`)
-  - size parameters resolved per demo
-  - whether the profile is feed-forward or recurrent
-  - whether the profile is currently approved for Flappy Bird, ASCII Maze, or both
-  - user-facing label and short explanation text
+- stable profile id
+- public builder family (`MLP`, `RandomSparse`, `NARX`, `GRU`, `LSTM`)
+- size parameters resolved per demo
+- whether the profile is feed-forward or recurrent
+- whether the profile is currently approved for Flappy Bird, ASCII Maze, or both
+- user-facing label and short explanation text
 - Keep the contract shared so both demos can talk about the same families even when the exact input/output sizes differ.
 - Do not let each demo invent its own architecture vocabulary once this exists.
 
@@ -214,17 +214,17 @@ Completion note:
 - Replace the current hardcoded `Architect.perceptron(...)` seed path in the Node trainer and browser worker with the shared architecture-profile contract.
 - Keep architecture-selection buttons as a Flappy Bird-only control surface; do not introduce equivalent architecture buttons into ASCII Maze.
 - Start with curated profiles that make sense for Flappy Bird’s current teaching story:
-  - `MLP` as the classic baseline
-  - `RandomSparse` as the first evolution-friendly topology alternative when stable
-  - `NARX` as the first stateful-memory candidate if recurrent/state-reset semantics remain easy to explain in the current worker/playback model
+- `MLP` as the classic baseline
+- `RandomSparse` as the first evolution-friendly topology alternative when stable
+- `NARX` as the first stateful-memory candidate if recurrent/state-reset semantics remain easy to explain in the current worker/playback model
 - Treat `GRU` and `LSTM` as gated Flappy deliverables within this phase, not as optional post-phase extras.
 - If `GRU` or `LSTM` remain too opaque or unstable for Flappy Bird’s browser label, worker playback, restart semantics, or fresh-run selection flow, then this Phase 2 lane is still open.
 - ASCII Maze may validate them earlier, but that earlier success does not close the phase unless Flappy Bird also reaches reference-quality behavior for the same public families.
 - Add a small architecture control group in the lower-right stats area only if it behaves as a **new-run selector**:
-  - clicking a profile stops the current session,
-  - starts a fresh worker-backed run with the selected seed profile,
-  - resets population state and telemetry for that run,
-  - updates the HUD and architecture labels to show the selected family clearly.
+- clicking a profile stops the current session,
+- starts a fresh worker-backed run with the selected seed profile,
+- resets population state and telemetry for that run,
+- updates the HUD and architecture labels to show the selected family clearly.
 - Under each Flappy Bird architecture button, render that architecture's historical best score in a small contrasting font when a record exists; render nothing when that architecture has never been run in the browser.
 - Persist those per-architecture historical max scores in browser local storage so repeated runs across sessions can compete against the stored record for that specific family.
 - Mark the architecture whose stored historical best is currently highest with a `*` suffix in the button label so the browser UI exposes the leading family at a glance.
@@ -247,10 +247,10 @@ Acceptance:
 - Add the same architecture-profile contract to the ASCII Maze evolution engine so population seeding can come from approved builders rather than only raw input/output seeding or externally injected networks.
 - Keep ASCII Maze focused on library-backed seed selection, telemetry, curriculum, and polish improvements rather than mirroring Flappy Bird's button-driven architecture chooser.
 - Support builder-backed profiles in:
-  - fresh evolution starts
-  - curriculum warm starts
-  - optional best-network seeding
-  - telemetry and archive metadata
+- fresh evolution starts
+- curriculum warm starts
+- optional best-network seeding
+- telemetry and archive metadata
 - Preserve the current ability to inject explicit external populations or best networks, but make builder-backed profiles the default path when a demo run is not resuming from prior artifacts.
 - Use ASCII Maze as the stronger earlier proving ground for memory-oriented profiles while Flappy semantics are still being stabilized, but do not treat that earlier proof as sufficient for Phase 2 closure.
 
@@ -267,15 +267,15 @@ Acceptance:
 
 - Add demo-level regression coverage that treats builder-backed seed profiles as part of the supported public story.
 - Minimum matrix for closing this lane:
-  - `MLP` profile exercised by both Flappy Bird and ASCII Maze
-  - one non-trivial alternative profile exercised by both demos when feasible, or by the single demo that best fits it when semantics differ materially
-  - `GRU` and `LSTM` are not counted as Phase 2-complete families unless they are exercised at reference quality in Flappy Bird as well as in any earlier proving surface used during stabilization
-  - at least one stateful profile exercised by both flagship demos before the lane closes, with Flappy Bird treated as the final approval gate rather than an optional follow-on
+- `MLP` profile exercised by both Flappy Bird and ASCII Maze
+- one non-trivial alternative profile exercised by both demos when feasible, or by the single demo that best fits it when semantics differ materially
+- `GRU` and `LSTM` are not counted as Phase 2-complete families unless they are exercised at reference quality in Flappy Bird as well as in any earlier proving surface used during stabilization
+- at least one stateful profile exercised by both flagship demos before the lane closes, with Flappy Bird treated as the final approval gate rather than an optional follow-on
 - Verify not just boot success, but also:
-  - explicit I/O role preservation
-  - deterministic builder labeling in demo telemetry/HUD surfaces
-  - evolution startup compatibility
-  - serialization or restart compatibility where the demo already supports it
+- explicit I/O role preservation
+- deterministic builder labeling in demo telemetry/HUD surfaces
+- evolution startup compatibility
+- serialization or restart compatibility where the demo already supports it
 - Prefer demo tests that fail because the library builder contract changed, not because a one-off demo helper drifted.
 
 Prerequisite implementation note:
@@ -291,13 +291,13 @@ Acceptance:
 
 - Update both demo READMEs to explain which architecture profiles they expose and why.
 - Document which architecture families are approved as:
-  - baseline reference profiles
-  - advanced but still reference-quality profiles
-  - deferred or experimental profiles not yet surfaced in the public demo UI
+- baseline reference profiles
+- advanced but still reference-quality profiles
+- deferred or experimental profiles not yet surfaced in the public demo UI
 - Keep the teaching story honest:
-  - Flappy Bird is still primarily a fast control-system demo,
-  - ASCII Maze is still primarily a compact navigation-and-shaping demo,
-  - architecture profiles expand those reference surfaces rather than replacing their core lessons.
+- Flappy Bird is still primarily a fast control-system demo,
+- ASCII Maze is still primarily a compact navigation-and-shaping demo,
+- architecture profiles expand those reference surfaces rather than replacing their core lessons.
 
 Acceptance:
 
@@ -306,34 +306,34 @@ Acceptance:
 ## Testing strategy
 
 - Snapshot structural tests:
-  - node/edge counts for known sizes
-  - roles for I/O nodes
-  - deterministic output under seed
+- node/edge counts for known sizes
+- roles for I/O nodes
+- deterministic output under seed
 - Runtime sanity tests:
-  - XOR for MLP
-  - tiny sequence task for NARX/GRU/LSTM (1–2 minutes max)
+- XOR for MLP
+- tiny sequence task for NARX/GRU/LSTM (1–2 minutes max)
 - Demo contract tests:
-  - Flappy trainer and worker can start from approved builder-backed profiles
-  - ASCII Maze can start from approved builder-backed profiles
-  - demo telemetry or HUD surfaces report the selected architecture family consistently
-  - profile selection in Flappy Bird restarts a fresh run instead of mutating live state
-  - Flappy Bird persists per-architecture browser best scores in local storage, omits empty score captions for never-run families, and marks the leading stored family with a `*`
+- Flappy trainer and worker can start from approved builder-backed profiles
+- ASCII Maze can start from approved builder-backed profiles
+- demo telemetry or HUD surfaces report the selected architecture family consistently
+- profile selection in Flappy Bird restarts a fresh run instead of mutating live state
+- Flappy Bird persists per-architecture browser best scores in local storage, omits empty score captions for never-run families, and marks the leading stored family with a `*`
 - Cross-demo end-to-end checks:
-  - the same profile family can be resolved into demo-specific network sizes without changing its semantic identity
-  - at least one builder-backed profile beyond the baseline `MLP` becomes part of the regular demo regression surface
+- the same profile family can be resolved into demo-specific network sizes without changing its semantic identity
+- at least one builder-backed profile beyond the baseline `MLP` becomes part of the regular demo regression surface
 
 ## Risks and mitigations
 
 - Risk: user expects “framework-grade” LSTM/GRU.
-  - Mitigation: label as pedagogical/evolution-friendly; show when to prefer simpler NARX.
+- Mitigation: label as pedagogical/evolution-friendly; show when to prefer simpler NARX.
 - Risk: recurrent graphs break activation assumptions.
-  - Mitigation: require recurrent-mode construction semantics and stable ordering.
+- Mitigation: require recurrent-mode construction semantics and stable ordering.
 - Risk: Flappy Bird architecture buttons become demo spectacle instead of a trustworthy reference control.
-  - Mitigation: only use them as explicit new-run selectors for curated profiles, label the profiles by exact architecture family, and keep the browser score history narrowly scoped to per-architecture bests stored in local storage rather than turning the control into a broader progression system.
+- Mitigation: only use them as explicit new-run selectors for curated profiles, label the profiles by exact architecture family, and keep the browser score history narrowly scoped to per-architecture bests stored in local storage rather than turning the control into a broader progression system.
 - Risk: demo integrations drift into custom seed factories that bypass the public builder surface.
-  - Mitigation: centralize demo seed profiles on the same `Architect`-backed contract and test them at the demo boundary.
+- Mitigation: centralize demo seed profiles on the same `Architect`-backed contract and test them at the demo boundary.
 - Risk: memory-oriented architectures muddy Flappy Bird’s current feed-forward teaching story too early.
-  - Mitigation: use ASCII Maze as the earlier proving ground when needed, but keep Flappy Bird as the mandatory end-to-end closure gate so the phase cannot close with stateful families that still fail the main browser reference demo.
+- Mitigation: use ASCII Maze as the earlier proving ground when needed, but keep Flappy Bird as the mandatory end-to-end closure gate so the phase cannot close with stateful families that still fail the main browser reference demo.
 
 ## Success criteria
 

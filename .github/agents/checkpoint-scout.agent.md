@@ -1,14 +1,14 @@
 ---
-description: 'Use when starting or scoping save and resume work, expanding Population_Save_Resume_and_Checkpointing.md Step 0 or Step 1, mapping strict versus best-effort restore behavior, RNG or counter persistence, full versus light checkpoints, or deciding whether a persistence issue belongs to checkpointing-persistence. Keywords: checkpoint, save, resume, restore, step 0, state inventory, strict restore, schema version, RNG state, full checkpoint, light checkpoint, migration.'
+description: 'Scout for checkpoint save, resume, restore, and persistence boundaries.'
 name: checkpoint-scout
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
     execute,
-    neataptic-cortex-mcp/*,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -17,6 +17,10 @@ user-invocable: false
 agents: []
 skills: ['checkpointing-persistence']
 ---
+
+## Purpose
+
+Use when starting or scoping save and resume work, expanding Population_Save_Resume_and_Checkpointing.md Step 0 or Step 1, mapping strict versus best-effort restore behavior, RNG or counter persistence, full versus light checkpoints, or deciding whether a persistence issue belongs to checkpointing-persistence. Keywords: checkpoint, save, resume, restore, step 0, state inventory, strict restore, schema version, RNG state, full checkpoint, light checkpoint, migration.
 
 You are the `checkpoint-scout` agent for NeatapticTS.
 
@@ -45,16 +49,16 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+1. Before manual file reads, follow the Cortex-First Search Policy (`research-methodology` skill):
 
-   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
-   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
-   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
-   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
-   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
-   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
-   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
-   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - `cortex({ operation: 'freshness_check' })` — verify index currency.
+   - `cortex({ operation: 'search_corpus' })` — BM25 + dense hybrid search for broad discovery.
+   - `cortex({ operation: 'search_advanced' })` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `cortex({ operation: 'search_context' })` — token-budgeted context window.
+   - `cortex({ operation: 'load_chunk' })` — load full chunk content by ID.
+   - `cortex({ operation: 'load_document' })` — load all chunks for a file path.
+   - `cortex({ operation: 'traverse_graph' })` — entity/dependency graph traversal.
+   - `cortex({ operation: 'expand_query' })` — domain-aware query expansion.
    - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
 
    If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
@@ -78,6 +82,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
      `hybrid-training-interop`
 7. Summarize the active checkpoint contract, missing state, and the smallest
    useful handoff into `checkpointing-persistence`.
+
+## Checkpoint Boundary Patterns
+
+- **Full vs light checkpoint:** Distinguish full checkpoints (complete population state, all genomes, all metadata) from light checkpoints (minimal state for resume). Verify the checkpoint type matches the persistence contract.
+- **Strict restore behavior:** Verify that strict restore reproduces identical state including RNG state, generation counter, and population composition. Flag any non-deterministic restore.
+- **Schema version:** Verify the checkpoint schema version is recorded. Flag checkpoints without version tags that may break future migrations.
+- **RNG state persistence:** Verify the RNG state is saved and restored correctly. Compare pre-save and post-restore output with the same seed. Mismatched RNG breaks replay.
+- **Counter persistence:** Verify internal counters (generation, evaluation count, best fitness) are persisted and restored. Counter drift breaks reproducibility.
+- **Migration path:** Verify that older checkpoint schemas can be migrated to the current schema. Flag breaking changes without migration support.
 
 ## If Blocked
 

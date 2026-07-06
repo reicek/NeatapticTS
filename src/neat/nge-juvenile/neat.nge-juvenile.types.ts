@@ -45,6 +45,18 @@ export interface NgeFocusScore {
   rawScore: number;
   /** Probability-like normalized score used by later top-k selection. */
   normalizedScore: number;
+  /** True when the raw score is positive enough to support a growth action. */
+  supportsGrowth: boolean;
+  /** Normalized utilization value that participated in the raw score. */
+  normalizedUtilization: number;
+  /** Normalized reward delta that participated in the raw score. */
+  normalizedRewardDelta: number;
+  /** Normalized novelty value that participated in the raw score. */
+  normalizedNovelty: number;
+  /** Normalized stability age that participated in the raw score. */
+  normalizedStabilityAge: number;
+  /** Normalized wiring cost that participated in the raw score. */
+  normalizedWiringCost: number;
 }
 
 /**
@@ -80,6 +92,16 @@ export interface NgeJuvenilePhaseConfig {
   gainStabilityTolerance: number;
   /** Evaluation window identifier echoed into the focus-vector metadata. */
   windowIndex: number;
+  /**
+   * Floor below which the composite node-growth signal cannot open the node-add gate.
+   * The signal is derived from the focus-weighted module metrics, so it reflects
+   * utilization, reward, novelty, stability, and cost jointly rather than reward alone.
+   */
+  nodeGrowthSignalFloor: number;
+  /** Number of hidden nodes one approved node-addition step plans to insert. */
+  nodeAdditionCount: number;
+  /** Number of forward edges one approved edge-densification step plans to insert. */
+  edgeDensificationCount: number;
 }
 
 /**

@@ -3,6 +3,11 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+// Tests run from the repository root, so cwd is a stable anchor for repo-relative
+// paths without needing import.meta.url (which currently breaks ts-jest for tests
+// in this project).
+const repositoryRoot = path.resolve();
+
 interface BrowserSnapshot {
   generated_at: string;
   schema_version: string;
@@ -16,9 +21,8 @@ describe('semantic browser snapshot', () => {
       const fixtureDirectory = await mkdtemp(
         path.join(tmpdir(), 'semantic-browser-snapshot-'),
       );
-      const databasePath = path.join(fixtureDirectory, 'semantic-index.sqlite');
+      const databasePath = path.join(fixtureDirectory, 'rag-index.sqlite');
       const outputPath = path.join(fixtureDirectory, 'semantic-snapshot.json');
-      const repositoryRoot = path.resolve(__dirname, '..', '..', '..');
 
       execFileSync(
         process.execPath,
@@ -30,7 +34,7 @@ describe('semantic browser snapshot', () => {
       execFileSync(
         process.execPath,
         [
-          'scripts/semantic-index/build-browser-snapshot.mjs',
+          'rag-index/build-browser-snapshot.mjs',
           '--database',
           databasePath,
           '--output',
@@ -62,17 +66,24 @@ describe('semantic browser snapshot', () => {
 
 function buildSeedScript(databasePath: string): string {
   return `
-    import Database from 'better-sqlite3';
+    import { createClient } from '@libsql/client';
     import { readFile } from 'node:fs/promises';
     import path from 'node:path';
     const databasePath = ${JSON.stringify(databasePath)};
-    const schema = await readFile(path.resolve('scripts/semantic-index/schema.sql'), 'utf8');
-    const database = new Database(databasePath);
-    database.exec(schema);
-    database.prepare('INSERT INTO documents(file_path, doc_family, mtime_ms, file_size, sha256, indexed_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run('README.md', 'readme', 1, 12, 'fixture-sha', 2);
-    database.prepare('INSERT INTO chunks(doc_id, chunk_index, heading_path, body_text, char_start, char_end) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(1, 0, '# NEAT', 'NEAT browser snapshot fixture.', 0, 30);
-    database.close();
+    const schema = await readFile(path.resolve('rag-index/schema-turso.sql'), 'utf8');
+    const database = createClient({ url: 'file:' + databasePath });
+    try {
+      await database.executeMultiple(schema);
+      await database.execute({
+        sql: 'INSERT INTO documents(file_path, doc_family, mtime_ms, file_size, sha256, indexed_at) VALUES (?, ?, ?, ?, ?, ?)',
+        args: ['README.md', 'readme', 1, 12, 'fixture-sha', 2],
+      });
+      await database.execute({
+        sql: 'INSERT INTO chunks(doc_id, chunk_index, heading_path, body_text, char_start, char_end) VALUES (?, ?, ?, ?, ?, ?)',
+        args: [1, 0, '# NEAT', 'NEAT browser snapshot fixture.', 0, 30],
+      });
+    } finally {
+      await database.close();
+    }
   `;
 }

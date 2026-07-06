@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
+import { createClient } from '@libsql/client';
 
 const REPO_ROOT = path.resolve();
 
@@ -35,15 +36,15 @@ const runModuleEvaluation = <Result>(source: string): Result => {
 /**
  * Build a minimal corpus SQLite fixture with two sequential chunks in one doc.
  */
-function makeSequentialChunkFixture(): {
+async function makeSequentialChunkFixture(): Promise<{
   databasePath: string;
   tempDir: string;
-} {
+}> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'load-chunk-red-'));
   const databasePath = path.join(tempDir, 'corpus.sqlite');
-  const db = new (require('better-sqlite3'))(databasePath);
+  const db = createClient({ url: 'file:' + databasePath });
   try {
-    db.exec(`
+    await db.executeMultiple(`
       CREATE TABLE documents (
         doc_id INTEGER PRIMARY KEY,
         doc_family TEXT NOT NULL,
@@ -75,27 +76,22 @@ function makeSequentialChunkFixture(): {
           (11, 1, 1, 'Second sequential chunk body.', 29, 'details');
     `);
   } finally {
-    db.close();
+    await db.close();
   }
   return { databasePath, tempDir };
 }
 
 describe('load-chunk.mjs follow-up navigation', () => {
   describe('next_chunk_id field', () => {
-    it('includes the next sequential chunk id for follow-up refs', () => {
-      const { databasePath, tempDir } = makeSequentialChunkFixture();
+    it('includes the next sequential chunk id for follow-up refs', async () => {
+      const { databasePath, tempDir } = await makeSequentialChunkFixture();
       try {
         const result = runModuleEvaluation<{
           nextChunkId: number | null;
         }>(`
           import { loadChunk } from './scripts/mcp-semantic/tools/load-chunk.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await loadChunk({ chunk_id: 10, databasePath });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             nextChunkId: response.chunk?.next_chunk_id ?? null,
           }));

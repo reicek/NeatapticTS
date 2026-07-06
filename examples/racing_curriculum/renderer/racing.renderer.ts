@@ -3,10 +3,10 @@
  *
  * Rendering is intentionally flat and stateless relative to game logic —
  * the renderer consumes a frozen `TrackSpec`, the current `EnvironmentState`,
- * and a small mutable `RacingRenderState` (tire marks) and produces one frame.
+ * and a small mutable `RacingRenderState` (context cache) and produces one frame.
  *
  * Visual style: neon-retro-arcade — dark background, cyan/blue structure,
- * square-outline car, fading tire marks, neon-white bumper lighting.
+ * square-outline car, neon-white bumper lighting.
  *
  * The world coordinate system is math-convention (Y increases upward).
  * Canvas pixels use Y-down convention. The affine `WorldTransform` absorbs
@@ -30,9 +30,10 @@ const COLOR_BACKGROUND = '#060b14';
 const COLOR_TRACK_SURFACE = '#0c1e35';
 const COLOR_TRACK_EDGE = '#00d4f5';
 const COLOR_TRACK_GLOW_ALPHA = 0.15;
-const COLOR_CENTERLINE = 'rgba(0,180,220,0.30)';
-const COLOR_GUIDANCE_LINE_RGB = '255,209,102';
-const COLOR_CAR_BODY = '#00e5ff';
+const COLOR_GUIDING_LINE_TEAM_A_RGB = '0,0,255';
+const COLOR_GUIDING_LINE_TEAM_B_RGB = '255,0,0';
+const COLOR_CAR_BODY_TEAM_A = '#0000ff';
+const COLOR_CAR_BODY_TEAM_B = '#ff0000';
 const COLOR_NEON_WHITE = '#f8feff';
 const COLOR_FRONT_BUMPER = COLOR_NEON_WHITE;
 const COLOR_HEADLIGHT_GLOW_RGB = '248,254,255';
@@ -40,16 +41,13 @@ const COLOR_CAR_INNER_FRAME = 'rgba(248, 254, 255, 0.38)';
 const COLOR_CAR_EDGE_GLINT = 'rgba(248, 254, 255, 0.58)';
 const COLOR_CAR_CANOPY_ACCENT = 'rgba(180, 245, 255, 0.58)';
 const COLOR_CAR_CORE_ACCENT = 'rgba(248, 254, 255, 0.78)';
-const COLOR_TIRE_MARK_MAX_ALPHA = 0.3;
-const COLOR_TIRE_MARK_GLOW_RGB = '170,235,255';
-const COLOR_TIRE_MARK_CORE_RGB = '248,254,255';
 const COLOR_TIRE_GOOD = COLOR_NEON_WHITE;
 const COLOR_TIRE_WARN = '#facc15';
 const COLOR_TIRE_ALERT = '#fb923c';
 const COLOR_TIRE_CRITICAL = '#ef4444';
 const COLOR_TIRE_GLINT = 'rgba(248, 254, 255, 0.6)';
-const COLOR_PIT_TEAM_A = 'rgba(0, 229, 255, 0.38)';
-const COLOR_PIT_TEAM_B = 'rgba(255, 122, 69, 0.38)';
+const COLOR_PIT_TEAM_A = 'rgba(0, 0, 255, 0.38)';
+const COLOR_PIT_TEAM_B = 'rgba(255, 0, 0, 0.38)';
 const COLOR_PIT_OCCUPIED = 'rgba(255, 204, 0, 0.16)';
 const FEATURE_FLAG_PITS_ENABLED = 0b100;
 
@@ -91,12 +89,10 @@ const CAR_CORE_RADIUS_PX = 1.06;
 const HEADLIGHT_PROJECTION_WORLD_LENGTH = 8.4;
 /** Extra side spread of the headlight glow projection in world units. */
 const HEADLIGHT_PROJECTION_SPREAD_WORLD = 2.6;
-/** Rearward world offset used when sampling tire-mark trail points. */
-const TIRE_MARK_REAR_OFFSET_WORLD = CAR_HALF_LENGTH_WORLD;
 /** Stroke width in CSS pixels used for the cyan boundary lines. */
 const TRACK_EDGE_LINE_WIDTH_PX = 2.4;
 /** Blur radius in CSS pixels used for the boundary glow. */
-const TRACK_GLOW_BLUR_PX = 18;
+const TRACK_GLOW_BLUR_PX = 8;
 /** Neighbor radius used to smooth pit heading from local spline tangents. */
 const PIT_HEADING_SMOOTHING_RADIUS = 4;
 /** Subtle glow alpha used for pit-overlay neon shine passes. */
@@ -144,13 +140,6 @@ const START_LINE_SQUARE_STROKE_WIDTH_PX = 1.35;
 const START_LINE_GLOW_ALPHA = 0.62;
 /** Blur radius in CSS pixels used for start-line neon glow. */
 const START_LINE_GLOW_BLUR_PX = 10;
-
-// ── Tire-mark accumulation constants ────────────────────────────────────────
-
-/** Maximum age (in ticks) before a tire mark is discarded. */
-const TIRE_MARK_MAX_AGE_TICKS = 260;
-/** Minimum ticks between successive tire-mark samples. */
-const TIRE_MARK_SAMPLE_INTERVAL_TICKS = 3;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -213,25 +202,23 @@ export interface WorldTransformOptions {
   readonly edgePaddingPx?: number;
 }
 
-/** One sampled point in the fading tire-mark trail. */
-export interface TireMark {
-  readonly worldX: number;
-  readonly worldY: number;
-  /** Ticks elapsed since this mark was recorded. Mutated each frame. */
-  age: number;
-}
-
 /**
  * Mutable render state owned by the animation loop.
  *
  * Isolated from the physics `EnvironmentState` so that rendering artefacts
- * (trail length, mark density) can be tuned without touching the simulation.
+ * can be tuned without touching the simulation.
  */
 export interface RacingRenderState {
-  /** Ordered list of sampled car positions forming the tire-mark trail. */
-  readonly tireMarks: TireMark[];
-  /** Ticks elapsed since the last mark was appended. */
-  ticksSinceLastMark: number;
+  /**
+   * Cached 2D rendering context for the render canvas.
+   *
+   * Stored on first frame so that `renderRacingFrame` avoids a per-frame
+   * `getContext('2d')` call. Per the HTML canvas spec, repeated
+   * `getContext('2d')` calls on the same canvas return the same context
+   * object, so caching is safe as long as the canvas element is stable
+   * across frames (which it is in the racing curriculum animation loop).
+   */
+  cached2dContext?: CanvasRenderingContext2D | null;
 }
 
 /** Narrow worker-frame fields consumed by the Tier 4 renderer overlays. */
@@ -261,7 +248,7 @@ export interface RacingRenderOptions {
 /**
  * Creates a zeroed `RacingRenderState` ready for first use.
  *
- * @returns Fresh render state with an empty tire-mark list.
+ * @returns Fresh render state with a cleared context cache.
  *
  * @example
  * ```ts
@@ -270,7 +257,64 @@ export interface RacingRenderOptions {
  * ```
  */
 export function createRacingRenderState(): RacingRenderState {
-  return { tireMarks: [], ticksSinceLastMark: 0 };
+  return {};
+}
+
+/**
+ * Builds a fresh per-car guiding line parallel to the road centerline.
+ *
+ * Team 0 (blue) defaults to the inner-lane centerline (`+innerOffsetWorld`
+ * from the road centerline). Team 1 (red) defaults to the outer-lane centerline
+ * (`-innerOffsetWorld`). A caller may override the lateral offset to produce
+ * a distinct line for every car in multi-car packs. Each call returns a fresh
+ * array, so callers may mutate or cache freely.
+ *
+ * @param trackSpec - Frozen track geometry.
+ * @param teamIndex - Team index: 0 = blue team, 1 = red team.
+ * @param lateralOffsetWorld - Optional signed lateral offset in world units
+ *   relative to the road centerline; when omitted the offset follows the team
+ *   baseline above.
+ * @returns Fresh ordered list of world-space `{x, y}` guiding points.
+ *
+ * @example
+ * ```ts
+ * const teamAGuidingLine = buildGuidingLineForTeam(trackSpec, 0);
+ * const teamBGuidingLine = buildGuidingLineForTeam(trackSpec, 1);
+ * ```
+ */
+export function buildGuidingLineForTeam(
+  trackSpec: TrackSpec,
+  teamIndex: number,
+  lateralOffsetWorld?: number,
+): Array<{ readonly x: number; readonly y: number }> {
+  const samples = trackSpec.splineSamples;
+  if (samples.length === 0) {
+    return [];
+  }
+
+  const firstSample = samples[0];
+  const laneWidthWorld =
+    firstSample?.laneWidthWorld ?? (firstSample?.width ?? 0) / 2;
+  const innerOffsetWorld =
+    firstSample?.innerOffsetWorld ??
+    (firstSample?.width ?? 0) / 2 - laneWidthWorld / 2;
+  const defaultLateralOffsetWorld =
+    teamIndex === 0 ? innerOffsetWorld : -innerOffsetWorld;
+  const resolvedLateralOffsetWorld =
+    lateralOffsetWorld ?? defaultLateralOffsetWorld;
+
+  const guidingLine: Array<{ readonly x: number; readonly y: number }> = [];
+  for (let sampleIndex = 0; sampleIndex < samples.length; sampleIndex++) {
+    const sample = samples[sampleIndex]!;
+    const sampleFrame = resolveSplineSampleFrame(samples, sampleIndex);
+
+    guidingLine.push({
+      x: sample.x + sampleFrame.normalX * resolvedLateralOffsetWorld,
+      y: sample.y + sampleFrame.normalY * resolvedLateralOffsetWorld,
+    });
+  }
+
+  return guidingLine;
 }
 
 /**
@@ -355,18 +399,19 @@ function resolveWorldEdgePaddingPx(
  * Renders one animation frame onto the canvas.
  *
  * Rendering order: background → track glow → track surface → track edges →
- * centerline dashes → tire marks → car body + front lighting accents.
+ * centerline dashes → car body + front lighting accents.
  *
  * When `renderOptions.frame` is present, the renderer also colors the four tire
  * corners from the packed Tier 4 tire tuple and draws pit entrance/stall
  * overlays from the packed pit-status tuple.
  *
- * Mutates `renderState.tireMarks` and `renderState.ticksSinceLastMark`.
+ * Lazily caches the 2D context on `renderState.cached2dContext` so
+ * that subsequent frames skip the per-frame `getContext('2d')` call.
  *
  * @param canvas - Target canvas element.
  * @param spec - Frozen track spec (geometry only).
  * @param envState - Current physics state from the simulation.
- * @param renderState - Mutable tire-mark accumulator.
+ * @param renderState - Mutable context cache.
  * @param transform - World-to-canvas affine transform.
  * @param renderOptions - Optional overlay configuration; defaults to no guidance overlay.
  */
@@ -378,8 +423,11 @@ export function renderRacingFrame(
   transform: WorldTransform,
   renderOptions: RacingRenderOptions = {},
 ): void {
-  const ctx = canvas.getContext('2d');
+  const ctx =
+    renderState.cached2dContext ??
+    canvas.getContext('2d', { desynchronized: true });
   if (!ctx) return;
+  renderState.cached2dContext = ctx;
   const renderCars = resolveRenderCars(envState);
   const focusCarIndex = renderOptions.focusCarIndex ?? 0;
   const pitsEnabledForCurrentTier = isPitsEnabledForCurrentTier(
@@ -391,27 +439,24 @@ export function renderRacingFrame(
     ? resolveVisiblePitTeamIndex(renderOptions.frame, envState, focusCarIndex)
     : undefined;
 
-  // Step 1: Advance tire marks for this tick.
-  advanceTireMarks(renderState, envState);
-
-  // Step 2: Background fill.
+  // Step 1: Background fill.
   ctx.fillStyle = COLOR_BACKGROUND;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Step 3: Track layers (glow, surface, edges, centerline).
+  // Step 2: Track layers (glow, surface, edges, centerline).
   drawTrack(
     ctx,
     spec,
     transform,
     renderOptions.guidanceAlpha ?? 0,
+    envState,
+    renderOptions.frame,
+    focusCarIndex,
     renderOptions.frame?.pitStatus,
     visiblePitTeamIndex,
   );
 
-  // Step 4: Fading tire-mark trail.
-  drawTireMarks(ctx, renderState.tireMarks, transform);
-
-  // Step 5: Car body and front lighting accents.
+  // Step 3: Car body and front lighting accents.
   for (const [carIndex, renderCar] of renderCars.entries()) {
     const carTeamIndex = resolveRenderCarTeamIndex(
       renderOptions.frame,
@@ -422,7 +467,7 @@ export function renderRacingFrame(
     );
     const carOutlineColor = pitsEnabledForCurrentTier
       ? resolveTeamPitColor(carTeamIndex)
-      : COLOR_CAR_BODY;
+      : resolveTeamCarColor(carTeamIndex);
 
     drawCar(
       ctx,
@@ -443,47 +488,6 @@ export function renderRacingFrame(
 // ── Private helpers ───────────────────────────────────────────────────────────
 
 /**
- * Appends a new tire mark at the car's current position and ages all marks.
- * Marks older than `TIRE_MARK_MAX_AGE_TICKS` are evicted from the front.
- *
- * @param renderState - Mutable render state (mutated in-place).
- * @param envState - Current car position source.
- */
-function advanceTireMarks(
-  renderState: RacingRenderState,
-  envState: EnvironmentState,
-): void {
-  renderState.ticksSinceLastMark++;
-
-  if (renderState.ticksSinceLastMark >= TIRE_MARK_SAMPLE_INTERVAL_TICKS) {
-    const rearSampleX =
-      envState.carX -
-      Math.cos(envState.carHeading) * TIRE_MARK_REAR_OFFSET_WORLD;
-    const rearSampleY =
-      envState.carY -
-      Math.sin(envState.carHeading) * TIRE_MARK_REAR_OFFSET_WORLD;
-
-    renderState.tireMarks.push({
-      worldX: rearSampleX,
-      worldY: rearSampleY,
-      age: 0,
-    });
-    renderState.ticksSinceLastMark = 0;
-  }
-
-  for (const mark of renderState.tireMarks) {
-    mark.age++;
-  }
-
-  while (
-    renderState.tireMarks.length > 0 &&
-    (renderState.tireMarks[0]?.age ?? 0) > TIRE_MARK_MAX_AGE_TICKS
-  ) {
-    renderState.tireMarks.shift();
-  }
-}
-
-/**
  * Draws all track layers onto the canvas context.
  *
  * Layers (back to front): glow halo, asphalt surface, left/right edge lines,
@@ -498,6 +502,9 @@ function drawTrack(
   spec: TrackSpec,
   transform: WorldTransform,
   guidanceAlpha: number,
+  envState: EnvironmentState,
+  overlayFrame?: RacingRenderOverlayFrame,
+  focusCarIndex = 0,
   pitStatus?: Uint8Array | Uint16Array | Int16Array,
   visiblePitTeamIndex?: 0 | 1,
 ): void {
@@ -505,9 +512,16 @@ function drawTrack(
   drawTrackGlowLayer(ctx, trackRenderGeometry, transform);
   drawTrackSurfaceLayer(ctx, trackRenderGeometry, transform);
   drawTrackEdgeLines(ctx, trackRenderGeometry, transform);
-  drawTrackCenterline(ctx, trackRenderGeometry, transform);
   drawStartLineCrosswalk(ctx, trackRenderGeometry, transform);
-  drawOptimalLineGuidance(ctx, trackRenderGeometry, transform, guidanceAlpha);
+  drawTeamGuidingLines(
+    ctx,
+    spec,
+    transform,
+    guidanceAlpha,
+    envState,
+    overlayFrame,
+    focusCarIndex,
+  );
   drawPitOverlays(ctx, spec, transform, pitStatus, visiblePitTeamIndex);
 }
 
@@ -574,29 +588,6 @@ function drawTrackEdgeLines(
 
   traceClosedWorldPath(ctx, trackRenderGeometry.rightBoundaryPoints, transform);
   ctx.stroke();
-}
-
-/**
- * Draws a dashed centerline along each segment.
- *
- * @param ctx - 2D rendering context.
- * @param spec - Track geometry.
- * @param transform - World-to-canvas transform.
- */
-function drawTrackCenterline(
-  ctx: CanvasRenderingContext2D,
-  trackRenderGeometry: TrackRenderGeometry,
-  transform: WorldTransform,
-): void {
-  ctx.save();
-  ctx.setLineDash([10, 12]);
-  ctx.strokeStyle = COLOR_CENTERLINE;
-  ctx.lineWidth = 1.2;
-  traceClosedSamplePath(ctx, trackRenderGeometry.centerlinePoints, transform);
-  ctx.stroke();
-
-  ctx.setLineDash([]);
-  ctx.restore();
 }
 
 /**
@@ -711,18 +702,30 @@ function resolveStartLineSquareCount(
 }
 
 /**
- * Draws the faded optimal-line overlay used by the Tier 1 browser harness.
+ * Draws a dashed per-car guiding line over the track when the guidance overlay
+ * is enabled.
+ *
+ * Team 0 (blue) lines sit on the inner-lane side and Team 1 (red) lines sit on
+ * the outer-lane side. In multi-car packs each car receives its own line so
+ * the host can anchor every agent independently. The lines are drawn before
+ * car bodies because this helper runs inside the track-drawing pass.
  *
  * @param ctx - 2D rendering context.
- * @param trackRenderGeometry - Cached spline-derived track geometry.
- * @param transform - World-to-canvas transform.
+ * @param spec - Frozen track geometry.
+ * @param transform - World-to-canvas affine transform.
  * @param guidanceAlpha - Overlay alpha in [0, 1].
+ * @param envState - Current environment snapshot (resolves the car roster).
+ * @param overlayFrame - Optional packed team indices from the worker host.
+ * @param focusCarIndex - Index of the focused car used for roster fallback.
  */
-function drawOptimalLineGuidance(
+function drawTeamGuidingLines(
   ctx: CanvasRenderingContext2D,
-  trackRenderGeometry: TrackRenderGeometry,
+  spec: TrackSpec,
   transform: WorldTransform,
   guidanceAlpha: number,
+  envState: EnvironmentState,
+  overlayFrame?: RacingRenderOverlayFrame,
+  focusCarIndex = 0,
 ): void {
   const clampedGuidanceAlpha = Math.max(0, Math.min(1, guidanceAlpha));
 
@@ -730,16 +733,92 @@ function drawOptimalLineGuidance(
     return;
   }
 
+  const renderCars = resolveRenderCars(envState);
+  if (renderCars.length === 0) {
+    return;
+  }
+
+  const firstSplineSample = spec.splineSamples[0];
+  const laneWidthWorld =
+    firstSplineSample?.laneWidthWorld ?? (firstSplineSample?.width ?? 0) / 2;
+  const innerOffsetWorld =
+    firstSplineSample?.innerOffsetWorld ??
+    (firstSplineSample?.width ?? 0) / 2 - laneWidthWorld / 2;
+
   ctx.save();
-  ctx.setLineDash([18, 10]);
-  ctx.strokeStyle = `rgba(${COLOR_GUIDANCE_LINE_RGB}, ${clampedGuidanceAlpha.toFixed(3)})`;
-  ctx.lineWidth = 2.1;
-  ctx.shadowColor = `rgba(${COLOR_GUIDANCE_LINE_RGB}, ${Math.min(0.75, clampedGuidanceAlpha + 0.1).toFixed(3)})`;
-  ctx.shadowBlur = 12;
-  traceClosedSamplePath(ctx, trackRenderGeometry.centerlinePoints, transform);
-  ctx.stroke();
+  ctx.setLineDash([12, 8]);
+  ctx.lineWidth = 2.0;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  for (const [carIndex, renderCar] of renderCars.entries()) {
+    const teamIndex = resolveRenderCarTeamIndex(
+      overlayFrame,
+      envState,
+      renderCar,
+      carIndex,
+      focusCarIndex,
+    );
+    const lateralOffsetWorld =
+      teamIndex === 0 ? innerOffsetWorld : -innerOffsetWorld;
+    const rgbColor =
+      teamIndex === 0
+        ? COLOR_GUIDING_LINE_TEAM_A_RGB
+        : COLOR_GUIDING_LINE_TEAM_B_RGB;
+
+    drawGuidingLinePath(
+      ctx,
+      buildGuidingLineForTeam(spec, teamIndex, lateralOffsetWorld),
+      transform,
+      rgbColor,
+      clampedGuidanceAlpha,
+    );
+  }
+
   ctx.setLineDash([]);
   ctx.restore();
+}
+
+/**
+ * Traces and strokes one guiding line path with the requested team color.
+ *
+ * @param ctx - 2D rendering context.
+ * @param worldPoints - Ordered world-space guiding points.
+ * @param transform - World-to-canvas affine transform.
+ * @param rgbColor - RGB color string without alpha wrapper.
+ * @param alpha - Stroke alpha in [0, 1].
+ */
+function drawGuidingLinePath(
+  ctx: CanvasRenderingContext2D,
+  worldPoints: readonly { readonly x: number; readonly y: number }[],
+  transform: WorldTransform,
+  rgbColor: string,
+  alpha: number,
+): void {
+  if (worldPoints.length === 0) {
+    return;
+  }
+
+  const firstPoint = worldPoints[0];
+  if (firstPoint === undefined) {
+    return;
+  }
+
+  ctx.strokeStyle = `rgba(${rgbColor}, ${alpha.toFixed(3)})`;
+  ctx.shadowColor = `rgba(${rgbColor}, ${Math.min(0.75, alpha + 0.1).toFixed(3)})`;
+  ctx.shadowBlur = 10;
+
+  ctx.beginPath();
+  const firstCanvasPoint = toCanvas(firstPoint.x, firstPoint.y, transform);
+  ctx.moveTo(firstCanvasPoint.x, firstCanvasPoint.y);
+
+  for (const worldPoint of worldPoints.slice(1)) {
+    const canvasPoint = toCanvas(worldPoint.x, worldPoint.y, transform);
+    ctx.lineTo(canvasPoint.x, canvasPoint.y);
+  }
+
+  ctx.closePath();
+  ctx.stroke();
 }
 
 /**
@@ -873,101 +952,6 @@ function traceClosedWorldPath(
 }
 
 /**
- * Traces the sampled centerline path.
- *
- * @param ctx - 2D rendering context.
- * @param centerlinePoints - Ordered sampled centerline points.
- * @param transform - World-to-canvas affine transform.
- */
-function traceClosedSamplePath(
-  ctx: CanvasRenderingContext2D,
-  centerlinePoints: readonly TrackSamplePoint[],
-  transform: WorldTransform,
-): void {
-  const [firstPoint] = centerlinePoints;
-  if (firstPoint === undefined) {
-    return;
-  }
-
-  const firstCanvasPoint = toCanvas(firstPoint.x, firstPoint.y, transform);
-  ctx.beginPath();
-  ctx.moveTo(firstCanvasPoint.x, firstCanvasPoint.y);
-
-  for (const samplePoint of centerlinePoints.slice(1)) {
-    const canvasPoint = toCanvas(samplePoint.x, samplePoint.y, transform);
-    ctx.lineTo(canvasPoint.x, canvasPoint.y);
-  }
-
-  ctx.closePath();
-}
-
-/**
- * Draws the fading tire-mark trail behind the car.
- *
- * Each mark fades from `COLOR_TIRE_MARK_MAX_ALPHA` to fully transparent as
- * its age increases toward `TIRE_MARK_MAX_AGE_TICKS`.
- *
- * @param ctx - 2D rendering context.
- * @param marks - Tire mark list from the render state.
- * @param transform - World-to-canvas transform.
- */
-function drawTireMarks(
-  ctx: CanvasRenderingContext2D,
-  marks: readonly TireMark[],
-  transform: WorldTransform,
-): void {
-  if (marks.length < 2) {
-    return;
-  }
-
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-
-  for (let markIndex = 1; markIndex < marks.length; markIndex++) {
-    const previousMark = marks[markIndex - 1]!;
-    const currentMark = marks[markIndex]!;
-    const remainingRatio =
-      1 - Math.max(previousMark.age, currentMark.age) / TIRE_MARK_MAX_AGE_TICKS;
-    const alpha = remainingRatio * COLOR_TIRE_MARK_MAX_ALPHA;
-    if (alpha <= 0) {
-      continue;
-    }
-
-    const previousCanvasPos = toCanvas(
-      previousMark.worldX,
-      previousMark.worldY,
-      transform,
-    );
-    const currentCanvasPos = toCanvas(
-      currentMark.worldX,
-      currentMark.worldY,
-      transform,
-    );
-
-    ctx.beginPath();
-    ctx.moveTo(previousCanvasPos.x, previousCanvasPos.y);
-    ctx.lineTo(currentCanvasPos.x, currentCanvasPos.y);
-    ctx.strokeStyle = `rgba(${COLOR_TIRE_MARK_GLOW_RGB}, ${(alpha * 0.62).toFixed(3)})`;
-    ctx.lineWidth = 4.2;
-    ctx.shadowColor = `rgba(${COLOR_TIRE_MARK_GLOW_RGB}, ${(alpha * 0.9).toFixed(3)})`;
-    ctx.shadowBlur = 7;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(previousCanvasPos.x, previousCanvasPos.y);
-    ctx.lineTo(currentCanvasPos.x, currentCanvasPos.y);
-    ctx.strokeStyle = `rgba(${COLOR_TIRE_MARK_CORE_RGB}, ${alpha.toFixed(3)})`;
-    ctx.lineWidth = 1.7;
-    ctx.shadowBlur = 0;
-    ctx.stroke();
-  }
-
-  ctx.restore();
-}
-
-/**
  * Draws the car as a square outline with a neon-white front bumper and
  * forward headlight projection.
  *
@@ -1026,7 +1010,7 @@ function drawCar(
 
   // Glow behind car body.
   ctx.shadowColor = carOutlineColor;
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 6;
 
   // Car body — team-colored square outline when pits are active.
   ctx.beginPath();
@@ -1191,7 +1175,7 @@ function drawCar(
   ctx.strokeStyle = COLOR_FRONT_BUMPER;
   ctx.lineWidth = 1.9;
   ctx.shadowColor = COLOR_FRONT_BUMPER;
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = 6;
   ctx.stroke();
 
   // Crisp bumper pass over the diffuse bloom to keep the front edge readable.
@@ -1214,17 +1198,22 @@ function drawCar(
  * @returns Canvas pixel coordinates.
  */
 /**
- * Draws the Tier 4 pit entrance and stall overlays.
+ * Draws the Tier 4 / Tier 5 pit entrance and stall overlays.
  *
- * `pitStatus` uses the packed tuple `[teamA_car, teamA_ticks, teamB_car,
- * teamB_ticks]`. A positive tick count marks that team's pit as occupied and
- * causes both the stall and entrance corridor AABB to render with the occupied
- * fill overlay.
+ * `pitStatus` uses a packed tuple whose layout depends on the car count:
+ * - 4-car packs (Tier 3–4): `[teamA_car, teamA_ticks, teamB_car, teamB_ticks]`
+ *   with stride 2 per team.
+ * - 6-car packs (Tier 5): `[teamA_car, teamA_ticks, teamA_waiting, teamB_car,
+ *   teamB_ticks, teamB_waiting]` with stride 3 per team.
+ *
+ * In both layouts a positive tick count at offset 1 within a team's slot marks
+ * that team's pit as occupied, causing both the stall and entrance corridor
+ * AABB to render with the occupied fill overlay.
  *
  * @param ctx - 2D rendering context.
  * @param spec - Frozen track geometry.
  * @param transform - World-to-canvas affine transform.
- * @param pitStatus - Optional packed pit-status tuple.
+ * @param pitStatus - Optional packed pit-status tuple (4 or 6 elements).
  */
 function drawPitOverlays(
   ctx: CanvasRenderingContext2D,
@@ -1243,7 +1232,10 @@ function drawPitOverlays(
 
     const teamColor =
       pitBox.teamIndex === 0 ? COLOR_PIT_TEAM_A : COLOR_PIT_TEAM_B;
-    const occupiedTicks = pitStatus?.[pitBox.teamIndex * 2 + 1] ?? 0;
+    // Pit-status stride is 2 for 4-car packs (Tier 3–4) and 3 for 6-car packs
+    // (Tier 5). The tick counter is always at offset 1 within each team's slot.
+    const pitStride = (pitStatus?.length ?? 0) >= 6 ? 3 : 2;
+    const occupiedTicks = pitStatus?.[pitBox.teamIndex * pitStride + 1] ?? 0;
     const pitBoxCenter = pitBox.boxCenter ?? {
       x: pitBox.entranceCorridor.x + pitBox.entranceCorridor.width / 2,
       y: pitBox.entranceCorridor.y + pitBox.entranceCorridor.height / 2,
@@ -1812,11 +1804,24 @@ function resolveRenderCarTeamIndex(
 /**
  * Resolves the pit palette color for the supplied team index.
  *
- * @param teamIndex - Team index (`0 = Team A`, `1 = Team B`).
+ * @param teamIndex - Team index (`0 = blue team`, `1 = red team`).
  * @returns Team pit color used by both pit overlays and car outlines.
  */
 function resolveTeamPitColor(teamIndex: 0 | 1): string {
   return teamIndex === 0 ? COLOR_PIT_TEAM_A : COLOR_PIT_TEAM_B;
+}
+
+/**
+ * Resolves the car-body palette color for the supplied team index.
+ *
+ * When pit visuals are disabled the renderer still needs a team-colored
+ * outline so the Tier 1/Tier 2 blue/red baseline remains visible.
+ *
+ * @param teamIndex - Team index (`0 = blue team`, `1 = red team`).
+ * @returns Team car-body color used when pits are not rendered.
+ */
+function resolveTeamCarColor(teamIndex: 0 | 1): string {
+  return teamIndex === 0 ? COLOR_CAR_BODY_TEAM_A : COLOR_CAR_BODY_TEAM_B;
 }
 
 /**

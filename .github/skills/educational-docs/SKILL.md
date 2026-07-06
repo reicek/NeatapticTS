@@ -1,9 +1,13 @@
 ---
 name: educational-docs
-description: 'Turn JSDoc and source comments into world-class educational documentation for generated README surfaces and hand-written docs. Use when a module README feels dry, a public API needs stronger explanation, or a docs pass needs Mermaid diagrams, compliant external references, or Wikimedia-safe visuals.'
+description: 'Use when: turning JSDoc/source comments into READMEs, examples, or guides.'
 argument-hint: 'Describe the target folder or public surface, the intended reader, and whether you need tone shaping, source mapping, Mermaid diagrams, citations, or Wikimedia-safe media.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - docs-academic-citation-audit
+  - updating-js-docs
+  - auditing-js-docs
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -104,6 +108,10 @@ better teaching choice.
   and the license obligations can be satisfied.
 - A `solid-split` step has just completed and the touched boundary now needs a
   focused educational-docs follow-up pass.
+
+## When NOT to use
+
+Do NOT use for citation auditing - use `docs-academic-citation-audit` instead. Do NOT use for JSDoc auditing - use `auditing-js-docs` instead.
 
 ## Companion Workflow Input
 
@@ -605,6 +613,48 @@ textual, reviewable, and close to the code they explain.
 
 For diagram selection, syntax caveats, and validation guidance, use
 [Mermaid diagram playbook](./assets/mermaid-diagram-playbook.md).
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Read source JSDoc" → "Read nearest README"; "Read nearest README" → "Map source to README"; "Map source to README" → "Improve JSDoc"; "Improve JSDoc" → "Add Mermaid/citations"; "Add Mermaid/citations" → "Regenerate docs"; "Regenerate docs" → "Inspect output"; "Inspect output" → "Report changes"; "Report changes".
+```
+
+## Decision Tree
+
+```text
+Flowchart summary: "Docs work needed" → "What kind?"; "What kind?" → "Use auditing-js-docs" (JSDoc quality audit), "Use updating-js-docs" (Update existing JSDoc), "Use educational-docs" (Educational rewrite), "Use docs-academic-citation-audit" (Citation check); "Use auditing-js-docs"; "Use updating-js-docs"; "Use educational-docs"; "Use docs-academic-citation-audit".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```ts
+/** Build a network. */
+export function buildMLP(config: MLPConfig): Network { ... }
+```
+
+**After:**
+
+````ts
+/**
+ * Build a multi-layer perceptron with configurable hidden layers.
+ *
+ * Implements the feedforward MLP architecture described in
+ * [Multi-layer perceptron (Wikipedia)](https://en.wikipedia.org/wiki/Multilayer_perceptron).
+ *
+ * @param config - Partial config; all fields have defaults
+ * @returns A Network ready for activation
+ * @throws Error when units < 1 or hiddenLayers is empty
+ *
+ * @example
+ * ```ts
+ * const net = buildMLP({ hiddenLayers: [4, 4] });
+ * ```
+ */
+export function buildMLP(config?: Partial<MLPConfig>): Network { ... }
+````
 
 ## Guardrails
 

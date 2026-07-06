@@ -21,8 +21,7 @@ function summarizeHydratedTemporalExtensionBag(network: Network): {
   recurrentKinds: string[];
 } {
   const hydratedExtensions = Reflect.get(network, '_serializedExtensions') as
-    | NetworkJSON['extensions']
-    | undefined;
+    NetworkJSON['extensions'] | undefined;
   const extensionValues = hydratedExtensions?.values as
     | {
         recurrentModules?: Array<{ kind?: string }>;

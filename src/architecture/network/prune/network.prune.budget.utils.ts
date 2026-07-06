@@ -530,8 +530,7 @@ function resolveDeniedGrowthBackoffWindow(
  * @returns Triggered soft-budget details when one environment is over budget.
  */
 function resolveTriggeredSoftBudgetState():
-  | TriggeredSoftBudgetState
-  | undefined {
+  TriggeredSoftBudgetState | undefined {
   const memoryConfig = defaultMemoryManager.getConfig();
   const environmentMetrics = captureEnvironmentMetrics();
 

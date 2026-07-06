@@ -22,17 +22,14 @@ describe('benchmark release gates', () => {
               scenario: 'nodePool-forward-parity',
             },
           ],
-          generatedAt: '2026-05-10T00:00:00.000Z',
           passed: true,
         },
-        generatedAt: '2026-05-10T00:00:00.000Z',
         history: [
           {
             commit: 'abc1234',
             distBundle: {
               hash: 'deadbeef1234',
             },
-            generatedAt: '2026-05-09T00:00:00.000Z',
             summary: [
               {
                 bytesPerConnMean: 64,
@@ -49,7 +46,6 @@ describe('benchmark release gates', () => {
             distBundle: {
               hash: 'feedface5678',
             },
-            generatedAt: '2026-05-10T00:00:00.000Z',
             summary: [
               {
                 bytesPerConnMean: 64,
@@ -108,17 +104,14 @@ describe('benchmark release gates', () => {
               scenario: 'nodePool-forward-parity',
             },
           ],
-          generatedAt: '2026-05-10T00:00:00.000Z',
           passed: true,
         },
-        generatedAt: '2026-05-10T00:00:00.000Z',
         history: [
           {
             commit: 'abc1234',
             distBundle: {
               hash: 'deadbeef1234',
             },
-            generatedAt: '2026-05-09T00:00:00.000Z',
             summary: [
               {
                 bytesPerConnMean: 64,
@@ -131,7 +124,6 @@ describe('benchmark release gates', () => {
             distBundle: {
               hash: 'feedface5678',
             },
-            generatedAt: '2026-05-10T00:00:00.000Z',
             summary: [
               {
                 bytesPerConnMean: 70,
@@ -185,14 +177,12 @@ describe('benchmark release gates', () => {
             size: 100000,
           },
         ],
-        generatedAt: '2026-05-10T00:00:00.000Z',
         history: [
           {
             commit: 'abc1234',
             distBundle: {
               hash: 'deadbeef1234',
             },
-            generatedAt: '2026-05-09T00:00:00.000Z',
             summary: [
               {
                 bytesPerConnMean: 64,
@@ -205,7 +195,6 @@ describe('benchmark release gates', () => {
             distBundle: {
               hash: 'feedface5678',
             },
-            generatedAt: '2026-05-10T00:00:00.000Z',
             summary: [
               {
                 bytesPerConnMean: 64,
@@ -266,14 +255,11 @@ describe('benchmark release gates', () => {
               scenario: 'nodePool-forward-parity',
             },
           ],
-          generatedAt: '2026-05-10T00:00:00.000Z',
           passed: true,
         },
-        generatedAt: '2026-05-10T00:00:00.000Z',
         history: [
           {
             commit: 'abc1234',
-            generatedAt: '2026-05-09T00:00:00.000Z',
             summary: [
               {
                 bytesPerConnMean: 64,
@@ -283,7 +269,6 @@ describe('benchmark release gates', () => {
           },
           {
             commit: 'def5678',
-            generatedAt: '2026-05-10T00:00:00.000Z',
             summary: [
               {
                 bytesPerConnMean: 64,

@@ -17,18 +17,18 @@ import {
   matchesQueryExpectation,
   aggregateMetrics,
   aggregateByClass,
-} from '../../semantic-index/eval-metrics.mjs';
+} from '../../../rag-index/eval-metrics.mjs';
 import {
   storeBaseline,
   loadBaseline,
   compareToBaseline,
-} from '../../semantic-index/eval-baseline.mjs';
+} from '../../../rag-index/eval-baseline.mjs';
 import {
   wilcoxonSignedRankTest,
   compareResults,
   alphaSweep,
   normalCdf,
-} from '../../semantic-index/eval-compare.mjs';
+} from '../../../rag-index/eval-compare.mjs';
 import {
   validateQuerySchema,
   runEval,
@@ -39,12 +39,12 @@ import {
   resolveSearchFn,
   runAllConditions,
   DEFAULT_QUERY_FILE_PATH,
-} from '../../semantic-index/eval-runner.mjs';
+} from '../../../rag-index/eval-runner.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const runnerPath = path.resolve(
   __dirname,
-  '../../semantic-index/eval-runner.mjs',
+  '../../../rag-index/eval-runner.mjs',
 );
 
 afterEach(() => {
@@ -148,7 +148,12 @@ describe('eval-baseline coverage', () => {
   });
 
   afterEach(async () => {
-    await rm(tempDir, { recursive: true, force: true });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
   });
 
   it('throws when storeBaseline is missing a baseline id', async () => {
@@ -334,7 +339,12 @@ describe('eval-runner coverage', () => {
     consoleErrorSpy.mockRestore();
     process.exitCode = undefined;
     delete process.env.EVAL_FORCE_SYNTHETIC;
-    await rm(tempDir, { recursive: true, force: true });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
   });
 
   it('validates a well-formed query', () => {
@@ -611,7 +621,12 @@ describe('eval-runner remaining coverage', () => {
   });
 
   afterEach(async () => {
-    await rm(tempDir, { recursive: true, force: true });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
     delete process.env.EVAL_FORCE_SYNTHETIC;
   });
 
@@ -646,6 +661,10 @@ describe('eval-runner remaining coverage', () => {
       alpha: 0.5,
       limit: 10,
       contextBudget: 4096,
+      compact: true,
+      read_top_result: true,
+      auto_fallback: true,
+      include_code_only: false,
     });
   });
 
@@ -733,7 +752,12 @@ describe('eval-coverage extra', () => {
   });
 
   afterEach(async () => {
-    await rm(tempDir, { recursive: true, force: true });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 200,
+    });
     tempDir = await mkdtemp(path.join(process.cwd(), '.test-extra-'));
     process.exitCode = 0;
     delete process.env.EVAL_FORCE_SYNTHETIC;

@@ -13,7 +13,7 @@ Shared type contracts for the browser-based network canvas renderer.
 
 These types define the generic layout, positioning, and scene contracts
 that any demo or external user can implement. Demo-specific overlays
-(Flappy input bands, ASCII Maze labels, etc.) are injected as optional
+(input-group label bands, layer labels, etc.) are injected as optional
 callback hooks rather than baked into this core layer.
 
 ### EdgePadding
@@ -39,8 +39,8 @@ topology, layout, and legend when the network payload changes.
 
 Optional hook functions that demos can use to inject custom overlays.
 
-Flappy Bird injects input-group label bands and per-input descriptions.
-ASCII Maze could inject custom layer labels, or leave hooks undefined.
+A consumer can inject input-group label bands and per-input descriptions,
+or custom layer labels, or leave hooks undefined.
 
 ### PositionedNetworkNode
 

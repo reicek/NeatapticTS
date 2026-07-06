@@ -9,36 +9,15 @@
  */
 
 // ---------------------------------------------------------------------------
-// Locally-defined interface — keeps TypeScript happy without implementing the
-// feature. Dynamic import path is assigned to a runtime string so ts-jest
-// cannot statically resolve it (same pattern as simulation-worker.tier3.test.ts).
+// Type imports from the evolution protocol contract
 // ---------------------------------------------------------------------------
 
-/** Phase labels for the worker-authoritative evolution FSM. */
-type RacingWorkerPhase =
-  | 'idle'
-  | 'initialised'
-  | 'generation-ready'
-  | 'racing'
-  | 'stopped';
-
-type EvolutionProtocolState = {
-  readonly phase: RacingWorkerPhase;
-};
-
-type RacingWorkerInboundMessage =
-  | { type: 'init'; populationSize: number; rngSeed: number; tier: number }
-  | { type: 'request-generation' }
-  | { type: 'start-race'; tierConfig: unknown; opponentSnapshotId: string }
-  | { type: 'request-race-step'; requestId: string; stepsToAdvance: number }
-  | { type: 'stop' };
-
-type EvolutionProtocolRouteResult = {
-  readonly nextState: EvolutionProtocolState;
-  readonly response?: unknown;
-  /** Populated when the message is rejected in the current phase. */
-  readonly error?: string;
-};
+import type {
+  EvolutionProtocolState,
+  RacingWorkerInboundMessage,
+  GenerationReadyResponse,
+  EvolutionProtocolRouteResult,
+} from './simulation-worker.evolution.types';
 
 interface EvolutionProtocolService {
   /** Returns the canonical starting state: phase = 'idle'. */
@@ -78,6 +57,40 @@ describe('simulation worker evolution protocol FSM', () => {
 
       // Assert
       expect(result.error).toBeDefined();
+    });
+  });
+
+  describe('request-generation in initialised phase', () => {
+    it('returns a generation-ready response when request-generation is routed', async () => {
+      // Arrange
+      const service = await loadEvolutionProtocolService();
+      const initialisedState: EvolutionProtocolState = { phase: 'initialised' };
+
+      // Act
+      const result = service.routeRacingWorkerProtocolMessage(
+        { type: 'request-generation' },
+        initialisedState,
+      );
+      const response = result.response as GenerationReadyResponse | undefined;
+
+      // Assert
+      expect(response?.type).toBe('generation-ready');
+    });
+
+    it('includes a non-empty transfer list in the generation-ready response', async () => {
+      // Arrange
+      const service = await loadEvolutionProtocolService();
+      const initialisedState: EvolutionProtocolState = { phase: 'initialised' };
+
+      // Act
+      const result = service.routeRacingWorkerProtocolMessage(
+        { type: 'request-generation' },
+        initialisedState,
+      );
+      const response = result.response as GenerationReadyResponse | undefined;
+
+      // Assert
+      expect(response?.transferList?.length ?? 0).toBeGreaterThan(0);
     });
   });
 

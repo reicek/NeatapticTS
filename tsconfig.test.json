@@ -14,14 +14,20 @@
     "allowImportingTsExtensions": true,
     // Allow importing from src with relative paths
     "allowJs": false,
-    "noEmit": false
+    "noEmit": false,
+    // Resolve package-level `neataptic` imports to the root source entry during tests.
+    "paths": {
+      "neataptic": ["src/neataptic.ts"]
+    }
   },
   "include": [
     "src/**/*.ts",
     "testing/jest-setup.ts",
+    "testing/**/*.test.ts",
     "benchmarks/**/*.ts",
     "examples/**/*.ts",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "rag-index/**/*.ts"
   ],
   "exclude": ["dist", "node_modules"]
 }

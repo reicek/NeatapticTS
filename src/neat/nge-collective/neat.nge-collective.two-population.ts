@@ -10,11 +10,11 @@ import {
   addOpponentSnapshot,
 } from './neat.nge-collective.metrics';
 
-/** Number of cars evaluated in the Phase 3 two-vs-two scaffold. */
+/** Number of agents evaluated in the Phase 3 two-vs-two scaffold. */
 const TWO_POPULATION_AGENT_COUNT = 4;
-/** Number of cars per team in the Phase 3 scaffold. */
+/** Number of agents per team in the Phase 3 scaffold. */
 const TEAM_AGENT_COUNT = 2;
-/** Number of teammate-radio channels available per car. */
+/** Number of teammate-radio channels available per agent. */
 const TWO_POPULATION_RADIO_CHANNEL_COUNT = 7;
 /** Default opponent snapshot capacity retained per team. */
 const DEFAULT_OPPONENT_SNAPSHOT_CAPACITY = 10;
@@ -48,13 +48,13 @@ export interface TeamScopedState {
 }
 
 /**
- * Shared scaffold for the smallest honest 2v2 race-pack harness.
+ * Shared scaffold for the smallest honest 2v2 episode-pack harness.
  *
  * The harness keeps two isolated `TeamScopedState` objects plus one shared
  * `CollectiveEvaluationContext`. That context binds four agent slots to a
  * 28-float stigmergy field laid out as 4 rows × 7 channels, so the evaluation
- * seam can reason about the whole race pack while each team still owns its own
- * evolutionary controller.
+ * seam can reason about the whole episode pack while each team still owns its
+ * own evolutionary controller.
  */
 export interface TwoPopulationHarnessState {
   /** Team A runtime state. */
@@ -63,7 +63,7 @@ export interface TwoPopulationHarnessState {
   readonly teamB: TeamScopedState;
   /** Shared four-slot context bound to the 28-float 2v2 radio field. */
   readonly sharedEvaluationContext: CollectiveEvaluationContext;
-  /** Width of one row in the shared radio field; Phase 3 fixes this at 7 channels per car. */
+  /** Width of one row in the shared radio field; Phase 3 fixes this at 7 channels per agent. */
   readonly radioChannelCount: number;
   /** Total scalar cell count in the shared row-major field; Phase 3 fixes this at 4 × 7 = 28. */
   readonly fieldSize: number;
@@ -73,10 +73,10 @@ export interface TwoPopulationHarnessState {
  * Creates the smallest honest Phase 3 two-population harness.
  *
  * The returned scaffold contains two isolated team controllers plus one shared
- * row-major radio field sized for four cars and seven channels per car
- * (`4 × 7 = 28` floats). The field layout matches the race-pack contract used
- * by the example worker seam: Team A occupies rows `0` and `1`, and Team B
- * occupies rows `2` and `3`.
+ * row-major radio field sized for four agents and seven channels per agent
+ * (`4 × 7 = 28` floats). The field layout matches the episode-pack contract
+ * used by the consumer worker seam: Team A occupies rows `0` and `1`, and
+ * Team B occupies rows `2` and `3`.
  *
  * Aliasing is rejected when `injected.teamA` and `injected.teamB` point to the
  * same `Neat` instance because a two-population harness only makes sense when
@@ -116,7 +116,7 @@ export function createTwoPopulationHarness(
     );
   }
 
-  // Step 2: Resolve the team-local controllers and shared four-car evaluation context.
+  // Step 2: Resolve the team-local controllers and shared four-agent evaluation context.
   const teamAController =
     injected?.teamA ?? new Neat(undefined, undefined, undefined, configA);
   const teamBController =
@@ -149,16 +149,16 @@ export function createTwoPopulationHarness(
 }
 
 /**
- * Produces the Phase 3 evaluation scaffold for one 2v2 race tick.
+ * Produces the Phase 3 evaluation scaffold for one 2v2 episode tick.
  *
- * This helper intentionally stays small: it partitions the shared four-car
- * context into Team A and Team B slices so the surrounding racing example can
+ * This helper intentionally stays small: it partitions the shared four-agent
+ * context into Team A and Team B slices so the surrounding consumer example can
  * exercise the two-population seam without pretending that full game-theory
  * evaluation already exists. Richer payoff shaping, opponent modeling, and
  * role-specialized coevolution stay Phase 4+ concerns.
  *
  * @param harness - Active two-population harness.
- * @param raceState - Current race state propagated to the placeholder results.
+ * @param episodeState - Current episode state propagated to the placeholder results.
  * @returns Distinct Team A and Team B result slices aligned to the shared four-slot pack.
  * @example
  * ```ts
@@ -171,12 +171,12 @@ export function createTwoPopulationHarness(
  */
 export function runTwoTeamEvaluationTick(
   harness: TwoPopulationHarnessState,
-  raceState: unknown,
+  episodeState: unknown,
 ): {
   readonly teamA: readonly unknown[];
   readonly teamB: readonly unknown[];
 } {
-  // Step 1: Partition the four-car scaffold into the two Team A and two Team B slots.
+  // Step 1: Partition the four-agent scaffold into the two Team A and two Team B slots.
   const teamBoundaryIndex =
     harness.sharedEvaluationContext.agentCount / TEAM_AGENT_COUNT;
   const teamAResults = Array.from(
@@ -184,7 +184,7 @@ export function runTwoTeamEvaluationTick(
     (_unusedValue, teamOffset) => ({
       team: 'A',
       agentIndex: teamOffset,
-      raceState,
+      episodeState,
     }),
   );
   const teamBResults = Array.from(
@@ -192,7 +192,7 @@ export function runTwoTeamEvaluationTick(
     (_unusedValue, teamOffset) => ({
       team: 'B',
       agentIndex: teamOffset + teamBoundaryIndex,
-      raceState,
+      episodeState,
     }),
   );
 
@@ -207,7 +207,7 @@ export function runTwoTeamEvaluationTick(
  *
  * The barrier is **shared**: a generation increment for either team — and any
  * mutation of either team's `opponentSnapshotPool` — is suppressed until **both**
- * teams have produced results for the completed shared race. An empty result
+ * teams have produced results for the completed shared episode. An empty result
  * slice on either side means "the shared evaluation has not finished," not
  * "advance with zero fitness." This invariant keeps the rolling rival archive
  * aligned to the same generation tick on both sides, which is the smallest
@@ -220,12 +220,12 @@ export function runTwoTeamEvaluationTick(
  * invariant and the deep-clone immutability contract.
  *
  * Transport-neutral by design: this function does not depend on packed
- * `race-step` frames, transfer lists, or worker topology. Those details are
+ * `episode-step` frames, transfer lists, or worker topology. Those details are
  * deferred to Phase 4 transport normalization.
  *
  * @param harness - Active two-population harness.
- * @param resultsA - Team A evaluation results for the completed race.
- * @param resultsB - Team B evaluation results for the completed race.
+ * @param resultsA - Team A evaluation results for the completed episode.
+ * @param resultsB - Team B evaluation results for the completed episode.
  *
  * @example
  * ```ts

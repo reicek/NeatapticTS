@@ -1,9 +1,13 @@
 ---
 name: plan-alignment
-description: 'Select the smallest useful subset of plan documents, preserve roadmap terminology and constraints, and align implementation work to the intended architectural direction without loading unnecessary plan context.'
+description: 'Use when: selecting or aligning plan documents and roadmap terminology.'
 argument-hint: 'Describe the architectural task, trigger phrases, suspected subsystem, whether core NEAT correctness is involved, and any known plan files or roadmap tensions.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - plan-sync-validation
+  - tracker-handoff
+  - planning-acceptance-criteria
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -29,6 +33,16 @@ shape, status markers, compression, and `Handoff query` structure.
 - The task may span two related initiatives and needs bounded plan context.
 - A demo or example symptom may actually indicate a higher-leverage library/API
   or runtime-contract gap.
+
+## When NOT to use
+
+Do NOT use for consistency checking or sync validation - use `plan-sync-validation` instead. Do NOT use for tracker updates - use `tracker-handoff` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "User request" → "Search plan files"; "Search plan files" → "Read roadmap"; "Read roadmap" → "Match trigger phrases"; "Match trigger phrases" → "Plan found?"; "Plan found?" → "Check alignment" (Yes), "Create new plan" (No); "Check alignment" → "Aligned?"; "Create new plan"; "Aligned?" → "Proceed" (Yes), "Update plan" (No); "Proceed"; "Update plan" → "Proceed".
+```
 
 ## Task Packet
 
@@ -67,6 +81,16 @@ Goal: identify the primary plan file and any roadmap mismatch risks.
 8. For demo-driven tasks, determine whether the symptom reveals a reusable
    library/API/defaults gap and align the recommendation there first.
 
+## No Deferred Cleanup — Alignment Check
+
+When aligning implementation work to a plan, verify that any migration,
+refactor, or API replacement step removes old code in the same step. A plan
+that introduces new code alongside old code — with backward-compatibility
+wrappers, dual-path code, or deferred cleanup — is a planning defect and
+MUST be flagged as a mismatch before implementation proceeds. The alignment
+brief MUST call out this risk explicitly when the plan touches migration or
+replacement work.
+
 ## Responsibility Split
 
 Use this boundary intentionally:
@@ -89,6 +113,32 @@ Useful handoff fields from `Plan Scout`:
 
 This handoff narrows the implementation pass. It does not replace the actual
 alignment workflow.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Implementation task" → "Plan file obvious?"; "Plan file obvious?" → "Read that plan + roadmap check" (Yes, single plan), "Search plans/README.md triggers" (No, unclear); "Read that plan + roadmap check" → "Proceed with minimal context"; "Search plans/README.md triggers" → "1 plan match?"; "Proceed with minimal context"; "1 plan match?" → "Read that plan + roadmap check" (Yes), "Read 1 primary + 1 adjacent only" (No, multiple); "Read 1 primary + 1 adjacent only" → "Proceed with minimal context".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+# context overflow: reading 5 plan files before starting
+Read: neat.plans.md, multithread.plans.md, worker.plans.md,
+      checkpoint.plans.md, reproducibility.plans.md
+→ 40K tokens consumed, 4 of 5 plans irrelevant
+```
+
+**After:**
+
+```text
+# targeted: 1 plan + roadmap lane check
+Read: plans/Turnkey_Multithread_Evaluation_API.md
+Check: plans/Roadmap.md Phase 4 lane
+→ 8K tokens consumed, aligned to correct direction
+```
 
 ## Guardrails
 

@@ -2,6 +2,8 @@
 
 > Extracted from `plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md` (Step 03) for permanent reference.
 
+> **Backing database.** The Repo Cortex is backed by a single consolidated Turso (libSQL) database accessed via the fully async `@libsql/client` driver (default local embedded replica `data/turso-replica.sqlite`; cloud primary `libsql://<db>.turso.io`). Vectors use native Turso vectors with `F8_BLOB` 8-bit quantization, approximate nearest neighbor search runs server-side via DiskANN (`libsql_vector_idx`, `vector_top_k()`), and hybrid ranking is performed SQL-side via Reciprocal Rank Fusion (RRF, k=60). The historical design content below describes the pre-Turso architecture that was subsequently migrated to this stack.
+
 Design for query intent classification with routing to appropriate retrieval strategies.
 
 #### Step 03 — Design query classification and routing architecture [DONE]
@@ -697,7 +699,7 @@ No changes to the existing `chunks`, `embeddings`, or `chunk_metadata` tables. C
 
 2. **Local-first**: Classification runs entirely in-process. No external API calls, no model downloads, no network dependencies.
 
-3. **No schema changes to corpus or embeddings databases**: The `classification_logs` table is a separate database (or separate table in `semantic-index.sqlite`). The corpus and embeddings databases are not modified.
+3. **No schema changes to corpus or embeddings databases**: The `classification_logs` table is a separate database (or separate table in the consolidated Turso database). The corpus and embeddings tables are not modified.
 
 4. **Backward compatible**: `search_corpus` without `query_class` or `classification_hints` behaves identically to its current behavior (fixed α=0.5, no family filter).
 

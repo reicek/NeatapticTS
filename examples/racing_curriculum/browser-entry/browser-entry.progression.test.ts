@@ -49,6 +49,12 @@ describe('racing curriculum steering and tier progression', () => {
   });
 
   describe('createCurriculumEpisodeState', () => {
+    it('starts Tier 1 with a two-car 1v1 pack so both team guiding lines render', () => {
+      const episodeState = createCurriculumEpisodeState(1);
+
+      expect(episodeState.envState.cars?.length ?? 0).toBe(2);
+    });
+
     it('expands Tier 4 to the four-car grid on the large track bucket', () => {
       const episodeState = createCurriculumEpisodeState(4);
 

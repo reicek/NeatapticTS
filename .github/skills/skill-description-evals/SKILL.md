@@ -1,9 +1,13 @@
 ---
 name: skill-description-evals
-description: 'Design and grade trigger evals for NeatapticTS Agent Skill and custom agent descriptions. Use when testing should-trigger and should-not-trigger queries, preventing broad false positives, or optimizing descriptions under the 1024-character limit.'
+description: 'Use when: designing or grading trigger evals for skill/agent descriptions.'
 argument-hint: 'Name the skill or agent, describe expected trigger scope, and provide observed trigger results or planned eval queries.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - skill-frontmatter-standards
+  - skill-output-evals
+  - agent-frontmatter-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,16 @@ This skill designs and grades trigger evaluation sets for NeatapticTS skill and 
 - Optimizing a description that is approaching the 1024-character Agent Skills limit.
 - Building initial eval coverage for a newly created skill or agent before it goes live.
 - Preparing evidence that a description change improved precision without reducing recall.
+
+## When NOT to use
+
+Do NOT use for output evaluation - use `skill-output-evals` instead. Do NOT use for frontmatter validation - use `skill-frontmatter-standards` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Skill description" → "Run eval"; "Run eval" → "Pass?"; "Pass?" → "Done" (Yes), "Failure category?" (No); "Done"; "Failure category?" → "Add specificity" (Too vague), "Add when-to-use" (Missing use case), "Trim to 1024 chars" (Too long); "Add specificity" → "Re-run eval"; "Add when-to-use" → "Re-run eval"; "Trim to 1024 chars" → "Re-run eval"; "Re-run eval" → "Pass?".
+```
 
 ## Task Packet
 
@@ -44,6 +58,26 @@ Eval mode: <train-only | train+validation split>
 7. Revise the description based on failure patterns; avoid adding exact failed-query keywords as one-off fixes.
 8. Keep the revised description under 1024 characters.
 9. Record trigger rates and failure categories in the active plan.
+
+## Before/After Description Examples
+
+**Before (vague):**
+
+```yaml
+description: 'Helps with tests.'
+```
+
+**After (specific):**
+
+```yaml
+description: 'Run focused Jest slices for specific source boundaries. Use when validating a code change with the nearest test file, not for full suite runs.'
+```
+
+## Decision Tree: Failure Categories
+
+```text
+Flowchart summary: "Eval failed" → "Why?"; "Why?" → "Add use-case trigger" (No 'Use when' trigger), "Add specificity: name target, action, scope" (Description too generic), "Compress description" (Exceeds 1024 chars), "Add argument-hint" (No argument-hint); "Add use-case trigger"; "Add specificity: name target, action, scope"; "Compress description"; "Add argument-hint".
+```
 
 ## Guardrails
 

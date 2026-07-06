@@ -1,9 +1,12 @@
 import {
+  NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
   NGE_JUVENILE_DEFAULT_EPISODIC_HIT_RATE_THRESHOLD,
   NGE_JUVENILE_DEFAULT_FOCUS_WEIGHTS,
   NGE_JUVENILE_DEFAULT_GAIN_STABILITY_TOLERANCE,
   NGE_JUVENILE_DEFAULT_GAIN_STABILITY_WINDOW,
   NGE_JUVENILE_DEFAULT_HYSTERESIS_WINDOW_COUNT,
+  NGE_JUVENILE_DEFAULT_NODE_ADDITION_COUNT,
+  NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR,
   NGE_JUVENILE_DEFAULT_RECURRENT_REFRESH_FLOOR,
 } from './neat.nge-juvenile.constants';
 import { minMaxNormalize } from './neat.nge-juvenile.utils';
@@ -17,8 +20,20 @@ import type {
 /**
  * Resolve a partial juvenile focus config against the seeded plan defaults.
  *
+ * Any omitted field falls back to a conservative default, so callers can tune
+ * one knob at a time without re-declaring the whole packet.
+ *
  * @param partial - Partial config whose omitted fields should resolve conservatively.
  * @returns A fully resolved config packet ready for deterministic focus scoring.
+ *
+ * @example
+ * ```ts
+ * const config = resolveFocusConfig({
+ *   hysteresisWindowCount: 5,
+ *   focusWeights: { w_u: 0.5, w_r: 0.3, w_n: 0.1, w_s: 0.1, w_c: 0.2 },
+ * });
+ * console.log(config.cooldownWindowCount); // 5 (mirrors hysteresisWindowCount)
+ * ```
  */
 export function resolveFocusConfig(
   partial: Partial<NgeJuvenilePhaseConfig>,
@@ -46,6 +61,14 @@ export function resolveFocusConfig(
       partial.gainStabilityTolerance ??
       NGE_JUVENILE_DEFAULT_GAIN_STABILITY_TOLERANCE,
     windowIndex: partial.windowIndex ?? 0,
+    nodeGrowthSignalFloor:
+      partial.nodeGrowthSignalFloor ??
+      NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR,
+    nodeAdditionCount:
+      partial.nodeAdditionCount ?? NGE_JUVENILE_DEFAULT_NODE_ADDITION_COUNT,
+    edgeDensificationCount:
+      partial.edgeDensificationCount ??
+      NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
   };
 }
 
@@ -55,9 +78,26 @@ export function resolveFocusConfig(
  * The score math is deterministic for a fixed snapshot and config. The `computedAt`
  * field is metadata only and must not participate in any deterministic fingerprint.
  *
+ * Each metric column is min-max normalized independently so mixed units stay
+ * comparable. Raw weighted scores are then softmax-normalized into a
+ * probability-like allocation shelf, following the standard temperature-free
+ * softmax over a discrete option set.
+ *
  * @param snapshots - Module metrics observed in the active evaluation slice.
  * @param config - Partial or fully resolved juvenile focus configuration.
  * @returns A focus vector carrying raw and normalized module scores.
+ *
+ * @example
+ * ```ts
+ * const vector = computeFocusScores([
+ *   { moduleId: 'policy', utilization: 0.8, rewardDelta: 0.2, novelty: 0.1, stabilityAge: 0.5, wiringCost: 0.3 },
+ *   { moduleId: 'value', utilization: 0.4, rewardDelta: 0.1, novelty: 0.0, stabilityAge: 0.9, wiringCost: 0.1 },
+ * ], {});
+ * console.log(vector.scores.map((s) => s.normalizedScore).reduce((a, b) => a + b, 0)); // 1
+ * ```
+ *
+ * @see [Softmax function (Wikipedia)](https://en.wikipedia.org/wiki/Softmax_function)
+ *   for the normalization mapping.
  */
 export function computeFocusScores(
   snapshots: readonly NgeModuleMetricsSnapshot[],
@@ -142,17 +182,30 @@ export function computeFocusScores(
     phaseConfig: NgeJuvenilePhaseConfig,
   ): NgeFocusScore {
     const { focusWeights } = phaseConfig;
+    const normalizedUtilization = normalizedColumns.utilization[snapshotIndex];
+    const normalizedRewardDelta = normalizedColumns.rewardDelta[snapshotIndex];
+    const normalizedNovelty = normalizedColumns.novelty[snapshotIndex];
+    const normalizedStabilityAge =
+      normalizedColumns.stabilityAge[snapshotIndex];
+    const normalizedWiringCost = normalizedColumns.wiringCost[snapshotIndex];
+
     const rawScore =
-      focusWeights.w_u * normalizedColumns.utilization[snapshotIndex] +
-      focusWeights.w_r * normalizedColumns.rewardDelta[snapshotIndex] +
-      focusWeights.w_n * normalizedColumns.novelty[snapshotIndex] +
-      focusWeights.w_s * normalizedColumns.stabilityAge[snapshotIndex] -
-      focusWeights.w_c * normalizedColumns.wiringCost[snapshotIndex];
+      focusWeights.w_u * normalizedUtilization +
+      focusWeights.w_r * normalizedRewardDelta +
+      focusWeights.w_n * normalizedNovelty +
+      focusWeights.w_s * normalizedStabilityAge -
+      focusWeights.w_c * normalizedWiringCost;
 
     return {
       moduleId: snapshot.moduleId,
       rawScore,
       normalizedScore: 0,
+      supportsGrowth: rawScore > 0,
+      normalizedUtilization,
+      normalizedRewardDelta,
+      normalizedNovelty,
+      normalizedStabilityAge,
+      normalizedWiringCost,
     };
   }
 

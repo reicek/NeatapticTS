@@ -1,14 +1,14 @@
 ---
-description: 'Use when mapping worker payload shapes, structured clone constraints, transfer-list boundaries, SharedArrayBuffer eligibility, fast-path blockers, or deciding whether a worker serialization issue belongs to worker-inference-transport. Keywords: worker payload, transport, structured clone, transfer list, SharedArrayBuffer, workerUrl, inference IR, postMessage.'
+description: 'Scout for worker payload shapes, transfer lists, and serialization.'
 name: 'worker-payload-scout'
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
     execute,
-    neataptic-cortex-mcp/*,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -17,6 +17,10 @@ user-invocable: false
 agents: []
 skills: ['worker-inference-transport']
 ---
+
+## Purpose
+
+Use when mapping worker payload shapes, structured clone constraints, transfer-list boundaries, SharedArrayBuffer eligibility, fast-path blockers, or deciding whether a worker serialization issue belongs to worker-inference-transport. Keywords: worker payload, transport, structured clone, transfer list, SharedArrayBuffer, workerUrl, inference IR, postMessage.
 
 ## Mission
 
@@ -43,16 +47,16 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+1. Before manual file reads, follow the Cortex-First Search Policy (`research-methodology` skill):
 
-   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
-   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
-   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
-   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
-   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
-   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
-   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
-   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - `cortex({ operation: 'freshness_check' })` — verify index currency.
+   - `cortex({ operation: 'search_corpus' })` — BM25 + dense hybrid search for broad discovery.
+   - `cortex({ operation: 'search_advanced' })` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `cortex({ operation: 'search_context' })` — token-budgeted context window.
+   - `cortex({ operation: 'load_chunk' })` — load full chunk content by ID.
+   - `cortex({ operation: 'load_document' })` — load all chunks for a file path.
+   - `cortex({ operation: 'traverse_graph' })` — entity/dependency graph traversal.
+   - `cortex({ operation: 'expand_query' })` — domain-aware query expansion.
    - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
 
    If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
@@ -75,6 +79,15 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - Example: If a README says "worker pool size is 4", ignore; if it says "payload is transferred via SharedArrayBuffer", include.
 6. **Summarize the active payload rung, the blocker, and the smallest useful handoff into `worker-inference-transport`.**
    - Example: "Active rung: transferable payload via postMessage. Blocker: fallback to JSON not implemented for legacy browsers. Handoff: worker-inference-transport must add JSON fallback."
+
+## Worker Payload Classification Patterns
+
+- **Structured clone constraints:** Verify payload fields are structured-clone-compatible (primitives, typed arrays, Maps, Sets, plain objects). Flag functions, Symbols, class instances, and DOM types as non-transferable.
+- **Transfer-list boundaries:** Identify which `ArrayBuffer` instances can be transferred (zero-copy) vs copied. Verify the transfer list matches the payload's ArrayBuffer fields. Flag missed transfer opportunities.
+- **SharedArrayBuffer eligibility:** Check whether the payload could use `SharedArrayBuffer` for shared memory. Verify the runtime supports it (COOP/COEP headers required in browser).
+- **Fast-path blockers:** Identify payload fields that force slow serialization (class instances with custom prototypes, circular references, large nested objects). Flag these as fast-path blockers.
+- **Worker URL pattern:** Verify the `workerUrl` configuration matches the expected bundle format (ESM, IIFE, or classic). Mismatched formats cause worker startup failures.
+- **Inference IR shape:** Verify the inference intermediate representation (IR) payload matches the worker's expected schema. Flag schema version mismatches.
 
 ## If Blocked
 

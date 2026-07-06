@@ -36,9 +36,9 @@ specialists:
   - 'slice-orchestration-scheduler'
 
 search-policy:
-  broad-discovery: 'neataptic-cortex-mcp: search_corpus (BM25 corpus index, preferred for plan and step-packet queries)'
+  broad-discovery: 'cortex: search_corpus (BM25 corpus index, preferred for plan and step-packet queries)'
   exact-match: 'grep_search or file_search (for exact slice_id, status markers, or plan file paths)'
-  freshness-gate: 'neataptic-cortex-mcp: freshness_check — required before broad discovery when session follows corpus-changing work'
+  freshness-gate: 'cortex: freshness_check — required before broad discovery when session follows corpus-changing work'
   fallback: 'semantic_search + grep_search when Cortex MCP is unavailable or freshness_check reports stale index'
   residual-gap: 'invoke repo-cortex-scout after task if index was stale and could not be rebuilt mid-task'
 

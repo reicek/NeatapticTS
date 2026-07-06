@@ -21,6 +21,7 @@ import type {
 import type { SplineSample, TrackSpec } from '../track/track.generator.types';
 import {
   TRACK_SPLINE_SAMPLES_PER_SEGMENT,
+  resolveInnerLaneCenterlinePoint,
   resolveSplineSampleFrame,
 } from '../track/track.spline.utils';
 
@@ -248,14 +249,18 @@ function resolveProjectedTargetPoint(
     trackSpec.splineSamples,
     targetSplineSample.globalIndex,
   );
+  const innerLaneCenterlinePoint = resolveInnerLaneCenterlinePoint(
+    targetSplineSample,
+    targetSplineSampleFrame,
+  );
 
   return {
     x:
-      targetSplineSample.x +
+      innerLaneCenterlinePoint.x +
       Math.cos(targetSplineSampleFrame.tangentHeadingRadians) *
         SCRIPTED_TARGET_PROJECTION_DISTANCE_WORLD,
     y:
-      targetSplineSample.y +
+      innerLaneCenterlinePoint.y +
       Math.sin(targetSplineSampleFrame.tangentHeadingRadians) *
         SCRIPTED_TARGET_PROJECTION_DISTANCE_WORLD,
   };

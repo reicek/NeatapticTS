@@ -107,9 +107,8 @@ const strictTier2StructuredFields = [
 ];
 const strictAllowedModels = new Set([
   'glm-5.2:cloud (ollama)',
-  'glm-5.2:cloud (ollama)',
-  'glm-5.2:cloud (ollama)',
   'anthropic/claude-sonnet-4-20250514',
+  'kimi-k2.7-code:cloud',
 ]);
 
 if (options.help) {
@@ -417,7 +416,8 @@ function validateGlobalAgentRules(agents, { strict }) {
 function isQualifiedModel(model) {
   return (
     typeof model === 'string' &&
-    /^[A-Za-z0-9 .:_-]+ \([A-Za-z0-9 ._-]+\)$/.test(model)
+    (/^[A-Za-z0-9 .:_-]+ \([A-Za-z0-9 ._-]+\)$/.test(model) ||
+      strictAllowedModels.has(model))
   );
 }
 
@@ -426,7 +426,7 @@ function usesOnlyAllowedModels(model) {
 }
 
 function hasOutputContract(body) {
-  return /(^|\n)(## Output Format|Return:|Return only:)/.test(body);
+  return /(^|\n)(## Output [Ff]ormat|Return:|Return only:)/.test(body);
 }
 
 function resolveStructuredPromptContract(agent) {

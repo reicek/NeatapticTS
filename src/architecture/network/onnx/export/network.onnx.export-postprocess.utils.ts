@@ -129,10 +129,7 @@ type SharedInitializerAliasRecord = {
   aliasTensorName: string;
   canonicalTensorName: string;
   initializerKind:
-    | 'dense_weight'
-    | 'dense_bias'
-    | 'per_neuron_weight'
-    | 'per_neuron_bias';
+    'dense_weight' | 'dense_bias' | 'per_neuron_weight' | 'per_neuron_bias';
 };
 
 /**

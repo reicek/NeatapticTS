@@ -1,9 +1,13 @@
 ---
 name: updating-skill-frontmatter
-description: 'Use when: updating SKILL.md YAML frontmatter, names, descriptions, argument hints, user-invocable flags, compatibility notes, or resource links.'
+description: 'Use when: updating SKILL.md frontmatter, names, descriptions, or hints.'
 argument-hint: 'Name the skill folder, frontmatter fields to update, desired trigger scope, visibility decision, and validation command.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - skill-frontmatter-standards
+  - skill-description-evals
+  - agent-frontmatter-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,16 @@ This skill makes safe, targeted edits to YAML frontmatter in existing `.github/s
 - Fixing a `name` mismatch between the field value and the folder name.
 - Updating compatibility notes or local resource links after a skill refactor.
 - Preparing a skill for a trigger eval pass by stabilizing its description first.
+
+## When NOT to use
+
+Do NOT use for agent frontmatter updates - use `updating-agent-frontmatter` instead. Do NOT use for skill validation - use `skill-frontmatter-standards` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Read SKILL.md" → "Identify fields to update"; "Identify fields to update" → "Apply changes"; "Apply changes" → "Validate with skill-frontmatter-standards"; "Validate with skill-frontmatter-standards" → "Pass?"; "Pass?" → "Done" (Yes), "Fix validation errors" (No); "Done"; "Fix validation errors" → "Validate with skill-frontmatter-standards".
+```
 
 ## Task Packet
 
@@ -45,6 +59,42 @@ Validate with: node scripts/agent-customization/validate-skill-frontmatter.mjs -
 7. Run `node scripts/agent-customization/validate-skill-frontmatter.mjs --json --strict` after the edit.
 8. If the description changed significantly, flag the skill for a trigger eval pass using `skill-description-evals`.
 9. Record skill files changed, trigger-scope decision, validation evidence, and any follow-up eval needs in the active plan.
+
+## Why Each Field Matters
+
+Skill frontmatter fields control discoverability and invocation. The `name` must match the folder name for routing. The `description` is the trigger phrase - if it lacks a clear "Use when" clause, the skill wont be invoked when needed. The `user-invocable` flag controls whether users see the skill. The `argument-hint` shapes how tasks are framed. A wrong value in any field can make a skill invisible or incorrectly invoked.
+
+## Before/After Frontmatter Examples
+
+**Before (incomplete):**
+
+```yaml
+---
+name: my-skill
+description: Helps with things
+---
+```
+
+**After (complete):**
+
+```yaml
+---
+name: my-skill
+description: Use when: validating X for Y boundary. Provides Z with defaults.
+argument-hint: Name the target file and validation mode.
+user-invocable: false
+disable-model-invocation: false
+skills:
+  - related-skill-1
+  - related-skill-2
+---
+```
+
+## Decision Tree
+
+```text
+Flowchart summary: "Frontmatter field to update" → "Which field?"; "Which field?" → "Update name + folder + all references, then run routing-table:gate" (name), "Keep under 1024 chars, flag for trigger eval" (description), "Verify each skill exists, run validate-skill-frontmatter" (skills), "Update task-shaping text, run validator" (argument-hint), "Toggle visibility, confirm intended audience" (user-invocable); "Update name + folder + all references, then run routing-table:gate"; "Keep under 1024 chars, flag for trigger eval"; "Verify each skill exists, run validate-skill-frontmatter"; "Update task-shaping text, run validator"; "Toggle visibility, confirm intended audience".
+```
 
 ## Guardrails
 

@@ -43,6 +43,8 @@ const PIT_CORRIDOR_HEIGHT = 12;
 const PIT_BOX_OFFSET_MULTIPLIER = 1.25;
 /** Fraction of track width used to push the corridor center away from the racing line. */
 const PIT_CORRIDOR_CENTERLINE_OFFSET_MULTIPLIER = 0.5;
+/** Default number of drivable lanes generated for a racing layout. */
+const DEFAULT_LANE_COUNT = 2;
 
 /**
  * Generates a deterministic closed-loop `TrackSpec` from the given seed,
@@ -105,7 +107,9 @@ export function generateTrack(input: TrackGeneratorInput): TrackSpec {
       width: roundTrackGeometry(baseWidth * widthMultiplier),
     };
   });
-  const splineSamples = buildTrackSplineSamples(segments);
+  const laneCount = DEFAULT_LANE_COUNT;
+  const laneWidthWorld = (segments[0]?.width ?? 0) / laneCount;
+  const splineSamples = buildTrackSplineSamples(segments, laneCount);
   const pitBoxes = buildPitBoxes(splineSamples);
   const spec = {
     seed: input.seed,
@@ -114,6 +118,8 @@ export function generateTrack(input: TrackGeneratorInput): TrackSpec {
     segments,
     splineSamples,
     pitBoxes,
+    laneCount,
+    laneWidthWorld,
   };
 
   validateTrackSpec(spec);
@@ -212,7 +218,8 @@ function buildPitBoxes(
 ): readonly TrackPitBox[] {
   return ALTERNATING_PIT_PROGRESS_SAMPLES.map((pitProgress, pitIndex) => {
     const teamIndex = (pitIndex % 2) as 0 | 1;
-    const normalDirection = teamIndex === 0 ? 1 : -1;
+    const normalDirection = (Math.floor(pitIndex / 2) % 2 === 0 ? 1 : -1) as
+      1 | -1;
 
     return buildPitBoxForTeam(
       teamIndex,

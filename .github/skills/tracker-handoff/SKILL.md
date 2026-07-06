@@ -1,9 +1,14 @@
 ---
 name: tracker-handoff
-description: 'Use when: standardizing NeatapticTS `.plans.md` or `.logs.md` trackers, including creating or refreshing active trackers, compressing completed history, managing `[PLANNED]`/`[WIP]`/`[DONE]`, handling intentional parallel lanes, archiving closed tracker pairs in `plans/completed/`, or updating a reusable `Handoff query` for safe session continuation.'
+description: 'Use when: standardizing plan/log trackers and handoff blocks.'
 argument-hint: 'Describe the tracker path, active vs closed intent, single-lane or parallel-lane state, history to compress, validations required, and what the next session must resume safely.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - plan-sync-validation
+  - plan-alignment
+  - summarizing-session-log
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -23,6 +28,10 @@ Other skills may decide **when** a tracker should change, but they should defer
 the tracker shape itself to this skill instead of redefining status markers,
 handoff layout, compression policy, or archive conventions ad hoc.
 
+## When NOT to use
+
+Do NOT use for non-durable tracking like scratch notes or temporary buffers. Do NOT use for session logs - use `summarizing-session-log` instead.
+
 ## When To Use
 
 - A `.plans.md` file needs to be created, rewritten, compressed, or updated.
@@ -37,6 +46,12 @@ handoff layout, compression policy, or archive conventions ad hoc.
 - A workstream truly needs parallel active lanes and the tracker must represent
   them intentionally instead of drifting into multiple accidental `[WIP]`
   branches.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Tracker state" → "Active or closing?"; "Active or closing?" → "Update WIP section" (Active), "Compress to DONE" (Closing); "Update WIP section" → "Refresh handoff query"; "Compress to DONE" → "Create .logs.md"; "Refresh handoff query" → "Run sync gates"; "Create .logs.md" → "Move to plans/completed/"; "Run sync gates"; "Move to plans/completed/" → "Run sync gates".
+```
 
 ## Task Packet
 
@@ -183,6 +198,24 @@ note before authoring the next phase's step packets or closing the workstream.
   `07.tracker-closure`) validates this requirement.
 - Do not advance to the next phase or close the workstream until the gate
   evidence is recorded in `VALIDATION_EVIDENCE`.
+
+### Phase Compression Policy
+
+When all steps in a phase are marked `[DONE]` and green validation has passed,
+the orchestrator MUST dispatch `07-logging` to compress the completed phase
+before advancing to the next phase. Compression means:
+
+1. Move detailed step/slice/VALIDATION_EVIDENCE blocks from the plan file to
+   the corresponding `.logs.md` file.
+2. Replace the detailed content in the plan file with a compact `[DONE]`
+   marker and a reference to the logs file.
+3. Keep the phase header, goal, and status as `[DONE]` in the plan file.
+
+This keeps plan files lean and focused on active work. Plan files should never
+carry verbose `[DONE]` phase details — those belong in logs.
+
+Skipping phase compression is a workflow violation. The orchestrator must not
+advance to the next phase until compression is complete.
 
 ### Completion Closure Rule
 
@@ -353,6 +386,33 @@ For `.logs.md` files, prefer:
 4. no active TODO list unless the file is intentionally dual-purpose
 5. the same boundary as the closed `.plans.md` file whenever the workstream is
    complete
+
+## Decision Tree
+
+```text
+Flowchart summary: "Tracker action" → "Tracker state?"; "Tracker state?" → "Refresh WIP + Handoff query" (Active, work ongoing), "Compress to DONE + create .logs.md" (All phases complete), "Reopen: move back or new tracker" (Archived, needs new work); "Refresh WIP + Handoff query" → "Run sync gates"; "Compress to DONE + create .logs.md" → "Move pair to plans/completed/"; "Reopen: move back or new tracker" → "Add fresh Handoff query"; "Run sync gates"; "Move pair to plans/completed/"; "Add fresh Handoff query".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+## Step 3: Implemented mutation
+Ran command: npx jest --testPathPattern=src/neat/mutation
+Output: PASS 42 tests, 0 failures
+Coverage: 100% 100% 100% 100%
+Took 3.2 seconds
+Also fixed the import in line 15
+And renamed the helper function
+Then ran lint, all passed
+```
+
+**After:**
+
+```text
+[DONE] Step 3: Implemented mutation, coverage gate passed.
+```
 
 ## Guardrails
 

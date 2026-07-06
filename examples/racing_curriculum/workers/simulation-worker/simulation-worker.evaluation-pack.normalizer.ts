@@ -2,9 +2,23 @@
  * Racing evaluation-pack normalizer (Layer 3 wrapper around Layer 2 generic pack).
  *
  * Provides the benchmark-local `populateRacingFrame` seam that consumes a core
- * `DeterministicEvaluationPack` and produces a `RacingRenderFrame`.  Also exposes
+ * `DeterministicEvaluationPack` and produces a `RacingRenderFrame`. Also exposes
  * thin racing-specific helpers for transfer-list resolution and schema-version
  * assertion that delegate to the generic Layer 2 contracts.
+ *
+ * The generic pack is intentionally transport-neutral: it only promises
+ * determinism for the tuple `(seed, agentCount, schemaVersion)`. The racing
+ * wrapper adds the benchmark-local reproducibility tuple
+ * `(seed, agentCount, packSchemaVersion, opponentSnapshot, trackId, featureFlags)`.
+ * Same full tuple → identical `RacingRenderFrame` on the same runtime. This
+ * preserves Layer 2 reuse while letting racing own its own frame format and
+ * lifecycle.
+ *
+ * Array mapping invariant: the generic pack exposes `[agentStates,
+ * agentWeights, agentActive]` in that order. The racing wrapper maps these
+ * deterministically to `carX`, `carY`, `carHeading`, `carActive`, and
+ * `carTeam` using pure functions, so the same source arrays always produce the
+ * same frame fields.
  *
  * @module simulation-worker.evaluation-pack.normalizer
  */
@@ -35,8 +49,14 @@ export type RacingEvaluationConfig = {
  * Populates a `RacingRenderFrame` from a generic deterministic evaluation pack
  * and racing-specific configuration.
  *
- * Same core pack + same racing configuration → identical racing frame on the
- * same runtime (Level 2 ordered-deterministic).
+ * Racing reproducibility tuple:
+ * `(seed, agentCount, packSchemaVersion, opponentSnapshot, trackId, featureFlags)`.
+ * Same tuple → identical racing frame on the same runtime.
+ *
+ * The deterministic array mapping is: `agentStates → carX/carHeading`,
+ * `agentWeights → carY`, `agentActive → carActive/carTeam`. Because the mapping
+ * uses pure functions (copy constructors and modulo), the same generic pack and
+ * racing configuration always produce the same frame fields.
  *
  * @param pack - Generic deterministic evaluation pack from Layer 2.
  * @param racingConfig - Racing-specific frame inputs.
@@ -124,10 +144,19 @@ export function populateRacingFrame(
  *
  * Delegates to the racing-specific transfer-list resolver so the Layer 3
  * normalizer and the existing snapshot utilities share the same zero-copy
- * ownership contract.
+ * ownership contract. The transfer list follows the HTML structured-clone
+ * transferables contract consumed by Web Workers; for background see MDN Web
+ * Docs,
+ * [Transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects_from_one_worker_to_another).
  *
  * @param frame - Packed racing render frame.
  * @returns Ordered list of distinct `ArrayBuffer` references.
+ *
+ * @example
+ * ```ts
+ * const transferList = resolveRacingTransferList(frame);
+ * worker.postMessage({ type: 'render', frame }, transferList);
+ * ```
  */
 export function resolveRacingTransferList(
   frame: RacingRenderFrame,
@@ -138,6 +167,13 @@ export function resolveRacingTransferList(
 /**
  * Asserts that the incoming generic pack's schema version matches the racing
  * configuration's expected version.
+ *
+ * This is the racing-specific wrapper around the generic
+ * `assertSchemaVersion` boundary guard. Rejecting an unexpected version at
+ * the boundary prevents silent misinterpretation of packed bytes. For background
+ * on schema-version sentinels and forward compatibility, see Wikipedia
+ * contributors,
+ * [Forward compatibility](https://en.wikipedia.org/wiki/Forward_compatibility).
  *
  * @param pack - Object with a `schemaVersion` field.
  * @param expectedVersion - Expected schema-version sentinel.
@@ -164,18 +200,10 @@ export function assertRacingPackSchemaVersion(
 // Helpers (below the fold)
 // ---------------------------------------------------------------------------
 
-/**
- * Validates that every typed array in the generic pack has the expected
- * agent-count dimension.
- *
- * Racing frame fields are sized from `racingConfig.agentCount`, so a dimension
- * mismatch would silently corrupt per-car state if it were allowed through.
- *
- * @param pack - Generic deterministic evaluation pack.
- * @param expectedAgentCount - Agent count from the racing configuration.
- * @throws {RangeError} When any pack array length differs from
- *   `expectedAgentCount`.
- */
+// Validates that every typed array in the generic pack has the expected
+// agent-count dimension. Racing frame fields are sized from
+// racingConfig.agentCount, so a dimension mismatch would silently corrupt
+// per-car state if it were allowed through.
 function validatePackAgentCount(
   pack: DeterministicEvaluationPack,
   expectedAgentCount: number,

@@ -1,9 +1,13 @@
 ---
 name: subagent-delegation-patterns
-description: 'Prepare precise subagent task packets for NeatapticTS. Use when deciding between sequential and parallel specialist calls, using runSubagent, assigning hidden agents, limiting tool scope, or validating specialist output contracts.'
+description: 'Use when: preparing or reviewing subagent task packets and delegation.'
 argument-hint: 'Describe the parent phase, specialist needed, task packet, expected output format, and whether calls can run in parallel.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - execute
+  - creating-specialist-agent
+  - splitting-monolithic-agent
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -32,6 +36,16 @@ specialist output before trusting it.
   to be narrowed and retried.
 - A hidden specialist agent is available and assigning it improves coherence or
   cost efficiency.
+
+## When NOT to use
+
+Do NOT use for simple 1-2 read tasks that can be done directly with grep/view. Do NOT use for tasks that dont need delegation at all.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Task to delegate" → "Independent?"; "Independent?" → "Launch in parallel" (Yes), "Sequential dispatch" (No); "Launch in parallel" → "Collect all results"; "Sequential dispatch" → "Wait for each result"; "Collect all results" → "Merge findings"; "Wait for each result" → "Merge findings"; "Merge findings" → "Done"; "Done".
+```
 
 ## Task Packet
 
@@ -73,6 +87,30 @@ Task: <one narrow objective>
 Files or plans: <bounded list>
 Constraints: <read-only/edit/validation limits>
 Return: <exact output fields>
+```
+
+## Parallel vs Sequential Decision Tree
+
+```text
+Flowchart summary: "Multiple sub-tasks" → "Independent?"; "Independent?" → "Parallel: launch all at once" (Yes), "Sequential: wait for each" (No); "Parallel: launch all at once" → "Collect results in order"; "Sequential: wait for each" → "Pass result to next agent"; "Collect results in order" → "Merge"; "Pass result to next agent" → "Merge"; "Merge".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+Task: look into the multithreading stuff and tell me what you find.
+```
+
+**After:**
+
+```text
+Role: boundary-mapper
+Task: identify all public surfaces in src/multithreading that cross the worker boundary
+Files: src/multithreading/**, testing/multithreading/**
+Constraints: read-only; no edits
+Return: list of crossing surfaces with transport type and coverage gaps
 ```
 
 ## Guardrails

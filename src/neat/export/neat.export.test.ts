@@ -1255,7 +1255,7 @@ describe('neat export chapter', () => {
         const extensions: NonNullable<
           Parameters<typeof Neat.importState>[0]['extensions']
         > = {
-          neatchat: {
+          myApp: {
             memoryBankId: 'memory-bank-1',
           },
         };
@@ -2101,7 +2101,7 @@ describe('neat export chapter', () => {
         const extensions: NonNullable<
           Parameters<typeof Neat.importLightState>[0]['extensions']
         > = {
-          neatchat: {
+          myApp: {
             branchId: 'branch-1',
           },
         };

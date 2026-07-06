@@ -1,5 +1,30 @@
 # Releasing NeatapticTS
 
+## Migration: Demo-agnostic public library refactor
+
+A recent refactor removed demo-specific names from the public library surface in `src/`. This is a **breaking change** for any external code that imported the old racing-named GPU module or symbols. No backward-compatibility aliases are provided.
+
+| Old                                                  | New                                                            | Notes                                                                                |
+| ---------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `src/architecture/network/gpu/network.gpu.racing.ts` | `src/architecture/network/gpu/network.gpu.batch-evaluation.ts` | File renamed to describe the actual capability: batch evaluation of networks/agents. |
+| `RacingBatchOptions`                                 | `BatchEvaluationOptions`                                       | Exported options interface.                                                          |
+| `evaluateRacingGeneration`                           | `evaluateBatchGeneration`                                      | Per-generation batch evaluator.                                                      |
+| `RacingAgentRequest`                                 | `AgentEvaluationRequest`                                       | Per-agent evaluation request shape.                                                  |
+| `evaluateConcurrentRacingAgents`                     | `evaluateConcurrentAgents`                                     | Concurrent agent evaluator.                                                          |
+
+Internal-only renames in the two-population NGE collective module also removed racing framing:
+
+- `raceState` → `episodeState`
+- `car` → `agent`
+- `race-pack` → `episode-pack`
+- other `race*` identifiers → `episode*` equivalents
+
+JSDoc across the GPU batch-evaluation module, NGE collective/evolution modules, export helpers, visualization utilities, and worker-payload types was sanitized so generated `src/**/README.md` documentation no longer references `flappy_bird`, `racing_curriculum`, `neatchat`, `asciiMaze`, `ant-hive`, or other demo names. The `examples/` and `docs/browser-tests/` directories keep their demo-specific names by design.
+
+To migrate, update every import and usage from the old racing names to the new batch-evaluation/agent names listed above.
+
+---
+
 This repository provides a small release flow using a dedicated manual pipeline and release-triggered publishers.
 
 Primary workflow used for releases

@@ -91,9 +91,9 @@ TeamFitnessPolicy(
 
 Aggregation policy injected into the reusable team-level evaluator seam.
 
-NGE core owns only the orchestration boundary. Consumers such as racing or
-ant-hive own the scoring policy and can swap it without rewriting the
-evaluator pipeline itself.
+NGE core owns only the orchestration boundary. Consumers such as collective or
+multi-agent benchmarks own the scoring policy and can swap it without rewriting
+the evaluator pipeline itself.
 
 Parameters:
 - `group` - Team-local member results to aggregate.
@@ -135,7 +135,7 @@ graph TD
   D["two-population\nTwoPopulationHarnessState\ncreateTwoPopulationHarness\nadvanceTwoPopulations"] --> B
   D --> C
   E["team-fitness\ncreateTeamFitnessEvaluator\npolicy-injection evaluator seam"]
-  Consumers["Racing · Ant Hive\nbenchmark consumers"] -->|"inject scoring policy"| E
+  Consumers["Benchmark consumers\ncollective · multi-agent"] -->|"inject scoring policy"| E
 ```
 
 ## Sub-modules
@@ -144,8 +144,8 @@ graph TD
 A `Float32Array`-backed 2D grid (`SharedField`) shared across all agents during one
 evaluation tick. Agents write signals with `writeCell` and read them with `readCell`.
 Because the backing array is passed by reference, sequential evaluators within the same
-tick observe each other's writes — exactly the stigmergy contract required by the ant-hive
-and racing benchmarks. Between ticks, `applyDecay` and `applyDiffusion` evolve field
+tick observe each other's writes — exactly the stigmergy contract required by collective
+benchmarks. Between ticks, `applyDecay` and `applyDiffusion` evolve field
 dynamics; `clearField` resets it for the next generation.
 
 ### evaluation
@@ -228,7 +228,7 @@ const harness = createTwoPopulationHarness({}, {});
 advanceTwoPopulations(harness, [{ genomeId: 'a0', fitness: 5 }], [{ genomeId: 'b0', fitness: 4 }]);
 
 // 7. Aggregate team fitness through the shared policy-injection evaluator seam.
-//    Racing and Ant Hive each supply their own policy; NGE core owns the fold structure.
+//    Benchmark consumers supply their own policies; NGE core owns the fold structure.
 const evaluateTeamFitness = createTeamFitnessEvaluator<'team-a', { score: number }>(
   (group) => group.memberResults.reduce((total, member) => total + member.score, 0),
 );
@@ -286,7 +286,7 @@ Advances both team controllers only after the shared generation barrier complete
 
 The barrier is **shared**: a generation increment for either team — and any
 mutation of either team's `opponentSnapshotPool` — is suppressed until **both**
-teams have produced results for the completed shared race. An empty result
+teams have produced results for the completed shared episode. An empty result
 slice on either side means "the shared evaluation has not finished," not
 "advance with zero fitness." This invariant keeps the rolling rival archive
 aligned to the same generation tick on both sides, which is the smallest
@@ -299,13 +299,13 @@ produced through `addOpponentSnapshot`, which preserves the bounded FIFO
 invariant and the deep-clone immutability contract.
 
 Transport-neutral by design: this function does not depend on packed
-`race-step` frames, transfer lists, or worker topology. Those details are
+`episode-step` frames, transfer lists, or worker topology. Those details are
 deferred to Phase 4 transport normalization.
 
 Parameters:
 - `harness` - Active two-population harness.
-- `resultsA` - Team A evaluation results for the completed race.
-- `resultsB` - Team B evaluation results for the completed race.
+- `resultsA` - Team A evaluation results for the completed episode.
+- `resultsB` - Team B evaluation results for the completed episode.
 
 Example:
 
@@ -552,7 +552,7 @@ Build a reusable team-level fitness evaluator for collective benchmarks.
 The returned evaluator preserves the planning seam: NGE core owns the
 orchestration that maps generic team groups into reusable team-fitness
 results, while each benchmark injects its own aggregation policy. That keeps
-racing, ant-hive, and future consumers on one shared evaluator contract
+collective and multi-agent consumers on one shared evaluator contract
 without leaking benchmark-local compensation into the core.
 
 Parameters:
@@ -596,10 +596,10 @@ createTwoPopulationHarness(
 Creates the smallest honest Phase 3 two-population harness.
 
 The returned scaffold contains two isolated team controllers plus one shared
-row-major radio field sized for four cars and seven channels per car
-(`4 × 7 = 28` floats). The field layout matches the race-pack contract used
-by the example worker seam: Team A occupies rows `0` and `1`, and Team B
-occupies rows `2` and `3`.
+row-major radio field sized for four agents and seven channels per agent
+(`4 × 7 = 28` floats). The field layout matches the episode-pack contract
+used by the consumer worker seam: Team A occupies rows `0` and `1`, and
+Team B occupies rows `2` and `3`.
 
 Aliasing is rejected when `injected.teamA` and `injected.teamB` point to the
 same `Neat` instance because a two-population harness only makes sense when
@@ -724,21 +724,21 @@ const result = runCollectiveEvaluationTick(context, [
 ```ts
 runTwoTeamEvaluationTick(
   harness: TwoPopulationHarnessState,
-  raceState: unknown,
+  episodeState: unknown,
 ): { readonly teamA: readonly unknown[]; readonly teamB: readonly unknown[]; }
 ```
 
-Produces the Phase 3 evaluation scaffold for one 2v2 race tick.
+Produces the Phase 3 evaluation scaffold for one 2v2 episode tick.
 
-This helper intentionally stays small: it partitions the shared four-car
-context into Team A and Team B slices so the surrounding racing example can
+This helper intentionally stays small: it partitions the shared four-agent
+context into Team A and Team B slices so the surrounding consumer example can
 exercise the two-population seam without pretending that full game-theory
 evaluation already exists. Richer payoff shaping, opponent modeling, and
 role-specialized coevolution stay Phase 4+ concerns.
 
 Parameters:
 - `harness` - Active two-population harness.
-- `raceState` - Current race state propagated to the placeholder results.
+- `episodeState` - Current episode state propagated to the placeholder results.
 
 Returns: Distinct Team A and Team B result slices aligned to the shared four-slot pack.
 
@@ -776,9 +776,9 @@ TeamFitnessPolicy(
 
 Aggregation policy injected into the reusable team-level evaluator seam.
 
-NGE core owns only the orchestration boundary. Consumers such as racing or
-ant-hive own the scoring policy and can swap it without rewriting the
-evaluator pipeline itself.
+NGE core owns only the orchestration boundary. Consumers such as collective or
+multi-agent benchmarks own the scoring policy and can swap it without rewriting
+the evaluator pipeline itself.
 
 Parameters:
 - `group` - Team-local member results to aggregate.
@@ -819,13 +819,13 @@ teamAState.opponentSnapshotPool.snapshots;
 
 ### TwoPopulationHarnessState
 
-Shared scaffold for the smallest honest 2v2 race-pack harness.
+Shared scaffold for the smallest honest 2v2 episode-pack harness.
 
 The harness keeps two isolated `TeamScopedState` objects plus one shared
 `CollectiveEvaluationContext`. That context binds four agent slots to a
 28-float stigmergy field laid out as 4 rows × 7 channels, so the evaluation
-seam can reason about the whole race pack while each team still owns its own
-evolutionary controller.
+seam can reason about the whole episode pack while each team still owns its
+own evolutionary controller.
 
 ### writeCell
 
@@ -1366,7 +1366,7 @@ Build a reusable team-level fitness evaluator for collective benchmarks.
 The returned evaluator preserves the planning seam: NGE core owns the
 orchestration that maps generic team groups into reusable team-fitness
 results, while each benchmark injects its own aggregation policy. That keeps
-racing, ant-hive, and future consumers on one shared evaluator contract
+collective and multi-agent consumers on one shared evaluator contract
 without leaking benchmark-local compensation into the core.
 
 Parameters:
@@ -1413,7 +1413,7 @@ Advances both team controllers only after the shared generation barrier complete
 
 The barrier is **shared**: a generation increment for either team — and any
 mutation of either team's `opponentSnapshotPool` — is suppressed until **both**
-teams have produced results for the completed shared race. An empty result
+teams have produced results for the completed shared episode. An empty result
 slice on either side means "the shared evaluation has not finished," not
 "advance with zero fitness." This invariant keeps the rolling rival archive
 aligned to the same generation tick on both sides, which is the smallest
@@ -1426,13 +1426,13 @@ produced through `addOpponentSnapshot`, which preserves the bounded FIFO
 invariant and the deep-clone immutability contract.
 
 Transport-neutral by design: this function does not depend on packed
-`race-step` frames, transfer lists, or worker topology. Those details are
+`episode-step` frames, transfer lists, or worker topology. Those details are
 deferred to Phase 4 transport normalization.
 
 Parameters:
 - `harness` - Active two-population harness.
-- `resultsA` - Team A evaluation results for the completed race.
-- `resultsB` - Team B evaluation results for the completed race.
+- `resultsA` - Team A evaluation results for the completed episode.
+- `resultsB` - Team B evaluation results for the completed episode.
 
 Example:
 
@@ -1470,10 +1470,10 @@ createTwoPopulationHarness(
 Creates the smallest honest Phase 3 two-population harness.
 
 The returned scaffold contains two isolated team controllers plus one shared
-row-major radio field sized for four cars and seven channels per car
-(`4 × 7 = 28` floats). The field layout matches the race-pack contract used
-by the example worker seam: Team A occupies rows `0` and `1`, and Team B
-occupies rows `2` and `3`.
+row-major radio field sized for four agents and seven channels per agent
+(`4 × 7 = 28` floats). The field layout matches the episode-pack contract
+used by the consumer worker seam: Team A occupies rows `0` and `1`, and
+Team B occupies rows `2` and `3`.
 
 Aliasing is rejected when `injected.teamA` and `injected.teamB` point to the
 same `Neat` instance because a two-population harness only makes sense when
@@ -1506,21 +1506,21 @@ harness.fieldSize; // 28
 ```ts
 runTwoTeamEvaluationTick(
   harness: TwoPopulationHarnessState,
-  raceState: unknown,
+  episodeState: unknown,
 ): { readonly teamA: readonly unknown[]; readonly teamB: readonly unknown[]; }
 ```
 
-Produces the Phase 3 evaluation scaffold for one 2v2 race tick.
+Produces the Phase 3 evaluation scaffold for one 2v2 episode tick.
 
-This helper intentionally stays small: it partitions the shared four-car
-context into Team A and Team B slices so the surrounding racing example can
+This helper intentionally stays small: it partitions the shared four-agent
+context into Team A and Team B slices so the surrounding consumer example can
 exercise the two-population seam without pretending that full game-theory
 evaluation already exists. Richer payoff shaping, opponent modeling, and
 role-specialized coevolution stay Phase 4+ concerns.
 
 Parameters:
 - `harness` - Active two-population harness.
-- `raceState` - Current race state propagated to the placeholder results.
+- `episodeState` - Current episode state propagated to the placeholder results.
 
 Returns: Distinct Team A and Team B result slices aligned to the shared four-slot pack.
 
@@ -1556,10 +1556,10 @@ teamAState.opponentSnapshotPool.snapshots;
 
 ### TwoPopulationHarnessState
 
-Shared scaffold for the smallest honest 2v2 race-pack harness.
+Shared scaffold for the smallest honest 2v2 episode-pack harness.
 
 The harness keeps two isolated `TeamScopedState` objects plus one shared
 `CollectiveEvaluationContext`. That context binds four agent slots to a
 28-float stigmergy field laid out as 4 rows × 7 channels, so the evaluation
-seam can reason about the whole race pack while each team still owns its own
-evolutionary controller.
+seam can reason about the whole episode pack while each team still owns its
+own evolutionary controller.

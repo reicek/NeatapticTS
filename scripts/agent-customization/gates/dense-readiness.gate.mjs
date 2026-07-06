@@ -5,7 +5,6 @@
  *
  * @param {boolean} [--json] - Emit the standard gate JSON contract.
  * @param {string}  [--database <path>] - Override the corpus database path.
- * @param {string}  [--embeddings-database <path>] - Override the embeddings database path.
  * @param {string}  [--model-directory <path>] - Override the local model directory.
  * @param {string}  [--model-id <id>] - Override the embedding model identifier.
  * @param {boolean} [--help] - Show help and exit.
@@ -17,8 +16,8 @@ import {
   parseCliArgs,
   printHelp,
   writeJsonOrText,
-} from '../../semantic-index/cli-utils.mjs';
-import { checkDenseReadiness } from '../../semantic-index/dense-readiness.mjs';
+} from '../../../rag-index/cli-utils.mjs';
+import { checkDenseReadiness } from '../../../rag-index/dense-readiness.mjs';
 
 const FIX_HINT = 'Run `npm run index:prewarm` to build the embedding index.';
 const OWNER = '01-planning';
@@ -28,7 +27,6 @@ const OWNER = '01-planning';
  *
  * @param {{
  *   corpusDatabasePath?: string,
- *   embeddingsDatabasePath?: string,
  *   modelDirectory?: string,
  *   modelId?: string,
  *   readinessProbe?: (options?: Record<string, unknown>) => Promise<{ state: 'cold' | 'model-only' | 'warm', chunk_count?: number | null, embedding_count?: number | null }>,
@@ -71,7 +69,6 @@ async function main() {
       options: [
         '--json                       Emit the standard gate JSON contract.',
         '--database <path>            Override the semantic-index corpus database path.',
-        '--embeddings-database <p>    Override the embeddings database path.',
         '--model-directory <path>     Override the local dense model directory.',
         '--model-id <id>              Override the embedding model identifier.',
         '--help                       Show this help.',
@@ -82,7 +79,6 @@ async function main() {
 
   const report = await evaluateDenseReadinessGate({
     corpusDatabasePath: args.database,
-    embeddingsDatabasePath: args['embeddings-database'],
     modelDirectory: args['model-directory'],
     modelId: args['model-id'],
   });

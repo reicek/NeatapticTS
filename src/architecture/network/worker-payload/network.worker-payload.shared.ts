@@ -515,8 +515,7 @@ function resolveSharedInferenceBufferLayout(
 function initializeSharedInferenceWorker(
   options: SharedInferenceWorkerOptions,
 ):
-  | InitializedSharedInferenceWorker
-  | Promise<InitializedSharedInferenceWorker> {
+  InitializedSharedInferenceWorker | Promise<InitializedSharedInferenceWorker> {
   const workerSpecifier = resolveInferenceSharedWorkerSpecifier(
     options.workerUrl,
   );
@@ -556,8 +555,7 @@ function resolveBrowserDefaultWorkerPath(
   browserDocument:
     | { currentScript?: { src?: string | null } | null }
     | undefined = globalThis.document as
-    | { currentScript?: { src?: string | null } | null }
-    | undefined,
+    { currentScript?: { src?: string | null } | null } | undefined,
   currentLocationHref: string | undefined = globalThis.location?.href,
 ): string {
   const currentScriptUrl = browserDocument?.currentScript?.src ?? undefined;
@@ -589,8 +587,7 @@ async function createNodeSharedInferenceWorker(
 
 async function loadNodeWorkerThreadsModule(
   builtinModuleResolver: () =>
-    | NodeWorkerThreadsModule
-    | undefined = resolveNodeWorkerThreadsModule,
+    NodeWorkerThreadsModule | undefined = resolveNodeWorkerThreadsModule,
   importFunction: (moduleSpecifier: string) => Promise<unknown> = Function(
     'moduleSpecifier',
     'return import(moduleSpecifier);',
@@ -611,8 +608,7 @@ function resolveNodeWorkerThreadsModule(): NodeWorkerThreadsModule | undefined {
   };
 
   return nodeProcess.getBuiltinModule?.('worker_threads') as
-    | NodeWorkerThreadsModule
-    | undefined;
+    NodeWorkerThreadsModule | undefined;
 }
 
 function resolveNodeSharedWorkerOptions(workerSpecifier: string): {

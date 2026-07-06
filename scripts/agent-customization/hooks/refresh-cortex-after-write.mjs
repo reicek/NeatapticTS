@@ -36,15 +36,15 @@ const substantiveToolPattern =
 const refreshSteps = Object.freeze([
   {
     name: 'build-index',
-    args: ['scripts/semantic-index/build-index.mjs', '--json-health'],
+    args: ['rag-index/build-index.mjs', '--json-health'],
   },
   {
     name: 'build-browser-snapshot',
-    args: ['scripts/semantic-index/build-browser-snapshot.mjs', '--json'],
+    args: ['rag-index/build-browser-snapshot.mjs', '--json'],
   },
   {
     name: 'prewarm-dense',
-    args: ['scripts/semantic-index/prewarm-dense.mjs', '--json'],
+    args: ['rag-index/prewarm-dense.mjs', '--json'],
   },
   {
     name: 'cortex-index-gate',

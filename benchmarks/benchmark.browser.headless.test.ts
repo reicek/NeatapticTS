@@ -331,8 +331,7 @@ describe('browser headless benchmark integration', () => {
       runs[0]?.bench?.asyncBuildComparisons,
     )
       ? (runs[0]?.bench?.asyncBuildComparisons[0] as
-          | { macrotaskHeartbeatCount?: number }
-          | undefined)
+          { macrotaskHeartbeatCount?: number } | undefined)
       : undefined;
 
     expect(

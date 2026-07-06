@@ -1,7 +1,7 @@
 /**
  * Basic smoke tests for the shared network-view renderer.
  *
- * Note: Full browser rendering tests are integrated via Flappy Bird and ASCII Maze demos.
+ * Note: Full browser rendering tests are integrated via the browser-test harness.
  * These tests verify type contracts and basic module structure.
  */
 

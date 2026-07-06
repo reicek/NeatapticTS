@@ -149,7 +149,18 @@ export function createNgeController(
       network.activate(observationVector),
     );
 
-    // Step 3: Map outputs and emit evidence from the same observation seam.
+    // Step 3: In Tier 2, write the radio tail back into the self-radio seam so
+    // the next tick reads it as part of the 77-dimensional observation vector.
+    if (controllerTier === 2) {
+      radioChannel.writeSelf(
+        controllerOutputs.slice(
+          CONTROLLER_OUTPUT_COUNT,
+          CONTROLLER_OUTPUT_COUNT + radioDimension,
+        ),
+      );
+    }
+
+    // Step 4: Map control outputs and emit evidence from the same observation seam.
     return {
       control: {
         throttle: clampControlValue(controllerOutputs[0] ?? 0),
@@ -280,10 +291,15 @@ function resolveSelfMonitoringPayload(
 }
 
 /**
- * Normalizes controller outputs into a two-element array.
+ * Normalizes raw network outputs into a flat, finite array.
+ *
+ * Tier 1 expects at least two control outputs; Tier 2 expects nine outputs
+ * (throttle, steer, plus seven self-radio write channels). The array is
+ * clamped to finite values so downstream splitting stays safe regardless of
+ * network width.
  *
  * @param controllerOutputs - Raw network output.
- * @returns Two-element control vector.
+ * @returns Finite controller output vector.
  */
 function normalizeControllerOutputs(
   controllerOutputs: readonly number[] | number,
@@ -292,8 +308,7 @@ function normalizeControllerOutputs(
     return [controllerOutputs, 0];
   }
 
-  return Array.from({ length: CONTROLLER_OUTPUT_COUNT }, (_, outputIndex) => {
-    const outputValue = controllerOutputs[outputIndex] ?? 0;
+  return controllerOutputs.map((outputValue) => {
     return Number.isFinite(outputValue) ? outputValue : 0;
   });
 }

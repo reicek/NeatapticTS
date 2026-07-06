@@ -56,6 +56,7 @@ drawNetworkVisualization(
   outputSize: number,
   hoverState: NetworkVisualizationHoverState | undefined,
   inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
+  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
 ): NetworkVisualizationPositionedScene
 ```
 
@@ -70,6 +71,8 @@ Parameters:
 - `inputSize` - Input-layer size.
 - `outputSize` - Output-layer size.
 - `hoverState` - Optional host-owned hover state for interactive emphasis.
+- `inputLabelGroupDefinitions` - Optional semantic input-label group definitions.
+- `connectionLayerStyle` - Optional override for connection stroke visibility.
 
 Returns: Positioned node snapshot reused by host-side hover hit testing.
 
@@ -86,6 +89,7 @@ drawPositionedNetworkGraph(
   context: CanvasRenderingContext2D,
   resolvedNetworkVisualizationFrame: NetworkVisualizationResolvedFrame,
   hoverState: NetworkVisualizationHoverState | undefined,
+  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
 ): void
 ```
 
@@ -95,6 +99,7 @@ Parameters:
 - `context` - Canvas 2D drawing context.
 - `resolvedNetworkVisualizationFrame` - Resolved network visualization frame containing positioned scene, connections, and color scales.
 - `hoverState` - Optional host-owned hover state for interactive emphasis.
+- `connectionLayerStyle` - Optional override for connection stroke visibility.
 
 Returns: Nothing.
 
@@ -105,6 +110,7 @@ drawResolvedNetworkVisualization(
   context: CanvasRenderingContext2D,
   resolvedNetworkVisualizationFrame: NetworkVisualizationResolvedFrame,
   hoverState: NetworkVisualizationHoverState | undefined,
+  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
 ): NetworkVisualizationPositionedScene
 ```
 
@@ -117,6 +123,7 @@ Parameters:
 - `context` - Canvas 2D drawing context.
 - `resolvedNetworkVisualizationFrame` - Reusable frame cache.
 - `hoverState` - Optional host-owned hover state for interactive emphasis.
+- `connectionLayerStyle` - Optional override for connection stroke visibility.
 
 Returns: Positioned node snapshot reused by host-side hover hit testing.
 
@@ -491,7 +498,6 @@ Returns: Minimum readable height in pixels.
 ```ts
 shouldHideNetworkOverlays(
   context: CanvasRenderingContext2D,
-  fallbackViewportWidthPx: number,
 ): boolean
 ```
 
@@ -499,7 +505,6 @@ Determines whether responsive rules hide auxiliary network overlays.
 
 Parameters:
 - `context` - Canvas 2D drawing context.
-- `fallbackViewportWidthPx` - Fallback viewport width.
 
 Returns: True when overlays should be hidden.
 

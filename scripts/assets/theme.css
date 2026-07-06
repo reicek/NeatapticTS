@@ -9,13 +9,12 @@
       rgba(4, 9, 20, 0) 78%
     ),
     linear-gradient(180deg, #07111f 0%, #040914 52%, #02050a 100%);
-  --reference-panel-top-glow:
-    radial-gradient(
-      56rem 14rem at 50% 0,
-      rgba(0, 216, 255, 0.06) 0%,
-      rgba(0, 216, 255, 0.025) 44%,
-      rgba(0, 216, 255, 0) 76%
-    );
+  --reference-panel-top-glow: radial-gradient(
+    56rem 14rem at 50% 0,
+    rgba(0, 216, 255, 0.06) 0%,
+    rgba(0, 216, 255, 0.025) 44%,
+    rgba(0, 216, 255, 0) 76%
+  );
   --reference-grid-line: rgba(0, 216, 255, 0.16);
   --reference-grid-glow: rgba(0, 216, 255, 0.08);
   --bg-panel: rgba(5, 12, 22, 0.88);
@@ -44,11 +43,9 @@
   --panel-border-warm: rgba(255, 78, 206, 0.22);
   --panel-line-gap: 7px;
   --panel-glow:
-    0 0 14px rgba(0, 216, 255, 0.12),
-    inset 0 0 18px rgba(0, 216, 255, 0.03);
+    0 0 14px rgba(0, 216, 255, 0.12), inset 0 0 18px rgba(0, 216, 255, 0.03);
   --panel-glow-strong:
-    0 0 18px rgba(0, 216, 255, 0.16),
-    inset 0 0 24px rgba(0, 216, 255, 0.05);
+    0 0 18px rgba(0, 216, 255, 0.16), inset 0 0 24px rgba(0, 216, 255, 0.05);
   --astro-font-family: Consolas, Menlo, Monaco, monospace;
   --astro-button-radius: 10px;
   --astro-button-border: #0fb5ff;
@@ -58,18 +55,17 @@
   --astro-button-selected-background: rgba(255, 92, 255, 0.08);
   --astro-button-rest-shadow: inset 0 0 6px rgba(15, 181, 255, 0.08);
   --astro-button-hover-shadow:
-    0 0 8px rgba(15, 181, 255, 0.72),
-    inset 0 0 10px rgba(0, 229, 255, 0.16);
+    0 0 8px rgba(15, 181, 255, 0.72), inset 0 0 10px rgba(0, 229, 255, 0.16);
   --astro-button-selected-shadow:
-    0 0 6px rgba(255, 92, 255, 0.48),
-    inset 0 0 8px rgba(255, 92, 255, 0.12);
-  --astro-tooltip-background:
-    linear-gradient(180deg, rgba(0, 21, 34, 0.96), rgba(4, 11, 19, 0.99));
+    0 0 6px rgba(255, 92, 255, 0.48), inset 0 0 8px rgba(255, 92, 255, 0.12);
+  --astro-tooltip-background: linear-gradient(
+    180deg,
+    rgba(0, 21, 34, 0.96),
+    rgba(4, 11, 19, 0.99)
+  );
   --astro-tooltip-shadow:
-    0 0 14px rgba(15, 181, 255, 0.34),
-    inset 0 0 12px rgba(15, 181, 255, 0.08);
-  --button-glow:
-    var(--astro-button-rest-shadow);
+    0 0 14px rgba(15, 181, 255, 0.34), inset 0 0 12px rgba(15, 181, 255, 0.08);
+  --button-glow: var(--astro-button-rest-shadow);
   --sidebar-rail-color: rgba(0, 216, 255, 0.72);
   --sidebar-rail-glow: rgba(0, 216, 255, 0.14);
   --sidebar-hover-color: #ffb347;
@@ -120,11 +116,31 @@ body::after {
 }
 body::before {
   background-image:
-    radial-gradient(circle at 26% 12%, rgba(0, 216, 255, 0.4) 0 1px, transparent 1px),
-    radial-gradient(circle at 72% 16%, rgba(255, 78, 206, 0.32) 0 1px, transparent 1px),
-    radial-gradient(circle at 88% 24%, rgba(98, 255, 201, 0.44) 0 1px, transparent 1px),
-    radial-gradient(circle at 14% 66%, rgba(0, 216, 255, 0.24) 0 1px, transparent 1px),
-    radial-gradient(circle at 60% 72%, rgba(255, 78, 206, 0.2) 0 1px, transparent 1px);
+    radial-gradient(
+      circle at 26% 12%,
+      rgba(0, 216, 255, 0.4) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 72% 16%,
+      rgba(255, 78, 206, 0.32) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 88% 24%,
+      rgba(98, 255, 201, 0.44) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 14% 66%,
+      rgba(0, 216, 255, 0.24) 0 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      circle at 60% 72%,
+      rgba(255, 78, 206, 0.2) 0 1px,
+      transparent 1px
+    );
   opacity: 0.78;
 }
 body::after {
@@ -132,7 +148,9 @@ body::after {
   background-image:
     linear-gradient(var(--reference-grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--reference-grid-line) 1px, transparent 1px);
-  background-size: 100% 32px, 120px 100%;
+  background-size:
+    100% 32px,
+    120px 100%;
   border-top: 2px solid rgba(0, 216, 255, 0.6);
   box-shadow: 0 -10px 28px var(--reference-grid-glow);
   opacity: 0.55;
@@ -169,7 +187,11 @@ a:focus-visible {
   justify-content: space-between;
   gap: 20px;
   position: relative;
-  background: linear-gradient(180deg, rgba(9, 19, 33, 0.94), rgba(4, 9, 20, 0.88));
+  background: linear-gradient(
+    180deg,
+    rgba(9, 19, 33, 0.94),
+    rgba(4, 9, 20, 0.88)
+  );
   backdrop-filter: blur(8px);
   border: var(--double-border-soft);
   border-radius: var(--surface-radius);
@@ -626,7 +648,12 @@ a:focus-visible {
 .pipe-nav-item.current .nav-link-label {
   color: var(--sidebar-hover-color);
   text-shadow: 0 0 10px var(--sidebar-hover-glow);
-  background: linear-gradient(90deg, rgba(255, 179, 71, 0.08), rgba(0, 216, 255, 0.04) 76%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 179, 71, 0.08),
+    rgba(0, 216, 255, 0.04) 76%,
+    transparent 100%
+  );
   border-color: rgba(255, 179, 71, 0.46);
 }
 .nav-priority-link .nav-link-label {
@@ -972,7 +999,11 @@ table::before {
   gap: 16px;
   margin-bottom: 22px;
   padding: 24px;
-  background: linear-gradient(180deg, rgba(9, 19, 33, 0.94), rgba(4, 9, 20, 0.88));
+  background: linear-gradient(
+    180deg,
+    rgba(9, 19, 33, 0.94),
+    rgba(4, 9, 20, 0.88)
+  );
   border-radius: var(--surface-radius);
   backdrop-filter: blur(8px);
   box-shadow: var(--panel-glow);

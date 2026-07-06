@@ -1,3 +1,23 @@
+/**
+ * Deterministic owner-local DNA boundary for NGE schema identity and canonical encoding.
+ *
+ * `NGE_DNA` builds and stores the canonical {@link NgeDnaCanonicalEnvelope}.
+ * Its constructor accepts loose input where omitted fields resolve to
+ * deterministic defaults, and it expands input shorthand values into the
+ * canonical envelope shape before serialization.
+ *
+ * ## Shorthand normalization
+ *
+ * The constructor accepts `reproductionPolicy.seedPolicy: 'queen-weighted'` as
+ * a shorthand for the canonical seed-governance object
+ * `{ siblingsDifferBySeed: true, twinsAllowed: false }`. The normalized object
+ * is what the envelope stores, so {@link NGE_DNA.toCanonical | toCanonical()}
+ * and {@link NGE_DNA.serialize | serialize()} always emit the same shape
+ * regardless of how the policy was originally expressed.
+ *
+ * This normalization follows the envelope-normalization contract: core accepts
+ * shorthand values at input and keeps a canonical shape internally.
+ */
 import {
   NGE_DNA_DEFAULT_BUDGET_MAX_EDGES,
   NGE_DNA_DEFAULT_BUDGET_MAX_NODES,
@@ -30,6 +50,8 @@ import type {
   NgeReproductionPolicy,
   NgeRulePass,
   NgeRulePlacement,
+  NgeSeedPolicy,
+  NgeSeedPolicyShorthand,
   NgeSubstrateConfig,
   NgeVirtualModulePlan,
   NgeZonePartitionConfig,
@@ -62,7 +84,8 @@ type NgeDnaConstructorInput = Partial<
   cppnPrograms?: readonly NgeCppnProgramInput[];
   moduleArchetypes?: readonly NgeDnaModuleArchetypeInput[];
   reproductionPolicy?: Partial<Omit<NgeReproductionPolicy, 'seedPolicy'>> & {
-    seedPolicy?: Partial<NgeReproductionPolicy['seedPolicy']>;
+    seedPolicy?:
+      Partial<NgeReproductionPolicy['seedPolicy']> | NgeSeedPolicyShorthand;
   };
   substrate?: NgeSubstrateInput;
   rulePasses?: readonly NgeRulePassInput[];
@@ -91,7 +114,7 @@ const DEFAULT_CPPN_ACTIVATION_KIND: NgeCppnActivationKind = 'linear';
 const DEFAULT_CPPN_NODE_BIAS = 0;
 
 /**
- * Deterministic owner-local DNA boundary for Phase A schema identity and canonical encoding.
+ * Deterministic owner-local DNA boundary for NGE schema identity and canonical encoding.
  */
 export class NGE_DNA {
   #canonicalEnvelope: NgeDnaCanonicalEnvelope;
@@ -270,6 +293,9 @@ function resolveReproductionPolicy(
     siblingsDifferBySeed: DEFAULT_SIBLINGS_DIFFER_BY_SEED,
     twinsAllowed: DEFAULT_TWINS_ALLOWED,
   };
+  const resolvedSeedPolicy = resolveSeedPolicy(
+    reproductionPolicyInput?.seedPolicy,
+  );
 
   return {
     assignedRegionStrategy:
@@ -290,9 +316,18 @@ function resolveReproductionPolicy(
     queenBias: reproductionPolicyInput?.queenBias ?? DEFAULT_QUEEN_BIAS,
     seedPolicy: {
       ...defaultSeedPolicy,
-      ...(reproductionPolicyInput?.seedPolicy ?? {}),
+      ...resolvedSeedPolicy,
     },
   };
+}
+
+function resolveSeedPolicy(
+  seedPolicyInput: Partial<NgeSeedPolicy> | NgeSeedPolicyShorthand | undefined,
+): Partial<NgeSeedPolicy> {
+  if (seedPolicyInput === 'queen-weighted') {
+    return { siblingsDifferBySeed: true, twinsAllowed: false };
+  }
+  return seedPolicyInput ?? {};
 }
 
 function resolveSubstrateConfig(

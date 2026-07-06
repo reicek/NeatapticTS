@@ -1,0 +1,1103 @@
+[
+  {
+    "query_id": "sl-001",
+    "query": "how does NEAT crossover work",
+    "class": "simple_lookup",
+    "difficulty": "easy",
+    "expected_doc_families": ["readme", "plan"],
+    "expected_heading_contains": "crossover",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "crossover", "family": "readme", "grade": 3 },
+      {
+        "heading_path_contains": "crossover",
+        "family": "ts-source",
+        "grade": 2
+      },
+      { "heading_path_contains": "NEAT", "family": "readme", "grade": 1 }
+    ],
+    "notes": "Canonical NEAT crossover lookup."
+  },
+  {
+    "query_id": "sl-002",
+    "query": "Network activate forward pass",
+    "class": "simple_lookup",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source", "readme"],
+    "expected_heading_contains": "activate",
+    "expected_symbol_contains": "activate",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "activate",
+        "family": "ts-source",
+        "grade": 3
+      },
+      { "heading_path_contains": "activate", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Direct symbol lookup."
+  },
+  {
+    "query_id": "sl-003",
+    "query": "speciation compatibility threshold",
+    "class": "simple_lookup",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source", "plan"],
+    "expected_heading_contains": "speciation",
+    "expected_symbol_contains": "speciation",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "speciation",
+        "family": "ts-source",
+        "grade": 3
+      },
+      { "heading_path_contains": "speciation", "family": "readme", "grade": 2 }
+    ],
+    "notes": "NEAT speciation parameter lookup."
+  },
+  {
+    "query_id": "sl-004",
+    "query": "mutation add node connection",
+    "class": "simple_lookup",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source", "readme"],
+    "expected_heading_contains": "mutation",
+    "expected_symbol_contains": "mutate",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "mutation",
+        "family": "ts-source",
+        "grade": 3
+      },
+      { "heading_path_contains": "mutate", "family": "ts-source", "grade": 2 }
+    ],
+    "notes": "NEAT mutation operators."
+  },
+  {
+    "query_id": "sl-005",
+    "query": "checkpoint save resume population",
+    "class": "simple_lookup",
+    "difficulty": "easy",
+    "expected_doc_families": ["plan", "ts-source"],
+    "expected_heading_contains": "checkpoint",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "checkpoint", "family": "plan", "grade": 3 },
+      {
+        "heading_path_contains": "checkpoint",
+        "family": "ts-source",
+        "grade": 2
+      }
+    ],
+    "notes": "Checkpoint persistence lookup."
+  },
+  {
+    "query_id": "sl-006",
+    "query": "deterministic seed replay RNG state",
+    "class": "simple_lookup",
+    "difficulty": "easy",
+    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_heading_contains": "determin",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "determin", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "determin", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Reproducibility contract lookup."
+  },
+  {
+    "query_id": "sl-007",
+    "query": "ONNX import constrained recurrent network",
+    "class": "simple_lookup",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_heading_contains": "onnx",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "onnx", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "onnx", "family": "readme", "grade": 2 }
+    ],
+    "notes": "ONNX portability lookup."
+  },
+  {
+    "query_id": "sl-008",
+    "query": "adaptive mutation complexity phases",
+    "class": "simple_lookup",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source", "readme"],
+    "expected_heading_contains": "adaptive",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "adaptive",
+        "family": "ts-source",
+        "grade": 3
+      },
+      { "heading_path_contains": "adaptive", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Adaptive mutation controller."
+  },
+  {
+    "query_id": "sl-009",
+    "query": "JSDoc exported function annotation",
+    "class": "simple_lookup",
+    "difficulty": "medium",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "jsdoc",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "jsdoc", "family": "ts-source", "grade": 3 }
+    ],
+    "notes": "Documentation quality lookup."
+  },
+  {
+    "query_id": "sl-010",
+    "query": "TypeScript docs generator exported declarations",
+    "class": "simple_lookup",
+    "difficulty": "medium",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "docs",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "docs", "family": "ts-source", "grade": 2 }
+    ],
+    "notes": "Generated README tooling."
+  },
+  {
+    "query_id": "sl-011",
+    "query": "graph surgery remove connection prune topology",
+    "class": "simple_lookup",
+    "difficulty": "medium",
+    "expected_doc_families": ["readme", "ts-source"],
+    "expected_heading_contains": "topology",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "topology",
+        "family": "ts-source",
+        "grade": 3
+      },
+      { "heading_path_contains": "topology", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Graph topology operations."
+  },
+  {
+    "query_id": "sl-012",
+    "query": "parameter vector export import fine tuning layout",
+    "class": "simple_lookup",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "ts-source"],
+    "expected_heading_contains": "parameter",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "parameter", "family": "plan", "grade": 3 },
+      {
+        "heading_path_contains": "parameter",
+        "family": "ts-source",
+        "grade": 2
+      }
+    ],
+    "notes": "Hybrid training interop lookup."
+  },
+  {
+    "query_id": "cb-001",
+    "query": "how does Network activation use the slab fast path",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["ts-source", "readme"],
+    "expected_heading_contains": "slab",
+    "expected_symbol_contains": "activate",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "slab", "family": "ts-source", "grade": 3 },
+      {
+        "heading_path_contains": "activate",
+        "family": "ts-source",
+        "grade": 2
+      },
+      { "heading_path_contains": "slab", "family": "readme", "grade": 1 }
+    ],
+    "notes": "Crosses activation and slab subsystems."
+  },
+  {
+    "query_id": "cb-002",
+    "query": "worker pool evaluation ordered results dataset broadcast",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_heading_contains": "worker",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "worker", "family": "ts-source", "grade": 3 },
+      { "heading_path_contains": "worker", "family": "readme", "grade": 2 },
+      { "heading_path_contains": "evaluat", "family": "plan", "grade": 1 }
+    ],
+    "notes": "Crosses multithreading and evaluation."
+  },
+  {
+    "query_id": "cb-003",
+    "query": "multiobjective telemetry lineage diversity selection",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["readme", "ts-source"],
+    "expected_heading_contains": "telemetry",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "telemetry",
+        "family": "ts-source",
+        "grade": 3
+      },
+      { "heading_path_contains": "lineage", "family": "ts-source", "grade": 2 },
+      { "heading_path_contains": "diversity", "family": "readme", "grade": 1 }
+    ],
+    "notes": "Crosses observability lanes."
+  },
+  {
+    "query_id": "cb-004",
+    "query": "browser runtime worker url packaging bundle",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme"],
+    "expected_heading_contains": "browser",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "browser", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "browser", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Browser build and runtime cross-family."
+  },
+  {
+    "query_id": "cb-005",
+    "query": "BM25 semantic index freshness validation",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme"],
+    "expected_heading_contains": "fresh",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "fresh", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "fresh", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Indexer freshness and validation."
+  },
+  {
+    "query_id": "cb-006",
+    "query": "feed forward recurrent intent policy architecture",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["readme", "ts-source"],
+    "expected_heading_contains": "feed forward",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "feed forward",
+        "family": "readme",
+        "grade": 3
+      },
+      {
+        "heading_path_contains": "recurrent",
+        "family": "ts-source",
+        "grade": 2
+      }
+    ],
+    "notes": "Topology intent crosses docs and source."
+  },
+  {
+    "query_id": "cb-007",
+    "query": "ordered batch evaluation worker pool fallback",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_heading_contains": "evaluat",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "evaluat", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "worker", "family": "ts-source", "grade": 2 },
+      { "heading_path_contains": "evaluat", "family": "readme", "grade": 1 }
+    ],
+    "notes": "Evaluation and worker pool cross-family."
+  },
+  {
+    "query_id": "cb-008",
+    "query": "serialization checkpoint schema migration",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "ts-source"],
+    "expected_heading_contains": "serial",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "serial", "family": "plan", "grade": 3 },
+      {
+        "heading_path_contains": "checkpoint",
+        "family": "ts-source",
+        "grade": 2
+      }
+    ],
+    "notes": "Persistence and schema migration cross-family."
+  },
+  {
+    "query_id": "cb-009",
+    "query": "repo cortex semantic search corpus context",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme"],
+    "expected_heading_contains": "cortex",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "cortex", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "cortex", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Repo Cortex retrieval cross-family."
+  },
+  {
+    "query_id": "cb-010",
+    "query": "neat chat persistent session memory routing",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme"],
+    "expected_heading_contains": "neatchat",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "neatchat", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "chat", "family": "readme", "grade": 1 }
+    ],
+    "notes": "NEATchat system cross-family."
+  },
+  {
+    "query_id": "cb-011",
+    "query": "visualizer canvas tooltip overflow layout parity",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme"],
+    "expected_heading_contains": "visualizer",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "visualizer", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "visualizer", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Visualizer workflow cross-family."
+  },
+  {
+    "query_id": "cb-012",
+    "query": "NGE core algorithm DNA development lifecycle",
+    "class": "cross_boundary",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme"],
+    "expected_heading_contains": "NGE",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "NGE", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "NGE", "family": "readme", "grade": 2 }
+    ],
+    "notes": "NGE benchmark and core cross-family."
+  },
+  {
+    "query_id": "mh-001",
+    "query": "how does NEAT use speciation to protect innovation during crossover",
+    "class": "multi_hop",
+    "difficulty": "hard",
+    "expected_doc_families": ["readme", "ts-source", "plan"],
+    "expected_heading_contains": "speciation",
+    "expected_symbol_contains": "crossover",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "speciation", "family": "readme", "grade": 3 },
+      { "heading_path_contains": "crossover", "family": "readme", "grade": 2 },
+      {
+        "heading_path_contains": "speciation",
+        "family": "ts-source",
+        "grade": 1
+      }
+    ],
+    "notes": "Chains speciation, innovation, crossover."
+  },
+  {
+    "query_id": "mh-002",
+    "query": "how does the adaptive mutation controller change rates across evolution phases",
+    "class": "multi_hop",
+    "difficulty": "hard",
+    "expected_doc_families": ["ts-source", "readme", "plan"],
+    "expected_heading_contains": "adaptive",
+    "expected_symbol_contains": "mutation",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "adaptive",
+        "family": "ts-source",
+        "grade": 3
+      },
+      {
+        "heading_path_contains": "mutation",
+        "family": "ts-source",
+        "grade": 2
+      },
+      { "heading_path_contains": "adaptive", "family": "readme", "grade": 1 }
+    ],
+    "notes": "Chains adaptive mutation and lifecycle."
+  },
+  {
+    "query_id": "mh-003",
+    "query": "how does deterministic seeding affect worker pool ordered evaluation",
+    "class": "multi_hop",
+    "difficulty": "hard",
+    "expected_doc_families": ["plan", "ts-source", "readme"],
+    "expected_heading_contains": "determin",
+    "expected_symbol_contains": "worker",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "determin", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "worker", "family": "ts-source", "grade": 2 },
+      { "heading_path_contains": "determin", "family": "readme", "grade": 1 }
+    ],
+    "notes": "Chains determinism and multithreading."
+  },
+  {
+    "query_id": "mh-004",
+    "query": "how does context assembly rank chunks across family boundaries",
+    "class": "multi_hop",
+    "difficulty": "hard",
+    "expected_doc_families": ["plan", "ts-source", "readme"],
+    "expected_heading_contains": "context",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "context", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "context", "family": "ts-source", "grade": 2 },
+      { "heading_path_contains": "assembly", "family": "readme", "grade": 1 }
+    ],
+    "notes": "Chains context assembly and cross-family ranking."
+  },
+  {
+    "query_id": "mh-005",
+    "query": "how does the routing table choose alpha for multi-hop queries",
+    "class": "multi_hop",
+    "difficulty": "hard",
+    "expected_doc_families": ["plan", "ts-source"],
+    "expected_heading_contains": "routing",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "routing", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "alpha", "family": "ts-source", "grade": 2 }
+    ],
+    "notes": "Chains routing and alpha selection."
+  },
+  {
+    "query_id": "mh-006",
+    "query": "how are embeddings used after BM25 candidate retrieval",
+    "class": "multi_hop",
+    "difficulty": "hard",
+    "expected_doc_families": ["plan", "ts-source"],
+    "expected_heading_contains": "embed",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "embed", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "embed", "family": "ts-source", "grade": 2 }
+    ],
+    "notes": "Chains BM25 and dense retrieval."
+  },
+  {
+    "query_id": "mh-007",
+    "query": "how does hybrid training combine evolution and gradient descent",
+    "class": "multi_hop",
+    "difficulty": "hard",
+    "expected_doc_families": ["plan", "ts-source"],
+    "expected_heading_contains": "hybrid",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "hybrid", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "hybrid", "family": "ts-source", "grade": 2 }
+    ],
+    "notes": "Chains evolution and gradient training."
+  },
+  {
+    "query_id": "mh-008",
+    "query": "how does the multithread evaluator fallback to single thread",
+    "class": "multi_hop",
+    "difficulty": "hard",
+    "expected_doc_families": ["ts-source", "readme", "plan"],
+    "expected_heading_contains": "multithread",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "multithread",
+        "family": "ts-source",
+        "grade": 3
+      },
+      { "heading_path_contains": "fallback", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Chains worker pool and fallback behavior."
+  },
+  {
+    "query_id": "mh-009",
+    "query": "how does neuron activation propagate through gating connections",
+    "class": "multi_hop",
+    "difficulty": "hard",
+    "expected_doc_families": ["ts-source", "readme"],
+    "expected_heading_contains": "gate",
+    "expected_symbol_contains": "activate",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "gate", "family": "ts-source", "grade": 3 },
+      {
+        "heading_path_contains": "activate",
+        "family": "ts-source",
+        "grade": 2
+      },
+      { "heading_path_contains": "gate", "family": "readme", "grade": 1 }
+    ],
+    "notes": "Chains activation and gating."
+  },
+  {
+    "query_id": "mh-010",
+    "query": "how does population evolution maintain lineage and diversity",
+    "class": "multi_hop",
+    "difficulty": "hard",
+    "expected_doc_families": ["ts-source", "readme"],
+    "expected_heading_contains": "lineage",
+    "expected_symbol_contains": "diversity",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "lineage", "family": "ts-source", "grade": 3 },
+      {
+        "heading_path_contains": "diversity",
+        "family": "ts-source",
+        "grade": 2
+      },
+      { "heading_path_contains": "population", "family": "readme", "grade": 1 }
+    ],
+    "notes": "Chains lineage, diversity, evolution."
+  },
+  {
+    "query_id": "ex-001",
+    "query": "overview of NeatapticTS architecture layers",
+    "class": "exploratory",
+    "difficulty": "medium",
+    "expected_doc_families": ["readme", "plan"],
+    "expected_heading_contains": "architecture",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "architecture",
+        "family": "readme",
+        "grade": 3
+      },
+      { "heading_path_contains": "architecture", "family": "plan", "grade": 2 }
+    ],
+    "notes": "Broad architecture overview."
+  },
+  {
+    "query_id": "ex-002",
+    "query": "what are the main components of the NEAT evolutionary algorithm",
+    "class": "exploratory",
+    "difficulty": "medium",
+    "expected_doc_families": ["readme", "ts-source"],
+    "expected_heading_contains": "NEAT",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "NEAT", "family": "readme", "grade": 3 },
+      { "heading_path_contains": "NEAT", "family": "ts-source", "grade": 2 }
+    ],
+    "notes": "Broad NEAT components overview."
+  },
+  {
+    "query_id": "ex-003",
+    "query": "examples of neural network demos and benchmarks",
+    "class": "exploratory",
+    "difficulty": "medium",
+    "expected_doc_families": ["readme", "plan"],
+    "expected_heading_contains": "demo",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "demo", "family": "readme", "grade": 3 },
+      { "heading_path_contains": "benchmark", "family": "plan", "grade": 2 }
+    ],
+    "notes": "Demos and benchmarks discovery."
+  },
+  {
+    "query_id": "ex-004",
+    "query": "documentation and generated README conventions",
+    "class": "exploratory",
+    "difficulty": "medium",
+    "expected_doc_families": ["readme", "ts-source"],
+    "expected_heading_contains": "README",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "README", "family": "readme", "grade": 3 },
+      { "heading_path_contains": "README", "family": "ts-source", "grade": 2 }
+    ],
+    "notes": "Documentation conventions discovery."
+  },
+  {
+    "query_id": "ex-005",
+    "query": "repo cortex advanced RAG architecture steps",
+    "class": "exploratory",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme"],
+    "expected_heading_contains": "RAG",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "RAG", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "cortex", "family": "readme", "grade": 2 }
+    ],
+    "notes": "RAG architecture roadmap discovery."
+  },
+  {
+    "query_id": "ex-006",
+    "query": "testing and coverage guard conventions",
+    "class": "exploratory",
+    "difficulty": "medium",
+    "expected_doc_families": ["readme", "ts-source"],
+    "expected_heading_contains": "coverage",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "coverage", "family": "readme", "grade": 3 },
+      { "heading_path_contains": "coverage", "family": "ts-source", "grade": 2 }
+    ],
+    "notes": "Testing conventions discovery."
+  },
+  {
+    "query_id": "ex-007",
+    "query": "agent customization routing table and skills",
+    "class": "exploratory",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "readme"],
+    "expected_heading_contains": "agent",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "agent", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "agent", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Agent system overview."
+  },
+  {
+    "query_id": "ex-008",
+    "query": "performance optimization and slab pooling",
+    "class": "exploratory",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "ts-source"],
+    "expected_heading_contains": "slab",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "slab", "family": "plan", "grade": 3 },
+      { "heading_path_contains": "slab", "family": "ts-source", "grade": 2 }
+    ],
+    "notes": "Performance optimization overview."
+  },
+  {
+    "query_id": "ex-009",
+    "query": "public API entry points and exports",
+    "class": "exploratory",
+    "difficulty": "medium",
+    "expected_doc_families": ["ts-source", "readme"],
+    "expected_heading_contains": "export",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "export", "family": "ts-source", "grade": 3 },
+      { "heading_path_contains": "export", "family": "readme", "grade": 2 }
+    ],
+    "notes": "Public API discovery."
+  },
+  {
+    "query_id": "ex-010",
+    "query": "roadmap and completed plans archive",
+    "class": "exploratory",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan", "completed-plan"],
+    "expected_heading_contains": "roadmap",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "roadmap", "family": "plan", "grade": 3 },
+      {
+        "heading_path_contains": "roadmap",
+        "family": "completed-plan",
+        "grade": 2
+      }
+    ],
+    "notes": "Roadmap archive discovery."
+  },
+  {
+    "query_id": "cs-001",
+    "query": "Network.activate implementation",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "activate",
+    "expected_symbol_contains": "activate",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "activate", "family": "ts-source", "grade": 3 }
+    ],
+    "notes": "Exact Network.activate symbol."
+  },
+  {
+    "query_id": "cs-002",
+    "query": "Neat.evolve population method",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "evolve",
+    "expected_symbol_contains": "evolve",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "evolve", "family": "ts-source", "grade": 3 }
+    ],
+    "notes": "Exact Neat.evolve symbol."
+  },
+  {
+    "query_id": "cs-003",
+    "query": "Node.connect method signature",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "connect",
+    "expected_symbol_contains": "connect",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "connect", "family": "ts-source", "grade": 3 }
+    ],
+    "notes": "Exact Node.connect symbol."
+  },
+  {
+    "query_id": "cs-004",
+    "query": "Architect.Perceptron builder",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "Perceptron",
+    "expected_symbol_contains": "Perceptron",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "Perceptron",
+        "family": "ts-source",
+        "grade": 3
+      }
+    ],
+    "notes": "Exact Architect.Perceptron symbol."
+  },
+  {
+    "query_id": "cs-005",
+    "query": "methods.activation.CRELU function",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "CRELU",
+    "expected_symbol_contains": "CRELU",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "CRELU", "family": "ts-source", "grade": 3 }
+    ],
+    "notes": "Exact activation function symbol."
+  },
+  {
+    "query_id": "cs-006",
+    "query": "Connection.mutate weight",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "mutate",
+    "expected_symbol_contains": "mutate",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "mutate", "family": "ts-source", "grade": 3 }
+    ],
+    "notes": "Exact Connection.mutate symbol."
+  },
+  {
+    "query_id": "cs-007",
+    "query": "Layer.Dense hidden layer builder",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "Dense",
+    "expected_symbol_contains": "Dense",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "Dense", "family": "ts-source", "grade": 3 }
+    ],
+    "notes": "Exact Layer.Dense symbol."
+  },
+  {
+    "query_id": "cs-008",
+    "query": "Group constructor neuron group",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "Group",
+    "expected_symbol_contains": "Group",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "Group", "family": "ts-source", "grade": 3 }
+    ],
+    "notes": "Exact Group symbol."
+  },
+  {
+    "query_id": "cs-009",
+    "query": "Genome constructor genome class",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "Genome",
+    "expected_symbol_contains": "Genome",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "Genome", "family": "ts-source", "grade": 3 }
+    ],
+    "notes": "Exact Genome symbol."
+  },
+  {
+    "query_id": "cs-010",
+    "query": "methods.cost.CROSS_ENTROPY",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "CROSS_ENTROPY",
+    "expected_symbol_contains": "CROSS_ENTROPY",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "CROSS_ENTROPY",
+        "family": "ts-source",
+        "grade": 3
+      }
+    ],
+    "notes": "Exact cost function symbol."
+  },
+  {
+    "query_id": "cs-011",
+    "query": "methods.selection.FITNESS_PROPORTIONATE",
+    "class": "code_specific",
+    "difficulty": "easy",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "FITNESS_PROPORTIONATE",
+    "expected_symbol_contains": "FITNESS_PROPORTIONATE",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      {
+        "heading_path_contains": "FITNESS_PROPORTIONATE",
+        "family": "ts-source",
+        "grade": 3
+      }
+    ],
+    "notes": "Exact selection method symbol."
+  },
+  {
+    "query_id": "cs-012",
+    "query": "multi.evaluateWorkers async batch evaluation",
+    "class": "code_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["ts-source"],
+    "expected_heading_contains": "evaluate",
+    "expected_symbol_contains": "evaluateWorkers",
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "evaluate", "family": "ts-source", "grade": 3 }
+    ],
+    "notes": "Exact multi-thread evaluation symbol."
+  },
+  {
+    "query_id": "ps-001",
+    "query": "Population save resume checkpointing plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "checkpoint",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "checkpoint", "family": "plan", "grade": 3 }
+    ],
+    "notes": "Checkpointing plan document."
+  },
+  {
+    "query_id": "ps-002",
+    "query": "Repo Cortex advanced RAG architecture",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "RAG",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "RAG", "family": "plan", "grade": 3 }
+    ],
+    "notes": "RAG architecture plan."
+  },
+  {
+    "query_id": "ps-003",
+    "query": "multithread evaluation worker pool plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "worker",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "worker", "family": "plan", "grade": 3 }
+    ],
+    "notes": "Worker pool plan."
+  },
+  {
+    "query_id": "ps-004",
+    "query": "hybrid training interop parameter vector plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "parameter",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "parameter", "family": "plan", "grade": 3 }
+    ],
+    "notes": "Hybrid training plan."
+  },
+  {
+    "query_id": "ps-005",
+    "query": "ONNX import constrained recurrent network plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "onnx",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "onnx", "family": "plan", "grade": 3 }
+    ],
+    "notes": "ONNX plan."
+  },
+  {
+    "query_id": "ps-006",
+    "query": "browser runtime packaging bundle plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "browser",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "browser", "family": "plan", "grade": 3 }
+    ],
+    "notes": "Browser build plan."
+  },
+  {
+    "query_id": "ps-007",
+    "query": "reproducibility contracts seed replay plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "determin",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "determin", "family": "plan", "grade": 3 }
+    ],
+    "notes": "Reproducibility plan."
+  },
+  {
+    "query_id": "ps-008",
+    "query": "NGE core algorithm and benchmark plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "NGE",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "NGE", "family": "plan", "grade": 3 }
+    ],
+    "notes": "NGE plan."
+  },
+  {
+    "query_id": "ps-009",
+    "query": "visualizer workflow and demo plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "visualizer",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "visualizer", "family": "plan", "grade": 3 }
+    ],
+    "notes": "Visualizer plan."
+  },
+  {
+    "query_id": "ps-010",
+    "query": "NEATchat persistent chat memory plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "neatchat",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "neatchat", "family": "plan", "grade": 3 }
+    ],
+    "notes": "NEATchat plan."
+  },
+  {
+    "query_id": "ps-011",
+    "query": "agent customization routing and skills plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "agent",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "agent", "family": "plan", "grade": 3 }
+    ],
+    "notes": "Agent customization plan."
+  },
+  {
+    "query_id": "ps-012",
+    "query": "performance optimization slab caching plan",
+    "class": "plan_specific",
+    "difficulty": "medium",
+    "expected_doc_families": ["plan"],
+    "expected_heading_contains": "slab",
+    "expected_symbol_contains": null,
+    "expected_chunk_ids": [],
+    "relevance_grades": [
+      { "heading_path_contains": "slab", "family": "plan", "grade": 3 }
+    ],
+    "notes": "Performance optimization plan."
+  }
+]

@@ -233,7 +233,7 @@ This benchmark belongs to **Phase G (Multi-Agent + Collective Intelligence)** in
 Only the **top-left quarter** is procedurally generated. The other three quadrants are mirrors:
 
 ```
-[ Q1  | mirror(Q1, H)  ]    Q1 = generated quarter
+[ Q1 | mirror(Q1, H) ] Q1 = generated quarter
 [ mirror(Q1, V) | mirror(Q1, HV) ]
 ```
 
@@ -275,15 +275,17 @@ This produces a 4-fold symmetric maze on every run, like the classic Pac-Man lay
 
 - **4 directions only:** North, East, South, West. No diagonals.
 - **Direction constants** (reuse from `asciiMaze/mazeMovement/mazeMovement.constants.ts`):
-  ```ts
-  DIRECTION_DELTAS: [
-    [0, -1],
-    [1, 0],
-    [0, 1],
-    [-1, 0],
-  ]; // N, E, S, W
-  OPPOSITE_DIR: [2, 3, 0, 1];
-  ```
+
+```ts
+DIRECTION_DELTAS: [
+  [0, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0],
+]; // N, E, S, W
+OPPOSITE_DIR: [2, 3, 0, 1];
+```
+
 - **Tick-based:** one step per tick. Both populations step simultaneously.
 - **Collision:** agents cannot move into wall cells. Walled direction → agent stays in place that tick.
 - **Network output:** 4 logits → softmax → argmax → direction index.
@@ -503,10 +505,10 @@ Flappy Bird uses one worker that owns everything (NEAT + playback) because each 
 
 ```
 COORDINATOR (main thread)
-├── Prey NEAT Worker     (1) — owns prey gene pool, species, generation counter
+├── Prey NEAT Worker (1) — owns prey gene pool, species, generation counter
 ├── Predator NEAT Worker (1) — owns predator gene pool, species, generation counter
-├── Simulation Worker   (1) — owns live display episode (world, agents, trails, voice)
-└── Episode Workers     (N) — stateless; run isolated training episodes
+├── Simulation Worker (1) — owns live display episode (world, agents, trails, voice)
+└── Episode Workers (N) — stateless; run isolated training episodes
 ```
 
 Worker count formula:
@@ -704,36 +706,36 @@ The coordination problem unique to this demo: both populations must finish fitne
 Generation N lifecycle:
 
 1. COORDINATOR receives 'population-ready' from both NEAT workers
-   → checks SNAPSHOT_UPDATE_INTERVAL; if due, updates rolling snapshot:
-       hallOfFame ← append(currentChampions), evict oldest if full
-       recentSample ← random sample of size RECENT_SAMPLE_SIZE from each population
-   → freezes currentPreySnapshot, currentPredatorSnapshot for this generation
+ → checks SNAPSHOT_UPDATE_INTERVAL; if due, updates rolling snapshot:
+ hallOfFame ← append(currentChampions), evict oldest if full
+ recentSample ← random sample of size RECENT_SAMPLE_SIZE from each population
+ → freezes currentPreySnapshot, currentPredatorSnapshot for this generation
 
 2. COORDINATOR queues all episode tasks (prey + predator interleaved):
-   for each preyGenome × ROLLOUT_SEED_COUNT:
-     tasks.push({ type: 'prey',     genome: preyGenome,     opponents: currentPredatorSnapshot, ... })
-   for each predatorGenome × ROLLOUT_SEED_COUNT:
-     tasks.push({ type: 'predator', genome: predatorGenome, opponents: currentPreySnapshot, ... })
-   shuffle(tasks)  // interleave prey + predator to prevent worker idle at generation boundary
+ for each preyGenome × ROLLOUT_SEED_COUNT:
+ tasks.push({ type: 'prey', genome: preyGenome, opponents: currentPredatorSnapshot, ... })
+ for each predatorGenome × ROLLOUT_SEED_COUNT:
+ tasks.push({ type: 'predator', genome: predatorGenome, opponents: currentPreySnapshot, ... })
+ shuffle(tasks) // interleave prey + predator to prevent worker idle at generation boundary
 
 3. COORDINATOR dispatches tasks to episode worker pool
-   → pool feeds idle workers; capacity = EPISODE_WORKER_COUNT
+ → pool feeds idle workers; capacity = EPISODE_WORKER_COUNT
 
 4. COORDINATOR collects EpisodeResults
-   → aggregates per genome: mean(fitness) − STABILITY_WEIGHT × stddev(fitness) across seeds
-   → accumulates armsRaceStats per genome
+ → aggregates per genome: mean(fitness) − STABILITY_WEIGHT × stddev(fitness) across seeds
+ → accumulates armsRaceStats per genome
 
 5a. When ALL prey genomes have ROLLOUT_SEED_COUNT results:
-    → COORDINATOR sends 'submit-fitness' + 'evolve' to Prey NEAT Worker immediately
-    (does NOT wait for predator side)
+ → COORDINATOR sends 'submit-fitness' + 'evolve' to Prey NEAT Worker immediately
+ (does NOT wait for predator side)
 
 5b. When ALL predator genomes have ROLLOUT_SEED_COUNT results:
-    → COORDINATOR sends 'submit-fitness' + 'evolve' to Predator NEAT Worker immediately
-    (does NOT wait for prey side)
+ → COORDINATOR sends 'submit-fitness' + 'evolve' to Predator NEAT Worker immediately
+ (does NOT wait for prey side)
 
 6. When BOTH NEAT workers send 'population-ready':
-   → Generation N+1 begins (go to step 1)
-   → Coordinator sends new champions to Simulation Worker (hybrid mode)
+ → Generation N+1 begins (go to step 1)
+ → Coordinator sends new champions to Simulation Worker (hybrid mode)
 ```
 
 ### Rolling opponent snapshot
@@ -837,63 +839,63 @@ type PredatorArmsRaceStats = {
 
 ```
 examples/predator_prey/
-  browser-entry/
-    browser-entry.spawn.utils.ts        ← adapted from flappy_bird/browser-entry/
-    host/
-      host.ts                           ← canvas setup, responsive resize (adapted from flappy_bird)
-      host.types.ts
-  maze/
-    maze.generator.ts                   ← quarter-gen + 4-fold mirror (new)
-    maze.generator.types.ts
-    maze.renderer.ts                    ← wall chars + neon color (adapted from asciiMaze)
-    maze.movement.ts                    ← 4-dir deltas, collision (copied from asciiMaze)
-    maze.vision.ts                      ← 4-dir raycasts, pooled buffers (adapted from asciiMaze)
-    maze.tunnels.ts                     ← tunnel wrap + transit cooldown (new)
-    maze.pellets.ts                     ← pellet grid + respawn timer (new)
-  signals/
-    signals.chem-trail.service.ts       ← two Float32Array grids, decay sweep, directional reads
-    signals.voice.service.ts            ← 4-dir raycast trigger, scream timer, wall-attenuated propagation
-    signals.types.ts
-  environment/
-    environment.state.service.ts        ← episode state (agents, pellets, trails, scream timers, tick)
-    environment.step.service.ts         ← tick: move all agents, capture, pellet, trail decay, voice
-    environment.types.ts
-  agents/
-    prey.sensor.service.ts              ← builds Float32Array(31) prey observation vector per tick
-    predator.sensor.service.ts          ← builds Float32Array(28) predator observation vector per tick
-    agents.types.ts
-  workers/
-    workers.types.ts                    ← all message type unions (all 4 worker types, both directions)
-    workers.coordinator.ts              ← generation barrier, task queue, mode management, snapshot updates
-    workers.pool.ts                     ← episode worker pool (pre-spawned, idle tracking, task dispatch)
-    workers.snapshot.service.ts         ← rolling snapshot: hall-of-fame + recent sample management
-    workers.worker-count.utils.ts       ← hardwareConcurrency → worker count formula
-    simulation-worker/
-      simulation-worker.ts              ← entrypoint, mutable state bag, message routing
-      simulation-worker.runtime.service.ts   ← init, champion genome install, maze setup
-      simulation-worker.step.service.ts      ← per-tick: env step + all forward passes + signals update
-      simulation-worker.snapshot.utils.ts    ← render frame packing + transfer list resolution
-      simulation-worker.offscreen.service.ts ← draw maze once to OffscreenCanvas; blit each tick
-      simulation-worker.types.ts
-    episode-worker/
-      episode-worker.ts                 ← entrypoint, stateless (no persistent NEAT state)
-      episode-worker.episode.service.ts ← runs one complete isolated episode (all ticks, all agents)
-      episode-worker.fitness.service.ts ← fitness aggregation across rollout seeds
-      episode-worker.arms-race.service.ts    ← junction entropy, coordination event counting
-      episode-worker.warm-start.service.ts   ← gen-0 heuristic teacher for prey and predator
-      episode-worker.types.ts
-    neat-worker/
-      neat-worker.prey.ts               ← entrypoint with prey-specific config
-      neat-worker.predator.ts           ← entrypoint with predator-specific config
-      neat-worker.evolution.service.ts  ← shared: submit fitness, evolve, emit population-ready
-      neat-worker.types.ts
-  constants/
-    constants.maze.ts                   ← grid size, cell size, pellet respawn ticks
-    constants.agents.ts                 ← population sizes, angel release interval
-    constants.signals.ts                ← trail + voice constants (see values below)
-    constants.fitness.ts                ← fitness weights, stability weight, rollout seed count
-    constants.workers.ts                ← snapshot sizes, update interval, rollout count
-    constants.theme.ts                  ← EVA_UNITS roster + ANGELS roster (name + hex color)
+ browser-entry/
+ browser-entry.spawn.utils.ts ← adapted from flappy_bird/browser-entry/
+ host/
+ host.ts ← canvas setup, responsive resize (adapted from flappy_bird)
+ host.types.ts
+ maze/
+ maze.generator.ts ← quarter-gen + 4-fold mirror (new)
+ maze.generator.types.ts
+ maze.renderer.ts ← wall chars + neon color (adapted from asciiMaze)
+ maze.movement.ts ← 4-dir deltas, collision (copied from asciiMaze)
+ maze.vision.ts ← 4-dir raycasts, pooled buffers (adapted from asciiMaze)
+ maze.tunnels.ts ← tunnel wrap + transit cooldown (new)
+ maze.pellets.ts ← pellet grid + respawn timer (new)
+ signals/
+ signals.chem-trail.service.ts ← two Float32Array grids, decay sweep, directional reads
+ signals.voice.service.ts ← 4-dir raycast trigger, scream timer, wall-attenuated propagation
+ signals.types.ts
+ environment/
+ environment.state.service.ts ← episode state (agents, pellets, trails, scream timers, tick)
+ environment.step.service.ts ← tick: move all agents, capture, pellet, trail decay, voice
+ environment.types.ts
+ agents/
+ prey.sensor.service.ts ← builds Float32Array(31) prey observation vector per tick
+ predator.sensor.service.ts ← builds Float32Array(28) predator observation vector per tick
+ agents.types.ts
+ workers/
+ workers.types.ts ← all message type unions (all 4 worker types, both directions)
+ workers.coordinator.ts ← generation barrier, task queue, mode management, snapshot updates
+ workers.pool.ts ← episode worker pool (pre-spawned, idle tracking, task dispatch)
+ workers.snapshot.service.ts ← rolling snapshot: hall-of-fame + recent sample management
+ workers.worker-count.utils.ts ← hardwareConcurrency → worker count formula
+ simulation-worker/
+ simulation-worker.ts ← entrypoint, mutable state bag, message routing
+ simulation-worker.runtime.service.ts ← init, champion genome install, maze setup
+ simulation-worker.step.service.ts ← per-tick: env step + all forward passes + signals update
+ simulation-worker.snapshot.utils.ts ← render frame packing + transfer list resolution
+ simulation-worker.offscreen.service.ts ← draw maze once to OffscreenCanvas; blit each tick
+ simulation-worker.types.ts
+ episode-worker/
+ episode-worker.ts ← entrypoint, stateless (no persistent NEAT state)
+ episode-worker.episode.service.ts ← runs one complete isolated episode (all ticks, all agents)
+ episode-worker.fitness.service.ts ← fitness aggregation across rollout seeds
+ episode-worker.arms-race.service.ts ← junction entropy, coordination event counting
+ episode-worker.warm-start.service.ts ← gen-0 heuristic teacher for prey and predator
+ episode-worker.types.ts
+ neat-worker/
+ neat-worker.prey.ts ← entrypoint with prey-specific config
+ neat-worker.predator.ts ← entrypoint with predator-specific config
+ neat-worker.evolution.service.ts ← shared: submit fitness, evolve, emit population-ready
+ neat-worker.types.ts
+ constants/
+ constants.maze.ts ← grid size, cell size, pellet respawn ticks
+ constants.agents.ts ← population sizes, angel release interval
+ constants.signals.ts ← trail + voice constants (see values below)
+ constants.fitness.ts ← fitness weights, stability weight, rollout seed count
+ constants.workers.ts ← snapshot sizes, update interval, rollout count
+ constants.theme.ts ← EVA_UNITS roster + ANGELS roster (name + hex color)
 ```
 
 ### Source reuse (copy-paste, adapt — each demo self-contained, no shared service):
@@ -935,18 +937,18 @@ SCREAM_DURATION_TICKS = 30; // ticks scream persists after last visual contact
 
 ## Acceptance Criteria
 
-- Both populations run at 30+ fps on canvas with 20–40 prey and 10–20 predators.
-- Prey fitness improves over generations (longer survival, more pellets gathered).
-- Predator fitness improves over generations (more prey caught per episode).
-- Arms race metric chart shows meaningful non-trivial trajectory (not immediate fixed-point convergence, not pure random walk).
-- Predator and prey populations develop measurably different `computationType` module compositions by generation 50+.
-- Voice scream signals are measurably used by receivers — mean reaction to heard screams differs statistically from baseline behavior (verifiable by ablation: disable voice input channels and compare fitness trajectory).
-- Chem trail following is measurably used by predators — ghost path correlation with prey trail concentration is above chance (verifiable by ablation: disable trail input channels).
-- Predator pursuit coordination emerges (two predators approach a prey from different directions more often than random by generation 30+).
-- Reproduction mode distribution shifts are observable and correlated with arms race phase transitions when `modeIsEvolvable: true`.
-- Rolling opponent snapshot prevents trivial one-generation fitness collapse in either population.
-- Total agent network wiring cost declines over generations relative to task performance (compact specialists emerge).
-- Full-screen canvas fills the available viewport and rescales correctly on window resize.
+- AC-PP-001: Both populations run at 30+ fps on canvas with 20–40 prey and 10–20 predators.
+- AC-PP-002: Prey fitness improves over generations (longer survival, more pellets gathered).
+- AC-PP-003: Predator fitness improves over generations (more prey caught per episode).
+- AC-PP-004: Arms race metric chart shows meaningful non-trivial trajectory (not immediate fixed-point convergence, not pure random walk).
+- AC-PP-005: Predator and prey populations develop measurably different `computationType` module compositions by generation 50+.
+- AC-PP-006: Voice scream signals are measurably used by receivers — mean reaction to heard screams differs statistically from baseline behavior (verifiable by ablation: disable voice input channels and compare fitness trajectory).
+- AC-PP-007: Chem trail following is measurably used by predators — ghost path correlation with prey trail concentration is above chance (verifiable by ablation: disable trail input channels).
+- AC-PP-008: Predator pursuit coordination emerges (two predators approach a prey from different directions more often than random by generation 30+).
+- AC-PP-009: Reproduction mode distribution shifts are observable and correlated with arms race phase transitions when `modeIsEvolvable: true`.
+- AC-PP-010: Rolling opponent snapshot prevents trivial one-generation fitness collapse in either population.
+- AC-PP-011: Total agent network wiring cost declines over generations relative to task performance (compact specialists emerge).
+- AC-PP-012: Full-screen canvas fills the available viewport and rescales correctly on window resize.
 
 ---
 
@@ -1021,11 +1023,21 @@ phase: '1'
 step: 1
 agent: '01-planning'
 agent_file: '.github/agents/01-planning.agent.md'
+title: 'Planning packet'
 status: '[PLANNED]'
 mode: 'fresh-session'
 source_of_truth: 'plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md'
 copy_paste: 'true'
+goal: 'planning'
 next_step: 'Step 02 — Research boundary mapping'
+skills:
+  - 'plan-alignment'
+  - 'research-methodology'
+constitution_check:
+  - 'development-workflow'
+  - 'breadth-first-recoverable'
+acceptance_criteria:
+  - 'AC-PP-001 through AC-PP-012 (see Acceptance Criteria section above)'
 validation:
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md
 ```
@@ -1049,7 +1061,7 @@ step packets (Steps 02-07) and confirm the smallest honest first implementation 
   an explicit narrowed honest boundary (e.g., environment-only scaffolding) is selected.
 - This plan is a prerequisite for `plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md`; the maze
   infrastructure (`examples/predator_prey/maze/`) will be reused there.
-- `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md` is a peer plan (not a prerequisite for this
+- `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md` is a peer plan (not a prerequisite for this
   one) and remains [PLANNED].
 
 **Execution steps:**
@@ -1092,7 +1104,7 @@ Plan-sync gate for this plan's active step.
 
 ### Latest validation evidence
 
-- 2026-05-29: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` → PASS (plan status `WIP`, Phase 1 Step 01 `[WIP]`, no errors, no warnings). Section added to satisfy MCP `IMPLEMENTATION_SECTION_PATTERN` lookahead requirement for workflow-MCP binding.
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` → PASS (plan status `PLANNED`, Phase 1 Step 01 `[PLANNED]`, no errors, no warnings). Section added to satisfy MCP `IMPLEMENTATION_SECTION_PATTERN` lookahead requirement for workflow-MCP binding.
 
 ## Handoff query
 
@@ -1103,13 +1115,13 @@ Current NGE workstream state:
 - plans/completed/NEAT_Genesis_EvoDevo.md Phases 0 through G are fully closed.
 - Active frontier: plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md Step 01 — Planning packet [WIP].
 - The src/neat/nge-collective/ shared-field and multi-agent evaluation core is implemented and at
-  100% owner-local runtime coverage. Primitives available: SharedField, OpponentSnapshotPool,
-  addOpponentSnapshot, runCollectiveEvaluationTick.
+ 100% owner-local runtime coverage. Primitives available: SharedField, OpponentSnapshotPool,
+ addOpponentSnapshot, runCollectiveEvaluationTick.
 - The remaining unimplemented prerequisite for this plan is the two-population NEAT harness
-  (independent gene pools, species tracking).
+ (independent gene pools, species tracking).
 - plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md is downstream of this plan and cannot start before
-  the maze infrastructure (examples/predator_prey/maze/) is implemented here.
-- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.md is a peer plan (not a prerequisite for this one).
+ the maze infrastructure (examples/predator_prey/maze/) is implemented here.
+- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md is a peer plan (not a prerequisite for this one).
 
 Begin with 01-planning on Step 01. Keep the plan self-contained and fresh-session safe.
 ```

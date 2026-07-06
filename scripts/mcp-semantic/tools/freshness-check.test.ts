@@ -13,7 +13,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 
 const REPO_ROOT = path.resolve();
 
@@ -53,33 +53,36 @@ const runModuleEvaluation = <Result>(source: string): Result => {
  * evaluation. A pre-computed freshness proof is supplied to the tool so the
  * test does not depend on filesystem state.
  */
-function makeFreshnessFixture(): { databasePath: string; tempDir: string } {
+async function makeFreshnessFixture(): Promise<{
+  databasePath: string;
+  tempDir: string;
+}> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'freshness-check-red-'),
   );
   const databasePath = path.join(tempDir, 'corpus.sqlite');
-  const db = new Database(databasePath);
+  const db = createClient({ url: 'file:' + databasePath });
   try {
-    db.exec(fs.readFileSync('./scripts/semantic-index/schema-v2.sql', 'utf8'));
-    db.exec(`
+    await db.executeMultiple(
+      fs.readFileSync('./rag-index/schema-turso.sql', 'utf8'),
+    );
+    await db.executeMultiple(`
       INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
         VALUES (1, 'src/network.ts', 'ts-source', 1234567890000, 100, 'fixture-sha-001', 1234567890000);
     `);
   } finally {
-    db.close();
+    await db.close();
   }
   return { databasePath, tempDir };
 }
 
 describe('freshness-check.mjs freshness transparency', () => {
   describe('freshnessCheck response must carry a freshness proof', () => {
-    it('includes a top-level freshness stanza with timestamp, stale flag, and update source', () => {
-      const { databasePath, tempDir } = makeFreshnessFixture();
+    it('includes a top-level freshness stanza with timestamp, stale flag, and update source', async () => {
+      const { databasePath, tempDir } = await makeFreshnessFixture();
       try {
         const result = runModuleEvaluation<FreshnessProbeResult>(`
           import { freshnessCheck } from './scripts/mcp-semantic/tools/freshness-check.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await freshnessCheck({
             databasePath,
@@ -89,9 +92,6 @@ describe('freshness-check.mjs freshness transparency', () => {
               sha256: 'fixture-sha-001',
             },
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           const freshness = response.freshness;
           console.log(JSON.stringify({
             hasTopLevelFreshness: typeof freshness === 'object' && freshness !== null,
@@ -117,13 +117,11 @@ describe('freshness-check.mjs freshness transparency', () => {
       }
     });
 
-    it('propagates freshness metadata to each checked document', () => {
-      const { databasePath, tempDir } = makeFreshnessFixture();
+    it('propagates freshness metadata to each checked document', async () => {
+      const { databasePath, tempDir } = await makeFreshnessFixture();
       try {
         const result = runModuleEvaluation<FreshnessProbeResult>(`
           import { freshnessCheck } from './scripts/mcp-semantic/tools/freshness-check.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await freshnessCheck({
             databasePath,
@@ -133,9 +131,6 @@ describe('freshness-check.mjs freshness transparency', () => {
               sha256: 'fixture-sha-001',
             },
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           const firstDocument = response.documents?.[0];
           console.log(JSON.stringify({
             hasTopLevelFreshness: typeof response.freshness === 'object' && response.freshness !== null,

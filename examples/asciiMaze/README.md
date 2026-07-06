@@ -12,13 +12,13 @@ It is also a strong demonstration of what a stable evolutionary contract buys a 
 
 ## Why This Example Holds Up Under Longer Experiments
 
-| Concept | Why it matters here |
-| --- | --- |
-| Compact perception | The policy has to reason from six values, so observation design stays visible instead of disappearing behind a huge sensor surface. |
+| Concept                           | Why it matters here                                                                                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Compact perception                | The policy has to reason from six values, so observation design stays visible instead of disappearing behind a huge sensor surface.                                            |
 | Deterministic and replayable runs | Sparse-goal search is hard to trust when every run feels different. Stable seeds and exportable state make comparisons, debugging, and regression checks easier to understand. |
-| Explicit search overlays | Novelty, adaptive pressure, multiobjective ranking, and telemetry remain legible controller choices instead of being hidden inside the base network contract. |
-| Optional richer structure | Recurrent or gated structure can be explored when navigation benefits from it, but the core lesson remains compact decision-making rather than architecture spectacle. |
-| Curriculum transfer | The folder treats progression across harder mazes as part of the design, not as an afterthought bolted onto a single-run demo. |
+| Explicit search overlays          | Novelty, adaptive pressure, multiobjective ranking, and telemetry remain legible controller choices instead of being hidden inside the base network contract.                  |
+| Optional richer structure         | Recurrent or gated structure can be explored when navigation benefits from it, but the core lesson remains compact decision-making rather than architecture spectacle.         |
+| Curriculum transfer               | The folder treats progression across harder mazes as part of the design, not as an afterthought bolted onto a single-run demo.                                                 |
 
 ## What This Folder Is Trying To Teach
 
@@ -37,15 +37,15 @@ The folder also raises one broader systems question: what makes a navigation dem
 
 Different readers arrive with different questions. Use the route that matches yours.
 
-| If you want to... | Start here | Then read |
-| --- | --- | --- |
-| Run a maze evolution programmatically | [evolutionEngine.ts](./evolutionEngine.ts) | [evolutionEngine/README.md](./evolutionEngine/README.md), [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) |
-| Reuse the example from code | [index.ts](./index.ts) | [evolutionEngine.ts](./evolutionEngine.ts), [mazeUtils.ts](./mazeUtils.ts), [interfaces.ts](./interfaces.ts) |
-| Understand how one agent episode works | [mazeMovement.ts](./mazeMovement.ts) | [mazeMovement/README.md](./mazeMovement/README.md), [fitness.ts](./fitness.ts) |
-| Understand the browser demo and telemetry surface | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts) or [index.html](./index.html) | [browser-entry.ts](./browser-entry.ts), [browser-entry/README.md](./browser-entry/README.md), [browser-entry/browser-entry.constants.ts](./browser-entry/browser-entry.constants.ts), [dashboardManager/README.md](./dashboardManager/README.md) |
-| Tune reward shaping or progress semantics | [fitness.ts](./fitness.ts) | [mazeMovement/README.md](./mazeMovement/README.md), [mazeUtils.ts](./mazeUtils.ts) |
-| Change curriculum, warm-start, or evolution policy | [evolutionEngine/README.md](./evolutionEngine/README.md) | [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) |
-| Understand the whole example as a system | this README | the module READMEs listed in [Recommended Reading Order](#recommended-reading-order) |
+| If you want to...                                  | Start here                                                                                       | Then read                                                                                                                                                                                                                                        |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Run a maze evolution programmatically              | [evolutionEngine.ts](./evolutionEngine.ts)                                                       | [evolutionEngine/README.md](./evolutionEngine/README.md), [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts)                                                                                                                                       |
+| Reuse the example from code                        | [index.ts](./index.ts)                                                                           | [evolutionEngine.ts](./evolutionEngine.ts), [mazeUtils.ts](./mazeUtils.ts), [interfaces.ts](./interfaces.ts)                                                                                                                                     |
+| Understand how one agent episode works             | [mazeMovement.ts](./mazeMovement.ts)                                                             | [mazeMovement/README.md](./mazeMovement/README.md), [fitness.ts](./fitness.ts)                                                                                                                                                                   |
+| Understand the browser demo and telemetry surface  | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts) or [index.html](./index.html) | [browser-entry.ts](./browser-entry.ts), [browser-entry/README.md](./browser-entry/README.md), [browser-entry/browser-entry.constants.ts](./browser-entry/browser-entry.constants.ts), [dashboardManager/README.md](./dashboardManager/README.md) |
+| Tune reward shaping or progress semantics          | [fitness.ts](./fitness.ts)                                                                       | [mazeMovement/README.md](./mazeMovement/README.md), [mazeUtils.ts](./mazeUtils.ts)                                                                                                                                                               |
+| Change curriculum, warm-start, or evolution policy | [evolutionEngine/README.md](./evolutionEngine/README.md)                                         | [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts)                                                                                                                                                                                                 |
+| Understand the whole example as a system           | this README                                                                                      | the module READMEs listed in [Recommended Reading Order](#recommended-reading-order)                                                                                                                                                             |
 
 ## Run The Example
 
@@ -83,12 +83,12 @@ If you want to make the hosted run start smaller, end bigger, grow faster, or
 give each maze more movement budget, the first file to read is
 [browser-entry/browser-entry.constants.ts](./browser-entry/browser-entry.constants.ts).
 
-| Knob | What it changes | Why you would touch it |
-| --- | --- | --- |
-| `INITIAL_MAZE_DIMENSION` | first browser curriculum maze size | make the opening phase easier or more demanding |
-| `MAX_MAZE_DIMENSION` | largest browser curriculum maze size | cap how far the hosted curriculum grows |
-| `MAZE_DIMENSION_INCREMENT` | size jump between solved phases | make progression smoother or steeper |
-| `AGENT_MAX_STEPS` | per-maze movement budget | give larger mazes more time or force shorter routes |
+| Knob                       | What it changes                      | Why you would touch it                              |
+| -------------------------- | ------------------------------------ | --------------------------------------------------- |
+| `INITIAL_MAZE_DIMENSION`   | first browser curriculum maze size   | make the opening phase easier or more demanding     |
+| `MAX_MAZE_DIMENSION`       | largest browser curriculum maze size | cap how far the hosted curriculum grows             |
+| `MAZE_DIMENSION_INCREMENT` | size jump between solved phases      | make progression smoother or steeper                |
+| `AGENT_MAX_STEPS`          | per-maze movement budget             | give larger mazes more time or force shorter routes |
 
 ### Run the curriculum-style end-to-end example with logs
 
@@ -260,13 +260,13 @@ The policy is intentionally small enough to fit in your head.
 
 `MazeVision` builds a six-value observation:
 
-| Input | Meaning | Why it exists |
-| --- | --- | --- |
-| `compassScalar` | coarse direction toward the exit | Gives the policy a global hint without revealing the whole maze. |
-| `openN` | whether North is traversable | Encodes immediate local affordance. |
-| `openE` | whether East is traversable | Encodes immediate local affordance. |
-| `openS` | whether South is traversable | Encodes immediate local affordance. |
-| `openW` | whether West is traversable | Encodes immediate local affordance. |
+| Input           | Meaning                                | Why it exists                                                                                        |
+| --------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `compassScalar` | coarse direction toward the exit       | Gives the policy a global hint without revealing the whole maze.                                     |
+| `openN`         | whether North is traversable           | Encodes immediate local affordance.                                                                  |
+| `openE`         | whether East is traversable            | Encodes immediate local affordance.                                                                  |
+| `openS`         | whether South is traversable           | Encodes immediate local affordance.                                                                  |
+| `openW`         | whether West is traversable            | Encodes immediate local affordance.                                                                  |
 | `progressDelta` | recent progress change toward the goal | Helps the policy distinguish movement that is productive from movement that merely changes position. |
 
 ### Outputs
@@ -296,15 +296,15 @@ The goal is not to produce the prettiest formula. The goal is to make sparse-goa
 
 This is the shortest route to the right boundary when you are modifying the example.
 
-| Change goal | Read first | Why |
-| --- | --- | --- |
-| Change what the network sees | [mazeVision.ts](./mazeVision.ts) | Observation design lives here. |
-| Change movement legality, action selection, or per-step shaping behavior | [mazeMovement/README.md](./mazeMovement/README.md) | The full episode runtime boundary lives here. |
-| Change score composition | [fitness.ts](./fitness.ts) | Reward logic should stay explicit and separate from movement. |
-| Change curriculum, warm-start, deterministic mode, or generation policy | [evolutionEngine/README.md](./evolutionEngine/README.md) | This is the population-policy layer. |
-| Change dashboards or telemetry presentation | [dashboardManager/README.md](./dashboardManager/README.md) | Search visibility lives here. |
-| Change browser lifecycle or embed API behavior | [browser-entry/README.md](./browser-entry/README.md) | The browser host surface lives here. |
-| Change test-driven curriculum expectations | [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts) | This file shows the current end-to-end usage pattern. |
+| Change goal                                                              | Read first                                                 | Why                                                           |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------- |
+| Change what the network sees                                             | [mazeVision.ts](./mazeVision.ts)                           | Observation design lives here.                                |
+| Change movement legality, action selection, or per-step shaping behavior | [mazeMovement/README.md](./mazeMovement/README.md)         | The full episode runtime boundary lives here.                 |
+| Change score composition                                                 | [fitness.ts](./fitness.ts)                                 | Reward logic should stay explicit and separate from movement. |
+| Change curriculum, warm-start, deterministic mode, or generation policy  | [evolutionEngine/README.md](./evolutionEngine/README.md)   | This is the population-policy layer.                          |
+| Change dashboards or telemetry presentation                              | [dashboardManager/README.md](./dashboardManager/README.md) | Search visibility lives here.                                 |
+| Change browser lifecycle or embed API behavior                           | [browser-entry/README.md](./browser-entry/README.md)       | The browser host surface lives here.                          |
+| Change test-driven curriculum expectations                               | [asciiMaze.e2e.test.ts](./asciiMaze.e2e.test.ts)           | This file shows the current end-to-end usage pattern.         |
 
 ## Programmatic Starting Point
 
@@ -364,12 +364,12 @@ console.log(result.architectureProfileId); // the profile that seeded the run
 
 ### Approved profiles for ASCII Maze
 
-| Profile id | Family | Recurrent | Role |
-| --- | --- | --- | --- |
-| `mlp` | MLP | No | Baseline feed-forward reference. Dense connectivity from fixed 6-value observation to 4 directional outputs. |
-| `narx` | NARX | Yes | Delay-line memory profile. Carries short-horizon sequences of inputs and outputs into hidden state without gating. Useful when position history helps navigation. |
-| `gru` | GRU | Yes | Pedagogical gated-memory profile. Recurrent blocks learn what to keep and forget. Practical for tasks that benefit from longer-horizon internal state. |
-| `lstm` | LSTM | Yes | Pedagogical gated-memory profile with explicit cell state. Structurally heavier than GRU but exposes the full gating vocabulary for teaching purposes. |
+| Profile id | Family | Recurrent | Role                                                                                                                                                              |
+| ---------- | ------ | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mlp`      | MLP    | No        | Baseline feed-forward reference. Dense connectivity from fixed 6-value observation to 4 directional outputs.                                                      |
+| `narx`     | NARX   | Yes       | Delay-line memory profile. Carries short-horizon sequences of inputs and outputs into hidden state without gating. Useful when position history helps navigation. |
+| `gru`      | GRU    | Yes       | Pedagogical gated-memory profile. Recurrent blocks learn what to keep and forget. Practical for tasks that benefit from longer-horizon internal state.            |
+| `lstm`     | LSTM   | Yes       | Pedagogical gated-memory profile with explicit cell state. Structurally heavier than GRU but exposes the full gating vocabulary for teaching purposes.            |
 
 The `random-sparse` profile is not approved for this demo because the maze's compact six-value observation already constrains useful topology; sparse random connectivity is a better topological starting point for higher-dimensional control problems.
 

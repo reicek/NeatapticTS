@@ -25,40 +25,13 @@
  */
 
 // ---------------------------------------------------------------------------
-// Locally-defined interfaces
+// Type imports from the coevolution service
 // ---------------------------------------------------------------------------
 
-type CoevolutionConfig = {
-  readonly populationSize: number;
-  readonly rngSeed: number;
-  readonly tier: number;
-};
-
-/**
- * Opaque handle for one team's independent population + species + fitness
- * state.  Step 04 wraps a real `Neat` instance behind this interface.
- */
-type TeamPopulationContainer = {
-  /** Opaque identity token — distinct between teamA and teamB. */
-  readonly populationId: string;
-};
-
-type CoevolutionContainer = {
-  readonly teamA: TeamPopulationContainer;
-  readonly teamB: TeamPopulationContainer;
-  /**
-   * Returns the team's fitness score, defined as the best (lowest) finishing
-   * position among the cars in `carFinishPositions`.
-   *
-   * @param teamId - 0 for Team A, 1 for Team B.
-   * @param carFinishPositions - Finish positions for only that team's cars.
-   *   Position 1 = first place (best).
-   */
-  resolveTeamFitness(
-    teamId: 0 | 1,
-    carFinishPositions: readonly number[],
-  ): number;
-};
+import type {
+  CoevolutionConfig,
+  CoevolutionContainer,
+} from './simulation-worker.coevolution.service';
 
 interface CoevolutionService {
   createCoevolutionContainer(config: CoevolutionConfig): CoevolutionContainer;
@@ -147,6 +120,40 @@ describe('simulation worker coevolution container', () => {
     });
   });
 
+  describe('independent team generation advancement', () => {
+    it('advances teamA generation when asked', async () => {
+      // Arrange
+      const service = await loadCoevolutionService();
+      const container = service.createCoevolutionContainer({
+        populationSize: 6,
+        rngSeed: 7,
+        tier: 1,
+      });
+
+      // Act
+      container.advanceTeamGeneration('team-a');
+
+      // Assert — teamA must have moved forward exactly one generation
+      expect(container.teamA.generation).toBe(1);
+    });
+
+    it('does not advance teamB generation when advancing teamA', async () => {
+      // Arrange
+      const service = await loadCoevolutionService();
+      const container = service.createCoevolutionContainer({
+        populationSize: 6,
+        rngSeed: 7,
+        tier: 1,
+      });
+
+      // Act
+      container.advanceTeamGeneration('team-a');
+
+      // Assert — teamB must remain at generation zero
+      expect(container.teamB.generation).toBe(0);
+    });
+  });
+
   describe('team-level fitness resolution', () => {
     it('resolves team fitness as the best (lowest) finishing position among team cars', async () => {
       // Arrange
@@ -179,6 +186,86 @@ describe('simulation worker coevolution container', () => {
       // Assert — fitness must be 1 (best), not 5 (average)
       expect(teamFitness).toBe(1);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 3 red tests — four-distinct-genome coevolution
+// ---------------------------------------------------------------------------
+
+describe('Tier 3 four-car genome layout', () => {
+  it('produces four distinct genomes for a tier-3 container', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 3,
+    });
+    const genomes = container.getCarGenomes();
+
+    // Assert — must return 4 genomes (2 per team), not 2
+    expect(genomes.length).toBe(4);
+  });
+
+  it('assigns team layout [0, 0, 1, 1] for four cars', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 3,
+    });
+    const genomes = container.getCarGenomes();
+    const teamLayout = genomes.map((genome) => genome.teamId);
+
+    // Assert — cars 0-1 = Team A, cars 2-3 = Team B
+    expect(teamLayout).toEqual([0, 0, 1, 1]);
+  });
+
+  it('produces four distinct genome instances with no shared references', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 3,
+    });
+    const genomes = container.getCarGenomes();
+
+    // Assert — each genome must be a distinct object
+    const allDistinct =
+      genomes[0] !== genomes[1] &&
+      genomes[0] !== genomes[2] &&
+      genomes[0] !== genomes[3] &&
+      genomes[1] !== genomes[2] &&
+      genomes[1] !== genomes[3] &&
+      genomes[2] !== genomes[3];
+
+    expect(allDistinct).toBe(true);
+  });
+
+  it('assigns carIndex 0 through 3 to the four genomes', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 3,
+    });
+    const genomes = container.getCarGenomes();
+    const carIndices = genomes.map((genome) => genome.carIndex);
+
+    // Assert
+    expect(carIndices).toEqual([0, 1, 2, 3]);
   });
 });
 
@@ -236,5 +323,116 @@ describe('simulation worker opponent snapshot store', () => {
       // Assert
       expect(updateApplied).toBe(false);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 4 red tests — tire-aware genome input size
+// ---------------------------------------------------------------------------
+
+describe('Tier 4 tire-aware genome input size', () => {
+  it('creates a 95-input controller network for the first tier-4 car genome', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 4,
+    });
+    const firstGenome = container.getCarGenome(0);
+
+    // Assert — Tier 4 must use 95 inputs (91 Tier 3 + 4 tire channels), not 91
+    expect(firstGenome.getNetwork().input).toBe(95);
+  });
+
+  it('creates 95-input controller networks for all four tier-4 car genomes', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 4,
+    });
+    const genomes = container.getCarGenomes();
+    const inputSizes = genomes.map((genome) => genome.getNetwork().input);
+
+    // Assert — all four Tier 4 genomes must have 95 inputs
+    expect(inputSizes).toEqual([95, 95, 95, 95]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 5 red tests — six-car 3v3 coevolution container
+// ---------------------------------------------------------------------------
+
+describe('Tier 5 six-car genome layout', () => {
+  it('produces six distinct genomes for a tier-5 container', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 5,
+    });
+    const genomes = container.getCarGenomes();
+
+    // Assert — must return 6 genomes (3 per team), not 4
+    expect(genomes.length).toBe(6);
+  });
+
+  it('assigns team layout [0, 0, 0, 1, 1, 1] for six cars', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 5,
+    });
+    const genomes = container.getCarGenomes();
+    const teamLayout = genomes.map((genome) => genome.teamId);
+
+    // Assert — cars 0-2 = Team A, cars 3-5 = Team B
+    expect(teamLayout).toEqual([0, 0, 0, 1, 1, 1]);
+  });
+
+  it('assigns carIndex 0 through 5 to the six genomes', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 5,
+    });
+    const genomes = container.getCarGenomes();
+    const carIndices = genomes.map((genome) => genome.carIndex);
+
+    // Assert
+    expect(carIndices).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  it('produces a defined genome at carIndex 5', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 5,
+    });
+    const sixthGenome = container.getCarGenome(5);
+
+    // Assert — the sixth genome must exist (currently only 4 are allocated)
+    expect(sixthGenome).toBeDefined();
   });
 });

@@ -1,6 +1,6 @@
 # Network Visualization Export Schema — Audit Log
 
-**Closed:** 2026-05-03
+**Closed:**
 
 ## Pass history
 

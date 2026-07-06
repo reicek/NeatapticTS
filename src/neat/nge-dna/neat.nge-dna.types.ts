@@ -1,3 +1,29 @@
+/**
+ * Canonical NGE DNA envelope schema.
+ *
+ * This file owns the TypeScript schema for the deterministic Neuro-Genesis
+ * Engine (NGE) DNA envelope. Every exported type here describes a field that
+ * is serialized inside the canonical envelope or accepted at a constructor/
+ * runtime boundary.
+ *
+ * ## Input shorthand vs. canonical envelope
+ *
+ * The core NGE boundary accepts a small set of input shorthand values at
+ * input time, but the canonical envelope always stores the expanded object
+ * shape. This keeps external call sites terse while guaranteeing that
+ * serialization, hashing, and round-trips always see the same canonical
+ * structure.
+ *
+ * - {@link NgeAssignedRegionStrategy} accepts `'non-overlapping'` as input
+ *   shorthand for the deterministic single-drone-per-region assignment that the
+ *   core already implements under `'roundRobin'`.
+ * - {@link NgeSeedPolicyShorthand} `'queen-weighted'` expands to the canonical
+ *   `{ siblingsDifferBySeed: true, twinsAllowed: false }` object inside the
+ *   `NGE_DNA` constructor.
+ *
+ * This design follows the envelope-normalization contract: core accepts
+ * shorthand values at input and keeps a canonical shape internally.
+ */
 import type {
   NeatGenomeComputationType,
   NeatGenomeSubstrateCoordinate,
@@ -35,18 +61,32 @@ export interface NgeIdentityFields {
  * Governs whether offspring arise from a single parent, multiple drone donors, or sexual crossover.
  */
 export type NgeReproductionPolicyMode =
-  | 'parthenogenesis'
-  | 'polyandric'
-  | 'sexual';
+  'parthenogenesis' | 'polyandric' | 'sexual';
 
 /**
  * Region-assignment strategies used for polyandric drone patch selection among donors.
  * Determines how the queen distributes writable DNA regions among secondary drone contributors.
+ *
+ * ## Input shorthand compatibility
+ *
+ * `'non-overlapping'` is input shorthand for the deterministic
+ * single-drone-per-region assignment that the core already implements under
+ * `'roundRobin'`. Both values resolve to identical behavior; only the canonical
+ * string stored in the envelope differs.
  */
 export type NgeAssignedRegionStrategy =
-  | 'roundRobin'
-  | 'byFitness'
-  | 'bySpecialization';
+  'roundRobin' | 'byFitness' | 'bySpecialization' | 'non-overlapping';
+
+/**
+ * Supported shorthand tokens for seed-governance policy at constructor/runtime boundaries.
+ * The canonical envelope always stores the expanded object shape.
+ *
+ * `'queen-weighted'` expands to `{ siblingsDifferBySeed: true, twinsAllowed: false }`
+ * during `NGE_DNA` construction. The normalized object is what the canonical
+ * envelope serializes, so round-trips and fingerprints remain stable regardless of
+ * whether the caller passed the shorthand or the full object.
+ */
+export type NgeSeedPolicyShorthand = 'queen-weighted';
 
 /**
  * Seed governance toggles controlling sibling divergence and identical twin generation.
@@ -82,7 +122,24 @@ export interface NgeReproductionPolicy {
 }
 
 /**
- * Optional substrate budget override reserved for later NGE development passes.
+ * Policy input accepted at reproduction operator boundaries. Identical to the
+ * canonical {@link NgeReproductionPolicy} but allows the seed-governance shelf
+ * to be supplied as the {@link NgeSeedPolicyShorthand} `'queen-weighted'`, which
+ * is expanded to the canonical object before the policy is stored in the
+ * envelope.
+ *
+ * This follows the envelope-normalization contract: core accepts shorthand values
+ * at input and keeps a canonical shape internally.
+ */
+export type NgeReproductionPolicyInput = Omit<
+  NgeReproductionPolicy,
+  'seedPolicy'
+> & {
+  seedPolicy: NgeSeedPolicy | NgeSeedPolicyShorthand;
+};
+
+/**
+ * Optional substrate budget override for callers that supply stricter node/edge limits than the defaults.
  * When present, clamps the maximum node and edge counts allowed for one materialized substrate.
  */
 export interface NgeSubstrateBudgetOverride {
@@ -143,7 +200,7 @@ export interface NgeSubstrateZone {
  * Fixes the three-axis unit-cube geometry and zone-partition scheme used during module placement.
  */
 export interface NgeSubstrateConfig {
-  /** Fixed three-axis dimensionality for the Step 03 unit-cube substrate. */
+  /** Fixed three-axis dimensionality for the unit-cube substrate. */
   dimensions: 3;
   /** Fixed unit-cube normalization contract for development-time placement. */
   normalization: 'unit-cube';
@@ -158,10 +215,7 @@ export interface NgeSubstrateConfig {
  * Each kind implies a distinct geometry strategy applied to the module placement list during development.
  */
 export type NgeRulePassKind =
-  | 'replicate'
-  | 'symmetry'
-  | 'hierarchy'
-  | 'differentiate';
+  'replicate' | 'symmetry' | 'hierarchy' | 'differentiate';
 
 /**
  * One requested placement emitted by a DNA rule pass during deterministic development.
@@ -190,14 +244,10 @@ export interface NgeRulePass {
 }
 
 /**
- * CPPN activation families supported by the Phase A deterministic evaluator.
+ * CPPN activation families supported by the canonical deterministic evaluator.
  */
 export type NgeCppnActivationKind =
-  | 'linear'
-  | 'tanh'
-  | 'sigmoid'
-  | 'gaussian'
-  | 'sine';
+  'linear' | 'tanh' | 'sigmoid' | 'gaussian' | 'sine';
 
 /**
  * One explicit non-input CPPN node.
@@ -246,14 +296,14 @@ export type NgeCppnEdgeInput = Pick<
 
 /**
  * Full canonical CPPN program descriptor carried by the NGE DNA envelope.
- * Evaluated during Step 04 materialization to derive sparse adjacency between realized modules.
+ * Evaluated during phenotype materialization to derive sparse adjacency between realized modules.
  */
 export interface NgeCppnProgram {
   /** Stable program identifier inside the DNA envelope. */
   programId: string;
-  /** Fixed canonical input ids for the Phase A evaluator. */
+  /** Fixed canonical input ids for the NGE CPPN evaluator. */
   inputNodeIds: string[];
-  /** Fixed canonical output ids for the Phase A evaluator. */
+  /** Fixed canonical output ids for the NGE CPPN evaluator. */
   outputNodeIds: string[];
   /** Explicit non-input nodes keyed by `nodeId`. */
   hiddenNodes: NgeCppnNode[];
@@ -262,7 +312,7 @@ export interface NgeCppnProgram {
 }
 
 /**
- * Loose constructor input for one canonical CPPN program descriptor for the Phase A evaluator.
+ * Loose constructor input for one canonical CPPN program descriptor for the NGE CPPN evaluator.
  * Omitted fields resolve to canonical defaults; omitted edge weights resolve to zero.
  */
 export interface NgeCppnProgramInput {
@@ -279,7 +329,7 @@ export interface NgeCppnProgramInput {
 }
 
 /**
- * DNA-level module archetype registry entry consumed during the Step 04 realization pass.
+ * DNA-level module archetype registry entry consumed during the phenotype realization pass.
  * Associates a computation motif with optional coordinate injection and weight-shared cohort membership.
  */
 export interface NgeDnaModuleArchetype {
@@ -329,7 +379,7 @@ export interface NgeVirtualModule {
 
 /**
  * Deterministic in-memory module-placement plan produced by NGE rule execution.
- * Consumed by the Step 04 materialization pass and validated via a canonical plan fingerprint.
+ * Consumed by the phenotype materialization pass and validated via a canonical plan fingerprint.
  */
 export interface NgeVirtualModulePlan {
   /** Stable ordered list of virtual modules emitted by the rule executor. */
@@ -341,14 +391,14 @@ export interface NgeVirtualModulePlan {
 }
 
 /**
- * One realized module emitted by the Step 04 materialization pass.
+ * One realized module emitted by the phenotype materialization pass.
  */
 export interface NgeRealizedModule {
   /** Stable deterministic module identifier derived from the canonical pass order. */
   moduleId: string;
   /** Stable archetype identity referenced by the source rule pass. */
   archetypeId: string;
-  /** Realized computation motif validated against the public Phase 0 catalogue. */
+  /** Realized computation motif validated against the public computation-type catalogue. */
   computationType: NeatGenomeComputationType;
   /** Normalized unit-cube coordinate forwarded from the virtual module plan. */
   coordinate: NeatGenomeSubstrateCoordinate;
@@ -384,7 +434,7 @@ export interface NgeRealizedEdge {
 }
 
 /**
- * Fully JSON-serializable realized phenotype descriptor produced at the end of Step 04.
+ * Fully JSON-serializable realized phenotype descriptor produced at the end of phenotype materialization.
  */
 export interface NgeRealizedPhenotypeDescriptor {
   /** Stable ordered list of realized modules. */

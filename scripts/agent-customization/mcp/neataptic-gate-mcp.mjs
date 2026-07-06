@@ -52,6 +52,12 @@ const TIER_1_GATES = [
       'Checks that active [WIP] step packets have required fields and sections.',
   },
   {
+    id: 'plan-slice-quality',
+    owner: 'plan-slice-quality.gate.mjs',
+    description:
+      'Checks that every WIP plan slice has estimate_hours <= 4. Oversized slices must be broken down before verification can pass.',
+  },
+  {
     id: 'agent-graph',
     owner: 'validate-agent-graph.mjs',
     description:
@@ -98,6 +104,18 @@ const TIER_1_GATES = [
     owner: 'cortex-first-search.gate.mjs',
     description:
       'Checks the prerequisites for the Cortex-first search policy before corpus-bound work relies on Repo Cortex.',
+  },
+  {
+    id: 'devtools-coverage',
+    owner: 'devtools-coverage.gate.mjs',
+    description:
+      'Checks that the 03-red-testing and 05-green-testing agents include the devtools skill and reference the three Chrome DevTools MCP specialists.',
+  },
+  {
+    id: 'delegate-skill-coverage',
+    owner: 'delegate-skill-coverage.gate.mjs',
+    description:
+      'Checks that every Tier 1 and Tier 2 agent includes the execute skill in its skills array.',
   },
 ];
 
@@ -165,7 +183,7 @@ function createGateTools() {
             type: 'string',
             enum: TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
             description:
-              'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, or cortex-first-search).',
+              'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, cortex-first-search, devtools-coverage, or delegate-skill-coverage).',
           },
         },
         required: ['gate'],

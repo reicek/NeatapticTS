@@ -2,6 +2,8 @@
 
 > Extracted from `plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md` (Step 12) for permanent reference.
 
+> **Backing database.** The Repo Cortex is backed by a single consolidated Turso (libSQL) database accessed via the fully async `@libsql/client` driver (default local embedded replica `data/turso-replica.sqlite`; cloud primary `libsql://<db>.turso.io`). Vectors use native Turso vectors with `F8_BLOB` 8-bit quantization, approximate nearest neighbor search runs server-side via DiskANN (`libsql_vector_idx`, `vector_top_k()`), and hybrid ranking is performed SQL-side via Reciprocal Rank Fusion (RRF, k=60). The historical design content below describes the pre-Turso architecture that was subsequently migrated to this stack.
+
 Complete design for approximate nearest neighbor (ANN) index architecture for scalable dense search in the NeatapticTS Repo Cortex, with sqlite-vec and hnswlib-node evaluation, brute-force caching fallback, threshold activation, incremental update, and cross-platform CI considerations.
 
 ---
@@ -36,6 +38,8 @@ validation:
 ---
 
 ##### ANN Index Architecture — Complete Design
+
+> **Implemented solution.** The production ANN index uses native Turso DiskANN via `libsql_vector_idx` with server-side `vector_top_k()` and `F8_BLOB` 8-bit quantization, on the consolidated Turso (libSQL) database. The brute-force, `sqlite-vec`, and `hnswlib-node` evaluation discussed below is the historical design analysis that preceded the Turso native-vector decision; it is preserved as design rationale and does not describe the current primary vector store.
 
 ###### A. Problem Statement
 
@@ -732,15 +736,15 @@ try {
 
 `sqlite-vec` (v0.1.10-alpha.4) was evaluated as an alternative. Key findings:
 
-| Criterion                 | sqlite-vec                                                  | hnswlib-node                           | Assessment                                                    |
-| ------------------------- | ----------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------- |
-| Search type               | Brute-force only (no ANN)                                   | HNSW ANN                               | sqlite-vec provides no ANN acceleration                       |
-| Maturity                  | Pre-v1, "expect breaking changes"                           | v3.0.0, stable                         | sqlite-vec is experimental                                    |
-| Windows extension loading | Known `loadExtension` issues with better-sqlite3 on Windows | node-gyp compilation required          | Both have Windows friction; hnswlib-node's is build-time only |
-| Distance metrics          | L2, cosine, hamming                                         | L2, IP, cosine                         | Comparable                                                    |
-| Persistence               | SQLite DB (same as existing system)                         | Binary file (separate from SQLite)     | sqlite-vec integrates more naturally with existing DB         |
-| Incremental updates       | INSERT/DELETE (trivial, brute-force)                        | addPoint/markDelete + periodic rebuild | sqlite-vec is simpler for updates                             |
-| Performance at 100K       | ~15–60 ms (brute-force)                                     | ~0.5–2 ms (HNSW)                       | HNSW is 10–50× faster                                         |
+| Criterion                 | sqlite-vec                                                                          | hnswlib-node                           | Assessment                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------- |
+| Search type               | Brute-force only (no ANN)                                                           | HNSW ANN                               | sqlite-vec provides no ANN acceleration                       |
+| Maturity                  | Pre-v1, "expect breaking changes"                                                   | v3.0.0, stable                         | sqlite-vec is experimental                                    |
+| Windows extension loading | Known `loadExtension` issues with the previous synchronous SQLite driver on Windows | node-gyp compilation required          | Both have Windows friction; hnswlib-node's is build-time only |
+| Distance metrics          | L2, cosine, hamming                                                                 | L2, IP, cosine                         | Comparable                                                    |
+| Persistence               | SQLite DB (same as existing system)                                                 | Binary file (separate from SQLite)     | sqlite-vec integrates more naturally with existing DB         |
+| Incremental updates       | INSERT/DELETE (trivial, brute-force)                                                | addPoint/markDelete + periodic rebuild | sqlite-vec is simpler for updates                             |
+| Performance at 100K       | ~15–60 ms (brute-force)                                                             | ~0.5–2 ms (HNSW)                       | HNSW is 10–50× faster                                         |
 
 **Conclusion**: sqlite-vec is not suitable for ANN search because it only provides brute-force vector similarity, not approximate nearest neighbor acceleration. Its `vec0` virtual table performs linear scans. While the DiskANN and IVF index implementations exist in development branches, they are not merged or stable. sqlite-vec could be reconsidered as an alternative brute-force implementation in the future if its ANN branches stabilize, but it does not solve the scaling problem today.
 
@@ -930,7 +934,7 @@ The ANN index feature does not change any existing API contract. The `dense_stra
 
 | Dependency                | Current version | New?           | Impact                                                       |
 | ------------------------- | --------------- | -------------- | ------------------------------------------------------------ |
-| `better-sqlite3`          | 12.10.0         | No             | Unchanged                                                    |
+| `@libsql/client`          | ^0.17.4         | No             | Unchanged                                                    |
 | `hnswlib-node`            | N/A             | Yes (optional) | Optional native dependency; graceful fallback if unavailable |
 | `onnxruntime-node`        | ^1.26.0         | No             | Unchanged                                                    |
 | `@huggingface/tokenizers` | Current         | No             | Unchanged                                                    |

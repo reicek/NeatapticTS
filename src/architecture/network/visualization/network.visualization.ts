@@ -15,8 +15,8 @@
  * does not draw anything. Rendering decisions (canvas, terminal, DOT, SVG) are
  * left to consumers. This makes the export path useful for:
  *
- * - In-browser canvas renderers (e.g. the Flappy Bird network panel).
- * - Terminal ASCII renderers (e.g. ASCII Maze).
+ * - In-browser canvas renderers (e.g. an interactive demo panel).
+ * - Terminal ASCII renderers (e.g. a maze-exploration demo).
  * - External visualization tools via the DOT helper.
  * - Debugging architectures in issues or docs.
  *

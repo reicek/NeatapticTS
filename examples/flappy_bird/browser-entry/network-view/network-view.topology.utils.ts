@@ -89,11 +89,13 @@ export function resolveNetworkVisualizationTopologyPlan(
           index: inputNodeIndex,
           type: 'input',
           bias: 0,
+          activation: 0,
         })),
         Array.from({ length: outputSize }, (_unusedValue, outputNodeIndex) => ({
           index: inputSize + outputNodeIndex,
           type: 'output',
           bias: 0,
+          activation: 0,
         })),
       ],
       hiddenColumnAnnotations: [],
@@ -106,6 +108,7 @@ export function resolveNetworkVisualizationTopologyPlan(
       index?: number;
       type?: string;
       bias?: number;
+      activation?: number;
       geneId?: number;
       layer?: number;
     }>
@@ -116,6 +119,7 @@ export function resolveNetworkVisualizationTopologyPlan(
         : fallbackNodeIndex,
     type: runtimeNode.type ?? 'hidden',
     bias: runtimeNode.bias ?? 0,
+    activation: runtimeNode.activation ?? 0,
     geneId: runtimeNode.geneId,
     layer: runtimeNode.layer,
   }));

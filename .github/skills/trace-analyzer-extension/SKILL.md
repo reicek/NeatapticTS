@@ -1,9 +1,13 @@
 ---
 name: trace-analyzer-extension
-description: 'Extend scripts/analyze-trace/analyze-trace.ts with new rollups, comparisons, script attribution, percentiles, or deterministic report sections. Use when the existing trace analyzer cannot answer an engineering question about Chrome trace or Perfetto data.'
+description: 'Use when: extending the trace analyzer with new rollups or comparisons.'
 argument-hint: 'Describe the trace question, missing metric, and validation trace file.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - trace-audit-reporting
+  - performance-optimization
+  - tracker-handoff
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -29,6 +33,16 @@ report log, `tracker-handoff` owns the plan/log structure.
 - The report needs percentiles, top-N comparisons, or a tighter summary format.
 - A one-off shell command would be too fragile or too noisy to repeat reliably
   across future trace captures.
+
+## When NOT to use
+
+Do NOT use for trace reporting or analysis - use `trace-audit-reporting` instead. Do NOT use for performance optimization implementation - use `performance-optimization` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Analyzer cant answer question" → "Read analyze-trace.ts"; "Read analyze-trace.ts" → "Design new section"; "Design new section" → "Implement helper"; "Implement helper" → "Validate against trace"; "Validate against trace" → "Output correct?"; "Output correct?" → "Update trace-audit-reporting docs" (Yes), "Design new section" (No); "Update trace-audit-reporting docs" → "Done"; "Done".
+```
 
 ## Task Packet
 
@@ -84,6 +98,31 @@ Output format: compact table, one row per thread, columns p50/p95/max.
 - Preserve thread awareness so renderer, worker, browser, and GPU work remain
   separable.
 - Avoid sections that require manual post-processing to become useful.
+
+## Before/After Analyzer Output
+
+**Before (insufficient):**
+
+```text
+Top events by duration:
+  HandlePostMessage: 45ms (12 occurrences)
+```
+
+**After (with per-thread breakdown):**
+
+```text
+Per-thread p95 durations:
+| Thread   | p50   | p95   | Max   |
+|----------|-------|-------|-------|
+| renderer | 2ms   | 8ms   | 15ms  |
+| worker   | 5ms   | 22ms  | 45ms  |
+```
+
+## Decision Tree
+
+```text
+Flowchart summary: "Trace work" → "What kind?"; "What kind?" → "trace-analyzer-extension" (Analyzer cannot answer question), "trace-audit-reporting" (Write report from analyzer output), "performance-optimization" (Implement perf optimization); "trace-analyzer-extension"; "trace-audit-reporting"; "performance-optimization".
+```
 
 ## Guardrails
 

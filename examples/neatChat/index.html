@@ -7,12 +7,37 @@
     <link rel="stylesheet" href="../../docs/assets/theme.css" />
     <script defer src="../../docs/assets/theme-tooltips.js"></script>
     <style>
-      .feature-lane-list { margin: 1rem 0; padding: 0; }
-      .feature-lane-list dt { font-weight: bold; margin-top: 0.75rem; padding: 0.2em 0.5em; border-radius: 3px; display: inline-block; }
-      .feature-lane-list dd { margin: 0.25rem 0 0 0; color: var(--color-text-muted, #ccc); font-size: 0.9em; }
-      .lane-live { background: #0a3020; color: #3dffa0; border: 1px solid #3dffa0; }
-      .lane-experimental { background: #1a1a00; color: #ffe040; border: 1px solid #ffe040; }
-      .lane-background { background: #1a0a00; color: #ff9040; border: 1px solid #ff9040; }
+      .feature-lane-list {
+        margin: 1rem 0;
+        padding: 0;
+      }
+      .feature-lane-list dt {
+        font-weight: bold;
+        margin-top: 0.75rem;
+        padding: 0.2em 0.5em;
+        border-radius: 3px;
+        display: inline-block;
+      }
+      .feature-lane-list dd {
+        margin: 0.25rem 0 0 0;
+        color: var(--color-text-muted, #ccc);
+        font-size: 0.9em;
+      }
+      .lane-live {
+        background: #0a3020;
+        color: #3dffa0;
+        border: 1px solid #3dffa0;
+      }
+      .lane-experimental {
+        background: #1a1a00;
+        color: #ffe040;
+        border: 1px solid #ffe040;
+      }
+      .lane-background {
+        background: #1a0a00;
+        color: #ff9040;
+        border: 1px solid #ff9040;
+      }
     </style>
   </head>
   <body class="demo-page">
@@ -29,24 +54,39 @@
         </p>
         <dl class="feature-lane-list">
           <dt class="lane-label lane-live">Live (stable)</dt>
-          <dd>Tokenization, bounded pretraining, online exchange updates,
-            session export/import, episodic memory bank, A/B metric comparison,
-            regression harness scoring, and safety gate checks.</dd>
-          <dt class="lane-label lane-experimental">Experimental — observability only</dt>
-          <dd>Multi-path routing compares base, personalized, and
+          <dd>
+            Tokenization, bounded pretraining, online exchange updates, session
+            export/import, episodic memory bank, A/B metric comparison,
+            regression harness scoring, and safety gate checks.
+          </dd>
+          <dt class="lane-label lane-experimental">
+            Experimental — observability only
+          </dt>
+          <dd>
+            Multi-path routing compares base, personalized, and
             retrieval-grounded candidates before selecting a reply. The routing
             log is recorded for inspection; routing does not promote weights or
-            mutate session state.</dd>
-          <dt class="lane-label lane-background">Experimental — background job</dt>
-          <dd>Background adaptation schedules a fine-tune pass asynchronously
+            mutate session state.
+          </dd>
+          <dt class="lane-label lane-background">
+            Experimental — background job
+          </dt>
+          <dd>
+            Background adaptation schedules a fine-tune pass asynchronously
             against a frozen session snapshot. The base network is never
             silently mutated. Candidates require explicit promotion or
             rejection. Adaptation runs on the main thread — a worker-thread
-            backend is not yet present.</dd>
+            backend is not yet present.
+          </dd>
         </dl>
       </section>
 
-      <p id="neat-chat-status" class="load-status" role="status" aria-live="polite">
+      <p
+        id="neat-chat-status"
+        class="load-status"
+        role="status"
+        aria-live="polite"
+      >
         Loading NEATchat preview...
       </p>
       <section id="neat-chat-output" class="starter-demo-shell"></section>
@@ -55,7 +95,9 @@
     <script>
       (function loadNeatChatBundle() {
         const statusElement = document.getElementById('neat-chat-status');
-        const isRepositoryExamplePath = /\/examples\//.test(window.location.pathname);
+        const isRepositoryExamplePath = /\/examples\//.test(
+          window.location.pathname,
+        );
         const bundleSrc = isRepositoryExamplePath
           ? '../../docs/assets/neat-chat.bundle.js'
           : '../../assets/neat-chat.bundle.js';
@@ -82,16 +124,14 @@
             })
             .catch((error) => {
               if (statusElement) {
-                statusElement.textContent = error instanceof Error
-                  ? error.message
-                  : String(error);
+                statusElement.textContent =
+                  error instanceof Error ? error.message : String(error);
               }
             });
         };
         scriptElement.onerror = () => {
           if (statusElement) {
-            statusElement.textContent =
-              `Failed to load neat-chat.bundle.js from ${bundleSrc}. Run npm run build:neat-chat.`;
+            statusElement.textContent = `Failed to load neat-chat.bundle.js from ${bundleSrc}. Run npm run build:neat-chat.`;
           }
         };
 

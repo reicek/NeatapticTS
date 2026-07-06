@@ -1,9 +1,13 @@
 ---
 name: plan-sync-validation
-description: 'Validate alignment between NeatapticTS active plans, plans/README.md, and plans/Roadmap.md. Use when registering a plan, changing status markers, adding trigger phrases, or checking that roadmap and index entries agree.'
+description: 'Use when: validating plan tracker, README, and Roadmap alignment.'
 argument-hint: 'Describe the plan path, expected status, index entry, roadmap placement, and whether this is advisory or blocking.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - plan-alignment
+  - tracker-handoff
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -15,8 +19,10 @@ that the plan file, its index entry in `plans/README.md`, and its roadmap
 placement in `plans/Roadmap.md` are all consistent with each other.
 
 This skill is invoked automatically as a gate inside agent workflow flows, and
-can also be invoked explicitly before marking a plan step `[DONE]`. When tracker
-shape or closure rules are needed, `tracker-handoff` is the canonical skill.
+can also be invoked explicitly before marking a plan step `[DONE]`. Plan sync
+enforces the constitution authority of the tracker shape across README, Roadmap,
+and the active plan. When tracker shape or closure rules are needed,
+`tracker-handoff` is the canonical skill.
 
 ## When to Use
 
@@ -30,6 +36,16 @@ shape or closure rules are needed, `tracker-handoff` is the canonical skill.
   roadmap, with a compressed record moved to `plans/completed/`.
 - A flow gate declares a `plan-sync` check and it must return `"pass": true`
   before the flow step can close.
+
+## When NOT to use
+
+Do NOT use for plan alignment or selection - use `plan-alignment` instead. Do NOT use for tracker updates - use `tracker-handoff` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Plan edited" → "Run workflow-update-sync"; "Run workflow-update-sync" → "Run validate-plan-sync"; "Run validate-plan-sync" → "Pass?"; "Pass?" → "Sync complete" (Yes), "Fix status/README/roadmap" (No); "Sync complete"; "Fix status/README/roadmap" → "Run workflow-update-sync".
+```
 
 ## Task Packet
 
@@ -83,6 +99,34 @@ Mode: blocking gate.
    `.logs.md` file will move to `plans/completed/` and that the active README
    and Roadmap entries will be removed or updated. Use `tracker-handoff` for the
    closure mechanics.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Plan / README / Roadmap" → "Which surface is wrong?"; "Which surface is wrong?" → "Update plan file marker" (Plan status stale), "Update plans/README.md" (README entry missing/stale), "Update plans/Roadmap.md" (Roadmap lane mismatch), "Fix plan first, then propagate" (All three disagree); "Update plan file marker" → "Re-run validate-plan-sync"; "Update plans/README.md" → "Re-run validate-plan-sync"; "Update plans/Roadmap.md" → "Re-run validate-plan-sync"; "Fix plan first, then propagate" → "Re-run validate-plan-sync"; "Re-run validate-plan-sync".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+# In plans/README.md (stale)
+- **Flappy Visualization** — [WIP] — trigger: flappy viz
+
+# In plan file (already done)
+**Status:** [DONE]
+```
+
+**After:**
+
+```text
+# In plans/README.md (corrected)
+- **Flappy Visualization** — [DONE] — trigger: flappy viz
+
+# In plan file (matches)
+**Status:** [DONE]
+```
 
 ## Guardrails
 

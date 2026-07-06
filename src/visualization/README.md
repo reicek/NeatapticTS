@@ -130,8 +130,8 @@ semantic annotations for overlays.
 
 Optional hook functions that demos can use to inject custom overlays.
 
-Flappy Bird injects input-group label bands and per-input descriptions.
-ASCII Maze could inject custom layer labels, or leave hooks undefined.
+A consumer can inject input-group label bands and per-input descriptions,
+or custom layer labels, or leave hooks undefined.
 
 ### PositionedNetworkNode
 

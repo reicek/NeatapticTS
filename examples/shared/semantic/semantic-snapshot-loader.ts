@@ -20,7 +20,7 @@ const DEFAULT_STORE_NAME = 'snapshots';
  * Falls back to a direct network fetch without caching in environments that do not expose
  * `globalThis.indexedDB` (e.g. Node.js test runners or server-side rendering).
  *
- * @param url - Browser URL for `docs/assets/semantic-snapshot.json` or a test fixture endpoint.
+ * @param url - Browser URL for `rag-index/snapshots/semantic-snapshot.json` or a test fixture endpoint.
  * @param options - Optional cache names, store name, and refresh controls.
  * @returns A validated semantic snapshot ready for browser-side search.
  *

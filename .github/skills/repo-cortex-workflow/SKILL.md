@@ -1,9 +1,13 @@
 ---
 name: repo-cortex-workflow
-description: 'Use when maintaining Repo Cortex health: checking semantic-index freshness, choosing incremental versus forced rebuilds, regenerating the browser snapshot, running Cortex lifecycle gates, recovering from workflow or corpus MCP drift, or packaging durable Cortex evidence for hooks and CI. Use this workflow instead of ad hoc rebuild guesses.'
+description: 'Use when: maintaining Repo Cortex health, freshness, or RAG gaps.'
 argument-hint: 'Describe the Cortex symptom, failing command or gate, known stale paths or plan binding, whether snapshot or dense search is in scope, and the desired green proof.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - repo-cortex-embeddings
+  - research-methodology
+  - green-validation-gates
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -22,7 +26,7 @@ maintenance surfaces drift red on their own.
   `over_age_paths`.
 - Only part of the corpus appears stale after localized changes and you need the
   narrowest safe repair.
-- `docs/assets/semantic-snapshot.json` is older than the index or browser
+- `rag-index/snapshots/semantic-snapshot.json` is older than the index or browser
   consumers are serving stale search state.
 - `cortex-index.gate.mjs` fails and you need to isolate whether the index,
   snapshot, corpus MCP, or workflow MCP is red.
@@ -33,6 +37,16 @@ maintenance surfaces drift red on their own.
 - Session-start or post-write automation needs a predictable Cortex maintenance
   packet with machine-readable evidence.
 
+## When NOT to use
+
+Do NOT use for embedding-specific work - use `repo-cortex-embeddings` instead. Do NOT use for general research - use `research-methodology` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Index stale?" → "Run freshness check"; "Run freshness check" → "Fresh?"; "Fresh?" → "Search ready" (Yes), "Rebuild index" (No); "Search ready"; "Rebuild index" → "Run build-index"; "Run build-index" → "Run validate-index"; "Run validate-index" → "Pass?"; "Pass?" → "Search ready" (Yes), "Fix indexing error" (No); "Fix indexing error" → "Run build-index".
+```
+
 ## Task Packet
 
 Pass a compact packet with the failing surface, any known scope, and the proof
@@ -41,7 +55,7 @@ you want at the end.
 ```text
 Use repo-cortex-workflow for localized semantic-index drift.
 Symptom: validate-index reports stale_paths after edits under .github/skills/.
-Failing command: node scripts/semantic-index/validate-index.mjs --json
+Failing command: node rag-index/validate-index.mjs --json
 Known scope: only skill docs changed; browser snapshot should stay current.
 Desired end state: validate-index passes, snapshot is current, and cortex-index gate returns {pass: true}.
 ```
@@ -49,25 +63,25 @@ Desired end state: validate-index passes, snapshot is current, and cortex-index 
 ## Required Workflow
 
 1. Start with the narrowest classifier:
-   `node scripts/semantic-index/validate-index.mjs --json`
+   `node rag-index/validate-index.mjs --json`
    Treat `stale_paths`, `missing_paths`, and `over_age_paths` as the decision
    surface.
 2. Choose the smallest safe repair:
    - **Over-age only**: run `npm run index:session-start` to touch still-fresh
      rows and rebuild only changed or new corpus files.
    - **Stale or missing corpus rows**: run
-     `node scripts/semantic-index/build-index.mjs --json`. The builder is
+     `node rag-index/build-index.mjs --json`. The builder is
      already incremental; it reindexes changed or new files and skips unchanged
      rows.
    - **Suspected freshness-proof corruption or chunker drift**: rerun
-     `node scripts/semantic-index/build-index.mjs --force --json` only after a
+     `node rag-index/build-index.mjs --force --json` only after a
      normal incremental build fails to clear the same paths.
    - **Snapshot only**: run `npm run index:build-snapshot`. Use `npm run docs`
      only when broader docs outputs also need regeneration.
    - **Dense-search readiness after corpus change**: run `npm run index:prewarm`
      after the index is healthy.
 3. Prefer a post-build health summary when available:
-   `node scripts/semantic-index/build-index.mjs --json-health`
+   `node rag-index/build-index.mjs --json-health`
    If that returns `status: "error"` or is unavailable on the checkout, fall
    back to the builder's `--json` summary plus a fresh
    `validate-index.mjs --json` pass.
@@ -86,12 +100,12 @@ Desired end state: validate-index passes, snapshot is current, and cortex-index 
 
 ## Command Sequence
 
-- Freshness status: `node scripts/semantic-index/validate-index.mjs --json`
-- Incremental rebuild: `node scripts/semantic-index/build-index.mjs --json`
+- Freshness status: `node rag-index/validate-index.mjs --json`
+- Incremental rebuild: `node rag-index/build-index.mjs --json`
 - Forced rebuild when evidence says normal freshness proofs are untrustworthy:
-  `node scripts/semantic-index/build-index.mjs --force --json`
+  `node rag-index/build-index.mjs --force --json`
 - Post-build health summary when available:
-  `node scripts/semantic-index/build-index.mjs --json-health`
+  `node rag-index/build-index.mjs --json-health`
 - Session-start partial refresh: `npm run index:session-start`
 - Snapshot regeneration: `npm run index:build-snapshot`
 - Dense-search prewarm: `npm run index:prewarm`
@@ -107,7 +121,7 @@ Desired end state: validate-index passes, snapshot is current, and cortex-index 
 ## Failure Recovery and Edge Cases
 
 - **Database missing or empty**: treat that as a build prerequisite failure. Run
-  `node scripts/semantic-index/build-index.mjs --json` before any snapshot or
+  `node rag-index/build-index.mjs --json` before any snapshot or
   MCP checks.
 - **Builder exits non-zero**: keep stdout or stderr as evidence, stop the
   sequence, and do not run snapshot regeneration or gates as if the index were
@@ -140,7 +154,7 @@ Desired end state: validate-index passes, snapshot is current, and cortex-index 
 - Reserve `--force` for suspected freshness-proof corruption, schema drift, or
   parser changes that make "unchanged" rows untrustworthy.
 - Rebuild the browser snapshot only after the index is green, because the
-  snapshot is downstream of the SQLite corpus.
+  snapshot is downstream of the Turso (libSQL) corpus.
 
 ## Persistent-Issue Escalation and Feedback
 
@@ -162,7 +176,8 @@ Escalate to `00-helping` when:
 - a required script or gate is missing from the checkout,
 - workflow or corpus MCP self-checks keep failing after the binding is
   corrected,
-- the same gate fails three consecutive times in the same session,
+- a gate or workflow issue cannot be resolved through normal repair and a true
+  technical limit has been reached,
 - manual host intervention is required to restart an MCP server or repair local
   toolchain state.
 
@@ -174,7 +189,7 @@ Capture durable before/after evidence for every non-trivial Cortex repair:
 - builder `--json` or `--json-health` summary,
 - `cortex-index.gate.mjs --json` result when available,
 - any session redirect payload showing the written `plan_path`,
-- snapshot regeneration summary when `docs/assets/semantic-snapshot.json`
+- snapshot regeneration summary when `rag-index/snapshots/semantic-snapshot.json`
   changed.
 
 When a binding change is temporary, also record the rollback command
@@ -199,11 +214,39 @@ Prefer existing automation surfaces over bespoke shell glue:
 - **Dense-search consumers**: pair corpus rebuilds with `npm run index:prewarm`
   only in environments that actually need warm dense search.
 
+## Decision Tree
+
+```text
+Flowchart summary: "Cortex symptom" → "What's failing?"; "What's failing?" → "Incremental rebuild" (stale_paths / missing_paths), "Check MCP binding" (validate-index clean, search wrong), "Diagnose MCP / snapshot" (Gate fails, index green), "Forced rebuild" (Freshness-proof corruption); "Incremental rebuild" → "Rerun validate-index"; "Check MCP binding" → "Check workflow MCP self-check"; "Diagnose MCP / snapshot" → "Isolate failing surface"; "Forced rebuild" → "Rerun validate-index"; "Rerun validate-index"; "Check workflow MCP self-check"; "Isolate failing surface".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+# Stale Cortex index
+validate-index: stale_paths: ["src/architecture/network/README.md", ...]
+search_corpus("network inference") → returns deleted-file results
+cortex-index gate: { pass: false }
+```
+
+**After:**
+
+```text
+# Repaired index with freshness proof
+node rag-index/build-index.mjs --json
+validate-index: { stale_paths: [], missing_paths: [] }
+search_corpus("network inference") → returns current results
+cortex-index gate: { pass: true, evidence: { index_fresh: true, ... } }
+```
+
 ## Guardrails
 
-- Do not hand-edit `data/semantic-index.sqlite` or
-  `docs/assets/semantic-snapshot.json`.
-- Do not use SQLite file modification time as a freshness proxy when index
+- Do not hand-edit the Turso (libSQL) corpus database
+  (`rag-index/data/turso-replica.sqlite` in local-only fallback mode) or
+  `rag-index/snapshots/semantic-snapshot.json`.
+- Do not use database file modification time as a freshness proxy when index
   content timestamps are available.
 - Do not treat workflow MCP binding failures as proof that the corpus needs a
   rebuild.

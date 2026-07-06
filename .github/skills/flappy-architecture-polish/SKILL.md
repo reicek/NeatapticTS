@@ -1,9 +1,14 @@
 ---
 name: flappy-architecture-polish
-description: 'Tune, stabilize, and instrument one Flappy Bird architecture profile across browser runtime, warm-start, worker evaluation, and durable long-run probes so the same polish loop can be reused for LSTM, GRU, NARX, MLP, or Sparse profiles.'
+description: 'Use when: tuning or instrumenting a Flappy Bird architecture profile.'
 argument-hint: 'Describe the Flappy architecture profile, the current symptom or polish target, whether a durable probe already exists, and whether this pass is reconnaissance, implementation, or rerun validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - tracker-handoff
+  - plan-alignment
+  - architecture-builder
+  - coverage-guard
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -37,6 +42,10 @@ runtime direction, `plan-alignment` owns plan selection and terminology.
 - A long-running Jest probe was useful for investigation, but the durable end
   state should be a CLI or scriptable probe rather than a multi-minute test.
 
+## When NOT to use
+
+Do NOT use for creating new architectures from scratch - use `architecture-builder` instead. Do NOT use for general Flappy Bird bug fixes - use `test-fix-workflow` instead.
+
 ## Scope Boundary
 
 This skill owns the repeatable Flappy architecture-polish workflow for:
@@ -50,6 +59,12 @@ This skill owns the repeatable Flappy architecture-polish workflow for:
 
 This skill does not replace `plan-alignment` for roadmap selection, and it does
 not replace `tracker-handoff` for tracker structure.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Select architecture profile" → "Run training probe"; "Run training probe" → "Analyze results"; "Analyze results" → "Meets target?"; "Meets target?" → "Record polished profile" (Yes), "Adjust hyperparams" (No); "Record polished profile" → "Update plan"; "Adjust hyperparams" → "Re-run probe"; "Update plan"; "Re-run probe" → "Analyze results".
+```
 
 ## Task Packet
 
@@ -185,6 +200,26 @@ A durable polish probe should normally emit:
 
 If the probe supports strict mode, the strict flag should only affect exit code
 behavior, not hide the summary.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Flappy symptom" → "Which owner boundary?"; "Which owner boundary?" → "LSTM/GRU architecture tuning" (Recurrent tuning, hyperparams), "Worker fairness (flappy-evolution-worker.runtime.service)" (Per-generation seed rotation), "Warm-start (flappy-evolution-worker.warm-start.service)" (Post-warm-start regression), "Sparse architecture (architecture-builder)" (Topology or connection density); "LSTM/GRU architecture tuning"; "Worker fairness (flappy-evolution-worker.runtime.service)"; "Warm-start (flappy-evolution-worker.warm-start.service)"; "Sparse architecture (architecture-builder)".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+lstmProfile: { hiddenSize: 8, lr: 0.01 } // random hyperparams, no probe baseline
+```
+
+**After:**
+
+```text
+lstmProfile: { hiddenSize: 12, lr: 0.005 } // probe-guided: p95 frames +18% over 30 gens
+```
 
 ## Guardrails
 

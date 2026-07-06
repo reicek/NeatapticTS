@@ -2,6 +2,8 @@
 
 > Extracted from `plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md` (Step 06) for permanent reference.
 
+> **Backing database.** The Repo Cortex is backed by a single consolidated Turso (libSQL) database accessed via the fully async `@libsql/client` driver (default local embedded replica `data/turso-replica.sqlite`; cloud primary `libsql://<db>.turso.io`). Vectors use native Turso vectors with `F8_BLOB` 8-bit quantization, approximate nearest neighbor search runs server-side via DiskANN (`libsql_vector_idx`, `vector_top_k()`), and hybrid ranking is performed SQL-side via Reciprocal Rank Fusion (RRF, k=60). The historical design content below describes the pre-Turso architecture that was subsequently migrated to this stack.
+
 Complete design for lightweight entity/relationship extraction and graph storage for multi-hop traversal.
 
 ---
@@ -26,7 +28,7 @@ validation:
 
 - Entity types: module, class, function, export, plan, skill, agent, demo, benchmark
 - Relationship types: imports, exports, depends-on, implements, references, owns, part-of
-- Storage: SQLite graph tables (nodes + edges) alongside corpus index
+- Storage: graph tables (nodes + edges) in the consolidated Turso (libSQL) database alongside corpus index
 - Extraction: static analysis for code entities, heading parsing for docs/plans
 - Multi-hop traversal: graph-based expansion from seed entities to related context
 
@@ -184,9 +186,9 @@ The `confidence` column is stored on every edge and used by the traversal algori
 
 ###### D. Schema Design
 
-**D.1 Graph tables in `semantic-index.sqlite`.**
+**D.1 Graph tables in the Turso (libSQL) database.**
 
-The entity/relationship graph is stored in the same SQLite database as the corpus index, alongside the existing `documents` and `chunks` tables. This ensures atomic transactions, cross-referencing via `doc_id`, and no additional database file to manage.
+The entity/relationship graph is stored in the same consolidated Turso (libSQL) database as the corpus index, alongside the existing `documents` and `chunks` tables. This ensures atomic transactions, cross-referencing via `doc_id`, and no additional database file to manage.
 
 ```sql
 -- Graph entities table
@@ -421,7 +423,7 @@ flowchart TD
     B1 --> B2[Module entity extraction]
     B1 --> B3[Symbol entity extraction]
     B1 --> B4[Code relationship extraction]
-    B2 --> E[SQLite INSERT]
+    B2 --> E[libSQL INSERT]
     B3 --> E
     B4 --> E
 
@@ -894,8 +896,8 @@ This is more targeted than "extract entities from Hop 1 results → expanded que
 
 **Constraints:**
 
-1. **Local-first**: All extraction and traversal runs locally using ts-morph (already a dependency) and SQLite. No external API calls.
-2. **Same database**: The entity graph is stored in `semantic-index.sqlite` alongside `documents` and `chunks`. No new database file.
+1. **Local-first**: All extraction and traversal runs locally using ts-morph (already a dependency) and the consolidated Turso (libSQL) database. No external API calls.
+2. **Same database**: The entity graph is stored in the consolidated Turso (libSQL) database alongside `documents` and `chunks`. No new database file.
 3. **Freshness-based incremental**: Entity extraction follows the same freshness proof mechanism as the corpus index. Unchanged files skip extraction.
 4. **Backward compatible**: The graph is optional. `traverse_graph` returns empty results if the `entities` and `edges` tables do not exist (graceful degradation).
 5. **Bounded traversal**: Max 3 hops and max 50 results prevent unbounded expansion.
@@ -908,7 +910,7 @@ This is more targeted than "extract entities from Hop 1 results → expanded que
 2. **Runtime dependency tracking**: The graph captures static dependencies (imports, type references), not runtime dependencies or dynamic imports.
 3. **Code search replacement**: The graph does not replace `search_corpus` for content search. It provides structural navigation, not semantic retrieval.
 4. **Real-time graph updates**: The graph is rebuilt during `build-entity-graph.mjs`, not on every file change. Incremental updates are freshness-based, not file-watch-based.
-5. **Cross-repo dependencies**: The graph covers only the NeatapticTS repository. External package dependencies (e.g., `better-sqlite3`, `onnxruntime-node`) are not modeled.
+5. **Cross-repo dependencies**: The graph covers only the NeatapticTS repository. External package dependencies (e.g., `@libsql/client`, `onnxruntime-node`) are not modeled.
 6. **Graph visualization**: The `traverse_graph` tool returns structured data (entities + relationships). No built-in visualization is planned, though the data is suitable for Mermaid or D3 rendering.
 
 ###### J. Evaluation Design

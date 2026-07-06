@@ -4,7 +4,7 @@ import type {
 } from './neat.nge-juvenile.types';
 
 /**
- * Seed focus weights from the plan's initial default-threshold section for the juvenile scorer.
+ * Default focus weights used by the juvenile scorer.
  * Drives the weighted formula that ranks modules by utilization, reward, novelty, stability, and cost.
  */
 export const NGE_JUVENILE_DEFAULT_FOCUS_WEIGHTS: NgeJuvenileFocusWeights = {
@@ -86,7 +86,7 @@ export const NGE_JUVENILE_DEFAULT_GATING_EDGE_LENGTH_THRESHOLD = 2.0;
  * Minimum viable edge increment applied by one approved juvenile densification step.
  * Each committed grow pass adds at least this many edges to the target module.
  */
-export const NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT = 1;
+export const NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT = 5;
 
 /**
  * Minimum viable episodic slot increment applied by one expansion step.
@@ -94,10 +94,16 @@ export const NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT = 1;
 export const NGE_JUVENILE_DEFAULT_SLOT_EXPANSION_COUNT = 1;
 
 /**
- * Exclusive lower bound on reward delta required to evidence-gate a node addition.
- * Node growth is blocked when the module's focus reward delta is at or below this floor.
+ * Floor below which the composite node-growth signal cannot open the node-add gate.
+ * The signal is derived from the focus-weighted module metrics, so growth evidence is
+ * no longer tied to raw rewardDelta alone.
  */
-export const NGE_JUVENILE_DEFAULT_NODE_REWARD_DELTA_FLOOR = 0.0;
+export const NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR = 0.0;
+
+/**
+ * Number of hidden nodes one approved node-addition step plans to insert.
+ */
+export const NGE_JUVENILE_DEFAULT_NODE_ADDITION_COUNT = 2;
 
 /**
  * Cost-pressure fraction above which one window counts as prune evidence.
@@ -108,3 +114,21 @@ export const NGE_JUVENILE_DEFAULT_PRUNE_COST_PRESSURE_THRESHOLD = 0.85;
  * Safe absolute minimum edge floor when DNA supplies no tighter prune bound.
  */
 export const NGE_JUVENILE_DEFAULT_MIN_EDGE_FLOOR = 1;
+
+/**
+ * Maximum node capacity that the NGE growth budget supports.
+ * Caps the total number of nodes a network may grow to during runtime adaptation.
+ * Used by lifecycle runners and callers that need an explicit 8,000-node ceiling.
+ *
+ * Contract: NGE_MAX_NODE_CAPACITY=8_000
+ */
+export const NGE_MAX_NODE_CAPACITY = 8_000;
+
+/**
+ * Maximum edge capacity that the NGE growth budget supports.
+ * Caps the total number of connections a network may grow to during runtime adaptation.
+ * Used by lifecycle runners and callers that need an explicit 32,000-edge ceiling.
+ *
+ * Contract: NGE_MAX_EDGE_CAPACITY=32_000
+ */
+export const NGE_MAX_EDGE_CAPACITY = 32_000;

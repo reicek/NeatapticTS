@@ -1,9 +1,13 @@
 ---
 name: onnx-work
-description: 'Extend, harden, or validate ONNX-like export and import in NeatapticTS. Use when adding operator support, hardening constrained recurrent import, validating JSON-first roundtrips, updating honest supported-subset documentation, or enabling external seed ingestion through ONNX or an explicitly documented non-ONNX bridge.'
+description: 'Use when: extending or validating ONNX export/import for networks.'
 argument-hint: 'Describe the ONNX target (export operator / import subset / recurrent hardening / external seed path), the current plan phase, and whether this is implementation, import hardening, documentation, or roundtrip validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - reproducibility-contracts
+  - hybrid-training-interop
+  - neatchat-systems
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -70,6 +74,16 @@ or newer-version deltas are needed.
   export coverage added.
 - A downstream consumer such as the planned NEATchat follow-up lane needs an
   honest recurrent seed-import boundary.
+
+## When NOT to use
+
+Do NOT use for internal serialization - use Network native methods instead. Do NOT use for general network construction - use `architecture-builder` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Network" → "Export to ONNX-like JSON"; "Export to ONNX-like JSON" → "Import back"; "Import back" → "Reconstruct Network"; "Reconstruct Network" → "Compare activation output"; "Compare activation output" → "Within tolerance?"; "Within tolerance?" → "Roundtrip verified" (Yes), "Debug operator mapping" (No); "Roundtrip verified"; "Debug operator mapping" → "Export to ONNX-like JSON".
+```
 
 ## Task Packet
 
@@ -180,6 +194,26 @@ ONNX export must satisfy:
 - If NEATchat or another downstream system needs a stronger seed path before the
   recurrent subset is honest, choose and document a non-ONNX bridge explicitly.
 - Keep the downstream consumer honest about what it can actually host.
+
+## Decision Tree
+
+```text
+Flowchart summary: "ONNX task" → "Which surface?"; "Which surface?" → "Export mapping" (Add operator mapping), "Import hardening" (Constrained recurrent import), "Roundtrip validation" (Export/import fidelity), "Supported-subset docs" (Operator table update); "Export mapping"; "Import hardening"; "Roundtrip validation"; "Supported-subset docs".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```ts
+const shape = [1, 4, 4]; // hardcoded for one network config
+```
+
+**After:**
+
+```ts
+const shape = deriveShapeFromGraph(graph); // derived from live graph topology
+```
 
 ## Guardrails
 

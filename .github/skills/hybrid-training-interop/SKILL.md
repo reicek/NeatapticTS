@@ -1,9 +1,13 @@
 ---
 name: hybrid-training-interop
-description: 'Design, implement, or validate deterministic parameter-vector and fine-tuning contracts in NeatapticTS. Use when working on toParameterVector, fromParameterVector, layout versioning, isolated fine-tuning, Lamarckian persistence policy, optimizer interoperability, cloned-vs-vector training, or hybrid evolution plus gradient workflows.'
+description: 'Use when: designing deterministic hybrid-training interop contracts.'
 argument-hint: 'Describe the parameter-vector or hybrid-training target, current step in Evolution_Training_Interoperability_Contracts.md, the mutation-isolation requirement, and whether the pass is design, implementation, or validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - reproducibility-contracts
+  - checkpointing-persistence
+  - multithread-evaluation
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -47,6 +51,10 @@ attribution.
 - A downstream system such as NEATchat needs to compare frozen, personalized,
   and candidate parameter deltas without inventing its own vector format.
 
+## When NOT to use
+
+Do NOT use for purely evolutionary training without gradient-based fine-tuning. Do NOT use for checkpoint management - use `checkpointing-persistence` instead.
+
 ## Core Contracts
 
 ### Parameter layout contract
@@ -80,6 +88,12 @@ $$
 
 where $\eta$ is the learning rate and $E$ is the loss. In this repo, that means
 the gradient mechanism and the persistence decision must stay separate.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Export parameter vector" → "Feed to training loop"; "Feed to training loop" → "Training updates weights"; "Training updates weights" → "Import updated vector"; "Import updated vector" → "Reconstruct network"; "Reconstruct network" → "Verify inference output"; "Verify inference output" → "Matches?"; "Matches?" → "Lamarckian persistence OK" (Yes), "Debug vector layout" (No); "Debug vector layout" → "Export parameter vector"; "Lamarckian persistence OK".
+```
 
 ## Task Packet
 
@@ -160,6 +174,26 @@ Validate with: vector roundtrip inference equality and layout compatibility nega
 - Policy tests proving fitness-only versus persistent training behavior differ in
   the intended way.
 - `npm run test:silent` only when the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Hybrid-training task" → "Which surface?"; "Which surface?" → "Parameter vector layout" (Export/import order or layout version), "Isolation (clone vs vector)" (Fine-tuning mutates shared state), "Lamarckian persistence policy" (Trained weights write-back policy), "checkpointing-persistence" (Checkpoint format); "Parameter vector layout"; "Isolation (clone vs vector)"; "Lamarckian persistence policy"; "checkpointing-persistence".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```ts
+const vec = network.toVector(); // no layout metadata, order unspecified
+```
+
+**After:**
+
+```ts
+const pv = toParameterVector(network); // layout v1: weights then biases, node-id keyed
+```
 
 ## Guardrails
 

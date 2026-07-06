@@ -3,9 +3,7 @@ export type OnnxBinaryValidatorName = 'onnxruntime-node';
 
 /** Failure categories surfaced by the current Phase 8 binary validation lane. */
 export type OnnxBinaryValidationErrorCategory =
-  | 'invalid-binary'
-  | 'invalid-model'
-  | 'runtime-load-failed';
+  'invalid-binary' | 'invalid-model' | 'runtime-load-failed';
 
 /**
  * Explicit binary compatibility policy resolved from one decoded `ModelProto`.

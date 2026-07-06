@@ -117,8 +117,7 @@ export type OnnxRuntimeParitySkippedResult = {
  * Runtime-parity result union type for the Phase 9 test harness seam.
  */
 export type OnnxRuntimeParityResult =
-  | OnnxRuntimeParityExecutedResult
-  | OnnxRuntimeParitySkippedResult;
+  OnnxRuntimeParityExecutedResult | OnnxRuntimeParitySkippedResult;
 
 /**
  * Flattened result for one seeded randomized parity sample.

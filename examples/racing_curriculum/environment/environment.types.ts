@@ -51,6 +51,14 @@ export type CarState = {
   teamIndex: 0 | 1;
   /** Ordered tire-health tuple `[FL, FR, RL, RR]`. */
   tireState: TireStateTuple;
+  /**
+   * Per-step reward/penalty produced by the local physics step.
+   *
+   * This is intentionally transient: it is written by `stepEnvironment` when a
+   * car leaves the track or drives the wrong direction, and is read by callers
+   * that need a per-car training signal for the current tick.
+   */
+  reward?: number;
 };
 
 /** Concrete racing-car alias kept for the browser and worker seams. */

@@ -2,40 +2,42 @@
 
 > Extracted from `plans/Repo_Cortex_Advanced_RAG_Architecture.plans.md` for permanent reference.
 
+> **Backing database.** The Repo Cortex is backed by a single consolidated Turso (libSQL) database accessed via the fully async `@libsql/client` driver (default local embedded replica `data/turso-replica.sqlite`; cloud primary `libsql://<db>.turso.io`). Vectors use native Turso vectors with `F8_BLOB` 8-bit quantization, approximate nearest neighbor search runs server-side via DiskANN (`libsql_vector_idx`, `vector_top_k()`), and hybrid ranking is performed SQL-side via Reciprocal Rank Fusion (RRF, k=60). The historical design content below describes the pre-Turso architecture that was subsequently migrated to this stack.
+
 This document contains the complete audit of the NeatapticTS Repo Cortex system (Layers 1–6) as of 2026-06-08, identifying gaps against advanced RAG requirements.
 
 ## Current system audit
 
 ### What exists (Layers 1–6) — Updated with measured baseline
 
-| Capability       | Current state                                                                                                                                                          | Gap severity                                              |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Corpus storage   | SQLite with 1,408 docs, 31,396 chunks across 10 families (1,407 docs, 31,363 chunks as of last build)                                                                  | **Baseline sufficient**                                   |
-| Full-text search | BM25 via FTS5 (porter+unicode61 tokenizer), heading-based markdown chunks (2,048-char max + 512-char overlap), per-symbol TS chunks (NO max size)                      | **CRITICAL — naive chunking destroys semantic coherence** |
-| Dense embeddings | `all-MiniLM-L6-v2` (384-dim, 512-token max), 31,106 embeddings in BLOB storage, mean-pooled + L2-normalized                                                            | **Small model, truncation issue with oversized chunks**   |
-| Hybrid ranking   | Fixed alpha=0.5 blend of min-max-normalized BM25 + cosine similarity; BM25 MRR@5=0.225, Hybrid MRR@5=0.308, improvement=+0.083                                         | **No query-adaptive weighting, no cross-encoder**         |
-| Family filtering | Single `family` parameter on `search_corpus` with 10 families (readme, ts-source, skill, agent, plan, completed-plan, demo, benchmark, root-doc, copilot-instructions) | **No structured metadata filtering**                      |
-| Result loading   | `load_chunk` by ID, `load_document` by path — no multi-source context assembly                                                                                         | **No context assembly, no dedup, no budget**              |
-| Freshness        | mtime + size + SHA-256 freshness proofs, incremental rebuild                                                                                                           | **Baseline sufficient**                                   |
-| MCP tools        | 7 tools (search_corpus, load_chunk, load_document, freshness_check, index_stats, list_families, scan_code_quality)                                                     | **Missing advanced RAG tools**                            |
-| Code quality     | JSDoc + complexity scanning via `scan_code_quality`                                                                                                                    | **Narrow scope**                                          |
-| Browser snapshot | `docs/assets/semantic-snapshot.json` + IndexedDB loader                                                                                                                | **Read-only, no browser-side search**                     |
+| Capability       | Current state                                                                                                                                                                | Gap severity                                              |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Corpus storage   | Turso (libSQL) consolidated database with native vectors (`F8_BLOB` quantization), 1,408 docs, 31,396 chunks across 10 families (1,407 docs, 31,363 chunks as of last build) | **Baseline sufficient**                                   |
+| Full-text search | BM25 via FTS5 (porter+unicode61 tokenizer), heading-based markdown chunks (2,048-char max + 512-char overlap), per-symbol TS chunks (NO max size)                            | **CRITICAL — naive chunking destroys semantic coherence** |
+| Dense embeddings | `all-MiniLM-L6-v2` (384-dim, 512-token max), 31,106 embeddings in BLOB storage, mean-pooled + L2-normalized                                                                  | **Small model, truncation issue with oversized chunks**   |
+| Hybrid ranking   | Fixed alpha=0.5 blend of min-max-normalized BM25 + cosine similarity; BM25 MRR@5=0.225, Hybrid MRR@5=0.308, improvement=+0.083                                               | **No query-adaptive weighting, no cross-encoder**         |
+| Family filtering | Single `family` parameter on `search_corpus` with 10 families (readme, ts-source, skill, agent, plan, completed-plan, demo, benchmark, root-doc, copilot-instructions)       | **No structured metadata filtering**                      |
+| Result loading   | `load_chunk` by ID, `load_document` by path — no multi-source context assembly                                                                                               | **No context assembly, no dedup, no budget**              |
+| Freshness        | mtime + size + SHA-256 freshness proofs, incremental rebuild                                                                                                                 | **Baseline sufficient**                                   |
+| MCP tools        | 7 tools (search_corpus, load_chunk, load_document, freshness_check, index_stats, list_families, scan_code_quality)                                                           | **Missing advanced RAG tools**                            |
+| Code quality     | JSDoc + complexity scanning via `scan_code_quality`                                                                                                                          | **Narrow scope**                                          |
+| Browser snapshot | `docs/assets/semantic-snapshot.json` + IndexedDB loader                                                                                                                      | **Read-only, no browser-side search**                     |
 
 ### What is missing (Layer 7+ requirements)
 
-| Missing capability                | Why it matters                                                                                                                                                                                                                  | Architecture complexity                                                           |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| **Semantic chunking**             | Heading-based splitting breaks code mid-function (ts-source chunks reach 42K chars!), loses AST context, produces 51.4% of chunks with no heading_path, and 2,604 ts-source chunks under 500 chars are semantically empty stubs | High — requires TypeScript AST sub-chunking + markdown structure awareness        |
-| **Query classification**          | All queries get the same retrieval pipeline; 7/20 BM25 queries and 8/20 hybrid queries score 0 MRR@5 (complete misses)                                                                                                          | Medium — local classifier or rule-based routing                                   |
-| **Cross-encoder re-ranking**      | Bi-encoder is fast but imprecise; cross-encoder examines query-document pairs jointly for much higher relevance                                                                                                                 | Medium — local cross-encoder model (e.g., `ms-marco-MiniLM-L-6-v2`)               |
-| **Context window assembly**       | Agents receive raw ranked chunks with no deduplication, no ordering heuristics, no budget management, and no cross-chunk context headers                                                                                        | High — requires dedup, ordering, budget, and stitching pipeline                   |
-| **Entity/relationship graph**     | No multi-hop traversal; agents cannot discover that "Network.activate uses slab fast path" implies checking both `activate/` and `slab/` families                                                                               | High — entity extraction + lightweight graph store                                |
-| **Query expansion**               | Single-query embedding misses synonymous terms, abbreviations, and domain-specific aliases                                                                                                                                      | Medium — embedding-based synonym discovery                                        |
-| **Relevance feedback**            | No mechanism for agents to signal which results were useful; ranking cannot improve from interaction                                                                                                                            | Medium — feedback collection + ranking adjustment                                 |
-| **Structured metadata filtering** | Only `family` filter; no filtering by module boundary, export type, source path pattern, test coverage, or architectural layer                                                                                                  | Medium — metadata enrichment + filter grammar                                     |
-| **Multi-hop retrieval**           | Complex questions require chaining across families; current system does single-pass retrieval only                                                                                                                              | High — iterative retrieval with stopping conditions                               |
-| **ANN index**                     | Dense search loads ALL 31K embeddings per query (~48MB float32 data), computes brute-force cosine similarity                                                                                                                    | Low (deferred) — brute-force is acceptable at 31K scale; defer until >100K chunks |
-| **RAG evaluation suite**          | Only 20 queries with MRR@5; no nDCG, recall@k, context relevance, or faithfulness metrics; no query taxonomy                                                                                                                    | Medium — eval framework + curated 50+ query set                                   |
+| Missing capability                | Why it matters                                                                                                                                                                                                                  | Architecture complexity                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Semantic chunking**             | Heading-based splitting breaks code mid-function (ts-source chunks reach 42K chars!), loses AST context, produces 51.4% of chunks with no heading_path, and 2,604 ts-source chunks under 500 chars are semantically empty stubs | High — requires TypeScript AST sub-chunking + markdown structure awareness |
+| **Query classification**          | All queries get the same retrieval pipeline; 7/20 BM25 queries and 8/20 hybrid queries score 0 MRR@5 (complete misses)                                                                                                          | Medium — local classifier or rule-based routing                            |
+| **Cross-encoder re-ranking**      | Bi-encoder is fast but imprecise; cross-encoder examines query-document pairs jointly for much higher relevance                                                                                                                 | Medium — local cross-encoder model (e.g., `ms-marco-MiniLM-L-6-v2`)        |
+| **Context window assembly**       | Agents receive raw ranked chunks with no deduplication, no ordering heuristics, no budget management, and no cross-chunk context headers                                                                                        | High — requires dedup, ordering, budget, and stitching pipeline            |
+| **Entity/relationship graph**     | No multi-hop traversal; agents cannot discover that "Network.activate uses slab fast path" implies checking both `activate/` and `slab/` families                                                                               | High — entity extraction + lightweight graph store                         |
+| **Query expansion**               | Single-query embedding misses synonymous terms, abbreviations, and domain-specific aliases                                                                                                                                      | Medium — embedding-based synonym discovery                                 |
+| **Relevance feedback**            | No mechanism for agents to signal which results were useful; ranking cannot improve from interaction                                                                                                                            | Medium — feedback collection + ranking adjustment                          |
+| **Structured metadata filtering** | Only `family` filter; no filtering by module boundary, export type, source path pattern, test coverage, or architectural layer                                                                                                  | Medium — metadata enrichment + filter grammar                              |
+| **Multi-hop retrieval**           | Complex questions require chaining across families; current system does single-pass retrieval only                                                                                                                              | High — iterative retrieval with stopping conditions                        |
+| **ANN index**                     | Native Turso DiskANN via `libsql_vector_idx` (`vector_top_k()`, `F8_BLOB` quantization) provides server-side approximate nearest neighbor search                                                                                | **Implemented** — native Turso DiskANN; no longer deferred                 |
+| **RAG evaluation suite**          | Only 20 queries with MRR@5; no nDCG, recall@k, context relevance, or faithfulness metrics; no query taxonomy                                                                                                                    | Medium — eval framework + curated 50+ query set                            |
 
 ---
 
@@ -60,23 +62,25 @@ This document contains the complete audit of the NeatapticTS Repo Cortex system 
 - **Failure mode 4 — No sub-chunking of large symbols**: A 42K-char utility object like `onnxImportOrchestratorsUtils` becomes one monolithic chunk, making fine-grained retrieval within it impossible.
 
 **Chunk size distribution (ts-source):**
+
 | Size range | Count |
-|---|---|
-| under 500 | 2,604 |
-| 500–1K | 710 |
-| 1K–2K | 186 |
-| 2K–5K | 62 |
-| 5K–10K | 22 |
-| 10K–20K | 15 |
-| over 20K | 10 |
+| ---------- | ----- |
+| under 500  | 2,604 |
+| 500–1K     | 710   |
+| 1K–2K      | 186   |
+| 2K–5K      | 62    |
+| 5K–10K     | 22    |
+| 10K–20K    | 15    |
+| over 20K   | 10    |
 
 **Chunk size distribution (markdown families):**
-| Size range | Count |
-|---|---|
-| under 500 | 8,348 |
-| 500–1K | 2,373 |
-| 1K–2K | 1,074 |
-| over 2K | 15,992 |
+
+| Size range | Count  |
+| ---------- | ------ |
+| under 500  | 8,348  |
+| 500–1K     | 2,373  |
+| 1K–2K      | 1,074  |
+| over 2K    | 15,992 |
 
 **Recommendation**: Implement two-level chunking — AST-aware splitting for TypeScript (per-symbol but with max-size sub-chunking at 1,500 chars with overlap at statement boundaries) and structure-aware markdown chunking (heading hierarchy with cross-chunk context headers). Add `parent_chunk_id`, `depth`, and `context_header` columns to the chunks table.
 
@@ -179,11 +183,12 @@ This document contains the complete audit of the NeatapticTS Repo Cortex system 
 #### 7. Cross-encoder selection
 
 **Candidate models for local ONNX runtime:**
-| Model | Size | Latency (est.) | Quality | Recommendation |
-|---|---|---|---|---|
-| `cross-encoder/ms-marco-MiniLM-L-6-v2` | ~22MB | ~5ms per pair | Moderate | **Start here** — best speed/quality tradeoff |
-| `cross-encoder/ms-marco-MiniLM-L-12-v2` | ~33MB | ~10ms per pair | Good | Upgrade if L-6 is insufficient |
-| `bge-reranker-v2-m3` | ~568MB | ~30ms per pair | Excellent | Defer — too large for local-first constraint |
+
+| Model                                   | Size   | Latency (est.) | Quality   | Recommendation                               |
+| --------------------------------------- | ------ | -------------- | --------- | -------------------------------------------- |
+| `cross-encoder/ms-marco-MiniLM-L-6-v2`  | ~22MB  | ~5ms per pair  | Moderate  | **Start here** — best speed/quality tradeoff |
+| `cross-encoder/ms-marco-MiniLM-L-12-v2` | ~33MB  | ~10ms per pair | Good      | Upgrade if L-6 is insufficient               |
+| `bge-reranker-v2-m3`                    | ~568MB | ~30ms per pair | Excellent | Defer — too large for local-first constraint |
 
 **Integration architecture**: Cross-encoder runs as a second-stage re-ranker on the top-K (10-20) hybrid candidates. This limits latency impact to ~50-200ms per query (10-20 × 10ms).
 
@@ -200,12 +205,13 @@ This document contains the complete audit of the NeatapticTS Repo Cortex system 
 - At 31K scale, brute-force with caching is faster than ANN for the first ~10 queries per warm session
 
 **Evaluation:**
-| Option | Latency | Complexity | Windows CI | Recommendation |
-|---|---|---|---|---|
-| Brute-force + query embedding cache | ~5-10ms search | Low | ✅ No native deps | **Current choice, keep for now** |
-| `sqlite-vec` | ~2-5ms search | Medium | ❌ Extension loading fragile on Windows | **Defer until Windows CI is stable** |
-| `hnswlib-node` | ~1-2ms search | Medium | ⚠️ Native addon, needs prebuilds | **Evaluate at >100K chunks** |
-| Brute-force + result caching | ~1ms for cached queries | Low | ✅ | **Add as incremental improvement** |
+
+| Option                              | Latency                 | Complexity | Windows CI                              | Recommendation                       |
+| ----------------------------------- | ----------------------- | ---------- | --------------------------------------- | ------------------------------------ |
+| Brute-force + query embedding cache | ~5-10ms search          | Low        | ✅ No native deps                       | **Current choice, keep for now**     |
+| `sqlite-vec`                        | ~2-5ms search           | Medium     | ❌ Extension loading fragile on Windows | **Defer until Windows CI is stable** |
+| `hnswlib-node`                      | ~1-2ms search           | Medium     | ⚠️ Native addon, needs prebuilds        | **Evaluate at >100K chunks**         |
+| Brute-force + result caching        | ~1ms for cached queries | Low        | ✅                                      | **Add as incremental improvement**   |
 
 **Recommendation**: Defer ANN until chunk count exceeds 100K. Add query-embedding caching (cache last 50 query embeddings with their results) for immediate latency wins.
 

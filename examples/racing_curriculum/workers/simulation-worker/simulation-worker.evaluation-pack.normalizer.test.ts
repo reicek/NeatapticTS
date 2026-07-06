@@ -1,13 +1,10 @@
 /**
- * Red tests for the racing evaluation-pack normalizer (Layer 3 wrapper).
+ * Tests for the racing evaluation-pack normalizer (Layer 3 wrapper).
  *
- * Phase 4 Step 04 — red contracts targeting the seam where the generic Layer 2
- * `DeterministicEvaluationPack` is consumed to produce a benchmark-owned
- * `RacingRenderFrame`.
- *
- * These tests assert the desired future behavior defined by the Step 01 frozen
- * determinism contract and Step 02 seam mapping.  They fail because the
- * normalizer module throws `Error('Not implemented …')`.
+ * Covers the seam where the generic Layer 2 `DeterministicEvaluationPack` is
+ * consumed to produce a benchmark-owned `RacingRenderFrame`, including the
+ * deterministic array-mapping invariant, schema-version rejection, and zero-copy
+ * transfer-list resolution.
  *
  * Single-expect rule enforced throughout.
  */

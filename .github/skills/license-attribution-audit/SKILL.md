@@ -1,9 +1,14 @@
 ---
 name: license-attribution-audit
-description: 'Audit source references and license notes for NeatapticTS workflow customizations. Use when external standards such as Agent Skills, VS Code docs, OpenSpec, or Superpowers inform agent, skill, plan, script, or documentation changes.'
+description: 'Use when: auditing source references and license attribution.'
 argument-hint: 'List the external sources used, target files, whether text was summarized or copied, and required license notes.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - docs-academic-citation-audit
+  - educational-docs
+  - research-methodology
+  - agent-frontmatter-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -31,6 +36,10 @@ internal location, and recording unknown license details as blockers.
   updated and the source license needs to be documented.
 - An external source with an unknown license was used and the project needs a
   recorded blocker before the change can be merged.
+
+## When NOT to use
+
+Do NOT use for citation auditing - use `docs-academic-citation-audit` instead. Do NOT use for general documentation - use `educational-docs` instead.
 
 ## Task Packet
 
@@ -68,6 +77,37 @@ Action: confirm text is summarized (not copied), add attribution in the referenc
 - VS Code documentation: cite as Microsoft/VS Code documentation source for
   supported fields and behavior; no code reproduction needed for API shape
   descriptions.
+
+## Why License Attribution Matters
+
+License attribution ensures the repo complies with open-source license requirements when external workflow standards (Agent Skills, OpenSpec, Superpowers) inform NeatapticTS agents, skills, or scripts. Missing attribution creates legal risk and violates the spirit of open-source collaboration. The audit catches unattributed external sources before they reach production.
+
+## Before/After Attribution Examples
+
+**Before (missing attribution):**
+
+```md
+This workflow follows the standard TDD loop.
+```
+
+**After (with attribution):**
+
+```md
+This workflow follows the standard TDD loop as described in the
+Agent Skills specification [copilot-instructions.md, MIT licensed].
+```
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "External source used" → "Identify license"; "Identify license" → "License known?"; "License known?" → "Summarize, don't copy" (Yes), "Record blocker" (No); "Summarize, don't copy" → "Add attribution to references"; "Record blocker" → "Halt until resolved"; "Add attribution to references" → "Record in learning log"; "Halt until resolved" → "Record in learning log"; "Record in learning log" → "Done"; "Done".
+```
+
+## Decision Tree
+
+```text
+Flowchart summary: "External source found" → "License known?"; "License known?" → "Audit and add attribution" (Yes, permissive), "Summarize only, note constraints" (Yes, restrictive), "Record as blocker" (Unknown); "Audit and add attribution" → "Record in references file"; "Summarize only, note constraints" → "Record in references file"; "Record as blocker" → "Do not merge until resolved"; "Record in references file"; "Do not merge until resolved".
+```
 
 ## Guardrails
 

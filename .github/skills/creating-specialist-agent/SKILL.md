@@ -1,9 +1,13 @@
 ---
 name: creating-specialist-agent
-description: 'Use when: creating a hidden specialist or auxiliary .agent.md for one narrow reusable job, including tools, model tier, output contract, and parent routing.'
+description: 'Use when: creating a hidden specialist .agent.md for a narrow reusable job.'
 argument-hint: 'Describe the missing specialist job, parent orchestrator, required tools, model tier, output fields, and validation commands.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - splitting-monolithic-agent
+  - agent-frontmatter-standards
+  - subagent-delegation-patterns
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,16 @@ This skill scaffolds new hidden specialist or auxiliary `.agent.md` files in the
 - Building a before/after split where the new agent takes over one responsibility from an existing overloaded agent.
 - Preparing a companion agent that performs read-only recon and hands off to a skill.
 
+## When NOT to use
+
+Do NOT use for splitting an existing monolithic agent - use `splitting-monolithic-agent` instead. Do NOT use for skill creation - skills and agents are different customization types.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Need new specialist" → "Agent or skill?"; "Agent or skill?" → "Create skill" (Reusable procedure), "Create agent" (Autonomous worker); "Create skill"; "Create agent" → "Specialist or orchestrator?"; "Specialist or orchestrator?" → "Create specialist (Tier 3)" (Scoped worker), "Create coordinator (Tier 2)" (Coordinates others); "Create specialist (Tier 3)" → "Write frontmatter"; "Create coordinator (Tier 2)" → "Write frontmatter"; "Write frontmatter" → "Validate with agent-frontmatter-standards"; "Validate with agent-frontmatter-standards" → "Add to routing table"; "Add to routing table".
+```
+
 ## Task Packet
 
 Include the job the new specialist will own, the parent orchestrator that will call it, the required tools, the model tier, and the structured output contract fields.
@@ -28,7 +42,7 @@ Include the job the new specialist will own, the parent orchestrator that will c
 Use creating-specialist-agent for <specialist-job-description>.
 Parent orchestrator: <agent-name>
 Required tools: <list of VS Code tool names>
-Model tier: <e.g. glm-5.2:cloud (ollama)>
+Model tier: <e.g. glm-5.2:cloud>
 Output contract fields: <field names the parent expects>
 Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs --json
              node scripts/agent-customization/validate-agent-graph.mjs --json
@@ -46,6 +60,37 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 8. Add the new agent to the smallest parent allow-list (`agents: [...]`) that legitimately needs it; do not add it to all orchestrators by default.
 9. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` to confirm frontmatter correctness.
 10. Run `node scripts/agent-customization/validate-agent-graph.mjs --json` to confirm the delegation edge is correctly registered.
+
+## Before/After Example
+
+**Before (vague agent scope):**
+
+```yaml
+---
+name: helper
+description: 'Helps with stuff'
+tier: 3
+---
+```
+
+**After (precise specialist scope):**
+
+```yaml
+---
+name: coverage-scout
+description: 'Identify the next coverage tranche target from lcov.info and map uncovered paths to source files.'
+tier: 3
+user-invocable: false
+tools:
+  - neataptic-cortex-mcp-search_corpus
+---
+```
+
+## Decision Tree
+
+```text
+Flowchart summary: "Recurring workflow gap" → "Needs isolated context or restricted tools?"; "Needs isolated context or restricted tools?" → "Create or update a skill" (No), "Coordinates other agents?" (Yes); "Create or update a skill" → "Validate skill frontmatter"; "Coordinates other agents?" → "Create specialist agent (Tier 3)" (No — scoped worker), "Create coordinator agent (Tier 2)" (Yes — delegates to others); "Validate skill frontmatter"; "Create specialist agent (Tier 3)" → "Validate agent frontmatter + graph"; "Create coordinator agent (Tier 2)" → "Validate agent frontmatter + graph"; "Validate agent frontmatter + graph".
+```
 
 ## Guardrails
 

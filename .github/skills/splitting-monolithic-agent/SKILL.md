@@ -1,9 +1,14 @@
 ---
 name: splitting-monolithic-agent
-description: 'Use when: splitting an overloaded custom agent into an orchestrator, sub-orchestrator, specialists, reusable skills, and explicit output contracts.'
+description: 'Use when: splitting an overloaded agent into orchestrators and specialists.'
 argument-hint: 'Describe the source agent, broad responsibilities, desired compatibility surface, candidate specialists, skills to extract, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - solid-split
+  - creating-specialist-agent
+  - agent-frontmatter-standards
+  - skill-frontmatter-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +25,16 @@ This skill decomposes an overloaded `.agent.md` file into a bounded orchestrator
 - A coordination layer (orchestrator or sub-orchestrator) needs to be separated from execution logic (specialist).
 - The customization system has accumulated routing debt and needs a structural cleanup.
 - Preparing a before/after split map for a tracker or plan alignment review.
+
+## When NOT to use
+
+Do NOT use for splitting code modules - use `solid-split` instead. Do NOT use for creating new agents - use `creating-specialist-agent` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Monolithic agent" → "Identify responsibilities"; "Identify responsibilities" → "Map boundaries"; "Map boundaries" → "Split decision"; "Split decision" → "Split into specialists" (Distinct roles), "Refactor, dont split" (Overlapping); "Split into specialists" → "Create new agent files"; "Refactor, dont split"; "Create new agent files" → "Update routing table"; "Update routing table" → "Validate frontmatter"; "Validate frontmatter".
+```
 
 ## Task Packet
 
@@ -47,6 +62,12 @@ Validate with: node scripts/agent-customization/validate-agent-frontmatter.mjs -
 8. Define an explicit output contract for each new boundary so the orchestrator can consume specialist output deterministically.
 9. Add eval or validation coverage for the new routing boundary to detect regressions.
 10. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` and `validate-agent-graph.mjs --json` to confirm no orphaned edges or frontmatter errors.
+
+## Decision Tree: Split Decisions
+
+```text
+Flowchart summary: "Agent too large" → "Multiple distinct responsibilities?"; "Multiple distinct responsibilities?" → "Split into specialists" (Yes), "Just too much code?" (No); "Split into specialists" → "Each gets single responsibility"; "Just too much code?" → "Extract skills, keep agent thin" (Yes), "No split needed" (No); "Each gets single responsibility"; "Extract skills, keep agent thin" → "Move procedures to SKILL.md"; "No split needed"; "Move procedures to SKILL.md".
+```
 
 ## Guardrails
 

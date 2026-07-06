@@ -37,6 +37,28 @@ export type SplineSample = {
   readonly sampleIndexWithinSegment: number;
   /** Stable global sample index around the closed loop. */
   readonly globalIndex: number;
+  /**
+   * Number of drivable lanes at this sample.
+   *
+   * Derived from the track generation profile and mirrored on each sample so
+   * downstream controllers can resolve per-lane geometry without reaching back
+   * to the top-level spec.
+   */
+  readonly laneCount?: number;
+  /**
+   * Width of a single lane at this sample in logical world units.
+   *
+   * Used with `width` to place the inner-lane centerline at
+   * `width / 2 - laneWidthWorld / 2` from the road centerline.
+   */
+  readonly laneWidthWorld?: number;
+  /**
+   * Lateral distance from the road centerline to the inner-lane centerline
+   * at this sample, in logical world units.
+   *
+   * Positive along the unit left normal (inward on a counter-clockwise loop).
+   */
+  readonly innerOffsetWorld?: number;
 };
 
 /** Axis-aligned pit geometry used for occupancy checks and renderer overlays. */
@@ -97,6 +119,19 @@ export type TrackSpec = {
   readonly splineSamples: readonly SplineSample[];
   /** Optional pit-box list. Present on generated racing tracks. */
   readonly pitBoxes?: readonly TrackPitBox[];
+  /**
+   * Number of drivable lanes for this layout.
+   *
+   * Defaults to 2 when not specified (e.g. hand-authored test fixtures).
+   */
+  readonly laneCount?: number;
+  /**
+   * Width of a single lane in logical world units.
+   *
+   * Derived from the first segment width and `laneCount` so the inner-lane
+   * centerline can be resolved consistently around the loop.
+   */
+  readonly laneWidthWorld?: number;
 };
 
 /**

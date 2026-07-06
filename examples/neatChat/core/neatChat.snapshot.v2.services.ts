@@ -607,8 +607,7 @@ function isDefinedRoutingLogEntry(
 
 function isDefinedRoutingPath(
   routingPath:
-    | NeatChatSession['routingLog'][number]['selectedPath']
-    | undefined,
+    NeatChatSession['routingLog'][number]['selectedPath'] | undefined,
 ): routingPath is NeatChatSession['routingLog'][number]['selectedPath'] {
   return routingPath != null;
 }

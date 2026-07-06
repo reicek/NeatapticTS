@@ -164,8 +164,7 @@ describe('neat helpers chapter', () => {
         // Act
         neat.addGenome(externalGenome, [parentGenome._id ?? 0]);
         const addedGenome = neat.population.at(-1) as
-          | HelperMetadataNetwork
-          | undefined;
+          HelperMetadataNetwork | undefined;
 
         // Assert
         expect(addedGenome?._parents).toEqual([parentGenome._id ?? 0]);
@@ -192,8 +191,7 @@ describe('neat helpers chapter', () => {
           secondParentGenome._id ?? 0,
         ]);
         const addedGenome = neat.population.at(-1) as
-          | HelperMetadataNetwork
-          | undefined;
+          HelperMetadataNetwork | undefined;
 
         // Assert
         expect(addedGenome?._depth).toBe(deepestParentDepth + 1);

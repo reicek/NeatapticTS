@@ -642,8 +642,7 @@ function _createSlabWriteArrays(
   // Step 1: Collect strongly typed writable slab references.
   return {
     weightArray: buildContext.internalNet._connWeights as
-      | Float32Array
-      | Float64Array,
+      Float32Array | Float64Array,
     fromIndexArray: buildContext.internalNet._connFrom as Uint32Array,
     toIndexArray: buildContext.internalNet._connTo as Uint32Array,
     flagArray: buildContext.internalNet._connFlags as Uint8Array,
@@ -665,9 +664,7 @@ function _createInitialSlabPopulateResult(
     anyPlastic: false,
     gainArray: internalNet._connGain as Float32Array | Float64Array | null,
     plasticArray: internalNet._connPlastic as
-      | Float32Array
-      | Float64Array
-      | null,
+      Float32Array | Float64Array | null,
   };
 }
 

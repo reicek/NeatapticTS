@@ -733,7 +733,7 @@ Example:
 ```ts
 const checkpoint = neat.exportLightState({ eliteCount: 12 });
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     branchId: 'draft-1',
   },
 };
@@ -827,7 +827,7 @@ Example:
 ```ts
 const checkpoint = neat.exportState();
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     memoryBankId: 'memory-bank-1',
   },
 };
@@ -1563,7 +1563,7 @@ Returns: Shared precision config for the current runtime decision.
 Root public entry point for the NeatapticTS library.
 
 Import everything you need for NEAT-based neuroevolution from this single
-surface. The library organizes its exports into four cooperating layers:
+surface. The library organizes its exports into five cooperating layers:
 
 - **`Neat`** — the NEAT evolutionary controller: population management,
   speciation, selection, mutation, and crossover.
@@ -1574,21 +1574,35 @@ surface. The library organizes its exports into four cooperating layers:
 - **Namespaces** — `methods` (activation functions, cost functions, mutation
   and selection operators), `config` (global library settings), `multi`
   (worker-thread parallel evaluation).
+- **`nge`** — experimental Genesis EvoDevo (NGE) lifecycle namespace. A narrow,
+  unstable preview of adult staging, juvenile growth, lifecycle
+  orchestration, and assimilation write-back. Not covered by the stable
+  public API contract.
+
+The NEAT algorithm behind the `Neat` controller was introduced by Stanley
+and Miikkulainen,
+[Evolving Neural Networks through Augmenting Topologies](https://nn.cs.utexas.edu/?stanley:ec02).
 
 ```mermaid
 flowchart LR
   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
   classDef entry fill:#0f1f10,stroke:#39d353,color:#d4fcd7,stroke-width:1.5px;
+  classDef experimental fill:#1a0f1a,stroke:#ff6b9d,color:#ffd6e5,stroke-width:1.5px;
 
   neataptic[neataptic.ts root entry]:::entry
   neataptic --> Neat[Neat evolutionary controller]:::accent
   neataptic --> Network[Network graph facade]:::accent
   neataptic --> Primitives[Node Connection Group Layer Architect]:::base
   neataptic --> Namespaces[methods config multi namespaces]:::base
+  neataptic --> nge[nge experimental namespace]:::experimental
   Neat --> Network
   Network --> Workers[worker inference transport]:::base
   Network --> ONNX[ONNX export and import]:::base
+  nge --> adult[adult lifecycle]:::experimental
+  nge --> juvenile[juvenile growth]:::experimental
+  nge --> lifecycle[lifecycle runner]:::experimental
+  nge --> assimilation[assimilation write-back]:::experimental
 ```
 
 Examples:
@@ -2743,7 +2757,7 @@ Example:
 ```ts
 const checkpoint = neat.exportLightState({ eliteCount: 12 });
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     branchId: 'draft-1',
   },
 };
@@ -2837,7 +2851,7 @@ Example:
 ```ts
 const checkpoint = neat.exportState();
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     memoryBankId: 'memory-bank-1',
   },
 };
@@ -3571,8 +3585,8 @@ await sharedWorker.release();
 
 Optional hook functions that demos can use to inject custom overlays.
 
-Flappy Bird injects input-group label bands and per-input descriptions.
-ASCII Maze could inject custom layer labels, or leave hooks undefined.
+A consumer can inject input-group label bands and per-input descriptions,
+or custom layer labels, or leave hooks undefined.
 
 ### ParallelInferencePool
 
@@ -3854,7 +3868,7 @@ Example:
 
 ```ts
 const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
-  'flappy-shared-inference.worker.bundle.js',
+  'shared-inference.worker.bundle.js',
 );
 ```
 
@@ -4147,15 +4161,24 @@ Returns: Reinitialized connection instance.
 ```ts
 activate(
   input: number[] | Float32Array<ArrayBufferLike>,
-  training: boolean,
-  _maxActivationDepth: number,
-): number[]
+  options: { training?: boolean | undefined; useGPU: true; },
+  _maxActivationDepth: number | undefined,
+): Promise<Float32Array<ArrayBufferLike>>
 ```
 
-Standard activation API returning a plain number[] for backward compatibility.
-Internally may use pooled typed arrays; if so they are cloned before returning unless
-`reuseSequenceBuffers` opts the network into a small reusable plain-array ring for
-repeated sequence steps.
+Implementation signature used by the overloads above.
+
+Existing callers passing a boolean `training` flag are unchanged. The GPU
+path is used only when an options bag with `useGPU: true` is supplied,
+`gpuDevice` is set, and `isGPUEligible` returns true. In every other case
+the standard CPU `network.activate()` implementation runs.
+
+Parameters:
+- `input` - Input vector of length `this.input`.
+- `trainingOrOptions` - Boolean training flag or options bag.
+- `_maxActivationDepth` - Unused; kept for signature compatibility.
+
+Returns: Output values, or a promise when the GPU path is selected.
 
 #### activate
 
@@ -4283,7 +4306,7 @@ after the split — evolution pressure then shapes the new node over time.
 
 This is one of the canonical NEAT structural mutations. It increases
 network depth without changing connectivity density significantly.
-See Stanley & Miikkulainen (2002) for the motivating analysis.
+See [Stanley & Miikkulainen (2002)](https://nn.cs.utexas.edu/?stanley:ec02) for the motivating analysis.
 
 Example:
 
@@ -5249,6 +5272,36 @@ getTrainingStats(): TrainingStatsSnapshot
 
 Consolidated training stats snapshot.
 
+#### gpuDevice
+
+Optional WebGPU device used by the GPU inference fast path.
+
+Assign a device here, then call `activate(input, { useGPU: true })` to opt
+into the WebGPU forward pass. If the device is missing, the network is
+ineligible, or `useGPU` is omitted, the standard CPU path is used
+transparently. This opt-in design keeps classic NEAT behavior unchanged
+unless a caller explicitly requests the GPU path.
+
+A one-shot `device.lost` listener is attached the first time a device is
+assigned. If the device is later lost, this property is cleared so
+subsequent activations fall back to the CPU path until a new device is
+assigned.
+
+GPU output agrees with the CPU path within an absolute tolerance of `5e-1`
+and a mean absolute error of `≤ 1e-1`. For deterministic replay or
+cross-machine regression tests, use the CPU path as the canonical reference.
+
+Example:
+
+```ts
+const network = new Architect.Perceptron(2, 4, 1);
+const adapter = await navigator.gpu.requestAdapter({
+  powerPreference: 'high-performance',
+});
+network.gpuDevice = (await adapter?.requestDevice()) ?? undefined;
+const output = await network.activate([0.5, -0.2], { useGPU: true });
+```
+
 #### gradientAccumulator
 
 Generic gradient accumulator used by RMSProp and AdaGrad.
@@ -5626,6 +5679,12 @@ mutate(
 Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in `methods.mutation`.
+
+Some structural methods, especially `ADD_CONN` and `ADD_NODE`, silently
+no-op when no eligible candidate exists (for example, a fully saturated
+graph). The NGE juvenile applier checks the live node/edge count before and
+after calling `mutate` so it can report the outcome truthfully as applied or
+skipped rather than claiming growth that did not happen.
 
 Parameters:
 - `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
@@ -6291,6 +6350,13 @@ setSeed(
 
 Seed the internal deterministic RNG.
 
+Seeding makes every subsequent structural mutation, weight initialization,
+and random choice reproducible for the same starting network. NGE uses this
+in `runNgeLifecycle` to guarantee that the same DNA + seed + experience
+stream produce identical growth checkpoints, including the same innovation
+IDs for newly created connections. Omitting the seed leaves the network
+using its default non-deterministic RNG.
+
 Parameters:
 - `seed` - Seed value.
 
@@ -6658,6 +6724,125 @@ const network = Architect.perceptron(2, 4, 1);
 const output = network.activate([0, 1]);
 ```
 
+### activateGPU
+
+```ts
+activateGPU(
+  device: GPUDevice,
+  network: default,
+  inputs: number[] | Float32Array<ArrayBufferLike>,
+): Promise<Float32Array<ArrayBufferLike>>
+```
+
+Run a single-network forward pass on the supplied WebGPU device.
+
+Parameters:
+- `device` - WebGPU device used to run the forward kernel.
+- `network` - Network whose fast-slab topology will be uploaded.
+- `inputs` - Input vector of length `network.input`.
+
+Returns: A promise resolving to a Float32Array of output-node values.
+
+Example:
+
+```ts
+const adapter = await navigator.gpu.requestAdapter({
+  powerPreference: 'high-performance',
+});
+const device = await adapter?.requestDevice();
+if (device) {
+  const output = await activateGPU(device, network, [0.5, -0.2]);
+}
+```
+
+### batchActivate
+
+```ts
+batchActivate(
+  device: GPUDevice,
+  networks: default[],
+  inputMatrix: Float32Array<ArrayBufferLike>,
+  options: BatchActivateOptions | undefined,
+): Promise<BatchedGPUResult>
+```
+
+Batched GPU activation for multi-agent evaluation.
+
+Reuses the per-network persistent GPU state managed by
+`ensureNetworkGPUState()`, uploads only the dynamic node/connection data
+and the input matrix each call, dispatches all networks in one or more compute
+passes once per topological level, and reads back the output matrix through a
+single reusable staging buffer. This removes the per-call buffer allocation,
+mapping, and destruction that otherwise make the GPU path slower than the CPU
+path for small networks. The optional `iterations` flag records many
+independent passes inside a single command buffer with only one CPU-GPU
+readback.
+
+Because every pass is recorded before the command buffer is submitted, only
+one `mapAsync` call is needed for the final result. The WebGPU specification
+already guarantees that mapping waits for all previously submitted work on the
+buffer's queue timeline, so an additional `onSubmittedWorkDone()` barrier is
+redundant for readback and is intentionally omitted.
+
+Parameters:
+- `device` - WebGPU device used to run the forward kernel.
+- `networks` - Networks to evaluate as a batch. All networks must have the
+same input and output dimensions.
+- `inputMatrix` - Flattened row-major inputs, length
+`networks.length * networks[0].input`. Still validated when upload is
+skipped, but not written to the GPU in that case.
+- `options` - Optional tuning flags for repeated static evaluation
+(see `BatchActivateOptions`).
+
+Returns: Promise resolving to a row-major output matrix.
+
+Example:
+
+```ts
+const networks = Array.from({ length: 4 }, () => Network.createMLP(2, [3], 1));
+const inputs = new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]);
+const { outputs, rowCount, colCount } = await batchActivate(device, networks, inputs);
+
+// Amortize CPU-GPU synchronization across 60 identical static evaluations.
+const batched = await batchActivate(device, networks, inputs, {
+  skipUpload: true,
+  iterations: 60,
+});
+```
+
+### buildOverheadArtifact
+
+```ts
+buildOverheadArtifact(
+  tierResults: ProfilingResult[],
+  options: { tiers?: number[] | undefined; inputCount?: number | undefined; outputCount?: number | undefined; timestampQuerySupported?: boolean | undefined; gpuTimestampQueryNs?: number | null | undefined; gpuAdapterInfo?: Record<string, unknown> | null | undefined; gpuProbedLimits?: Record<string, number> | null | undefined; referenceHardware?: { processor: string; memory: string; os: string; gpu_vendor: string; gpu_architecture: string; maxStorageBuffersPerShaderStage: number; } | undefined; browserVisibility?: string | undefined; },
+): Record<string, unknown>
+```
+
+Build the overhead-breakdown artifact consumed by the browser scenario.
+
+Parameters:
+- `tierResults` - Per-tier profiling results.
+- `options` - Benchmark options and probed environment values.
+- `options` - Visibility label, e.g. 'visible-foreground'.
+
+Returns: JSON-serializable artifact object.
+
+### computeOverheadBreakdown
+
+```ts
+computeOverheadBreakdown(
+  timings: Record<string, number>,
+): ProfilingPhaseTiming[]
+```
+
+Compute the percentage share of each overhead phase relative to the total.
+
+Parameters:
+- `timings` - Milliseconds per phase.
+
+Returns: Phase timings with percentages, sorted by descending share.
+
 ### formatConstructSummary
 
 ```ts
@@ -6683,6 +6868,84 @@ Example:
 const construction = Network.construct([sensor, hidden, readout]);
 const summary = formatConstructSummary(construction);
 ```
+
+### GpuProfilingTimer
+
+Simple high-resolution timer for named overhead phases.
+
+Uses `performance.now()` so the same instrumentation works in the browser
+and in Node test environments. A phase may be started and stopped multiple
+times; reported durations are accumulated.
+
+Example:
+
+```ts
+const timer = new GpuProfilingTimer();
+timer.start('bufferUpload');
+// ... GPU upload work ...
+const ms = timer.stop('bufferUpload');
+```
+
+#### durations
+
+Accumulated durations keyed by phase name.
+
+#### get
+
+```ts
+get(
+  name: string,
+): number
+```
+
+Return the accumulated milliseconds for a phase.
+
+Parameters:
+- `name` - Phase identifier.
+
+Returns: Accumulated milliseconds, or `0` when the phase was never timed.
+
+#### marks
+
+In-flight start marks keyed by phase name.
+
+#### reset
+
+```ts
+reset(): void
+```
+
+Clear all marks and accumulated durations.
+
+#### start
+
+```ts
+start(
+  name: string,
+): void
+```
+
+Record the start time for a named phase.
+
+Parameters:
+- `name` - Phase identifier.
+
+#### stop
+
+```ts
+stop(
+  name: string,
+): number
+```
+
+Stop a phase and return the elapsed milliseconds.
+
+If the phase was never started, returns `0` and records nothing.
+
+Parameters:
+- `name` - Phase identifier that was previously passed to `start`.
+
+Returns: Accumulated milliseconds for the phase, including this interval.
 
 ### Neat
 
@@ -7168,7 +7431,7 @@ Example:
 ```ts
 const checkpoint = neat.exportLightState({ eliteCount: 12 });
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     branchId: 'draft-1',
   },
 };
@@ -7262,7 +7525,7 @@ Example:
 ```ts
 const checkpoint = neat.exportState();
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     memoryBankId: 'memory-bank-1',
   },
 };
@@ -7849,6 +8112,70 @@ const restored = Neat.fromJSON(meta, fitness);
 await restored.import(population);
 ```
 
+### prepareActivationContext
+
+```ts
+prepareActivationContext(
+  network: default,
+): { index: number; restore: () => void; }
+```
+
+Temporarily annotate the first node's squash with its worker-registry index
+so `compileActivationKernel` can generate the correct WGSL switch, then restore
+the original value.
+
+Parameters:
+- `network` - Network whose first node squash will be temporarily annotated.
+
+Returns: A context object with the resolved index and a `restore()` callback.
+
+### profileGPUActivation
+
+```ts
+profileGPUActivation(
+  device: GPUDevice,
+  network: default,
+  inputs: number[] | Float32Array<ArrayBufferLike>,
+): Promise<ProfilingResult>
+```
+
+Profile a single GPU forward pass, measuring every major cold-path overhead.
+
+This function deliberately bypasses the production `activateGPU` caches so it
+can time buffer allocation, pipeline compilation, and bind-group creation.
+It creates and destroys a fresh `GPUBufferSet` per call. The returned result
+includes a per-phase percentage breakdown, the dominant bottleneck, and an
+overhead ratio.
+
+Parameters:
+- `device` - WebGPU device used to run the forward pass.
+- `network` - Network whose topology will be uploaded.
+- `inputs` - Input vector of length `network.input`.
+
+Returns: A `ProfilingResult` with timing breakdowns and the output vector.
+
+Example:
+
+```ts
+const result = await profileGPUActivation(device, network, [0.5, -0.2]);
+console.log(result.dominantBottleneck, result.overheadRatio);
+```
+
+### rankWeakPoints
+
+```ts
+rankWeakPoints(
+  phases: ProfilingPhaseTiming[],
+): { name: "cpuPreparation" | "bufferUpload" | "pipeline" | "bindGroup" | "dynamicBufferUpload" | "queueSubmission" | "gpuCompletionWait" | "outputReadback"; impactPct: number; strategy: string; }[]
+```
+
+Rank measured overhead phases by impact and attach a strategy to each.
+
+Parameters:
+- `phases` - Phase timings from one or more profile runs.
+
+Returns: Weak points sorted by descending percentage share.
+
 ### default
 
 #### _activateCore
@@ -7925,15 +8252,24 @@ Returns: Reinitialized connection instance.
 ```ts
 activate(
   input: number[] | Float32Array<ArrayBufferLike>,
-  training: boolean,
-  _maxActivationDepth: number,
-): number[]
+  options: { training?: boolean | undefined; useGPU: true; },
+  _maxActivationDepth: number | undefined,
+): Promise<Float32Array<ArrayBufferLike>>
 ```
 
-Standard activation API returning a plain number[] for backward compatibility.
-Internally may use pooled typed arrays; if so they are cloned before returning unless
-`reuseSequenceBuffers` opts the network into a small reusable plain-array ring for
-repeated sequence steps.
+Implementation signature used by the overloads above.
+
+Existing callers passing a boolean `training` flag are unchanged. The GPU
+path is used only when an options bag with `useGPU: true` is supplied,
+`gpuDevice` is set, and `isGPUEligible` returns true. In every other case
+the standard CPU `network.activate()` implementation runs.
+
+Parameters:
+- `input` - Input vector of length `this.input`.
+- `trainingOrOptions` - Boolean training flag or options bag.
+- `_maxActivationDepth` - Unused; kept for signature compatibility.
+
+Returns: Output values, or a promise when the GPU path is selected.
 
 #### activate
 
@@ -8061,7 +8397,7 @@ after the split — evolution pressure then shapes the new node over time.
 
 This is one of the canonical NEAT structural mutations. It increases
 network depth without changing connectivity density significantly.
-See Stanley & Miikkulainen (2002) for the motivating analysis.
+See [Stanley & Miikkulainen (2002)](https://nn.cs.utexas.edu/?stanley:ec02) for the motivating analysis.
 
 Example:
 
@@ -9027,6 +9363,36 @@ getTrainingStats(): TrainingStatsSnapshot
 
 Consolidated training stats snapshot.
 
+#### gpuDevice
+
+Optional WebGPU device used by the GPU inference fast path.
+
+Assign a device here, then call `activate(input, { useGPU: true })` to opt
+into the WebGPU forward pass. If the device is missing, the network is
+ineligible, or `useGPU` is omitted, the standard CPU path is used
+transparently. This opt-in design keeps classic NEAT behavior unchanged
+unless a caller explicitly requests the GPU path.
+
+A one-shot `device.lost` listener is attached the first time a device is
+assigned. If the device is later lost, this property is cleared so
+subsequent activations fall back to the CPU path until a new device is
+assigned.
+
+GPU output agrees with the CPU path within an absolute tolerance of `5e-1`
+and a mean absolute error of `≤ 1e-1`. For deterministic replay or
+cross-machine regression tests, use the CPU path as the canonical reference.
+
+Example:
+
+```ts
+const network = new Architect.Perceptron(2, 4, 1);
+const adapter = await navigator.gpu.requestAdapter({
+  powerPreference: 'high-performance',
+});
+network.gpuDevice = (await adapter?.requestDevice()) ?? undefined;
+const output = await network.activate([0.5, -0.2], { useGPU: true });
+```
+
 #### gradientAccumulator
 
 Generic gradient accumulator used by RMSProp and AdaGrad.
@@ -9404,6 +9770,12 @@ mutate(
 Mutates the network's structure or parameters according to the specified method.
 This is a core operation for neuro-evolutionary algorithms (like NEAT).
 The method argument should be one of the mutation types defined in `methods.mutation`.
+
+Some structural methods, especially `ADD_CONN` and `ADD_NODE`, silently
+no-op when no eligible candidate exists (for example, a fully saturated
+graph). The NGE juvenile applier checks the live node/edge count before and
+after calling `mutate` so it can report the outcome truthfully as applied or
+skipped rather than claiming growth that did not happen.
 
 Parameters:
 - `method` - The mutation method to apply (e.g., `mutation.ADD_NODE`, `mutation.MOD_WEIGHT`).
@@ -10068,6 +10440,13 @@ setSeed(
 ```
 
 Seed the internal deterministic RNG.
+
+Seeding makes every subsequent structural mutation, weight initialization,
+and random choice reproducible for the same starting network. NGE uses this
+in `runNgeLifecycle` to guarantee that the same DNA + seed + experience
+stream produce identical growth checkpoints, including the same innovation
+IDs for newly created connections. Omitting the seed leaves the network
+using its default non-deterministic RNG.
 
 Parameters:
 - `seed` - Seed value.

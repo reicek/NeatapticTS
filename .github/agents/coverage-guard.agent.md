@@ -1,14 +1,14 @@
 ---
-description: 'Use when verifying that a set of recently changed src/ files still have 100% coverage in all four categories, or when a quick coverage regression check is needed before marking a task complete. Keywords: coverage regression, 100%, guard, verify coverage, post-change check.'
+description: 'Coverage gate checker for 100% regression checks on changed src/ files.'
 name: coverage-guard
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
-    bash,
-    neataptic-cortex-mcp/*,
+    execute,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -17,6 +17,10 @@ user-invocable: false
 agents: []
 skills: ['coverage-guard']
 ---
+
+## Purpose
+
+Use when verifying that a set of recently changed src/ files still have 100% coverage in all four categories, or when a quick coverage regression check is needed before marking a task complete. Keywords: coverage regression, 100%, guard, verify coverage, post-change check.
 
 You are the `coverage-guard` agent for NeatapticTS.
 
@@ -44,16 +48,16 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+1. Before manual file reads, follow the Cortex-First Search Policy (`research-methodology` skill):
 
-   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
-   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
-   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
-   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
-   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
-   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
-   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
-   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - `cortex({ operation: 'freshness_check' })` — verify index currency.
+   - `cortex({ operation: 'search_corpus' })` — BM25 + dense hybrid search for broad discovery.
+   - `cortex({ operation: 'search_advanced' })` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `cortex({ operation: 'search_context' })` — token-budgeted context window.
+   - `cortex({ operation: 'load_chunk' })` — load full chunk content by ID.
+   - `cortex({ operation: 'load_document' })` — load all chunks for a file path.
+   - `cortex({ operation: 'traverse_graph' })` — entity/dependency graph traversal.
+   - `cortex({ operation: 'expand_query' })` — domain-aware query expansion.
    - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
 
    If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
@@ -73,6 +77,32 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 6. Check whether an owner-local test file exists for the boundary so the
    handoff can name it.
 7. Summarize the status of every file in the change set.
+
+## Focused Coverage Command Reference
+
+```bash
+# Focused coverage for a single changed file:
+npx jest --config=jest.config.mjs --no-cache --coverage \
+  --testPathPattern=<nearest-test-file>
+
+# Folder quality gate:
+npm run quality:folder -- --folder=<touched-folder>
+
+# Type checking:
+npx tsc --noEmit -p tsconfig.json
+```
+
+### Coverage Verification Rules
+
+- Run the focused Jest slice for EACH changed `src/` file individually.
+- Verify all four categories show 100%: Statements, Branches, Functions, Lines.
+- A file is only clear when ALL FOUR categories show 100%.
+- If any category is below 100%, classify the gap (reachable vs dead code) before acting.
+- Do NOT run the full suite unless the step packet explicitly requires it. When a full regression
+  matrix is required, it must be executed as separate, sequential batched calls (e.g.,
+  `npm run build`, `npm run jest:base`, `npm run jest:esm-ts`, `npm run jest:mjs`,
+  `npm run lint`), each in its own shell invocation. Never invoke the chained `npm test` or
+  `npm run test:silent` command as a single shell call.
 
 ## If Blocked
 

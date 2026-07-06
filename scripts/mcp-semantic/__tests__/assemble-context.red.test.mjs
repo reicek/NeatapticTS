@@ -6,8 +6,12 @@
 
 import { createHash } from 'node:crypto';
 
-const ASSEMBLE_CONTEXT_PATH = '../../semantic-index/assemble-context.mjs';
-const SEARCH_CONTEXT_PATH = '../../mcp-semantic/tools/search-context.mjs';
+// Force the Repo Cortex dense path to cold so these contract tests exercise
+// BM25 assembly only and avoid loading onnxruntime-node under Jest ESM VMs.
+process.env.DENSE_FORCE_STATE = 'cold';
+
+const ASSEMBLE_CONTEXT_PATH = '../../../rag-index/assemble-context.mjs';
+const SEARCH_CONTEXT_PATH = '../tools/search-context.mjs';
 
 function loadAssembleContext() {
   return import(ASSEMBLE_CONTEXT_PATH);
@@ -85,10 +89,15 @@ describe('assemble-context pipeline', () => {
     it('removes chunks with identical SHA-256 hashes', async () => {
       const { deduplicateChunks } = await loadAssembleContext();
       const sharedText = 'duplicate body';
+      const sharedHash = sha256(sharedText);
       const chunks = [
-        makeChunk({ chunk_id: 1, body_text: sharedText }),
-        makeChunk({ chunk_id: 2, body_text: sharedText }),
-        makeChunk({ chunk_id: 3, body_text: 'unique body' }),
+        makeChunk({ chunk_id: 1, body_text: sharedText, sha256: sharedHash }),
+        makeChunk({ chunk_id: 2, body_text: sharedText, sha256: sharedHash }),
+        makeChunk({
+          chunk_id: 3,
+          body_text: 'unique body',
+          sha256: sha256('unique body'),
+        }),
       ];
       const result = deduplicateChunks(chunks, { cosineThreshold: 0.95 });
       expect(result.map((c) => c.chunk_id)).toEqual([1, 3]);

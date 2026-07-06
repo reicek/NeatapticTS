@@ -1,7 +1,7 @@
 # Agentic Flows and Gates Upgrade — Session Log
 
 **Status:** [DONE]
-**Archived:** 2026-05-22
+**Archived:**
 **Source tracker:** `plans/completed/Agentic_Flows_and_Gates_Upgrade.plans.md`
 
 ---
@@ -129,4 +129,4 @@
 
 ---
 
-_Closed 2026-05-22 by 07-logging (Phase 7 Step 07)._
+_Closed by 07-logging (Phase 7 Step 07)._

@@ -1,9 +1,13 @@
 ---
 name: skill-frontmatter-standards
-description: 'Use when: validating or designing SKILL.md frontmatter, skill folder names, argument-hint fields, descriptions, visibility, compatibility text, or local resource links.'
+description: 'Use when: validating or designing SKILL.md frontmatter and metadata.'
 argument-hint: 'Describe the skill folder, intended trigger scope, visibility decision, argument hint, local resources, and validation mode.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - agent-frontmatter-standards
+  - skill-description-evals
+  - updating-skill-frontmatter
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,16 @@ This skill governs the design and validation of YAML frontmatter in `.github/ski
 - Deciding whether a skill should be `user-invocable: true` or hidden with `false`.
 - Moving skill-specific scripts, templates, or resources into the owning skill folder.
 - Running `validate-skill-frontmatter.mjs` in strict mode to confirm all skills meet the standard.
+
+## When NOT to use
+
+Do NOT use for agent frontmatter validation - use `agent-frontmatter-standards` instead. Do NOT use for skill output evaluation - use `skill-output-evals` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Skill SKILL.md" → "Validate frontmatter"; "Validate frontmatter" → "Valid?"; "Valid?" → "Check body links" (Yes), "Fix fields" (No); "Check body links" → "Links valid?"; "Fix fields" → "Validate frontmatter"; "Links valid?" → "Pass" (Yes), "Fix broken links" (No); "Pass"; "Fix broken links" → "Check body links".
+```
 
 ## Task Packet
 
@@ -43,6 +57,26 @@ Validate with: node scripts/agent-customization/validate-skill-frontmatter.mjs -
 6. Move any skill-specific scripts, templates, or reference files into the owning skill folder rather than a shared location.
 7. Run `node scripts/agent-customization/validate-skill-frontmatter.mjs --json --strict` after metadata edits.
 8. Record validation output and any residual routing risk in the active plan or chat summary.
+
+## Decision Tree: User-Invocable Visibility
+
+```text
+Flowchart summary: "Skill frontmatter" → "user-invocable set?"; "user-invocable set?" → "Appears in user agent list" (true), "Hidden from users, model-invoked only" (false), "Default: treat as false" (not set); "Appears in user agent list" → "Validate description has Use-when trigger"; "Hidden from users, model-invoked only" → "Validate argument-hint exists"; "Default: treat as false"; "Validate description has Use-when trigger"; "Validate argument-hint exists".
+```
+
+## Before / After Examples
+
+**Before (too broad):**
+
+```yaml
+description: 'Helps with testing and coverage tasks across the codebase.'
+```
+
+**After (well-scoped with Use-when trigger):**
+
+```yaml
+description: 'Use when: expanding test coverage for a specific src/ file that is below 100% in any category and the test suite is already green.'
+```
 
 ## Guardrails
 

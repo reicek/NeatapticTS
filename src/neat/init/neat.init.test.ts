@@ -90,8 +90,7 @@ function loadMockedInitializeNeatConstructor(input: {
   selectionModule: Record<string, unknown>;
 }): InitializeNeatConstructorFunction {
   let mockedInitializeNeatConstructor:
-    | InitializeNeatConstructorFunction
-    | undefined;
+    InitializeNeatConstructorFunction | undefined;
 
   jest.resetModules();
 

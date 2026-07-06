@@ -5,16 +5,13 @@ import type {
 } from '../nge-dna/neat.nge-dna.types';
 
 /**
- * Fixed term names used by the Phase E composite compatibility-distance calculator.
+ * Fixed term names used by the NGE composite compatibility-distance calculator.
  */
 export type NgeEvolutionCompatibilityDistanceTermName =
-  | 'topology'
-  | 'computation'
-  | 'memory'
-  | 'lifecycle';
+  'topology' | 'computation' | 'memory' | 'lifecycle';
 
 /**
- * One weighted compatibility-distance term captured during Phase E speciation scoring.
+ * One weighted compatibility-distance term captured during NGE speciation scoring.
  */
 export interface NgeEvolutionCompatibilityDistanceTerm {
   /** Stable term label for telemetry and assertion surfaces. */
@@ -30,7 +27,7 @@ export interface NgeEvolutionCompatibilityDistanceTerm {
 }
 
 /**
- * Alpha weights applied to the four Phase E compatibility-distance terms.
+ * Alpha weights applied to the four NGE compatibility-distance terms.
  */
 export interface NgeEvolutionCompatibilityDistanceWeights {
   /** Alpha weight for the classic topology-distance term. */
@@ -44,7 +41,7 @@ export interface NgeEvolutionCompatibilityDistanceWeights {
 }
 
 /**
- * Wiring-cost preference knobs compared by the Phase E lifecycle-distance term.
+ * Wiring-cost preference knobs compared by the NGE lifecycle-distance term.
  */
 export interface NgeEvolutionCompatibilityWiringCostWeights {
   /** Relative penalty applied to realized module count. */
@@ -56,7 +53,7 @@ export interface NgeEvolutionCompatibilityWiringCostWeights {
 }
 
 /**
- * One genome-side input consumed by the Phase E composite compatibility calculator.
+ * One genome-side input consumed by the NGE composite compatibility calculator.
  *
  * The canonical DNA envelope does not yet own lifecycle cadence or wiring-preference
  * knobs, so the calculator accepts those traits as an owner-local sidecar.
@@ -71,7 +68,7 @@ export interface NgeEvolutionCompatibilityGenomeInput {
 }
 
 /**
- * One pairwise comparison input evaluated by the Phase E composite compatibility calculator.
+ * One pairwise comparison input evaluated by the NGE composite compatibility calculator.
  */
 export interface NgeEvolutionCompatibilityComparisonInput {
   /** Classic NEAT topology distance injected without recomputation. */
@@ -85,17 +82,17 @@ export interface NgeEvolutionCompatibilityComparisonInput {
 }
 
 /**
- * Context bag controlling one Phase E compatibility-distance computation and normalization scope.
+ * Context bag controlling one NGE compatibility-distance computation and normalization scope.
  */
 export interface NgeEvolutionCompatibilityDistanceContext {
   /** Optional population slice used for independent per-term min-max normalization. */
   populationSlice?: readonly NgeEvolutionCompatibilityComparisonInput[];
-  /** Optional alpha weights overriding the Phase E defaults before normalization. */
+  /** Optional alpha weights overriding the NGE defaults before normalization. */
   weights?: Partial<NgeEvolutionCompatibilityDistanceWeights>;
 }
 
 /**
- * Fully expanded term shelf returned by the Phase E compatibility-distance calculator.
+ * Fully expanded term shelf returned by the NGE compatibility-distance calculator.
  */
 export interface NgeEvolutionCompatibilityDistanceTerms {
   /** Classic NEAT innovation-and-topology term. */
@@ -109,7 +106,7 @@ export interface NgeEvolutionCompatibilityDistanceTerms {
 }
 
 /**
- * Composite compatibility-distance result returned by the Phase E speciation helper.
+ * Composite compatibility-distance result returned by the NGE speciation helper.
  */
 export interface NgeEvolutionCompatibilityDistanceResult {
   /** Weighted sum of the four normalized compatibility-distance terms. */
@@ -121,27 +118,19 @@ export interface NgeEvolutionCompatibilityDistanceResult {
 }
 
 /**
- * Parent-role labels used when Phase E operators report how one offspring was assembled.
+ * Parent-role labels used when NGE operators report how one offspring was assembled.
  */
 export type NgeEvolutionParentRole =
-  | 'sole-parent'
-  | 'queen'
-  | 'drone'
-  | 'primary'
-  | 'secondary';
+  'sole-parent' | 'queen' | 'drone' | 'primary' | 'secondary';
 
 /**
  * High-level contribution kinds used to describe parent input at the reproduction boundary.
  */
 export type NgeEvolutionContributionKind =
-  | 'clone'
-  | 'mutation'
-  | 'patch'
-  | 'crossover'
-  | 'blend';
+  'clone' | 'mutation' | 'patch' | 'crossover' | 'blend';
 
 /**
- * One parent contribution reported by a Phase E reproduction operator.
+ * One parent contribution reported by a NGE reproduction operator.
  */
 export interface NgeEvolutionParentContribution {
   /** Stable parent identifier used for lineage or telemetry lookups. */
@@ -199,7 +188,7 @@ export interface NgeEvolutionEpigeneticReference<
 }
 
 /**
- * Input contract consumed by the optional Phase E epigenetic prior operator.
+ * Input contract consumed by the optional NGE epigenetic prior operator.
  */
 export interface NgeEvolutionEpigeneticPriorInput<
   ParameterVector extends readonly number[] = readonly number[],
@@ -215,7 +204,7 @@ export interface NgeEvolutionEpigeneticPriorInput<
 }
 
 /**
- * Output contract returned by the optional Phase E epigenetic prior operator.
+ * Output contract returned by the optional NGE epigenetic prior operator.
  */
 export interface NgeEvolutionEpigeneticPriorResult<
   ParameterVector extends readonly number[] = readonly number[],
@@ -231,16 +220,13 @@ export interface NgeEvolutionEpigeneticPriorResult<
 }
 
 /**
- * High-level offspring outcome labels surfaced by the Phase E reproduction operators.
+ * High-level offspring outcome labels surfaced by the NGE reproduction operators.
  */
 export type NgeEvolutionReproductionOutcome =
-  | 'clone'
-  | 'mutation-only'
-  | 'queen-template-patched'
-  | 'sexual-crossover';
+  'clone' | 'mutation-only' | 'queen-template-patched' | 'sexual-crossover';
 
 /**
- * Shared reproduction result returned by all three Phase E reproduction modes.
+ * Shared reproduction result returned by all three NGE reproduction modes.
  */
 export interface NgeEvolutionReproductionResult<
   OffspringEnvelope = NgeDnaCanonicalEnvelope,

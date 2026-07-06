@@ -1,13 +1,14 @@
 ---
-description: 'Use when mapping ONNX embedding model cache state, embeddings index readiness, hybrid BM25+dense ranking gaps, or deciding whether an embeddings issue belongs to Semantic_Knowledge_Embeddings. Hands off to the embeddings skill when available. Keywords: cortex embeddings, ONNX embeddings, dense retrieval, embed-index, sqlite-vec, hybrid ranking, MRR, embeddings scout.'
+description: 'Scout for Cortex embeddings index and hybrid ranking gaps.'
 name: 'cortex-embeddings-scout'
 tier: 3
-model: 'kimi-k2.7-code:cloud (ollama)'
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
-    neataptic-cortex-mcp/*,
+    execute,
+    cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -16,6 +17,10 @@ user-invocable: false
 agents: []
 skills: [repo-cortex-embeddings]
 ---
+
+## Purpose
+
+Use when mapping ONNX embedding model cache state, embeddings index readiness, hybrid BM25+dense ranking gaps, or deciding whether an embeddings issue belongs to Semantic_Knowledge_Embeddings. Hands off to the embeddings skill when available. Keywords: cortex embeddings, ONNX embeddings, dense retrieval, embed-index, sqlite-vec, hybrid ranking, MRR, embeddings scout.
 
 You are the `cortex-embeddings-scout` agent for NeatapticTS.
 
@@ -41,16 +46,16 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Approach
 
-1. Before manual file reads, follow the Cortex-First Search Policy (`copilot-instructions.md` §10):
+1. Before manual file reads, follow the Cortex-First Search Policy (`research-methodology` skill):
 
-   - `neataptic-cortex-mcp:freshness_check` — verify index currency.
-   - `neataptic-cortex-mcp:search_corpus` — BM25 + dense hybrid search for broad discovery.
-   - `neataptic-cortex-mcp:search_advanced` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
-   - `neataptic-cortex-mcp:search_context` — token-budgeted context window.
-   - `neataptic-cortex-mcp:load_chunk` — load full chunk content by ID.
-   - `neataptic-cortex-mcp:load_document` — load all chunks for a file path.
-   - `neataptic-cortex-mcp:traverse_graph` — entity/dependency graph traversal.
-   - `neataptic-cortex-mcp:expand_query` — domain-aware query expansion.
+   - `cortex({ operation: 'freshness_check' })` — verify index currency.
+   - `cortex({ operation: 'search_corpus' })` — BM25 + dense hybrid search for broad discovery.
+   - `cortex({ operation: 'search_advanced' })` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.
+   - `cortex({ operation: 'search_context' })` — token-budgeted context window.
+   - `cortex({ operation: 'load_chunk' })` — load full chunk content by ID.
+   - `cortex({ operation: 'load_document' })` — load all chunks for a file path.
+   - `cortex({ operation: 'traverse_graph' })` — entity/dependency graph traversal.
+   - `cortex({ operation: 'expand_query' })` — domain-aware query expansion.
    - Native tools (`grep`, `glob`, `view`) — fallback only when Cortex is degraded or target is a known file path.
 
    If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
@@ -59,6 +64,13 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 3. Identify the active readiness surface: embedding-model cache, SQLite embeddings store presence, hybrid ranking boundary, or evaluation gap.
 4. Collect the minimum evidence needed from nearby files, path expectations, and retrieval-facing source.
 5. Summarize the active blocker and the smallest useful handoff for the repo-cortex-embeddings skill owner.
+
+## Embeddings Readiness Check Patterns
+
+- **Model-cache availability:** Verify the ONNX embedding model is downloaded and cached. Check for model files in the expected cache directory. If missing, the dense search path is degraded to BM25-only.
+- **SQLite store presence:** Verify the SQLite vector store exists and contains embeddings. Check for `*.sqlite` files with vector tables. If missing, dense retrieval cannot function.
+- **Hybrid ranking boundary:** Verify the hybrid BM25 + dense ranking pipeline is functional. Check that `search_corpus` returns both BM25 and dense results with `dense_state` reporting "warm". If dense is "cold" or "model-only", only BM25 results are valid.
+- **Index freshness:** Verify the corpus index is up-to-date with current file metadata. Use `freshness_check` to compare indexed proofs against filesystem metadata. Stale indexes produce degraded search results.
 
 ## If Blocked
 

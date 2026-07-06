@@ -60,8 +60,8 @@ if the process had never stopped.
 
 Both full and light checkpoint bundles also reserve a top-level
 `extensions` bag for downstream metadata. That pocket exists so consumers
-such as NEATchat can attach namespaced descriptors without redefining the
-checkpoint semantics that this chapter owns.
+such as a downstream application can attach namespaced descriptors without
+redefining the checkpoint semantics that this chapter owns.
 
 Read the chapter in this order:
 - start with `exportPopulation()` and `importPopulation()` when you only need
@@ -129,7 +129,7 @@ Example:
 ```ts
 const checkpoint = neat.exportLightState({ eliteCount: 4 });
 checkpoint.extensions = {
-  neatchat: {
+  myApp: {
     branchId: 'draft-1',
   },
 };
@@ -187,7 +187,7 @@ Example:
 ```ts
 const state = neat.exportState();
 state.extensions = {
-  neatchat: {
+  myApp: {
     memoryBankId: 'memory-bank-1',
   },
 };

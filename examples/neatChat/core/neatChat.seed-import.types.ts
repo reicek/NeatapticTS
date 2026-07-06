@@ -3,9 +3,7 @@ export type NeatChatSupportedSeedFamily = 'gru' | 'lstm';
 
 /** Error codes raised by the NEATchat external-seed import boundary. */
 export type NeatChatSeedImportErrorCode =
-  | 'UNSUPPORTED_OPERATOR'
-  | 'DIMENSION_MISMATCH'
-  | 'ACTIVATION_INCOMPATIBLE';
+  'UNSUPPORTED_OPERATOR' | 'DIMENSION_MISMATCH' | 'ACTIVATION_INCOMPATIBLE';
 
 /** One recurrent-layer weight bundle exported from a compatible teacher checkpoint. */
 export interface NeatChatExternalSeedLayerWeights {

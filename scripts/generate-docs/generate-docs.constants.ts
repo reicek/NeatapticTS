@@ -94,4 +94,25 @@ export const DOCS_TARGETS: Record<string, DocsTargetConfig> = {
     publishedRootDir: path.join(DOCS_DIR, 'examples', 'flappy_bird'),
     preservePublishedEntries: ['index.html'],
   },
+  'racing-curriculum': {
+    name: 'racing-curriculum',
+    sourceDir: path.resolve('examples', 'racing_curriculum'),
+    docsDir: path.join(DOCS_DIR, 'examples', 'racing_curriculum', 'docs'),
+    rootDocsDir: path.join(DOCS_DIR, 'examples', 'racing_curriculum', 'docs'),
+    rootReadmeSource: path.resolve(
+      'examples',
+      'racing_curriculum',
+      'README.md',
+    ),
+    rootReadmeDestination: path.join(
+      DOCS_DIR,
+      'examples',
+      'racing_curriculum',
+      'docs',
+      'README.md',
+    ),
+    excludeRootSourceFiles: true,
+    publishedRootDir: path.join(DOCS_DIR, 'examples', 'racing_curriculum'),
+    preservePublishedEntries: ['index.html'],
+  },
 };

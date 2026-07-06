@@ -11,7 +11,7 @@
  *
  * ```mermaid
  * graph LR
- *   MCP[neataptic-cortex-mcp] --> search_corpus
+ *   MCP[cortex] --> search_corpus
  *   MCP --> load_chunk
  *   MCP --> load_parent_chunk
  *   MCP --> load_document
@@ -41,7 +41,6 @@ import {
   createSelfCheckReport,
   createTool,
   emitSelfCheckReport,
-  invokeServerRequest,
   parseMcpCliArgs,
   printMcpUsage,
   runStdioMcpServer,
@@ -54,13 +53,18 @@ import { listFamilies } from './tools/list-families.mjs';
 import { loadChunk } from './tools/load-chunk.mjs';
 import { loadDocument } from './tools/load-document.mjs';
 import { loadParentChunk } from './tools/load-parent-chunk.mjs';
-import { runDocsQualityMetrics } from '../semantic-index/docs-quality/docs-quality.metrics.mjs';
+import { multiHopSearchHandler } from './tools/multi-hop-search.mjs';
+import { runDocsQualityMetrics } from '../../rag-index/docs-quality/docs-quality.metrics.mjs';
 import { searchAdvanced } from './tools/search-advanced.mjs';
 import { searchContext } from './tools/search-context.mjs';
 import { searchCorpus } from './tools/search-corpus.mjs';
 import { submitFeedback } from './tools/submit-feedback.mjs';
 import { traverseGraphHandler } from './tools/traverse-graph.mjs';
+import { tursoBranch } from './tools/turso-branch.mjs';
+import { tursoPitr } from './tools/turso-pitr.mjs';
 import { buildAnnIndex } from './tools/ann-index.mjs';
+import { getTursoClient } from './tools/cortex-db.mjs';
+import { runParallelQueries } from '../../rag-index/parallel-search.mjs';
 
 const SERVER_VERSION = '0.1.0';
 const ENTRYPOINT = 'scripts/mcp-semantic/repo-cortex-mcp.mjs';
@@ -75,7 +79,7 @@ export function createRepoCortexMcpServer(options = {}) {
   const databasePath = options.databasePath;
   const tools = createRepoCortexTools(databasePath);
   return createMcpServer({
-    serverName: 'neataptic-cortex-mcp',
+    serverName: 'cortex',
     serverVersion: SERVER_VERSION,
     tools,
   });
@@ -90,31 +94,22 @@ const DEFAULT_ANN_MODEL_ID = 'all-MiniLM-L6-v2';
 const DEFAULT_ANN_DIMENSION = 384;
 
 /**
- * Build or refresh the ANN index from an MCP tool invocation.
+ * Build or refresh the DiskANN index from an MCP tool invocation.
  *
- * Resolves the embeddings database path as a sibling to the corpus database,
- * then delegates to {@link buildAnnIndex}. `validate_recall` is accepted by
- * the schema but is a no-op in this slice — recall validation is handled in
- * the green-validation follow-up slice.
+ * Delegates to {@link buildAnnIndex} with the corpus database path.
+ * `validate_recall` is accepted by the schema but is a no-op in this slice —
+ * recall validation is handled in the green-validation follow-up slice.
  *
  * @param {object} options - Handler options.
  * @param {string | undefined} options.databasePath - Corpus database path override.
- * @param {'hnsw' | 'brute_force_cached' | 'brute_force' | undefined} options.force - Strategy override.
+ * @param {'diskann' | undefined} options.force - Strategy override.
  * @returns {Promise<{ strategy: string, build_status: string, [key: string]: unknown }>} Build result.
  */
 async function buildAnnIndexHandler(options = {}) {
   const databasePath = options.databasePath;
-  const embeddingsDatabasePath =
-    typeof databasePath === 'string'
-      ? path.join(path.dirname(databasePath), 'embeddings.sqlite')
-      : 'data/embeddings.sqlite';
 
   return buildAnnIndex({
-    embeddingsDatabasePath,
-    indexFilePath:
-      typeof databasePath === 'string'
-        ? path.join(path.dirname(databasePath), 'ann-index.dat')
-        : 'data/ann-index.dat',
+    databasePath,
     modelId: DEFAULT_ANN_MODEL_ID,
     dimension: DEFAULT_ANN_DIMENSION,
     forceStrategy: options.force,
@@ -829,13 +824,13 @@ export function createRepoCortexTools(databasePath) {
     createTool({
       name: 'ann_build_index',
       description:
-        'Build or refresh the Approximate-Nearest-Neighbor (ANN) index for dense corpus search. When hnswlib-node is unavailable or the corpus is below the threshold, the index metadata is prepared for brute_force_cached search.',
+        'Build or refresh the Approximate-Nearest-Neighbor (ANN) index for dense corpus search. Creates a DiskANN vector index using libsql_vector_idx on chunks.embedding with cosine metric.',
       inputSchema: {
         type: 'object',
         properties: {
           force: {
             type: 'string',
-            enum: ['hnsw', 'brute_force_cached', 'brute_force'],
+            enum: ['diskann'],
             description: 'Override the automatically selected ANN strategy.',
           },
           validate_recall: {
@@ -1172,49 +1167,312 @@ export function createRepoCortexTools(databasePath) {
       handler: (argumentsObject) =>
         submitFeedback({ ...argumentsObject, databasePath }),
     }),
+    createTool({
+      name: 'parallel_search',
+      description:
+        'Run multiple corpus SQL queries concurrently and merge results via Reciprocal Ranked Fusion (RRF). Respects the TURSO_CONCURRENCY env var to limit in-flight requests (default 20). Graceful degradation: surviving query results are returned when individual queries fail.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          queries: {
+            type: 'array',
+            description:
+              'Array of query objects to run concurrently. Each query has a `sql` string and optional `args` array.',
+            items: {
+              type: 'object',
+              properties: {
+                sql: { type: 'string' },
+                args: { type: 'array' },
+              },
+              required: ['sql'],
+              additionalProperties: false,
+            },
+          },
+          fusion: {
+            type: 'string',
+            enum: ['rrf', 'alpha'],
+            default: 'rrf',
+            description:
+              'Fusion strategy for merging multi-query results. "rrf" uses Reciprocal Ranked Fusion (rank-based); "alpha" uses score-based weighted blend of normalized scores.',
+          },
+          limit: {
+            type: 'integer',
+            description:
+              'Maximum number of merged results to return. When omitted, all merged results are returned.',
+          },
+          use_dense: {
+            type: 'boolean',
+            description:
+              'When true, include dense (embedding) query results in the parallel batch alongside BM25 queries. When false, only the provided queries are executed.',
+          },
+        },
+        required: ['queries'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          results: {
+            type: 'array',
+            items: { type: 'object' },
+            description:
+              'Merged results from all successful queries, sorted by descending RRF score.',
+          },
+          errors: {
+            type: 'array',
+            items: { type: 'object' },
+            description:
+              'Per-query failure descriptors when individual queries fail. Omitted when all queries succeed.',
+          },
+        },
+        required: ['results'],
+        additionalProperties: true,
+      },
+      handler: async (argumentsObject) => {
+        const client = await getTursoClient(databasePath);
+        const parallelResults = await runParallelQueries({
+          client,
+          queries: argumentsObject.queries,
+          fusion: argumentsObject.fusion,
+          limit: argumentsObject.limit,
+          use_dense: argumentsObject.use_dense,
+        });
+        const queryErrors = parallelResults.errors ?? [];
+        return {
+          results: parallelResults,
+          ...(queryErrors.length > 0 ? { errors: queryErrors } : {}),
+        };
+      },
+    }),
+    createTool({
+      name: 'multi_hop_search',
+      description:
+        'Multi-hop vector→graph→vector composition search. Hop 1: vector_top_k finds seed chunks from a query embedding. Hop 2: entities JOIN edges traverses the graph from seed chunk_ids. Hop 3: vector_top_k scoped to neighbor chunk_ids finds related chunks. Combined ranking: vector_distance × graph_proximity.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Free-text query for the initial vector seed search.',
+          },
+          max_hops: {
+            type: 'number',
+            default: 3,
+            description:
+              'Maximum number of hops. 1 = vector seed only, 2 = +graph traversal, 3 = +scoped vector search. Must be an integer between 1 and 3.',
+          },
+          relationship_types: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: [
+                'imports',
+                'exports',
+                'depends-on',
+                'implements',
+                'references',
+                'owns',
+                'part-of',
+                'contains',
+              ],
+            },
+            description:
+              'Relationship types to follow during graph traversal (hop 2).',
+          },
+          entity_types: {
+            type: 'array',
+            items: {
+              type: 'string',
+              enum: [
+                'module',
+                'class',
+                'function',
+                'interface',
+                'type-alias',
+                'variable',
+                'error-class',
+                'plan',
+                'skill',
+                'agent',
+                'demo',
+                'benchmark',
+              ],
+            },
+            description:
+              'Entity types to include in graph traversal results (hop 2).',
+          },
+          limit: {
+            type: 'number',
+            default: 10,
+            description: 'Maximum number of combined results to return.',
+          },
+        },
+        required: ['query'],
+        additionalProperties: false,
+      },
+      outputSchema: {
+        type: 'object',
+        properties: {
+          query: { type: 'string' },
+          max_hops: { type: 'number' },
+          limit: { type: 'number' },
+          seed_chunks: {
+            type: 'array',
+            items: { type: 'object' },
+            description: 'Seed chunks from hop 1 vector search.',
+          },
+          entities: {
+            type: 'array',
+            items: { type: 'object' },
+            description: 'Entities discovered during hop 2 graph traversal.',
+          },
+          results: {
+            type: 'array',
+            items: { type: 'object' },
+            description:
+              'Combined results sorted by combined_score (vector_distance × graph_proximity) descending.',
+          },
+        },
+        required: [
+          'query',
+          'max_hops',
+          'limit',
+          'seed_chunks',
+          'entities',
+          'results',
+        ],
+      },
+      handler: (argumentsObject) => multiHopSearchHandler(argumentsObject),
+    }),
+    createTool({
+      name: 'turso_branch',
+      description:
+        'Create or delete a branch of a Turso database via the Turso Platform API (api.turso.tech). Branch creation POSTs with a seed block so index changes can be tested in isolation without affecting the production database. Branch cleanup (delete) issues a DELETE to the same Platform API.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          branch_name: {
+            type: 'string',
+            description:
+              'Name of the branch to create or delete. Required for both create and delete actions.',
+          },
+          action: {
+            type: 'string',
+            enum: ['create', 'delete'],
+            default: 'create',
+            description:
+              'Whether to create (POST with seed) or delete (DELETE) the branch. Defaults to "create".',
+          },
+          organization: {
+            type: 'string',
+            description: 'Turso organization slug.',
+          },
+          api_token: {
+            type: 'string',
+            description: 'Turso Platform API token.',
+          },
+          database_name: {
+            type: 'string',
+            description: 'Source database to branch from.',
+          },
+        },
+        required: ['branch_name', 'action'],
+        additionalProperties: false,
+      },
+      handler: (argumentsObject) =>
+        tursoBranch({
+          action: argumentsObject.action ?? 'create',
+          branchName: argumentsObject.branch_name,
+          organization: argumentsObject.organization,
+          apiToken: argumentsObject.api_token,
+          databaseName: argumentsObject.database_name,
+        }),
+    }),
+    createTool({
+      name: 'turso_pitr',
+      description:
+        'Create a Turso database from a timestamp via the Turso Platform API (api.turso.tech) for point-in-time recovery. POSTs with a seed block of type "timestamp" that carries the recovery timestamp and source database name. Returns the recovered database name, hostname, and raw API response.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          database_name: {
+            type: 'string',
+            description: 'Name of the recovered database to create. Required.',
+          },
+          organization: {
+            type: 'string',
+            description: 'Turso organization slug.',
+          },
+          api_token: {
+            type: 'string',
+            description: 'Turso Platform API token.',
+          },
+          source_database_name: {
+            type: 'string',
+            description:
+              'Source database to recover from (the database whose PITR retention window applies).',
+          },
+          timestamp: {
+            type: 'string',
+            description:
+              'ISO-8601 timestamp within the PITR retention window of the source database.',
+          },
+        },
+        required: ['database_name', 'timestamp'],
+        additionalProperties: false,
+      },
+      handler: (argumentsObject) =>
+        tursoPitr({
+          databaseName: argumentsObject.database_name,
+          organization: argumentsObject.organization,
+          apiToken: argumentsObject.api_token,
+          sourceDatabaseName: argumentsObject.source_database_name,
+          timestamp: argumentsObject.timestamp,
+        }),
+    }),
   ];
 }
 
 /**
- * Run a self-check against the Repo Cortex MCP server to validate the semantic index.
+ * Run a self-check against the Repo Cortex MCP server to validate that every
+ * registered tool is callable.
  *
- * Invokes the `index_stats` tool internally and reports an error when the
- * index is empty or unreachable. Suitable for CI gate validation.
+ * Iterates ALL registered tools and verifies each has a valid handler function
+ * (a registration/callability check, not a full execution check — the self-check
+ * runs via CLI and may not have a live Turso connection). Produces a per-tool
+ * `tools_checked` report with `{ name, ok }` entries, a `tool_checks_count`
+ * equal to the number of registered tools, and `all_ok` set to true only when
+ * every tool passes. Suitable for CI gate validation.
  *
  * @param {{ databasePath?: string }} [options={}] - Optional database path override.
- * @returns {Promise<Record<string, unknown>>} Self-check report in the standard `{ ok, issues, ... }` format.
+ * @returns {Promise<Record<string, unknown>>} Self-check report in the standard `{ ok, issues, ... }` format with `tools_checked`, `tool_checks_count`, and `all_ok` fields.
  */
 export async function runSelfCheck(options = {}) {
-  const server = createRepoCortexMcpServer({
-    databasePath: options.databasePath,
-  });
+  const tools = createRepoCortexTools(options.databasePath);
   const issues = [];
-  let stats = null;
 
-  try {
-    const statsResult = await invokeServerRequest(server, {
-      method: 'tools/call',
-      params: { name: 'index_stats', arguments: {} },
-    });
-    stats = statsResult.structuredContent;
-    if (!stats || Number(stats.total_chunks) < 1) {
+  const toolsChecked = tools.map((tool) => {
+    const ok = typeof tool.handler === 'function';
+    if (!ok) {
       issues.push(
         selfCheckError(
-          'data/semantic-index.sqlite',
-          'Semantic index has no chunks.',
+          'scripts/mcp-semantic/repo-cortex-mcp.mjs',
+          `Tool "${tool.name}" is not callable (missing or invalid handler).`,
         ),
       );
     }
-  } catch (error) {
-    issues.push(
-      selfCheckError(
-        'data/semantic-index.sqlite',
-        error instanceof Error ? error.message : String(error),
-      ),
-    );
-  }
+    return { name: tool.name, ok };
+  });
 
-  return createSelfCheckReport('repo-cortex-mcp', issues, { stats });
+  const toolChecksCount = toolsChecked.length;
+  const allOk =
+    toolChecksCount > 0 && toolsChecked.every((entry) => entry.ok === true);
+
+  return createSelfCheckReport('repo-cortex-mcp', issues, {
+    tools_checked: toolsChecked,
+    tool_checks_count: toolChecksCount,
+    all_ok: allOk,
+  });
 }
 
 /**

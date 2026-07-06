@@ -1,9 +1,16 @@
 ---
 name: neatchat-systems
-description: 'Design, implement, or validate the post-toy NEATchat system in NeatapticTS. Use when work involves persistent chat sessions, multi-tier memory, retrieval-like ranking, candidate routing, stronger teacher or seed import, background adaptation, checkpoint-aware personalization, evaluation harnesses, or dependency gating across workers, checkpoints, hybrid interop, ONNX import, and browser runtime for the NEATchat follow-up lane.'
+description: 'Use when: designing or validating NEATchat memory, retrieval, routing, or sessions.'
 argument-hint: 'Describe the NEATchat workstream, the active section in NEATchat.plans.md, whether the pass is architecture, implementation, evaluation, or dependency gating, which prerequisite owners are already satisfied, and what user-visible conversational behavior must be proven.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - checkpointing-persistence
+  - worker-inference-transport
+  - multithread-evaluation
+  - hybrid-training-interop
+  - onnx-work
+  - browser-build
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -25,6 +32,16 @@ layer.
 See [NEATchat sources](./references/neatchat-sources.md) for paraphrased notes on
 dialogue systems, episodic memory, information retrieval, and the current repo
 plan boundary.
+
+## When NOT to use
+
+Do NOT use for general chat systems or simple Q&A - this skill is specifically for NEATchat conversational architecture. Do NOT use for ONNX export alone - use `onnx-work` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "User input" → "Dialogue manager"; "Dialogue manager" → "Retrieve from memory tiers", "Branch / reset check"; "Retrieve from memory tiers" → "Rank candidates"; "Branch / reset check" → "Reset?"; "Rank candidates" → "Route to response generator"; "Reset?" → "Clear session state" (Yes), "Return response" (No); "Route to response generator" → "Generate response"; "Clear session state"; "Return response"; "Generate response" → "Update session memory"; "Update session memory" → "Return response".
+```
 
 ## Scope Boundary
 
@@ -122,8 +139,8 @@ every feature into one undebuggable recurrent blob.
 - Keep episodic memory distinct from semantic or profile memory.
 - Promote stable facts from repeated episodic evidence instead of writing every
   turn directly into durable profile state.
-- Store provenance for every durable memory: source turn, branch, timestamp,
-  score, and any approval status if relevant.
+- Store provenance for every durable memory: source turn, branch, score, and
+  any approval status if relevant.
 - Make branch reset and hard reset explicit product behaviors, not hidden debug
   utilities.
 
@@ -162,6 +179,31 @@ traceable reason why a memory was surfaced.
   mutated.
 - Same-input reproducibility checks at the exact rung promised by
   `reproducibility-contracts`.
+
+## Decision Tree
+
+```text
+Flowchart summary: "NEATchat task" → "Which dependency gate?"; "Which dependency gate?" → "onnx-work" (Seed import needs pretrained recurrent model), "checkpointing-persistence" (Session save/branch/restore), "repo-cortex-embeddings / advanced RAG" (Semantic ranking over corpus), "browser-build / worker-inference-transport" (Browser delivery or worker payload), "neatchat-systems owns the bridge" (Custom NEATchat-internal bridge); "onnx-work"; "checkpointing-persistence"; "repo-cortex-embeddings / advanced RAG"; "browser-build / worker-inference-transport"; "neatchat-systems owns the bridge".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+session: { turns: [] } // flat list, no tiering, every turn written to durable store
+```
+
+**After:**
+
+```text
+session: {
+  working: Turn[],
+  episodic: EpisodicMemory[],
+  semantic: ProfileMemory[],
+  snapshot: Checkpoint,
+} // multi-tier retrieval with provenance
+```
 
 ## Guardrails
 

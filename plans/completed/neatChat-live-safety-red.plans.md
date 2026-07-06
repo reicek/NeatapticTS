@@ -1,7 +1,7 @@
 # NEATchat Live Safety Red Contract
 
 **Status:** [DONE]
-**Closed:** 2026-05-23
+**Closed:**
 
 ## Scope
 

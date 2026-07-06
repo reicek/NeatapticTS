@@ -82,6 +82,7 @@ export interface VisualNetworkNodeLike {
   index: number;
   type: string;
   bias: number;
+  activation?: number;
   geneId?: number;
   layer?: number;
 }

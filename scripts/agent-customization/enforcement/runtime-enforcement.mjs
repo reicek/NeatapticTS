@@ -3,14 +3,18 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { repoRoot } from '../customization-utils.mjs';
 
-export const RUNTIME_CONTEXT_TTL_MS = 60 * 60 * 1000;
 export const LEARNING_LOG_PATH = path.join(
   repoRoot,
   '.github',
   'ai-learning',
   'learning-log.jsonl',
 );
-export const RUNTIME_CONTEXT_DIR = path.join(repoRoot, 'data');
+export const RUNTIME_CONTEXT_DIR = path.join(
+  repoRoot,
+  'rag-index',
+  'data',
+  'hook-context',
+);
 export const RUNTIME_PROOF_TOOL_PATTERN =
   /^(apply_patch|powershell|task|edit|create|create_file|createFile|editFiles|replace_string_in_file|writeFile|vscode_renameSymbol)$/i;
 export const RUNTIME_CONTEXT_PREPARE_PATTERN =
@@ -118,12 +122,7 @@ export async function initializeRuntimeContextCarrier(
   const initializedCarrier = {
     schemaVersion: 1,
     sessionId,
-    sessionStartedAt:
-      existingCarrier?.sessionStartedAt ?? new Date().toISOString(),
     carrierSource,
-    carrierExpiresAt: new Date(
-      Date.now() + RUNTIME_CONTEXT_TTL_MS,
-    ).toISOString(),
     preparedAction: null,
   };
 
@@ -173,7 +172,6 @@ export async function prepareRuntimeContext(options) {
     sessionId,
     'prepare',
   );
-  const preparedAt = new Date();
   const preparedAction = {
     actionId: crypto.randomUUID(),
     flowId: requireNonEmptyValue(options.flowId, 'flowId'),
@@ -189,10 +187,6 @@ export async function prepareRuntimeContext(options) {
       'allowedActionClass',
     ),
     expectedToolName: String(options.expectedToolName ?? '').trim() || null,
-    preparedAt: preparedAt.toISOString(),
-    expiresAt: new Date(
-      preparedAt.getTime() + RUNTIME_CONTEXT_TTL_MS,
-    ).toISOString(),
   };
 
   if (preparedAction.delegatorChain.length === 0) {
@@ -201,7 +195,6 @@ export async function prepareRuntimeContext(options) {
     );
   }
 
-  baseCarrier.carrierExpiresAt = preparedAction.expiresAt;
   baseCarrier.preparedAction = preparedAction;
   await writeRuntimeContext(baseCarrier);
   return baseCarrier;
@@ -228,9 +221,6 @@ export async function clearPreparedRuntimeContext(sessionId, actionId = null) {
     return carrier;
   }
 
-  carrier.carrierExpiresAt = new Date(
-    Date.now() + RUNTIME_CONTEXT_TTL_MS,
-  ).toISOString();
   carrier.preparedAction = null;
   await writeRuntimeContext(carrier);
   return carrier;
@@ -377,21 +367,6 @@ export function diagnosePreparedRuntimeContext(options) {
     return {
       ok: false,
       reason: 'Prepared action is missing allowedActionClass.',
-      recoveryHint: buildRuntimeRecoveryHint({
-        sessionId,
-        expectedPlanPath,
-        toolName: options.toolName,
-        actionClass,
-      }),
-      actionClass,
-      preparedAction,
-    };
-  }
-
-  if (Date.parse(preparedAction.expiresAt ?? '') < Date.now()) {
-    return {
-      ok: false,
-      reason: 'Prepared action runtime context has expired.',
       recoveryHint: buildRuntimeRecoveryHint({
         sessionId,
         expectedPlanPath,

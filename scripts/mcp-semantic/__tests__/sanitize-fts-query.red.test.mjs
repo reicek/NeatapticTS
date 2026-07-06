@@ -19,7 +19,7 @@ describe('sanitizeFtsQuery', () => {
   it('strips dots from code-specific queries such as Network.activate', async () => {
     const { sanitizeFtsQuery } = await loadSanitizer();
     const result = sanitizeFtsQuery('Network.activate implementation');
-    expect(result).toBe('Network* activate* implementation*');
+    expect(result).toBe('"Network.activate" implementation*');
   });
 
   it('removes other FTS5 syntax operators like quotes and parentheses', async () => {

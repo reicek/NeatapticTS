@@ -840,7 +840,7 @@ Example:
 
 ```ts
 const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
-  'flappy-shared-inference.worker.bundle.js',
+  'shared-inference.worker.bundle.js',
 );
 ```
 
@@ -1302,7 +1302,7 @@ Example:
 
 ```ts
 const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
-  'flappy-shared-inference.worker.bundle.js',
+  'shared-inference.worker.bundle.js',
 );
 ```
 

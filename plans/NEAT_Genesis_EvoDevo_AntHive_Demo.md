@@ -439,9 +439,9 @@ The ant hive has a single NEAT population (no two-population generation barrier)
 
 ```
 COORDINATOR (main thread)
-├── Colony NEAT Worker  (1) — owns colony gene pool, species, generation counter
-├── Simulation Worker   (1) — owns live display episode (world, ants, pheromone, Angels)
-└── Episode Workers     (N) — stateless; run isolated training episodes
+├── Colony NEAT Worker (1) — owns colony gene pool, species, generation counter
+├── Simulation Worker (1) — owns live display episode (world, ants, pheromone, Angels)
+└── Episode Workers (N) — stateless; run isolated training episodes
 ```
 
 Worker count formula (identical to predator/prey):
@@ -645,17 +645,17 @@ Generation N lifecycle:
 1. COORDINATOR receives 'population-ready' from Colony NEAT Worker.
 
 2. COORDINATOR queues all episode tasks:
-   for each colonyGenome × ROLLOUT_SEED_COUNT:
-     tasks.push({ type: 'run-episode', genome: colonyGenome, seed: seeds[rolloutIndex], ... })
+ for each colonyGenome × ROLLOUT_SEED_COUNT:
+ tasks.push({ type: 'run-episode', genome: colonyGenome, seed: seeds[rolloutIndex], ... })
 
 3. COORDINATOR dispatches tasks to episode worker pool (pre-spawned, idle tracking).
 
 4. COORDINATOR collects EpisodeResults.
-   → aggregates per genome: mean(fitness) − STABILITY_WEIGHT × stddev(fitness) across seeds
+ → aggregates per genome: mean(fitness) − STABILITY_WEIGHT × stddev(fitness) across seeds
 
 5. When ALL genomes have ROLLOUT_SEED_COUNT results:
-   → COORDINATOR sends 'submit-fitness' + 'evolve' to Colony NEAT Worker
-   → Coordinator sends new champion to Simulation Worker (hybrid mode)
+ → COORDINATOR sends 'submit-fitness' + 'evolve' to Colony NEAT Worker
+ → Coordinator sends new champion to Simulation Worker (hybrid mode)
 
 6. Colony NEAT Worker replies 'population-ready' → Generation N+1 begins.
 ```
@@ -736,74 +736,74 @@ Angel patrol routes (including tunnel transits) are computed once at episode sta
 
 ```
 examples/ant_hive/
-  browser-entry/
-    browser-entry.spawn.utils.ts          ← adapted from predator_prey/browser-entry/
-    host/
-      host.ts                             ← canvas setup, responsive resize (shared pattern)
-      host.types.ts
-  maze/                                   ← COPY from examples/predator_prey/maze/ without modification
-    maze.generator.ts
-    maze.generator.types.ts
-    maze.renderer.ts
-    maze.movement.ts
-    maze.vision.ts
-    maze.tunnels.ts
-    maze.pellets.ts                       ← adapted: PELLET_RESPAWN_TICKS override, depletion gradient seeding
-  geofront/
-    geofront.state.service.ts             ← interior cell tracking, integrity score, cap recalculation
-    geofront.damage.service.ts            ← wall shrink logic, collapse detection, excess ant removal
-    geofront.repair.service.ts            ← worker repair accumulation, wall restoration
-    geofront.renderer.ts                  ← intact/damaged/pulse visual state
-    geofront.types.ts
-  signals/
-    signals.pheromone.service.ts          ← 6 Float32Array grids, masked diffusion sweep, deposition rules
-    signals.pheromone.renderer.ts         ← 6-channel ImageData blend, per-channel tint constants
-    signals.types.ts
-  angels/
-    angels.patrol.service.ts              ← pre-computes patrol routes at episode start, tunnel transit
-    angels.combat.service.ts              ← Angel vs soldier engagement, neutralization, respawn
-    angels.renderer.ts                    ← rhombus silhouette, per-angel color, alive/neutralized state
-    angels.types.ts
-  environment/
-    environment.state.service.ts          ← episode state: ants, angels, pheromone grids, geofront, tick
-    environment.step.service.ts           ← tick: all ant forward passes, pheromone update, angel patrol, combat
-    environment.types.ts
-  agents/
-    ant.sensor.service.ts                 ← builds Float32Array(70) ant observation vector per tick
-    ant.deposition.service.ts             ← hardwired pheromone deposition rules by agent state
-    ant.caste.detection.service.ts        ← heuristic caste label from module size distribution (debug/display)
-    agents.types.ts
-  workers/
-    workers.types.ts                      ← all message type unions (colony neat + episode + simulation workers)
-    workers.coordinator.ts                ← generation lifecycle, task queue, mode management
-    workers.pool.ts                       ← episode worker pool (pre-spawned, idle tracking, task dispatch)
-    workers.worker-count.utils.ts         ← hardwareConcurrency → worker count formula
-    simulation-worker/
-      simulation-worker.ts                ← entrypoint, mutable state bag, message routing
-      simulation-worker.runtime.service.ts ← init, champion genome install, maze + geofront + angels setup
-      simulation-worker.step.service.ts   ← per-tick: env step + forward passes + pheromone update
-      simulation-worker.snapshot.utils.ts ← AntHiveRenderFrame packing + transfer list
-      simulation-worker.offscreen.service.ts ← draw maze once to OffscreenCanvas; blit each tick
-      simulation-worker.types.ts
-    episode-worker/
-      episode-worker.ts                   ← entrypoint, stateless
-      episode-worker.episode.service.ts   ← runs one complete isolated episode (all ticks, all agents)
-      episode-worker.fitness.service.ts   ← colony fitness aggregation across rollout seeds
-      episode-worker.warm-start.service.ts ← gen-0 heuristic teacher: follow food trail / flee alarm pheromone
-      episode-worker.types.ts
-    neat-worker/
-      neat-worker.colony.ts               ← entrypoint with colony config
-      neat-worker.evolution.service.ts    ← submit fitness, evolve, emit population-ready
-      neat-worker.types.ts
-  constants/
-    constants.maze.ts                     ← grid size, cell size, PELLET_RESPAWN_TICKS (≈2000)
-    constants.geofront.ts                 ← initial cells, min viable, ants/cell, food/cell, repair rate, attack delay
-    constants.angels.ts                   ← angel count, respawn delay, combat ticks, patrol bias constants
-    constants.pheromone.ts                ← decayRate, diffusionRate, emitAmount per channel; normalization scale
-    constants.agents.ts                   ← population size, episode length (≈3000 ticks)
-    constants.fitness.ts                  ← fitness weights, stability weight, rollout seed count
-    constants.workers.ts                  ← rollout count, worker count formula
-    constants.theme.ts                    ← IMPORT from predator_prey/constants/constants.theme.ts (or copy-paste)
+ browser-entry/
+ browser-entry.spawn.utils.ts ← adapted from predator_prey/browser-entry/
+ host/
+ host.ts ← canvas setup, responsive resize (shared pattern)
+ host.types.ts
+ maze/ ← COPY from examples/predator_prey/maze/ without modification
+ maze.generator.ts
+ maze.generator.types.ts
+ maze.renderer.ts
+ maze.movement.ts
+ maze.vision.ts
+ maze.tunnels.ts
+ maze.pellets.ts ← adapted: PELLET_RESPAWN_TICKS override, depletion gradient seeding
+ geofront/
+ geofront.state.service.ts ← interior cell tracking, integrity score, cap recalculation
+ geofront.damage.service.ts ← wall shrink logic, collapse detection, excess ant removal
+ geofront.repair.service.ts ← worker repair accumulation, wall restoration
+ geofront.renderer.ts ← intact/damaged/pulse visual state
+ geofront.types.ts
+ signals/
+ signals.pheromone.service.ts ← 6 Float32Array grids, masked diffusion sweep, deposition rules
+ signals.pheromone.renderer.ts ← 6-channel ImageData blend, per-channel tint constants
+ signals.types.ts
+ angels/
+ angels.patrol.service.ts ← pre-computes patrol routes at episode start, tunnel transit
+ angels.combat.service.ts ← Angel vs soldier engagement, neutralization, respawn
+ angels.renderer.ts ← rhombus silhouette, per-angel color, alive/neutralized state
+ angels.types.ts
+ environment/
+ environment.state.service.ts ← episode state: ants, angels, pheromone grids, geofront, tick
+ environment.step.service.ts ← tick: all ant forward passes, pheromone update, angel patrol, combat
+ environment.types.ts
+ agents/
+ ant.sensor.service.ts ← builds Float32Array(70) ant observation vector per tick
+ ant.deposition.service.ts ← hardwired pheromone deposition rules by agent state
+ ant.caste.detection.service.ts ← heuristic caste label from module size distribution (debug/display)
+ agents.types.ts
+ workers/
+ workers.types.ts ← all message type unions (colony neat + episode + simulation workers)
+ workers.coordinator.ts ← generation lifecycle, task queue, mode management
+ workers.pool.ts ← episode worker pool (pre-spawned, idle tracking, task dispatch)
+ workers.worker-count.utils.ts ← hardwareConcurrency → worker count formula
+ simulation-worker/
+ simulation-worker.ts ← entrypoint, mutable state bag, message routing
+ simulation-worker.runtime.service.ts ← init, champion genome install, maze + geofront + angels setup
+ simulation-worker.step.service.ts ← per-tick: env step + forward passes + pheromone update
+ simulation-worker.snapshot.utils.ts ← AntHiveRenderFrame packing + transfer list
+ simulation-worker.offscreen.service.ts ← draw maze once to OffscreenCanvas; blit each tick
+ simulation-worker.types.ts
+ episode-worker/
+ episode-worker.ts ← entrypoint, stateless
+ episode-worker.episode.service.ts ← runs one complete isolated episode (all ticks, all agents)
+ episode-worker.fitness.service.ts ← colony fitness aggregation across rollout seeds
+ episode-worker.warm-start.service.ts ← gen-0 heuristic teacher: follow food trail / flee alarm pheromone
+ episode-worker.types.ts
+ neat-worker/
+ neat-worker.colony.ts ← entrypoint with colony config
+ neat-worker.evolution.service.ts ← submit fitness, evolve, emit population-ready
+ neat-worker.types.ts
+ constants/
+ constants.maze.ts ← grid size, cell size, PELLET_RESPAWN_TICKS (≈2000)
+ constants.geofront.ts ← initial cells, min viable, ants/cell, food/cell, repair rate, attack delay
+ constants.angels.ts ← angel count, respawn delay, combat ticks, patrol bias constants
+ constants.pheromone.ts ← decayRate, diffusionRate, emitAmount per channel; normalization scale
+ constants.agents.ts ← population size, episode length (≈3000 ticks)
+ constants.fitness.ts ← fitness weights, stability weight, rollout seed count
+ constants.workers.ts ← rollout count, worker count formula
+ constants.theme.ts ← IMPORT from predator_prey/constants/constants.theme.ts (or copy-paste)
 ```
 
 ### Source Reuse
@@ -832,19 +832,19 @@ examples/ant_hive/
 
 ## Acceptance Criteria
 
-- Colony of 50–100 ants + 5–10 Angels runs at 30+ fps in display mode.
-- Pheromone field gradients are visibly concentrated in productive foraging corridors after 200+ episode ticks.
-- Alarm pheromone visibly triggers behavioral mode shifts — agents in alarm zones exhibit measurably different movement patterns than baseline.
-- GeoFront wall damage occurs when soldiers fail to intercept Angels. Damage is visually obvious (amber gap on the border).
-- Worker repair restores damaged wall sections when food storage is sufficient.
-- Colony fitness improves over generations (food throughput increases; GeoFront integrity at episode end increases).
-- By adult stage, forager agents have measurably larger foodTrail/nestTrail processing zones than soldier agents from the same colony DNA.
-- By adult stage, soldier agents have measurably larger alarmPheromone/recruitmentPheromone processing zones than forager agents from the same colony DNA.
-- Tunnel-flanking Angels succeed more often in colonies without perimeter patrol than in colonies that develop tunnel-coverage soldiers.
-- Colonies with wiring economy pressure develop more compact agent networks than colonies without it, at no significant fitness cost.
-- Polyandric reproduction produces measurably more diverse module size distributions across a worker cohort than parthenogenetic reproduction.
-- Total pheromone field memory cost stays within slab budget (no per-cell JS object allocation).
-- Full-screen canvas fills available viewport and rescales correctly on window resize.
+- AC-ANT-001: Colony of 50–100 ants + 5–10 Angels runs at 30+ fps in display mode.
+- AC-ANT-002: Pheromone field gradients are visibly concentrated in productive foraging corridors after 200+ episode ticks.
+- AC-ANT-003: Alarm pheromone visibly triggers behavioral mode shifts — agents in alarm zones exhibit measurably different movement patterns than baseline.
+- AC-ANT-004: GeoFront wall damage occurs when soldiers fail to intercept Angels. Damage is visually obvious (amber gap on the border).
+- AC-ANT-005: Worker repair restores damaged wall sections when food storage is sufficient.
+- AC-ANT-006: Colony fitness improves over generations (food throughput increases; GeoFront integrity at episode end increases).
+- AC-ANT-007: By adult stage, forager agents have measurably larger foodTrail/nestTrail processing zones than soldier agents from the same colony DNA.
+- AC-ANT-008: By adult stage, soldier agents have measurably larger alarmPheromone/recruitmentPheromone processing zones than forager agents from the same colony DNA.
+- AC-ANT-009: Tunnel-flanking Angels succeed more often in colonies without perimeter patrol than in colonies that develop tunnel-coverage soldiers.
+- AC-ANT-010: Colonies with wiring economy pressure develop more compact agent networks than colonies without it, at no significant fitness cost.
+- AC-ANT-011: Polyandric reproduction produces measurably more diverse module size distributions across a worker cohort than parthenogenetic reproduction.
+- AC-ANT-012: Total pheromone field memory cost stays within slab budget (no per-cell JS object allocation).
+- AC-ANT-013: Full-screen canvas fills available viewport and rescales correctly on window resize.
 
 ---
 

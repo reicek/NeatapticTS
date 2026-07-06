@@ -1,9 +1,14 @@
 ---
 name: test-fix-workflow
-description: 'Systematically fix multiple test failures by planning first, preferring a TDD red-green-coverage cadence inside each fix cluster, validating types early, and only running the full suite at the end.'
+description: 'Use when: systematically fixing multiple test failures with TDD discipline.'
 argument-hint: 'Describe the failing surface, available failure output, whether the issue is type-level, runtime, or mixed, and any known plan file or validation constraints.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - triaging-test-failures
+  - coverage-guard
+  - running-unit-tests
+  - red-test-contracts
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -39,6 +44,16 @@ Do not invoke this skill for **coverage expansion** on passing code. Use
 `coverage-tranche` instead when the test suite is green and the goal is to
 raise coverage metrics toward 100%. The two skills are complements: this skill
 repairs failures first; `coverage-tranche` expands coverage afterward.
+
+## When NOT to use
+
+Do NOT use for triaging failures when root cause is unknown - use `triaging-test-failures` first. Do NOT use for coverage enforcement - use `coverage-guard` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Test failure" → "Reproduce"; "Reproduce" → "Identify root cause"; "Identify root cause" → "Fixable?"; "Fixable?" → "Apply fix" (Yes), "Escalate to 00-helping" (No); "Apply fix" → "Re-run test"; "Escalate to 00-helping"; "Re-run test" → "Pass?"; "Pass?" → "Run coverage-guard" (Yes), "Identify root cause" (No); "Run coverage-guard".
+```
 
 ## Task Packet
 
@@ -103,6 +118,29 @@ repo-wide confirmation.
    broad validation.
 10. Analyze any remaining failures and update the plan rather than switching to
     unstructured iteration.
+
+## Decision Tree: Repair vs Escalate
+
+```text
+Flowchart summary: "Failing test" → "Reproduce locally"; "Reproduce locally" → "Root cause clear?"; "Root cause clear?" → "Fix" (Yes), "Triage with triaging-test-failures" (No); "Fix" → "Fix works?"; "Triage with triaging-test-failures" → "Root cause found?"; "Fix works?" → "Done" (Yes), "3 attempts?" (No); "Root cause found?" → "Fix" (Yes), "Escalate to 00-helping" (No); "Done"; "3 attempts?" → "Escalate to 00-helping" (Yes), "Fix" (No); "Escalate to 00-helping".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+5 tests failing in flappy trainer. Seems like a timing issue. Will try increasing timeout.
+```
+
+**After:**
+
+```text
+Root cause: evaluation loop awaited batch results out of order after async refactor.
+Fix: restore ordered result assembly in evaluateInWorkers.
+Validation: npx jest --testPathPattern=testing/flappy/trainer → 6/6 pass
+Coverage: coverage-guard on src/flappy/trainer.ts → 100% all categories
+```
 
 ## Guardrails
 

@@ -614,9 +614,7 @@ function resolveCompiledActivationSteps(
   nodesByGeneId: ReadonlyMap<number, Node>,
 ): ReadonlyArray<ReadonlyArray<number>> | null {
   const activationSchedule = Reflect.get(network, '_activationSchedule') as
-    | ActivationSchedule
-    | null
-    | undefined;
+    ActivationSchedule | null | undefined;
 
   if (!activationSchedule || activationSchedule.steps.length === 0) {
     return null;

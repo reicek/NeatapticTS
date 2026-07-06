@@ -54,7 +54,7 @@ function runGateContractCheck(): SpawnedGateResult {
   const inlineScript = [
     `import { runCortexFirstSearchGate } from ${JSON.stringify(gateUrl)};`,
     'const report = await runCortexFirstSearchGate({',
-    "  databasePath: 'data/semantic-index.sqlite',",
+    "  databasePath: 'rag-index/data/turso-replica.sqlite',",
     '  indexValidator: async () => ({ pass: true, documents: 12, chunks: 48, fixHint: null }),',
     '  mcpSmoke: async () => ({ pass: true, evidence: { searchResults: 3 }, fixHint: null }),',
     '});',

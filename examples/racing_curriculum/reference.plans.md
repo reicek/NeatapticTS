@@ -669,17 +669,17 @@ Tier 1–2 provide explicit optimal-line guidance channels as curriculum scaffol
 - [ ] Two-population NEAT harness implemented (independent gene pools, independent species tracking).
 - [x] Rolling opponent snapshot mechanism implemented (hall-of-fame + recent-population sampling). <!-- Phase G Step 04: `createOpponentSnapshotPool` + `addOpponentSnapshot` in `src/neat/nge-collective/` provide the fixed-capacity rolling buffer. Benchmark-specific sampling policy (hall-of-fame weighting, population sweep) is a benchmark-local concern. -->
 - [x] Stigmergy typed-array field primitive available (shared with ant hive pheromone infrastructure). <!-- Phase G Step 04: `src/neat/nge-collective/neat.nge-collective.shared-field.ts` is implemented with `createSharedField`, `writeCell`, `readCell`, `applyDecay`, `applyDiffusion`, `clearField`. -->
-- [ ] Tire degradation model (state field, decay function, grip multiplier) implemented.
-- [ ] Tier schema drafted with deterministic race pack semantics and cross-team promotion rules.
+- [x] Tire degradation model (state field, decay function, grip multiplier) implemented. <!-- Phase 5: `decayTireState` in `environment.step.service.ts`, `FRESH_TIRE_HEALTH` and `PIT_STOP_TICKS` in race-pack service, grip multiplier wired into race-pack physics. -->
+- [x] Tier schema drafted with deterministic race pack semantics and cross-team promotion rules. <!-- Phases 2-6: per-tier team layouts, car counts, and observation dimensions in `simulation-worker.coevolution.service.ts`; deterministic race pack via `createDeterministicRacePack`. -->
 - [ ] Carry-state and reset-state boundary agreed.
-- [ ] Team radio protocol: typed-array size fixed; no semantic prescribed.
+- [x] Team radio protocol: typed-array size fixed; no semantic prescribed. <!-- Phases 3-6: `RADIO_CHANNELS_PER_CAR = 7` in race-pack service; per-tier radio row population in tier3/tier4/tier5 modules. -->
 - [ ] Optimal-line guidance fade policy fixed per tier.
 - [ ] Sensor-family normalization contract written.
 - [ ] Behavioral-drive vocabulary and `GatingRouter` policy-head count agreed.
 - [ ] Newborn nursery warm-start contract fixed.
-- [ ] Reward and penalty contract written (anti-contact-exploit guardrails, pit-spam penalty, wrong-direction penalty).
-- [ ] Canvas rendering approach decided (raw 2D context vs. WebGL).
-- [ ] Deterministic race seeding contract written (same seed → same track layout, starting positions, opponent snapshot).
+- [x] Reward and penalty contract written (anti-contact-exploit guardrails, pit-spam penalty, wrong-direction penalty). <!-- Phase 3: `OFF_TRACK_PENALTY`, `OFF_TRACK_GRACE_TICKS`, wrong-direction detection, and car-vs-car pushing in race-pack service. -->
+- [x] Canvas rendering approach decided (raw 2D context vs. WebGL). <!-- Phases 1-3: raw 2D canvas context in `racing.renderer.ts`. -->
+- [x] Deterministic race seeding contract written (same seed → same track layout, starting positions, opponent snapshot). <!-- Phases 2-6: `createDeterministicRacePack(seed, opponentSnapshot)` in race-pack service; identical seed + snapshot → identical frame. -->
 - [ ] Tire degradation balance constants verified (fresh tires should last 1–2 full laps at aggressive pace; conservative pace extends tire life meaningfully).
 
 ---

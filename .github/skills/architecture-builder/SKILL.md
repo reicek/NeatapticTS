@@ -1,9 +1,14 @@
 ---
 name: architecture-builder
-description: 'Design, implement, test, and document preconfigured architecture builders (MLP, LSTM, GRU, NARX, sparse) in NeatapticTS. Use when adding a new builder entrypoint, extending an existing one, hardening builder validation, or documenting an architecture API.'
+description: 'Use when: designing, implementing, or validating preconfigured network architecture builders.'
 argument-hint: 'Name the architecture type (mlp, lstm, gru, narx, sparse), describe the current state of the builder, and state whether this is API design, implementation, testing, or documentation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - educational-docs
+  - tracker-handoff
+  - plan-alignment
+  - coverage-guard
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -55,6 +60,16 @@ All preconfigured builders must satisfy the Phase 2 gate before the lane closes:
   educational.
 - A builder's API contract needs test coverage for determinism, diagnostics,
   and roundtrip shape.
+
+## When NOT to use
+
+Do NOT use for refactoring existing module boundaries - use `solid-split` instead. Do NOT use for general network construction - use `Network.construct()` directly.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Design builder API" → "Implement builder function"; "Implement builder function" → "Write roundtrip tests"; "Write roundtrip tests" → "Run focused Jest slice"; "Run focused Jest slice" → "Run coverage-guard"; "Run coverage-guard" → "Improve JSDoc"; "Improve JSDoc" → "Run npm run docs"; "Run npm run docs" → "Update plan"; "Update plan" → "Invoke educational-docs"; "Invoke educational-docs".
+```
 
 ## Task Packet
 
@@ -141,6 +156,32 @@ Builder README chapters should teach the reader:
 - at least one Mermaid diagram showing the network topology shape.
 
 These rules apply to every architecture type: MLP, LSTM, GRU, NARX, sparse.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Builder work" → "Which phase?"; "Which phase?" → "API design" (Define typed config + defaults), "Testing" (Roundtrip + determinism tests), "Documentation" (JSDoc + generated README); "API design"; "Testing"; "Documentation".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```ts
+export function buildGRU(config?: any): Network {
+  /* crashes if config undefined */
+}
+```
+
+**After:**
+
+```ts
+export function buildGRU(config: Partial<GRUConfig> = {}): Network {
+  const full = { ...DEFAULT_GRU_CONFIG, ...config };
+  validateGRUConfig(full);
+  return constructGRU(full);
+}
+```
 
 ## Guardrails
 

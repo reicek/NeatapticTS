@@ -13,7 +13,7 @@ import type {
 const MEMORY_CAPACITY_BIN_THRESHOLDS = [4, 8, 16] as const;
 
 /**
- * Compute the Phase E composite compatibility distance for one NGE genome pair.
+ * Compute the NGE composite compatibility distance for one NGE genome pair.
  *
  * The classic NEAT topology distance stays injected rather than recomputed here.
  * The additional NGE-only terms derive from DNA archetype composition, memory
@@ -22,7 +22,7 @@ const MEMORY_CAPACITY_BIN_THRESHOLDS = [4, 8, 16] as const;
  *
  * @param comparison - Target pairwise comparison to score.
  * @param context - Optional normalization slice and alpha-weight overrides.
- * @returns Composite Phase E compatibility-distance result for the target pair.
+ * @returns Composite NGE compatibility-distance result for the target pair.
  */
 export function computeNgeEvolutionCompatibilityDistance(
   comparison: NgeEvolutionCompatibilityComparisonInput,
@@ -144,7 +144,7 @@ function resolvePopulationSlice(
 /**
  * Normalize a weight bag so the enabled composite sum stays bounded by one.
  *
- * @param weights - Optional caller overrides merged onto the Phase E defaults.
+ * @param weights - Optional caller overrides merged onto the NGE defaults.
  * @returns Normalized alpha weights whose sum is `1` unless every entry is `0`.
  */
 function resolveCompatibilityDistanceWeights(

@@ -19,16 +19,31 @@
     "neataptic-gate-mcp": {
       "type": "stdio",
       "command": "node",
-      "args": [
-        "scripts/agent-customization/mcp/neataptic-gate-mcp.mjs"
-      ]
+      "args": ["scripts/agent-customization/mcp/neataptic-gate-mcp.mjs"]
     },
-    "neataptic-cortex-mcp": {
+    "cortex": {
       "type": "stdio",
       "command": "node",
-      "args": [
-        "scripts/mcp-semantic/repo-cortex-mcp.mjs"
-      ]
+      "args": ["scripts/agent-customization/mcp/cortex-facade.mjs"],
+      "env": {
+        "TURSO_DATABASE_URL": "file:./rag-index/data/turso-replica.sqlite",
+        "TURSO_AUTH_TOKEN": "",
+        "TURSO_SYNC_URL": "",
+        "TURSO_SYNC_INTERVAL": "60"
+      }
+    },
+    "devtools": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["scripts/agent-customization/mcp/devtools-facade.mjs"]
+    },
+    "neataptic-dispatch-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["scripts/agent-customization/mcp/neataptic-dispatch-mcp.mjs"]
     }
+  },
+  "agent": {
+    "maxConcurrentAgents": 10
   }
 }

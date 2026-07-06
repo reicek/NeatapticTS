@@ -3,105 +3,50 @@
  * @description Dense retrieval strategy selection, query-result caching, and
  * incremental-update detection for the Repo Cortex ANN index.
  *
- * Selects among three strategies:
- *   - `brute_force_cached`: default below the 50K-chunk threshold; uses an
- *     in-memory LRU + TTL cache for repeated exact/near-exact queries.
- *   - `hnsw`: used at or above the threshold when an HNSW index is ready and
- *     `hnswlib-node` is available.
- *   - `brute_force`: baseline strategy selectable only via `forceStrategy` for
- *     recall evaluation or diagnostics.
+ * Uses DiskANN (libsql_vector_idx) as the sole dense-retrieval strategy.
+ * The old HNSW and fallback strategies have been removed in favor of
+ * server-side DiskANN indexes built into libSQL.
  */
 
-/** Default chunk-count threshold at which HNSW becomes the preferred strategy. */
+/** Default chunk-count threshold at which DiskANN index build is recommended. */
 export const DEFAULT_ANN_THRESHOLD = 50_000;
 
-/** Default TTL for cached brute-force query results (30 minutes). */
+/** Default TTL for cached dense query results (30 minutes). */
 export const DEFAULT_CACHE_TTL_MS = 30 * 60 * 1000;
 
 /** Default maximum number of cached query-result entries. */
 export const DEFAULT_CACHE_MAX_ENTRIES = 500;
 
-/** HNSW construction parameter: number of bi-directional links per node. */
-export const DEFAULT_HNSW_M = 32;
+/** DiskANN construction parameter: max neighbors per node (~3*sqrt(dimension)). */
+export const DEFAULT_DISKANN_MAX_NEIGHBORS = 59;
 
-/** HNSW construction parameter: size of the dynamic candidate list during build. */
-export const DEFAULT_HNSW_EF_CONSTRUCTION = 200;
+/** DiskANN construction parameter: controls search/build tradeoff. */
+export const DEFAULT_DISKANN_ALPHA = 1.2;
 
-/** HNSW search parameter: size of the dynamic candidate list during query. */
-export const DEFAULT_HNSW_EF_SEARCH = 100;
-
-/**
- * Detect whether the optional `hnswlib-node` dependency is installed.
- *
- * The value is determined once at module load by attempting a dynamic import.
- * It is always a boolean so callers can use it directly in conditions.
- */
-export let isHnswAvailable = false;
-
-/**
- * Internal test seam for injecting a mock `hnswlib-node` implementation.
- * The default loader attempts the real optional dependency. Tests may replace
- * `importFn` and call `__refreshHnswAvailability()` to exercise the HNSW code
- * paths without installing the native package.
- */
-export const __hnswTestSeam = {
-  importFn: () => import('hnswlib-node'),
-};
-
-async function refreshHnswAvailability() {
-  try {
-    await __hnswTestSeam.importFn();
-    isHnswAvailable = true;
-  } catch {
-    isHnswAvailable = false;
-  }
-}
-
-/**
- * Re-evaluate HNSW availability using the current test seam loader.
- * Exported for coverage tests; no production caller should use this.
- * @returns {Promise<void>}
- */
-export async function __refreshHnswAvailability() {
-  await refreshHnswAvailability();
-}
-
-await refreshHnswAvailability();
+/** DiskANN query-time parameter: search list size (lower = faster, higher = better recall). */
+export const DEFAULT_DISKANN_SEARCH_L = 80;
 
 /**
  * Select the dense-retrieval strategy for a corpus.
  *
- * Force overrides everything. Below the configured chunk threshold the
- * cache-assisted brute-force strategy is always preferred because the HNSW
- * build overhead outweighs the query benefit. At or above the threshold HNSW
- * is used only when the index is `ready` and HNSW support is available.
+ * With DiskANN as the sole strategy, this always returns the diskann strategy
+ * name. The threshold and force parameters are retained for API compatibility
+ * with existing callers but no longer select between multiple strategies.
  *
  * @param {object} options - Strategy inputs.
- * @param {number} options.chunkCount - Number of chunks in the corpus.
- * @param {number} [options.annThreshold=50000] - Chunk-count threshold for HNSW.
- * @param {string} [options.indexStatus] - ANN index status (`ready`, `stale`, `error`, etc.).
- * @param {string} [options.forceStrategy] - Force a specific strategy (`hnsw`, `brute_force_cached`, `brute_force`).
- * @param {boolean} [options.hnswAvailable] - Whether `hnswlib-node` is available.
- * @returns {'brute_force_cached' | 'hnsw' | 'brute_force'} Selected strategy name.
+ * @param {number} [options.chunkCount] - Number of chunks in the corpus.
+ * @param {number} [options.annThreshold=50000] - Chunk-count threshold (retained for compat).
+ * @param {string} [options.indexStatus] - ANN index status (retained for compat).
+ * @param {string} [options.forceStrategy] - Force override (retained for compat, only diskann valid).
+ * @returns {'diskann'} Selected strategy name.
  */
 export function resolveDenseStrategy({
   chunkCount,
   annThreshold = DEFAULT_ANN_THRESHOLD,
   indexStatus,
   forceStrategy,
-  hnswAvailable,
-}) {
-  if (forceStrategy === 'brute_force') return 'brute_force';
-  if (forceStrategy === 'brute_force_cached') return 'brute_force_cached';
-  if (forceStrategy === 'hnsw') return 'hnsw';
-
-  const count = Number(chunkCount ?? 0);
-  const threshold = Number(annThreshold ?? DEFAULT_ANN_THRESHOLD);
-  if (count < threshold) return 'brute_force_cached';
-
-  if (indexStatus === 'ready' && hnswAvailable !== false) return 'hnsw';
-
-  return 'brute_force_cached';
+} = {}) {
+  return 'diskann';
 }
 
 /**
@@ -137,7 +82,7 @@ function buildCacheKey(embedding, modelId) {
 }
 
 /**
- * Retrieve cached brute-force results for a query embedding.
+ * Retrieve cached dense-query results for a query embedding.
  *
  * Returns `undefined` when no entry exists or the entry has expired. Hits are
  * promoted to the most-recently-used position.
@@ -165,7 +110,7 @@ export function getQueryResultCache({ embedding, modelId }) {
 }
 
 /**
- * Store brute-force results in the LRU cache.
+ * Store dense-query results in the LRU cache.
  *
  * Evicts the oldest entries when the cache grows beyond `maxEntries`.
  *
@@ -195,7 +140,7 @@ export function setQueryResultCache({
 }
 
 /**
- * Clear all cached brute-force query results.
+ * Clear all cached dense-query results.
  *
  * Useful in tests and after an index rebuild to avoid serving stale results.
  */

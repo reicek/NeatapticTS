@@ -1,0 +1,13 @@
+{
+  "introFile": "neat.nge-evolution.ts",
+  "fileOrder": [
+    "neat.nge-evolution.ts",
+    "neat.nge-evolution.reproduction.ts",
+    "neat.nge-evolution.types.ts",
+    "neat.nge-evolution.constants.ts",
+    "neat.nge-evolution.errors.ts",
+    "neat.nge-evolution.distance.ts",
+    "neat.nge-evolution.epigenetic.ts"
+  ],
+  "hiddenSymbols": ["expandSeedPolicy"]
+}

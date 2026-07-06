@@ -14,14 +14,14 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { defaultDatabasePath } from '../../semantic-index/init-schema.mjs';
-import { validateDatabase } from '../../semantic-index/validate-index.mjs';
+import { defaultDatabasePath } from '../../../rag-index/init-schema.mjs';
+import { validateDatabase } from '../../../rag-index/validate-index.mjs';
 import { parseArgs } from '../customization-utils.mjs';
 import { runCortexMcpSmoke } from './cortex-mcp-smoke.mjs';
 
 const OWNER = 'repo-cortex-workflow';
 const DEFAULT_FIX_HINT =
-  'Run `node scripts/semantic-index/build-index.mjs` and confirm the Repo Cortex MCP is reachable before relying on Cortex-first search.';
+  'Run `node rag-index/build-index.mjs` and confirm the Repo Cortex MCP is reachable before relying on Cortex-first search.';
 
 export async function runCortexFirstSearchGate(options = {}) {
   const databasePath = path.resolve(

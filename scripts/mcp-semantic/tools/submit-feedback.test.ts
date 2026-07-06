@@ -13,7 +13,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
-import Database from 'better-sqlite3';
+import { createClient } from '@libsql/client';
 
 const REPO_ROOT = path.resolve();
 
@@ -48,37 +48,40 @@ const runModuleEvaluation = <Result>(source: string): Result => {
  *
  * The temporary database is deleted after the evaluation.
  */
-function makeFeedbackFixture(): { databasePath: string; tempDir: string } {
+async function makeFeedbackFixture(): Promise<{
+  databasePath: string;
+  tempDir: string;
+}> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'submit-feedback-red-'),
   );
   const databasePath = path.join(tempDir, 'corpus.sqlite');
-  const db = new Database(databasePath);
+  const db = createClient({ url: 'file:' + databasePath });
   try {
-    db.exec(fs.readFileSync('./scripts/semantic-index/schema-v2.sql', 'utf8'));
-    db.exec(`
+    await db.executeMultiple(
+      fs.readFileSync('./rag-index/schema-turso.sql', 'utf8'),
+    );
+    await db.executeMultiple(`
       INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
         VALUES (1, 'src/network.ts', 'ts-source', 1, 100, 'sha', 1);
       INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, depth)
         VALUES (42, 1, 0, 'activate', 'fixture body', 0, 12, 0);
     `);
   } finally {
-    db.close();
+    await db.close();
   }
   return { databasePath, tempDir };
 }
 
 describe('submit-feedback.mjs normalization and bounding', () => {
   describe('explicit signal strengths must be clamped to the designed range', () => {
-    it('does not record an explicit positive strength beyond the designed upper bound', () => {
-      const { databasePath, tempDir } = makeFeedbackFixture();
+    it('does not record an explicit positive strength beyond the designed upper bound', async () => {
+      const { databasePath, tempDir } = await makeFeedbackFixture();
       try {
         const result = runModuleEvaluation<
           Pick<FeedbackProbeResult, 'recordedStrength' | 'score'>
         >(`
           import { submitFeedback } from './scripts/mcp-semantic/tools/submit-feedback.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await submitFeedback({
             chunk_id: 42,
@@ -88,9 +91,6 @@ describe('submit-feedback.mjs normalization and bounding', () => {
             query: 'positive bound test',
             databasePath,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             recordedStrength: response.signal_strength,
             score: response.feedback_score,
@@ -107,15 +107,13 @@ describe('submit-feedback.mjs normalization and bounding', () => {
       }
     });
 
-    it('does not record an explicit negative strength beyond the designed lower bound', () => {
-      const { databasePath, tempDir } = makeFeedbackFixture();
+    it('does not record an explicit negative strength beyond the designed lower bound', async () => {
+      const { databasePath, tempDir } = await makeFeedbackFixture();
       try {
         const result = runModuleEvaluation<
           Pick<FeedbackProbeResult, 'recordedStrength' | 'score'>
         >(`
           import { submitFeedback } from './scripts/mcp-semantic/tools/submit-feedback.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await submitFeedback({
             chunk_id: 42,
@@ -125,9 +123,6 @@ describe('submit-feedback.mjs normalization and bounding', () => {
             query: 'negative bound test',
             databasePath,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             recordedStrength: response.signal_strength,
             score: response.feedback_score,
@@ -146,15 +141,13 @@ describe('submit-feedback.mjs normalization and bounding', () => {
   });
 
   describe('repeated same-session positive signals must be normalized', () => {
-    it('does not inflate the feedback score when the same session submits many positive signals', () => {
-      const { databasePath, tempDir } = makeFeedbackFixture();
+    it('does not inflate the feedback score when the same session submits many positive signals', async () => {
+      const { databasePath, tempDir } = await makeFeedbackFixture();
       try {
         const result = runModuleEvaluation<
           Pick<FeedbackProbeResult, 'singleSessionScore' | 'multiSessionScore'>
         >(`
           import { submitFeedback } from './scripts/mcp-semantic/tools/submit-feedback.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const shared = {
             chunk_id: 42,
@@ -170,9 +163,6 @@ describe('submit-feedback.mjs normalization and bounding', () => {
             await submitFeedback({ ...shared, query: 'session normalization test multi' });
           }
           const multi = await submitFeedback({ ...shared, query: 'session normalization test multi' });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-
           console.log(JSON.stringify({
             singleSessionScore: single.feedback_score,
             multiSessionScore: multi.feedback_score,

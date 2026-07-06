@@ -1,15 +1,10 @@
 /**
- * Red tests for the deterministic evaluation-pack normalization seam (Layer 2).
+ * Tests for the deterministic evaluation-pack normalization seam (Layer 2).
  *
- * Phase 4 Step 03 — red contracts targeting:
- * 1. Deterministic pack normalization (same seed → identical pack)
- * 2. Replay stability (replayed packs are byte-identical)
- * 3. Race-step transport contracts (transfer-list resolution, schema versioning)
- *
- * These tests assert the desired future behavior defined by the Step 01 frozen
- * determinism contract and the Step 02 seam mapping.  They fail because the
- * stub module throws `Error('Not implemented …')` — the expected reason for a
- * red-phase test (missing normalization, not a syntax/import error).
+ * Covers:
+ * 1. Deterministic pack creation (same reproducibility tuple → identical pack).
+ * 2. Zero-copy transfer-list resolution (deduplication and coverage).
+ * 3. Schema-version boundary assertion with a clear `RangeError`.
  *
  * Single-expect rule enforced throughout.
  */
@@ -28,7 +23,7 @@ import {
 /** Fixed seed for all deterministic pack tests. */
 const SEED = 42;
 
-/** Minimal transport-neutral inputs (no racing-specific fields). */
+/** Minimal transport-neutral inputs (no domain-specific fields). */
 const INPUTS: EvaluationPackInputs = {
   agentCount: 4,
   schemaVersion: 'test-eval-pack-v1',
@@ -127,7 +122,7 @@ describe('network.evaluation-pack', () => {
     });
   });
 
-  describe('resolveTransferList — race-step transport', () => {
+  describe('resolveTransferList — episode-step transport', () => {
     it('collects all distinct buffer entries from a pack', () => {
       // Arrange — a pack with three distinct buffers (no sharing)
       const bufA = new ArrayBuffer(16);

@@ -5,9 +5,5 @@
     "network.onnx.utils.ts",
     "network.onnx.utils.types.ts"
   ],
-  "folderOrder": [
-    "export",
-    "import",
-    "schema"
-  ]
+  "folderOrder": ["export", "import", "schema"]
 }

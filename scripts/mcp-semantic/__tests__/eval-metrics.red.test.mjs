@@ -6,7 +6,7 @@
  * and latency computations used by the Step 22 eval suite.
  */
 
-const METRICS_PATH = '../../semantic-index/eval-metrics.mjs';
+const METRICS_PATH = '../../../rag-index/eval-metrics.mjs';
 
 function loadMetrics() {
   return import(METRICS_PATH);

@@ -174,9 +174,7 @@ export interface IActivationSchedulingDiagnostics {
   requestedMode?: 'acyclic' | 'recurrent';
   /** Execution path used for the current activation traversal. */
   executionPath?:
-    | 'compiled-schedule'
-    | 'cycle-fallback-order'
-    | 'raw-node-order';
+    'compiled-schedule' | 'cycle-fallback-order' | 'raw-node-order';
   /** Number of compiled schedule steps when scheduling is available. */
   stepCount?: number;
   /** Number of recurrent-component steps in the compiled schedule. */

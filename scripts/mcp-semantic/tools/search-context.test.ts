@@ -8,6 +8,7 @@
  * defaults (800-1200 token budget, <= 5 retrieved chunks) and compact-mode
  * field filtering/truncation explicit before the implementation changes.
  */
+import { createClient } from '@libsql/client';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -50,14 +51,17 @@ const runModuleEvaluation = <Result>(source: string): Result => {
  * caps are observable. Some chunks contain long body text so compact-mode
  * truncation is also observable.
  */
-function makeMultiChunkFixture(): { databasePath: string; tempDir: string } {
+async function makeMultiChunkFixture(): Promise<{
+  databasePath: string;
+  tempDir: string;
+}> {
   const tempDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'search-context-defaults-red-'),
   );
   const databasePath = path.join(tempDir, 'corpus.sqlite');
-  const db = new (require('better-sqlite3'))(databasePath);
+  const db = createClient({ url: 'file:' + databasePath });
   try {
-    db.exec(`
+    await db.executeMultiple(`
       CREATE TABLE documents (
         doc_id INTEGER PRIMARY KEY,
         doc_family TEXT NOT NULL,
@@ -115,28 +119,24 @@ function makeMultiChunkFixture(): { databasePath: string; tempDir: string } {
         (6, 'neural network speciation guide part six compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding compact-red-test-padding');
     `);
   } finally {
-    db.close();
+    await db.close();
   }
   return { databasePath, tempDir };
 }
 
 describe('search-context conservative defaults and compact mode', () => {
   describe('default response sizes', () => {
-    it('defaults to a budget of at most 1200 tokens', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('defaults to a budget of at most 1200 tokens', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ budget: number }>(`
           import { searchContext } from './scripts/mcp-semantic/tools/search-context.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchContext({
             databasePath,
             query: 'neural network',
             use_dense: false,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
           console.log(JSON.stringify({ budget: response.metadata.budget }));
         `);
 
@@ -150,25 +150,21 @@ describe('search-context conservative defaults and compact mode', () => {
       }
     });
 
-    it('retrieves at most five chunks by default', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('includes at most five chunks in context by default', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
-        const result = runModuleEvaluation<{ totalChunksRetrieved: number }>(`
+        const result = runModuleEvaluation<{ chunksInContext: number }>(`
           import { searchContext } from './scripts/mcp-semantic/tools/search-context.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchContext({
             databasePath,
             query: 'neural network',
             use_dense: false,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
-          console.log(JSON.stringify({ totalChunksRetrieved: response.total_chunks_retrieved }));
+          console.log(JSON.stringify({ chunksInContext: response.chunks_in_context }));
         `);
 
-        expect(result.totalChunksRetrieved).toBeLessThanOrEqual(5);
+        expect(result.chunksInContext).toBeLessThanOrEqual(5);
       } finally {
         try {
           fs.rmSync(tempDir, { recursive: true, force: true });
@@ -180,13 +176,11 @@ describe('search-context conservative defaults and compact mode', () => {
   });
 
   describe('compact mode', () => {
-    it('strips non-essential fields from per-chunk results', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('strips non-essential fields from per-chunk results', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ allStripped: boolean }>(`
           import { searchContext } from './scripts/mcp-semantic/tools/search-context.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchContext({
             databasePath,
@@ -199,8 +193,6 @@ describe('search-context conservative defaults and compact mode', () => {
           const allStripped = response.results.every((result) =>
             nonEssential.every((key) => !(key in result)),
           );
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
           console.log(JSON.stringify({ allStripped }));
         `);
 
@@ -214,13 +206,11 @@ describe('search-context conservative defaults and compact mode', () => {
       }
     });
 
-    it('truncates assembled context text to the compact threshold', () => {
-      const { databasePath, tempDir } = makeMultiChunkFixture();
+    it('truncates assembled context text to the compact threshold', async () => {
+      const { databasePath, tempDir } = await makeMultiChunkFixture();
       try {
         const result = runModuleEvaluation<{ contextLength: number }>(`
           import { searchContext } from './scripts/mcp-semantic/tools/search-context.mjs';
-          import fs from 'node:fs';
-
           const databasePath = ${JSON.stringify(databasePath)};
           const response = await searchContext({
             databasePath,
@@ -228,8 +218,6 @@ describe('search-context conservative defaults and compact mode', () => {
             use_dense: false,
             compact: true,
           });
-
-          fs.rmSync(${JSON.stringify(tempDir)}, { recursive: true, force: true });
           console.log(JSON.stringify({ contextLength: response.context.length }));
         `);
 

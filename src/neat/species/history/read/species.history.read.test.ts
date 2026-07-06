@@ -30,8 +30,7 @@ function createGenomeMember(
 function createSpeciesHistoryHost(input?: {
   members?: GenomeDetailed[];
   historyStat?:
-    | SpeciesHistoryEntry['stats'][number]
-    | SpeciesHistoryStatExtended;
+    SpeciesHistoryEntry['stats'][number] | SpeciesHistoryStatExtended;
   fallbackInnov?: (connection: ConnectionLike) => number;
 }): SpeciesHistoryReadHost {
   const members = input?.members ?? [

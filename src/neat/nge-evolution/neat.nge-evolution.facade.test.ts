@@ -18,7 +18,7 @@ import ngeEvolutionUtils, {
 } from './neat.nge-evolution.utils';
 
 /**
- * Owner-local tests for the Phase E facade and helper shelves.
+ * Owner-local tests for the NGE facade and helper shelves.
  */
 describe('nge evolution facade shelf', () => {
   it('bundles the public runtime surface on one owner-local import path', () => {

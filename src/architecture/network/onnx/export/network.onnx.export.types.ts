@@ -260,8 +260,7 @@ export type OnnxDynamicQuantizationOptions = {
 
 /** Supported quantization request packets for the narrow first Phase 7 lane. */
 export type OnnxQuantizationOptions =
-  | OnnxStaticQuantizationOptions
-  | OnnxDynamicQuantizationOptions;
+  OnnxStaticQuantizationOptions | OnnxDynamicQuantizationOptions;
 
 /** Resolved reduced-precision packet for build orchestration, carrying the requested flag, mode, and metadata inclusion decision. */
 export type OnnxResolvedPrecisionOptions = {
@@ -967,8 +966,7 @@ export type DenseActivationNodePayload = {
 
 /** Dense node payload union used by ordered append helpers, covering Gemm and activation node payloads. */
 export type DenseOrderedNodePayload =
-  | DenseGemmNodePayload
-  | DenseActivationNodePayload;
+  DenseGemmNodePayload | DenseActivationNodePayload;
 
 /** Parameters for per-neuron layer emission, grouping model, layer index, node lists, options, and batch-dimension flag. */
 export type PerNeuronLayerParams = {

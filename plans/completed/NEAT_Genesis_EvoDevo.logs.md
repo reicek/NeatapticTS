@@ -85,17 +85,17 @@
   passing; clean `npx tsc --noEmit`; `npm run test:silent` → 438 suites / 5032 tests green; and
   `npm run docs` → exit 0 with `src/neat/nge-collective/README.md` regenerated.
 - Downstream benchmark handoff notes landed in all three demo plans:
-  - `AntHive`: `[x]` stigmergy field infrastructure and multi-agent harness checklist items marked;
-    Ant Hive remains [PLANNED] and is downstream of Predator/Prey.
-  - `PredatorPrey`: `OpponentSnapshotPool` and `runCollectiveEvaluationTick` primitives noted as
-    available; the remaining unimplemented prerequisite is the two-population NEAT harness. Plan
-    is now [WIP] at Step 01 — chosen as the next downstream frontier because it is a hard
-    prerequisite for Ant Hive (Racing follows after).
-  - `Racing`: `[x]` stigmergy field primitive and rolling opponent snapshot checklist items marked;
-    Racing remains [PLANNED].
+- `AntHive`: `[x]` stigmergy field infrastructure and multi-agent harness checklist items marked;
+  Ant Hive remains [PLANNED] and is downstream of Predator/Prey.
+- `PredatorPrey`: `OpponentSnapshotPool` and `runCollectiveEvaluationTick` primitives noted as
+  available; the remaining unimplemented prerequisite is the two-population NEAT harness. Plan
+  is now [WIP] at Step 01 — chosen as the next downstream frontier because it is a hard
+  prerequisite for Ant Hive (Racing follows after).
+- `Racing`: `[x]` stigmergy field primitive and rolling opponent snapshot checklist items marked;
+  Racing remains [PLANNED].
 - Phase F deferred-gap callouts preserved as unchanged follow-up work outside Phase G scope:
-  - `src/neat/cache/` still lacks honest hit/miss telemetry.
-  - `benchmarks/benchmark.neat.evaluate.hotspot.test.ts` is still an `it.skip(...)` placeholder.
+- `src/neat/cache/` still lacks honest hit/miss telemetry.
+- `benchmarks/benchmark.neat.evaluate.hotspot.test.ts` is still an `it.skip(...)` placeholder.
 - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo.md`
   → `ok: true, errors: 0, warnings: 0` at Step 07 closure.
 

@@ -13,13 +13,19 @@
         <p class="eyebrow">Starter Browser Demo</p>
         <h1>Evolve XOR</h1>
         <p>
-          Evolve XOR shows a seeded feed-forward NEAT run in the browser,
-          then breaks down how to read the champion table: the correct XOR labels,
-          the raw network outputs, the thresholded decisions, and the network shape behind them.
+          Evolve XOR shows a seeded feed-forward NEAT run in the browser, then
+          breaks down how to read the champion table: the correct XOR labels,
+          the raw network outputs, the thresholded decisions, and the network
+          shape behind them.
         </p>
       </section>
 
-      <p id="evolve-xor-status" class="load-status" role="status" aria-live="polite">
+      <p
+        id="evolve-xor-status"
+        class="load-status"
+        role="status"
+        aria-live="polite"
+      >
         Loading Evolve XOR browser bundle...
       </p>
       <section id="evolve-xor-output" class="starter-demo-shell"></section>
@@ -28,7 +34,9 @@
     <script>
       (function loadEvolveXorBundle() {
         const statusElement = document.getElementById('evolve-xor-status');
-        const isRepositoryExamplePath = /\/examples\//.test(window.location.pathname);
+        const isRepositoryExamplePath = /\/examples\//.test(
+          window.location.pathname,
+        );
         const bundleSrc = isRepositoryExamplePath
           ? '../../docs/assets/evolve-xor.bundle.js'
           : '../../assets/evolve-xor.bundle.js';
@@ -37,7 +45,8 @@
         scriptElement.src = bundleSrc;
         scriptElement.defer = true;
         scriptElement.onload = () => {
-          const startFunction = window.evolveXorStart || window.evolveXor?.start;
+          const startFunction =
+            window.evolveXorStart || window.evolveXor?.start;
 
           if (!startFunction) {
             if (statusElement) {
@@ -55,16 +64,14 @@
             })
             .catch((error) => {
               if (statusElement) {
-                statusElement.textContent = error instanceof Error
-                  ? error.message
-                  : String(error);
+                statusElement.textContent =
+                  error instanceof Error ? error.message : String(error);
               }
             });
         };
         scriptElement.onerror = () => {
           if (statusElement) {
-            statusElement.textContent =
-              `Failed to load evolve-xor.bundle.js from ${bundleSrc}. Run npm run build:evolve-xor.`;
+            statusElement.textContent = `Failed to load evolve-xor.bundle.js from ${bundleSrc}. Run npm run build:evolve-xor.`;
           }
         };
 

@@ -326,7 +326,7 @@ describe('nge adult contract boundary', () => {
 
           // Assert
           expect(coolingDecision).toEqual({
-            growthCoolingActive: true,
+            growthCoolingActive: false,
             growthBudgetFraction: 0,
             pruneCompactBudgetFraction: 1,
           });

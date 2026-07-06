@@ -13,20 +13,27 @@ pnpm-debug.log*
 *.tsbuildinfo
 
 # Generated documentation output (CI builds & deploys)
-/docs/
 /dist-docs/
+/docs/*
+
+# Research artifacts are manual pre-design evidence, not generated docs.
+!/docs/research/
+!/docs/research/README.md
+
+# RAG generated artifacts
+rag-index/data/*.sqlite
+rag-index/data/*.sqlite-journal
+rag-index/data/hook-context/*.json
+rag-index/data/mcp-session-override.json
+rag-index/models/
+rag-index/freshness-proofs/*/
+rag-index/snapshots/
 
 # Coverage and test output
 /coverage/
 /nyc_output/
 /test-results/
 /ascii_maze_snapshots/
-data/semantic-index.sqlite
-data/embeddings.sqlite
-data/*.sqlite-journal
-data/mcp-session-override.json
-data/hook-context-*.json
-scripts/semantic-index/models/
 
 # Environment/secret files
 .env
@@ -66,3 +73,19 @@ bench-browser/jest-*.html
 bench-browser/tmp-*.html
 benchmarks/asciiMaze.benchmark.results.
 .tmp_liquidcarrot_flappy
+
+# Trace storage (Chrome DevTools MCP performance traces) and temporal session output
+tmp/
+tmp-feedback-*/
+tmp_*/
+tmp*
+artifacts/
+freshness-proof-*/
+coverage-export-utils/
+scripts/temp/
+lcov-detail-output.txt
+lcov-detail-parse.cjs
+lcov-parse.cjs
+missing-semantic-index.sqlite
+test-feedback-debug.mjs
+verify-results.mjs

@@ -1,9 +1,13 @@
 ---
 name: trace-audit-reporting
-description: 'Analyze Chrome trace or Perfetto trace captures, run scripts/analyze-trace/analyze-trace.ts, map hotspots to NeatapticTS source files, and generate a detailed performance report with findings, evidence, and an action plan. Use when auditing renderer, worker, GPU, requestAnimationFrame, postMessage, or long-task regressions.'
+description: 'Use when: analyzing Chrome/Perfetto traces and producing performance reports.'
 argument-hint: 'Describe the trace file, feature area, and target report file.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - trace-analyzer-extension
+  - performance-optimization
+  - tracker-handoff
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -32,6 +36,16 @@ implementation, hand off to `performance-optimization`.
 - Reusing the repository trace tooling instead of manually inspecting raw JSON.
 - A `performance-optimization` or `flappy-architecture-polish` pass needs an
   evidence baseline before implementation begins.
+
+## When NOT to use
+
+Do NOT use for extending the analyzer tool - use `trace-analyzer-extension` instead. Do NOT use for implementing optimizations - use `performance-optimization` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Trace file" → "Run analyze-trace.ts"; "Run analyze-trace.ts" → "Read output sections"; "Read output sections" → "Identify hotspots"; "Identify hotspots" → "Enough data?"; "Enough data?" → "Write report" (Yes), "Request analyzer extension" (No); "Write report" → "Update tracker"; "Request analyzer extension" → "trace-analyzer-extension"; "Update tracker"; "trace-analyzer-extension".
+```
 
 ## Task Packet
 
@@ -93,6 +107,32 @@ Top events to focus: RunTask, HandlePostMessage, FireAnimationFrame.
 9. End the report with a prioritized action plan that states clearly whether
    each finding should be fixed in the library, in shared infrastructure, or
    only in the demo.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Trace capture received" → "Is it a Chrome trace or Perfetto JSON?"; "Is it a Chrome trace or Perfetto JSON?" → "Run analyze-trace.ts" (Yes), "Request proper trace export first" (No); "Request proper trace export first" → "Trace capture received"; "Run analyze-trace.ts" → "Read output sections: thread totals, longest events, dropped frames"; "Read output sections: thread totals, longest events, dropped frames" → "Hotspots identified?"; "Hotspots identified?" → "Map each hotspot to source file" (Yes), "Extend analyzer via trace-analyzer-extension" (No); "Extend analyzer via trace-analyzer-extension" → "Run analyze-trace.ts"; "Map each hotspot to source file" → "Is the bottleneck library-level?"; "Is the bottleneck library-level?" → "Recommend library fix via performance-optimization" (Yes), "Recommend demo-local fix" (No, demo-only), "Recommend protocol fix" (No, worker/protocol); "Recommend library fix via performance-optimization" → "Write report with prioritized action plan"; "Recommend demo-local fix" → "Write report with prioritized action plan"; "Recommend protocol fix" → "Write report with prioritized action plan"; "Write report with prioritized action plan" → "Update tracker via tracker-handoff"; "Update tracker via tracker-handoff".
+```
+
+## Before/After Examples
+
+**Before (no trace audit):**
+
+> "The worker seems slow. We should probably look at the evaluation loop."
+
+No evidence, no layer separation, no source attribution.
+
+**After (with trace audit):**
+
+> "Trace window: 10.2s, 47 dropped frames. Worker thread dominates at 78% of
+> total CPU time. Longest `HandlePostMessage` event: 234ms in
+> `src/multithread/evaluation-pool.ts:142`. The bottleneck is
+> `structuredClone` of the full dataset on each `postMessage` call.
+> **Action 1 (library):** Switch to `SharedArrayBuffer` for dataset
+> broadcast in `evaluation-pool.ts`. **Action 2 (demo-local):** Reduce
+> render frequency from 60fps to 30fps in `flappy-bird/render-loop.ts`."
+
+Evidence-backed, source-mapped, layered, and prioritized.
 
 ## Guardrails
 

@@ -1,9 +1,13 @@
 ---
 name: multithread-evaluation
-description: 'Design, implement, or validate NeatapticTS batch evaluation in Node and browser worker pools. Use when working on evaluateInWorkers, task queueing, ordered results, workerCount sizing, backpressure, dataset broadcast, AsyncResource correlation, graceful single-thread fallback, or deterministic multithread fitness evaluation.'
+description: 'Use when: designing or validating parallel evaluation in Node/browser workers.'
 argument-hint: 'Describe the pool target, current step in Turnkey_Multithread_Evaluation_API.md, environment, dataset strategy, and whether the pass is design, implementation, benchmark, or validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - worker-inference-transport
+  - reproducibility-contracts
+  - coverage-guard
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -46,6 +50,10 @@ worker-pool scheduling notes, source attribution, and queueing heuristics.
 - Dataset shipping is dominating runtime and must move to init-time broadcast.
 - Evolution-loop integration is being added on top of a pool that already works.
 
+## When NOT to use
+
+Do NOT use for single-threaded evaluation - use direct evaluation calls instead. Do NOT use for worker payload encoding - use `worker-inference-transport` instead.
+
 ## Core Contracts
 
 ### Result-order contract
@@ -85,6 +93,12 @@ critical path. In practice, pool startup, dataset broadcast, queue contention,
 and browser scheduling can dominate the theoretical win for small batches.
 
 Choose pool complexity only when the batch size and compute cost justify it.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Start evaluation" → "Broadcast dataset to workers"; "Broadcast dataset to workers" → "Schedule genome batches"; "Schedule genome batches" → "Workers evaluate in parallel"; "Workers evaluate in parallel" → "Collect ordered results"; "Collect ordered results" → "All done?"; "All done?" → "Schedule genome batches" (No), "Assemble final scores" (Yes); "Assemble final scores" → "Done"; "Done".
+```
 
 ## Task Packet
 
@@ -178,6 +192,32 @@ Validate with: focused multithreading tests, a small batch integration test, and
 - Focused integration test for a small deterministic batch.
 - Browser smoke validation when browser worker parity is part of the step.
 - `npm run test:silent` only when the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Batch to evaluate" → "Workers available?"; "Workers available?" → "Single-thread fallback" (No / unsupported), "Batch size predictable?" (Yes); "Single-thread fallback" → "Preserve result semantics"; "Batch size predictable?" → "Fixed pool" (Yes), "Dynamic sizing" (No, varies widely); "Preserve result semantics"; "Fixed pool" → "Bounded queue + backpressure"; "Dynamic sizing" → "Bounded queue + backpressure"; "Bounded queue + backpressure".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```ts
+// unbounded worker spawn: one worker per task, no limit
+for (const genome of genomes) {
+  const worker = new Worker(url);
+  worker.postMessage(genome); // no queue, no backpressure
+}
+```
+
+**After:**
+
+```ts
+// bounded pool with backpressure: fixed worker count, queued tasks
+const pool = createWorkerPool({ workerCount: 4, maxQueueDepth: 100 });
+const results = await pool.evaluate(genomes); // ordered, backpressured
+```
 
 ## Guardrails
 

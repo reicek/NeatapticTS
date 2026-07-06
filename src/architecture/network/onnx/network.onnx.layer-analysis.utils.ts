@@ -535,14 +535,14 @@ function buildLayerValidationContexts(
   layers: NeatapticNode[][],
   options: OnnxExportOptions,
 ): LayerValidationTraversalContext[] {
-  return layers.slice(FIRST_NON_INPUT_LAYER_INDEX).map(
-    (currentLayerNodes, layerOffset): LayerValidationTraversalContext => ({
+  return layers
+    .slice(FIRST_NON_INPUT_LAYER_INDEX)
+    .map((currentLayerNodes, layerOffset): LayerValidationTraversalContext => ({
       layerIndex: layerOffset + FIRST_NON_INPUT_LAYER_INDEX,
       previousLayerNodes: layers[layerOffset],
       currentLayerNodes,
       options,
-    }),
-  );
+    }));
 }
 
 /**

@@ -1,9 +1,13 @@
 ---
 name: phase-handoff-workflow
-description: 'Design and validate the seven-step NeatapticTS agent workflow inside each plan phase. Use when creating copy-pasteable step packets, phase-step handoffs, step stop conditions, sequential orchestration, or when deciding whether a phase can advance.'
+description: 'Use when: designing phase gates, handoffs, or slice boundaries.'
 argument-hint: 'Name the source phase, target phase, current plan state, and whether the handoff should be user-reviewed or auto-sent.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - execute
+  - tracker-handoff
+  - plan-sync-validation
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -15,9 +19,10 @@ or when a plan file needs its phase structure brought into conformance with the
 standard seven-step shape.
 
 This skill owns the durable rules for phase ordering, step packet authoring,
-gate contracts, tracker updates, and escalation behavior. It does not own the
-content of any particular phase's work — that belongs to the relevant domain
-skill.
+gate contracts, tracker updates, and escalation behavior. Handoffs rely on
+append-only convergence in the tracker so phase history remains reconstructible.
+It does not own the content of any particular phase's work — that belongs to
+the relevant domain skill.
 
 ## When to Use
 
@@ -33,6 +38,10 @@ skill.
   the `00-helping` cross-tier helper.
 - The active tracker has drifted from the standard step-packet shape and needs
   to be brought back into conformance.
+
+## When NOT to use
+
+Do NOT use for single-phase work without inter-phase handoffs. Do NOT use for tracker management - use `tracker-handoff` instead.
 
 ## Task Packet
 
@@ -85,7 +94,50 @@ repo-owned runtime proof carrier with
 so pretool and posttool enforcement can validate the flow, delegator chain,
 required skills, required specialists, and action class. Use
 `.github/runtime-enforcement-contract.md` as the canonical contract for that
-payload.
+payload. 12. **Phase Compression (mandatory).** When all steps in a phase are marked
+`[DONE]` and green validation has passed, the orchestrator MUST dispatch
+`07-logging` to compress the completed phase before advancing to the next
+phase or performing the phase-to-phase handoff. Compression means:
+
+1. Move detailed step/slice/VALIDATION_EVIDENCE blocks from the plan file
+   to the corresponding `.logs.md` file.
+2. Replace the detailed content in the plan file with a compact `[DONE]`
+   marker and a reference to the logs file.
+3. Keep the phase header, goal, and status as `[DONE]` in the plan file.
+
+This keeps plan files lean and focused on active work. Plan files should
+never carry verbose `[DONE]` phase details — those belong in logs.
+
+Skipping phase compression is a workflow violation. The orchestrator must
+not advance to the next phase or send the phase-to-phase handoff until
+compression is complete.
+
+### Mandatory Plan Verification Loop
+
+Before any phase step with `goal: red-testing` or `goal: implementing` is
+dispatched, the plan must pass an independent verification pass:
+
+1. **After Step 01 planning packets are authored**, the orchestrator dispatches
+   a **fresh** `01-planning` agent in verification mode to read the active plan.
+2. **The verifier checks:** completeness of phase/step YAML blocks, risk
+   coverage, acceptance criteria quality, dependency ordering, and consistency
+   with the phase objective.
+3. **The verifier records the verdict in the plan's
+   `## Latest validation evidence` section:**
+   - `green-light: true` or `status: green-light` when the plan is ready for
+     execution.
+   - Blockers with `green-light: false` or `status: blocked` when the plan is
+     not ready.
+4. **If blockers are recorded**, the orchestrator routes back to `01-planning`
+   for a patch cycle, then dispatches a new verification agent. This patch →
+   verify loop repeats until green light is recorded.
+5. **Only after a green-light verdict** may Agent Zero dispatch
+   `03-red-testing`, `04-implementing`, or other execution-phase agents.
+
+Every active `.plans.md` file must include a `## Latest validation evidence`
+section containing the most recent verification verdict and timestamp. The
+`plan-readiness` gate (`scripts/agent-customization/gates/plan-readiness.gate.mjs`)
+verifies this marker before execution-phase dispatch.
 
 ## Flow-Aware Handoff Contract
 
@@ -94,11 +146,20 @@ the current task shape. Flows declare exit gates; every gate must return
 `{pass: true, evidence, fixHint, owner}` JSON before the flow is considered
 complete. Post-phase fan-out from the flow definition runs after the flow body.
 
+- The `plan-readiness` gate must return `pass: true` before any handoff to a
+  step with `goal: red-testing` or `goal: implementing`. The gate checks for a
+  green-light marker recorded by a fresh `01-planning` verification pass in the
+  plan's `## Latest validation evidence` section.
+- The `spec-checklist` skill is a **pre-implementation quality gate**. Before
+  any dispatch to `04-implementing`, run it read-only to validate prose quality,
+  traceability coverage (≥ 80%), and ID coverage; block dispatch until any
+  `missing`, `partial`, `contradicts`, or `unrequested` gaps are resolved.
 - Gate exceptions are recorded via
   `scripts/agent-customization/gates/record-gate-exception.mjs` and appended to
   `.github/ai-learning/learning-log.jsonl`.
-- Three consecutive gate failures in a session escalate automatically to
-  `00-helping` via the `00.cross-tier-helper` flow.
+- Gate failures are recorded for audit but do not trigger automatic
+  escalation. Continue retrying until resolved or a true technical limit is
+  reached. No concessions.
 - Cross-tier helper calls from any numbered agent route to `00-helping`, which
   resolves the blocker and returns a resolution summary. All cross-tier calls
   are logged as learning events visible to `00.workflow-gap-audit`.
@@ -117,20 +178,21 @@ packets, before execution continues.
 
 ### Field Definitions
 
-| Field             | Required | Description                                                                                                                                                  |
-| ----------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `phase`           | Yes      | Phase number (integer)                                                                                                                                       |
-| `step`            | Yes      | Step number within the phase (integer)                                                                                                                       |
-| `goal`            | Yes      | What outcome this step needs. Must be one of: `planning`, `researching`, `red-testing`, `implementing`, `green-testing`, `documenting`, `logging`, `helping` |
-| `tdd_sequence`    | No       | How the orchestrator should decompose this step across phases. Must be one of: `red-green`, `green-only`. When absent, single-phase dispatch                 |
-| `status`          | Yes      | Step status: `[PLANNED]`, `[WIP]`, or `[DONE]`                                                                                                               |
-| `mode`            | Yes      | Session mode: `fresh-session` or `perpetual`                                                                                                                 |
-| `source_of_truth` | Yes      | Path to the authoritative plan file                                                                                                                          |
-| `copy_paste`      | Yes      | Whether the step packet is a paste-ready prompt (`true`/`false`)                                                                                             |
-| `next_step`       | Yes      | Description of the next step, or `null` for terminal steps                                                                                                   |
-| `skills`          | Yes      | List of skill names the agent should load                                                                                                                    |
-| `specialists`     | No       | List of hidden specialist agent names for delegation                                                                                                         |
-| `validation`      | Yes      | List of validation commands or evidence gates                                                                                                                |
+| Field                | Required | Description                                                                                                                                                  |
+| -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `phase`              | Yes      | Phase number (integer)                                                                                                                                       |
+| `step`               | Yes      | Step number within the phase (integer)                                                                                                                       |
+| `goal`               | Yes      | What outcome this step needs. Must be one of: `planning`, `researching`, `red-testing`, `implementing`, `green-testing`, `documenting`, `logging`, `helping` |
+| `tdd_sequence`       | No       | How the orchestrator should decompose this step across phases. Must be one of: `red-green`, `green-only`. When absent, single-phase dispatch                 |
+| `status`             | Yes      | Step status: `[PLANNED]`, `[WIP]`, or `[DONE]`                                                                                                               |
+| `mode`               | Yes      | Session mode: `fresh-session` or `perpetual`                                                                                                                 |
+| `source_of_truth`    | Yes      | Path to the authoritative plan file                                                                                                                          |
+| `copy_paste`         | Yes      | Whether the step packet is a paste-ready prompt (`true`/`false`)                                                                                             |
+| `next_step`          | Yes      | Description of the next step, or `null` for terminal steps                                                                                                   |
+| `skills`             | Yes      | List of skill names the agent should load                                                                                                                    |
+| `specialists`        | No       | List of hidden specialist agent names for delegation                                                                                                         |
+| `validation`         | Yes      | List of validation commands or evidence gates                                                                                                                |
+| `constitution_check` | No       | Stable principle identifiers from `plans/constitution.md` that this step exercises. Informational; preserved by plan-sync and reported in handoffs.          |
 
 The orchestrator resolves `goal` to the dispatched agent using the routing
 table in `.github/copilot-instructions.md` §3. When `tdd_sequence` is present,
@@ -209,6 +271,29 @@ work, validation evidence, and the next active step before ending.
 append a second nested `Copy-paste prompt` subsection.
 ````
 
+### Traceability Table (recommended)
+
+For steps whose acceptance criteria map to concrete file changes and validation commands, include a `traceability` table in the step packet or in the plan's `VALIDATION_EVIDENCE` section. The table makes every `AC-###` criterion machine-traceable and supports the test-backed / gate-backed change principle in `plans/constitution.md`.
+
+Use this shape:
+
+```yaml
+traceability:
+  - id: AC-001
+    criterion: 'buildMLP() default config produces 5-node network'
+    files_changed:
+      - 'src/architecture/network/builders/mlp/*.ts'
+    validation_command: 'npx jest --testPathPattern=builders/mlp'
+  - id: AC-002
+    criterion: 'buildMLP() rejects empty hiddenLayers with actionable error'
+    files_changed:
+      - 'src/architecture/network/builders/mlp/*.ts'
+      - 'src/architecture/network/builders/mlp/*.errors.ts'
+    validation_command: 'npx jest --testPathPattern=builders/mlp'
+```
+
+Each row must reference one `AC-###` identifier, the concrete criterion text, the exact files changed, and the validation command that proves it. Gap types to flag while authoring the table: `missing` (no `AC-###` for a file change), `partial` (criterion lacks a validation command), `contradicts` (command does not cover the listed files), or `unrequested` (validation command present but no matching criterion).
+
 Completed phases **must** have their history compressed to a concise coverage
 note before the next phase is started or the workstream is closed. The
 `phase-compression` gate (enforced in `01.phase-kickoff` and
@@ -222,6 +307,18 @@ the current step copy-pasteable.
 Tracker YAML step packets are workflow artifacts. They do not replace the
 required Tier-0 or Tier-1 `structured-v1` chat envelope, which remains the
 mandatory response shape when those agents answer in chat.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Phase completes" → "Author step packet"; "Author step packet" → "Set send/model"; "Set send/model" → "Dispatch to next phase"; "Dispatch to next phase" → "Next phase executes"; "Next phase executes" → "Green pass?"; "Green pass?" → "Advance to next phase" (Yes), "Route back to prior phase" (No); "Advance to next phase"; "Route back to prior phase" → "Author step packet".
+```
+
+## Decision Tree
+
+```text
+Flowchart summary: "Phase step result" → "Green testing?"; "Green testing?" → "Advance to next phase" (Pass), "Loop back to prior phase" (Fail); "Advance to next phase" → "More steps?"; "Loop back to prior phase" → "3 failures? Escalate to 00-helping"; "More steps?" → "Author next step packet" (Yes), "Close phase" (No); "3 failures? Escalate to 00-helping"; "Author next step packet"; "Close phase".
+```
 
 ## Guardrails
 

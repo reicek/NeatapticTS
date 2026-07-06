@@ -37,8 +37,8 @@ A library can be technically excellent and still lose adoption if the first run 
 
 - Modern evergreen browsers (Chromium, Firefox, Safari) with ES2023-ish features.
 - If a feature requires Node-only APIs (fs, worker_threads), it must be:
-  - compiled out of the browser bundle, or
-  - behind a runtime capability check with a clear error.
+- compiled out of the browser bundle, or
+- behind a runtime capability check with a clear error.
 
 ## Public API (browser)
 
@@ -78,7 +78,7 @@ Naming can be adjusted to fit current conventions; the key is that we ship both 
 ### Step 1 — Define browser entry module
 
 - Create a dedicated browser entry file (example name):
-  - `src/browser-entry.ts`
+- `src/browser-entry.ts`
 - Re-export only supported browser-safe symbols.
 - Ensure no Node-only modules are imported transitively.
 
@@ -89,9 +89,9 @@ Acceptance:
 ### Step 2 — Split Node-only concerns behind environment adapters
 
 - Introduce “environment adapter” modules so imports are browser-safe:
-  - `src/env/node/*`
-  - `src/env/browser/*`
-  - `src/env/index.ts` that chooses by build target (compile-time), not runtime.
+- `src/env/node/*`
+- `src/env/browser/*`
+- `src/env/index.ts` that chooses by build target (compile-time), not runtime.
 
 Notes:
 
@@ -123,9 +123,9 @@ Acceptance:
 Add a dedicated docs page:
 
 - `docs/` content or a `README` section describing:
-  - script tag IIFE usage
-  - ESM usage
-  - limitations (threads, filesystem, perf)
+- script tag IIFE usage
+- ESM usage
+- limitations (threads, filesystem, perf)
 
 Acceptance:
 
@@ -136,8 +136,8 @@ Acceptance:
 Without introducing heavy browser testing:
 
 - Add a small build-time smoke check that:
-  - imports the browser ESM output
-  - runs a trivial activation on a toy network
+- imports the browser ESM output
+- runs a trivial activation on a toy network
 
 Acceptance:
 
@@ -148,17 +148,17 @@ Acceptance:
 - TypeScript: `npx tsc --noEmit -p tsconfig.json`
 - Build: `npm run build` and `npm run build:browser`
 - Minimal runtime smoke:
-  - Node loads `dist/neataptic.browser.esm.js` (as ESM) and runs a simple call.
-  - Optional: a headless browser run (Puppeteer exists in dev deps) for a single-page smoke.
+- Node loads `dist/neataptic.browser.esm.js` (as ESM) and runs a simple call.
+- Optional: a headless browser run (Puppeteer exists in dev deps) for a single-page smoke.
 
 ## Risks and mitigations
 
 - Risk: accidental Node-only transitive imports.
-  - Mitigation: keep browser entry small; use env adapters.
+- Mitigation: keep browser entry small; use env adapters.
 - Risk: tree-shaking breaks side-effect assumptions.
-  - Mitigation: mark side-effectful modules clearly; add smoke tests.
+- Mitigation: mark side-effectful modules clearly; add smoke tests.
 - Risk: bundle size grows.
-  - Mitigation: export only essentials; avoid large optional modules by default.
+- Mitigation: export only essentials; avoid large optional modules by default.
 
 ## Success criteria
 

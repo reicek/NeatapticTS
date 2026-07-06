@@ -177,8 +177,7 @@ export function emitChampionChangedEvent(
  */
 function emitPlaybackChampionChanged(
   onChampionChanged:
-    | ((event: PlaybackChampionChangedEvent) => void)
-    | undefined,
+    ((event: PlaybackChampionChangedEvent) => void) | undefined,
   championBirdIndex: number,
 ): void {
   // Step 1: Skip work when no runtime callback was provided.

@@ -1,9 +1,13 @@
 ---
 name: agent-json-body-to-md
-description: 'Use when: converting the JSON body of a .github/agents/*.agent.md file to Markdown, replacing the raw JSON block with the formatted MD output, or running scripts/agent-customization/json-to-md.mjs against an agent description body.'
+description: 'Use when: converting the JSON body of an agent file to Markdown prose.'
 argument-hint: 'Name the target agent file (relative to .github/agents/), and confirm whether the YAML frontmatter should remain untouched.'
 user-invocable: false
 disable-model-invocation: false
+skills:
+  - updating-agent-frontmatter
+  - agent-frontmatter-standards
+  - educational-docs
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -20,6 +24,16 @@ It exists because many agent descriptions ship as a single raw JSON object (with
 - A new SDLC orchestrator (e.g. `00-helping`, `01-planning`, … `07-logging`) is being added and its body needs the same Markdown treatment as sibling agents.
 - An existing agent is being rewritten and the body should be re-emitted as Markdown for reviewability.
 - The conversion needs to be re-run after the JSON body changes (e.g. constraints, flow steps, or recovery rules were updated).
+
+## When NOT to use
+
+Do NOT use for agents already in markdown format - this skill is only for JSON-body to markdown conversion.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Agent file" → "Format?"; "Format?" → "Convert to markdown" (JSON body), "No action needed" (Already markdown); "Convert to markdown" → "Validate frontmatter"; "No action needed"; "Validate frontmatter" → "Run agent-frontmatter-standards"; "Run agent-frontmatter-standards" → "Done"; "Done".
+```
 
 ## Task Packet
 
@@ -82,6 +96,41 @@ Preserve frontmatter: <yes>
 5. Use `edit()` with `old_str` = the entire original file (frontmatter + JSON body) and `new_str` = the original frontmatter + a blank line + the Markdown body + a blank line + the trailing ` ```structured-v1 ` block. Keep the trailing block exactly as it was.
 6. Re-read the file; confirm the body now contains `## Mission`, `## Constraints`, `## Default Flow`, `## Tracker Recovery`, `## If Blocked`, `## Output Contract` headings, each followed by the appropriate bullet list or paragraph from the JSON, and that the ` ```structured-v1 ` fence is still present at the end.
 7. Run `node scripts/agent-customization/validate-agent-frontmatter.mjs --json` to confirm the frontmatter is still valid.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Agent .agent.md file" → "Body format?"; "Body format?" → "Convert with jsonToMarkdown" (Raw JSON object), "No action — pass through" (Already Markdown), "Convert JSON body, preserve fence" (Mixed JSON + trailing fenced block); "Convert with jsonToMarkdown" → "Validate frontmatter unchanged"; "No action — pass through" → "Report PARTIAL: nothing to convert"; "Convert JSON body, preserve fence" → "Validate frontmatter unchanged"; "Validate frontmatter unchanged" → "Done"; "Report PARTIAL: nothing to convert"; "Done".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```json
+{
+  "mission": "Plan work",
+  "constraints": ["Stay in scope"],
+  "default_flow": ["Read plan", "Decompose"]
+}
+```
+
+**After:**
+
+```markdown
+## Mission
+
+Plan work
+
+## Constraints
+
+- Stay in scope
+
+## Default Flow
+
+- Read plan
+- Decompose
+```
 
 ## Guardrails
 

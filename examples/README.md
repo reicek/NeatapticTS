@@ -8,13 +8,13 @@ The point of this folder is not just to prove that NeatapticTS can evolve agents
 
 ## Recommended learning path
 
-| Step | Start here | What it teaches | Why it comes now |
-| --- | --- | --- | --- |
-| 1 | [helloNetwork](./helloNetwork) | One tiny forward pass through the public API | It gives you a concrete output immediately, without evolution or browser setup. |
-| 2 | [evolveXor](./evolveXor) | The smallest useful NEAT loop | It adds selection, mutation, and generations without the extra complexity of a large environment. |
-| 3 | [sequenceReset](./sequenceReset) | Recurrent state and `network.clear()` semantics | It shows the first stateful behavior boundary before you move to bigger runtime systems. |
-| 4 | [Starter browser pages](../docs/examples/index.html) | Lightweight browser-hosted walkthroughs | It lets you stay on the same starter concepts while seeing the docs-published browser path. |
-| 5 | [flappy_bird](./flappy_bird) and [asciiMaze](./asciiMaze) | Full-system neuroevolution demos | They are best read after the starter path, once the controller and runtime basics are already familiar. |
+| Step | Start here                                                                                           | What it teaches                                 | Why it comes now                                                                                        |
+| ---- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 1    | [helloNetwork](./helloNetwork)                                                                       | One tiny forward pass through the public API    | It gives you a concrete output immediately, without evolution or browser setup.                         |
+| 2    | [evolveXor](./evolveXor)                                                                             | The smallest useful NEAT loop                   | It adds selection, mutation, and generations without the extra complexity of a large environment.       |
+| 3    | [sequenceReset](./sequenceReset)                                                                     | Recurrent state and `network.clear()` semantics | It shows the first stateful behavior boundary before you move to bigger runtime systems.                |
+| 4    | [Starter browser pages](../docs/examples/index.html)                                                 | Lightweight browser-hosted walkthroughs         | It lets you stay on the same starter concepts while seeing the docs-published browser path.             |
+| 5    | [flappy_bird](./flappy_bird), [asciiMaze](./asciiMaze), and [racing_curriculum](./racing_curriculum) | Full-system neuroevolution demos                | They are best read after the starter path, once the controller and runtime basics are already familiar. |
 
 If you want the shortest useful route through the folder, follow that order exactly: inference first, minimal evolution second, sequence state third, browser quickstart fourth, then the flagship systems.
 
@@ -72,7 +72,7 @@ Important browser note:
 
 ## Flagship demos second
 
-After the starter path, move to the two larger examples that show NeatapticTS under more realistic system pressure.
+After the starter path, move to the larger examples that show NeatapticTS under more realistic system pressure.
 
 ### Flappy Bird
 
@@ -98,28 +98,42 @@ Best starting points:
 - [asciiMaze/evolutionEngine.ts](./asciiMaze/evolutionEngine.ts)
 - [asciiMaze/index.html](./asciiMaze/index.html)
 
+### Racing Curriculum
+
+[racing_curriculum](./racing_curriculum) is the best next step if you want to study coevolution, host/worker authority, and deterministic packed-snapshot streaming.
+
+It runs two independent NEAT populations (Team A and Team B) against frozen opponent snapshots, keeps all simulation truth inside a dedicated worker, and streams compact typed-array race-step frames back to the host. The lesson is how to separate rendering authority from evolution authority and how to keep a competitive coevolution benchmark fair, replayable, and easy to extend with new neuromodulation, plasticity, or controller contracts.
+
+Best starting points:
+
+- [racing_curriculum/docs/coevolution-contract.md](https://github.com/reicek/NeatapticTS/blob/main/examples/racing_curriculum/docs/coevolution-contract.md)
+- [racing_curriculum/workers/simulation-worker/README.md](./racing_curriculum/workers/simulation-worker/README.md)
+- [racing_curriculum/browser-entry/browser-entry.ts](./racing_curriculum/browser-entry/browser-entry.ts)
+- [racing_curriculum/index.html](./racing_curriculum/index.html)
+
 ## How the flagship demos differ
 
-| Dimension | Flappy Bird | ASCII Maze |
-| --- | --- | --- |
-| Core challenge | Reflex control under changing geometry | Deliberate navigation toward a goal |
-| Observation style | Broad temporal observation | Tight handcrafted state summary |
-| Policy outputs | 2 action scores | 4 directional scores |
-| Teaching emphasis | Evaluation fairness, feed-forward local memory, worker playback, inspectable UI | Reward shaping, curriculum transfer, telemetry-rich evolution, explicit search overlays |
-| Runtime flavor | Browser-heavy and replay-oriented | Console-browser hybrid and experiment-oriented |
+| Dimension         | Flappy Bird                                                                     | ASCII Maze                                                                              | Racing Curriculum                                                                    |
+| ----------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Core challenge    | Reflex control under changing geometry                                          | Deliberate navigation toward a goal                                                     | Competitive coevolution across two teams                                             |
+| Observation style | Broad temporal observation                                                      | Tight handcrafted state summary                                                         | Continuous sensor vector from track state                                            |
+| Policy outputs    | 2 action scores                                                                 | 4 directional scores                                                                    | Car-control vector (steer, throttle, brake)                                          |
+| Teaching emphasis | Evaluation fairness, feed-forward local memory, worker playback, inspectable UI | Reward shaping, curriculum transfer, telemetry-rich evolution, explicit search overlays | Host/worker authority, frozen-snapshot coevolution, zero-copy transfer, protocol FSM |
+| Runtime flavor    | Browser-heavy and replay-oriented                                               | Console-browser hybrid and experiment-oriented                                          | Worker-authoritative simulation with host rendering                                  |
 
 The quickest mental shortcut is simple:
 
 - Flappy Bird is a fast control-systems lesson.
 - ASCII Maze is a compact decision-making lesson.
+- Racing Curriculum is a coevolution and runtime-authority lesson.
 
 Together they show that a good neuroevolution example is not one fixed template. Observation design, scoring design, runtime ownership, and visualization strategy all change with the problem.
 
 ## Advanced follow-up
 
-[`neatChat`](./neatChat) belongs after the starter path and the two existing flagship demos, but its browser-hosted page should publish alongside the flagship section so users can inspect progress without depending on Node.
+[`neatChat`](./neatChat) belongs after the starter path and the three existing flagship demos, but its browser-hosted page should publish alongside the flagship section so users can inspect progress without depending on Node.
 
-Treat it as an advanced learnability follow-up for when you already understand the small examples, the browser publication flow, and the two larger system demos.
+Treat it as an advanced learnability follow-up for when you already understand the small examples, the browser publication flow, and the three larger system demos.
 
 Best starting points:
 

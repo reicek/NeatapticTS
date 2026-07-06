@@ -29,7 +29,7 @@ const BODY_MATCH_WEIGHT = 1;
  * Heading-path weighting ensures chunks that name a concept in their heading rank above chunks
  * that only mention it in the body.
  *
- * @param snapshot - Browser snapshot produced by `scripts/semantic-index/build-browser-snapshot.mjs`.
+ * @param snapshot - Browser snapshot produced by `rag-index/build-browser-snapshot.mjs`.
  * @param query - User query text to split into Unicode-aware lowercase tokens.
  * @param options - Optional result limit (default: {@link DEFAULT_RESULT_LIMIT}).
  * @returns Ranked chunk matches sorted by descending score and stable source order.

@@ -1,9 +1,13 @@
 ---
 name: performance-optimization
-description: 'Implement memory efficiency, slab optimization, typed-array usage, cache-friendly data layouts, or benchmark-driven library performance improvements in NeatapticTS. Use when executing a Track 1 phase of Memory_Optimization.md or addressing a measured hotspot after trace-audit-reporting or trace-analyzer-extension has identified a library-owned bottleneck.'
+description: 'Use when: optimizing memory, typed arrays, caches, or runtime speed.'
 argument-hint: 'Describe the optimization target (slab, typed array, activation path, cache layout, browser-worker hotspot), the evidence (trace report or benchmark), and the current plan phase.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - trace-audit-reporting
+  - trace-analyzer-extension
+  - implementation-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -51,6 +55,16 @@ When roadmap alignment is needed, use `plan-alignment`.
 - Activation throughput benchmarks show regression.
 - A slab or typed-array change is needed before another lane can proceed
   efficiently, without taking ownership of that lane's public contract.
+
+## When NOT to use
+
+Do NOT use for trace analysis or reporting - use `trace-audit-reporting` instead. Do NOT use for trace analyzer extension - use `trace-analyzer-extension` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Profiled hotspot" → "Target type?"; "Target type?" → "Slab/pool optimization" (Memory allocation), "Fast-path optimization" (Activation path), "Cache-friendly refactor" (Data layout); "Slab/pool optimization" → "Write correctness test"; "Fast-path optimization" → "Write correctness test"; "Cache-friendly refactor" → "Write correctness test"; "Write correctness test" → "Implement optimization"; "Implement optimization" → "Verify invariant"; "Verify invariant" → "Output identical?"; "Output identical?" → "Run benchmark" (Yes), "Debug" (No); "Run benchmark" → "Report improvement"; "Debug" → "Implement optimization"; "Report improvement".
+```
 
 ## Task Packet
 
@@ -121,6 +135,27 @@ Every performance change must satisfy:
 Do not start Hyper (Track 2) work until the Track 1 stability conditions in
 `Memory_Optimization.md` are fully satisfied. If those conditions appear met,
 use `plan-alignment` to verify before proceeding.
+
+## Decision Tree: Optimization Targets
+
+```text
+Flowchart summary: "Performance complaint" → "Where is the hotspot?"; "Where is the hotspot?" → "This skill" (Library code in src/), "visualizer-workflow" (Demo rendering / DOM), "worker-inference-transport" (Worker payload encoding), "trace-analyzer-extension" (Trace tooling gap), "trace-audit-reporting first" (Unknown); "This skill"; "visualizer-workflow"; "worker-inference-transport"; "trace-analyzer-extension"; "trace-audit-reporting first".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```text
+Slab allocation: 12,000 ops/sec, 41% activation time in Float64Array allocation
+```
+
+**After:**
+
+```text
+Slab pool reuse: 28,500 ops/sec (+137%), allocation time reduced to 9% of activation
+Correctness invariant: bitwise identical output, same seed → same result
+```
 
 ## Guardrails
 

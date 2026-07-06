@@ -2,21 +2,82 @@
  * Deterministic evaluation-pack contracts (Layer 2 — Worker Transport
  * Normalization).
  *
- * Provides transport-neutral generic contracts for deterministic pack
- * creation, transfer-list resolution, and schema versioning.  These
- * contracts bridge the gap between benchmark-specific transport stacks
- * (racing, predator/prey, ant-hive) and the library's worker-payload
- * infrastructure by offering a reusable normalization layer that any
- * benchmark can adopt.
+ * An evaluation pack is the transport-neutral initial state for one evaluation
+ * episode. It bundles deterministic typed arrays with the seed and schema
+ * version that produced them, so a worker can recreate the exact same starting
+ * point on the same runtime. The boundary exists because benchmarks such as
+ * multi-agent, competitive, and cooperative tasks all need to ship initial state
+ * across a worker boundary, but each benchmark should not invent its own pack,
+ * transfer, and versioning rules.
  *
- * Contracts frozen by Step 01 / confirmed by Step 02:
- * - `createDeterministicEvaluationPack(seed, inputs)` — transport-neutral
- *   generic pack creation.  Same seed + same inputs → identical pack (Level 2
- *   ordered-deterministic).
- * - `resolveTransferList(pack)` — collects every distinct `ArrayBuffer`
- *   backing a typed-array field in the pack, deduplicating shared buffers.
- * - `assertSchemaVersion(pack, expectedVersion)` — generic schema-version
- *   rejection; throws `RangeError` on mismatch.
+ * This module owns the generic contract:
+ * - `createDeterministicEvaluationPack(seed, inputs)` builds a pack from a
+ *   seed and transport-neutral inputs. The same reproducibility tuple
+ *   `(seed, agentCount, schemaVersion)` produces byte-identical arrays on the
+ *   same runtime.
+ * - `resolveTransferList(pack)` collects every distinct `ArrayBuffer` backing
+ *   a typed-array field, so `postMessage` can transfer the pack without
+ *   copying.
+ * - `assertSchemaVersion(pack, expectedVersion)` rejects incompatible pack
+ *   shapes at the boundary with a clear `RangeError`.
+ *
+ * The pack is intentionally transport-neutral. It does not know about domain
+ * frames, opponent snapshots, or simulation physics; the benchmark's Layer 3 wrapper
+ * injects that state after the pack arrives. This split lets Layer 2 stay
+ * reusable while each benchmark keeps its own frame format and lifecycle.
+ *
+ * Determinism here is bounded to the same runtime. The pack is filled with a
+ * self-contained xorshift32 PRNG, so same seed plus same inputs yields the
+ * same arrays on the same Node or browser build. Cross-runtime byte identity
+ * is not promised because typed-array layout, transfer semantics, and
+ * floating-point reduction order can differ between environments.
+ *
+ * ```mermaid
+ * flowchart TD
+ *   classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+ *   classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+ *
+ *   Core[Layer 1 — NGE core<br/>collective evaluation]:::base --> Pack[Layer 2 — generic pack<br/>seed + agentCount + schemaVersion]:::accent
+ *   Pack --> Transfer[postMessage + transfer list<br/>zero-copy worker handoff]:::base
+ *   Transfer --> Wrap[Layer 3 — benchmark wrapper<br/>populateEvaluationFrame, etc.]:::base
+ *   Wrap --> Frame[benchmark frame<br/>EvaluationFrame]:::accent
+ * ```
+ *
+ * For background on the PRNG family used to fill the arrays, see Marsaglia,
+ * G. (2003), "Xorshift RNGs," *Journal of Statistical Software*, 8(14), 1–6,
+ * https://www.jstatsoft.org/article/view/v008i14, and Wikipedia contributors,
+ * [Pseudorandom number generator](https://en.wikipedia.org/wiki/Pseudorandom_number_generator).
+ * For background on the worker boundary where the zero-copy transfer list is
+ * consumed, see Wikipedia contributors,
+ * [Web Workers](https://en.wikipedia.org/wiki/Web_Workers), and MDN Web Docs,
+ * [Transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects_from_one_worker_to_another).
+ *
+ * Example: create a generic pack and resolve its zero-copy transfer list for a
+ * worker.
+ *
+ * ```ts
+ * const pack = createDeterministicEvaluationPack(42, {
+ *   agentCount: 4,
+ *   schemaVersion: 'eval-pack-v1',
+ * });
+ * const transferList = resolveTransferList(pack);
+ * worker.postMessage({ type: 'eval', pack }, transferList);
+ * ```
+ *
+ * Example: assert a schema version before reading typed-array fields.
+ *
+ * ```ts
+ * assertSchemaVersion(receivedPack, 'eval-pack-v1');
+ * // now safe to read pack.arrays
+ * ```
+ *
+ * Practical reading order:
+ *
+ * 1. Start here for the generic pack contract, the reproducibility tuple, and
+ *    the layer map.
+ * 2. Read `createDeterministicEvaluationPack` for seed-to-array semantics.
+ * 3. Read `resolveTransferList` for zero-copy transfer-list resolution.
+ * 4. Read `assertSchemaVersion` for forward-compatibility rejection.
  *
  * @module network.evaluation-pack
  */
@@ -24,10 +85,14 @@
 /**
  * Transport-neutral deterministic evaluation pack.
  *
- * A pack is the complete deterministic initial state for one evaluation
- * episode.  Given the same `seed` and the same `EvaluationPackInputs`, the
- * pack's typed arrays are byte-identical within a single runtime (Level 2
- * ordered-deterministic).
+ * A pack is the transport-neutral deterministic initial state for the generic
+ * evaluation-pack arrays. Benchmark-specific episode state such as
+ * `opponentSnapshot`, `trackId`, or `featureFlags` is injected by the Layer 3
+ * wrapper after the pack arrives, not by this generic type.
+ *
+ * Given the same `seed` and the same `EvaluationPackInputs`, the pack's typed
+ * arrays are byte-identical within a single runtime (same Node or browser
+ * build). Cross-runtime byte identity is not promised.
  *
  * The `arrays` field holds every typed array that participates in zero-copy
  * transfer; `resolveTransferList` walks this collection to build the
@@ -48,8 +113,11 @@ export type DeterministicEvaluationPack = {
  * Captures the reproducibility tuple components that are NOT the seed:
  * `agentCount` (determines typed-array sizes) and `schemaVersion` (forward-
  * compatibility sentinel).  Benchmark-specific inputs (opponent snapshots,
- * track physics, etc.) are injected by the benchmark's own wrapper, not by
+ * simulation physics, etc.) are injected by the benchmark's own wrapper, not by
  * this generic type.
+ *
+ * Generic reproducibility tuple: `(seed, agentCount, schemaVersion)`. Same
+ * tuple → identical pack on the same runtime.
  */
 export type EvaluationPackInputs = {
   /** Number of agent slots (determines typed-array lengths). */
@@ -61,12 +129,19 @@ export type EvaluationPackInputs = {
 /**
  * Constructs a deterministic evaluation pack from a seed and transport-neutral
  * inputs.  Identical `(seed, inputs)` → identical pack on the same runtime
- * (Level 2 ordered-deterministic).
+ * (same Node or browser build).
  *
  * The pack's typed arrays are filled by a self-contained xorshift32 PRNG
- * seeded from `seed`.  The PRNG algorithm matches the same family used in
+ * seeded from `seed`. The PRNG algorithm matches the same family used in
  * `src/neat/rng/core/` but is duplicated here to avoid a cross-layer
- * dependency — Layer 2 must not import NEAT core internals.
+ * dependency — Layer 2 must not import NEAT core internals. For background
+ * on xorshift32, see Marsaglia, G. (2003), "Xorshift RNGs," *Journal of
+ * Statistical Software*, 8(14), 1–6,
+ * https://www.jstatsoft.org/article/view/v008i14.
+ *
+ * Generic reproducibility tuple: `(seed, agentCount, schemaVersion)`. Same
+ * tuple → identical pack on the same runtime. Cross-runtime byte identity is
+ * not promised.
  *
  * @param seed - Deterministic pack seed (non-negative integer; zero falls
  * back to a non-zero constant because xorshift32 cannot advance from zero).
@@ -110,6 +185,12 @@ export function createDeterministicEvaluationPack(
  * - Every typed-array field contributes exactly one buffer entry.
  * - Shared buffers are deduplicated (listed only once).
  *
+ * The transfer list follows the HTML structured-clone transferables contract
+ * consumed by Web Workers. For background, see MDN Web Docs,
+ * [Transferable objects](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferring_objects_from_one_worker_to_another),
+ * and Wikipedia contributors,
+ * [Web Workers](https://en.wikipedia.org/wiki/Web_Workers).
+ *
  * @param pack - The deterministic evaluation pack whose buffers will transfer.
  * @returns Ordered list of `ArrayBuffer` references for postMessage transfer.
  *
@@ -132,9 +213,11 @@ export function resolveTransferList(
  * field so that a version mismatch is caught at the boundary rather than
  * silently misinterpreting the packed bytes.
  *
- * This is the generic version of the racing-specific
- * `assertRacingSchemaVersion` — the expected version is passed as a parameter
- * so any benchmark can use the same boundary guard.
+ * This is the generic version of the domain-specific schema-version guards used
+ * by individual benchmarks — the expected version is passed as a parameter
+ * so any benchmark can use the same boundary guard. Schema-version sentinels
+ * are a common forward-compatibility technique; see Wikipedia contributors,
+ * [Forward compatibility](https://en.wikipedia.org/wiki/Forward_compatibility).
  *
  * @param pack - Object with a `schemaVersion` field.
  * @param expectedVersion - Expected schema-version sentinel.
@@ -161,50 +244,26 @@ export function assertSchemaVersion(
 // Helpers (below the fold)
 // ---------------------------------------------------------------------------
 
-/** Left-shift amount for the first xorshift32 state-mixing step. */
+// xorshift32 shift constants. See Marsaglia (2003), "Xorshift RNGs."
 const PACK_PRNG_SHIFT_LEFT_PRIMARY = 13;
-
-/** Right-shift amount for the middle xorshift32 state-mixing step. */
 const PACK_PRNG_SHIFT_RIGHT_PRIMARY = 17;
-
-/** Left-shift amount for the final xorshift32 state-mixing step. */
 const PACK_PRNG_SHIFT_LEFT_SECONDARY = 5;
 
-/**
- * Divisor-plus-one used to normalize the 32-bit integer PRNG state into the
- * `[0, 1)` range.  Stored as the divisor boundary so the normalization step
- * reads as an explicit integer-to-float conversion.
- */
+// Divisor boundary for converting the unsigned 32-bit PRNG state into [0, 1).
 const PACK_PRNG_NORMALIZATION_DIVISOR = 0xffff_ffff;
 
-/**
- * Fallback seed when the caller-provided seed is zero.  Xorshift32 cannot
- * advance from a zero state, so this non-zero constant is the guarded escape
- * hatch that keeps initialization valid.
- */
+// Fallback seed: xorshift32 cannot advance from a zero state.
 const PACK_PRNG_FALLBACK_SEED = 0x1a2b3c4d;
 
-/**
- * Scaling factor applied to agent weight values so they span a meaningful
- * range rather than collapsing toward [0, 1).
- */
+// Scaling factor applied to agent weight values.
 const PACK_WEIGHT_SCALE = 1_000;
 
-/** Maximum value (exclusive) for `Uint8Array` agent-active flags. */
+// Exclusive upper bound for Uint8Array agent-active flags.
 const PACK_U8_RANGE = 256;
 
-/**
- * Creates a deterministic xorshift32 PRNG closure from a seed.
- *
- * Given the same seed, the returned function always produces the same
- * sequence of pseudo-random floats in `[0, 1)`.  The algorithm matches the
- * xorshift32 family used in `src/neat/rng/core/` but is self-contained here
- * to avoid a cross-layer dependency from Layer 2 to NEAT core.
- *
- * @param seed - Non-negative integer seed (zero falls back to a non-zero
- * constant).
- * @returns A function that returns the next deterministic float in `[0, 1)`.
- */
+// Creates a deterministic xorshift32 PRNG closure from a seed. The returned
+// function always produces the same sequence for the same seed, keeping the
+// evaluation pack self-contained and free of cross-layer dependencies.
 function createPackPRNG(seed: number): () => number {
   let state = seed === 0 ? PACK_PRNG_FALLBACK_SEED : seed >>> 0;
 
@@ -219,18 +278,9 @@ function createPackPRNG(seed: number): () => number {
   };
 }
 
-/**
- * Builds the typed arrays for an evaluation pack from a PRNG and agent count.
- *
- * Each array is filled with deterministic values drawn from the PRNG in a
- * fixed order: agent states first, then agent weights, then agent active
- * flags.  This ordering guarantees that the same `(seed, agentCount)` tuple
- * always produces byte-identical arrays.
- *
- * @param prng - Deterministic PRNG closure (from `createPackPRNG`).
- * @param agentCount - Number of agent slots (determines each array's length).
- * @returns Array of typed arrays ready for the pack's `arrays` field.
- */
+// Builds the typed arrays for an evaluation pack from a PRNG and agent count.
+// Arrays are filled in a fixed order (states, weights, flags) so the same
+// `(seed, agentCount)` tuple always produces byte-identical arrays.
 function buildPackArrays(
   prng: () => number,
   agentCount: number,
@@ -248,18 +298,9 @@ function buildPackArrays(
   return [agentStates, agentWeights, agentActive];
 }
 
-/**
- * Collects distinct `ArrayBuffer` references from a collection of typed
- * arrays, deduplicating shared buffers.
- *
- * Two typed arrays that view the same underlying `ArrayBuffer` (e.g. offset
- * views into a shared slab) produce exactly one buffer entry, not two.
- * This matches the transfer-list contract required by `postMessage` zero-
- * copy transfer.
- *
- * @param arrays - Typed-array views whose backing buffers will transfer.
- * @returns Ordered list of distinct `ArrayBuffer` references.
- */
+// Collects distinct ArrayBuffer references from a collection of typed arrays,
+// deduplicating shared buffers so each underlying buffer appears only once in
+// the postMessage transfer list.
 function collectDistinctBuffers(
   arrays: readonly ArrayBufferView[],
 ): ArrayBuffer[] {

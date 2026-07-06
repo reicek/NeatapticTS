@@ -19,10 +19,12 @@ export interface SplineSampleFrame {
  * Builds the shared Catmull-Rom lane-center samples for a closed-loop track.
  *
  * @param segments - Ordered closed-loop control segments.
+ * @param laneCount - Number of drivable lanes; defaults to 2.
  * @returns Stable spline samples shared by the renderer and controllers.
  */
 export function buildTrackSplineSamples(
   segments: readonly TrackSegment[],
+  laneCount: number = 2,
 ): readonly SplineSample[] {
   if (segments.length === 0) {
     return [];
@@ -59,13 +61,19 @@ export function buildTrackSplineSamples(
         interpolationFactor,
       );
 
+      const sampleWidth =
+        segment.width + (nextWidth - segment.width) * interpolationFactor;
+      const sampleLaneWidthWorld = sampleWidth / laneCount;
+
       splineSamples.push({
         ...sampledPoint,
-        width:
-          segment.width + (nextWidth - segment.width) * interpolationFactor,
+        width: sampleWidth,
         segmentIndex,
         sampleIndexWithinSegment,
         globalIndex: splineSamples.length,
+        laneCount,
+        laneWidthWorld: sampleLaneWidthWorld,
+        innerOffsetWorld: sampleWidth / 2 - sampleLaneWidthWorld / 2,
       });
     }
   }
@@ -113,6 +121,42 @@ export function resolveSplineSampleFrame(
     tangentHeadingRadians: Math.atan2(tangentDeltaY, tangentDeltaX),
     normalX: -tangentUnitY,
     normalY: tangentUnitX,
+  };
+}
+
+/**
+ * Resolves the lateral distance from the road centerline to the inner-lane
+ * centerline for one sample.
+ *
+ * @param splineSample - Sample carrying lane geometry metadata.
+ * @returns Inner-lane centerline offset in world units.
+ */
+export function resolveInnerLaneCenterlineOffsetWorld(
+  splineSample: SplineSample,
+): number {
+  const laneCount = splineSample.laneCount ?? 2;
+  const laneWidthWorld =
+    splineSample.laneWidthWorld ?? splineSample.width / laneCount;
+
+  return splineSample.width / 2 - laneWidthWorld / 2;
+}
+
+/**
+ * Resolves the world-space point on the inner-lane centerline for one sample.
+ *
+ * @param splineSample - Sample whose centerline anchor is known.
+ * @param splineSampleFrame - Local tangent frame for the sample.
+ * @returns World-space point on the inner-lane centerline.
+ */
+export function resolveInnerLaneCenterlinePoint(
+  splineSample: SplineSample,
+  splineSampleFrame: SplineSampleFrame,
+): { readonly x: number; readonly y: number } {
+  const innerOffsetWorld = resolveInnerLaneCenterlineOffsetWorld(splineSample);
+
+  return {
+    x: splineSample.x + splineSampleFrame.normalX * innerOffsetWorld,
+    y: splineSample.y + splineSampleFrame.normalY * innerOffsetWorld,
   };
 }
 

@@ -1,9 +1,13 @@
 ---
 name: reproducibility-contracts
-description: 'Design, implement, or validate reproducibility and determinism contracts in NeatapticTS. Use when work depends on stable seeds, RNG state capture, ordered evaluation, worker replay, serialization fidelity, floating-point caveats, exact resume claims, or cross-environment reproducibility boundaries for Node, browser, and worker execution.'
+description: 'Use when: designing reproducibility contracts for seeds, RNG, replay, or workers.'
 argument-hint: 'Describe the deterministic claim you need to support, the runtime surfaces involved, whether replay must be exact or best-effort, and the validation target for seed, ordering, worker, or floating-point behavior.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - checkpointing-persistence
+  - multithread-evaluation
+  - hybrid-training-interop
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -24,6 +28,10 @@ the shared determinism language those skills should reuse.
 See [reproducibility sources](./references/reproducibility-sources.md) for
 paraphrased reference notes on PRNG state, floating-point caveats, and
 structured clone semantics.
+
+## When NOT to use
+
+Do NOT use for stochastic work that does not require determinism guarantees. Do NOT use for checkpoint management - use `checkpointing-persistence` instead.
 
 ## Scope Boundary
 
@@ -115,6 +123,12 @@ If any required component is missing, the claim weakens.
 - Functions, DOM nodes, and some metadata cannot be cloned.
 - Replay claims across workers must use clone-safe payloads and explicit state.
 
+## Workflow Diagram
+
+```text
+Flowchart summary: "Repro claim" → "What level?"; "What level?" → "Basic determinism" (Same seed, same output), "Ordered determinism" (Same seed, same sequence), "Strict determinism" (Bitwise identical); "Basic determinism" → "Record contract"; "Ordered determinism" → "Record contract"; "Strict determinism" → "Record contract"; "Record contract" → "Write test"; "Write test" → "Verify"; "Verify".
+```
+
 ## Task Packet
 
 Pass a compact packet that includes:
@@ -198,6 +212,34 @@ Validation: repeated runs produce identical ordered fitness results and matching
 - Replay hash or output comparison at the declared checkpoint boundary.
 - Negative test proving that missing tuple components weaken the claim as
   documented.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Determinism claim" → "What level needed?"; "What level needed?" → "Level 1: Seed-repeatable" (Same seed, same high-level output), "Level 2: Ordered deterministic" (Same seed + ordering rules), "Level 3: Replay exact" (Bit-identical at checkpoint), "Level 4: Cross-environment bounded" (Cross Node/browser/worker); "Level 1: Seed-repeatable" → "Capture seed + document caveats"; "Level 2: Ordered deterministic" → "Capture seed + ordering + tie-breaks"; "Level 3: Replay exact" → "Capture full tuple: seed, RNG state, serialized state"; "Level 4: Cross-environment bounded" → "Document floating-point + transport caveats"; "Capture seed + document caveats"; "Capture seed + ordering + tie-breaks"; "Capture full tuple: seed, RNG state, serialized state"; "Document floating-point + transport caveats".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```ts
+// vague: no level named, no caveats
+/** Produces deterministic results with the same seed. */
+```
+
+**After:**
+
+```ts
+// precise: level named, seed and tolerance stated
+/**
+ * Ordered deterministic (Level 2): same seed, same inputs,
+ * and same worker partition order produce identical fitness
+ * results on the same runtime. Not cross-environment exact;
+ * floating-point accumulation order may differ across Node
+ * and browser workers.
+ */
+```
 
 ## Guardrails
 

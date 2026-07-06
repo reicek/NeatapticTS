@@ -12,12 +12,16 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
+// Tests run from the repository root, so cwd is a stable anchor for repo-relative
+// paths without needing import.meta.url (which currently breaks ts-jest for the
+// mcp-semantic-scripts project).
+const REPO_ROOT = path.resolve();
+
 interface ToolCallResult {
   isError: boolean;
   structuredContent?: Record<string, unknown>;
 }
 
-const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const BUILD_INDEX_PATH = path.join(
   REPO_ROOT,
   'scripts',
@@ -30,7 +34,7 @@ const SNAPSHOT_SCRIPT_PATH = path.join(
   'semantic-index',
   'build-browser-snapshot.mjs',
 );
-const DATABASE_PATH = path.join(REPO_ROOT, 'data', 'semantic-index.sqlite');
+const DATABASE_PATH = path.join(REPO_ROOT, 'data', 'turso-replica.sqlite');
 
 const runModuleEvaluation = <Result>(source: string): Result => {
   const output = execFileSync(
@@ -69,7 +73,7 @@ describe('repo cortex MCP premium primary search defaults', () => {
     it('returns compact results by default', () => {
       const result = runModuleEvaluation<ToolCallResult>(`
         import { createRepoCortexMcpServer } from './scripts/mcp-semantic/repo-cortex-mcp.mjs';
-        const server = createRepoCortexMcpServer({ databasePath: './data/semantic-index.sqlite' });
+        const server = createRepoCortexMcpServer({ databasePath: './rag-index/data/turso-replica.sqlite' });
         const result = await server.dispatch({
           jsonrpc: '2.0',
           id: 1,
@@ -85,7 +89,7 @@ describe('repo cortex MCP premium primary search defaults', () => {
     it('returns a freshness proof after a successful index update', () => {
       const result = runModuleEvaluation<ToolCallResult>(`
         import { createRepoCortexMcpServer } from './scripts/mcp-semantic/repo-cortex-mcp.mjs';
-        const server = createRepoCortexMcpServer({ databasePath: './data/semantic-index.sqlite' });
+        const server = createRepoCortexMcpServer({ databasePath: './rag-index/data/turso-replica.sqlite' });
         const result = await server.dispatch({
           jsonrpc: '2.0',
           id: 1,
@@ -113,7 +117,7 @@ describe('repo cortex MCP premium primary search defaults', () => {
     it('returns compact results and an inline top result by default', () => {
       const result = runModuleEvaluation<ToolCallResult>(`
         import { createRepoCortexMcpServer } from './scripts/mcp-semantic/repo-cortex-mcp.mjs';
-        const server = createRepoCortexMcpServer({ databasePath: './data/semantic-index.sqlite' });
+        const server = createRepoCortexMcpServer({ databasePath: './rag-index/data/turso-replica.sqlite' });
         const result = await server.dispatch({
           jsonrpc: '2.0',
           id: 1,
@@ -134,15 +138,15 @@ describe('repo cortex MCP premium primary search defaults', () => {
   });
 
   describe('search_advanced', () => {
-    it('triggers auto_fallback by default for low-confidence queries', () => {
+    it('triggers auto_fallback when the primary pipeline returns no results', () => {
       const result = runModuleEvaluation<ToolCallResult>(`
         import { createRepoCortexMcpServer } from './scripts/mcp-semantic/repo-cortex-mcp.mjs';
-        const server = createRepoCortexMcpServer({ databasePath: './data/semantic-index.sqlite' });
+        const server = createRepoCortexMcpServer({ databasePath: './rag-index/data/turso-replica.sqlite' });
         const result = await server.dispatch({
           jsonrpc: '2.0',
           id: 1,
           method: 'tools/call',
-          params: { name: 'search_advanced', arguments: { query: 'completely nonexistent xyzabc123' } },
+          params: { name: 'search_advanced', arguments: { query: 'completely nonexistent xyzabc123', use_dense: false } },
         });
         console.log(JSON.stringify(result));
       `);
@@ -153,7 +157,7 @@ describe('repo cortex MCP premium primary search defaults', () => {
     it('applies include_code_only by default for code_specific queries', () => {
       const result = runModuleEvaluation<ToolCallResult>(`
         import { createRepoCortexMcpServer } from './scripts/mcp-semantic/repo-cortex-mcp.mjs';
-        const server = createRepoCortexMcpServer({ databasePath: './data/semantic-index.sqlite' });
+        const server = createRepoCortexMcpServer({ databasePath: './rag-index/data/turso-replica.sqlite' });
         const result = await server.dispatch({
           jsonrpc: '2.0',
           id: 1,

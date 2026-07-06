@@ -1,9 +1,13 @@
 ---
 name: worker-inference-transport
-description: 'Design, implement, harden, or validate worker-friendly network serialization and inference transport in NeatapticTS. Use when working on inference IR extraction, portable or transferable payloads, MessageChannel predictors, SharedArrayBuffer paths, workerUrl overrides, structured clone constraints, or browser and node worker parity.'
+description: 'Use when: designing worker-friendly network serialization/inference transport.'
 argument-hint: 'Describe the transport strategy, current phase in Worker_Friendly_Network_Serialization_Fastpath.md, target environment, and whether this pass is reconnaissance, implementation, benchmark, or validation.'
 user-invocable: true
 disable-model-invocation: false
+skills:
+  - multithread-evaluation
+  - performance-optimization
+  - reproducibility-contracts
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -49,6 +53,10 @@ platform notes, cost models, and attribution.
 - Browser worker delivery, blob worker fallback, or CSP-sensitive workerUrl
   behavior needs hardening.
 - Shared memory is being considered and the task needs explicit fallback rules.
+
+## When NOT to use
+
+Do NOT use for general worker management - use `multithread-evaluation` instead. Do NOT use for performance optimization of shared library code - use `performance-optimization` instead.
 
 ## Transport Ladder
 
@@ -105,6 +113,12 @@ Use this simple model when comparing strategies:
 
 Choose the next strategy only if the additional complexity is justified by a
 measured bottleneck, not by intuition alone.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Payload to send" → "Check structuredClone"; "Check structuredClone" → "Cloneable?"; "Cloneable?" → "postMessage directly" (Yes), "Serialize to transferable" (No); "postMessage directly" → "Worker receives"; "Serialize to transferable" → "Use transfer list"; "Worker receives" → "Process in worker"; "Use transfer list" → "Worker receives"; "Process in worker" → "Return result"; "Return result".
+```
 
 ## Task Packet
 
@@ -190,6 +204,29 @@ Validate with: focused worker-payload tests, multithreading tests if loader code
   - `src/multithreading/workers/workers.test.ts`
 - A benchmark or timing probe when the reason for the change is transport cost.
 - `npm run test:silent` only when the active step packet or user explicitly requires repo-wide confirmation; otherwise, report the focused slice result as the gate evidence.
+
+## Decision Tree
+
+```text
+Flowchart summary: "Payload to transport" → "Reuse across many calls?"; "Reuse across many calls?" → "Transferable typed arrays?" (No, one-shot), "Shared memory available?" (Yes, repeated); "Transferable typed arrays?" → "TransferableInferencePayload" (Yes, owned), "PortableInferencePayload" (No, structured-clone safe); "Shared memory available?" → "SharedInferenceWorker" (Yes, COOP/COEP set), "InferenceChannel" (No / uncertain); "TransferableInferencePayload"; "PortableInferencePayload"; "SharedInferenceWorker"; "InferenceChannel".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```ts
+// verbose payload: deep-clones every message, no ownership transfer
+worker.postMessage({ ir: network.toJSON(), input: float32Array });
+```
+
+**After:**
+
+```ts
+// optimized transferable: zero-copy ownership move with portable fallback
+const { buffer } = float32Array;
+worker.postMessage({ ir, input: buffer }, [buffer]);
+```
 
 ## Guardrails
 

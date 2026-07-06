@@ -13,7 +13,7 @@ const SUBSTRATE_AXES = ['x', 'y', 'z'] as const;
 type SubstrateAxis = (typeof SUBSTRATE_AXES)[number];
 
 /**
- * Clamp one raw substrate coordinate into the Step 03 unit cube.
+ * Clamp one raw substrate coordinate into the unit cube.
  *
  * @param raw - Raw three-axis coordinate to normalize.
  * @returns Clamped coordinate whose axes stay within `[0, 1]`.
