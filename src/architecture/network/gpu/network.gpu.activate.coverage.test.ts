@@ -355,6 +355,76 @@ describe('network.gpu.activate coverage', () => {
         ),
       ).toThrow('activateGPU: missing bind group for level 1');
     });
+
+    it('uses per-level workgroup counts when provided', () => {
+      const bufferSet = {
+        nodeCount: 4,
+        topoLevelCount: 3,
+      } as unknown as GPUBufferSet;
+      const pipeline = {} as unknown as GPUComputePipeline;
+      const dispatchCalls: number[] = [];
+      const pass = {
+        setPipeline: jest.fn(),
+        setBindGroup: jest.fn(),
+        dispatchWorkgroups: jest.fn((x: number) => {
+          dispatchCalls.push(x);
+        }),
+        end: jest.fn(),
+      };
+      const commandEncoder = {
+        beginComputePass: jest.fn(() => pass),
+      } as unknown as GPUCommandEncoder;
+      const levelBindGroups: (GPUBindGroup | undefined)[] = [
+        undefined,
+        {} as unknown as GPUBindGroup,
+        {} as unknown as GPUBindGroup,
+      ];
+      const levelWorkgroupCounts = [0, 7, 9];
+
+      encodeActivationKernel(
+        commandEncoder,
+        bufferSet,
+        pipeline,
+        levelBindGroups,
+        levelWorkgroupCounts,
+      );
+
+      expect(dispatchCalls).toEqual([7, 9]);
+    });
+
+    it('falls back to the global workgroup count when per-level counts are omitted', () => {
+      const bufferSet = {
+        nodeCount: 4,
+        topoLevelCount: 3,
+      } as unknown as GPUBufferSet;
+      const pipeline = {} as unknown as GPUComputePipeline;
+      const dispatchCalls: number[] = [];
+      const pass = {
+        setPipeline: jest.fn(),
+        setBindGroup: jest.fn(),
+        dispatchWorkgroups: jest.fn((x: number) => {
+          dispatchCalls.push(x);
+        }),
+        end: jest.fn(),
+      };
+      const commandEncoder = {
+        beginComputePass: jest.fn(() => pass),
+      } as unknown as GPUCommandEncoder;
+      const levelBindGroups: (GPUBindGroup | undefined)[] = [
+        undefined,
+        {} as unknown as GPUBindGroup,
+        {} as unknown as GPUBindGroup,
+      ];
+
+      encodeActivationKernel(
+        commandEncoder,
+        bufferSet,
+        pipeline,
+        levelBindGroups,
+      );
+
+      expect(dispatchCalls).toEqual([1, 1]);
+    });
   });
 
   describe('bind group layout cache', () => {
