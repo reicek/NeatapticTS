@@ -59,7 +59,9 @@ This path caches the topology buffers, the compiled pipeline, and one output
 staging buffer per output size, which removes buffer churn and recompilation
 overhead. The dominant remaining cost is per-call readback, which the batched
 activation path amortizes through `skipUpload` and repeated `iterations`,
-but does not eliminate.
+but does not eliminate. For a deeper walkthrough of the measured bottleneck
+and the optimization strategies, see the
+[WebGPU Performance Guide](../../../docs/webgpu-performance-guide.md).
 
 ```mermaid
 flowchart TD
@@ -136,6 +138,29 @@ Example:
 ```ts
 const output = await activateGPUWithFreshState(device, network, [0.5, -0.2]);
 ```
+
+### computeLevelWorkgroupCounts
+
+```ts
+computeLevelWorkgroupCounts(
+  bufferSet: GPUBufferSet,
+): number[]
+```
+
+Compute the workgroup dispatch count for each topological level.
+
+The activation kernel launches one thread per node and each thread checks
+its topological level against the dispatch level. Using a per-level dispatch
+size avoids launching empty workgroups for levels with far fewer nodes than
+the full network (for example a small output layer on a large hidden layer),
+which removes the dominant source of dispatch overhead for multi-layer
+perceptrons.
+
+Parameters:
+- `bufferSet` - Uploaded buffer metadata including `topoLevelsArray`.
+
+Returns: Array where index `level` is the number of workgroups to dispatch
+for that level. Index 0 is unused because input nodes are never dispatched.
 
 ### computeTopologyHash
 
@@ -262,26 +287,30 @@ encodeActivationKernel(
   bufferSet: GPUBufferSet,
   pipeline: GPUComputePipeline,
   levelBindGroups: any[],
+  levelWorkgroupCounts: number[] | undefined,
 ): void
 ```
 
 Record the activation kernel dispatches for every topological level into the
 supplied command encoder.
 
-The kernel is written as one compute pass per topological level rather than a
-single pass because each level must see the node writes produced by the
-previous level. Compute passes within the same command encoder are still
-submitted together, so the CPU pays for submission only once. The params
-uniform is supplied by a per-level bind group, so no queue writes or
-intermediate submissions are needed between levels. The caller submits the
-encoder; awaiting `mapAsync` on the output staging buffer is sufficient
-synchronization for readback.
+All levels are recorded into a single compute pass because dispatches within
+the same pass execute in submission order and the WebGPU memory model makes
+each level's node writes visible to the next level without requiring separate
+compute-pass boundaries. This removes per-level pass overhead while keeping
+the correct dependency ordering. The params uniform is supplied by a per-level
+bind group, so no queue writes or intermediate submissions are needed between
+levels. The caller submits the encoder; awaiting `mapAsync` on the output
+staging buffer is sufficient synchronization for readback.
 
 Parameters:
-- `commandEncoder` - Encoder that will hold all compute passes.
+- `commandEncoder` - Encoder that will hold the compute pass.
 - `bufferSet` - Uploaded network slab buffers.
 - `pipeline` - Compiled activation pipeline.
 - `levelBindGroups` - Per-level bind groups from `createLevelBindGroups`.
+- `levelWorkgroupCounts` - Optional per-level workgroup dispatch counts.
+When provided, each level is dispatched with exactly the workgroups needed
+for its node count instead of the whole-network ceiling.
 
 ### ensureNetworkGPUState
 
@@ -1472,27 +1501,22 @@ limit.
 This module implements several optimization strategies:
 
 - Persistent per-device GPU state cached through `ensureNetworkGPUState()`.
-- One combined command buffer with many compute passes and a single readback.
+- One combined command buffer with a single compute pass and a single readback.
 - A shared mappable staging buffer for the whole output matrix.
 - Optional `skipUpload` to avoid rewriting unchanged weights and inputs.
 - Optional `iterations` to amortize synchronization over many forward passes.
-- Topology-aware dispatch scheduling so each topological level runs in its own
-  compute pass.
+- Topology-aware dispatch scheduling so each topological level is dispatched
+  with exactly the workgroups it needs, avoiding empty workgroups for small
+  output layers on large networks.
 
 The WebGPU command-encoding model rewards batching. Every `queue.submit()` call
 carries fixed driver/queue overhead, while individual `dispatchWorkgroups()`
 calls inside the same compute pass share the pass begin/end cost and execute
 sequentially in submission order. That sequential ordering is exactly what a
 Kahn-style topological sort needs: nodes at level k are dispatched after nodes
-at level k-1 have written their activations. Because each network uses its own
-bind group (different buffer set), `setPipeline` is called per network here;
-networks that share topology could go further and share one pipeline with only
-bind-group switches, which is the pattern TensorFlow.js and burn use to keep
-GPU-resident tensors batched into a single `queue.submit()`.
-
-CSR input layout and fused activation passes are outside the scope of this
-implementation; the current path keeps each network in its own bind group and
-dispatches one compute pass per topological level.
+at level k-1 have written their activations. Each network uses its own bind
+group (different buffer set), and networks that share topology reuse the same
+compiled pipeline with only bind-group switches.
 
 ### batchActivate
 
@@ -1509,13 +1533,13 @@ Batched GPU activation for multi-agent evaluation.
 
 Reuses the per-network persistent GPU state managed by
 `ensureNetworkGPUState()`, uploads only the dynamic node/connection data
-and the input matrix each call, dispatches all networks in one or more compute
-passes once per topological level, and reads back the output matrix through a
-single reusable staging buffer. This removes the per-call buffer allocation,
-mapping, and destruction that otherwise make the GPU path slower than the CPU
-path for small networks. The optional `iterations` flag records many
-independent passes inside a single command buffer with only one CPU-GPU
-readback.
+and the input matrix each call, dispatches all networks and all iterations
+inside a single compute pass once per topological level, and reads back the
+output matrix through a single reusable staging buffer. This removes the
+per-call buffer allocation, mapping, and destruction that otherwise make
+the GPU path slower than the CPU path for small networks. The optional
+`iterations` flag records many independent passes inside a single command
+buffer with only one CPU-GPU readback.
 
 Because every pass is recorded before the command buffer is submitted, only
 one `mapAsync` call is needed for the final result. The WebGPU specification

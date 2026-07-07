@@ -58,7 +58,9 @@
  * staging buffer per output size, which removes buffer churn and recompilation
  * overhead. The dominant remaining cost is per-call readback, which the batched
  * activation path amortizes through `skipUpload` and repeated `iterations`,
- * but does not eliminate.
+ * but does not eliminate. For a deeper walkthrough of the measured bottleneck
+ * and the optimization strategies, see the
+ * [WebGPU Performance Guide](../../../docs/webgpu-performance-guide.md).
  *
  * ```mermaid
  * flowchart TD
@@ -90,7 +92,8 @@
  *   for staging-ring best practices.
  * @see [burn-wgpu compute server](https://github.com/tracel-ai/burn/blob/v0.12.1/burn-wgpu/src/compute/server.rs)
  *   for a cross-library size-keyed handle pool.
- * @see [WebGPU Performance Guide](https://github.com/reicek/NeatapticTS/blob/main/docs/webgpu-performance-guide.md)
+ * @see [WebGPU Performance Guide](../../../docs/webgpu-performance-guide.md)
+ *   for measured overhead, optimization strategies, and CPU/GPU crossover analysis.
  *
  * @module
  */
@@ -131,6 +134,8 @@ interface NetworkGPUState {
   levelParamsBuffers: (GPUBuffer | undefined)[];
   /** Per-level bind groups selecting the matching params buffer. */
   levelBindGroups: (GPUBindGroup | undefined)[];
+  /** Per-level workgroup dispatch count sized to the actual nodes in each level. */
+  levelWorkgroupCounts: number[];
 }
 
 /** Per-network cache of uploaded GPU state, keyed by the live network object. */
@@ -317,6 +322,7 @@ export function ensureNetworkGPUState(
     bufferSet,
     levelParamsBuffers,
   );
+  const levelWorkgroupCounts = computeLevelWorkgroupCounts(bufferSet);
 
   const state: NetworkGPUState = {
     device,
@@ -324,10 +330,40 @@ export function ensureNetworkGPUState(
     bufferSet,
     levelParamsBuffers,
     levelBindGroups,
+    levelWorkgroupCounts,
   };
 
   networkGPUStateCache.set(network, state);
   return { state, pipeline };
+}
+
+/**
+ * Compute the workgroup dispatch count for each topological level.
+ *
+ * The activation kernel launches one thread per node and each thread checks
+ * its topological level against the dispatch level. Using a per-level dispatch
+ * size avoids launching empty workgroups for levels with far fewer nodes than
+ * the full network (for example a small output layer on a large hidden layer),
+ * which removes the dominant source of dispatch overhead for multi-layer
+ * perceptrons.
+ *
+ * @param bufferSet - Uploaded buffer metadata including `topoLevelsArray`.
+ * @returns Array where index `level` is the number of workgroups to dispatch
+ *   for that level. Index 0 is unused because input nodes are never dispatched.
+ */
+function computeLevelWorkgroupCounts(bufferSet: GPUBufferSet): number[] {
+  const counts = new Array<number>(bufferSet.topoLevelCount).fill(0);
+  for (let nodeIndex = 0; nodeIndex < bufferSet.nodeCount; nodeIndex += 1) {
+    const level = bufferSet.topoLevelsArray[nodeIndex];
+    counts[level] += 1;
+  }
+  for (let level = 0; level < counts.length; level += 1) {
+    counts[level] = Math.max(
+      1,
+      Math.ceil(counts[level] / ACTIVATION_WORKGROUP_SIZE),
+    );
+  }
+  return counts;
 }
 
 /**
@@ -381,7 +417,7 @@ export async function activateGPU(
   }
 
   const { state, pipeline } = ensureNetworkGPUState(device, network);
-  const { bufferSet, levelBindGroups } = state;
+  const { bufferSet, levelBindGroups, levelWorkgroupCounts } = state;
 
   uploadDynamicNetworkBuffers(device, bufferSet, network);
   writeInputValuesToNodeStruct(device, bufferSet.nodes, typedInputs);
@@ -389,7 +425,13 @@ export async function activateGPU(
   const commandEncoder = device.createCommandEncoder({
     label: 'network_activation',
   });
-  encodeActivationKernel(commandEncoder, bufferSet, pipeline, levelBindGroups);
+  encodeActivationKernel(
+    commandEncoder,
+    bufferSet,
+    pipeline,
+    levelBindGroups,
+    levelWorkgroupCounts,
+  );
 
   return readOutputValues(commandEncoder, device, network, bufferSet);
 }
@@ -457,6 +499,7 @@ export async function activateGPUWithFreshState(
     bufferSet,
     levelParamsBuffers,
   );
+  const levelWorkgroupCounts = computeLevelWorkgroupCounts(bufferSet);
 
   uploadDynamicNetworkBuffers(device, bufferSet, network);
   writeInputValuesToNodeStruct(device, bufferSet.nodes, typedInputs);
@@ -464,7 +507,13 @@ export async function activateGPUWithFreshState(
   const commandEncoder = device.createCommandEncoder({
     label: 'network_activation_fresh',
   });
-  encodeActivationKernel(commandEncoder, bufferSet, pipeline, levelBindGroups);
+  encodeActivationKernel(
+    commandEncoder,
+    bufferSet,
+    pipeline,
+    levelBindGroups,
+    levelWorkgroupCounts,
+  );
 
   const outputs = await readOutputValues(
     commandEncoder,
@@ -851,45 +900,59 @@ function createLevelBindGroups(
  * Record the activation kernel dispatches for every topological level into the
  * supplied command encoder.
  *
- * The kernel is written as one compute pass per topological level rather than a
- * single pass because each level must see the node writes produced by the
- * previous level. Compute passes within the same command encoder are still
- * submitted together, so the CPU pays for submission only once. The params
- * uniform is supplied by a per-level bind group, so no queue writes or
- * intermediate submissions are needed between levels. The caller submits the
- * encoder; awaiting `mapAsync` on the output staging buffer is sufficient
- * synchronization for readback.
+ * All levels are recorded into a single compute pass because dispatches within
+ * the same pass execute in submission order and the WebGPU memory model makes
+ * each level's node writes visible to the next level without requiring separate
+ * compute-pass boundaries. This removes per-level pass overhead while keeping
+ * the correct dependency ordering. The params uniform is supplied by a per-level
+ * bind group, so no queue writes or intermediate submissions are needed between
+ * levels. The caller submits the encoder; awaiting `mapAsync` on the output
+ * staging buffer is sufficient synchronization for readback.
  *
- * @param commandEncoder - Encoder that will hold all compute passes.
+ * @param commandEncoder - Encoder that will hold the compute pass.
  * @param bufferSet - Uploaded network slab buffers.
  * @param pipeline - Compiled activation pipeline.
  * @param levelBindGroups - Per-level bind groups from `createLevelBindGroups`.
+ * @param levelWorkgroupCounts - Optional per-level workgroup dispatch counts.
+ *   When provided, each level is dispatched with exactly the workgroups needed
+ *   for its node count instead of the whole-network ceiling.
  */
 export function encodeActivationKernel(
   commandEncoder: GPUCommandEncoder,
   bufferSet: GPUBufferSet,
   pipeline: GPUComputePipeline,
   levelBindGroups: (GPUBindGroup | undefined)[],
+  levelWorkgroupCounts?: number[],
 ): void {
   const levelCount = bufferSet.topoLevelCount;
-  const workgroupCount = Math.ceil(
+  const globalWorkgroupCount = Math.ceil(
     bufferSet.nodeCount / ACTIVATION_WORKGROUP_SIZE,
   );
 
-  for (let level = 1; level < levelCount; level++) {
-    const bindGroup = levelBindGroups[level];
-    if (!bindGroup) {
+  // Validate bind groups before starting the compute pass so that missing
+  // groups surface with the intended error instead of a lower-level WebGPU
+  // failure.
+  for (let level = 1; level < levelCount; level += 1) {
+    if (!levelBindGroups[level]) {
       throw new Error(`activateGPU: missing bind group for level ${level}`);
     }
+  }
 
-    const pass = commandEncoder.beginComputePass({
-      label: `network_activation_pass_level_${level}`,
-    });
-    pass.setPipeline(pipeline);
+  const pass = commandEncoder.beginComputePass({
+    label: 'network_activation_pass',
+  });
+
+  pass.setPipeline(pipeline);
+
+  for (let level = 1; level < levelCount; level += 1) {
+    const bindGroup = levelBindGroups[level]!;
+    const workgroupCount =
+      levelWorkgroupCounts?.[level] ?? globalWorkgroupCount;
     pass.setBindGroup(0, bindGroup);
     pass.dispatchWorkgroups(workgroupCount);
-    pass.end();
   }
+
+  pass.end();
 }
 
 /**

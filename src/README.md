@@ -6770,13 +6770,13 @@ Batched GPU activation for multi-agent evaluation.
 
 Reuses the per-network persistent GPU state managed by
 `ensureNetworkGPUState()`, uploads only the dynamic node/connection data
-and the input matrix each call, dispatches all networks in one or more compute
-passes once per topological level, and reads back the output matrix through a
-single reusable staging buffer. This removes the per-call buffer allocation,
-mapping, and destruction that otherwise make the GPU path slower than the CPU
-path for small networks. The optional `iterations` flag records many
-independent passes inside a single command buffer with only one CPU-GPU
-readback.
+and the input matrix each call, dispatches all networks and all iterations
+inside a single compute pass once per topological level, and reads back the
+output matrix through a single reusable staging buffer. This removes the
+per-call buffer allocation, mapping, and destruction that otherwise make
+the GPU path slower than the CPU path for small networks. The optional
+`iterations` flag records many independent passes inside a single command
+buffer with only one CPU-GPU readback.
 
 Because every pass is recorded before the command buffer is submitted, only
 one `mapAsync` call is needed for the final result. The WebGPU specification

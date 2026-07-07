@@ -19,27 +19,22 @@
  * This module implements several optimization strategies:
  *
  * - Persistent per-device GPU state cached through `ensureNetworkGPUState()`.
- * - One combined command buffer with many compute passes and a single readback.
+ * - One combined command buffer with a single compute pass and a single readback.
  * - A shared mappable staging buffer for the whole output matrix.
  * - Optional `skipUpload` to avoid rewriting unchanged weights and inputs.
  * - Optional `iterations` to amortize synchronization over many forward passes.
- * - Topology-aware dispatch scheduling so each topological level runs in its own
- *   compute pass.
+ * - Topology-aware dispatch scheduling so each topological level is dispatched
+ *   with exactly the workgroups it needs, avoiding empty workgroups for small
+ *   output layers on large networks.
  *
  * The WebGPU command-encoding model rewards batching. Every `queue.submit()` call
  * carries fixed driver/queue overhead, while individual `dispatchWorkgroups()`
  * calls inside the same compute pass share the pass begin/end cost and execute
  * sequentially in submission order. That sequential ordering is exactly what a
  * Kahn-style topological sort needs: nodes at level k are dispatched after nodes
- * at level k-1 have written their activations. Because each network uses its own
- * bind group (different buffer set), `setPipeline` is called per network here;
- * networks that share topology could go further and share one pipeline with only
- * bind-group switches, which is the pattern TensorFlow.js and burn use to keep
- * GPU-resident tensors batched into a single `queue.submit()`.
- *
- * CSR input layout and fused activation passes are outside the scope of this
- * implementation; the current path keeps each network in its own bind group and
- * dispatches one compute pass per topological level.
+ * at level k-1 have written their activations. Each network uses its own bind
+ * group (different buffer set), and networks that share topology reuse the same
+ * compiled pipeline with only bind-group switches.
  *
  * @see [WebGPU](https://en.wikipedia.org/wiki/WebGPU) on Wikipedia for
  * background on the browser GPU compute API.
@@ -119,9 +114,6 @@ export interface BatchActivateOptions {
    */
   iterations?: number;
 }
-
-/** Number of threads per compute workgroup for the activation kernel. */
-const ACTIVATION_WORKGROUP_SIZE = 64;
 
 /** WebGPU buffer usage flag for mappable readback buffers. */
 const GPU_BUFFER_USAGE_MAP_READ = 0x0001;
@@ -277,13 +269,13 @@ function getOrCreateBatchedOutputStagingBuffer(
  *
  * Reuses the per-network persistent GPU state managed by
  * `ensureNetworkGPUState()`, uploads only the dynamic node/connection data
- * and the input matrix each call, dispatches all networks in one or more compute
- * passes once per topological level, and reads back the output matrix through a
- * single reusable staging buffer. This removes the per-call buffer allocation,
- * mapping, and destruction that otherwise make the GPU path slower than the CPU
- * path for small networks. The optional `iterations` flag records many
- * independent passes inside a single command buffer with only one CPU-GPU
- * readback.
+ * and the input matrix each call, dispatches all networks and all iterations
+ * inside a single compute pass once per topological level, and reads back the
+ * output matrix through a single reusable staging buffer. This removes the
+ * per-call buffer allocation, mapping, and destruction that otherwise make
+ * the GPU path slower than the CPU path for small networks. The optional
+ * `iterations` flag records many independent passes inside a single command
+ * buffer with only one CPU-GPU readback.
  *
  * Because every pass is recorded before the command buffer is submitted, only
  * one `mapAsync` call is needed for the final result. The WebGPU specification
@@ -374,11 +366,13 @@ export async function batchActivate(
   }
 
   // Ensure each network has a persistent GPU state entry. This entry caches the
-  // uploaded slab buffers, per-level params buffers, bind groups, and the
-  // compiled pipeline, so repeated batch evaluations only refresh dynamic data.
+  // uploaded slab buffers, per-level params buffers, bind groups, per-level
+  // dispatch sizes, and the compiled pipeline, so repeated batch evaluations only
+  // refresh dynamic data.
   const states = [] as {
     bufferSet: GPUBufferSet;
     levelBindGroups: (GPUBindGroup | undefined)[];
+    levelWorkgroupCounts: number[];
   }[];
   const pipelines = [] as GPUComputePipeline[];
 
@@ -405,25 +399,31 @@ export async function batchActivate(
     }
   }
 
-  // One command encoder records every requested pass. Each pass gets its own
-  // compute pass so memory writes from one iteration are visible to the next.
-  // Networks with shared topology reuse their cached pipeline by switching bind
-  // groups inside the same command encoder.
+  // One command encoder records every requested pass. A single compute pass
+  // contains all iterations and all networks because WebGPU dispatches execute
+  // in submission order and the memory model makes each level's writes visible
+  // to the next without per-iteration pass boundaries. Networks with shared
+  // topology reuse their cached pipeline by switching bind groups inside the
+  // same pass, and the pipeline is only set when it actually changes.
   const commandEncoder = device.createCommandEncoder({
     label: 'network_batched_activation',
   });
+  const computePass = commandEncoder.beginComputePass({
+    label: 'network_batched_activation_pass',
+  });
+
+  let currentPipeline: GPUComputePipeline | undefined;
 
   for (let iteration = 0; iteration < iterationCount; iteration += 1) {
-    const computePass = commandEncoder.beginComputePass({
-      label: `network_batched_activation_pass_${iteration}`,
-    });
-
     for (let index = 0; index < networks.length; index += 1) {
       const pipeline = pipelines[index];
-      const { bufferSet, levelBindGroups } = states[index];
-      const workgroupCount = Math.ceil(
-        bufferSet.nodeCount / ACTIVATION_WORKGROUP_SIZE,
-      );
+      if (pipeline !== currentPipeline) {
+        computePass.setPipeline(pipeline);
+        currentPipeline = pipeline;
+      }
+
+      const { bufferSet, levelBindGroups, levelWorkgroupCounts } =
+        states[index];
 
       for (let level = 1; level < bufferSet.topoLevelCount; level += 1) {
         const bindGroup = levelBindGroups[level];
@@ -433,14 +433,13 @@ export async function batchActivate(
           );
         }
 
-        computePass.setPipeline(pipeline);
         computePass.setBindGroup(0, bindGroup);
-        computePass.dispatchWorkgroups(workgroupCount);
+        computePass.dispatchWorkgroups(levelWorkgroupCounts[level]);
       }
     }
-
-    computePass.end();
   }
+
+  computePass.end();
 
   // Copy every network's output-node slice into a single reusable staging
   // buffer in the same command encoder, then read the whole matrix back once.
