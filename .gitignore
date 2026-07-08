@@ -31,6 +31,7 @@ rag-index/snapshots/
 
 # Coverage and test output
 /coverage/
+!/coverage/coverage-baseline.json
 /nyc_output/
 /test-results/
 /ascii_maze_snapshots/
