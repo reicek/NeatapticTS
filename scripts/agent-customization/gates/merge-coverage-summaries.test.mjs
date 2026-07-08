@@ -797,7 +797,60 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     assert.ok(baseline['scripts/agent-customization/gates/valid.mjs']);
   });
 
-  it('generateCoverageBaseline uses default options and real git status', async () => {
+  it('generateCoverageBaseline uses default paths and a mocked git status', async () => {
+    const { generateCoverageBaseline } = await loadMerge();
+    const defaultSummaryPath = path.join(
+      REPO_ROOT,
+      'coverage',
+      'coverage-summary.json',
+    );
+    const defaultBaselinePath = path.join(
+      REPO_ROOT,
+      'coverage',
+      'coverage-baseline.json',
+    );
+    mkdirSync(path.dirname(defaultSummaryPath), { recursive: true });
+    const originalSummary = existsSync(defaultSummaryPath)
+      ? readFileSync(defaultSummaryPath, 'utf8')
+      : null;
+    const originalBaseline = existsSync(defaultBaselinePath)
+      ? readFileSync(defaultBaselinePath, 'utf8')
+      : null;
+    const summary = {
+      ...makeTotal(),
+      ...makeSummaryData('src/architecture/network/gpu/network.gpu.activate.ts'),
+    };
+    writeFileSync(defaultSummaryPath, JSON.stringify(summary));
+    const stdout = ' M src/architecture/network/gpu/network.gpu.activate.ts';
+    const spawnSync = () => ({ status: 0, stdout, stderr: '' });
+
+    try {
+      const result = await generateCoverageBaseline({ spawnSync });
+      assert.equal(result.files, 1);
+      assert.equal(
+        path.normalize(result.baselinePath),
+        path.normalize(path.join('coverage', 'coverage-baseline.json')),
+      );
+      assert.ok(existsSync(defaultBaselinePath));
+      const baseline = JSON.parse(readFileSync(defaultBaselinePath, 'utf8'));
+      assert.ok(
+        baseline['src/architecture/network/gpu/network.gpu.activate.ts'],
+      );
+    } finally {
+      if (originalSummary !== null) {
+        writeFileSync(defaultSummaryPath, originalSummary);
+      } else {
+        rmSync(defaultSummaryPath, { force: true });
+      }
+      if (originalBaseline !== null) {
+        writeFileSync(defaultBaselinePath, originalBaseline);
+      } else {
+        rmSync(defaultBaselinePath, { force: true });
+      }
+    }
+  });
+
+  it('generateCoverageBaseline can be invoked without arguments', async () => {
     const { generateCoverageBaseline } = await loadMerge();
     const defaultSummaryPath = path.join(
       REPO_ROOT,
@@ -820,17 +873,11 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
 
     try {
       const result = await generateCoverageBaseline();
-      assert.ok(
-        result.files >= 1,
-        'expected at least one changed source file from git status',
-      );
       assert.equal(
         path.normalize(result.baselinePath),
         path.normalize(path.join('coverage', 'coverage-baseline.json')),
       );
       assert.ok(existsSync(defaultBaselinePath));
-      const baseline = JSON.parse(readFileSync(defaultBaselinePath, 'utf8'));
-      assert.ok(Object.keys(baseline).length >= 1);
     } finally {
       if (originalSummary !== null) {
         writeFileSync(defaultSummaryPath, originalSummary);
