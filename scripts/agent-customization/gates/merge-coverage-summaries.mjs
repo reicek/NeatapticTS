@@ -14,7 +14,9 @@
  * extracts changed source files under `src/`, `scripts/agent-customization/`,
  * and `scripts/mcp-semantic/`, and writes a per-file coverage baseline JSON
  * preserving current coverage or recording 0% for files not present in the
- * merged summary.
+ * merged summary. An explicit comma/newline separated `--source-files` list
+ * bypasses `git status` and is useful when regenerating the baseline for files
+ * that are already committed.
  *
  * Usage:
  *   node scripts/agent-customization/gates/merge-coverage-summaries.mjs
@@ -79,6 +81,20 @@ async function collectSummaryPaths(coverageDir, summaryPath) {
 }
 
 /**
+ * Convert an Istanbul/Jest coverage key (usually an absolute path) to a
+ * repo-relative forward-slash key. The special `total` key is preserved.
+ *
+ * @param {string} key - Original coverage summary key.
+ * @returns {string} Repo-relative key with forward slashes.
+ */
+export function toRepoRelativeKey(key) {
+  if (key === 'total') {
+    return key;
+  }
+  return path.relative(repoRoot, key).replace(/\\/g, '/');
+}
+
+/**
  * Determine whether a repository-relative path is a source file that should
  * participate in coverage gating.
  *
@@ -132,13 +148,14 @@ export async function mergeCoverageSummaries(options = {}) {
       if (key === 'total') {
         continue;
       }
-      const existing = fileEntries[key];
+      const relativeKey = toRepoRelativeKey(key);
+      const existing = fileEntries[relativeKey];
       if (!existing) {
-        fileEntries[key] = entry;
+        fileEntries[relativeKey] = entry;
         continue;
       }
       if (isBetterCoverage(entry, existing)) {
-        fileEntries[key] = entry;
+        fileEntries[relativeKey] = entry;
       }
     }
   }
@@ -172,6 +189,8 @@ export async function mergeCoverageSummaries(options = {}) {
  * @param {Function} [options.spawnSync] - `child_process.spawnSync` seam for testing.
  * @param {Function} [options.readFile] - `fs.promises.readFile` seam for testing.
  * @param {Function} [options.writeFile] - `fs.promises.writeFile` seam for testing.
+ * @param {string} [options.sourceFiles] - Comma/newline separated repo-relative
+ *   source paths. When provided, `git status` is skipped.
  * @returns {Promise<{baselinePath: string, files: number, zeroFiles: number}>}
  */
 export async function generateCoverageBaseline(options = {}) {
@@ -184,24 +203,29 @@ export async function generateCoverageBaseline(options = {}) {
   const readFileImpl = options.readFile ?? readFile;
   const writeFileImpl = options.writeFile ?? writeFile;
 
-  const spawned = spawnSyncImpl('git', ['status', '--porcelain'], {
-    cwd: repoRoot,
-    encoding: 'utf8',
-  });
+  let changedFiles;
+  if (options.sourceFiles) {
+    changedFiles = splitSourceFiles(options.sourceFiles);
+  } else {
+    const spawned = spawnSyncImpl('git', ['status', '--porcelain'], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
 
-  if (spawned.status !== 0) {
-    throw new Error(
-      `git status failed: ${spawned.stderr?.trim() ?? 'unknown error'}`,
-    );
+    if (spawned.status !== 0) {
+      throw new Error(
+        `git status failed: ${spawned.stderr?.trim() ?? 'unknown error'}`,
+      );
+    }
+
+    changedFiles = spawned.stdout
+      .split(/\r?\n/)
+      .map((line) => line.slice(3).trim())
+      .filter(Boolean)
+      .map((entry) => entry.replace(/\\/g, '/'))
+      .filter((entry) => COVERAGE_DIRS.some((dir) => entry.startsWith(dir)))
+      .filter(isSourceFile);
   }
-
-  const changedFiles = spawned.stdout
-    .split(/\r?\n/)
-    .map((line) => line.slice(3).trim())
-    .filter(Boolean)
-    .map((entry) => entry.replace(/\\/g, '/'))
-    .filter((entry) => COVERAGE_DIRS.some((dir) => entry.startsWith(dir)))
-    .filter(isSourceFile);
 
   const summary = JSON.parse(await readFileImpl(coverageSummaryPath, 'utf8'));
 
@@ -210,13 +234,13 @@ export async function generateCoverageBaseline(options = {}) {
   let zeroFiles = 0;
 
   for (const file of changedFiles) {
-    const absoluteKey = path.resolve(repoRoot, file);
-    const entry = summary[absoluteKey];
+    const relativeKey = file;
+    const entry = summary[relativeKey] ?? summary[path.resolve(repoRoot, file)];
     if (entry) {
-      baseline[absoluteKey] = {};
+      baseline[relativeKey] = {};
       for (const metric of METRICS) {
         const metricEntry = entry[metric];
-        baseline[absoluteKey][metric] = {
+        baseline[relativeKey][metric] = {
           total: metricEntry?.total ?? 0,
           covered: metricEntry?.covered ?? 0,
           skipped: metricEntry?.skipped ?? 0,
@@ -225,9 +249,9 @@ export async function generateCoverageBaseline(options = {}) {
       }
     } else {
       zeroFiles += 1;
-      baseline[absoluteKey] = {};
+      baseline[relativeKey] = {};
       for (const metric of METRICS) {
-        baseline[absoluteKey][metric] = {
+        baseline[relativeKey][metric] = {
           total: 0,
           covered: 0,
           skipped: 0,
@@ -244,6 +268,20 @@ export async function generateCoverageBaseline(options = {}) {
     files: changedFiles.length,
     zeroFiles,
   };
+}
+
+/**
+ * Split an explicit `--source-files` value into normalized repo-relative paths.
+ *
+ * @param {string} value - Comma or newline separated path list.
+ * @returns {string[]} Non-empty normalized paths.
+ */
+function splitSourceFiles(value) {
+  return value
+    .split(/[\n,]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => entry.replace(/\\/g, '/'));
 }
 
 /**
@@ -328,6 +366,10 @@ export function parseCliOptions(argv) {
       }
     } else if (rawArg.startsWith('--baseline=')) {
       options.baselinePath = path.resolve(rawArg.slice('--baseline='.length));
+    } else if (rawArg === '--source-files' && argv[index + 1] !== undefined) {
+      options.sourceFiles = argv[++index];
+    } else if (rawArg.startsWith('--source-files=')) {
+      options.sourceFiles = rawArg.slice('--source-files='.length);
     }
   }
   return options;
@@ -347,6 +389,7 @@ export async function main(argv = process.argv.slice(2), deps = {}) {
       spawnSync: deps.spawnSync,
       readFile: deps.readFile,
       writeFile: deps.writeFile,
+      sourceFiles: cliOptions.sourceFiles,
     });
   }
   return mergeResult;

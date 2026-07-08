@@ -19,7 +19,11 @@ export const ROUTING_TABLE_PATH = '.github/agent-skill-routing-table.md';
 
 const options = parseArgs(process.argv.slice(2));
 
-if (options.help) {
+const isMainModule =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+
+if (options.help && isMainModule) {
   printUsage({
     title: 'Generate the canonical NeatapticTS agent and skill routing table.',
     usage:
@@ -116,7 +120,7 @@ async function computeRoutingSourceHash(sourceFiles) {
   return hasher.digest('hex');
 }
 
-function createAgentRows(agents) {
+export function createAgentRows(agents) {
   return agents
     .toSorted((leftAgent, rightAgent) =>
       leftAgent.name.localeCompare(rightAgent.name),
@@ -130,7 +134,7 @@ function createAgentRows(agents) {
     }));
 }
 
-function createSkillRows(skills, agents) {
+export function createSkillRows(skills, agents) {
   const agentsBySkill = new Map(
     skills.map((skill) => [
       skill.name,
@@ -149,17 +153,17 @@ function createSkillRows(skills, agents) {
       name: skill.name,
       tier: 'skill',
       model: '-',
-      agents: formatList(agentsBySkill.get(skill.name) ?? []),
+      agents: formatList(agentsBySkill.get(skill.name)),
       skills: 'self',
     }));
 }
 
-function formatModel(model) {
+export function formatModel(model) {
   if (Array.isArray(model)) return model.join('<br>');
   return model ?? '-';
 }
 
-function formatList(items) {
+export function formatList(items) {
   return items.length > 0 ? items.join('<br>') : '-';
 }
 
@@ -202,20 +206,16 @@ function renderTableRow(row) {
   return `| ${row.name} | ${row.tier} | ${row.model} | ${row.agents} | ${row.skills} |`;
 }
 
-async function main() {
+export async function main() {
   const report = await runGenerateCustomizationRoutingTable();
   writeReport(report, options);
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
-) {
-  main().then(
-    () => {},
-    (error) => {
-      console.error(error);
-      process.exitCode = 1;
-    },
-  );
+export function handleMainError(error) {
+  console.error(error);
+  process.exitCode = 1;
+}
+
+if (isMainModule) {
+  main().then(() => {}, handleMainError);
 }

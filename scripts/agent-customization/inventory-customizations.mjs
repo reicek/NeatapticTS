@@ -13,7 +13,11 @@ import {
 
 const options = parseArgs(process.argv.slice(2));
 
-if (options.help) {
+const isMainModule =
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
+
+if (options.help && isMainModule) {
   printUsage({
     title: 'Inventory NeatapticTS agent customizations.',
     usage:
@@ -53,7 +57,7 @@ export async function runCustomizationInventory() {
   return report;
 }
 
-async function main() {
+export async function main() {
   const report = await runCustomizationInventory();
   writeReport(report, options);
 }
@@ -72,7 +76,7 @@ async function collectSkills() {
   return Promise.all(paths.map(readSkill));
 }
 
-async function readAgent(relativePath) {
+export async function readAgent(relativePath) {
   const { data, raw } = parseFrontmatter(
     await readWorkspaceFile(relativePath),
     relativePath,
@@ -92,7 +96,7 @@ async function readAgent(relativePath) {
   };
 }
 
-async function readSkill(relativePath) {
+export async function readSkill(relativePath) {
   const { data, body } = parseFrontmatter(
     await readWorkspaceFile(relativePath),
     relativePath,
@@ -110,15 +114,11 @@ async function readSkill(relativePath) {
   };
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
-) {
-  main().then(
-    () => {},
-    (error) => {
-      console.error(error);
-      process.exitCode = 1;
-    },
-  );
+export function handleMainError(error) {
+  console.error(error);
+  process.exitCode = 1;
+}
+
+if (isMainModule) {
+  main().then(() => {}, handleMainError);
 }

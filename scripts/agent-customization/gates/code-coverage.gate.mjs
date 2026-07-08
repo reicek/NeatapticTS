@@ -49,10 +49,9 @@ const TEST_DIR_RE = /(^|\/)__tests__\//iu;
  * Runs the code-coverage gate.
  *
  * The gate checks every changed source file against the current coverage
- * summary. New files (absent from the committed baseline) must be 100 % covered
- * on all metrics. Existing files only need to not regress below their baseline
- * coverage. This keeps the mandate strict for new code while preserving a path
- * for legacy files that pre-date full-coverage enforcement.
+ * summary. Every changed source file must be 100 % covered on lines, statements,
+ * functions, and branches. The committed baseline is retained only for reporting
+ * context; it no longer relaxes the threshold for legacy files.
  *
  * @param {object} [options] - Optional configuration.
  * @param {string} [options.coverageSummaryPath] - Repo-relative path to the
@@ -122,62 +121,41 @@ export async function runCodeCoverageGate(options = {}) {
   const failedFiles = [];
 
   for (const targetFile of targetFiles) {
-    const absoluteKey = path.resolve(repoRoot, targetFile);
-    const entry = coverageSummary[absoluteKey];
-
-    const baselineEntry = baselineSummary[absoluteKey];
+    const relativeKey = targetFile;
+    const entry = lookupCoverageEntry(coverageSummary, relativeKey);
+    const baselineEntry = lookupCoverageEntry(baselineSummary, relativeKey);
 
     if (!entry) {
-      // A file that is tracked in the baseline but missing from the current
-      // summary is treated as having 0 % coverage. This lets the gate enforce
-      // no-regression on legacy files without requiring every focused run to
-      // exercise every legacy file. Files without a baseline entry are still
-      // reported as missing so new code cannot slip through untested.
-      if (baselineEntry) {
-        const metrics = { lines: 0, statements: 0, functions: 0, branches: 0 };
-        const thresholds = Object.fromEntries(
-          REQUIRED_METRICS.map((metric) => [
-            metric,
-            baselineEntry[metric]?.pct ?? 0,
-          ]),
-        );
-        const allCovered = REQUIRED_METRICS.every(
-          (metric) => metrics[metric] >= thresholds[metric],
-        );
-        fileReports.push({
-          file: targetFile,
-          found: false,
-          baseline: Object.fromEntries(
-            REQUIRED_METRICS.map((metric) => [
-              metric,
-              baselineEntry[metric]?.pct ?? 0,
-            ]),
-          ),
-          metrics,
-          thresholds,
-          allCovered,
-        });
-        if (!allCovered) {
-          failedFiles.push(targetFile);
-        }
-      } else {
-        missingFiles.push(targetFile);
-        fileReports.push({
-          file: targetFile,
-          found: false,
-          metrics: null,
-        });
-      }
+      // A changed source file that is absent from the current coverage summary
+      // is treated as 0 % covered and must fail. The baseline is recorded only
+      // as context; it does not lower the threshold.
+      missingFiles.push(targetFile);
+      failedFiles.push(targetFile);
+      fileReports.push({
+        file: targetFile,
+        found: false,
+        baseline: baselineEntry
+          ? Object.fromEntries(
+              REQUIRED_METRICS.map((metric) => [
+                metric,
+                baselineEntry[metric]?.pct ?? 0,
+              ]),
+            )
+          : null,
+        metrics: { lines: 0, statements: 0, functions: 0, branches: 0 },
+        thresholds: Object.fromEntries(
+          REQUIRED_METRICS.map((metric) => [metric, 100]),
+        ),
+        allCovered: false,
+      });
       continue;
     }
+
     const metrics = Object.fromEntries(
       REQUIRED_METRICS.map((metric) => [metric, entry[metric]?.pct ?? 0]),
     );
     const thresholds = Object.fromEntries(
-      REQUIRED_METRICS.map((metric) => [
-        metric,
-        baselineEntry?.[metric]?.pct ?? 100,
-      ]),
+      REQUIRED_METRICS.map((metric) => [metric, 100]),
     );
     const allCovered = REQUIRED_METRICS.every(
       (metric) => metrics[metric] >= thresholds[metric],
@@ -204,7 +182,7 @@ export async function runCodeCoverageGate(options = {}) {
     }
   }
 
-  const pass = missingFiles.length === 0 && failedFiles.length === 0;
+  const pass = failedFiles.length === 0;
 
   return {
     pass,
@@ -293,6 +271,22 @@ function splitPathList(value) {
 }
 
 /**
+ * Looks up a file entry in a coverage-style summary by repo-relative key,
+ * falling back to the legacy absolute key for backwards compatibility.
+ *
+ * Istanbul/Jest historically emitted absolute paths; the merged summary and
+ * baseline now use repo-relative forward-slash keys. This helper lets the gate
+ * consume both formats during the transition.
+ *
+ * @param {Record<string, object>} summary - Coverage or baseline summary.
+ * @param {string} relativeKey - Repo-relative path with forward slashes.
+ * @returns {object|undefined} The matching entry, if any.
+ */
+function lookupCoverageEntry(summary, relativeKey) {
+  return summary[relativeKey] ?? summary[path.resolve(repoRoot, relativeKey)];
+}
+
+/**
  * Derives changed source files from `git status --porcelain` and filters them
  * to the coverage-relevant directories and source extensions.
  *
@@ -352,7 +346,7 @@ function isSourceFile(filePath) {
  * @param {string[]} failedFiles - Files with coverage below 100 %.
  * @returns {string} Fix hint string.
  */
-function buildFixHint(missingFiles, failedFiles) {
+export function buildFixHint(missingFiles, failedFiles) {
   const parts = [];
   if (missingFiles.length > 0) {
     parts.push(

@@ -105,8 +105,17 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     assert.ok(result.mergedFiles.length >= 2);
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
     assert.equal(merged.total.statements.pct, 100);
-    assert.ok(merged[path.join(REPO_ROOT, 'src/a.ts')]);
-    assert.ok(merged[path.join(REPO_ROOT, 'src/b.ts')]);
+    assert.ok(merged['src/a.ts']);
+    assert.ok(merged['src/b.ts']);
+  });
+
+  it('toRepoRelativeKey preserves total and converts absolute paths', async () => {
+    const { toRepoRelativeKey } = await loadMerge();
+    assert.equal(toRepoRelativeKey('total'), 'total');
+    assert.equal(
+      toRepoRelativeKey(path.join(REPO_ROOT, 'src/x.ts')),
+      'src/x.ts',
+    );
   });
 
   it('discovers coverage-summary.json in nested subdirectories', async () => {
@@ -124,7 +133,7 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     const merged = JSON.parse(
       readFileSync(path.join(coverageDir, 'coverage-summary.json'), 'utf8'),
     );
-    assert.ok(merged[path.join(REPO_ROOT, 'src/nested.ts')]);
+    assert.ok(merged['src/nested.ts']);
   });
 
   it('discovers coverage-summary.json in non-project-named directories', async () => {
@@ -142,7 +151,7 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     const merged = JSON.parse(
       readFileSync(path.join(coverageDir, 'coverage-summary.json'), 'utf8'),
     );
-    assert.ok(merged[path.join(REPO_ROOT, 'src/custom.ts')]);
+    assert.ok(merged['src/custom.ts']);
   });
 
   it('ignores the previous merged coverage-summary.json output path', async () => {
@@ -163,8 +172,8 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     const result = await mergeCoverageSummaries({ coverageDir, summaryPath });
     assert.equal(result.mergedFiles.length, 1);
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    assert.ok(merged[path.join(REPO_ROOT, 'src/a.ts')]);
-    assert.equal(merged[path.join(REPO_ROOT, 'src/old.ts')], undefined);
+    assert.ok(merged['src/a.ts']);
+    assert.equal(merged['src/old.ts'], undefined);
   });
 
   it('skips project directories that have no coverage-summary.json yet', async () => {
@@ -419,7 +428,7 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
 
     await mergeCoverageSummaries({ coverageDir, summaryPath });
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    assert.equal(merged[path.join(REPO_ROOT, fileName)].lines.pct, 80);
+    assert.equal(merged[fileName].lines.pct, 80);
   });
 
   it('replaces an existing entry when the candidate has better statement coverage', async () => {
@@ -452,7 +461,7 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
 
     await mergeCoverageSummaries({ coverageDir, summaryPath });
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    assert.equal(merged[path.join(REPO_ROOT, fileName)].statements.pct, 83);
+    assert.equal(merged[fileName].statements.pct, 83);
   });
 
   it('keeps the existing entry when line coverage is worse despite tied statements', async () => {
@@ -489,7 +498,7 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
 
     await mergeCoverageSummaries({ coverageDir, summaryPath });
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    assert.equal(merged[path.join(REPO_ROOT, fileName)].lines.pct, 80);
+    assert.equal(merged[fileName].lines.pct, 80);
   });
 
   it('keeps the existing entry when the candidate is worse', async () => {
@@ -522,7 +531,7 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
 
     await mergeCoverageSummaries({ coverageDir, summaryPath });
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    assert.equal(merged[path.join(REPO_ROOT, fileName)].statements.pct, 83);
+    assert.equal(merged[fileName].statements.pct, 83);
   });
 
   it('handles sparse entries that are missing statements and lines', async () => {
@@ -534,7 +543,8 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     mkdirSync(projectA, { recursive: true });
     mkdirSync(projectB, { recursive: true });
 
-    const absolutePath = path.join(REPO_ROOT, 'src/sparse.ts');
+    const relativePath = 'src/sparse.ts';
+    const absolutePath = path.join(REPO_ROOT, relativePath);
     const sparseA = {
       [absolutePath]: {
         functions: { total: 3, covered: 3, skipped: 0, pct: 100 },
@@ -558,7 +568,7 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
 
     await mergeCoverageSummaries({ coverageDir, summaryPath });
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    assert.ok(merged[absolutePath]);
+    assert.ok(merged[relativePath]);
     assert.equal(merged.total.lines.pct, 100);
   });
 
@@ -571,7 +581,8 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     mkdirSync(projectA, { recursive: true });
     mkdirSync(projectB, { recursive: true });
 
-    const absolutePath = path.join(REPO_ROOT, 'src/sparse-candidate.ts');
+    const relativePath = 'src/sparse-candidate.ts';
+    const absolutePath = path.join(REPO_ROOT, relativePath);
     const sparseA = {
       [absolutePath]: {
         lines: { pct: 100 },
@@ -594,7 +605,7 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
 
     await mergeCoverageSummaries({ coverageDir, summaryPath });
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    assert.ok(merged[absolutePath]);
+    assert.ok(merged[relativePath]);
   });
 
   it('skips missing metrics while computing the total', async () => {
@@ -603,7 +614,8 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     const projectA = path.join(coverageDir, 'project-a');
     mkdirSync(projectA, { recursive: true });
 
-    const absolutePath = path.join(REPO_ROOT, 'src/missing.ts');
+    const relativePath = 'src/missing.ts';
+    const absolutePath = path.join(REPO_ROOT, relativePath);
     const partial = {
       [absolutePath]: {
         lines: { total: 10, covered: 10, skipped: 0, pct: 100 },
@@ -658,8 +670,8 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     });
     assert.equal(result.mergedFiles.length, 1);
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    assert.ok(merged[path.join(REPO_ROOT, 'src/a.ts')]);
-    assert.equal(merged[path.join(REPO_ROOT, 'src/b.ts')], undefined);
+    assert.ok(merged['src/a.ts']);
+    assert.equal(merged['src/b.ts'], undefined);
   });
 
   it('generateCoverageBaseline records coverage for changed source files', async () => {
@@ -675,7 +687,6 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     writeFileSync(summaryPath, JSON.stringify(summary));
 
     const fileA = 'src/baseline-feature.ts';
-    const absoluteA = path.resolve(REPO_ROOT, fileA);
     const spawnSync = () => ({
       status: 0,
       stdout: ` M ${fileA}\n`,
@@ -690,8 +701,8 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     assert.equal(result.files, 1);
     assert.equal(result.zeroFiles, 0);
     const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
-    assert.equal(baseline[absoluteA].statements.pct, 100);
-    assert.equal(baseline[absoluteA].lines.pct, 100);
+    assert.equal(baseline[fileA].statements.pct, 100);
+    assert.equal(baseline[fileA].lines.pct, 100);
   });
 
   it('generateCoverageBaseline records 0% for changed files not in the summary', async () => {
@@ -703,7 +714,6 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     writeFileSync(summaryPath, JSON.stringify(makeTotal()));
 
     const fileA = 'src/missing-coverage.ts';
-    const absoluteA = path.resolve(REPO_ROOT, fileA);
     const spawnSync = () => ({
       status: 0,
       stdout: `?? ${fileA}\n`,
@@ -718,8 +728,8 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     assert.equal(result.files, 1);
     assert.equal(result.zeroFiles, 1);
     const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
-    assert.equal(baseline[absoluteA].statements.pct, 0);
-    assert.equal(baseline[absoluteA].lines.pct, 0);
+    assert.equal(baseline[fileA].statements.pct, 0);
+    assert.equal(baseline[fileA].lines.pct, 0);
   });
 
   it('generateCoverageBaseline writes an empty baseline when no files changed', async () => {
@@ -784,11 +794,7 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     });
     assert.equal(result.files, 1);
     const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
-    assert.ok(
-      baseline[
-        path.resolve(REPO_ROOT, 'scripts/agent-customization/gates/valid.mjs')
-      ],
-    );
+    assert.ok(baseline['scripts/agent-customization/gates/valid.mjs']);
   });
 
   it('generateCoverageBaseline uses default options and real git status', async () => {
@@ -888,13 +894,44 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     );
   });
 
+  it('generateCoverageBaseline accepts an explicit --source-files list bypassing git status', async () => {
+    const { generateCoverageBaseline } = await loadMerge();
+    const coverageDir = path.join(tempDir, 'coverage');
+    const summaryPath = path.join(coverageDir, 'baseline-input-summary.json');
+    const baselinePath = path.join(coverageDir, 'baseline-output.json');
+    mkdirSync(coverageDir, { recursive: true });
+    const summary = {
+      ...makeTotal(),
+      ...makeSummaryData('src/explicit-a.ts'),
+      ...makeSummaryData('src/explicit-b.ts'),
+    };
+    writeFileSync(summaryPath, JSON.stringify(summary));
+
+    const result = await generateCoverageBaseline({
+      coverageSummaryPath: summaryPath,
+      baselinePath,
+      sourceFiles:
+        'src/explicit-a.ts\nsrc/explicit-b.ts,scripts/agent-customization/gates/valid.mjs',
+    });
+    assert.equal(result.files, 3);
+    assert.equal(result.zeroFiles, 1);
+    const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
+    assert.equal(baseline['src/explicit-a.ts'].statements.pct, 100);
+    assert.equal(baseline['src/explicit-b.ts'].statements.pct, 100);
+    assert.equal(
+      baseline['scripts/agent-customization/gates/valid.mjs'].statements.pct,
+      0,
+    );
+  });
+
   it('generateCoverageBaseline records zero for missing per-metric entries', async () => {
     const { generateCoverageBaseline } = await loadMerge();
     const coverageDir = path.join(tempDir, 'coverage');
     const summaryPath = path.join(coverageDir, 'baseline-input-summary.json');
     const baselinePath = path.join(coverageDir, 'baseline-output.json');
     mkdirSync(coverageDir, { recursive: true });
-    const absolutePath = path.resolve(REPO_ROOT, 'src/partial.ts');
+    const relativePath = 'src/partial.ts';
+    const absolutePath = path.resolve(REPO_ROOT, relativePath);
     const summary = {
       total: { lines: { total: 1, covered: 1, skipped: 0, pct: 100 } },
       [absolutePath]: {
@@ -904,7 +941,7 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     writeFileSync(summaryPath, JSON.stringify(summary));
     const spawnSync = () => ({
       status: 0,
-      stdout: ` M src/partial.ts\n`,
+      stdout: ` M ${relativePath}\n`,
       stderr: '',
     });
 
@@ -914,8 +951,8 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
       spawnSync,
     });
     const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
-    assert.equal(baseline[absolutePath].lines.pct, 100);
-    assert.equal(baseline[absolutePath].statements.pct, 0);
+    assert.equal(baseline[relativePath].lines.pct, 100);
+    assert.equal(baseline[relativePath].statements.pct, 0);
   });
 
   it('parseCliOptions handles --baseline in flag, token and equals forms', async () => {
@@ -933,6 +970,18 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
       parseCliOptions([`--baseline=${path.join(tempDir, 'eq.json')}`])
         .baselinePath,
       path.join(tempDir, 'eq.json'),
+    );
+  });
+
+  it('parseCliOptions handles --source-files in token and equals forms', async () => {
+    const { parseCliOptions } = await loadMerge();
+    assert.equal(
+      parseCliOptions(['--source-files', 'src/a.ts,src/b.ts']).sourceFiles,
+      'src/a.ts,src/b.ts',
+    );
+    assert.equal(
+      parseCliOptions(['--source-files=src/c.ts']).sourceFiles,
+      'src/c.ts',
     );
   });
 

@@ -108,6 +108,44 @@ describe('code-coverage gate native-ESM coverage', () => {
     assert.ok(result.missingFiles.includes('src/architecture/missing.ts'));
   });
 
+  it('supports repo-relative keys in the coverage summary and baseline', async () => {
+    const { runCodeCoverageGate } = await loadGate();
+    const summaryPath = path.join(tempDir, 'relative-summary.json');
+    const baselinePath = path.join(tempDir, 'relative-baseline.json');
+    writeFileSync(
+      summaryPath,
+      JSON.stringify({
+        'src/architecture/relative.ts': {
+          lines: { pct: 100 },
+          statements: { pct: 100 },
+          functions: { pct: 100 },
+          branches: { pct: 100 },
+        },
+      }),
+    );
+    writeFileSync(
+      baselinePath,
+      JSON.stringify({
+        'src/architecture/relative.ts': {
+          lines: { pct: 80 },
+          statements: { pct: 80 },
+          functions: { pct: 80 },
+          branches: { pct: 80 },
+        },
+      }),
+    );
+
+    const result = await runCodeCoverageGate({
+      coverageSummaryPath: path.relative(REPO_ROOT, summaryPath),
+      coverageBaselinePath: path.relative(REPO_ROOT, baselinePath),
+      changedFiles: ['src/architecture/relative.ts'],
+    });
+
+    assert.equal(result.pass, true);
+    assert.equal(result.evidence.fileReports[0].found, true);
+    assert.equal(result.evidence.fileReports[0].baseline.statements, 80);
+  });
+
   it('passes trivially when no coverage-relevant files are changed', async () => {
     const { runCodeCoverageGate } = await loadGate();
     const summaryPath = makeSummary(tempDir, {});
@@ -121,14 +159,14 @@ describe('code-coverage gate native-ESM coverage', () => {
     assert.deepEqual(result.evidence.targetFiles, []);
   });
 
-  it('allows legacy files to match their baseline coverage instead of 100%', async () => {
+  it('requires legacy files to reach 100% even when a baseline exists', async () => {
     const { runCodeCoverageGate } = await loadGate();
     const summaryPath = makeSummary(tempDir, {
       'src/architecture/legacy.ts': {
-        lines: { pct: 80 },
-        statements: { pct: 80 },
+        lines: { pct: 100 },
+        statements: { pct: 100 },
         functions: { pct: 100 },
-        branches: { pct: 70 },
+        branches: { pct: 100 },
       },
     });
     const baselinePath = makeSummary(
@@ -152,6 +190,8 @@ describe('code-coverage gate native-ESM coverage', () => {
 
     assert.equal(result.pass, true);
     assert.deepEqual(result.failedFiles, []);
+    assert.equal(result.evidence.fileReports[0].baseline.statements, 80);
+    assert.equal(result.evidence.fileReports[0].thresholds.statements, 100);
   });
 
   it('treats a missing baseline file as an empty baseline and still requires 100% for new files', async () => {
@@ -208,7 +248,7 @@ describe('code-coverage gate native-ESM coverage', () => {
     assert.ok(result.failedFiles.includes('src/architecture/legacy.ts'));
   });
 
-  it('treats a missing legacy file as 0% and passes when the baseline is also 0%', async () => {
+  it('treats a missing changed file as 0% and fails even when the baseline is 0%', async () => {
     const { runCodeCoverageGate } = await loadGate();
     const summaryPath = makeSummary(tempDir, {});
     const baselinePath = makeSummary(
@@ -230,11 +270,12 @@ describe('code-coverage gate native-ESM coverage', () => {
       changedFiles: ['src/architecture/not-run.ts'],
     });
 
-    assert.equal(result.pass, true);
-    assert.deepEqual(result.failedFiles, []);
+    assert.equal(result.pass, false);
+    assert.ok(result.failedFiles.includes('src/architecture/not-run.ts'));
+    assert.ok(result.missingFiles.includes('src/architecture/not-run.ts'));
   });
 
-  it('falls back to 0% for missing baseline metrics when a legacy file is not in the summary', async () => {
+  it('falls back to 0% for missing baseline metrics but still fails uncovered files', async () => {
     const { runCodeCoverageGate } = await loadGate();
     const summaryPath = makeSummary(tempDir, {});
     const baselinePath = makeSummary(
@@ -253,8 +294,10 @@ describe('code-coverage gate native-ESM coverage', () => {
       changedFiles: ['src/architecture/partial-baseline.ts'],
     });
 
-    assert.equal(result.pass, true);
-    assert.equal(result.evidence.fileReports[0].thresholds.branches, 0);
+    assert.equal(result.pass, false);
+    assert.ok(result.failedFiles.includes('src/architecture/partial-baseline.ts'));
+    assert.equal(result.evidence.fileReports[0].thresholds.branches, 100);
+    assert.equal(result.evidence.fileReports[0].baseline.branches, 0);
   });
 
   it('treats a missing legacy file as 0% and fails when the baseline is above 0%', async () => {
@@ -759,5 +802,19 @@ describe('code-coverage gate native-ESM coverage', () => {
     assert.equal(result.pass, false);
     assert.ok(result.fixHint.includes('Missing from coverage summary'));
     assert.ok(result.fixHint.includes('src/missing-a.ts'));
+  });
+
+  it('buildFixHint handles each combination of missing and failed files', async () => {
+    const { buildFixHint } = await loadGate();
+    assert.ok(
+      buildFixHint(['src/missing.ts'], []).includes('Missing from coverage summary'),
+    );
+    assert.ok(
+      buildFixHint([], ['src/failed.ts']).includes('Files below 100% coverage'),
+    );
+    const combined = buildFixHint(['src/missing.ts'], ['src/failed.ts']);
+    assert.ok(combined.includes('Missing from coverage summary'));
+    assert.ok(combined.includes('Files below 100% coverage'));
+    assert.equal(buildFixHint([], []), '');
   });
 });

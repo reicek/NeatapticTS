@@ -13,7 +13,7 @@ export {
   runValidateAgentGraph,
 } from './tier-graph-utils.mjs';
 
-async function main() {
+export async function main() {
   const options = parseArgs(process.argv.slice(2));
 
   if (options.help) {
@@ -29,15 +29,14 @@ async function main() {
   process.exitCode = report.ok ? 0 : 1;
 }
 
+export function handleMainError(error) {
+  console.error(error);
+  process.exitCode = 1;
+}
+
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 ) {
-  main().then(
-    () => {},
-    (error) => {
-      console.error(error);
-      process.exitCode = 1;
-    },
-  );
+  main().then(() => {}, handleMainError);
 }
