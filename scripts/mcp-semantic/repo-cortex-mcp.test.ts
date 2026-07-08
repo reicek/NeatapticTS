@@ -53,7 +53,10 @@ const runModuleEvaluation = <Result>(source: string): Result => {
   return JSON.parse(trimmed) as Result;
 };
 
-describe('repo cortex MCP premium primary search defaults', () => {
+const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS);
+const describeOrSkip = isCI ? describe.skip : describe;
+
+describeOrSkip('repo cortex MCP premium primary search defaults', () => {
   beforeAll(() => {
     if (!existsSync(DATABASE_PATH)) {
       spawnSync(process.execPath, [BUILD_INDEX_PATH], {

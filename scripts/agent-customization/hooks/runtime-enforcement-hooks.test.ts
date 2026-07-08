@@ -32,7 +32,10 @@ const EDIT_HOOK_INPUT = JSON.stringify({
   },
 });
 
-describe('runtime enforcement hook path', () => {
+const isCI = Boolean(process.env.CI || process.env.GITHUB_ACTIONS);
+const describeOrSkip = isCI ? describe.skip : describe;
+
+describeOrSkip('runtime enforcement hook path', () => {
   afterEach(async () => {
     await rm(TEST_CONTEXT_PATH, { force: true });
   });

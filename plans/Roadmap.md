@@ -48,6 +48,53 @@ NEAT algorithms, or cloud/Turso deployment topology. Keep
 `data/eval-baselines/` in place; it is persistent evaluation data, not a
 generated runtime artifact.
 
+## Standalone CI Failure Hardening Lane [DONE]
+
+**Outcome:** make the `npm test` matrix pass in the GitHub Actions `ubuntu-latest`
+runner by removing local-only assumptions and closing reported coverage gaps,
+including accurate coverage measurement for `scripts/agent-customization/` `.mjs`
+gate scripts via a native-ESM Jest project.
+
+- CI failure hardening
+- Plan: [completed/CI_Failure_Hardening.plans.md](completed/CI_Failure_Hardening.plans.md) (`plans/completed/CI_Failure_Hardening.plans.md`) [DONE]
+- Current internal state: archived after the native-ESM coverage project and
+  `code-coverage` gate baseline were committed.
+- Next active plan to track: `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md`
+  (reactivated as [WIP] for Phase 8 Racing Curriculum v2).
+
+**Coordination rule:** this lane is confined to test files and fixtures under
+`scripts/agent-customization/`, `scripts/mcp-semantic/`, `testing/fixtures/`,
+plus the three barrel re-export files in `src/` and their new test files.
+It must not change core NEAT algorithms or the public API surface beyond
+adding required tests/fixtures.
+
+## Racing Curriculum v2 Lane [WIP]
+
+**Outcome:** begin Phase 8 of the racing curriculum now that the upstream
+NGE Core Algorithm Workstream and NGE Core Growth Engine Wiring are [DONE].
+Address the accumulated v2 gaps: pit strategy depth (blue-only pit calls,
+tires simply run out), incomplete per-car independent agents, growth stall
+(~101 nodes vs. 8,000+ target), coevolution not yet independent and
+continuous, and the visualizer showing only blue team car #1. Start with a
+single bounded first slice and tier-promotion / carry-reset semantics from
+`examples/racing_curriculum/reference.plans.md`.
+
+- Racing Curriculum v2
+- Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) [WIP]
+- Current internal state: Phase 8 Step 01 [WIP]; plan reactivated from [DONE]
+  after CI Failure Hardening closure. Upstream
+  [completed/NGE_Core_Algorithm_Workstream.plans.md](completed/NGE_Core_Algorithm_Workstream.plans.md)
+  and
+  [completed/NGE_Core_Growth_Engine_Wiring.plans.md](completed/NGE_Core_Growth_Engine_Wiring.plans.md)
+  are [DONE], unblocking the v2 workstream.
+
+**Coordination rule:** this lane owns `examples/racing_curriculum/` and any
+racing-specific plumbing in `src/` that is required to close the v2 gaps. It
+must preserve the Tier 1-6 ladder, promotion rules, carry/reset semantics, and
+acceptance criteria defined in `examples/racing_curriculum/reference.plans.md`.
+It does not own general NGE core algorithm work; those changes belong in the
+completed upstream workstreams.
+
 ## Standalone Workspace MCP Registration Lane [DONE]
 
 **Outcome:** register the repo-owned direct MCP servers in `.vscode/mcp.json`

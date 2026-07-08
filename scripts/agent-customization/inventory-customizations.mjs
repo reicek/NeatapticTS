@@ -114,5 +114,11 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 ) {
-  await main();
+  main().then(
+    () => {},
+    (error) => {
+      console.error(error);
+      process.exitCode = 1;
+    },
+  );
 }

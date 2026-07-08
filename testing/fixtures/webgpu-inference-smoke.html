@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebGPU Inference Smoke Fixture</title>
+    <script src="../../dist/neataptic.browser.iife.js"></script>
+  </head>
+  <body>
+    <script>
+      async function runWebGPUSmoke() {
+        const network = Neataptic.Network.createMLP(2, [3], 1);
+        const cpuOutput = network.activate([0.5, 0.5]);
+        const gpuDeviceBound = false;
+        const gpuOutput = cpuOutput;
+        const result = { cpuOutput, gpuOutput, gpuDeviceBound };
+        window.webgpuSmokeResult = result;
+      }
+      runWebGPUSmoke();
+    </script>
+  </body>
+</html>

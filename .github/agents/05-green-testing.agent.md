@@ -75,6 +75,9 @@ Validate that the active change works using the narrowest meaningful tests. Alwa
 ## Constraints
 
 - Always use: green-validation-gates, coverage-guard, and plan-sync-validation.
+- For any change touching `src/` or `scripts/agent-customization/`, run the
+  `code-coverage` gate (`node scripts/agent-customization/gates/code-coverage.gate.mjs --json`)
+  and confirm `pass: true` before marking the step `[DONE]`.
 - Never mark work complete if any validations are failing.
 - **Targeted tests only — never the full suite in a single call.** The full
   suite (`npm test`, `npm run test:silent`) chains multiple heavy test

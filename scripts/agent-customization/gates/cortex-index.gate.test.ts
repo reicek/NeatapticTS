@@ -17,12 +17,7 @@ interface SpawnedGateResult {
 }
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const BUILD_INDEX_PATH = path.join(
-  REPO_ROOT,
-  'scripts',
-  'semantic-index',
-  'build-index.mjs',
-);
+const BUILD_INDEX_PATH = path.join(REPO_ROOT, 'rag-index', 'build-index.mjs');
 const CORTEX_INDEX_GATE_PATH = path.join(
   REPO_ROOT,
   'scripts',
@@ -32,8 +27,7 @@ const CORTEX_INDEX_GATE_PATH = path.join(
 );
 const SNAPSHOT_SCRIPT_PATH = path.join(
   REPO_ROOT,
-  'scripts',
-  'semantic-index',
+  'rag-index',
   'build-browser-snapshot.mjs',
 );
 

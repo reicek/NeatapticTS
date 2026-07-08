@@ -923,6 +923,8 @@ describe('lazy-facade-core internals', () => {
     return import('../lazy-facade-core.mjs');
   }
 
+  const itOnWindows = process.platform === 'win32' ? it : it.skip;
+
   function baseConfig(overrides: Record<string, unknown> = {}) {
     return {
       name: 'cortex',
@@ -1541,6 +1543,7 @@ describe('lazy-facade-core internals', () => {
 
   it('reports a failing self-check when the snapshot tools field is not an array', async () => {
     const tempPath = path.resolve(REPO_ROOT, 'tmp/invalid-tools-snapshot.json');
+    mkdirSync(path.dirname(tempPath), { recursive: true });
     writeFileSync(tempPath, JSON.stringify({ tools: 'not-an-array' }));
     const { runFacadeMain } = await importLazyFacadeCore();
     const originalExitCode = process.exitCode;
@@ -1753,31 +1756,34 @@ describe('lazy-facade-core internals', () => {
     }
   });
 
-  it('defaults PATH to empty when PATH is undefined on Windows', async () => {
-    const { resolveSpawnCommand } = await importLazyFacadeCore();
-    const originalPlatform = Object.getOwnPropertyDescriptor(
-      process,
-      'platform',
-    );
-    const originalPath = process.env.PATH;
-    Object.defineProperty(process, 'platform', { value: 'win32' });
-    delete process.env.PATH;
-    try {
-      const result = resolveSpawnCommand('npx');
-      expect(result.file.endsWith('npx.cmd')).toBe(true);
-      expect(path.dirname(result.file)).toBe(path.dirname(process.execPath));
-      expect(result.shell).toBe(true);
-    } finally {
-      if (originalPlatform) {
-        Object.defineProperty(process, 'platform', originalPlatform);
+  itOnWindows(
+    'defaults PATH to empty when PATH is undefined on Windows',
+    async () => {
+      const { resolveSpawnCommand } = await importLazyFacadeCore();
+      const originalPlatform = Object.getOwnPropertyDescriptor(
+        process,
+        'platform',
+      );
+      const originalPath = process.env.PATH;
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+      delete process.env.PATH;
+      try {
+        const result = resolveSpawnCommand('npx');
+        expect(result.file.endsWith('npx.cmd')).toBe(true);
+        expect(path.dirname(result.file)).toBe(path.dirname(process.execPath));
+        expect(result.shell).toBe(true);
+      } finally {
+        if (originalPlatform) {
+          Object.defineProperty(process, 'platform', originalPlatform);
+        }
+        if (originalPath === undefined) {
+          delete process.env.PATH;
+        } else {
+          process.env.PATH = originalPath;
+        }
       }
-      if (originalPath === undefined) {
-        delete process.env.PATH;
-      } else {
-        process.env.PATH = originalPath;
-      }
-    }
-  });
+    },
+  );
 
   it('resolves a Windows wrapper to an absolute path with shell:true', async () => {
     const { resolveSpawnCommand } = await importLazyFacadeCore();
@@ -1808,27 +1814,30 @@ describe('lazy-facade-core internals', () => {
     }
   });
 
-  it('falls back to the Node executable directory on Windows when PATH lacks the command', async () => {
-    const { resolveSpawnCommand } = await importLazyFacadeCore();
-    const originalPlatform = Object.getOwnPropertyDescriptor(
-      process,
-      'platform',
-    );
-    const originalPath = process.env.PATH;
-    Object.defineProperty(process, 'platform', { value: 'win32' });
-    process.env.PATH = '';
-    try {
-      const result = resolveSpawnCommand('npx');
-      expect(result.file.endsWith('npx.cmd')).toBe(true);
-      expect(path.dirname(result.file)).toBe(path.dirname(process.execPath));
-      expect(result.shell).toBe(true);
-    } finally {
-      if (originalPlatform) {
-        Object.defineProperty(process, 'platform', originalPlatform);
+  itOnWindows(
+    'falls back to the Node executable directory on Windows when PATH lacks the command',
+    async () => {
+      const { resolveSpawnCommand } = await importLazyFacadeCore();
+      const originalPlatform = Object.getOwnPropertyDescriptor(
+        process,
+        'platform',
+      );
+      const originalPath = process.env.PATH;
+      Object.defineProperty(process, 'platform', { value: 'win32' });
+      process.env.PATH = '';
+      try {
+        const result = resolveSpawnCommand('npx');
+        expect(result.file.endsWith('npx.cmd')).toBe(true);
+        expect(path.dirname(result.file)).toBe(path.dirname(process.execPath));
+        expect(result.shell).toBe(true);
+      } finally {
+        if (originalPlatform) {
+          Object.defineProperty(process, 'platform', originalPlatform);
+        }
+        process.env.PATH = originalPath ?? '';
       }
-      process.env.PATH = originalPath ?? '';
-    }
-  });
+    },
+  );
 
   it('falls back to shell:true with the original command on Windows when no wrapper is found', async () => {
     const { resolveSpawnCommand } = await importLazyFacadeCore();
@@ -1852,6 +1861,37 @@ describe('lazy-facade-core internals', () => {
         Object.defineProperty(process, 'platform', originalPlatform);
       }
       process.env.PATH = originalPath ?? '';
+    }
+  });
+
+  it('resolves a Windows .exe binary with shell:false', async () => {
+    const { resolveSpawnCommand } = await importLazyFacadeCore();
+    const tempDir = path.join(REPO_ROOT, 'tmp', `spawn-exe-test-${Date.now()}`);
+    const exeDir = path.join(tempDir, 'bin');
+    mkdirSync(exeDir, { recursive: true });
+    const exePath = path.join(exeDir, 'npx.exe');
+    writeFileSync(exePath, '', 'utf8');
+
+    const originalPlatform = Object.getOwnPropertyDescriptor(
+      process,
+      'platform',
+    );
+    const originalPath = process.env.PATH;
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    process.env.PATH = exeDir;
+    try {
+      const result = resolveSpawnCommand('npx');
+      expect(result).toEqual({
+        file: 'npx',
+        args: [],
+        shell: false,
+      });
+    } finally {
+      if (originalPlatform) {
+        Object.defineProperty(process, 'platform', originalPlatform);
+      }
+      process.env.PATH = originalPath ?? '';
+      rmSync(tempDir, { recursive: true, force: true });
     }
   });
 });

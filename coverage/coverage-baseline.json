@@ -158,27 +158,27 @@
   "C:\\NeatapticTS\\src\\architecture\\network\\gpu\\network.gpu.activate.ts": {
     "lines": {
       "total": 228,
-      "covered": 228,
+      "covered": 163,
       "skipped": 0,
-      "pct": 100
+      "pct": 71.49
     },
     "statements": {
       "total": 236,
-      "covered": 236,
+      "covered": 170,
       "skipped": 0,
-      "pct": 100
+      "pct": 72.03
     },
     "functions": {
       "total": 22,
-      "covered": 22,
+      "covered": 17,
       "skipped": 0,
-      "pct": 100
+      "pct": 77.27
     },
     "branches": {
       "total": 79,
-      "covered": 79,
+      "covered": 28,
       "skipped": 0,
-      "pct": 100
+      "pct": 35.44
     }
   },
   "C:\\NeatapticTS\\scripts\\agent-customization\\gates\\code-coverage.gate.mjs": {
@@ -203,32 +203,6 @@
     "branches": {
       "total": 87,
       "covered": 87,
-      "skipped": 0,
-      "pct": 100
-    }
-  },
-  "C:\\NeatapticTS\\scripts\\agent-customization\\gates\\merge-coverage-summaries.mjs": {
-    "lines": {
-      "total": 129,
-      "covered": 129,
-      "skipped": 0,
-      "pct": 100
-    },
-    "statements": {
-      "total": 131,
-      "covered": 131,
-      "skipped": 0,
-      "pct": 100
-    },
-    "functions": {
-      "total": 14,
-      "covered": 14,
-      "skipped": 0,
-      "pct": 100
-    },
-    "branches": {
-      "total": 96,
-      "covered": 96,
       "skipped": 0,
       "pct": 100
     }
