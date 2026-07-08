@@ -63,8 +63,9 @@ async function withExitStub(fn) {
 
 describe('validate-agent-graph native-ESM coverage', () => {
   it('imports the module and re-exports runValidateAgentGraph', async () => {
-    const mod = await withArgv([process.execPath, 'dummy-runner'], () =>
-      import('./validate-agent-graph.mjs'),
+    const mod = await withArgv(
+      [process.execPath, 'dummy-runner'],
+      () => import('./validate-agent-graph.mjs'),
     );
     assert.equal(typeof mod.runValidateAgentGraph, 'function');
     assert.equal(typeof mod.main, 'function');
@@ -84,15 +85,12 @@ describe('validate-agent-graph native-ESM coverage', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner', '--json'],
-        async () => {
-          await importInIsolation(async () => {
-            const { main } = await import('./validate-agent-graph.mjs');
-            await main();
-          });
-        },
-      );
+      await withArgv([process.execPath, 'dummy-runner', '--json'], async () => {
+        await importInIsolation(async () => {
+          const { main } = await import('./validate-agent-graph.mjs');
+          await main();
+        });
+      });
       assert.equal(logs.length, 1);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.ok, true);
@@ -106,15 +104,12 @@ describe('validate-agent-graph native-ESM coverage', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner'],
-        async () => {
-          await importInIsolation(async () => {
-            const { main } = await import('./validate-agent-graph.mjs');
-            await main();
-          });
-        },
-      );
+      await withArgv([process.execPath, 'dummy-runner'], async () => {
+        await importInIsolation(async () => {
+          const { main } = await import('./validate-agent-graph.mjs');
+          await main();
+        });
+      });
       assert.ok(logs.some((line) => line.includes('PASS')));
       assert.equal(process.exitCode, 0);
     } finally {
@@ -138,15 +133,12 @@ describe('validate-agent-graph native-ESM coverage', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner'],
-        async () => {
-          await importInIsolation(async () => {
-            const { main } = await import('./validate-agent-graph.mjs');
-            await main();
-          });
-        },
-      );
+      await withArgv([process.execPath, 'dummy-runner'], async () => {
+        await importInIsolation(async () => {
+          const { main } = await import('./validate-agent-graph.mjs');
+          await main();
+        });
+      });
       assert.equal(process.exitCode, 1);
       assert.ok(logs.some((line) => line.includes('FAIL')));
     } finally {

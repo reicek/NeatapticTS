@@ -49,8 +49,9 @@ async function importInIsolation(callback) {
 
 describe('routing-table-freshness gate native-ESM coverage', () => {
   it('imports the module and exposes the runner', async () => {
-    const gate = await withArgv([process.execPath, 'dummy-runner'], () =>
-      import('./routing-table-freshness.gate.mjs'),
+    const gate = await withArgv(
+      [process.execPath, 'dummy-runner'],
+      () => import('./routing-table-freshness.gate.mjs'),
     );
     assert.equal(typeof gate.runRoutingTableFreshnessGate, 'function');
     assert.equal(typeof gate.main, 'function');
@@ -71,15 +72,12 @@ describe('routing-table-freshness gate native-ESM coverage', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner', '--json'],
-        async () => {
-          await importInIsolation(async () => {
-            const { main } = await import('./routing-table-freshness.gate.mjs');
-            await main();
-          });
-        },
-      );
+      await withArgv([process.execPath, 'dummy-runner', '--json'], async () => {
+        await importInIsolation(async () => {
+          const { main } = await import('./routing-table-freshness.gate.mjs');
+          await main();
+        });
+      });
       assert.equal(logs.length, 1);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, true);
@@ -94,15 +92,12 @@ describe('routing-table-freshness gate native-ESM coverage', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner'],
-        async () => {
-          await importInIsolation(async () => {
-            const { main } = await import('./routing-table-freshness.gate.mjs');
-            await main();
-          });
-        },
-      );
+      await withArgv([process.execPath, 'dummy-runner'], async () => {
+        await importInIsolation(async () => {
+          const { main } = await import('./routing-table-freshness.gate.mjs');
+          await main();
+        });
+      });
       assert.ok(logs.some((line) => line.includes('PASS')));
       assert.equal(process.exitCode, 0);
     } finally {
@@ -112,43 +107,46 @@ describe('routing-table-freshness gate native-ESM coverage', () => {
   });
 
   it('main reports failure and fix hint when the table is stale', async () => {
-    jest.unstable_mockModule('../generate-agent-skill-routing-table.mjs', () => ({
-      ROUTING_TABLE_PATH: '.github/agent-skill-routing-table.md',
-      collectCustomizationRoutingTable: jest.fn(() =>
-        Promise.resolve({
-          sourceHash: 'stale-hash',
-          sourceFiles: ['a'],
-          agentRows: [],
-          skillRows: [],
-          markdown: 'stale',
-        }),
-      ),
-      extractRoutingTableSourceHash: jest.fn(() => 'current-hash'),
-    }));
+    jest.unstable_mockModule(
+      '../generate-agent-skill-routing-table.mjs',
+      () => ({
+        ROUTING_TABLE_PATH: '.github/agent-skill-routing-table.md',
+        collectCustomizationRoutingTable: jest.fn(() =>
+          Promise.resolve({
+            sourceHash: 'stale-hash',
+            sourceFiles: ['a'],
+            agentRows: [],
+            skillRows: [],
+            markdown: 'stale',
+          }),
+        ),
+        extractRoutingTableSourceHash: jest.fn(() => 'current-hash'),
+      }),
+    );
     const logs = [];
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner'],
-        async () => {
-          await importInIsolation(async () => {
-            const { main } = await import('./routing-table-freshness.gate.mjs');
-            await main();
-          });
-        },
-      );
+      await withArgv([process.execPath, 'dummy-runner'], async () => {
+        await importInIsolation(async () => {
+          const { main } = await import('./routing-table-freshness.gate.mjs');
+          await main();
+        });
+      });
       assert.equal(process.exitCode, 1);
       assert.ok(logs.some((line) => line.includes('FAIL')));
       assert.ok(logs.some((line) => line.includes('fixHint')));
     } finally {
       console.log = originalLog;
       process.exitCode = 0;
-      jest.unstable_mockModule('../generate-agent-skill-routing-table.mjs', () => ({
-        ROUTING_TABLE_PATH: '.github/agent-skill-routing-table.md',
-        collectCustomizationRoutingTable: jest.fn(),
-        extractRoutingTableSourceHash: jest.fn(),
-      }));
+      jest.unstable_mockModule(
+        '../generate-agent-skill-routing-table.mjs',
+        () => ({
+          ROUTING_TABLE_PATH: '.github/agent-skill-routing-table.md',
+          collectCustomizationRoutingTable: jest.fn(),
+          extractRoutingTableSourceHash: jest.fn(),
+        }),
+      );
     }
   });
 
@@ -167,7 +165,8 @@ describe('routing-table-freshness gate native-ESM coverage', () => {
     const originalStderr = console.error;
     console.error = (...args) => errors.push(args.join(' '));
     try {
-      const { handleMainError } = await import('./routing-table-freshness.gate.mjs');
+      const { handleMainError } =
+        await import('./routing-table-freshness.gate.mjs');
       await handleMainError(new Error('freshness boom'));
       assert.ok(errors.some((line) => line.includes('freshness boom')));
       assert.equal(process.exitCode, 1);
@@ -184,19 +183,15 @@ describe('routing-table-freshness gate native-ESM coverage', () => {
       fileExists: jest.fn(() => Promise.resolve(false)),
     }));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner'],
-        async () => {
-          await importInIsolation(async () => {
-            const { runRoutingTableFreshnessGate } = await import(
-              './routing-table-freshness.gate.mjs'
-            );
-            const result = await runRoutingTableFreshnessGate();
-            assert.equal(result.pass, false);
-            assert.equal(result.evidence.exists, false);
-          });
-        },
-      );
+      await withArgv([process.execPath, 'dummy-runner'], async () => {
+        await importInIsolation(async () => {
+          const { runRoutingTableFreshnessGate } =
+            await import('./routing-table-freshness.gate.mjs');
+          const result = await runRoutingTableFreshnessGate();
+          assert.equal(result.pass, false);
+          assert.equal(result.evidence.exists, false);
+        });
+      });
     } finally {
       jest.unstable_mockModule('../customization-utils.mjs', () => utils);
     }

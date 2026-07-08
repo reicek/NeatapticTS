@@ -1222,6 +1222,7 @@ against the remaining v2 gaps, and author Step 02-07 packets with red-green
 implementation slices before any execution work begins.
 
 **Context the agent must know:**
+
 - The plan file was reactivated from [DONE] to [WIP] after CI Failure Hardening closed.
 - Upstream `plans/completed/NGE_Core_Algorithm_Workstream.plans.md` and `plans/completed/NGE_Core_Growth_Engine_Wiring.plans.md` are [DONE]; these resolve the prior P1-P5 and modeIsEvolvable blockers that forced Phase 7 to use analytics-only fallback.
 - Remaining v2 gaps: pit strategy depth, per-car independent agents, growth stall, independent continuous coevolution, visualizer parity.
@@ -1229,6 +1230,7 @@ implementation slices before any execution work begins.
 - This step must not edit production code; only the plan file, README, and Roadmap may be touched.
 
 **Execution steps:**
+
 1. Re-read `examples/racing_curriculum/reference.plans.md` to confirm the v2-relevant contract and any changes made by upstream NGE work.
 2. Re-read the Phase 7 carry-forward blockers in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md` to ensure no stale assumptions leak into Phase 8.
 3. Select the first v2 slice using the criteria: smallest surface that unblocks the next gap, has existing tests to extend, and does not require GPU work.
@@ -1241,11 +1243,13 @@ implementation slices before any execution work begins.
 10. Update the plan's `## Latest validation evidence` with the gate outputs and the Step 01 completion note.
 
 **Stop conditions:**
+
 - **Done:** Step 02-07 packets are authored, all three planning gates pass, and the next active step is set to Step 02.
 - **Blocked:** If upstream NGE plans are not actually [DONE] or conflict with Phase 8 scope, stop and escalate via `00.cross-tier-helper`.
 - **Route-back:** If a gate fails, fix the plan/Roadmap/README content and re-run the gate before claiming done.
 
 **Required validation:**
+
 - `node scripts/agent-customization/gates/plan-sync.gate.mjs --json`
 - `node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json`
 - `node scripts/agent-customization/gates/step-packet.gate.mjs --json`
@@ -1255,16 +1259,16 @@ implementation slices before any execution work begins.
 **Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested `Copy-paste prompt` subsection.
 
 VALIDATION_EVIDENCE:
-- plan_sync_gate:
-    command: 'node scripts/agent-customization/gates/plan-sync.gate.mjs --json'
-    result: 'PASS'
-    evidence: '{ "pass": true, "evidence": { "wipPlans": ["plans/mcp-active-binding.plans.md", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md"], "missingFromReadme": [], "missingFromRoadmap": [], "plansChecked": 5 }, "fixHint": "All WIP plans are correctly registered in README and Roadmap.", "owner": "validate-plan-sync.mjs" }'
-- plan_slice_quality_gate:
-    command: 'node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json'
-    result: 'PASS'
-    evidence: '{ "pass": true, "evidence": { "plansChecked": ["plans/mcp-active-binding.plans.md", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md"], "violations": [], "limit": 4 }, "fixHint": "All WIP plan slices are within the 4-hour estimate limit.", "owner": "plan-slice-quality.gate.mjs" }'
-- step_packet_gate:
-    command: 'node scripts/agent-customization/gates/step-packet.gate.mjs --json'
-    result: 'PASS'
-    evidence: '{ "pass": true, "evidence": { "blocksChecked": ["plans/mcp-active-binding.plans.md:yaml@14718", "plans/mcp-active-binding.plans.md:yaml@16171", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md:yaml@101317", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md:yaml@103960"], "violations": [], "planReadinessWarnings": [], "plansScanned": 2 }, "fixHint": "All active WIP phase/step packets conform to the new format.", "owner": "step-packet.gate.mjs" }'
 
+- plan_sync_gate:
+  command: 'node scripts/agent-customization/gates/plan-sync.gate.mjs --json'
+  result: 'PASS'
+  evidence: '{ "pass": true, "evidence": { "wipPlans": ["plans/mcp-active-binding.plans.md", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md"], "missingFromReadme": [], "missingFromRoadmap": [], "plansChecked": 5 }, "fixHint": "All WIP plans are correctly registered in README and Roadmap.", "owner": "validate-plan-sync.mjs" }'
+- plan_slice_quality_gate:
+  command: 'node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json'
+  result: 'PASS'
+  evidence: '{ "pass": true, "evidence": { "plansChecked": ["plans/mcp-active-binding.plans.md", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md"], "violations": [], "limit": 4 }, "fixHint": "All WIP plan slices are within the 4-hour estimate limit.", "owner": "plan-slice-quality.gate.mjs" }'
+- step_packet_gate:
+  command: 'node scripts/agent-customization/gates/step-packet.gate.mjs --json'
+  result: 'PASS'
+  evidence: '{ "pass": true, "evidence": { "blocksChecked": ["plans/mcp-active-binding.plans.md:yaml@14718", "plans/mcp-active-binding.plans.md:yaml@16171", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md:yaml@101317", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md:yaml@103960"], "violations": [], "planReadinessWarnings": [], "plansScanned": 2 }, "fixHint": "All active WIP phase/step packets conform to the new format.", "owner": "step-packet.gate.mjs" }'

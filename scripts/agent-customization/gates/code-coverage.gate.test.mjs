@@ -295,7 +295,9 @@ describe('code-coverage gate native-ESM coverage', () => {
     });
 
     assert.equal(result.pass, false);
-    assert.ok(result.failedFiles.includes('src/architecture/partial-baseline.ts'));
+    assert.ok(
+      result.failedFiles.includes('src/architecture/partial-baseline.ts'),
+    );
     assert.equal(result.evidence.fileReports[0].thresholds.branches, 100);
     assert.equal(result.evidence.fileReports[0].baseline.branches, 0);
   });
@@ -807,7 +809,9 @@ describe('code-coverage gate native-ESM coverage', () => {
   it('buildFixHint handles each combination of missing and failed files', async () => {
     const { buildFixHint } = await loadGate();
     assert.ok(
-      buildFixHint(['src/missing.ts'], []).includes('Missing from coverage summary'),
+      buildFixHint(['src/missing.ts'], []).includes(
+        'Missing from coverage summary',
+      ),
     );
     assert.ok(
       buildFixHint([], ['src/failed.ts']).includes('Files below 100% coverage'),

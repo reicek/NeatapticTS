@@ -19,7 +19,8 @@ export async function main() {
   if (options.help) {
     printUsage({
       title: 'Validate NeatapticTS custom agent delegation graph.',
-      usage: 'node scripts/agent-customization/validate-agent-graph.mjs [--json]',
+      usage:
+        'node scripts/agent-customization/validate-agent-graph.mjs [--json]',
     });
     process.exit(0);
   }

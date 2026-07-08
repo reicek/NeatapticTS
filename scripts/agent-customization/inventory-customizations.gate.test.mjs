@@ -49,8 +49,9 @@ async function importInIsolation(callback) {
 
 describe('inventory-customizations native-ESM coverage', () => {
   it('imports the module and exposes the runner', async () => {
-    const mod = await withArgv([process.execPath, 'dummy-runner'], () =>
-      import('./inventory-customizations.mjs'),
+    const mod = await withArgv(
+      [process.execPath, 'dummy-runner'],
+      () => import('./inventory-customizations.mjs'),
     );
     assert.equal(typeof mod.runCustomizationInventory, 'function');
     assert.equal(typeof mod.main, 'function');
@@ -72,15 +73,12 @@ describe('inventory-customizations native-ESM coverage', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner', '--json'],
-        async () => {
-          await importInIsolation(async () => {
-            const { main } = await import('./inventory-customizations.mjs');
-            await main();
-          });
-        },
-      );
+      await withArgv([process.execPath, 'dummy-runner', '--json'], async () => {
+        await importInIsolation(async () => {
+          const { main } = await import('./inventory-customizations.mjs');
+          await main();
+        });
+      });
       assert.equal(logs.length, 1);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.ok, true);
@@ -94,16 +92,15 @@ describe('inventory-customizations native-ESM coverage', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner'],
-        async () => {
-          await importInIsolation(async () => {
-            const { main } = await import('./inventory-customizations.mjs');
-            await main();
-          });
-        },
+      await withArgv([process.execPath, 'dummy-runner'], async () => {
+        await importInIsolation(async () => {
+          const { main } = await import('./inventory-customizations.mjs');
+          await main();
+        });
+      });
+      assert.ok(
+        logs.some((line) => line.includes('PASS customization inventory')),
       );
-      assert.ok(logs.some((line) => line.includes('PASS customization inventory')));
     } finally {
       console.log = originalLog;
     }
@@ -144,7 +141,8 @@ describe('inventory-customizations native-ESM coverage', () => {
     const originalStderr = console.error;
     console.error = (...args) => errors.push(args.join(' '));
     try {
-      const { handleMainError } = await import('./inventory-customizations.mjs');
+      const { handleMainError } =
+        await import('./inventory-customizations.mjs');
       await handleMainError(new Error('inventory boom'));
       assert.ok(errors.some((line) => line.includes('inventory boom')));
       assert.equal(process.exitCode, 1);
@@ -181,60 +179,55 @@ describe('inventory-customizations native-ESM coverage', () => {
       }),
     }));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner'],
-        async () => {
-          await importInIsolation(async () => {
-            const {
-              readAgent,
-              readSkill,
-            } = await import('./inventory-customizations.mjs');
+      await withArgv([process.execPath, 'dummy-runner'], async () => {
+        await importInIsolation(async () => {
+          const { readAgent, readSkill } =
+            await import('./inventory-customizations.mjs');
 
-            const minimalAgentResult = await readAgent('agents/minimal.agent.md');
-            assert.equal(minimalAgentResult.name, 'minimal');
-            assert.equal(minimalAgentResult.description, '');
-            assert.equal(minimalAgentResult.tier, null);
-            assert.deepEqual(minimalAgentResult.tools, []);
-            assert.deepEqual(minimalAgentResult.agents, []);
-            assert.deepEqual(minimalAgentResult.skills, []);
-            assert.equal(minimalAgentResult.model, null);
-            assert.equal(minimalAgentResult.handoffs, false);
-            assert.equal(minimalAgentResult.userInvocable, true);
-            assert.equal(minimalAgentResult.disableModelInvocation, false);
+          const minimalAgentResult = await readAgent('agents/minimal.agent.md');
+          assert.equal(minimalAgentResult.name, 'minimal');
+          assert.equal(minimalAgentResult.description, '');
+          assert.equal(minimalAgentResult.tier, null);
+          assert.deepEqual(minimalAgentResult.tools, []);
+          assert.deepEqual(minimalAgentResult.agents, []);
+          assert.deepEqual(minimalAgentResult.skills, []);
+          assert.equal(minimalAgentResult.model, null);
+          assert.equal(minimalAgentResult.handoffs, false);
+          assert.equal(minimalAgentResult.userInvocable, true);
+          assert.equal(minimalAgentResult.disableModelInvocation, false);
 
-            const fullAgentResult = await readAgent('agents/full.agent.md');
-            assert.equal(fullAgentResult.name, 'Foo');
-            assert.equal(fullAgentResult.description, 'desc');
-            assert.equal(fullAgentResult.tier, '1');
-            assert.deepEqual(fullAgentResult.tools, ['t']);
-            assert.deepEqual(fullAgentResult.agents, ['a']);
-            assert.deepEqual(fullAgentResult.skills, ['s']);
-            assert.equal(fullAgentResult.model, 'm');
-            assert.equal(fullAgentResult.handoffs, true);
-            assert.equal(fullAgentResult.userInvocable, false);
-            assert.equal(fullAgentResult.disableModelInvocation, true);
+          const fullAgentResult = await readAgent('agents/full.agent.md');
+          assert.equal(fullAgentResult.name, 'Foo');
+          assert.equal(fullAgentResult.description, 'desc');
+          assert.equal(fullAgentResult.tier, '1');
+          assert.deepEqual(fullAgentResult.tools, ['t']);
+          assert.deepEqual(fullAgentResult.agents, ['a']);
+          assert.deepEqual(fullAgentResult.skills, ['s']);
+          assert.equal(fullAgentResult.model, 'm');
+          assert.equal(fullAgentResult.handoffs, true);
+          assert.equal(fullAgentResult.userInvocable, false);
+          assert.equal(fullAgentResult.disableModelInvocation, true);
 
-            const minimalSkillResult = await readSkill('skills/minimal/SKILL.md');
-            assert.equal(minimalSkillResult.name, '');
-            assert.equal(minimalSkillResult.description, '');
-            assert.equal(minimalSkillResult.argumentHint, null);
-            assert.equal(minimalSkillResult.userInvocable, true);
-            assert.equal(minimalSkillResult.disableModelInvocation, false);
-            assert.equal(minimalSkillResult.context, null);
-            assert.equal(minimalSkillResult.license, null);
+          const minimalSkillResult = await readSkill('skills/minimal/SKILL.md');
+          assert.equal(minimalSkillResult.name, '');
+          assert.equal(minimalSkillResult.description, '');
+          assert.equal(minimalSkillResult.argumentHint, null);
+          assert.equal(minimalSkillResult.userInvocable, true);
+          assert.equal(minimalSkillResult.disableModelInvocation, false);
+          assert.equal(minimalSkillResult.context, null);
+          assert.equal(minimalSkillResult.license, null);
 
-            const fullSkillResult = await readSkill('skills/full/SKILL.md');
-            assert.equal(fullSkillResult.name, 'Bar');
-            assert.equal(fullSkillResult.description, 'd');
-            assert.equal(fullSkillResult.argumentHint, 'arg');
-            assert.equal(fullSkillResult.userInvocable, false);
-            assert.equal(fullSkillResult.disableModelInvocation, true);
-            assert.equal(fullSkillResult.context, 'c');
-            assert.equal(fullSkillResult.license, 'l');
-            assert.equal(fullSkillResult.bodyLines, 3);
-          });
-        },
-      );
+          const fullSkillResult = await readSkill('skills/full/SKILL.md');
+          assert.equal(fullSkillResult.name, 'Bar');
+          assert.equal(fullSkillResult.description, 'd');
+          assert.equal(fullSkillResult.argumentHint, 'arg');
+          assert.equal(fullSkillResult.userInvocable, false);
+          assert.equal(fullSkillResult.disableModelInvocation, true);
+          assert.equal(fullSkillResult.context, 'c');
+          assert.equal(fullSkillResult.license, 'l');
+          assert.equal(fullSkillResult.bodyLines, 3);
+        });
+      });
     } finally {
       jest.unstable_mockModule('./customization-utils.mjs', () => utils);
     }

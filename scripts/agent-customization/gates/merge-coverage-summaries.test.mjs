@@ -818,7 +818,9 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
       : null;
     const summary = {
       ...makeTotal(),
-      ...makeSummaryData('src/architecture/network/gpu/network.gpu.activate.ts'),
+      ...makeSummaryData(
+        'src/architecture/network/gpu/network.gpu.activate.ts',
+      ),
     };
     writeFileSync(defaultSummaryPath, JSON.stringify(summary));
     const stdout = ' M src/architecture/network/gpu/network.gpu.activate.ts';

@@ -54,8 +54,9 @@ describe('generate-agent-skill-routing-table native-ESM coverage', () => {
       collectCustomizationRoutingTable,
       runGenerateCustomizationRoutingTable,
       main,
-    } = await withArgv([process.execPath, 'dummy-runner'], () =>
-      import('./generate-agent-skill-routing-table.mjs'),
+    } = await withArgv(
+      [process.execPath, 'dummy-runner'],
+      () => import('./generate-agent-skill-routing-table.mjs'),
     );
     assert.equal(typeof collectCustomizationRoutingTable, 'function');
     assert.equal(typeof runGenerateCustomizationRoutingTable, 'function');
@@ -90,11 +91,20 @@ describe('generate-agent-skill-routing-table native-ESM coverage', () => {
       [process.execPath, 'dummy-runner'],
       () => import('./generate-agent-skill-routing-table.mjs'),
     );
-    const tablePath = path.join(REPO_ROOT, '.github/agent-skill-routing-table.md');
+    const tablePath = path.join(
+      REPO_ROOT,
+      '.github/agent-skill-routing-table.md',
+    );
     const original = readFileSync(tablePath, 'utf8');
-    writeFileSync(tablePath, `${original}\n<!-- temporary coverage perturbation -->\n`, 'utf8');
+    writeFileSync(
+      tablePath,
+      `${original}\n<!-- temporary coverage perturbation -->\n`,
+      'utf8',
+    );
     try {
-      const result = await runGenerateCustomizationRoutingTable({ write: true });
+      const result = await runGenerateCustomizationRoutingTable({
+        write: true,
+      });
       assert.equal(result.ok, true);
       assert.equal(result.changed, true);
       const restored = readFileSync(tablePath, 'utf8');
@@ -110,7 +120,9 @@ describe('generate-agent-skill-routing-table native-ESM coverage', () => {
       () => import('./generate-agent-skill-routing-table.mjs'),
     );
     assert.equal(
-      extractRoutingTableSourceHash('<!-- source-hash: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789 -->'),
+      extractRoutingTableSourceHash(
+        '<!-- source-hash: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789 -->',
+      ),
       'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
     );
     assert.equal(extractRoutingTableSourceHash('no hash here'), null);
@@ -167,22 +179,23 @@ describe('generate-agent-skill-routing-table native-ESM coverage', () => {
       ...utils,
       fileExists: jest.fn(() => Promise.resolve(false)),
     }));
-    const tablePath = path.join(REPO_ROOT, '.github/agent-skill-routing-table.md');
+    const tablePath = path.join(
+      REPO_ROOT,
+      '.github/agent-skill-routing-table.md',
+    );
     const original = readFileSync(tablePath, 'utf8');
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner'],
-        async () => {
-          await importInIsolation(async () => {
-            const { runGenerateCustomizationRoutingTable } = await import(
-              './generate-agent-skill-routing-table.mjs'
-            );
-            const result = await runGenerateCustomizationRoutingTable({ write: true });
-            assert.equal(result.ok, true);
-            assert.equal(result.changed, true);
+      await withArgv([process.execPath, 'dummy-runner'], async () => {
+        await importInIsolation(async () => {
+          const { runGenerateCustomizationRoutingTable } =
+            await import('./generate-agent-skill-routing-table.mjs');
+          const result = await runGenerateCustomizationRoutingTable({
+            write: true,
           });
-        },
-      );
+          assert.equal(result.ok, true);
+          assert.equal(result.changed, true);
+        });
+      });
       const written = readFileSync(tablePath, 'utf8');
       assert.ok(written.includes('# Canonical Agent and Skill Routing Table'));
     } finally {
@@ -196,15 +209,13 @@ describe('generate-agent-skill-routing-table native-ESM coverage', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner', '--json'],
-        async () => {
-          await importInIsolation(async () => {
-            const { main } = await import('./generate-agent-skill-routing-table.mjs');
-            await main();
-          });
-        },
-      );
+      await withArgv([process.execPath, 'dummy-runner', '--json'], async () => {
+        await importInIsolation(async () => {
+          const { main } =
+            await import('./generate-agent-skill-routing-table.mjs');
+          await main();
+        });
+      });
       assert.equal(logs.length, 1);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.ok, true);
@@ -218,16 +229,16 @@ describe('generate-agent-skill-routing-table native-ESM coverage', () => {
     const originalLog = console.log;
     console.log = (...args) => logs.push(args.join(' '));
     try {
-      await withArgv(
-        [process.execPath, 'dummy-runner'],
-        async () => {
-          await importInIsolation(async () => {
-            const { main } = await import('./generate-agent-skill-routing-table.mjs');
-            await main();
-          });
-        },
+      await withArgv([process.execPath, 'dummy-runner'], async () => {
+        await importInIsolation(async () => {
+          const { main } =
+            await import('./generate-agent-skill-routing-table.mjs');
+          await main();
+        });
+      });
+      assert.ok(
+        logs.some((line) => line.includes('PASS customization routing table')),
       );
-      assert.ok(logs.some((line) => line.includes('PASS customization routing table')));
     } finally {
       console.log = originalLog;
     }
@@ -268,7 +279,8 @@ describe('generate-agent-skill-routing-table native-ESM coverage', () => {
     const originalStderr = console.error;
     console.error = (...args) => errors.push(args.join(' '));
     try {
-      const { handleMainError } = await import('./generate-agent-skill-routing-table.mjs');
+      const { handleMainError } =
+        await import('./generate-agent-skill-routing-table.mjs');
       await handleMainError(new Error('boom'));
       assert.ok(errors.some((line) => line.includes('boom')));
       assert.equal(process.exitCode, 1);

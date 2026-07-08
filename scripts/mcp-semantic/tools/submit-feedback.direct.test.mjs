@@ -12,7 +12,10 @@ import { createClient } from '@libsql/client';
 import { getTursoClient, closeTursoClient } from './cortex-db.mjs';
 
 const REPO_ROOT = path.resolve();
-const SHARED_TEMP_DIR = path.join(os.tmpdir(), 'neat-submit-feedback-direct-mjs');
+const SHARED_TEMP_DIR = path.join(
+  os.tmpdir(),
+  'neat-submit-feedback-direct-mjs',
+);
 
 async function makeSharedFixture() {
   fs.rmSync(SHARED_TEMP_DIR, { recursive: true, force: true });
@@ -20,7 +23,10 @@ async function makeSharedFixture() {
   const databasePath = path.join(SHARED_TEMP_DIR, 'corpus.sqlite');
   const client = createClient({ url: 'file:' + databasePath });
   await client.executeMultiple(
-    fs.readFileSync(path.resolve(REPO_ROOT, './rag-index/schema-turso.sql'), 'utf8'),
+    fs.readFileSync(
+      path.resolve(REPO_ROOT, './rag-index/schema-turso.sql'),
+      'utf8',
+    ),
   );
   await client.executeMultiple(`
     INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
@@ -107,7 +113,10 @@ describe('submit-feedback.mjs direct import coverage', () => {
     const memoryClient = await getTursoClient(':memory:');
     try {
       await memoryClient.executeMultiple(
-        fs.readFileSync(path.resolve(REPO_ROOT, './rag-index/schema-turso.sql'), 'utf8'),
+        fs.readFileSync(
+          path.resolve(REPO_ROOT, './rag-index/schema-turso.sql'),
+          'utf8',
+        ),
       );
       await memoryClient.executeMultiple(`
         INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
