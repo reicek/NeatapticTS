@@ -19,7 +19,7 @@ import path from 'node:path';
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const SCRIPTS_DIR = path.join(REPO_ROOT, 'scripts', 'agent-customization');
 const TEMP_DIR = path.join(REPO_ROOT, 'plans', '_test-temp');
-const TEMP_PREFIX = '_plan-workflow-test-';
+const TEMP_PREFIX = 'plan-workflow-test-';
 const ACTIVE_PLAN =
   'plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md';
 const DOWNSTREAM_TRACKER_PLANS = [

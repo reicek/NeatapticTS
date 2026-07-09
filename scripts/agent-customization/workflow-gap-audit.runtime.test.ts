@@ -1,14 +1,9 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 import path from 'node:path';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
-const LEARNING_LOG_PATH = path.join(
-  REPO_ROOT,
-  '.github',
-  'ai-learning',
-  'learning-log.jsonl',
-);
 const WORKFLOW_GAP_AUDIT_PATH = path.join(
   REPO_ROOT,
   'scripts',
@@ -17,17 +12,14 @@ const WORKFLOW_GAP_AUDIT_PATH = path.join(
 );
 
 describe('workflow-gap-audit runtime enforcement evidence', () => {
-  let originalLearningLog = '';
+  let tempDir: string;
+  let tempLogPath: string;
 
-  beforeEach(async () => {
-    try {
-      originalLearningLog = await readFile(LEARNING_LOG_PATH, 'utf8');
-    } catch {
-      originalLearningLog = '';
-    }
-    await mkdir(path.dirname(LEARNING_LOG_PATH), { recursive: true });
-    await writeFile(
-      LEARNING_LOG_PATH,
+  beforeEach(() => {
+    tempDir = mkdtempSync(path.join(os.tmpdir(), 'neataptic-workflow-audit-'));
+    tempLogPath = path.join(tempDir, 'learning-log.jsonl');
+    writeFileSync(
+      tempLogPath,
       [
         JSON.stringify({
           eventType: 'runtime-action-prepass',
@@ -49,8 +41,8 @@ describe('workflow-gap-audit runtime enforcement evidence', () => {
     );
   });
 
-  afterEach(async () => {
-    await writeFile(LEARNING_LOG_PATH, originalLearningLog, 'utf8');
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
   });
 
   it('reports missing hook pairs and runtime proof mismatches in JSON output', () => {
@@ -61,6 +53,10 @@ describe('workflow-gap-audit runtime enforcement evidence', () => {
         cwd: REPO_ROOT,
         encoding: 'utf8',
         timeout: 120000,
+        env: {
+          ...process.env,
+          NEATAPTIC_LEARNING_LOG_PATH: tempLogPath,
+        },
       },
     );
     const parsedReport = JSON.parse(auditResult.stdout) as {

@@ -114,8 +114,8 @@ describe('merge-coverage-summaries utility contract', () => {
     expect(result.mergedFiles.length).toBeGreaterThanOrEqual(2);
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
     expect(merged.total.statements.pct).toBe(100);
-    expect(merged[path.join(REPO_ROOT, 'src/a.ts')]).toBeDefined();
-    expect(merged[path.join(REPO_ROOT, 'src/b.ts')]).toBeDefined();
+    expect(merged['src/a.ts']).toBeDefined();
+    expect(merged['src/b.ts']).toBeDefined();
     expect(path.resolve(REPO_ROOT, result.summaryPath)).toBe(summaryPath);
   });
 
@@ -378,7 +378,7 @@ describe('merge-coverage-summaries utility contract', () => {
 
     await runMerge({ coverageDir, summaryPath });
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    expect(merged[path.join(REPO_ROOT, fileName)].lines.pct).toBe(80);
+    expect(merged[fileName].lines.pct).toBe(80);
   });
 
   it('replaces an existing entry when the candidate has better statement coverage', async () => {
@@ -410,7 +410,7 @@ describe('merge-coverage-summaries utility contract', () => {
 
     await runMerge({ coverageDir, summaryPath });
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    expect(merged[path.join(REPO_ROOT, fileName)].statements.pct).toBe(83);
+    expect(merged[fileName].statements.pct).toBe(83);
   });
 
   it('keeps the existing entry when the candidate is worse', async () => {
@@ -442,7 +442,7 @@ describe('merge-coverage-summaries utility contract', () => {
 
     await runMerge({ coverageDir, summaryPath });
     const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
-    expect(merged[path.join(REPO_ROOT, fileName)].statements.pct).toBe(83);
+    expect(merged[fileName].statements.pct).toBe(83);
   });
 
   it('skips missing metrics while computing the total', async () => {

@@ -1,14 +1,15 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import os from 'node:os';
 import path from 'node:path';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const LEARNING_LOG_PATH = path.join(
-  REPO_ROOT,
-  '.github',
-  'ai-learning',
-  'learning-log.jsonl',
-);
 const RECORD_GATE_EXCEPTION_PATH = path.join(
   REPO_ROOT,
   'scripts',
@@ -26,23 +27,25 @@ const GATE_EXCEPTION_COUNTER_PATH = path.join(
 const TEST_SESSION_ID = 'runtime-escalation-test-session';
 
 describe('runtime gate escalation persistence', () => {
-  let originalLearningLog = '';
+  let tempDir: string;
+  let tempLogPath: string;
 
-  beforeEach(async () => {
-    try {
-      originalLearningLog = await readFile(LEARNING_LOG_PATH, 'utf8');
-    } catch {
-      originalLearningLog = '';
-    }
-    await mkdir(path.dirname(LEARNING_LOG_PATH), { recursive: true });
-    await writeFile(LEARNING_LOG_PATH, '', 'utf8');
+  beforeEach(() => {
+    tempDir = mkdtempSync(path.join(os.tmpdir(), 'neataptic-escalation-'));
+    tempLogPath = path.join(tempDir, 'learning-log.jsonl');
+    writeFileSync(tempLogPath, '', 'utf8');
   });
 
-  afterEach(async () => {
-    await writeFile(LEARNING_LOG_PATH, originalLearningLog, 'utf8');
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('appends a gate escalation event after three consecutive gate exceptions', async () => {
+  it('appends a gate escalation event after three consecutive gate exceptions', () => {
+    const childEnv = {
+      ...process.env,
+      NEATAPTIC_LEARNING_LOG_PATH: tempLogPath,
+    };
+
     for (const gateId of ['first', 'second', 'third']) {
       spawnSync(
         process.execPath,
@@ -58,6 +61,7 @@ describe('runtime gate escalation persistence', () => {
           cwd: REPO_ROOT,
           encoding: 'utf8',
           timeout: 120000,
+          env: childEnv,
         },
       );
     }
@@ -74,13 +78,14 @@ describe('runtime gate escalation persistence', () => {
         cwd: REPO_ROOT,
         encoding: 'utf8',
         timeout: 120000,
+        env: childEnv,
       },
     );
     const parsedCounter = JSON.parse(counterResult.stdout) as {
       escalationTriggered: boolean;
       failureCount: number;
     };
-    const learningLogText = await readFile(LEARNING_LOG_PATH, 'utf8');
+    const learningLogText = readFileSync(tempLogPath, 'utf8');
     const hasEscalationEvent = learningLogText.includes(
       '"eventType":"gate-escalation"',
     );

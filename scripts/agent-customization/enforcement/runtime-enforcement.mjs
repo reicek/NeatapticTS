@@ -3,12 +3,9 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { repoRoot } from '../customization-utils.mjs';
 
-export const LEARNING_LOG_PATH = path.join(
-  repoRoot,
-  '.github',
-  'ai-learning',
-  'learning-log.jsonl',
-);
+export const LEARNING_LOG_PATH = process.env.NEATAPTIC_LEARNING_LOG_PATH
+  ? path.resolve(process.env.NEATAPTIC_LEARNING_LOG_PATH)
+  : path.join(repoRoot, '.github', 'ai-learning', 'learning-log.jsonl');
 export const RUNTIME_CONTEXT_DIR = path.join(
   repoRoot,
   'rag-index',

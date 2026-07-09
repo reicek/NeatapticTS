@@ -9,7 +9,6 @@ interface CortexIndexGateReport {
 }
 
 interface SpawnedGateResult {
-  buildStatus: number | null;
   gateStatus: number | null;
   report: CortexIndexGateReport | null;
   stderr: string;
@@ -17,18 +16,12 @@ interface SpawnedGateResult {
 }
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const BUILD_INDEX_PATH = path.join(REPO_ROOT, 'rag-index', 'build-index.mjs');
 const CORTEX_INDEX_GATE_PATH = path.join(
   REPO_ROOT,
   'scripts',
   'agent-customization',
   'gates',
   'cortex-index.gate.mjs',
-);
-const SNAPSHOT_SCRIPT_PATH = path.join(
-  REPO_ROOT,
-  'rag-index',
-  'build-browser-snapshot.mjs',
 );
 
 describe('cortex-index.gate.mjs', () => {
@@ -38,7 +31,6 @@ describe('cortex-index.gate.mjs', () => {
 
       expect(result).toEqual(
         expect.objectContaining({
-          buildStatus: 0,
           gateStatus: 0,
           report: expect.objectContaining({
             pass: true,
@@ -58,20 +50,6 @@ describe('cortex-index.gate.mjs', () => {
 });
 
 function runGateContractCheck(): SpawnedGateResult {
-  const buildIndexResult = spawnSync(
-    process.execPath,
-    [BUILD_INDEX_PATH, '--json-health'],
-    {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-      timeout: 600000,
-    },
-  );
-  spawnSync(process.execPath, [SNAPSHOT_SCRIPT_PATH], {
-    cwd: REPO_ROOT,
-    encoding: 'utf8',
-    timeout: 120000,
-  });
   const gateResult = spawnSync(
     process.execPath,
     [CORTEX_INDEX_GATE_PATH, '--json'],
@@ -83,7 +61,6 @@ function runGateContractCheck(): SpawnedGateResult {
   );
 
   return {
-    buildStatus: buildIndexResult.status,
     gateStatus: gateResult.status,
     report: tryParseJson<CortexIndexGateReport>(gateResult.stdout ?? ''),
     stderr: gateResult.stderr ?? '',

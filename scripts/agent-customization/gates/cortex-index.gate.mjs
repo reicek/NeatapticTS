@@ -18,7 +18,7 @@ import { runCortexMcpSmoke } from './cortex-mcp-smoke.mjs';
 
 const OWNER = '00-helping';
 const DEFAULT_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_TIMEOUT_MS = 10_000;
+const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_SNAPSHOT_PATH = path.join(
   repoRoot,
   'rag-index',

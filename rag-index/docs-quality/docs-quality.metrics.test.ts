@@ -516,11 +516,11 @@ function withTemporaryCoverageFixture<ResultType>(
 
 function hideCoverageDirectory(): CoverageDirectorySwapState {
   const backupDirectoryPath = existsSync(COVERAGE_DIRECTORY_PATH)
-    ? `${COVERAGE_DIRECTORY_PATH}.docs-quality-backup.${process.pid}.${Date.now()}`
+    ? `${COVERAGE_DIRECTORY_PATH}.docs-quality-backup.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`
     : null;
 
   if (backupDirectoryPath) {
-    renameSync(COVERAGE_DIRECTORY_PATH, backupDirectoryPath);
+    retryRenameSync(COVERAGE_DIRECTORY_PATH, backupDirectoryPath);
   }
 
   return { backupDirectoryPath };
@@ -550,8 +550,28 @@ function restoreCoverageDirectory({
   rmSync(COVERAGE_DIRECTORY_PATH, { recursive: true, force: true });
 
   if (backupDirectoryPath && existsSync(backupDirectoryPath)) {
-    renameSync(backupDirectoryPath, COVERAGE_DIRECTORY_PATH);
+    retryRenameSync(backupDirectoryPath, COVERAGE_DIRECTORY_PATH);
   }
+}
+
+function retryRenameSync(source: string, destination: string): void {
+  const maxRetries = 10;
+  const delayMs = 50;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < maxRetries; attempt += 1) {
+    try {
+      renameSync(source, destination);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries - 1) {
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs);
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 function tryParseJson<ReportType>(stdout: string): ReportType | null {

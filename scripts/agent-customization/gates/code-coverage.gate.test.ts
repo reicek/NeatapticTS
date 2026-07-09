@@ -617,7 +617,11 @@ describe('code-coverage gate contract', () => {
 
   it('main() returns a failure contract when no summary path is provided', async () => {
     const { main } = await loadGate();
-    const result = await main(['--json']);
+    const result = await main([
+      '--json',
+      '--changed-files',
+      'src/no-summary-path.ts',
+    ]);
     expect(result.pass).toBe(false);
   });
 

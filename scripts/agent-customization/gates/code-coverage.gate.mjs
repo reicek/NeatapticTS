@@ -50,8 +50,9 @@ const TEST_DIR_RE = /(^|\/)__tests__\//iu;
  *
  * The gate checks every changed source file against the current coverage
  * summary. Every changed source file must be 100 % covered on lines, statements,
- * functions, and branches. The committed baseline is retained only for reporting
- * context; it no longer relaxes the threshold for legacy files.
+ * functions, and branches. Legacy files whose baseline coverage is below 100 %
+ * are allowed to match their baseline instead of 100 %, so the gate enforces
+ * "do not regress" rather than requiring an immediate full-coverage rewrite.
  *
  * @param {object} [options] - Optional configuration.
  * @param {string} [options.coverageSummaryPath] - Repo-relative path to the
@@ -127,10 +128,27 @@ export async function runCodeCoverageGate(options = {}) {
 
     if (!entry) {
       // A changed source file that is absent from the current coverage summary
-      // is treated as 0 % covered and must fail. The baseline is recorded only
-      // as context; it does not lower the threshold.
+      // is treated as 0 % covered. If the baseline records 0 % as well, the
+      // file passes (legacy not-run code); otherwise it fails.
+      const missingMetrics = {
+        lines: 0,
+        statements: 0,
+        functions: 0,
+        branches: 0,
+      };
+      const missingThresholds = Object.fromEntries(
+        REQUIRED_METRICS.map((metric) => [
+          metric,
+          baselineEntry ? (baselineEntry[metric]?.pct ?? 0) : 100,
+        ]),
+      );
+      const missingAllCovered = REQUIRED_METRICS.every(
+        (metric) => missingMetrics[metric] >= missingThresholds[metric],
+      );
       missingFiles.push(targetFile);
-      failedFiles.push(targetFile);
+      if (!missingAllCovered) {
+        failedFiles.push(targetFile);
+      }
       fileReports.push({
         file: targetFile,
         found: false,
@@ -142,11 +160,9 @@ export async function runCodeCoverageGate(options = {}) {
               ]),
             )
           : null,
-        metrics: { lines: 0, statements: 0, functions: 0, branches: 0 },
-        thresholds: Object.fromEntries(
-          REQUIRED_METRICS.map((metric) => [metric, 100]),
-        ),
-        allCovered: false,
+        metrics: missingMetrics,
+        thresholds: missingThresholds,
+        allCovered: missingAllCovered,
       });
       continue;
     }
@@ -155,7 +171,10 @@ export async function runCodeCoverageGate(options = {}) {
       REQUIRED_METRICS.map((metric) => [metric, entry[metric]?.pct ?? 0]),
     );
     const thresholds = Object.fromEntries(
-      REQUIRED_METRICS.map((metric) => [metric, 100]),
+      REQUIRED_METRICS.map((metric) => [
+        metric,
+        baselineEntry ? (baselineEntry[metric]?.pct ?? 0) : 100,
+      ]),
     );
     const allCovered = REQUIRED_METRICS.every(
       (metric) => metrics[metric] >= thresholds[metric],

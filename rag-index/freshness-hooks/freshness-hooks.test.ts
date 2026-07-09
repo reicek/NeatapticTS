@@ -19,19 +19,30 @@ const REPO_ROOT = path.resolve();
  * @returns The JSON-parsed value the snippet wrote to stdout.
  */
 const runModuleEvaluation = <Result>(source: string): Result => {
-  const output = execFileSync(
-    process.execPath,
-    ['--input-type=module', '--eval', source],
-    {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-    },
-  );
-  const trimmed = output.trim();
-  if (trimmed.length === 0) {
-    throw new Error('Module evaluation produced empty output');
+  let stderr = '';
+  try {
+    const output = execFileSync(
+      process.execPath,
+      ['--input-type=module', '--eval', source],
+      {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+        timeout: 60000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
+    const trimmed = output.trim();
+    if (trimmed.length === 0) {
+      throw new Error('Module evaluation produced empty output');
+    }
+    return JSON.parse(trimmed) as Result;
+  } catch (error) {
+    if (error instanceof Error && 'stderr' in error && typeof error.stderr === 'string') {
+      stderr = error.stderr;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Module evaluation failed: ${message}${stderr ? `\nstderr: ${stderr}` : ''}`);
   }
-  return JSON.parse(trimmed) as Result;
 };
 
 interface TempFixture {

@@ -34,9 +34,19 @@ const config = {
       setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
       testTimeout: 300000,
       collectCoverageFrom: [
-        'src/**/*.ts',
-        '!src/**/*.d.ts',
-        '!src/**/*.test.ts',
+        '**/src/**/*.ts',
+        '!**/src/**/*.d.ts',
+        '!**/src/**/*.test.ts',
+      ],
+      coveragePathIgnorePatterns: [
+        '/node_modules/',
+        '/dist/',
+        '/examples/',
+        '/scripts/',
+        '/assimilate-repo',
+        '/benchmarks/',
+        '/testing/',
+        '/rag-index/',
       ],
       coverageDirectory: 'coverage/project-default',
       coverageReporters: ['lcov', 'text', 'html', 'json', 'json-summary'],
@@ -61,6 +71,7 @@ const config = {
       },
       setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
       testTimeout: 3000000,
+      coveragePathIgnorePatterns: ['/examples/'],
     },
     {
       displayName: 'starter-examples',
@@ -76,6 +87,7 @@ const config = {
       },
       setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
       testTimeout: 300000,
+      coveragePathIgnorePatterns: ['/examples/'],
     },
     {
       displayName: 'rag-index-scripts',
@@ -97,6 +109,7 @@ const config = {
       testMatch: ['**/scripts/agent-customization/**/*.test.ts'],
       preset: 'ts-jest/presets/default-esm',
       testEnvironment: 'node',
+      maxWorkers: 1,
       extensionsToTreatAsEsm: ['.ts'],
       transform: {
         '^.+\\.ts$': [

@@ -328,16 +328,18 @@ describe('neataptic-gate-mcp direct imports', () => {
   });
 
   it('prints MCP usage and exits when main() is called with --help', async () => {
+    jest.resetModules();
     // @ts-ignore - tested module is authored in plain ESM without a declaration file.
     const { main } = await import(SERVER_PATH);
     const logSpy = jest
       .spyOn(console, 'log')
       .mockImplementation(() => undefined);
-    const exitSpy = jest
-      .spyOn(process, 'exit')
-      .mockImplementation(() => undefined as never);
+    const exitSentinel = new Error('process.exit(0) mock');
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {
+      throw exitSentinel;
+    });
     try {
-      await main(['--help']);
+      await expect(main(['--help'])).rejects.toBe(exitSentinel);
       expect(logSpy).toHaveBeenCalled();
       expect(exitSpy).toHaveBeenCalledWith(0);
     } finally {
