@@ -486,6 +486,13 @@ export async function activateGPUWithFreshState(
     );
   }
 
+  const outputByteLength = network.output * Float32Array.BYTES_PER_ELEMENT;
+  const freshOutputStagingBuffer = device.createBuffer({
+    label: 'network_outputs_fresh_staging',
+    size: outputByteLength,
+    usage: GPU_BUFFER_USAGE_MAP_READ | GPU_BUFFER_USAGE_COPY_DST,
+  });
+
   const bufferSet = createConcurrentBufferSet(device, network);
   const pipeline = getOrCreateActivationPipeline(device, network);
   const levelParamsBuffers = createLevelParamsBuffers(
@@ -520,7 +527,9 @@ export async function activateGPUWithFreshState(
     device,
     network,
     bufferSet,
+    freshOutputStagingBuffer,
   );
+  freshOutputStagingBuffer.destroy();
   destroyLevelParamsBuffers(levelParamsBuffers);
   destroyGPUBufferSet(device, bufferSet);
   return outputs;
@@ -1076,6 +1085,10 @@ function getOrCreateOutputStagingBuffer(
  * @param device - WebGPU device that owns the staging buffer.
  * @param network - Network being evaluated; determines output node count.
  * @param bufferSet - Uploaded network slab buffers.
+ * @param providedStagingBuffer - Optional dedicated staging buffer. When
+ *   supplied, readback uses it directly instead of the shared per-device cache.
+ *   Callers are responsible for destroying the supplied buffer. This avoids
+ *   data races when multiple activations are in flight concurrently.
  * @returns Promise resolving to a detached copy of the output values.
  * @see [WebGPU buffer mapping](https://www.w3.org/TR/webgpu/#buffer-mapping)
  * @see [WebGPU buffer map states](https://www.w3.org/TR/webgpu/#enumdef-gpubuffermapstate)
@@ -1087,16 +1100,16 @@ async function readOutputValues(
   device: GPUDevice,
   network: Network,
   bufferSet: GPUBufferSet,
+  providedStagingBuffer?: GPUBuffer,
 ): Promise<Float32Array> {
   const outputNodeCount = network.output;
   const outputByteLength = outputNodeCount * Float32Array.BYTES_PER_ELEMENT;
   const outputStartOffset =
     (bufferSet.nodeCount - outputNodeCount) * Float32Array.BYTES_PER_ELEMENT;
 
-  const stagingBuffer = getOrCreateOutputStagingBuffer(
-    device,
-    outputByteLength,
-  );
+  const stagingBuffer =
+    providedStagingBuffer ??
+    getOrCreateOutputStagingBuffer(device, outputByteLength);
 
   const copyEncoder = commandEncoder as unknown as GPUCommandEncoderCopy;
   copyEncoder.copyBufferToBuffer(

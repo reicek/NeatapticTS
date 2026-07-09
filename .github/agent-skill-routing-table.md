@@ -1,6 +1,6 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: 07ae1f978e795d3ccf0b1cb5113e4f668e618a88a278eeee410f5d5bd26eddba -->
-<!-- source-file-count: 127 -->
+<!-- source-hash: 78ddb7f77621d40ef60ba4ec70e07bb1c0f43ed9c296e52ffb21c1200964e108 -->
+<!-- source-file-count: 128 -->
 # Canonical Agent and Skill Routing Table
 
 > Generated file. Do not edit manually.
@@ -90,6 +90,7 @@
 | architecture-builder | skill | - | 04-implementing<br>flappy-architecture-polish | self |
 | auditing-js-docs | skill | - | 06-documenting<br>academic-docs-auditor | self |
 | browser-build | skill | - | browser-runtime-scout | self |
+| capturing-learning-event | skill | - | 00-helping<br>07-logging<br>assimilator<br>learning-event-capturer | self |
 | chrome-devtools-mcp | skill | - | 03-red-testing<br>05-green-testing<br>browser-harness-specialist<br>browser-memory-specialist<br>browser-ui-specialist<br>performance-trace-specialist | self |
 | coverage-guard | skill | - | 05-green-testing<br>coverage-guard<br>coverage-scout<br>implementation-executor<br>test-coverage-analyst | self |
 | coverage-tranche | skill | - | 03-red-testing<br>coverage-scout<br>test-coverage-analyst | self |

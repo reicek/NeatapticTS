@@ -138,6 +138,29 @@ describe('submit-feedback.mjs normalization and bounding', () => {
         }
       }
     });
+
+    it('rejects a missing numeric chunk_id with MISSING_CHUNK_ID', async () => {
+      const { databasePath, tempDir } = await makeFeedbackFixture();
+      try {
+        expect(() =>
+          runModuleEvaluation(`
+            import { submitFeedback } from './scripts/mcp-semantic/tools/submit-feedback.mjs';
+            const databasePath = ${JSON.stringify(databasePath)};
+            await submitFeedback({
+              chunk_id: 999,
+              signal_type: 'positive',
+              databasePath,
+            });
+          `),
+        ).toThrow(/MISSING_CHUNK_ID/);
+      } finally {
+        try {
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        } catch {
+          // Ignore best-effort cleanup failures.
+        }
+      }
+    });
   });
 
   describe('repeated same-session positive signals must be normalized', () => {

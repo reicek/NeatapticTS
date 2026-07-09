@@ -18,6 +18,7 @@
 
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
   createMcpServer,
   createSelfCheckReport,
@@ -117,6 +118,12 @@ const TIER_1_GATES = [
     description:
       'Checks that every Tier 1 and Tier 2 agent includes the execute skill in its skills array.',
   },
+  {
+    id: 'code-coverage',
+    owner: 'code-coverage.gate.mjs',
+    description:
+      'Checks that changed src/, scripts/agent-customization/, and scripts/mcp-semantic/ files meet their coverage baseline (100% for new files, no regression for legacy files).',
+  },
 ];
 
 const GATES_DIR = path.join(
@@ -125,39 +132,10 @@ const GATES_DIR = path.join(
   'agent-customization',
   'gates',
 );
-const GATE_TOOLS = createGateTools();
-
-const options = parseMcpCliArgs(process.argv.slice(2));
-
-if (options.help) {
-  printMcpUsage({
-    title: 'Expose Tier-1 gate scripts as a direct MCP server.',
-    entrypoint: 'scripts/agent-customization/mcp/neataptic-gate-mcp.mjs',
-    summary:
-      'Without flags this script starts a dependency-light stdio MCP server. ' +
-      'Use --self-check to confirm that the gate scripts are accessible and return valid contracts.',
-    tools: GATE_TOOLS,
-  });
-  process.exit(0);
-}
-
-const server = createMcpServer({
-  serverName: SERVER_NAME,
-  serverVersion: SERVER_VERSION,
-  tools: GATE_TOOLS,
-});
-
-if (options.selfCheck) {
-  const report = await runGateSelfCheck({ server });
-  emitSelfCheckReport(report, options);
-  process.exitCode = report.ok ? 0 : 1;
-} else {
-  await runStdioMcpServer(server);
-}
 
 // ---------------------------------------------------------------------------
 
-function createGateTools() {
+export function createGateTools() {
   return [
     createTool({
       name: 'list_gates',
@@ -183,7 +161,7 @@ function createGateTools() {
             type: 'string',
             enum: TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
             description:
-              'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, cortex-first-search, devtools-coverage, or delegate-skill-coverage).',
+              'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, cortex-first-search, devtools-coverage, delegate-skill-coverage, or code-coverage).',
           },
         },
         required: ['gate'],
@@ -214,7 +192,7 @@ function createGateTools() {
   ];
 }
 
-async function runGateSelfCheck({ server }) {
+export async function runGateSelfCheck({ server }) {
   const issues = [];
 
   // Step 1: Confirm protocol handshake.
@@ -365,4 +343,55 @@ async function runGateSelfCheck({ server }) {
       ? toolListResult.tools.length
       : 0,
   });
+}
+
+export async function main(
+  argv = process.argv.slice(2),
+  { runSelfCheck = runGateSelfCheck } = {},
+) {
+  const options = parseMcpCliArgs(argv);
+
+  if (options.help) {
+    printMcpUsage({
+      title: 'Expose Tier-1 gate scripts as a direct MCP server.',
+      entrypoint: 'scripts/agent-customization/mcp/neataptic-gate-mcp.mjs',
+      summary:
+        'Without flags this script starts a dependency-light stdio MCP server. ' +
+        'Use --self-check to confirm that the gate scripts are accessible and return valid contracts.',
+      tools: createGateTools(),
+    });
+    process.exit(0);
+  }
+
+  const server = createMcpServer({
+    serverName: SERVER_NAME,
+    serverVersion: SERVER_VERSION,
+    tools: createGateTools(),
+  });
+
+  if (options.selfCheck) {
+    const report = await runSelfCheck({ server });
+    emitSelfCheckReport(report, options);
+    process.exitCode = report.ok ? 0 : 1;
+  } else {
+    await runStdioMcpServer(server);
+  }
+}
+
+export function bootstrapMain() {
+  main().then(
+    () => {},
+    (error) => {
+      console.error(error);
+      process.exitCode = 1;
+    },
+  );
+}
+
+/* istanbul ignore next */
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
+  bootstrapMain();
 }

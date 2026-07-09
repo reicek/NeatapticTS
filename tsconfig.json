@@ -24,5 +24,5 @@
     "verbatimModuleSyntax": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "docs", "src/**/*.test.ts"]
+  "exclude": ["node_modules", "dist", "docs", "src/**/*.test.ts", "src/**/__mocks__/**/*", "src/**/*.mock.ts"]
 }

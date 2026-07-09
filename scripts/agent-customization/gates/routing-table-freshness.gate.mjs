@@ -57,7 +57,7 @@ export async function runRoutingTableFreshnessGate() {
   };
 }
 
-async function main() {
+export async function main() {
   const result = await runRoutingTableFreshnessGate();
 
   if (options.json) {
@@ -70,9 +70,14 @@ async function main() {
   process.exitCode = result.pass ? 0 : 1;
 }
 
+export function handleMainError(error) {
+  console.error(error);
+  process.exitCode = 1;
+}
+
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 ) {
-  await main();
+  main().then(() => {}, handleMainError);
 }

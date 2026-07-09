@@ -16,7 +16,9 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parseArgs, repoRoot } from '../customization-utils.mjs';
 
-const LEARNING_LOG_PATH = '.github/ai-learning/learning-log.jsonl';
+const LEARNING_LOG_PATH = process.env.NEATAPTIC_LEARNING_LOG_PATH
+  ? path.resolve(process.env.NEATAPTIC_LEARNING_LOG_PATH)
+  : path.join(repoRoot, '.github', 'ai-learning', 'learning-log.jsonl');
 
 const options = parseArgs(process.argv.slice(2));
 
@@ -37,7 +39,7 @@ async function runLearningEventGate() {
   // Step 1: Attempt to read the learning event log.
   let text = '';
   try {
-    text = await readFile(path.join(repoRoot, LEARNING_LOG_PATH), 'utf8');
+    text = await readFile(LEARNING_LOG_PATH, 'utf8');
   } catch {
     return {
       pass: false,

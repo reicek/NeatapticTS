@@ -477,6 +477,7 @@ readOutputValues(
   device: GPUDevice,
   network: default,
   bufferSet: GPUBufferSet,
+  providedStagingBuffer: any,
 ): Promise<Float32Array<ArrayBufferLike>>
 ```
 
@@ -525,6 +526,10 @@ Parameters:
 - `device` - WebGPU device that owns the staging buffer.
 - `network` - Network being evaluated; determines output node count.
 - `bufferSet` - Uploaded network slab buffers.
+- `providedStagingBuffer` - Optional dedicated staging buffer. When
+supplied, readback uses it directly instead of the shared per-device cache.
+Callers are responsible for destroying the supplied buffer. This avoids
+data races when multiple activations are in flight concurrently.
 
 Returns: Promise resolving to a detached copy of the output values.
 

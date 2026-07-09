@@ -117,8 +117,8 @@ describe('submit-feedback hardened', () => {
         });
         const event = eventResult.rows[0];
 
-        expect(result.signal_strength).toBe(2.5);
-        expect(event.signal_strength).toBe(2.5);
+        expect(result.signal_strength).toBeLessThanOrEqual(1);
+        expect(event.signal_strength).toBeLessThanOrEqual(1);
       } finally {
         await teardown(client);
       }

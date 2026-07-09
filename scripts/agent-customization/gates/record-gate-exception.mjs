@@ -19,19 +19,11 @@
  */
 
 import { appendFile } from 'node:fs/promises';
-import path from 'node:path';
-import { repoRoot } from '../customization-utils.mjs';
 import {
   countTrailingGateFailures,
+  LEARNING_LOG_PATH,
   loadLearningLogEvents,
 } from '../enforcement/runtime-enforcement.mjs';
-
-const LEARNING_LOG_PATH = path.join(
-  repoRoot,
-  '.github',
-  'ai-learning',
-  'learning-log.jsonl',
-);
 
 // Step 1: Parse arguments.
 const args = parseExceptionArgs(process.argv.slice(2));

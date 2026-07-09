@@ -63,6 +63,8 @@ async function runLegacyFormatGate() {
 
       if (headingStatus === 'DONE') continue;
       if (statusValue === 'DONE') continue;
+      // PlanUpdate blocks are audit logs, not step/phase metadata.
+      if (/^\s*PlanUpdate:/mu.test(rawBlock)) continue;
 
       let metadata;
       try {
@@ -128,6 +130,8 @@ async function collectPlanFiles() {
     }
 
     for (const entry of entries) {
+      // Ignore hidden/temp files created by other tooling and tests.
+      if (entry.startsWith('_') || entry.startsWith('.')) continue;
       if (!entry.endsWith('.plans.md')) continue;
       const fullPath = path.join(dirPath, entry);
       const entryStat = await stat(fullPath);

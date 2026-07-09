@@ -4,8 +4,8 @@ import path from 'node:path';
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const SCENARIO_HTML_PATH = path.join(
   REPO_ROOT,
-  'docs',
-  'browser-tests',
+  'testing',
+  'fixtures',
   'webgpu-inference-smoke.html',
 );
 

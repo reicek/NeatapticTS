@@ -1,25 +1,9 @@
 {
   "servers": {
-    "neataptic-workflow-mcp": {
+    "devtools": {
       "type": "stdio",
       "command": "node",
-      "args": [
-        "scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs",
-        "--plan=plans/NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md"
-      ]
-    },
-    "neataptic-validation-mcp": {
-      "type": "stdio",
-      "command": "node",
-      "args": [
-        "scripts/agent-customization/mcp/neataptic-validation-mcp.mjs",
-        "--plan=plans/NEAT_Genesis_EvoDevo_WebGPU_Real_Performance.plans.md"
-      ]
-    },
-    "neataptic-gate-mcp": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["scripts/agent-customization/mcp/neataptic-gate-mcp.mjs"]
+      "args": ["scripts/agent-customization/mcp/devtools-facade.mjs"]
     },
     "cortex": {
       "type": "stdio",
@@ -32,15 +16,31 @@
         "TURSO_SYNC_INTERVAL": "60"
       }
     },
-    "devtools": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["scripts/agent-customization/mcp/devtools-facade.mjs"]
-    },
     "neataptic-dispatch-mcp": {
       "type": "stdio",
       "command": "node",
       "args": ["scripts/agent-customization/mcp/neataptic-dispatch-mcp.mjs"]
+    },
+    "neataptic-gate-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["scripts/agent-customization/mcp/neataptic-gate-mcp.mjs"]
+    },
+    "neataptic-validation-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "scripts/agent-customization/mcp/neataptic-validation-mcp.mjs",
+        "--plan=plans/mcp-active-binding.plans.md"
+      ]
+    },
+    "neataptic-workflow-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs",
+        "--plan=plans/mcp-active-binding.plans.md"
+      ]
     }
   }
 }

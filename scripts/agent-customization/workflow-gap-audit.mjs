@@ -44,7 +44,9 @@ import { access, constants, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parseArgs, repoRoot } from './customization-utils.mjs';
 
-const LEARNING_LOG_PATH = '.github/ai-learning/learning-log.jsonl';
+const LEARNING_LOG_PATH = process.env.NEATAPTIC_LEARNING_LOG_PATH
+  ? path.resolve(process.env.NEATAPTIC_LEARNING_LOG_PATH)
+  : path.join(repoRoot, '.github', 'ai-learning', 'learning-log.jsonl');
 const FLOWS_DIR = '.github/flows';
 
 /** Named-flow ID pattern: two digits, dot, kebab-case name (e.g. `04.scoped-fix`). */
@@ -172,7 +174,7 @@ async function runWorkflowGapAudit(opts) {
 async function loadLearningLog() {
   let text = '';
   try {
-    text = await readFile(path.join(repoRoot, LEARNING_LOG_PATH), 'utf8');
+    text = await readFile(path.resolve(repoRoot, LEARNING_LOG_PATH), 'utf8');
   } catch {
     return [];
   }

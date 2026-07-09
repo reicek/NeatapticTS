@@ -28,6 +28,7 @@ const SUBMITTABLE_SIGNAL_TYPES = Object.freeze([
  * @param {number} options.chunk_id - Target chunk ID.
  * @param {string} options.signal_type - One of 'reference', 'positive', 'negative', 'irrelevant'.
  * @param {number} [options.signal_strength] - Optional explicit signal strength override.
+ *   Supplied values are clamped to the designed [-1, 1] range before recording.
  * @param {string} [options.context] - Optional free-text context (truncated to 500 chars).
  * @param {string} [options.query] - Optional originating query (hashed before storage).
  * @param {string} [options.agent_id] - Optional agent identifier.
@@ -65,10 +66,15 @@ export async function submitFeedback(options = {}) {
     );
   }
 
+  const explicitStrength =
+    typeof options.signal_strength === 'number'
+      ? Math.max(-1, Math.min(1, options.signal_strength))
+      : options.signal_strength;
+
   const eventParams = {
     chunk_id: chunkId,
     signal_type: signalType,
-    signal_strength: options.signal_strength,
+    signal_strength: explicitStrength,
     query: options.query,
     agent_id: options.agent_id,
     context: options.context,
@@ -81,15 +87,16 @@ export async function submitFeedback(options = {}) {
     args: [chunkId],
   });
   const totalSignals = Number(countResult.rows[0].c);
+  const feedbackBoost = score.feedback_boost;
 
   return {
     chunk_id: chunkId,
     signal_type: signalType,
     signal_strength: Number(recorded.signal_strength),
     recorded: true,
-    feedback_boost_after: score ? score.feedback_boost : null,
-    feedback_score: score ? score.feedback_boost : null,
-    feedback_boost: score ? score.feedback_boost : null,
+    feedback_boost_after: feedbackBoost,
+    feedback_score: feedbackBoost,
+    feedback_boost: feedbackBoost,
     total_signals: totalSignals,
   };
 }

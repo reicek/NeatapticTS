@@ -86,6 +86,9 @@ batched calls (`npm run build`, `npm run jest:base`, `npm run jest:esm-ts`,
    - `.github/agents/` changes: agent frontmatter and graph validation.
    - `.github/skills/` changes: skill frontmatter validation.
    - `.github/flows/` changes: flow gate resolution checks.
+   - `src/` or `scripts/agent-customization/` source-file changes: run
+     `node scripts/agent-customization/gates/code-coverage.gate.mjs --json`
+     and confirm `pass: true` before marking the step `[DONE]`.
 
 2. For customization scripts, run each script in audit mode first, then in
    targeted strict mode when the target state should hold.
@@ -127,6 +130,7 @@ batched calls (`npm run build`, `npm run jest:base`, `npm run jest:esm-ts`,
 | `step-packet`    | Active step has yaml block, status, next_step, validation, stop conditions | `scripts/agent-customization/gates/step-packet.gate.mjs`    |
 | `agent-graph`    | All flow/gate/agent references resolve to real files                       | `scripts/agent-customization/gates/agent-graph.gate.mjs`    |
 | `learning-event` | A learning event exists for any gate exception or cross-tier call          | `scripts/agent-customization/gates/learning-event.gate.mjs` |
+| `code-coverage`  | Changed `src/` and `scripts/agent-customization/` files are at 100%        | `scripts/agent-customization/gates/code-coverage.gate.mjs`  |
 
 ## GPU Real-Device Gate
 

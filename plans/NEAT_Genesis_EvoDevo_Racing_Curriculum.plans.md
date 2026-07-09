@@ -1,6 +1,6 @@
 # NEAT Genesis EvoDevo: Core Readiness — Racing Curriculum
 
-**Status:** [DONE]
+**Status:** [WIP]
 
 ## Scope
 
@@ -71,6 +71,7 @@ Claim: 04-implementing — Slice-fix for `04-wire-reproduction-coverage-repair`:
 - **Phase 5 — Tier 4: 2v2 tires and pits** is [DONE]. All steps (Step 01-07) passed green validation. 45 suites / 385 tests all pass. Tire decay, pit lifecycle, and grip multiplier wired into worker race-pack. Chrome DevTools MCP visual confirmed Tier 4 simulation. Phase 5 step/slice details compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 - **Phase 6 — Tier 5: 3v3 full** is [DONE]. All steps (Step 01-07) passed green validation. 6-car coevolution with TIER_FIVE_CAR_COUNT=6, full 3-row radio population with self-broadcast, role-divergence observables (blockerDelta, inferredRole), 6-element pitStatus with layout-aware stride, renderer pit-overlay fix. 46 suites / 394 tests pass, 3 skipped (polyandric P1/P2). Chrome DevTools MCP confirmed Tier 5 (N101/C388, STABLE, 0 console errors). Polyandric reproduction DEFERRED (P1/P2 blockers — nge-core-algorithm ownership). Phase 6 step/slice details compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
 - **Phase 7 — Tier 6: 3v3 advanced strategy** is [DONE]. All steps (Step 01-07) passed green validation. Analytics-only fallback per DR-008 (modeIsEvolvable BLOCKED — nge-core-algorithm ownership). FSM 5-bug fix completed (DR-009). OpponentSnapshotPool wired into racing coevolution loop. Strategy-divergence analytics module created. 68 suites / 502 tests pass (3 skipped polyandric P1/P2). Worker README regenerated 1258→1739 lines. Carry-forward blockers (P1-P5, modeIsEvolvable) documented for nge-core-algorithm handoff. Phase 7 step/slice details compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`.
+- **Phase 8 — Racing Curriculum v2** is [WIP]. Step 01 planning opened now that upstream `plans/completed/NGE_Core_Algorithm_Workstream.plans.md` and `plans/completed/NGE_Core_Growth_Engine_Wiring.plans.md` are [DONE]. V2 gaps: pit strategy depth (blue-only pit calls, tires run out), per-car independent agents still incomplete, growth stall (101 nodes vs. 8,000+ target), coevolution must be independent + continuous, visualizer shows only blue team #1. Step 01 will author Step 02-07 packets for red-green implementation of the first v2 slice.
 
 - **Step 05 visual confirmation:** Browser-ui-specialist confirmed two cars render with cyan (Team A) and magenta (Team B) guiding lines, no Phase 1 regressions, and only minor viewport/alpha observations (see Step 05 evidence block).
 - Tier 1—6 ladder, promotion rules, and carry/reset policy are defined in this plan and sourced from `examples/racing_curriculum/reference.plans.md`.
@@ -859,6 +860,7 @@ See plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md Phase 7 section for ful
 
 ## Latest validation evidence
 
+- Phase 8 Step 01 reactivation completed — Plan status changed from [DONE] to [WIP]; Phase 8 Step 01 planning packet appended; `plans/Roadmap.md` updated with `## Racing Curriculum v2 Lane [WIP]`. `plan-sync.gate`: pass. `plan-slice-quality.gate`: pass. `step-packet.gate`: pass (after fixing Step 01 `expansion: slices` → `expansion: none` because Step 01 authors Step 02-07 packets rather than owning implementation slices).
 - Phase 7 Step 07 completed — Phase 7 marked [DONE], compressed into `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md`. Workstream marked [DONE]. Carry-forward blockers (P1-P5, modeIsEvolvable, 27 tsc errors, 3 skipped polyandric tests) documented for nge-core-algorithm handoff. `phase-compression.gate`: pass. `stale-wip-plans.gate`: pass. `log-completion-marker.gate`: pass. `validate-plan-sync`: PASS.
 - Phase 7 Step 06 completed — Tier 6 contract documented across 4 source files, 3 Mermaid diagrams + 3 citations, worker README regenerated 1258→1739 lines, reference readiness checklist 6 items marked [x]. tsc clean, lint 0.
 - Phase 7 Step 05 completed — 68 suites / 502 tests ALL PASS (3 skipped polyandric P1/P2). tsc (tsconfig.json) clean. 27 tsc.test.json carry-forward errors unchanged. Lint 0. Build 719.9kb OK. plan-sync PASS. No regressions from Step 04.
@@ -1114,3 +1116,159 @@ rollback:
   coverage_guard: 'PASS — coverage-guard specialist reached 100% on simulation-worker.evolution.protocol.service.ts by removing dead branches and adding smallest owner-local tests'
   analysis: |
   The slice-fix is green. The original mock-wiring problem was resolved by the mutable activeRaceRunnerFactory pattern introduced by 04-implementing. Coverage-guard removed genuinely unreachable defensive branches and added the smallest owner-local tests for reachable edge paths, bringing the touched production file to 100% statements/branches/functions/lines on the focused simulation-worker test surface.
+
+### Phase 8 — Racing Curriculum v2 [WIP]
+
+```yaml
+phase: 8
+title: 'Racing Curriculum v2'
+status: '[WIP]'
+goal: 'planning'
+expansion: 'steps'
+auto_expand: false
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
+copy_paste: true
+next_phase: 'Workstream closure or next benchmark'
+skills:
+  - 'plan-alignment'
+  - 'nge-benchmark-scout'
+  - 'boundary-mapper'
+constitution_check:
+  - 'development-workflow'
+  - 'breadth-first-recoverable'
+validation:
+  - 'node scripts/agent-customization/gates/plan-sync.gate.mjs --json'
+  - 'node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json'
+  - 'node scripts/agent-customization/gates/step-packet.gate.mjs --json'
+acceptance_criteria:
+  - id: AC-RC-V2-001
+    text: 'Phase 8 scope is bounded to first v2 slice: pit-strategy depth OR per-car independent agents OR growth-stall diagnosis, with explicit non-goals for the other v2 gaps.'
+    validation: 'manual review of Step 01 packet'
+  - id: AC-RC-V2-002
+    text: 'Step 02-07 packets are authored for the chosen first slice with red-green TDD slices, each slice estimate_hours <= 4.'
+    validation: 'node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json'
+  - id: AC-RC-V2-003
+    text: 'Upstream NGE Core Algorithm Workstream and NGE Core Growth Engine Wiring are confirmed [DONE] and unblocked.'
+    validation: 'node scripts/agent-customization/gates/plan-sync.gate.mjs --json'
+  - id: AC-RC-V2-004
+    text: 'Plan-sync, plan-slice-quality, and step-packet gates all pass before handing off to Step 02.'
+    validation: 'node scripts/agent-customization/gates/step-packet.gate.mjs --json'
+placeholder_steps:
+  - 'Step 01 — Plan Racing Curriculum v2 first slice'
+  - 'Step 02 — Research current v2 gaps and upstream primitives'
+  - 'Step 03 — Red tests for first v2 slice'
+  - 'Step 04 — Implement first v2 slice'
+  - 'Step 05 — Green validation and regression triage'
+  - 'Step 06 — Document v2 slice contract'
+  - 'Step 07 — Logging and tracker handoff'
+```
+
+**Phase objective:** Resume the racing curriculum now that the upstream NGE Core
+Algorithm Workstream and NGE Core Growth Engine Wiring are complete. Phase 8
+tackles the accumulated v2 gaps left by Phases 1-7: pit strategy is shallow
+(only blue pits are used and tires simply run out), per-car agents are not
+fully independent, growth stalls at ~101 nodes instead of climbing toward the
+8,000+ target, coevolution is not yet independent and continuous, and the
+visualizer only shows blue team car #1. The first slice must pick the smallest
+high-leverage surface that unblocks the others.
+
+#### Step 01 — Plan Racing Curriculum v2 first slice [WIP]
+
+```yaml
+phase: 8
+step: 1
+title: 'Plan Racing Curriculum v2 first slice'
+status: '[WIP]'
+goal: 'planning'
+expansion: 'none'
+auto_expand: false
+mode: 'fresh-session'
+source_of_truth: 'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md'
+copy_paste: true
+next_step: 'Step 02 — Research current v2 gaps and upstream NGE primitives'
+skills:
+  - 'plan-alignment'
+  - 'nge-benchmark-scout'
+  - 'boundary-mapper'
+  - 'planning-acceptance-criteria'
+  - 'planning-risk-coordinator'
+specialists:
+  - 'plan-scout'
+  - 'boundary-mapper'
+validation:
+  - 'node scripts/agent-customization/gates/plan-sync.gate.mjs --json'
+  - 'node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json'
+  - 'node scripts/agent-customization/gates/step-packet.gate.mjs --json'
+acceptance_criteria:
+  - id: AC-RC-V2-S01-001
+    text: 'Phase 8 first slice is selected and justified (pit strategy depth, per-car independent agents, or growth-stall diagnosis) with explicit non-goals for deferred v2 gaps.'
+    validation: 'manual review of Step 01 output'
+  - id: AC-RC-V2-S01-002
+    text: 'Step 02-07 packets are authored for the selected first slice with full red-green slices; each slice estimate_hours <= 4.'
+    validation: 'node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json'
+  - id: AC-RC-V2-S01-003
+    text: 'All planning gates (plan-sync, plan-slice-quality, step-packet) pass before handing off.'
+    validation: 'node scripts/agent-customization/gates/step-packet.gate.mjs --json'
+constitution_check:
+  - 'principle-2-human-mission-ai-method'
+  - 'principle-4-small-slices'
+```
+
+**User instruction:** Paste this full step packet.
+
+**Step objective:** Define the first Phase 8 v2 slice, justify the choice
+against the remaining v2 gaps, and author Step 02-07 packets with red-green
+implementation slices before any execution work begins.
+
+**Context the agent must know:**
+
+- The plan file was reactivated from [DONE] to [WIP] after CI Failure Hardening closed.
+- Upstream `plans/completed/NGE_Core_Algorithm_Workstream.plans.md` and `plans/completed/NGE_Core_Growth_Engine_Wiring.plans.md` are [DONE]; these resolve the prior P1-P5 and modeIsEvolvable blockers that forced Phase 7 to use analytics-only fallback.
+- Remaining v2 gaps: pit strategy depth, per-car independent agents, growth stall, independent continuous coevolution, visualizer parity.
+- The reference design in `examples/racing_curriculum/reference.plans.md` still defines the Tier 1-6 ladder, promotion rules, carry/reset policy, radio semantics, tire/pit design, and acceptance criteria.
+- This step must not edit production code; only the plan file, README, and Roadmap may be touched.
+
+**Execution steps:**
+
+1. Re-read `examples/racing_curriculum/reference.plans.md` to confirm the v2-relevant contract and any changes made by upstream NGE work.
+2. Re-read the Phase 7 carry-forward blockers in `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md` to ensure no stale assumptions leak into Phase 8.
+3. Select the first v2 slice using the criteria: smallest surface that unblocks the next gap, has existing tests to extend, and does not require GPU work.
+4. Write explicit non-goals for the v2 gaps not chosen in this first slice.
+5. Author Step 02-07 packets with the standard YAML schema (phase, step, title, status, goal, tdd_sequence, expansion, auto_expand, mode, source_of_truth, copy_paste, next_step, skills, validation, acceptance_criteria, slices).
+6. Ensure each slice estimate_hours is <= 4.
+7. Record the decision and any open assumptions in a decision record if needed.
+8. Update `plans/README.md` and `plans/Roadmap.md` if the active plan description needs refinement.
+9. Run `plan-sync.gate`, `plan-slice-quality.gate`, and `step-packet.gate`; fix any failures and re-run.
+10. Update the plan's `## Latest validation evidence` with the gate outputs and the Step 01 completion note.
+
+**Stop conditions:**
+
+- **Done:** Step 02-07 packets are authored, all three planning gates pass, and the next active step is set to Step 02.
+- **Blocked:** If upstream NGE plans are not actually [DONE] or conflict with Phase 8 scope, stop and escalate via `00.cross-tier-helper`.
+- **Route-back:** If a gate fails, fix the plan/Roadmap/README content and re-run the gate before claiming done.
+
+**Required validation:**
+
+- `node scripts/agent-customization/gates/plan-sync.gate.mjs --json`
+- `node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json`
+- `node scripts/agent-customization/gates/step-packet.gate.mjs --json`
+
+**Plan update requirement:** Update the source plan with the selected first slice, non-goals, Step 02-07 packets, and the validation evidence below before ending.
+
+**Whole-step copy rule:** The entire step block above is the prompt. Do not append a second nested `Copy-paste prompt` subsection.
+
+VALIDATION_EVIDENCE:
+
+- plan_sync_gate:
+  command: 'node scripts/agent-customization/gates/plan-sync.gate.mjs --json'
+  result: 'PASS'
+  evidence: '{ "pass": true, "evidence": { "wipPlans": ["plans/mcp-active-binding.plans.md", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md"], "missingFromReadme": [], "missingFromRoadmap": [], "plansChecked": 5 }, "fixHint": "All WIP plans are correctly registered in README and Roadmap.", "owner": "validate-plan-sync.mjs" }'
+- plan_slice_quality_gate:
+  command: 'node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json'
+  result: 'PASS'
+  evidence: '{ "pass": true, "evidence": { "plansChecked": ["plans/mcp-active-binding.plans.md", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md"], "violations": [], "limit": 4 }, "fixHint": "All WIP plan slices are within the 4-hour estimate limit.", "owner": "plan-slice-quality.gate.mjs" }'
+- step_packet_gate:
+  command: 'node scripts/agent-customization/gates/step-packet.gate.mjs --json'
+  result: 'PASS'
+  evidence: '{ "pass": true, "evidence": { "blocksChecked": ["plans/mcp-active-binding.plans.md:yaml@14718", "plans/mcp-active-binding.plans.md:yaml@16171", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md:yaml@101317", "plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md:yaml@103960"], "violations": [], "planReadinessWarnings": [], "plansScanned": 2 }, "fixHint": "All active WIP phase/step packets conform to the new format.", "owner": "step-packet.gate.mjs" }'
