@@ -296,6 +296,7 @@ interface TelemetryPanelNodes {
   networkSizeValue: Text;
   networkDeltaValue: Text;
   lastChangeReasonValue: Text;
+  lapTimeValue: Text;
   controlsElement: HTMLDivElement;
   syncRuntimeControls: () => void;
 }
@@ -369,7 +370,7 @@ const MAX_CURRICULUM_TIER: CurriculumTier = 6;
  * must meet or exceed the tier's N_floor before promotion is granted.
  */
 const TIER_N_FLOOR: Readonly<Record<number, number>> = {
-  1: 500,
+  1: 1_000,
   2: 2_000,
   3: 8_000,
   4: 20_000,
@@ -830,6 +831,7 @@ export async function start(
       focusedControllerNetwork,
       envState,
       curriculumProgress.lapProgress.completedLaps,
+      tierBestLapTimeMs,
       latestAdaptationTelemetryByCarIndex,
       0,
       hostHandle.networkHud,
@@ -1451,6 +1453,7 @@ function setupRuntimeControls(region: HTMLElement): TelemetryPanelNodes {
   const lastChangeReasonValue = document.createTextNode(
     `${humanizeAdaptationReason('pending')} (local adaptation)`,
   );
+  const lapTimeValue = document.createTextNode('—');
 
   const runtimeCard = createPanelCard('Runtime Telemetry', 'Runtime Controls', [
     'Adaptation runs locally in the browser. This panel shows live telemetry.',
@@ -1463,6 +1466,7 @@ function setupRuntimeControls(region: HTMLElement): TelemetryPanelNodes {
   telemetryGrid.append(
     buildPanelRowWithLiveNode('Laps', lapValue),
     buildPanelRowWithLiveNode('Tick', tickValue),
+    buildPanelRowWithLiveNode('Best Lap', lapTimeValue),
     buildPanelRowWithLiveNode('Network Size', networkSizeValue),
     buildPanelRowWithLiveNode('Network Δ', networkDeltaValue),
     buildPanelRowWithLiveNode('Last Change', lastChangeReasonValue),
@@ -1481,6 +1485,7 @@ function setupRuntimeControls(region: HTMLElement): TelemetryPanelNodes {
     networkSizeValue,
     networkDeltaValue,
     lastChangeReasonValue,
+    lapTimeValue,
     controlsElement,
     syncRuntimeControls,
   };
@@ -1959,6 +1964,8 @@ function createEdgeKey(
  * @param controllerNetwork - Current focused controller network.
  * @param envState - Current physics state.
  * @param completedLaps - Current completed lap count.
+ * @param bestLapTimeMs - Team-level best lap time in milliseconds, or `null`
+ *   when no lap has been completed yet.
  * @param latestTelemetryByCarIndex - Latest per-car runtime adaptation
  *   telemetry, keyed by car index.
  * @param focusCarIndex - Car index whose delta and reason should be shown.
@@ -1970,6 +1977,7 @@ function updateTelemetryPanelNodes(
   controllerNetwork: Network,
   envState: EnvironmentState,
   completedLaps: number,
+  bestLapTimeMs: number | null,
   latestTelemetryByCarIndex: ReadonlyMap<number, RuntimeAdaptationTelemetry>,
   focusCarIndex: number,
   networkHud?: RacingNetworkHudNodes,
@@ -1982,6 +1990,8 @@ function updateTelemetryPanelNodes(
 
   nodes.lapValue.textContent = String(completedLaps);
   nodes.tickValue.textContent = String(envState.tick);
+  nodes.lapTimeValue.textContent =
+    bestLapTimeMs === null ? '—' : `${bestLapTimeMs.toFixed(0)} ms`;
   nodes.networkSizeValue.textContent = `N${networkSize.nodes} / C${networkSize.connections}`;
   nodes.networkDeltaValue.textContent = formatNetworkDelta(
     adaptationSummary.nodeDelta,

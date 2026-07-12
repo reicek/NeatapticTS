@@ -213,19 +213,31 @@ const LARGE_NETWORK_NODE_THRESHOLD = 1_000;
 const GROWTH_THROTTLE_BASE_INTERVAL_TICKS = 3;
 
 /**
- * Consecutive positive-quality windows required before the lifecycle's
- * internal `canGrowNow()` gate allows structural growth. Setting this
- * above zero implements hysteresis: the engine must observe sustained
- * improvement before committing to growth, preventing premature expansion.
+ * Resolve the adaptive hysteresis window count based on the live network
+ * node count. Smaller networks use a lower threshold (2 consecutive
+ * positive-quality windows) to accelerate early growth, while larger
+ * networks require more sustained evidence (5 windows) before committing
+ * to further structural expansion.
+ *
+ * @param nodeCount - Current total node count in the live network.
+ * @returns Hysteresis window count: 2 for ≤ 200 nodes, 3 for ≤ 500, 5 for > 500.
  */
-const HYSTERESIS_WINDOW_COUNT = 5;
+export function resolveAdaptiveHysteresis(nodeCount: number): number {
+  if (nodeCount <= 200) {
+    return 2;
+  }
+  if (nodeCount <= 500) {
+    return 3;
+  }
+  return 5;
+}
 
 /**
  * Maximum number of quality-score entries retained for plateau detection.
  * The rolling window tracks the baseline score at each adaptation tick to
  * determine whether the network has stabilized before allowing growth.
  */
-const PLATEAU_WINDOW_SIZE = 10;
+const PLATEAU_WINDOW_SIZE = 5;
 
 /**
  * Variance threshold below which the quality score is considered plateaued.
@@ -234,7 +246,7 @@ const PLATEAU_WINDOW_SIZE = 10;
  * is permitted. A variance at or above this value indicates ongoing
  * learning — growth is blocked until the score stabilizes.
  */
-const PLATEAU_VARIANCE_THRESHOLD = 0.05;
+const PLATEAU_VARIANCE_THRESHOLD = 0.1;
 
 /**
  * Fraction of connections whose weights are perturbed during each
@@ -249,6 +261,21 @@ const WEIGHT_MUTATION_RATE = 0.3;
  * [-WEIGHT_MUTATION_MAGNITUDE, +WEIGHT_MUTATION_MAGNITUDE].
  */
 const WEIGHT_MUTATION_MAGNITUDE = 0.1;
+
+/**
+ * Minimum stabilization ticks that must elapse after structural growth
+ * before plateau detection can fire. This prevents premature growth
+ * cycles by ensuring the network has time to learn its new structure.
+ */
+const MIN_STABILIZATION_TICKS = 5;
+
+/**
+ * Maximum stabilization ticks after which growth is forced to re-enter
+ * even if the quality score has not plateaued. This time-box prevents
+ * the network from getting stuck in an indefinitely long stabilization
+ * phase when the score remains noisy.
+ */
+const MAX_STABILIZATION_TICKS = 25;
 
 /**
  * Creates a reusable per-tick adaptation engine for racing runtime loops.
@@ -425,6 +452,7 @@ export function createRuntimeAdaptationEngine(
       const plateauReached = isPlateauReached(
         qualityScoreHistory,
         hasGrownBefore,
+        stabilizationTicksSinceGrowth,
       );
 
       if (!plateauReached) {
@@ -547,8 +575,10 @@ export function createRuntimeAdaptationEngine(
       //         5 consecutive positive-quality windows, but growth must happen
       //         first so the network has capacity to learn.
       const isFirstGrowth = !hasGrownBefore;
+      const currentNodeCount = tickInput.network.nodes.length;
+      const adaptiveHysteresis = resolveAdaptiveHysteresis(currentNodeCount);
       const lifecycleHysteresis = isFirstGrowth
-        ? { ...hysteresis, growthPositiveWindowCount: HYSTERESIS_WINDOW_COUNT }
+        ? { ...hysteresis, growthPositiveWindowCount: adaptiveHysteresis }
         : hysteresis;
       const lifecycleResult = runNgeLifecycle({
         stage: 'juvenile',
@@ -556,7 +586,7 @@ export function createRuntimeAdaptationEngine(
         metrics,
         budget: growthBudget,
         config: {
-          hysteresisWindowCount: 5,
+          hysteresisWindowCount: adaptiveHysteresis,
           cooldownWindowCount: limits.mutationCooldownTicks,
         },
         hysteresis: lifecycleHysteresis,
@@ -1275,18 +1305,41 @@ function createTelemetry(
  * {@link PLATEAU_VARIANCE_THRESHOLD}, indicating that learning has stabilized
  * and further structural growth is safe.
  *
+ * Time-boxed stabilization: a minimum of {@link MIN_STABILIZATION_TICKS}
+ * ticks must elapse before plateau can fire (preventing premature growth),
+ * and a maximum of {@link MAX_STABILIZATION_TICKS} ticks forces growth
+ * re-entry even if the variance remains above threshold.
+ *
  * @param scoreWindow - Rolling window of recent baseline quality scores.
  * @param hasGrownBefore - Whether the network has already undergone at least
  *   one structural growth phase.
- * @returns `true` when growth should proceed (first growth or stabilized
- *   plateau), `false` when the network is still stabilizing after growth.
+ * @param stabilizationTicksSinceGrowth - Ticks elapsed in the stabilization
+ *   phase since the last structural growth.
+ * @returns `true` when growth should proceed (first growth, stabilized
+ *   plateau, or time-box cap exceeded), `false` when the network is still
+ *   stabilizing after growth.
  */
 function isPlateauReached(
   scoreWindow: readonly number[],
   hasGrownBefore: boolean,
+  stabilizationTicksSinceGrowth: number,
 ): boolean {
   if (!hasGrownBefore) {
     return true;
+  }
+
+  // Time-box cap: after 25 stabilization ticks, force growth re-entry
+  // even if the score has not plateaued. This prevents indefinite
+  // stabilization when the quality signal remains noisy.
+  if (stabilizationTicksSinceGrowth >= MAX_STABILIZATION_TICKS) {
+    return true;
+  }
+
+  // Minimum guard: require at least 5 stabilization ticks before plateau
+  // can fire. This gives the network time to learn its new structure
+  // before allowing further structural growth.
+  if (stabilizationTicksSinceGrowth < MIN_STABILIZATION_TICKS) {
+    return false;
   }
 
   if (scoreWindow.length < PLATEAU_WINDOW_SIZE) {

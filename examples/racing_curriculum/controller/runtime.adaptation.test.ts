@@ -504,19 +504,25 @@ describe('AC-RC-21-005: actual physics speed and physics-based signal (P8S21)', 
   });
 });
 
-describe('P8S22 — AC-RC-22-001: hysteresisWindowCount raised from 0 to >= 3', () => {
+describe('P8S22 — AC-RC-22-001: hysteresisWindowCount uses adaptive resolution >= 2', () => {
   const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
 
-  it('(P8S22) lifecycle config passes hysteresisWindowCount >= 3 (not 0)', () => {
+  it('(P8S22) lifecycle config uses resolveAdaptiveHysteresis (not hardcoded 0)', () => {
     const sourceText = fs.readFileSync(sourcePath, 'utf8');
 
-    // The lifecycle config in adaptOnTick currently passes hysteresisWindowCount: 0.
-    // After the fix it should be >= 3.
+    // The lifecycle config should now call resolveAdaptiveHysteresis
+    // instead of using a hardcoded literal.
     const hasHysteresisZero = /hysteresisWindowCount:\s*0\b/.test(sourceText);
-    const hysteresisMatch = sourceText.match(/hysteresisWindowCount:\s*(\d+)/);
-    const hysteresisValue = hysteresisMatch ? Number(hysteresisMatch[1]) : 0;
+    const usesAdaptive =
+      sourceText.includes('resolveAdaptiveHysteresis') &&
+      typeof (
+        runtimeAdaptationModule as unknown as Record<
+          string,
+          (nodeCount: number) => number
+        >
+      )['resolveAdaptiveHysteresis'] === 'function';
 
-    expect(!hasHysteresisZero && hysteresisValue >= 3).toBe(true);
+    expect(!hasHysteresisZero && usesAdaptive).toBe(true);
   });
 });
 
@@ -640,5 +646,98 @@ describe('P8S22 — AC-RC-22-012: evaluator uses separate baseline/candidate sco
       adaptSection.includes('candidateWindow');
 
     expect(hasPostMutationCandidate).toBe(true);
+  });
+});
+
+describe('P8S23 — AC-023-001: adaptive hysteresis resolution', () => {
+  const moduleExports = runtimeAdaptationModule as unknown as Record<
+    string,
+    (nodeCount: number) => number
+  >;
+
+  it('(P8S23) resolveAdaptiveHysteresis is exported as a function', () => {
+    expect(typeof moduleExports['resolveAdaptiveHysteresis']).toBe('function');
+  });
+
+  it('(P8S23) resolveAdaptiveHysteresis returns 2 for 200 hidden nodes', () => {
+    const fn = moduleExports['resolveAdaptiveHysteresis'];
+    expect(fn ? fn(200) : undefined).toBe(2);
+  });
+
+  it('(P8S23) resolveAdaptiveHysteresis returns 3 for 500 hidden nodes', () => {
+    const fn = moduleExports['resolveAdaptiveHysteresis'];
+    expect(fn ? fn(500) : undefined).toBe(3);
+  });
+
+  it('(P8S23) resolveAdaptiveHysteresis returns 5 for 501 hidden nodes', () => {
+    const fn = moduleExports['resolveAdaptiveHysteresis'];
+    expect(fn ? fn(501) : undefined).toBe(5);
+  });
+});
+
+describe('P8S23 — AC-023-002: lifecycle call uses adaptive hysteresis not hardcoded 5', () => {
+  const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
+
+  it('(P8S23) source does not contain hardcoded hysteresisWindowCount: 5 literal', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    expect(/hysteresisWindowCount:\s*5\b/.test(sourceText)).toBe(false);
+  });
+
+  it('(P8S23) lifecycle config area calls resolveAdaptiveHysteresis', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const lifecycleIdx = sourceText.indexOf('runNgeLifecycle({');
+    const configSection = sourceText.slice(
+      lifecycleIdx - 300,
+      lifecycleIdx + 400,
+    );
+    expect(configSection.includes('resolveAdaptiveHysteresis')).toBe(true);
+  });
+});
+
+describe('P8S23 — AC-023-003: plateau window reduced to 5 and threshold raised to 0.1', () => {
+  const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
+
+  it('(P8S23) PLATEAU_WINDOW_SIZE is 5 (not 10)', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const match = sourceText.match(/const\s+PLATEAU_WINDOW_SIZE\s*=\s*(\d+)/);
+    const value = match ? Number(match[1]) : 10;
+    expect(value).toBe(5);
+  });
+
+  it('(P8S23) PLATEAU_VARIANCE_THRESHOLD is 0.1 (not 0.05)', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const match = sourceText.match(
+      /const\s+PLATEAU_VARIANCE_THRESHOLD\s*=\s*([0-9.]+)/,
+    );
+    const value = match ? Number(match[1]) : 0.05;
+    expect(value).toBe(0.1);
+  });
+});
+
+describe('P8S23 — AC-023-004: time-boxed stabilization with min 5 and max 25 ticks', () => {
+  const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
+
+  it('(P8S23) isPlateauReached accepts stabilizationTicksSinceGrowth parameter', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const fnStart = sourceText.indexOf('function isPlateauReached');
+    const fnSection = sourceText.slice(fnStart, fnStart + 600);
+    expect(fnSection.includes('stabilizationTicksSinceGrowth')).toBe(true);
+  });
+
+  it('(P8S23) isPlateauReached has max stabilization tick cap of 25', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const fnStart = sourceText.indexOf('function isPlateauReached');
+    const fnSection = sourceText.slice(fnStart, fnStart + 800);
+    expect(fnSection.includes('25')).toBe(true);
+  });
+
+  it('(P8S23) isPlateauReached has min stabilization tick floor of 5 before plateau', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const fnStart = sourceText.indexOf('function isPlateauReached');
+    const fnSection = sourceText.slice(fnStart, fnStart + 800);
+    const hasMinFloor =
+      fnSection.includes('MIN_STABILIZATION') ||
+      /stabilizationTicksSinceGrowth\s*<\s*\d+/.test(fnSection);
+    expect(hasMinFloor).toBe(true);
   });
 });
