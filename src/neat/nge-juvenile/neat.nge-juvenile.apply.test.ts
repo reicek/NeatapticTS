@@ -481,6 +481,137 @@ describe('nge juvenile morph applier', () => {
           NgeJuvenile_BudgetError,
         );
       });
+
+      it('throws NgeJuvenile_BudgetError when nodeAdd would exceed maxNodes', () => {
+        // Arrange — set maxNodes equal to current so any node addition overflows
+        const network = new Network(2, 1, { seed: 42 });
+        const currentNodeCount = network.nodes.length;
+        const budget = buildPermissiveBudget(network);
+        budget.growth.maxNodes = currentNodeCount;
+        const deltas: NgeMorphDelta[] = [
+          {
+            kind: 'nodeAdd',
+            targetModuleId: 'module-A',
+            detail: {
+              currentNodeCount,
+              proposedAdditions: 1,
+              rewardDelta: 0.5,
+            },
+            wiringCostDelta: 0,
+          },
+        ];
+
+        // Act & Assert
+        expect(() => applyMorphDeltas(network, deltas, budget)).toThrow(
+          NgeJuvenile_BudgetError,
+        );
+      });
+
+      it('throws NgeJuvenile_BudgetError when compact would drop below minNodes', () => {
+        // Arrange — add hidden nodes then set minNodes equal to the current
+        // hidden count so any compact violates the floor.
+        const network = new Network(2, 1, { seed: 42 });
+        network.mutate(mutation.ADD_NODE);
+        const hiddenCount = countHiddenNodes(network);
+        const budget = buildPermissiveBudget(network);
+        budget.prune.minNodes = hiddenCount;
+        const deltas: NgeMorphDelta[] = [
+          {
+            kind: 'compact',
+            targetModuleId: 'module-A',
+            detail: {
+              currentNodeCount: network.nodes.length,
+              currentWiringCost: 0,
+            },
+            wiringCostDelta: 0,
+          },
+        ];
+
+        // Act & Assert
+        expect(() => applyMorphDeltas(network, deltas, budget)).toThrow(
+          NgeJuvenile_BudgetError,
+        );
+      });
+    });
+
+    describe('batch and empty input handling', () => {
+      it('returns an empty outcome array when given no deltas', () => {
+        // Arrange
+        const network = new Network(2, 1, { seed: 42 });
+        const deltas: NgeMorphDelta[] = [];
+
+        // Act
+        const outcomes = applyMorphDeltas(
+          network,
+          deltas,
+          buildPermissiveBudget(network),
+        );
+
+        // Assert
+        expect(outcomes).toEqual([]);
+      });
+
+      it('processes multiple deltas in one batch call preserving order', () => {
+        // Arrange — add hidden nodes so both edgeDensify and nodeAdd have room
+        const network = new Network(3, 2, { seed: 42 });
+        network.mutate(mutation.ADD_NODE);
+        network.mutate(mutation.ADD_NODE);
+        const initialConnectionCount = network.connections.length;
+        const initialHiddenCount = countHiddenNodes(network);
+        const deltas: NgeMorphDelta[] = [
+          {
+            kind: 'edgeDensify',
+            targetModuleId: 'module-A',
+            detail: {
+              currentEdgeCount: initialConnectionCount,
+              proposedAdditions: 1,
+              normalizedFocusScore: 0.8,
+            },
+            wiringCostDelta: 1,
+          },
+          {
+            kind: 'nodeAdd',
+            targetModuleId: 'module-B',
+            detail: {
+              currentNodeCount: network.nodes.length,
+              rewardDelta: 0.5,
+            },
+            wiringCostDelta: 0,
+          },
+          {
+            kind: 'slotExpand',
+            targetModuleId: 'module-C',
+            detail: {
+              currentSlotCount: 0,
+              proposedAdditions: 1,
+              hitRate: 0.9,
+              hitRateSource: 'metrics.utilization',
+            },
+            wiringCostDelta: 1,
+          },
+        ];
+
+        // Act
+        const outcomes = applyMorphDeltas(
+          network,
+          deltas,
+          buildPermissiveBudget(network),
+        );
+
+        // Assert — three outcomes in input order: applied, applied, skipped
+        expect(outcomes.map(({ kind }) => kind)).toEqual([
+          'edgeDensify',
+          'nodeAdd',
+          'slotExpand',
+        ]);
+        expect(outcomes.map(({ status }) => status)).toEqual([
+          'applied',
+          'applied',
+          'skipped',
+        ]);
+        expect(network.connections.length).toBe(initialConnectionCount + 2);
+        expect(countHiddenNodes(network)).toBe(initialHiddenCount + 1);
+      });
     });
   });
 });
