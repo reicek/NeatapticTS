@@ -792,6 +792,39 @@ Inputs for the juvenile stage of the NGE lifecycle runner.
 
 Result emitted by one call to the NGE lifecycle staging runner.
 
+### restoreNetworkSnapshot
+
+```ts
+restoreNetworkSnapshot(
+  network: default,
+  snapshot: Record<string, unknown>,
+  capturedInnovation: number,
+): void
+```
+
+Restore a live network reference to a JSON snapshot and rewind the global
+connection innovation counter to the value captured before the mutation.
+
+The network is mutated in place so callers (such as a runtime adaptation
+rollback path) can keep the same reference while discarding any structural
+changes applied during a candidate window.  Restoring the counter prevents
+the global process-level innovation cursor from leaking forward due to
+rolled-back growth morphs.
+
+Parameters:
+- `network` - Live network reference to mutate in place.
+- `snapshot` - JSON snapshot previously produced by `network.toJSON()`.
+- `capturedInnovation` - Connection counter value to restore.
+
+Example:
+
+```ts
+const capturedInnovation = Connection.nextInnovation;
+const snapshot = network.toJSON();
+// ...candidate mutation window...
+restoreNetworkSnapshot(network, snapshot, capturedInnovation);
+```
+
 ### runNgeLifecycle
 
 ```ts

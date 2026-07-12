@@ -124,6 +124,73 @@ Parameters:
 
 Returns: Reusable resolved frame for subsequent draw passes.
 
+## browser-entry/network-view/network-view.lod.ts
+
+Level-of-detail (LOD) renderer for dense racing-curriculum network diagrams.
+
+The shared Flappy Bird visualizer draws every node and edge, which collapses
+FPS once networks grow past a few hundred nodes. This module replaces that
+full-detail path for the racing demo with a cheap abstraction:
+
+- input and output shelves are always rendered in full so tooltips and
+  output labels keep working;
+- hidden nodes above a threshold are collapsed into a handful of density
+  clusters;
+- hovering a hidden node expands a deterministic 2-hop ego neighborhood so
+  the user can still inspect local topology without redrawing the whole graph.
+
+### drawRacingNetworkLODFromFrame
+
+```ts
+drawRacingNetworkLODFromFrame(
+  context: CanvasRenderingContext2D,
+  resolvedFrame: RacingLODResolvedFrame,
+  hoveredNodeIndices: readonly number[] | undefined,
+  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
+): NetworkVisualizationPositionedScene
+```
+
+Draw a previously resolved LOD frame, optionally expanding a hovered ego graph.
+
+### RacingLODResolvedFrame
+
+Frame brand used to route racing network-view drawing through the LOD path.
+
+### resolveRacingNetworkLODFrame
+
+```ts
+resolveRacingNetworkLODFrame(
+  context: CanvasRenderingContext2D,
+  network: default,
+): RacingLODResolvedFrame
+```
+
+Resolve a reusable LOD frame for a dense racing network.
+
+### shouldUseRacingNetworkLOD
+
+```ts
+shouldUseRacingNetworkLOD(
+  network: default | undefined,
+): boolean
+```
+
+Decide whether the racing network view should use the LOD abstraction.
+
+## browser-entry/network-view/network-view.fixture.ts
+
+### buildDenseRacingNetwork
+
+```ts
+buildDenseRacingNetwork(): default
+```
+
+Deterministic dense feed-forward network for level-of-detail red tests.
+
+The fixture intentionally starts with 4,000 hidden nodes so the LOD renderer
+has a strong reason to abstract the hidden graph while keeping every input
+and output node visible.
+
 ## browser-entry/network-view/network-view.constants.ts
 
 Visual constants and input/output label definitions for the racing curriculum
@@ -257,6 +324,18 @@ vivid neon graph instead of disappearing into the background.
 ### RACING_NETWORK_CONNECTION_UNDERLAY_COLOR
 
 Bright neon underlay color used behind racing network connection strokes.
+
+### RACING_NETWORK_LOD_HIDDEN_CLUSTER_COUNT
+
+Number of abstract hidden clusters/density bins in the LOD view.
+
+### RACING_NETWORK_LOD_HIDDEN_NODE_THRESHOLD
+
+Hidden-node count above which the racing network view switches to an abstract cluster/density LOD.
+
+### RACING_NETWORK_LOD_HOVER_MAX_LOCAL_NODES
+
+Maximum number of local nodes rendered when hovering a hidden node in the LOD network view.
 
 ### RACING_OUTPUT_LABELS
 

@@ -446,6 +446,42 @@ describe('per-agent guiding line draw calls', () => {
   });
 });
 
+describe('pit overlay team parity', () => {
+  it('draws both team pit overlays when pits are enabled regardless of focus car', () => {
+    const trackSpec = generateTrack({
+      seed: 42,
+      layoutVersion: 1,
+      sizeBucket: 'medium',
+    });
+    const { canvasElement, strokeStyleAssignments } =
+      createMockCanvasAndStrokeRecorder();
+    const envState = createRendererEnvironmentState(trackSpec);
+
+    renderRacingFrame(
+      canvasElement,
+      trackSpec,
+      envState,
+      createRacingRenderState(),
+      computeWorldTransform(canvasElement, trackSpec),
+      {
+        frame: {
+          featureFlags: 0b100,
+          carTeam: Uint8Array.from([0, 1]),
+          tireState: new Float32Array([1, 1, 1, 1, 1, 1, 1, 1]),
+        },
+        focusCarIndex: 0,
+      },
+    );
+
+    const teamPitColors = ['rgba(0, 0, 255, 0.38)', 'rgba(255, 0, 0, 0.38)'];
+    const renderedTeamPitColors = teamPitColors.filter((teamPitColor) =>
+      strokeStyleAssignments.includes(teamPitColor),
+    );
+
+    expect(renderedTeamPitColors).toEqual(teamPitColors);
+  });
+});
+
 describe('Tier 1/Tier 2 baseline color and guide-track contracts', () => {
   it('draws Team 0 car bodies in blue when pit visuals are disabled', () => {
     const trackSpec = createTrackSpecWithoutPits();

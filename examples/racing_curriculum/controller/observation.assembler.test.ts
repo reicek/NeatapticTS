@@ -447,6 +447,187 @@ describe('assembleNormalizedObservationVector team-aware optimal line', () => {
   });
 });
 
+describe('assembleNormalizedObservationVector tier routing', () => {
+  it('returns a 91-channel vector for Tier 3', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createFourCarEnvironmentState(trackSpec);
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 3 }),
+    );
+
+    expect(observationVector.length).toBe(91);
+  });
+
+  it('returns a 103-channel vector for Tier 4', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createFourCarEnvironmentState(trackSpec);
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 4 }),
+    );
+
+    expect(observationVector.length).toBe(103);
+  });
+
+  it('returns a 103-channel vector for Tier 5', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createFourCarEnvironmentState(trackSpec);
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 5 }),
+    );
+
+    expect(observationVector.length).toBe(103);
+  });
+});
+
+describe('assembleNormalizedObservationVector edge cases', () => {
+  it('reports zero boundary balance when both boundary distances are zero', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createExpandedEnvironmentState({
+      boundaryDistanceLeftWorld: 0,
+      boundaryDistanceRightWorld: 0,
+    });
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 1 }),
+    );
+
+    expect(observationVector[13]).toBe(0);
+  });
+});
+
+describe('derivePerCarObservationState error path', () => {
+  it('throws RangeError when carIndex is out of bounds', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createTwoCarEnvironmentState(trackSpec);
+    const mod = await loadObservationAssemblerModule();
+
+    expect(() => mod.derivePerCarObservationState(envState, 5)).toThrow(
+      RangeError,
+    );
+  });
+});
+
+describe('assembleNormalizedObservationVector normalization edge cases', () => {
+  it('zero-pads a memory trace shorter than the channel count', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createExpandedEnvironmentState({ memoryTrace: [0.5] });
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 1 }),
+    );
+
+    expect(Number.isFinite(observationVector[0])).toBe(true);
+  });
+
+  it('zero-pads a radio field shorter than the Tier 2 tail', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createExpandedEnvironmentState({
+      radioField: new Float32Array([0.1]),
+    });
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 2 }),
+    );
+
+    expect(observationVector.length).toBe(77);
+  });
+
+  it('treats NaN progress01 as the minimum probability after clamping', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createExpandedEnvironmentState({ progress01: NaN });
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 1 }),
+    );
+
+    expect(observationVector[9]).toBe(-1);
+  });
+
+  it('derives progress fields from spline geometry when both are missing', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const focalSampleIndex = 2;
+    const focalSample = trackSpec.splineSamples[focalSampleIndex]!;
+    const frame = resolveSplineSampleFrame(
+      trackSpec.splineSamples,
+      focalSample.globalIndex,
+    );
+    const innerOffsetWorld = focalSample.width / 4;
+    const envState = createExpandedEnvironmentState({
+      carX: focalSample.x + frame.normalX * innerOffsetWorld,
+      carY: focalSample.y + frame.normalY * innerOffsetWorld,
+      carHeading: frame.tangentHeadingRadians,
+      progress01: undefined,
+      lapProgress01: undefined,
+    });
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 1 }),
+    );
+
+    const derivedProgress01 = focalSampleIndex / trackSpec.splineSamples.length;
+    expect(observationVector[9]).toBeCloseTo(derivedProgress01 * 2 - 1, 6);
+    expect(observationVector[10]).toBeCloseTo(derivedProgress01 * 2 - 1, 6);
+  });
+
+  it('clamps a large finite forward speed to the upper normalized bound', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createExpandedEnvironmentState({
+      forwardSpeedWorld: 250,
+      lateralSpeedWorld: 0,
+      speedWorld: 250,
+    });
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 1 }),
+    );
+
+    expect(observationVector[4]).toBe(1);
+  });
+
+  it('treats Infinity forward speed as zero after clamping', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createExpandedEnvironmentState({
+      forwardSpeedWorld: Infinity,
+      lateralSpeedWorld: 0,
+      speedWorld: Infinity,
+    });
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 1 }),
+    );
+
+    expect(observationVector[4]).toBe(0);
+  });
+
+  it('clips negative boundary distances to zero before normalization', async () => {
+    const trackSpec = createStraightTrackSpec();
+    const envState = createExpandedEnvironmentState({
+      boundaryDistanceLeftWorld: -12,
+      boundaryDistanceRightWorld: 12,
+    });
+    const mod = await loadObservationAssemblerModule();
+
+    const observationVector = Array.from(
+      mod.assembleNormalizedObservationVector(envState, trackSpec, { tier: 1 }),
+    );
+
+    expect(observationVector[11]).toBe(0);
+  });
+});
+
 function createStraightTrackSpec(): TrackSpec {
   const segments = [
     { startX: 0, startY: 0, endX: 100, endY: 0, width: 24 },
@@ -488,7 +669,7 @@ interface ObservationAssemblerModule {
   assembleNormalizedObservationVector(
     envState: ExpandedEnvironmentState,
     trackSpec: TrackSpec,
-    options: { tier: 1 | 2 },
+    options: { tier: 1 | 2 | 3 | 4 | 5 },
   ): Float32Array | readonly number[];
   derivePerCarObservationState(
     envState: ExpandedEnvironmentState,

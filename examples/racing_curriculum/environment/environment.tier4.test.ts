@@ -160,7 +160,12 @@ describe('environment Tier 4 tire and pit seam', () => {
       // Arrange
       const tier4EnvironmentState = createTier4EnvironmentState({
         cars: [
-          createTier4CarState({ carX: 12, carY: 12, teamIndex: 0 }),
+          createTier4CarState({
+            carX: 12,
+            carY: 12,
+            teamIndex: 0,
+            tireState: [0.6, 0.6, 0.6, 0.6],
+          }),
           createTier4CarState({ carX: 40, carY: 40, teamIndex: 0 }),
           createTier4CarState({ carX: 120, carY: 120, teamIndex: 1 }),
           createTier4CarState({ carX: 160, carY: 160, teamIndex: 1 }),

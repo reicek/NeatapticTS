@@ -1345,9 +1345,7 @@ describe('P8S22 — AC-RC-22-002: mutationCooldownTicks raised from 5 to >= 30',
 
     // The browser-entry config currently passes mutationCooldownTicks: 5.
     // After the fix it should be >= 30.
-    const configMatch = sourceText.match(
-      /mutationCooldownTicks:\s*(\d+)/,
-    );
+    const configMatch = sourceText.match(/mutationCooldownTicks:\s*(\d+)/);
     const cooldownValue = configMatch ? Number(configMatch[1]) : 0;
 
     expect(cooldownValue).toBeGreaterThanOrEqual(30);
@@ -1361,11 +1359,49 @@ describe('P8S22 — AC-RC-22-003: improvementThreshold raised from 0 to >= 0.01'
 
     // The browser-entry config currently passes improvementThreshold: 0.
     // After the fix it should be >= 0.01.
-    const configMatch = sourceText.match(
-      /improvementThreshold:\s*([0-9.]+)/,
-    );
+    const configMatch = sourceText.match(/improvementThreshold:\s*([0-9.]+)/);
     const thresholdValue = configMatch ? Number(configMatch[1]) : 0;
 
     expect(thresholdValue).toBeGreaterThanOrEqual(0.01);
+  });
+});
+
+describe('P8S23 — AC-023-005: TIER_N_FLOOR[1] raised from 500 to 1000', () => {
+  it('(P8S23) TIER_N_FLOOR tier 1 floor equals 1000 (not 500)', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const floorMatch = sourceText.match(
+      /TIER_N_FLOOR[\s\S]*?\n\s*1:\s*(\d[\d_]*)/,
+    );
+    const tier1Floor = floorMatch
+      ? Number(floorMatch[1].replace(/_/g, ''))
+      : 500;
+    expect(tier1Floor).toBe(1000);
+  });
+});
+
+describe('P8S23 — AC-023-006: lap time displayed in telemetry panel', () => {
+  it('(P8S23) TelemetryPanelNodes interface includes lapTimeValue field', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const ifaceStart = sourceText.indexOf('interface TelemetryPanelNodes');
+    const ifaceSection = sourceText.slice(ifaceStart, ifaceStart + 500);
+    expect(ifaceSection.includes('lapTimeValue')).toBe(true);
+  });
+
+  it('(P8S23) setupRuntimeControls creates a lapTimeValue text node', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const fnStart = sourceText.indexOf('function setupRuntimeControls');
+    const fnSection = sourceText.slice(fnStart, fnStart + 2000);
+    expect(fnSection.includes('lapTimeValue')).toBe(true);
+  });
+
+  it('(P8S23) updateTelemetryPanelNodes sets lapTimeValue text content', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const fnStart = sourceText.indexOf('function updateTelemetryPanelNodes');
+    const fnSection = sourceText.slice(fnStart, fnStart + 2000);
+    expect(fnSection.includes('lapTimeValue')).toBe(true);
   });
 });

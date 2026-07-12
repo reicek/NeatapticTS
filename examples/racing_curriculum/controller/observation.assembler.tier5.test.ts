@@ -68,7 +68,7 @@ describe('observation assembler Tier 5 six-car seam', () => {
       ).resolves.toBe(true);
     });
 
-    it('returns exactly 95 channels', async () => {
+    it('returns exactly 103 channels', async () => {
       // Arrange
       const tier5ObservationState = createTier5ObservationState();
       const trackSpec = createTrackSpec();
@@ -83,7 +83,7 @@ describe('observation assembler Tier 5 six-car seam', () => {
               assembleTier5Observation(tier5ObservationState, trackSpec),
             ).length,
         ),
-      ).resolves.toBe(95);
+      ).resolves.toBe(103);
     });
 
     it('writes three fully populated 7-float team-radio rows into channels 70 through 90', async () => {

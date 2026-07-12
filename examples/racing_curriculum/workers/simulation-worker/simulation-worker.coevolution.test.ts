@@ -331,7 +331,7 @@ describe('simulation worker opponent snapshot store', () => {
 // ---------------------------------------------------------------------------
 
 describe('Tier 4 tire-aware genome input size', () => {
-  it('creates a 95-input controller network for the first tier-4 car genome', async () => {
+  it('creates a 103-input controller network for the first tier-4 car genome', async () => {
     // Arrange
     const service = await loadCoevolutionService();
 
@@ -343,11 +343,11 @@ describe('Tier 4 tire-aware genome input size', () => {
     });
     const firstGenome = container.getCarGenome(0);
 
-    // Assert — Tier 4 must use 95 inputs (91 Tier 3 + 4 tire channels), not 91
-    expect(firstGenome.getNetwork().input).toBe(95);
+    // Assert — Tier 4 must use 103 inputs (91 Tier 3 + 4 tire + 8 pit/strategy channels), not 91
+    expect(firstGenome.getNetwork().input).toBe(103);
   });
 
-  it('creates 95-input controller networks for all four tier-4 car genomes', async () => {
+  it('creates 103-input controller networks for all four tier-4 car genomes', async () => {
     // Arrange
     const service = await loadCoevolutionService();
 
@@ -360,8 +360,8 @@ describe('Tier 4 tire-aware genome input size', () => {
     const genomes = container.getCarGenomes();
     const inputSizes = genomes.map((genome) => genome.getNetwork().input);
 
-    // Assert — all four Tier 4 genomes must have 95 inputs
-    expect(inputSizes).toEqual([95, 95, 95, 95]);
+    // Assert — all four Tier 4 genomes must have 103 inputs
+    expect(inputSizes).toEqual([103, 103, 103, 103]);
   });
 });
 

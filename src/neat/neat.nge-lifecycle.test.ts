@@ -15,7 +15,8 @@ import type {
   NgeJuvenilePhaseConfig,
   NgeModuleMetricsSnapshot,
 } from './nge-juvenile/neat.nge-juvenile.types';
-import { runNgeLifecycle } from './neat.nge-lifecycle';
+import { restoreNetworkSnapshot, runNgeLifecycle } from './neat.nge-lifecycle';
+import Connection from '../architecture/connection';
 import Network from '../architecture/network';
 
 function createJuvenileFixture(): {
@@ -185,5 +186,23 @@ describe('nge lifecycle staging runner', () => {
         (result.assimilationResult as NgeAssimilationResult).updatedModuleDelta,
       ).not.toBeNull();
     });
+  });
+});
+
+describe('network snapshot rollback preserves global innovation counter', () => {
+  afterEach(() => {
+    Connection.resetInnovationCounter(1);
+  });
+
+  it('restores Connection.nextInnovation after rolling back a mutated network', () => {
+    Connection.resetInnovationCounter(1000);
+    const network = new Network(4, 2, { seed: 42 });
+    const snapshot = network.toJSON();
+    const initialInnovation = Connection.nextInnovation;
+
+    network.connect(network.nodes[0], network.nodes[network.nodes.length - 1]);
+    restoreNetworkSnapshot(network, snapshot, initialInnovation);
+
+    expect(Connection.nextInnovation).toBe(initialInnovation);
   });
 });

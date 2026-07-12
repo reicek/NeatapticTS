@@ -26,6 +26,15 @@ export const RACING_INPUT_SIZE = 70;
 /** Number of action outputs produced by the Tier 1 racing network. */
 export const RACING_OUTPUT_SIZE = 2;
 
+/** Hidden-node count above which the racing network view switches to an abstract cluster/density LOD. */
+export const RACING_NETWORK_LOD_HIDDEN_NODE_THRESHOLD = 2048;
+
+/** Maximum number of local nodes rendered when hovering a hidden node in the LOD network view. */
+export const RACING_NETWORK_LOD_HOVER_MAX_LOCAL_NODES = 64;
+
+/** Number of abstract hidden clusters/density bins in the LOD view. */
+export const RACING_NETWORK_LOD_HIDDEN_CLUSTER_COUNT = 4;
+
 /** Total left padding reserved for the input label panel (band + chip + gap). */
 export const RACING_LABEL_LEFT_PADDING_PX = 176;
 

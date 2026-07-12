@@ -539,7 +539,7 @@ The `tier` field in the config controls two dimension switches:
   4 cars (two per team) using the `[0, 0, 1, 1]` team layout.
 - **Controller input dimension:** Tier 1–2 produces 4-input networks; Tier 3
   produces 91-input networks (70 base + 21 teammate-radio); Tier 4+ produces
-  95-input networks (91 Tier 3 + 4 tire-health channels).
+  103-input networks (91 Tier 3 + 4 tire-health + 8 pit/strategy channels).
 
 The output dimension is 2 for Tier 1–2 (throttle + steer) and 9 for Tier 3+
 (2 control + 7 radio-write). Each car gets a distinct seed derived from the
@@ -560,7 +560,7 @@ const fitness = container.resolveTeamFitness(0, [3, 7]); // → 3
 ```
 
 ```ts
-// Tier 4: 2v2 with 95-input / 9-output controller networks.
+// Tier 4: 2v2 with 103-input / 9-output controller networks.
 const container = createCoevolutionContainer({ populationSize: 50, rngSeed: 42, tier: 4 });
 const genomes = container.getCarGenomes();
 // genomes.length === 4 (two blue, two red)
@@ -851,6 +851,16 @@ reproduction.
 See [Coevolution (Wikipedia)](https://en.wikipedia.org/wiki/Coevolution)
 for background on why observing strategy divergence helps assess whether a
 competitive coevolution arms race is producing diverse team strategies.
+
+### clamp01
+
+```ts
+clamp01(
+  value: number,
+): number
+```
+
+Clamps a value to the closed `[0, 1]` interval.
 
 ### convertCoreToRacePackSnapshot
 

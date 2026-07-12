@@ -184,6 +184,63 @@ Mutable self-radio seam used by Tier 2 single-car self-monitoring.
 
 ## controller/runtime.adaptation.ts
 
+### applyWeightMutations
+
+```ts
+applyWeightMutations(
+  network: default,
+  random: () => number,
+): number
+```
+
+Apply random weight perturbations to existing connections.
+
+Each connection is independently selected for mutation with probability
+{@link WEIGHT_MUTATION_RATE}. Selected connections have their weight
+perturbed by a random amount in the range
+[-{@link WEIGHT_MUTATION_MAGNITUDE}, +{@link WEIGHT_MUTATION_MAGNITUDE}].
+This helps the network learn to use its current structure during the
+stabilization phase between structural growth phases.
+
+Parameters:
+- `network` - The network whose connections to perturb.
+- `random` - Random number generator returning a float in [0, 1).
+
+Returns: The number of connections that were mutated.
+
+### buildCandidateScoreWindow
+
+```ts
+buildCandidateScoreWindow(
+  network: default,
+  evidenceWindow: readonly (number | RacingQualitySignal)[],
+): number[]
+```
+
+Build a fresh candidate score window from the post-mutation network's
+forward-pass outputs.
+
+Unlike the shared {@link RuntimeAdaptationTickInput.scoreHistory} (which
+represents historical driving quality and is identical for both baseline
+and candidate evaluations), this window is derived by activating the
+post-mutation network on sample observations from the evidence window and
+converting each output vector into a scalar quality score.  This ensures
+the candidate score reflects the actual behavioral impact of the structural
+mutation, not historical performance.
+
+Each output vector is reduced to a scalar by taking the mean of its
+absolute activation values.  A mutation that disrupts driving behavior
+produces different activation magnitudes, yielding a different candidate
+score window and therefore a different candidate score — even when the
+historical scoreHistory is unchanged.
+
+Parameters:
+- `network` - Post-mutation candidate network to evaluate.
+- `evidenceWindow` - Filtered rolling score history used to derive
+sample observations for the forward passes.
+
+Returns: Array of scalar quality scores, one per sample observation.
+
 ### buildGrowthBudget
 
 ```ts
@@ -206,7 +263,7 @@ Returns: NGE growth budget for the lifecycle apply phase.
 ```ts
 buildModuleMetricsSnapshot(
   network: default,
-  evidenceWindow: readonly number[],
+  evidenceWindow: readonly (number | RacingQualitySignal)[],
 ): NgeModuleMetricsSnapshot
 ```
 
@@ -232,6 +289,26 @@ Parameters:
 - `network` - Live controller network.
 
 Returns: NGE prune budget for the lifecycle apply phase.
+
+### collectForwardPassOutputs
+
+```ts
+collectForwardPassOutputs(
+  network: default,
+  scoreHistory: readonly (number | RacingQualitySignal)[],
+): number[][]
+```
+
+Collects forward-pass outputs from the network by activating it on sample
+observations drawn from the score history.  For numeric entries the scalar
+is repeated to fill the input vector; for composite signals the five
+signal fields are tiled or truncated to the input size.
+
+Parameters:
+- `network` - Candidate network to activate.
+- `scoreHistory` - Rolling score window used to derive observations.
+
+Returns: Array of output vectors, one per sample observation.
 
 ### computeGrowthThrottle
 
@@ -303,6 +380,40 @@ Parameters:
 
 Returns: Stateful runtime adaptation engine.
 
+### evaluateRacingTrendScore
+
+```ts
+evaluateRacingTrendScore(
+  network: default,
+  scoreHistory: readonly (number | RacingQualitySignal)[],
+): number
+```
+
+Racing-specific trend evaluator that consumes a composite driving-quality
+signal and accounts for network complexity via a forward pass.
+
+Each history entry is either a legacy numeric score or a
+{@link RacingQualitySignal} that carries track progress, forward speed,
+heading alignment, off-track penalty, and an optional physics reward.
+The composite quality is folded into the same trend/mean combination used
+by the default rolling-window evaluator.
+
+The complexity bonus is computed from the variance of forward-pass outputs
+across sample observations drawn from the score history.  A behaviorally-
+neutral mutation (e.g. a disconnected dead-weight node) produces identical
+forward-pass outputs and therefore zero variance, yielding no complexity
+bonus — the evaluator correctly rejects it.  The bonus is additionally
+gated on a non-negative driving-quality trend so that structural growth is
+only rewarded when the car is not getting worse.
+
+Parameters:
+- `network` - Candidate network whose forward pass determines behavioral
+complexity.
+- `scoreHistory` - Rolling score window of numeric scores or composite
+driving-quality signals.
+
+Returns: Trend/mean score with performance-gated complexity bonus.
+
 ### evaluateRollingScoreWindow
 
 ```ts
@@ -320,6 +431,42 @@ Parameters:
 
 Returns: Combined trend/complexity score.
 
+### isPlateauReached
+
+```ts
+isPlateauReached(
+  scoreWindow: readonly number[],
+  hasGrownBefore: boolean,
+  stabilizationTicksSinceGrowth: number,
+): boolean
+```
+
+Determine whether the quality score has plateaued based on a rolling
+window of recent baseline scores.
+
+Before the first structural growth, the function always returns `true` to
+allow initial network development without waiting for a full score window.
+After the first growth, the network is considered plateaued when the
+rolling window is full and its variance falls below
+{@link PLATEAU_VARIANCE_THRESHOLD}, indicating that learning has stabilized
+and further structural growth is safe.
+
+Time-boxed stabilization: a minimum of {@link MIN_STABILIZATION_TICKS}
+ticks must elapse before plateau can fire (preventing premature growth),
+and a maximum of {@link MAX_STABILIZATION_TICKS} ticks forces growth
+re-entry even if the variance remains above threshold.
+
+Parameters:
+- `scoreWindow` - Rolling window of recent baseline quality scores.
+- `hasGrownBefore` - Whether the network has already undergone at least
+one structural growth phase.
+- `stabilizationTicksSinceGrowth` - Ticks elapsed in the stabilization
+phase since the last structural growth.
+
+Returns: `true` when growth should proceed (first growth, stabilized
+plateau, or time-box cap exceeded), `false` when the network is still
+stabilizing after growth.
+
 ### mapOutcomesToOperations
 
 ```ts
@@ -334,6 +481,88 @@ Parameters:
 - `outcomes` - Apply outcomes from the lifecycle result.
 
 Returns: Runtime operations for telemetry, excluding skipped morphs.
+
+### RacingQualitySignal
+
+Composite driving-quality signal used by the racing trend evaluator.
+
+Encapsulates the four per-tick telemetry components that together describe
+how well the car is driving: spline-track progress, forward speed, heading
+alignment with the track, and an off-track penalty.  The composite replaces
+the older heading-alignment-only scalar.
+
+### resolveAdaptiveHysteresis
+
+```ts
+resolveAdaptiveHysteresis(
+  nodeCount: number,
+): number
+```
+
+Resolve the adaptive hysteresis window count based on the live network
+node count. Smaller networks use a lower threshold (2 consecutive
+positive-quality windows) to accelerate early growth, while larger
+networks require more sustained evidence (5 windows) before committing
+to further structural expansion.
+
+Parameters:
+- `nodeCount` - Current total node count in the live network.
+
+Returns: Hysteresis window count: 2 for ≤ 200 nodes, 3 for ≤ 500, 5 for > 500.
+
+### resolveBehavioralComplexity
+
+```ts
+resolveBehavioralComplexity(
+  outputs: number[][],
+): number
+```
+
+Compute behavioral complexity as the total variance of forward-pass outputs
+across sample observations.  If all samples produce identical outputs (e.g.
+a dead-weight mutation that does not change the forward pass), the variance
+is zero and the complexity bonus is correctly zero.
+
+Parameters:
+- `outputs` - Array of output vectors, one per sample observation.
+
+Returns: Total variance across all output dimensions.
+
+### resolveObservationVector
+
+```ts
+resolveObservationVector(
+  entry: number | RacingQualitySignal,
+  inputSize: number,
+): number[]
+```
+
+Build an observation vector of the given size from a single score history
+entry.  Numeric entries are repeated to fill the input; composite signals
+tile their five fields (or truncate) to match the network input dimension.
+
+Parameters:
+- `entry` - Numeric score or composite driving-quality signal.
+- `inputSize` - Number of input nodes in the candidate network.
+
+Returns: Input vector suitable for `network.activate`.
+
+### resolveSampleIndices
+
+```ts
+resolveSampleIndices(
+  historyLength: number,
+  maxSamples: number,
+): number[]
+```
+
+Resolve evenly-spaced sample indices from the score history.
+
+Parameters:
+- `historyLength` - Total number of entries in the history.
+- `maxSamples` - Maximum number of samples to select.
+
+Returns: Array of indices into the score history.
 
 ### RuntimeAdaptationCadenceMode
 
@@ -370,6 +599,26 @@ Per-tick input contract for adaptation checks.
 ### RuntimeNetworkSizeSnapshot
 
 Per-step network size snapshot used by adaptation telemetry.
+
+### toDrivingQuality
+
+```ts
+toDrivingQuality(
+  entry: number | RacingQualitySignal,
+): number
+```
+
+Convert one history entry into a scalar driving-quality score.
+
+Legacy numeric entries pass through unchanged so existing callers and the
+default engine can keep using raw score windows.  Composite signals are
+weighted so that better progress, speed, and alignment increase the score,
+while a larger off-track penalty decreases it.
+
+Parameters:
+- `entry` - Numeric score or composite driving-quality signal.
+
+Returns: Scalar quality value for trend/mean scoring.
 
 ## controller/scripted.controller.ts
 
@@ -467,6 +716,38 @@ Parameters:
 
 Returns: Observation vector with the tire-health tail appended.
 
+### appendPitStrategyState
+
+```ts
+appendPitStrategyState(
+  baseVector: Float32Array<ArrayBufferLike>,
+  pitStrategy: PitStrategyState,
+): Float32Array<ArrayBufferLike>
+```
+
+Appends the querying car's pit/strategy state as an 8-channel tail.
+
+The channels are ordered and map to offsets `[95..102]` of the Tier 4/5
+observation vector:
+  0. `pitDistanceToEntrance01` — distance to pit entrance, normalized to `[0, 1]`
+  1. `pitOccupancyStatus` — pit-box occupancy for the car's team (`0` empty, `1` occupied)
+  2. `lapsSincePit` — laps since the car's last pit stop, normalized to `[0, 1]`
+  3. `teammatePitStatus` — team pit box occupied by any team member, including the
+     querying car itself when it is pitting (`0` free, `1` occupied)
+  4. `tireDegradationRate` — tire degradation rate, normalized to `[0, 1]`
+  5. `estimatedLapsBeforeFailure` — estimated laps before tire failure, normalized to `[0, 1]`
+  6. `reservedPitContext1` — reserved expansion channel
+  7. `reservedPitContext2` — reserved expansion channel
+
+Any missing field is treated as zero so the vector length stays stable even
+when the race-pack service has not populated pit/strategy data yet.
+
+Parameters:
+- `baseVector` - Base observation vector (usually already tire-aware).
+- `pitStrategy` - Pit/strategy state computed by the race-pack service.
+
+Returns: Observation vector with the 8-channel pit/strategy tail appended.
+
 ### assembleNormalizedObservationVector
 
 ```ts
@@ -486,21 +767,22 @@ The Tier 1 base vector contains 70 channels:
 
 Tier 2 reuses the Tier 1 base and appends the seven self-radio channels at the
 tail without re-normalizing them. Tier 3 reuses the same base and appends three
-seven-channel teammate-radio slots. Tier 4 and 5 both keep the 95-channel tail
-shape that appends the querying car's four tire channels.
+seven-channel teammate-radio slots. Tier 4 and 5 both keep the 103-channel tail
+shape that appends the querying car's four tire channels plus eight pit/strategy
+channels.
 
 Parameters:
 - `envState` - Current environment snapshot plus optional Tier 1–5 fields.
 - `trackSpec` - Frozen track geometry used to derive look-ahead features.
-- `options` - Tier selector that decides which radio or tire tail is appended.
+- `options` - Tier selector that decides which radio, tire, or pit tail is appended.
 
-Returns: Normalized Tier 1 vector (70 channels), Tier 2 vector (77 channels), Tier 3 vector (91 channels), or Tier 4/5 vector (95 channels).
+Returns: Normalized Tier 1 vector (70 channels), Tier 2 vector (77 channels), Tier 3 vector (91 channels), or Tier 4/5 vector (103 channels).
 
 ### assembleTier3Observation
 
 ```ts
 assembleTier3Observation(
-  envState: EnvironmentState & ObservationExtensions & { teammateRadioSlots?: readonly (Float32Array<ArrayBufferLike> | readonly number[])[] | undefined; },
+  envState: EnvironmentState & ObservationExtensions & PitStrategyState & { teammateRadioSlots?: readonly (Float32Array<ArrayBufferLike> | readonly number[])[] | undefined; },
   trackSpec: TrackSpec,
 ): Float32Array<ArrayBufferLike>
 ```
@@ -550,18 +832,20 @@ assembleTier4Observation(
 ): Float32Array<ArrayBufferLike>
 ```
 
-Builds the Tier 4 observation vector by appending own-car tire health.
+Builds the Tier 4 observation vector by appending own-car tire health and
+pit/strategy state.
 
 The first 91 channels are byte-for-byte identical to Tier 3. The new suffix
-occupies `[91..94]` and stores `[frontLeft, frontRight, rearLeft, rearRight]`.
-That keeps every pre-existing Tier 3 feature aligned while exposing only the
-querying car's four tire channels as the new Tier 4 sensory delta.
+occupies `[91..94]` and stores `[frontLeft, frontRight, rearLeft, rearRight]`,
+followed by 8 pit/strategy channels at `[95..102]`. That keeps every pre-existing
+Tier 3 feature aligned while exposing only the querying car's tire and strategy
+state as the new Tier 4 sensory delta.
 
 Parameters:
-- `envState` - Current environment snapshot plus optional Tier 4 tire state.
+- `envState` - Current environment snapshot plus optional Tier 4 tire and pit/strategy state.
 - `trackSpec` - Frozen track geometry used to derive look-ahead features.
 
-Returns: Ninety-five-channel Tier 4 observation vector.
+Returns: 103-channel Tier 4 observation vector.
 
 Example:
 
@@ -571,8 +855,9 @@ const observation = assembleTier4Observation(
   trackSpec,
 );
 
-observation.length; // 95
+observation.length; // 103
 observation.slice(91, 95); // Float32Array [1, 0.9, 0.8, 0.7]
+observation.slice(95, 103); // 8 pit/strategy channels
 ```
 
 ### assembleTier5Observation
@@ -584,7 +869,7 @@ assembleTier5Observation(
 ): Float32Array<ArrayBufferLike>
 ```
 
-Builds the Tier 5 observation vector with the canonical 95-channel 3v3 layout.
+Builds the Tier 5 observation vector with the canonical 103-channel 3v3 layout.
 
 Channel layout:
 - `[0..69]` — 70-channel base observation containing pose, speed, track geometry,
@@ -592,15 +877,16 @@ Channel layout:
 - `[70..90]` — team radio (`3 × 7 = 21` channels). In 3v3 all three rows can be
   populated; smaller packs keep any missing row zero-padded.
 - `[91..94]` — own-car tire state `[frontLeft, frontRight, rearLeft, rearRight]`.
+- `[95..102]` — 8 pit/strategy channels.
 
-Tier 5 is byte-stable with Tier 4: both tiers emit the same 95 floats in the
+Tier 5 is byte-stable with Tier 4: both tiers emit the same 103 floats in the
 same order. The difference is radio population, not vector shape.
 
 Parameters:
-- `envState` - Current environment snapshot plus optional Tier 5 teammate radio rows and tire state.
+- `envState` - Current environment snapshot plus optional Tier 5 teammate radio rows, tire state, and pit/strategy state.
 - `trackSpec` - Frozen track geometry used to derive look-ahead features.
 
-Returns: Ninety-five-channel Tier 5 observation vector with the stable Tier 4 byte layout.
+Returns: 103-channel Tier 5 observation vector with the stable Tier 4 byte layout.
 
 Example:
 
@@ -618,21 +904,29 @@ const observation = assembleTier5Observation(
   trackSpec,
 );
 
-observation.length; // TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT + TIRE_CHANNEL_COUNT
+observation.length; // TOTAL_TIER4_INPUT_SIZE
 observation.slice(
   TIER_ONE_CHANNEL_COUNT,
   TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT,
 ); // three teammate radio rows
 observation.slice(
   TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT,
+  TIER_ONE_CHANNEL_COUNT +
+    TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT +
+    TIRE_CHANNEL_COUNT,
 ); // own-car tire channels
+observation.slice(
+  TIER_ONE_CHANNEL_COUNT +
+    TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT +
+    TIRE_CHANNEL_COUNT,
+); // 8 pit/strategy channels
 ```
 
 ### buildTeammateRadioSlots
 
 ```ts
 buildTeammateRadioSlots(
-  cars: readonly CarState[] | undefined,
+  cars: readonly CarState[],
   focalCarIndex: number,
   focalTeamIndex: 0 | 1,
   focalCarX: number,
@@ -795,7 +1089,7 @@ Returns: Immutable Tier 3 observation options object.
 createTier4ObservationOptions(): { readonly tier: 4; }
 ```
 
-Creates the reusable `{ tier: 4 }` selector for the 95-channel observation layout.
+Creates the reusable `{ tier: 4 }` selector for the 103-channel observation layout.
 
 Use this helper when callers need the canonical Tier 4 pack shape without
 re-allocating the options object by hand.
@@ -808,7 +1102,7 @@ Returns: Immutable Tier 4 observation options object.
 createTier5ObservationOptions(): { readonly tier: 5; }
 ```
 
-Creates the reusable `{ tier: 5 }` selector for the 95-channel Tier 5 layout.
+Creates the reusable `{ tier: 5 }` selector for the 103-channel Tier 5 layout.
 
 Pass this helper to `assembleNormalizedObservationVector` when the caller wants
 the byte-stable Tier 4/5 observation shape while allowing all three teammate-radio
@@ -823,7 +1117,7 @@ const options = createTier5ObservationOptions();
 const observation = assembleNormalizedObservationVector(envState, trackSpec, options);
 
 options.tier; // 5
-observation.length; // TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT + TIRE_CHANNEL_COUNT
+observation.length; // TOTAL_TIER4_INPUT_SIZE
 ```
 
 ### derivePerCarObservationState
@@ -934,8 +1228,9 @@ Returns: Normalized value in [0, 1].
 Options that select which suffix is appended to the 70-channel driving base.
 
 `tier` decides whether callers receive only the base observation, the seven-channel
-self-radio tail, the 21-channel teammate-radio tail, or the four-channel own-tire
-suffix that keeps Tier 4 and Tier 5 byte-stable at 95 channels.
+self-radio tail, the 21-channel teammate-radio tail, the four-channel own-tire
+suffix, or the 8-channel pit/strategy suffix that keeps Tier 4 and Tier 5
+byte-stable at 103 channels.
 
 ### ObservationExtensions
 
@@ -950,9 +1245,10 @@ Tier selector for the owner-local observation seam.
 - `3` — Tier 1 plus three teammate-radio slots for a 91-channel vector; smaller
   packs keep any missing slot zero-padded.
 - `4` — Tier 3 plus own-car tire health at `[91..94]` ordered as
-  `[frontLeft, frontRight, rearLeft, rearRight]`, producing 95 channels.
-- `5` — The same 95-channel byte layout as Tier 4, but the 3v3 six-car seam can
-  fully populate all three teammate-radio rows before the tire tail is appended.
+  `[frontLeft, frontRight, rearLeft, rearRight]`, then 8 pit/strategy channels
+  at `[95..102]`, producing 103 channels.
+- `5` — The same 103-channel byte layout as Tier 4, but the 3v3 six-car seam can
+  fully populate all three teammate-radio rows before the tire/pit tail is appended.
 
 ### RacingObservationState
 
@@ -1059,6 +1355,13 @@ Parameters:
 - `trackSpec` - Frozen track geometry.
 
 Returns: Bounding box plus center point.
+
+### TOTAL_TIER4_INPUT_SIZE
+
+Total Tier 4/5 controller input size after the tire and pit/strategy tails.
+
+This is `70 + 21 + 4 + 8 = 103` channels and must stay byte-stable with the
+coevolution service's controller input dimension.
 
 ### wrapAngleToMinusPiPi
 

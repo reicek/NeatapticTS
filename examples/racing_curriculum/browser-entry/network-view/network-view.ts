@@ -30,6 +30,12 @@ import {
   RACING_OUTPUT_LABELS,
   RACING_OUTPUT_SIZE,
 } from './network-view.constants';
+import {
+  drawRacingNetworkLODFromFrame,
+  resolveRacingNetworkLODFrame,
+  shouldUseRacingNetworkLOD,
+  type RacingLODResolvedFrame,
+} from './network-view.lod';
 
 /** Minimum canvas backing-store width. */
 const MIN_CANVAS_WIDTH_PX = 320;
@@ -139,6 +145,10 @@ export function resolveRacingNetworkVisualizationFrame(
   context: CanvasRenderingContext2D,
   network: Network | undefined,
 ): NetworkVisualizationResolvedFrame {
+  if (network && shouldUseRacingNetworkLOD(network)) {
+    return resolveRacingNetworkLODFrame(context, network);
+  }
+
   return resolveSharedNetworkVisualizationFrame(
     context,
     network,
@@ -164,6 +174,21 @@ export function drawRacingNetworkVisualizationFromFrame(
   resolvedFrame: NetworkVisualizationResolvedFrame,
   hoveredNodeIndices?: readonly number[],
 ): NetworkVisualizationPositionedScene {
+  if (isRacingLODResolvedFrame(resolvedFrame)) {
+    const positionedScene = drawRacingNetworkLODFromFrame(
+      context,
+      resolvedFrame,
+      hoveredNodeIndices,
+      RACING_NETWORK_CONNECTION_LAYER_STYLE,
+    );
+    drawRacingOutputNodeLabels(
+      context,
+      resolveSortedOutputNodes(positionedScene.positionedNodes),
+    );
+
+    return positionedScene as unknown as NetworkVisualizationPositionedScene;
+  }
+
   const hoverState = resolveRacingHoverState(hoveredNodeIndices);
 
   const positionedScene = drawResolvedNetworkVisualization(
@@ -178,6 +203,12 @@ export function drawRacingNetworkVisualizationFromFrame(
   );
 
   return positionedScene as unknown as NetworkVisualizationPositionedScene;
+}
+
+function isRacingLODResolvedFrame(
+  resolvedFrame: NetworkVisualizationResolvedFrame,
+): resolvedFrame is RacingLODResolvedFrame {
+  return '__racingLod' in resolvedFrame && resolvedFrame.__racingLod === true;
 }
 
 /**

@@ -183,10 +183,14 @@ function createTeamPitCompetitionState(): EnvironmentState {
   const cars = (initialState.cars ?? []).map((car, carIndex) =>
     createPitCompetitionCar(car, carIndex),
   );
+  const degradedCars = cars.map((car) => ({
+    ...car,
+    tireState: [0.5, 0.5, 0.5, 0.5] as const,
+  }));
 
   return {
     ...initialState,
-    cars,
+    cars: degradedCars,
     trackSpec: createTier5TrackSpec(),
   };
 }
@@ -215,6 +219,7 @@ function createFullPitOccupancyState(): EnvironmentState {
       ...car,
       carX,
       carY,
+      tireState: [0.5, 0.5, 0.5, 0.5] as const,
     };
   });
 

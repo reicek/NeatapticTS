@@ -7,6 +7,7 @@ import type {
   NgeRulePlacement,
 } from '../../../../src/neat/nge-dna/neat.nge-dna.types';
 import type { NeatGenomeSubstrateCoordinate } from '../../../../src/neat/genome/genome.types';
+import { TOTAL_TIER4_INPUT_SIZE } from '../../controller/observation.assembler';
 
 /**
  * Team A/B coevolution container for the racing curriculum benchmark.
@@ -159,8 +160,8 @@ const TIER_FIVE_CAR_COUNT = 6;
 const TIER_ONE_TWO_CONTROLLER_INPUT_SIZE = 4;
 /** Tier 3+ controller input dimension (91-channel observation). */
 const TIER_THREE_CONTROLLER_INPUT_SIZE = 91;
-/** Tier 4+ controller input dimension (95-channel observation with tire health). */
-const TIER_FOUR_CONTROLLER_INPUT_SIZE = 95;
+/** Tier 4+ controller input dimension (103-channel observation with tire health and pit/strategy). */
+const TIER_FOUR_CONTROLLER_INPUT_SIZE = TOTAL_TIER4_INPUT_SIZE;
 /** Tier 1–2 controller output dimension. */
 const TIER_ONE_TWO_CONTROLLER_OUTPUT_SIZE = 2;
 /** Tier 3+ controller output dimension (2 control + 7 radio-write). */
@@ -367,7 +368,7 @@ const evaluateRacingTeamFitness = createTeamFitnessEvaluator<
  *   4 cars (two per team) using the `[0, 0, 1, 1]` team layout.
  * - **Controller input dimension:** Tier 1–2 produces 4-input networks; Tier 3
  *   produces 91-input networks (70 base + 21 teammate-radio); Tier 4+ produces
- *   95-input networks (91 Tier 3 + 4 tire-health channels).
+ *   103-input networks (91 Tier 3 + 4 tire-health + 8 pit/strategy channels).
  *
  * The output dimension is 2 for Tier 1–2 (throttle + steer) and 9 for Tier 3+
  * (2 control + 7 radio-write). Each car gets a distinct seed derived from the
@@ -386,7 +387,7 @@ const evaluateRacingTeamFitness = createTeamFitnessEvaluator<
  *
  * @example
  * ```ts
- * // Tier 4: 2v2 with 95-input / 9-output controller networks.
+ * // Tier 4: 2v2 with 103-input / 9-output controller networks.
  * const container = createCoevolutionContainer({ populationSize: 50, rngSeed: 42, tier: 4 });
  * const genomes = container.getCarGenomes();
  * // genomes.length === 4 (two blue, two red)

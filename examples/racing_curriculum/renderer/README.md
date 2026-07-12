@@ -81,6 +81,30 @@ Example:
 const transform = computeWorldTransform(canvasElement, trackSpec);
 ```
 
+### countActiveTeams
+
+```ts
+countActiveTeams(
+  renderCars: readonly RenderCarState[],
+  overlayFrame: RacingRenderOverlayFrame | undefined,
+): number
+```
+
+Counts the number of distinct teams present in the render roster.
+
+When the packed worker frame supplies `carTeam`, the count is derived
+directly from that team roster, because the frame may describe more cars
+(and therefore more teams) than are present in the local environment
+state. If `carTeam` is absent, the count falls back to the teams of the
+resolved render cars. When two or more teams are active, pit overlays are
+rendered for all teams regardless of focus car.
+
+Parameters:
+- `renderCars` - Ordered list of car states to draw for this frame.
+- `overlayFrame` - Optional packed worker frame with per-car team assignments.
+
+Returns: Number of unique teams in the render roster.
+
 ### createRacingRenderState
 
 ```ts

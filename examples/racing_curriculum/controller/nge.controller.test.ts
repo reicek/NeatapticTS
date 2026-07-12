@@ -104,6 +104,22 @@ describe('nge.controller', () => {
       ).resolves.toEqual(payload);
     });
   });
+
+  describe('Tier 4/5 controller network input size contract', () => {
+    it('resolves a 103-input deterministic network for Tier 4', async () => {
+      const { createDeterministicRacingControllerNetwork } =
+        await import('../browser-entry/browser-entry');
+
+      expect(createDeterministicRacingControllerNetwork(4).input).toBe(103);
+    });
+
+    it('resolves a 103-input deterministic network for Tier 5', async () => {
+      const { createDeterministicRacingControllerNetwork } =
+        await import('../browser-entry/browser-entry');
+
+      expect(createDeterministicRacingControllerNetwork(5).input).toBe(103);
+    });
+  });
 });
 
 type ExpandedEnvironmentState = EnvironmentState & {

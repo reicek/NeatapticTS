@@ -11,6 +11,7 @@ import {
   resolveRacingNetworkVisualizationFrame,
 } from './network-view';
 import { RACING_NETWORK_CONNECTION_LAYER_STYLE } from './network-view.constants';
+import { buildDenseRacingNetwork } from './network-view.fixture';
 
 describe('racing network-view adapter', () => {
   const buildStubContext = (): CanvasRenderingContext2D => {
@@ -212,5 +213,97 @@ describe('racing network-view adapter', () => {
         activationValues.has(Number.parseFloat(text)),
       ),
     ).toBe(true);
+  });
+
+  describe('level-of-detail rendering', () => {
+    it('abstracts a dense network so positioned node count is well below total node count', () => {
+      const context = buildStubContext();
+      const network = buildDenseRacingNetwork();
+
+      const frame = resolveRacingNetworkVisualizationFrame(context, network);
+      const scene = drawRacingNetworkVisualizationFromFrame(context, frame, []);
+
+      expect({
+        positionedNodeCount: scene.positionedNodes.length,
+        totalNodeCount: network.nodes.length,
+        isAbstract: scene.positionedNodes.length < network.nodes.length * 0.5,
+      }).toEqual({
+        positionedNodeCount: expect.any(Number),
+        totalNodeCount: network.nodes.length,
+        isAbstract: true,
+      });
+    });
+
+    it('switches to a more detailed scene when a hidden node is hovered', () => {
+      const context = buildStubContext();
+      const network = buildDenseRacingNetwork();
+      const hoveredNodeIndex = network.nodes[100]?.index ?? -1;
+
+      const frame = resolveRacingNetworkVisualizationFrame(context, network);
+      const abstractScene = drawRacingNetworkVisualizationFromFrame(
+        context,
+        frame,
+        [],
+      );
+      const hoveredScene = drawRacingNetworkVisualizationFromFrame(
+        context,
+        frame,
+        [hoveredNodeIndex],
+      );
+
+      expect({
+        moreDetailed:
+          hoveredScene.positionedNodes.length >
+          abstractScene.positionedNodes.length,
+        hoveredNodePresent: hoveredScene.positionedNodes.some(
+          (positionedNode) => positionedNode.node.index === hoveredNodeIndex,
+        ),
+      }).toEqual({
+        moreDetailed: true,
+        hoveredNodePresent: true,
+      });
+    });
+
+    it('preserves input and output visibility while still abstracting hidden nodes', () => {
+      const context = buildStubContext();
+      const network = buildDenseRacingNetwork();
+
+      const frame = resolveRacingNetworkVisualizationFrame(context, network);
+      const scene = drawRacingNetworkVisualizationFromFrame(context, frame, []);
+      const ioPositionedNodeCount = scene.positionedNodes.filter(
+        (positionedNode) =>
+          positionedNode.node.type === 'input' ||
+          positionedNode.node.type === 'output',
+      ).length;
+
+      expect({
+        ioPositionedNodeCount,
+        isAbstract: scene.positionedNodes.length < network.nodes.length * 0.5,
+      }).toEqual({
+        ioPositionedNodeCount: 72,
+        isAbstract: true,
+      });
+    });
+
+    it('resolves and draws a 4k-node abstract frame within the 15 FPS budget', () => {
+      const context = buildStubContext();
+      const network = buildDenseRacingNetwork();
+      const frameBudgetMs = 1000 / 15;
+
+      const startMs = performance.now();
+      const frame = resolveRacingNetworkVisualizationFrame(context, network);
+      drawRacingNetworkVisualizationFromFrame(context, frame, []);
+      const elapsedMs = performance.now() - startMs;
+
+      expect({
+        isAbstract:
+          frame.positionedScene.positionedNodes.length <
+          network.nodes.length * 0.5,
+        underBudget: elapsedMs < frameBudgetMs,
+      }).toEqual({
+        isAbstract: true,
+        underBudget: true,
+      });
+    });
   });
 });

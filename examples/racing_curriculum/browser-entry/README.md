@@ -119,6 +119,14 @@ Team index for the browser-local race pack grid.
 
 Curriculum tier contract from the racing plan ladder.
 
+### PromotionCandidate
+
+Candidate for tier promotion with all metrics needed for agent selection.
+
+### PromotionSelectionConfig
+
+Configurable selection criteria for tier promotion.
+
 ### RacingCurriculumRunHandle
 
 Public run handle for the racing curriculum browser shell.
@@ -169,24 +177,6 @@ Parameters:
 - `recentTrend` - Latest improvement trend telemetry value.
 
 Returns: Uppercase status label.
-
-### resolveTierPromotionFromLapCount
-
-```ts
-resolveTierPromotionFromLapCount(
-  currentTier: CurriculumTier,
-  completedLaps: number,
-): { nextTier: CurriculumTier; didAdvance: boolean; remainingLaps: number; }
-```
-
-Applies the racing-curriculum fallback promotion rule:
-advance one tier whenever the winner completes at least three laps.
-
-Parameters:
-- `currentTier` - Active curriculum tier.
-- `completedLaps` - Completed laps within the current tier race window.
-
-Returns: Promotion decision with next tier and remaining lap carry.
 
 ### resolveTrackSizeBucketForCurriculumTier
 

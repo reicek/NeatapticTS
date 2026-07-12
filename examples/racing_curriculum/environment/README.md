@@ -43,6 +43,30 @@ not change with roster size, so single-car, 2v2, and 3v3 packs all reuse this
 same six-slot state with the `255 = no car` sentinel and fixed stop-tick
 contract.
 
+### PitStrategyState
+
+Pit/strategy sensory state appended to the Tier 4/5 observation tail.
+
+All channels are normalized to `[0, 1]` (or zero when unavailable). The
+assembler treats every field as optional so that Tier 1–3 code paths stay
+unchanged until the race-pack service explicitly provides pit/strategy data.
+
+The canonical channel order matches offsets `[95..102]` of the Tier 4/5
+observation vector:
+  1. `pitDistanceToEntrance01`
+  2. `pitOccupancyStatus`
+  3. `lapsSincePit`
+  4. `teammatePitStatus`
+  5. `tireDegradationRate`
+  6. `estimatedLapsBeforeFailure`
+  7. `reservedPitContext1`
+  8. `reservedPitContext2`
+
+`teammatePitStatus` is high whenever the team pit box is occupied by any
+team member, including the querying car itself. Because each team has its
+own box, the channel functions as a "team box busy" signal rather than a
+strict teammate-other-than-self flag.
+
 ### RacingCarState
 
 Concrete racing-car alias kept for the browser and worker seams.
@@ -55,6 +79,31 @@ The layout is always `[frontLeft, frontRight, rearLeft, rearRight]`, with
 each channel clamped to the closed `[0, 1]` interval.
 
 ## environment/environment.step.service.ts
+
+### applyPitHold
+
+```ts
+applyPitHold(
+  cars: readonly CarState[],
+  pitOccupancy: PitOccupancyState,
+  trackSpec: TrackSpec,
+): CarState[]
+```
+
+Locks every car that is actively serving a pit stop to its assigned box center.
+
+When a car enters a pit box in `resolvePitEntries`, the occupancy record already
+starts counting down `remainingStopTicks`. This helper runs after entry
+resolution so the same tick that claims the slot also teleports the car from
+the entrance corridor to `boxCenter`, and every following tick keeps the car
+parked there until the stop expires.
+
+Parameters:
+- `cars` - Updated car roster after separation.
+- `pitOccupancy` - Pit occupancy shelf after entry resolution.
+- `trackSpec` - Active track metadata.
+
+Returns: Car roster with pitting cars pinned to their box centers.
 
 ### clampCarToTrackBounds
 
@@ -123,6 +172,46 @@ Parameters:
 - `pitOccupancy` - Source pit occupancy state.
 
 Returns: Mutable clone suitable for in-step updates.
+
+### computeGuideDivergencePenalty
+
+```ts
+computeGuideDivergencePenalty(
+  guideOffsetNormalized: number,
+): number
+```
+
+Computes a divergence penalty when the car strays far from the guide line
+while it is available.
+
+Returns {@link GUIDE_DIVERGENCE_PENALTY} when the normalized lateral offset
+exceeds {@link GUIDE_OFFSET_MODERATE_THRESHOLD}, and 0 otherwise.
+
+Parameters:
+- `guideOffsetNormalized` - Signed normalized lateral offset from the guide line.
+
+Returns: Negative penalty or 0.
+
+### computeGuideFollowReward
+
+```ts
+computeGuideFollowReward(
+  guideOffsetNormalized: number,
+): number
+```
+
+Computes a positive guide-following reward based on how close the car is
+to the guide line.
+
+Returns {@link GUIDE_FOLLOW_REWARD_CLOSE} when the normalized lateral offset
+is very small (< {@link GUIDE_OFFSET_CLOSE_THRESHOLD}), a smaller
+{@link GUIDE_FOLLOW_REWARD_MODERATE} when moderately close (<
+{@link GUIDE_OFFSET_MODERATE_THRESHOLD}), and 0 when far from the guide.
+
+Parameters:
+- `guideOffsetNormalized` - Signed normalized lateral offset from the guide line.
+
+Returns: Positive reward or 0.
 
 ### createEmptyPitOccupancy
 
@@ -366,6 +455,30 @@ Parameters:
 
 Returns: Index of the nearest spline sample.
 
+### resolveOptimalLineLateralOffsetNormalized
+
+```ts
+resolveOptimalLineLateralOffsetNormalized(
+  car: CarState,
+  trackSpec: TrackSpec,
+): number
+```
+
+Computes the normalized lateral offset from the car to its team's optimal
+lane centerline (guide line).
+
+Replicates the computation in the observation assembler: the signed lateral
+offset from the nearest spline sample is subtracted by the team-specific
+lane centerline offset, then normalized by
+{@link GUIDE_OFFSET_NORMALIZATION_SCALE} world units. The result is a
+signed value where 0 means the car is exactly on the guide line.
+
+Parameters:
+- `car` - Car whose offset should be computed.
+- `trackSpec` - Frozen track geometry.
+
+Returns: Normalized lateral offset; 0 when the track has no spline samples.
+
 ### resolvePitEntries
 
 ```ts
@@ -380,8 +493,11 @@ resolvePitEntries(
 Detects new pit entries after the current tick's car updates complete.
 
 Entry is based on any of the team's `entranceCorridor` axis-aligned boxes
-inside the frozen `TrackSpec`. Cars may claim up to one own-team slot each,
-but cars released earlier in the same tick cannot re-enter immediately.
+inside the frozen `TrackSpec`. A car is admitted only when its mean tire
+health is below `PIT_SERVICE_TIRE_HEALTH_THRESHOLD`, so freshly serviced
+cars sitting at `boxCenter` (which may still be inside the same AABB) are
+not immediately re-trapped. Cars may claim up to one own-team slot each,
+and cars released earlier in the same tick cannot re-enter immediately.
 
 Parameters:
 - `cars` - Updated car roster.
@@ -405,6 +521,17 @@ Parameters:
 - `state` - Current environment state.
 
 Returns: Six-slot pit occupancy shelf.
+
+### RewardShapingStateExtensions
+
+Optional runtime extensions carried on the environment state for reward shaping.
+
+These fields are not part of the canonical {@link EnvironmentState} type but
+may be set by callers (e.g. the browser harness) and are preserved across
+step calls via object spread. `guidanceAlpha` controls whether guide-following
+rewards and divergence penalties are active (Tier 0–1: alpha > 0, Tier 2+:
+alpha = 0). `consecutiveBorderContactTicks` tracks per-car escalating
+border-contact penalty state across ticks.
 
 ### separateCars
 

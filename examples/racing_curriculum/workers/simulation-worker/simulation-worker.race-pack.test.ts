@@ -965,7 +965,7 @@ function resolveTeamBPitEntranceCenter(track: TrackSpec): {
 }
 
 describe('Tier 4 tire and pit coevolution contracts', () => {
-  it('feeds a 95-channel observation vector to each car controller during tick', async () => {
+  it('feeds a 103-channel observation vector to each car controller during tick', async () => {
     // Arrange
     const service = await loadRacePackService();
     const networks = makeSpyRaceNetworks(4);
@@ -978,9 +978,9 @@ describe('Tier 4 tire and pit coevolution contracts', () => {
     // Act
     runner.tick();
 
-    // Assert — Tier 4 must feed 95 channels (91 Tier 3 + 4 tire), not 5
+    // Assert — Tier 4 must feed 103 channels (91 Tier 3 + 4 tire + 8 pit/strategy), not 5
     const firstCallInput = networks[0].activate.mock.calls[0]?.[0];
-    expect(firstCallInput?.length).toBe(95);
+    expect(firstCallInput?.length).toBe(103);
   });
 
   it('includes own-car tire health in the observation tail channels 91 through 94', async () => {
@@ -1131,5 +1131,55 @@ describe('Tier 4 tire and pit coevolution contracts', () => {
 
     // Assert — Team B pit car slot (index 2) must remain unoccupied (255)
     expect(runner.frame.pitStatus?.[2]).toBe(255);
+  });
+});
+
+describe('pit/strategy observation channels', () => {
+  it('feeds a 103-channel observation vector to each car controller during tick', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const networks = makeSpyRaceNetworks(2);
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      networks,
+    );
+
+    // Act
+    runner.tick();
+
+    // Assert
+    const firstCallInput = networks[0].activate.mock.calls[0]?.[0];
+    expect(firstCallInput?.length).toBe(103);
+  });
+
+  it('exposes defined pit/strategy values at observation offsets 95 through 102', async () => {
+    // Arrange
+    const service = await loadRacePackService();
+    const networks = makeSpyRaceNetworks(2);
+    const runner = service.createRaceEpisodeRunner(
+      42,
+      makeMinimalOpponentSnapshot(),
+      networks,
+    );
+
+    // Act
+    runner.tick();
+
+    // Assert
+    const input = networks[0].activate.mock.calls[0]?.[0];
+    const values = [95, 96, 97, 98, 99, 100, 101, 102].map(
+      (offset) => input?.[offset],
+    );
+    expect(values).toEqual([
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+    ]);
   });
 });
