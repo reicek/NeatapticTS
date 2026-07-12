@@ -54,6 +54,45 @@ flowchart LR
   Truth -->|skipped| Keep["Keep hysteresis"]
 ```
 
+## The grow-stabilize cycle
+
+Above the single-window growth pipeline sits the
+{@link runNgeGrowStabilizeCycle} orchestrator, which sequences repeated
+adaptation ticks. Each tick decides whether the network should **grow**
+(add structural capacity via the lifecycle) or **stabilize** (tune existing
+weights to exploit current capacity). The decision is driven by plateau
+detection: when the rolling quality-score variance falls below a threshold,
+the network has learned to use its current structure and further growth is
+permitted.
+
+This separation keeps the engine from growing indiscriminately. A network
+that adds structure every tick never learns to use what it already has. By
+alternating growth with stabilization, the cycle lets the network consolidate
+each structural investment before the next expansion, mirroring the
+explore–exploit tradeoff common in reinforcement learning and
+neuro-evolution.
+
+Key pure decision functions exported from the grow-stabilize module:
+
+- {@link isPlateauReached} — variance-based plateau detection with
+  time-boxed min/max stabilization guards.
+- {@link resolveAdaptiveHysteresis} — network-size-aware hysteresis window
+  count that accelerates early growth and requires more sustained evidence
+  at scale.
+- {@link applyWeightMutations} — stochastic weight perturbation during the
+  stabilization phase.
+- {@link computeGrowthThrottle} — progressive back-off for large networks
+  to preserve real-time performance.
+
+```mermaid
+stateDiagram-v2
+  [*] --> PlateauCheck
+  PlateauCheck --> Stabilization : not plateaued
+  PlateauCheck --> Growth : plateaued or first growth
+  Stabilization --> [*] : weight mutations applied
+  Growth --> [*] : lifecycle morphs applied
+```
+
 ## Tuning knobs
 
 Most callers can use the seeded defaults. The constants below are the levers
@@ -69,6 +108,11 @@ too conservative.
 | {@link NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR} | Minimum composite growth signal that opens the node-add gate | `0.0` | Raise to make node addition rarer and more evidence-gated. |
 | {@link NGE_MAX_NODE_CAPACITY} | Absolute node ceiling enforced by the growth budget | `8000` | Match to the memory/performance envelope of your runtime. |
 | {@link NGE_MAX_EDGE_CAPACITY} | Absolute edge ceiling enforced by the growth budget | `32000` | Match to the memory/performance envelope of your runtime. |
+| {@link NGE_GROW_STABILIZE_PLATEAU_WINDOW_SIZE} | Rolling window length for plateau detection | `5` | Raise for smoother plateau detection, lower for faster response. |
+| {@link NGE_GROW_STABILIZE_PLATEAU_VARIANCE_THRESHOLD} | Variance below which quality is considered plateaued | `0.1` | Raise to trigger growth sooner, lower to require tighter convergence. |
+| {@link NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP} | Max structural edits per lifecycle call | `5` | Raise for batch growth, lower for fine-grained morphs. |
+| {@link NGE_GROW_STABILIZE_MIN_STABILIZATION_TICKS} | Min ticks after growth before plateau can fire | `5` | Raise to give more learning time, lower for faster cycling. |
+| {@link NGE_GROW_STABILIZE_MAX_STABILIZATION_TICKS} | Max ticks before growth is forced regardless of plateau | `25` | Raise to allow longer stabilization, lower to force growth sooner. |
 
 ## Determinism boundary
 
@@ -88,6 +132,11 @@ deterministic replay fingerprint.
   [Wikipedia — Softmax function](https://en.wikipedia.org/wiki/Softmax_function).
 - Feature scaling / min-max normalization:
   [Wikipedia — Feature scaling](https://en.wikipedia.org/wiki/Feature_scaling).
+- Hysteresis in control systems, which inspires the adaptive hysteresis
+  window counts in the grow-stabilize cycle:
+  [Wikipedia — Hysteresis](https://en.wikipedia.org/wiki/Hysteresis).
+- The explore–exploit tradeoff that the grow-stabilize cycle mirrors:
+  [Wikipedia — Exploration vs exploitation](https://en.wikipedia.org/wiki/Exploration_exploitation_dilemma).
 
 Examples:
 
@@ -128,6 +177,91 @@ const outcomes = nge.juvenile.applyMorphDeltas(network, deltas, budget);
 ```
 
 ## neat/nge-juvenile/neat.nge-juvenile.constants.ts
+
+### NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP
+
+Default maximum number of structural edits per lifecycle call.
+Enables batch growth so multiple morphs can commit in a single tick.
+
+Contract: NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP=5
+
+### NGE_GROW_STABILIZE_DEFAULT_MODULE_ID
+
+Default module identifier used by the grow-stabilize cycle when no
+custom module ID is supplied.
+
+### NGE_GROW_STABILIZE_GROWTH_THROTTLE_BASE_INTERVAL_TICKS
+
+Base throttle interval (in ticks) applied when the network exceeds the
+large-network threshold.
+
+Contract: NGE_GROW_STABILIZE_GROWTH_THROTTLE_BASE_INTERVAL_TICKS=3
+
+### NGE_GROW_STABILIZE_LARGE_NETWORK_NODE_THRESHOLD
+
+Node count above which the growth throttle engages.
+Networks exceeding this threshold get progressively longer back-off intervals.
+
+Contract: NGE_GROW_STABILIZE_LARGE_NETWORK_NODE_THRESHOLD=1_000
+
+### NGE_GROW_STABILIZE_MAX_EPISODIC_SLOTS
+
+Maximum number of episodic growth slots the NGE lifecycle may allocate.
+
+Contract: NGE_GROW_STABILIZE_MAX_EPISODIC_SLOTS=15
+
+### NGE_GROW_STABILIZE_MAX_FORWARD_PASS_SAMPLES
+
+Maximum number of sample observations drawn from the score history for
+forward-pass evaluation.
+
+Contract: NGE_GROW_STABILIZE_MAX_FORWARD_PASS_SAMPLES=5
+
+### NGE_GROW_STABILIZE_MAX_STABILIZATION_TICKS
+
+Maximum stabilization ticks after which growth is forced to re-enter
+even if the quality score has not plateaued.
+
+Contract: NGE_GROW_STABILIZE_MAX_STABILIZATION_TICKS=25
+
+### NGE_GROW_STABILIZE_MIN_STABILIZATION_TICKS
+
+Minimum stabilization ticks that must elapse after structural growth
+before plateau detection can fire.
+
+Contract: NGE_GROW_STABILIZE_MIN_STABILIZATION_TICKS=5
+
+### NGE_GROW_STABILIZE_PLATEAU_VARIANCE_THRESHOLD
+
+Variance threshold below which the quality score is considered plateaued.
+When the rolling-window variance falls below this value, the network is
+deemed to have learned to use its current structure and further growth
+is permitted.
+
+Contract: NGE_GROW_STABILIZE_PLATEAU_VARIANCE_THRESHOLD=0.1
+
+### NGE_GROW_STABILIZE_PLATEAU_WINDOW_SIZE
+
+Maximum number of quality-score entries retained for plateau detection.
+The rolling window tracks the baseline score at each adaptation tick to
+determine whether the network has stabilized before allowing growth.
+
+Contract: NGE_GROW_STABILIZE_PLATEAU_WINDOW_SIZE=5
+
+### NGE_GROW_STABILIZE_WEIGHT_MUTATION_MAGNITUDE
+
+Maximum magnitude of weight perturbation applied during stabilization.
+Each selected connection's weight is shifted by a random value in
+[-MAGNITUDE, +MAGNITUDE].
+
+Contract: NGE_GROW_STABILIZE_WEIGHT_MUTATION_MAGNITUDE=0.1
+
+### NGE_GROW_STABILIZE_WEIGHT_MUTATION_RATE
+
+Fraction of connections whose weights are perturbed during each
+stabilization-phase adaptation tick.
+
+Contract: NGE_GROW_STABILIZE_WEIGHT_MUTATION_RATE=0.3
 
 ### NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT
 
@@ -231,6 +365,11 @@ Contract: NGE_MAX_NODE_CAPACITY=8_000
 
 ## neat/nge-juvenile/neat.nge-juvenile.types.ts
 
+### NGE_JUVENILE_TYPES_LOADED
+
+Runtime sentinel confirming the juvenile types module has been loaded.
+Ensures Istanbul instruments this file so it appears in coverage reports.
+
 ### NgeFocusScore
 
 One module-level focus result containing both the raw and normalized score.
@@ -239,6 +378,33 @@ One module-level focus result containing both the raw and normalized score.
 
 Normalized focus vector emitted for one juvenile evaluation window.
 Contains per-module probability-like scores produced by the weighted focus formula.
+
+### NgeGrowStabilizeConfig
+
+Configuration for one grow-stabilize cycle call.
+
+All fields have sensible defaults, so callers can override only the knobs
+they need to tune.
+
+### NgeGrowStabilizeInput
+
+Input for one grow-stabilize cycle call.
+
+The first four fields are required and match the minimal red-test contract.
+All other fields are optional with sensible defaults, so the cycle can run
+with just a network and score history.
+
+### NgeGrowStabilizePhase
+
+Phase label for the NGE grow-stabilize cycle.
+
+The cycle alternates between structural `growth` (adding edges/nodes via the
+NGE lifecycle) and `stabilization` (weight tuning to exploit current
+capacity before further growth).
+
+### NgeGrowStabilizeResult
+
+Result of one grow-stabilize cycle call.
 
 ### NgeGrowthBudget
 
@@ -299,6 +465,14 @@ Guards the minimum edge and node counts that no morph action may reduce below.
 ### NgePruneCandidate
 
 One scored prune candidate supplied by the caller for dry-run ranking.
+
+### NgeQualitySignal
+
+Quality signal entry accepted by the grow-stabilize cycle.
+
+The core module operates on plain numeric scores. App layers convert
+composite signals (e.g. `RacingQualitySignal`) to scalar numbers before
+calling the core cycle, keeping the core free of demo-specific types.
 
 ## neat/nge-juvenile/neat.nge-juvenile.focus.ts
 
@@ -726,6 +900,296 @@ The applier re-validates both before mutating.
 ### MorphApplyOutcome
 
 Outcome produced for one morph delta after the applier processes it.
+
+## neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.ts
+
+NGE grow-stabilize cycle.
+
+This module owns the core grow-stabilize adaptation cycle extracted from the
+racing curriculum's runtime adaptation engine. It provides pure decision
+functions (plateau detection, adaptive hysteresis, weight mutations, growth
+throttle) and a single orchestrator (`runNgeGrowStabilizeCycle`) that
+sequences one adaptation tick.
+
+The orchestrator accepts plain numeric score history and a live mutable
+network, keeping the core free of demo-specific types (e.g.
+`RacingQualitySignal`). App layers convert composite signals to scalar
+numbers before calling the core cycle.
+
+## Determinism note
+
+When a deterministic `random` source is supplied, weight mutation selection
+is reproducible. When a `lifecycleRunner` is injected, the caller controls
+the lifecycle execution, enabling test doubles and cycle breaking.
+
+## Background reading
+
+- Hysteresis in control systems:
+  [Wikipedia — Hysteresis](https://en.wikipedia.org/wiki/Hysteresis).
+- Plateau detection via rolling-window variance:
+  [Wikipedia — Variance](https://en.wikipedia.org/wiki/Variance).
+
+```mermaid
+stateDiagram-v2
+  [*] --> PlateauCheck
+  PlateauCheck --> Stabilization : not plateaued
+  PlateauCheck --> Growth : plateaued or first growth
+  Stabilization --> [*] : weight mutations applied
+  Growth --> [*] : lifecycle morphs applied
+```
+
+### applyWeightMutations
+
+```ts
+applyWeightMutations(
+  network: default,
+  random: () => number,
+): number
+```
+
+Apply random weight perturbations to existing connections.
+
+Each connection is independently selected for mutation with probability
+equal to the weight mutation rate. Selected connections have their weight
+perturbed by a random amount in the range
+[-magnitude, +magnitude]. This helps the network learn to use its current
+structure during the stabilization phase between structural growth phases.
+
+Parameters:
+- `network` - The network whose connections to perturb.
+- `random` - Random number generator returning a float in [0, 1).
+
+Returns: The number of connections that were mutated.
+
+Example:
+
+```ts
+const mutated = applyWeightMutations(network, Math.random);
+console.log(mutated); // e.g. 3
+```
+
+### buildDefaultBudget
+
+```ts
+buildDefaultBudget(
+  network: default,
+  config: NgeGrowStabilizeConfig,
+): NgeGrowthBudget
+```
+
+Build a default growth budget from the live network and resolved config.
+
+Parameters:
+- `network` - Live controller network.
+- `config` - Resolved grow-stabilize config.
+
+Returns: NGE growth budget for the lifecycle apply phase.
+
+### buildDefaultMetrics
+
+```ts
+buildDefaultMetrics(
+  scoreHistory: readonly number[],
+  network: default,
+  moduleId: string,
+): NgeModuleMetricsSnapshot
+```
+
+Build default module metrics from numeric score history and live network state.
+
+Parameters:
+- `scoreHistory` - Rolling numeric score history.
+- `network` - Live controller network.
+- `moduleId` - Module identifier for the metrics snapshot.
+
+Returns: NGE module metrics for the lifecycle focus scorer.
+
+### buildDefaultPruneBudget
+
+```ts
+buildDefaultPruneBudget(
+  network: default,
+): NgePruneBudget
+```
+
+Build a default prune budget from the live network.
+
+Parameters:
+- `network` - Live controller network.
+
+Returns: NGE prune budget for the lifecycle apply phase.
+
+### computeGrowthThrottle
+
+```ts
+computeGrowthThrottle(
+  network: default,
+  tick: number,
+): { shouldThrottle: boolean; interval: number; }
+```
+
+Compute whether the growth lifecycle should be throttled for the current tick.
+
+When the network exceeds the large-network node threshold, the effective
+throttle interval scales with network size so that larger networks get
+progressively longer back-off intervals. This preserves real-time
+performance by preventing the lifecycle from running every tick at scale.
+
+Parameters:
+- `network` - Live controller network whose size determines throttling.
+- `tick` - Current fixed-timestep tick used for interval gating.
+
+Returns: Throttle decision with the computed interval.
+
+Example:
+
+```ts
+const { shouldThrottle } = computeGrowthThrottle(network, 42);
+console.log(shouldThrottle); // false for small networks
+```
+
+### isPlateauReached
+
+```ts
+isPlateauReached(
+  scoreWindow: readonly number[],
+  hasGrownBefore: boolean,
+  stabilizationTicksSinceGrowth: number,
+): boolean
+```
+
+Determine whether the quality score has plateaued based on a rolling
+window of recent baseline scores.
+
+Before the first structural growth, the function always returns `true` to
+allow initial network development without waiting for a full score window.
+After the first growth, the network is considered plateaued when the
+rolling window is full and its variance falls below the threshold.
+
+Time-boxed stabilization: a minimum number of ticks must elapse before
+plateau can fire (preventing premature growth), and a maximum number of
+ticks forces growth re-entry even if the variance remains above threshold.
+
+Parameters:
+- `scoreWindow` - Rolling window of recent baseline quality scores.
+- `hasGrownBefore` - Whether the network has already undergone at least
+one structural growth phase.
+- `stabilizationTicksSinceGrowth` - Ticks elapsed in the stabilization
+phase since the last structural growth.
+
+Returns: `true` when growth should proceed (first growth, stabilized
+plateau, or time-box cap exceeded), `false` when the network is still
+stabilizing after growth.
+
+Example:
+
+```ts
+const plateaued = isPlateauReached([0.5, 0.51, 0.49, 0.5, 0.5], true, 10);
+console.log(plateaued); // true (low variance after min ticks)
+```
+
+### mapOutcomesToOperations
+
+```ts
+mapOutcomesToOperations(
+  outcomes: readonly { status: string; kind: string; }[],
+): string[]
+```
+
+Map lifecycle apply outcomes to operation name strings.
+
+Parameters:
+- `outcomes` - Apply outcomes from the lifecycle result.
+
+Returns: Operation strings for telemetry, excluding skipped morphs.
+
+### resolveAdaptiveHysteresis
+
+```ts
+resolveAdaptiveHysteresis(
+  nodeCount: number,
+): number
+```
+
+Resolve the adaptive hysteresis window count based on the live network
+node count. Smaller networks use a lower threshold (2 consecutive
+positive-quality windows) to accelerate early growth, while larger
+networks require more sustained evidence (5 windows) before committing
+to further structural expansion.
+
+Parameters:
+- `nodeCount` - Current total node count in the live network.
+
+Returns: Hysteresis window count: 2 for ≤ 200 nodes, 3 for ≤ 500, 5 for > 500.
+
+Example:
+
+```ts
+const hysteresis = resolveAdaptiveHysteresis(150);
+console.log(hysteresis); // 2
+```
+
+### resolveGrowStabilizeConfig
+
+```ts
+resolveGrowStabilizeConfig(
+  partial: Partial<NgeGrowStabilizeConfig> | undefined,
+): NgeGrowStabilizeConfig
+```
+
+Resolve a partial grow-stabilize config with sensible defaults.
+
+Parameters:
+- `partial` - Caller-supplied config overrides.
+
+Returns: Fully resolved config.
+
+### runNgeGrowStabilizeCycle
+
+```ts
+runNgeGrowStabilizeCycle(
+  input: NgeGrowStabilizeInput,
+): NgeGrowStabilizeResult
+```
+
+Run one NGE grow-stabilize adaptation cycle.
+
+This orchestrator encapsulates the plateau-detection decision and either:
+
+- **Stabilization phase**: applies weight perturbations to existing
+  connections so the network can learn to use its current structure.
+- **Growth phase**: builds module metrics, a growth budget, and a prune
+  budget from the live network state, then delegates to the NGE lifecycle
+  runner to plan and apply structural morphs.
+
+For the very first growth (`hasGrownBefore` is `false`), the plateau check
+is bypassed and the hysteresis gate is pre-satisfied so the lifecycle
+produces candidate morphs immediately — the network needs capacity before
+stabilization can tune it.
+
+The caller is responsible for pre-mutation score evaluation, network
+snapshot/rollback, and post-mutation score evaluation. The cycle only
+handles the core decision and mutation application; commit/rollback based
+on score improvement remains the caller's responsibility.
+
+Parameters:
+- `input` - Grow-stabilize cycle input with required network,
+scoreHistory, hasGrownBefore, and stabilizationTicksSinceGrowth.
+
+Returns: Result describing whether the cycle committed, which phase it
+entered, and what operations were applied.
+
+Example:
+
+```ts
+const result = runNgeGrowStabilizeCycle({
+  network,
+  scoreHistory: [1, 2, 3, 4],
+  hasGrownBefore: false,
+  stabilizationTicksSinceGrowth: 0,
+});
+console.log(result.committed); // true (first growth)
+```
 
 ## neat/nge-juvenile/neat.nge-juvenile.probe.ts
 

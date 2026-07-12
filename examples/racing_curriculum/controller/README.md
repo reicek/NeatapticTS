@@ -184,30 +184,6 @@ Mutable self-radio seam used by Tier 2 single-car self-monitoring.
 
 ## controller/runtime.adaptation.ts
 
-### applyWeightMutations
-
-```ts
-applyWeightMutations(
-  network: default,
-  random: () => number,
-): number
-```
-
-Apply random weight perturbations to existing connections.
-
-Each connection is independently selected for mutation with probability
-{@link WEIGHT_MUTATION_RATE}. Selected connections have their weight
-perturbed by a random amount in the range
-[-{@link WEIGHT_MUTATION_MAGNITUDE}, +{@link WEIGHT_MUTATION_MAGNITUDE}].
-This helps the network learn to use its current structure during the
-stabilization phase between structural growth phases.
-
-Parameters:
-- `network` - The network whose connections to perturb.
-- `random` - Random number generator returning a float in [0, 1).
-
-Returns: The number of connections that were mutated.
-
 ### buildCandidateScoreWindow
 
 ```ts
@@ -310,28 +286,6 @@ Parameters:
 
 Returns: Array of output vectors, one per sample observation.
 
-### computeGrowthThrottle
-
-```ts
-computeGrowthThrottle(
-  network: default,
-  tick: number,
-): { shouldThrottle: boolean; interval: number; }
-```
-
-Compute whether the growth lifecycle should be throttled for the current tick.
-
-When the network exceeds {@link LARGE_NETWORK_NODE_THRESHOLD}, the effective
-throttle interval scales with network size so that larger networks get
-progressively longer back-off intervals. This preserves real-time
-performance by preventing the lifecycle from running every tick at scale.
-
-Parameters:
-- `network` - Live controller network whose size determines throttling.
-- `tick` - Current fixed-timestep tick used for interval gating.
-
-Returns: Throttle decision with the computed interval.
-
 ### createPerCarAdaptationEngines
 
 ```ts
@@ -431,57 +385,6 @@ Parameters:
 
 Returns: Combined trend/complexity score.
 
-### isPlateauReached
-
-```ts
-isPlateauReached(
-  scoreWindow: readonly number[],
-  hasGrownBefore: boolean,
-  stabilizationTicksSinceGrowth: number,
-): boolean
-```
-
-Determine whether the quality score has plateaued based on a rolling
-window of recent baseline scores.
-
-Before the first structural growth, the function always returns `true` to
-allow initial network development without waiting for a full score window.
-After the first growth, the network is considered plateaued when the
-rolling window is full and its variance falls below
-{@link PLATEAU_VARIANCE_THRESHOLD}, indicating that learning has stabilized
-and further structural growth is safe.
-
-Time-boxed stabilization: a minimum of {@link MIN_STABILIZATION_TICKS}
-ticks must elapse before plateau can fire (preventing premature growth),
-and a maximum of {@link MAX_STABILIZATION_TICKS} ticks forces growth
-re-entry even if the variance remains above threshold.
-
-Parameters:
-- `scoreWindow` - Rolling window of recent baseline quality scores.
-- `hasGrownBefore` - Whether the network has already undergone at least
-one structural growth phase.
-- `stabilizationTicksSinceGrowth` - Ticks elapsed in the stabilization
-phase since the last structural growth.
-
-Returns: `true` when growth should proceed (first growth, stabilized
-plateau, or time-box cap exceeded), `false` when the network is still
-stabilizing after growth.
-
-### mapOutcomesToOperations
-
-```ts
-mapOutcomesToOperations(
-  outcomes: readonly MorphApplyOutcome[],
-): RuntimeAdaptationOperation[]
-```
-
-Map lifecycle apply outcomes to runtime adaptation operations.
-
-Parameters:
-- `outcomes` - Apply outcomes from the lifecycle result.
-
-Returns: Runtime operations for telemetry, excluding skipped morphs.
-
 ### RacingQualitySignal
 
 Composite driving-quality signal used by the racing trend evaluator.
@@ -509,6 +412,13 @@ Parameters:
 - `nodeCount` - Current total node count in the live network.
 
 Returns: Hysteresis window count: 2 for ≤ 200 nodes, 3 for ≤ 500, 5 for > 500.
+
+Example:
+
+```ts
+const hysteresis = resolveAdaptiveHysteresis(150);
+console.log(hysteresis); // 2
+```
 
 ### resolveBehavioralComplexity
 
@@ -565,8 +475,6 @@ Parameters:
 Returns: Array of indices into the score history.
 
 ### RuntimeAdaptationCadenceMode
-
-Cadence modes supported by the runtime adaptation engine.
 
 ### RuntimeAdaptationCadenceOptions
 

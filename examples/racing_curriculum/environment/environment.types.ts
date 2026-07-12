@@ -140,6 +140,8 @@ export type EnvironmentState = {
   pitStatus?: PitOccupancyState;
   /** Per-car consecutive border-contact tick counts for escalating penalties. */
   consecutiveBorderContactTicks?: readonly number[];
+  /** Per-car consecutive wrong-direction tick counts for escalating penalties. */
+  consecutiveWrongDirectionTicks?: readonly number[];
   /** Guidance overlay alpha in [0, 1]; 0 means the guide line is unavailable. */
   guidanceAlpha?: number;
 };

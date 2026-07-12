@@ -1405,3 +1405,67 @@ describe('P8S23 — AC-023-006: lap time displayed in telemetry panel', () => {
     expect(fnSection.includes('lapTimeValue')).toBe(true);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 9 Step 03 — Red tests for all-cars methodology (AC-016)
+// These tests assert that the NGE grow-stabilize cycle is imported from
+// the core module and called per-car. They fail because the extraction
+// has not happened yet (runtime.adaptation.ts still uses inline logic).
+// ──────────────────────────────────────────────────────────────────────
+
+describe('Phase 9 Step 03 — all-cars methodology: core module per-car', () => {
+  const runtimePath = path.join(
+    __dirname,
+    '..',
+    'controller',
+    'runtime.adaptation.ts',
+  );
+
+  it('(P9S03) runtime.adaptation.ts imports runNgeGrowStabilizeCycle from the core module', () => {
+    const sourceText = fs.readFileSync(runtimePath, 'utf8');
+    const hasCoreImport = sourceText.includes(
+      'neat.nge-juvenile.grow-stabilize',
+    );
+
+    expect(hasCoreImport).toBe(true);
+  });
+
+  it('(P9S03) the adaptation engine calls runNgeGrowStabilizeCycle per-tick', () => {
+    const sourceText = fs.readFileSync(runtimePath, 'utf8');
+    const hasCall = sourceText.includes('runNgeGrowStabilizeCycle(');
+
+    expect(hasCall).toBe(true);
+  });
+
+  it('(P9S03) per-car adaptation does not share mutable growth state across cars', () => {
+    const sourceText = fs.readFileSync(runtimePath, 'utf8');
+    // After extraction, each car's adaptation engine should create its own
+    // NgeGrowStabilizeState, not use a shared/global state object.
+    const hasSharedState =
+      sourceText.includes('sharedGrowthState') ||
+      sourceText.includes('globalGrowthState');
+    const hasPerCarState =
+      sourceText.includes('runNgeGrowStabilizeCycle') && !hasSharedState;
+
+    expect(hasPerCarState).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 9 Step 03 — Red test for deferred item (AC-019, AC-044)
+// This test asserts that resolveTierPromotionFromLapCount is exported
+// from browser-entry.ts. It fails because the function does not exist.
+// ──────────────────────────────────────────────────────────────────────
+
+describe('Phase 9 Step 03 — deferred: resolveTierPromotionFromLapCount export', () => {
+  it('(P9S03) browser-entry.ts exports resolveTierPromotionFromLapCount', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const hasExport =
+      /export\s+(?:function|const)\s+resolveTierPromotionFromLapCount/.test(
+        sourceText,
+      );
+
+    expect(hasExport).toBe(true);
+  });
+});

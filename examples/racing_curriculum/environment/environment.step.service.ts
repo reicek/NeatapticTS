@@ -43,6 +43,8 @@ const SEPARATION_MAX_ITERATIONS = 200;
 const OFF_TRACK_CLAMP_REWARD = -5;
 /** Penalty assigned when a car moves opposite the track tangent. */
 const WRONG_DIRECTION_REWARD = -5;
+/** Cap for the escalating wrong-direction tick multiplier. */
+const MAX_ESCALATING_WRONG_DIRECTION_TICKS = 10;
 /** Positive reward when the car closely follows the guide line at Tier 0–1. */
 const GUIDE_FOLLOW_REWARD_CLOSE = 3;
 /** Smaller positive reward when the car is moderately close to the guide line. */
@@ -85,11 +87,14 @@ type MutablePitOccupancyState = PitOccupancyRecord[];
  * step calls via object spread. `guidanceAlpha` controls whether guide-following
  * rewards and divergence penalties are active (Tier 0–1: alpha > 0, Tier 2+:
  * alpha = 0). `consecutiveBorderContactTicks` tracks per-car escalating
- * border-contact penalty state across ticks.
+ * border-contact penalty state across ticks. `consecutiveWrongDirectionTicks`
+ * tracks per-car escalating wrong-direction penalty state across ticks.
  */
 type RewardShapingStateExtensions = {
   /** Per-car consecutive border-contact tick counts for escalating penalties. */
   consecutiveBorderContactTicks?: readonly number[];
+  /** Per-car consecutive wrong-direction tick counts for escalating penalties. */
+  consecutiveWrongDirectionTicks?: readonly number[];
   /** Guidance overlay alpha in [0, 1]; 0 means the guide line is unavailable. */
   guidanceAlpha?: number;
 };
@@ -231,9 +236,13 @@ export function stepEnvironment(
   const previousBorderContactTicks =
     shapingExtensions.consecutiveBorderContactTicks ?? [];
   const nextBorderContactTicks: number[] = [];
+  const previousWrongDirectionTicks =
+    shapingExtensions.consecutiveWrongDirectionTicks ?? [];
+  const nextWrongDirectionTicks: number[] = [];
   const boundedCars = steppedCars.map((car, carIndex) => {
     if (isCarStoppedInPit(pitOccupancy, carIndex)) {
       nextBorderContactTicks[carIndex] = 0;
+      nextWrongDirectionTicks[carIndex] = 0;
       return car;
     }
 
@@ -253,9 +262,18 @@ export function stepEnvironment(
     }
     nextBorderContactTicks[carIndex] = consecutiveBorderContactTicks;
 
+    // Escalating wrong-direction penalty: each consecutive wrong-direction
+    // tick multiplies the base penalty, capped at
+    // MAX_ESCALATING_WRONG_DIRECTION_TICKS.
+    let consecutiveWrongDirectionTicks = 0;
     if (wrongDirectionFlags[carIndex]) {
-      reward += WRONG_DIRECTION_REWARD;
+      consecutiveWrongDirectionTicks = Math.min(
+        (previousWrongDirectionTicks[carIndex] ?? 0) + 1,
+        MAX_ESCALATING_WRONG_DIRECTION_TICKS,
+      );
+      reward += WRONG_DIRECTION_REWARD * consecutiveWrongDirectionTicks;
     }
+    nextWrongDirectionTicks[carIndex] = consecutiveWrongDirectionTicks;
 
     // Guide-following reward and divergence penalty apply only while the
     // guide line is available (Tier 0–1, guidanceAlpha > 0).
@@ -296,6 +314,7 @@ export function stepEnvironment(
     pitOccupancy: nextPitOccupancy,
     pitStatus: nextPitOccupancy,
     consecutiveBorderContactTicks: nextBorderContactTicks,
+    consecutiveWrongDirectionTicks: nextWrongDirectionTicks,
   };
 }
 

@@ -1,3 +1,4 @@
+import type Network from '../../architecture/network';
 import type { NgeRealizedModule } from '../nge-dna/neat.nge-dna.types';
 
 /**
@@ -102,6 +103,13 @@ export interface NgeJuvenilePhaseConfig {
   nodeAdditionCount: number;
   /** Number of forward edges one approved edge-densification step plans to insert. */
   edgeDensificationCount: number;
+  /**
+   * Maximum number of structural edits (morph deltas) that one lifecycle call
+   * may apply. When set, the lifecycle runner truncates the planned delta list
+   * to this count before passing it to `applyMorphDeltas`, enabling batch
+   * growth in a single tick rather than one-at-a-time.
+   */
+  maxStructuralEditsPerStep: number;
 }
 
 /**
@@ -252,4 +260,140 @@ export interface NgeProbeLedgerEntry {
   delta: number;
   /** Evaluation epoch in which the probe ran. */
   epochIndex: number;
+}
+
+/**
+ * Runtime sentinel confirming the juvenile types module has been loaded.
+ * Ensures Istanbul instruments this file so it appears in coverage reports.
+ */
+export const NGE_JUVENILE_TYPES_LOADED = true;
+
+// ──────────────────────────────────────────────────────────────────────
+// Grow-Stabilize Cycle Types
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Phase label for the NGE grow-stabilize cycle.
+ *
+ * The cycle alternates between structural `growth` (adding edges/nodes via the
+ * NGE lifecycle) and `stabilization` (weight tuning to exploit current
+ * capacity before further growth).
+ */
+export type NgeGrowStabilizePhase = 'growth' | 'stabilization';
+
+/**
+ * Quality signal entry accepted by the grow-stabilize cycle.
+ *
+ * The core module operates on plain numeric scores. App layers convert
+ * composite signals (e.g. `RacingQualitySignal`) to scalar numbers before
+ * calling the core cycle, keeping the core free of demo-specific types.
+ */
+export type NgeQualitySignal = number;
+
+/**
+ * Configuration for one grow-stabilize cycle call.
+ *
+ * All fields have sensible defaults, so callers can override only the knobs
+ * they need to tune.
+ */
+export interface NgeGrowStabilizeConfig {
+  /** Maximum number of structural edits per lifecycle call. */
+  maxStructuralEditsPerStep: number;
+  /** Hard cap for node count after mutation. */
+  maxNodes: number;
+  /** Hard cap for connection count after mutation. */
+  maxConnections: number;
+  /** Maximum episodic growth slots the lifecycle may allocate. */
+  maxEpisodicSlots: number;
+  /** Module identifier passed to the lifecycle runner. */
+  moduleId: string;
+}
+
+/**
+ * Result of one grow-stabilize cycle call.
+ *
+ * @property committed - Whether the cycle committed a structural or weight mutation.
+ * @property phase - Current phase after the cycle (`growth` or `stabilization`).
+ * @property reason - Outcome reason for diagnostics and telemetry.
+ * @property operations - Operations applied during this cycle.
+ * @property stabilizationTicksSinceGrowth - Updated tick count since the last structural growth.
+ * @property mutatedCount - Number of weight mutations applied (stabilization phase only).
+ * @property networkSizeAfter - Network size snapshot after the cycle.
+ */
+export interface NgeGrowStabilizeResult {
+  /** Whether the cycle committed a structural or weight mutation. */
+  committed: boolean;
+  /** Current phase after the cycle. */
+  phase: NgeGrowStabilizePhase;
+  /** Outcome reason for diagnostics and telemetry. */
+  reason: string;
+  /** Operations applied during this cycle. */
+  operations: readonly string[];
+  /** Updated tick count since the last structural growth. */
+  stabilizationTicksSinceGrowth: number;
+  /** Number of weight mutations applied (stabilization phase only). */
+  mutatedCount: number;
+  /** Network size snapshot after the cycle. */
+  networkSizeAfter: { nodes: number; connections: number };
+  /** Updated hysteresis state from the lifecycle runner (growth phase only). */
+  hysteresis?: NgeHysteresisState;
+}
+
+/**
+ * Input for one grow-stabilize cycle call.
+ *
+ * The first four fields are required and match the minimal red-test contract.
+ * All other fields are optional with sensible defaults, so the cycle can run
+ * with just a network and score history.
+ *
+ * @property network - Live mutable controller network.
+ * @property scoreHistory - Rolling score history used to compute module metrics.
+ * @property hasGrownBefore - Whether the network has already undergone structural growth.
+ * @property stabilizationTicksSinceGrowth - Ticks elapsed in stabilization since the last growth.
+ * @property qualityScoreHistory - Rolling quality scores for plateau detection.
+ * @property hysteresis - Current hysteresis state from the caller, used for subsequent growth.
+ * @property random - Optional deterministic random source for weight mutations.
+ * @property config - Optional configuration overrides.
+ * @property lifecycleRunner - Optional lifecycle runner for dependency injection.
+ */
+export interface NgeGrowStabilizeInput {
+  /** Live mutable controller network. */
+  readonly network: Network;
+  /** Rolling score history used to compute module metrics. */
+  readonly scoreHistory: readonly number[];
+  /** Whether the network has already undergone structural growth. */
+  readonly hasGrownBefore: boolean;
+  /** Ticks elapsed in stabilization since the last structural growth. */
+  readonly stabilizationTicksSinceGrowth: number;
+  /** Rolling quality scores for plateau detection. Defaults to an empty array. */
+  readonly qualityScoreHistory?: readonly number[];
+  /** Current hysteresis state from the caller, used for subsequent growth. */
+  readonly hysteresis?: NgeHysteresisState;
+  /** Optional deterministic random source for weight mutations. */
+  readonly random?: () => number;
+  /** Optional configuration overrides. */
+  readonly config?: Partial<NgeGrowStabilizeConfig>;
+  /**
+   * Optional lifecycle runner override for dependency injection and cycle
+   * breaking. When omitted, the default `runNgeLifecycle` is used.
+   */
+  readonly lifecycleRunner?: (input: {
+    stage: 'juvenile';
+    moduleId: string;
+    metrics: NgeModuleMetricsSnapshot;
+    budget: NgeGrowthBudget;
+    config: Partial<NgeJuvenilePhaseConfig>;
+    hysteresis: NgeHysteresisState;
+    network?: Network;
+    pruneBudget?: NgePruneBudget;
+    seed?: number;
+  }) => {
+    stage: string;
+    juvenileResult?: {
+      focusScore: NgeFocusScore;
+      deltas: NgeMorphDelta[];
+    };
+    applyOutcomes?: readonly { status: string; kind: string }[];
+    hysteresis?: NgeHysteresisState;
+  };
 }

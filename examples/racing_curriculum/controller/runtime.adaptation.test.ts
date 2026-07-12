@@ -550,7 +550,7 @@ describe('P8S22 — AC-RC-22-005: fitness plateau detector before growth', () =>
     // function, not in the existing resolveBehavioralComplexity variance
     // computation which is part of the evaluator.
     const adaptStart = sourceText.indexOf('adaptOnTick');
-    const adaptSection = sourceText.slice(adaptStart, adaptStart + 4000);
+    const adaptSection = sourceText.slice(adaptStart, adaptStart + 6000);
 
     const hasPlateauOrVariance =
       adaptSection.includes('plateau') ||
@@ -695,19 +695,30 @@ describe('P8S23 — AC-023-002: lifecycle call uses adaptive hysteresis not hard
 });
 
 describe('P8S23 — AC-023-003: plateau window reduced to 5 and threshold raised to 0.1', () => {
-  const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
+  const coreSourcePath = path.join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'src',
+    'neat',
+    'nge-juvenile',
+    'neat.nge-juvenile.constants.ts',
+  );
 
-  it('(P8S23) PLATEAU_WINDOW_SIZE is 5 (not 10)', () => {
-    const sourceText = fs.readFileSync(sourcePath, 'utf8');
-    const match = sourceText.match(/const\s+PLATEAU_WINDOW_SIZE\s*=\s*(\d+)/);
+  it('(P8S23) NGE_GROW_STABILIZE_PLATEAU_WINDOW_SIZE is 5 (not 10)', () => {
+    const sourceText = fs.readFileSync(coreSourcePath, 'utf8');
+    const match = sourceText.match(
+      /NGE_GROW_STABILIZE_PLATEAU_WINDOW_SIZE\s*=\s*(\d+)/,
+    );
     const value = match ? Number(match[1]) : 10;
     expect(value).toBe(5);
   });
 
-  it('(P8S23) PLATEAU_VARIANCE_THRESHOLD is 0.1 (not 0.05)', () => {
-    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+  it('(P8S23) NGE_GROW_STABILIZE_PLATEAU_VARIANCE_THRESHOLD is 0.1 (not 0.05)', () => {
+    const sourceText = fs.readFileSync(coreSourcePath, 'utf8');
     const match = sourceText.match(
-      /const\s+PLATEAU_VARIANCE_THRESHOLD\s*=\s*([0-9.]+)/,
+      /NGE_GROW_STABILIZE_PLATEAU_VARIANCE_THRESHOLD\s*=\s*([0-9.]+)/,
     );
     const value = match ? Number(match[1]) : 0.05;
     expect(value).toBe(0.1);
@@ -715,29 +726,198 @@ describe('P8S23 — AC-023-003: plateau window reduced to 5 and threshold raised
 });
 
 describe('P8S23 — AC-023-004: time-boxed stabilization with min 5 and max 25 ticks', () => {
-  const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
+  const coreSourcePath = path.join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'src',
+    'neat',
+    'nge-juvenile',
+    'neat.nge-juvenile.grow-stabilize.ts',
+  );
 
   it('(P8S23) isPlateauReached accepts stabilizationTicksSinceGrowth parameter', () => {
-    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const sourceText = fs.readFileSync(coreSourcePath, 'utf8');
     const fnStart = sourceText.indexOf('function isPlateauReached');
     const fnSection = sourceText.slice(fnStart, fnStart + 600);
     expect(fnSection.includes('stabilizationTicksSinceGrowth')).toBe(true);
   });
 
   it('(P8S23) isPlateauReached has max stabilization tick cap of 25', () => {
-    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const sourceText = fs.readFileSync(coreSourcePath, 'utf8');
     const fnStart = sourceText.indexOf('function isPlateauReached');
     const fnSection = sourceText.slice(fnStart, fnStart + 800);
     expect(fnSection.includes('25')).toBe(true);
   });
 
   it('(P8S23) isPlateauReached has min stabilization tick floor of 5 before plateau', () => {
-    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const sourceText = fs.readFileSync(coreSourcePath, 'utf8');
     const fnStart = sourceText.indexOf('function isPlateauReached');
     const fnSection = sourceText.slice(fnStart, fnStart + 800);
     const hasMinFloor =
       fnSection.includes('MIN_STABILIZATION') ||
       /stabilizationTicksSinceGrowth\s*<\s*\d+/.test(fnSection);
     expect(hasMinFloor).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 9 Step 03 — Red tests for app-layer thinning (AC-015)
+// These tests assert that NGE core functions and constants have been
+// EXTRACTED out of runtime.adaptation.ts into src/neat/nge-juvenile/.
+// They fail because the extraction has not happened yet.
+// ──────────────────────────────────────────────────────────────────────
+
+describe('Phase 9 Step 03 — app-layer thinning: NGE core removed from runtime.adaptation.ts', () => {
+  const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
+
+  it('(P9S03) resolveAdaptiveHysteresis is not defined in runtime.adaptation.ts', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      /(?:export\s+)?function\s+resolveAdaptiveHysteresis\s*\(/.test(
+        sourceText,
+      ),
+    ).toBe(false);
+  });
+
+  it('(P9S03) isPlateauReached is not defined in runtime.adaptation.ts', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(/function\s+isPlateauReached\s*\(/.test(sourceText)).toBe(false);
+  });
+
+  it('(P9S03) applyWeightMutations is not defined in runtime.adaptation.ts', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(/function\s+applyWeightMutations\s*\(/.test(sourceText)).toBe(false);
+  });
+
+  it('(P9S03) PLATEAU_WINDOW_SIZE and PLATEAU_VARIANCE_THRESHOLD are not defined in runtime.adaptation.ts', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const hasPlateauWindow = /const\s+PLATEAU_WINDOW_SIZE\s*=/.test(sourceText);
+    const hasPlateauVariance = /const\s+PLATEAU_VARIANCE_THRESHOLD\s*=/.test(
+      sourceText,
+    );
+
+    expect(hasPlateauWindow || hasPlateauVariance).toBe(false);
+  });
+
+  it('(P9S03) WEIGHT_MUTATION_RATE and WEIGHT_MUTATION_MAGNITUDE are not defined in runtime.adaptation.ts', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const hasRate = /const\s+WEIGHT_MUTATION_RATE\s*=/.test(sourceText);
+    const hasMagnitude = /const\s+WEIGHT_MUTATION_MAGNITUDE\s*=/.test(
+      sourceText,
+    );
+
+    expect(hasRate || hasMagnitude).toBe(false);
+  });
+
+  it('(P9S03) MIN_STABILIZATION_TICKS and MAX_STABILIZATION_TICKS are not defined in runtime.adaptation.ts', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const hasMin = /const\s+MIN_STABILIZATION_TICKS\s*=/.test(sourceText);
+    const hasMax = /const\s+MAX_STABILIZATION_TICKS\s*=/.test(sourceText);
+
+    expect(hasMin || hasMax).toBe(false);
+  });
+
+  it('(P9S03) runtime.adaptation.ts imports runNgeGrowStabilizeCycle from the core module', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const hasImport = sourceText.includes('runNgeGrowStabilizeCycle');
+
+    expect(hasImport).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 9 Step 03 — Red tests for driving improvement (AC-017)
+// These tests assert that driving quality rewards are stronger than
+// the current values. They fail because the current values are too low.
+// ──────────────────────────────────────────────────────────────────────
+
+describe('Phase 9 Step 03 — driving improvement: stronger reward shaping', () => {
+  const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
+  const envSourcePath = path.join(
+    __dirname,
+    '..',
+    'environment',
+    'environment.step.service.ts',
+  );
+
+  it('(P9S03) toDrivingQuality weights physicsReward at ≥ 0.5', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const fnStart = sourceText.indexOf('function toDrivingQuality');
+    const fnSection = sourceText.slice(fnStart, fnStart + 500);
+    const match = fnSection.match(
+      /physicsReward\s*\?\?\s*0\)\s*\*\s*([0-9.]+)/,
+    );
+
+    expect(match !== null && Number(match[1]) >= 0.5).toBe(true);
+  });
+
+  it('(P9S03) WRONG_DIRECTION_REWARD uses an escalating penalty, not a flat -5', () => {
+    const sourceText = fs.readFileSync(envSourcePath, 'utf8');
+    const hasEscalating =
+      sourceText.includes('consecutiveWrongDirection') ||
+      sourceText.includes('wrongDirectionTicks') ||
+      /WRONG_DIRECTION.*\*\s*\w+/.test(sourceText);
+
+    expect(hasEscalating).toBe(true);
+  });
+
+  it('(P9S03) DEFAULT_IMPROVEMENT_THRESHOLD is ≥ 0.02', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const match = sourceText.match(
+      /const\s+DEFAULT_IMPROVEMENT_THRESHOLD\s*=\s*([0-9.]+)\s*;/,
+    );
+
+    expect(match !== null && Number(match[1]) >= 0.02).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 9 Step 03 — Red tests for growth speed (AC-018)
+// These tests assert that maxStructuralEditsPerStep is wired into the
+// lifecycle call and the default is raised. They fail because the knob
+// is currently dead (not passed to runNgeLifecycle) and the default is 1.
+// ──────────────────────────────────────────────────────────────────────
+
+describe('Phase 9 Step 03 — growth speed: maxStructuralEditsPerStep wired', () => {
+  const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
+
+  it('(P9S03) maxStructuralEditsPerStep is passed to the runNgeLifecycle call', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const lifecycleStart = sourceText.indexOf('runNgeLifecycle(');
+    const lifecycleSection = sourceText.slice(
+      lifecycleStart,
+      lifecycleStart + 700,
+    );
+
+    expect(lifecycleSection.includes('maxStructuralEditsPerStep')).toBe(true);
+  });
+
+  it('(P9S03) default maxStructuralEditsPerStep is ≥ 5 for batch growth', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const match = sourceText.match(/maxStructuralEditsPerStep:\s*(\d+)/);
+
+    expect(match !== null && Number(match[1]) >= 5).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 9 Step 03 — Red test for deferred item (AC-019, AC-043)
+// This test asserts that nge-e2e-growth.test.ts does not use .ts
+// extension in import paths. It fails because the current file uses
+// `from '../../../src/browser-entry.ts'` which triggers TS5097.
+// ──────────────────────────────────────────────────────────────────────
+
+describe('Phase 9 Step 03 — deferred: nge-e2e-growth.test.ts import path fix', () => {
+  it('(P9S03) nge-e2e-growth.test.ts does not use .ts extension in import paths', () => {
+    const testPath = path.join(__dirname, 'nge-e2e-growth.test.ts');
+    const testSource = fs.readFileSync(testPath, 'utf8');
+    const hasTsExtension = /from\s+['"][^'"]*\.ts['"]/.test(testSource);
+
+    expect(hasTsExtension).toBe(false);
   });
 });

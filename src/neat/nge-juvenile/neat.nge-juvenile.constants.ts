@@ -132,3 +132,104 @@ export const NGE_MAX_NODE_CAPACITY = 8_000;
  * Contract: NGE_MAX_EDGE_CAPACITY=32_000
  */
 export const NGE_MAX_EDGE_CAPACITY = 32_000;
+
+// ──────────────────────────────────────────────────────────────────────
+// Grow-Stabilize Cycle Constants
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Maximum number of quality-score entries retained for plateau detection.
+ * The rolling window tracks the baseline score at each adaptation tick to
+ * determine whether the network has stabilized before allowing growth.
+ *
+ * Contract: NGE_GROW_STABILIZE_PLATEAU_WINDOW_SIZE=5
+ */
+export const NGE_GROW_STABILIZE_PLATEAU_WINDOW_SIZE = 5;
+
+/**
+ * Variance threshold below which the quality score is considered plateaued.
+ * When the rolling-window variance falls below this value, the network is
+ * deemed to have learned to use its current structure and further growth
+ * is permitted.
+ *
+ * Contract: NGE_GROW_STABILIZE_PLATEAU_VARIANCE_THRESHOLD=0.1
+ */
+export const NGE_GROW_STABILIZE_PLATEAU_VARIANCE_THRESHOLD = 0.1;
+
+/**
+ * Fraction of connections whose weights are perturbed during each
+ * stabilization-phase adaptation tick.
+ *
+ * Contract: NGE_GROW_STABILIZE_WEIGHT_MUTATION_RATE=0.3
+ */
+export const NGE_GROW_STABILIZE_WEIGHT_MUTATION_RATE = 0.3;
+
+/**
+ * Maximum magnitude of weight perturbation applied during stabilization.
+ * Each selected connection's weight is shifted by a random value in
+ * [-MAGNITUDE, +MAGNITUDE].
+ *
+ * Contract: NGE_GROW_STABILIZE_WEIGHT_MUTATION_MAGNITUDE=0.1
+ */
+export const NGE_GROW_STABILIZE_WEIGHT_MUTATION_MAGNITUDE = 0.1;
+
+/**
+ * Minimum stabilization ticks that must elapse after structural growth
+ * before plateau detection can fire.
+ *
+ * Contract: NGE_GROW_STABILIZE_MIN_STABILIZATION_TICKS=5
+ */
+export const NGE_GROW_STABILIZE_MIN_STABILIZATION_TICKS = 5;
+
+/**
+ * Maximum stabilization ticks after which growth is forced to re-enter
+ * even if the quality score has not plateaued.
+ *
+ * Contract: NGE_GROW_STABILIZE_MAX_STABILIZATION_TICKS=25
+ */
+export const NGE_GROW_STABILIZE_MAX_STABILIZATION_TICKS = 25;
+
+/**
+ * Maximum number of episodic growth slots the NGE lifecycle may allocate.
+ *
+ * Contract: NGE_GROW_STABILIZE_MAX_EPISODIC_SLOTS=15
+ */
+export const NGE_GROW_STABILIZE_MAX_EPISODIC_SLOTS = 15;
+
+/**
+ * Node count above which the growth throttle engages.
+ * Networks exceeding this threshold get progressively longer back-off intervals.
+ *
+ * Contract: NGE_GROW_STABILIZE_LARGE_NETWORK_NODE_THRESHOLD=1_000
+ */
+export const NGE_GROW_STABILIZE_LARGE_NETWORK_NODE_THRESHOLD = 1_000;
+
+/**
+ * Base throttle interval (in ticks) applied when the network exceeds the
+ * large-network threshold.
+ *
+ * Contract: NGE_GROW_STABILIZE_GROWTH_THROTTLE_BASE_INTERVAL_TICKS=3
+ */
+export const NGE_GROW_STABILIZE_GROWTH_THROTTLE_BASE_INTERVAL_TICKS = 3;
+
+/**
+ * Maximum number of sample observations drawn from the score history for
+ * forward-pass evaluation.
+ *
+ * Contract: NGE_GROW_STABILIZE_MAX_FORWARD_PASS_SAMPLES=5
+ */
+export const NGE_GROW_STABILIZE_MAX_FORWARD_PASS_SAMPLES = 5;
+
+/**
+ * Default maximum number of structural edits per lifecycle call.
+ * Enables batch growth so multiple morphs can commit in a single tick.
+ *
+ * Contract: NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP=5
+ */
+export const NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP = 5;
+
+/**
+ * Default module identifier used by the grow-stabilize cycle when no
+ * custom module ID is supplied.
+ */
+export const NGE_GROW_STABILIZE_DEFAULT_MODULE_ID = 'nge:runtime';

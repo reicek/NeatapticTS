@@ -531,7 +531,8 @@ may be set by callers (e.g. the browser harness) and are preserved across
 step calls via object spread. `guidanceAlpha` controls whether guide-following
 rewards and divergence penalties are active (Tier 0–1: alpha > 0, Tier 2+:
 alpha = 0). `consecutiveBorderContactTicks` tracks per-car escalating
-border-contact penalty state across ticks.
+border-contact penalty state across ticks. `consecutiveWrongDirectionTicks`
+tracks per-car escalating wrong-direction penalty state across ticks.
 
 ### separateCars
 

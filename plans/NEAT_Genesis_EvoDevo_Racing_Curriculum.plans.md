@@ -32,11 +32,11 @@ valid only when the phase's focused tests, build, and quality gates pass.
 
 ## Current state
 
-- **Phase 8 — Racing Curriculum v2 [DONE].** All 23 steps [DONE] and green-validated. All step details archived in logs.
-- **Phases 1-8 [DONE]** and compressed in plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md.
-- **Browser demo path:** examples/racing_curriculum/index.html exercises live per-car runtime adaptation via createPerCarAdaptationEngines + evaluateRacingTrendScore.
+- **Phase 9 - NGE Core Extraction + Driving Improvement + Growth Acceleration [DONE].** All 7 steps [DONE] and green-validated. 341 tests pass, 100% coverage on 6 src/ files, tsc/lint/build pass, browser smoke pass. All step details archived in logs.
+- **Phases 1-9 [DONE]** and compressed in plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md.
+- **Browser demo path:** examples/racing_curriculum/index.html exercises live per-car runtime adaptation via createPerCarAdaptationEngines + runNgeGrowStabilizeCycle (core module extracted to src/neat/nge-juvenile/).
 
-Claim: 04-implementing @ 2026-07-12T01:15:00Z
+All phases complete. Plan ready for archival to plans/completed/.
 
 ### Research findings summary
 
@@ -331,27 +331,17 @@ first-class requirements, not anti-patterns to be avoided.
 
 [DONE] Step 23: Growth rate optimization and Tier 1 completion criteria. Adaptive hysteresis (2/3/5 based on node count), time-boxed stabilization (min 5, max 25 ticks), PLATEAU_WINDOW_SIZE=5, PLATEAU_VARIANCE_THRESHOLD=0.1, TIER_N_FLOOR[1]=1000, lap time display. Green: 144/144 tests, tsc/lint clean, browser smoke N82->N85 growth within 60s, lap time displayed. See logs section Phase 8 Step 23 -- Detailed archive.
 
-## Latest validation evidence
 
-- Step 23 green: all 9 ACs pass (2026-07-11T22:48:00-04:00). 144/144 tests, tsc/lint clean, browser smoke N82->N85 growth within ~60s, lap time displayed. See logs Phase 8 Step 23 -- Detailed archive.
-- Step 22 green: 129/129 tests, browser smoke N76->N82, commit 737e4f49.
-- Step 21 green: all 8 ACs pass, browser smoke confirms growth + driving improvement.
-- Plan verification: green-light: true (Step 23, 2026-07-11T22:30:00-04:00).
-- All prior step validation evidence archived in logs.
+### Phase 9 - NGE Core Extraction + Driving Improvement + Growth Acceleration [DONE]
 
-## Final state
+**Phase objective:** Extract the NGE grow-stabilize cycle from the racing demo's app layer into `src/neat/nge-juvenile/` as reusable core library behavior. Fix all-cars methodology, driving quality improvement, growth speed (dead knob + batch growth), and pre-existing test defects. The NGE lifecycle should expose a `growStabilizeCycle` mode with sensible defaults and overridable parameters. The app layer must be thinner after this refactor - it should call NGE core, not implement NGE logic.
 
-- Phases 1-8 [DONE] and archived in plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.logs.md.
-- Phase 8 all 23 steps [DONE] and green-validated.
-- Browser demo: examples/racing_curriculum/index.html exercises live per-car runtime adaptation with network growth.
-- Tier 1 N_floor updated to 1000 per user requirement.
-- Known risk: Tier 2 output-expansion remap path (obs tier 1->2, 2->9 outputs) not exercised in smoke test.
-- Known risk: maxStructuralEditsPerStep is a dead knob; wiring it for batch growth is deferred to a follow-up step.
-- Known risk: Pre-existing test defects in nge-e2e-growth.test.ts (TS type mismatch) and browser-entry.progression.test.ts (missing export) -- not blocking but should be addressed in a future fix step.
+[DONE] Phase 9 Steps 01-07: All steps green-validated. 341 tests pass, 100% coverage on 6 src/ files, tsc/lint/build pass, browser smoke pass. See logs section "Phase 9 - NGE Core Extraction + Driving Improvement + Growth Acceleration [DONE] - Detailed archive".
 
-## Reopen conditions
-
-- Reopen if Tier 2 output-expansion remap path needs validation.
-- Reopen if new racing curriculum defects are discovered.
-- Reopen if upstream NGE core changes require adaptation evaluation updates.
-- Reopen if growth rate is still insufficient after Step 23 parameter tuning.
+- [DONE] Step 01 - Plan Phase 9: boundary map completed, step packets 02-07 authored, gates PASS (plan-sync, step-packet, plan-slice-quality, agent-graph, plan-readiness green-light: true).
+- [DONE] Step 02 - Research: boundary map confirmed, new file targets and cycle-break plan documented, tsc clean.
+- [DONE] Step 03 - Red tests: 24 red test contracts across 3 files, all fail for right reasons (missing implementation).
+- [DONE] Step 04 - Implementation: all 7 slices (04a-04g) completed. Core module created, app layer thinned (no deferred cleanup), all-cars methodology, driving improvement, growth speed, test fixes.
+- [DONE] Step 05 - Green validation: 341 tests pass, 100% coverage on 6 src/ files (statements/branches/functions/lines), 6 iterations to green. Browser smoke N79->N85 growth, 0 console errors.
+- [DONE] Step 06 - Documentation: JSDoc complete on all new exports, docs PASS, folder quality gates pass (pre-existing gaps documented as risks).
+- [DONE] Step 07 - Logging/compression: Phase 9 compressed to logs, plan marked [DONE].

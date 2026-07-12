@@ -178,6 +178,36 @@ Parameters:
 
 Returns: Uppercase status label.
 
+### resolveTierPromotionFromLapCount
+
+```ts
+resolveTierPromotionFromLapCount(
+  currentTier: number,
+  completedLaps: number,
+): { nextTier: number; didAdvance: boolean; remainingLaps: number; }
+```
+
+Simplified lap-count-based tier promotion check used by the all-cars
+methodology to decide whether every car on the grid has completed enough
+laps to advance as a group.
+
+Tiers 1–4 advance after `LAP_COUNT_PROMOTION_THRESHOLD` completed laps.
+Tier 5 holds for cross-team fairness confirmation and never auto-advances.
+Tier 6 is the ceiling and cannot advance further.
+
+Parameters:
+- `currentTier` - Current curriculum tier (1–6).
+- `completedLaps` - Number of laps completed by the car at this tier.
+
+Returns: Promotion decision with next tier, advance flag, and remaining laps.
+
+Example:
+
+```ts
+const result = resolveTierPromotionFromLapCount(1, 3);
+console.log(result); // { nextTier: 2, didAdvance: true, remainingLaps: 0 }
+```
+
 ### resolveTrackSizeBucketForCurriculumTier
 
 ```ts

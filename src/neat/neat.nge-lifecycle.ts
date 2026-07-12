@@ -39,13 +39,15 @@ import type {
   NgeAssimilationPolicy,
   NgeAssimilationResult,
 } from './nge-assimilation/neat.nge-assimilation.types';
+import { applyMorphDeltas } from './nge-juvenile/neat.nge-juvenile.apply';
 import {
-  applyMorphDeltas,
   commitGrowth,
-  computeFocusScores,
   planGrowthMorphs,
+} from './nge-juvenile/neat.nge-juvenile.grow';
+import {
+  computeFocusScores,
   resolveFocusConfig,
-} from './nge-juvenile/neat.nge-juvenile';
+} from './nge-juvenile/neat.nge-juvenile.focus';
 import type {
   MorphApplyBudget,
   MorphApplyOutcome,
@@ -194,9 +196,11 @@ export function runNgeLifecycle(
         growth: input.budget,
         prune: input.pruneBudget,
       };
+      const maxEdits = resolvedConfig.maxStructuralEditsPerStep;
+      const limitedDeltas = maxEdits > 0 ? deltas.slice(0, maxEdits) : deltas;
       const applyOutcomes = applyMorphDeltas(
         input.network,
-        deltas,
+        limitedDeltas,
         applyBudget,
       );
 

@@ -13,8 +13,11 @@
  *
  * Single-expect rule enforced throughout.  AAA structure in every test.
  */
-import { Network } from '../../../src/browser-entry.ts';
-import { createRuntimeAdaptationEngine } from './runtime.adaptation';
+import { Network } from '../../../src/browser-entry';
+import {
+  createRuntimeAdaptationEngine,
+  type RacingQualitySignal,
+} from './runtime.adaptation';
 
 /**
  * Trend-only evaluator that ignores the network's size penalty.
@@ -25,10 +28,15 @@ import { createRuntimeAdaptationEngine } from './runtime.adaptation';
  */
 const trendOnlyEvaluator = (
   _network: Network,
-  scoreHistory: readonly number[],
+  scoreHistory: readonly (number | RacingQualitySignal)[],
 ): number => {
   if (scoreHistory.length === 0) return 0;
-  return (scoreHistory.at(-1) ?? 0) - (scoreHistory[0] ?? 0);
+  const last = scoreHistory.at(-1);
+  if (last === undefined) return 0;
+  const first = scoreHistory[0];
+  const lastValue = typeof last === 'number' ? last : (last.score ?? 0);
+  const firstValue = typeof first === 'number' ? first : (first.score ?? 0);
+  return lastValue - firstValue;
 };
 
 describe('NGE Core Growth Engine E2E pipeline', () => {
@@ -81,7 +89,9 @@ describe('NGE Core Growth Engine E2E pipeline', () => {
       // Arrange
       const network = new Network(4, 2, { seed: 42 });
       const engine = createRuntimeAdaptationEngine({
+        cadence: { mode: 'every_tick' },
         evaluateScore: trendOnlyEvaluator,
+        limits: { mutationCooldownTicks: 0 },
       });
       const scoreHistory = [1, 2, 3, 4];
       const committedSizes: number[] = [];
@@ -115,7 +125,9 @@ describe('NGE Core Growth Engine E2E pipeline', () => {
       // Arrange — 1002 nodes exceeds the LARGE_NETWORK_NODE_THRESHOLD (1000).
       const network = new Network(1001, 1, { seed: 42 });
       const engine = createRuntimeAdaptationEngine({
+        cadence: { mode: 'every_tick' },
         evaluateScore: trendOnlyEvaluator,
+        limits: { mutationCooldownTicks: 0 },
       });
       const scoreHistory = [1, 2, 3, 4];
 
@@ -137,6 +149,7 @@ describe('NGE Core Growth Engine E2E pipeline', () => {
       // Arrange
       const network = new Network(4, 2, { seed: 42 });
       const engine = createRuntimeAdaptationEngine({
+        cadence: { mode: 'every_tick' },
         evaluateScore: trendOnlyEvaluator,
         limits: { mutationCooldownTicks: 5 },
       });

@@ -522,7 +522,9 @@ export async function start(
   };
   buildPerCarAdaptationEngines(carCount);
 
-  let focusedControllerNetwork = controllerNetworkByCarIndex.get(0)!;
+  let focusedCarIndex = 0;
+  let focusedControllerNetwork =
+    controllerNetworkByCarIndex.get(focusedCarIndex)!;
   let tierSignalEvidenceAccumulator =
     createEmptyTierSignalEvidenceAccumulator();
   let guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
@@ -777,7 +779,9 @@ export async function start(
             }),
           );
         }
-        focusedControllerNetwork = controllerNetworkByCarIndex.get(0)!;
+        focusedCarIndex = 0;
+        focusedControllerNetwork =
+          controllerNetworkByCarIndex.get(focusedCarIndex)!;
         buildPerCarAdaptationEngines(promotedCarCount);
         simulationTick = 0;
         lapStartTick = 0;
@@ -845,6 +849,15 @@ export async function start(
   const focusedNetworkRefreshIntervalId = window.setInterval(() => {
     if (!running) {
       return;
+    }
+
+    // Round-robin through all cars so the visualizer shows every agent's
+    // network architecture, not just car 0.
+    const carCount = controllerNetworkByCarIndex.size;
+    if (carCount > 0) {
+      focusedCarIndex = (focusedCarIndex + 1) % carCount;
+      focusedControllerNetwork =
+        controllerNetworkByCarIndex.get(focusedCarIndex)!;
     }
 
     hostHandle.renderNetworkArchitecture(focusedControllerNetwork);
@@ -3007,6 +3020,64 @@ function resolveTierPromotion(params: {
     didAdvance: true,
     remainingLaps: 0,
     promotedCarIndices: promotedIndices,
+  };
+}
+
+/** Lap threshold required before a tier-1-through-4 car is eligible for promotion. */
+const LAP_COUNT_PROMOTION_THRESHOLD = 3;
+
+/**
+ * Simplified lap-count-based tier promotion check used by the all-cars
+ * methodology to decide whether every car on the grid has completed enough
+ * laps to advance as a group.
+ *
+ * Tiers 1–4 advance after `LAP_COUNT_PROMOTION_THRESHOLD` completed laps.
+ * Tier 5 holds for cross-team fairness confirmation and never auto-advances.
+ * Tier 6 is the ceiling and cannot advance further.
+ *
+ * @param currentTier - Current curriculum tier (1–6).
+ * @param completedLaps - Number of laps completed by the car at this tier.
+ * @returns Promotion decision with next tier, advance flag, and remaining laps.
+ *
+ * @example
+ * ```ts
+ * const result = resolveTierPromotionFromLapCount(1, 3);
+ * console.log(result); // { nextTier: 2, didAdvance: true, remainingLaps: 0 }
+ * ```
+ */
+export function resolveTierPromotionFromLapCount(
+  currentTier: number,
+  completedLaps: number,
+): { nextTier: number; didAdvance: boolean; remainingLaps: number } {
+  if (currentTier >= MAX_CURRICULUM_TIER) {
+    return {
+      nextTier: MAX_CURRICULUM_TIER,
+      didAdvance: false,
+      remainingLaps: completedLaps,
+    };
+  }
+
+  // Tier 5 holds for cross-team fairness confirmation.
+  if (currentTier >= 5) {
+    return {
+      nextTier: currentTier,
+      didAdvance: false,
+      remainingLaps: completedLaps,
+    };
+  }
+
+  if (completedLaps >= LAP_COUNT_PROMOTION_THRESHOLD) {
+    return {
+      nextTier: currentTier + 1,
+      didAdvance: true,
+      remainingLaps: 0,
+    };
+  }
+
+  return {
+    nextTier: currentTier,
+    didAdvance: false,
+    remainingLaps: LAP_COUNT_PROMOTION_THRESHOLD - completedLaps,
   };
 }
 
