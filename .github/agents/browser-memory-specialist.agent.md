@@ -16,7 +16,7 @@ tools:
   ]
 user-invocable: false
 agents: []
-skills: ['chrome-devtools-mcp', 'browser-testing-harness']
+skills: ['chrome-devtools-mcp']
 ---
 
 ## Purpose
@@ -33,6 +33,10 @@ Profile browser memory usage via Chrome DevTools MCP heap snapshots, compare mem
 
 - ALWAYS stay read-only. DO NOT edit any files.
 - NEVER read raw heap snapshot files directly. Use Chrome DevTools MCP summary and comparison tools.
+- For GPU-related memory tests, ensure the browser window is visible. If
+  `--headless=false` is not reliable, launch Chrome with
+  `--remote-debugging-port=9222` and connect the DevTools MCP to that existing
+  instance.
 - ALWAYS classify retained object growth as "leak" or "expected" with rationale.
 - DO NOT edit production code.
 - This agent is intentionally thin. Durable memory profiling policy lives in `devtools` skill.

@@ -17,12 +17,7 @@ tools:
 user-invocable: false
 agents: []
 skills:
-  [
-    'chrome-devtools-mcp',
-    'trace-audit-reporting',
-    'trace-analyzer-extension',
-    'browser-testing-harness',
-  ]
+  ['chrome-devtools-mcp', 'trace-audit-reporting', 'trace-analyzer-extension']
 ---
 
 ## Purpose
@@ -39,6 +34,10 @@ Capture, compress, analyze, and summarize Chrome DevTools performance traces for
 
 - ALWAYS stay read-only. DO NOT edit any files.
 - NEVER read raw trace files (10MB+) directly into agent context. Always use `scripts/trace-summarize.mjs` or `scripts/analyze-trace/analyze-trace.ts`.
+- FOR GPU/performance tests the browser window MUST be visible. If
+  `--headless=false` is not reliable, launch Chrome with
+  `--remote-debugging-port=9222` and connect the DevTools MCP to that existing
+  instance.
 - ALWAYS save traces to `tmp/traces/` (gitignored).
 - ALWAYS compress traces with `scripts/trace-compress.mjs` before storage.
 - ALWAYS produce a concise metric summary (< 2000 chars) for the calling agent.

@@ -16,7 +16,7 @@ tools:
   ]
 user-invocable: false
 agents: []
-skills: ['chrome-devtools-mcp', 'browser-testing-harness']
+skills: ['chrome-devtools-mcp']
 ---
 
 ## Purpose
@@ -35,6 +35,9 @@ Interact with browser demo UIs via Chrome DevTools MCP using DOM queries, clicks
 - For WebGPU/GPU/performance tests, the browser window MUST be visible and in
   the foreground. Report window visibility in the result; measurements from
   hidden, minimized, or occluded windows are invalid.
+- If `--headless=false` does not produce a visible window, launch Chrome with
+  `--remote-debugging-port=9222` and connect the DevTools MCP to that existing
+  instance.
 - MINIMIZE screenshot usage. Screenshots are token-expensive. Use DOM queries, text extraction, and element property checks instead.
 - Only use screenshots when explicitly requested by the calling agent or when visual regression requires pixel comparison.
 - DO NOT edit production code.

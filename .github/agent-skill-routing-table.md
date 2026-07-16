@@ -1,6 +1,6 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: 78ddb7f77621d40ef60ba4ec70e07bb1c0f43ed9c296e52ffb21c1200964e108 -->
-<!-- source-file-count: 128 -->
+<!-- source-hash: 5119172905af200c933aaba74b841840b0d4a1e2812a059805d7da17b2e06bfe -->
+<!-- source-file-count: 129 -->
 # Canonical Agent and Skill Routing Table
 
 > Generated file. Do not edit manually.
@@ -14,20 +14,20 @@
 | 00-helping | 1 | kimi-k2.7-code:cloud | helping-gap-resolution-coordinator<br>helping-agent-maintenance-coordinator<br>skill-inventory-auditor<br>agent-frontmatter-auditor<br>skill-frontmatter-auditor<br>model-name-auditor<br>skill-trigger-eval-designer<br>skill-output-eval-grader<br>coverage-guard<br>learning-event-capturer<br>file-change-summarizer<br>slice-orchestration-scheduler | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>customize-cloud-agent<br>subagent-delegation-patterns<br>capturing-learning-event<br>routing-optimization-policy<br>phase-handoff-workflow<br>tracker-handoff<br>execute |
 | 01-planning | 1 | kimi-k2.7-code:cloud | planning-context-coordinator<br>planning-risk-coordinator<br>planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>plan-scout<br>model-name-auditor<br>plan-registration-auditor<br>helping-gap-resolution-coordinator<br>research-synthesis-specialist<br>phase-handoff-designer | plan-alignment<br>tracker-handoff<br>phase-handoff-workflow<br>agent-frontmatter-standards<br>model-routing-and-budget<br>license-attribution-audit<br>planning-acceptance-criteria<br>plan-sync-validation<br>spec-checklist<br>research-methodology<br>execute |
 | 02-researching | 1 | kimi-k2.7-code:cloud | research-codebase-coordinator<br>plan-scout<br>docs-scout<br>repo-cortex-scout<br>boundary-mapper<br>skill-inventory-auditor<br>helping-gap-resolution-coordinator<br>cortex-embeddings-scout | subagent-delegation-patterns<br>research-methodology<br>repo-cortex-workflow<br>execute |
-| 03-red-testing | 1 | kimi-k2.7-code:cloud | planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>unit-test-writer<br>test-coverage-analyst<br>coverage-scout<br>determinism-scout<br>nge-core-scout<br>plan-scout<br>helping-gap-resolution-coordinator<br>performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist<br>browser-harness-specialist | red-test-contracts<br>nge-core-algorithm<br>reproducibility-contracts<br>creating-unit-tests<br>test-fix-workflow<br>coverage-tranche<br>research-methodology<br>execute<br>chrome-devtools-mcp<br>browser-testing-harness |
-| 04-implementing | 1 | kimi-k2.7-code:cloud | implementation-pattern-coordinator<br>implementation-pattern-scout<br>implementation-executor<br>boundary-mapper<br>docs-scout<br>browser-runtime-scout<br>worker-payload-scout<br>evaluation-pool-scout<br>checkpoint-scout<br>hybrid-interop-scout<br>determinism-scout<br>visualizer-scout<br>nge-core-scout<br>nge-benchmark-scout<br>neatchat-scout<br>solid-split<br>flappy-architecture-polish<br>agent-frontmatter-auditor<br>phase-handoff-designer<br>mcp-server-architect<br>helping-gap-resolution-coordinator<br>browser-harness-specialist | implementation-standards<br>nge-core-algorithm<br>reproducibility-contracts<br>tracker-handoff<br>architecture-builder<br>onnx-work<br>performance-optimization<br>trace-analyzer-extension<br>worker-inference-transport<br>research-methodology<br>execute<br>browser-testing-harness |
-| 05-green-testing | 1 | kimi-k2.7-code:cloud | green-test-failure-triage-coordinator<br>coverage-guard<br>coverage-scout<br>failure-triage-specialist<br>unit-test-runner<br>determinism-scout<br>plan-registration-auditor<br>mcp-validation-auditor<br>helping-gap-resolution-coordinator<br>code-quality-auditor<br>test-coverage-analyst<br>performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist<br>browser-harness-specialist | green-validation-gates<br>coverage-guard<br>test-fix-workflow<br>plan-sync-validation<br>spec-checklist<br>trace-audit-reporting<br>research-methodology<br>execute<br>chrome-devtools-mcp<br>browser-testing-harness |
-| 06-documenting | 1 | kimi-k2.7-code:cloud | docs-scout<br>nge-core-scout<br>academic-docs-auditor<br>docs-example-writer<br>plan-scout<br>license-attribution-auditor<br>vscode-ai-extensibility-scout<br>helping-gap-resolution-coordinator<br>browser-harness-specialist | educational-docs<br>nge-core-algorithm<br>docs-academic-citation-audit<br>license-attribution-audit<br>auditing-js-docs<br>updating-js-docs<br>research-methodology<br>execute<br>browser-testing-harness |
+| 03-red-testing | 1 | kimi-k2.7-code:cloud | planning-test-strategy-coordinator<br>acceptance-criteria-writer<br>unit-test-writer<br>test-coverage-analyst<br>coverage-scout<br>determinism-scout<br>nge-core-scout<br>plan-scout<br>helping-gap-resolution-coordinator<br>performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist<br>browser-harness-specialist | red-test-contracts<br>nge-core-algorithm<br>reproducibility-contracts<br>creating-unit-tests<br>test-fix-workflow<br>coverage-tranche<br>research-methodology<br>execute<br>devtools |
+| 04-implementing | 1 | kimi-k2.7-code:cloud | implementation-pattern-coordinator<br>implementation-pattern-scout<br>implementation-executor<br>boundary-mapper<br>docs-scout<br>browser-runtime-scout<br>worker-payload-scout<br>evaluation-pool-scout<br>checkpoint-scout<br>hybrid-interop-scout<br>determinism-scout<br>visualizer-scout<br>nge-core-scout<br>nge-benchmark-scout<br>neatchat-scout<br>solid-split<br>flappy-architecture-polish<br>agent-frontmatter-auditor<br>phase-handoff-designer<br>mcp-server-architect<br>helping-gap-resolution-coordinator<br>browser-harness-specialist | implementation-standards<br>nge-core-algorithm<br>reproducibility-contracts<br>tracker-handoff<br>architecture-builder<br>onnx-work<br>performance-optimization<br>trace-analyzer-extension<br>worker-inference-transport<br>research-methodology<br>execute |
+| 05-green-testing | 1 | kimi-k2.7-code:cloud | green-test-failure-triage-coordinator<br>coverage-guard<br>coverage-scout<br>failure-triage-specialist<br>unit-test-runner<br>determinism-scout<br>plan-registration-auditor<br>mcp-validation-auditor<br>helping-gap-resolution-coordinator<br>code-quality-auditor<br>test-coverage-analyst<br>performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist<br>browser-harness-specialist | green-validation-gates<br>coverage-guard<br>test-fix-workflow<br>plan-sync-validation<br>spec-checklist<br>trace-audit-reporting<br>research-methodology<br>execute<br>devtools |
+| 06-documenting | 1 | kimi-k2.7-code:cloud | docs-scout<br>nge-core-scout<br>academic-docs-auditor<br>docs-example-writer<br>plan-scout<br>license-attribution-auditor<br>vscode-ai-extensibility-scout<br>helping-gap-resolution-coordinator<br>browser-harness-specialist | educational-docs<br>nge-core-algorithm<br>docs-academic-citation-audit<br>license-attribution-audit<br>auditing-js-docs<br>updating-js-docs<br>research-methodology<br>execute |
 | 07-logging | 1 | kimi-k2.7-code:cloud | plan-scout<br>plan-registration-auditor<br>learning-event-capturer<br>file-change-summarizer<br>helping-gap-resolution-coordinator<br>phase-handoff-designer | tracker-handoff<br>summarizing-session-log<br>plan-sync-validation<br>capturing-learning-event<br>research-methodology<br>execute |
 | academic-docs-auditor | 3 | kimi-k2.7-code:cloud | - | docs-academic-citation-audit<br>auditing-js-docs |
 | acceptance-criteria-writer | 4 | kimi-k2.7-code:cloud | - | planning-acceptance-criteria |
 | agent-frontmatter-auditor | 3 | kimi-k2.7-code:cloud | - | agent-frontmatter-standards<br>updating-agent-frontmatter |
 | assimilator | 3 | kimi-k2.7-code:cloud | - | external-tool-assimilation<br>license-attribution-audit<br>research-methodology<br>capturing-learning-event |
 | boundary-mapper | 3 | kimi-k2.7-code:cloud | - | solid-split<br>implementation-standards |
-| browser-harness-specialist | 3 | kimi-k2.7-code:cloud | - | browser-testing-harness<br>chrome-devtools-mcp<br>research-methodology |
-| browser-memory-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>browser-testing-harness |
+| browser-harness-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>research-methodology |
+| browser-memory-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp |
 | browser-runtime-scout | 3 | kimi-k2.7-code:cloud | - | browser-build |
-| browser-ui-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>browser-testing-harness |
+| browser-ui-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp |
 | checkpoint-scout | 3 | kimi-k2.7-code:cloud | - | checkpointing-persistence |
 | code-quality-auditor | 3 | kimi-k2.7-code:cloud | file-change-summarizer | green-validation-gates<br>implementation-standards |
 | cortex-embeddings-scout | 3 | kimi-k2.7-code:cloud | - | repo-cortex-embeddings |
@@ -56,7 +56,7 @@
 | neatchat-scout | 3 | kimi-k2.7-code:cloud | - | neatchat-systems |
 | nge-benchmark-scout | 3 | kimi-k2.7-code:cloud | - | nge-benchmark-workflow |
 | nge-core-scout | 3 | kimi-k2.7-code:cloud | - | nge-core-algorithm |
-| performance-trace-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>trace-audit-reporting<br>trace-analyzer-extension<br>browser-testing-harness |
+| performance-trace-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>trace-audit-reporting<br>trace-analyzer-extension |
 | phase-handoff-designer | 3 | kimi-k2.7-code:cloud | - | phase-handoff-workflow |
 | plan-registration-auditor | 3 | kimi-k2.7-code:cloud | - | plan-sync-validation |
 | plan-scout | 3 | kimi-k2.7-code:cloud | - | plan-alignment |
@@ -91,12 +91,13 @@
 | auditing-js-docs | skill | - | 06-documenting<br>academic-docs-auditor | self |
 | browser-build | skill | - | browser-runtime-scout | self |
 | capturing-learning-event | skill | - | 00-helping<br>07-logging<br>assimilator<br>learning-event-capturer | self |
-| chrome-devtools-mcp | skill | - | 03-red-testing<br>05-green-testing<br>browser-harness-specialist<br>browser-memory-specialist<br>browser-ui-specialist<br>performance-trace-specialist | self |
+| chrome-devtools-mcp | skill | - | browser-harness-specialist<br>browser-memory-specialist<br>browser-ui-specialist<br>performance-trace-specialist | self |
 | coverage-guard | skill | - | 05-green-testing<br>coverage-guard<br>coverage-scout<br>implementation-executor<br>test-coverage-analyst | self |
 | coverage-tranche | skill | - | 03-red-testing<br>coverage-scout<br>test-coverage-analyst | self |
 | creating-specialist-agent | skill | - | helping-agent-maintenance-coordinator<br>helping-gap-resolution-coordinator | self |
 | creating-unit-tests | skill | - | 03-red-testing<br>unit-test-writer | self |
 | customize-cloud-agent | skill | - | 00-helping | self |
+| devtools | skill | - | 03-red-testing<br>05-green-testing | self |
 | docs-academic-citation-audit | skill | - | 06-documenting<br>academic-docs-auditor | self |
 | educational-docs | skill | - | 06-documenting<br>docs-example-writer<br>docs-scout | self |
 | execute | skill | - | 00-helping<br>01-planning<br>02-researching<br>03-red-testing<br>04-implementing<br>05-green-testing<br>06-documenting<br>07-logging<br>flappy-architecture-polish<br>green-test-failure-triage-coordinator<br>helping-agent-maintenance-coordinator<br>helping-gap-resolution-coordinator<br>implementation-executor<br>implementation-pattern-coordinator<br>planning-context-coordinator<br>planning-risk-coordinator<br>planning-test-strategy-coordinator<br>research-codebase-coordinator<br>slice-orchestration-scheduler<br>solid-split | self |

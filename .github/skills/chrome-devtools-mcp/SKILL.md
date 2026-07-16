@@ -53,7 +53,35 @@ execution hotspots, frame rate measurement.
 > Headless GPU execution deprioritizes the GPU process and compositor, producing
 > invalid timing and parity data. Always launch the browser with `headless: false`,
 > bring the page to the foreground, and document `browserVisibility:
-visible-foreground` in the trace summary.
+> visible-foreground` in the trace summary.
+
+## Visible Browser Window
+
+The `--headless=false` flag asks Chrome DevTools MCP to launch a visible
+browser window, but it does **not** reliably produce a visible window in all
+environments. Some sessions still spawn a headless or background instance even
+with the flag set.
+
+For real GPU validation, use the working workaround:
+
+1. **Manually launch Chrome with remote debugging enabled.**
+   PowerShell:
+   ```powershell
+   Start-Process "chrome.exe" -ArgumentList "--remote-debugging-port=9222","--user-data-dir=C:\temp\chrome-debug","<url>"
+   ```
+   The user data directory can be any writable temp path; using a dedicated
+   directory keeps the debug profile separate from the daily Chrome profile.
+2. **Connect the DevTools MCP to the running browser.** Once Chrome is running
+   with `--remote-debugging-port=9222`, the DevTools MCP can attach to that
+   existing browser instance instead of launching a new one.
+3. **Why this matters.** Headless browsers may not engage WebGPU or the GPU
+   process properly. Real GPU/performance validation requires a visible
+   foreground window. Document `browserVisibility: visible-foreground` in every
+   GPU-related trace summary.
+
+Agents may also call `launchVisibleChrome(url)` exported by
+`scripts/agent-customization/mcp/devtools-facade.mjs` to launch Chrome the same
+way programmatically.
 
 ### Screenshots
 
