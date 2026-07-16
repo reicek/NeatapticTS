@@ -24,10 +24,11 @@ const DEFAULT_SNAPSHOT_PATH = path.join(
 const DEFAULT_SPAWN_COMMAND = [
   'npx',
   '-y',
-  'chrome-devtools-mcp@1.4.0',
-  '--headless=true',
+  'chrome-devtools-mcp@1.6.0',
+  '--headless=false',
   '--usage-statistics=false',
   '--performance-crux=false',
+  '--allow-unrestricted-paths=true',
 ];
 const DEFAULT_ENV = {
   CI: '1',

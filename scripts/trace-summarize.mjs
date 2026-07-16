@@ -29,7 +29,10 @@ const LONG_TASK_THRESHOLD_MS = 16;
 const VERY_LONG_TASK_THRESHOLD_MS = 50;
 
 /** Chrome trace metadata name for the renderer main thread. */
-const MAIN_THREAD_NAME = 'CrRendererMainThread';
+const MAIN_THREAD_NAME = 'CrRendererMain';
+
+/** Legacy Chrome trace metadata name still present in some traces. */
+const MAIN_THREAD_NAME_LEGACY = 'CrRendererMainThread';
 
 /** Trace event name used by Chrome when one frame is dropped. */
 const DROPPED_FRAME_EVENT_NAME = 'DroppedFrame';
@@ -102,8 +105,9 @@ export function extractTraceEvents(rawJson) {
 /**
  * Finds the renderer main thread from metadata events.
  *
- * Scans for a `thread_name` metadata event with the value
- * `CrRendererMainThread` and returns its pid/tid pair.
+ * Scans for a `thread_name` metadata event whose value matches either the
+ * current `CrRendererMain` name or the legacy `CrRendererMainThread` name,
+ * and returns its pid/tid pair.
  *
  * @param events - All trace events.
  * @returns Main thread identifier or null when not found.
@@ -112,7 +116,10 @@ function findMainThread(events) {
   for (const event of events) {
     if (event.ph !== METADATA_PHASE) continue;
     if (event.name !== 'thread_name') continue;
-    if (event.args?.name !== MAIN_THREAD_NAME) continue;
+    const threadName = event.args?.name;
+    if (threadName !== MAIN_THREAD_NAME && threadName !== MAIN_THREAD_NAME_LEGACY) {
+      continue;
+    }
     return { pid: event.pid, tid: event.tid };
   }
   return null;

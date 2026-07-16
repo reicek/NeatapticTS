@@ -56,7 +56,7 @@ const COMPREHENSIVE_EVENTS = [
     pid: 1,
     tid: 2,
     ts: 0,
-    args: { name: 'CrRendererMainThread' },
+    args: { name: 'CrRendererMain' },
   },
   { ph: 'X', name: 'RunTask', pid: 1, tid: 2, ts: 1_000, dur: 60_000 },
   { ph: 'X', name: 'RunTask', pid: 1, tid: 2, ts: 2_000, dur: 20_000 },
@@ -169,6 +169,23 @@ describe('trace-summarize', () => {
     it('falls back to all events when no main thread is detected', () => {
       const events = [
         { ph: 'X', name: 'RunTask', pid: 1, tid: 2, ts: 0, dur: 20_000 },
+      ];
+      const result = computeMetrics(events);
+      expect(result.cpuTimeMs).toBe(20);
+    });
+
+    it('detects the legacy CrRendererMainThread name', () => {
+      const events = [
+        {
+          ph: 'M',
+          name: 'thread_name',
+          pid: 1,
+          tid: 2,
+          ts: 0,
+          args: { name: 'CrRendererMainThread' },
+        },
+        { ph: 'X', name: 'RunTask', pid: 1, tid: 2, ts: 0, dur: 20_000 },
+        { ph: 'X', name: 'RunTask', pid: 1, tid: 99, ts: 0, dur: 50_000 },
       ];
       const result = computeMetrics(events);
       expect(result.cpuTimeMs).toBe(20);
