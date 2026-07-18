@@ -7824,3 +7824,126 @@ PlanUpdate:
 - Polyandric reproduction P1/P5 blockers remain (owned by nge-core-algorithm). 3 skipped polyandric tests in simulation-worker.race-pack.tier5.test.ts remain skipped.
 
 **Next boundary:** All phases 1-9 complete. Plan ready for closure and archival to plans/completed/.
+
+---
+
+### Post-completion docs-quality cleanup — `src/neat/nge-juvenile/`
+
+Focused documentation pass after Phase 9 juvenile implementation landed.
+
+- Regenerated `src/neat/nge-juvenile/README.md` with `npm run docs`; corrected stale
+  constant values (e.g., `NGE_LIFECYCLE_DEFAULT_BABY_NODE_THRESHOLD=1_000`,
+  `BABY_GROWTH_CADENCE=0.8`, `ADULT_STABILIZATION_INTENSITY=0.7`) that drifted
+  from `neat.nge-juvenile.constants.ts`.
+- Added `@internal` tags to 12 private helpers so they stop leaking into the
+  generated public README:
+  - `neat.nge-juvenile.variants.ts`: `resolveStageMagnitude`,
+    `resolveStageVariantRef`, `createSeededRandom`, `pickDistinctIndicesExcluding`,
+    `roundDelta`, `boundedDelta`, `evaluatePatch`.
+  - `neat.nge-juvenile.grow-stabilize.ts`: `buildDefaultMetrics`,
+    `buildDefaultBudget`, `buildDefaultPruneBudget`, `mapOutcomesToOperations`,
+    `evaluateNetworkScore`.
+- Extended the barrel JSDoc (`neat.nge-juvenile.ts`) with a
+  **Weight-exhaustion gate and variant scaling** chapter and added five new
+  tuning-knob rows for Phase 5 levers (`NGE_EXHAUSTION_*`, `NGE_VARIANT_*`).
+- Validation:
+  - `npm run docs` exit 0.
+  - `npm run lint` exit 0 (0 errors; 21 pre-existing `no-explicit-any` warnings in
+    `neat.nge-juvenile.grow-stabilize.test.ts`).
+  - `npm run docs:quality:gate` PASS.
+- Residual docs-quality debt: `npm run docs:quality:metrics` reports 26 weak-JSDoc
+  and 5 high-complexity evidence items inside `src/neat/nge-juvenile/`. Most are
+  re-export/type aliases or constants whose generated README content is now
+  accurate; a future educational-docs pass could deepen individual symbol JSDoc
+  to reduce the metric score.
+
+### DF12–DF16: NGE Juvenile Diagnostic Fix Cycle [DONE]
+
+Compressed summary of the completed DF12–DF16 NGE juvenile diagnostic fix cycles.
+
+- **DF12 (6 + 5 follow-up fixes)** — src/neat/nge-juvenile/ + src/acceleration/ + examples/racing_curriculum/controller/
+  - DF12-1: GPU variant evaluator now binds autoEnableAcceleration device to Network.gpuDevice and passes { useGPU: true } to Network.activate(...).
+  - DF12-2: GPU variant evaluation switched from concurrent Promise.all to sequential for…of to avoid shared-buffer races.
+  - DF12-3: Added actualVariantCount to NgeGrowStabilizeResult, populated in stabilization path, and used in diagnostic CSV.
+  - DF12-4: Added focused test for resolveExhaustionImprovementThreshold decay branch.
+  - DF12-5: Added focused test for forced-growth when consecutiveStabilizationFailures reaches threshold.
+  - DF12-6: Made all engine.adaptOnTick(...) call sites await in nge-e2e-growth.test.ts.
+  - DF12-7 / DF12-8 follow-up: added GPU-path bind/restore coverage tests and fake-timer cleanup for requestIdleCallback/setTimeout diagnostic flushes.
+  - Green validation: focused tests pass, 100% coverage on touched src/ files, plan-sync + step-packet pass.
+
+- **DF13** — Restore CPU parallelism + guard GPU dispatch by network size
+  - evaluateNgeWeightVariants uses Promise.all for CPU patches; GPU path stays sequential.
+  - GPU dispatch skipped for networks below DEFAULT_ACCELERATION_GPU_NODE_THRESHOLD (1024 nodes) in NGE and generic variant evaluators.
+  - Green validation: 60 ticks/s verified.
+
+- **DF14** — CPU cross-talk isolation via shallow clone attempted
+  - Added createPatchedNetworkClone + scorePatchedNetwork; regression test added.
+  - Proven broken by browser/specialist validation: non-acyclic networks read weights from node.connections, not cloned array; acyclic networks share typed-array slab buffers; _topoDirty/_slabDirty forced slow legacy path on every evaluation.
+  - Reverted in DF15.
+
+- **DF15** — Revert DF14 clone approach and restore sequential CPU path
+  - Removed createPatchedNetworkClone and scorePatchedNetwork.
+  - evaluatePatch serves both CPU and GPU paths with explicit useGPU flag.
+  - CPU path restored to sequential apply → activate → score → undo on the live network.
+  - Green validation: 110/110 focused tests pass, 60 t/s, 509 growth commits, 100% coverage on neat.nge-juvenile.variants.ts.
+
+- **DF15.1** — Zero-connection guard fix
+  - Added guards in evaluatePatch so apply/restore loops skip perturbations whose weightIndex resolves to an undefined connection.
+  - Fixed TypeError: Cannot read properties of undefined (reading 'weight') on mock networks with zero connections.
+  - Green validation: 110/110 focused tests pass, 100% coverage on touched file.
+
+- **DF16 r1** — Racing scorer seam (negative MSE)
+  - Injected RACING_VARIANT_SCORER returning negative MSE against scalar target.
+  - Failed: variant scores were in negative-MSE space while baselineScore remained in positive racing-trend space, so bestScore > baselineScore + threshold was unsatisfiable.
+
+- **DF16 r2** — Racing scorer seam (positive driving-quality score) — SUCCESS
+  - Changed RACING_VARIANT_SCORER to compute a positive driving-quality score mirroring evaluateRacingTrendScore (mean + 0.5×trend + gated complexity bonus).
+  - Threaded scoreFn and baselineScore through runNgeGrowStabilizeCycle and evaluateNgeWeightVariants.
+  - Green validation: 268 stabilization commits, 91.44 t/s, N277/C824; 3 specialists validated with zero blockers.
+
+- **DF16.1** — Diagnostic logging cleanup + stale P8S22 test fix
+  - Removed DIAGNOSTIC_LOGGING, formatNgeDiagnosticLine, diagnosticLogBuffer, and all NGE_DIAGNOSTIC console output from runtime.adaptation.ts.
+  - Updated brittle 6000-character adaptOnTick substring search in runtime.adaptation.test.ts to scan the full source for plateau/Plateau/qualityVariance.
+  - Green validation: 76/76 tests pass; preflight (tsc/eslint/prettier) pass.
+
+- **DF16 documentation pass**
+  - Source JSDoc/README updates for DF6–DF11/DF16 surfaces; npm run docs and npm run lint pass.
+
+**Files changed:**
+
+- src/neat/nge-juvenile/neat.nge-juvenile.variants.ts
+- src/neat/nge-juvenile/neat.nge-juvenile.variants.test.ts
+- src/acceleration/acceleration.gpu.ts
+- src/acceleration/acceleration.variants.ts
+- src/acceleration/acceleration.variants.test.ts
+- src/neat/nge-juvenile/neat.nge-juvenile.types.ts
+- src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.ts
+- src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts
+- src/neat/nge-juvenile/neat.nge-juvenile.constants.ts
+- examples/racing_curriculum/controller/runtime.adaptation.ts
+- examples/racing_curriculum/controller/runtime.adaptation.test.ts
+- examples/racing_curriculum/controller/nge-e2e-growth.test.ts
+- src/neat/nge-juvenile/README.md
+
+**Validation evidence:**
+
+- npx tsc --noEmit -p tsconfig.json — pass
+- npx eslint on changed files — pass
+- npx prettier --check on changed files + plan — pass
+- npm run quality:folder -- --folder=src/neat/nge-juvenile --json — PASS
+- Focused Jest suites — pass (grow-stabilize, variants, acceleration variants/gpu, runtime adaptation)
+- node scripts/agent-customization/gates/code-coverage.gate.mjs --json --changed-files=<touched src files> — PASS (100/100/100/100)
+- node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md — PASS
+- node scripts/agent-customization/gates/step-packet.gate.mjs --json — pass
+- Browser smoke — pass (N277/C824, 0 console errors)
+
+**Residual risks:** none identified; all diagnostic cycles closed.
+
+**Next boundary:** DF12–DF16 complete. Plan ready for final closure/archival if no further racing-curriculum work remains.
+
+## Archive closure note
+
+- Archived to `plans/completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md` alongside this log.
+- Closure reason: all implementation phases were already marked `[DONE]` while the top-level tracker was stale `[WIP]`; status normalized to `[DONE]` and the tracker pair moved into `plans/completed/`.
+- Remaining driving-improvement work folded into the active `plans/Racing_Perception_Redesign.plans.md` lane.
+- Plan-sync, stale-wip-plans, and log-completion-marker gates all PASS.

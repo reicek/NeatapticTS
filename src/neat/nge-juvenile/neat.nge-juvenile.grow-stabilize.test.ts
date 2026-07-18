@@ -41,6 +41,11 @@ import {
   resolveRepresentativeDelta,
   resolveEffectiveMagnitude,
 } from './neat.nge-juvenile.variants';
+import {
+  NGE_EXHAUSTION_TIER_FRACTIONS,
+  NGE_EXHAUSTION_NOISE_SIGMA_TIERS,
+  NGE_EXHAUSTION_DECAY_FLOOR_TIERS,
+} from './neat.nge-juvenile.constants';
 
 describe('NGE grow-stabilize cycle', () => {
   describe('resolveAdaptiveHysteresis', () => {
@@ -620,9 +625,11 @@ describe('NGE grow-stabilize cycle', () => {
     });
 
     it('uses parallel weight-variant evaluation when effective variant count > 1', async () => {
-      // Arrange — stabilization phase with parallel variant evaluation enabled
-      // Seed 3 produces a weight variant whose improvement clears the baby-stage
-      // adaptive threshold for this tiny input/target pair.
+      // Arrange — stabilization phase with parallel variant evaluation enabled.
+      // Keep the target close to the unmutated network's natural output so the
+      // baseline score magnitude (and therefore the baby-stage relative
+      // improvement threshold) stays small enough for a single weight nudge to
+      // clear it.
       const network = new Network(4, 2, { seed: 3 });
 
       // Act
@@ -638,7 +645,7 @@ describe('NGE grow-stabilize cycle', () => {
           stageVariantCounts: { baby: 16 },
         },
         inputs: [[0.5, 0.5, 0.5, 0.5]],
-        target: [1.0, 0.0],
+        target: [1.0, 1.0],
       });
 
       // Assert — the winning variant commits exactly one weight nudge
@@ -652,8 +659,11 @@ describe('NGE grow-stabilize cycle', () => {
     });
 
     it('defaults to the baby lifecycle stage for variant evaluation when none is supplied', async () => {
-      // Arrange — stabilization phase with parallel variants but no explicit stage
-      // Seed chosen so the winning variant clears the adaptive threshold.
+      // Arrange — stabilization phase with parallel variants but no explicit stage.
+      // Keep the target close to the unmutated network's natural output so the
+      // baseline score magnitude (and therefore the baby-stage relative
+      // improvement threshold) stays small enough for a single weight nudge to
+      // clear it.
       const network = new Network(4, 2, { seed: 3 });
 
       // Act
@@ -668,7 +678,7 @@ describe('NGE grow-stabilize cycle', () => {
           stageVariantCounts: { baby: 16 },
         },
         inputs: [[0.5, 0.5, 0.5, 0.5]],
-        target: [1.0, 0.0],
+        target: [1.0, 1.0],
       });
 
       // Assert — default stage still routes to the parallel variant path
@@ -705,8 +715,11 @@ describe('NGE grow-stabilize cycle', () => {
     });
 
     it('uses default baby variant count when no accelerationConfig is provided', async () => {
-      // Arrange — stabilization phase with training data but no acceleration config
-      // Seed chosen so the default 16 baby variants produce a commitable winner.
+      // Arrange — stabilization phase with training data but no acceleration config.
+      // Keep the target close to the unmutated network's natural output so the
+      // baseline score magnitude (and therefore the baby-stage relative
+      // improvement threshold) stays small enough for a single weight nudge to
+      // clear it.
       const network = new Network(4, 2, { seed: 3 });
 
       // Act
@@ -717,7 +730,7 @@ describe('NGE grow-stabilize cycle', () => {
         stabilizationTicksSinceGrowth: 3,
         qualityScoreHistory: [0.5, 0.5, 0.5],
         inputs: [[0.5, 0.5, 0.5, 0.5]],
-        target: [1.0, 0.0],
+        target: [1.0, 1.0],
       });
 
       // Assert — default baby count (16) routes to the parallel variant path
@@ -1089,7 +1102,9 @@ describe('NGE grow-stabilize cycle', () => {
         { current: 50, max: 100 },
         Infinity,
       );
-      expect(threshold).toBeCloseTo(0.015, 5);
+      // current=50 maps to the newborn tier (fraction 0.018), so the
+      // threshold scales to 0.018 / 0.02 of the flat baby value.
+      expect(threshold).toBeCloseTo(0.0135, 5);
     });
 
     it('uses headroom scale for a bounded score ceiling', () => {
@@ -1101,7 +1116,9 @@ describe('NGE grow-stabilize cycle', () => {
         { current: 50, max: 100 },
         1.0,
       );
-      expect(threshold).toBeCloseTo(0.0125, 5);
+      // current=50 maps to the newborn tier (fraction 0.018), so the
+      // bounded threshold scales to 0.018 / 0.02 of the flat baby value.
+      expect(threshold).toBeCloseTo(0.01125, 5);
     });
 
     it('applies baby stage fraction 0.02', () => {
@@ -1551,6 +1568,152 @@ describe('NGE grow-stabilize cycle', () => {
         growthPositiveWindowCount: 0,
         pruneUnderuseWindowCount: 0,
       });
+    });
+  });
+
+  describe('resolveStageFraction with currentNeurons sub-tier granularity', () => {
+    it('returns 0.018 for baby stage at 50 neurons (newborn tier)', () => {
+      expect(resolveStageFraction('baby', 50)).toBe(0.018);
+    });
+
+    it('returns 0.020 for baby stage at 150 neurons (baby tier)', () => {
+      expect(resolveStageFraction('baby', 150)).toBe(0.02);
+    });
+
+    it('returns 0.024 for baby stage at 250 neurons (child tier)', () => {
+      expect(resolveStageFraction('baby', 250)).toBe(0.024);
+    });
+
+    it('returns 0.028 for baby stage at 350 neurons (pre-teen tier)', () => {
+      expect(resolveStageFraction('baby', 350)).toBe(0.028);
+    });
+
+    it('returns 0.032 for baby stage at 450 neurons (teen tier)', () => {
+      expect(resolveStageFraction('baby', 450)).toBe(0.032);
+    });
+
+    it('returns 0.036 for baby stage at 600 neurons (pre-adult tier)', () => {
+      expect(resolveStageFraction('baby', 600)).toBe(0.036);
+    });
+
+    it('returns 0.020 when currentNeurons is omitted (backward compat)', () => {
+      expect(resolveStageFraction('baby')).toBe(0.02);
+    });
+
+    it('falls back to baby fraction when currentNeurons is Infinity', () => {
+      expect(resolveStageFraction('baby', Infinity)).toBe(0.02);
+    });
+  });
+
+  describe('resolveNoiseSigmaFraction with currentNeurons sub-tier granularity', () => {
+    it('returns 0.003 for baby stage at 50 neurons (newborn)', () => {
+      expect(resolveNoiseSigmaFraction('baby', 50)).toBe(0.003);
+    });
+
+    it('returns 0.0025 for baby stage at 150 neurons (baby)', () => {
+      expect(resolveNoiseSigmaFraction('baby', 150)).toBe(0.0025);
+    });
+
+    it('returns 0.002 for baby stage at 250 neurons (child)', () => {
+      expect(resolveNoiseSigmaFraction('baby', 250)).toBe(0.002);
+    });
+
+    it('returns 0.0015 for baby stage at 350 neurons (pre-teen)', () => {
+      expect(resolveNoiseSigmaFraction('baby', 350)).toBe(0.0015);
+    });
+
+    it('returns 0.001 for baby stage at 450 neurons (teen)', () => {
+      expect(resolveNoiseSigmaFraction('baby', 450)).toBe(0.001);
+    });
+
+    it('returns 0.0005 for baby stage at 600 neurons (pre-adult)', () => {
+      expect(resolveNoiseSigmaFraction('baby', 600)).toBe(0.0005);
+    });
+
+    it('falls back to baby noise sigma when currentNeurons is Infinity', () => {
+      expect(resolveNoiseSigmaFraction('baby', Infinity)).toBe(0.003);
+    });
+  });
+
+  describe('resolveExhaustionImprovementThreshold with tier-aware decay floor', () => {
+    it('returns a higher threshold at 250 neurons than at 150 neurons', () => {
+      const t250 = resolveExhaustionImprovementThreshold(
+        0.5,
+        0.6,
+        16,
+        'baby',
+        { current: 250, max: 1000 },
+        Infinity,
+        0,
+      );
+      const t150 = resolveExhaustionImprovementThreshold(
+        0.5,
+        0.6,
+        16,
+        'baby',
+        { current: 150, max: 1000 },
+        Infinity,
+        0,
+      );
+      expect(t250).toBeGreaterThan(t150);
+    });
+
+    it('returns a higher threshold at 350 neurons than at 250 neurons', () => {
+      const t350 = resolveExhaustionImprovementThreshold(
+        0.5,
+        0.6,
+        16,
+        'baby',
+        { current: 350, max: 1000 },
+        Infinity,
+        0,
+      );
+      const t250 = resolveExhaustionImprovementThreshold(
+        0.5,
+        0.6,
+        16,
+        'baby',
+        { current: 250, max: 1000 },
+        Infinity,
+        0,
+      );
+      expect(t350).toBeGreaterThan(t250);
+    });
+
+    it('applies a tier-aware decay floor at 350 neurons (0.50) higher than flat floor', () => {
+      const t350 = resolveExhaustionImprovementThreshold(
+        0.5,
+        0.6,
+        16,
+        'baby',
+        { current: 350, max: 1000 },
+        Infinity,
+        10,
+      );
+      const t150 = resolveExhaustionImprovementThreshold(
+        0.5,
+        0.6,
+        16,
+        'baby',
+        { current: 150, max: 1000 },
+        Infinity,
+        10,
+      );
+      expect(t350).toBeGreaterThan(t150 * 1.25);
+    });
+  });
+
+  describe('NGE exhaustion tier constants', () => {
+    it('exports NGE_EXHAUSTION_TIER_FRACTIONS with six entries', () => {
+      expect(NGE_EXHAUSTION_TIER_FRACTIONS.length).toBe(6);
+    });
+
+    it('exports NGE_EXHAUSTION_NOISE_SIGMA_TIERS with six entries', () => {
+      expect(NGE_EXHAUSTION_NOISE_SIGMA_TIERS.length).toBe(6);
+    });
+
+    it('exports NGE_EXHAUSTION_DECAY_FLOOR_TIERS with six entries', () => {
+      expect(NGE_EXHAUSTION_DECAY_FLOOR_TIERS.length).toBe(6);
     });
   });
 });

@@ -1469,3 +1469,33 @@ describe('Phase 9 Step 03 — deferred: resolveTierPromotionFromLapCount export'
     expect(hasExport).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase 2 Step 01 — Tier 6 opponent-perception observation support
+// ---------------------------------------------------------------------------
+
+describe('Tier 6 opponent-perception observation support', () => {
+  it('resolveControllerInputCountForObservationTier(6) returns 124', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const functionStart = sourceText.indexOf(
+      'function resolveControllerInputCountForObservationTier',
+    );
+    const functionSection = sourceText.slice(
+      functionStart,
+      functionStart + 600,
+    );
+
+    expect(functionSection.includes('124')).toBe(true);
+  });
+
+  it('SupportedObservationTier type includes 6', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const typeStart = sourceText.indexOf('type SupportedObservationTier');
+    const typeEnd = sourceText.indexOf(';', typeStart);
+    const typeSection = sourceText.slice(typeStart, typeEnd + 1);
+
+    expect(typeSection.includes('6')).toBe(true);
+  });
+});

@@ -54,6 +54,7 @@ import { mutation } from '../../methods/mutation/mutation';
 import { runNgeLifecycle } from '../neat.nge-lifecycle';
 import { resolveGrowStabilizeConfig } from './neat.nge-juvenile.config';
 import {
+  NGE_EXHAUSTION_DECAY_FLOOR_TIERS,
   NGE_EXHAUSTION_MAX_CONSECUTIVE_TICKS,
   NGE_EXHAUSTION_MIN_CONSECUTIVE_TICKS,
   NGE_EXHAUSTION_NEURON_BUDGET_FACTOR,
@@ -61,6 +62,7 @@ import {
   NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT,
   NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY,
   NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE,
+  NGE_EXHAUSTION_NOISE_SIGMA_TIERS,
   NGE_EXHAUSTION_POST_GROWTH_EXHAUSTION_BOOST,
   NGE_EXHAUSTION_POST_GROWTH_MAX_CONSECUTIVE_TICKS,
   NGE_EXHAUSTION_SCORE_EPSILON,
@@ -69,6 +71,7 @@ import {
   NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE,
   NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR,
   NGE_EXHAUSTION_THRESHOLD_DECAY_RATE,
+  NGE_EXHAUSTION_TIER_FRACTIONS,
   NGE_EXHAUSTION_TICK_BUDGET,
   NGE_GROW_STABILIZE_FORCE_GROWTH_AFTER_FAILED_STABILIZATIONS,
   NGE_GROW_STABILIZE_GROWTH_THROTTLE_BASE_INTERVAL_TICKS,
@@ -103,35 +106,79 @@ import type {
 // ──────────────────────────────────────────────────────────────────────
 
 /**
+ * Resolve a tiered numeric value based on current neuron count.
+ *
+ * Clamps the count to non-negative values and selects the first tier whose
+ * `maxNeurons` upper bound exceeds the count. If no tier matches (for example an
+ * empty tier list), the fallback value is returned.
+ *
+ * @param currentNeurons - Number of neurons in the network (clamped to >= 0).
+ * @param tiers - Ordered tier table with `maxNeurons` upper bounds. Each tier
+ *   carries either a `fraction` or a `floor` value.
+ * @param fallback - Value returned when no tier matches.
+ * @returns The value belonging to the matched tier, or the fallback.
+ *
+ * @example
+ * ```ts
+ * const fraction = resolveNeuronTierFraction(150, NGE_EXHAUSTION_TIER_FRACTIONS, 0.02);
+ * console.log(fraction); // 0.02
+ * ```
+ */
+function resolveNeuronTierFraction(
+  currentNeurons: number,
+  tiers:
+    | readonly { maxNeurons: number; fraction: number }[]
+    | readonly { maxNeurons: number; floor: number }[],
+  fallback: number,
+): number {
+  const clamped = Math.max(0, currentNeurons);
+  const tier = tiers.find((t) => clamped < t.maxNeurons);
+  if (tier === undefined) return fallback;
+  if ('fraction' in tier) return tier.fraction;
+  return tier.floor;
+}
+
+/**
  * Resolve the relative improvement fraction for a lifecycle stage.
  *
- * Baby/embryo networks get the largest bar (1%), juvenile networks get a
- * tighter bar (0.5%), and adult/equilibrium networks get the tightest bar
- * (0.3%). This implements the "grow fast past baby, picky in middle, slower
+ * Baby/embryo networks get the largest bar (2%), juvenile networks get a
+ * tighter bar (1%), and adult/equilibrium networks get the tightest bar
+ * (0.6%). This implements the "grow fast past baby, picky in middle, slower
  * adult" intent by requiring larger improvements early and smaller
  * improvements later.
  *
+ * When `currentNeurons` is supplied for a baby/embryo network, the fraction is
+ * resolved from `NGE_EXHAUSTION_TIER_FRACTIONS` so tiny newborn networks get a
+ * lower bar than larger pre-juvenile networks. Omitting `currentNeurons`
+ * preserves the legacy single-value behavior.
+ *
  * @param stage - Current NGE lifecycle stage.
+ * @param currentNeurons - Optional current neuron count for baby/embryo tier
+ *   resolution.
  * @returns Relative improvement fraction for the stage.
  *
  * @example
  * ```ts
  * const fraction = resolveStageFraction('baby');
- * console.log(fraction); // 0.01
+ * console.log(fraction); // 0.02
  * ```
  */
-export function resolveStageFraction(stage: NgeLifecycleStage): number {
-  switch (stage) {
-    case 'embryo':
-    case 'baby':
-      return NGE_EXHAUSTION_STAGE_FRACTION_BABY;
-    case 'juvenile':
-      return NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE;
-    case 'adult':
-    case 'equilibrium':
-    default:
-      return NGE_EXHAUSTION_STAGE_FRACTION_ADULT;
+export function resolveStageFraction(
+  stage: NgeLifecycleStage,
+  currentNeurons?: number,
+): number {
+  if (stage === 'embryo' || stage === 'baby') {
+    if (currentNeurons !== undefined) {
+      return resolveNeuronTierFraction(
+        currentNeurons,
+        NGE_EXHAUSTION_TIER_FRACTIONS,
+        NGE_EXHAUSTION_STAGE_FRACTION_BABY,
+      );
+    }
+    return NGE_EXHAUSTION_STAGE_FRACTION_BABY;
   }
+  if (stage === 'juvenile') return NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE;
+  return NGE_EXHAUSTION_STAGE_FRACTION_ADULT;
 }
 
 /**
@@ -142,7 +189,13 @@ export function resolveStageFraction(stage: NgeLifecycleStage): number {
  * get a larger fraction (0.003) because they evaluate more variants and need
  * a higher uplift; later stages get a smaller fraction (0.001).
  *
+ * When `currentNeurons` is supplied for a baby/embryo network, the fraction is
+ * resolved from `NGE_EXHAUSTION_NOISE_SIGMA_TIERS` so tiny newborn networks get
+ * a larger noise allowance that shrinks as the network grows.
+ *
  * @param stage - Current NGE lifecycle stage.
+ * @param currentNeurons - Optional current neuron count for baby/embryo tier
+ *   resolution.
  * @returns Noise-sigma fraction for the stage.
  *
  * @example
@@ -151,18 +204,22 @@ export function resolveStageFraction(stage: NgeLifecycleStage): number {
  * console.log(sigmaFraction); // 0.002
  * ```
  */
-export function resolveNoiseSigmaFraction(stage: NgeLifecycleStage): number {
-  switch (stage) {
-    case 'embryo':
-    case 'baby':
-      return NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY;
-    case 'juvenile':
-      return NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE;
-    case 'adult':
-    case 'equilibrium':
-    default:
-      return NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT;
+export function resolveNoiseSigmaFraction(
+  stage: NgeLifecycleStage,
+  currentNeurons?: number,
+): number {
+  if (stage === 'embryo' || stage === 'baby') {
+    if (currentNeurons !== undefined) {
+      return resolveNeuronTierFraction(
+        currentNeurons,
+        NGE_EXHAUSTION_NOISE_SIGMA_TIERS,
+        NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY,
+      );
+    }
+    return NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY;
   }
+  if (stage === 'juvenile') return NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE;
+  return NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT;
 }
 
 /**
@@ -171,9 +228,10 @@ export function resolveNoiseSigmaFraction(stage: NgeLifecycleStage): number {
  *
  * The threshold combines:
  *
- * - a stage-relative improvement bar,
+ * - a stage-relative improvement bar (tier-aware for baby/embryo networks),
  * - a noise-aware uplift that grows with the number of evaluated variants,
- * - a neuron-budget factor that biases small networks toward structural growth.
+ * - a neuron-budget factor that biases small networks toward structural growth,
+ * - a per-failure decay whose floor rises with network size.
  *
  * When the score ceiling is finite and both baseline and best score are below
  * it, the threshold scales with remaining headroom; otherwise it scales with
@@ -216,9 +274,12 @@ export function resolveExhaustionImprovementThreshold(
   const scoreScale = useMagnitude
     ? Math.max(Math.abs(baseline), Math.abs(bestScore), epsilon)
     : Math.max(scoreCeiling - baseline, scoreCeiling - bestScore, epsilon);
-  const stageFraction = resolveStageFraction(stage);
+  const stageFraction = resolveStageFraction(stage, neuronBudget.current);
   const relativeBar = stageFraction * scoreScale;
-  const noiseSigmaFraction = resolveNoiseSigmaFraction(stage);
+  const noiseSigmaFraction = resolveNoiseSigmaFraction(
+    stage,
+    neuronBudget.current,
+  );
   const noiseSigma = noiseSigmaFraction * scoreScale;
   const noiseMultiplier =
     variantCount <= 1
@@ -240,8 +301,13 @@ export function resolveExhaustionImprovementThreshold(
           ),
         )
       : 1.0;
-  const decay = Math.max(
+  const decayFloor = resolveNeuronTierFraction(
+    neuronBudget.current,
+    NGE_EXHAUSTION_DECAY_FLOOR_TIERS,
     NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR,
+  );
+  const decay = Math.max(
+    decayFloor,
     1.0 - NGE_EXHAUSTION_THRESHOLD_DECAY_RATE * consecutiveFailures,
   );
   return Math.max(relativeBar, noiseUplift) * neuronFactor * decay;

@@ -59,7 +59,7 @@ gate scripts via a native-ESM Jest project.
 - Plan: [completed/CI_Failure_Hardening.plans.md](completed/CI_Failure_Hardening.plans.md) (`plans/completed/CI_Failure_Hardening.plans.md`) [DONE]
 - Current internal state: archived after the native-ESM coverage project and
   `code-coverage` gate baseline were committed.
-- Racing Curriculum v2 lane is [WIP]; Step 08 [DONE] (Tier 4 start-line fix confirmed by user). Step 09-12 research-only steps [PLANNED]: NGE growth stall, pit parity, pit-stop behavior, tire wear rate, Tier 5 activation, dense network visualization. Step 13 synthesis [PLANNED].
+- Racing Curriculum v2 lane is [DONE]; archived to [completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md).
 
 **Coordination rule:** this lane is confined to test files and fixtures under
 `scripts/agent-customization/`, `scripts/mcp-semantic/`, `testing/fixtures/`,
@@ -67,7 +67,7 @@ plus the three barrel re-export files in `src/` and their new test files.
 It must not change core NEAT algorithms or the public API surface beyond
 adding required tests/fixtures.
 
-## Racing Curriculum v2 Lane [WIP]
+## Racing Curriculum v2 Lane [DONE]
 
 **Outcome:** continue Phase 8 of the racing curriculum now that the upstream
 NGE Core Algorithm Workstream and NGE Core Growth Engine Wiring are [DONE].
@@ -85,8 +85,8 @@ implementation packets. Preserve tier-promotion / carry-reset semantics from
 `examples/racing_curriculum/reference.plans.md`.
 
 - Racing Curriculum v2
-- Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) [WIP]
-- Current internal state: Phase 8 Steps 01-20 [DONE]. Step 21 [WIP]: driving improvement blocker fix. Network growth blocker fixed (Step 20). Browser smoke confirms N109/C420 -> N523/C1524. Step 21 fixes the driving improvement blocker: forward-pass evaluation, performance-gated complexityBonus, physics rewards, RacingQualitySignal proxies, tier promotion gates, agent selection, behavioral diversity.
+- Plan: [completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) [DONE]
+- Current internal state: archived after all phases [DONE] and the network-growth blocker fix (N109/C420 -> N523/C1524). Remaining driving-improvement work folded into the Racing Perception Redesign lane.
 
 **Coordination rule:** this lane owns `examples/racing_curriculum/` and any
 racing-specific plumbing in `src/` that is required to close the v2 gaps. It
@@ -94,6 +94,28 @@ must preserve the Tier 1-6 ladder, promotion rules, carry/reset semantics, and
 acceptance criteria defined in `examples/racing_curriculum/reference.plans.md`.
 It does not own general NGE core algorithm work; those changes belong in the
 completed upstream workstreams.
+
+## NGE Racing Curriculum Oscillation & Sub-Tier Fix Lane [DONE]
+
+**Outcome:** add NGE library-side juvenile sub-tier exhaustion thresholds that scale with network size, and add racing-side steering/score oscillation detection and penalties in the runtime adaptation engine. Library surface changes in `src/neat/nge-juvenile/`; racing surface changes in `examples/racing_curriculum/controller/runtime.adaptation.ts`. Core oscillation fix is green-gated and complete; remaining bundle rebuild, browser smoke validation, and documentation are folded into the Racing Perception Redesign lane.
+
+- NGE Racing Curriculum Oscillation & Sub-Tier Fix
+- Plan: [completed/NGE_Racing_Curriculum_Oscillation_SubTier_Fix.plans.md](completed/NGE_Racing_Curriculum_Oscillation_SubTier_Fix.plans.md) [DONE]
+- Current internal state: Phase 4 [DONE] — core oscillation fix verified (82/82 tests pass, NGE specialist APPROVED, all gates green). Phases 5–7 (bundle rebuild, documentation, session logging) [CANCELLED] and folded into [Racing_Perception_Redesign.plans.md](Racing_Perception_Redesign.plans.md).
+- Upstream dependency: [completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) [DONE]
+
+**Coordination rule:** this lane owns the `src/neat/nge-juvenile/` juvenile sub-tier threshold surface and the `examples/racing_curriculum/controller/runtime.adaptation.ts` oscillation-penalty surface. It must not change general NGE core lifecycle or reproduction. Preserve tier-promotion / carry-reset semantics from `examples/racing_curriculum/reference.plans.md`.
+
+## Racing Perception Redesign Lane [WIP]
+
+**Outcome:** redesign the racing curriculum observation/perception layer so opponents can be opponent-aware. Phase 1 fixes the speed persistence bug by storing real velocity in `CarState` and piping it into the existing teammate observation slot without changing input dimensions. Phase 2 adds a new Tier 6 observation tier with 103 base channels + 21 opponent-relative channels (3 opponent slots × 7 ego-relative channels) = 124 total inputs. Plan C (track-centric Frenét refactor) remains deferred until continuous arc-length projection is implemented as a standalone prerequisite.
+
+- Racing Perception Redesign
+- Plan: [Racing_Perception_Redesign.plans.md](Racing_Perception_Redesign.plans.md) [WIP]
+- Current internal state: Phase 1 [WIP] (Step 01 planning packet authored, green-light verification recorded); Phase 2 [PLANNED].
+- Upstream dependency: [completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) [DONE]
+
+**Coordination rule:** this lane owns the `examples/racing_curriculum/` observation and `CarState` surfaces and any racing-specific perception plumbing in `src/` required for the new opponent-aware tier. It must preserve the Tier 1–6 ladder, promotion rules, carry/reset semantics, and observation dimension contracts from `examples/racing_curriculum/reference.plans.md`. It does not own general NGE core algorithm work; those changes belong in completed upstream workstreams.
 
 ## Standalone Workspace MCP Registration Lane [DONE]
 
@@ -674,8 +696,10 @@ archived Repo Cortex layer plans as the baselines this migration builds upon.
 - Plan: [completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [DONE]
 - Archive: [completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md`) [DONE]
 - NGE Racing Curriculum — canonical long-form racing curriculum readiness plan: Phase 1 UI/behavior completion to Flappy Bird parity and inner-track centerline [DONE]; Phase 2 Tier 1 single-agent simple track [DONE] (worker-authoritative race-pack service, per-agent cyan/magenta guiding lines, browser visual confirmation, Tier 1 README contract); Phase 3 Tier 2 single-car-with-radio [DONE] (independent per-car NEAT agents, DR-011, 348 tests pass, lint clean, tsc clean); Phase 4 Tier 3 2v2 no pits [DONE] — all steps complete (4-car coevolution with independent genomes, shared-equal team fitness, 4-car browser rendering, worker-side continuous adaptation; Chrome DevTools MCP visual validation confirmed network growth N76/C288→N97/C372; 3 pre-existing race-pack test failures triaged as carry-forward debt); Phase 5 Tier 4 2v2 tires and pits [DONE] — all steps complete (95-channel observation, tire decay + grip multiplier wired into worker race-pack, pit lifecycle with 4-tick stops and 3 slots per team, DR-004/02-CORRECTION, 45 suites/385 tests pass, Chrome DevTools MCP visual confirmed tire markers and pit overlays, Tier 4 README contract with 3 Mermaid diagrams); Phase 6 Tier 5 3v3 full [DONE] — all steps complete (6-car coevolution with TIER_FIVE_CAR_COUNT=6, full 3-row radio population with self-broadcast, role-divergence observables with blockerDelta and inferredRole, 6-element pitStatus with layout-aware stride, renderer pit-overlay fix; 46 suites/394 tests pass, 3 skipped polyandric P1/P2; Chrome DevTools MCP visual confirmed Tier 5 N101/C388 STABLE 0 console errors; polyandric reproduction DEFERRED P1/P2 blockers nge-core-algorithm ownership; Tier 5 README contract with 3 Mermaid diagrams); Phase 7 Tier 6 3v3 advanced strategy [DONE] — all steps complete (FSM 5-bug fix DR-009, OpponentSnapshotPool wired with type adapter, strategy-divergence analytics module, multi-generation loop working, analytics-only fallback per DR-008; 68 suites/502 tests pass, 3 skipped polyandric P1/P2; modeIsEvolvable BLOCKED — nge-core-algorithm ownership; carry-forward blockers P1-P5 documented). Tier 1–6 green-gated ladder with promotion rules and carry/reset semantics from `examples/racing_curriculum/reference.plans.md`. Downstream trackers point here for tier semantics.
-- Plan: [NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) (plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) [DONE]
+- Plan: [completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) (plans/completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) [DONE]
 - Phase 8 (Racing Curriculum v2) [DONE] — all 20 steps [DONE] and green-validated. Steps 01-17 archived in logs. Steps 18-19 fixed worker-authoritative demo evolution and Tier 1 follow-up defects. Step 20 fixed network growth blocker (evaluateRacingTrendScore void network; removed, 5 fixes: network-aware evaluator, tier promotion structure preservation, composite score signal, episodic slots, explicit config). Browser smoke: N109/C420 -> N523/C1524, ~60 FPS, 0 console errors.
+- NGE Racing Curriculum Oscillation & Sub-Tier Fix [DONE] — core oscillation fix green-gated and complete (82/82 tests pass, NGE specialist APPROVED, all gates green). Remaining bundle rebuild and browser validation folded into Racing_Perception_Redesign.
+- Plan: [completed/NGE_Racing_Curriculum_Oscillation_SubTier_Fix.plans.md](completed/NGE_Racing_Curriculum_Oscillation_SubTier_Fix.plans.md) [DONE]
 - Racing Path-Tracking Debug and Quality Followup — pre-Phase-3 visual fix, geometry audit, and deferred quality cleanup
 - Plan: [completed/Racing_Pathtracking_Debug_and_Quality_Followup.plans.md](completed/Racing_Pathtracking_Debug_and_Quality_Followup.plans.md) [DONE]
 - Current internal state: archived after the shared-spline path-tracking repair, the
@@ -721,7 +745,7 @@ Current status: **The NGE Core Algorithm Workstream is [DONE] and archived to `p
 - **Standalone meta-workflow lane F:** [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md) [DONE] — numbered user-invocable agent architecture, hidden specialist delegation, skill-first customization, model routing, validators, evals, and the closed MCP runtime-visibility ownership baseline.
 - **Pre-NGE stop line:** closed. NEATchat follow-up lane archived [DONE]; Phase 7 / NGE is now the next frontier.
 - **Serial pre-NGE handoff:** after the archived Phase 5 memory stop line, the archived ONNX baseline, the archived hybrid-interoperability baseline, and the archived NEATchat follow-up baseline, the next lane is Phase 7 / NGE.
-- **Final capstone:** [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
+- **Final capstone:** [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) and its three benchmark demos ([Racing](completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md), [Ant Hive](NEAT_Genesis_EvoDevo_AntHive_Demo.md), [Predator/Prey](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md))
 
 ## Plan Inventory in Roadmap Order
 
@@ -814,7 +838,7 @@ M14. [Spec-Kit_Assimilation.plans.md](completed/Spec-Kit_Assimilation.plans.md) 
 32. [completed/NEAT_Genesis_EvoDevo.md](completed/NEAT_Genesis_EvoDevo.md) [DONE]
     32b. [completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md`) [DONE] — prior core readiness audit
     32c. [completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md](completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md) (`plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.logs.md`) [DONE] — prior core audit archive
-33. [NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) (plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) [DONE] — canonical racing curriculum readiness plan; Phase 1 [DONE], Phase 2 [DONE], Phase 3 [DONE] (independent per-car NEAT agents; 348 tests pass), Phase 4 [DONE] (4-car coevolution, shared-equal team fitness, 4-car browser rendering, worker-side continuous adaptation; 3 pre-existing race-pack test failures as carry-forward debt), Phase 5 [DONE] (Tier 4 2v2 tires and pits; 45 suites/385 tests pass), Phase 6 [DONE] (Tier 5 3v3 full; 6-car coevolution, role-divergence observables, 46 suites/394 tests pass, 3 skipped polyandric P1/P2; polyandric reproduction DEFERRED), Phase 7 [DONE] (Tier 6 3v3 advanced strategy; FSM 5-bug fix, OpponentSnapshotPool wired, strategy-divergence analytics, analytics-only fallback; 68 suites/502 tests pass; modeIsEvolvable BLOCKED — nge-core-algorithm ownership; carry-forward blockers P1-P5 documented). Phase 8 [DONE] — all 20 steps [DONE] (controller input fix, growth stall research, pit parity, tire wear, Tier 5 auto-promotion, worker-authoritative evolution, defect hardening, network growth blocker fix). Browser smoke confirms N109/C420 -> N523/C1524 at ~60 FPS.
+33. [completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) (plans/completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) [DONE] — archived canonical racing curriculum readiness plan; Phase 1 [DONE], Phase 2 [DONE], Phase 3 [DONE] (independent per-car NEAT agents; 348 tests pass), Phase 4 [DONE] (4-car coevolution, shared-equal team fitness, 4-car browser rendering, worker-side continuous adaptation; 3 pre-existing race-pack test failures as carry-forward debt), Phase 5 [DONE] (Tier 4 2v2 tires and pits; 45 suites/385 tests pass), Phase 6 [DONE] (Tier 5 3v3 full; 6-car coevolution, role-divergence observables, 46 suites/394 tests pass, 3 skipped polyandric P1/P2; polyandric reproduction DEFERRED), Phase 7 [DONE] (Tier 6 3v3 advanced strategy; FSM 5-bug fix, OpponentSnapshotPool wired, strategy-divergence analytics, analytics-only fallback; 68 suites/502 tests pass; modeIsEvolvable BLOCKED — nge-core-algorithm ownership; carry-forward blockers P1-P5 documented). Phase 8 [DONE] — all 20 steps [DONE] (controller input fix, growth stall research, pit parity, tire wear, Tier 5 auto-promotion, worker-authoritative evolution, defect hardening, network growth blocker fix). Browser smoke confirms N109/C420 -> N523/C1524 at ~60 FPS.
 34. [NEAT_Genesis_EvoDevo_AntHive_Demo.md](NEAT_Genesis_EvoDevo_AntHive_Demo.md) [PLANNED]
 35. [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]
 36. [completed/racing-curriculum-parallel-variant-gap.plans.md](completed/racing-curriculum-parallel-variant-gap.plans.md) (`plans/completed/racing-curriculum-parallel-variant-gap.plans.md`) [DONE] — close the parallel-variant evaluation gap in the NGE juvenile grow-stabilize cycle; all 5 implementation slices green, 18 suites/435 tests, 100% coverage.

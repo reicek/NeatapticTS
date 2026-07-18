@@ -53,7 +53,7 @@ execution hotspots, frame rate measurement.
 > Headless GPU execution deprioritizes the GPU process and compositor, producing
 > invalid timing and parity data. Always launch the browser with `headless: false`,
 > bring the page to the foreground, and document `browserVisibility:
-> visible-foreground` in the trace summary.
+visible-foreground` in the trace summary.
 
 ## Visible Browser Window
 

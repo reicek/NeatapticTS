@@ -96,6 +96,12 @@ export type CarState = {
   teamIndex: 0 | 1;
   /** Ordered tire-health tuple `[FL, FR, RL, RR]`. */
   tireState: TireStateTuple;
+  /** Signed forward speed in world units per second (negative when reversing). */
+  forwardSpeedWorld?: number;
+  /** Signed lateral speed in world units per second; `0` until a lateral-velocity model is added. */
+  lateralSpeedWorld?: number;
+  /** Unsigned world speed in world units per second; always `Math.abs(forwardSpeedWorld)`. */
+  speedWorld?: number;
   /**
    * Per-step reward/penalty produced by the local physics step.
    *

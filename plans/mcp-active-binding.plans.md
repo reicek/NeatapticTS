@@ -7,14 +7,14 @@
 Claim: 04-implementing @ 2026-07-18T07:07:18Z
 
 Active workstream tracker:
-`plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md`.
+`plans/Racing_Perception_Redesign.plans.md`.
 
-The racing curriculum plan is the canonical long-form NGE readiness plan for
-the Tier 1–6 racing-curriculum ladder. Its Phase 7 (Tier 6 advanced strategy)
-is [DONE]; Phase 8 (Racing Curriculum v2) is now the next active workstream
-after the upstream NGE Core Algorithm Workstream completed. The MCP binding
-keeps `neataptic-workflow-mcp` and `neataptic-validation-mcp` pointed at this
-plan so step-packet and validation allow-lists resolve without prompt input.
+The racing curriculum plan is now archived to
+`plans/completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md`. The Racing
+Perception Redesign plan is the current active workstream for racing-curriculum
+observation/perception work. The MCP binding keeps `neataptic-workflow-mcp`
+and `neataptic-validation-mcp` pointed at this plan so step-packet and
+validation allow-lists resolve without prompt input.
 
 ```yaml
 PlanUpdate:
@@ -30,7 +30,7 @@ PlanUpdate:
     - 'routing-table-freshness: PASS'
   rollback:
     - 'git checkout -- plans/mcp-active-binding.plans.md'
-  next: 'Continue monitoring active workstream in plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md; keep this binding file pointing at the current open tracker.'
+  next: 'Continue monitoring active workstream in plans/Racing_Perception_Redesign.plans.md; keep this binding file pointing at the current open tracker.'
 ```
 
 ### Slice-quality gate registration

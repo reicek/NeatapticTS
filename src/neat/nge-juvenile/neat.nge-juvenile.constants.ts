@@ -613,4 +613,58 @@ export const NGE_EXHAUSTION_THRESHOLD_DECAY_RATE = 0.15;
  *
  * Contract: NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR=0.40
  */
-export const NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR = 0.40;
+export const NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR = 0.4;
+
+/**
+ * Tiered relative improvement fractions for the baby/embryo lifecycle stage.
+ *
+ * As the network grows from a tiny newborn toward juvenile size, the relative
+ * improvement bar rises in discrete steps. This keeps early networks permissive
+ * while gradually demanding larger relative gains before a weight variant
+ * commits.
+ *
+ * Contract: six tiers from <100 neurons up to Infinity.
+ */
+export const NGE_EXHAUSTION_TIER_FRACTIONS = [
+  { maxNeurons: 100, fraction: 0.018 },
+  { maxNeurons: 200, fraction: 0.02 },
+  { maxNeurons: 300, fraction: 0.024 },
+  { maxNeurons: 400, fraction: 0.028 },
+  { maxNeurons: 500, fraction: 0.032 },
+  { maxNeurons: Infinity, fraction: 0.036 },
+] as const;
+
+/**
+ * Tiered noise-sigma fractions for the baby/embryo lifecycle stage.
+ *
+ * Early tiny networks tolerate more statistical noise because they evaluate
+ * fewer variants; as the network grows the noise allowance shrinks in step
+ * with the rising relative improvement bar.
+ *
+ * Contract: six tiers from <100 neurons up to Infinity.
+ */
+export const NGE_EXHAUSTION_NOISE_SIGMA_TIERS = [
+  { maxNeurons: 100, fraction: 0.003 },
+  { maxNeurons: 200, fraction: 0.0025 },
+  { maxNeurons: 300, fraction: 0.002 },
+  { maxNeurons: 400, fraction: 0.0015 },
+  { maxNeurons: 500, fraction: 0.001 },
+  { maxNeurons: Infinity, fraction: 0.0005 },
+] as const;
+
+/**
+ * Tiered decay floors for the adaptive improvement-threshold decay.
+ *
+ * Larger networks are allowed to retain a higher minimum decay multiplier so
+ * the threshold does not collapse too far for mature structures.
+ *
+ * Contract: six tiers from <100 neurons up to Infinity.
+ */
+export const NGE_EXHAUSTION_DECAY_FLOOR_TIERS = [
+  { maxNeurons: 100, floor: 0.35 },
+  { maxNeurons: 200, floor: 0.4 },
+  { maxNeurons: 300, floor: 0.45 },
+  { maxNeurons: 400, floor: 0.5 },
+  { maxNeurons: 500, floor: 0.55 },
+  { maxNeurons: Infinity, floor: 0.6 },
+] as const;

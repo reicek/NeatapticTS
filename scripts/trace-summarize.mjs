@@ -117,7 +117,10 @@ function findMainThread(events) {
     if (event.ph !== METADATA_PHASE) continue;
     if (event.name !== 'thread_name') continue;
     const threadName = event.args?.name;
-    if (threadName !== MAIN_THREAD_NAME && threadName !== MAIN_THREAD_NAME_LEGACY) {
+    if (
+      threadName !== MAIN_THREAD_NAME &&
+      threadName !== MAIN_THREAD_NAME_LEGACY
+    ) {
       continue;
     }
     return { pid: event.pid, tid: event.tid };

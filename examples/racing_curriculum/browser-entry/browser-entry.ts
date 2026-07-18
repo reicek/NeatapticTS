@@ -64,7 +64,10 @@
 
 import { resolveAccelerationConfig } from '../../../src/acceleration/acceleration.config';
 import { autoEnableAcceleration } from '../../../src/acceleration/acceleration.orchestrator';
-import type { AccelerationStatus } from '../../../src/acceleration/acceleration.types';
+import type {
+  AccelerationMode,
+  AccelerationStatus,
+} from '../../../src/acceleration/acceleration.types';
 import { createRacingHost } from './host/host';
 import type { RacingNetworkHudNodes } from './host/host.types';
 import { Network, Node, methods } from '../../../src/browser-entry.ts';
@@ -95,6 +98,7 @@ import {
 } from '../controller/runtime.adaptation';
 import {
   derivePerCarObservationState,
+  TIER6_TOTAL_INPUT_SIZE,
   TOTAL_TIER4_INPUT_SIZE,
 } from '../controller/observation.assembler';
 import type {
@@ -319,7 +323,7 @@ interface TelemetryPanelNodes {
 type CurriculumTier = 1 | 2 | 3 | 4 | 5 | 6;
 
 /** Observation tier supported by the owner-local controller seam. */
-type SupportedObservationTier = 1 | 2 | 3 | 4 | 5;
+type SupportedObservationTier = 1 | 2 | 3 | 4 | 5 | 6;
 
 /** Team index for the browser-local race pack grid. */
 type CurriculumTeamIndex = 0 | 1;
@@ -396,7 +400,7 @@ const DEFAULT_PROMOTION_SELECTION_RATIO = 0.5;
 /** Minimum number of agents to promote when candidates qualify. */
 const MIN_PROMOTED_AGENTS = 1;
 /** Highest observation tier implemented in the browser controller seam. */
-const MAX_SUPPORTED_OBSERVATION_TIER: SupportedObservationTier = 5;
+const MAX_SUPPORTED_OBSERVATION_TIER: SupportedObservationTier = 6;
 /** Wrap threshold used to detect one completed lap from nearest spline sample indices. */
 const LAP_WRAP_HIGH_WATERMARK_RATIO = 0.75;
 /** Wrap threshold used to detect one completed lap from nearest spline sample indices. */
@@ -545,12 +549,12 @@ export async function start(
   // display the chosen backend, any fallback reason, and the variant count.
   const accelerationStatus = await autoEnableAcceleration({
     nodeCount: focusedControllerNetwork.nodes.length,
-    batchParallelCount: DEMO_ACCELERATION_CONFIG.parallelVariantCount,
+    batchParallelCount: DEMO_ACCELERATION_CONFIG.parallelVariantCount!,
     config: DEMO_ACCELERATION_CONFIG,
   });
   const accelerationDisplayLabel = formatAccelerationStatus(
     accelerationStatus,
-    DEMO_ACCELERATION_CONFIG.parallelVariantCount,
+    DEMO_ACCELERATION_CONFIG.parallelVariantCount!,
   );
   hostHandle.networkHud.titleValue.textContent = accelerationDisplayLabel;
   if (stageCardNodes.accelerationValueElement) {
@@ -579,6 +583,77 @@ export async function start(
   let tierBestLapTimeMs: number | null = null;
   let lapStartTick = 0;
   let promotedCarIndices: number[] = [];
+
+  /**
+   * Rebuilds the curriculum episode, race state, and per-car controllers for a
+   * target curriculum tier while carrying any supplied source networks.
+   *
+   * This is the single rebuild seam used both by automatic tier promotion and
+   * by the runtime tier selector. Callers decide which networks (if any) are
+   * carried into the new tier shape; missing slots receive a fresh deterministic
+   * substrate.
+   *
+   * @param targetTier - Curriculum tier to switch to.
+   * @param sourceNetworkByCarIndex - Optional map of networks to remap into the
+   *   new tier shape, keyed by car index.
+   * @internal
+   */
+  function rebuildCurriculumStateForTier(
+    targetTier: CurriculumTier,
+    sourceNetworkByCarIndex?: ReadonlyMap<number, Network>,
+  ): void {
+    activeObservationTier = resolveObservationTierForCurriculumTier(targetTier);
+    curriculumProgress = {
+      tier: targetTier,
+      lapProgress: createInitialLapProgress(trackSpec, envState),
+    };
+    episodeState = createCurriculumEpisodeState(
+      targetTier,
+      resolveTrackGenerationViewport(hostHandle.canvasElement),
+    );
+    trackSpec = episodeState.trackSpec;
+    envState = stabilizeCurriculumTierTireGrip(
+      episodeState.envState,
+      targetTier,
+    );
+
+    const targetCarCount = envState.cars?.length ?? 1;
+    controllerNetworkByCarIndex.clear();
+    controllerByCarIndex.clear();
+    for (let carIndex = 0; carIndex < targetCarCount; carIndex++) {
+      const sourceNetwork = sourceNetworkByCarIndex?.get(carIndex);
+      const baseNetwork =
+        sourceNetwork ??
+        createDeterministicRacingControllerNetwork(activeObservationTier);
+      const remappedNetwork = remapControllerNetworkForObservationTier(
+        baseNetwork,
+        activeObservationTier,
+      );
+      controllerNetworkByCarIndex.set(carIndex, remappedNetwork);
+      controllerByCarIndex.set(
+        carIndex,
+        createNgeController(remappedNetwork, { tier: activeObservationTier }),
+      );
+    }
+
+    buildPerCarAdaptationEngines(targetCarCount);
+    focusedCarIndex = 0;
+    focusedControllerNetwork =
+      controllerNetworkByCarIndex.get(focusedCarIndex)!;
+    simulationTick = 0;
+    lapStartTick = 0;
+    tierBestLapTimeMs = null;
+    tierSignalEvidenceAccumulator = createEmptyTierSignalEvidenceAccumulator();
+    guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(targetTier);
+    hostHandle.renderNetworkArchitecture(focusedControllerNetwork);
+    setupCanvasStage(
+      hostHandle.canvasRegionElement,
+      hostHandle.canvasElement,
+      targetTier,
+      accelerationStatus,
+    );
+  }
+
   const promotionSelectionConfig: PromotionSelectionConfig = {
     selectionCriteria: 'bestLapTime',
     selectionRatio: DEFAULT_PROMOTION_SELECTION_RATIO,
@@ -608,6 +683,15 @@ export async function start(
     hostHandle.canvasRegionElement.querySelector('.racing-stage-card');
   const runtimeControls = setupRuntimeControls(
     (stageCardElement as HTMLElement | null) ?? hostHandle.canvasRegionElement,
+    {
+      initialTier: curriculumProgress.tier,
+      onSelectTier: (selectedTier) => {
+        rebuildCurriculumStateForTier(
+          selectedTier,
+          new Map(controllerNetworkByCarIndex),
+        );
+      },
+    },
   );
 
   // Step 6: Keep layout mode and canvas backbuffer in sync with the viewport.
@@ -782,69 +866,18 @@ export async function start(
       }
 
       if (curriculumProgress.tier !== previousCurriculumTier) {
-        // Step 1: Resolve the observation tier for the promoted curriculum tier.
-        activeObservationTier = resolveObservationTierForCurriculumTier(
-          curriculumProgress.tier,
-        );
-        // Step 2: Rebuild the track and race-local state for the promoted tier.
-        episodeState = createCurriculumEpisodeState(
-          curriculumProgress.tier,
-          resolveTrackGenerationViewport(hostHandle.canvasElement),
-        );
-        trackSpec = episodeState.trackSpec;
-        envState = stabilizeCurriculumTierTireGrip(
-          episodeState.envState,
-          curriculumProgress.tier,
-        );
-        // Step 3: Carry only promoted agents' evolved networks into the next
-        // tier. Non-promoted and newly added car slots receive a fresh
-        // deterministic substrate remapped to the promoted tier shape.
+        // Carry only promoted agents' evolved networks into the next tier.
+        // Non-promoted and newly added car slots receive a fresh deterministic
+        // substrate remapped to the promoted tier shape.
         const promotedSet = new Set(promotedCarIndices);
-        const promotedCarCount = envState.cars?.length ?? 1;
         const previousNetworksByCarIndex = new Map(controllerNetworkByCarIndex);
-        controllerNetworkByCarIndex.clear();
-        controllerByCarIndex.clear();
-        for (let carIndex = 0; carIndex < promotedCarCount; carIndex++) {
-          const sourceNetwork =
-            (promotedSet.size > 0 && promotedSet.has(carIndex)
-              ? previousNetworksByCarIndex.get(carIndex)
-              : undefined) ??
-            createDeterministicRacingControllerNetwork(activeObservationTier);
-          const remappedNetwork = remapControllerNetworkForObservationTier(
-            sourceNetwork,
-            activeObservationTier,
-          );
-          controllerNetworkByCarIndex.set(carIndex, remappedNetwork);
-          controllerByCarIndex.set(
-            carIndex,
-            createNgeController(remappedNetwork, {
-              tier: activeObservationTier,
-            }),
-          );
+        const carriedNetworks = new Map<number, Network>();
+        for (const [carIndex, network] of previousNetworksByCarIndex) {
+          if (promotedSet.has(carIndex)) {
+            carriedNetworks.set(carIndex, network);
+          }
         }
-        focusedCarIndex = 0;
-        focusedControllerNetwork =
-          controllerNetworkByCarIndex.get(focusedCarIndex)!;
-        buildPerCarAdaptationEngines(promotedCarCount);
-        simulationTick = 0;
-        lapStartTick = 0;
-        tierBestLapTimeMs = null;
-        hostHandle.renderNetworkArchitecture(focusedControllerNetwork);
-        tierSignalEvidenceAccumulator =
-          createEmptyTierSignalEvidenceAccumulator();
-        curriculumProgress = {
-          ...curriculumProgress,
-          lapProgress: createInitialLapProgress(trackSpec, envState),
-        };
-        guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
-          curriculumProgress.tier,
-        );
-        setupCanvasStage(
-          hostHandle.canvasRegionElement,
-          hostHandle.canvasElement,
-          curriculumProgress.tier,
-          accelerationStatus,
-        );
+        rebuildCurriculumStateForTier(curriculumProgress.tier, carriedNetworks);
       } else {
         tierSignalEvidenceAccumulator =
           createEmptyTierSignalEvidenceAccumulator();
@@ -1263,6 +1296,50 @@ function injectRacingStyles(): void {
       display: grid;
       gap: 8px;
     }
+    .racing-tier-selector {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      border: 1px solid rgba(15, 181, 255, 0.22);
+      border-radius: var(--racing-control-radius);
+      background: rgba(6, 11, 20, 0.45);
+    }
+    .racing-tier-selector__label {
+      color: var(--racing-text-muted);
+      font-family: var(--racing-mono);
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding-right: 6px;
+    }
+    .racing-tier-button {
+      min-width: 28px;
+      padding: var(--racing-control-padding);
+      border: 1px solid var(--racing-border-color);
+      border-radius: var(--racing-control-radius);
+      background: var(--racing-control-background);
+      color: var(--racing-text);
+      font-family: var(--racing-mono);
+      font-size: var(--racing-control-font-size);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      box-shadow: var(--racing-control-idle-shadow);
+      transition: ${FLAPPY_SELECTOR_TRANSITION};
+    }
+    .racing-tier-button:hover,
+    .racing-tier-button:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: var(--racing-control-hover-shadow);
+    }
+    .racing-tier-button--active {
+      color: var(--racing-accent);
+      border-color: var(--racing-accent);
+      background: rgba(255, 154, 46, 0.12);
+    }
     .racing-control-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(120px, 1fr) auto;
@@ -1507,7 +1584,7 @@ function setupCanvasStage(
   const initialAccelerationLabel = accelerationStatus
     ? formatAccelerationStatus(
         accelerationStatus,
-        DEMO_ACCELERATION_CONFIG.parallelVariantCount,
+        DEMO_ACCELERATION_CONFIG.parallelVariantCount!,
       )
     : 'detecting…';
   const accelerationChipElement = createStatusChip(
@@ -1562,13 +1639,21 @@ function setupCanvasStage(
  * The panel lives inside the canvas region below the stage, matching the
  * Flappy Bird parity layout where runtime widgets share the left column.
  * Adaptation now runs worker-side; the host only displays tick, lap, and
- * network size telemetry.
+ * network size telemetry. A small tier selector lets the user manually switch
+ * between the six observation tiers without reloading the page.
  *
  * @param region - The stage-card body element inside the canvas region.
+ * @param options - Optional initial tier and tier-selection callback.
  * @returns References to live-updating telemetry text nodes plus a sync hook.
  * @internal
  */
-function setupRuntimeControls(region: HTMLElement): TelemetryPanelNodes {
+function setupRuntimeControls(
+  region: HTMLElement,
+  options?: {
+    readonly initialTier?: CurriculumTier;
+    readonly onSelectTier?: (tier: CurriculumTier) => void;
+  },
+): TelemetryPanelNodes {
   const tickValue = document.createTextNode('0');
   const lapValue = document.createTextNode('0');
   const networkSizeValue = document.createTextNode('N0 / C0');
@@ -1581,9 +1666,52 @@ function setupRuntimeControls(region: HTMLElement): TelemetryPanelNodes {
 
   const runtimeCard = createPanelCard('Runtime Telemetry', 'Runtime Controls', [
     'Adaptation runs locally in the browser. This panel shows live telemetry.',
+    'Use the observation-tier selector to switch between Tier 1 (70 inputs) and Tier 6 (124 inputs).',
   ]);
   const controlsElement = document.createElement('div');
   controlsElement.className = 'racing-controls';
+
+  const tierSelectorElement = document.createElement('div');
+  tierSelectorElement.className = 'racing-tier-selector';
+  const tierSelectorLabel = document.createElement('div');
+  tierSelectorLabel.className = 'racing-tier-selector__label';
+  tierSelectorLabel.textContent = 'Observation Tier';
+  tierSelectorElement.append(tierSelectorLabel);
+
+  const TIER_SELECTOR_BUTTONS: readonly {
+    tier: CurriculumTier;
+    label: string;
+  }[] = [
+    { tier: 1, label: 'T1' },
+    { tier: 2, label: 'T2' },
+    { tier: 3, label: 'T3' },
+    { tier: 4, label: 'T4' },
+    { tier: 5, label: 'T5' },
+    { tier: 6, label: 'T6' },
+  ];
+  const activeTier = options?.initialTier ?? 1;
+  const tierButtons: HTMLButtonElement[] = [];
+  for (const tierButtonSpec of TIER_SELECTOR_BUTTONS) {
+    const tierButton = document.createElement('button');
+    tierButton.type = 'button';
+    tierButton.className = 'racing-tier-button';
+    if (tierButtonSpec.tier === activeTier) {
+      tierButton.classList.add('racing-tier-button--active');
+    }
+    tierButton.textContent = tierButtonSpec.label;
+    tierButton.addEventListener('click', () => {
+      options?.onSelectTier?.(tierButtonSpec.tier);
+      for (const button of tierButtons) {
+        button.classList.toggle(
+          'racing-tier-button--active',
+          button === tierButton,
+        );
+      }
+    });
+    tierButtons.push(tierButton);
+    tierSelectorElement.append(tierButton);
+  }
+  controlsElement.append(tierSelectorElement);
 
   const telemetryGrid = document.createElement('div');
   telemetryGrid.className = 'racing-telemetry';
@@ -1835,7 +1963,7 @@ export function createDeterministicRacingControllerNetwork(
 ): Network {
   const resolvedInputCount =
     resolveControllerInputCountForObservationTier(observationTier);
-  const resolvedOutputCount = observationTier === 2 ? 9 : 2;
+  const resolvedOutputCount = observationTier >= 2 ? 9 : 2;
   const controllerNetwork = Network.createMLP(
     resolvedInputCount,
     [...CONTROLLER_HIDDEN_LAYER_SIZES],
@@ -3464,6 +3592,10 @@ function resolveControllerInputCountForObservationTier(
     return 91;
   }
 
+  if (observationTier === 6) {
+    return TIER6_TOTAL_INPUT_SIZE;
+  }
+
   return TOTAL_TIER4_INPUT_SIZE;
 }
 
@@ -3615,16 +3747,26 @@ function remapControllerNetworkForObservationTier(
   const currentInputNodes = resolveSortedNodesByType(sourceNetwork, 'input');
   const currentInputCount = currentInputNodes.length;
 
-  // If the next tier does not require more inputs, the evolved network is
-  // already structurally compatible — return it unchanged.
-  if (nextInputCount <= currentInputCount) {
+  if (nextInputCount === currentInputCount) {
     return sourceNetwork;
   }
 
-  // Step 1: Determine how many new input nodes are needed.
+  // Step 1: Remove excess input nodes when the next tier is narrower than the
+  // current network. Existing hidden and output structure is preserved because
+  // excess input nodes only own outgoing zero-weight connections.
+  if (nextInputCount < currentInputCount) {
+    const nodesToRemove = currentInputNodes.slice(nextInputCount);
+    for (const inputNode of nodesToRemove) {
+      sourceNetwork.remove(inputNode);
+    }
+    sourceNetwork.input = nextInputCount;
+    return sourceNetwork;
+  }
+
+  // Step 2: Determine how many new input nodes are needed.
   const newInputCount = nextInputCount - currentInputCount;
 
-  // Step 2: Add new input nodes to the existing network.
+  // Step 3: Add new input nodes to the existing network.
   const hiddenNodes = resolveSortedNodesByType(sourceNetwork, 'hidden');
 
   for (let inputIndex = 0; inputIndex < newInputCount; inputIndex++) {
@@ -3632,7 +3774,7 @@ function remapControllerNetworkForObservationTier(
     newInputNode.bias = 0;
     sourceNetwork.nodes.push(newInputNode);
 
-    // Step 3: Connect each new input node to every existing hidden node with
+    // Step 4: Connect each new input node to every existing hidden node with
     // zero-weight connections so the new inputs are inert until learning
     // shapes them.
     for (const hiddenNode of hiddenNodes) {
@@ -3640,7 +3782,7 @@ function remapControllerNetworkForObservationTier(
     }
   }
 
-  // Step 4: Update the network's input count so activation vectors match the
+  // Step 5: Update the network's input count so activation vectors match the
   // new observation width.
   sourceNetwork.input = nextInputCount;
 

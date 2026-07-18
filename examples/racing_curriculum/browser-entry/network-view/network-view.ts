@@ -24,11 +24,11 @@ import type {
 import type { NetworkVisualizationPositionedScene } from '../host/host.network-tooltip.service';
 import {
   RACING_GROUP_COLORS,
-  RACING_INPUT_GROUP_DEFS,
   RACING_INPUT_SIZE,
   RACING_NETWORK_CONNECTION_LAYER_STYLE,
   RACING_OUTPUT_LABELS,
   RACING_OUTPUT_SIZE,
+  resolveRacingInputGroupDefinitions,
 } from './network-view.constants';
 import {
   drawRacingNetworkLODFromFrame,
@@ -59,10 +59,14 @@ export interface RacingNetworkRenderResult {
 /**
  * Resolves the shared visualizer input-label definitions for the racing demo.
  *
+ * @param inputSize - Optional network input size; when 124, the full Tier 6
+ *   label set is returned, otherwise the Tier 1 set is returned.
  * @returns Racing semantic label groups expressed in the shared visualizer format.
  */
-export function resolveRacingInputLabelGroupDefinitions(): readonly InputLabelGroupDefinition[] {
-  return RACING_INPUT_GROUP_DEFS.map(
+export function resolveRacingInputLabelGroupDefinitions(
+  inputSize?: number,
+): readonly InputLabelGroupDefinition[] {
+  return resolveRacingInputGroupDefinitions(inputSize).map(
     (racingInputGroupDefinition, groupIndex) => ({
       label: racingInputGroupDefinition.label,
       labelLines: racingInputGroupDefinition.labelLines,
@@ -126,7 +130,7 @@ export function resolveRacingNetworkCanvasDimensions(
 export function resolveRacingArchitectureLabel(network: Network): string {
   return resolveSharedNetworkArchitectureLabel(
     network,
-    RACING_INPUT_SIZE,
+    network.input ?? RACING_INPUT_SIZE,
     RACING_OUTPUT_SIZE,
   );
 }
@@ -145,6 +149,8 @@ export function resolveRacingNetworkVisualizationFrame(
   context: CanvasRenderingContext2D,
   network: Network | undefined,
 ): NetworkVisualizationResolvedFrame {
+  const inputSize = network?.input ?? RACING_INPUT_SIZE;
+
   if (network && shouldUseRacingNetworkLOD(network)) {
     return resolveRacingNetworkLODFrame(context, network);
   }
@@ -152,9 +158,9 @@ export function resolveRacingNetworkVisualizationFrame(
   return resolveSharedNetworkVisualizationFrame(
     context,
     network,
-    RACING_INPUT_SIZE,
+    inputSize,
     RACING_OUTPUT_SIZE,
-    resolveRacingInputLabelGroupDefinitions(),
+    resolveRacingInputLabelGroupDefinitions(inputSize),
   );
 }
 

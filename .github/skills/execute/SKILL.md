@@ -392,7 +392,7 @@ receives a slice, implements it, and returns evidence.
 ### The RED → IMPLEMENT → GREEN Loop
 
 ```text
-Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green light" → "1. Red Testing 03-red-testing creates failing tests"; "1. Red Testing 03-red-testing creates failing tests" → "2. Implementation 04-implementing makes tests pass"; "2. Implementation 04-implementing makes tests pass" → "3. Green Testing 05-green-testing validates implementation"; "3. Green Testing 05-green-testing validates implementation" → "4. Loop-back orchestrator passes observations to a NEW 04 instance" (observations (not OK)), "5. Advance move to next step/slice" (OK); "4. Loop-back orchestrator passes observations to a NEW 04 instance" → "2. Implementation 04-implementing makes tests pass"; "5. Advance move to next step/slice".
+Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green light" → "1. Red Testing 03-red-testing creates failing tests"; "1. Red Testing 03-red-testing creates failing tests" → "2. Implementation 04-implementing makes tests pass"; "2. Implementation 04-implementing makes tests pass" → "2a. Specialist Review 2-3 Tier-3 specialists review implementation BEFORE green testing"; "2a. Specialist Review 2-3 Tier-3 specialists review implementation BEFORE green testing" → "2b. All specialists approve?" (Yes), "2b. All specialists approve?" → "2. Implementation 04-implementing makes tests pass" (No — REQUEST_CHANGES → NEW 04 instance with fix packet); "2b. All specialists approve?" (Yes) → "3. Green Testing 05-green-testing validates implementation"; "3. Green Testing 05-green-testing validates implementation" → "4. Loop-back orchestrator passes observations to a NEW 04 instance" (observations (not OK)), "5. Advance move to next step/slice" (OK); "4. Loop-back orchestrator passes observations to a NEW 04 instance" → "2. Implementation 04-implementing makes tests pass"; "5. Advance move to next step/slice".
 ```
 
 ### Loop Steps
@@ -408,8 +408,24 @@ Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green li
 2. **Implementation** (`04-implementing`) implements the code to make the
    tests pass. The implementer works within the slice boundary and does
    not expand scope.
+   2a. **Specialist Review** (MANDATORY). After `04-implementing` returns
+   and BEFORE dispatching `05-green-testing`, the orchestrator MUST
+   dispatch 2–3 Tier-3 specialist agents (e.g.,
+   `implementation-pattern-scout`, `nge-core-scout`,
+   `performance-trace-specialist`) to review the implementation in
+   parallel. Each specialist reads the changed files, verifies
+   correctness, code quality, domain compliance, and checks for gaps
+   that tests alone cannot catch. Specialists return either APPROVE
+   or REQUEST_CHANGES with specific observations. See **Section 5.7
+   — Pre-Green Specialist Review Policy** for the full protocol.
+   2b. **Fix Loop**. If any specialist returns REQUEST_CHANGES, the
+   orchestrator compiles all observations into a fix packet, dispatches
+   a NEW `04-implementing` instance with the fix packet, and then
+   re-dispatches the same specialists (fresh instances) to re-review.
+   This loop repeats until ALL specialists return APPROVE.
 3. **Green Testing** (`05-green-testing`) validates the implementation
-   against the red tests and the slice acceptance criteria.
+   against the red tests and the slice acceptance criteria. Green testing
+   is ONLY dispatched after all specialist reviews return APPROVE.
 4. **Loop-back**: If green gives observations (not OK), the orchestrator
    passes the observations to a **NEW** `04-implementing` instance (fresh
    context), which produces a fix, then a **NEW** `05-green-testing`
@@ -447,15 +463,21 @@ Each slice is a bounded unit of work with these fields:
    full slice objects.
 2. Assign the next uncompleted non-parallelizable slice, or all ready
    parallelizable slices, to `04-implementing`.
-3. Wait for implementation evidence, then invoke `05-green-testing` to
-   validate.
-4. If `05` returns failure, spawn a new `04-implementing` with a focused
-   `slice-fix` packet and re-run `05` until the slice passes.
-5. When a slice passes, record `VALIDATION_EVIDENCE` and move to the next
+3. Wait for implementation evidence, then dispatch 2–3 Tier-3
+   specialists to review the implementation BEFORE green testing (see
+   Section 5.7).
+4. If any specialist returns REQUEST_CHANGES, compile observations into
+   a fix packet, dispatch a NEW `04-implementing`, then re-review with
+   fresh specialist instances. Loop until all specialists APPROVE.
+5. After all specialists approve, invoke `05-green-testing` to validate.
+6. If `05` returns failure, spawn a new `04-implementing` with a focused
+   `slice-fix` packet, re-review with specialists, then re-run `05` until
+   the slice passes.
+7. When a slice passes, record `VALIDATION_EVIDENCE` and move to the next
    slice.
-6. After all slices pass, call `06-documenting` to run docs-quality checks
+8. After all slices pass, call `06-documenting` to run docs-quality checks
    and close the step.
-7. After all steps in a phase are `[DONE]` and green validation has passed,
+9. After all steps in a phase are `[DONE]` and green validation has passed,
    dispatch `07-logging` to compress the completed phase to logs before
    advancing to the next phase. See **Phase Compression Policy** below.
 
@@ -471,6 +493,14 @@ Each slice is a bounded unit of work with these fields:
   orchestrator MUST call `neataptic-dispatch-mcp / build_dispatch_packet`
   and use the returned `dispatch_packet`. Direct `task` use without a prior
   dispatch packet is a workflow violation.
+- **MANDATORY PRE-GREEN SPECIALIST REVIEW.** Before dispatching
+  `05-green-testing`, the orchestrator MUST dispatch 2–3 Tier-3
+  specialists to review each `04-implementing` slice. Specialists check
+  correctness, domain compliance, code quality, and gaps that tests
+  alone cannot catch. If any specialist returns REQUEST_CHANGES, the
+  orchestrator dispatches a NEW `04-implementing` with a fix packet and
+  re-reviews with fresh specialist instances until ALL return APPROVE.
+  See **Section 5.7 — Pre-Green Specialist Review Policy** for details.
 - **The ORCHESTRATOR manages the loop, NOT the implementer.** The
   implementer receives a slice and returns evidence; it does not decide
   when to loop back or advance.
@@ -646,7 +676,87 @@ When a scout needs a T4 auxiliary, it should return its findings to the
 parent orchestrator (Tier 1 or Tier 2), which dispatches the T4 agent
 directly. This flat dispatch pattern works within any concurrent limit.
 
-## Section 6 — Routing Table Reference
+## Section 5.7 — Pre-Green Specialist Review Policy (Mandatory)
+
+Before dispatching `05-green-testing` for any `04-implementing` slice, the
+orchestrator MUST dispatch 2–3 Tier-3 specialist agents to review the
+implementation. This is a **mandatory gate** — green testing MUST NOT be
+dispatched until all dispatched specialists return APPROVE.
+
+### Why Specialist Review Before Green Testing?
+
+Tests verify behavior; specialists verify **implementation quality and
+domain correctness**. Tests can pass while the implementation has:
+
+- Formula drift from the design spec (penalty too aggressive, wrong
+  weighting)
+- Inconsistent scalarization between related functions
+- Missing magnitude gating or deadband logic
+- Cross-talk with parallel slices that unit tests don't exercise
+- JSDoc that overstates or misdocuments behavior
+- Test assertions that pass by coincidence rather than encoding the actual
+  contract
+
+Specialists catch these because they read the **actual code**, compare it
+to the design intent, and check cross-references — things tests alone
+cannot do.
+
+### Specialist Count
+
+| Slice Complexity                                | Specialist Count | Recommended Specialists                                                                            |
+| ----------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------- |
+| Simple (1 file, < 50 lines changed)             | 2                | `implementation-pattern-scout` + one domain scout                                                  |
+| Moderate (2-3 files, 50-200 lines)              | 2                | `implementation-pattern-scout` + domain-specific scout                                             |
+| Complex (3+ files, 200+ lines, or cross-module) | 3                | `implementation-pattern-scout` + domain scout + `performance-trace-specialist` or `coverage-scout` |
+
+### Specialist Selection
+
+The orchestrator selects specialists based on the slice's domain:
+
+- **NGE/NEAT domain** → `nge-core-scout`
+- **Racing/benchmark domain** → `nge-benchmark-scout`
+- **Browser/UI domain** → `browser-runtime-scout` or `visualizer-scout`
+- **Performance-critical** → `performance-trace-specialist`
+- **Coverage-critical** → `coverage-scout`
+- **Always include** → `implementation-pattern-scout` (code quality and
+  pattern compliance)
+
+### Review Protocol
+
+1. **Dispatch all specialists in parallel** (background mode) — they are
+   independent reviewers.
+2. **Each specialist receives**: the slice description, the files changed,
+   the design intent, and instructions to report APPROVE or
+   REQUEST_CHANGES with specific observations.
+3. **Wait for all specialists** to complete.
+4. **If ALL return APPROVE**: proceed to `05-green-testing`.
+5. **If ANY return REQUEST_CHANGES**: compile ALL observations from ALL
+   specialists into a single fix packet, dispatch a NEW `04-implementing`
+   instance with the fix packet, then re-dispatch the same specialists
+   (fresh instances) to re-review. Loop until all return APPROVE.
+6. **Record evidence**: the orchestrator records specialist review results
+   in the plan's `VALIDATION_EVIDENCE` section, including which specialists
+   reviewed, their verdicts, and any fix cycles.
+
+### Gate Enforcement
+
+The `specialist-review` gate checks that the plan's `VALIDATION_EVIDENCE`
+section contains evidence of specialist review before green testing. The
+orchestrator MUST run this gate (or confirm evidence exists) before
+dispatching `05-green-testing`.
+
+### When to Skip Specialist Review
+
+Specialist review may be skipped ONLY for:
+
+- **Trivial slices** that change comments, formatting, or documentation
+  only (zero behavioral changes).
+- **Plan-only changes** (no source code modified).
+- **Bundle rebuild slices** (`npm run build:*`) that only recompile
+  existing source.
+
+For any slice that modifies source code logic, specialist review is
+MANDATORY.
 
 The canonical agent routing table lives at
 `.github/agent-skill-routing-table.md`. It is generated by

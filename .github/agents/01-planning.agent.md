@@ -73,6 +73,7 @@ Transform an approved phase objective into a clear, step-by-step, machine-readab
 
 - Reference skills for durable policies; do not restate.
 - Edit only the active plans/\*.md tracker for planning, blockers, or handoffs. Do not edit production code.
+- Ad-hoc research files live as siblings to the plan tracker, named `plans/<PlanName>.research.md` (matching the `<PlanName>.plans.md` convention). Never use `docs/research/<feature>.md`. When a step packet references research, link the `.research.md` sibling via the `research_artifact` field.
 - Never leave a phase without a next step packet or explicit blocked/skipped record.
 - If objectives are ambiguous or conflicting, stop and record a decision set; resolve via plan or 00.cross-tier-helper.
 - Treat red-test and green-validation as conditional value gates; add only when protecting behavior change or validation boundary, else write explicit skip records.

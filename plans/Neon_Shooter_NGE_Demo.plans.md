@@ -3,7 +3,7 @@
 **Status:** [PROPOSED] · **Plan ID:** NEATENSTEIN_NGE_DEMO · **Created:** 2026-07-17
 **Consensus:** 4 specialists (NGE Core, NGE Benchmark, Visualizer, Game Director) — all APPROVED after 2 review rounds.
 **Downstream of:** `plans/completed/NEAT_Genesis_EvoDevo.md` (NGE core), `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` (co-evolution harness reference, not duplicated).
-**Engine research:** `plans/references/neat-doom-engine-research.md` — DOOM/raycasting algorithm notes, neon renderer design (Lineage B grid DDA, locked), Flappy ground grid reuse, license attribution, and reuse map. **Read this before implementing Phase 1.**
+**Engine research:** `plans/Neon_Shooter_NGE_Demo.research.md` — DOOM/raycasting algorithm notes, neon renderer design (Lineage B grid DDA, locked), Flappy ground grid reuse, license attribution, and reuse map. **Read this before implementing Phase 1.**
 **Rendering direction:** Lineage B (grid DDA raycasting) — locked. See research file §1.
 
 ---
@@ -43,7 +43,7 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 **Goal:** Raycasting neon renderer + frame protocol + audio.
 
 - Raycasting renderer (~800 lines): map grid, DDA ray cast, neon wall rendering (pure neon-line with optional line-pattern texture modulation, NOT sampled texels), enemy wireframe sprites, projectiles.
-- **Floor: reuse Flappy Bird's synthwave ground grid** (camera-adapted). Reuse `FLAPPY_GROUND_GRID_*` constants, depth-curve/alpha/blur/thickness helpers, pulse system, and `FLAPPY_NEON_PALETTE` ground colors. Adapt vertical rays to camera yaw rotation. See research file §3.3. This gives visual coherence with the Flappy demo — both share the same neon floor aesthetic.
+- **Floor: reuse Flappy Bird's synthwave ground grid** (camera-adapted). Reuse `FLAPPY_GROUND_GRID_*` constants, depth-curve/alpha/blur/thickness helpers, and `FLAPPY_NEON_PALETTE` ground colors. Adapt vertical rays to camera yaw rotation. **Pulse system is fake-perspective-anchored** (research §3.3.5): horizontal pulses reuse Flappy helpers unchanged; vertical pulses use world-bearing continuity (cache `worldBearingRad`, match by `Δθ` with 0.1 rad tolerance; off-screen bearings fade, never re-anchor). Pulses render on Layer 2 (dynamic), depth-tested against the z-buffer (§3.4.1). **Pulse emission is sim-tick-driven** (not wall-clock, not frameIndex) for Phase 2 determinism (§3.3.7). **Ambient density** `NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS=3000` (adapted from Flappy's 6000ms, §3.3.6); **event pulses** for generation-up ripple (white-hot expanding ring, 600ms, synced with generation-up sound §3.3.9), enemy death pulse (enemy-hue tint, 400ms), low-health dim (alpha × 0.5 when health < 30%). 8-concurrent-pulse ceiling. See research file §3.3.5–§3.3.9. This gives visual coherence with the Flappy demo and a secondary legibility channel for combat events.
 - Tier-aware column count: GPU 320 cols, Worker 240, CPU 160. Glow passes skip on CPU. CPU fallback: lines only, no texture modulation, no glow.
 - Worker offload: all NGE inference + enemy AI + projectile physics on workers; renderer reads packed `NeatensteinRenderFrame` (SoA typed arrays, transfer list, zero-copy, requestId-gated). Worker tier may use `OffscreenCanvas` via `transferControlToOffscreen()` for off-main-thread rendering (see research file §3.2.1). **Two render architectures by tier:** (a) CPU/GPU — display worker produces `NeatensteinRenderFrame`, main thread renders; (b) Worker — display worker renders directly via OffscreenCanvas, frame transfer bypassed. On Worker tier, display worker responsibilities = sim tick + NGE inference + OffscreenCanvas render.
 - **Render path (tier-gated, see research file §3.2.1):** CPU tier → `ImageData` framebuffer + single `putImageData` (no per-column `fillRect`); Worker tier → `OffscreenCanvas`; GPU tier → stroke + `shadowBlur` (premium). All tiers: `getContext("2d", { alpha: false })`, integer-floored coordinates. Feature-detect `transferControlToOffscreen` and `ctx.filter`; fall back to CPU ImageData path if unavailable.
@@ -52,7 +52,7 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 - **Render interpolation:** `lerp(statePrev, stateCurr, alpha)` on each RAF to eliminate 30→60 Hz judder. See research file §4.1.2.
 - **Raycaster is a shared build entry** — included in both host bundle (CPU/GPU tiers render on main thread) and worker bundle (Worker tier renders via OffscreenCanvas). Build script configures dual webpack entries. Worker instantiated as module worker: `new Worker(url, { type: 'module' })`.
 - 60fps target on GPU tier, 30fps floor on CPU.
-- **Audio (Phase 1 deliverable, same weight as renderer):** 6 sounds — fire, enemy hit, player damage, dash, kill, **generation-up** (rising arpeggio, the audio signal of learning) — via WebAudio procedural synthesis (oscillators, zero assets). Positional audio via `StereoPannerNode` + distance attenuation. `AudioContext.resume()` on first click (regardless of mode — AI modes need audio too). **AudioContext is main-thread only** — audio trigger events originate in the display worker and are `postMessage`d to the main thread for synthesis. See research file §9.
+- **Audio (Phase 1 deliverable, same weight as renderer):** 6 sounds — fire, enemy hit, player damage, dash, kill, **generation-up** (rising arpeggio, the audio signal of learning) — via WebAudio procedural synthesis (oscillators, zero assets). Positional audio via `StereoPannerNode` + distance attenuation. `AudioContext.resume()` on first click (regardless of mode — AI modes need audio too). **AudioContext is main-thread only** — audio trigger events originate in the display worker and are `postMessage`d to the main thread for synthesis. The generation-up sound fires on the same sim tick as the generation-up floor ripple (research §3.3.9) as an audio-visual pair — audio punches in (200ms), ripple lingers (600ms). See research file §9.
 - **Rendering invariant:** distance fog and glow use per-column/per-sprite explicit fill/stroke with layer opacity. NO global `ctx.globalAlpha` passes.
 - **Canvas resize:** Phase 1 raycaster owns resize reaction (ResizeObserver → re-derive column stride + re-allocate SoA frame buffers). Phase 7 owns shell/sidebar layout.
 - **Tier contract:** column count locks at session-start tier. `onBackendChange` observer re-evaluates tier caps + updates chip label on next RAF (not mid-frame). Re-draw-last-frame fallback coordinates with locked col count until next tier re-bind.
@@ -60,11 +60,16 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 - Reuse: Flappy `WorkerPlaybackFrameSnapshot` SoA pattern, WeakMap buffer pool, `resolveWorkerPlaybackSnapshotTransferList`.
 
 **Acceptance:**
+
 - 60fps on GPU tier (Chrome DevTools trace, no long task > 16ms).
 - Neon walls with borders + distance fog; no overdraw outside canvas.
 - Frame protocol versioned + transfer-list zero-copy; `requestId` increments.
 - 3 audio cues wired and audible.
 - `README.md` present at example root.
+- Pulses render fake-perspective-anchored: rotating the camera (mouse look) does not cause pulses to swim or snap; a pulse emitted in view remains continuous as it transits the FOV.
+- Pulse emission is deterministic: same seed + same inputs → identical pulse positions/timings in a focused replay test (paired with Phase 2 determinism acceptance).
+- Pulses are depth-tested against walls (no pulse shows through a wall).
+- Generation-up fires as an audio-visual pair (sound + floor ripple on the same sim tick).
 
 ### Phase 2 — Game Logic & FPS State (visualizer + benchmark-owned)
 
@@ -79,6 +84,7 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 - Game loop lives in `examples/neatenstein/browser-entry/host/game/` module.
 
 **Acceptance:**
+
 - Deterministic episode: same seed + same inputs → identical final world state (focused replay test, reuse racing `environment.step` determinism test pattern).
 - Collision correct; projectiles render as tracers.
 - Episode length and cadence within targets.
@@ -100,6 +106,7 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 - **Combat fitness composite:** `survivalTicks + damageDealt + kills - damageTaken - aimMissRate + performance-gated complexityBonus - parsimonyDensityPenalty` (reuse racing's `RacingQualitySignal` pattern, same 800–3000 syn/neuron parsimony band).
 
 **Acceptance:**
+
 - `genBarrier(seed=K)` reproduces identical `M_N` and enemy state on GPU tier (index-stable argmax + tie-break).
 - Snapshot refresh cadence enforced (5 gens MLP, 3 gens SWARM).
 - MLP throttle fires only on `N % 5 == 0`.
@@ -119,6 +126,7 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
   - (b) Combat-pressure → reproduction-mode policy (inspectable, tested, in `src/neat/nge-evolution/`).
 
 **Acceptance:**
+
 - ARMS RACE mode runs at interactive rates.
 - Main fitness computed against MLP snapshot, not live MLP.
 - Assimilation writes internal priors, not enemy-derived weights/structure.
@@ -138,6 +146,7 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 - SWARM snapshot refresh: every 3 generations (explicit).
 
 **Acceptance:**
+
 - One DNA + shared weights + coordinate injection produces differentiated swarm behavior (focused test on coordinate-injection effect).
 - Swarm fitness scalar; SWARM barrier deterministic.
 - HIVE DENSITY (normalized 0–1) correlates with coordination behavior change.
@@ -158,6 +167,7 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 - **Human-mode entry moment:** pressing 3 or 4 triggers a 1.5s camera handoff — camera flies into the agent's POV, "NOW YOU" card (neon, 1s), then spawn.
 
 **Acceptance:**
+
 - All 128 variants see identical replay (fairness test).
 - Edge cases each have a focused test: death <10s → last complete; no recording → skip mutation; long survival → tail 10s; corrupted → fallback.
 - Same-recording → same-fitness determinism check passes.
@@ -183,6 +193,7 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 - **On-screen text cap:** ≤20 words of TRANSIENT text at any time (intro card, banners, tooltips, callouts). Stats overlay is persistent HUD, exempt but iconified. Transient-stacking budget: max 2 transients simultaneously.
 
 **Acceptance:**
+
 - Mode switch posts `set-mode` and locks until `mode-ready`; chip shows tier; stats update each frame.
 - Ghost replay legible (or fallback death-position marker functional).
 - "First time it did X" callout fires on behavior taxonomy triggers.
@@ -205,6 +216,7 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 - **Browser E2E smoke:** 0 console errors, ≥30fps, tier correctly reported.
 
 **Acceptance:**
+
 - Promotion gates require reliable performance over seed pack (not one lucky episode).
 - Arms-race chart shows oscillation + ratchet; enemy adaptation lag observable stays positive and bounded.
 - All four ablations produce predicted divergence.
@@ -224,30 +236,30 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 
 ## Reuse Summary
 
-| Reused `src/` primitive | Demo role |
-|---|---|
-| `NGE_DNA` envelope (`neat.nge-dna.ts`) | Main agent + swarm DNA |
-| `NgeSubstrateBudgetOverride` (`neat.nge-dna.types.ts`) | Tier caps (swarm + main) |
-| `NgeDnaModuleArchetype.weightSharedCohortId` | Swarm cohort |
-| `NgeDnaModuleArchetype.receivesCoordinates` | Per-enemy coordinate injection |
-| `NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE` (`genome.types.ts`) | All combat motifs (no new motifs) |
-| `isValidWeightSharedCohortDescriptor` (`genome.utils.ts`) | Swarm DNA validation |
-| Lifecycle state machine (`neat.nge-lifecycle.ts`) | Main + swarm lifecycle |
-| `assimilateEquilibriumCandidate` (`neat.nge-assimilation`) | Structural prior write-back (internal) |
-| `NgeReproductionPolicy` (evolvable mode) | Combat-pressure mode selection |
-| Juvenile focus weights + hysteresis (`neat.nge-juvenile.constants.ts`) | Grow/prune gating |
-| `accelerationConfig.parallelVariantCount` | Tier preset variant counts |
-| `RacingQualitySignal` composite fitness pattern | `CombatQualitySignal` |
-| `OpponentSnapshotPool` / hall-of-fame (racing Tier 6) | Asymmetric rolling opponent snapshot |
-| Worker-authoritative deterministic episode runner (racing) | Combat episode runner + seed-stamped snapshots |
-| Flappy `WorkerPlaybackFrameSnapshot` SoA + transfer list | `NeatensteinRenderFrame` |
-| **Flappy ground grid** (`playback/background/ground-grid/`) | **Floor renderer** — depth-curve, alpha/blur/thickness helpers, pulse system, palette. Adapt vertical rays to camera yaw. See research file §3.3. |
-| Racing `resolveAccelerationChipPresentation` | Acceleration chip (extended additively) |
+| Reused `src/` primitive                                                | Demo role                                                                                                                                                                                                                                                                                              |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NGE_DNA` envelope (`neat.nge-dna.ts`)                                 | Main agent + swarm DNA                                                                                                                                                                                                                                                                                 |
+| `NgeSubstrateBudgetOverride` (`neat.nge-dna.types.ts`)                 | Tier caps (swarm + main)                                                                                                                                                                                                                                                                               |
+| `NgeDnaModuleArchetype.weightSharedCohortId`                           | Swarm cohort                                                                                                                                                                                                                                                                                           |
+| `NgeDnaModuleArchetype.receivesCoordinates`                            | Per-enemy coordinate injection                                                                                                                                                                                                                                                                         |
+| `NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE` (`genome.types.ts`)           | All combat motifs (no new motifs)                                                                                                                                                                                                                                                                      |
+| `isValidWeightSharedCohortDescriptor` (`genome.utils.ts`)              | Swarm DNA validation                                                                                                                                                                                                                                                                                   |
+| Lifecycle state machine (`neat.nge-lifecycle.ts`)                      | Main + swarm lifecycle                                                                                                                                                                                                                                                                                 |
+| `assimilateEquilibriumCandidate` (`neat.nge-assimilation`)             | Structural prior write-back (internal)                                                                                                                                                                                                                                                                 |
+| `NgeReproductionPolicy` (evolvable mode)                               | Combat-pressure mode selection                                                                                                                                                                                                                                                                         |
+| Juvenile focus weights + hysteresis (`neat.nge-juvenile.constants.ts`) | Grow/prune gating                                                                                                                                                                                                                                                                                      |
+| `accelerationConfig.parallelVariantCount`                              | Tier preset variant counts                                                                                                                                                                                                                                                                             |
+| `RacingQualitySignal` composite fitness pattern                        | `CombatQualitySignal`                                                                                                                                                                                                                                                                                  |
+| `OpponentSnapshotPool` / hall-of-fame (racing Tier 6)                  | Asymmetric rolling opponent snapshot                                                                                                                                                                                                                                                                   |
+| Worker-authoritative deterministic episode runner (racing)             | Combat episode runner + seed-stamped snapshots                                                                                                                                                                                                                                                         |
+| Flappy `WorkerPlaybackFrameSnapshot` SoA + transfer list               | `NeatensteinRenderFrame`                                                                                                                                                                                                                                                                               |
+| **Flappy ground grid** (`playback/background/ground-grid/`)            | **Floor renderer** — depth-curve, alpha/blur/thickness helpers, palette. Adapt vertical rays to camera yaw. **Pulse system:** reuse lifetime/color/selection; adapt interval (6000→3000ms), emission (sim-tick), vertical continuity (world-bearing), + event pulses. See research file §3.3.5–§3.3.9. |
+| Racing `resolveAccelerationChipPresentation`                           | Acceleration chip (extended additively)                                                                                                                                                                                                                                                                |
 
-| New (core-side) | Location | Why core-owned |
-|---|---|---|
-| Per-enemy substrate coordinate allocator | `src/neat/nge-dna/` | Determinism + hashability + unit-cube contract |
-| Combat-pressure → reproduction-mode policy | `src/neat/nge-evolution/` | Inspectable policy surface, not a demo hack |
+| New (core-side)                            | Location                  | Why core-owned                                 |
+| ------------------------------------------ | ------------------------- | ---------------------------------------------- |
+| Per-enemy substrate coordinate allocator   | `src/neat/nge-dna/`       | Determinism + hashability + unit-cube contract |
+| Combat-pressure → reproduction-mode policy | `src/neat/nge-evolution/` | Inspectable policy surface, not a demo hack    |
 
 ---
 
@@ -265,6 +277,7 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 10. **Demo faking intelligence.** Ablations (no-snapshot, static-enemy, no-complexity-bonus, coordinate-shuffle) + arms-race lag observable prove coevolution drives adaptation. Publish ablation results in demo UI.
 11. **2048 variants single-pass on GPU may exceed `DEFAULT_ACCELERATION_GPU_NODE_THRESHOLD` (1024) only for large nets.** Document fallback in UI.
 12. **`shadowBlur` expensive at 320 cols × 32 sprites (8 enemies + 24 projectiles max).** Tier-gate glow; profile with `chrome-devtools-mcp`; offer "glow off" fallback.
+13. **Fake-perspective-anchored pulses may alias at grazing angles / clutter during heavy combat.** Mitigate: 2px screen-size minimum for grazing pulses (§3.3.5); 8-concurrent-pulse ceiling with oldest-event-first drop (§3.3.6); ambient pulses never dropped mid-travel; depth-test against z-buffer (§3.4.1) prevents bleed-through. Profile pulse projection cost (≤8 sprites/frame, negligible vs 8 enemies + 24 projectiles).
 
 ---
 
@@ -280,18 +293,20 @@ The human's deaths train the enemies (act one: you are the teacher who gets kill
 8. **No dead air:** No 15-second stretch in any mode where nothing happens (no deaths, no counter movement, no behavior change). Generation cadence ≥2/min ensures this.
 9. **No-trivial-fixed-point:** Adaptation-lag oscillates over N=50 generations; ablations show predicted divergence.
 10. **Browser smoke:** 0 console errors, ≥30fps, tier correctly reported.
+11. **Generation-up is viscerally a pair:** 3/3 NGE-naive viewers, asked "what happened just now?" within 2s of a generation-up event, mention either the sound or the floor ripple (ideally both). The pair is recognizable as a single "level-up" moment, not two unrelated effects.
 
 ---
 
 ## Consensus Record
 
-| Round | NGE Core | NGE Benchmark | Visualizer | Game Director |
-|---|---|---|---|---|
-| 1 (propose) | proposed | proposed | proposed | proposed |
-| 2 (review) | 10 observations | 10 observations | 11 observations | 9 observations |
-| 3 (approve v2) | **APPROVED** | **APPROVED** | **APPROVED** | **APPROVED** |
+| Round          | NGE Core        | NGE Benchmark   | Visualizer      | Game Director  |
+| -------------- | --------------- | --------------- | --------------- | -------------- |
+| 1 (propose)    | proposed        | proposed        | proposed        | proposed       |
+| 2 (review)     | 10 observations | 10 observations | 11 observations | 9 observations |
+| 3 (approve v2) | **APPROVED**    | **APPROVED**    | **APPROVED**    | **APPROVED**   |
 
 All observations addressed in v2. Non-blocking notes:
+
 - NGE Core: rollback test should cover `maxEdges`, not just `maxNodes`.
 - Game Director: behavior taxonomy (strafe/pre-fire/corner-camp) must be defined in Phase 3–6 so the "first time it did X" callout has a trigger source.
 
@@ -300,5 +315,6 @@ All observations addressed in v2. Non-blocking notes:
 ## Next Steps
 
 This plan is [PROPOSED] and consensus-approved. Before implementation:
+
 1. Dispatch `01-planning` (verification mode) to independently validate slice sizes (≤4h, ideally 2–3), structural completeness, and run `plan-slice-quality` + `step-packet` gates.
 2. Only after verification records `green-light: true` may the orchestrator proceed to RED/IMPLEMENT/GREEN.

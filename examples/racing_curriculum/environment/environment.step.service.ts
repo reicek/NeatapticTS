@@ -803,12 +803,19 @@ function stepCarKinematics(
     FIXED_TIMESTEP_SECONDS;
   const speed =
     Math.abs(effectiveThrottle) * MAX_FORWARD_SPEED_UNITS_PER_SECOND;
+  const forwardSpeedWorld =
+    clampedThrottle * MAX_FORWARD_SPEED_UNITS_PER_SECOND;
+  const lateralSpeedWorld = 0;
+  const speedWorld = Math.abs(forwardSpeedWorld);
 
   return {
     ...car,
     carHeading: nextHeading,
     carX: car.carX + Math.cos(nextHeading) * forwardDistance,
     carY: car.carY + Math.sin(nextHeading) * forwardDistance,
+    forwardSpeedWorld,
+    lateralSpeedWorld,
+    speedWorld,
     tireState: decayTireState(
       car.tireState,
       Math.abs(clampedSteer),

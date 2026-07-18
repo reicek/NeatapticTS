@@ -147,9 +147,9 @@ too conservative.
 | {@link NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP} | Max structural edits per lifecycle call | `5` | Raise for batch growth, lower for fine-grained morphs. |
 | {@link NGE_GROW_STABILIZE_MIN_STABILIZATION_TICKS} | Min ticks after growth before plateau can fire | `5` | Raise to give more learning time, lower for faster cycling. |
 | {@link NGE_GROW_STABILIZE_MAX_STABILIZATION_TICKS} | Max ticks before growth is forced regardless of plateau | `25` | Raise to allow longer stabilization, lower to force growth sooner. |
-| {@link NGE_EXHAUSTION_STAGE_FRACTION_BABY} | Relative improvement bar for weight variants in the baby stage | `0.01` | Lower to let baby networks commit smaller weight wins; raise to demand stronger evidence. |
-| {@link NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE} | Relative improvement bar for weight variants in the juvenile stage | `0.005` | Raise to demand stronger variants, lower to commit smaller improvements. |
-| {@link NGE_EXHAUSTION_STAGE_FRACTION_ADULT} | Relative improvement bar for weight variants in the adult stage | `0.003` | Raise to demand stronger variants; adult tuning is intentionally picky. |
+| {@link NGE_EXHAUSTION_STAGE_FRACTION_BABY} | Relative improvement bar for weight variants in the baby stage | `0.02` | Lower to let baby networks commit smaller weight wins; raise to demand stronger evidence. |
+| {@link NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE} | Relative improvement bar for weight variants in the juvenile stage | `0.01` | Raise to demand stronger variants, lower to commit smaller improvements. |
+| {@link NGE_EXHAUSTION_STAGE_FRACTION_ADULT} | Relative improvement bar for weight variants in the adult stage | `0.006` | Raise to demand stronger variants; adult tuning is intentionally picky. |
 | {@link NGE_EXHAUSTION_TICK_BUDGET} | Total exhaustion tick budget before structural growth is forced | `48` | Raise to give weight tuning more total ticks; the per-variant limit is `ceil(tickBudget / variantCount)`. |
 | {@link NGE_EXHAUSTION_MIN_CONSECUTIVE_TICKS} | Floor on consecutive exhaustion ticks before forcing growth | `1` | Raise to prevent immediate growth fallback after a single bad variant tick. |
 | {@link NGE_EXHAUSTION_MAX_CONSECUTIVE_TICKS} | Consecutive failed variant ticks before forcing structural growth | `8` | Raise to allow more tuning attempts, lower to switch to growth sooner. |
@@ -229,6 +229,15 @@ const outcomes = nge.juvenile.applyMorphDeltas(network, deltas, budget);
 
 ## neat/nge-juvenile/neat.nge-juvenile.constants.ts
 
+### NGE_EXHAUSTION_DECAY_FLOOR_TIERS
+
+Tiered decay floors for the adaptive improvement-threshold decay.
+
+Larger networks are allowed to retain a higher minimum decay multiplier so
+the threshold does not collapse too far for mature structures.
+
+Contract: six tiers from <100 neurons up to Infinity.
+
 ### NGE_EXHAUSTION_MAX_CONSECUTIVE_TICKS
 
 Maximum consecutive weight-exhaustion ticks before forcing structural growth
@@ -277,6 +286,16 @@ Noise-sigma fraction for the juvenile lifecycle stage.
 
 Contract: NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE=0.002
 
+### NGE_EXHAUSTION_NOISE_SIGMA_TIERS
+
+Tiered noise-sigma fractions for the baby/embryo lifecycle stage.
+
+Early tiny networks tolerate more statistical noise because they evaluate
+fewer variants; as the network grows the noise allowance shrinks in step
+with the rising relative improvement bar.
+
+Contract: six tiers from <100 neurons up to Infinity.
+
 ### NGE_EXHAUSTION_POST_GROWTH_EXHAUSTION_BOOST
 
 Multiplier applied to the base exhaustion limit after a bad growth event.
@@ -303,20 +322,20 @@ Contract: NGE_EXHAUSTION_SCORE_EPSILON=1e-6
 
 Stage fraction for the adult lifecycle stage.
 
-Contract: NGE_EXHAUSTION_STAGE_FRACTION_ADULT=0.003
+Contract: NGE_EXHAUSTION_STAGE_FRACTION_ADULT=0.006
 
 ### NGE_EXHAUSTION_STAGE_FRACTION_BABY
 
 Stage fraction for the baby lifecycle stage. Determines the relative
 improvement bar used to decide whether a weight variant commits.
 
-Contract: NGE_EXHAUSTION_STAGE_FRACTION_BABY=0.01
+Contract: NGE_EXHAUSTION_STAGE_FRACTION_BABY=0.02
 
 ### NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE
 
 Stage fraction for the juvenile lifecycle stage.
 
-Contract: NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE=0.005
+Contract: NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE=0.01
 
 ### NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR
 
@@ -324,7 +343,7 @@ Floor for the adaptive improvement-threshold decay. The decay multiplier is
 clamped to this value so the threshold never collapses to zero and allows
 random noise to commit.
 
-Contract: NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR=0.25
+Contract: NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR=0.40
 
 ### NGE_EXHAUSTION_THRESHOLD_DECAY_RATE
 
@@ -341,6 +360,17 @@ Total tick budget allocated to weight-exhaustion before structural growth is
 forced. The raw exhaustion count is `ceil(tickBudget / variantCount)`.
 
 Contract: NGE_EXHAUSTION_TICK_BUDGET=48
+
+### NGE_EXHAUSTION_TIER_FRACTIONS
+
+Tiered relative improvement fractions for the baby/embryo lifecycle stage.
+
+As the network grows from a tiny newborn toward juvenile size, the relative
+improvement bar rises in discrete steps. This keeps early networks permissive
+while gradually demanding larger relative gains before a weight variant
+commits.
+
+Contract: six tiers from <100 neurons up to Infinity.
 
 ### NGE_GROW_STABILIZE_BIAS_MUTATION_MAGNITUDE
 
@@ -1651,9 +1681,10 @@ gate.
 
 The threshold combines:
 
-- a stage-relative improvement bar,
+- a stage-relative improvement bar (tier-aware for baby/embryo networks),
 - a noise-aware uplift that grows with the number of evaluated variants,
-- a neuron-budget factor that biases small networks toward structural growth.
+- a neuron-budget factor that biases small networks toward structural growth,
+- a per-failure decay whose floor rises with network size.
 
 When the score ceiling is finite and both baseline and best score are below
 it, the threshold scales with remaining headroom; otherwise it scales with
@@ -1682,11 +1713,43 @@ const threshold = resolveExhaustionImprovementThreshold(
 console.log(threshold > 0); // true
 ```
 
+### resolveNeuronTierFraction
+
+```ts
+resolveNeuronTierFraction(
+  currentNeurons: number,
+  tiers: readonly { maxNeurons: number; fraction: number; }[] | readonly { maxNeurons: number; floor: number; }[],
+  fallback: number,
+): number
+```
+
+Resolve a tiered numeric value based on current neuron count.
+
+Clamps the count to non-negative values and selects the first tier whose
+`maxNeurons` upper bound exceeds the count. If no tier matches (for example an
+empty tier list), the fallback value is returned.
+
+Parameters:
+- `currentNeurons` - Number of neurons in the network (clamped to >= 0).
+- `tiers` - Ordered tier table with `maxNeurons` upper bounds. Each tier
+carries either a `fraction` or a `floor` value.
+- `fallback` - Value returned when no tier matches.
+
+Returns: The value belonging to the matched tier, or the fallback.
+
+Example:
+
+```ts
+const fraction = resolveNeuronTierFraction(150, NGE_EXHAUSTION_TIER_FRACTIONS, 0.02);
+console.log(fraction); // 0.02
+```
+
 ### resolveNoiseSigmaFraction
 
 ```ts
 resolveNoiseSigmaFraction(
   stage: NgeLifecycleStage,
+  currentNeurons: number | undefined,
 ): number
 ```
 
@@ -1697,8 +1760,14 @@ statistical noise from evaluating a finite number of variants. Early stages
 get a larger fraction (0.003) because they evaluate more variants and need
 a higher uplift; later stages get a smaller fraction (0.001).
 
+When `currentNeurons` is supplied for a baby/embryo network, the fraction is
+resolved from `NGE_EXHAUSTION_NOISE_SIGMA_TIERS` so tiny newborn networks get
+a larger noise allowance that shrinks as the network grows.
+
 Parameters:
 - `stage` - Current NGE lifecycle stage.
+- `currentNeurons` - Optional current neuron count for baby/embryo tier
+resolution.
 
 Returns: Noise-sigma fraction for the stage.
 
@@ -1714,19 +1783,27 @@ console.log(sigmaFraction); // 0.002
 ```ts
 resolveStageFraction(
   stage: NgeLifecycleStage,
+  currentNeurons: number | undefined,
 ): number
 ```
 
 Resolve the relative improvement fraction for a lifecycle stage.
 
-Baby/embryo networks get the largest bar (1%), juvenile networks get a
-tighter bar (0.5%), and adult/equilibrium networks get the tightest bar
-(0.3%). This implements the "grow fast past baby, picky in middle, slower
+Baby/embryo networks get the largest bar (2%), juvenile networks get a
+tighter bar (1%), and adult/equilibrium networks get the tightest bar
+(0.6%). This implements the "grow fast past baby, picky in middle, slower
 adult" intent by requiring larger improvements early and smaller
 improvements later.
 
+When `currentNeurons` is supplied for a baby/embryo network, the fraction is
+resolved from `NGE_EXHAUSTION_TIER_FRACTIONS` so tiny newborn networks get a
+lower bar than larger pre-juvenile networks. Omitting `currentNeurons`
+preserves the legacy single-value behavior.
+
 Parameters:
 - `stage` - Current NGE lifecycle stage.
+- `currentNeurons` - Optional current neuron count for baby/embryo tier
+resolution.
 
 Returns: Relative improvement fraction for the stage.
 
@@ -1734,7 +1811,7 @@ Example:
 
 ```ts
 const fraction = resolveStageFraction('baby');
-console.log(fraction); // 0.01
+console.log(fraction); // 0.02
 ```
 
 ### runNgeGrowStabilizeCycle

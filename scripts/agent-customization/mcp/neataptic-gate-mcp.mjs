@@ -124,6 +124,12 @@ const TIER_1_GATES = [
     description:
       'Checks that changed src/, scripts/agent-customization/, and scripts/mcp-semantic/ files meet their coverage baseline (100% for new files, no regression for legacy files).',
   },
+  {
+    id: 'specialist-review',
+    owner: 'specialist-review.gate.mjs',
+    description:
+      'Checks that [WIP] plans contain specialist review evidence in VALIDATION_EVIDENCE before 05-green-testing is dispatched. Requires 2-3 Tier-3 specialists to review each 04-implementing slice.',
+  },
 ];
 
 const GATES_DIR = path.join(
@@ -161,7 +167,7 @@ export function createGateTools() {
             type: 'string',
             enum: TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
             description:
-              'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, cortex-first-search, devtools-coverage, delegate-skill-coverage, or code-coverage).',
+              'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, cortex-first-search, devtools-coverage, delegate-skill-coverage, code-coverage, or specialist-review).',
           },
         },
         required: ['gate'],

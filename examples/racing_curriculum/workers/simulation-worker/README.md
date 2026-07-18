@@ -536,10 +536,13 @@ handles and a best-position team-fitness resolver.
 
 The `tier` field in the config controls two dimension switches:
 - **Car count:** Tier 1–2 allocates 2 cars (one per team); Tier 3+ allocates
-  4 cars (two per team) using the `[0, 0, 1, 1]` team layout.
-- **Controller input dimension:** Tier 1–2 produces 4-input networks; Tier 3
-  produces 91-input networks (70 base + 21 teammate-radio); Tier 4+ produces
-  103-input networks (91 Tier 3 + 4 tire-health + 8 pit/strategy channels).
+  4 cars (two per team) using the `[0, 0, 1, 1]` team layout; Tier 6 uses a
+  6-car `[0, 0, 0, 1, 1, 1]` layout.
+- **Controller input dimension:** Tier 1 produces 70-input networks; Tier 2
+  produces 77-input networks (70 base + 7 self-radio); Tier 3 produces
+  91-input networks (70 base + 21 teammate-radio); Tier 4/5 produces 103-input
+  networks (91 Tier 3 + 4 tire-health + 8 pit/strategy channels); Tier 6
+  produces 124-input networks (103 Tier 4/5 + 21 opponent-perception channels).
 
 The output dimension is 2 for Tier 1–2 (throttle + steer) and 9 for Tier 3+
 (2 control + 7 radio-write). Each car gets a distinct seed derived from the
@@ -1044,10 +1047,10 @@ fixed timestep and runs one controller inference per car.
 
 ### RaceEpisodeRunnerFrame
 
-Packed render frame augmented with the per-car unit-progress field used by the
-race-pack runner. The `progress01` buffer is intentionally not part of the
-zero-copy transfer list; it is computed locally and kept attached to the
-runner frame.
+Packed render frame augmented with the per-car unit-progress and speed fields
+used by the race-pack runner. The `progress01` and speed buffers are
+intentionally not part of the zero-copy transfer list; they are computed
+locally and kept attached to the runner frame.
 
 ### resolveRaceStepTransferList
 
@@ -1069,7 +1072,7 @@ Rules:
 - Shared buffers are deduplicated (listed only once).
 - A standard pack without `pitStatus` produces exactly
   {@link EXPECTED_TRANSFER_BUFFER_COUNT} entries.
-- The local-only `progress01` field is never transferred.
+- The local-only `progress01` and speed fields are never transferred.
 
 Parameters:
 - `frame` - Packed render frame whose buffers will be transferred.
@@ -1449,7 +1452,7 @@ for a given car.
 ### createTier5RacePack
 
 ```ts
-createTier5RacePack(): RacingRenderFrame & { pitStatus: Int16Array<ArrayBufferLike>; focusCarIndex: number; }
+createTier5RacePack(): RacingRenderFrame & { pitStatus: Int16Array<ArrayBufferLike>; focusCarIndex: number; forwardSpeedWorld: Float32Array<ArrayBufferLike>; lateralSpeedWorld: Float32Array<ArrayBufferLike>; speedWorld: Float32Array<ArrayBufferLike>; }
 ```
 
 Creates the canonical packed Tier 5 race frame for a 3v3 evaluation slice.

@@ -436,3 +436,57 @@ describe('Tier 5 six-car genome layout', () => {
     expect(sixthGenome).toBeDefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Tier 6 red tests — opponent-perception genome layout
+// ---------------------------------------------------------------------------
+
+describe('Tier 6 opponent-perception genome layout', () => {
+  it('creates 124-input controller networks for the first tier-6 car genome', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 6,
+    });
+    const firstGenome = container.getCarGenome(0);
+
+    // Assert — Tier 6 must use 124 inputs (103 Tier 5 + 21 opponent perception)
+    expect(firstGenome.getNetwork().input).toBe(124);
+  });
+
+  it('creates 9-output controller networks for the first tier-6 car genome', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 6,
+    });
+    const firstGenome = container.getCarGenome(0);
+
+    // Assert — controller output dimension stays at 9 (2 controls + 7 radio-write)
+    expect(firstGenome.getNetwork().output).toBe(9);
+  });
+
+  it('creates six distinct genomes for a tier-6 container', async () => {
+    // Arrange
+    const service = await loadCoevolutionService();
+
+    // Act
+    const container = service.createCoevolutionContainer({
+      populationSize: 10,
+      rngSeed: 42,
+      tier: 6,
+    });
+    const genomes = container.getCarGenomes();
+
+    // Assert — Tier 6 keeps the 3v3 six-car roster
+    expect(genomes.length).toBe(6);
+  });
+});

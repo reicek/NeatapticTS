@@ -10,11 +10,22 @@
 import fs from 'fs';
 import path from 'path';
 
-import { Connection, Network, Node } from '../../../src/browser-entry.ts';
+import { Connection, Network, Node } from '../../../src/browser-entry';
 import {
   createRuntimeAdaptationEngine,
+  detectScoreWindowOscillation,
+  detectSteeringOscillation,
   evaluateRollingScoreWindow,
   evaluateRacingTrendScore,
+  RACING_COMPLEXITY_WEIGHT,
+  RACING_OSCILLATION_COMMIT_THRESHOLD,
+  RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST,
+  RACING_OSCILLATION_MIN_MEAN_STEERING,
+  RACING_OSCILLATION_MIN_NEURONS,
+  RACING_OSCILLATION_PENALTY_WEIGHT,
+  RACING_VARIANT_SCORER,
+  resolveOscillationThresholdBoost,
+  scoreRacingVariant,
 } from './runtime.adaptation';
 import * as runtimeAdaptationModule from './runtime.adaptation';
 
@@ -916,18 +927,278 @@ describe('Phase 9 Step 03 — growth speed: maxStructuralEditsPerStep wired', ()
 });
 
 // ──────────────────────────────────────────────────────────────────────
-// Phase 9 Step 03 — Red test for deferred item (AC-019, AC-043)
-// This test asserts that nge-e2e-growth.test.ts does not use .ts
-// extension in import paths. It fails because the current file uses
-// `from '../../../src/browser-entry.ts'` which triggers TS5097.
+// Phase 9 Step 03 — deferred: import path extension cleanup (AC-019, AC-043)
+// This test asserts that the current test file does not use explicit .ts
+// extensions in import paths, which keeps the source compatible with standard
+// ESM/Bundler resolution and avoids TS5097 in non-test builds.
 // ──────────────────────────────────────────────────────────────────────
 
-describe('Phase 9 Step 03 — deferred: nge-e2e-growth.test.ts import path fix', () => {
-  it('(P9S03) nge-e2e-growth.test.ts does not use .ts extension in import paths', () => {
-    const testPath = path.join(__dirname, 'nge-e2e-growth.test.ts');
+describe('Phase 9 Step 03 — deferred: runtime.adaptation.test.ts import path fix', () => {
+  it('(P9S03) runtime.adaptation.test.ts does not use .ts extension in import paths', () => {
+    const testPath = path.join(__dirname, 'runtime.adaptation.test.ts');
     const testSource = fs.readFileSync(testPath, 'utf8');
     const hasTsExtension = /from\s+['"][^'"]*\.ts['"]/.test(testSource);
 
     expect(hasTsExtension).toBe(false);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Workstream B — Red tests for racing-side oscillation detection.
+// These tests fail because the helpers, variant scorer, and tuning
+// constants are not yet exported from runtime.adaptation.ts.
+// ──────────────────────────────────────────────────────────────────────
+
+describe('detectSteeringOscillation helper', () => {
+  it('returns 0 for smooth steering outputs with the same sign', () => {
+    expect(detectSteeringOscillation([0.2, 0.3, 0.4, 0.5])).toBe(0);
+  });
+
+  it('returns a high value for alternating steering outputs', () => {
+    const metric = detectSteeringOscillation([0.5, -0.5, 0.5, -0.5]);
+    expect(metric).toBeGreaterThan(0.5);
+  });
+
+  it('returns 0 when fewer than 3 steering outputs are provided', () => {
+    expect(detectSteeringOscillation([0.5, -0.5])).toBe(0);
+  });
+
+  it('returns 0 for all-zero steering outputs', () => {
+    expect(detectSteeringOscillation([0, 0, 0, 0])).toBe(0);
+  });
+
+  it('returns 0 for gentle corrections below the magnitude deadband', () => {
+    // Small alternating values model a smooth S-curve correction; they must
+    // not be treated like aggressive zig-zags.
+    expect(detectSteeringOscillation([0.05, -0.05, 0.05, -0.05])).toBe(0);
+  });
+
+  it('returns a non-zero metric for alternating outputs above the magnitude deadband', () => {
+    const metric = detectSteeringOscillation([0.2, -0.2, 0.2, -0.2]);
+
+    expect(metric).toBeGreaterThan(0);
+  });
+});
+
+describe('detectScoreWindowOscillation helper', () => {
+  it('returns 0 for monotonically increasing scores', () => {
+    expect(detectScoreWindowOscillation([1, 2, 3, 4, 5])).toBe(0);
+  });
+
+  it('returns a high value for alternating up/down scores', () => {
+    const metric = detectScoreWindowOscillation([1, 3, 1, 3, 1]);
+    expect(metric).toBeGreaterThan(0.5);
+  });
+
+  it('returns 0 when fewer than 4 score values are provided', () => {
+    expect(detectScoreWindowOscillation([1, 2, 3])).toBe(0);
+  });
+});
+
+describe('RACING_VARIANT_SCORER oscillation penalty', () => {
+  const zeroTarget = [0, 0, 0, 0];
+
+  it('scores oscillating steering outputs lower than smooth outputs of the same magnitude', () => {
+    const smooth = RACING_VARIANT_SCORER(
+      [
+        [0.5, 0.5],
+        [0.5, 0.5],
+        [0.5, 0.5],
+        [0.5, 0.5],
+      ],
+      zeroTarget,
+    );
+    const oscillating = RACING_VARIANT_SCORER(
+      [
+        [0.5, -0.5],
+        [-0.5, 0.5],
+        [0.5, -0.5],
+        [-0.5, 0.5],
+      ],
+      zeroTarget,
+    );
+
+    expect(oscillating).toBeLessThan(smooth);
+  });
+
+  it('penalizes proportionally to baseScore times oscillation metric times weight', () => {
+    const outputs = [
+      [0.5, -0.5],
+      [-0.5, 0.5],
+      [0.5, -0.5],
+      [-0.5, 0.5],
+    ];
+    const score = RACING_VARIANT_SCORER(outputs, zeroTarget);
+    const steering = outputs.map((output) => output[1]);
+    const metric = detectSteeringOscillation(steering);
+
+    // Every output has mean absolute magnitude 0.5 and zero trend, so the
+    // internal baseScore is exactly 0.5.  The score also receives a tiny
+    // behavioral-complexity bonus because the outputs are not uniform,
+    // so the expected score is baseScore + complexityBonus - penalty.
+    const baseScore = 0.5;
+    const behavioralComplexity = 0.5; // total variance across both output dimensions
+    const complexityBonus = behavioralComplexity * RACING_COMPLEXITY_WEIGHT;
+    const expectedPenalty =
+      baseScore * metric * RACING_OSCILLATION_PENALTY_WEIGHT;
+    const expectedScore = baseScore + complexityBonus - expectedPenalty;
+
+    expect(score).toBeCloseTo(expectedScore, 10);
+  });
+});
+
+describe('scoreRacingVariant tier-aware oscillation penalty', () => {
+  const zeroTarget = [0, 0, 0, 0];
+  const smoothOutputs = [
+    [0.5, 0.5],
+    [0.5, 0.5],
+    [0.5, 0.5],
+    [0.5, 0.5],
+  ];
+  const oscillatingOutputs = [
+    [0.5, -0.5],
+    [-0.5, 0.5],
+    [0.5, -0.5],
+    [-0.5, 0.5],
+  ];
+
+  it('does not penalize oscillation for networks below RACING_OSCILLATION_MIN_NEURONS', () => {
+    const smooth = scoreRacingVariant(
+      smoothOutputs,
+      zeroTarget,
+      RACING_OSCILLATION_MIN_NEURONS - 1,
+    );
+    const oscillating = scoreRacingVariant(
+      oscillatingOutputs,
+      zeroTarget,
+      RACING_OSCILLATION_MIN_NEURONS - 1,
+    );
+
+    expect(oscillating).not.toBeLessThan(smooth);
+  });
+
+  it('penalizes oscillation for networks at or above RACING_OSCILLATION_MIN_NEURONS', () => {
+    const smooth = scoreRacingVariant(
+      smoothOutputs,
+      zeroTarget,
+      RACING_OSCILLATION_MIN_NEURONS,
+    );
+    const oscillating = scoreRacingVariant(
+      oscillatingOutputs,
+      zeroTarget,
+      RACING_OSCILLATION_MIN_NEURONS,
+    );
+
+    expect(oscillating).toBeLessThan(smooth);
+  });
+});
+
+describe('resolveOscillationThresholdBoost', () => {
+  it('returns 0 for networks below RACING_OSCILLATION_MIN_NEURONS', () => {
+    expect(
+      resolveOscillationThresholdBoost(1.0, RACING_OSCILLATION_MIN_NEURONS - 1),
+    ).toBe(0);
+  });
+
+  it('returns 0 when the oscillation metric is at or below the commit gate', () => {
+    expect(
+      resolveOscillationThresholdBoost(
+        RACING_OSCILLATION_COMMIT_THRESHOLD,
+        RACING_OSCILLATION_MIN_NEURONS,
+      ),
+    ).toBe(0);
+    expect(
+      resolveOscillationThresholdBoost(
+        RACING_OSCILLATION_COMMIT_THRESHOLD - 0.1,
+        RACING_OSCILLATION_MIN_NEURONS,
+      ),
+    ).toBe(0);
+  });
+
+  it('returns the small additive boost for child-tier networks above the commit gate', () => {
+    expect(
+      resolveOscillationThresholdBoost(
+        RACING_OSCILLATION_COMMIT_THRESHOLD + 0.01,
+        RACING_OSCILLATION_MIN_NEURONS,
+      ),
+    ).toBe(RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST);
+  });
+});
+
+describe('evaluateRacingTrendScore with oscillation penalty', () => {
+  it('scores an oscillating score-history lower than a monotonic history', () => {
+    const network = new Network(4, 2, { seed: 42 });
+    const oscillating = evaluateRacingTrendScore(network, [1, 3, 1, 3, 1]);
+    const monotonic = evaluateRacingTrendScore(network, [1, 2, 3, 4, 5]);
+
+    expect(oscillating).toBeLessThan(monotonic);
+  });
+
+  it('applies the oscillation penalty only once the network reaches RACING_OSCILLATION_MIN_NEURONS', () => {
+    const smallNetwork = new Network(4, 2, { seed: 42 });
+    const largeNetwork = new Network(200, 1, { seed: 42 });
+    // Same oscillating history for both networks.  The trend is negative so
+    // the complexity bonus is gated off, isolating the oscillation-penalty
+    // effect to the neuron-count gate.
+    const oscillatingHistory = [5, 3, 5, 3, 1];
+
+    const smallScore = evaluateRacingTrendScore(
+      smallNetwork,
+      oscillatingHistory,
+    );
+    const largeScore = evaluateRacingTrendScore(
+      largeNetwork,
+      oscillatingHistory,
+    );
+
+    expect(largeScore).toBeLessThan(smallScore);
+  });
+});
+
+describe('Racing oscillation constants', () => {
+  it('exports RACING_OSCILLATION_PENALTY_WEIGHT equal to 0.25', () => {
+    expect(RACING_OSCILLATION_PENALTY_WEIGHT).toBe(0.25);
+  });
+
+  it('exports RACING_OSCILLATION_COMMIT_THRESHOLD equal to 0.5', () => {
+    expect(RACING_OSCILLATION_COMMIT_THRESHOLD).toBe(0.5);
+  });
+
+  it('exports RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST equal to 0.03', () => {
+    expect(RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST).toBe(0.03);
+  });
+
+  it('exports RACING_OSCILLATION_MIN_MEAN_STEERING equal to 0.15', () => {
+    expect(RACING_OSCILLATION_MIN_MEAN_STEERING).toBe(0.15);
+  });
+
+  it('exports RACING_OSCILLATION_MIN_NEURONS equal to 200', () => {
+    expect(RACING_OSCILLATION_MIN_NEURONS).toBe(200);
+  });
+});
+
+describe('runtime adaptation growth threshold oscillation integration', () => {
+  const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
+
+  it('uses the maximum of steering and score-window oscillation for the growth threshold', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes('Math.max(steeringOscillation, scoreOscillation)'),
+    ).toBe(true);
+  });
+});
+
+describe('runtime adaptation scoreFn wiring', () => {
+  const sourcePath = path.join(__dirname, 'runtime.adaptation.ts');
+
+  it('passes the live candidate neuron count to scoreRacingVariant', () => {
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes(
+        'scoreRacingVariant(outputs, target, tickInput.network.nodes.length)',
+      ),
+    ).toBe(true);
   });
 });

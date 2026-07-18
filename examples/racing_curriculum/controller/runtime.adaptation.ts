@@ -53,12 +53,12 @@ import type {
   AccelerationConfig,
   VariantScorer,
 } from '../../../src/acceleration/acceleration.types';
-import { Connection, Network } from '../../../src/browser-entry.ts';
+import { Connection, Network } from '../../../src/browser-entry';
 import {
   restoreNetworkSnapshot,
   runNgeLifecycle,
 } from '../../../src/neat/neat.nge-lifecycle';
-import { advanceGrowthHysteresis } from '../../../src/neat/nge-juvenile/neat.nge-juvenile.ts';
+import { advanceGrowthHysteresis } from '../../../src/neat/nge-juvenile/neat.nge-juvenile';
 import {
   computeGrowthThrottle,
   resolveAdaptiveHysteresis,
@@ -70,7 +70,7 @@ import type {
   NgeHysteresisState,
   NgeModuleMetricsSnapshot,
   NgePruneBudget,
-} from '../../../src/neat/nge-juvenile/neat.nge-juvenile.types.ts';
+} from '../../../src/neat/nge-juvenile/neat.nge-juvenile.types';
 /** Cadence modes supported by the runtime adaptation engine. */
 export type RuntimeAdaptationCadenceMode =
   'every_tick' | 'every_n_ticks' | 'lap_boundary' | 'sector_boundary';
@@ -296,7 +296,7 @@ function reduceOutputToScalar(outputVector: readonly number[]): number {
 }
 
 /**
- * Racing-specific variant scorer for the NGE grow-stabilize cycle.
+ * Internal racing variant scorer with an explicit neuron-count gate.
  *
  * The network emits a 2-D controller vector (`[throttle, steering]`), but the
  * grow-stabilize evaluator expects the baseline and variant scores to share the
@@ -307,39 +307,23 @@ function reduceOutputToScalar(outputVector: readonly number[]): number {
  * non-negative trend). Higher scores mean better driving quality, so a variant
  * can win the commit decision when it genuinely outperforms the baseline.
  *
- * The `target` argument is part of the {@link VariantScorer} contract but is
+ * The `target` argument mirrors the {@link VariantScorer} contract but is
  * intentionally not used here; the score is derived from the candidate
  * network's own forward-pass outputs so that it lives in the same space as
  * the pre-mutation baseline.
  *
- * @example
- * ```ts
- * const outputs = [
- *   [0.5, -0.1], // throttle, steering
- *   [0.6, 0.0],
- * ];
- * const score = RACING_VARIANT_SCORER(outputs, [0]);
- * // score is a positive driving-quality proxy; higher is better
- * ```
- *
- * ## Background reading
- *
- * - NEAT and topology-evolving neuroevolution:
- *   K. O. Stanley and R. Miikkulainen, "Evolving Neural Networks through
- *   Augmenting Topologies," *Evolutionary Computation*, vol. 10, no. 2,
- *   pp. 99-127, 2002.
- *   [NEAT publications](https://nn.cs.utexas.edu/?neat-papers)
- * - Growth/stabilization as an explore–exploit tradeoff:
- *   [Wikipedia — Exploration–exploitation dilemma](https://en.wikipedia.org/wiki/Exploration%E2%80%93exploitation_dilemma)
- *
  * @param outputs - Stack of network output vectors, one per input sample.
  * @param _target - Scalar target value for each sample (unused).
+ * @param neuronCount - Live neuron count used to tier-gate the oscillation
+ *   penalty.  Penalty is skipped below
+ *   {@link RACING_OSCILLATION_MIN_NEURONS}.
  * @returns Positive racing-trend quality score (higher is better).
  */
-// The `target` parameter is required by the VariantScorer contract but unused
-// because the racing score is derived from the candidate's own outputs.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const RACING_VARIANT_SCORER: VariantScorer = (outputs, _target) => {
+export function scoreRacingVariant(
+  outputs: readonly number[][],
+  _target: readonly number[],
+  neuronCount: number = Number.POSITIVE_INFINITY,
+): number {
   if (outputs.length === 0) {
     return 0;
   }
@@ -363,8 +347,62 @@ const RACING_VARIANT_SCORER: VariantScorer = (outputs, _target) => {
     ? behavioralComplexity * RACING_COMPLEXITY_WEIGHT
     : 0;
 
-  return scoreMean + scoreTrend * 0.5 + complexityBonus;
-};
+  // Step 3: penalize rapid steering oscillation so the adaptation loop
+  // rewards sustained progress instead of noisy back-and-forth control.
+  // The penalty is proportional to the base score so it damps oscillation
+  // without inverting a positive score into a negative one.  The penalty is
+  // only applied once a network has reached the child tier size (200+ neurons);
+  // newborn and baby networks naturally oscillate while learning to steer and
+  // must not be trapped by the penalty.
+  const baseScore = scoreMean + scoreTrend * 0.5;
+  const steeringAngles = outputs.map((outputVector) => outputVector[1] ?? 0);
+  const steeringOscillation = detectSteeringOscillation(steeringAngles);
+  const scoreOscillation = detectScoreWindowOscillation(scalarWindow);
+  const oscillationMetric = Math.max(steeringOscillation, scoreOscillation);
+  const applyOscillationPenalty = neuronCount >= RACING_OSCILLATION_MIN_NEURONS;
+  const oscillationPenalty = applyOscillationPenalty
+    ? baseScore * oscillationMetric * RACING_OSCILLATION_PENALTY_WEIGHT
+    : 0;
+
+  return baseScore + complexityBonus - oscillationPenalty;
+}
+
+/**
+ * Racing-specific variant scorer for the NGE grow-stabilize cycle.
+ *
+ * This is a {@link VariantScorer}-compatible wrapper around
+ * {@link scoreRacingVariant}.  Because the variant-scorer contract only passes
+ * `outputs` and `target`, the wrapper uses a default neuron count of
+ * `Number.POSITIVE_INFINITY` so direct callers continue to apply the
+ * oscillation penalty.  The runtime engine calls {@link scoreRacingVariant}
+ * directly with the live candidate size to tier-gate young networks.
+ *
+ * @example
+ * ```ts
+ * const outputs = [
+ *   [0.5, -0.1], // throttle, steering
+ *   [0.6, 0.0],
+ * ];
+ * const score = RACING_VARIANT_SCORER(outputs, [0]);
+ * // score is a positive driving-quality proxy; higher is better
+ * ```
+ *
+ * ## Background reading
+ *
+ * - NEAT and topology-evolving neuroevolution:
+ *   K. O. Stanley and R. Miikkulainen, "Evolving Neural Networks through
+ *   Augmenting Topologies," *Evolutionary Computation*, vol. 10, no. 2,
+ *   pp. 99-127, 2002.
+ *   [NEAT publications](https://nn.cs.utexas.edu/?neat-papers)
+ * - Growth/stabilization as an explore–exploit tradeoff:
+ *   [Wikipedia — Exploration–exploitation dilemma](https://en.wikipedia.org/wiki/Exploration%E2%80%93exploitation_dilemma)
+ *
+ * @param outputs - Stack of network output vectors, one per input sample.
+ * @param target - Scalar target value for each sample (unused).
+ * @returns Positive racing-trend quality score (higher is better).
+ */
+export const RACING_VARIANT_SCORER: VariantScorer = (outputs, target) =>
+  scoreRacingVariant(outputs, target, Number.POSITIVE_INFINITY);
 
 /**
  * Creates a reusable per-tick adaptation engine for racing runtime loops.
@@ -604,7 +642,8 @@ export function createRuntimeAdaptationEngine(
         baselineScore: preMutationBaselineScore,
         inputs: trainingInputs,
         target: trainingTarget,
-        scoreFn: RACING_VARIANT_SCORER,
+        scoreFn: (outputs, target) =>
+          scoreRacingVariant(outputs, target, tickInput.network.nodes.length),
         lifecycleStage: 'baby',
         config: {
           maxStructuralEditsPerStep: limits.maxStructuralEditsPerStep,
@@ -780,6 +819,26 @@ export function createRuntimeAdaptationEngine(
       // phase will tune; requiring an immediate score improvement would
       // rollback the first growth and leave the network stuck forever.
       const isFirstGrowth = !hasGrownBefore;
+      // Boost the improvement threshold when either the evidence window is
+      // oscillating or the candidate network's steering outputs are zig-zagging,
+      // making it harder to commit structural growth during unstable reward
+      // windows.
+      const candidateOutputs = collectForwardPassOutputs(
+        tickInput.network,
+        evidenceWindow,
+      );
+      const steeringAngles = candidateOutputs.map(
+        (outputVector) => outputVector[1] ?? 0,
+      );
+      const steeringOscillation = detectSteeringOscillation(steeringAngles);
+      const scoreOscillation = detectScoreWindowOscillation(evidenceWindow);
+      const oscillationMetric = Math.max(steeringOscillation, scoreOscillation);
+      const effectiveImprovementThreshold =
+        improvementThreshold +
+        resolveOscillationThresholdBoost(
+          oscillationMetric,
+          tickInput.network.nodes.length,
+        );
       // Trust the grow-stabilize cycle's commit decision. The cycle already
       // applied the structural mutation in-place; re-evaluating with a fixed
       // improvement threshold here would roll back valid growth. We still
@@ -788,7 +847,7 @@ export function createRuntimeAdaptationEngine(
         safetyChecksPass &&
         (isFirstGrowth ||
           cycleResult.committed ||
-          improvement >= improvementThreshold);
+          improvement >= effectiveImprovementThreshold);
 
       // Commit or rollback based on score improvement.
       if (shouldCommit) {
@@ -937,7 +996,49 @@ export function evaluateRollingScoreWindow(
  * improvement threshold.  The weight is kept small so the driving-quality
  * trend remains the dominant signal.
  */
-const RACING_COMPLEXITY_WEIGHT = 0.000_1;
+export const RACING_COMPLEXITY_WEIGHT = 0.000_1;
+
+/**
+ * Weight applied to steering- and score-window oscillation penalties in the
+ * racing trend evaluator.  A positive weight penalizes wild steering swings and
+ * reward oscillation, steering evolution toward smooth, consistent driving
+ * behavior.
+ */
+export const RACING_OSCILLATION_PENALTY_WEIGHT = 0.25;
+
+/**
+ * Oscillation gate for the growth-commit threshold boost.  The small additive
+ * {@link RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST} is only applied when
+ * the maximum of steering and score-window oscillation exceeds this value;
+ * below the gate the threshold is left unchanged.  This is a gate, not a
+ * multiplier.
+ */
+export const RACING_OSCILLATION_COMMIT_THRESHOLD = 0.5;
+
+/**
+ * Small additive boost added to the growth commit threshold when the
+ * oscillation metric is above {@link RACING_OSCILLATION_COMMIT_THRESHOLD}.  It
+ * is not multiplied by the metric; it is a fixed nudge that makes structural
+ * commits slightly harder during unstable reward windows without creating a
+ * death spiral for young networks.
+ */
+export const RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST = 0.03;
+
+/**
+ * Minimum live neuron count at which oscillation penalties and the growth-commit
+ * threshold boost are applied.  Newborn and baby networks (< 200 neurons)
+ * naturally oscillate while learning to steer, so the adaptation loop must not
+ * penalize them until they reach the child tier.
+ */
+export const RACING_OSCILLATION_MIN_NEURONS = 200;
+
+/**
+ * Minimum mean absolute steering magnitude required for steering oscillation
+ * to contribute to the oscillation metric.  Gentle corrections below this
+ * deadband are treated as smooth steering, so legitimate S-curves through
+ * chicanes are not penalized the same as aggressive zig-zags.
+ */
+export const RACING_OSCILLATION_MIN_MEAN_STEERING = 0.15;
 
 /**
  * Maximum number of sample observations drawn from the score history for the
@@ -946,6 +1047,141 @@ const RACING_COMPLEXITY_WEIGHT = 0.000_1;
  * non-trivial mutations.
  */
 const MAX_FORWARD_PASS_SAMPLES = 5;
+
+/**
+ * Resolves the oscillation-driven additive boost for the growth-commit
+ * improvement threshold.  The boost is only returned when the network has
+ * reached the child tier (200+ neurons) and the oscillation metric is above the
+ * commit gate; otherwise it returns zero so young or smooth networks are not
+ * saddled with an extra growth bar.
+ *
+ * @param oscillationMetric - Maximum of steering and score-window oscillation.
+ * @param neuronCount - Live neuron count of the candidate network.
+ * @returns Additive threshold boost (0 or
+ *   {@link RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST}).
+ */
+export function resolveOscillationThresholdBoost(
+  oscillationMetric: number,
+  neuronCount: number,
+): number {
+  if (neuronCount < RACING_OSCILLATION_MIN_NEURONS) {
+    return 0;
+  }
+
+  if (oscillationMetric <= RACING_OSCILLATION_COMMIT_THRESHOLD) {
+    return 0;
+  }
+
+  return RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST;
+}
+
+/**
+ * Detects steering oscillation from a window of steering angles.  A series is
+ * considered oscillating when the number of sign changes exceeds a small,
+ * length-scaled threshold and the mean steering magnitude is above a deadband,
+ * which catches aggressive zig-zags without penalizing gentle corrections or
+ * legitimate S-curves through chicanes.
+ *
+ * @param angles - Recent steering outputs in chronological order.
+ * @returns Oscillation metric in [0, 1]; 0 means smooth steering and values
+ *   near 1 indicate strong back-and-forth swings.
+ */
+export function detectSteeringOscillation(angles: readonly number[]): number {
+  const length = angles.length;
+  if (length <= 2) {
+    return 0;
+  }
+
+  const meanMagnitude =
+    angles.reduce((sum, angle) => sum + Math.abs(angle), 0) / length;
+  if (meanMagnitude < RACING_OSCILLATION_MIN_MEAN_STEERING) {
+    return 0;
+  }
+
+  let crossings = 0;
+  for (let i = 1; i < length; i++) {
+    const previous = angles[i - 1]!;
+    const current = angles[i]!;
+    if (previous === 0 || current === 0) {
+      continue;
+    }
+    if (Math.sign(previous) !== Math.sign(current)) {
+      crossings++;
+    }
+  }
+
+  return Math.min(1, crossings / (length * 0.5));
+}
+
+/**
+ * Convert one history entry into a scalar driving-quality score.
+ *
+ * Legacy numeric entries pass through unchanged so existing callers and the
+ * default engine can keep using raw score windows.  Composite signals are
+ * weighted so that better progress, speed, and alignment increase the score,
+ * while a larger off-track penalty decreases it.
+ *
+ * @param entry - Numeric score or composite driving-quality signal.
+ * @returns Scalar quality value for trend/mean scoring.
+ */
+function toDrivingQuality(entry: number | RacingQualitySignal): number {
+  if (typeof entry === 'number') {
+    return entry;
+  }
+
+  return (
+    entry.trackProgress * 0.35 +
+    entry.forwardSpeed * 0.25 +
+    entry.headingAlignment * 0.3 -
+    entry.offTrackPenalty * 0.3 +
+    (entry.physicsReward ?? 0) * 0.5
+  );
+}
+
+/**
+ * Detects score-window oscillation from a window of scalar scores or quality
+ * signals.  The series is considered oscillating when the number of direction
+ * changes (peaks or troughs) exceeds a length-scaled threshold.
+ *
+ * @param scores - Recent scores in chronological order.
+ * @returns Oscillation metric in [0, 1]; 0 means stable scores and values near
+ *   1 indicate strong up/down reward swings.
+ */
+export function detectScoreWindowOscillation(
+  scores: readonly (number | RacingQualitySignal)[],
+): number {
+  const length = scores.length;
+  if (length < 4) {
+    return 0;
+  }
+
+  const values = scores.map((entry) => {
+    if (typeof entry === 'number') {
+      return entry;
+    }
+
+    if (entry.score !== undefined) {
+      return entry.score;
+    }
+
+    return toDrivingQuality(entry);
+  });
+
+  let peaks = 0;
+  let troughs = 0;
+  for (let i = 1; i < length - 1; i++) {
+    const previous = values[i - 1]!;
+    const current = values[i]!;
+    const next = values[i + 1]!;
+    if (previous < current && current > next) {
+      peaks++;
+    } else if (previous > current && current < next) {
+      troughs++;
+    }
+  }
+
+  return Math.min(1, (peaks + troughs) / (length * 0.5));
+}
 
 /**
  * Collects forward-pass outputs from the network by activating it on sample
@@ -1152,32 +1388,21 @@ export function evaluateRacingTrendScore(
     ? behavioralComplexity * RACING_COMPLEXITY_WEIGHT
     : 0;
 
-  return scoreMean + scoreTrend * 0.5 + complexityBonus;
-}
+  // Penalize score-window oscillation so the trend evaluator prefers stable,
+  // monotonic improvement over noisy reward swings.  The penalty is proportional
+  // to the base score so it damps oscillation without inverting the score.  Like
+  // the variant scorer, the penalty is gated to child-tier networks so young
+  // networks are not punished for the natural learning oscillations that come
+  // with learning to steer.
+  const baseScore = scoreMean + scoreTrend * 0.5;
+  const scoreOscillation = detectScoreWindowOscillation(scoreHistory);
+  const applyOscillationPenalty =
+    network.nodes.length >= RACING_OSCILLATION_MIN_NEURONS;
+  const oscillationPenalty = applyOscillationPenalty
+    ? baseScore * scoreOscillation * RACING_OSCILLATION_PENALTY_WEIGHT
+    : 0;
 
-/**
- * Convert one history entry into a scalar driving-quality score.
- *
- * Legacy numeric entries pass through unchanged so existing callers and the
- * default engine can keep using raw score windows.  Composite signals are
- * weighted so that better progress, speed, and alignment increase the score,
- * while a larger off-track penalty decreases it.
- *
- * @param entry - Numeric score or composite driving-quality signal.
- * @returns Scalar quality value for trend/mean scoring.
- */
-function toDrivingQuality(entry: number | RacingQualitySignal): number {
-  if (typeof entry === 'number') {
-    return entry;
-  }
-
-  return (
-    entry.trackProgress * 0.35 +
-    entry.forwardSpeed * 0.25 +
-    entry.headingAlignment * 0.3 -
-    entry.offTrackPenalty * 0.3 +
-    (entry.physicsReward ?? 0) * 0.5
-  );
+  return baseScore + complexityBonus - oscillationPenalty;
 }
 
 function resolveCadenceOptions(

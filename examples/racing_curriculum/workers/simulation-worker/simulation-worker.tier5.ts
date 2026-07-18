@@ -63,6 +63,9 @@ const NO_CAR_INDEX = 255;
 export function createTier5RacePack(): RacingRenderFrame & {
   pitStatus: Int16Array;
   focusCarIndex: number;
+  forwardSpeedWorld: Float32Array;
+  lateralSpeedWorld: Float32Array;
+  speedWorld: Float32Array;
 } {
   const pitStatus = new Int16Array(PIT_STATUS_CHANNEL_COUNT);
   pitStatus[0] = NO_CAR_INDEX;
@@ -85,6 +88,10 @@ export function createTier5RacePack(): RacingRenderFrame & {
     // Step 2: Pin team ownership to `[A0, A1, A2, B0, B1, B2]` for every consumer.
     carTeam: Uint8Array.from(TIER_FIVE_TEAM_LAYOUT),
     carMode: new Uint8Array(TIER_FIVE_AGENT_COUNT),
+    // Step 2b: Allocate speed lanes required by Tier 6 opponent-perception slots.
+    forwardSpeedWorld: new Float32Array(TIER_FIVE_AGENT_COUNT),
+    lateralSpeedWorld: new Float32Array(TIER_FIVE_AGENT_COUNT),
+    speedWorld: new Float32Array(TIER_FIVE_AGENT_COUNT),
     // Step 3: Allocate the shared transport slabs: tires, radio rows, and pit shelf.
     tireState: new Float32Array(TIER_FIVE_TIRE_STATE_SIZE).fill(1),
     radioField: new Float32Array(TIER_FIVE_RADIO_FIELD_SIZE),

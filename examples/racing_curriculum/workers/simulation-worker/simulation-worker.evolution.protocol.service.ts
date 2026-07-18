@@ -611,6 +611,7 @@ export function routeRacingWorkerProtocolMessage(
     const controllerNetworks: RaceControllerNetwork[] = carGenomes.map(
       (genome) => ({
         activate: (inputs: number[]) => genome.activate(inputs),
+        input: genome.inputSize,
       }),
     );
 

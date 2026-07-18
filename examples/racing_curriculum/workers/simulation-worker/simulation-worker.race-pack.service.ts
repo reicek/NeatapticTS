@@ -83,7 +83,9 @@ import { decayTireState } from '../../environment/environment.step.service';
 import {
   assembleTier4Observation,
   assembleTier5Observation,
+  assembleTier6Observation,
   derivePerCarObservationState,
+  TIER6_TOTAL_INPUT_SIZE,
   type RacingObservationState,
 } from '../../controller/observation.assembler';
 import type {
@@ -230,6 +232,8 @@ function extractNetworkPayloadsFromSnapshot(
 
 /** Minimal controller handle used inside a race episode runner. */
 export type RaceControllerNetwork = {
+  /** Controller input dimension used to infer the active observation tier. */
+  readonly input: number;
   /** Runs inference and returns the controller's output vector. */
   activate(inputs: number[]): number[];
 };
@@ -249,14 +253,20 @@ export type RaceAdaptationContext = {
 };
 
 /**
- * Packed render frame augmented with the per-car unit-progress field used by the
- * race-pack runner. The `progress01` buffer is intentionally not part of the
- * zero-copy transfer list; it is computed locally and kept attached to the
- * runner frame.
+ * Packed render frame augmented with the per-car unit-progress and speed fields
+ * used by the race-pack runner. The `progress01` and speed buffers are
+ * intentionally not part of the zero-copy transfer list; they are computed
+ * locally and kept attached to the runner frame.
  */
 type RaceEpisodeRunnerFrame = RacingRenderFrame & {
   /** Unit progress [0, 1] along the current lap for each car. */
   progress01: Float32Array;
+  /** Signed forward speed in world units per second. */
+  forwardSpeedWorld: Float32Array;
+  /** Signed lateral speed in world units per second. */
+  lateralSpeedWorld: Float32Array;
+  /** Unsigned world speed in world units per second. */
+  speedWorld: Float32Array;
 };
 
 /**
@@ -391,7 +401,7 @@ export function createDeterministicRacePack(
  * - Shared buffers are deduplicated (listed only once).
  * - A standard pack without `pitStatus` produces exactly
  *   {@link EXPECTED_TRANSFER_BUFFER_COUNT} entries.
- * - The local-only `progress01` field is never transferred.
+ * - The local-only `progress01` and speed fields are never transferred.
  *
  * @param frame - Packed render frame whose buffers will be transferred.
  * @returns Ordered list of `ArrayBuffer` references for postMessage transfer.
@@ -561,6 +571,13 @@ export function createRaceEpisodeRunner(
       );
       const currentSample = track.splineSamples[currentSampleIndex]!;
 
+      // Default the signed speed channels to zero before any off-track or pit
+      // guards so stopped or off-track cars never leak stale velocities into
+      // Tier 6 opponent-perception slots.
+      runnerState.frame.forwardSpeedWorld[carIndex] = 0;
+      runnerState.frame.lateralSpeedWorld[carIndex] = 0;
+      runnerState.frame.speedWorld[carIndex] = 0;
+
       if (distanceFromCenterline > currentSample.width / 2) {
         offTrackCounter[carIndex] += 1;
 
@@ -587,6 +604,14 @@ export function createRaceEpisodeRunner(
           MAX_FORWARD_SPEED_UNITS_PER_SECOND *
           FIXED_TIMESTEP_SECONDS;
         distanceAlongTrack[carIndex] += forwardStep;
+
+        // Step 4b: Record signed speed channels used by Tier 6 opponent perception.
+        runnerState.frame.forwardSpeedWorld[carIndex] =
+          throttle * gripMultiplier * MAX_FORWARD_SPEED_UNITS_PER_SECOND;
+        runnerState.frame.lateralSpeedWorld[carIndex] = 0;
+        runnerState.frame.speedWorld[carIndex] = Math.abs(
+          runnerState.frame.forwardSpeedWorld[carIndex],
+        );
 
         const newCenterline = resolveTrackPointAtDistance(
           distanceAlongTrack[carIndex],
@@ -690,6 +715,9 @@ export function createRaceEpisodeRunner(
         carY: runnerState.frame.carY[i],
         carHeading: runnerState.frame.carHeading[i],
         teamIndex: runnerState.frame.carTeam[i]! as 0 | 1,
+        forwardSpeedWorld: runnerState.frame.forwardSpeedWorld[i],
+        lateralSpeedWorld: runnerState.frame.lateralSpeedWorld[i],
+        speedWorld: runnerState.frame.speedWorld[i],
         tireState: [
           runnerState.frame.tireState[tireOffset],
           runnerState.frame.tireState[tireOffset + 1],
@@ -702,17 +730,17 @@ export function createRaceEpisodeRunner(
   }
 
   /**
-   * Resolves the 103-channel Tier 4/5 observation vector for one car.
+   * Resolves the tiered observation vector for one car.
    *
-   * The observation is assembled from the pre-physics, pre-decay state so
-   * the tire channels at `[91..94]` capture the car's current health
-   * *before* this tick's degradation is applied, and channels `[95..102]` carry
-   * pit/strategy context. This ordering lets the controller observe tire wear
-   * and pit state before deciding whether to push, lift off, or pit.
+   * Tier 4/5 emits the byte-stable 103-channel layout; Tier 6 appends 21
+   * opponent-perception channels for a 124-channel vector. The observation is
+   * assembled from the pre-physics, pre-decay state so the tire channels at
+   * `[91..94]` capture the car's current health *before* this tick's
+   * degradation is applied, and channels `[95..102]` carry pit/strategy context.
    *
    * @param carIndex - Index of the car to observe.
    * @param cars - Ordered car roster from the current frame state.
-   * @returns 103-element observation array (91 Tier 3 + 4 tire health + 8 pit/strategy).
+   * @returns Observation array for the active episode tier.
    */
   function resolvePerCarObservation(
     carIndex: number,
@@ -725,12 +753,16 @@ export function createRaceEpisodeRunner(
       teamIndex,
       tireOffset,
     );
+    const carState = cars[carIndex]!;
     const envState: RacingObservationState = {
       tick: runnerState.frame.tick,
       carX: runnerState.frame.carX[carIndex],
       carY: runnerState.frame.carY[carIndex],
       carHeading: runnerState.frame.carHeading[carIndex],
       teamIndex,
+      forwardSpeedWorld: carState.forwardSpeedWorld,
+      lateralSpeedWorld: carState.lateralSpeedWorld,
+      speedWorld: carState.speedWorld,
       tireState: [
         runnerState.frame.tireState[tireOffset],
         runnerState.frame.tireState[tireOffset + 1],
@@ -742,11 +774,36 @@ export function createRaceEpisodeRunner(
       progress01: runnerState.frame.progress01[carIndex],
     };
     const perCarState = derivePerCarObservationState(envState, carIndex);
-    const observation =
-      agentCount >= TIER_FIVE_CAR_COUNT
-        ? assembleTier5Observation(perCarState, track)
-        : assembleTier4Observation(perCarState, track);
+    const observation = resolveTieredObservation(perCarState);
     return Array.from(observation);
+  }
+
+  /**
+   * Routes the derived per-car observation to the assembler matching the active
+   * episode tier. Tier 6 is inferred from the first controller network's input
+   * dimension so the existing `RaceControllerNetwork` seam does not need to
+   * change; when the dimension is unavailable the six-car path defaults to the
+   * byte-stable Tier 5 layout.
+   *
+   * @param perCarState - Observation state scoped to the current car.
+   * @returns Assembled observation vector for the current episode tier.
+   */
+  function resolveTieredObservation(
+    perCarState: RacingObservationState,
+  ): Float32Array {
+    const firstNetwork = networks.at(0);
+    const isTier6 =
+      agentCount >= TIER_FIVE_CAR_COUNT &&
+      firstNetwork !== undefined &&
+      firstNetwork.input === TIER6_TOTAL_INPUT_SIZE;
+
+    if (isTier6) {
+      return assembleTier6Observation(perCarState, track);
+    }
+
+    return agentCount >= TIER_FIVE_CAR_COUNT
+      ? assembleTier5Observation(perCarState, track)
+      : assembleTier4Observation(perCarState, track);
   }
 
   /**
@@ -1153,6 +1210,9 @@ function buildRaceFrame(
   const lap = new Uint16Array(agentCount);
   const place = new Uint8Array(agentCount);
   const progress01 = new Float32Array(agentCount);
+  const forwardSpeedWorld = new Float32Array(agentCount);
+  const lateralSpeedWorld = new Float32Array(agentCount);
+  const speedWorld = new Float32Array(agentCount);
   const pitStatus =
     agentCount >= TIER_FIVE_CAR_COUNT
       ? new Uint8Array([NO_CAR_INDEX, 0, 0, NO_CAR_INDEX, 0, 0])
@@ -1200,6 +1260,9 @@ function buildRaceFrame(
     raceTimeMs: 0,
     done: false,
     progress01,
+    forwardSpeedWorld,
+    lateralSpeedWorld,
+    speedWorld,
     ...(pitStatus !== undefined ? { pitStatus } : {}),
   };
 }

@@ -33,6 +33,19 @@ export const TOTAL_TIER4_INPUT_SIZE =
   TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT +
   TIRE_CHANNEL_COUNT +
   PIT_STRATEGY_CHANNEL_COUNT;
+/** Number of opponent slots encoded in the Tier 6 opponent-perception tail. */
+const TIER6_OPPONENT_SLOT_COUNT = 3;
+/** Number of ego-relative channels encoded per Tier 6 opponent slot. */
+const TIER6_OPPONENT_SLOT_CHANNELS = 7;
+/**
+ * Total Tier 6 controller input size after appending the opponent-perception tail.
+ *
+ * This is `103 + 3 × 7 = 124` channels and must stay byte-stable with the
+ * coevolution service's Tier 6 controller input dimension.
+ */
+export const TIER6_TOTAL_INPUT_SIZE =
+  TOTAL_TIER4_INPUT_SIZE +
+  TIER6_OPPONENT_SLOT_COUNT * TIER6_OPPONENT_SLOT_CHANNELS;
 /** Number of teammate slots in the Tier 3 radio layout. */
 const TIER_THREE_TEAMMATE_SLOT_COUNT = 3;
 /** Number of channels per teammate radio slot. */
@@ -87,6 +100,8 @@ type ObservationExtensions = {
   memoryTrace?: readonly number[];
   radioField?: Float32Array;
   teammateRadioSlots?: readonly (Float32Array | readonly number[])[];
+  /** Optional pre-computed opponent slots for Tier 6; derived from `envState.cars` when absent. */
+  opponentPerceptionSlots?: readonly (Float32Array | readonly number[])[];
   tireState?: TireStateTuple;
 };
 
@@ -107,16 +122,19 @@ export type RacingObservationState = EnvironmentState &
  *   at `[95..102]`, producing 103 channels.
  * - `5` — The same 103-channel byte layout as Tier 4, but the 3v3 six-car seam can
  *   fully populate all three teammate-radio rows before the tire/pit tail is appended.
+ * - `6` — 103-channel Tier 4/5 base plus 21 opponent-perception channels
+ *   (3 opponent slots × 7 ego-relative channels) for a 124-channel vector.
  */
-export type ObservationTier = 1 | 2 | 3 | 4 | 5;
+export type ObservationTier = 1 | 2 | 3 | 4 | 5 | 6;
 
 /**
  * Options that select which suffix is appended to the 70-channel driving base.
  *
  * `tier` decides whether callers receive only the base observation, the seven-channel
  * self-radio tail, the 21-channel teammate-radio tail, the four-channel own-tire
- * suffix, or the 8-channel pit/strategy suffix that keeps Tier 4 and Tier 5
- * byte-stable at 103 channels.
+ * suffix, the 8-channel pit/strategy suffix that keeps Tier 4 and Tier 5
+ * byte-stable at 103 channels, or the 21-channel opponent-perception suffix that
+ * produces the Tier 6 124-channel vector.
  */
 export interface ObservationAssemblerOptions {
   /** Active curriculum tier for the controller. */
@@ -213,6 +231,10 @@ export function assembleNormalizedObservationVector(
     return assembleTier5Observation(envState, trackSpec);
   }
 
+  if (options.tier === 6) {
+    return assembleTier6Observation(envState, trackSpec);
+  }
+
   // Step 2: Append the raw seven-channel self-radio tail for Tier 2.
   const tierTwoVector = new Float32Array(
     TIER_ONE_CHANNEL_COUNT + TIER_TWO_RADIO_CHANNEL_COUNT,
@@ -271,6 +293,13 @@ export function derivePerCarObservationState(
     selectedCar.carHeading,
   );
 
+  // Step 2: Populate opponent-perception slots for Tier 6.
+  const opponentPerceptionSlots = buildOpponentPerceptionSlots(
+    envState.cars!,
+    carIndex,
+    selectedCar,
+  );
+
   return {
     ...envState,
     carX: selectedCar.carX,
@@ -279,6 +308,7 @@ export function derivePerCarObservationState(
     teamIndex: selectedCar.teamIndex,
     tireState: selectedCar.tireState,
     teammateRadioSlots,
+    opponentPerceptionSlots,
   };
 }
 
@@ -355,7 +385,8 @@ function buildTeammateRadioSlots(
  * Encodes one teammate's state into a 7-channel radio slot.
  *
  * Channel layout: [posX, posY, headingSin, speed, relOffsetX, relOffsetY, relHeadingSin].
- * All channels are normalized to [-1, 1].
+ * Position channels are normalized by {@link TRACK_POSITION_WORLD_SCALE}, speed by
+ * {@link SPEED_WORLD_SCALE}, and all channels stay within [-1, 1].
  *
  * @param teammate - The teammate car state to encode.
  * @param focalCarX - Focal car X position in world units.
@@ -377,10 +408,108 @@ function buildTeammateSlot(
     teammate.carX / TRACK_POSITION_WORLD_SCALE,
     teammate.carY / TRACK_POSITION_WORLD_SCALE,
     Math.sin(teammate.carHeading),
-    0,
+    (teammate.speedWorld ?? 0) / SPEED_WORLD_SCALE,
     relOffsetX / TRACK_POSITION_WORLD_SCALE,
     relOffsetY / TRACK_POSITION_WORLD_SCALE,
     Math.sin(relHeading),
+  ]);
+}
+
+/**
+ * Builds the opponent-perception slots for a focal car from the multi-car roster.
+ *
+ * Opponents are taken from all cars that are not the focal car and that are not
+ * on the same team as the focal car, preserving deterministic roster order.
+ * Missing slots are zero-padded by leaving them empty; the caller is expected
+ * to fill unused slots with zeros.
+ *
+ * @param cars - Ordered car roster from the environment state.
+ * @param focalCarIndex - Index of the focal car.
+ * @param focalCar - Focal car state used as the body-frame origin.
+ * @returns Array of up to three 7-channel opponent slots.
+ */
+function buildOpponentPerceptionSlots(
+  cars: readonly RacingCarState[],
+  focalCarIndex: number,
+  focalCar: RacingCarState,
+): readonly (Float32Array | readonly number[])[] {
+  const opponents = cars.filter(
+    (car, index) =>
+      index !== focalCarIndex && car.teamIndex !== focalCar.teamIndex,
+  );
+  const slots: (Float32Array | readonly number[])[] = [];
+
+  for (let slotIndex = 0; slotIndex < TIER6_OPPONENT_SLOT_COUNT; slotIndex++) {
+    const opponent = opponents[slotIndex];
+    slots.push(
+      opponent !== undefined
+        ? buildOpponentSlot(focalCar, opponent)
+        : new Float32Array(TIER6_OPPONENT_SLOT_CHANNELS),
+    );
+  }
+
+  return slots;
+}
+
+/**
+ * Encodes one opponent's state into a 7-channel ego-relative slot.
+ *
+ * Channel layout:
+ *   0. `relForwardEgo` — forward distance in the focal car's body frame,
+ *      normalized by {@link TRACK_POSITION_WORLD_SCALE}.
+ *   1. `relLeftEgo` — left distance in the focal car's body frame,
+ *      normalized by {@link TRACK_POSITION_WORLD_SCALE}.
+ *   2. `sinHeadingDeltaEgo` — sine of the opponent heading minus the focal heading.
+ *   3. `cosHeadingDeltaEgo` — cosine of the opponent heading minus the focal heading.
+ *   4. `relSpeedForwardEgo` — relative forward speed along the focal car's forward
+ *      axis, normalized by {@link SPEED_WORLD_SCALE}.
+ *   5. `relSpeedLateralEgo` — relative lateral speed along the focal car's left
+ *      axis, normalized by {@link LATERAL_SPEED_WORLD_SCALE}.
+ *   6. `directDistance` — Euclidean distance between the two cars, normalized by
+ *      {@link DISTANCE_WORLD_SCALE}.
+ *
+ * @param focalCar - Focal car state that defines the body-frame origin.
+ * @param opponentCar - Opponent car state to encode.
+ * @returns Seven-channel Float32Array with normalized ego-relative state.
+ */
+function buildOpponentSlot(
+  focalCar: RacingCarState,
+  opponentCar: RacingCarState,
+): Float32Array {
+  const dx = opponentCar.carX - focalCar.carX;
+  const dy = opponentCar.carY - focalCar.carY;
+  const focalHeading = focalCar.carHeading;
+  const headingDelta = opponentCar.carHeading - focalHeading;
+  const cosHeading = Math.cos(focalHeading);
+  const sinHeading = Math.sin(focalHeading);
+
+  const focalWorldVx =
+    (focalCar.forwardSpeedWorld ?? 0) * cosHeading -
+    (focalCar.lateralSpeedWorld ?? 0) * sinHeading;
+  const focalWorldVy =
+    (focalCar.forwardSpeedWorld ?? 0) * sinHeading +
+    (focalCar.lateralSpeedWorld ?? 0) * cosHeading;
+  const opponentCosHeading = Math.cos(opponentCar.carHeading);
+  const opponentSinHeading = Math.sin(opponentCar.carHeading);
+  const opponentWorldVx =
+    (opponentCar.forwardSpeedWorld ?? 0) * opponentCosHeading -
+    (opponentCar.lateralSpeedWorld ?? 0) * opponentSinHeading;
+  const opponentWorldVy =
+    (opponentCar.forwardSpeedWorld ?? 0) * opponentSinHeading +
+    (opponentCar.lateralSpeedWorld ?? 0) * opponentCosHeading;
+
+  const relWorldVx = opponentWorldVx - focalWorldVx;
+  const relWorldVy = opponentWorldVy - focalWorldVy;
+
+  return Float32Array.from([
+    (dx * cosHeading + dy * sinHeading) / TRACK_POSITION_WORLD_SCALE,
+    (-dx * sinHeading + dy * cosHeading) / TRACK_POSITION_WORLD_SCALE,
+    Math.sin(headingDelta),
+    Math.cos(headingDelta),
+    (relWorldVx * cosHeading + relWorldVy * sinHeading) / SPEED_WORLD_SCALE,
+    (-relWorldVx * sinHeading + relWorldVy * cosHeading) /
+      LATERAL_SPEED_WORLD_SCALE,
+    Math.hypot(dx, dy) / DISTANCE_WORLD_SCALE,
   ]);
 }
 
@@ -597,6 +726,85 @@ export function assembleTier5Observation(
  */
 export function createTier5ObservationOptions(): { readonly tier: 5 } {
   return { tier: 5 };
+}
+
+/**
+ * Builds the Tier 6 observation vector with the 124-channel opponent-perception layout.
+ *
+ * Channel layout:
+ * - `[0..69]` — 70-channel base observation containing pose, speed, track geometry,
+ *   and recurrent memory trace.
+ * - `[70..90]` — team radio (`3 × 7 = 21` channels).
+ * - `[91..94]` — own-car tire state `[frontLeft, frontRight, rearLeft, rearRight]`.
+ * - `[95..102]` — 8 pit/strategy channels.
+ * - `[103..123]` — 21 opponent-perception channels (`3 × 7` ego-relative slots).
+ *
+ * Tier 6 is byte-stable with Tier 4/5 for the first 103 channels. The 21-channel
+ * opponent tail is appended after the pit/strategy suffix.
+ *
+ * @param envState - Current environment snapshot plus Tier 6 opponent perception slots.
+ * @param trackSpec - Frozen track geometry used to derive look-ahead features.
+ * @returns 124-channel Tier 6 observation vector.
+ * @example
+ * ```ts
+ * const observation = assembleTier6Observation(
+ *   {
+ *     ...envState,
+ *     teammateRadioSlots: [
+ *       Float32Array.from([1, 0, 0, 0, 0, 0, 0]),
+ *       Float32Array.from([0, 1, 0, 0, 0, 0, 0]),
+ *       Float32Array.from([0, 0, 1, 0, 0, 0, 0]),
+ *     ],
+ *     opponentPerceptionSlots: [
+ *       Float32Array.from([0.5, 0, 0, 1, 0, 0, 0.25]),
+ *     ],
+ *   },
+ *   trackSpec,
+ * );
+ *
+ * observation.length; // TIER6_TOTAL_INPUT_SIZE
+ * observation.slice(103, 110); // opponent slot 0
+ * ```
+ */
+export function assembleTier6Observation(
+  envState: RacingObservationState & {
+    opponentPerceptionSlots?: readonly (Float32Array | readonly number[])[];
+  },
+  trackSpec: TrackSpec,
+): Float32Array {
+  const baseVector = assembleTier5Observation(envState, trackSpec);
+  const tierSixVector = new Float32Array(TIER6_TOTAL_INPUT_SIZE);
+
+  tierSixVector.set(baseVector, 0);
+
+  // Append up to three 7-channel opponent-perception slots after the 103-channel base.
+  const opponentSlots = envState.opponentPerceptionSlots ?? [];
+  const opponentSlotStartOffset = TOTAL_TIER4_INPUT_SIZE;
+  for (
+    let opponentSlotIndex = 0;
+    opponentSlotIndex < TIER6_OPPONENT_SLOT_COUNT;
+    opponentSlotIndex++
+  ) {
+    const slotData = opponentSlots[opponentSlotIndex];
+    if (slotData !== undefined) {
+      tierSixVector.set(
+        slotData.slice(0, TIER6_OPPONENT_SLOT_CHANNELS),
+        opponentSlotStartOffset +
+          opponentSlotIndex * TIER6_OPPONENT_SLOT_CHANNELS,
+      );
+    }
+  }
+
+  return tierSixVector;
+}
+
+/**
+ * Creates the reusable `{ tier: 6 }` selector for the 124-channel Tier 6 layout.
+ *
+ * @returns Immutable Tier 6 observation options object.
+ */
+export function createTier6ObservationOptions(): { readonly tier: 6 } {
+  return { tier: 6 };
 }
 
 /**
