@@ -1,0 +1,22 @@
+{
+  "introFile": "index.ts",
+  "fileOrder": [
+    "index.ts",
+    "acceleration.types.ts",
+    "acceleration.constants.ts",
+    "acceleration.config.ts",
+    "acceleration.detect.ts",
+    "acceleration.resolve.ts",
+    "acceleration.policy.ts",
+    "acceleration.observer.ts",
+    "acceleration.gpu.device.ts",
+    "acceleration.gpu.ts",
+    "acceleration.workers.ts",
+    "acceleration.variants.ts",
+    "acceleration.orchestrator.ts",
+    "acceleration.manager.ts",
+    "workerPoolLifecycle.ts",
+    "acceleration.benchmark.ts"
+  ],
+  "hiddenFiles": ["index.ts"]
+}

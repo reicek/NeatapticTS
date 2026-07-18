@@ -62,6 +62,9 @@
  * ```
  */
 
+import { resolveAccelerationConfig } from '../../../src/acceleration/acceleration.config';
+import { autoEnableAcceleration } from '../../../src/acceleration/acceleration.orchestrator';
+import type { AccelerationStatus } from '../../../src/acceleration/acceleration.types';
 import { createRacingHost } from './host/host';
 import type { RacingNetworkHudNodes } from './host/host.types';
 import { Network, Node, methods } from '../../../src/browser-entry.ts';
@@ -137,6 +140,16 @@ const MAX_CANVAS_HEIGHT_PX = 900;
 const FOCUSED_NETWORK_REFRESH_INTERVAL_MS = 5000;
 /** Rolling score window size supplied to the runtime adaptation evaluator. */
 const RACING_RUNTIME_SCORE_HISTORY_WINDOW = 60;
+
+/**
+ * Resolved acceleration configuration forwarded into the per-car runtime
+ * adaptation engines. The demo explicitly requests a large parallel variant
+ * count so the grow-stabilize cycle can exercise the NGE variant evaluator.
+ */
+const DEMO_ACCELERATION_CONFIG = resolveAccelerationConfig({
+  parallelVariantCount: 1024,
+  stageVariantCounts: { baby: 1024, juvenile: 1024, adult: 1024 },
+});
 
 /** Track determinism key: seed 42, layout v1. */
 const DEMO_TRACK_SEED = 42;
@@ -297,6 +310,7 @@ interface TelemetryPanelNodes {
   networkDeltaValue: Text;
   lastChangeReasonValue: Text;
   lapTimeValue: Text;
+  accelerationValue: Text;
   controlsElement: HTMLDivElement;
   syncRuntimeControls: () => void;
 }
@@ -440,7 +454,7 @@ export async function start(
   const containerElement = resolveContainerElement(container);
   injectRacingStyles();
   const hostHandle = createRacingHost(containerElement);
-  setupCanvasStage(
+  const stageCardNodes = setupCanvasStage(
     hostHandle.canvasRegionElement,
     hostHandle.canvasElement,
     resolvedTier,
@@ -514,6 +528,7 @@ export async function start(
       improvementThreshold: 0.01,
       cadence: { mode: 'every_n_ticks', everyNTicks: 4 },
       limits: { mutationCooldownTicks: 40, rollbackCooldownTicks: 5 },
+      accelerationConfig: DEMO_ACCELERATION_CONFIG,
     });
     for (let carIndex = 0; carIndex < rosterSize; carIndex++) {
       adaptationEngineByCarIndex.set(carIndex, engines.get(carIndex)!);
@@ -525,6 +540,34 @@ export async function start(
   let focusedCarIndex = 0;
   let focusedControllerNetwork =
     controllerNetworkByCarIndex.get(focusedCarIndex)!;
+
+  // Resolve the actual acceleration backend the library will use so the HUD can
+  // display the chosen backend, any fallback reason, and the variant count.
+  const accelerationStatus = await autoEnableAcceleration({
+    nodeCount: focusedControllerNetwork.nodes.length,
+    batchParallelCount: DEMO_ACCELERATION_CONFIG.parallelVariantCount,
+    config: DEMO_ACCELERATION_CONFIG,
+  });
+  const accelerationDisplayLabel = formatAccelerationStatus(
+    accelerationStatus,
+    DEMO_ACCELERATION_CONFIG.parallelVariantCount,
+  );
+  hostHandle.networkHud.titleValue.textContent = accelerationDisplayLabel;
+  if (stageCardNodes.accelerationValueElement) {
+    stageCardNodes.accelerationValueElement.textContent =
+      accelerationDisplayLabel;
+  }
+  if (stageCardNodes.accelerationChipElement) {
+    stageCardNodes.accelerationChipElement.classList.remove(
+      'racing-status-chip--gpu',
+      'racing-status-chip--worker',
+      'racing-status-chip--cpu',
+    );
+    stageCardNodes.accelerationChipElement.classList.add(
+      resolveAccelerationChipClass(accelerationStatus.mode),
+    );
+  }
+
   let tierSignalEvidenceAccumulator =
     createEmptyTierSignalEvidenceAccumulator();
   let guidanceAlpha = resolveGuidanceAlphaForCurriculumTier(
@@ -647,7 +690,7 @@ export async function start(
         if (perCarScoreHistory.length > RACING_RUNTIME_SCORE_HISTORY_WINDOW) {
           perCarScoreHistory.shift();
         }
-        const adaptationTelemetry = adaptationEngineByCarIndex
+        const adaptationTelemetry = await adaptationEngineByCarIndex
           .get(carIndex)!
           .adaptOnTick({
             tick: simulationTick,
@@ -800,6 +843,7 @@ export async function start(
           hostHandle.canvasRegionElement,
           hostHandle.canvasElement,
           curriculumProgress.tier,
+          accelerationStatus,
         );
       } else {
         tierSignalEvidenceAccumulator =
@@ -838,6 +882,7 @@ export async function start(
       tierBestLapTimeMs,
       latestAdaptationTelemetryByCarIndex,
       0,
+      accelerationDisplayLabel,
       hostHandle.networkHud,
     );
 
@@ -1271,6 +1316,18 @@ function injectRacingStyles(): void {
     .racing-status-chip__label {
       color: var(--racing-accent);
     }
+    .racing-status-chip--gpu {
+      color: #4ade80;
+      border-color: rgba(74, 222, 128, 0.4);
+    }
+    .racing-status-chip--worker {
+      color: #fbbf24;
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+    .racing-status-chip--cpu {
+      color: #f87171;
+      border-color: rgba(248, 113, 113, 0.4);
+    }
     .racing-callout {
       padding: ${FLAPPY_HOST_TABLE_HOST_PADDING};
       border: 1px solid rgba(15, 181, 255, 0.34);
@@ -1394,17 +1451,42 @@ function injectRacingStyles(): void {
 }
 
 /**
+ * Resolves the CSS class that color-codes the acceleration metadata chip by
+ * the selected backend mode.
+ *
+ * @param mode - Resolved acceleration backend mode.
+ * @returns Class name to apply to the acceleration status chip.
+ * @internal
+ */
+function resolveAccelerationChipClass(mode: AccelerationMode): string {
+  return `racing-status-chip--${mode}`;
+}
+
+/**
  * Rebuilds the canvas region into a proper stage card with explanatory HUD chips.
+ *
+ * The returned acceleration chip reference lets the caller update the chip once
+ * the async acceleration backend resolution finishes.
  *
  * @param region - Canvas host region.
  * @param canvasElement - Playback canvas element to place inside the stage.
+ * @param tier - Curriculum tier driving the stage narrative.
+ * @param accelerationStatus - Optional resolved acceleration status; when
+ *   supplied the chip is created with the resolved label and color-coded
+ *   immediately. When omitted the chip starts as "detecting…" and the caller
+ *   should update it via the returned reference.
+ * @returns Reference to the acceleration chip element and its value text node.
  * @internal
  */
 function setupCanvasStage(
   region: HTMLElement,
   canvasElement: HTMLCanvasElement,
   tier: CurriculumTier,
-): void {
+  accelerationStatus?: AccelerationStatus,
+): {
+  accelerationChipElement: HTMLDivElement | undefined;
+  accelerationValueElement: HTMLSpanElement | undefined;
+} {
   region.replaceChildren();
   const stageNarrative = resolveStageNarrativeForTier(tier);
 
@@ -1422,11 +1504,34 @@ function setupCanvasStage(
 
   const metaElement = document.createElement('div');
   metaElement.className = 'racing-stage-card__meta';
+  const initialAccelerationLabel = accelerationStatus
+    ? formatAccelerationStatus(
+        accelerationStatus,
+        DEMO_ACCELERATION_CONFIG.parallelVariantCount,
+      )
+    : 'detecting…';
+  const accelerationChipElement = createStatusChip(
+    'Acceleration',
+    initialAccelerationLabel,
+  );
+  if (accelerationStatus) {
+    accelerationChipElement.classList.add(
+      resolveAccelerationChipClass(accelerationStatus.mode),
+    );
+  }
   metaElement.append(
-    createStatusChip('Controller', 'Live NGE controller'),
+    createStatusChip(
+      'Controller',
+      `Live NGE controller • ${DEMO_ACCELERATION_CONFIG.parallelVariantCount} variants`,
+    ),
     createStatusChip('Track', 'Spline-smoothed visual'),
     createStatusChip('Seed', '42 • v1 • medium'),
+    accelerationChipElement,
   );
+  const accelerationValueElement =
+    accelerationChipElement.querySelector<HTMLSpanElement>(
+      '.racing-status-chip__value',
+    );
 
   const stageElement = document.createElement('div');
   stageElement.className = 'racing-stage';
@@ -1444,6 +1549,11 @@ function setupCanvasStage(
     footerElement,
   );
   region.append(stageCardElement);
+
+  return {
+    accelerationChipElement,
+    accelerationValueElement: accelerationValueElement ?? undefined,
+  };
 }
 
 /**
@@ -1467,6 +1577,7 @@ function setupRuntimeControls(region: HTMLElement): TelemetryPanelNodes {
     `${humanizeAdaptationReason('pending')} (local adaptation)`,
   );
   const lapTimeValue = document.createTextNode('—');
+  const accelerationValue = document.createTextNode('detecting…');
 
   const runtimeCard = createPanelCard('Runtime Telemetry', 'Runtime Controls', [
     'Adaptation runs locally in the browser. This panel shows live telemetry.',
@@ -1483,6 +1594,7 @@ function setupRuntimeControls(region: HTMLElement): TelemetryPanelNodes {
     buildPanelRowWithLiveNode('Network Size', networkSizeValue),
     buildPanelRowWithLiveNode('Network Δ', networkDeltaValue),
     buildPanelRowWithLiveNode('Last Change', lastChangeReasonValue),
+    buildPanelRowWithLiveNode('Acceleration', accelerationValue),
   );
 
   const syncRuntimeControls = (): void => {
@@ -1499,6 +1611,7 @@ function setupRuntimeControls(region: HTMLElement): TelemetryPanelNodes {
     networkDeltaValue,
     lastChangeReasonValue,
     lapTimeValue,
+    accelerationValue,
     controlsElement,
     syncRuntimeControls,
   };
@@ -1584,6 +1697,7 @@ function createStatusChip(label: string, value: string): HTMLDivElement {
   labelElement.textContent = label;
 
   const valueElement = document.createElement('span');
+  valueElement.className = 'racing-status-chip__value';
   valueElement.textContent = value;
 
   chipElement.append(labelElement, valueElement);
@@ -1993,6 +2107,7 @@ function updateTelemetryPanelNodes(
   bestLapTimeMs: number | null,
   latestTelemetryByCarIndex: ReadonlyMap<number, RuntimeAdaptationTelemetry>,
   focusCarIndex: number,
+  accelerationLabel: string,
   networkHud?: RacingNetworkHudNodes,
 ): void {
   const networkSize = resolveNetworkSize(controllerNetwork);
@@ -2013,6 +2128,7 @@ function updateTelemetryPanelNodes(
   nodes.lastChangeReasonValue.textContent = `${humanizeAdaptationReason(
     adaptationSummary.reason,
   )} (local adaptation)`;
+  nodes.accelerationValue.textContent = accelerationLabel;
 
   if (!networkHud) {
     return;
@@ -2274,6 +2390,27 @@ function formatNetworkDelta(
   const nodeSign = nodeDelta > 0 ? '+' : '';
   const connectionSign = connectionDelta > 0 ? '+' : '';
   return `ΔN${nodeSign}${nodeDelta} / ΔC${connectionSign}${connectionDelta}`;
+}
+
+/**
+ * Formats the resolved acceleration backend status for HUD readouts.
+ *
+ * @param status - Resolved acceleration status from the library.
+ * @param parallelVariantCount - Variant count actually requested by the demo.
+ * @returns A short label such as "GPU (1024 variants)" or
+ *   "CPU · GPU blocked: no WebGPU (1024 variants)".
+ * @internal
+ */
+function formatAccelerationStatus(
+  status: AccelerationStatus,
+  parallelVariantCount: number,
+): string {
+  const modeLabel = status.mode.toUpperCase();
+  const fallbackReason = status.gapReasons?.[0];
+  const suffix = fallbackReason
+    ? ` · ${status.mode} blocked: ${fallbackReason}`
+    : '';
+  return `${modeLabel}${suffix} (${parallelVariantCount} variants)`;
 }
 
 /**

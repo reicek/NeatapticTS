@@ -1,3 +1,58 @@
+/**
+ * Racing-curriculum runtime adaptation engine.
+ *
+ * Sequences one NGE grow-stabilize cycle per controller tick. It converts
+ * composite driving-quality signals into scalar scores, decides whether the
+ * controller network should grow new structure or stabilize existing weights,
+ * and routes the resulting mutations back to the live network.
+ *
+ * The engine is deliberately decoupled from the simulation worker so the same
+ * adaptation policy can run in the browser host, in a worker, or in unit tests.
+ * All demo-specific knowledge lives here; the core `runNgeGrowStabilizeCycle`
+ * only sees plain numeric score history and a mutable network.
+ *
+ * ## Score-space invariant
+ *
+ * The grow-stabilize cycle commits a weight variant only when
+ * `bestVariantScore > baselineScore + threshold`. That inequality is only
+ * meaningful when both scores share the same units and direction. The default
+ * variant scorer returns negative mean-squared-error against a target vector,
+ * while the racing baseline is a positive driving-quality score. This engine
+ * therefore injects a racing-specific `VariantScorer` that collapses the
+ * 2-D controller output `[throttle, steering]` to a scalar and returns a
+ * positive quality score in the same space as the baseline.
+ *
+ * ```mermaid
+ * flowchart LR
+ *   Tick["Controller tick"] --> Cadence{"Cadence gate open?"}
+ *   Cadence -->|no| Skip["Skip adaptation"]
+ *   Cadence -->|yes| Evidence["Build evidence window"]
+ *   Evidence --> Baseline["Compute positive driving-quality baseline"]
+ *   Baseline --> Cycle["runNgeGrowStabilizeCycle"]
+ *   Cycle --> Committed{"Committed?"}
+ *   Committed -->|yes| Apply["Apply mutation / keep weights"]
+ *   Committed -->|no| Rollback["Rollback network"]
+ *   Apply --> Telemetry["Emit telemetry"]
+ *   Rollback --> Telemetry
+ * ```
+ *
+ * ## Background reading
+ *
+ * - NEAT and topology-evolving neuroevolution:
+ *   K. O. Stanley and R. Miikkulainen, "Evolving Neural Networks through
+ *   Augmenting Topologies," *Evolutionary Computation*, vol. 10, no. 2,
+ *   pp. 99-127, 2002.
+ *   [NEAT publications](https://nn.cs.utexas.edu/?neat-papers)
+ * - Growth/stabilization as an explore–exploit tradeoff:
+ *   [Wikipedia — Exploration–exploitation dilemma](https://en.wikipedia.org/wiki/Exploration%E2%80%93exploitation_dilemma)
+ * - Mean squared error:
+ *   [Wikipedia — Mean squared error](https://en.wikipedia.org/wiki/Mean_squared_error)
+ */
+
+import type {
+  AccelerationConfig,
+  VariantScorer,
+} from '../../../src/acceleration/acceleration.types';
 import { Connection, Network } from '../../../src/browser-entry.ts';
 import {
   restoreNetworkSnapshot,
@@ -16,6 +71,7 @@ import type {
   NgeModuleMetricsSnapshot,
   NgePruneBudget,
 } from '../../../src/neat/nge-juvenile/neat.nge-juvenile.types.ts';
+/** Cadence modes supported by the runtime adaptation engine. */
 export type RuntimeAdaptationCadenceMode =
   'every_tick' | 'every_n_ticks' | 'lap_boundary' | 'sector_boundary';
 
@@ -128,6 +184,16 @@ export interface RuntimeAdaptationEngineOptions {
   /** Optional deterministic random source for operation proposal. */
   readonly random?: () => number;
   /**
+   * Optional acceleration configuration forwarded to the grow-stabilize cycle's
+   * parallel variant evaluator.
+   */
+  readonly accelerationConfig?: AccelerationConfig;
+  /**
+   * Optional human-readable car identifier. When omitted the per-car factory
+   * defaults this to the car index.
+   */
+  readonly carId?: string | number;
+  /**
    * Evaluates a network candidate against a short rolling score history.
    *
    * @param network - Candidate network.
@@ -160,11 +226,11 @@ export interface RuntimeAdaptationEngine {
    * Runs one adaptation decision against the current tick input.
    *
    * @param tickInput - Per-tick runtime inputs.
-   * @returns Deterministic-friendly telemetry for the decision.
+   * @returns Promise resolving to deterministic-friendly telemetry.
    */
   adaptOnTick(
     tickInput: RuntimeAdaptationTickInput,
-  ): RuntimeAdaptationTelemetry;
+  ): Promise<RuntimeAdaptationTelemetry>;
   /** Resets cadence boundaries and cooldown state. */
   reset(): void;
 }
@@ -207,9 +273,126 @@ export { resolveAdaptiveHysteresis };
 const MAX_EPISODIC_SLOTS = 15;
 
 /**
+ * Reduce a multi-dimensional controller output vector to a scalar driving
+ * quality proxy by averaging the absolute activation magnitudes.
+ *
+ * This matches the reduction used by {@link buildCandidateScoreWindow} so that
+ * the racing variant scorer and the rolling candidate scores live in the same
+ * units.
+ *
+ * @param outputVector - Raw network output vector (e.g. `[throttle, steering]`).
+ * @returns Scalar proxy in the same units as the racing trend score.
+ */
+function reduceOutputToScalar(outputVector: readonly number[]): number {
+  if (outputVector.length === 0) {
+    return 0;
+  }
+
+  const sum = outputVector.reduce(
+    (accumulated, value) => accumulated + Math.abs(value),
+    0,
+  );
+  return sum / outputVector.length;
+}
+
+/**
+ * Racing-specific variant scorer for the NGE grow-stabilize cycle.
+ *
+ * The network emits a 2-D controller vector (`[throttle, steering]`), but the
+ * grow-stabilize evaluator expects the baseline and variant scores to share the
+ * same positive driving-quality score space. This scorer mirrors the
+ * {@link evaluateRacingTrendScore} baseline computation: it collapses each
+ * output row with {@link reduceOutputToScalar}, then combines the mean trend
+ * of the resulting scalar window with a behavioral-complexity bonus (gated on a
+ * non-negative trend). Higher scores mean better driving quality, so a variant
+ * can win the commit decision when it genuinely outperforms the baseline.
+ *
+ * The `target` argument is part of the {@link VariantScorer} contract but is
+ * intentionally not used here; the score is derived from the candidate
+ * network's own forward-pass outputs so that it lives in the same space as
+ * the pre-mutation baseline.
+ *
+ * @example
+ * ```ts
+ * const outputs = [
+ *   [0.5, -0.1], // throttle, steering
+ *   [0.6, 0.0],
+ * ];
+ * const score = RACING_VARIANT_SCORER(outputs, [0]);
+ * // score is a positive driving-quality proxy; higher is better
+ * ```
+ *
+ * ## Background reading
+ *
+ * - NEAT and topology-evolving neuroevolution:
+ *   K. O. Stanley and R. Miikkulainen, "Evolving Neural Networks through
+ *   Augmenting Topologies," *Evolutionary Computation*, vol. 10, no. 2,
+ *   pp. 99-127, 2002.
+ *   [NEAT publications](https://nn.cs.utexas.edu/?neat-papers)
+ * - Growth/stabilization as an explore–exploit tradeoff:
+ *   [Wikipedia — Exploration–exploitation dilemma](https://en.wikipedia.org/wiki/Exploration%E2%80%93exploitation_dilemma)
+ *
+ * @param outputs - Stack of network output vectors, one per input sample.
+ * @param _target - Scalar target value for each sample (unused).
+ * @returns Positive racing-trend quality score (higher is better).
+ */
+// The `target` parameter is required by the VariantScorer contract but unused
+// because the racing score is derived from the candidate's own outputs.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const RACING_VARIANT_SCORER: VariantScorer = (outputs, _target) => {
+  if (outputs.length === 0) {
+    return 0;
+  }
+
+  // Step 1: collapse the multi-dimensional controller output to a scalar
+  // driving-quality proxy, exactly like {@link buildCandidateScoreWindow}.
+  const scalarWindow = outputs.map((outputVector) =>
+    reduceOutputToScalar(outputVector),
+  );
+
+  // Step 2: compute the same positive trend/mean/complexity score used for
+  // the pre-mutation baseline so the stabilization commit inequality compares
+  // values in the same units.
+  const scoreTrend = scalarWindow.at(-1)! - scalarWindow[0]!;
+  const scoreMean =
+    scalarWindow.reduce((accumulated, value) => accumulated + value, 0) /
+    scalarWindow.length;
+  const behavioralComplexity = resolveBehavioralComplexity(outputs);
+  const qualityImprovedOrSame = scoreTrend >= 0;
+  const complexityBonus = qualityImprovedOrSame
+    ? behavioralComplexity * RACING_COMPLEXITY_WEIGHT
+    : 0;
+
+  return scoreMean + scoreTrend * 0.5 + complexityBonus;
+};
+
+/**
  * Creates a reusable per-tick adaptation engine for racing runtime loops.
  *
- * @param options - Optional cadence, bounds, and evaluation policy.
+ * The engine sequences one NGE grow-stabilize cycle per tick. It enforces a
+ * configurable cadence policy so adaptation attempts do not fire on every tick,
+ * applies a rollback cooldown after rejected candidates, and respects a
+ * growth throttle that slows structural mutation as the network grows. The
+ * growth-phase commit decision trusts the grow-stabilize cycle's own commit
+ * flag, while the engine adds safety-limit checks and an unconditional
+ * first-growth path so a brand-new network cannot stall.
+ *
+ * When an `accelerationConfig` is supplied, variant counts are forwarded to the
+ * grow-stabilize cycle's parallel evaluator. The stabilization phase caps the
+ * evaluated variant count to `NGE_GROW_STABILIZE_STABILIZATION_VARIANT_COUNT`
+ * (32 by default) regardless of the acceleration configuration, while the
+ * growth-phase variant count follows the acceleration configuration's stage
+ * limits.
+ *
+ * A racing-specific `VariantScorer` is injected into the grow-stabilize
+ * cycle as `scoreFn` so the stabilization baseline and variant scores share the
+ * same positive driving-quality score space. Without that alignment, the commit
+ * inequality `bestScore > baselineScore + threshold` compares incommensurate
+ * values (for example, negative MSE against a positive quality score) and
+ * stabilization commits cannot occur.
+ *
+ * @param options - Optional cadence, bounds, evaluation policy, and
+ *   acceleration configuration.
  * @returns Stateful runtime adaptation engine.
  */
 export function createRuntimeAdaptationEngine(
@@ -240,15 +423,28 @@ export function createRuntimeAdaptationEngine(
   let hasGrownBefore = false;
   let stabilizationTicksSinceGrowth = 0;
   let currentPhase: 'growth' | 'stabilization' = 'growth';
+  let consecutiveWeightExhaustion = 0;
+  let consecutiveStabilizationFailures = 0;
+  let postGrowthThresholdActive = false;
+  let preGrowthBaseline: number | undefined;
+  let previousScore: number | undefined;
   const randomSource = options.random ?? Math.random;
 
   return {
-    adaptOnTick(
+    async adaptOnTick(
       tickInput: RuntimeAdaptationTickInput,
-    ): RuntimeAdaptationTelemetry {
+    ): Promise<RuntimeAdaptationTelemetry> {
       const networkSizeBefore = resolveNetworkSizeSnapshot(tickInput.network);
       const evidenceWindow = resolveEvidenceWindow(tickInput.scoreHistory);
       const baselineScore = evaluateScore(tickInput.network, evidenceWindow);
+      const inputSize = tickInput.network.input;
+      const trainingInputs =
+        inputSize > 0
+          ? evidenceWindow.map((entry) =>
+              resolveObservationVector(entry, inputSize),
+            )
+          : [];
+      const trainingTarget = evidenceWindow.map(toDrivingQuality);
 
       // Step 1: Verify cadence gating before proposing any mutations.
       if (
@@ -391,7 +587,7 @@ export function createRuntimeAdaptationEngine(
       const capturedInnovation = Connection.nextInnovation;
       const rollbackSnapshot = tickInput.network.toJSON();
 
-      const cycleResult = runNgeGrowStabilizeCycle({
+      const cycleResult = await runNgeGrowStabilizeCycle({
         network: tickInput.network,
         scoreHistory: evidenceWindow.map(toDrivingQuality),
         hasGrownBefore,
@@ -399,6 +595,17 @@ export function createRuntimeAdaptationEngine(
         qualityScoreHistory,
         hysteresis,
         random: randomSource,
+        accelerationConfig: options.accelerationConfig,
+        previousScore,
+        consecutiveWeightExhaustion,
+        consecutiveStabilizationFailures,
+        postGrowthThresholdActive,
+        preGrowthBaseline,
+        baselineScore: preMutationBaselineScore,
+        inputs: trainingInputs,
+        target: trainingTarget,
+        scoreFn: RACING_VARIANT_SCORER,
+        lifecycleStage: 'baby',
         config: {
           maxStructuralEditsPerStep: limits.maxStructuralEditsPerStep,
           maxNodes: limits.maxNodes,
@@ -407,11 +614,18 @@ export function createRuntimeAdaptationEngine(
           moduleId: RUNTIME_MODULE_ID,
         },
         lifecycleRunner: (lifecycleInput) => {
+          const { stage, ...lifecycleRest } = lifecycleInput;
+          if (stage !== 'juvenile') {
+            throw new Error(
+              `Runtime adaptation only supports the juvenile NGE lifecycle stage, received: ${stage}`,
+            );
+          }
           const adaptiveHysteresis = resolveAdaptiveHysteresis(
             tickInput.network.nodes.length,
           );
           return runNgeLifecycle({
-            ...lifecycleInput,
+            ...lifecycleRest,
+            stage,
             metrics: buildModuleMetricsSnapshot(
               tickInput.network,
               evidenceWindow,
@@ -419,7 +633,7 @@ export function createRuntimeAdaptationEngine(
             budget: buildGrowthBudget(tickInput.network, limits),
             pruneBudget: buildPruneBudget(tickInput.network),
             config: {
-              ...lifecycleInput.config,
+              ...lifecycleRest.config,
               hysteresisWindowCount: adaptiveHysteresis,
               cooldownWindowCount: limits.mutationCooldownTicks,
               maxStructuralEditsPerStep: limits.maxStructuralEditsPerStep,
@@ -428,13 +642,26 @@ export function createRuntimeAdaptationEngine(
         },
       });
 
+      // Carry the grow-stabilize cycle state forward so that weight-exhaustion
+      // counting, the post-growth anti-runaway boost, and the pre-growth
+      // baseline persist across adaptation ticks.
+      consecutiveWeightExhaustion =
+        cycleResult.consecutiveWeightExhaustion ?? 0;
+      consecutiveStabilizationFailures =
+        cycleResult.consecutiveStabilizationFailures ??
+        consecutiveStabilizationFailures;
+      postGrowthThresholdActive =
+        cycleResult.postGrowthThresholdActive ?? postGrowthThresholdActive;
+      preGrowthBaseline = cycleResult.preGrowthBaseline;
+      previousScore = preMutationBaselineScore;
+      stabilizationTicksSinceGrowth = cycleResult.stabilizationTicksSinceGrowth;
+
       // Stabilization phase: weight mutations applied by the cycle.
       if (cycleResult.phase === 'stabilization') {
         currentPhase = 'stabilization';
-        stabilizationTicksSinceGrowth =
-          cycleResult.stabilizationTicksSinceGrowth;
 
         if (!cycleResult.committed) {
+          consecutiveStabilizationFailures += 1;
           return createTelemetry(
             {
               tick: tickInput.tick,
@@ -463,6 +690,7 @@ export function createRuntimeAdaptationEngine(
         const stabilizationImprovement = stabilizationScore - baselineScore;
 
         if (stabilizationImprovement >= 0) {
+          consecutiveStabilizationFailures = 0;
           return createTelemetry(
             {
               tick: tickInput.tick,
@@ -480,6 +708,7 @@ export function createRuntimeAdaptationEngine(
         }
 
         // Rollback weight mutations that did not improve the score.
+        consecutiveStabilizationFailures += 1;
         restoreNetworkSnapshot(
           tickInput.network,
           rollbackSnapshot,
@@ -551,9 +780,15 @@ export function createRuntimeAdaptationEngine(
       // phase will tune; requiring an immediate score improvement would
       // rollback the first growth and leave the network stuck forever.
       const isFirstGrowth = !hasGrownBefore;
+      // Trust the grow-stabilize cycle's commit decision. The cycle already
+      // applied the structural mutation in-place; re-evaluating with a fixed
+      // improvement threshold here would roll back valid growth. We still
+      // enforce safety limits and keep the unconditional first-growth path.
       const shouldCommit =
         safetyChecksPass &&
-        (isFirstGrowth || improvement >= improvementThreshold);
+        (isFirstGrowth ||
+          cycleResult.committed ||
+          improvement >= improvementThreshold);
 
       // Commit or rollback based on score improvement.
       if (shouldCommit) {
@@ -619,6 +854,11 @@ export function createRuntimeAdaptationEngine(
       hasGrownBefore = false;
       stabilizationTicksSinceGrowth = 0;
       currentPhase = 'growth';
+      consecutiveWeightExhaustion = 0;
+      consecutiveStabilizationFailures = 0;
+      postGrowthThresholdActive = false;
+      preGrowthBaseline = undefined;
+      previousScore = undefined;
     },
   };
 }
@@ -652,7 +892,11 @@ export function createPerCarAdaptationEngines(
   const safeCarCount = Math.max(0, Math.floor(carCount));
 
   for (let carIndex = 0; carIndex < safeCarCount; carIndex++) {
-    engines.set(carIndex, createRuntimeAdaptationEngine(options));
+    const carOptions: RuntimeAdaptationEngineOptions = {
+      ...options,
+      carId: options.carId ?? carIndex,
+    };
+    engines.set(carIndex, createRuntimeAdaptationEngine(carOptions));
   }
 
   return engines;
@@ -760,16 +1004,7 @@ function buildCandidateScoreWindow(
   evidenceWindow: readonly (number | RacingQualitySignal)[],
 ): number[] {
   const outputs = collectForwardPassOutputs(network, evidenceWindow);
-  return outputs.map((outputVector) => {
-    if (outputVector.length === 0) {
-      return 0;
-    }
-    const sum = outputVector.reduce(
-      (accumulated, value) => accumulated + Math.abs(value),
-      0,
-    );
-    return sum / outputVector.length;
-  });
+  return outputs.map((outputVector) => reduceOutputToScalar(outputVector));
 }
 
 /**
@@ -834,7 +1069,7 @@ function resolveObservationVector(
  * @param outputs - Array of output vectors, one per sample observation.
  * @returns Total variance across all output dimensions.
  */
-function resolveBehavioralComplexity(outputs: number[][]): number {
+function resolveBehavioralComplexity(outputs: readonly number[][]): number {
   if (outputs.length <= 1) {
     return 0;
   }

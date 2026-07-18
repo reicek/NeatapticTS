@@ -1,14 +1,17 @@
 /**
- * Deterministic scripted waypoint-following controller for the Tier 0
- * racing curriculum demo.
+ * Deterministic scripted waypoint-following controller and runtime adaptation
+ * integration for the Tier 0 racing curriculum demo.
  *
- * The controller maintains a target waypoint index that advances around the
- * closed-loop track as the car approaches each endpoint. Steering is a
- * proportional heading-error term; throttle is held at a fixed constant.
+ * `computeScriptedControl` is the baseline deterministic lane: it maintains a
+ * target waypoint index that advances around the closed-loop track as the car
+ * approaches each endpoint, uses a proportional heading-error term for
+ * steering, and holds throttle at a fixed constant. The controller folder also
+ * hosts `runtime.adaptation.ts`, which provides the per-car NGE grow-stabilize
+ * adaptation engine that mutates controller networks within an episode.
  *
- * This controller is intentionally simple and deterministic. It remains useful
- * as a baseline reference lane for regression comparisons against NGE-backed
- * controller behavior while preserving the same `computeScriptedControl`
+ * The scripted controller is intentionally simple and deterministic. It remains
+ * useful as a baseline reference lane for regression comparisons against
+ * NGE-backed controller behavior while preserving the same `computeScriptedControl`
  * integration seam.
  *
  * @see {@link https://en.wikipedia.org/wiki/Proportional_control Proportional control (Wikipedia)}

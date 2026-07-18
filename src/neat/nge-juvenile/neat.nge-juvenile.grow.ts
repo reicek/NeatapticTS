@@ -269,8 +269,101 @@ export function planNodeAddition(
   };
 }
 
+type MorphValidator = (delta: NgeMorphDelta, budget: NgeGrowthBudget) => void;
+
+const morphValidatorRegistry = new Map<string, MorphValidator>();
+
+/**
+ * Registry of morph-delta validators used by `validateMorphDelta`.
+ *
+ * The registry is initialized with the built-in NGE juvenile morph kinds
+ * (`edgeDensify`, `slotExpand`, `nodeAdd`, `edgePrune`, `compact`). Additional
+ * kinds can be registered at runtime; removing a kind causes `validate` to
+ * reject deltas of that kind with {@link NgeJuvenile_MorphError}.
+ */
+export const MorphDeltaRegistry = {
+  /**
+   * Register a validator for a morph kind.
+   *
+   * @param kind - Morph kind to validate.
+   * @param validator - Function that throws a budget/morph error when invalid.
+   */
+  register(kind: string, validator: MorphValidator): void {
+    morphValidatorRegistry.set(kind, validator);
+  },
+
+  /**
+   * Remove a previously registered morph kind validator.
+   *
+   * @param kind - Morph kind to remove from the registry.
+   */
+  unregister(kind: string): void {
+    morphValidatorRegistry.delete(kind);
+  },
+
+  /**
+   * Validate a morph delta against the current structural budget.
+   *
+   * @param delta - Planned morph delta to validate.
+   * @param budget - DNA-configured growth caps and current live counts.
+   * @throws {NgeJuvenile_MorphError} when the kind has no registered validator.
+   */
+  validate(delta: NgeMorphDelta, budget: NgeGrowthBudget): void {
+    const validator = morphValidatorRegistry.get(delta.kind);
+    if (validator === undefined) {
+      throw new NgeJuvenile_MorphError(
+        `Unhandled morph delta kind: ${String(delta.kind)}`,
+      );
+    }
+    validator(delta, budget);
+  },
+};
+
+function registerDefaultMorphValidators(): void {
+  MorphDeltaRegistry.register('edgeDensify', (delta, budget) => {
+    if (budget.currentEdgeCount + delta.wiringCostDelta > budget.maxEdges) {
+      throw new NgeJuvenile_BudgetError(
+        `Edge densification would exceed the edge budget for ${delta.targetModuleId}.`,
+      );
+    }
+  });
+
+  MorphDeltaRegistry.register('slotExpand', (delta, budget) => {
+    if (
+      budget.currentEpisodicSlotCount + delta.wiringCostDelta >
+      budget.maxEpisodicSlots
+    ) {
+      throw new NgeJuvenile_BudgetError(
+        `Slot expansion would exceed the episodic slot budget for ${delta.targetModuleId}.`,
+      );
+    }
+  });
+
+  MorphDeltaRegistry.register('nodeAdd', (delta, budget) => {
+    const nodeAdditions = (delta.detail.proposedAdditions as number) ?? 1;
+    if (budget.currentNodeCount + nodeAdditions > budget.maxNodes) {
+      throw new NgeJuvenile_BudgetError(
+        `Node addition would exceed the node budget for ${delta.targetModuleId}.`,
+      );
+    }
+  });
+
+  MorphDeltaRegistry.register('edgePrune', () => {
+    // Pruning frees structural budget; no validation needed.
+  });
+
+  MorphDeltaRegistry.register('compact', () => {
+    // Compaction frees structural budget; no validation needed.
+  });
+}
+
+registerDefaultMorphValidators();
+
 /**
  * Re-validate one dry-run morph delta against the current structural budget.
+ *
+ * Delegates to {@link MorphDeltaRegistry.validate} so that validation is
+ * table-driven and extensible.
  *
  * @param delta - Planned morph delta to validate.
  * @param budget - DNA-configured growth caps and current live counts.
@@ -279,47 +372,7 @@ export function validateMorphDelta(
   delta: NgeMorphDelta,
   budget: NgeGrowthBudget,
 ): void {
-  switch (delta.kind) {
-    case 'edgeDensify':
-      if (budget.currentEdgeCount + delta.wiringCostDelta > budget.maxEdges) {
-        throw new NgeJuvenile_BudgetError(
-          `Edge densification would exceed the edge budget for ${delta.targetModuleId}.`,
-        );
-      }
-
-      return;
-    case 'slotExpand':
-      if (
-        budget.currentEpisodicSlotCount + delta.wiringCostDelta >
-        budget.maxEpisodicSlots
-      ) {
-        throw new NgeJuvenile_BudgetError(
-          `Slot expansion would exceed the episodic slot budget for ${delta.targetModuleId}.`,
-        );
-      }
-
-      return;
-    case 'nodeAdd': {
-      const nodeAdditions = (delta.detail.proposedAdditions as number) ?? 1;
-      if (budget.currentNodeCount + nodeAdditions > budget.maxNodes) {
-        throw new NgeJuvenile_BudgetError(
-          `Node addition would exceed the node budget for ${delta.targetModuleId}.`,
-        );
-      }
-
-      return;
-    }
-    case 'edgePrune':
-    case 'compact':
-      return;
-  }
-
-  /* istanbul ignore next -- compile-time exhaustiveness guard for future morph kinds */
-  const exhaustiveMorphKind: never = delta.kind;
-  /* istanbul ignore next -- compile-time exhaustiveness guard for future morph kinds */
-  throw new NgeJuvenile_MorphError(
-    `Unhandled morph delta kind: ${String(exhaustiveMorphKind)}`,
-  );
+  MorphDeltaRegistry.validate(delta, budget);
 }
 
 /**

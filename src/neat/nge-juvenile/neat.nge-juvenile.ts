@@ -15,8 +15,7 @@
  * level structural mutations that actually change the network. That separation
  * lets the same engine run inside an application curriculum, a collective
  * simulation, an agent-based scenario, or a headless unit test with no dependency
- * on `examples/` or demo
- * code.
+ * on `examples/` or demo code.
  *
  * ## The juvenile growth contract
  *
@@ -92,6 +91,41 @@
  *   Growth --> [*] : lifecycle morphs applied
  * ```
  *
+ * ## Weight-exhaustion gate and variant scaling
+ *
+ * The grow-stabilize cycle does not rely on a fixed improvement threshold. When
+ * weight mutation is active, the cycle compares the best weight variant against
+ * an adaptive **exhaustion** bar that rises as the network ages. If no variant
+ * beats the bar for too many consecutive ticks, the cycle treats structural growth
+ * as the better investment and switches back to the lifecycle pipeline. The bar
+ * is stage-aware: babies tolerate larger jumps, adults require finer evidence.
+ *
+ * Three additional signals shape the bar so it cannot be gamed by scale alone:
+ *
+ * - **Neuron-budget factor** — small networks are nudged toward structural
+ *   growth because they have headroom; large networks face a tighter bar.
+ * - **Noise-multiplier cap** — the statistical uplift from evaluating many
+ *   variants is bounded so huge variant counts do not drown out real signal.
+ * - **Score-ceiling vs. magnitude scaling** — when a known ceiling exists the
+ *   threshold measures remaining headroom; otherwise it scales with the absolute
+ *   score magnitude.
+ *
+ * After a bad growth event the bar doubles briefly (the post-growth anti-runaway
+ * boost) so the cycle does not over-tune weights while ignoring the structural
+ * mistake. The boost is capped and time-boxed so growth is never deferred forever.
+ *
+ * Variant patches scale their effective magnitude with lifecycle stage and
+ * network size. A small baby network explores a wide symmetric range around each
+ * weight, while a large adult network shrinks its perturbations so tuning stays
+ * local. The scaling is bounded by clamps so very large variant counts or very
+ * large connection counts cannot explode or collapse the step size.
+ *
+ * The exported helpers {@link resolveEffectiveMagnitude} and
+ * {@link resolveRepresentativeDelta} materialize these scaled perturbations for
+ * downstream weight mutation, while {@link resolveExhaustionImprovementThreshold}
+ * and {@link resolveExhaustionForceGrowthThreshold} compute the adaptive
+ * improvement bar and the structural-growth fallback threshold.
+ *
  * ## Tuning knobs
  *
  * Most callers can use the seeded defaults. The constants below are the levers
@@ -112,6 +146,23 @@
  * | {@link NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP} | Max structural edits per lifecycle call | `5` | Raise for batch growth, lower for fine-grained morphs. |
  * | {@link NGE_GROW_STABILIZE_MIN_STABILIZATION_TICKS} | Min ticks after growth before plateau can fire | `5` | Raise to give more learning time, lower for faster cycling. |
  * | {@link NGE_GROW_STABILIZE_MAX_STABILIZATION_TICKS} | Max ticks before growth is forced regardless of plateau | `25` | Raise to allow longer stabilization, lower to force growth sooner. |
+ * | {@link NGE_EXHAUSTION_STAGE_FRACTION_BABY} | Relative improvement bar for weight variants in the baby stage | `0.02` | Lower to let baby networks commit smaller weight wins; raise to demand stronger evidence. |
+ * | {@link NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE} | Relative improvement bar for weight variants in the juvenile stage | `0.01` | Raise to demand stronger variants, lower to commit smaller improvements. |
+ * | {@link NGE_EXHAUSTION_STAGE_FRACTION_ADULT} | Relative improvement bar for weight variants in the adult stage | `0.006` | Raise to demand stronger variants; adult tuning is intentionally picky. |
+ * | {@link NGE_EXHAUSTION_TICK_BUDGET} | Total exhaustion tick budget before structural growth is forced | `48` | Raise to give weight tuning more total ticks; the per-variant limit is `ceil(tickBudget / variantCount)`. |
+ * | {@link NGE_EXHAUSTION_MIN_CONSECUTIVE_TICKS} | Floor on consecutive exhaustion ticks before forcing growth | `1` | Raise to prevent immediate growth fallback after a single bad variant tick. |
+ * | {@link NGE_EXHAUSTION_MAX_CONSECUTIVE_TICKS} | Consecutive failed variant ticks before forcing structural growth | `8` | Raise to allow more tuning attempts, lower to switch to growth sooner. |
+ * | {@link NGE_EXHAUSTION_POST_GROWTH_EXHAUSTION_BOOST} | Multiplier applied to the exhaustion limit after a bad growth event | `2.0` | Lower to reduce the post-growth anti-runaway back-off. |
+ * | {@link NGE_EXHAUSTION_POST_GROWTH_MAX_CONSECUTIVE_TICKS} | Same cap after a bad growth event triggered the exhaustion boost | `16` | Keeps the doubled back-off from deferring weight tuning forever. |
+ * | {@link NGE_EXHAUSTION_NEURON_BUDGET_FACTOR} | Half-range multiplier for the neuron-budget factor | `0.5` | Raise to push small networks toward growth faster; zero disables the bias. |
+ * | {@link NGE_EXHAUSTION_NOISE_MULTIPLIER_CAP} | Upper bound on the variant-count noise uplift | `2.0` | Lower to make huge variant counts less forgiving of noise. |
+ * | {@link NGE_EXHAUSTION_SCORE_EPSILON} | Minimum absolute scale for the adaptive threshold | `1e-6` | Raise when very small scores need a larger minimum improvement bar. |
+ * | {@link NGE_GROW_STABILIZE_BIAS_MUTATION_RATE} | Fraction of biases perturbed during stabilization | `0.3` | Raise for more aggressive bias exploration; lower for conservative tuning. |
+ * | {@link NGE_GROW_STABILIZE_BIAS_MUTATION_MAGNITUDE} | Maximum bias perturbation during stabilization | `0.1` | Raise for larger bias steps; lower for fine-grained bias tuning. |
+ * | {@link NGE_GROW_STABILIZE_MUTATION_COOLDOWN_TICKS} | Cooldown after a committed mutation attempt | `5` | Raise to make adaptation sparser; lower for faster response. |
+ * | {@link NGE_GROW_STABILIZE_ROLLBACK_COOLDOWN_TICKS} | Cooldown after a rollback outcome | `5` | Raise to throttle retries after a rejected candidate. |
+ * | {@link NGE_VARIANT_WIDTH_FACTOR_MAX} | Upper clamp on stage-driven variant-count magnitude scaling | `1.5` | Lower to cap exploration width for very large variant counts. |
+ * | {@link NGE_VARIANT_SIZE_FACTOR_FLOOR} | Lower clamp on network-size magnitude scaling | `0.1` | Raise to prevent tiny perturbations in very large networks. |
  *
  * ## Determinism boundary
  *

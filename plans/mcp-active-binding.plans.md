@@ -4,7 +4,7 @@
 
 ## Current state
 
-Claim: 04-implementing @ 2026-07-08T00:47:43Z
+Claim: 04-implementing @ 2026-07-18T07:07:18Z
 
 Active workstream tracker:
 `plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md`.
@@ -379,6 +379,7 @@ boundary:
 - orchestration-alignment refresh after Chrome DevTools MCP Integration closure — `execute` skill added to the phase and step `skills:` lists; `delegate-skill-coverage` gate added to validation; Chrome DevTools MCP specialist availability noted for any browser-related validation routed from this boundary. `chrome-devtools-mcp-coverage` gate applies to any `03-red-testing`/`05-green-testing` dispatch from this plan. No substantive change to the perpetual binding contract.
 - scoped cleanup pass from `05-green-testing`. Changed fixture references `schema.sql`/`schema-v2.sql` → `schema-turso.sql` in `examples/shared/semantic/build-browser-snapshot.test.ts`, `scripts/mcp-semantic/tools/freshness-check.test.ts`, `scripts/mcp-semantic/tools/search-corpus.test.ts`, `scripts/mcp-semantic/tools/submit-feedback.test.ts`; deleted legacy `scripts/semantic-index/schema-v2.sql`; surfaced per-query errors from `scripts/semantic-index/parallel-search.mjs` via a non-enumerable `errors` array and propagated them through the `parallel_search` MCP handler in `scripts/mcp-semantic/repo-cortex-mcp.mjs`; added targeted test `runParallelQueries surfaces per-query errors on the returned array` in `scripts/mcp-semantic/__tests__/parallel-search.test.mjs`. Validation: `npx tsc --noEmit -p tsconfig.json` -> PASS; `npm run lint` -> PASS; `npx prettier --check <touched files>` -> PASS; `npx jest ... --testPathPatterns=build-browser-snapshot` -> PASS (1 suite, 1 test); `npx jest ... --testPathPatterns="freshness-check.test|search-corpus.test|submit-feedback.test"` -> PASS (3 suites, 17 tests); `NODE_OPTIONS=--experimental-vm-modules npx jest ... --selectProjects mcp-semantic-mjs --testPathPatterns=parallel-search.test.mjs` -> PASS (1 suite, 16 tests); `node --check scripts/semantic-index/parallel-search.mjs` and `node --check scripts/mcp-semantic/repo-cortex-mcp.mjs` -> OK. Note: `scripts/mcp-semantic/repo-cortex-mcp.test.ts` and `scripts/mcp-semantic/__tests__/repo-cortex-mcp.red.test.ts` currently fail to run with `ReferenceError: __dirname is not defined` under ts-jest ESM; this is a pre-existing red-test issue outside the scoped cleanup items and was left untouched per the "no red tests" boundary. Gate checks: `validate-plan-sync` -> PASS; `delegate-skill-coverage` -> PASS; `chrome-devtools-mcp-coverage` -> PASS. No `src/` files were changed, so no additional coverage-guard obligation.
 - Chrome DevTools MCP lazy-load facade native-routing fix. Added `routingMode` to `lazy-facade-core.mjs`, wired `devtools-facade.mjs` to `native`, kept `cortex-facade.mjs` in `single-tool`, hardened Windows `resolveSpawnCommand` to find `npx.cmd` next to the Node executable, and added native-mode + Windows spawn fallback tests. Validation: `npx tsc --noEmit -p tsconfig.json` -> PASS; `npm run lint` -> PASS; `npm run prettier:scripts` -> PASS; `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=lazy-facade` -> PASS (1 suite, 59 tests, `lazy-facade-core.mjs` 100/100/100/100); `node scripts/agent-customization/mcp/devtools-facade.mjs --self-check --json` -> PASS (`pass: true`); `node scripts/agent-customization/mcp/cortex-facade.mjs --self-check --json` -> PASS (`pass: true`); direct `createDevtoolsFacade().dispatch({operation:'tools/list'})` against real `chrome-devtools-mcp` -> PASS (29 tools returned). Gate: `plan-sync` -> PASS.
+- NGE juvenile grow-stabilize test assertion refresh. Updated 14 hard-coded expected values in `src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts` to match the new exhaustion-stage fractions (`BABY 0.015`, `JUVENILE 0.008`, `ADULT 0.005`) and decay-driven outputs. No `src/` production files changed; `NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR` is not referenced in this test. Preflight: `npx tsc --noEmit -p tsconfig.json` -> PASS; `npx eslint <file>` -> PASS (0 errors, pre-existing 21 warnings); `npx prettier --check <file>` -> PASS. Next: hand off to `05-green-testing` for focused Jest slice confirmation.
 
 ```yaml
 PlanUpdate:
@@ -410,6 +411,23 @@ PlanUpdate:
  - 'git checkout -- examples/shared/semantic/build-browser-snapshot.test.ts scripts/mcp-semantic/tools/freshness-check.test.ts scripts/mcp-semantic/tools/search-corpus.test.ts scripts/mcp-semantic/tools/submit-feedback.test.ts scripts/semantic-index/parallel-search.mjs scripts/mcp-semantic/repo-cortex-mcp.mjs scripts/mcp-semantic/__tests__/parallel-search.test.mjs plans/mcp-active-binding.plans.md'
  - 'git restore --source=HEAD -- scripts/semantic-index/schema-v2.sql'
  next: 'Handoff to 05-green-testing for focused slice confirmation; no src/ files touched, so coverage-guard is not required beyond noting zero production-source changes.'
+```
+
+```yaml
+PlanUpdate:
+  slice_id: nge-juvenile-exhaustion-assertion-refresh
+  changed_files:
+    - src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts
+    - plans/mcp-active-binding.plans.md
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx eslint src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts'
+    - 'npx prettier --check src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts plans/mcp-active-binding.plans.md'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts'
+  rollback:
+    - 'git checkout -- src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts'
+  next: 'Hand off to 05-green-testing to confirm the focused grow-stabilize test slice passes after updating the stale exhaustion-stage fraction assertions.'
 ```
 
 ## Handoff query

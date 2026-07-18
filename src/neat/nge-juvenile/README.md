@@ -16,8 +16,7 @@ scoring, hysteresis, cooldowns, and budgets) stays separate from the lower
 level structural mutations that actually change the network. That separation
 lets the same engine run inside an application curriculum, a collective
 simulation, an agent-based scenario, or a headless unit test with no dependency
-on `examples/` or demo
-code.
+on `examples/` or demo code.
 
 ## The juvenile growth contract
 
@@ -93,6 +92,41 @@ stateDiagram-v2
   Growth --> [*] : lifecycle morphs applied
 ```
 
+## Weight-exhaustion gate and variant scaling
+
+The grow-stabilize cycle does not rely on a fixed improvement threshold. When
+weight mutation is active, the cycle compares the best weight variant against
+an adaptive **exhaustion** bar that rises as the network ages. If no variant
+beats the bar for too many consecutive ticks, the cycle treats structural growth
+as the better investment and switches back to the lifecycle pipeline. The bar
+is stage-aware: babies tolerate larger jumps, adults require finer evidence.
+
+Three additional signals shape the bar so it cannot be gamed by scale alone:
+
+- **Neuron-budget factor** — small networks are nudged toward structural
+  growth because they have headroom; large networks face a tighter bar.
+- **Noise-multiplier cap** — the statistical uplift from evaluating many
+  variants is bounded so huge variant counts do not drown out real signal.
+- **Score-ceiling vs. magnitude scaling** — when a known ceiling exists the
+  threshold measures remaining headroom; otherwise it scales with the absolute
+  score magnitude.
+
+After a bad growth event the bar doubles briefly (the post-growth anti-runaway
+boost) so the cycle does not over-tune weights while ignoring the structural
+mistake. The boost is capped and time-boxed so growth is never deferred forever.
+
+Variant patches scale their effective magnitude with lifecycle stage and
+network size. A small baby network explores a wide symmetric range around each
+weight, while a large adult network shrinks its perturbations so tuning stays
+local. The scaling is bounded by clamps so very large variant counts or very
+large connection counts cannot explode or collapse the step size.
+
+The exported helpers {@link resolveEffectiveMagnitude} and
+{@link resolveRepresentativeDelta} materialize these scaled perturbations for
+downstream weight mutation, while {@link resolveExhaustionImprovementThreshold}
+and {@link resolveExhaustionForceGrowthThreshold} compute the adaptive
+improvement bar and the structural-growth fallback threshold.
+
 ## Tuning knobs
 
 Most callers can use the seeded defaults. The constants below are the levers
@@ -113,6 +147,23 @@ too conservative.
 | {@link NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP} | Max structural edits per lifecycle call | `5` | Raise for batch growth, lower for fine-grained morphs. |
 | {@link NGE_GROW_STABILIZE_MIN_STABILIZATION_TICKS} | Min ticks after growth before plateau can fire | `5` | Raise to give more learning time, lower for faster cycling. |
 | {@link NGE_GROW_STABILIZE_MAX_STABILIZATION_TICKS} | Max ticks before growth is forced regardless of plateau | `25` | Raise to allow longer stabilization, lower to force growth sooner. |
+| {@link NGE_EXHAUSTION_STAGE_FRACTION_BABY} | Relative improvement bar for weight variants in the baby stage | `0.01` | Lower to let baby networks commit smaller weight wins; raise to demand stronger evidence. |
+| {@link NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE} | Relative improvement bar for weight variants in the juvenile stage | `0.005` | Raise to demand stronger variants, lower to commit smaller improvements. |
+| {@link NGE_EXHAUSTION_STAGE_FRACTION_ADULT} | Relative improvement bar for weight variants in the adult stage | `0.003` | Raise to demand stronger variants; adult tuning is intentionally picky. |
+| {@link NGE_EXHAUSTION_TICK_BUDGET} | Total exhaustion tick budget before structural growth is forced | `48` | Raise to give weight tuning more total ticks; the per-variant limit is `ceil(tickBudget / variantCount)`. |
+| {@link NGE_EXHAUSTION_MIN_CONSECUTIVE_TICKS} | Floor on consecutive exhaustion ticks before forcing growth | `1` | Raise to prevent immediate growth fallback after a single bad variant tick. |
+| {@link NGE_EXHAUSTION_MAX_CONSECUTIVE_TICKS} | Consecutive failed variant ticks before forcing structural growth | `8` | Raise to allow more tuning attempts, lower to switch to growth sooner. |
+| {@link NGE_EXHAUSTION_POST_GROWTH_EXHAUSTION_BOOST} | Multiplier applied to the exhaustion limit after a bad growth event | `2.0` | Lower to reduce the post-growth anti-runaway back-off. |
+| {@link NGE_EXHAUSTION_POST_GROWTH_MAX_CONSECUTIVE_TICKS} | Same cap after a bad growth event triggered the exhaustion boost | `16` | Keeps the doubled back-off from deferring weight tuning forever. |
+| {@link NGE_EXHAUSTION_NEURON_BUDGET_FACTOR} | Half-range multiplier for the neuron-budget factor | `0.5` | Raise to push small networks toward growth faster; zero disables the bias. |
+| {@link NGE_EXHAUSTION_NOISE_MULTIPLIER_CAP} | Upper bound on the variant-count noise uplift | `2.0` | Lower to make huge variant counts less forgiving of noise. |
+| {@link NGE_EXHAUSTION_SCORE_EPSILON} | Minimum absolute scale for the adaptive threshold | `1e-6` | Raise when very small scores need a larger minimum improvement bar. |
+| {@link NGE_GROW_STABILIZE_BIAS_MUTATION_RATE} | Fraction of biases perturbed during stabilization | `0.3` | Raise for more aggressive bias exploration; lower for conservative tuning. |
+| {@link NGE_GROW_STABILIZE_BIAS_MUTATION_MAGNITUDE} | Maximum bias perturbation during stabilization | `0.1` | Raise for larger bias steps; lower for fine-grained bias tuning. |
+| {@link NGE_GROW_STABILIZE_MUTATION_COOLDOWN_TICKS} | Cooldown after a committed mutation attempt | `5` | Raise to make adaptation sparser; lower for faster response. |
+| {@link NGE_GROW_STABILIZE_ROLLBACK_COOLDOWN_TICKS} | Cooldown after a rollback outcome | `5` | Raise to throttle retries after a rejected candidate. |
+| {@link NGE_VARIANT_WIDTH_FACTOR_MAX} | Upper clamp on stage-driven variant-count magnitude scaling | `1.5` | Lower to cap exploration width for very large variant counts. |
+| {@link NGE_VARIANT_SIZE_FACTOR_FLOOR} | Lower clamp on network-size magnitude scaling | `0.1` | Raise to prevent tiny perturbations in very large networks. |
 
 ## Determinism boundary
 
@@ -178,6 +229,133 @@ const outcomes = nge.juvenile.applyMorphDeltas(network, deltas, budget);
 
 ## neat/nge-juvenile/neat.nge-juvenile.constants.ts
 
+### NGE_EXHAUSTION_MAX_CONSECUTIVE_TICKS
+
+Maximum consecutive weight-exhaustion ticks before forcing structural growth
+under normal conditions.
+
+Contract: NGE_EXHAUSTION_MAX_CONSECUTIVE_TICKS=8
+
+### NGE_EXHAUSTION_MIN_CONSECUTIVE_TICKS
+
+Minimum consecutive weight-exhaustion ticks before forcing structural growth.
+
+Contract: NGE_EXHAUSTION_MIN_CONSECUTIVE_TICKS=1
+
+### NGE_EXHAUSTION_NEURON_BUDGET_FACTOR
+
+Half-range multiplier used by the neuron-budget factor. The factor equals
+`1.0 + factor * (1.0 - current / max)`, clamped to [0.5, 2.0].
+
+Contract: NGE_EXHAUSTION_NEURON_BUDGET_FACTOR=0.5
+
+### NGE_EXHAUSTION_NOISE_MULTIPLIER_CAP
+
+Maximum multiplier applied to the noise-sigma term when computing the
+weight-exhaustion improvement threshold. Without a cap, very large variant
+counts inflate the noise uplift without bound; this cap keeps the uplift
+bounded to twice the per-stage noise sigma.
+
+Contract: NGE_EXHAUSTION_NOISE_MULTIPLIER_CAP=2.0
+
+### NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT
+
+Noise-sigma fraction for the adult lifecycle stage.
+
+Contract: NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT=0.001
+
+### NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY
+
+Noise-sigma fraction for the baby lifecycle stage. Controls how much the
+adaptive threshold is lifted by variant-count noise in early growth.
+
+Contract: NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY=0.003
+
+### NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE
+
+Noise-sigma fraction for the juvenile lifecycle stage.
+
+Contract: NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE=0.002
+
+### NGE_EXHAUSTION_POST_GROWTH_EXHAUSTION_BOOST
+
+Multiplier applied to the base exhaustion limit after a bad growth event.
+The resulting limit is clamped between 4 and 16.
+
+Contract: NGE_EXHAUSTION_POST_GROWTH_EXHAUSTION_BOOST=2.0
+
+### NGE_EXHAUSTION_POST_GROWTH_MAX_CONSECUTIVE_TICKS
+
+Maximum consecutive weight-exhaustion ticks after a post-growth boost is
+active. Used to cap the doubled exhaustion limit so bad growth cannot defer
+weight tuning indefinitely.
+
+Contract: NGE_EXHAUSTION_POST_GROWTH_MAX_CONSECUTIVE_TICKS=16
+
+### NGE_EXHAUSTION_SCORE_EPSILON
+
+Minimum absolute scale used by the adaptive improvement threshold to avoid
+a zero threshold when both baseline and best score are extremely small.
+
+Contract: NGE_EXHAUSTION_SCORE_EPSILON=1e-6
+
+### NGE_EXHAUSTION_STAGE_FRACTION_ADULT
+
+Stage fraction for the adult lifecycle stage.
+
+Contract: NGE_EXHAUSTION_STAGE_FRACTION_ADULT=0.003
+
+### NGE_EXHAUSTION_STAGE_FRACTION_BABY
+
+Stage fraction for the baby lifecycle stage. Determines the relative
+improvement bar used to decide whether a weight variant commits.
+
+Contract: NGE_EXHAUSTION_STAGE_FRACTION_BABY=0.01
+
+### NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE
+
+Stage fraction for the juvenile lifecycle stage.
+
+Contract: NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE=0.005
+
+### NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR
+
+Floor for the adaptive improvement-threshold decay. The decay multiplier is
+clamped to this value so the threshold never collapses to zero and allows
+random noise to commit.
+
+Contract: NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR=0.25
+
+### NGE_EXHAUSTION_THRESHOLD_DECAY_RATE
+
+Per-failure decay rate applied to the adaptive improvement threshold. Each
+consecutive weight-exhaustion tick multiplies the threshold by
+`(1 - NGE_EXHAUSTION_THRESHOLD_DECAY_RATE)` so that near-converged scores can
+still commit small-but-useful weight variants.
+
+Contract: NGE_EXHAUSTION_THRESHOLD_DECAY_RATE=0.15
+
+### NGE_EXHAUSTION_TICK_BUDGET
+
+Total tick budget allocated to weight-exhaustion before structural growth is
+forced. The raw exhaustion count is `ceil(tickBudget / variantCount)`.
+
+Contract: NGE_EXHAUSTION_TICK_BUDGET=48
+
+### NGE_GROW_STABILIZE_BIAS_MUTATION_MAGNITUDE
+
+Maximum magnitude of bias perturbation applied during grow-stabilize
+stabilization. Each selected bias is shifted by a random value in
+[-MAGNITUDE, +MAGNITUDE].
+
+Contract: NGE_GROW_STABILIZE_BIAS_MUTATION_MAGNITUDE=0.1
+
+### NGE_GROW_STABILIZE_BIAS_MUTATION_RATE
+
+Fraction of biases perturbed during each grow-stabilize stabilization tick.
+
+Contract: NGE_GROW_STABILIZE_BIAS_MUTATION_RATE=0.3
+
 ### NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP
 
 Default maximum number of structural edits per lifecycle call.
@@ -189,6 +367,15 @@ Contract: NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP=5
 
 Default module identifier used by the grow-stabilize cycle when no
 custom module ID is supplied.
+
+### NGE_GROW_STABILIZE_FORCE_GROWTH_AFTER_FAILED_STABILIZATIONS
+
+Number of consecutive failed stabilization ticks after which the grow-stabilize
+cycle skips weight tuning and forces a structural growth attempt. This prevents
+the network from remaining stuck in a local weight basin when the score is
+no longer improving.
+
+Contract: NGE_GROW_STABILIZE_FORCE_GROWTH_AFTER_FAILED_STABILIZATIONS=3
 
 ### NGE_GROW_STABILIZE_GROWTH_THROTTLE_BASE_INTERVAL_TICKS
 
@@ -203,6 +390,14 @@ Node count above which the growth throttle engages.
 Networks exceeding this threshold get progressively longer back-off intervals.
 
 Contract: NGE_GROW_STABILIZE_LARGE_NETWORK_NODE_THRESHOLD=1_000
+
+### NGE_GROW_STABILIZE_LIFECYCLE_COOLDOWN_WINDOW_COUNT
+
+Number of consecutive lifecycle windows used for grow-stabilize cooldown
+gating. A morph action may not commit again until this many windows have
+elapsed.
+
+Contract: NGE_GROW_STABILIZE_LIFECYCLE_COOLDOWN_WINDOW_COUNT=5
 
 ### NGE_GROW_STABILIZE_MAX_EPISODIC_SLOTS
 
@@ -231,6 +426,13 @@ before plateau detection can fire.
 
 Contract: NGE_GROW_STABILIZE_MIN_STABILIZATION_TICKS=5
 
+### NGE_GROW_STABILIZE_MUTATION_COOLDOWN_TICKS
+
+Cooldown ticks between consecutive weight mutations in the grow-stabilize
+cycle. Prevents over-tuning within a single stabilization window.
+
+Contract: NGE_GROW_STABILIZE_MUTATION_COOLDOWN_TICKS=10
+
 ### NGE_GROW_STABILIZE_PLATEAU_VARIANCE_THRESHOLD
 
 Variance threshold below which the quality score is considered plateaued.
@@ -247,6 +449,24 @@ The rolling window tracks the baseline score at each adaptation tick to
 determine whether the network has stabilized before allowing growth.
 
 Contract: NGE_GROW_STABILIZE_PLATEAU_WINDOW_SIZE=5
+
+### NGE_GROW_STABILIZE_ROLLBACK_COOLDOWN_TICKS
+
+Cooldown ticks between structural rollbacks in the grow-stabilize cycle.
+
+Contract: NGE_GROW_STABILIZE_ROLLBACK_COOLDOWN_TICKS=3
+
+### NGE_GROW_STABILIZE_STABILIZATION_VARIANT_COUNT
+
+Number of parallel weight variants evaluated during the stabilization phase.
+
+The racing demo's acceleration config uses 1024 variants for growth-oriented
+evaluation, but stabilization is a local hill-climb around the current weights
+and does not need that resolution. Capping stabilization variants at this count
+preserves real-time frame budget without changing the growth-phase variant
+budget.
+
+Contract: NGE_GROW_STABILIZE_STABILIZATION_VARIANT_COUNT=32
 
 ### NGE_GROW_STABILIZE_WEIGHT_MUTATION_MAGNITUDE
 
@@ -319,6 +539,8 @@ no longer tied to raw rewardDelta alone.
 
 Default Gaussian standard deviation applied to module activations during noise probes.
 Smaller values produce fine-grained perturbations; larger values create more disruptive noise.
+See [Normal distribution (Wikipedia)](https://en.wikipedia.org/wiki/Normal_distribution)
+for background on the bell-curve noise model.
 
 ### NGE_JUVENILE_DEFAULT_PROBE_CADENCE_EPOCHS
 
@@ -347,6 +569,80 @@ Hidden-state refresh floor below which recurrent state becomes prune evidence.
 
 Minimum viable episodic slot increment applied by one expansion step.
 
+### NGE_LIFECYCLE_DEFAULT_ADULT_GROWTH_CADENCE
+
+Default growth cadence for the adult lifecycle stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_ADULT_GROWTH_CADENCE=0.2
+
+### NGE_LIFECYCLE_DEFAULT_ADULT_MUTATION_MAGNITUDE
+
+Default weight-mutation magnitude for the adult lifecycle stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_ADULT_MUTATION_MAGNITUDE=0.05
+
+### NGE_LIFECYCLE_DEFAULT_ADULT_STABILIZATION_INTENSITY
+
+Default stabilization intensity for the adult lifecycle stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_ADULT_STABILIZATION_INTENSITY=0.7
+
+### NGE_LIFECYCLE_DEFAULT_ADULT_VARIANT_COUNT
+
+Default number of weight variants evaluated in the adult lifecycle stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_ADULT_VARIANT_COUNT=2
+
+### NGE_LIFECYCLE_DEFAULT_BABY_GROWTH_CADENCE
+
+Default growth cadence for the baby lifecycle stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_BABY_GROWTH_CADENCE=0.8
+
+### NGE_LIFECYCLE_DEFAULT_BABY_MUTATION_MAGNITUDE
+
+Default weight-mutation magnitude for the baby lifecycle stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_BABY_MUTATION_MAGNITUDE=0.15
+
+### NGE_LIFECYCLE_DEFAULT_BABY_NODE_THRESHOLD
+
+Default node-count threshold that separates the baby lifecycle stage from
+the juvenile stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_BABY_NODE_THRESHOLD=1_000
+
+### NGE_LIFECYCLE_DEFAULT_BABY_STABILIZATION_INTENSITY
+
+Default stabilization intensity for the baby lifecycle stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_BABY_STABILIZATION_INTENSITY=0.3
+
+### NGE_LIFECYCLE_DEFAULT_BABY_VARIANT_COUNT
+
+Default number of weight variants evaluated in the baby lifecycle stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_BABY_VARIANT_COUNT=16
+
+### NGE_LIFECYCLE_DEFAULT_JUVENILE_MUTATION_MAGNITUDE
+
+Default weight-mutation magnitude for the juvenile lifecycle stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_JUVENILE_MUTATION_MAGNITUDE=0.1
+
+### NGE_LIFECYCLE_DEFAULT_JUVENILE_NODE_THRESHOLD
+
+Default node-count threshold that separates the juvenile lifecycle stage
+from the adult stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_JUVENILE_NODE_THRESHOLD=4_000
+
+### NGE_LIFECYCLE_DEFAULT_JUVENILE_VARIANT_COUNT
+
+Default number of weight variants evaluated in the juvenile lifecycle stage.
+
+Contract: NGE_LIFECYCLE_DEFAULT_JUVENILE_VARIANT_COUNT=8
+
 ### NGE_MAX_EDGE_CAPACITY
 
 Maximum edge capacity that the NGE growth budget supports.
@@ -363,12 +659,119 @@ Used by lifecycle runners and callers that need an explicit 8,000-node ceiling.
 
 Contract: NGE_MAX_NODE_CAPACITY=8_000
 
+### NGE_VARIANT_PATCH_MAX_CONNECTION_COUNT
+
+Maximum number of connections perturbed by a single multi-connection
+weight variant patch. Caps patch size independently of network scale so
+each variant remains a bounded local search step. Reduced from 16 to 8
+because random-sign perturbations scale as sqrt(K), so smaller K loses
+little signal while keeping patches local.
+
+Contract: NGE_VARIANT_PATCH_MAX_CONNECTION_COUNT=8
+
+### NGE_VARIANT_PATCH_MIN_CONNECTION_COUNT
+
+Minimum number of connections perturbed by a single multi-connection
+weight variant patch. Patches always contain at least this many
+perturbations when the network has any trainable connections.
+
+Contract: NGE_VARIANT_PATCH_MIN_CONNECTION_COUNT=1
+
+### NGE_VARIANT_PATCH_SEED_OFFSET
+
+Minimum deterministic seed offset between successive variant patches.
+The actual stride is `max(offset, patchSize * strideFactor)` so small
+patches remain well-separated while large patches cannot overflow a 32-bit
+seed space by using a per-count multiplier.
+
+Contract: NGE_VARIANT_PATCH_SEED_OFFSET=1000
+
+### NGE_VARIANT_PATCH_SEED_STRIDE_FACTOR
+
+Deterministic seed stride multiplier between successive variant patches.
+Each patch uses `baseSeed + index * strideFactor`, keeping streams short
+and non-overlapping when the same base seed is reused across variant
+indices.
+
+Contract: NGE_VARIANT_PATCH_SEED_STRIDE_FACTOR=4
+
+### NGE_VARIANT_PATCH_SIZE_DIVISOR
+
+Divisor used to derive the desired multi-connection patch size from the
+total connection count. Combined with
+{@link NGE_VARIANT_PATCH_MAX_CONNECTION_COUNT} to keep patch size modest.
+A divisor of 50 means a 500-connection network gets a 10-connection patch,
+which is then clamped to the patch maximum.
+
+Contract: NGE_VARIANT_PATCH_SIZE_DIVISOR=50
+
+### NGE_VARIANT_SIZE_FACTOR_FLOOR
+
+Lower clamp for the size-factor scaling term. Prevents the magnitude from
+collapsing to zero for extremely large networks.
+
+Contract: NGE_VARIANT_SIZE_FACTOR_FLOOR=0.1
+
+### NGE_VARIANT_SIZE_FACTOR_REF_CONNECTIONS
+
+Reference connection count used to scale the effective mutation magnitude
+by network size. Derived from the patch defaults as
+ceil(NGE_VARIANT_PATCH_MAX_CONNECTION_COUNT / (1 / NGE_VARIANT_PATCH_SIZE_DIVISOR)).
+
+Contract: NGE_VARIANT_SIZE_FACTOR_REF_CONNECTIONS=400
+
+### NGE_VARIANT_WEIGHT_RANGE
+
+Total weight exploration range multiplier. Representative deltas are
+symmetric around zero and span [-magnitude, +magnitude], so the
+effective exploration width is two magnitudes.
+
+### NGE_VARIANT_WIDTH_FACTOR_MAX
+
+Upper clamp for the width-factor scaling term. Keeps very large variant
+counts (for example, the 1024 override) from inflating the effective
+magnitude beyond a bounded multiple of the stage baseline. Reduced from 2.0
+to 1.5 so the logarithmic width factor does not over-widen the search.
+
+Contract: NGE_VARIANT_WIDTH_FACTOR_MAX=1.5
+
 ## neat/nge-juvenile/neat.nge-juvenile.types.ts
 
 ### NGE_JUVENILE_TYPES_LOADED
 
 Runtime sentinel confirming the juvenile types module has been loaded.
 Ensures Istanbul instruments this file so it appears in coverage reports.
+
+### NgeAdaptConfig
+
+Optional override values for a single `adapt()` call.
+
+### NgeAdaptOptions
+
+Inputs for one score-gated adaptation window.
+
+### NgeAdaptResult
+
+Result of one score-gated adaptation window.
+
+### NgeAdaptTelemetry
+
+Telemetry recorded for one score-gated adaptation window.
+
+### NgeCadencePolicy
+
+Pluggable cadence policy called when supplied to `adapt()`.
+
+### NgeCandidateEvaluator
+
+Injected evaluator contract used by the score-gated adaptation window.
+
+The caller provides baseline scoring, mutation application, and candidate
+scoring so `adapt()` can stay domain-agnostic and testable.
+
+### NgeCandidateScoringConfig
+
+Configuration for candidate score-window and sample-index resolution.
 
 ### NgeFocusScore
 
@@ -424,6 +827,35 @@ Each weight scales one normalized metric — utilization, reward, novelty, stabi
 
 Resolved juvenile-phase configuration for focus scoring and later morph guards.
 
+### NgeLifecycleRunner
+
+```ts
+NgeLifecycleRunner(): void
+```
+
+Optional lifecycle runner signature accepted by `adapt()` for dependency
+injection and future cycle integration.
+
+### NgeLifecycleStage
+
+Discrete NGE lifecycle stage. The progression is embryo → baby → juvenile →
+adult → equilibrium. Each stage carries different defaults for growth cadence,
+stabilization intensity, and weight-mutation magnitude.
+
+### NgeLifecycleStageConfig
+
+Optional numeric overrides for lifecycle-stage thresholds and magnitudes.
+
+All fields are optional. When omitted, the lifecycle-stage resolver falls
+back to the documented constants in `neat.nge-juvenile.constants.ts`.
+
+### NgeMetricsProvider
+
+Pluggable metrics provider called when supplied to `adapt()`.
+
+The provider is intentionally minimal so tests and callers can inject a
+simple spy without implementing a full telemetry surface.
+
 ### NgeModuleMetricsSnapshot
 
 Cheap per-module metrics snapshot consumed by the juvenile focus scorer.
@@ -431,6 +863,11 @@ Cheap per-module metrics snapshot consumed by the juvenile focus scorer.
 ### NgeMorphDelta
 
 Dry-run structural delta that later juvenile passes can validate or roll back.
+
+### NgeObservationEncoder
+
+Domain-agnostic encoder that converts an application observation into a
+network input vector.
 
 ### NgeProbeDecision
 
@@ -626,6 +1063,58 @@ Parameters:
 
 Returns: Scalar growth signal; values above the configured floor open the gate.
 
+### MorphDeltaRegistry
+
+Registry of morph-delta validators used by `validateMorphDelta`.
+
+The registry is initialized with the built-in NGE juvenile morph kinds
+(`edgeDensify`, `slotExpand`, `nodeAdd`, `edgePrune`, `compact`). Additional
+kinds can be registered at runtime; removing a kind causes `validate` to
+reject deltas of that kind with {@link NgeJuvenile_MorphError}.
+
+#### register
+
+```ts
+register(
+  kind: string,
+  validator: MorphValidator,
+): void
+```
+
+Register a validator for a morph kind.
+
+Parameters:
+- `kind` - Morph kind to validate.
+- `validator` - Function that throws a budget/morph error when invalid.
+
+#### unregister
+
+```ts
+unregister(
+  kind: string,
+): void
+```
+
+Remove a previously registered morph kind validator.
+
+Parameters:
+- `kind` - Morph kind to remove from the registry.
+
+#### validate
+
+```ts
+validate(
+  delta: NgeMorphDelta,
+  budget: NgeGrowthBudget,
+): void
+```
+
+Validate a morph delta against the current structural budget.
+
+Parameters:
+- `delta` - Planned morph delta to validate.
+- `budget` - DNA-configured growth caps and current live counts.
+
 ### NgeGrowthMorphKind
 
 Growth-side morph kinds that the juvenile planner can emit and the lifecycle
@@ -750,6 +1239,9 @@ validateMorphDelta(
 ```
 
 Re-validate one dry-run morph delta against the current structural budget.
+
+Delegates to {@link MorphDeltaRegistry.validate} so that validation is
+table-driven and extensible.
 
 Parameters:
 - `delta` - Planned morph delta to validate.
@@ -924,10 +1416,19 @@ the lifecycle execution, enabling test doubles and cycle breaking.
 
 ## Background reading
 
+- NEAT and topology-evolving neuroevolution:
+  K. O. Stanley and R. Miikkulainen, "Evolving Neural Networks through
+  Augmenting Topologies," *Evolutionary Computation*, vol. 10, no. 2,
+  pp. 99-127, 2002.
+  [NEAT publications](https://nn.cs.utexas.edu/?neat-papers)
+- Growth/stabilization as an explore–exploit tradeoff:
+  [Wikipedia — Exploration–exploitation dilemma](https://en.wikipedia.org/wiki/Exploration%E2%80%93exploitation_dilemma)
 - Hysteresis in control systems:
   [Wikipedia — Hysteresis](https://en.wikipedia.org/wiki/Hysteresis).
 - Plateau detection via rolling-window variance:
   [Wikipedia — Variance](https://en.wikipedia.org/wiki/Variance).
+- Mean squared error:
+  [Wikipedia — Mean squared error](https://en.wikipedia.org/wiki/Mean_squared_error)
 
 ```mermaid
 stateDiagram-v2
@@ -944,6 +1445,7 @@ stateDiagram-v2
 applyWeightMutations(
   network: default,
   random: () => number,
+  magnitude: number | undefined,
 ): number
 ```
 
@@ -958,6 +1460,8 @@ structure during the stabilization phase between structural growth phases.
 Parameters:
 - `network` - The network whose connections to perturb.
 - `random` - Random number generator returning a float in [0, 1).
+- `magnitude` - Optional override for the perturbation magnitude. When
+omitted, the default grow-stabilize weight mutation magnitude is used.
 
 Returns: The number of connections that were mutated.
 
@@ -968,56 +1472,39 @@ const mutated = applyWeightMutations(network, Math.random);
 console.log(mutated); // e.g. 3
 ```
 
-### buildDefaultBudget
+### buildWeightVariants
 
 ```ts
-buildDefaultBudget(
+buildWeightVariants(
   network: default,
-  config: NgeGrowStabilizeConfig,
-): NgeGrowthBudget
+  variantCount: number,
+  stage: NgeLifecycleStage,
+): WeightVariant[]
 ```
 
-Build a default growth budget from the live network and resolved config.
+Build deterministic weight variants that mirror the evaluator's internal
+variant list.
+
+The parallel evaluator restores connection weights after each variant, so
+the grow-stabilize cycle must reconstruct the same variant list to commit
+the winning delta. This builder uses the same endpoint-inclusive delta
+distribution and effective-magnitude scaling as the evaluator so that
+reconstruction is guaranteed to match the evaluated slot.
 
 Parameters:
-- `network` - Live controller network.
-- `config` - Resolved grow-stabilize config.
+- `network` - Network surface whose connection list is used for indexing.
+- `variantCount` - Number of parallel variants to reconstruct.
+- `stage` - Current NGE lifecycle stage; controls effective magnitude.
 
-Returns: NGE growth budget for the lifecycle apply phase.
+Returns: Array of deterministic weight variants.
 
-### buildDefaultMetrics
+Example:
 
 ```ts
-buildDefaultMetrics(
-  scoreHistory: readonly number[],
-  network: default,
-  moduleId: string,
-): NgeModuleMetricsSnapshot
+const variants = buildWeightVariants(network, 4, 'juvenile');
+// variants[0] targets connection 0 with a small negative delta;
+// variants[3] targets connection 3 with the largest positive delta.
 ```
-
-Build default module metrics from numeric score history and live network state.
-
-Parameters:
-- `scoreHistory` - Rolling numeric score history.
-- `network` - Live controller network.
-- `moduleId` - Module identifier for the metrics snapshot.
-
-Returns: NGE module metrics for the lifecycle focus scorer.
-
-### buildDefaultPruneBudget
-
-```ts
-buildDefaultPruneBudget(
-  network: default,
-): NgePruneBudget
-```
-
-Build a default prune budget from the live network.
-
-Parameters:
-- `network` - Live controller network.
-
-Returns: NGE prune budget for the lifecycle apply phase.
 
 ### computeGrowthThrottle
 
@@ -1088,21 +1575,6 @@ const plateaued = isPlateauReached([0.5, 0.51, 0.49, 0.5, 0.5], true, 10);
 console.log(plateaued); // true (low variance after min ticks)
 ```
 
-### mapOutcomesToOperations
-
-```ts
-mapOutcomesToOperations(
-  outcomes: readonly { status: string; kind: string; }[],
-): string[]
-```
-
-Map lifecycle apply outcomes to operation name strings.
-
-Parameters:
-- `outcomes` - Apply outcomes from the lifecycle result.
-
-Returns: Operation strings for telemetry, excluding skipped morphs.
-
 ### resolveAdaptiveHysteresis
 
 ```ts
@@ -1129,27 +1601,148 @@ const hysteresis = resolveAdaptiveHysteresis(150);
 console.log(hysteresis); // 2
 ```
 
-### resolveGrowStabilizeConfig
+### resolveExhaustionForceGrowthThreshold
 
 ```ts
-resolveGrowStabilizeConfig(
-  partial: Partial<NgeGrowStabilizeConfig> | undefined,
-): NgeGrowStabilizeConfig
+resolveExhaustionForceGrowthThreshold(
+  variantCount: number,
+  postGrowthBoostActive: boolean,
+): number
 ```
 
-Resolve a partial grow-stabilize config with sensible defaults.
+Resolve the number of consecutive weight-exhaustion ticks before structural
+growth is forced.
+
+The raw count is `ceil(tickBudget / variantCount)`, clamped to the allowed
+[min, max] range. After a bad growth event the limit is doubled (capped at
+16, floored at 4) to prevent the network from over-tuning weights instead of
+adding useful structure.
 
 Parameters:
-- `partial` - Caller-supplied config overrides.
+- `variantCount` - Number of parallel variants evaluated.
+- `postGrowthBoostActive` - Whether the post-growth anti-runaway boost
+is active.
 
-Returns: Fully resolved config.
+Returns: Allowed consecutive exhaustion ticks before forcing growth.
+
+Example:
+
+```ts
+const limit = resolveExhaustionForceGrowthThreshold(16, false);
+console.log(limit); // 3
+```
+
+### resolveExhaustionImprovementThreshold
+
+```ts
+resolveExhaustionImprovementThreshold(
+  baseline: number,
+  bestScore: number,
+  variantCount: number,
+  stage: NgeLifecycleStage,
+  neuronBudget: { current: number; max: number; },
+  scoreCeiling: number,
+  consecutiveFailures: number,
+): number
+```
+
+Resolve the adaptive improvement threshold used by the weight-exhaustion
+gate.
+
+The threshold combines:
+
+- a stage-relative improvement bar,
+- a noise-aware uplift that grows with the number of evaluated variants,
+- a neuron-budget factor that biases small networks toward structural growth.
+
+When the score ceiling is finite and both baseline and best score are below
+it, the threshold scales with remaining headroom; otherwise it scales with
+the absolute score magnitude.
+
+Parameters:
+- `baseline` - Score before evaluating variants.
+- `bestScore` - Best score observed across all variants.
+- `variantCount` - Number of variants evaluated.
+- `stage` - Current NGE lifecycle stage.
+- `neuronBudget` - Current and maximum neuron counts.
+- `scoreCeiling` - Known score ceiling, or `Infinity` when absent.
+- `consecutiveFailures` - Optional number of consecutive failed
+stabilization ticks. Each failure decays the threshold so that
+near-converged scores can still commit useful weight variants.
+
+Returns: Adaptive improvement threshold; a variant commits when
+`bestScore > baseline + threshold`.
+
+Example:
+
+```ts
+const threshold = resolveExhaustionImprovementThreshold(
+  0.5, 0.6, 16, 'baby', { current: 10, max: 100 }, Infinity,
+);
+console.log(threshold > 0); // true
+```
+
+### resolveNoiseSigmaFraction
+
+```ts
+resolveNoiseSigmaFraction(
+  stage: NgeLifecycleStage,
+): number
+```
+
+Resolve the noise-sigma fraction for a lifecycle stage.
+
+The noise-sigma fraction scales the adaptive threshold by the expected
+statistical noise from evaluating a finite number of variants. Early stages
+get a larger fraction (0.003) because they evaluate more variants and need
+a higher uplift; later stages get a smaller fraction (0.001).
+
+Parameters:
+- `stage` - Current NGE lifecycle stage.
+
+Returns: Noise-sigma fraction for the stage.
+
+Example:
+
+```ts
+const sigmaFraction = resolveNoiseSigmaFraction('juvenile');
+console.log(sigmaFraction); // 0.002
+```
+
+### resolveStageFraction
+
+```ts
+resolveStageFraction(
+  stage: NgeLifecycleStage,
+): number
+```
+
+Resolve the relative improvement fraction for a lifecycle stage.
+
+Baby/embryo networks get the largest bar (1%), juvenile networks get a
+tighter bar (0.5%), and adult/equilibrium networks get the tightest bar
+(0.3%). This implements the "grow fast past baby, picky in middle, slower
+adult" intent by requiring larger improvements early and smaller
+improvements later.
+
+Parameters:
+- `stage` - Current NGE lifecycle stage.
+
+Returns: Relative improvement fraction for the stage.
+
+Example:
+
+```ts
+const fraction = resolveStageFraction('baby');
+console.log(fraction); // 0.01
+```
 
 ### runNgeGrowStabilizeCycle
 
 ```ts
 runNgeGrowStabilizeCycle(
   input: NgeGrowStabilizeInput,
-): NgeGrowStabilizeResult
+): Promise<NgeGrowStabilizeResult>
 ```
 
 Run one NGE grow-stabilize adaptation cycle.
@@ -1165,7 +1758,41 @@ This orchestrator encapsulates the plateau-detection decision and either:
 For the very first growth (`hasGrownBefore` is `false`), the plateau check
 is bypassed and the hysteresis gate is pre-satisfied so the lifecycle
 produces candidate morphs immediately — the network needs capacity before
-stabilization can tune it.
+stabilization can tune it. If the lifecycle still returns no applied
+operations on that first call, the cycle forces a single `ADD_NODE` mutation
+so the network cannot remain stuck at its starting size.
+
+Weight-exhaustion detection is stateful. Supply `consecutiveWeightExhaustion`
+and `postGrowthThresholdActive` so the cycle can count failed variant ticks
+and activate the post-growth anti-runaway boost. A captured
+`preGrowthBaseline` is compared against the stabilization baseline; a large
+drop activates the boost and consumes the captured value.
+
+When stabilization repeatedly fails to commit weight variants, the caller
+can pass a non-zero `consecutiveStabilizationFailures` count. Once it meets
+or exceeds `NGE_GROW_STABILIZE_FORCE_GROWTH_AFTER_FAILED_STABILIZATIONS`,
+the cycle skips the stabilization phase and forces a growth attempt with
+reason `forced_by_stabilization_failures`. This prevents the network from
+staying stuck in local weight-tuning optima.
+
+The adaptive improvement threshold used during variant evaluation decays as
+`consecutiveWeightExhaustion` increases, controlled by
+`NGE_EXHAUSTION_THRESHOLD_DECAY_RATE` and floored by
+`NGE_EXHAUSTION_THRESHOLD_DECAY_FLOOR`. The decay lowers the bar so that
+near-converged scores can still commit useful weight variants.
+
+The returned result includes `actualVariantCount`, which reports the number of
+weight variants that were actually evaluated during stabilization. When
+variants are not evaluated (for example because training data are missing or
+growth was forced), the field is zero.
+
+Score-space alignment matters. When a custom `scoreFn` is supplied, it is
+used for both the baseline and the variant evaluations. The caller must ensure
+the scorer returns values in the same semantic space and direction as the
+supplied `baselineScore`; otherwise the commit inequality
+`bestScore > baselineScore + threshold` can never be satisfied. A common
+mistake is comparing a positive task-specific quality score with the default
+negative mean-squared-error scorer.
 
 The caller is responsible for pre-mutation score evaluation, network
 snapshot/rollback, and post-mutation score evaluation. The cycle only
@@ -1176,13 +1803,15 @@ Parameters:
 - `input` - Grow-stabilize cycle input with required network,
 scoreHistory, hasGrownBefore, and stabilizationTicksSinceGrowth.
 
-Returns: Result describing whether the cycle committed, which phase it
-entered, and what operations were applied.
+Returns: Promise resolving to the result describing whether the cycle
+committed, which phase it entered, what operations were applied, and the
+updated exhaustion/hysteresis state. When stabilization evaluated weight
+variants, `actualVariantCount` reports the count that were used.
 
 Example:
 
 ```ts
-const result = runNgeGrowStabilizeCycle({
+const result = await runNgeGrowStabilizeCycle({
   network,
   scoreHistory: [1, 2, 3, 4],
   hasGrownBefore: false,
@@ -1551,3 +2180,1178 @@ Parameters:
 - `k` - Maximum number of items to return.
 
 Returns: The highest-ranked `k` items with stable tie-breaking by input index.
+
+## neat/nge-juvenile/neat.nge-juvenile.dna.ts
+
+NGE DNA governance translator for the grow-stabilize cycle.
+
+This module bridges the canonical NGE DNA envelope to the grow-stabilize
+configuration surface. It reads optional `governance.growStabilize` overrides
+from the DNA envelope and merges them with caller-supplied defaults, so
+DNA-level governance knobs always take priority over runtime defaults
+without hardcoding any values into the translator itself.
+
+## Design rationale
+
+The translator is intentionally a thin, pure function:
+
+- It does not mutate the DNA envelope or the defaults object.
+- It does not import or call any core algorithm code.
+- It does not hardcode defaults; every fallback value comes from the
+  caller-supplied `defaults` parameter.
+- It preserves the `Partial<NgeGrowStabilizeConfig>` contract: fields absent
+  from both sources are simply omitted from the result.
+
+This keeps the DNA → config boundary inspectable, testable, and free of
+hidden side effects, which is critical for deterministic development
+reproducibility (see `reproducibility-contracts` skill).
+
+## Background reading
+
+- NGE DNA as a compact program rather than an explicit graph:
+  see `nge-core-algorithm` skill.
+- Governance overlays and morph policy knobs:
+  see `plans/NGE_Grow_Stabilize_Cycle.plans.md` slice B7.
+
+```mermaid
+flowchart LR
+  DNA["NgeDnaCanonicalEnvelope"] --> Gov{"governance.growStabilize?"}
+  Gov -- present --> Merge["Merge defaults + DNA overrides"]
+  Gov -- absent --> Passthrough["Return defaults"]
+  Merge --> Config["Partial<NgeGrowStabilizeConfig>"]
+  Passthrough --> Config
+```
+
+### extractGrowStabilizeGovernance
+
+```ts
+extractGrowStabilizeGovernance(
+  dna: NgeDnaCanonicalEnvelope,
+): Partial<NgeGrowStabilizeConfig> | undefined
+```
+
+Extract the optional `growStabilize` governance shelf from a DNA envelope.
+
+Returns `undefined` when the envelope carries no governance or when the
+governance shelf has no `growStabilize` field. This keeps the merge logic
+in the orchestrator clean and makes the governance access inspectable.
+
+Parameters:
+- `dna` - Canonical NGE DNA envelope, optionally carrying a governance overlay.
+
+Returns: The grow-stabilize overrides from DNA governance, or `undefined`.
+
+### NgeDnaEnvelopeWithGovernance
+
+A canonical NGE DNA envelope with an optional governance overlay.
+
+The base `NgeDnaCanonicalEnvelope` does not declare a `governance` field.
+This helper type extends it so the translator can safely access the
+optional governance shelf that DNA envelopes may carry.
+
+### NgeDnaGovernance
+
+Governance overlay carried by a canonical NGE DNA envelope.
+
+Maps stage schedules, budgets, wiring-cost preferences, and morph policy
+knobs to canonical NGE_DNA schema fields via the `growStabilize` shelf.
+Each field is optional so DNA envelopes that do not specify governance
+remain valid.
+
+### translateDnaToGrowStabilizeConfig
+
+```ts
+translateDnaToGrowStabilizeConfig(
+  dna: NgeDnaCanonicalEnvelope,
+  defaults: Partial<NgeGrowStabilizeConfig>,
+): Partial<NgeGrowStabilizeConfig>
+```
+
+Translate NGE DNA governance overrides into a grow-stabilize config.
+
+Reads the optional `governance.growStabilize` overlay on the DNA envelope
+and merges it with caller-supplied defaults. DNA governance values take
+priority over defaults for any field present in the governance block.
+Fields absent from both sources are omitted from the result, preserving
+the `Partial<NgeGrowStabilizeConfig>` contract.
+
+All fallback values come from the `defaults` parameter — the translator
+never hardcodes config values. This ensures that the caller (typically the
+lifecycle runner or a higher-level orchestrator) controls every default,
+while DNA governance can override individual knobs without rewriting the
+entire config.
+
+Parameters:
+- `dna` - Canonical NGE DNA envelope, optionally carrying a governance overlay.
+- `defaults` - Caller-supplied default values for grow-stabilize config fields.
+
+Returns: Merged grow-stabilize config with DNA governance overrides applied.
+
+Example:
+
+```ts
+const config = translateDnaToGrowStabilizeConfig(dna, {
+  maxStructuralEditsPerStep: 5,
+  maxNodes: 8_000,
+  maxConnections: 32_000,
+  maxEpisodicSlots: 15,
+  moduleId: 'nge:runtime',
+});
+```
+
+## neat/nge-juvenile/neat.nge-juvenile.adapt.ts
+
+Score-gated adaptation API for the NGE juvenile phase.
+
+This module extracts the commit/rollback loop used by the racing curriculum's
+runtime adaptation engine into a small, testable, domain-agnostic core
+function. The caller supplies a live network, a score history, and an
+injected {@link NgeCandidateEvaluator}. `adapt()` snapshots the network and
+the global connection innovation counter, evaluates a baseline score, applies
+the candidate mutation, evaluates a candidate score, and either commits the
+mutation or rolls back to the snapshot based on a configurable improvement
+threshold.
+
+The first structural growth may be exempted from the improvement check via
+`config.overrides.firstGrowthExemption`. All policy values are defaults that
+callers can override; no thresholds are hardcoded.
+
+```mermaid
+sequenceDiagram
+  participant Caller
+  participant adapt
+  participant Network
+  participant Evaluator
+  Caller->>adapt: adapt({ network, evaluator, config })
+  adapt->>Network: snapshot + capture innovation
+  adapt->>Evaluator: baseline(network, scoreHistory)
+  adapt->>Network: evaluator.apply(network)
+  adapt->>Evaluator: candidate(network, scoreHistory)
+  alt candidate improved or first-growth exemption
+    adapt->>Network: keep mutation
+  else candidate not improved
+    adapt->>Network: restoreNetworkSnapshot
+  end
+  adapt-->>Caller: { baseline, candidate, accepted, telemetry }
+```
+
+### adapt
+
+```ts
+adapt(
+  options: NgeAdaptOptions,
+): NgeAdaptResult
+```
+
+Run one score-gated adaptation window.
+
+Steps:
+1. Snapshot the live network and global connection innovation counter.
+2. Evaluate the baseline score using the injected evaluator.
+3. Apply the candidate mutation using `evaluator.apply(network)`.
+4. Evaluate the candidate score using the injected evaluator.
+5. If the candidate improves enough (or the first-growth exemption applies),
+   keep the mutation; otherwise restore the snapshot and roll back the
+   global innovation counter.
+
+Parameters:
+- `options` - Inputs for the adaptation window, including the live
+network, score history, injected evaluator, and optional config overrides.
+
+Returns: Result containing the baseline and candidate scores, whether the
+mutation was accepted, and telemetry for the window.
+
+Example:
+
+```ts
+import { adapt } from './neat.nge-juvenile.adapt';
+import Network from '../../architecture/network';
+
+const network = new Network(4, 2, { seed: 42 });
+const result = adapt({
+  network,
+  scoreHistory: [0.5, 0.55, 0.52],
+  evaluator: {
+    baseline: () => 0.5,
+    apply: (net) => net.mutate(mutation.ADD_NODE),
+    candidate: () => 0.7,
+  },
+});
+console.log(result.accepted); // true
+```
+
+### captureNetworkSnapshot
+
+```ts
+captureNetworkSnapshot(
+  network: default,
+): { snapshot: Record<string, unknown>; capturedInnovation: number; }
+```
+
+Snapshot the current network state and global connection innovation counter.
+
+The returned snapshot is a deep JSON representation of the network plus the
+counter value captured before any candidate mutation. Restoring uses
+{@link restoreNetworkSnapshot} so the live network reference and the global
+innovation cursor can both be rewound.
+
+Parameters:
+- `network` - Live network whose state should be preserved.
+
+Returns: Object holding the JSON snapshot and captured innovation counter.
+
+### resolveAdaptConfig
+
+```ts
+resolveAdaptConfig(
+  partial: Partial<NgeAdaptConfig> | undefined,
+): ResolvedAdaptConfig
+```
+
+Resolve the effective adaptation config from optional caller overrides.
+
+Any missing override falls back to the documented default constants. This
+keeps the core free of hardcoded thresholds while still allowing red-test
+fixtures to inject precise values.
+
+Parameters:
+- `partial` - Caller-supplied config overrides.
+
+Returns: Fully resolved adaptation config with non-optional override values.
+
+### ResolvedAdaptConfig
+
+Fully resolved adaptation config where all override fields are non-optional.
+
+This is the internal return type of {@link resolveAdaptConfig}, guaranteeing
+that downstream consumers never need nullish coalescing on resolved values.
+
+### shouldCommitCandidate
+
+```ts
+shouldCommitCandidate(
+  baseline: number,
+  candidate: number,
+  improvementThreshold: number,
+  hasGrownBefore: boolean,
+  firstGrowthExemption: boolean,
+): boolean
+```
+
+Decide whether the candidate score should be committed.
+
+A candidate commits when it improves over the baseline by at least the
+configured threshold, or when the first-growth exemption applies and the
+network has not grown before.
+
+Parameters:
+- `baseline` - Score captured before the mutation.
+- `candidate` - Score captured after the mutation.
+- `improvementThreshold` - Minimum improvement required over baseline.
+- `hasGrownBefore` - Whether the network already committed growth.
+- `firstGrowthExemption` - Whether the first growth bypasses improvement.
+
+Returns: `true` when the mutation should be kept, `false` when it should roll
+back.
+
+## neat/nge-juvenile/neat.nge-juvenile.config.ts
+
+Resolved configuration for the NGE juvenile grow-stabilize cycle.
+
+This module owns `resolveGrowStabilizeConfig`, a pure helper that fills in
+every optional field of `NgeGrowStabilizeConfig` with canonical defaults.
+Keeping the resolver in its own file breaks the import cycle between the
+grow-stabilize orchestrator (which calls `applyPlasticity`) and the
+plasticity pass (which needs the resolved config defaults). Both
+`grow-stabilize.ts` and `plasticity.ts` now import the resolver from here,
+so neither depends on the other for config defaults.
+
+```mermaid
+flowchart TD
+  GS["neat.nge-juvenile.grow-stabilize.ts"] -->|imports| Config["neat.nge-juvenile.config.ts"]
+  Plasticity["neat.nge-juvenile.plasticity.ts"] -->|imports| Config
+  GS -->|calls applyPlasticity| Plasticity
+```
+
+### resolveGrowStabilizeConfig
+
+```ts
+resolveGrowStabilizeConfig(
+  partial: Partial<NgeGrowStabilizeConfig> | undefined,
+): NgeGrowStabilizeConfig
+```
+
+Resolve a partial grow-stabilize config with sensible defaults.
+
+Parameters:
+- `partial` - Caller-supplied config overrides.
+
+Returns: Fully resolved config.
+
+Example:
+
+```ts
+const config = resolveGrowStabilizeConfig({ maxNodes: 500, weightMutationRate: 0.5 });
+console.log(config.maxNodes); // 500
+console.log(config.plateauWindowSize); // 5 (default)
+```
+
+## neat/nge-juvenile/neat.nge-juvenile.variants.ts
+
+NGE juvenile async weight-variant evaluator consumer.
+
+This module builds and evaluates lifecycle-aware **multi-connection** weight
+variant patches for NGE juvenile networks. A patch is a set of simultaneous
+connection perturbations that are applied, scored as a group, and then rolled
+back. The highest-scoring patch's representative perturbation is reported as
+the winning single-connection variant so that downstream grow-stabilize
+reconstruction (which is outside this slice) can commit it without being
+edited.
+
+Stage-specific variant counts are resolved from explicit overrides, the
+supplied acceleration configuration, or built-in lifecycle defaults.
+
+### buildVariants
+
+```ts
+buildVariants(
+  network: VariantEvaluationNetwork,
+  stage: NgeLifecycleStage,
+  count: number,
+  seed: number | undefined,
+): NgeWeightVariantPatch[]
+```
+
+Build deterministic multi-connection weight variant patches for a network
+surface.
+
+Each patch perturbs a small, distinct subset of connections. The first
+perturbation in the patch is the **representative**: it uses the same
+deterministic rule as the legacy single-connection variant builder so that
+downstream grow-stabilize reconstruction can recreate the winning variant
+without knowing the full patch contents.
+
+Parameters:
+- `network` - Network surface whose connection list is used for indexing.
+- `stage` - Current NGE lifecycle stage; controls mutation magnitude.
+- `count` - Number of variant patches to generate.
+- `seed` - Optional determinism seed for patch generation.
+
+Returns: Array of deterministic weight variant patches.
+
+Example:
+
+```ts
+const patches = buildVariants(network, 'baby', 16, 12345);
+// patches[0].representative uses connection 0 and the smallest negative delta.
+// The same seed reproduces identical patches on every run.
+```
+
+### evaluateNgeWeightVariants
+
+```ts
+evaluateNgeWeightVariants(
+  network: VariantEvaluationNetwork,
+  stage: NgeLifecycleStage,
+  inputs: number[][],
+  target: number[],
+  seed: number | undefined,
+  options: EvaluateNgeWeightVariantsOptions | undefined,
+): Promise<WeightVariantResult>
+```
+
+Evaluate multi-connection weight variant patches for an NGE juvenile network
+asynchronously.
+
+The function resolves the appropriate variant count from the supplied
+lifecycle stage, builds deterministic patches over the network's connection
+list, and scores each patch by applying all of its perturbations at once. All
+connection weights are restored after every patch, so the network is returned
+to its original state once the promise resolves. Patches are evaluated
+sequentially on the live network so that activation always reads the patched
+weights that were actually applied.
+
+The default scorer returns negative mean-squared-error against `target`.
+If the caller supplies a custom `scoreFn`, it must produce values in the
+same score space as the caller's baseline; otherwise the stabilization
+commit inequality `bestScore > baselineScore + threshold` can never be
+satisfied.
+
+Stage-specific variant counts can be supplied through `options` or through
+`options.accelerationConfig.stageVariantCounts`. When a stage count is given,
+it overrides the built-in default for that stage (for example, `baby: 256`
+replaces the default baby count).
+
+Background reading:
+- NEAT and topology-evolving neuroevolution:
+  K. O. Stanley and R. Miikkulainen, "Evolving Neural Networks through
+  Augmenting Topologies," Evolutionary Computation, vol. 10, no. 2,
+  pp. 99-127, 2002.
+  [NEAT publications](https://nn.cs.utexas.edu/?neat-papers)
+
+Parameters:
+- `network` - Network surface to evaluate.
+- `stage` - Current NGE lifecycle stage.
+- `inputs` - Input batch, one vector per sample.
+- `target` - Target output vector for the default scorer.
+- `seed` - Optional determinism seed for patch generation.
+- `options` - Optional NGE-specific overrides.
+May include `accelerationConfig` to control backend selection, or
+`stageVariantCounts` to override per-stage variant counts.
+
+Returns: Promise resolving to per-variant scores and backend metadata.
+
+Examples:
+
+```ts
+const result = await evaluateNgeWeightVariants(
+  network,
+  'baby',
+  [[0.5, 0.5]],
+  [1.0],
+  42,
+);
+console.log(result.metadata.variantCount); // 16 for baby stage
+```
+
+```ts
+const result = await evaluateNgeWeightVariants(
+  network,
+  'baby',
+  [[0.5, 0.5]],
+  [1.0],
+  42,
+  {
+    accelerationConfig: {
+      parallelVariantCount: 256,
+      stageVariantCounts: { baby: 256 },
+    },
+  },
+);
+console.log(result.metadata.variantCount); // 256
+```
+
+### EvaluateNgeWeightVariantsOptions
+
+Options forwarded to {@link evaluateNgeWeightVariants}.
+
+### NgeWeightVariantPatch
+
+One representative perturbation plus the full multi-connection patch used
+for scoring.
+
+The representative is the single-connection perturbation that downstream
+consumers see as the "winning variant". The full patch contains additional
+simultaneous perturbations so that the score reflects a broader local
+search step.
+
+### resolveEffectiveMagnitude
+
+```ts
+resolveEffectiveMagnitude(
+  stage: NgeLifecycleStage,
+  variantCount: number,
+  connectionCount: number,
+): number
+```
+
+Resolve the effective mutation magnitude for a lifecycle stage, variant
+count, and network connection count.
+
+The magnitude scales with both the exploration width (more variants need a
+wider total range) and the network size (larger networks need smaller local
+steps). Small networks retain the stage baseline because the size factor is
+clamped at 1.0.
+
+Parameters:
+- `stage` - Current NGE lifecycle stage.
+- `variantCount` - Number of parallel variants being evaluated.
+- `connectionCount` - Number of connections in the live network.
+
+Returns: Effective absolute delta magnitude to use for this variant batch.
+
+Example:
+
+```ts
+const magnitude = resolveEffectiveMagnitude('baby', 16, 5); // 0.15
+```
+
+### resolveRepresentativeDelta
+
+```ts
+resolveRepresentativeDelta(
+  index: number,
+  variantCount: number,
+  magnitude: number,
+): number
+```
+
+Resolve the representative delta for a variant index using an
+endpoint-inclusive linear spread over [-magnitude, +magnitude].
+
+For a single variant the probe is the positive endpoint, preserving a
+non-zero weight nudge. For two or more variants the spread is symmetric,
+unique, and reaches the exact endpoints at the first and last indices.
+
+Parameters:
+- `index` - Variant index in [0, variantCount).
+- `variantCount` - Total number of variants in the spread.
+- `magnitude` - Maximum absolute delta for the spread.
+
+Returns: Representative delta for the indexed variant.
+
+Example:
+
+```ts
+const delta = resolveRepresentativeDelta(0, 16, 0.15); // -0.15
+const last = resolveRepresentativeDelta(15, 16, 0.15); // +0.15
+```
+
+### resolveVariantCountForStage
+
+```ts
+resolveVariantCountForStage(
+  stage: NgeLifecycleStage,
+  overrides: Partial<Record<NgeLifecycleStage, number>> | undefined,
+  accelerationConfig: AccelerationConfig | undefined,
+): number
+```
+
+Resolve the variant count for a lifecycle stage.
+
+Resolution order: explicit `overrides` for the stage, then
+`accelerationConfig.stageVariantCounts` for the stage, then built-in
+lifecycle defaults. Baby-stage networks get many variants (default 16),
+adult/equilibrium networks get few (default 4), and juvenile gets the
+midpoint (default 8). Embryo mirrors baby because the network is still tiny.
+
+Parameters:
+- `stage` - Current NGE lifecycle stage.
+- `overrides` - Optional per-stage variant count overrides.
+- `accelerationConfig` - Optional acceleration configuration carrying
+per-stage variant counts.
+
+Returns: Number of variants to evaluate.
+
+Example:
+
+```ts
+// Built-in juvenile default: 8 variants.
+const count = resolveVariantCountForStage('juvenile');
+
+// Override for a single stage without touching acceleration config.
+const tiny = resolveVariantCountForStage('adult', { adult: 2 });
+```
+
+## neat/nge-juvenile/neat.nge-juvenile.candidate.ts
+
+### buildCandidateScoreWindow
+
+```ts
+buildCandidateScoreWindow(
+  scoreHistory: readonly number[],
+  config: Partial<NgeCandidateScoringConfig>,
+): number[]
+```
+
+Build a sliding window of the most recent scores from a candidate score history.
+
+The window size is config-driven and defaults to
+{@link NGE_GROW_STABILIZE_PLATEAU_WINDOW_SIZE}. When the history is shorter
+than the requested window, the full history is returned without padding.
+
+Parameters:
+- `scoreHistory` - Ordered numeric score history.
+- `config` - Optional window size override.
+
+Returns: The last `windowSize` entries, or the full history if shorter.
+
+### collectForwardPassOutputs
+
+```ts
+collectForwardPassOutputs(
+  network: default,
+  observations: readonly T[],
+  encoder: NgeObservationEncoder<T>,
+): number[][]
+```
+
+Collect forward-pass output vectors from a network for a set of observations.
+
+Each observation is encoded through the caller-supplied {@link NgeObservationEncoder}
+to match the network's input size, then activated. The returned array preserves
+the observation order so downstream scorers can compare behavioral variance or
+reduce each output to a scalar quality score.
+
+Parameters:
+- `network` - Live network to activate. Must expose `input` and `activate`.
+- `observations` - Observations drawn from the evidence window.
+- `encoder` - Domain-agnostic encoder that produces an input vector per observation.
+
+Returns: Array of output vectors, one per observation.
+
+### NgeCandidateScoringConfig
+
+Configuration for candidate score-window and sample-index resolution.
+
+### NgeObservationEncoder
+
+Domain-agnostic encoder that converts an application observation into a
+network input vector.
+
+### resolveSampleIndices
+
+```ts
+resolveSampleIndices(
+  totalSamples: number,
+  config: Partial<NgeCandidateScoringConfig>,
+  _random: (() => number) | undefined,
+): number[]
+```
+
+Resolve a deterministic, evenly-spaced subset of sample indices.
+
+When `totalSamples` fits within the configured maximum, every index is
+returned in order. Otherwise the indices are spread across the full range
+using integer floor division so repeated calls with the same parameters
+produce the same sample set. The `random` argument is part of the public
+surface for future randomized sampling strategies but is intentionally unused
+by the current deterministic spread.
+
+Parameters:
+- `totalSamples` - Number of observations available.
+- `config` - Optional maximum sample count override.
+- `_random` - Deterministic random source reserved for future strategies.
+
+Returns: Array of selected indices in ascending order.
+
+## neat/nge-juvenile/neat.nge-juvenile.plasticity.ts
+
+Activity/bias-aware plasticity for the NGE juvenile module.
+
+This boundary provides a reward-gated, activity-aware weight and bias
+adjustment that combines three signals:
+
+1. **Activity signal** — per-connection activity (0..1) that scales the
+   nudge magnitude.  Connections that fired more strongly get larger
+   adjustments.
+2. **Reward-gated nudge** — a scalar reward signal (−1..+1) that gates
+   whether the activity-driven nudge is positive (reinforce) or negative
+   (decay).
+3. **Small random noise** — a stochastic perturbation drawn from the
+   caller-supplied RNG so that exploration is still possible when
+   activity and reward are both near zero.
+
+When `biasMutationRate > 0` the function also perturbs node biases using
+the same three-signal model but scoped to per-node activity.
+
+Configuration defaults are imported from `neat.nge-juvenile.config.ts`, the
+resolver that broke the `grow-stabilize.ts` ↔ `plasticity.ts` import cycle.
+
+### applyPlasticity
+
+```ts
+applyPlasticity(
+  network: default,
+  random: () => number,
+  input: NgePlasticityInput,
+  config: Partial<NgeGrowStabilizeConfig> | undefined,
+): number
+```
+
+Apply activity/bias-aware plasticity to a network.
+
+Combines three signals for each connection: per-connection activity
+scales the nudge, a scalar reward signal gates whether the nudge is
+positive (reinforce) or negative (decay), and small random noise
+enables exploration when activity and reward are both near zero.
+When `biasMutationRate > 0`, also perturbs non-input node biases
+with random noise.
+
+Parameters:
+- `network` - The network whose weights and biases will be adjusted.
+- `random` - Caller-supplied RNG function returning [0, 1).
+- `input` - Activity map and reward signal driving the plasticity pass.
+- `config` - Optional config overrides for mutation rates and magnitudes.
+
+Returns: The number of connections and nodes that were adjusted.
+
+Example:
+
+```ts
+const adjusted = applyPlasticity(network, Math.random, {
+  activity: new Map([[conn.innovation, 0.8]]),
+  rewardSignal: 1.0,
+});
+console.log(adjusted); // e.g. 5
+```
+
+### NgePlasticityInput
+
+Inputs driving one plasticity pass.
+
+## neat/nge-juvenile/neat.nge-juvenile.lifecycle-policy.ts
+
+NGE juvenile lifecycle acceleration policy.
+
+Maps each NGE lifecycle stage (`embryo`, `baby`, `juvenile`, `adult`,
+`equilibrium`) to a stage-specific {@link AccelerationConfig}. The policy keeps
+NGE's developmental preferences explicit and separate from the generic
+acceleration layer so the same `src/acceleration/` machinery can be reused by
+non-NGE callers.
+
+The defaults encode the explore–exploit curve of the NGE lifecycle:
+- **Embryo/baby** use a modest variant-friendly batch size and rely on CPU
+  by default because networks are tiny and setup overhead dominates.
+- **Juvenile/adult** may opt into `auto` backend selection once the network is
+  large enough for GPU or worker batching to matter.
+- **Equilibrium** falls back to CPU to keep inference deterministic and
+  lightweight while the network is no longer structurally evolving.
+
+Background reading:
+- The explore–exploit tradeoff:
+  [Wikipedia — Exploration-exploitation dilemma](https://en.wikipedia.org/wiki/Exploration_exploitation_dilemma).
+
+### buildJuvenileLifecyclePolicy
+
+```ts
+buildJuvenileLifecyclePolicy(): { stages: Record<NgeLifecycleStage, AccelerationConfig>; }
+```
+
+Build the default NGE juvenile lifecycle acceleration policy.
+
+The returned policy is a pure, deterministic factory: every call produces an
+equivalent fresh object. Callers can override individual stage fields by
+cloning the returned map and editing the desired stage.
+
+Returns: A record mapping each NGE lifecycle stage to an `AccelerationConfig`.
+
+Example:
+
+```ts
+const policy = buildJuvenileLifecyclePolicy();
+console.log(policy.stages.baby.backend); // 'cpu'
+console.log(policy.stages.adult.backend); // 'auto'
+```
+
+## neat/nge-juvenile/neat.nge-juvenile.lifecycle-stages.ts
+
+NGE lifecycle stage resolution for baby/juvenile/adult phases.
+
+The NGE lifecycle progresses through discrete stages: embryo → baby →
+juvenile → adult → equilibrium. Each stage carries different defaults for
+growth cadence, stabilization intensity, and mutation magnitude, reflecting
+the explore–exploit tradeoff that governs brain-like neuro-evolution.
+
+- **Baby** (≤1k nodes): aggressive growth, high variant count (16), high
+  mutation magnitude, low stabilization. The network is small enough that
+  many weight variants can be evaluated in parallel.
+- **Juvenile** (1k–4k nodes): transitioning. Growth cadence and mutation
+  magnitude ramp down from baby to adult levels. Variant count ramps from
+  16 to 2.
+- **Adult** (>4k nodes): stability-focused. Low growth cadence, low mutation
+  magnitude, high stabilization intensity, and only 2 variants evaluated
+  to preserve real-time performance.
+
+All numeric thresholds and magnitudes are **config-overridable defaults**.
+Core code reads values from the config first, falling back to documented
+constants in `neat.nge-juvenile.constants.ts`. No policy value is ever
+hard-coded.
+
+## Determinism
+
+All resolve functions are pure: same inputs produce the same outputs with
+no side effects or randomness. The lifecycle stage resolution is deterministic
+given a fixed node count and config.
+
+## Background
+
+The explore–exploit tradeoff that drives these stage-based parameters is
+inspired by developmental neuroscience and reinforcement learning:
+- [Wikipedia — Exploration vs exploitation](https://en.wikipedia.org/wiki/Exploration_exploitation_dilemma)
+- The lifecycle stage model mirrors developmental phases in biological
+  neural networks where early plasticity decreases and stability increases
+  with maturation.
+
+Example:
+
+Resolve the lifecycle stage and parameters for a 2,500-node network.
+```ts
+import { resolveLifecycleStage, resolveGrowthCadence } from 'neataptic';
+
+const stage = resolveLifecycleStage(2_500, {});
+// stage === 'juvenile'
+
+const cadence = resolveGrowthCadence(stage, {});
+// cadence ≈ 0.5 (midpoint of baby 0.8 and adult 0.2)
+```
+
+### lerp
+
+```ts
+lerp(
+  from: number,
+  to: number,
+  ratio: number,
+): number
+```
+
+Linearly interpolate between two values at a given ratio.
+
+Parameters:
+- `from` - The start value (at ratio 0).
+- `to` - The end value (at ratio 1).
+- `ratio` - Interpolation ratio in [0, 1].
+
+Returns: The interpolated value, rounded to the nearest integer.
+
+### midpoint
+
+```ts
+midpoint(
+  low: number,
+  high: number,
+): number
+```
+
+Compute the midpoint between two numbers.
+
+Parameters:
+- `low` - The lower value.
+- `high` - The higher value.
+
+Returns: The arithmetic mean of `low` and `high`.
+
+### NgeLifecycleStage
+
+Discrete NGE lifecycle stage. The progression is embryo → baby → juvenile →
+adult → equilibrium. Each stage carries different defaults for growth cadence,
+stabilization intensity, and weight-mutation magnitude.
+
+### NgeLifecycleStageConfig
+
+Optional numeric overrides for lifecycle-stage thresholds and magnitudes.
+
+All fields are optional. When omitted, the lifecycle-stage resolver falls
+back to the documented constants in `neat.nge-juvenile.constants.ts`.
+
+### resolveAdultGrowthCadence
+
+```ts
+resolveAdultGrowthCadence(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective adult growth cadence from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective adult growth cadence.
+
+### resolveAdultMutationMagnitude
+
+```ts
+resolveAdultMutationMagnitude(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective adult mutation magnitude from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective adult mutation magnitude.
+
+### resolveAdultStabilizationIntensity
+
+```ts
+resolveAdultStabilizationIntensity(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective adult stabilization intensity from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective adult stabilization intensity.
+
+### resolveAdultVariantCount
+
+```ts
+resolveAdultVariantCount(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective adult variant count from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective adult variant count.
+
+### resolveBabyGrowthCadence
+
+```ts
+resolveBabyGrowthCadence(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective baby growth cadence from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective baby growth cadence.
+
+### resolveBabyMutationMagnitude
+
+```ts
+resolveBabyMutationMagnitude(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective baby mutation magnitude from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective baby mutation magnitude.
+
+### resolveBabyNodeThreshold
+
+```ts
+resolveBabyNodeThreshold(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective baby node threshold from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective baby node threshold.
+
+### resolveBabyStabilizationIntensity
+
+```ts
+resolveBabyStabilizationIntensity(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective baby stabilization intensity from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective baby stabilization intensity.
+
+### resolveBabyVariantCount
+
+```ts
+resolveBabyVariantCount(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective baby variant count from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective baby variant count.
+
+### resolveGrowthCadence
+
+```ts
+resolveGrowthCadence(
+  stage: NgeLifecycleStage,
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the growth cadence for a given lifecycle stage.
+
+Baby-stage networks get aggressive growth cadence (default 0.8) to expand
+structural capacity rapidly. Adult-stage networks get stability-focused
+cadence (default 0.2). Juvenile-stage networks get the midpoint between
+baby and adult. Embryo uses baby defaults; equilibrium uses adult defaults.
+
+Parameters:
+- `stage` - The lifecycle stage to resolve cadence for.
+- `config` - Optional config overrides; all fields are optional.
+
+Returns: The growth cadence value for the stage.
+
+Example:
+
+```ts
+const babyCadence = resolveGrowthCadence('baby', {}); // 0.8
+const adultCadence = resolveGrowthCadence('adult', {}); // 0.2
+```
+
+### resolveJuvenileNodeThreshold
+
+```ts
+resolveJuvenileNodeThreshold(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective juvenile node threshold from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective juvenile node threshold.
+
+### resolveJuvenileVariantCount
+
+```ts
+resolveJuvenileVariantCount(
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the effective juvenile variant count from config or default.
+
+Parameters:
+- `config` - Optional config overrides.
+
+Returns: Effective juvenile variant count.
+
+### resolveLifecycleStage
+
+```ts
+resolveLifecycleStage(
+  nodeCount: number,
+  config: NgeLifecycleStageConfig,
+): NgeLifecycleStage
+```
+
+Resolve the lifecycle stage for a given network node count.
+
+Returns `'baby'` for networks at or below `babyNodeThreshold` (default 1,000),
+`'juvenile'` for networks between the baby and juvenile thresholds
+(1k–4k), and `'adult'` for networks above `juvenileNodeThreshold`
+(default 4,000).
+
+The thresholds are config fields, not hard-coded constants, so callers can
+shift the stage boundaries to match their runtime or memory constraints.
+
+Parameters:
+- `nodeCount` - Current network node count.
+- `config` - Optional config overrides; all fields are optional.
+
+Returns: The resolved lifecycle stage.
+
+Example:
+
+```ts
+const stage = resolveLifecycleStage(500, {}); // 'baby'
+const stage = resolveLifecycleStage(2_000, {}); // 'juvenile'
+const stage = resolveLifecycleStage(5_000, {}); // 'adult'
+```
+
+### resolveMutationMagnitude
+
+```ts
+resolveMutationMagnitude(
+  stage: NgeLifecycleStage,
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the mutation magnitude for a given lifecycle stage.
+
+Baby-stage networks use higher mutation magnitude (default 0.5) for broad
+exploration of the solution space. Adult-stage networks use lower magnitude
+(default 0.05) for fine-tuning. Juvenile-stage networks get the midpoint.
+Embryo uses baby defaults; equilibrium uses adult defaults.
+
+Parameters:
+- `stage` - The lifecycle stage to resolve magnitude for.
+- `config` - Optional config overrides; all fields are optional.
+
+Returns: The mutation magnitude value for the stage.
+
+Example:
+
+```ts
+const babyMag = resolveMutationMagnitude('baby', {}); // 0.5
+const adultMag = resolveMutationMagnitude('adult', {}); // 0.05
+```
+
+### resolveStabilizationIntensity
+
+```ts
+resolveStabilizationIntensity(
+  stage: NgeLifecycleStage,
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the stabilization intensity for a given lifecycle stage.
+
+Adult-stage networks get higher stabilization intensity (default 0.7) to
+focus on extracting maximum performance from current structural capacity.
+Baby-stage networks get lower intensity (default 0.3) since they prioritize
+growth over stabilization. Juvenile-stage networks get the midpoint. Embryo
+uses baby defaults; equilibrium uses adult defaults.
+
+Parameters:
+- `stage` - The lifecycle stage to resolve intensity for.
+- `config` - Optional config overrides; all fields are optional.
+
+Returns: The stabilization intensity value for the stage.
+
+Example:
+
+```ts
+const babyIntensity = resolveStabilizationIntensity('baby', {}); // 0.3
+const adultIntensity = resolveStabilizationIntensity('adult', {}); // 0.7
+```
+
+### resolveVariantCount
+
+```ts
+resolveVariantCount(
+  nodeCount: number,
+  config: NgeLifecycleStageConfig,
+): number
+```
+
+Resolve the number of weight variants to evaluate for a given network size.
+
+Returns the baby-stage variant count (default 16) for networks at or below
+the baby node threshold (default 1,000), ramps linearly to the adult-stage
+variant count (default 2) between the baby and juvenile thresholds
+(1k–4k), and returns the adult-stage variant count (default 2) for
+networks above the juvenile node threshold (default 4,000).
+
+All thresholds and counts are config-overridable via
+{@link NgeLifecycleStageConfig}.
+
+Parameters:
+- `nodeCount` - Current network node count.
+- `config` - Optional config overrides; all fields are optional.
+
+Returns: Number of weight variants to evaluate.
+
+Example:
+
+```ts
+const count = resolveVariantCount(500, {}); // 16 (baby stage)
+const ramped = resolveVariantCount(2_500, {}); // 8 (juvenile ramp midpoint)
+const adult = resolveVariantCount(5_000, {}); // 2 (adult stage)
+const custom = resolveVariantCount(500, { babyVariantCount: 24 }); // 24
+```

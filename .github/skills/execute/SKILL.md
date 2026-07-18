@@ -512,6 +512,17 @@ Each slice is a bounded unit of work with these fields:
   was performed, the slice is NOT green; the orchestrator must loop back to
   `04-implementing` with a `slice-fix` packet that instructs the use of the
   `browser-harness-specialist` or Chrome DevTools MCP for real-device measurement.
+- **DEMO/UI SLICES REQUIRE REAL VISIBLE-WINDOW VALIDATION.** For any slice whose
+  `files_to_change` includes a path under `examples/*/browser-entry/`, `src/**/browser-entry.ts`,
+  or any file that directly affects browser runtime behavior (e.g., DOM rendering,
+  event handlers, page entry points, demo UI code), `05-green-testing` MUST run a
+  real browser-based smoke test: load the page in a visible browser window, check
+  the console for runtime errors, and verify that UI elements render correctly.
+  Mock-only Jest validation and `tsc` compilation are INSUFFICIENT. If no real
+  browser smoke test was performed, the slice is NOT green; the orchestrator must
+  loop back to `04-implementing` with a `slice-fix` packet that instructs the use
+  of the `browser-harness-specialist` or Chrome DevTools MCP for real-browser
+  validation.
 - **Targeted Tests Only — Never the Full Suite in a Single Call.**
   Orchestrators and green-testing agents MUST NOT run broad regression
   suites such as `npm run test:silent`, `npm test`, or unconstrained `jest`

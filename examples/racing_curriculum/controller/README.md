@@ -1,16 +1,53 @@
 # controller
 
-Deterministic scripted waypoint-following controller for the Tier 0
-racing curriculum demo.
+Racing-curriculum runtime adaptation engine.
 
-The controller maintains a target waypoint index that advances around the
-closed-loop track as the car approaches each endpoint. Steering is a
-proportional heading-error term; throttle is held at a fixed constant.
+Sequences one NGE grow-stabilize cycle per controller tick. It converts
+composite driving-quality signals into scalar scores, decides whether the
+controller network should grow new structure or stabilize existing weights,
+and routes the resulting mutations back to the live network.
 
-This controller is intentionally simple and deterministic. It remains useful
-as a baseline reference lane for regression comparisons against NGE-backed
-controller behavior while preserving the same `computeScriptedControl`
-integration seam.
+The engine is deliberately decoupled from the simulation worker so the same
+adaptation policy can run in the browser host, in a worker, or in unit tests.
+All demo-specific knowledge lives here; the core `runNgeGrowStabilizeCycle`
+only sees plain numeric score history and a mutable network.
+
+## Score-space invariant
+
+The grow-stabilize cycle commits a weight variant only when
+`bestVariantScore > baselineScore + threshold`. That inequality is only
+meaningful when both scores share the same units and direction. The default
+variant scorer returns negative mean-squared-error against a target vector,
+while the racing baseline is a positive driving-quality score. This engine
+therefore injects a racing-specific `VariantScorer` that collapses the
+2-D controller output `[throttle, steering]` to a scalar and returns a
+positive quality score in the same space as the baseline.
+
+```mermaid
+flowchart LR
+  Tick["Controller tick"] --> Cadence{"Cadence gate open?"}
+  Cadence -->|no| Skip["Skip adaptation"]
+  Cadence -->|yes| Evidence["Build evidence window"]
+  Evidence --> Baseline["Compute positive driving-quality baseline"]
+  Baseline --> Cycle["runNgeGrowStabilizeCycle"]
+  Cycle --> Committed{"Committed?"}
+  Committed -->|yes| Apply["Apply mutation / keep weights"]
+  Committed -->|no| Rollback["Rollback network"]
+  Apply --> Telemetry["Emit telemetry"]
+  Rollback --> Telemetry
+```
+
+## Background reading
+
+- NEAT and topology-evolving neuroevolution:
+  K. O. Stanley and R. Miikkulainen, "Evolving Neural Networks through
+  Augmenting Topologies," *Evolutionary Computation*, vol. 10, no. 2,
+  pp. 99-127, 2002.
+  [NEAT publications](https://nn.cs.utexas.edu/?neat-papers)
+- Growth/stabilization as an explore–exploit tradeoff:
+  [Wikipedia — Exploration–exploitation dilemma](https://en.wikipedia.org/wiki/Exploration%E2%80%93exploitation_dilemma)
+- Mean squared error:
+  [Wikipedia — Mean squared error](https://en.wikipedia.org/wiki/Mean_squared_error)
 
 ## controller/nge.controller.ts
 
@@ -329,8 +366,31 @@ createRuntimeAdaptationEngine(
 
 Creates a reusable per-tick adaptation engine for racing runtime loops.
 
+The engine sequences one NGE grow-stabilize cycle per tick. It enforces a
+configurable cadence policy so adaptation attempts do not fire on every tick,
+applies a rollback cooldown after rejected candidates, and respects a
+growth throttle that slows structural mutation as the network grows. The
+growth-phase commit decision trusts the grow-stabilize cycle's own commit
+flag, while the engine adds safety-limit checks and an unconditional
+first-growth path so a brand-new network cannot stall.
+
+When an `accelerationConfig` is supplied, variant counts are forwarded to the
+grow-stabilize cycle's parallel evaluator. The stabilization phase caps the
+evaluated variant count to `NGE_GROW_STABILIZE_STABILIZATION_VARIANT_COUNT`
+(32 by default) regardless of the acceleration configuration, while the
+growth-phase variant count follows the acceleration configuration's stage
+limits.
+
+A racing-specific `VariantScorer` is injected into the grow-stabilize
+cycle as `scoreFn` so the stabilization baseline and variant scores share the
+same positive driving-quality score space. Without that alignment, the commit
+inequality `bestScore > baselineScore + threshold` compares incommensurate
+values (for example, negative MSE against a positive quality score) and
+stabilization commits cannot occur.
+
 Parameters:
-- `options` - Optional cadence, bounds, and evaluation policy.
+- `options` - Optional cadence, bounds, evaluation policy, and
+acceleration configuration.
 
 Returns: Stateful runtime adaptation engine.
 
@@ -394,6 +454,26 @@ how well the car is driving: spline-track progress, forward speed, heading
 alignment with the track, and an off-track penalty.  The composite replaces
 the older heading-alignment-only scalar.
 
+### reduceOutputToScalar
+
+```ts
+reduceOutputToScalar(
+  outputVector: readonly number[],
+): number
+```
+
+Reduce a multi-dimensional controller output vector to a scalar driving
+quality proxy by averaging the absolute activation magnitudes.
+
+This matches the reduction used by {@link buildCandidateScoreWindow} so that
+the racing variant scorer and the rolling candidate scores live in the same
+units.
+
+Parameters:
+- `outputVector` - Raw network output vector (e.g. `[throttle, steering]`).
+
+Returns: Scalar proxy in the same units as the racing trend score.
+
 ### resolveAdaptiveHysteresis
 
 ```ts
@@ -424,7 +504,7 @@ console.log(hysteresis); // 2
 
 ```ts
 resolveBehavioralComplexity(
-  outputs: number[][],
+  outputs: readonly number[][],
 ): number
 ```
 
@@ -475,6 +555,8 @@ Parameters:
 Returns: Array of indices into the score history.
 
 ### RuntimeAdaptationCadenceMode
+
+Cadence modes supported by the runtime adaptation engine.
 
 ### RuntimeAdaptationCadenceOptions
 
@@ -529,6 +611,21 @@ Parameters:
 Returns: Scalar quality value for trend/mean scoring.
 
 ## controller/scripted.controller.ts
+
+Deterministic scripted waypoint-following controller and runtime adaptation
+integration for the Tier 0 racing curriculum demo.
+
+`computeScriptedControl` is the baseline deterministic lane: it maintains a
+target waypoint index that advances around the closed-loop track as the car
+approaches each endpoint, uses a proportional heading-error term for
+steering, and holds throttle at a fixed constant. The controller folder also
+hosts `runtime.adaptation.ts`, which provides the per-car NGE grow-stabilize
+adaptation engine that mutates controller networks within an episode.
+
+The scripted controller is intentionally simple and deterministic. It remains
+useful as a baseline reference lane for regression comparisons against
+NGE-backed controller behavior while preserving the same `computeScriptedControl`
+integration seam.
 
 ### computeScriptedControl
 
