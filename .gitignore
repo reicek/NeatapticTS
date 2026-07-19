@@ -89,3 +89,6 @@ lcov-parse.cjs
 missing-semantic-index.sqlite
 test-feedback-debug.mjs
 verify-results.mjs
+
+coverage/
+coverage*/
