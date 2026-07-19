@@ -106,13 +106,13 @@ completed upstream workstreams.
 
 **Coordination rule:** this lane owns the `src/neat/nge-juvenile/` juvenile sub-tier threshold surface and the `examples/racing_curriculum/controller/runtime.adaptation.ts` oscillation-penalty surface. It must not change general NGE core lifecycle or reproduction. Preserve tier-promotion / carry-reset semantics from `examples/racing_curriculum/reference.plans.md`.
 
-## Racing Perception Redesign Lane [WIP]
+## Racing Perception Redesign Lane [PLANNED]
 
 **Outcome:** redesign the racing curriculum observation/perception layer so opponents can be opponent-aware. Phase 1 fixes the speed persistence bug by storing real velocity in `CarState` and piping it into the existing teammate observation slot without changing input dimensions. Phase 2 adds a new Tier 6 observation tier with 103 base channels + 21 opponent-relative channels (3 opponent slots × 7 ego-relative channels) = 124 total inputs. Plan C (track-centric Frenét refactor) remains deferred until continuous arc-length projection is implemented as a standalone prerequisite.
 
 - Racing Perception Redesign
-- Plan: [Racing_Perception_Redesign.plans.md](Racing_Perception_Redesign.plans.md) [WIP]
-- Current internal state: Phase 1 [WIP] (Step 01 planning packet authored, green-light verification recorded); Phase 2 [PLANNED].
+- Plan: [Racing_Perception_Redesign.plans.md](Racing_Perception_Redesign.plans.md) [PLANNED]
+- Current internal state: Phase 1 [PLANNED] (Step 01 planning packet authored, green-light verification recorded); Phase 2 [PLANNED].
 - Upstream dependency: [completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md](completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md) [DONE]
 
 **Coordination rule:** this lane owns the `examples/racing_curriculum/` observation and `CarState` surfaces and any racing-specific perception plumbing in `src/` required for the new opponent-aware tier. It must preserve the Tier 1–6 ladder, promotion rules, carry/reset semantics, and observation dimension contracts from `examples/racing_curriculum/reference.plans.md`. It does not own general NGE core algorithm work; those changes belong in completed upstream workstreams.
@@ -718,6 +718,8 @@ archived Repo Cortex layer plans as the baselines this migration builds upon.
 - Plan: [completed/NGE_Core_Growth_Engine_Wiring.plans.md](completed/NGE_Core_Growth_Engine_Wiring.plans.md) (`plans/completed/NGE_Core_Growth_Engine_Wiring.plans.md`) [DONE]
 - NGE Predator/Prey Co-evolution — co-evolutionary benchmark (sensory arms race, reproduction modes, non-stationary fitness). NGE Core Algorithm Workstream is now [DONE]; predator/prey demo is unblocked.
 - Plan: [NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md](NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md) [PLANNED]
+- NGE Neon Shooter Demo (Neatenstein) — first-person shooter co-evolution demo with asymmetric main/enemy co-evolution, SWARM mode, and human-vs-evolved-enemy modes. NGE Core Algorithm Workstream is now [DONE]; Neon Shooter demo is unblocked.
+- Plan: [Neon_Shooter_NGE_Demo.plans.md](Neon_Shooter_NGE_Demo.plans.md) [WIP]
 
 ## Standalone Public Library Demo-Agnostic Refactor Lane [DONE]
 

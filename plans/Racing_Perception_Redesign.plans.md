@@ -1,6 +1,6 @@
 # Racing Perception Redesign
 
-**Status:** [WIP]
+**Status:** [PLANNED]
 
 ## Scope
 
@@ -18,10 +18,11 @@ Plans A and B are in scope now. Plan C is cancelled.
 
 ## Current state
 
-Claim: 04-implementing @ 2026-07-18T16:30:00-04:00
+Plan paused; active workstream is now `plans/Neon_Shooter_NGE_Demo.plans.md`.
 
-Pre-green fix slice `02-impl-tier6-pre-green-fixes` is implemented across the
-Tier 6 opponent-perception seam, the worker race-pack/evolution wrapper, the
+Previous claim: 04-implementing @ 2026-07-18T16:30:00-04:00. Pre-green fix slice
+`02-impl-tier6-pre-green-fixes` is implemented across the Tier 6
+opponent-perception seam, the worker race-pack/evolution wrapper, the
 coevolution JSDoc, and the browser-entry/network-view label set. All ten fix
 items (teammate filtering, `RaceControllerNetwork.input` exposure, stale-speed
 zeroing, body-frame speed projection, deterministic 9-output browser networks,
@@ -29,7 +30,7 @@ input-layer shrinking on tier downgrade, tier-aware 70/77/91/103/124 label
 sets, richer I/O tooltips, updated Tier 6 JSDoc, and a 3v3 mixed-team fixture
 with a non-zero heading speed-projection test) are in place.
 Preflight (`tsc`, `eslint`, `prettier`, `quality:folder`, `npm run docs`) passed.
-Green testing is pending for `05-green-testing`.
+Green testing is pending for `05-green-testing` when this plan resumes.
 
 ## Source of truth
 
@@ -38,7 +39,7 @@ Green testing is pending for `05-green-testing`.
 
 ---
 
-### Phase 1 — Speed Bug Fix [WIP]
+### Phase 1 — Speed Bug Fix [PLANNED]
 
 **Phase objective:** Fix the speed persistence bug so the teammate observation
 slot reflects actual car speed, without changing input dimensions or breaking
@@ -47,7 +48,7 @@ existing tiers.
 ```yaml
 phase: 1
 title: 'Speed Bug Fix'
-status: '[WIP]'
+status: '[PLANNED]'
 goal: 'planning'
 expansion: 'steps'
 auto_expand: false
@@ -76,13 +77,13 @@ placeholder_steps:
   - 'Step 01 — Implement speed bug fix'
 ```
 
-#### Step 01: Implement speed bug fix [WIP]
+#### Step 01: Implement speed bug fix [PLANNED]
 
 ```yaml
 phase: 1
 step: 1
 title: 'Implement speed bug fix'
-status: '[WIP]'
+status: '[PLANNED]'
 goal: 'implementing'
 tdd_sequence: 'green-only'
 expansion: 'slices'
@@ -181,7 +182,7 @@ PlanUpdate:
 
 ---
 
-### Phase 2 — Tier 6 Opponent Perception [WIP]
+### Phase 2 — Tier 6 Opponent Perception [PLANNED]
 
 **Phase objective:** Add a new observation tier (Tier 6) with 124 inputs:
 103 base channels + 21 opponent channels from 3 ego-relative opponent slots.
@@ -189,7 +190,7 @@ PlanUpdate:
 ```yaml
 phase: 2
 title: 'Tier 6 Opponent Perception'
-status: '[WIP]'
+status: '[PLANNED]'
 goal: 'planning'
 expansion: 'steps'
 auto_expand: false
@@ -228,13 +229,13 @@ placeholder_steps:
   - 'Step 03 — Tier 6 green validation'
 ```
 
-#### Step 01: Tier 6 red tests [RED-COMPLETE]
+#### Step 01: Tier 6 red tests [PLANNED]
 
 ```yaml
 phase: 2
 step: 1
 title: 'Tier 6 red tests'
-status: '[RED-COMPLETE]'
+status: '[PLANNED]'
 goal: 'red-testing'
 tdd_sequence: 'red-green'
 expansion: 'slices'
@@ -462,7 +463,7 @@ constitution_check:
 slices:
   - slice_id: '02-impl-tier6-observation'
     title: 'Implement assembleTier6Observation and opponent slot helper'
-    status: '[WIP]'
+    status: '[PLANNED]'
     goal: 'implementing'
     estimate_hours: 4
     files_to_change:

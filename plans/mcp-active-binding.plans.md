@@ -7,13 +7,13 @@
 Claim: 04-implementing @ 2026-07-18T07:07:18Z
 
 Active workstream tracker:
-`plans/Racing_Perception_Redesign.plans.md`.
+`plans/Neon_Shooter_NGE_Demo.plans.md`.
 
 The racing curriculum plan is now archived to
 `plans/completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md`. The Racing
-Perception Redesign plan is the current active workstream for racing-curriculum
-observation/perception work. The MCP binding keeps `neataptic-workflow-mcp`
-and `neataptic-validation-mcp` pointed at this plan so step-packet and
+Perception Redesign plan is paused; the Neon Shooter NGE Demo is the current
+active workstream. The MCP binding keeps `neataptic-workflow-mcp`
+and `neataptic-validation-mcp` pointed at the active shooter plan so step-packet and
 validation allow-lists resolve without prompt input.
 
 ```yaml
@@ -30,7 +30,7 @@ PlanUpdate:
     - 'routing-table-freshness: PASS'
   rollback:
     - 'git checkout -- plans/mcp-active-binding.plans.md'
-  next: 'Continue monitoring active workstream in plans/Racing_Perception_Redesign.plans.md; keep this binding file pointing at the current open tracker.'
+  next: 'Continue monitoring active workstream in plans/Neon_Shooter_NGE_Demo.plans.md; keep this binding file pointing at the current open tracker.'
 ```
 
 ### Slice-quality gate registration

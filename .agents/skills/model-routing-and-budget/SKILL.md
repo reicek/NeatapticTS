@@ -1,0 +1,143 @@
+---
+name: model-routing-and-budget
+description: 'Use when: choosing or validating custom-agent model routing and budget.'
+argument-hint: 'Describe the agent phase, desired model tier, available model names, and whether validation should be advisory or strict.'
+user-invocable: false
+disable-model-invocation: false
+skills:
+  - customize-cloud-agent
+  - agent-frontmatter-standards
+  - routing-optimization-policy
+---
+
+> **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
+
+# Model Routing And Budget
+
+Use this skill before writing or changing an agent `model` field, and whenever
+a frontmatter model string must be verified as a valid qualified name before
+it is committed.
+
+This skill owns the phase-default routing table, qualified name validation
+process, and CLI-compatible scalar `model` policy for NeatapticTS custom
+agents.
+
+## When to Use
+
+- A new agent file is being created and its `model` field needs a phase-
+  appropriate qualified name.
+- An existing agent's model string is producing routing errors or resolving to
+  an unexpected model tier.
+- The available Copilot model list has changed and agent frontmatter needs to
+  be updated to match.
+- A phase is being delegated to a lower-cost tier and the routing change needs
+  to be validated before wiring.
+- Frontmatter shape needs to be confirmed with `validate-agent-frontmatter.mjs`
+  before the agent is used in a gate or handoff.
+
+## When NOT to use
+
+Do NOT use for cloud agent setup - use `customize-cloud-agent` instead. Do NOT use for frontmatter validation - use `agent-frontmatter-standards` instead.
+
+## Workflow Diagram
+
+```text
+Flowchart summary: "Select model" → "Agent tier?"; "Agent tier?" → "Use high-capability model" (Tier 0-1), "Use mid-capability model" (Tier 2-3), "Use lightweight model" (Tier 4); "Use high-capability model" → "Check context budget"; "Use mid-capability model" → "Check context budget"; "Use lightweight model" → "Check context budget"; "Check context budget" → "Within budget?"; "Within budget?" → "Approve routing" (Yes), "Downgrade model" (No); "Approve routing"; "Downgrade model" → "Check context budget".
+```
+
+## Task Packet
+
+Pass a compact packet describing the agent, its phase, and the routing decision
+to validate.
+
+```text
+Use model-routing-and-budget for the 03-red-testing agent frontmatter.
+Agent: .github/agents/03-red-testing.agent.md.
+Phase: 03 Red Testing.
+Desired tier: Full (GPT-5.4 or Claude Sonnet 4.6).
+Validation: advisory — confirm qualified name before committing.
+```
+
+## Required Workflow
+
+1. Discover the exact qualified model names available in the active Copilot
+   client before assigning any name.
+2. Treat session-local availability constraints as controlling for frontmatter
+   edits. Under the current cost-tier restriction, `GPT-5.5 (copilot)` must
+   not be written to frontmatter.
+3. Use `glm-5.2:cloud` for coding-heavy implementation and red-test
+   synthesis when available.
+4. Use `Claude Sonnet 4.6 (copilot)` for planning, documentation synthesis,
+   nuanced maintenance, and ambiguity-heavy coordination when available.
+5. Use `glm-5.2:cloud` for bounded research, validation, and subagent
+   work where coding or tool strength still matters.
+6. Use `Claude Haiku 4.6 (copilot)` for narrow checklist, summarization, and
+   mechanical assistant work. If the model picker exposes only a different Haiku
+   generation, update the qualified name before strict validation.
+7. Write a single qualified model string in `model:`. When repairing a legacy
+   array-valued `model`, preserve the first listed entry unless the user
+   explicitly requests a different routing decision.
+8. Validate frontmatter shape with
+   `node scripts/agent-customization/validate-agent-frontmatter.mjs`.
+
+## Phase Defaults
+
+| Phase             | Tier          | Reason                                                                    |
+| ----------------- | ------------- | ------------------------------------------------------------------------- |
+| 00 Helping        | Sonnet / Full | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
+| 01 Planning       | Sonnet / Full | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
+| 02 Research       | Mini / Haiku  | Retrieval and summarization should be cheap and bounded.                  |
+| 03 Red Testing    | Full          | Test contracts need careful judgment.                                     |
+| 04 Implementation | Full          | Implementation needs deeper reasoning and edge-case handling.             |
+| 05 Green Testing  | Mini / Haiku  | Verification is mostly mechanical.                                        |
+| 06 Documentation  | Sonnet / Mini | Educational docs benefit from stronger writing after facts exist.         |
+| 07 Logging        | Haiku / Mini  | Summarization and tracker updates should be lightweight.                  |
+
+## Decision Tree: Model Selection by Tier
+
+```text
+Flowchart summary: "Need model for agent" → "What tier?"; "What tier?" → "claude-sonnet-4-20250514" (Tier 0 (Agent Zero)), "claude-sonnet-4-20250514" (Tier 1 (SDLC)), "haiku-3.5 or equivalent" (Tier 2 (Coordinators)), "haiku-3.5 or equivalent" (Tier 3 (Scouts)), "Lightest available model" (Tier 4 (Auxiliaries)); "claude-sonnet-4-20250514"; "haiku-3.5 or equivalent"; "Lightest available model".
+```
+
+## Before / After Examples
+
+**Before:**
+
+```yaml
+---
+model: claude-sonnet
+---
+```
+
+**After:**
+
+```yaml
+---
+# Qualified name confirmed in the active Copilot client; tier budget matches phase default.
+model: claude-sonnet-4-20250514
+---
+```
+
+## Guardrails
+
+- Do not commit a model string that has not been confirmed as a valid qualified
+  name in the active Copilot client; an invalid name causes silent fallback or
+  routing errors.
+- When a model is rejected by the active session, keep that session-local
+  restriction out of frontmatter. Under the current cost-tier restriction,
+  `GPT-5.5 (copilot)` must not be written to frontmatter.
+- Do not assign a Full-tier model to phases where a Mini or Haiku tier is
+  sufficient; unnecessary cost undermines the budget design.
+- Do not write arrays into `model:` frontmatter in this repo; NeatapticTS
+  targets Copilot CLI-compatible scalar model strings.
+- Do not hand-edit qualified names without re-running
+  `validate-agent-frontmatter.mjs`; the validator catches typos and schema
+  drift that manual review misses.
+
+## Expected Final Output
+
+A strong model-routing pass should produce:
+
+- the confirmed qualified model name for the target agent and phase,
+- the `validate-agent-frontmatter.mjs` result confirming schema validity,
+- an updated scalar `model` value ready to commit.
