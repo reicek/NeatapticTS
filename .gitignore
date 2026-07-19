@@ -82,7 +82,6 @@ tmp_*/
 tmp*
 artifacts/
 freshness-proof-*/
-coverage-export-utils/
 scripts/temp/
 lcov-detail-output.txt
 lcov-detail-parse.cjs
@@ -90,6 +89,3 @@ lcov-parse.cjs
 missing-semantic-index.sqlite
 test-feedback-debug.mjs
 verify-results.mjs
-
-coverage/
-coverage*/
