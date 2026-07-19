@@ -37,9 +37,9 @@ interface Tier4ObservationAssemblerModule {
   };
 }
 
-describe('observation assembler Tier 4 tire tail', () => {
+describe('observation assembler Tier 4 tire and pit/strategy tail', () => {
   describe('assembleTier4Observation', () => {
-    it('returns exactly 95 channels', async () => {
+    it('returns exactly 103 channels', async () => {
       // Arrange
       const tier4ObservationState = createTier4ObservationState();
       const trackSpec = createTrackSpec();
@@ -52,7 +52,7 @@ describe('observation assembler Tier 4 tire tail', () => {
               assembleTier4Observation(tier4ObservationState, trackSpec),
             ).length,
         ),
-      ).resolves.toBe(95);
+      ).resolves.toBe(103);
     });
 
     it('preserves channels 0 through 90 exactly from Tier 3', async () => {

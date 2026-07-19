@@ -15,7 +15,8 @@ import type {
   NgeJuvenilePhaseConfig,
   NgeModuleMetricsSnapshot,
 } from './nge-juvenile/neat.nge-juvenile.types';
-import { runNgeLifecycle } from './neat.nge-lifecycle';
+import { restoreNetworkSnapshot, runNgeLifecycle } from './neat.nge-lifecycle';
+import Connection from '../architecture/connection';
 import Network from '../architecture/network';
 
 function createJuvenileFixture(): {
@@ -185,5 +186,192 @@ describe('nge lifecycle staging runner', () => {
         (result.assimilationResult as NgeAssimilationResult).updatedModuleDelta,
       ).not.toBeNull();
     });
+
+    // --- Coverage tests for uncovered branches ---
+
+    it('applies morphs without re-seeding when no seed is supplied', () => {
+      // Arrange
+      const { metrics, budget, config, hysteresis } = createJuvenileFixture();
+      const focusVector = computeFocusScores([metrics], config);
+      const focusScore = focusVector.scores[0];
+      const deltas = planGrowthMorphs(
+        'module:alpha',
+        focusScore,
+        metrics,
+        budget,
+        config,
+        hysteresis,
+      );
+      const network = new Network(2, 1);
+
+      // Act
+      const result = runNgeLifecycle({
+        stage: 'juvenile',
+        moduleId: 'module:alpha',
+        metrics,
+        budget,
+        config,
+        hysteresis,
+        focusScore,
+        deltas,
+        network,
+        pruneBudget: {
+          minEdges: 0,
+          minNodes: 1,
+          costExemptEdgeIds: [],
+          currentEdgeCount: network.connections.length,
+          currentNodeCount: network.nodes.length,
+          currentWiringCost: network.nodes.length + network.connections.length,
+        },
+      });
+
+      // Assert
+      expect(result.stage).toBe('adult');
+    });
+
+    it('falls through to the dry-run path when network is supplied without pruneBudget', () => {
+      // Arrange
+      const { metrics, budget, config, hysteresis } = createJuvenileFixture();
+      const focusVector = computeFocusScores([metrics], config);
+      const focusScore = focusVector.scores[0];
+      const deltas = planGrowthMorphs(
+        'module:alpha',
+        focusScore,
+        metrics,
+        budget,
+        config,
+        hysteresis,
+      );
+      const network = new Network(2, 1);
+
+      // Act
+      const result = runNgeLifecycle({
+        stage: 'juvenile',
+        moduleId: 'module:alpha',
+        metrics,
+        budget,
+        config,
+        hysteresis,
+        focusScore,
+        deltas,
+        network,
+      });
+
+      // Assert
+      expect(result.applyOutcomes).toBeUndefined();
+    });
+
+    it('keeps hysteresis unchanged when all morphs are skipped due to a saturated budget', () => {
+      // Arrange
+      const { metrics, config, hysteresis } = createJuvenileFixture();
+      const saturatedBudget: NgeGrowthBudget = {
+        maxNodes: 1,
+        maxEdges: 0,
+        maxEpisodicSlots: 0,
+        currentNodeCount: 1,
+        currentEdgeCount: 0,
+        currentEpisodicSlotCount: 0,
+      };
+      const focusVector = computeFocusScores([metrics], config);
+      const focusScore = focusVector.scores[0];
+      const deltas = planGrowthMorphs(
+        'module:alpha',
+        focusScore,
+        metrics,
+        saturatedBudget,
+        config,
+        hysteresis,
+      );
+      const network = new Network(2, 1);
+
+      // Act
+      const result = runNgeLifecycle({
+        stage: 'juvenile',
+        moduleId: 'module:alpha',
+        metrics,
+        budget: saturatedBudget,
+        config,
+        hysteresis,
+        focusScore,
+        deltas,
+        network,
+        seed: 42,
+        pruneBudget: {
+          minEdges: 0,
+          minNodes: 1,
+          costExemptEdgeIds: [],
+          currentEdgeCount: network.connections.length,
+          currentNodeCount: network.nodes.length,
+          currentWiringCost: network.nodes.length + network.connections.length,
+        },
+      });
+
+      // Assert
+      expect(result.hysteresis).toEqual(hysteresis);
+    });
+
+    it('passes all deltas through when maxStructuralEditsPerStep is zero', () => {
+      // Arrange
+      const { metrics, budget, hysteresis } = createJuvenileFixture();
+      const config = resolveFocusConfig({
+        hysteresisWindowCount: 2,
+        cooldownWindowCount: 0,
+        maxStructuralEditsPerStep: 0,
+      });
+      const focusVector = computeFocusScores([metrics], config);
+      const focusScore = focusVector.scores[0];
+      const deltas = planGrowthMorphs(
+        'module:alpha',
+        focusScore,
+        metrics,
+        budget,
+        config,
+        hysteresis,
+      );
+      const network = new Network(2, 1);
+
+      // Act
+      const result = runNgeLifecycle({
+        stage: 'juvenile',
+        moduleId: 'module:alpha',
+        metrics,
+        budget,
+        config,
+        hysteresis,
+        focusScore,
+        deltas,
+        network,
+        seed: 42,
+        pruneBudget: {
+          minEdges: 0,
+          minNodes: 1,
+          costExemptEdgeIds: [],
+          currentEdgeCount: network.connections.length,
+          currentNodeCount: network.nodes.length,
+          currentWiringCost: network.nodes.length + network.connections.length,
+        },
+      });
+
+      // Assert
+      expect(result.stage).toBe('adult');
+    });
+  });
+});
+
+describe('network snapshot rollback preserves global innovation counter', () => {
+  afterEach(() => {
+    Connection.resetInnovationCounter(1);
+  });
+
+  it('restores Connection.nextInnovation after rolling back a mutated network', () => {
+    Connection.resetInnovationCounter(1000);
+    const network = new Network(4, 2, { seed: 42 });
+    const snapshot = network.toJSON();
+    const initialInnovation = Connection.nextInnovation;
+
+    network.connect(network.nodes[0], network.nodes[network.nodes.length - 1]);
+    restoreNetworkSnapshot(network, snapshot, initialInnovation);
+
+    expect(Connection.nextInnovation).toBe(initialInnovation);
   });
 });

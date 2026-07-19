@@ -435,9 +435,11 @@ export function renderRacingFrame(
     renderCars.length,
     spec.pitBoxes?.length ?? 0,
   );
-  const visiblePitTeamIndex = pitsEnabledForCurrentTier
-    ? resolveVisiblePitTeamIndex(renderOptions.frame, envState, focusCarIndex)
-    : undefined;
+  const activeTeamCount = countActiveTeams(renderCars, renderOptions.frame);
+  const visiblePitTeamIndex =
+    pitsEnabledForCurrentTier && activeTeamCount < 2
+      ? resolveVisiblePitTeamIndex(renderOptions.frame, envState, focusCarIndex)
+      : undefined;
 
   // Step 1: Background fill.
   ctx.fillStyle = COLOR_BACKGROUND;
@@ -1745,6 +1747,36 @@ function isPitsEnabledForCurrentTier(
   }
 
   return carCount >= 4 && pitBoxCount > 0;
+}
+
+/**
+ * Counts the number of distinct teams present in the render roster.
+ *
+ * When the packed worker frame supplies `carTeam`, the count is derived
+ * directly from that team roster, because the frame may describe more cars
+ * (and therefore more teams) than are present in the local environment
+ * state. If `carTeam` is absent, the count falls back to the teams of the
+ * resolved render cars. When two or more teams are active, pit overlays are
+ * rendered for all teams regardless of focus car.
+ *
+ * @param renderCars - Ordered list of car states to draw for this frame.
+ * @param overlayFrame - Optional packed worker frame with per-car team assignments.
+ * @returns Number of unique teams in the render roster.
+ */
+function countActiveTeams(
+  renderCars: readonly RenderCarState[],
+  overlayFrame?: RacingRenderOverlayFrame,
+): number {
+  const packedCarTeam = overlayFrame?.carTeam;
+  if (packedCarTeam !== undefined && packedCarTeam.length > 0) {
+    return new Set<number>(packedCarTeam).size;
+  }
+
+  const teamSet = new Set<number>();
+  for (const renderCar of renderCars) {
+    teamSet.add(renderCar.teamIndex ?? 0);
+  }
+  return teamSet.size;
 }
 
 /**

@@ -8,15 +8,15 @@ tools:
     read,
     search,
     execute,
-    agent,
     cortex/cortex,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    devtools/devtools,
   ]
 user-invocable: false
 agents: []
-skills: [browser-testing-harness, chrome-devtools-mcp, research-methodology]
+skills: [chrome-devtools-mcp, research-methodology]
 ---
 
 ## Purpose
@@ -42,13 +42,17 @@ speculatively. You keep browser test fixtures hidden and deterministic.
 
 ## Constraints
 
-- ALWAYS use the exact skill name `browser-testing-harness` when referencing
-  the canonical harness workflow.
+- ALWAYS use the exact skill name `chrome-devtools-mcp` when referencing
+  the canonical DevTools workflow.
 - ALWAYS use `chrome-devtools-mcp` when delegating to DevTools specialists.
 - ALWAYS launch the browser in a **visible, non-headless** window for WebGPU/
   GPU/performance tests. Hidden, headless, minimized, or occluded windows
   produce invalid measurements and are non-negotiable.
 - ALWAYS document browser window visibility in the trace summary.
+- WHEN `--headless=false` does not produce a visible window, launch Chrome
+  manually with `--remote-debugging-port=9222` and connect the DevTools MCP
+  to that existing instance (use `launchVisibleChrome(url)` from
+  `scripts/agent-customization/mcp/devtools-facade.mjs` when programmatic).
 - ALWAYS tear down the local server before completing.
 - ALWAYS prefer the focused `agent-customization-scripts` Jest project for
   harness-level red tests.

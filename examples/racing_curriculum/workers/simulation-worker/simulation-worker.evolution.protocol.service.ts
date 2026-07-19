@@ -149,6 +149,7 @@ import {
 } from './simulation-worker.race-pack.service';
 import {
   createPerCarAdaptationEngines,
+  evaluateRacingTrendScore,
   type RuntimeAdaptationEngine,
 } from '../../controller/runtime.adaptation';
 import type { Network } from '../../../../src/browser-entry.ts';
@@ -523,7 +524,10 @@ export function routeRacingWorkerProtocolMessage(
         const existingEngines = currentState.adaptationEngines as
           ReadonlyMap<number, unknown> | undefined;
         const adaptationEngines =
-          existingEngines ?? createPerCarAdaptationEngines(carGenomes.length);
+          existingEngines ??
+          createPerCarAdaptationEngines(carGenomes.length, {
+            evaluateScore: evaluateRacingTrendScore,
+          });
 
         // Step 3: Create the rolling opponent snapshot store once so it
         // persists across generations.
@@ -607,6 +611,7 @@ export function routeRacingWorkerProtocolMessage(
     const controllerNetworks: RaceControllerNetwork[] = carGenomes.map(
       (genome) => ({
         activate: (inputs: number[]) => genome.activate(inputs),
+        input: genome.inputSize,
       }),
     );
 

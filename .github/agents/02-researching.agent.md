@@ -70,7 +70,7 @@ This agent follows the Cortex-First Search Policy. Use the `research-methodology
 
 ## Mission
 
-Gather only the minimum evidence needed to refine Step 01 workset, without editing production files. Use hidden scouts for domain reconnaissance. Update the active plan with clear, source-grounded findings. Materialize any resolved unknowns as a research artifact at `docs/research/<feature>.md` and link to it from the produced step packet using the `research_artifact` field. Always hand off to the next step; never attempt to resolve outside your scope.
+Gather only the minimum evidence needed to refine Step 01 workset, without editing production files. Use hidden scouts for domain reconnaissance. Update the active plan with clear, source-grounded findings. Materialize any resolved unknowns as a **ad-hoc research file** alongside the plan, named `<PlanName>.research.md` (matching the `<PlanName>.plans.md` convention), and link to it from the produced step packet using the `research_artifact` field. Always hand off to the next step; never attempt to resolve outside your scope.
 
 **Delegation Mandate:** This agent MUST delegate substantive work to Tier 2 coordinators and Tier 3 specialists. Use `.github/agent-skill-routing-table.md` as the canonical delegation target lookup. The output contract MUST report which sub-agents were used (not `NONE`). A completion with zero delegations is a defect unless the task is trivially self-contained.
 
@@ -78,7 +78,7 @@ Gather only the minimum evidence needed to refine Step 01 workset, without editi
 
 - Never edit production code, generated outputs, or source files unless explicitly routed to implementation.
 - Only edit the active plans/\*.md tracker before handoff; chat is not a source of truth.
-- Materialize resolved unknowns as `docs/research/<feature>.md` and link to the artifact from the step packet `research_artifact` field before handing off.
+- Materialize resolved unknowns as a **ad-hoc research file** at `plans/<PlanName>.research.md` (sibling to the `<PlanName>.plans.md` tracker) and link to the artifact from the step packet `research_artifact` field before handing off. Never use `docs/research/<feature>.md` — the `.research.md` sibling convention keeps research co-located with its plan.
 - Always use existing scouts; never attempt manual exploration unless all scouts fail.
 - Use subagent-delegation-patterns for all task packets.
 - Keep all durable rules in skills and plans, not in this agent.
@@ -124,10 +124,11 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
      - "Runtime log shows X, static code shows Y. Tie-break: runtime log preferred. Residual risk: possible code drift."
 8. **Update the active plan with evidence, blockers, and next step status**
    - Example: Add findings, blockers, and set `TASK_STATUS` in `plans/step01.md`.
-9. **If the research resolved genuine unknowns, write a research artifact at `docs/research/<feature>.md`**
-   - Required sections: Question, Evidence, Decision, Risks. Follow the convention documented in `docs/research/README.md`.
+9. **If the research resolved genuine unknowns, write a research artifact at `plans/<PlanName>.research.md`**
+   - This is a sibling file to the active `plans/<PlanName>.plans.md` tracker, following the `.plans.md` / `.research.md` naming convention.
+   - Required sections: Question, Evidence, Decision, Risks.
 10. **Reference the research artifact in the step packet**
-    - Include a `research_artifact` field in the produced step packet YAML pointing to `docs/research/<feature>.md`, or explicitly link to the artifact in the handoff summary.
+    - Include a `research_artifact` field in the produced step packet YAML pointing to `plans/<PlanName>.research.md`, or explicitly link to the artifact in the handoff summary.
 11. **Invoke workflow sync hook**
     - Command: `node .github/hooks/workflow-update-sync.mjs --plan=plans/step01.md --json`
     - If waiting for user input, skip hook and record: "Hold: awaiting user response."

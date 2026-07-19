@@ -1,6 +1,13 @@
 import { generateTrack } from '../track/track.generator';
-import type { TrackAabb, TrackSpec } from '../track/track.generator.types';
-import { resolveSplineSampleFrame } from '../track/track.spline.utils';
+import type {
+  SplineSample,
+  TrackAabb,
+  TrackSpec,
+} from '../track/track.generator.types';
+import {
+  resolveInnerLaneCenterlineOffsetWorld,
+  resolveSplineSampleFrame,
+} from '../track/track.spline.utils';
 import type {
   CarControlOutput,
   EnvironmentState,
@@ -18,6 +25,8 @@ const DEFAULT_TRACK_LAYOUT_VERSION = 1;
 const DEFAULT_TRACK_SIZE_BUCKET = 'medium';
 const NO_CAR_INDEX = 255;
 const PIT_STOP_TICKS = 4;
+/** Mean tire-health value below which a car is considered degraded enough to need pit service. */
+const PIT_SERVICE_TIRE_HEALTH_THRESHOLD = 0.85;
 const TEAM_COUNT = 2;
 const PIT_SLOTS_PER_TEAM = 3;
 const PIT_SLOT_COUNT = TEAM_COUNT * PIT_SLOTS_PER_TEAM;
@@ -31,15 +40,31 @@ const SEPARATION_MARGIN = 0.01;
 /** Maximum iterations for the pairwise overlap resolution solver. */
 const SEPARATION_MAX_ITERATIONS = 200;
 /** Penalty assigned when a car is clamped back onto the track ribbon. */
-const OFF_TRACK_CLAMP_REWARD = -1;
+const OFF_TRACK_CLAMP_REWARD = -5;
 /** Penalty assigned when a car moves opposite the track tangent. */
-const WRONG_DIRECTION_REWARD = -1;
+const WRONG_DIRECTION_REWARD = -5;
+/** Cap for the escalating wrong-direction tick multiplier. */
+const MAX_ESCALATING_WRONG_DIRECTION_TICKS = 10;
+/** Positive reward when the car closely follows the guide line at Tier 0–1. */
+const GUIDE_FOLLOW_REWARD_CLOSE = 3;
+/** Smaller positive reward when the car is moderately close to the guide line. */
+const GUIDE_FOLLOW_REWARD_MODERATE = 1;
+/** Penalty per tick when the car diverges from the guide line while it is available. */
+const GUIDE_DIVERGENCE_PENALTY = -2;
+/** World-unit scale used to normalize the optimal-line lateral offset. */
+const GUIDE_OFFSET_NORMALIZATION_SCALE = 18;
+/** Normalized offset threshold for the close guide-following reward. */
+const GUIDE_OFFSET_CLOSE_THRESHOLD = 0.2;
+/** Normalized offset threshold for the moderate guide-following reward. */
+const GUIDE_OFFSET_MODERATE_THRESHOLD = 0.5;
+/** Cap for the escalating border-contact tick multiplier. */
+const MAX_ESCALATING_BORDER_TICKS = 10;
 /** Base lateral wear contribution per step for the tire-health model. */
-const TIRE_DECAY_LATERAL_FACTOR = 0.00012;
+const TIRE_DECAY_LATERAL_FACTOR = 0.00004;
 /** Base longitudinal wear contribution per step for the tire-health model. */
-const TIRE_DECAY_LONGITUDINAL_FACTOR = 0.00006;
+const TIRE_DECAY_LONGITUDINAL_FACTOR = 0.00002;
 /** Base speed wear contribution per step for the tire-health model. */
-const TIRE_DECAY_SPEED_FACTOR = 0.000006;
+const TIRE_DECAY_SPEED_FACTOR = 0.000002;
 const TIRE_DECAY_ACCELERATION_FACTOR = 0.5;
 const TEAM_LAYOUT: readonly [0, 0, 0, 1, 1, 1] = [0, 0, 0, 1, 1, 1];
 const DEFAULT_TIRE_STATE: TireStateTuple = [1, 1, 1, 1];
@@ -53,6 +78,26 @@ const DEFAULT_TRACK_SPEC = generateTrack({
 type EnvironmentControlInput = CarControlOutput | readonly CarControlOutput[];
 
 type MutablePitOccupancyState = PitOccupancyRecord[];
+
+/**
+ * Optional runtime extensions carried on the environment state for reward shaping.
+ *
+ * These fields are not part of the canonical {@link EnvironmentState} type but
+ * may be set by callers (e.g. the browser harness) and are preserved across
+ * step calls via object spread. `guidanceAlpha` controls whether guide-following
+ * rewards and divergence penalties are active (Tier 0–1: alpha > 0, Tier 2+:
+ * alpha = 0). `consecutiveBorderContactTicks` tracks per-car escalating
+ * border-contact penalty state across ticks. `consecutiveWrongDirectionTicks`
+ * tracks per-car escalating wrong-direction penalty state across ticks.
+ */
+type RewardShapingStateExtensions = {
+  /** Per-car consecutive border-contact tick counts for escalating penalties. */
+  consecutiveBorderContactTicks?: readonly number[];
+  /** Per-car consecutive wrong-direction tick counts for escalating penalties. */
+  consecutiveWrongDirectionTicks?: readonly number[];
+  /** Guidance overlay alpha in [0, 1]; 0 means the guide line is unavailable. */
+  guidanceAlpha?: number;
+};
 
 /**
  * Creates the canonical start-of-episode environment state.
@@ -184,19 +229,61 @@ export function stepEnvironment(
     trackSpec,
   );
   // Step 7: Enforce track boundary walls and assign off-track/wrong-direction rewards.
+  const shapingExtensions = state as EnvironmentState &
+    RewardShapingStateExtensions;
+  const guidanceAlpha = shapingExtensions.guidanceAlpha ?? 1;
+  const guideAvailable = guidanceAlpha > 0;
+  const previousBorderContactTicks =
+    shapingExtensions.consecutiveBorderContactTicks ?? [];
+  const nextBorderContactTicks: number[] = [];
+  const previousWrongDirectionTicks =
+    shapingExtensions.consecutiveWrongDirectionTicks ?? [];
+  const nextWrongDirectionTicks: number[] = [];
   const boundedCars = steppedCars.map((car, carIndex) => {
     if (isCarStoppedInPit(pitOccupancy, carIndex)) {
+      nextBorderContactTicks[carIndex] = 0;
+      nextWrongDirectionTicks[carIndex] = 0;
       return car;
     }
 
     const clamped = clampCarToTrackBounds(car, trackSpec);
     const wasClamped = clamped.carX !== car.carX || clamped.carY !== car.carY;
     let reward = 0;
+
+    // Escalating border-contact penalty: each consecutive clamped tick
+    // multiplies the base penalty, capped at MAX_ESCALATING_BORDER_TICKS.
+    let consecutiveBorderContactTicks = 0;
     if (wasClamped) {
-      reward += OFF_TRACK_CLAMP_REWARD;
+      consecutiveBorderContactTicks = Math.min(
+        (previousBorderContactTicks[carIndex] ?? 0) + 1,
+        MAX_ESCALATING_BORDER_TICKS,
+      );
+      reward += OFF_TRACK_CLAMP_REWARD * consecutiveBorderContactTicks;
     }
+    nextBorderContactTicks[carIndex] = consecutiveBorderContactTicks;
+
+    // Escalating wrong-direction penalty: each consecutive wrong-direction
+    // tick multiplies the base penalty, capped at
+    // MAX_ESCALATING_WRONG_DIRECTION_TICKS.
+    let consecutiveWrongDirectionTicks = 0;
     if (wrongDirectionFlags[carIndex]) {
-      reward += WRONG_DIRECTION_REWARD;
+      consecutiveWrongDirectionTicks = Math.min(
+        (previousWrongDirectionTicks[carIndex] ?? 0) + 1,
+        MAX_ESCALATING_WRONG_DIRECTION_TICKS,
+      );
+      reward += WRONG_DIRECTION_REWARD * consecutiveWrongDirectionTicks;
+    }
+    nextWrongDirectionTicks[carIndex] = consecutiveWrongDirectionTicks;
+
+    // Guide-following reward and divergence penalty apply only while the
+    // guide line is available (Tier 0–1, guidanceAlpha > 0).
+    if (guideAvailable) {
+      const guideOffsetNormalized = resolveOptimalLineLateralOffsetNormalized(
+        clamped,
+        trackSpec,
+      );
+      reward += computeGuideFollowReward(guideOffsetNormalized);
+      reward += computeGuideDivergencePenalty(guideOffsetNormalized);
     }
 
     return reward === 0 ? clamped : { ...clamped, reward };
@@ -210,7 +297,9 @@ export function stepEnvironment(
     trackSpec,
     releasedCars,
   );
-  const primaryCar = separatedCars[0] ?? createFallbackPrimaryCar();
+  // Step 10: Hold pitting cars at their assigned box center for the service duration.
+  const heldCars = applyPitHold(separatedCars, nextPitOccupancy, trackSpec);
+  const primaryCar = heldCars[0] ?? createFallbackPrimaryCar();
 
   return {
     ...state,
@@ -220,10 +309,12 @@ export function stepEnvironment(
     carHeading: primaryCar.carHeading,
     teamIndex: primaryCar.teamIndex,
     tireState: primaryCar.tireState,
-    cars: separatedCars,
+    cars: heldCars,
     trackSpec,
     pitOccupancy: nextPitOccupancy,
     pitStatus: nextPitOccupancy,
+    consecutiveBorderContactTicks: nextBorderContactTicks,
+    consecutiveWrongDirectionTicks: nextWrongDirectionTicks,
   };
 }
 
@@ -712,12 +803,19 @@ function stepCarKinematics(
     FIXED_TIMESTEP_SECONDS;
   const speed =
     Math.abs(effectiveThrottle) * MAX_FORWARD_SPEED_UNITS_PER_SECOND;
+  const forwardSpeedWorld =
+    clampedThrottle * MAX_FORWARD_SPEED_UNITS_PER_SECOND;
+  const lateralSpeedWorld = 0;
+  const speedWorld = Math.abs(forwardSpeedWorld);
 
   return {
     ...car,
     carHeading: nextHeading,
     carX: car.carX + Math.cos(nextHeading) * forwardDistance,
     carY: car.carY + Math.sin(nextHeading) * forwardDistance,
+    forwardSpeedWorld,
+    lateralSpeedWorld,
+    speedWorld,
     tireState: decayTireState(
       car.tireState,
       Math.abs(clampedSteer),
@@ -731,8 +829,11 @@ function stepCarKinematics(
  * Detects new pit entries after the current tick's car updates complete.
  *
  * Entry is based on any of the team's `entranceCorridor` axis-aligned boxes
- * inside the frozen `TrackSpec`. Cars may claim up to one own-team slot each,
- * but cars released earlier in the same tick cannot re-enter immediately.
+ * inside the frozen `TrackSpec`. A car is admitted only when its mean tire
+ * health is below `PIT_SERVICE_TIRE_HEALTH_THRESHOLD`, so freshly serviced
+ * cars sitting at `boxCenter` (which may still be inside the same AABB) are
+ * not immediately re-trapped. Cars may claim up to one own-team slot each,
+ * and cars released earlier in the same tick cannot re-enter immediately.
  *
  * @param cars - Updated car roster.
  * @param pitOccupancy - Pit occupancy shelf after ticking active stops.
@@ -754,7 +855,8 @@ function resolvePitEntries(
 
     if (
       releasedCars.has(carIndex) ||
-      isCarStoppedInPit(nextPitOccupancy, carIndex)
+      isCarStoppedInPit(nextPitOccupancy, carIndex) ||
+      resolveMeanTireHealth(car.tireState) >= PIT_SERVICE_TIRE_HEALTH_THRESHOLD
     ) {
       continue;
     }
@@ -777,6 +879,49 @@ function resolvePitEntries(
   }
 
   return nextPitOccupancy;
+}
+
+/**
+ * Locks every car that is actively serving a pit stop to its assigned box center.
+ *
+ * When a car enters a pit box in `resolvePitEntries`, the occupancy record already
+ * starts counting down `remainingStopTicks`. This helper runs after entry
+ * resolution so the same tick that claims the slot also teleports the car from
+ * the entrance corridor to `boxCenter`, and every following tick keeps the car
+ * parked there until the stop expires.
+ *
+ * @param cars - Updated car roster after separation.
+ * @param pitOccupancy - Pit occupancy shelf after entry resolution.
+ * @param trackSpec - Active track metadata.
+ * @returns Car roster with pitting cars pinned to their box centers.
+ */
+function applyPitHold(
+  cars: readonly RacingCarState[],
+  pitOccupancy: PitOccupancyState,
+  trackSpec: TrackSpec,
+): RacingCarState[] {
+  const pitBoxes = trackSpec.pitBoxes ?? [];
+
+  return cars.map((car, carIndex) => {
+    if (!isCarStoppedInPit(pitOccupancy, carIndex)) {
+      return car;
+    }
+
+    const slotIndex = pitOccupancy.findIndex(
+      (record) => record.occupyingCarIndex === carIndex,
+    );
+    const boxCenter = pitBoxes[slotIndex]?.boxCenter;
+
+    if (boxCenter === undefined) {
+      return car;
+    }
+
+    return {
+      ...car,
+      carX: boxCenter.x,
+      carY: boxCenter.y,
+    };
+  });
 }
 
 /**
@@ -858,4 +1003,100 @@ function clampControlValue(value: number): number {
  */
 function clampUnitInterval(value: number): number {
   return Math.max(0, Math.min(1, value));
+}
+
+/**
+ * Computes the normalized lateral offset from the car to its team's optimal
+ * lane centerline (guide line).
+ *
+ * Replicates the computation in the observation assembler: the signed lateral
+ * offset from the nearest spline sample is subtracted by the team-specific
+ * lane centerline offset, then normalized by
+ * {@link GUIDE_OFFSET_NORMALIZATION_SCALE} world units. The result is a
+ * signed value where 0 means the car is exactly on the guide line.
+ *
+ * @param car - Car whose offset should be computed.
+ * @param trackSpec - Frozen track geometry.
+ * @returns Normalized lateral offset; 0 when the track has no spline samples.
+ */
+function resolveOptimalLineLateralOffsetNormalized(
+  car: RacingCarState,
+  trackSpec: TrackSpec,
+): number {
+  const { splineSamples } = trackSpec;
+
+  if (splineSamples.length === 0) {
+    return 0;
+  }
+
+  const nearestSampleIndex = resolveNearestSampleIndex(
+    car.carX,
+    car.carY,
+    trackSpec,
+  );
+  const nearestSample = splineSamples[nearestSampleIndex] as SplineSample;
+  const sampleFrame = resolveSplineSampleFrame(
+    splineSamples,
+    nearestSampleIndex,
+  );
+  const signedLateralOffsetWorld =
+    (car.carX - nearestSample.x) * sampleFrame.normalX +
+    (car.carY - nearestSample.y) * sampleFrame.normalY;
+  const innerLaneCenterlineOffsetWorld =
+    resolveInnerLaneCenterlineOffsetWorld(nearestSample);
+  // Team 0 (blue) targets the inner-lane centerline, Team 1 (red) the outer.
+  const targetLaneCenterlineOffsetWorld =
+    car.teamIndex === 1
+      ? -innerLaneCenterlineOffsetWorld
+      : innerLaneCenterlineOffsetWorld;
+  const optimalLineLateralOffsetWorld =
+    signedLateralOffsetWorld - targetLaneCenterlineOffsetWorld;
+
+  return optimalLineLateralOffsetWorld / GUIDE_OFFSET_NORMALIZATION_SCALE;
+}
+
+/**
+ * Computes a positive guide-following reward based on how close the car is
+ * to the guide line.
+ *
+ * Returns {@link GUIDE_FOLLOW_REWARD_CLOSE} when the normalized lateral offset
+ * is very small (< {@link GUIDE_OFFSET_CLOSE_THRESHOLD}), a smaller
+ * {@link GUIDE_FOLLOW_REWARD_MODERATE} when moderately close (<
+ * {@link GUIDE_OFFSET_MODERATE_THRESHOLD}), and 0 when far from the guide.
+ *
+ * @param guideOffsetNormalized - Signed normalized lateral offset from the guide line.
+ * @returns Positive reward or 0.
+ */
+function computeGuideFollowReward(guideOffsetNormalized: number): number {
+  const absoluteOffset = Math.abs(guideOffsetNormalized);
+
+  if (absoluteOffset < GUIDE_OFFSET_CLOSE_THRESHOLD) {
+    return GUIDE_FOLLOW_REWARD_CLOSE;
+  }
+
+  if (absoluteOffset < GUIDE_OFFSET_MODERATE_THRESHOLD) {
+    return GUIDE_FOLLOW_REWARD_MODERATE;
+  }
+
+  return 0;
+}
+
+/**
+ * Computes a divergence penalty when the car strays far from the guide line
+ * while it is available.
+ *
+ * Returns {@link GUIDE_DIVERGENCE_PENALTY} when the normalized lateral offset
+ * exceeds {@link GUIDE_OFFSET_MODERATE_THRESHOLD}, and 0 otherwise.
+ *
+ * @param guideOffsetNormalized - Signed normalized lateral offset from the guide line.
+ * @returns Negative penalty or 0.
+ */
+function computeGuideDivergencePenalty(guideOffsetNormalized: number): number {
+  const absoluteOffset = Math.abs(guideOffsetNormalized);
+
+  if (absoluteOffset > GUIDE_OFFSET_MODERATE_THRESHOLD) {
+    return GUIDE_DIVERGENCE_PENALTY;
+  }
+
+  return 0;
 }

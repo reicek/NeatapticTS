@@ -3236,6 +3236,51 @@ describe('nge juvenile focus metrics', () => {
       });
     });
   });
+
+  // --- Coverage tests for uncovered branches ---
+
+  describe('resolveFocusConfig override coverage', () => {
+    it('uses the overridden maxStructuralEditsPerStep when provided', () => {
+      // Act
+      const resolvedConfig = resolveFocusConfig({
+        maxStructuralEditsPerStep: 7,
+      });
+
+      // Assert
+      expect(resolvedConfig.maxStructuralEditsPerStep).toBe(7);
+    });
+  });
+
+  describe('computeFocusScores supportsGrowth false branch', () => {
+    it('sets supportsGrowth to false when the raw score is negative', () => {
+      // Arrange — high wiringCost with low positive metrics produces a
+      // negative raw score for the costly module.
+      const snapshots: NgeModuleMetricsSnapshot[] = [
+        {
+          moduleId: 'module:good',
+          utilization: 10,
+          rewardDelta: 10,
+          novelty: 10,
+          stabilityAge: 10,
+          wiringCost: 0,
+        },
+        {
+          moduleId: 'module:costly',
+          utilization: 0,
+          rewardDelta: 0,
+          novelty: 0,
+          stabilityAge: 0,
+          wiringCost: 10,
+        },
+      ];
+
+      // Act
+      const focusVector = computeFocusScores(snapshots, {});
+
+      // Assert
+      expect(focusVector.scores[1].supportsGrowth).toBe(false);
+    });
+  });
 });
 
 /**

@@ -1,6 +1,6 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: 78ddb7f77621d40ef60ba4ec70e07bb1c0f43ed9c296e52ffb21c1200964e108 -->
-<!-- source-file-count: 128 -->
+<!-- source-hash: 820ec5186064c6bab01594a8922267a9fb1db350605af2d5bf05ec2fbe65db0a -->
+<!-- source-file-count: 129 -->
 # Canonical Agent and Skill Routing Table
 
 > Generated file. Do not edit manually.
@@ -24,10 +24,10 @@
 | agent-frontmatter-auditor | 3 | kimi-k2.7-code:cloud | - | agent-frontmatter-standards<br>updating-agent-frontmatter |
 | assimilator | 3 | kimi-k2.7-code:cloud | - | external-tool-assimilation<br>license-attribution-audit<br>research-methodology<br>capturing-learning-event |
 | boundary-mapper | 3 | kimi-k2.7-code:cloud | - | solid-split<br>implementation-standards |
-| browser-harness-specialist | 3 | kimi-k2.7-code:cloud | - | browser-testing-harness<br>chrome-devtools-mcp<br>research-methodology |
-| browser-memory-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>browser-testing-harness |
+| browser-harness-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>research-methodology |
+| browser-memory-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp |
 | browser-runtime-scout | 3 | kimi-k2.7-code:cloud | - | browser-build |
-| browser-ui-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>browser-testing-harness |
+| browser-ui-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp |
 | checkpoint-scout | 3 | kimi-k2.7-code:cloud | - | checkpointing-persistence |
 | code-quality-auditor | 3 | kimi-k2.7-code:cloud | file-change-summarizer | green-validation-gates<br>implementation-standards |
 | cortex-embeddings-scout | 3 | kimi-k2.7-code:cloud | - | repo-cortex-embeddings |
@@ -56,7 +56,7 @@
 | neatchat-scout | 3 | kimi-k2.7-code:cloud | - | neatchat-systems |
 | nge-benchmark-scout | 3 | kimi-k2.7-code:cloud | - | nge-benchmark-workflow |
 | nge-core-scout | 3 | kimi-k2.7-code:cloud | - | nge-core-algorithm |
-| performance-trace-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>trace-audit-reporting<br>trace-analyzer-extension<br>browser-testing-harness |
+| performance-trace-specialist | 3 | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>trace-audit-reporting<br>trace-analyzer-extension |
 | phase-handoff-designer | 3 | kimi-k2.7-code:cloud | - | phase-handoff-workflow |
 | plan-registration-auditor | 3 | kimi-k2.7-code:cloud | - | plan-sync-validation |
 | plan-scout | 3 | kimi-k2.7-code:cloud | - | plan-alignment |
@@ -97,6 +97,7 @@
 | creating-specialist-agent | skill | - | helping-agent-maintenance-coordinator<br>helping-gap-resolution-coordinator | self |
 | creating-unit-tests | skill | - | 03-red-testing<br>unit-test-writer | self |
 | customize-cloud-agent | skill | - | 00-helping | self |
+| devtools | skill | - | - | self |
 | docs-academic-citation-audit | skill | - | 06-documenting<br>academic-docs-auditor | self |
 | educational-docs | skill | - | 06-documenting<br>docs-example-writer<br>docs-scout | self |
 | execute | skill | - | 00-helping<br>01-planning<br>02-researching<br>03-red-testing<br>04-implementing<br>05-green-testing<br>06-documenting<br>07-logging<br>flappy-architecture-polish<br>green-test-failure-triage-coordinator<br>helping-agent-maintenance-coordinator<br>helping-gap-resolution-coordinator<br>implementation-executor<br>implementation-pattern-coordinator<br>planning-context-coordinator<br>planning-risk-coordinator<br>planning-test-strategy-coordinator<br>research-codebase-coordinator<br>slice-orchestration-scheduler<br>solid-split | self |

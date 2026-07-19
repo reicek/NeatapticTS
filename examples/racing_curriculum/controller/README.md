@@ -1,16 +1,53 @@
 # controller
 
-Deterministic scripted waypoint-following controller for the Tier 0
-racing curriculum demo.
+Racing-curriculum runtime adaptation engine.
 
-The controller maintains a target waypoint index that advances around the
-closed-loop track as the car approaches each endpoint. Steering is a
-proportional heading-error term; throttle is held at a fixed constant.
+Sequences one NGE grow-stabilize cycle per controller tick. It converts
+composite driving-quality signals into scalar scores, decides whether the
+controller network should grow new structure or stabilize existing weights,
+and routes the resulting mutations back to the live network.
 
-This controller is intentionally simple and deterministic. It remains useful
-as a baseline reference lane for regression comparisons against NGE-backed
-controller behavior while preserving the same `computeScriptedControl`
-integration seam.
+The engine is deliberately decoupled from the simulation worker so the same
+adaptation policy can run in the browser host, in a worker, or in unit tests.
+All demo-specific knowledge lives here; the core `runNgeGrowStabilizeCycle`
+only sees plain numeric score history and a mutable network.
+
+## Score-space invariant
+
+The grow-stabilize cycle commits a weight variant only when
+`bestVariantScore > baselineScore + threshold`. That inequality is only
+meaningful when both scores share the same units and direction. The default
+variant scorer returns negative mean-squared-error against a target vector,
+while the racing baseline is a positive driving-quality score. This engine
+therefore injects a racing-specific `VariantScorer` that collapses the
+2-D controller output `[throttle, steering]` to a scalar and returns a
+positive quality score in the same space as the baseline.
+
+```mermaid
+flowchart LR
+  Tick["Controller tick"] --> Cadence{"Cadence gate open?"}
+  Cadence -->|no| Skip["Skip adaptation"]
+  Cadence -->|yes| Evidence["Build evidence window"]
+  Evidence --> Baseline["Compute positive driving-quality baseline"]
+  Baseline --> Cycle["runNgeGrowStabilizeCycle"]
+  Cycle --> Committed{"Committed?"}
+  Committed -->|yes| Apply["Apply mutation / keep weights"]
+  Committed -->|no| Rollback["Rollback network"]
+  Apply --> Telemetry["Emit telemetry"]
+  Rollback --> Telemetry
+```
+
+## Background reading
+
+- NEAT and topology-evolving neuroevolution:
+  K. O. Stanley and R. Miikkulainen, "Evolving Neural Networks through
+  Augmenting Topologies," *Evolutionary Computation*, vol. 10, no. 2,
+  pp. 99-127, 2002.
+  [NEAT publications](https://nn.cs.utexas.edu/?neat-papers)
+- Growth/stabilization as an explore–exploit tradeoff:
+  [Wikipedia — Exploration–exploitation dilemma](https://en.wikipedia.org/wiki/Exploration%E2%80%93exploitation_dilemma)
+- Mean squared error:
+  [Wikipedia — Mean squared error](https://en.wikipedia.org/wiki/Mean_squared_error)
 
 ## controller/nge.controller.ts
 
@@ -184,6 +221,39 @@ Mutable self-radio seam used by Tier 2 single-car self-monitoring.
 
 ## controller/runtime.adaptation.ts
 
+### buildCandidateScoreWindow
+
+```ts
+buildCandidateScoreWindow(
+  network: default,
+  evidenceWindow: readonly (number | RacingQualitySignal)[],
+): number[]
+```
+
+Build a fresh candidate score window from the post-mutation network's
+forward-pass outputs.
+
+Unlike the shared {@link RuntimeAdaptationTickInput.scoreHistory} (which
+represents historical driving quality and is identical for both baseline
+and candidate evaluations), this window is derived by activating the
+post-mutation network on sample observations from the evidence window and
+converting each output vector into a scalar quality score.  This ensures
+the candidate score reflects the actual behavioral impact of the structural
+mutation, not historical performance.
+
+Each output vector is reduced to a scalar by taking the mean of its
+absolute activation values.  A mutation that disrupts driving behavior
+produces different activation magnitudes, yielding a different candidate
+score window and therefore a different candidate score — even when the
+historical scoreHistory is unchanged.
+
+Parameters:
+- `network` - Post-mutation candidate network to evaluate.
+- `evidenceWindow` - Filtered rolling score history used to derive
+sample observations for the forward passes.
+
+Returns: Array of scalar quality scores, one per sample observation.
+
 ### buildGrowthBudget
 
 ```ts
@@ -206,7 +276,7 @@ Returns: NGE growth budget for the lifecycle apply phase.
 ```ts
 buildModuleMetricsSnapshot(
   network: default,
-  evidenceWindow: readonly number[],
+  evidenceWindow: readonly (number | RacingQualitySignal)[],
 ): NgeModuleMetricsSnapshot
 ```
 
@@ -233,27 +303,25 @@ Parameters:
 
 Returns: NGE prune budget for the lifecycle apply phase.
 
-### computeGrowthThrottle
+### collectForwardPassOutputs
 
 ```ts
-computeGrowthThrottle(
+collectForwardPassOutputs(
   network: default,
-  tick: number,
-): { shouldThrottle: boolean; interval: number; }
+  scoreHistory: readonly (number | RacingQualitySignal)[],
+): number[][]
 ```
 
-Compute whether the growth lifecycle should be throttled for the current tick.
-
-When the network exceeds {@link LARGE_NETWORK_NODE_THRESHOLD}, the effective
-throttle interval scales with network size so that larger networks get
-progressively longer back-off intervals. This preserves real-time
-performance by preventing the lifecycle from running every tick at scale.
+Collects forward-pass outputs from the network by activating it on sample
+observations drawn from the score history.  For numeric entries the scalar
+is repeated to fill the input vector; for composite signals the five
+signal fields are tiled or truncated to the input size.
 
 Parameters:
-- `network` - Live controller network whose size determines throttling.
-- `tick` - Current fixed-timestep tick used for interval gating.
+- `network` - Candidate network to activate.
+- `scoreHistory` - Rolling score window used to derive observations.
 
-Returns: Throttle decision with the computed interval.
+Returns: Array of output vectors, one per sample observation.
 
 ### createPerCarAdaptationEngines
 
@@ -298,10 +366,105 @@ createRuntimeAdaptationEngine(
 
 Creates a reusable per-tick adaptation engine for racing runtime loops.
 
+The engine sequences one NGE grow-stabilize cycle per tick. It enforces a
+configurable cadence policy so adaptation attempts do not fire on every tick,
+applies a rollback cooldown after rejected candidates, and respects a
+growth throttle that slows structural mutation as the network grows. The
+growth-phase commit decision trusts the grow-stabilize cycle's own commit
+flag, while the engine adds safety-limit checks and an unconditional
+first-growth path so a brand-new network cannot stall.
+
+When an `accelerationConfig` is supplied, variant counts are forwarded to the
+grow-stabilize cycle's parallel evaluator. The stabilization phase caps the
+evaluated variant count to `NGE_GROW_STABILIZE_STABILIZATION_VARIANT_COUNT`
+(32 by default) regardless of the acceleration configuration, while the
+growth-phase variant count follows the acceleration configuration's stage
+limits.
+
+A racing-specific `VariantScorer` is injected into the grow-stabilize
+cycle as `scoreFn` so the stabilization baseline and variant scores share the
+same positive driving-quality score space. Without that alignment, the commit
+inequality `bestScore > baselineScore + threshold` compares incommensurate
+values (for example, negative MSE against a positive quality score) and
+stabilization commits cannot occur.
+
 Parameters:
-- `options` - Optional cadence, bounds, and evaluation policy.
+- `options` - Optional cadence, bounds, evaluation policy, and
+acceleration configuration.
 
 Returns: Stateful runtime adaptation engine.
+
+### detectScoreWindowOscillation
+
+```ts
+detectScoreWindowOscillation(
+  scores: readonly (number | RacingQualitySignal)[],
+): number
+```
+
+Detects score-window oscillation from a window of scalar scores or quality
+signals.  The series is considered oscillating when the number of direction
+changes (peaks or troughs) exceeds a length-scaled threshold.
+
+Parameters:
+- `scores` - Recent scores in chronological order.
+
+Returns: Oscillation metric in [0, 1]; 0 means stable scores and values near
+1 indicate strong up/down reward swings.
+
+### detectSteeringOscillation
+
+```ts
+detectSteeringOscillation(
+  angles: readonly number[],
+): number
+```
+
+Detects steering oscillation from a window of steering angles.  A series is
+considered oscillating when the number of sign changes exceeds a small,
+length-scaled threshold and the mean steering magnitude is above a deadband,
+which catches aggressive zig-zags without penalizing gentle corrections or
+legitimate S-curves through chicanes.
+
+Parameters:
+- `angles` - Recent steering outputs in chronological order.
+
+Returns: Oscillation metric in [0, 1]; 0 means smooth steering and values
+near 1 indicate strong back-and-forth swings.
+
+### evaluateRacingTrendScore
+
+```ts
+evaluateRacingTrendScore(
+  network: default,
+  scoreHistory: readonly (number | RacingQualitySignal)[],
+): number
+```
+
+Racing-specific trend evaluator that consumes a composite driving-quality
+signal and accounts for network complexity via a forward pass.
+
+Each history entry is either a legacy numeric score or a
+{@link RacingQualitySignal} that carries track progress, forward speed,
+heading alignment, off-track penalty, and an optional physics reward.
+The composite quality is folded into the same trend/mean combination used
+by the default rolling-window evaluator.
+
+The complexity bonus is computed from the variance of forward-pass outputs
+across sample observations drawn from the score history.  A behaviorally-
+neutral mutation (e.g. a disconnected dead-weight node) produces identical
+forward-pass outputs and therefore zero variance, yielding no complexity
+bonus — the evaluator correctly rejects it.  The bonus is additionally
+gated on a non-negative driving-quality trend so that structural growth is
+only rewarded when the car is not getting worse.
+
+Parameters:
+- `network` - Candidate network whose forward pass determines behavioral
+complexity.
+- `scoreHistory` - Rolling score window of numeric scores or composite
+driving-quality signals.
+
+Returns: Trend/mean score with performance-gated complexity bonus.
 
 ### evaluateRollingScoreWindow
 
@@ -320,20 +483,227 @@ Parameters:
 
 Returns: Combined trend/complexity score.
 
-### mapOutcomesToOperations
+### RACING_COMPLEXITY_WEIGHT
+
+Weight applied to network complexity (nodes + connections) in the racing
+trend evaluator.  A small positive weight ensures the candidate (post-morph)
+network scores slightly higher than the baseline (pre-morph) network when
+structural mutations add capacity, allowing growth mutations to pass the
+improvement threshold.  The weight is kept small so the driving-quality
+trend remains the dominant signal.
+
+### RACING_OSCILLATION_COMMIT_THRESHOLD
+
+Oscillation gate for the growth-commit threshold boost.  The small additive
+{@link RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST} is only applied when
+the maximum of steering and score-window oscillation exceeds this value;
+below the gate the threshold is left unchanged.  This is a gate, not a
+multiplier.
+
+### RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST
+
+Small additive boost added to the growth commit threshold when the
+oscillation metric is above {@link RACING_OSCILLATION_COMMIT_THRESHOLD}.  It
+is not multiplied by the metric; it is a fixed nudge that makes structural
+commits slightly harder during unstable reward windows without creating a
+death spiral for young networks.
+
+### RACING_OSCILLATION_MIN_MEAN_STEERING
+
+Minimum mean absolute steering magnitude required for steering oscillation
+to contribute to the oscillation metric.  Gentle corrections below this
+deadband are treated as smooth steering, so legitimate S-curves through
+chicanes are not penalized the same as aggressive zig-zags.
+
+### RACING_OSCILLATION_MIN_NEURONS
+
+Minimum live neuron count at which oscillation penalties and the growth-commit
+threshold boost are applied.  Newborn and baby networks (< 200 neurons)
+naturally oscillate while learning to steer, so the adaptation loop must not
+penalize them until they reach the child tier.
+
+### RACING_OSCILLATION_PENALTY_WEIGHT
+
+Weight applied to steering- and score-window oscillation penalties in the
+racing trend evaluator.  A positive weight penalizes wild steering swings and
+reward oscillation, steering evolution toward smooth, consistent driving
+behavior.
+
+### RACING_VARIANT_SCORER
 
 ```ts
-mapOutcomesToOperations(
-  outcomes: readonly MorphApplyOutcome[],
-): RuntimeAdaptationOperation[]
+RACING_VARIANT_SCORER(
+  outputs: readonly number[][],
+  target: readonly number[],
+): number
 ```
 
-Map lifecycle apply outcomes to runtime adaptation operations.
+Racing-specific variant scorer for the NGE grow-stabilize cycle.
+
+This is a {@link VariantScorer}-compatible wrapper around
+{@link scoreRacingVariant}.  Because the variant-scorer contract only passes
+`outputs` and `target`, the wrapper uses a default neuron count of
+`Number.POSITIVE_INFINITY` so direct callers continue to apply the
+oscillation penalty.  The runtime engine calls {@link scoreRacingVariant}
+directly with the live candidate size to tier-gate young networks.
 
 Parameters:
-- `outcomes` - Apply outcomes from the lifecycle result.
+- `outputs` - Stack of network output vectors, one per input sample.
+- `target` - Scalar target value for each sample (unused).
 
-Returns: Runtime operations for telemetry, excluding skipped morphs.
+Returns: Positive racing-trend quality score (higher is better).
+
+Example:
+
+```ts
+const outputs = [
+  [0.5, -0.1], // throttle, steering
+  [0.6, 0.0],
+];
+const score = RACING_VARIANT_SCORER(outputs, [0]);
+// score is a positive driving-quality proxy; higher is better
+```
+
+## Background reading
+
+- NEAT and topology-evolving neuroevolution:
+  K. O. Stanley and R. Miikkulainen, "Evolving Neural Networks through
+  Augmenting Topologies," *Evolutionary Computation*, vol. 10, no. 2,
+  pp. 99-127, 2002.
+  [NEAT publications](https://nn.cs.utexas.edu/?neat-papers)
+- Growth/stabilization as an explore–exploit tradeoff:
+  [Wikipedia — Exploration–exploitation dilemma](https://en.wikipedia.org/wiki/Exploration%E2%80%93exploitation_dilemma)
+
+### RacingQualitySignal
+
+Composite driving-quality signal used by the racing trend evaluator.
+
+Encapsulates the four per-tick telemetry components that together describe
+how well the car is driving: spline-track progress, forward speed, heading
+alignment with the track, and an off-track penalty.  The composite replaces
+the older heading-alignment-only scalar.
+
+### reduceOutputToScalar
+
+```ts
+reduceOutputToScalar(
+  outputVector: readonly number[],
+): number
+```
+
+Reduce a multi-dimensional controller output vector to a scalar driving
+quality proxy by averaging the absolute activation magnitudes.
+
+This matches the reduction used by {@link buildCandidateScoreWindow} so that
+the racing variant scorer and the rolling candidate scores live in the same
+units.
+
+Parameters:
+- `outputVector` - Raw network output vector (e.g. `[throttle, steering]`).
+
+Returns: Scalar proxy in the same units as the racing trend score.
+
+### resolveAdaptiveHysteresis
+
+```ts
+resolveAdaptiveHysteresis(
+  nodeCount: number,
+): number
+```
+
+Resolve the adaptive hysteresis window count based on the live network
+node count. Smaller networks use a lower threshold (2 consecutive
+positive-quality windows) to accelerate early growth, while larger
+networks require more sustained evidence (5 windows) before committing
+to further structural expansion.
+
+Parameters:
+- `nodeCount` - Current total node count in the live network.
+
+Returns: Hysteresis window count: 2 for ≤ 200 nodes, 3 for ≤ 500, 5 for > 500.
+
+Example:
+
+```ts
+const hysteresis = resolveAdaptiveHysteresis(150);
+console.log(hysteresis); // 2
+```
+
+### resolveBehavioralComplexity
+
+```ts
+resolveBehavioralComplexity(
+  outputs: readonly number[][],
+): number
+```
+
+Compute behavioral complexity as the total variance of forward-pass outputs
+across sample observations.  If all samples produce identical outputs (e.g.
+a dead-weight mutation that does not change the forward pass), the variance
+is zero and the complexity bonus is correctly zero.
+
+Parameters:
+- `outputs` - Array of output vectors, one per sample observation.
+
+Returns: Total variance across all output dimensions.
+
+### resolveObservationVector
+
+```ts
+resolveObservationVector(
+  entry: number | RacingQualitySignal,
+  inputSize: number,
+): number[]
+```
+
+Build an observation vector of the given size from a single score history
+entry.  Numeric entries are repeated to fill the input; composite signals
+tile their five fields (or truncate) to match the network input dimension.
+
+Parameters:
+- `entry` - Numeric score or composite driving-quality signal.
+- `inputSize` - Number of input nodes in the candidate network.
+
+Returns: Input vector suitable for `network.activate`.
+
+### resolveOscillationThresholdBoost
+
+```ts
+resolveOscillationThresholdBoost(
+  oscillationMetric: number,
+  neuronCount: number,
+): number
+```
+
+Resolves the oscillation-driven additive boost for the growth-commit
+improvement threshold.  The boost is only returned when the network has
+reached the child tier (200+ neurons) and the oscillation metric is above the
+commit gate; otherwise it returns zero so young or smooth networks are not
+saddled with an extra growth bar.
+
+Parameters:
+- `oscillationMetric` - Maximum of steering and score-window oscillation.
+- `neuronCount` - Live neuron count of the candidate network.
+
+Returns: Additive threshold boost (0 or
+ *    {@link RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST} ).
+
+### resolveSampleIndices
+
+```ts
+resolveSampleIndices(
+  historyLength: number,
+  maxSamples: number,
+): number[]
+```
+
+Resolve evenly-spaced sample indices from the score history.
+
+Parameters:
+- `historyLength` - Total number of entries in the history.
+- `maxSamples` - Maximum number of samples to select.
+
+Returns: Array of indices into the score history.
 
 ### RuntimeAdaptationCadenceMode
 
@@ -371,7 +741,77 @@ Per-tick input contract for adaptation checks.
 
 Per-step network size snapshot used by adaptation telemetry.
 
+### scoreRacingVariant
+
+```ts
+scoreRacingVariant(
+  outputs: readonly number[][],
+  _target: readonly number[],
+  neuronCount: number,
+): number
+```
+
+Internal racing variant scorer with an explicit neuron-count gate.
+
+The network emits a 2-D controller vector (`[throttle, steering]`), but the
+grow-stabilize evaluator expects the baseline and variant scores to share the
+same positive driving-quality score space. This scorer mirrors the
+{@link evaluateRacingTrendScore} baseline computation: it collapses each
+output row with {@link reduceOutputToScalar}, then combines the mean trend
+of the resulting scalar window with a behavioral-complexity bonus (gated on a
+non-negative trend). Higher scores mean better driving quality, so a variant
+can win the commit decision when it genuinely outperforms the baseline.
+
+The `target` argument mirrors the {@link VariantScorer} contract but is
+intentionally not used here; the score is derived from the candidate
+network's own forward-pass outputs so that it lives in the same space as
+the pre-mutation baseline.
+
+Parameters:
+- `outputs` - Stack of network output vectors, one per input sample.
+- `_target` - Scalar target value for each sample (unused).
+- `neuronCount` - Live neuron count used to tier-gate the oscillation
+ *   penalty.  Penalty is skipped below
+ *    {@link RACING_OSCILLATION_MIN_NEURONS} .
+
+Returns: Positive racing-trend quality score (higher is better).
+
+### toDrivingQuality
+
+```ts
+toDrivingQuality(
+  entry: number | RacingQualitySignal,
+): number
+```
+
+Convert one history entry into a scalar driving-quality score.
+
+Legacy numeric entries pass through unchanged so existing callers and the
+default engine can keep using raw score windows.  Composite signals are
+weighted so that better progress, speed, and alignment increase the score,
+while a larger off-track penalty decreases it.
+
+Parameters:
+- `entry` - Numeric score or composite driving-quality signal.
+
+Returns: Scalar quality value for trend/mean scoring.
+
 ## controller/scripted.controller.ts
+
+Deterministic scripted waypoint-following controller and runtime adaptation
+integration for the Tier 0 racing curriculum demo.
+
+`computeScriptedControl` is the baseline deterministic lane: it maintains a
+target waypoint index that advances around the closed-loop track as the car
+approaches each endpoint, uses a proportional heading-error term for
+steering, and holds throttle at a fixed constant. The controller folder also
+hosts `runtime.adaptation.ts`, which provides the per-car NGE grow-stabilize
+adaptation engine that mutates controller networks within an episode.
+
+The scripted controller is intentionally simple and deterministic. It remains
+useful as a baseline reference lane for regression comparisons against
+NGE-backed controller behavior while preserving the same `computeScriptedControl`
+integration seam.
 
 ### computeScriptedControl
 
@@ -467,6 +907,38 @@ Parameters:
 
 Returns: Observation vector with the tire-health tail appended.
 
+### appendPitStrategyState
+
+```ts
+appendPitStrategyState(
+  baseVector: Float32Array<ArrayBufferLike>,
+  pitStrategy: PitStrategyState,
+): Float32Array<ArrayBufferLike>
+```
+
+Appends the querying car's pit/strategy state as an 8-channel tail.
+
+The channels are ordered and map to offsets `[95..102]` of the Tier 4/5
+observation vector:
+  0. `pitDistanceToEntrance01` — distance to pit entrance, normalized to `[0, 1]`
+  1. `pitOccupancyStatus` — pit-box occupancy for the car's team (`0` empty, `1` occupied)
+  2. `lapsSincePit` — laps since the car's last pit stop, normalized to `[0, 1]`
+  3. `teammatePitStatus` — team pit box occupied by any team member, including the
+     querying car itself when it is pitting (`0` free, `1` occupied)
+  4. `tireDegradationRate` — tire degradation rate, normalized to `[0, 1]`
+  5. `estimatedLapsBeforeFailure` — estimated laps before tire failure, normalized to `[0, 1]`
+  6. `reservedPitContext1` — reserved expansion channel
+  7. `reservedPitContext2` — reserved expansion channel
+
+Any missing field is treated as zero so the vector length stays stable even
+when the race-pack service has not populated pit/strategy data yet.
+
+Parameters:
+- `baseVector` - Base observation vector (usually already tire-aware).
+- `pitStrategy` - Pit/strategy state computed by the race-pack service.
+
+Returns: Observation vector with the 8-channel pit/strategy tail appended.
+
 ### assembleNormalizedObservationVector
 
 ```ts
@@ -486,21 +958,22 @@ The Tier 1 base vector contains 70 channels:
 
 Tier 2 reuses the Tier 1 base and appends the seven self-radio channels at the
 tail without re-normalizing them. Tier 3 reuses the same base and appends three
-seven-channel teammate-radio slots. Tier 4 and 5 both keep the 95-channel tail
-shape that appends the querying car's four tire channels.
+seven-channel teammate-radio slots. Tier 4 and 5 both keep the 103-channel tail
+shape that appends the querying car's four tire channels plus eight pit/strategy
+channels.
 
 Parameters:
 - `envState` - Current environment snapshot plus optional Tier 1–5 fields.
 - `trackSpec` - Frozen track geometry used to derive look-ahead features.
-- `options` - Tier selector that decides which radio or tire tail is appended.
+- `options` - Tier selector that decides which radio, tire, or pit tail is appended.
 
-Returns: Normalized Tier 1 vector (70 channels), Tier 2 vector (77 channels), Tier 3 vector (91 channels), or Tier 4/5 vector (95 channels).
+Returns: Normalized Tier 1 vector (70 channels), Tier 2 vector (77 channels), Tier 3 vector (91 channels), or Tier 4/5 vector (103 channels).
 
 ### assembleTier3Observation
 
 ```ts
 assembleTier3Observation(
-  envState: EnvironmentState & ObservationExtensions & { teammateRadioSlots?: readonly (Float32Array<ArrayBufferLike> | readonly number[])[] | undefined; },
+  envState: EnvironmentState & ObservationExtensions & PitStrategyState & { teammateRadioSlots?: readonly (Float32Array<ArrayBufferLike> | readonly number[])[] | undefined; },
   trackSpec: TrackSpec,
 ): Float32Array<ArrayBufferLike>
 ```
@@ -550,18 +1023,20 @@ assembleTier4Observation(
 ): Float32Array<ArrayBufferLike>
 ```
 
-Builds the Tier 4 observation vector by appending own-car tire health.
+Builds the Tier 4 observation vector by appending own-car tire health and
+pit/strategy state.
 
 The first 91 channels are byte-for-byte identical to Tier 3. The new suffix
-occupies `[91..94]` and stores `[frontLeft, frontRight, rearLeft, rearRight]`.
-That keeps every pre-existing Tier 3 feature aligned while exposing only the
-querying car's four tire channels as the new Tier 4 sensory delta.
+occupies `[91..94]` and stores `[frontLeft, frontRight, rearLeft, rearRight]`,
+followed by 8 pit/strategy channels at `[95..102]`. That keeps every pre-existing
+Tier 3 feature aligned while exposing only the querying car's tire and strategy
+state as the new Tier 4 sensory delta.
 
 Parameters:
-- `envState` - Current environment snapshot plus optional Tier 4 tire state.
+- `envState` - Current environment snapshot plus optional Tier 4 tire and pit/strategy state.
 - `trackSpec` - Frozen track geometry used to derive look-ahead features.
 
-Returns: Ninety-five-channel Tier 4 observation vector.
+Returns: 103-channel Tier 4 observation vector.
 
 Example:
 
@@ -571,8 +1046,9 @@ const observation = assembleTier4Observation(
   trackSpec,
 );
 
-observation.length; // 95
+observation.length; // 103
 observation.slice(91, 95); // Float32Array [1, 0.9, 0.8, 0.7]
+observation.slice(95, 103); // 8 pit/strategy channels
 ```
 
 ### assembleTier5Observation
@@ -584,7 +1060,7 @@ assembleTier5Observation(
 ): Float32Array<ArrayBufferLike>
 ```
 
-Builds the Tier 5 observation vector with the canonical 95-channel 3v3 layout.
+Builds the Tier 5 observation vector with the canonical 103-channel 3v3 layout.
 
 Channel layout:
 - `[0..69]` — 70-channel base observation containing pose, speed, track geometry,
@@ -592,15 +1068,16 @@ Channel layout:
 - `[70..90]` — team radio (`3 × 7 = 21` channels). In 3v3 all three rows can be
   populated; smaller packs keep any missing row zero-padded.
 - `[91..94]` — own-car tire state `[frontLeft, frontRight, rearLeft, rearRight]`.
+- `[95..102]` — 8 pit/strategy channels.
 
-Tier 5 is byte-stable with Tier 4: both tiers emit the same 95 floats in the
+Tier 5 is byte-stable with Tier 4: both tiers emit the same 103 floats in the
 same order. The difference is radio population, not vector shape.
 
 Parameters:
-- `envState` - Current environment snapshot plus optional Tier 5 teammate radio rows and tire state.
+- `envState` - Current environment snapshot plus optional Tier 5 teammate radio rows, tire state, and pit/strategy state.
 - `trackSpec` - Frozen track geometry used to derive look-ahead features.
 
-Returns: Ninety-five-channel Tier 5 observation vector with the stable Tier 4 byte layout.
+Returns: 103-channel Tier 5 observation vector with the stable Tier 4 byte layout.
 
 Example:
 
@@ -618,21 +1095,134 @@ const observation = assembleTier5Observation(
   trackSpec,
 );
 
-observation.length; // TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT + TIRE_CHANNEL_COUNT
+observation.length; // TOTAL_TIER4_INPUT_SIZE
 observation.slice(
   TIER_ONE_CHANNEL_COUNT,
   TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT,
 ); // three teammate radio rows
 observation.slice(
   TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT,
+  TIER_ONE_CHANNEL_COUNT +
+    TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT +
+    TIRE_CHANNEL_COUNT,
 ); // own-car tire channels
+observation.slice(
+  TIER_ONE_CHANNEL_COUNT +
+    TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT +
+    TIRE_CHANNEL_COUNT,
+); // 8 pit/strategy channels
 ```
+
+### assembleTier6Observation
+
+```ts
+assembleTier6Observation(
+  envState: EnvironmentState & ObservationExtensions & PitStrategyState & { opponentPerceptionSlots?: readonly (Float32Array<ArrayBufferLike> | readonly number[])[] | undefined; },
+  trackSpec: TrackSpec,
+): Float32Array<ArrayBufferLike>
+```
+
+Builds the Tier 6 observation vector with the 124-channel opponent-perception layout.
+
+Channel layout:
+- `[0..69]` — 70-channel base observation containing pose, speed, track geometry,
+  and recurrent memory trace.
+- `[70..90]` — team radio (`3 × 7 = 21` channels).
+- `[91..94]` — own-car tire state `[frontLeft, frontRight, rearLeft, rearRight]`.
+- `[95..102]` — 8 pit/strategy channels.
+- `[103..123]` — 21 opponent-perception channels (`3 × 7` ego-relative slots).
+
+Tier 6 is byte-stable with Tier 4/5 for the first 103 channels. The 21-channel
+opponent tail is appended after the pit/strategy suffix.
+
+Parameters:
+- `envState` - Current environment snapshot plus Tier 6 opponent perception slots.
+- `trackSpec` - Frozen track geometry used to derive look-ahead features.
+
+Returns: 124-channel Tier 6 observation vector.
+
+Example:
+
+```ts
+const observation = assembleTier6Observation(
+  {
+    ...envState,
+    teammateRadioSlots: [
+      Float32Array.from([1, 0, 0, 0, 0, 0, 0]),
+      Float32Array.from([0, 1, 0, 0, 0, 0, 0]),
+      Float32Array.from([0, 0, 1, 0, 0, 0, 0]),
+    ],
+    opponentPerceptionSlots: [
+      Float32Array.from([0.5, 0, 0, 1, 0, 0, 0.25]),
+    ],
+  },
+  trackSpec,
+);
+
+observation.length; // TIER6_TOTAL_INPUT_SIZE
+observation.slice(103, 110); // opponent slot 0
+```
+
+### buildOpponentPerceptionSlots
+
+```ts
+buildOpponentPerceptionSlots(
+  cars: readonly CarState[],
+  focalCarIndex: number,
+  focalCar: CarState,
+): readonly (Float32Array<ArrayBufferLike> | readonly number[])[]
+```
+
+Builds the opponent-perception slots for a focal car from the multi-car roster.
+
+Opponents are taken from all cars that are not the focal car and that are not
+on the same team as the focal car, preserving deterministic roster order.
+Missing slots are zero-padded by leaving them empty; the caller is expected
+to fill unused slots with zeros.
+
+Parameters:
+- `cars` - Ordered car roster from the environment state.
+- `focalCarIndex` - Index of the focal car.
+- `focalCar` - Focal car state used as the body-frame origin.
+
+Returns: Array of up to three 7-channel opponent slots.
+
+### buildOpponentSlot
+
+```ts
+buildOpponentSlot(
+  focalCar: CarState,
+  opponentCar: CarState,
+): Float32Array<ArrayBufferLike>
+```
+
+Encodes one opponent's state into a 7-channel ego-relative slot.
+
+Channel layout:
+  0. `relForwardEgo` — forward distance in the focal car's body frame,
+     normalized by {@link TRACK_POSITION_WORLD_SCALE}.
+  1. `relLeftEgo` — left distance in the focal car's body frame,
+     normalized by {@link TRACK_POSITION_WORLD_SCALE}.
+  2. `sinHeadingDeltaEgo` — sine of the opponent heading minus the focal heading.
+  3. `cosHeadingDeltaEgo` — cosine of the opponent heading minus the focal heading.
+  4. `relSpeedForwardEgo` — relative forward speed along the focal car's forward
+     axis, normalized by {@link SPEED_WORLD_SCALE}.
+  5. `relSpeedLateralEgo` — relative lateral speed along the focal car's left
+     axis, normalized by {@link LATERAL_SPEED_WORLD_SCALE}.
+  6. `directDistance` — Euclidean distance between the two cars, normalized by
+     {@link DISTANCE_WORLD_SCALE}.
+
+Parameters:
+- `focalCar` - Focal car state that defines the body-frame origin.
+- `opponentCar` - Opponent car state to encode.
+
+Returns: Seven-channel Float32Array with normalized ego-relative state.
 
 ### buildTeammateRadioSlots
 
 ```ts
 buildTeammateRadioSlots(
-  cars: readonly CarState[] | undefined,
+  cars: readonly CarState[],
   focalCarIndex: number,
   focalTeamIndex: 0 | 1,
   focalCarX: number,
@@ -674,7 +1264,8 @@ buildTeammateSlot(
 Encodes one teammate's state into a 7-channel radio slot.
 
 Channel layout: [posX, posY, headingSin, speed, relOffsetX, relOffsetY, relHeadingSin].
-All channels are normalized to [-1, 1].
+Position channels are normalized by {@link TRACK_POSITION_WORLD_SCALE}, speed by
+{@link SPEED_WORLD_SCALE}, and all channels stay within [-1, 1].
 
 Parameters:
 - `teammate` - The teammate car state to encode.
@@ -795,7 +1386,7 @@ Returns: Immutable Tier 3 observation options object.
 createTier4ObservationOptions(): { readonly tier: 4; }
 ```
 
-Creates the reusable `{ tier: 4 }` selector for the 95-channel observation layout.
+Creates the reusable `{ tier: 4 }` selector for the 103-channel observation layout.
 
 Use this helper when callers need the canonical Tier 4 pack shape without
 re-allocating the options object by hand.
@@ -808,7 +1399,7 @@ Returns: Immutable Tier 4 observation options object.
 createTier5ObservationOptions(): { readonly tier: 5; }
 ```
 
-Creates the reusable `{ tier: 5 }` selector for the 95-channel Tier 5 layout.
+Creates the reusable `{ tier: 5 }` selector for the 103-channel Tier 5 layout.
 
 Pass this helper to `assembleNormalizedObservationVector` when the caller wants
 the byte-stable Tier 4/5 observation shape while allowing all three teammate-radio
@@ -823,8 +1414,18 @@ const options = createTier5ObservationOptions();
 const observation = assembleNormalizedObservationVector(envState, trackSpec, options);
 
 options.tier; // 5
-observation.length; // TIER_ONE_CHANNEL_COUNT + TIER_THREE_TEAMMATE_RADIO_CHANNEL_COUNT + TIRE_CHANNEL_COUNT
+observation.length; // TOTAL_TIER4_INPUT_SIZE
 ```
+
+### createTier6ObservationOptions
+
+```ts
+createTier6ObservationOptions(): { readonly tier: 6; }
+```
+
+Creates the reusable `{ tier: 6 }` selector for the 124-channel Tier 6 layout.
+
+Returns: Immutable Tier 6 observation options object.
 
 ### derivePerCarObservationState
 
@@ -934,8 +1535,10 @@ Returns: Normalized value in [0, 1].
 Options that select which suffix is appended to the 70-channel driving base.
 
 `tier` decides whether callers receive only the base observation, the seven-channel
-self-radio tail, the 21-channel teammate-radio tail, or the four-channel own-tire
-suffix that keeps Tier 4 and Tier 5 byte-stable at 95 channels.
+self-radio tail, the 21-channel teammate-radio tail, the four-channel own-tire
+suffix, the 8-channel pit/strategy suffix that keeps Tier 4 and Tier 5
+byte-stable at 103 channels, or the 21-channel opponent-perception suffix that
+produces the Tier 6 124-channel vector.
 
 ### ObservationExtensions
 
@@ -950,9 +1553,12 @@ Tier selector for the owner-local observation seam.
 - `3` — Tier 1 plus three teammate-radio slots for a 91-channel vector; smaller
   packs keep any missing slot zero-padded.
 - `4` — Tier 3 plus own-car tire health at `[91..94]` ordered as
-  `[frontLeft, frontRight, rearLeft, rearRight]`, producing 95 channels.
-- `5` — The same 95-channel byte layout as Tier 4, but the 3v3 six-car seam can
-  fully populate all three teammate-radio rows before the tire tail is appended.
+  `[frontLeft, frontRight, rearLeft, rearRight]`, then 8 pit/strategy channels
+  at `[95..102]`, producing 103 channels.
+- `5` — The same 103-channel byte layout as Tier 4, but the 3v3 six-car seam can
+  fully populate all three teammate-radio rows before the tire/pit tail is appended.
+- `6` — 103-channel Tier 4/5 base plus 21 opponent-perception channels
+  (3 opponent slots × 7 ego-relative channels) for a 124-channel vector.
 
 ### RacingObservationState
 
@@ -1059,6 +1665,20 @@ Parameters:
 - `trackSpec` - Frozen track geometry.
 
 Returns: Bounding box plus center point.
+
+### TIER6_TOTAL_INPUT_SIZE
+
+Total Tier 6 controller input size after appending the opponent-perception tail.
+
+This is `103 + 3 × 7 = 124` channels and must stay byte-stable with the
+coevolution service's Tier 6 controller input dimension.
+
+### TOTAL_TIER4_INPUT_SIZE
+
+Total Tier 4/5 controller input size after the tire and pit/strategy tails.
+
+This is `70 + 21 + 4 + 8 = 103` channels and must stay byte-stable with the
+coevolution service's controller input dimension.
 
 ### wrapAngleToMinusPiPi
 

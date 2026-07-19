@@ -1,4 +1,5 @@
 import {
+  NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP,
   NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
   NGE_JUVENILE_DEFAULT_EPISODIC_HIT_RATE_THRESHOLD,
   NGE_JUVENILE_DEFAULT_FOCUS_WEIGHTS,
@@ -69,6 +70,9 @@ export function resolveFocusConfig(
     edgeDensificationCount:
       partial.edgeDensificationCount ??
       NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
+    maxStructuralEditsPerStep:
+      partial.maxStructuralEditsPerStep ??
+      NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP,
   };
 }
 

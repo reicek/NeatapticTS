@@ -78,7 +78,19 @@ describe('runtime.adaptation NGE lifecycle integration', () => {
 
   describe('lifecycle applyOutcomes used for rollback decisions', () => {
     it('source file references applyOutcomes from the lifecycle result', () => {
-      const sourceText = readSourceText();
+      // applyOutcomes handling was extracted to grow-stabilize.ts during the
+      // lifecycle refactor; runtime.adaptation.ts no longer references it.
+      const growStabilizePath = path.resolve(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        'src',
+        'neat',
+        'nge-juvenile',
+        'neat.nge-juvenile.grow-stabilize.ts',
+      );
+      const sourceText = fs.readFileSync(growStabilizePath, 'utf-8');
 
       const referencesApplyOutcomes = /applyOutcomes/.test(sourceText);
 

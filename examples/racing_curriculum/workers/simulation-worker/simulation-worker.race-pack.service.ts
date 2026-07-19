@@ -83,10 +83,13 @@ import { decayTireState } from '../../environment/environment.step.service';
 import {
   assembleTier4Observation,
   assembleTier5Observation,
+  assembleTier6Observation,
   derivePerCarObservationState,
+  TIER6_TOTAL_INPUT_SIZE,
   type RacingObservationState,
 } from '../../controller/observation.assembler';
 import type {
+  PitStrategyState,
   RacingCarState,
   TireStateTuple,
 } from '../../environment/environment.types';
@@ -132,6 +135,15 @@ const NO_CAR_INDEX = 255 as const;
 
 /** Fixed number of ticks a car must remain in the pit before tire reset. */
 const PIT_STOP_TICKS = 4 as const;
+
+/** Normalization scale for pit-entrance distance channels in world units. */
+const PIT_DISTANCE_WORLD_SCALE = 256;
+
+/** Normalization scale for `lapsSincePit01` before clamping to `[0, 1]`. */
+const LAPS_SINCE_PIT_SCALE = 10;
+
+/** Normalization scale for estimated laps before tire failure. */
+const ESTIMATED_LAPS_BEFORE_FAILURE_SCALE = 10;
 
 /** Fresh tire health value at episode start. */
 const FRESH_TIRE_HEALTH = 1.0;
@@ -220,6 +232,8 @@ function extractNetworkPayloadsFromSnapshot(
 
 /** Minimal controller handle used inside a race episode runner. */
 export type RaceControllerNetwork = {
+  /** Controller input dimension used to infer the active observation tier. */
+  readonly input: number;
   /** Runs inference and returns the controller's output vector. */
   activate(inputs: number[]): number[];
 };
@@ -239,14 +253,20 @@ export type RaceAdaptationContext = {
 };
 
 /**
- * Packed render frame augmented with the per-car unit-progress field used by the
- * race-pack runner. The `progress01` buffer is intentionally not part of the
- * zero-copy transfer list; it is computed locally and kept attached to the
- * runner frame.
+ * Packed render frame augmented with the per-car unit-progress and speed fields
+ * used by the race-pack runner. The `progress01` and speed buffers are
+ * intentionally not part of the zero-copy transfer list; they are computed
+ * locally and kept attached to the runner frame.
  */
 type RaceEpisodeRunnerFrame = RacingRenderFrame & {
   /** Unit progress [0, 1] along the current lap for each car. */
   progress01: Float32Array;
+  /** Signed forward speed in world units per second. */
+  forwardSpeedWorld: Float32Array;
+  /** Signed lateral speed in world units per second. */
+  lateralSpeedWorld: Float32Array;
+  /** Unsigned world speed in world units per second. */
+  speedWorld: Float32Array;
 };
 
 /**
@@ -381,7 +401,7 @@ export function createDeterministicRacePack(
  * - Shared buffers are deduplicated (listed only once).
  * - A standard pack without `pitStatus` produces exactly
  *   {@link EXPECTED_TRANSFER_BUFFER_COUNT} entries.
- * - The local-only `progress01` field is never transferred.
+ * - The local-only `progress01` and speed fields are never transferred.
  *
  * @param frame - Packed render frame whose buffers will be transferred.
  * @returns Ordered list of `ArrayBuffer` references for postMessage transfer.
@@ -485,7 +505,7 @@ export function createRaceEpisodeRunner(
   const guidingLines = Array.from({ length: agentCount }, (_, carIndex) => {
     const carGuidingLine = buildGuidingLineForTeam(
       track,
-      frame.carTeam[carIndex] ?? 0,
+      frame.carTeam[carIndex]!,
     );
     // Snap the first point to the car's actual start position so the host
     // renderer can anchor the per-agent line exactly where the car appears.
@@ -529,15 +549,12 @@ export function createRaceEpisodeRunner(
 
     for (let carIndex = 0; carIndex < agentCount; carIndex++) {
       const network = networks[carIndex];
-      if (network === undefined) {
-        continue;
-      }
 
-      // Step 3: Build 95-channel Tier 4 observation and run controller inference.
+      // Step 3: Build 103-channel Tier 4/5 observation and run controller inference.
       const observationInput = resolvePerCarObservation(carIndex, cars);
       const controllerOutput = network.activate(observationInput);
-      const throttle = clamp01(controllerOutput[0] ?? 0);
-      const steer = Math.max(-1, Math.min(1, controllerOutput[1] ?? 0));
+      const throttle = clamp01(controllerOutput[0]!);
+      const steer = Math.max(-1, Math.min(1, controllerOutput[1]!));
 
       const currentCenterline = resolveTrackPointAtDistance(
         distanceAlongTrack[carIndex],
@@ -554,6 +571,13 @@ export function createRaceEpisodeRunner(
       );
       const currentSample = track.splineSamples[currentSampleIndex]!;
 
+      // Default the signed speed channels to zero before any off-track or pit
+      // guards so stopped or off-track cars never leak stale velocities into
+      // Tier 6 opponent-perception slots.
+      runnerState.frame.forwardSpeedWorld[carIndex] = 0;
+      runnerState.frame.lateralSpeedWorld[carIndex] = 0;
+      runnerState.frame.speedWorld[carIndex] = 0;
+
       if (distanceFromCenterline > currentSample.width / 2) {
         offTrackCounter[carIndex] += 1;
 
@@ -568,60 +592,69 @@ export function createRaceEpisodeRunner(
 
       offTrackCounter[carIndex] = 0;
 
+      const stoppedInPit = isCarStoppedInPit(carIndex);
+
       // Step 4: Apply grip multiplier from tire health to forward progress.
-      const tireOffset = carIndex * 4;
-      const gripMultiplier = Math.sqrt(resolveMeanTireHealth(tireOffset));
-      const forwardStep =
-        throttle *
-        gripMultiplier *
-        MAX_FORWARD_SPEED_UNITS_PER_SECOND *
-        FIXED_TIMESTEP_SECONDS;
-      distanceAlongTrack[carIndex] += forwardStep;
+      if (!stoppedInPit) {
+        const tireOffset = carIndex * 4;
+        const gripMultiplier = Math.sqrt(resolveMeanTireHealth(tireOffset));
+        const forwardStep =
+          throttle *
+          gripMultiplier *
+          MAX_FORWARD_SPEED_UNITS_PER_SECOND *
+          FIXED_TIMESTEP_SECONDS;
+        distanceAlongTrack[carIndex] += forwardStep;
 
-      const newCenterline = resolveTrackPointAtDistance(
-        distanceAlongTrack[carIndex],
-        centerline,
-      );
+        // Step 4b: Record signed speed channels used by Tier 6 opponent perception.
+        runnerState.frame.forwardSpeedWorld[carIndex] =
+          throttle * gripMultiplier * MAX_FORWARD_SPEED_UNITS_PER_SECOND;
+        runnerState.frame.lateralSpeedWorld[carIndex] = 0;
+        runnerState.frame.speedWorld[carIndex] = Math.abs(
+          runnerState.frame.forwardSpeedWorld[carIndex],
+        );
 
-      runnerState.frame.carX[carIndex] = newCenterline.x;
-      runnerState.frame.carY[carIndex] = newCenterline.y;
-      runnerState.frame.carHeading[carIndex] = newCenterline.heading;
+        const newCenterline = resolveTrackPointAtDistance(
+          distanceAlongTrack[carIndex],
+          centerline,
+        );
 
-      const completedLaps = Math.floor(
-        distanceAlongTrack[carIndex] / trackLength,
-      );
-      if (completedLaps > runnerState.frame.lap[carIndex]) {
-        runnerState.frame.lap[carIndex] = completedLaps;
+        runnerState.frame.carX[carIndex] = newCenterline.x;
+        runnerState.frame.carY[carIndex] = newCenterline.y;
+        runnerState.frame.carHeading[carIndex] = newCenterline.heading;
 
-        if (completedLaps === 1 && runnerState.lapCompleted[carIndex] === 0) {
+        const completedLaps = Math.floor(
+          distanceAlongTrack[carIndex] / trackLength,
+        );
+        if (completedLaps > runnerState.frame.lap[carIndex]) {
+          runnerState.frame.lap[carIndex] = completedLaps;
           runnerState.lapCompleted[carIndex] = 1;
           runnerState.lapTimeTicks[carIndex] = runnerState.frame.tick;
         }
+
+        runnerState.frame.progress01[carIndex] =
+          (distanceAlongTrack[carIndex] % trackLength) / trackLength;
+
+        // Step 5: Apply tire decay based on driving forces.
+        const currentTireState = [
+          runnerState.frame.tireState[tireOffset],
+          runnerState.frame.tireState[tireOffset + 1],
+          runnerState.frame.tireState[tireOffset + 2],
+          runnerState.frame.tireState[tireOffset + 3],
+        ] as TireStateTuple;
+        const effectiveSpeed =
+          Math.abs(throttle * gripMultiplier) *
+          MAX_FORWARD_SPEED_UNITS_PER_SECOND;
+        const decayedTires = decayTireState(
+          currentTireState,
+          Math.abs(steer),
+          Math.abs(throttle),
+          effectiveSpeed,
+        );
+        runnerState.frame.tireState[tireOffset] = decayedTires[0];
+        runnerState.frame.tireState[tireOffset + 1] = decayedTires[1];
+        runnerState.frame.tireState[tireOffset + 2] = decayedTires[2];
+        runnerState.frame.tireState[tireOffset + 3] = decayedTires[3];
       }
-
-      runnerState.frame.progress01[carIndex] =
-        (distanceAlongTrack[carIndex] % trackLength) / trackLength;
-
-      // Step 5: Apply tire decay based on driving forces.
-      const currentTireState = [
-        runnerState.frame.tireState[tireOffset],
-        runnerState.frame.tireState[tireOffset + 1],
-        runnerState.frame.tireState[tireOffset + 2],
-        runnerState.frame.tireState[tireOffset + 3],
-      ] as TireStateTuple;
-      const effectiveSpeed =
-        Math.abs(throttle * gripMultiplier) *
-        MAX_FORWARD_SPEED_UNITS_PER_SECOND;
-      const decayedTires = decayTireState(
-        currentTireState,
-        Math.abs(steer),
-        Math.abs(throttle),
-        effectiveSpeed,
-      );
-      runnerState.frame.tireState[tireOffset] = decayedTires[0];
-      runnerState.frame.tireState[tireOffset + 1] = decayedTires[1];
-      runnerState.frame.tireState[tireOffset + 2] = decayedTires[2];
-      runnerState.frame.tireState[tireOffset + 3] = decayedTires[3];
 
       // Step 6: Run continuous adaptation for this car after physics + inference.
       runCarAdaptation(carIndex);
@@ -681,7 +714,10 @@ export function createRaceEpisodeRunner(
         carX: runnerState.frame.carX[i],
         carY: runnerState.frame.carY[i],
         carHeading: runnerState.frame.carHeading[i],
-        teamIndex: (runnerState.frame.carTeam[i] ?? 0) as 0 | 1,
+        teamIndex: runnerState.frame.carTeam[i]! as 0 | 1,
+        forwardSpeedWorld: runnerState.frame.forwardSpeedWorld[i],
+        lateralSpeedWorld: runnerState.frame.lateralSpeedWorld[i],
+        speedWorld: runnerState.frame.speedWorld[i],
         tireState: [
           runnerState.frame.tireState[tireOffset],
           runnerState.frame.tireState[tireOffset + 1],
@@ -694,44 +730,192 @@ export function createRaceEpisodeRunner(
   }
 
   /**
-   * Resolves the 95-channel Tier 4 observation vector for one car.
+   * Resolves the tiered observation vector for one car.
    *
-   * The observation is assembled from the pre-physics, pre-decay state so
-   * the tire channels at `[91..94]` capture the car's current health
-   * *before* this tick's degradation is applied. This ordering lets the
-   * controller observe tire wear and decide whether to push or lift off
-   * before the wear happens, not after.
+   * Tier 4/5 emits the byte-stable 103-channel layout; Tier 6 appends 21
+   * opponent-perception channels for a 124-channel vector. The observation is
+   * assembled from the pre-physics, pre-decay state so the tire channels at
+   * `[91..94]` capture the car's current health *before* this tick's
+   * degradation is applied, and channels `[95..102]` carry pit/strategy context.
    *
    * @param carIndex - Index of the car to observe.
    * @param cars - Ordered car roster from the current frame state.
-   * @returns 95-element observation array (91 Tier 3 + 4 tire health).
+   * @returns Observation array for the active episode tier.
    */
   function resolvePerCarObservation(
     carIndex: number,
     cars: RacingCarState[],
   ): number[] {
     const tireOffset = carIndex * 4;
+    const teamIndex = runnerState.frame.carTeam[carIndex]! as 0 | 1;
+    const pitStrategyState = resolvePitStrategyState(
+      carIndex,
+      teamIndex,
+      tireOffset,
+    );
+    const carState = cars[carIndex]!;
     const envState: RacingObservationState = {
       tick: runnerState.frame.tick,
       carX: runnerState.frame.carX[carIndex],
       carY: runnerState.frame.carY[carIndex],
       carHeading: runnerState.frame.carHeading[carIndex],
-      teamIndex: (runnerState.frame.carTeam[carIndex] ?? 0) as 0 | 1,
+      teamIndex,
+      forwardSpeedWorld: carState.forwardSpeedWorld,
+      lateralSpeedWorld: carState.lateralSpeedWorld,
+      speedWorld: carState.speedWorld,
       tireState: [
         runnerState.frame.tireState[tireOffset],
         runnerState.frame.tireState[tireOffset + 1],
         runnerState.frame.tireState[tireOffset + 2],
         runnerState.frame.tireState[tireOffset + 3],
       ] as TireStateTuple,
+      ...pitStrategyState,
       cars,
       progress01: runnerState.frame.progress01[carIndex],
     };
     const perCarState = derivePerCarObservationState(envState, carIndex);
-    const observation =
-      agentCount >= TIER_FIVE_CAR_COUNT
-        ? assembleTier5Observation(perCarState, track)
-        : assembleTier4Observation(perCarState, track);
+    const observation = resolveTieredObservation(perCarState);
     return Array.from(observation);
+  }
+
+  /**
+   * Routes the derived per-car observation to the assembler matching the active
+   * episode tier. Tier 6 is inferred from the first controller network's input
+   * dimension so the existing `RaceControllerNetwork` seam does not need to
+   * change; when the dimension is unavailable the six-car path defaults to the
+   * byte-stable Tier 5 layout.
+   *
+   * @param perCarState - Observation state scoped to the current car.
+   * @returns Assembled observation vector for the current episode tier.
+   */
+  function resolveTieredObservation(
+    perCarState: RacingObservationState,
+  ): Float32Array {
+    const firstNetwork = networks.at(0);
+    const isTier6 =
+      agentCount >= TIER_FIVE_CAR_COUNT &&
+      firstNetwork !== undefined &&
+      firstNetwork.input === TIER6_TOTAL_INPUT_SIZE;
+
+    if (isTier6) {
+      return assembleTier6Observation(perCarState, track);
+    }
+
+    return agentCount >= TIER_FIVE_CAR_COUNT
+      ? assembleTier5Observation(perCarState, track)
+      : assembleTier4Observation(perCarState, track);
+  }
+
+  /**
+   * Builds the optional pit/strategy state for one car from the current frame.
+   *
+   * The returned fields follow the canonical Tier 4/5 tail order and map to
+   * offsets `[95..102]` of the observation vector:
+   *   1. `pitDistanceToEntrance01`
+   *   2. `pitOccupancyStatus`
+   *   3. `lapsSincePit`
+   *   4. `teammatePitStatus`
+   *   5. `tireDegradationRate`
+   *   6. `estimatedLapsBeforeFailure`
+   *   7. `reservedPitContext1`
+   *   8. `reservedPitContext2`
+   *
+   * All returned values are normalized to `[0, 1]`. Missing or degenerate data
+   * falls back to `0` so the observation tail stays deterministic and safe for
+   * controllers that have not seen pit features during training yet.
+   */
+  function resolvePitStrategyState(
+    carIndex: number,
+    teamIndex: 0 | 1,
+    tireOffset: number,
+  ): PitStrategyState {
+    const pitDistanceToEntrance01 = resolvePitDistanceToEntrance01(
+      carIndex,
+      teamIndex,
+    );
+    const pitBoxStatus = resolvePitBoxStatus(teamIndex);
+    const meanTireHealth = resolveMeanTireHealth(tireOffset);
+    const tireDegradationRate01 = clamp01(1 - meanTireHealth);
+    const estimatedLapsBeforeFailure01 = clamp01(
+      meanTireHealth * ESTIMATED_LAPS_BEFORE_FAILURE_SCALE,
+    );
+    const lapsSincePit01 = resolveLapsSincePit01(carIndex);
+
+    return {
+      pitDistanceToEntrance01,
+      pitOccupancyStatus: pitBoxStatus.isOccupied ? 1 : 0,
+      lapsSincePit: lapsSincePit01,
+      teammatePitStatus: pitBoxStatus.isTeammateOccupied ? 1 : 0,
+      tireDegradationRate: tireDegradationRate01,
+      estimatedLapsBeforeFailure: estimatedLapsBeforeFailure01,
+      reservedPitContext1: 0,
+      reservedPitContext2: 0,
+    };
+  }
+
+  /**
+   * Computes the normalized distance from a car to its team's pit entrance.
+   *
+   * If no pit box exists for the team the distance is reported as `1` (far).
+   */
+  function resolvePitDistanceToEntrance01(
+    carIndex: number,
+    teamIndex: 0 | 1,
+  ): number {
+    const teamPitBox = track.pitBoxes!.find(
+      (pitBox) => pitBox.teamIndex === teamIndex,
+    )!;
+    const carX = runnerState.frame.carX[carIndex];
+    const carY = runnerState.frame.carY[carIndex];
+    const entranceX =
+      teamPitBox.entranceCorridor.x + teamPitBox.entranceCorridor.width / 2;
+    const entranceY =
+      teamPitBox.entranceCorridor.y + teamPitBox.entranceCorridor.height / 2;
+    const distanceWorld = Math.hypot(carX - entranceX, carY - entranceY);
+    return clamp01(distanceWorld / PIT_DISTANCE_WORLD_SCALE);
+  }
+
+  /**
+   * Reports whether the team pit box is occupied and whether the occupant is
+   * a teammate of the querying car.
+   *
+   * Because the pit layout is team-scoped (each team has its own box), any
+   * occupant of the queried box is definitionally on the querying car's team.
+   * `isTeammateOccupied` therefore becomes `true` whenever the box is occupied,
+   * including when the querying car itself is the one being serviced. Callers
+   * should treat `teammatePitStatus` as "team box busy" rather than "another car
+   * is in the box".
+   */
+  function resolvePitBoxStatus(teamIndex: 0 | 1): {
+    readonly isOccupied: boolean;
+    readonly isTeammateOccupied: boolean;
+  } {
+    const pitStatus = runnerState.frame.pitStatus;
+    if (pitStatus === undefined) {
+      return { isOccupied: false, isTeammateOccupied: false };
+    }
+    const stride = pitStatus.length >= 6 ? 3 : 2;
+    const teamBase = teamIndex * stride;
+    const occupyingCarIndex = pitStatus[teamBase];
+    const empty = occupyingCarIndex === NO_CAR_INDEX;
+    return {
+      isOccupied: !empty,
+      isTeammateOccupied: !empty,
+    };
+  }
+
+  /**
+   * Computes normalized laps elapsed since the car's last pit stop.
+   *
+   * A value of `0` means the car has never pitted or pitted on the current lap.
+   */
+  function resolveLapsSincePit01(carIndex: number): number {
+    const pitLap = runnerState.pitLapPerCar[carIndex];
+    if (pitLap === 0) {
+      return 0;
+    }
+    const currentLap = runnerState.frame.lap[carIndex];
+    return clamp01((currentLap - pitLap) / LAPS_SINCE_PIT_SCALE);
   }
 
   /**
@@ -757,6 +941,21 @@ export function createRaceEpisodeRunner(
       y >= aabb.y &&
       y <= aabb.y + aabb.height
     );
+  }
+
+  /**
+   * Returns true when the car is currently occupying its team's pit slot and
+   * the stop timer is still active. Such cars must not move or decay tires.
+   */
+  function isCarStoppedInPit(carIndex: number): boolean {
+    const pitStatus = runnerState.frame.pitStatus;
+    if (pitStatus === undefined) {
+      return false;
+    }
+    const carTeam = runnerState.frame.carTeam[carIndex]!;
+    const stride = pitStatus.length >= 6 ? 3 : 2;
+    const teamBase = carTeam * stride;
+    return pitStatus[teamBase] === carIndex && pitStatus[teamBase + 1] > 0;
   }
 
   /**
@@ -820,18 +1019,13 @@ export function createRaceEpisodeRunner(
     if (pitStatus === undefined) {
       return;
     }
-    const pitBoxes = track.pitBoxes;
-    if (pitBoxes === undefined) {
-      return;
-    }
 
     const stride = pitStatus.length >= 6 ? 3 : 2;
     for (let carIndex = 0; carIndex < agentCount; carIndex++) {
-      const carTeam = runnerState.frame.carTeam[carIndex] ?? 0;
-      const ownPitBox = pitBoxes.find((box) => box.teamIndex === carTeam);
-      if (ownPitBox === undefined) {
-        continue;
-      }
+      const carTeam = runnerState.frame.carTeam[carIndex]!;
+      const ownPitBox = track.pitBoxes!.find(
+        (box) => box.teamIndex === carTeam,
+      )!;
 
       const teamBase = carTeam * stride;
       if (pitStatus[teamBase] !== NO_CAR_INDEX) {
@@ -965,6 +1159,11 @@ export function createRaceEpisodeRunner(
         secondIndex < targetAgentCount;
         secondIndex++
       ) {
+        // Cars stopped in the pit box must not be pushed by moving teammates.
+        if (isCarStoppedInPit(firstIndex) || isCarStoppedInPit(secondIndex)) {
+          continue;
+        }
+
         const deltaX =
           targetFrame.carX[secondIndex] - targetFrame.carX[firstIndex];
         const deltaY =
@@ -1011,16 +1210,12 @@ function buildRaceFrame(
   const lap = new Uint16Array(agentCount);
   const place = new Uint8Array(agentCount);
   const progress01 = new Float32Array(agentCount);
+  const forwardSpeedWorld = new Float32Array(agentCount);
+  const lateralSpeedWorld = new Float32Array(agentCount);
+  const speedWorld = new Float32Array(agentCount);
   const pitStatus =
     agentCount >= TIER_FIVE_CAR_COUNT
-      ? new Uint8Array([
-          NO_CAR_INDEX,
-          0,
-          NO_CAR_INDEX,
-          NO_CAR_INDEX,
-          0,
-          NO_CAR_INDEX,
-        ])
+      ? new Uint8Array([NO_CAR_INDEX, 0, 0, NO_CAR_INDEX, 0, 0])
       : agentCount >= TIER_THREE_CAR_COUNT
         ? new Uint8Array([NO_CAR_INDEX, 0, NO_CAR_INDEX, 0])
         : undefined;
@@ -1033,7 +1228,7 @@ function buildRaceFrame(
         : TIER_ONE_TWO_TEAM_LAYOUT;
 
   for (let carIndex = 0; carIndex < agentCount; carIndex++) {
-    carTeam[carIndex] = teamLayout[carIndex] ?? carIndex % 2;
+    carTeam[carIndex] = teamLayout[carIndex]!;
     place[carIndex] = carIndex + 1;
   }
 
@@ -1065,6 +1260,9 @@ function buildRaceFrame(
     raceTimeMs: 0,
     done: false,
     progress01,
+    forwardSpeedWorld,
+    lateralSpeedWorld,
+    speedWorld,
     ...(pitStatus !== undefined ? { pitStatus } : {}),
   };
 }
@@ -1086,14 +1284,6 @@ function buildTrackCenterline(
   splineSamples: readonly SplineSample[],
 ): TrackCenterline {
   const sampleCount = splineSamples.length;
-
-  if (sampleCount === 0) {
-    return {
-      cumulativeDistances: new Float32Array(1),
-      points: [],
-      trackLength: 0,
-    };
-  }
 
   const cumulativeDistances = new Float32Array(sampleCount + 1);
   const points: { x: number; y: number; heading: number }[] = [];
@@ -1147,18 +1337,7 @@ function resolveTrackPointAtDistance(
 ): { x: number; y: number; heading: number } {
   const { trackLength, cumulativeDistances, points } = centerline;
 
-  if (points.length === 0) {
-    return { x: 0, y: 0, heading: 0 };
-  }
-
-  if (trackLength <= 0) {
-    return points[0]!;
-  }
-
-  let normalizedDistance = distance % trackLength;
-  if (normalizedDistance < 0) {
-    normalizedDistance += trackLength;
-  }
+  const normalizedDistance = distance % trackLength;
 
   const segmentCount = points.length;
   let segmentIndex = 0;
@@ -1168,13 +1347,10 @@ function resolveTrackPointAtDistance(
   ) {
     segmentIndex++;
   }
-  if (segmentIndex >= segmentCount) {
-    segmentIndex = segmentCount - 1;
-  }
 
   const segmentStart = cumulativeDistances[segmentIndex]!;
   const segmentEnd = cumulativeDistances[segmentIndex + 1]!;
-  const segmentLength = segmentEnd - segmentStart || Number.MIN_VALUE;
+  const segmentLength = segmentEnd - segmentStart;
   const interpolationFactor =
     (normalizedDistance - segmentStart) / segmentLength;
 
@@ -1190,6 +1366,16 @@ function resolveTrackPointAtDistance(
       interpolationFactor,
     ),
   };
+}
+
+/**
+ * Clamps a value to the closed `[0, 1]` interval.
+ */
+function clamp01(value: number): number {
+  if (Number.isNaN(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(1, value));
 }
 
 function lerpAngle(
@@ -1211,13 +1397,6 @@ function resolveProgressSampleIndex(
   const floatIndex = progress01 * (sampleCount - 1);
   const index = Math.floor(floatIndex);
   return Math.max(0, Math.min(sampleCount - 1, index));
-}
-
-function clamp01(value: number): number {
-  if (Number.isNaN(value)) {
-    return 0;
-  }
-  return Math.min(1, Math.max(0, value));
 }
 
 /**
@@ -1256,7 +1435,7 @@ export function extractPitLapDistribution(
   }
   const distribution: number[] = [];
   for (let carIndex = 0; carIndex < pitLapPerCar.length; carIndex++) {
-    if ((carTeam[carIndex] ?? 0) === teamId) {
+    if (carTeam[carIndex] === teamId) {
       distribution.push(pitLapPerCar[carIndex]);
     }
   }

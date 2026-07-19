@@ -31,7 +31,7 @@
  */
 
 import Connection from '../architecture/connection/connection';
-import type Network from '../architecture/network';
+import Network from '../architecture/network';
 import type { EquilibriumCandidate } from './nge-adult/neat.nge-adult.types';
 import { assimilateEquilibriumCandidate } from './nge-assimilation/neat.nge-assimilation';
 import type {
@@ -39,13 +39,15 @@ import type {
   NgeAssimilationPolicy,
   NgeAssimilationResult,
 } from './nge-assimilation/neat.nge-assimilation.types';
+import { applyMorphDeltas } from './nge-juvenile/neat.nge-juvenile.apply';
 import {
-  applyMorphDeltas,
   commitGrowth,
-  computeFocusScores,
   planGrowthMorphs,
+} from './nge-juvenile/neat.nge-juvenile.grow';
+import {
+  computeFocusScores,
   resolveFocusConfig,
-} from './nge-juvenile/neat.nge-juvenile';
+} from './nge-juvenile/neat.nge-juvenile.focus';
 import type {
   MorphApplyBudget,
   MorphApplyOutcome,
@@ -194,9 +196,11 @@ export function runNgeLifecycle(
         growth: input.budget,
         prune: input.pruneBudget,
       };
+      const maxEdits = resolvedConfig.maxStructuralEditsPerStep;
+      const limitedDeltas = maxEdits > 0 ? deltas.slice(0, maxEdits) : deltas;
       const applyOutcomes = applyMorphDeltas(
         input.network,
-        deltas,
+        limitedDeltas,
         applyBudget,
       );
 
@@ -231,6 +235,45 @@ export function runNgeLifecycle(
     stage: 'adult',
     assimilationResult,
   };
+}
+
+/**
+ * Restore a live network reference to a JSON snapshot and rewind the global
+ * connection innovation counter to the value captured before the mutation.
+ *
+ * The network is mutated in place so callers (such as a runtime adaptation
+ * rollback path) can keep the same reference while discarding any structural
+ * changes applied during a candidate window.  Restoring the counter prevents
+ * the global process-level innovation cursor from leaking forward due to
+ * rolled-back growth morphs.
+ *
+ * @param network - Live network reference to mutate in place.
+ * @param snapshot - JSON snapshot previously produced by `network.toJSON()`.
+ * @param capturedInnovation - Connection counter value to restore.
+ *
+ * @example
+ * ```ts
+ * const capturedInnovation = Connection.nextInnovation;
+ * const snapshot = network.toJSON();
+ * // ...candidate mutation window...
+ * restoreNetworkSnapshot(network, snapshot, capturedInnovation);
+ * ```
+ */
+export function restoreNetworkSnapshot(
+  network: Network,
+  snapshot: Record<string, unknown>,
+  capturedInnovation: number,
+): void {
+  const restoredNetwork = Network.fromJSON(snapshot);
+  const mutableTarget = network as Record<string, unknown>;
+  const mutableSource = restoredNetwork as unknown as Record<string, unknown>;
+
+  for (const propertyName of Object.keys(mutableTarget)) {
+    delete mutableTarget[propertyName];
+  }
+  Object.assign(mutableTarget, mutableSource);
+
+  Connection.resetInnovationCounter(capturedInnovation);
 }
 
 /**

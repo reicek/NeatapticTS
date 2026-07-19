@@ -2294,7 +2294,7 @@ Description of one supported activation function in WGSL form.
 
 ```ts
 buildActivationFunctionBody(
-  index: 0 | 2 | 1 | 4 | 3 | 5 | 12 | 10 | 13 | 9 | 11,
+  index: 0 | 2 | 1 | 4 | 3 | 5 | 10 | 12 | 13 | 9 | 11,
 ): string
 ```
 
@@ -2335,3 +2335,239 @@ supports.
 These positions must stay in sync with `ACTIVATION_FUNCTIONS` in
 `src/multithreading/multi.utils.ts` because DNA, workers, and the GPU kernel
 all use the same numeric index for the same activation.
+
+## architecture/network/gpu/network.gpu.buffer-set-pool.ts
+
+GPU buffer-set pool for recycling topology buffers across variant evaluations.
+
+The pool keeps GPU buffer sets alive across `evaluateWeightVariants` calls so
+that repeated evaluation of the same network topology does not pay per-iteration
+allocation and destruction overhead. Buffer sets are keyed by a compound key of
+topology key and variant count, because different variant counts require
+independent output state even when the topology is identical.
+
+The pool follows the same pattern as TensorFlow.js `BufferManager` and burn's
+`burn-wgpu` compute server: acquire/release lifecycles with size-keyed handle
+pools so inference never pays allocation or destruction overhead on the hot
+path. The default `maxPooledBytes` cap is resolved dynamically by
+{@link resolveBufferPoolMaxPooledBytes} from the workload node count,
+average degree, buffer count, and a safety factor, and can be overridden by
+the caller. This prevents unbounded memory growth when many distinct
+topologies are evaluated while still leaving enough headroom for typical
+NEAT networks.
+
+### computeBufferSetBytes
+
+```ts
+computeBufferSetBytes(
+  set: GPUBufferSet,
+): number
+```
+
+Estimate the total GPU byte footprint of a buffer set.
+
+Sums the `size` property of every buffer in the set. This is used for
+the `maxPooledBytes` cap enforcement.
+
+Parameters:
+- `set` - The buffer set to measure.
+
+Returns: Total bytes across all six buffers.
+
+### destroyBufferSet
+
+```ts
+destroyBufferSet(
+  set: GPUBufferSet,
+): void
+```
+
+Destroy every GPU buffer in a buffer set by calling `.destroy()` on each.
+
+This is a local helper that mirrors `destroyGPUBufferSet` from
+`network.gpu.buffer` but does not require a device reference, since the
+WebGPU `GPUBuffer.destroy()` method is self-contained.
+
+Parameters:
+- `set` - The buffer set whose buffers should be destroyed.
+
+### GPUBufferSetPool
+
+Recycle pool for GPU buffer sets used during NGE weight-variant evaluation.
+
+The pool caches {@link GPUBufferSet} instances keyed by a compound key of
+topology key and variant count. When a buffer set is released, it is kept
+in the pool for reuse by the next acquisition with the same key, avoiding
+the cost of destroying and re-creating six GPU buffers per evaluation
+iteration.
+
+The pool enforces a configurable `maxPooledBytes` cap to prevent unbounded
+memory growth. When a new acquisition would exceed the cap, free entries
+are evicted (their buffers destroyed) until the new set fits.
+
+Example:
+
+```ts
+const pool = new GPUBufferSetPool({ maxPooledBytes: 32 * 1024 * 1024 });
+const bufferSet = pool.acquire(device, 'topo-2-3-1', network, 16);
+// ... use bufferSet for variant evaluation ...
+pool.release('topo-2-3-1');
+// Next acquire with the same key reuses the same buffer set
+const reused = pool.acquire(device, 'topo-2-3-1', network, 16);
+pool.destroy();
+```
+
+#### acquire
+
+```ts
+acquire(
+  device: GPUDevice,
+  topologyKey: string,
+  network: default,
+  variantCount: number,
+): GPUBufferSet
+```
+
+Acquire a GPU buffer set for the given topology and variant count.
+
+If a free (released) buffer set exists for the same compound key, it is
+reused without reallocation. Otherwise, a new buffer set is uploaded
+from the network via `uploadNetworkToGPU`. When the new set would
+exceed `maxPooledBytes`, free entries are evicted first.
+
+Parameters:
+- `device` - WebGPU device used to allocate buffers when a new set
+is needed.
+- `topologyKey` - Deterministic string identifying the network
+topology.
+- `network` - Network whose slab will be uploaded when a new buffer
+set is required.
+- `variantCount` - Number of weight variants being evaluated. Used
+as part of the compound key so different variant counts get distinct
+buffer sets.
+
+Returns: A GPU buffer set with `nodeCount` matching the network.
+
+#### destroy
+
+```ts
+destroy(): void
+```
+
+Destroy all pooled buffer sets and clear the pool.
+
+After `destroy`, the pool is empty (`size` is 0) and all GPU buffers
+have been released. The pool can continue to be used for new acquisitions
+after destruction.
+
+#### estimateBufferSetBytes
+
+```ts
+estimateBufferSetBytes(
+  network: default,
+): number
+```
+
+Estimate the byte footprint of a buffer set for the given network.
+
+Uses the struct-packed layout: nodes are 16 bytes each, connections are
+16 bytes each, outputs are 4 bytes per node, the params uniform is 16
+bytes, topo levels are 4 bytes per node, and in-start offsets are 4 bytes
+per node plus one.
+
+Parameters:
+- `network` - Network to estimate buffer sizes for.
+
+Returns: Estimated total bytes for the six-buffer set.
+
+#### evictFreeEntries
+
+```ts
+evictFreeEntries(
+  projectedBytes: number,
+): void
+```
+
+Evict free entries from the pool until the projected new set fits.
+
+Only entries that are not currently in use are evicted. Their GPU buffers
+are destroyed and their bytes are reclaimed from the running total.
+Eviction stops as soon as the projected set fits under the cap, so only
+the minimum number of free entries are reclaimed.
+
+This is a single-pass eviction: entries are destroyed and removed from the
+pool inline so that `totalPooledBytes` is updated during iteration. This
+ensures the break condition becomes reachable after evicting one entry,
+rather than collecting all candidates first and evicting them all
+regardless of whether fewer would suffice.
+
+Map deletion during iteration is safe per the ECMAScript spec: deleting
+the current entry does not skip subsequent entries.
+
+Parameters:
+- `projectedBytes` - Bytes needed for the new buffer set.
+
+#### maxPooledBytes
+
+Maximum total bytes the pool will retain across all cached buffer sets.
+
+#### pool
+
+Internal storage mapping compound keys to pool entries.
+
+#### release
+
+```ts
+release(
+  topologyKey: string,
+): void
+```
+
+Release all buffer sets matching the given topology key back to the pool.
+
+Released sets remain in the pool and are available for reuse by a
+subsequent `acquire` with the same compound key. The variant count is
+not needed because all variant counts for the given topology are
+released together.
+
+Parameters:
+- `topologyKey` - Topology key prefix to match.
+
+#### size
+
+Number of buffer sets currently held in the pool (both in-use and free).
+
+#### totalPooledBytes
+
+Running total of bytes occupied by all pooled buffer sets.
+
+### GPUBufferSetPoolOptions
+
+Configuration options for {@link GPUBufferSetPool}.
+
+All fields are optional and have sensible defaults. Callers override only the
+knobs they need to tune.
+
+### makePoolKey
+
+```ts
+makePoolKey(
+  topologyKey: string,
+  variantCount: number,
+): string
+```
+
+Compute the compound pool key from a topology key and variant count.
+
+Different variant counts produce distinct keys so that independent output
+state is maintained even when the topology is identical.
+
+Parameters:
+- `topologyKey` - Deterministic string identifying the network topology.
+- `variantCount` - Number of weight variants being evaluated.
+
+Returns: Compound key string.
+
+### PoolEntry
+
+Internal pool entry tracking a buffer set and its in-use status.

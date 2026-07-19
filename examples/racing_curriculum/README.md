@@ -67,8 +67,8 @@ flowchart LR
     HOST -- "init | request-generation | start-race\nrequest-race-step | stop" --> WORKER
     WORKER -- "generation-ready | race-step | status | error" --> HOST
 
-    style HOST fill:#0d1117,stroke:#30a2da,color:#c9d1d9
-    style WORKER fill:#0d1117,stroke:#00e5ff,color:#c9d1d9
+    classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+    class HOST,WORKER base;
 ```
 
 Read the diagram as two connected stories:
@@ -83,29 +83,31 @@ single-population racing demo could.
 
 ## Why This Example Holds Up Under Coevolution
 
-| Concept                     | Why it matters here                                                                                                                                 |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Two independent populations | Team A and Team B cannot share species or fitness history, or the coevolution dynamic collapses into ordinary single-population optimization.       |
-| Frozen opponent snapshots   | Holding the opponent constant during one generation makes fitness comparisons fair and prevents an unstable arms race inside the evaluation window. |
-| Deterministic race packs    | Identical seed + snapshot always produce identical starting conditions, so comparative fitness claims are not confounded by random track placement. |
-| Zero-copy transfer lists    | Streaming packed typed arrays keeps the worker→host channel cheap enough for 60 Hz rendering without copying large state objects.                   |
-| Forward-only protocol FSM   | Strict phase-gated messages keep the host from accidentally driving simulation ticks or sending commands at the wrong lifecycle moment.             |
+| Concept                        | Why it matters here                                                                                                                                                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Two independent populations    | Team A and Team B cannot share species or fitness history, or the coevolution dynamic collapses into ordinary single-population optimization.                                                                                                    |
+| Frozen opponent snapshots      | Holding the opponent constant during one generation makes fitness comparisons fair and prevents an unstable arms race inside the evaluation window.                                                                                              |
+| Deterministic race packs       | Identical seed + snapshot always produce identical starting conditions, so comparative fitness claims are not confounded by random track placement.                                                                                              |
+| Zero-copy transfer lists       | Streaming packed typed arrays keeps the worker→host channel cheap enough for 60 Hz rendering without copying large state objects.                                                                                                                |
+| Forward-only protocol FSM      | Strict phase-gated messages keep the host from accidentally driving simulation ticks or sending commands at the wrong lifecycle moment.                                                                                                          |
+| Racing-specific variant scorer | The grow-stabilize cycle commits weight variants only when `bestVariantScore > baselineScore + threshold`. A task-specific `VariantScorer` keeps the two sides in the same positive driving-quality score space so the inequality is meaningful. |
 
 ## Choose Your Route
 
 Different readers arrive with different questions. Use the route that matches
 yours.
 
-| If you want to...                          | Start here                                                                                                                                             | Then read                                                                                                                                                                                                                |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Understand the coevolution contract        | [docs/coevolution-contract.md](https://github.com/reicek/NeatapticTS/blob/main/examples/racing_curriculum/docs/coevolution-contract.md)                | [workers/simulation-worker/README.md](./workers/simulation-worker/README.md)                                                                                                                                             |
-| Wire or read the host/worker protocol      | [workers/simulation-worker/simulation-worker.evolution.types.ts](./workers/simulation-worker/simulation-worker.evolution.types.ts)                     | [workers/simulation-worker/simulation-worker.evolution.protocol.service.ts](./workers/simulation-worker/simulation-worker.evolution.protocol.service.ts)                                                                 |
-| Add a real NEAT population loop            | [workers/simulation-worker/simulation-worker.coevolution.service.ts](./workers/simulation-worker/simulation-worker.coevolution.service.ts)             | [docs/coevolution-contract.md](https://github.com/reicek/NeatapticTS/blob/main/examples/racing_curriculum/docs/coevolution-contract.md)                                                                                  |
-| Understand opponent snapshot policy        | [workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts](./workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts) | [docs/coevolution-contract.md](https://github.com/reicek/NeatapticTS/blob/main/examples/racing_curriculum/docs/coevolution-contract.md)                                                                                  |
-| Build or inspect a deterministic race pack | [workers/simulation-worker/simulation-worker.race-pack.service.ts](./workers/simulation-worker/simulation-worker.race-pack.service.ts)                 | [workers/simulation-worker/simulation-worker.snapshot.utils.ts](./workers/simulation-worker/simulation-worker.snapshot.utils.ts)                                                                                         |
-| Understand the browser host                | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts)                                                                                     | [browser-entry/host/host.ts](./browser-entry/host/host.ts)                                                                                                                                                               |
-| Run the browser demo                       | [index.html](./index.html)                                                                                                                             | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts)                                                                                                                                                       |
-| See the whole example as a system          | this README                                                                                                                                            | [docs/coevolution-contract.md](https://github.com/reicek/NeatapticTS/blob/main/examples/racing_curriculum/docs/coevolution-contract.md) and [workers/simulation-worker/README.md](./workers/simulation-worker/README.md) |
+| If you want to...                                                 | Start here                                                                                                                                             | Then read                                                                                                                                                                                                                |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Understand the coevolution contract                               | [docs/coevolution-contract.md](https://github.com/reicek/NeatapticTS/blob/main/examples/racing_curriculum/docs/coevolution-contract.md)                | [workers/simulation-worker/README.md](./workers/simulation-worker/README.md)                                                                                                                                             |
+| Wire or read the host/worker protocol                             | [workers/simulation-worker/simulation-worker.evolution.types.ts](./workers/simulation-worker/simulation-worker.evolution.types.ts)                     | [workers/simulation-worker/simulation-worker.evolution.protocol.service.ts](./workers/simulation-worker/simulation-worker.evolution.protocol.service.ts)                                                                 |
+| Add a real NEAT population loop                                   | [workers/simulation-worker/simulation-worker.coevolution.service.ts](./workers/simulation-worker/simulation-worker.coevolution.service.ts)             | [docs/coevolution-contract.md](https://github.com/reicek/NeatapticTS/blob/main/examples/racing_curriculum/docs/coevolution-contract.md)                                                                                  |
+| Understand opponent snapshot policy                               | [workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts](./workers/simulation-worker/simulation-worker.opponent-snapshot.service.ts) | [docs/coevolution-contract.md](https://github.com/reicek/NeatapticTS/blob/main/examples/racing_curriculum/docs/coevolution-contract.md)                                                                                  |
+| Build or inspect a deterministic race pack                        | [workers/simulation-worker/simulation-worker.race-pack.service.ts](./workers/simulation-worker/simulation-worker.race-pack.service.ts)                 | [workers/simulation-worker/simulation-worker.snapshot.utils.ts](./workers/simulation-worker/simulation-worker.snapshot.utils.ts)                                                                                         |
+| Understand the browser host                                       | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts)                                                                                     | [browser-entry/host/host.ts](./browser-entry/host/host.ts)                                                                                                                                                               |
+| Run the browser demo                                              | [index.html](./index.html)                                                                                                                             | [browser-entry/browser-entry.ts](./browser-entry/browser-entry.ts)                                                                                                                                                       |
+| Understand controller adaptation and the NGE grow-stabilize cycle | [controller/runtime.adaptation.ts](./controller/runtime.adaptation.ts)                                                                                 | [controller/README.md](./controller/README.md) and [docs/research/racing-curriculum-df16-stabilization-scorer-fix.md](../../docs/research/racing-curriculum-df16-stabilization-scorer-fix.md)                            |
+| See the whole example as a system                                 | this README                                                                                                                                            | [docs/coevolution-contract.md](https://github.com/reicek/NeatapticTS/blob/main/examples/racing_curriculum/docs/coevolution-contract.md) and [workers/simulation-worker/README.md](./workers/simulation-worker/README.md) |
 
 ## Run The Example
 
@@ -792,23 +794,25 @@ const TIER_THREE_TEAM_LAYOUT = [0, 0, 1, 1]; // two blue, two red
 ```
 
 The coevolution container resolves the controller input dimension based on the
-active tier. Tier 4 produces a 95-input / 9-output controller network:
+active tier. Tier 4 produces a 103-input / 9-output controller network:
 
 ```ts
-const TIER_FOUR_CONTROLLER_INPUT_SIZE = 95; // 91 Tier 3 + 4 tire health
+const TIER_FOUR_CONTROLLER_INPUT_SIZE = 103; // 91 Tier 3 + 4 tire health + 8 pit/strategy
 const TIER_THREE_CONTROLLER_OUTPUT_SIZE = 9; // 2 control + 7 radio-write
 ```
 
 ### Tier 4 observation vector
 
 The Tier 4 observation is the 91-channel Tier 3 vector with a four-channel
-tire-health suffix appended, producing **95 channels**:
+tire-health suffix and an eight-channel pit/strategy suffix appended,
+producing **103 channels**:
 
-| Range      | Channels | Content                                                            |
-| ---------- | -------- | ------------------------------------------------------------------ |
-| `[0..69]`  | 70       | Tier 1 driving baseline (20 scalar + 40 look-ahead + 10 memory)    |
-| `[70..90]` | 21       | Three teammate-radio slots (3 × 7 channels); unused slots zero-pad |
-| `[91..94]` | 4        | Own-car tire health `[frontLeft, frontRight, rearLeft, rearRight]` |
+| Range       | Channels | Content                                                            |
+| ----------- | -------- | ------------------------------------------------------------------ |
+| `[0..69]`   | 70       | Tier 1 driving baseline (20 scalar + 40 look-ahead + 10 memory)    |
+| `[70..90]`  | 21       | Three teammate-radio slots (3 × 7 channels); unused slots zero-pad |
+| `[91..94]`  | 4        | Own-car tire health `[frontLeft, frontRight, rearLeft, rearRight]` |
+| `[95..102]` | 8        | Pit/strategy tail (see table below)                                |
 
 The first 91 channels are byte-for-byte identical to Tier 3, so any
 controller weights trained at Tier 3 transfer directly — the only new
@@ -817,9 +821,33 @@ clamped to `[0, 1]`, where `1.0` means a fresh tire and `0.0` means a
 completely worn tire.
 
 The observation reflects the **pre-physics, pre-decay** state: the tire
-channels capture current health _before_ this tick's degradation is applied.
-That ordering lets the controller observe how worn its tires are and decide
-whether to push hard or lift off before the wear happens, not after.
+channels capture current health _before_ this tick's degradation is applied,
+and the pit/strategy channels capture the box occupancy and distance to pit
+entrance at the start of the tick. That ordering lets the controller observe
+how worn its tires are, how close the pit is, and whether the box is busy
+before deciding whether to push hard, lift off, or pit — all before the
+wear happens, not after.
+
+### Tier 4 pit/strategy observation tail
+
+The eight channels at `[95..102]` expose the car's relationship to its own
+team's pit box and the strategic state of its tires:
+
+| Offset | Field                        | Meaning                                                                      |
+| ------ | ---------------------------- | ---------------------------------------------------------------------------- |
+| `95`   | `pitDistanceToEntrance01`    | Normalized distance from the car to its team's pit entrance                  |
+| `96`   | `pitOccupancyStatus`         | Team pit box occupied (`1`) or empty (`0`)                                   |
+| `97`   | `lapsSincePit`               | Normalized laps elapsed since the car's last pit stop                        |
+| `98`   | `teammatePitStatus`          | Team pit box occupied by any team member, including the car itself (`1`/`0`) |
+| `99`   | `tireDegradationRate`        | Normalized degradation rate derived from mean tire health                    |
+| `100`  | `estimatedLapsBeforeFailure` | Normalized estimate of laps remaining before tires fail                      |
+| `101`  | `reservedPitContext1`        | Reserved expansion channel (zero in this frame contract)                     |
+| `102`  | `reservedPitContext2`        | Reserved expansion channel (zero in this frame contract)                     |
+
+`teammatePitStatus` is high whenever the team box is occupied, including when
+the querying car itself is the one being serviced. Because each team has its
+own box, there is no opponent-occupied box in this channel; it functions as a
+"team box busy" signal rather than a strict teammate-other-than-self flag.
 
 ### Tire degradation model
 
@@ -950,8 +978,8 @@ flowchart TD
 
     Tick["tick()"]:::base
     Tick --> PitLife["tickPitLifecycle<br/>decrement stops,<br/>release finished cars"]:::pit
-    Tick --> Obs["derivePerCarObservationState<br/>+ assembleTier4Observation<br/>95 channels"]:::accent
-    Obs --> Infer["network.activate(95 inputs)"]:::base
+    Tick --> Obs["derivePerCarObservationState<br/>+ assembleTier4Observation<br/>103 channels<br/>+ 8 pit/strategy"]:::accent
+    Obs --> Infer["network.activate(103 inputs)"]:::base
     Infer --> Grip["gripMultiplier = sqrt(meanTireHealth)"]:::tire
     Grip --> Move["forwardStep = throttle * grip * maxSpeed * dt"]:::base
     Move --> Decay["decayTireState(steer, throttle, speed)"]:::tire
@@ -961,7 +989,7 @@ flowchart TD
 
 Read the diagram as a single tick's execution order: the pit lifecycle ticks
 first (so released cars are free to move), then each car observes the
-95-channel vector, runs inference, has its forward progress scaled by the
+103-channel vector, runs inference, has its forward progress scaled by the
 grip multiplier, suffers tire decay, and finally pit entries are resolved
 after all car updates.
 
@@ -981,7 +1009,7 @@ import { createCoevolutionContainer } from './workers/simulation-worker/simulati
 const container = createCoevolutionContainer({
   populationSize: 50,
   rngSeed: 42,
-  tier: 4, // resolves to 95-input / 9-output controller networks
+  tier: 4, // resolves to 103-input / 9-output controller networks
 });
 
 // 2. Extract the four car genomes (two per team).
@@ -1015,10 +1043,10 @@ console.log('Pit status:', runner.frame.pitStatus); // Uint8Array(4)
 In this snippet:
 
 - `createCoevolutionContainer({ tier: 4 })` allocates four independent
-  genomes with 95-input networks. The tier selector resolves the input
-  dimension: Tier 3 gets 91 inputs, Tier 4 gets 95.
+  genomes with 103-input networks. The tier selector resolves the input
+  dimension: Tier 3 gets 91 inputs, Tier 4 gets 103.
 - `createRaceEpisodeRunner` produces the four-car episode. Each `tick()`
-  runs the full Tier 4 loop: pit lifecycle, 95-channel observation,
+  runs the full Tier 4 loop: pit lifecycle, 103-channel observation,
   inference, grip-scaled forward progress, tire decay, and pit entry
   resolution.
 - `runner.frame.tireState` is a `Float32Array` of length `agentCount * 4`
@@ -1029,7 +1057,7 @@ In this snippet:
 
 This is the full Tier 4 surface: a 2v2 pack with tire degradation, a grip
 multiplier that makes worn tires costly, a deterministic pit lifecycle with
-own-team-only entry and four-tick stops, and a 95-channel observation that
+own-team-only entry and four-tick stops, and a 103-channel observation that
 exposes per-corner tire health to the controller. Everything the network
 needs to discover pit strategy is in the observation and the physics — no
 explicit pit command is emitted by the controller.
@@ -1044,7 +1072,7 @@ has only one possible division of labor (lead and support); a three-car team
 opens a richer strategic space where one car can fight for the lead while the
 other two sacrifice their own finishes to impede the opposing team's queen.
 
-Tier 5 reuses the **95-channel observation** and **9-output controller** from
+Tier 5 reuses the **103-channel observation** and **9-output controller** from
 Tier 4. There are no new sensory channels and no new output channels. The
 difference is **radio population**, not vector shape: Tier 4 only filled one
 of the three teammate-radio rows (the second teammate) and zero-padded the
@@ -1064,28 +1092,29 @@ const TIER_FIVE_CAR_COUNT = 6;
 ```
 
 The coevolution container resolves the controller input dimension based on
-the active tier. Tier 5 produces the same 95-input / 9-output controller
+the active tier. Tier 5 produces the same 103-input / 9-output controller
 network as Tier 4 — the vector shape is identical, only the number of
 genomes allocated doubles from four to six:
 
 ```ts
-const TIER_FIVE_CONTROLLER_INPUT_SIZE = 95; // same as Tier 4
-const TIER_FIVE_CONTROLLER_OUTPUT_SIZE = 9; // 2 control + 7 radio-write
+const TIER_FOUR_CONTROLLER_INPUT_SIZE = 103; // shared by Tier 4 and Tier 5
+const TIER_THREE_CONTROLLER_OUTPUT_SIZE = 9; // 2 control + 7 radio-write
 ```
 
 ### Tier 5 observation vector
 
-The Tier 5 observation is **byte-stable with Tier 4** — the same 95 channels
+The Tier 5 observation is **byte-stable with Tier 4** — the same 103 channels
 in the same order. No channels are added, removed, or reordered:
 
-| Range      | Channels | Content                                                                            |
-| ---------- | -------- | ---------------------------------------------------------------------------------- |
-| `[0..69]`  | 70       | Tier 1 driving baseline (20 scalar + 40 look-ahead + 10 memory)                    |
-| `[70..90]` | 21       | Three teammate-radio slots (3 × 7 channels); Tier 5 fully populates all three rows |
-| `[91..94]` | 4        | Own-car tire health `[frontLeft, frontRight, rearLeft, rearRight]`                 |
+| Range       | Channels | Content                                                                            |
+| ----------- | -------- | ---------------------------------------------------------------------------------- |
+| `[0..69]`   | 70       | Tier 1 driving baseline (20 scalar + 40 look-ahead + 10 memory)                    |
+| `[70..90]`  | 21       | Three teammate-radio slots (3 × 7 channels); Tier 5 fully populates all three rows |
+| `[91..94]`  | 4        | Own-car tire health `[frontLeft, frontRight, rearLeft, rearRight]`                 |
+| `[95..102]` | 8        | Pit/strategy tail (same canonical layout as Tier 4)                                |
 
 The critical distinction is in the radio block. The 21 radio channels
-(`[70..90]`) are **already part of the 95** — Tier 5 does not add them. In
+(`[70..90]`) are **already part of the 103** — Tier 5 does not add them. In
 Tier 3 and Tier 4, only one teammate-radio row carried non-zero data (the
 single teammate), and the remaining two rows were zero-padded. In Tier 5,
 all three radio rows carry non-zero data because each car has two teammates
@@ -1229,14 +1258,13 @@ Queen selection is implemented by `selectQueenPerTeam` in
 It takes the per-car finishing positions and team assignments and returns
 the queen car index for each team.
 
-In the current harness, queen selection is **implemented and
-observability-only** — it identifies the queen and records the result, but
-does not yet drive reproduction. The actual polyandric reproduction call
-that would use the queen's genome as a template and the drones as
-contributors is deferred until upstream NGE primitive integration is
-complete (see the next subsection).
+In this harness, queen selection is **implemented and observability-only**
+— it identifies the queen and records the result, but it does not drive
+reproduction. The polyandric reproduction primitive is available in the NGE
+core, so a caller who wants to use it can wire `selectQueenPerTeam` output
+to `reproducePolyandric` in the coevolution service's generation step.
 
-### Polyandric reproduction (deferred)
+### Polyandric reproduction
 
 Polyandry — where one queen mates with multiple drones — is a mating system
 borrowed from biology (see [Polyandry (Wikipedia)](https://en.wikipedia.org/wiki/Polyandry)).
@@ -1252,25 +1280,19 @@ related parameters). The reproduction function builds one offspring from a
 queen DNA template plus optional drone donors, blending genetic material
 according to the configured contribution fraction.
 
-However, the **racing benchmark wiring is not yet active**. No racing
-worker code calls `reproducePolyandric` at this time. Queen selection is
-implemented and runs after each race; the reproduction call that would
-consume the queen and drone genomes to produce the next generation is
-deferred. Tests for polyandric reproduction in the racing harness are
-skipped pending this integration.
+In the racing harness, the support surface is split:
 
-The current support status is:
+- `reproducePolyandric` and `NgeReproductionPolicy` with `mode: 'polyandric'`
+  are available in the NGE core.
+- `selectQueenPerTeam` identifies queens after each race.
+- `computeRoleDivergenceMetrics` classifies roles for observability.
+- The coevolution service's generation step does not currently call
+  `reproducePolyandric`, so this example does not exercise the polyandric
+  path.
 
-- ✅ `reproducePolyandric` primitive exists in the NGE core.
-- ✅ `NgeReproductionPolicy` with `mode: 'polyandric'` is fully specified.
-- ✅ `selectQueenPerTeam` identifies queens after each race.
-- ✅ `computeRoleDivergenceMetrics` classifies roles for observability.
-- ❌ No racing worker code calls `reproducePolyandric` yet.
-- ⏸️ Polyandric reproduction tests are skipped pending integration.
-
-No timeline is promised for the remaining wiring. The deferred boundary is
-narrow and well-defined: connect `selectQueenPerTeam` output to
-`reproducePolyandric` in the coevolution service's generation step.
+A caller can close that seam by feeding the queen and drone indices produced
+by `selectQueenPerTeam` into `reproducePolyandric` when advancing the next
+generation.
 
 ### Pit status representation (6-car)
 
@@ -1321,7 +1343,7 @@ import { computeRoleDivergenceMetrics } from './workers/simulation-worker/simula
 const container = createCoevolutionContainer({
   populationSize: 50,
   rngSeed: 42,
-  tier: 5, // resolves to 95-input / 9-output controller networks, 6 cars
+  tier: 5, // resolves to 103-input / 9-output controller networks, 6 cars
 });
 
 // 2. Extract the six car genomes (three per team).
@@ -1370,12 +1392,12 @@ const roleMetrics = computeRoleDivergenceMetrics(
 In this snippet:
 
 - `createCoevolutionContainer({ tier: 5 })` allocates six independent
-  genomes with 95-input networks. The tier selector resolves the input
-  dimension: Tier 4 and Tier 5 both get 95 inputs; the difference is the
+  genomes with 103-input networks. The tier selector resolves the input
+  dimension: Tier 4 and Tier 5 both get 103 inputs; the difference is the
   number of genomes (4 vs 6) and the fully-populated radio slab.
 - `createRaceEpisodeRunner` produces the six-car episode. Each `tick()`
   runs the full Tier 5 loop: pit lifecycle with 6-element stride,
-  95-channel observation with all three radio rows populated, inference,
+  103-channel observation with all three radio rows populated, inference,
   grip-scaled forward progress, tire decay, and pit entry resolution.
 - `runner.frame.tireState` is a `Float32Array` of length `agentCount * 4`
   (FL, FR, RL, RR per car), initialized to `1.0` and decaying over the
@@ -1394,43 +1416,44 @@ flowchart TD
     classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
     classDef tire fill:#0f2233,stroke:#00e5ff,color:#a6e4ff,stroke-width:1.5px;
     classDef pit fill:#2a0a0a,stroke:#ff6b6b,color:#ffd6d6,stroke-width:1.5px;
-    classDef role fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
 
     Tick["tick()"]:::base
     Tick --> PitLife["tickPitLifecycle<br/>6-element stride<br/>decrement stops, release cars"]:::pit
-    Tick --> Obs["derivePerCarObservationState<br/>+ assembleTier5Observation<br/>95 channels, full radio (3 rows)"]:::accent
-    Obs --> Infer["network.activate(95 inputs)"]:::base
+    Tick --> Obs["derivePerCarObservationState<br/>+ assembleTier5Observation<br/>103 channels, full radio (3 rows)<br/>+ 8 pit/strategy"]:::accent
+    Obs --> Infer["network.activate(103 inputs)"]:::base
     Infer --> Grip["gripMultiplier = sqrt(meanTireHealth)"]:::tire
     Grip --> Move["forwardStep = throttle * grip * maxSpeed * dt"]:::base
     Move --> Decay["decayTireState(steer, throttle, speed)"]:::tire
     Decay --> PitEntry["resolvePitEntries<br/>own-team corridor check<br/>6-element stride"]:::pit
     PitEntry --> Separate["separateCars + recomputePlaces"]:::base
     Separate --> PostRace{"race done?"}:::base
-    PostRace -- yes --> Roles["computeRoleDivergenceMetrics<br/>blockerDelta + inferredRole<br/>(observability only)"]:::role
-    Roles --> Queen["selectQueenPerTeam<br/>best finisher per team"]:::role
+    PostRace -- yes --> Roles["computeRoleDivergenceMetrics<br/>blockerDelta + inferredRole<br/>(observability only)"]:::accent
+    Roles --> Queen["selectQueenPerTeam<br/>best finisher per team"]:::accent
     PostRace -- no --> Tick
 ```
 
 Read the diagram as a single tick's execution order: the pit lifecycle
 ticks first with the 6-element stride (so released cars are free to move),
-then each car observes the 95-channel vector with all three radio rows
+then each car observes the 103-channel vector with all three radio rows
 populated, runs inference, has its forward progress scaled by the grip
 multiplier, suffers tire decay, and pit entries are resolved with the
 6-element stride after all car updates. When the race finishes, the
 post-race block runs: `computeRoleDivergenceMetrics` classifies each car's
 role for observability, and `selectQueenPerTeam` identifies the queen on
-each team — the foundation for polyandric reproduction, which is deferred
-but whose selection step is already in place.
+each team — the first step of a polyandric reproduction pipeline. The
+harness stops after selection; a caller can add the `reproducePolyandric`
+call that consumes the queen and drones.
 
 This is the full Tier 5 surface: a 3v3 pack with six cars, a 42-float
 shared radio slab where every car reads three same-team rows (including
-self-broadcast), the same 95-channel observation and 9-output controller as
+self-broadcast), the same 103-channel observation and 9-output controller as
 Tier 4, role-divergence observables that quantify spontaneous
 specialization, queen selection that identifies the best finisher per team,
 and an expanded 6-element pit status with stride 3 per team. The
-polyandric reproduction primitive exists in the NGE core but is not yet
-wired into the racing harness — queen selection is implemented, and the
-reproduction call is deferred.
+polyandric reproduction primitive exists in the NGE core, but the racing
+harness does not call it. Queen selection and role classification are
+implemented; a caller can wire the `reproducePolyandric` call into the
+coevolution service's generation step.
 
 ## What Each Boundary Protects
 

@@ -52,6 +52,12 @@ export type RacingRenderFrame = {
   carTeam: Uint8Array;
   /** GatingRouter mode index (0 when routing not yet present). Length = agentCount. */
   carMode: Uint8Array;
+  /** Signed forward speed in world units per second. Length = agentCount. */
+  forwardSpeedWorld?: Float32Array;
+  /** Signed lateral speed in world units per second. Length = agentCount. */
+  lateralSpeedWorld?: Float32Array;
+  /** Unsigned world speed in world units per second. Length = agentCount. */
+  speedWorld?: Float32Array;
 
   // --- Tire state row-major [agentCount × 4] ---
 

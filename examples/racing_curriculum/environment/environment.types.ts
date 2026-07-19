@@ -34,6 +34,51 @@ export type PitOccupancyRecord = {
 export type PitOccupancyState = readonly PitOccupancyRecord[];
 
 /**
+ * Pit/strategy sensory state appended to the Tier 4/5 observation tail.
+ *
+ * All channels are normalized to `[0, 1]` (or zero when unavailable). The
+ * assembler treats every field as optional so that Tier 1–3 code paths stay
+ * unchanged until the race-pack service explicitly provides pit/strategy data.
+ *
+ * The canonical channel order matches offsets `[95..102]` of the Tier 4/5
+ * observation vector:
+ *   1. `pitDistanceToEntrance01`
+ *   2. `pitOccupancyStatus`
+ *   3. `lapsSincePit`
+ *   4. `teammatePitStatus`
+ *   5. `tireDegradationRate`
+ *   6. `estimatedLapsBeforeFailure`
+ *   7. `reservedPitContext1`
+ *   8. `reservedPitContext2`
+ *
+ * `teammatePitStatus` is high whenever the team pit box is occupied by any
+ * team member, including the querying car itself. Because each team has its
+ * own box, the channel functions as a "team box busy" signal rather than a
+ * strict teammate-other-than-self flag.
+ */
+export type PitStrategyState = {
+  /** Normalized distance from the car to its team's pit entrance. */
+  pitDistanceToEntrance01?: number;
+  /** Normalized team pit-box occupancy (`0` empty, `1` occupied). */
+  pitOccupancyStatus?: number;
+  /** Normalized laps elapsed since the car's last pit stop. */
+  lapsSincePit?: number;
+  /**
+   * Normalized flag indicating the team pit box is occupied by any team member,
+   * including the querying car itself when it is pitting (`0` free, `1` occupied).
+   */
+  teammatePitStatus?: number;
+  /** Normalized tire-degradation rate (`0` fresh, `1` fully degraded). */
+  tireDegradationRate?: number;
+  /** Normalized estimate of remaining laps before tire failure. */
+  estimatedLapsBeforeFailure?: number;
+  /** Reserved expansion channel for future pit context. */
+  reservedPitContext1?: number;
+  /** Reserved expansion channel for future pit context. */
+  reservedPitContext2?: number;
+};
+
+/**
  * Per-car racing state tracked by the environment.
  *
  * Tire health stays owner-local on each car so grip, pit restore, worker
@@ -51,6 +96,12 @@ export type CarState = {
   teamIndex: 0 | 1;
   /** Ordered tire-health tuple `[FL, FR, RL, RR]`. */
   tireState: TireStateTuple;
+  /** Signed forward speed in world units per second (negative when reversing). */
+  forwardSpeedWorld?: number;
+  /** Signed lateral speed in world units per second; `0` until a lateral-velocity model is added. */
+  lateralSpeedWorld?: number;
+  /** Unsigned world speed in world units per second; always `Math.abs(forwardSpeedWorld)`. */
+  speedWorld?: number;
   /**
    * Per-step reward/penalty produced by the local physics step.
    *
@@ -93,6 +144,12 @@ export type EnvironmentState = {
   pitOccupancy?: PitOccupancyState;
   /** Backward-compatible alias exposing the same six-record pit shelf to UI/tests. */
   pitStatus?: PitOccupancyState;
+  /** Per-car consecutive border-contact tick counts for escalating penalties. */
+  consecutiveBorderContactTicks?: readonly number[];
+  /** Per-car consecutive wrong-direction tick counts for escalating penalties. */
+  consecutiveWrongDirectionTicks?: readonly number[];
+  /** Guidance overlay alpha in [0, 1]; 0 means the guide line is unavailable. */
+  guidanceAlpha?: number;
 };
 
 /**

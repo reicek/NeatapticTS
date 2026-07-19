@@ -29,6 +29,7 @@ import {
   drawRacingNetworkVisualizationFromFrame,
   resolveRacingNetworkVisualizationFrame,
 } from './network-view/network-view';
+import type { RuntimeAdaptationEngine } from '../controller/runtime.adaptation';
 
 jest.mock('./network-view/network-view', () => ({
   drawRacingNetworkVisualizationFromFrame: jest.fn(() => ({
@@ -592,6 +593,34 @@ describe('Tier 2 deterministic controller network', () => {
   });
 });
 
+describe('Tier 4 deterministic controller network', () => {
+  it('builds a 103-input, 2-output controller for the four-car tire/pit tail', () => {
+    const network = createDeterministicRacingControllerNetwork(4);
+
+    expect({
+      inputCount: network.input,
+      outputCount: network.output,
+    }).toEqual({
+      inputCount: 103,
+      outputCount: 2,
+    });
+  });
+});
+
+describe('Tier 5 deterministic controller network', () => {
+  it('builds a 103-input, 2-output controller for the six-car tire/pit tail', () => {
+    const network = createDeterministicRacingControllerNetwork(5);
+
+    expect({
+      inputCount: network.input,
+      outputCount: network.output,
+    }).toEqual({
+      inputCount: 103,
+      outputCount: 2,
+    });
+  });
+});
+
 describe('racing network visualizer live refresh', () => {
   let rafSpy: jest.SpyInstance | undefined;
 
@@ -769,6 +798,34 @@ describe('Phase 3 per-car controller red contracts', () => {
   });
 });
 
+describe('Tier 4/5 controller activation contract', () => {
+  it('activates a Tier 4 deterministic controller with a Tier 4 per-car observation', () => {
+    const episodeState = createCurriculumEpisodeState(4);
+    const carState = derivePerCarObservationState(episodeState.envState, 0);
+    const controller = createNgeController(
+      createDeterministicRacingControllerNetwork(4),
+      { tier: 4 },
+    );
+
+    expect(() =>
+      controller.computeControl(carState, episodeState.trackSpec),
+    ).not.toThrow();
+  });
+
+  it('activates a Tier 5 deterministic controller with a Tier 5 per-car observation', () => {
+    const episodeState = createCurriculumEpisodeState(5);
+    const carState = derivePerCarObservationState(episodeState.envState, 0);
+    const controller = createNgeController(
+      createDeterministicRacingControllerNetwork(5),
+      { tier: 5 },
+    );
+
+    expect(() =>
+      controller.computeControl(carState, episodeState.trackSpec),
+    ).not.toThrow();
+  });
+});
+
 describe('Phase 4 tier 3 four-car rendering red contracts', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
@@ -810,6 +867,40 @@ describe('Phase 4 tier 3 four-car rendering red contracts', () => {
       networkArgs[2] !== networkArgs[3];
 
     expect(allDistinct).toBe(true);
+  });
+});
+
+describe('Phase 8 Step 18 worker-authoritative adaptation wiring red contract', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    Object.defineProperty(document, 'currentScript', {
+      value: null,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('wires per-car adaptation engines with the racing trend evaluator so the focused network can grow', async () => {
+    const {
+      runHandle,
+      createPerCarAdaptationEnginesSpy,
+      evaluateRacingTrendScoreSpy,
+    } = await startTier1WithRuntimeAdaptationSpy();
+
+    runHandle.stop();
+
+    expect({
+      enginesCreated: createPerCarAdaptationEnginesSpy.mock.calls.length > 0,
+      evaluatorWired:
+        createPerCarAdaptationEnginesSpy.mock.calls[0]?.[1]?.evaluateScore ===
+        evaluateRacingTrendScoreSpy,
+    }).toEqual({
+      enginesCreated: true,
+      evaluatorWired: true,
+    });
   });
 });
 
@@ -942,3 +1033,469 @@ async function startTier3WithControllerSpy(): Promise<{
 
   return capturedResult;
 }
+
+async function startTier1WithRuntimeAdaptationSpy(): Promise<{
+  runHandle: { stop: () => void };
+  createPerCarAdaptationEnginesSpy: jest.Mock;
+  evaluateRacingTrendScoreSpy: jest.Mock;
+}> {
+  let capturedResult:
+    | {
+        runHandle: { stop: () => void };
+        createPerCarAdaptationEnginesSpy: jest.Mock;
+        evaluateRacingTrendScoreSpy: jest.Mock;
+      }
+    | undefined;
+
+  await jest.isolateModulesAsync(async () => {
+    const actualRuntimeAdaptationModule =
+      await import('../controller/runtime.adaptation');
+    const evaluateRacingTrendScoreSpy = jest.fn(
+      actualRuntimeAdaptationModule.evaluateRacingTrendScore,
+    );
+    const createPerCarAdaptationEnginesSpy = jest.fn(
+      actualRuntimeAdaptationModule.createPerCarAdaptationEngines,
+    );
+
+    jest.doMock('../controller/runtime.adaptation', () => ({
+      ...actualRuntimeAdaptationModule,
+      createPerCarAdaptationEngines: createPerCarAdaptationEnginesSpy,
+      evaluateRacingTrendScore: evaluateRacingTrendScoreSpy,
+    }));
+
+    const { start: isolatedStart } = await import('./browser-entry');
+    const hostElement = document.createElement('div');
+    hostElement.id = 'racing-curriculum-output';
+    document.body.append(hostElement);
+    const runHandle = await isolatedStart(hostElement);
+
+    capturedResult = {
+      runHandle,
+      createPerCarAdaptationEnginesSpy,
+      evaluateRacingTrendScoreSpy,
+    };
+  });
+
+  if (capturedResult === undefined) {
+    throw new Error(
+      'startTier1WithRuntimeAdaptationSpy did not capture a result',
+    );
+  }
+
+  return capturedResult;
+}
+
+async function startTier1WithPerCarAdaptationSpy(): Promise<{
+  runHandle: { stop: () => void };
+  rafCallback: (timestamp: number) => Promise<void>;
+  createPerCarAdaptationEnginesSpy: jest.SpyInstance;
+}> {
+  let capturedResult:
+    | {
+        runHandle: { stop: () => void };
+        rafCallback: (timestamp: number) => Promise<void>;
+        createPerCarAdaptationEnginesSpy: jest.SpyInstance;
+      }
+    | undefined;
+
+  await jest.isolateModulesAsync(async () => {
+    const actualRuntimeAdaptationModule =
+      await import('../controller/runtime.adaptation');
+    const createPerCarAdaptationEnginesSpy = jest.spyOn(
+      actualRuntimeAdaptationModule,
+      'createPerCarAdaptationEngines',
+    );
+
+    jest.doMock('../controller/runtime.adaptation', () => ({
+      ...actualRuntimeAdaptationModule,
+      createPerCarAdaptationEngines: createPerCarAdaptationEnginesSpy,
+    }));
+
+    const { start: isolatedStart } = await import('./browser-entry');
+    const hostElement = document.createElement('div');
+    hostElement.id = 'racing-curriculum-output';
+    document.body.append(hostElement);
+
+    let capturedRafCallback: ((timestamp: number) => Promise<void>) | undefined;
+    jest
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        capturedRafCallback = callback as (timestamp: number) => Promise<void>;
+        return 0;
+      });
+
+    const runHandle = await isolatedStart(hostElement);
+
+    if (capturedRafCallback === undefined) {
+      throw new Error(
+        'startTier1WithPerCarAdaptationSpy did not capture a requestAnimationFrame callback',
+      );
+    }
+
+    capturedResult = {
+      runHandle,
+      rafCallback: capturedRafCallback,
+      createPerCarAdaptationEnginesSpy,
+    };
+  });
+
+  if (capturedResult === undefined) {
+    throw new Error(
+      'startTier1WithPerCarAdaptationSpy did not capture a result',
+    );
+  }
+
+  return capturedResult;
+}
+
+describe('Phase 8 Step 19 per-car adaptation and promotion red contract', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    Object.defineProperty(document, 'currentScript', {
+      value: null,
+      configurable: true,
+    });
+    // Reset Jest's module registry and mock state between tests so that
+    // earlier doMock()/spyOn() helpers for runtime.adaptation do not leak
+    // into this isolated module import.
+    jest.resetModules();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('ticks every car adaptation engine during a fixed timestep', async () => {
+    const { runHandle, rafCallback, createPerCarAdaptationEnginesSpy } =
+      await startTier1WithPerCarAdaptationSpy();
+
+    // Capture the engines from the most recent build; in full-suite runs earlier
+    // doMock()/spyOn() state can cause an extra createPerCarAdaptationEngines
+    // invocation, but the live adaptationEngineByCarIndex always reflects the
+    // last buildPerCarAdaptationEngines call.
+    const enginesByCarIndex = createPerCarAdaptationEnginesSpy.mock.results.at(
+      -1,
+    )?.value as Map<number, RuntimeAdaptationEngine>;
+    const adaptOnTickSpies = new Map<number, jest.SpyInstance>();
+    for (const [carIndex, engine] of enginesByCarIndex) {
+      adaptOnTickSpies.set(carIndex, jest.spyOn(engine, 'adaptOnTick'));
+    }
+
+    await rafCallback(0);
+    await rafCallback(17);
+    runHandle.stop();
+
+    const everyCarTicked = [...adaptOnTickSpies.values()].every(
+      (spy) => spy.mock.calls.length > 0,
+    );
+    expect(everyCarTicked).toBe(true);
+  });
+
+  it('does not rebuild non-focused cars from a deterministic seed during tier promotion', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes(
+        'for (let carIndex = 1; carIndex < promotedCarCount; carIndex++) {',
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('tier promotion preserves evolved controller structure (P8S20)', () => {
+  it('does not rebuild the remapped network from a deterministic seed', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const functionStart = sourceText.indexOf(
+      'function remapControllerNetworkForObservationTier',
+    );
+    const functionSection = sourceText.slice(
+      functionStart,
+      functionStart + 1200,
+    );
+
+    expect(
+      functionSection.includes('createDeterministicRacingControllerNetwork'),
+    ).toBe(false);
+  });
+});
+
+describe('per-car score history receives composite quality signal (P8S20)', () => {
+  it('does not push the scalar heading alignment field directly', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes(
+        'perCarScoreHistory.push(perCarTickResult.evidence.headingAlignment01)',
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('browser demo explicitly configures adaptation engines (P8S20)', () => {
+  it('passes improvement threshold, cadence, and limits to createPerCarAdaptationEngines', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const callIndex = sourceText.indexOf(
+      'createPerCarAdaptationEngines(rosterSize',
+    );
+    const callSection = sourceText.slice(callIndex, callIndex + 400);
+
+    expect(
+      callSection.includes('improvementThreshold') &&
+        callSection.includes('cadence') &&
+        callSection.includes('limits'),
+    ).toBe(true);
+  });
+});
+
+describe('AC-RC-21-006: tier promotion performance gates (P8S21)', () => {
+  it('(P8S21) does not auto-promote based on completedLaps >= 3 alone', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes('LAP_COMPLETIONS_REQUIRED_FOR_TIER_ADVANCE'),
+    ).toBe(false);
+  });
+
+  it('(P8S21) tier promotion checks lap-time improvement', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes('lapTime') ||
+        sourceText.includes('bestLapTime') ||
+        sourceText.includes('lap_time'),
+    ).toBe(true);
+  });
+
+  it('(P8S21) tier promotion checks N_floor median hidden-node count', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes('N_floor') ||
+        sourceText.includes('nFloor') ||
+        sourceText.includes('medianHidden') ||
+        sourceText.includes('median'),
+    ).toBe(true);
+  });
+});
+
+describe('AC-RC-21-007: agent selection for tier promotion (P8S21)', () => {
+  it('(P8S21) source contains agent selection logic for tier promotion', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes('selectForPromotion') ||
+        sourceText.includes('selectAgentsForPromotion') ||
+        sourceText.includes('selectBestAgents') ||
+        sourceText.includes('promotionSelection'),
+    ).toBe(true);
+  });
+
+  it('(P8S21) promotion selection criteria is configurable', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes('selectionCriteria') ||
+        sourceText.includes('promotionCriteria') ||
+        sourceText.includes('sortBy') ||
+        sourceText.includes('bestLapTime'),
+    ).toBe(true);
+  });
+});
+
+describe('AC-RC-21-008: behavioral diversity preservation (P8S21)', () => {
+  it('(P8S21) source computes behavioral diversity metric', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes('diversity') ||
+        sourceText.includes('outputVariance') ||
+        sourceText.includes('behavioralDiversity') ||
+        sourceText.includes('variance'),
+    ).toBe(true);
+  });
+
+  it('(P8S21) source retains at least one diverse agent in promoted set', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    expect(
+      sourceText.includes('retainDiverse') ||
+        sourceText.includes('diverseAgent') ||
+        sourceText.includes('preserveDiversity') ||
+        sourceText.includes('atLeastOneDiverse') ||
+        sourceText.includes('diverse'),
+    ).toBe(true);
+  });
+});
+
+describe('P8S22 — AC-RC-22-002: mutationCooldownTicks raised from 5 to >= 30', () => {
+  it('(P8S22) browser-entry adaptation engine config sets mutationCooldownTicks >= 30', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    // The browser-entry config currently passes mutationCooldownTicks: 5.
+    // After the fix it should be >= 30.
+    const configMatch = sourceText.match(/mutationCooldownTicks:\s*(\d+)/);
+    const cooldownValue = configMatch ? Number(configMatch[1]) : 0;
+
+    expect(cooldownValue).toBeGreaterThanOrEqual(30);
+  });
+});
+
+describe('P8S22 — AC-RC-22-003: improvementThreshold raised from 0 to >= 0.01', () => {
+  it('(P8S22) browser-entry adaptation engine config sets improvementThreshold >= 0.01', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+
+    // The browser-entry config currently passes improvementThreshold: 0.
+    // After the fix it should be >= 0.01.
+    const configMatch = sourceText.match(/improvementThreshold:\s*([0-9.]+)/);
+    const thresholdValue = configMatch ? Number(configMatch[1]) : 0;
+
+    expect(thresholdValue).toBeGreaterThanOrEqual(0.01);
+  });
+});
+
+describe('P8S23 — AC-023-005: TIER_N_FLOOR[1] raised from 500 to 1000', () => {
+  it('(P8S23) TIER_N_FLOOR tier 1 floor equals 1000 (not 500)', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const floorMatch = sourceText.match(
+      /TIER_N_FLOOR[\s\S]*?\n\s*1:\s*(\d[\d_]*)/,
+    );
+    const tier1Floor = floorMatch
+      ? Number(floorMatch[1].replace(/_/g, ''))
+      : 500;
+    expect(tier1Floor).toBe(1000);
+  });
+});
+
+describe('P8S23 — AC-023-006: lap time displayed in telemetry panel', () => {
+  it('(P8S23) TelemetryPanelNodes interface includes lapTimeValue field', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const ifaceStart = sourceText.indexOf('interface TelemetryPanelNodes');
+    const ifaceSection = sourceText.slice(ifaceStart, ifaceStart + 500);
+    expect(ifaceSection.includes('lapTimeValue')).toBe(true);
+  });
+
+  it('(P8S23) setupRuntimeControls creates a lapTimeValue text node', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const fnStart = sourceText.indexOf('function setupRuntimeControls');
+    const fnSection = sourceText.slice(fnStart, fnStart + 2000);
+    expect(fnSection.includes('lapTimeValue')).toBe(true);
+  });
+
+  it('(P8S23) updateTelemetryPanelNodes sets lapTimeValue text content', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const fnStart = sourceText.indexOf('function updateTelemetryPanelNodes');
+    const fnSection = sourceText.slice(fnStart, fnStart + 2000);
+    expect(fnSection.includes('lapTimeValue')).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 9 Step 03 — Red tests for all-cars methodology (AC-016)
+// These tests assert that the NGE grow-stabilize cycle is imported from
+// the core module and called per-car. They fail because the extraction
+// has not happened yet (runtime.adaptation.ts still uses inline logic).
+// ──────────────────────────────────────────────────────────────────────
+
+describe('Phase 9 Step 03 — all-cars methodology: core module per-car', () => {
+  const runtimePath = path.join(
+    __dirname,
+    '..',
+    'controller',
+    'runtime.adaptation.ts',
+  );
+
+  it('(P9S03) runtime.adaptation.ts imports runNgeGrowStabilizeCycle from the core module', () => {
+    const sourceText = fs.readFileSync(runtimePath, 'utf8');
+    const hasCoreImport = sourceText.includes(
+      'neat.nge-juvenile.grow-stabilize',
+    );
+
+    expect(hasCoreImport).toBe(true);
+  });
+
+  it('(P9S03) the adaptation engine calls runNgeGrowStabilizeCycle per-tick', () => {
+    const sourceText = fs.readFileSync(runtimePath, 'utf8');
+    const hasCall = sourceText.includes('runNgeGrowStabilizeCycle(');
+
+    expect(hasCall).toBe(true);
+  });
+
+  it('(P9S03) per-car adaptation does not share mutable growth state across cars', () => {
+    const sourceText = fs.readFileSync(runtimePath, 'utf8');
+    // After extraction, each car's adaptation engine should create its own
+    // NgeGrowStabilizeState, not use a shared/global state object.
+    const hasSharedState =
+      sourceText.includes('sharedGrowthState') ||
+      sourceText.includes('globalGrowthState');
+    const hasPerCarState =
+      sourceText.includes('runNgeGrowStabilizeCycle') && !hasSharedState;
+
+    expect(hasPerCarState).toBe(true);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Phase 9 Step 03 — Red test for deferred item (AC-019, AC-044)
+// This test asserts that resolveTierPromotionFromLapCount is exported
+// from browser-entry.ts. It fails because the function does not exist.
+// ──────────────────────────────────────────────────────────────────────
+
+describe('Phase 9 Step 03 — deferred: resolveTierPromotionFromLapCount export', () => {
+  it('(P9S03) browser-entry.ts exports resolveTierPromotionFromLapCount', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const hasExport =
+      /export\s+(?:function|const)\s+resolveTierPromotionFromLapCount/.test(
+        sourceText,
+      );
+
+    expect(hasExport).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 2 Step 01 — Tier 6 opponent-perception observation support
+// ---------------------------------------------------------------------------
+
+describe('Tier 6 opponent-perception observation support', () => {
+  it('resolveControllerInputCountForObservationTier(6) returns 124', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const functionStart = sourceText.indexOf(
+      'function resolveControllerInputCountForObservationTier',
+    );
+    const functionSection = sourceText.slice(
+      functionStart,
+      functionStart + 600,
+    );
+
+    expect(functionSection.includes('124')).toBe(true);
+  });
+
+  it('SupportedObservationTier type includes 6', () => {
+    const sourcePath = path.join(__dirname, 'browser-entry.ts');
+    const sourceText = fs.readFileSync(sourcePath, 'utf8');
+    const typeStart = sourceText.indexOf('type SupportedObservationTier');
+    const typeEnd = sourceText.indexOf(';', typeStart);
+    const typeSection = sourceText.slice(typeStart, typeEnd + 1);
+
+    expect(typeSection.includes('6')).toBe(true);
+  });
+});

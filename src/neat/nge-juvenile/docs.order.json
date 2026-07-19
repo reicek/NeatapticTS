@@ -6,6 +6,7 @@
     "neat.nge-juvenile.focus.ts",
     "neat.nge-juvenile.grow.ts",
     "neat.nge-juvenile.apply.ts",
+    "neat.nge-juvenile.grow-stabilize.ts",
     "neat.nge-juvenile.probe.ts",
     "neat.nge-juvenile.prune.ts",
     "neat.nge-juvenile.errors.ts",

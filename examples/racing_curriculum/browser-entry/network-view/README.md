@@ -80,10 +80,16 @@ Returns: Shared architecture label with racing IO counts.
 ### resolveRacingInputLabelGroupDefinitions
 
 ```ts
-resolveRacingInputLabelGroupDefinitions(): readonly InputLabelGroupDefinition[]
+resolveRacingInputLabelGroupDefinitions(
+  inputSize: number | undefined,
+): readonly InputLabelGroupDefinition[]
 ```
 
 Resolves the shared visualizer input-label definitions for the racing demo.
+
+Parameters:
+- `inputSize` - Optional network input size; when 124, the full Tier 6
+label set is returned, otherwise the Tier 1 set is returned.
 
 Returns: Racing semantic label groups expressed in the shared visualizer format.
 
@@ -124,17 +130,91 @@ Parameters:
 
 Returns: Reusable resolved frame for subsequent draw passes.
 
+## browser-entry/network-view/network-view.lod.ts
+
+Level-of-detail (LOD) renderer for dense racing-curriculum network diagrams.
+
+The shared Flappy Bird visualizer draws every node and edge, which collapses
+FPS once networks grow past a few hundred nodes. This module replaces that
+full-detail path for the racing demo with a cheap abstraction:
+
+- input and output shelves are always rendered in full so tooltips and
+  output labels keep working;
+- hidden nodes above a threshold are collapsed into a handful of density
+  clusters;
+- hovering a hidden node expands a deterministic 2-hop ego neighborhood so
+  the user can still inspect local topology without redrawing the whole graph.
+
+### drawRacingNetworkLODFromFrame
+
+```ts
+drawRacingNetworkLODFromFrame(
+  context: CanvasRenderingContext2D,
+  resolvedFrame: RacingLODResolvedFrame,
+  hoveredNodeIndices: readonly number[] | undefined,
+  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
+): NetworkVisualizationPositionedScene
+```
+
+Draw a previously resolved LOD frame, optionally expanding a hovered ego graph.
+
+### RacingLODResolvedFrame
+
+Frame brand used to route racing network-view drawing through the LOD path.
+
+### resolveRacingNetworkLODFrame
+
+```ts
+resolveRacingNetworkLODFrame(
+  context: CanvasRenderingContext2D,
+  network: default,
+): RacingLODResolvedFrame
+```
+
+Resolve a reusable LOD frame for a dense racing network.
+
+### shouldUseRacingNetworkLOD
+
+```ts
+shouldUseRacingNetworkLOD(
+  network: default | undefined,
+): boolean
+```
+
+Decide whether the racing network view should use the LOD abstraction.
+
+## browser-entry/network-view/network-view.fixture.ts
+
+### buildDenseRacingNetwork
+
+```ts
+buildDenseRacingNetwork(): default
+```
+
+Deterministic dense feed-forward network for level-of-detail red tests.
+
+The fixture intentionally starts with 4,000 hidden nodes so the LOD renderer
+has a strong reason to abstract the hidden graph while keeping every input
+and output node visible.
+
 ## browser-entry/network-view/network-view.constants.ts
 
 Visual constants and input/output label definitions for the racing curriculum
 network-view panel.
 
 The Tier 1 racing controller consumes a 70-element observation vector and
-produces a 2-element action vector (throttle and steer). These constants
-describe the semantic input groups, per-node chip labels, hover tooltip copy,
-and the short output tags shown in the right-sidebar network visualizer.
+produces a 2-element action vector (throttle and steer). Higher tiers widen
+the same base vector in-place:
+  Tier 2 — 77 inputs (70 base + 7 self-radio channels).
+  Tier 3 — 91 inputs (70 base + 21 teammate-radio channels).
+  Tier 4/5 — 103 inputs (91 Tier 3 + 4 tire-health + 8 pit/strategy channels).
+  Tier 6 — 124 inputs (103 Tier 4/5 + 21 opponent-perception channels).
 
-Observation vector layout (in order):
+These constants describe the semantic input groups, per-node chip labels,
+hover tooltip copy, and the short output tags shown in the right-sidebar
+network visualizer.
+
+Tier 1 observation vector layout (in order):
   0..19   Car state scalars — position, heading, speed, yaw, slip angle,
           progress, boundary distances, hazard/waypoint distances, optimal-line
           offset, target speed, etc.
@@ -142,9 +222,17 @@ Observation vector layout (in order):
           nextRelX, nextRelY, sinTangent, cosTangent, trackWidth, distance.
   60..69  Recurrent memory trace — ten channels of self-feedback state.
 
+Tier 6 tail layout:
+  70..76   Self-radio — 7 learned self-communication channels (Tier 2 only).
+  77..97   Teammate radio — 3 slots × 7 channels each.
+  98..101  Own-car tire health — frontLeft, frontRight, rearLeft, rearRight.
+ 102..109  Pit/strategy state — 8 channels.
+ 110..130  Opponent perception — 3 slots × 7 ego-relative channels each.
+
 Action vector layout:
   0  throttle (THR)
   1  steer     (STR)
+  2..8  radio-write channels for Tier 3+ controllers.
 
 ### buildLookAheadGroupDefinitions
 
@@ -163,6 +251,71 @@ Parameters:
 - `segmentIndex` - Zero-based look-ahead segment (0..4).
 
 Returns: One group definition with eight node descriptions.
+
+### buildOpponentPerceptionGroupDefinition
+
+```ts
+buildOpponentPerceptionGroupDefinition(
+  slotIndex: number,
+): readonly RacingInputGroupDef[]
+```
+
+Builds one opponent-perception input group definition for the given slot index.
+
+Parameters:
+- `slotIndex` - Zero-based opponent slot (0..2).
+
+Returns: One group definition with seven node descriptions.
+
+### buildPitStrategyGroupDefinition
+
+```ts
+buildPitStrategyGroupDefinition(): readonly RacingInputGroupDef[]
+```
+
+Builds the pit/strategy input group definition.
+
+Returns: One group definition with eight node descriptions.
+
+### buildSelfRadioGroupDefinition
+
+```ts
+buildSelfRadioGroupDefinition(): readonly RacingInputGroupDef[]
+```
+
+Builds the Tier 2 self-radio input group definition.
+
+The seven self-radio channels are learned latent broadcasts that the
+controller emits and reads back on the next tick. They have no fixed
+semantic meaning; instead they let the network evolve its own short-term
+memory protocol on top of the base observation vector.
+
+Returns: One group definition with seven node descriptions.
+
+### buildTeammateRadioGroupDefinition
+
+```ts
+buildTeammateRadioGroupDefinition(
+  slotIndex: number,
+): readonly RacingInputGroupDef[]
+```
+
+Builds one teammate-radio input group definition for the given slot index.
+
+Parameters:
+- `slotIndex` - Zero-based teammate slot (0..2).
+
+Returns: One group definition with seven node descriptions.
+
+### buildTireHealthGroupDefinition
+
+```ts
+buildTireHealthGroupDefinition(): readonly RacingInputGroupDef[]
+```
+
+Builds the own-car tire-health input group definition.
+
+Returns: One group definition with four node descriptions.
 
 ### RACING_GROUP_COLORS
 
@@ -258,10 +411,23 @@ vivid neon graph instead of disappearing into the background.
 
 Bright neon underlay color used behind racing network connection strokes.
 
+### RACING_NETWORK_LOD_HIDDEN_CLUSTER_COUNT
+
+Number of abstract hidden clusters/density bins in the LOD view.
+
+### RACING_NETWORK_LOD_HIDDEN_NODE_THRESHOLD
+
+Hidden-node count above which the racing network view switches to an abstract cluster/density LOD.
+
+### RACING_NETWORK_LOD_HOVER_MAX_LOCAL_NODES
+
+Maximum number of local nodes rendered when hovering a hidden node in the LOD network view.
+
 ### RACING_OUTPUT_LABELS
 
-Short labels for the two output nodes, ordered to match the action vector.
-Used to annotate the throttle and steer outputs on the right side of the graph.
+Short labels for the action output nodes, ordered to match the action vector.
+Tier 1–2 controllers only use the first two entries (throttle and steer);
+Tier 3+ controllers append seven radio-write channels.
 
 ### RACING_OUTPUT_SIZE
 
@@ -274,3 +440,23 @@ Definition for one input semantic group, covering band and chip metadata.
 ### RacingNodeDescDef
 
 Definition for one per-node chip label, including hover tooltip content.
+
+### resolveRacingInputGroupDefinitions
+
+```ts
+resolveRacingInputGroupDefinitions(
+  inputSize: number | undefined,
+): readonly RacingInputGroupDef[]
+```
+
+Resolves the racing input group definitions matching the requested input size.
+
+The default (Tier 1) set covers the first 70 channels and keeps all pre-existing
+visualizer tests unchanged. When the network consumes the full Tier 6 vector,
+this resolver returns the extended set that labels every teammate-radio,
+tire-health, pit/strategy, and opponent-perception channel.
+
+Parameters:
+- `inputSize` - Optional network input size; defaults to the Tier 1 width.
+
+Returns: Ordered racing input group definitions for the shared visualizer.

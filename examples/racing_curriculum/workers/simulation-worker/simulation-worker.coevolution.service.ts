@@ -7,6 +7,10 @@ import type {
   NgeRulePlacement,
 } from '../../../../src/neat/nge-dna/neat.nge-dna.types';
 import type { NeatGenomeSubstrateCoordinate } from '../../../../src/neat/genome/genome.types';
+import {
+  TIER6_TOTAL_INPUT_SIZE,
+  TOTAL_TIER4_INPUT_SIZE,
+} from '../../controller/observation.assembler';
 
 /**
  * Team A/B coevolution container for the racing curriculum benchmark.
@@ -159,8 +163,10 @@ const TIER_FIVE_CAR_COUNT = 6;
 const TIER_ONE_TWO_CONTROLLER_INPUT_SIZE = 4;
 /** Tier 3+ controller input dimension (91-channel observation). */
 const TIER_THREE_CONTROLLER_INPUT_SIZE = 91;
-/** Tier 4+ controller input dimension (95-channel observation with tire health). */
-const TIER_FOUR_CONTROLLER_INPUT_SIZE = 95;
+/** Tier 4+ controller input dimension (103-channel observation with tire health and pit/strategy). */
+const TIER_FOUR_CONTROLLER_INPUT_SIZE = TOTAL_TIER4_INPUT_SIZE;
+/** Tier 6 controller input dimension (124-channel observation with opponent perception). */
+const TIER_SIX_CONTROLLER_INPUT_SIZE = TIER6_TOTAL_INPUT_SIZE;
 /** Tier 1–2 controller output dimension. */
 const TIER_ONE_TWO_CONTROLLER_OUTPUT_SIZE = 2;
 /** Tier 3+ controller output dimension (2 control + 7 radio-write). */
@@ -364,10 +370,13 @@ const evaluateRacingTeamFitness = createTeamFitnessEvaluator<
  *
  * The `tier` field in the config controls two dimension switches:
  * - **Car count:** Tier 1–2 allocates 2 cars (one per team); Tier 3+ allocates
- *   4 cars (two per team) using the `[0, 0, 1, 1]` team layout.
- * - **Controller input dimension:** Tier 1–2 produces 4-input networks; Tier 3
- *   produces 91-input networks (70 base + 21 teammate-radio); Tier 4+ produces
- *   95-input networks (91 Tier 3 + 4 tire-health channels).
+ *   4 cars (two per team) using the `[0, 0, 1, 1]` team layout; Tier 6 uses a
+ *   6-car `[0, 0, 0, 1, 1, 1]` layout.
+ * - **Controller input dimension:** Tier 1 produces 70-input networks; Tier 2
+ *   produces 77-input networks (70 base + 7 self-radio); Tier 3 produces
+ *   91-input networks (70 base + 21 teammate-radio); Tier 4/5 produces 103-input
+ *   networks (91 Tier 3 + 4 tire-health + 8 pit/strategy channels); Tier 6
+ *   produces 124-input networks (103 Tier 4/5 + 21 opponent-perception channels).
  *
  * The output dimension is 2 for Tier 1–2 (throttle + steer) and 9 for Tier 3+
  * (2 control + 7 radio-write). Each car gets a distinct seed derived from the
@@ -386,7 +395,7 @@ const evaluateRacingTeamFitness = createTeamFitnessEvaluator<
  *
  * @example
  * ```ts
- * // Tier 4: 2v2 with 95-input / 9-output controller networks.
+ * // Tier 4: 2v2 with 103-input / 9-output controller networks.
  * const container = createCoevolutionContainer({ populationSize: 50, rngSeed: 42, tier: 4 });
  * const genomes = container.getCarGenomes();
  * // genomes.length === 4 (two blue, two red)
@@ -412,6 +421,7 @@ export function createCoevolutionContainer(
   // distinct seed so activation outputs differ from generation 1 onward.
   // Tier 5 uses a 6-car [0, 0, 0, 1, 1, 1] layout; Tier 3–4 uses 4 cars
   // [0, 0, 1, 1]; Tier 1–2 uses 2 cars [0, 1].
+  const isTier6 = config.tier >= 6;
   const isTier5 = config.tier >= 5;
   const isTier4 = config.tier >= 4;
   const isTier3 = config.tier >= 3;
@@ -420,11 +430,13 @@ export function createCoevolutionContainer(
     : isTier3
       ? TIER_THREE_CAR_COUNT
       : TIER_ONE_TWO_CAR_COUNT;
-  const inputSize = isTier4
-    ? TIER_FOUR_CONTROLLER_INPUT_SIZE
-    : isTier3
-      ? TIER_THREE_CONTROLLER_INPUT_SIZE
-      : TIER_ONE_TWO_CONTROLLER_INPUT_SIZE;
+  const inputSize = isTier6
+    ? TIER_SIX_CONTROLLER_INPUT_SIZE
+    : isTier4
+      ? TIER_FOUR_CONTROLLER_INPUT_SIZE
+      : isTier3
+        ? TIER_THREE_CONTROLLER_INPUT_SIZE
+        : TIER_ONE_TWO_CONTROLLER_INPUT_SIZE;
   const outputSize = isTier3
     ? TIER_THREE_CONTROLLER_OUTPUT_SIZE
     : TIER_ONE_TWO_CONTROLLER_OUTPUT_SIZE;

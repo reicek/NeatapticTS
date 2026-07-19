@@ -1,3 +1,6 @@
+import type { VariantScorer } from '../../acceleration/acceleration.types';
+import type Network from '../../architecture/network';
+import type { AccelerationConfig } from '../../acceleration/acceleration.types';
 import type { NgeRealizedModule } from '../nge-dna/neat.nge-dna.types';
 
 /**
@@ -102,6 +105,13 @@ export interface NgeJuvenilePhaseConfig {
   nodeAdditionCount: number;
   /** Number of forward edges one approved edge-densification step plans to insert. */
   edgeDensificationCount: number;
+  /**
+   * Maximum number of structural edits (morph deltas) that one lifecycle call
+   * may apply. When set, the lifecycle runner truncates the planned delta list
+   * to this count before passing it to `applyMorphDeltas`, enabling batch
+   * growth in a single tick rather than one-at-a-time.
+   */
+  maxStructuralEditsPerStep: number;
 }
 
 /**
@@ -252,4 +262,511 @@ export interface NgeProbeLedgerEntry {
   delta: number;
   /** Evaluation epoch in which the probe ran. */
   epochIndex: number;
+}
+
+/**
+ * Runtime sentinel confirming the juvenile types module has been loaded.
+ * Ensures Istanbul instruments this file so it appears in coverage reports.
+ */
+export const NGE_JUVENILE_TYPES_LOADED = true;
+
+// ──────────────────────────────────────────────────────────────────────
+// Score-Gated Adaptation Types
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Injected evaluator contract used by the score-gated adaptation window.
+ *
+ * The caller provides baseline scoring, mutation application, and candidate
+ * scoring so `adapt()` can stay domain-agnostic and testable.
+ */
+export interface NgeCandidateEvaluator {
+  /** Score the network before the candidate mutation is applied. */
+  baseline: (network: Network, scoreHistory: readonly number[]) => number;
+  /** Apply the candidate mutation to the live network in place. */
+  apply: (network: Network) => void;
+  /** Score the network after the candidate mutation is applied. */
+  candidate: (network: Network, scoreHistory: readonly number[]) => number;
+}
+
+/**
+ * Optional override values for a single `adapt()` call.
+ */
+export interface NgeAdaptConfig {
+  /** Override values for the adaptation decision. */
+  overrides?: {
+    /** Minimum improvement over baseline required to commit a mutation. */
+    improvementThreshold?: number;
+    /** Whether the first structural growth bypasses the improvement check. */
+    firstGrowthExemption?: boolean;
+  };
+}
+
+/**
+ * Pluggable metrics provider called when supplied to `adapt()`.
+ *
+ * The provider is intentionally minimal so tests and callers can inject a
+ * simple spy without implementing a full telemetry surface.
+ */
+export interface NgeMetricsProvider {
+  /** Return current metrics snapshot for the adaptation window. */
+  getMetrics: () => NgeModuleMetricsSnapshot | undefined;
+}
+
+/**
+ * Pluggable cadence policy called when supplied to `adapt()`.
+ */
+export interface NgeCadencePolicy {
+  /** Decide whether the current tick should run an adaptation pass. */
+  decideCadence: () => boolean;
+}
+
+/**
+ * Domain-agnostic encoder that converts an application observation into a
+ * network input vector.
+ *
+ * @typeParam T - Application-specific observation type.
+ */
+export interface NgeObservationEncoder<T = unknown> {
+  /**
+   * Encode one observation into a numeric input vector matching the supplied
+   * input size.
+   *
+   * @param observation - Application-specific observation.
+   * @param inputSize - Expected length of the returned input vector.
+   * @returns Numeric input vector of length `inputSize`.
+   */
+  encode: (observation: T, inputSize: number) => number[];
+}
+
+/**
+ * Optional lifecycle runner signature accepted by `adapt()` for dependency
+ * injection and future cycle integration.
+ */
+export type NgeLifecycleRunner = () => void;
+
+/**
+ * Inputs for one score-gated adaptation window.
+ */
+export interface NgeAdaptOptions {
+  /** Live mutable controller network. */
+  network: Network;
+  /** Rolling score history used by the evaluator. */
+  scoreHistory: readonly number[];
+  /** Injected evaluator implementing baseline, apply, and candidate steps. */
+  evaluator: NgeCandidateEvaluator;
+  /** Whether the network has already committed structural growth. */
+  hasGrownBefore?: boolean;
+  /** Optional override config for the adaptation decision. */
+  config?: NgeAdaptConfig;
+  /** Optional metrics provider invoked before the adaptation window. */
+  metricsProvider?: NgeMetricsProvider;
+  /** Optional cadence policy invoked before the adaptation window. */
+  cadencePolicy?: NgeCadencePolicy;
+  /** Optional observation encoder invoked before the adaptation window. */
+  observationEncoder?: NgeObservationEncoder<unknown>;
+  /** Optional raw observation passed to the observation encoder. */
+  observation?: unknown;
+  /** Optional lifecycle runner invoked before the adaptation window. */
+  lifecycleRunner?: NgeLifecycleRunner;
+}
+
+/**
+ * Telemetry recorded for one score-gated adaptation window.
+ */
+export interface NgeAdaptTelemetry {
+  /** Whether a snapshot was captured before the candidate mutation. */
+  snapshotTaken: boolean;
+  /** Whether a rollback occurred because the candidate was rejected. */
+  rollbackOccurred: boolean;
+  /** Wall-clock duration of the adaptation window in milliseconds. */
+  duration: number;
+}
+
+/**
+ * Result of one score-gated adaptation window.
+ */
+export interface NgeAdaptResult {
+  /** Score before the candidate mutation. */
+  baseline: number;
+  /** Score after the candidate mutation. */
+  candidate: number;
+  /** Whether the candidate mutation was committed. */
+  accepted: boolean;
+  /** Telemetry for the adaptation window. */
+  telemetry: NgeAdaptTelemetry;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Candidate Scoring Types
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Configuration for candidate score-window and sample-index resolution.
+ */
+export interface NgeCandidateScoringConfig {
+  /** Length of the rolling score window used for plateau detection. */
+  windowSize?: number;
+  /** Maximum number of sample indices to draw from the evidence window. */
+  maxSamples?: number;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Grow-Stabilize Cycle Types
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Phase label for the NGE grow-stabilize cycle.
+ *
+ * The cycle alternates between structural `growth` (adding edges/nodes via the
+ * NGE lifecycle) and `stabilization` (weight tuning to exploit current
+ * capacity before further growth).
+ */
+export type NgeGrowStabilizePhase = 'growth' | 'stabilization';
+
+/**
+ * Quality signal entry accepted by the grow-stabilize cycle.
+ *
+ * The core module operates on plain numeric scores. App layers convert
+ * composite signals (e.g. `RacingQualitySignal`) to scalar numbers before
+ * calling the core cycle, keeping the core free of demo-specific types.
+ */
+export type NgeQualitySignal = number;
+
+/**
+ * Discrete NGE lifecycle stage. The progression is embryo → baby → juvenile →
+ * adult → equilibrium. Each stage carries different defaults for growth cadence,
+ * stabilization intensity, and weight-mutation magnitude.
+ */
+export type NgeLifecycleStage =
+  'embryo' | 'baby' | 'juvenile' | 'adult' | 'equilibrium';
+
+/**
+ * Optional numeric overrides for lifecycle-stage thresholds and magnitudes.
+ *
+ * All fields are optional. When omitted, the lifecycle-stage resolver falls
+ * back to the documented constants in `neat.nge-juvenile.constants.ts`.
+ */
+export interface NgeLifecycleStageConfig {
+  /** Optional override for the baby-stage node threshold. */
+  babyNodeThreshold?: number;
+  /** Optional override for the juvenile-stage node threshold. */
+  juvenileNodeThreshold?: number;
+  /** Optional override for the baby-stage variant count. */
+  babyVariantCount?: number;
+  /** Optional override for the adult-stage variant count. */
+  adultVariantCount?: number;
+  /** Optional override for the juvenile-stage variant count midpoint. */
+  juvenileVariantCount?: number;
+  /** Optional override for the baby-stage growth cadence. */
+  babyGrowthCadence?: number;
+  /** Optional override for the adult-stage growth cadence. */
+  adultGrowthCadence?: number;
+  /** Optional override for the baby-stage stabilization intensity. */
+  babyStabilizationIntensity?: number;
+  /** Optional override for the adult-stage stabilization intensity. */
+  adultStabilizationIntensity?: number;
+  /** Optional override for the baby-stage weight mutation magnitude. */
+  babyMutationMagnitude?: number;
+  /** Optional override for the adult-stage weight mutation magnitude. */
+  adultMutationMagnitude?: number;
+}
+
+/**
+ * Configuration for one grow-stabilize cycle call.
+ *
+ * All fields have sensible defaults, so callers can override only the knobs
+ * they need to tune.
+ */
+export interface NgeGrowStabilizeConfig {
+  /** Maximum number of structural edits per lifecycle call. */
+  maxStructuralEditsPerStep: number;
+  /** Hard cap for node count after mutation. */
+  maxNodes: number;
+  /** Hard cap for connection count after mutation. */
+  maxConnections: number;
+  /** Maximum episodic growth slots the lifecycle may allocate. */
+  maxEpisodicSlots: number;
+  /** Module identifier passed to the lifecycle runner. */
+  moduleId: string;
+
+  // Stabilization plateau detection
+  /** Rolling-window length for score-plateau detection. */
+  plateauWindowSize: number;
+  /** Variance threshold below which the score is treated as plateaued. */
+  plateauVarianceThreshold: number;
+  /** Minimum stabilization ticks before plateau detection may fire. */
+  minStabilizationTicks: number;
+  /** Maximum stabilization ticks before growth is forced to re-enter. */
+  maxStabilizationTicks: number;
+
+  // Weight and bias mutation tuning
+  /** Fraction of connections perturbed during each stabilization tick. */
+  weightMutationRate: number;
+  /** Maximum magnitude of each weight perturbation. */
+  weightMutationMagnitude: number;
+  /** Fraction of biases perturbed during each stabilization tick. */
+  biasMutationRate: number;
+  /** Maximum magnitude of each bias perturbation. */
+  biasMutationMagnitude: number;
+  /** Minimum score improvement required to treat a mutation as beneficial. */
+  improvementThreshold: number;
+  /** Cooldown ticks between consecutive weight mutations. */
+  mutationCooldownTicks: number;
+  /** Cooldown ticks between structural rollbacks. */
+  rollbackCooldownTicks: number;
+  /** Number of consecutive lifecycle windows used for cooldown gating. */
+  lifecycleCooldownWindowCount: number;
+
+  // Growth throttling and sampling
+  /** Node count above which growth throttling engages. */
+  largeNetworkNodeThreshold: number;
+  /** Base back-off interval for large-network throttling. */
+  growthThrottleBaseIntervalTicks: number;
+  /** Maximum observations drawn from score history for forward-pass evaluation. */
+  maxForwardPassSamples: number;
+
+  // Lifecycle stage band overrides
+  /** Baby-stage node-count threshold. */
+  babyNodeThreshold: number;
+  /** Juvenile-stage node-count threshold. */
+  juvenileNodeThreshold: number;
+  /** Baby-stage variant count. */
+  babyVariantCount: number;
+  /** Juvenile-stage variant count. */
+  juvenileVariantCount: number;
+  /** Adult-stage variant count. */
+  adultVariantCount: number;
+  /** Baby-stage growth cadence. */
+  babyGrowthCadence: number;
+  /** Adult-stage growth cadence. */
+  adultGrowthCadence: number;
+  /** Baby-stage stabilization intensity. */
+  babyStabilizationIntensity: number;
+  /** Adult-stage stabilization intensity. */
+  adultStabilizationIntensity: number;
+  /** Baby-stage weight-mutation magnitude. */
+  babyMutationMagnitude: number;
+  /** Adult-stage weight-mutation magnitude. */
+  adultMutationMagnitude: number;
+
+  // Buffer-pool budget and acceleration controls
+  /** Maximum bytes the connection buffer pool may pool for this cycle. */
+  bufferPoolMaxPooledBytes: number;
+  /** When true, skip GPU acceleration even if available. */
+  disableGPU: boolean;
+  /** When true, run evaluation on the main thread instead of workers. */
+  disableWorkers: boolean;
+
+  /** Optional acceleration configuration for parallel weight-variant evaluation. */
+  accelerationConfig?: AccelerationConfig;
+}
+
+/**
+ * Result of one grow-stabilize cycle call.
+ *
+ * @property committed - Whether the cycle committed a structural or weight mutation.
+ * @property phase - Current phase after the cycle (`growth` or `stabilization`).
+ * @property reason - Outcome reason for diagnostics and telemetry.
+ * @property operations - Operations applied during this cycle.
+ * @property stabilizationTicksSinceGrowth - Updated tick count since the last structural growth.
+ * @property mutatedCount - Number of weight mutations applied (stabilization phase only).
+ * @property networkSizeAfter - Network size snapshot after the cycle.
+ */
+export interface NgeGrowStabilizeResult {
+  /** Whether the cycle committed a structural or weight mutation. */
+  committed: boolean;
+  /** Current phase after the cycle. */
+  phase: NgeGrowStabilizePhase;
+  /** Outcome reason for diagnostics and telemetry. */
+  reason: string;
+  /** Operations applied during this cycle. */
+  operations: readonly string[];
+  /** Updated tick count since the last structural growth. */
+  stabilizationTicksSinceGrowth: number;
+  /** Number of weight mutations applied (stabilization phase only). */
+  mutatedCount: number;
+  /** Network size snapshot after the cycle. */
+  networkSizeAfter: { nodes: number; connections: number };
+  /** Updated hysteresis state from the lifecycle runner (growth phase only). */
+  hysteresis?: NgeHysteresisState;
+  /**
+   * Consecutive stabilization ticks where no weight variant improvement
+   * exceeded the adaptive threshold.
+   */
+  consecutiveWeightExhaustion: number;
+  /**
+   * Whether the post-growth exhaustion boost is currently active. Doubles the
+   * exhaustion limit (capped at 16, floored at 4) after a bad growth event.
+   */
+  postGrowthThresholdActive: boolean;
+  /**
+   * Baseline score captured at the start of the most recent growth phase. The
+   * next stabilization tick compares the new baseline against this value to detect
+   * a bad growth event and activate the post-growth anti-runaway boost.
+   */
+  preGrowthBaseline?: number;
+  /**
+   * Score of the best weight variant evaluated during the stabilization phase.
+   * Only populated when weight variants were evaluated and a best score exists.
+   */
+  bestVariantScore?: number;
+  /**
+   * Adaptive improvement threshold used to decide whether the best variant
+   * score justifies committing a weight mutation. Only populated when weight
+   * variants were evaluated.
+   */
+  threshold?: number;
+  /**
+   * Actual number of weight variants used during the stabilization phase. This
+   * may differ from the configured stage count because the stabilization path
+   * overrides the count with `NGE_GROW_STABILIZE_STABILIZATION_VARIANT_COUNT`
+   * and then derives patches from the live connection count. Populated whenever
+   * variant evaluation runs; zero when the non-variant fallback path is used.
+   */
+  actualVariantCount?: number;
+  /**
+   * Number of consecutive failed stabilization ticks carried forward to the
+   * caller. Reset to zero when the cycle enters the growth phase.
+   */
+  consecutiveStabilizationFailures?: number;
+}
+
+/**
+ * Input for one grow-stabilize cycle call.
+ *
+ * The first four fields are required and match the minimal red-test contract.
+ * All other fields are optional with sensible defaults, so the cycle can run
+ * with just a network and score history.
+ *
+ * @property network - Live mutable controller network.
+ * @property scoreHistory - Rolling score history used to compute module metrics.
+ * @property hasGrownBefore - Whether the network has already undergone structural growth.
+ * @property stabilizationTicksSinceGrowth - Ticks elapsed in stabilization since the last growth.
+ * @property qualityScoreHistory - Rolling quality scores for plateau detection.
+ * @property hysteresis - Current hysteresis state from the caller, used for subsequent growth.
+ * @property random - Optional deterministic random source for weight mutations.
+ * @property config - Optional configuration overrides.
+ * @property lifecycleRunner - Optional lifecycle runner for dependency injection.
+ * @property lifecycleStage - Optional lifecycle stage override; defaults to `'baby'`.
+ * @property accelerationConfig - Optional acceleration config for parallel variant evaluation.
+ * @property inputs - Optional training inputs for parallel variant evaluation.
+ * @property target - Optional training target for parallel variant evaluation.
+ */
+export interface NgeGrowStabilizeInput {
+  /** Live mutable controller network. */
+  readonly network: Network;
+  /** Rolling score history used to compute module metrics. */
+  readonly scoreHistory: readonly number[];
+  /** Whether the network has already undergone structural growth. */
+  readonly hasGrownBefore: boolean;
+  /** Ticks elapsed in stabilization since the last structural growth. */
+  readonly stabilizationTicksSinceGrowth: number;
+  /** Rolling quality scores for plateau detection. Defaults to an empty array. */
+  readonly qualityScoreHistory?: readonly number[];
+  /** Current hysteresis state from the caller, used for subsequent growth. */
+  readonly hysteresis?: NgeHysteresisState;
+  /** Optional deterministic random source for weight mutations. */
+  readonly random?: () => number;
+  /** Optional configuration overrides. */
+  readonly config?: Partial<NgeGrowStabilizeConfig>;
+  /**
+   * Optional lifecycle runner override for dependency injection and cycle
+   * breaking. When omitted, the default `runNgeLifecycle` is used.
+   */
+  readonly lifecycleRunner?: (input: {
+    stage: NgeLifecycleStage;
+    moduleId: string;
+    metrics: NgeModuleMetricsSnapshot;
+    budget: NgeGrowthBudget;
+    config: Partial<NgeJuvenilePhaseConfig>;
+    hysteresis: NgeHysteresisState;
+    network?: Network;
+    pruneBudget?: NgePruneBudget;
+    seed?: number;
+  }) => {
+    stage: string;
+    juvenileResult?: {
+      focusScore: NgeFocusScore;
+      deltas: NgeMorphDelta[];
+    };
+    applyOutcomes?: readonly { status: string; kind: string }[];
+    hysteresis?: NgeHysteresisState;
+  };
+  /** Optional lifecycle stage override; defaults to `'baby'`. */
+  readonly lifecycleStage?: NgeLifecycleStage;
+  /** Optional acceleration config for parallel weight-variant evaluation. */
+  readonly accelerationConfig?: AccelerationConfig;
+  /** Optional training inputs for parallel variant evaluation. */
+  readonly inputs?: number[][];
+  /** Optional training target for parallel variant evaluation. */
+  readonly target?: number[];
+  /**
+   * Optional custom scorer for parallel weight-variant evaluation.
+   *
+   * When supplied, both the baseline score and the variant scores are computed
+   * with this scorer so the weight-exhaustion commit inequality compares values
+   * in the same score space. The scorer must return values that share the same
+   * sign, scale, and semantic direction as `baselineScore`; otherwise a variant
+   * can never beat the threshold (for example, negative MSE versus a positive
+   * driving-quality score). Callers that need a task-specific reduction (for
+   * example, collapsing a 2-D controller output to a scalar driving-quality
+   * score) should provide a {@link VariantScorer} here.
+   *
+   * Background reading:
+   * - Mean squared error:
+   *     [Wikipedia — Mean squared error](https://en.wikipedia.org/wiki/Mean_squared_error)
+   * - NEAT:
+   *     K. O. Stanley and R. Miikkulainen, "Evolving Neural Networks through
+   *     Augmenting Topologies," *Evolutionary Computation*, vol. 10, no. 2,
+   *     pp. 99-127, 2002.
+   *     [NEAT publications](https://nn.cs.utexas.edu/?neat-papers)
+   */
+  readonly scoreFn?: VariantScorer;
+  /**
+   * Baseline quality score used by the weight-exhaustion gate to decide
+   * whether a variant improvement is large enough to commit. Defaults to the
+   * last entry of `qualityScoreHistory` when omitted.
+   */
+  readonly baselineScore?: number;
+  /**
+   * Previous quality score recorded immediately before the last structural
+   * growth. Used as the fallback baseline when `baselineScore` is omitted so
+   * the weight-exhaustion gate measures improvement against the pre-growth
+   * score.
+   */
+  readonly previousScore?: number;
+  /**
+   * Current count of consecutive weight-exhaustion ticks carried over from a
+   * previous stabilization cycle.
+   */
+  readonly consecutiveWeightExhaustion?: number;
+  /**
+   * Whether a post-growth anti-runaway boost is already active from a previous
+   * cycle.
+   */
+  readonly postGrowthThresholdActive?: boolean;
+  /**
+   * Baseline score captured at the start of the most recent growth phase. The
+   * cycle compares the new stabilization baseline against this value to detect a
+   * bad growth event and activate the post-growth anti-runaway boost.
+   */
+  readonly preGrowthBaseline?: number;
+  /**
+   * Maximum neuron budget for the adaptive improvement threshold. Defaults to
+   * `config.maxNodes` when omitted.
+   */
+  readonly maxNeurons?: number;
+  /**
+   * Known score ceiling used by the adaptive improvement threshold. When
+   * omitted or `Infinity`, the threshold scales with the absolute score
+   * magnitude instead of headroom.
+   */
+  readonly scoreCeiling?: number;
+  /**
+   * Number of consecutive failed stabilization ticks observed by the caller.
+   * When this count reaches the configured threshold, the next cycle skips
+   * weight tuning and forces structural growth instead of plateau detection.
+   */
+  readonly consecutiveStabilizationFailures?: number;
 }

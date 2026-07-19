@@ -11,6 +11,8 @@ import {
   createInitialProtocolState,
   routeRacingWorkerProtocolMessage,
 } from './simulation-worker.evolution.protocol.service';
+import type { EvolutionProtocolState } from './simulation-worker.evolution.types';
+import * as runtimeAdaptation from '../../controller/runtime.adaptation';
 
 describe('simulation-worker.evolution.protocol.service module exports', () => {
   describe('createInitialProtocolState', () => {
@@ -36,5 +38,33 @@ describe('simulation-worker.evolution.protocol.service module exports', () => {
 
       expect(typeof result.nextState).toBe('object');
     });
+  });
+});
+
+describe('request-generation adaptation engine wiring', () => {
+  let createPerCarAdaptationEnginesSpy: jest.SpiedFunction<
+    typeof runtimeAdaptation.createPerCarAdaptationEngines
+  >;
+
+  beforeEach(() => {
+    createPerCarAdaptationEnginesSpy = jest.spyOn(
+      runtimeAdaptation,
+      'createPerCarAdaptationEngines',
+    );
+  });
+
+  afterEach(() => {
+    createPerCarAdaptationEnginesSpy.mockRestore();
+  });
+
+  it('passes a custom evaluateScore to createPerCarAdaptationEngines', () => {
+    const initialisedState: EvolutionProtocolState = { phase: 'initialised' };
+    routeRacingWorkerProtocolMessage(
+      { type: 'request-generation' },
+      initialisedState,
+    );
+
+    const secondArg = createPerCarAdaptationEnginesSpy.mock.calls[0]?.[1];
+    expect(typeof secondArg?.evaluateScore).toBe('function');
   });
 });

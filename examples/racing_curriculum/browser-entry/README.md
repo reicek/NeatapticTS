@@ -119,6 +119,14 @@ Team index for the browser-local race pack grid.
 
 Curriculum tier contract from the racing plan ladder.
 
+### PromotionCandidate
+
+Candidate for tier promotion with all metrics needed for agent selection.
+
+### PromotionSelectionConfig
+
+Configurable selection criteria for tier promotion.
+
 ### RacingCurriculumRunHandle
 
 Public run handle for the racing curriculum browser shell.
@@ -174,19 +182,31 @@ Returns: Uppercase status label.
 
 ```ts
 resolveTierPromotionFromLapCount(
-  currentTier: CurriculumTier,
+  currentTier: number,
   completedLaps: number,
-): { nextTier: CurriculumTier; didAdvance: boolean; remainingLaps: number; }
+): { nextTier: number; didAdvance: boolean; remainingLaps: number; }
 ```
 
-Applies the racing-curriculum fallback promotion rule:
-advance one tier whenever the winner completes at least three laps.
+Simplified lap-count-based tier promotion check used by the all-cars
+methodology to decide whether every car on the grid has completed enough
+laps to advance as a group.
+
+Tiers 1–4 advance after `LAP_COUNT_PROMOTION_THRESHOLD` completed laps.
+Tier 5 holds for cross-team fairness confirmation and never auto-advances.
+Tier 6 is the ceiling and cannot advance further.
 
 Parameters:
-- `currentTier` - Active curriculum tier.
-- `completedLaps` - Completed laps within the current tier race window.
+- `currentTier` - Current curriculum tier (1–6).
+- `completedLaps` - Number of laps completed by the car at this tier.
 
-Returns: Promotion decision with next tier and remaining lap carry.
+Returns: Promotion decision with next tier, advance flag, and remaining laps.
+
+Example:
+
+```ts
+const result = resolveTierPromotionFromLapCount(1, 3);
+console.log(result); // { nextTier: 2, didAdvance: true, remainingLaps: 0 }
+```
 
 ### resolveTrackSizeBucketForCurriculumTier
 
