@@ -19,6 +19,10 @@ agents: []
 skills: ['creating-unit-tests', 'red-test-contracts']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the iew tool.
+
 ## Purpose
 
 Use when writing focused unit tests, red tests, fixtures, mocks, assertions, or coverage tests for a scoped behavior change. Keywords: test, jest, fixture, mock, assertion, coverage.

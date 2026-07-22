@@ -1085,6 +1085,98 @@ const result = applyNgeEvolutionEpigeneticPrior({
 });
 ```
 
+## neat/nge-evolution/neat.nge-evolution.reproduction-mode.ts
+
+Combat-pressure → reproduction-mode hysteresis policy.
+
+This module implements an external overlay that inspects the last three
+generations of combat pressure and selects a reproduction mode by majority
+vote. The selected mode is written back to the canonical
+{@link NgeReproductionPolicy.mode} field only when the policy declares the
+mode itself evolvable (`modeIsEvolvable: true`).
+
+The policy is deliberately distinct from the juvenile `NgeHysteresisState`
+grow gate: it governs *which* reproduction operator the lineage uses, not
+whether a juvenile module may grow.
+
+Mode mapping:
+- dominating majority → `'parthenogenesis'`
+- struggling majority → `'polyandric'`
+- stalemate majority → `'sexual'`
+
+Ties are resolved deterministically by the priority order above.
+
+### reproductionModeHysteresis
+
+```ts
+reproductionModeHysteresis(
+  input: ReproductionModeHysteresisInput,
+): ReproductionModeHysteresisResult
+```
+
+Compute a 3-generation majority-vote reproduction mode from combat pressure.
+
+When `policy.modeIsEvolvable` is true, the selected mode is written back into
+the returned policy; otherwise the policy is returned unchanged so a fixed
+mode cannot be overwritten by the hysteresis overlay.
+
+If no generation pressure is supplied, the function falls back to
+`'parthenogenesis'` as the conservative default.
+
+Parameters:
+- `input` - combat-pressure window and target policy
+
+Returns: selected mode and the possibly updated policy
+
+Example:
+
+```ts
+const result = reproductionModeHysteresis({
+  policy: { mode: 'parthenogenesis', modeIsEvolvable: true, ... },
+  generationPressure: [
+    { generation: 1, isDominating: false, isStruggling: true, isStalemate: false },
+    { generation: 2, isDominating: false, isStruggling: true, isStalemate: false },
+    { generation: 3, isDominating: false, isStruggling: true, isStalemate: false },
+  ],
+});
+console.log(result.mode); // 'polyandric'
+```
+
+### ReproductionModeHysteresisInput
+
+Input consumed by {@link reproductionModeHysteresis}.
+
+### ReproductionModeHysteresisResult
+
+Result returned by {@link reproductionModeHysteresis}.
+
+### ReproductionModePressureSignal
+
+One generation's combat-pressure signal.
+
+Exactly one of the three booleans should be true for a given generation,
+but the counter tolerates mixed signals by counting each flag independently
+and applying the majority vote.
+
+### selectModeFromWindow
+
+```ts
+selectModeFromWindow(
+  generationPressure: readonly ReproductionModePressureSignal[],
+): NgeReproductionPolicyMode
+```
+
+Select the reproduction mode implied by the last three pressure signals.
+
+Counts each flag independently across the trailing window and returns the
+mode associated with the highest count. Ties resolve deterministically in
+the order parthenogenesis → polyandric → sexual.
+
+Parameters:
+- `generationPressure` - pressure signals, oldest-to-newest
+
+Returns: selected reproduction mode
+
 ## neat/nge-evolution/neat.nge-evolution.utils.ts
 
 ### ngeEvolutionCompatibilityUtils

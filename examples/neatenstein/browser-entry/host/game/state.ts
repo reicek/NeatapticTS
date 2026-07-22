@@ -13,19 +13,18 @@ import seedrandom from 'seedrandom';
 import {
   NEATENSTEIN_DASH_COOLDOWN_MS,
   NEATENSTEIN_DASH_INVULNERABILITY_MS,
+  NEATENSTEIN_EPISODE_DEFAULT_DURATION_MS,
   NEATENSTEIN_PLAYER_MAX_AMMO,
   NEATENSTEIN_PLAYER_MAX_HEALTH,
+  NEATENSTEIN_SPAWN_CENTER_X,
+  NEATENSTEIN_SPAWN_CENTER_Y,
 } from './constants';
 import type {
   CreateGameStateOptions,
   EnemyState,
   GameState,
   PlayerState,
-  Vector2,
 } from './types';
-
-/** Canonical origin used when no random spawn offset is requested. */
-const ORIGIN: Vector2 = { x: 0, y: 0 };
 
 /**
  * Reconstruct a seeded PRNG from a deterministic game seed.
@@ -69,8 +68,13 @@ export function createGameState(
 ): GameState {
   const seed = options.seed ?? 1;
   const rng = createGameRng(seed);
+  const spawnPosition = {
+    x: NEATENSTEIN_SPAWN_CENTER_X,
+    y: NEATENSTEIN_SPAWN_CENTER_Y,
+  };
   const player: PlayerState = {
-    position: { ...ORIGIN },
+    position: { ...spawnPosition },
+    previousPosition: { ...spawnPosition },
     angleRad: rng() * 2 * Math.PI,
     health: NEATENSTEIN_PLAYER_MAX_HEALTH,
     maxHealth: NEATENSTEIN_PLAYER_MAX_HEALTH,
@@ -78,6 +82,7 @@ export function createGameState(
     maxAmmo: NEATENSTEIN_PLAYER_MAX_AMMO,
     dashTimeRemainingMs: 0,
     dashCooldownMs: 0,
+    contactIFrameMs: 0,
   };
 
   const enemies: EnemyState[] = [];
@@ -86,9 +91,12 @@ export function createGameState(
     seed,
     simTimeMs: 0,
     episodeTimeMs: 0,
+    episodeDurationMs: NEATENSTEIN_EPISODE_DEFAULT_DURATION_MS,
     player,
     enemies,
+    tracers: [],
     kills: 0,
+    spawnCount: 0,
     generation: 1,
   };
 }
@@ -96,14 +104,17 @@ export function createGameState(
 /**
  * Check whether the player is currently invulnerable to damage.
  *
- * Invulnerability is granted by a recent dash and expires once
- * {@link PlayerState.dashTimeRemainingMs} reaches zero.
+ * Invulnerability is granted by a recent dash or by recent enemy contact
+ * damage and expires once the corresponding counters reach zero.
  *
  * @param state - Snapshot to inspect.
  * @returns `true` while the player is in an invulnerability window.
  */
 export function isInvulnerable(state: GameState): boolean {
-  return state.player.dashTimeRemainingMs > 0;
+  return (
+    state.player.dashTimeRemainingMs > 0 ||
+    (state.player.contactIFrameMs ?? 0) > 0
+  );
 }
 
 /**
@@ -126,12 +137,13 @@ export function canDash(state: GameState): boolean {
  *
  * @param state - Snapshot before damage.
  * @param amount - Damage amount; clamped to zero if negative.
- * @returns New snapshot with reduced (and clamped) player health, or the same
- * health if the player is currently invulnerable.
+ * @returns New snapshot with reduced (and clamped) player health, or an
+ * immutable clone of the snapshot (with a new player object) if the player is
+ * currently invulnerable.
  */
 export function applyDamage(state: GameState, amount: number): GameState {
   if (isInvulnerable(state)) {
-    return state;
+    return { ...state, player: { ...state.player } };
   }
   const clamped = Math.max(0, amount);
   return {
@@ -162,19 +174,19 @@ export function consumeAmmo(state: GameState): GameState {
 /**
  * Activate a dash, granting invulnerability and starting the cooldown.
  *
- * The dash only takes effect when {@link canDash} returns `true`; otherwise
- * the snapshot is returned unchanged so the observable cooldown prevents
- * indefinite chaining.
+ * The dash only takes effect when {@link canDash} returns `true`. While on
+ * cooldown, an immutable clone of the snapshot (with a new player object) is
+ * returned so the observable cooldown prevents indefinite chaining.
  *
  * @param state - Snapshot before the dash.
  * @returns New snapshot with {@link PlayerState.dashTimeRemainingMs} set to the
  * configured invulnerability window and {@link PlayerState.dashCooldownMs} set
- * to the configured cooldown duration, or the unchanged snapshot while on
- * cooldown.
+ * to the configured cooldown duration, or an immutable clone of the
+ * snapshot (with a new player object) while on cooldown.
  */
 export function applyDash(state: GameState): GameState {
   if (!canDash(state)) {
-    return state;
+    return { ...state, player: { ...state.player } };
   }
   return {
     ...state,

@@ -18,6 +18,10 @@ agents: []
 skills: ['repo-cortex-workflow']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the iew tool.
+
 ## Purpose
 
 Use when checking Repo Cortex index freshness, triggering a corpus rebuild, diagnosing validate-index failures, confirming MCP server binding, or deciding whether a semantic index issue belongs to repo-cortex-workflow. Hands off recon results to the repo-cortex-workflow skill. Keywords: repo cortex, index freshness, validate-index, build-index, cortex MCP, semantic snapshot, cortex lifecycle, cortex scout.

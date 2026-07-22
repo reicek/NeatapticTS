@@ -147,6 +147,16 @@ describe('Neatenstein game state', () => {
       expect(after.player.health).toBe(before.player.health);
     });
 
+    it('returns a new state and player reference when damage is ignored during invulnerability', async () => {
+      const { createGameState, applyDash, applyDamage } =
+        (await import('./state.ts')) as Record<string, any>;
+      const before = createGameState({ seed: 1 });
+      const dashed = applyDash(before);
+      const after = applyDamage(dashed, before.player.health);
+      expect(after).not.toBe(dashed);
+      expect(after.player).not.toBe(dashed.player);
+    });
+
     it('starts the configured cooldown when applyDash is called', async () => {
       const { createGameState, applyDash } =
         (await import('./state.ts')) as Record<string, any>;
@@ -168,6 +178,16 @@ describe('Neatenstein game state', () => {
         invulnerability: first.player.dashTimeRemainingMs,
         cooldown: first.player.dashCooldownMs,
       });
+    });
+
+    it('returns a new state and player reference when dash is gated by cooldown', async () => {
+      const { createGameState, applyDash } =
+        (await import('./state.ts')) as Record<string, any>;
+      const before = createGameState({ seed: 1 });
+      const first = applyDash(before);
+      const second = applyDash(first);
+      expect(second).not.toBe(first);
+      expect(second.player).not.toBe(first.player);
     });
 
     it('exports canDash that reflects cooldown state', async () => {

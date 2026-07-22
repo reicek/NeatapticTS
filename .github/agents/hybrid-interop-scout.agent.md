@@ -18,6 +18,10 @@ agents: []
 skills: ['hybrid-training-interop']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the iew tool.
+
 ## Purpose
 
 Use when mapping parameter-vector layouts, deterministic export/import order, clone-vs-vector isolation, Lamarckian persistence policy, or deciding whether a hybrid evolution-plus-training issue belongs to hybrid-training-interop. Keywords: parameter vector, fine-tuning, Lamarckian, isolation, export, import, layout version, hybrid training.

@@ -56,6 +56,10 @@ handoffs:
     model: 'glm-5.2:cloud'
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the iew tool.
+
 ## Purpose
 
 Use for local AI system maintenance, workflow gap troubleshooting, config checks, CI support, and safe continuous-improvement updates. Policy-sensitive escalations defer to the plan's constitution authority before overriding local rules.

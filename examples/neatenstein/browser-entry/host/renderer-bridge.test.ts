@@ -1,5 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
-import { NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION } from '../constants';
+import {
+  NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
+  NEATENSTEIN_WORKER_BUNDLE_FILENAME,
+} from '../constants';
 
 const loadModule = (path: string): Promise<any> => import(path);
 
@@ -49,8 +52,9 @@ describe('Neatenstein host renderer bridge', () => {
       );
       const bridge = createNeatensteinRendererBridge({
         canvas,
-        workerUrl: '/assets/neatenstein.worker.esm.js',
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
         tier: 'cpu',
+        mapSeed: 42,
       });
       expect({
         hasPostSimState: typeof bridge.postSimState === 'function',
@@ -72,8 +76,9 @@ describe('Neatenstein host renderer bridge', () => {
       );
       createNeatensteinRendererBridge({
         canvas,
-        workerUrl: '/assets/neatenstein.worker.esm.js',
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
         tier: 'worker',
+        mapSeed: 42,
       });
       const worker = instances[0];
       const initCall = worker.postMessage.mock.calls[0];
@@ -98,8 +103,9 @@ describe('Neatenstein host renderer bridge', () => {
       );
       const bridge = createNeatensteinRendererBridge({
         canvas,
-        workerUrl: '/assets/neatenstein.worker.esm.js',
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
         tier: 'cpu',
+        mapSeed: 42,
       });
       const worker = instances[0];
       const onmessage = worker.onmessage;
@@ -125,8 +131,9 @@ describe('Neatenstein host renderer bridge', () => {
       );
       const bridge = createNeatensteinRendererBridge({
         canvas,
-        workerUrl: '/assets/neatenstein.worker.esm.js',
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
         tier: 'gpu',
+        mapSeed: 42,
       });
       const worker = instances[0];
       const onmessage = worker.onmessage;
@@ -152,8 +159,9 @@ describe('Neatenstein host renderer bridge', () => {
       );
       createNeatensteinRendererBridge({
         canvas,
-        workerUrl: '/assets/neatenstein.worker.esm.js',
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
         tier: 'gpu',
+        mapSeed: 42,
       });
       const initCall = instances[0].postMessage.mock.calls[0];
       expect({
@@ -161,9 +169,11 @@ describe('Neatenstein host renderer bridge', () => {
           initCall &&
           initCall[0]?.version === NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
         hasTier: initCall && initCall[0]?.tier === 'gpu',
+        hasMapSeed: initCall && initCall[0]?.mapSeed === 42,
       }).toEqual({
         hasVersion: true,
         hasTier: true,
+        hasMapSeed: true,
       });
     });
 
@@ -175,8 +185,9 @@ describe('Neatenstein host renderer bridge', () => {
       );
       const bridge = createNeatensteinRendererBridge({
         canvas,
-        workerUrl: '/assets/neatenstein.worker.esm.js',
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
         tier: 'cpu',
+        mapSeed: 42,
       });
       bridge.destroy();
       expect(instances[0].terminate).toHaveBeenCalled();

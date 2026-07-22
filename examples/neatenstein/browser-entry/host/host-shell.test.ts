@@ -37,10 +37,10 @@ describe('Neatenstein host HTML shell', () => {
     });
   });
 
-  describe('AC-025: module worker reference', () => {
-    it('instantiates the module worker from docs/assets/neatenstein.worker.esm.js', () => {
+  describe('AC-025: no legacy module worker reference', () => {
+    it('does not reference the unused docs/assets/neatenstein.worker.esm.js asset', () => {
       const html = readHostShell();
-      expect(html).toContain('neatenstein.worker.esm.js');
+      expect(html).not.toContain('neatenstein.worker.esm.js');
     });
   });
 });

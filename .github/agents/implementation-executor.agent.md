@@ -36,6 +36,10 @@ handoffs:
     model: 'glm-5.2:cloud'
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the iew tool.
+
 ## Purpose
 
 Use when: 04-implementing delegates scoped file edits, patch application, or write-phase synthesis. Executes implementation packets with implementation-standards compliance. Keywords: file edits, implementation executor, patch apply, write synthesis, scoped changes.

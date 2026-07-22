@@ -8,7 +8,10 @@
  * @module
  */
 
-import { NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION } from '../constants';
+import {
+  NEATENSTEIN_CPU_COLUMN_COUNT,
+  NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
+} from '../constants';
 
 /**
  * Simulation/render state snapshot needed to build a frame.
@@ -24,6 +27,25 @@ export interface NeatensteinRenderState {
   canvasHeight: number;
   /** Current fixed-timestep simulation tick. */
   simTick: number;
+  /** Camera world X position in grid units. */
+  cameraX: number;
+  /** Camera world Y position in grid units. */
+  cameraY: number;
+  /** Camera horizontal look angle in radians (0 = +X axis). */
+  cameraYaw: number;
+  /** Deterministic seed used to build the wall grid. */
+  mapSeed: number;
+  /** Optional movement intent forwarded from the input router. */
+  movement?: {
+    /** True while the forward key is held. */
+    forward: boolean;
+    /** True while the backward key is held. */
+    backward: boolean;
+    /** True while the strafe-left key is held. */
+    left: boolean;
+    /** True while the strafe-right key is held. */
+    right: boolean;
+  };
 }
 
 /**
@@ -79,14 +101,22 @@ let nextRequestId = 0;
  * @example
  * ```ts
  * const frame = buildNeatensteinRenderFrame(
- *   { canvasWidth: 640, canvasHeight: 360, simTick: 7 },
+ *   {
+ *     canvasWidth: 640,
+ *     canvasHeight: 360,
+ *     simTick: 7,
+ *     cameraX: 12.5,
+ *     cameraY: 12.5,
+ *     cameraYaw: 0.25,
+ *     mapSeed: 42,
+ *   },
  *   NEATENSTEIN_CPU_COLUMN_COUNT,
  * );
  * ```
  */
 export function buildNeatensteinRenderFrame(
   state: NeatensteinRenderState,
-  columnCount: number,
+  columnCount: number = NEATENSTEIN_CPU_COLUMN_COUNT,
 ): NeatensteinRenderFrame {
   const id = nextRequestId;
   nextRequestId += 1;

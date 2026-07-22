@@ -34,5 +34,55 @@ describe('Neatenstein game combat', () => {
       const result = fireNeonBeam(state);
       expect(result.fired).toBe(false);
     });
+
+    it('consumes one unit of ammo when fired', async () => {
+      const { createGameState, fireNeonBeam } =
+        (await import('./combat.ts')) as Record<string, any>;
+      const state = createGameState({ seed: 1 });
+      const result = fireNeonBeam(state);
+      expect(result.state.player.ammo).toBe(state.player.ammo - 1);
+    });
+
+    it('appends a single tracer to the new state when fired', async () => {
+      const { createGameState, fireNeonBeam } =
+        (await import('./combat.ts')) as Record<string, any>;
+      const state = createGameState({ seed: 1 });
+      const result = fireNeonBeam(state);
+      expect(result.state.tracers.length).toBe(state.tracers.length + 1);
+    });
+
+    it('returns a tracer with beam origin, endpoint, and hit metadata', async () => {
+      const { createGameState, fireNeonBeam } =
+        (await import('./combat.ts')) as Record<string, any>;
+      const state = createGameState({ seed: 1 });
+      const result = fireNeonBeam(state);
+      expect(result.tracer).toMatchObject({
+        origin: state.player.position,
+        hitType: expect.any(String),
+        distance: expect.any(Number),
+        color: expect.any(String),
+      });
+    });
+
+    it('damages the first enemy in the beam path', async () => {
+      const { createGameState, fireNeonBeam } =
+        (await import('./combat.ts')) as Record<string, any>;
+      const base = createGameState({ seed: 1 });
+      const state = {
+        ...base,
+        player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+        enemies: [
+          {
+            position: {
+              x: base.player.position.x + 2,
+              y: base.player.position.y,
+            },
+            health: 100,
+          },
+        ],
+      };
+      const result = fireNeonBeam(state);
+      expect(result.state.enemies[0].health).toBe(50);
+    });
   });
 });

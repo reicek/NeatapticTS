@@ -25,3 +25,24 @@
 - **01-green-phase1** [DONE]: Full Phase 1 green validation and coverage guard. All 14 focused suites pass (81/81 tests). Lint passes. Visible-browser smoke at `docs/examples/neatenstein/index.html` passes with expected 404s for unbuilt bundle/worker assets.
 
 **Plan gates:** plan-sync → pass; step-packet → pass; agent-graph → pass; specialist-review → pass; plan-slice-quality → pass; workflow-update-sync → pass; learning-event → pass; cortex-index → pass.
+
+## Phase 2 — Game Logic & FPS State (visualizer + benchmark-owned)
+
+**Status:** [DONE]
+
+**Goal:** FPS game state, controls, hitscan combat, enemy waves, deterministic episode loop.
+
+[DONE] Step 01 — Game Logic & FPS State red tests and implementation slices. All 10 Phase 2 slices completed and green validated.
+
+- **02-red-phase2** [DONE]: Red tests for game logic contracts. 10 suites failed with TS2307 module-not-found for state, constants, controls, waves, combat, movement, episode, cadence, tick, and input — confirming no implementation existed yet.
+- **02-game-scaffold** [DONE]: Created `host/game/types.ts`, `state.ts`, `constants.ts`, and `host/game/README.md`. Green: `constants` 6/6 tests pass.
+- **02-hero-state** [DONE]: Player health/ammo invariants, damage/ammo decrement, dash invulnerability (200 ms) and cooldown (500 ms). Green: `state` + `types` 24/24 tests pass.
+- **02-enemy-waves** [DONE]: Continuous trickle wave spawn, cap at 8 concurrent enemies, deterministic spawn sequencing. Green: `waves` + `state` + `types` 34/34 tests pass.
+- **02-controls** [DONE]: WASD movement, mouse/arrow look, pointer lock, left-click fire, Space dash, iOS touch drag-to-look. Green: 22/22 focused tests pass; visible-browser smoke passes. Pre-green specialist review APPROVED.
+- **02-projectiles** [DONE]: Hitscan neon beam (`fireNeonBeam`), tracer state, flat-map DDA wrapper in `raycast.ts`. Green: `combat` 7/7 tests pass.
+- **02-collision** [DONE]: `movePlayer`, wall collision, contact damage, i-frames. Green: `movement` 9/9, `collision` 8/8, `state`+`types` 25/25 tests pass; lint clean. Pre-green specialist review APPROVED.
+- **02-episode-loop** [DONE]: Deterministic `episode.ts` and `cadence.ts` loop, generation cadence. Green: `episode` 4/4, `cadence` 4/4, `state`+`types` 25/25, `constants` 8/8 tests pass.
+- **02-worker-game-sync** [DONE]: Deterministic host `gameTick`, `forwardWorkerInput`, display worker advances `gameState`. Green: `tick` 4/4, renderer-bridge + display.worker 6/6 tests pass.
+- **02-green-phase2** [DONE]: Full Phase 2 green validation and visible-browser smoke. `controls.test.ts` 9/9, `input.test.ts` 11/11, `host/game` 11 suites 88/88, changed files 3 suites 26/26 tests pass; lint 0 errors; browser smoke PASS (0 console errors, canvas renders, WASD/look/fire/dash verified).
+
+**Plan gates:** plan-sync → pass; validate-plan-sync → pass; step-packet → pass; agent-graph → pass; plan-slice-quality → pass; specialist-review → pass.

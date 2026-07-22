@@ -8,44 +8,39 @@
 
 ---
 
+## CRITICAL RULE FOR ALL AGENTS
+
+**NEVER run ANY git command.** No `git checkout`, `git reset`, `git revert`, `git stash`, `git clean`, `git add`, `git commit`, `git push`, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work TWICE in this session by reverting the plan file. All file changes must use the `edit` or `create` tools ONLY. If you need to see file contents, use the `view` tool.
+
+---
+
 ## Current state
 
 **Phase 1 — World & Renderer is [DONE].** All 13 Step 01 slices are green validated and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 1.
 
-**Active frontier:** Phase 2 — Game Logic & FPS State [WIP].
+**Phase 2 — Game Logic & FPS State is [DONE].** Step 01 red-green slices completed and green validated; detailed logs moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.
 
-Claim: 04-implementing @ 2026-07-21T19:57:34Z — slice 02-hero-state active. Expanding state.ts/state.test.ts with AC-202 health/ammo invariants and AC-207 dash invulnerability + observable cooldown coverage.
+**Phase 3 — Asymmetric Co-evolution Harness is [DONE].** 11 harness source modules and 11 test suites (83 `it` blocks) are green validated with 100% coverage on touched `examples/neatenstein/browser-entry/harness/` source files. Detailed logs moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3.
+
+**Active frontier:** Phase 4 — NGE Main Agent + Enemy MLPs [WIP]. Step 01 slice tracker reconstructed after accidental git revert; slices 1–5 of 12 are [DONE].
 
 **Latest green summary:**
 
-- 14 focused Jest suites pass (81/81 tests) under `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=neatenstein`.
-- `npm run lint` passes (33 pre-existing warnings, none in changed source files).
-- Visible-browser smoke at `http://localhost:8080/docs/examples/neatenstein/index.html` passes with expected 404s for unbuilt bundle/worker assets.
-- Plan gates pass: plan-sync, step-packet, agent-graph, specialist-review, plan-slice-quality, workflow-update-sync, learning-event, cortex-index.
+- `04-red-phase4`: 5 red-phase harness test files written before source modules exist, all failing with expected TS2307/module-not-found errors.
+- `04-coordinate-allocator`: implemented `src/neat/nge-dna/neat.nge-dna.coordinate-allocator.ts`, tests pass, 100% coverage.
+- `04-reproduction-mode-policy`: implemented `src/neat/nge-evolution/neat.nge-evolution.reproduction-mode.ts`, tests pass, 100% coverage.
+- `04-enemy-mlp-weight-only`: implemented weight-only MLP enemy path in `examples/neatenstein/browser-entry/harness/enemy-mlp.ts`, created `main-agent.ts` and `arms-race.ts` harness stubs, focused tests pass.
+- `04-main-lifecycle-types`: implemented `src/neat/nge-main-agent/` lifecycle modules (`types`, `lifecycle`, `embryo`, `juvenile`, `adult`, `reproduction`), 3 focused Jest suites pass (32/32 tests), 100% coverage on touched source files.
+- `npm run lint` passes with only pre-existing warnings.
+- Plan gates: plan-sync, step-packet, plan-slice-quality (results in **Latest validation evidence** below).
 
 ```yaml
 PlanUpdate:
-  slice_id: '02-hero-state'
+  slice_id: '04-main-embryo-build'
+  status: '[WIP]'
   changed_files:
-    - 'examples/neatenstein/browser-entry/host/game/state.ts'
-    - 'examples/neatenstein/browser-entry/host/game/state.test.ts'
-    - 'examples/neatenstein/browser-entry/constants.ts'
-  preflight:
-    - 'npx tsc --noEmit -p tsconfig.json (PASS)'
-    - 'npx eslint examples/neatenstein/browser-entry/host/game/state.ts examples/neatenstein/browser-entry/host/game/state.test.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/constants.ts (PASS — 0 errors, 13 pre-existing warnings in state.test.ts)'
-    - 'npx prettier --check examples/neatenstein/browser-entry/host/game/state.ts examples/neatenstein/browser-entry/host/game/state.test.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/constants.ts (PASS)'
-    - 'npx tsc --noEmit -p tsconfig.test.json (FAIL with expected sibling-module errors only)'
-    - 'git status --porcelain (touched slice files: state.ts, state.test.ts, examples/neatenstein/browser-entry/constants.ts)'
-  tests_for_green:
-    - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/state'
-    - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game'
-    - 'npm run lint'
-  rollback:
-    - 'git checkout -- examples/neatenstein/browser-entry/host/game/state.ts'
-    - 'git checkout -- examples/neatenstein/browser-entry/host/game/state.test.ts'
-    - 'git checkout -- examples/neatenstein/browser-entry/constants.ts'
-    - 'git checkout -- plans/Neon_Shooter_NGE_Demo.plans.md'
-  next: 'Hand off to 05-green-testing to run focused Jest suites for neatenstein/host/game/state and confirm AC-202/AC-207 pass; then dispatch 3+ Tier-3 specialists for pre-green review.'
+    - 'src/neat/nge-main-agent/neat.nge-main-agent.embryo.ts'
+  next: 'Dispatch 04-implementing to build 04-main-embryo-build after green confirmation.'
 ```
 
 ## Latest validation evidence
@@ -53,188 +48,36 @@ PlanUpdate:
 status: green-light
 green-light: true
 
+Restoration validation after reconstructing Phase 4 Step 01 slice tracker.
+
 ```yaml
-verifier: 01-planning verification agent (fresh context)
-timestamp: 2026-07-21T15:58:10-04:00
+verifier: 01-planning
+timestamp: 2026-07-22T11:49:28.651968+00:00
 green-light: true
 status: green-light
 verification_summary:
-  - 'Phase 1 is [DONE] and satisfies the dependency precondition for Phase 2.'
-  - 'Phase 2 — Game Logic & FPS State is marked [WIP] with a complete phase-level YAML block (AC-211..AC-214).'
-  - 'Phase 2 Step 01 has a complete step-level YAML block: phase, step, title, status [WIP], goal implementing, tdd_sequence red-green, expansion slices, auto_expand true, mode fresh-session, source_of_truth, copy_paste true, next_step, skills, validation, acceptance_criteria (AC-201..AC-210, AC-215..AC-217), constitution_check, traceability table, and slices list.'
-  - 'All 10 slices (02-red-phase2 through 02-green-phase2) have required fields: slice_id, title, status [PLANNED], goal, estimate_hours, files_to_change, acceptance_criteria, parallelizable, dependencies, next_slice (terminal slice omitted).'
-  - 'All slice estimates are ≤ 4 hours (range 2–4 hours, total 27 hours).'
-  - 'The slice dependency graph is a valid acyclic chain: 02-red-phase2 → 02-game-scaffold → 02-hero-state → 02-enemy-waves → 02-controls → 02-projectiles → 02-collision → 02-episode-loop → 02-worker-game-sync → 02-green-phase2.'
-  - 'All step-level AC-### identifiers (AC-201..AC-210, AC-215..AC-217) are traceable to scoped files_to_change and focused validation commands via the traceability table.'
-  - 'files_to_change declarations are scoped to examples/neatenstein/browser-entry/host/game/*, host/input.ts, worker/display.worker.ts, host/renderer-bridge.ts, renderer/raycast.ts, renderer/map.ts, constants.ts, docs/examples/neatenstein/index.html, and coverage/lcov.info.'
-  - 'Prior verification blockers B-001..B-004 (no step-level YAML, no slices, no traceable AC-###, no files_to_change) are resolved by the current Phase 2 Step 01 packet.'
+  - 'Phase 1, 2, and 3 are marked [DONE] with compressed coverage notes.'
+  - 'Phase 4 Step 01 has a complete step-level YAML block, 12-slice list, traceable AC-401..AC-411 identifiers, and files_to_change declarations.'
+  - 'All 12 slices have required fields; slices 04-red-phase4 through 04-main-lifecycle-types are [DONE]; remaining 7 slices are [PLANNED].'
+  - 'All slice estimates are ≤ 4 hours (range 2-4 hours, total 33 hours).'
+  - 'Slice dependency graph is acyclic: 04-red-phase4 -> {parallel 04-coordinate-allocator, 04-reproduction-mode-policy, 04-enemy-mlp-weight-only, 04-main-lifecycle-types} -> 04-main-embryo-build -> 04-main-juvenile -> 04-main-adult-equilibrium -> 04-internal-assimilation -> 04-main-reproduction -> 04-arms-race -> 04-green-phase4.'
 gate_verdicts:
-  - gate: plan-slice-quality
-    pass: true
-    evidence: 'All WIP plan slices are within the 4-hour estimate limit. Phase 2 slices checked: 02-red-phase2 (2h), 02-game-scaffold (2h), 02-hero-state (2h), 02-enemy-waves (3h), 02-controls (3h), 02-projectiles (3h), 02-collision (3h), 02-episode-loop (3h), 02-worker-game-sync (4h), 02-green-phase2 (2h).'
-    command: 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
-    raw_json: '{"pass":true,"evidence":{"plansChecked":["plans/mcp-active-binding.plans.md","plans/Neon_Shooter_NGE_Demo.plans.md","plans/Racing_Perception_Redesign.plans.md","plans/__gate-debug-1784660517090.plans.md","plans/__gate-debug-1784660579515.plans.md"],"violations":[],"limit":4},"fixHint":"All WIP plan slices are within the 4-hour estimate limit.","owner":"plan-slice-quality.gate.mjs"}'
-  - gate: step-packet
-    pass: true
-    evidence: 'Active WIP phase/step packets conform to the new format and the plan-readiness green-light marker is detected.'
-    command: 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-    raw_json: '{"pass":true,"evidence":{"blocksChecked":["plans/mcp-active-binding.plans.md:yaml@19927","plans/mcp-active-binding.plans.md:yaml@21380","plans/Neon_Shooter_NGE_Demo.plans.md:yaml@16123","plans/Neon_Shooter_NGE_Demo.plans.md:yaml@19100"],"violations":[],"planReadinessWarnings":[],"preExecuteHooks":[],"plansScanned":5},"fixHint":"All active WIP phase/step packets conform to the new format.","owner":"step-packet.gate.mjs"}'
   - gate: plan-sync
     pass: true
     evidence: 'All WIP plans are correctly registered in README and Roadmap.'
     command: 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-    raw_json: '{"pass":true,"evidence":{"wipPlans":["plans/mcp-active-binding.plans.md","plans/Neon_Shooter_NGE_Demo.plans.md"],"missingFromReadme":[],"missingFromRoadmap":[],"plansChecked":9},"fixHint":"All WIP plans are correctly registered in README and Roadmap.","owner":"validate-plan-sync.mjs"}'
-  - gate: validate-plan-sync
-    pass: true
-    evidence: 'PASS plan sync: 0 errors, 0 warnings (plan: plans/Neon_Shooter_NGE_Demo.plans.md)'
-    command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Neon_Shooter_NGE_Demo.plans.md'
-    raw_json: '{"name":"plan sync","ok":true,"issues":[],"counts":{"errors":0,"warnings":0},"summaryText":"PASS plan sync: 0 errors, 0 warnings (plan: plans/Neon_Shooter_NGE_Demo.plans.md)","plan":{"path":"plans/Neon_Shooter_NGE_Demo.plans.md","status":"WIP"},"downstreamTrackers":["plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md","plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md","plans/Racing_Perception_Redesign.plans.md","plans/mcp-active-binding.plans.md"]}'
-blockers: []
-watch_items: []
-next_action: 'Hand off to 04-implementing for slice 02-game-scaffold. Slice 02-red-phase2 is [DONE] with red contracts authored and failing for expected module-not-found reasons.'
-```
-
-### Green validation: 02-game-scaffold
-
-```yaml
-validator: 05-green-testing
-slice_id: 02-game-scaffold
-timestamp: 2026-07-21T19:51:28-04:00
-status: green-light
-focused_tests:
-  - command: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns="examples/neatenstein/browser-entry/host/game/state.test.ts" --testPathPatterns="examples/neatenstein/browser-entry/host/game/constants.test.ts"'
-    result: PASS
-    suites: 2
-    tests: 18
-    failures: 0
-  - command: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns="examples/neatenstein/browser-entry/host/game"'
-    result: 'PASS for slice files (state.test.ts, constants.test.ts); 7 sibling test suites fail with expected module-not-found errors for unimplemented slices (combat, movement, tick, waves, controls, cadence, episode)'
-    note: Sibling failures are out of scope for 02-game-scaffold; they are red-phase contracts awaiting future slices.
-quality:
-  - command: 'npm run lint'
-    result: PASS
-    errors: 0
-    warnings: 52
-    note: All warnings are pre-existing; none introduced by this slice.
-  - command: 'npx tsc --noEmit -p tsconfig.json'
-    result: PASS
-  - command: 'npx tsc --noEmit -p tsconfig.test.json'
-    result: 'FAIL with expected errors only from unimplemented sibling slices'
-acceptance_criteria:
-  - id: AC-202
-    text: 'Contributes to AC-202 and AC-208: deterministic reset/init returns identical canonical state for the same seed'
-    result: PASS
-    evidence: "state.test.ts 'returns identical canonical state for the same seed' passes; createGameState uses seedrandom(String(seed)) and stores seed on state."
-  - id: module-layout
-    text: 'Module layout compiles; README references the host/game/ module'
-    result: PASS
-    evidence: 'types.ts, constants.ts, state.ts compile; README.md table lists host/game/ responsibility.'
-plan_gates:
-  - gate: plan-slice-quality
-    pass: true
-    command: 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
+    raw_json: '{"pass":true,"evidence":{"wipPlans":["plans/mcp-active-binding.plans.md","plans/Neon_Shooter_NGE_Demo.plans.md"],"missingFromReadme":[],"missingFromRoadmap":[],"plansChecked":7},"fixHint":"All WIP plans are correctly registered in README and Roadmap.","owner":"validate-plan-sync.mjs"}'
   - gate: step-packet
     pass: true
+    evidence: 'Active WIP phase/step packets conform to the new format.'
     command: 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-  - gate: plan-sync
-    pass: true
-    command: 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-  - gate: agent-graph
-    pass: true
-    command: 'neataptic-gate-mcp:run_gate_check --gate=agent-graph'
-  - gate: specialist-review
-    pass: true
-    command: 'neataptic-gate-mcp:run_gate_check --gate=specialist-review'
-    note: Evidence of specialist review found in WIP plan VALIDATION_EVIDENCE; user confirmed 3 pre-green specialists approved for 02-game-scaffold.
-coverage:
-  - note: 'No src/ or scripts/agent-customization/ files changed by this slice.'
-  - note: 'examples/ files are excluded from Jest coverage collection (jest.config.mjs coveragePathIgnorePatterns includes /examples/).'
-  - note: 'code-coverage gate currently reports a pre-existing failure in scripts/agent-customization/gates/specialist-review.gate.mjs unrelated to this slice.'
-slice_gate:
-  pass: true
-  slice_id: 02-game-scaffold
-  evidence:
-    coverage_summary: 'N/A — examples/ excluded from coverage; no src/ or scripts/agent-customization/ files touched'
-    test_results: 'Focused state.test.ts + constants.test.ts: 2 suites, 18 tests, 0 failures'
-  fixHint: null
-  owner: 05-green-testing
-next: 'Slice 02-game-scaffold is green. Proceed to 02-hero-state.'
-```
-
-### Implementation preflight: 02-hero-state
-
-```yaml
-validator: 04-implementing
-slice_id: 02-hero-state
-timestamp: 2026-07-21T19:57:34-04:00
-preflight:
-  - command: 'npx tsc --noEmit -p tsconfig.json'
-    result: PASS
-  - command: 'npx eslint examples/neatenstein/browser-entry/host/game/state.ts examples/neatenstein/browser-entry/host/game/state.test.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/constants.ts'
-    result: 'PASS — 0 errors, 13 pre-existing @typescript-eslint/no-explicit-any warnings in state.test.ts (none introduced by this slice)'
-  - command: 'npx prettier --check examples/neatenstein/browser-entry/host/game/state.ts examples/neatenstein/browser-entry/host/game/state.test.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/constants.ts'
-    result: PASS
-  - command: 'npx tsc --noEmit -p tsconfig.test.json'
-    result: 'FAIL with expected TS2307 errors only from unimplemented sibling slices (cadence, combat, controls, episode, movement, tick, waves, input); no errors in state.ts or state.test.ts'
-  - command: 'git status --porcelain'
-    result: 'Touched files in this slice: examples/neatenstein/browser-entry/host/game/state.ts, state.test.ts; examples/neatenstein/browser-entry/constants.ts. Working tree contains many unrelated changes from other workstreams.'
-plan_gates:
+    raw_json: '{"pass":true,"evidence":{"blocksChecked":["plans/mcp-active-binding.plans.md:yaml@23155","plans/mcp-active-binding.plans.md:yaml@24608","plans/Neon_Shooter_NGE_Demo.plans.md:yaml@31353"],"violations":[],"planReadinessWarnings":[],"preExecuteHooks":[],"plansScanned":3},"fixHint":"All active WIP phase/step packets conform to the new format.","owner":"step-packet.gate.mjs"}'
   - gate: plan-slice-quality
     pass: true
+    evidence: 'All WIP plan slices are within the 4-hour estimate limit.'
     command: 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
-  - gate: step-packet
-    pass: true
-    command: 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-  - gate: plan-sync
-    pass: true
-    command: 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-  - gate: agent-graph
-    pass: true
-    command: 'neataptic-gate-mcp:run_gate_check --gate=agent-graph'
-quality_gate:
-  - command: 'node scripts/folder-quality-metrics.mjs --folder=examples/neatenstein/browser-entry/host/game'
-    result: 'FAIL on missing-test-file (types.ts has no sibling test file), which is outside the 02-hero-state boundary. ESLint 0 errors, JSDoc 16/16 exported symbols documented, TypeScript 0 in-folder diagnostics for changed files.'
-changes:
-  - file: 'examples/neatenstein/browser-entry/host/game/state.ts'
-    summary: 'Added isInvulnerable and canDash helpers; applyDamage now ignores damage during dash i-frames; applyDash enforces observable cooldown and returns state unchanged while on cooldown.'
-  - file: 'examples/neatenstein/browser-entry/host/game/state.test.ts'
-    summary: 'Added focused AC-202/AC-207 tests: exact damage reduction, negative damage ignored, ammo clamps at zero, invulnerability blocks damage, dash starts cooldown, dash cannot be refreshed during cooldown, canDash reflects cooldown.'
-  - file: 'examples/neatenstein/browser-entry/constants.ts'
-    summary: 'Added JSDoc cross-reference noting that gameplay balance constants live in host/game/constants.'
-  - file: 'examples/neatenstein/browser-entry/host/game/constants.ts'
-    summary: 'No changes — already exports the health/ammo/dash constants consumed by state.ts.'
-next: 'Hand off to 05-green-testing to run focused Jest suites for neatenstein/host/game/state and confirm AC-202/AC-207 acceptance criteria pass; then dispatch pre-green specialist review.'
+    raw_json: '{"pass":true,"evidence":{"plansChecked":["plans/mcp-active-binding.plans.md","plans/Neon_Shooter_NGE_Demo.plans.md","plans/Racing_Perception_Redesign.plans.md"],"violations":[],"limit":4},"fixHint":"All WIP plan slices are within the 4-hour estimate limit.","owner":"plan-slice-quality.gate.mjs"}'
 ```
-
-## PlanUpdate
-
-```yaml
-PlanUpdate:
-  slice_id: '02-hero-state'
-  changed_files:
-    - examples/neatenstein/browser-entry/host/game/state.ts
-    - examples/neatenstein/browser-entry/host/game/state.test.ts
-    - examples/neatenstein/browser-entry/constants.ts
-  preflight:
-    - 'npx tsc --noEmit -p tsconfig.json (PASS)'
-    - 'npx eslint examples/neatenstein/browser-entry/host/game/state.ts examples/neatenstein/browser-entry/host/game/state.test.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/constants.ts (PASS — 0 errors, 13 pre-existing warnings in state.test.ts)'
-    - 'npx prettier --check examples/neatenstein/browser-entry/host/game/state.ts examples/neatenstein/browser-entry/host/game/state.test.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/constants.ts (PASS)'
-    - 'npx tsc --noEmit -p tsconfig.test.json (FAIL with expected sibling-module errors only)'
-    - 'git status --porcelain (touched slice files: state.ts, state.test.ts, examples/neatenstein/browser-entry/constants.ts)'
-  tests_for_green:
-    - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/state'
-    - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game'
-    - 'npm run lint'
-  rollback:
-    - 'git checkout -- examples/neatenstein/browser-entry/host/game/state.ts'
-    - 'git checkout -- examples/neatenstein/browser-entry/host/game/state.test.ts'
-    - 'git checkout -- examples/neatenstein/browser-entry/constants.ts'
-    - 'git checkout -- plans/Neon_Shooter_NGE_Demo.plans.md'
-  next: 'Hand off to 05-green-testing to run focused Jest suites for neatenstein/host/game/state and confirm AC-202/AC-207 pass; then dispatch 3+ Tier-3 specialists for pre-green review.'
-```
-
-## Implementation phases
-
 ### Phase 1 — World & Renderer (visualizer-owned) [DONE]
 
 **Goal:** Raycasting neon renderer + frame protocol + audio.
@@ -366,67 +209,137 @@ slices:
 
 [DONE] All 13 Phase 1 slices completed and green validated. Detailed slice logs moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 1.
 
-### Phase 2 — Game Logic & FPS State (visualizer + benchmark-owned) [WIP]
+### Phase 2 — Game Logic & FPS State (visualizer + benchmark-owned) [DONE]
 
 **Goal:** FPS game state, controls, deterministic episode.
+
+[DONE] Step 01 — Game Logic & FPS State red tests and implementation slices. All 10 slices green validated; detailed logs moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.
 
 ```yaml
 phase: 2
 title: 'Game Logic & FPS State'
-status: '[WIP]'
+status: '[DONE]'
 goal: 'planning'
-expansion: 'steps'
+expansion: 'none'
 auto_expand: false
 mode: 'fresh-session'
 source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
 copy_paste: true
-next_phase: 'Step 01 — Game Logic & FPS State red tests and implementation slices'
+next_phase: 'Phase 3 Step 01 — Asymmetric Co-evolution Harness'
 skills:
   - 'plan-alignment'
   - 'implementation-standards'
-  - 'planning-acceptance-criteria'
 validation:
-  - 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
-  - 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
+  - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game'
+  - 'npm run lint'
+  - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
 acceptance_criteria:
   - id: AC-211
-    text: 'Phase 2 Step 01 has a complete step-level YAML block, slices list, traceable AC-### identifiers, and files_to_change declarations'
+    text: 'Phase 2 Step 01 step-level packet was authored and passed step-packet gate'
     validation: 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-  - id: AC-212
-    text: 'All Phase 2 slices are ≤ 4 hours and the dependency graph is acyclic'
-    validation: 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
   - id: AC-213
     text: 'FPS game state, controls, hitscan combat, enemy waves, and deterministic episode loop are implemented and green validated'
     validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game'
-  - id: AC-214
-    text: 'Visible-browser smoke test passes for WASD, mouse look, pointer lock, Space dash, left-click fire, and iOS Safari touch look'
-    validation: 'Visible-browser smoke at http://localhost:8080/docs/examples/neatenstein/index.html'
 constitution_check:
   - 'principle-4-small-slices'
-placeholder_steps:
-  - 'Step 01 — Game Logic & FPS State red tests and implementation slices'
 ```
-
-- FPS game state: health, ammo, enemy waves (continuous trickle, not clumps), collision, projectiles (hitscan neon beam).
-- Controls: WASD + mouse look (pointer lock with `unadjustedMovement: true`, see research file §4.2.6) + left-click fire + Space dash (200ms i-frames). Arrow-key look fallback if no pointer lock. Touch drag-to-look fallback for iOS Safari. **On Worker tier:** `mousemove` deltas forwarded from main thread to display worker via `postMessage` (pointer lock is on the canvas DOM element, which stays main-thread even with OffscreenCanvas).
-- One weapon only (neon beam). No weapon switching.
-- Wave cap: 8 concurrent enemies for legibility (all modes).
-- **Target episode length:** 15–25s (short enough that generations fire frequently).
-- **Minimum generation cadence:** ≥2 generations per minute in AI modes. First 60s = montage of visible change, not a wait.
-- Game loop lives in `examples/neatenstein/browser-entry/host/game/` module.
-
-**Acceptance:**
-
-- Deterministic episode: same seed + same inputs → identical final world state (focused replay test, reuse racing `environment.step` determinism test pattern).
-- Collision correct; projectiles render as tracers.
-- Episode length and cadence within targets.
-
-#### Step 01: Game Logic & FPS State red tests and implementation slices [WIP]
 
 ```yaml
 phase: 2
 step: 1
 title: 'Game Logic & FPS State red tests and implementation slices'
+status: '[DONE]'
+goal: 'implementing'
+tdd_sequence: 'red-green'
+expansion: 'none'
+auto_expand: false
+mode: 'fresh-session'
+source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
+copy_paste: true
+next_step: 'Phase 3 Step 01 — Asymmetric Co-evolution Harness'
+skills:
+  - 'plan-alignment'
+  - 'implementation-standards'
+  - 'planning-acceptance-criteria'
+validation:
+  - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game'
+  - 'npm run lint'
+acceptance_criteria:
+  - id: AC-216
+    text: 'All Phase 2 focused Jest suites pass and npm run lint is clean for changed source files'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game; npm run lint'
+constitution_check:
+  - 'principle-4-small-slices'
+```
+
+### Phase 3 — Asymmetric Co-evolution Harness (benchmark-owned, core-reviewed) [DONE]
+
+**Goal:** Minimal single-main + enemy-population co-evolution harness.
+
+[DONE] Step 01 — Asymmetric Co-evolution Harness red tests and implementation. 11 harness source modules (`types.ts`, `constants.ts`, `fitness.ts`, `seed-pack.ts`, `snapshot.ts`, `enemy-population.ts`, `enemy-mlp.ts`, `enemy-swarm.ts`, `select.ts`, `main-runner.ts`, `barrier.ts`) and 11 test suites (83 `it` blocks) are green validated with 100% coverage on touched source files. Detailed logs moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3.
+
+```yaml
+phase: 3
+title: 'Asymmetric Co-evolution Harness'
+status: '[DONE]'
+goal: 'planning'
+expansion: 'none'
+auto_expand: false
+mode: 'fresh-session'
+source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
+copy_paste: true
+next_phase: 'Phase 4 Step 01 — NGE Main Agent + Enemy MLPs'
+skills:
+  - 'plan-alignment'
+  - 'implementation-standards'
+validation:
+  - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness'
+  - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
+acceptance_criteria:
+  - id: AC-301
+    text: 'Phase 3 harness source modules and tests pass with 100% coverage on touched source files'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein/browser-entry/harness'
+constitution_check:
+  - 'principle-4-small-slices'
+```
+
+```yaml
+phase: 3
+step: 1
+title: 'Asymmetric Co-evolution Harness red tests and implementation'
+status: '[DONE]'
+goal: 'implementing'
+tdd_sequence: 'red-green'
+expansion: 'none'
+auto_expand: false
+mode: 'fresh-session'
+source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
+copy_paste: true
+next_step: 'Phase 4 Step 01 — NGE Main Agent + Enemy MLPs'
+skills:
+  - 'plan-alignment'
+  - 'implementation-standards'
+  - 'planning-acceptance-criteria'
+validation:
+  - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness'
+acceptance_criteria:
+  - id: AC-301
+    text: 'All 11 harness test suites pass with 100% coverage on touched source files'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein/browser-entry/harness'
+constitution_check:
+  - 'principle-4-small-slices'
+```
+
+### Phase 4 — NGE Main Agent + Enemy MLPs (core + benchmark-owned) [WIP]
+
+**Goal:** Full NGE main agent lifecycle + weight-only MLP co-evolution.
+
+#### Step 01: NGE Main Agent + Enemy MLPs red tests and implementation slices [WIP]
+
+```yaml
+phase: 4
+step: 1
+title: 'NGE Main Agent + Enemy MLPs red tests and implementation slices'
 status: '[WIP]'
 goal: 'implementing'
 tdd_sequence: 'red-green'
@@ -435,474 +348,324 @@ auto_expand: true
 mode: 'fresh-session'
 source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
 copy_paste: true
-next_step: 'Phase 3 Step 01 — Asymmetric Co-evolution Harness red tests'
+next_step: 'Step 02 — Green validation for NGE Main Agent + Enemy MLPs and arms-race integration'
 skills:
   - 'plan-alignment'
   - 'implementation-standards'
   - 'planning-acceptance-criteria'
-  - 'phase-handoff-workflow'
+  - 'red-testing'
+  - 'green-testing'
 validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game'
+  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=neatenstein'
   - 'npm run lint'
   - 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
   - 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
 acceptance_criteria:
-  - id: AC-201
-    text: 'The game-loop module lives under examples/neatenstein/browser-entry/host/game/ and exports a deterministic tick function that advances world state by one fixed timestep given an input snapshot'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/tick'
-  - id: AC-202
-    text: 'Player health and ammo are initialized to documented constants, never go negative, never exceed their maximums, firing decrements ammo by exactly one, and damage events decrement health by the attackers configured damage value'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/state'
-  - id: AC-203
-    text: 'Enemy waves spawn as a continuous trickle with at most one new enemy per spawn tick, no simultaneous clumps, and the active enemy count is capped at 8 concurrent enemies'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/waves'
-  - id: AC-204
-    text: 'The neon beam is hitscan; it intersects the nearest enemy or wall along the view center, applies damage only to the struck enemy, and renders a visible tracer in the frame it was fired'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/combat'
-  - id: AC-205
-    text: 'WASD translates the player in world space, wall collision prevents entering solid map cells, and diagonal movement is normalized so combined keys do not increase speed'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/movement'
-  - id: AC-206
-    text: 'Clicking the canvas requests pointer lock with unadjustedMovement: true; mouse deltas rotate the camera; arrow keys provide look fallback when pointer lock is unavailable; touch drag-to-look works on iOS Safari; on the Worker tier mouse deltas are forwarded to the display worker via postMessage'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/controls'
-  - id: AC-207
-    text: 'Pressing Space triggers a dash that grants exactly 200 ms of invulnerability; the player takes zero damage during that window and cannot immediately re-dash (observable cooldown prevents indefinite chaining)'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/state'
-  - id: AC-208
-    text: 'A default episode ends within 15-25 seconds, and replaying the same seed with the same deterministic input sequence produces identical final health, ammo, kill count, and enemy roster'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/episode'
-  - id: AC-209
-    text: 'The fixed-timestep game loop design supports a minimum cadence of at least 2 generations per minute in AI modes (episode length plus evaluation overhead stays ≤ 30 s per generation under default settings)'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/cadence'
-  - id: AC-210
-    text: 'Only the neon beam weapon exists; no weapon switching logic, state, or UI is added; left-click always fires the beam when ammo is greater than zero'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/combat'
-  - id: AC-215
-    text: 'Red tests for all game domains exist and fail before implementation for the expected module-not-found or contract-missing reasons'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game (expected to fail on 02-red-phase2)'
-  - id: AC-216
-    text: 'All Phase 2 focused Jest suites pass and npm run lint is clean for changed source files'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game; npm run lint'
-  - id: AC-217
-    text: 'Visible-browser smoke test passes for movement, look, fire, dash, and touch look'
-    validation: 'Visible-browser smoke at http://localhost:8080/docs/examples/neatenstein/index.html'
+  - id: AC-401
+    text: 'Red tests for main-agent, MLP, and arms-race harness modules exist and fail before implementation with expected TS2307/module-not-found errors'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness'
+  - id: AC-402
+    text: 'Deterministic substrate coordinate allocator produces reproducible, unit-cube conformant coordinates per (swarmSize, enemyIndex, seed)'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-dna/coordinate-allocator'
+  - id: AC-403
+    text: 'Combat-pressure reproduction-mode policy maps pressure signals to inspectable mode selection with 3-generation hysteresis'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-evolution/reproduction-mode'
+  - id: AC-404
+    text: 'Enemy MLP uses a fixed 8->6->4->2 topology, weight-only mutation, and a runtime guard that rejects structural mutation operators'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/enemy-mlp'
+  - id: AC-405
+    text: 'NGE main-agent lifecycle modules (types, lifecycle, embryo, juvenile, adult, reproduction) are implemented and fully covered'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/neat/nge-main-agent'
+  - id: AC-406
+    text: 'Main-agent embryo builder integrates coordinate allocator and reproduction-mode policy with tier-capped topology'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/embryo'
+  - id: AC-407
+    text: 'Juvenile grow stage applies hysteresis grow-gate and assimilates only internal priors, never enemy-derived structure'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/juvenile'
+  - id: AC-408
+    text: 'Adult equilibrium stage produces a stable candidate for reproduction and snapshot generation'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/adult'
+  - id: AC-409
+    text: 'Internal assimilation writes weak/decaying structural priors back to the main agents own genome'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-assimilation/internal'
+  - id: AC-410
+    text: 'Reproduction stage selects mode via reproductionModeHysteresis and produces offspring via parthenogenesis, polyandric, or sexual paths'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/reproduction'
+  - id: AC-411
+    text: 'ARMS RACE mode runs at interactive rates with main fitness evaluated against a frozen MLP snapshot, not the live enemy population'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/arms-race'
 constitution_check:
   - 'principle-4-small-slices'
+  - 'principle-5-unique-ids'
 traceability:
-  - id: AC-201
-    criterion: 'deterministic tick function advances world state one fixed timestep per input snapshot'
+  - id: AC-401
+    criterion: 'red tests fail before implementation'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/tick.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
-      - 'examples/neatenstein/browser-entry/host/renderer-bridge.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/tick'
-  - id: AC-202
-    criterion: 'player health and ammo invariants and damage/ammo decrement behavior'
+      - 'examples/neatenstein/browser-entry/harness/main-agent.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-snapshot.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-weight-only.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/arms-race.test.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness'
+  - id: AC-402
+    criterion: 'deterministic substrate coordinate allocator'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.test.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/state'
-  - id: AC-203
-    criterion: 'continuous trickle enemy spawn with 8-concurrent cap'
+      - 'src/neat/nge-dna/neat.nge-dna.coordinate-allocator.ts'
+      - 'src/neat/nge-dna/neat.nge-dna.coordinate-allocator.test.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-dna/coordinate-allocator'
+  - id: AC-403
+    criterion: 'combat-pressure reproduction-mode policy'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/waves.ts'
-      - 'examples/neatenstein/browser-entry/host/game/waves.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/waves'
-  - id: AC-204
-    criterion: 'hitscan neon beam intersects nearest enemy/wall and renders tracer'
+      - 'src/neat/nge-evolution/neat.nge-evolution.reproduction-mode.ts'
+      - 'src/neat/nge-evolution/neat.nge-evolution.reproduction-mode.test.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-evolution/reproduction-mode'
+  - id: AC-404
+    criterion: 'weight-only MLP enemy'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/combat.ts'
-      - 'examples/neatenstein/browser-entry/host/game/combat.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/combat'
-  - id: AC-205
-    criterion: 'WASD movement with wall collision and normalized diagonal speed'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-snapshot.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-weight-only.test.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/enemy-mlp'
+  - id: AC-405
+    criterion: 'main-agent lifecycle types and modules'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/movement.ts'
-      - 'examples/neatenstein/browser-entry/host/game/movement.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/collision.ts'
-      - 'examples/neatenstein/browser-entry/host/game/collision.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/movement'
-  - id: AC-206
-    criterion: 'pointer-lock mouse look, arrow/touch fallbacks, and Worker-tier mouse-delta forwarding'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.types.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.lifecycle.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.embryo.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.juvenile.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.adult.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.reproduction.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/neat/nge-main-agent'
+  - id: AC-406
+    criterion: 'embryo builder integration'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/controls.ts'
-      - 'examples/neatenstein/browser-entry/host/game/controls.test.ts'
-      - 'examples/neatenstein/browser-entry/host/input.ts'
-      - 'examples/neatenstein/browser-entry/host/input.test.ts'
-      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/controls'
-  - id: AC-207
-    criterion: '200 ms dash invulnerability with observable cooldown'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.embryo.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/embryo'
+  - id: AC-407
+    criterion: 'juvenile grow gate and internal assimilation'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/controls.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/state'
-  - id: AC-208
-    criterion: 'default episode ends within 15-25 s and is deterministic on replay'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.juvenile.ts'
+      - 'src/neat/nge-assimilation/neat.nge-assimilation.internal.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/juvenile'
+  - id: AC-408
+    criterion: 'adult equilibrium candidate'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/episode.ts'
-      - 'examples/neatenstein/browser-entry/host/game/episode.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/episode'
-  - id: AC-209
-    criterion: 'episode cadence supports ≥2 generations per minute in AI modes'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.adult.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/adult'
+  - id: AC-409
+    criterion: 'weak/decaying internal assimilation priors'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/cadence.ts'
-      - 'examples/neatenstein/browser-entry/host/game/cadence.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/episode.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/cadence'
-  - id: AC-210
-    criterion: 'only the neon beam weapon exists and left-click fires it when ammo > 0'
+      - 'src/neat/nge-assimilation/neat.nge-assimilation.internal.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-assimilation/internal'
+  - id: AC-410
+    criterion: 'reproduction mode selection and offspring production'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/combat.ts'
-      - 'examples/neatenstein/browser-entry/host/game/combat.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/combat'
-  - id: AC-215
-    criterion: 'red tests exist and fail for expected reasons before implementation'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.reproduction.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/reproduction'
+  - id: AC-411
+    criterion: 'ARMS RACE mode integration'
     files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/state.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/controls.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/waves.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/combat.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/movement.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/episode.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/cadence.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/tick.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.test.ts'
-      - 'examples/neatenstein/browser-entry/host/input.test.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game (expected fail)'
-  - id: AC-216
-    criterion: 'all Phase 2 focused suites pass and lint is clean'
-    files_changed:
-      - 'examples/neatenstein/browser-entry/host/game/*.ts'
-      - 'examples/neatenstein/browser-entry/host/input.ts'
-      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
-      - 'examples/neatenstein/browser-entry/host/renderer-bridge.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game; npm run lint'
-  - id: AC-217
-    criterion: 'visible-browser smoke test passes for controls and combat'
-    files_changed:
-      - 'docs/examples/neatenstein/index.html'
-      - 'examples/neatenstein/browser-entry/host/game/*.ts'
-      - 'examples/neatenstein/browser-entry/host/input.ts'
-    validation_command: 'Visible-browser smoke at http://localhost:8080/docs/examples/neatenstein/index.html'
+      - 'examples/neatenstein/browser-entry/harness/arms-race.ts'
+      - 'examples/neatenstein/browser-entry/harness/arms-race.test.ts'
+    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/arms-race'
 slices:
-  - slice_id: '02-red-phase2'
-    title: 'Red tests for game logic contracts'
+  - slice_id: '04-red-phase4'
+    title: 'Write red tests for NGE Main Agent + Enemy MLPs'
     status: '[DONE]'
     goal: 'red-testing'
-    estimate_hours: 2
+    estimate_hours: 3
     files_to_change:
-      - 'examples/neatenstein/browser-entry/host/game/state.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/controls.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/waves.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/combat.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/movement.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/episode.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/cadence.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/tick.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.test.ts'
-      - 'examples/neatenstein/browser-entry/host/input.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/main-agent.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-snapshot.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-weight-only.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/arms-race.test.ts'
     acceptance_criteria:
-      - text: 'Contributes to AC-215: red tests for all game domains exist and fail for expected module-not-found/contract-missing reasons'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=neatenstein/browser-entry/host/game (expected to fail)'
-    validation_evidence:
-      - date: '2026-07-21'
-        agent: 'unit-test-writer'
-        command: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=neatenstein/browser-entry/host/game'
-        result: 'FAILED as expected (9 suites failed to run; TS2307 cannot find module ./state.ts, ./constants.ts, ./controls.ts, ./waves.ts, ./combat.ts, ./movement.ts, ./episode.ts, ./cadence.ts, ./tick.ts)'
-        handoff: 'All game-domain red contracts are authored and owner-local under examples/neatenstein/browser-entry/host/game/. Source modules do not exist; hand off to 02-game-scaffold to create host/game layout and exported contracts, then to implementation slices to satisfy each failing contract.'
-      - date: '2026-07-21'
-        agent: 'unit-test-writer'
-        command: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=neatenstein/browser-entry/host/input.test.ts'
-        result: 'FAILED as expected (1 suite failed to run; TS2307 cannot find module ./input.ts)'
-        handoff: 'Host input router red contract is authored and owner-local at examples/neatenstein/browser-entry/host/input.test.ts. Source module input.ts does not exist; implementation belongs to 02-controls.'
-      - date: '2026-07-21'
-        agent: '03-red-testing'
-        command: "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='neatenstein/browser-entry/host/(game/|input\\.test\\.ts)'"
-        result: 'FAILED as expected (10 suites failed, 0 tests passed; every failure is TS2307 cannot find module for the corresponding source module).'
-        handoff: 'Red phase complete. Hand off to 02-game-scaffold implementation slice to create host/game module layout and exported contracts, then to the domain implementation slices to satisfy each red contract.'
+      - id: AC-401
+        text: 'Red tests exist and fail before implementation'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness'
     parallelizable: false
     dependencies: []
-    next_slice: '02-game-scaffold'
-  - slice_id: '02-game-scaffold'
-    title: 'Create host/game/ module layout and deterministic reset'
+    next_slice: '04-coordinate-allocator'
+  - slice_id: '04-coordinate-allocator'
+    title: 'Implement deterministic substrate coordinate allocator'
+    status: '[DONE]'
+    goal: 'implementing'
+    estimate_hours: 3
+    files_to_change:
+      - 'src/neat/nge-dna/neat.nge-dna.coordinate-allocator.ts'
+    acceptance_criteria:
+      - id: AC-402
+        text: 'Allocator tests pass with repeated-build hash reproducibility and unit-cube conformance'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-dna/coordinate-allocator'
+    parallelizable: true
+    dependencies:
+      - '04-red-phase4'
+    next_slice: '04-reproduction-mode-policy'
+  - slice_id: '04-reproduction-mode-policy'
+    title: 'Implement combat-pressure reproduction-mode policy'
     status: '[DONE]'
     goal: 'implementing'
     estimate_hours: 2
     files_to_change:
-      - 'examples/neatenstein/browser-entry/host/game/types.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.test.ts'
-      - 'examples/neatenstein/browser-entry/README.md'
+      - 'src/neat/nge-evolution/neat.nge-evolution.reproduction-mode.ts'
     acceptance_criteria:
-      - text: 'Module layout compiles; README references the host/game/ module'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/constants'
-      - text: 'Contributes to AC-202 and AC-208: deterministic reset/init returns identical canonical state for the same seed'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/state'
-    validation_evidence:
-      - date: '2026-07-21'
-        agent: '04-implementing'
-        command: 'npx eslint examples/neatenstein/browser-entry/host/game/types.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/host/game/state.ts'
-        result: 'PASS — 0 errors, 0 warnings in slice source files (pre-existing warnings are in red-phase test files)'
-      - date: '2026-07-21'
-        agent: '04-implementing'
-        command: 'npx prettier --check examples/neatenstein/browser-entry/host/game/types.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/host/game/state.ts examples/neatenstein/browser-entry/README.md'
-        result: 'PASS — all changed files match repo prettier style'
-      - date: '2026-07-21'
-        agent: '04-implementing'
-        command: 'npx tsc --noEmit -p tsconfig.test.json'
-        result: 'Type errors are expected from other red-phase test modules (cadence.ts, combat.ts, controls.ts, episode.ts, movement.ts, tick.ts, waves.ts) that are out of slice scope; no type errors in the three new source files (state.ts, constants.ts, types.ts)'
-      - date: '2026-07-21'
-        agent: '04-implementing'
-        command: 'git status --porcelain'
-        result: 'Working tree shows the three new source files and README as untracked; all other changes are from prior work'
-      - date: '2026-07-21'
-        agent: '04-implementing'
-        command: 'npx tsc --noEmit -p tsconfig.json'
-        result: 'PASS — root project type-checks cleanly'
-      - date: '2026-07-21'
-        agent: '04-implementing'
-        command: 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
-        result: 'PASS — all WIP plan slices within 4-hour limit'
-      - date: '2026-07-21'
-        agent: '04-implementing'
-        command: 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-        result: 'PASS — active step packets conform to required format'
-      - date: '2026-07-21'
-        agent: '04-implementing'
-        command: 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-        result: 'PASS — plan is correctly registered in README and Roadmap'
+      - id: AC-403
+        text: 'Mode policy tests pass with 3-gen hysteresis and inspectable mode selection'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-evolution/reproduction-mode'
+    parallelizable: true
+    dependencies:
+      - '04-red-phase4'
+    next_slice: '04-enemy-mlp-weight-only'
+  - slice_id: '04-enemy-mlp-weight-only'
+    title: 'Implement weight-only MLP enemy and main-agent coupling'
+    status: '[DONE]'
+    goal: 'implementing'
+    estimate_hours: 4
+    files_to_change:
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.ts'
+      - 'examples/neatenstein/browser-entry/harness/main-agent.ts'
+      - 'examples/neatenstein/browser-entry/harness/arms-race.ts'
+    acceptance_criteria:
+      - id: AC-404
+        text: 'MLP enemy weight-only tests pass with fixed topology and structural-mutation guard'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/enemy-mlp'
+    parallelizable: true
+    dependencies:
+      - '04-red-phase4'
+    next_slice: '04-main-lifecycle-types'
+  - slice_id: '04-main-lifecycle-types'
+    title: 'Implement NGE main agent lifecycle types and modules'
+    status: '[DONE]'
+    goal: 'implementing'
+    estimate_hours: 4
+    files_to_change:
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.types.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.lifecycle.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.embryo.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.juvenile.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.adult.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.reproduction.ts'
+    acceptance_criteria:
+      - id: AC-405
+        text: 'All lifecycle module tests pass with 100% coverage on touched src/ files'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/neat/nge-main-agent'
+    parallelizable: true
+    dependencies:
+      - '04-coordinate-allocator'
+      - '04-reproduction-mode-policy'
+      - '04-enemy-mlp-weight-only'
+    next_slice: '04-main-embryo-build'
+  - slice_id: '04-main-embryo-build'
+    title: 'Integrate embryo builder with allocator and mode policy'
+    status: '[PLANNED]'
+    goal: 'implementing'
+    estimate_hours: 3
+    files_to_change:
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.embryo.ts'
+    acceptance_criteria:
+      - id: AC-406
+        text: 'Embryo builder tests pass with tier-capped topology integration'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/embryo'
     parallelizable: false
     dependencies:
-      - '02-red-phase2'
-    next_slice: '02-hero-state'
-  - slice_id: '02-hero-state'
-    title: 'Player health, ammo, and dash invulnerability'
-    status: '[WIP]'
+      - '04-main-lifecycle-types'
+    next_slice: '04-main-juvenile'
+  - slice_id: '04-main-juvenile'
+    title: 'Implement juvenile grow stage and internal assimilation'
+    status: '[PLANNED]'
+    goal: 'implementing'
+    estimate_hours: 3
+    files_to_change:
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.juvenile.ts'
+      - 'src/neat/nge-assimilation/neat.nge-assimilation.internal.ts'
+    acceptance_criteria:
+      - id: AC-407
+        text: 'Juvenile tests pass with grow-gate and internal-prior assimilation'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/juvenile'
+    parallelizable: false
+    dependencies:
+      - '04-main-embryo-build'
+    next_slice: '04-main-adult-equilibrium'
+  - slice_id: '04-main-adult-equilibrium'
+    title: 'Implement adult equilibrium and snapshot candidate'
+    status: '[PLANNED]'
+    goal: 'implementing'
+    estimate_hours: 3
+    files_to_change:
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.adult.ts'
+    acceptance_criteria:
+      - id: AC-408
+        text: 'Adult equilibrium tests pass'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/adult'
+    parallelizable: false
+    dependencies:
+      - '04-main-juvenile'
+    next_slice: '04-internal-assimilation'
+  - slice_id: '04-internal-assimilation'
+    title: 'Harden internal assimilation priors'
+    status: '[PLANNED]'
     goal: 'implementing'
     estimate_hours: 2
     files_to_change:
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
+      - 'src/neat/nge-assimilation/neat.nge-assimilation.internal.ts'
     acceptance_criteria:
-      - text: 'Contributes to AC-202: health and ammo invariants and damage/ammo decrement behavior are covered by focused tests'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/state'
-      - text: 'Contributes to AC-207: dash grants exactly 200 ms i-frames and has an observable cooldown'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/state'
+      - id: AC-409
+        text: 'Internal assimilation tests pass with weak/decaying priors'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-assimilation/internal'
     parallelizable: false
     dependencies:
-      - '02-game-scaffold'
-    next_slice: '02-enemy-waves'
-  - slice_id: '02-enemy-waves'
-    title: 'Continuous-trickle enemy spawn with 8-concurrent cap'
+      - '04-main-adult-equilibrium'
+    next_slice: '04-main-reproduction'
+  - slice_id: '04-main-reproduction'
+    title: 'Implement reproduction stage and mode selection'
     status: '[PLANNED]'
     goal: 'implementing'
     estimate_hours: 3
     files_to_change:
-      - 'examples/neatenstein/browser-entry/host/game/waves.ts'
-      - 'examples/neatenstein/browser-entry/host/game/waves.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
+      - 'src/neat/nge-main-agent/neat.nge-main-agent.reproduction.ts'
     acceptance_criteria:
-      - text: 'Contributes to AC-203: enemy spawn is a continuous trickle, one per tick, capped at 8 concurrent enemies'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/waves'
+      - id: AC-410
+        text: 'Reproduction tests pass with mode hysteresis and all three mode paths'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/reproduction'
     parallelizable: false
     dependencies:
-      - '02-hero-state'
-    next_slice: '02-controls'
-  - slice_id: '02-controls'
-    title: 'WASD, mouse look, pointer lock, fire, and worker-tier input forwarding'
-    status: '[PLANNED]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'examples/neatenstein/browser-entry/host/game/controls.ts'
-      - 'examples/neatenstein/browser-entry/host/game/controls.test.ts'
-      - 'examples/neatenstein/browser-entry/host/input.ts'
-      - 'examples/neatenstein/browser-entry/host/input.test.ts'
-      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.ts'
-      - 'examples/neatenstein/browser-entry/constants.ts'
-    acceptance_criteria:
-      - text: 'Contributes to AC-206: pointer lock with unadjustedMovement: true, mouse-delta look, arrow-key fallback, touch drag-to-look, and Worker-tier mouse-delta forwarding'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/controls'
-    parallelizable: false
-    dependencies:
-      - '02-enemy-waves'
-    next_slice: '02-projectiles'
-  - slice_id: '02-projectiles'
-    title: 'Hitscan neon beam weapon and tracers'
-    status: '[PLANNED]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'examples/neatenstein/browser-entry/host/game/combat.ts'
-      - 'examples/neatenstein/browser-entry/host/game/combat.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.ts'
-      - 'examples/neatenstein/browser-entry/renderer/raycast.ts'
-    acceptance_criteria:
-      - text: 'Contributes to AC-204: hitscan beam intersects nearest enemy or wall and renders a visible tracer'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/combat'
-      - text: 'Contributes to AC-210: only the neon beam exists; no weapon-switching logic or state'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/combat'
-    parallelizable: false
-    dependencies:
-      - '02-controls'
-    next_slice: '02-collision'
-  - slice_id: '02-collision'
-    title: 'Player/enemy movement, wall collision, and contact damage'
-    status: '[PLANNED]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'examples/neatenstein/browser-entry/host/game/movement.ts'
-      - 'examples/neatenstein/browser-entry/host/game/movement.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/collision.ts'
-      - 'examples/neatenstein/browser-entry/host/game/collision.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.ts'
-      - 'examples/neatenstein/browser-entry/renderer/map.ts'
-    acceptance_criteria:
-      - text: 'Contributes to AC-205: WASD movement with wall-slide and normalized diagonal speed'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/movement'
-      - text: 'Contributes to AC-202 and AC-207: enemy/player contact damage respects i-frames and never drives health negative'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/collision'
-    parallelizable: false
-    dependencies:
-      - '02-projectiles'
-    next_slice: '02-episode-loop'
-  - slice_id: '02-episode-loop'
-    title: 'Deterministic episode lifecycle and generation cadence'
-    status: '[PLANNED]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'examples/neatenstein/browser-entry/host/game/episode.ts'
-      - 'examples/neatenstein/browser-entry/host/game/episode.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/cadence.ts'
-      - 'examples/neatenstein/browser-entry/host/game/cadence.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.ts'
-    acceptance_criteria:
-      - text: 'Contributes to AC-208: default episode ends within 15-25 seconds and replays deterministically from the same seed'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/episode'
-      - text: 'Contributes to AC-209: episode loop plus stub evaluator overhead supports ≥2 generations per minute'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/cadence'
-    parallelizable: false
-    dependencies:
-      - '02-collision'
-    next_slice: '02-worker-game-sync'
-  - slice_id: '02-worker-game-sync'
-    title: 'Wire game tick into the display worker and renderer bridge'
+      - '04-internal-assimilation'
+    next_slice: '04-arms-race'
+  - slice_id: '04-arms-race'
+    title: 'Implement ARMS RACE mode harness integration'
     status: '[PLANNED]'
     goal: 'implementing'
     estimate_hours: 4
     files_to_change:
-      - 'examples/neatenstein/browser-entry/host/game/tick.ts'
-      - 'examples/neatenstein/browser-entry/host/game/tick.test.ts'
-      - 'examples/neatenstein/browser-entry/host/game/state.ts'
-      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
-      - 'examples/neatenstein/browser-entry/host/renderer-bridge.ts'
-      - 'examples/neatenstein/browser-entry/host/game/constants.ts'
+      - 'examples/neatenstein/browser-entry/harness/arms-race.ts'
     acceptance_criteria:
-      - text: 'Contributes to AC-201: deterministic tick advances world state one fixed timestep per input snapshot'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game/tick'
-      - text: 'Contributes to AC-206 and AC-201: display worker consumes input snapshots and advances sim ticks; renderer bridge forwards them from the host'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/renderer-bridge|neatenstein/browser-entry/worker/display.worker'
+      - id: AC-411
+        text: 'ARMS RACE integration tests pass'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/arms-race'
     parallelizable: false
     dependencies:
-      - '02-episode-loop'
-    next_slice: '02-green-phase2'
-  - slice_id: '02-green-phase2'
-    title: 'Phase 2 green validation, lint, and visible-browser smoke'
+      - '04-main-reproduction'
+    next_slice: '04-green-phase4'
+  - slice_id: '04-green-phase4'
+    title: 'Green validation and coverage guard for Phase 4'
     status: '[PLANNED]'
     goal: 'green-testing'
-    estimate_hours: 2
+    estimate_hours: 3
     files_to_change:
       - 'coverage/lcov.info'
-      - 'examples/neatenstein/browser-entry/host/game/*.ts'
-      - 'examples/neatenstein/browser-entry/host/input.ts'
-      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
-      - 'examples/neatenstein/browser-entry/host/renderer-bridge.ts'
     acceptance_criteria:
-      - text: 'Contributes to AC-216: all focused game-logic suites pass and npm run lint is clean for changed source files'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game; npm run lint'
-      - text: 'Contributes to AC-217: visible-browser smoke passes for movement, look, fire, dash, and touch look'
-        validation: 'Visible-browser smoke at http://localhost:8080/docs/examples/neatenstein/index.html'
+      - id: AC-405
+        text: 'All Phase 4 focused suites remain green'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=neatenstein'
+      - id: AC-405b
+        text: '100% coverage on touched src/ files'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-main-agent|src/neat/nge-dna|src/neat/nge-evolution|src/neat/nge-assimilation'
     parallelizable: false
     dependencies:
-      - '02-worker-game-sync'
+      - '04-arms-race'
 ```
-
-### Phase 3 — Asymmetric Co-evolution Harness (benchmark-owned, core-reviewed) [PLANNED]
-
-**Goal:** Minimal single-main + enemy-population co-evolution harness.
-
-[PLANNED] Step 01 — Asymmetric Co-evolution Harness red tests (deferred until phase becomes active).
-
-- Single main agent lifecycle runner with combat telemetry adapters.
-- Enemy population abstraction: MLP backend (fixed 8→6→4→2, weight-only, throttled every 5th gen, 32 variants) and WeightSharedCohort backend (singleton DNA, shared weights, coordinate injection).
-- **Rolling opponent snapshot (asymmetric):**
-  - Main evaluates against frozen enemy snapshot (hall-of-fame + recent sample).
-  - Enemy evaluates against frozen main snapshot (main representative = current best variant from last generation).
-  - Refresh every 5 gens (MLP), every 3 gens (SWARM — explicit).
-- **Deterministic seed-pack fairness contract:** all variants (2048 main / 32 MLP / 128 human) evaluated against a fixed frozen seed pack per generation — same seeds for all variants in a generation.
-- **Generation barrier:** main completes full variant batch + selection BEFORE enemy update gate fires.
-- **Authoritative world owner:** one designated display worker owns the authoritative display world; batch-evaluation workers are stateless episode workers (reuse racing's worker-authoritative pattern).
-- **GPU-tier determinism:** variant selection uses index-stable argmax with deterministic tie-break by variant id (lowest id wins ties).
-- **Combat fitness composite:** `survivalTicks + damageDealt + kills - damageTaken - aimMissRate + performance-gated complexityBonus - parsimonyDensityPenalty` (reuse racing's `RacingQualitySignal` pattern, same 800–3000 syn/neuron parsimony band).
-
-**Acceptance:**
-
-- `genBarrier(seed=K)` reproduces identical `M_N` and enemy state on GPU tier (index-stable argmax + tie-break).
-- Snapshot refresh cadence enforced (5 gens MLP, 3 gens SWARM).
-- MLP throttle fires only on `N % 5 == 0`.
-- Seed-pack fairness: all variants in a generation see identical seeds.
-
-### Phase 4 — NGE Main Agent + Enemy MLPs (core + benchmark-owned) [PLANNED]
-
-**Goal:** Full NGE main agent lifecycle + weight-only MLP co-evolution.
-
-[PLANNED] Step 01 — NGE Main Agent + Enemy MLPs red tests (deferred until phase becomes active).
-
-- Main agent: full NGE lifecycle (Embryo→Juvenile→Adult→Reproducing), tier-capped topology up to tier limit.
-- **All motifs are EXISTING in `NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE`** — no new motifs, no schema version bump. Motifs used: `AttentionHead` (threat prioritization), `GatedRecurrentCell` (aim/strafe state), `EpisodicSlot` (spawn-pattern memory).
-- MLP enemies: fixed topology, weight-only mutation, no structural assimilation.
-- **Assimilation is INTERNAL to the main agent lifecycle** — writes back structural priors derived from the main agent's own equilibrium candidate. The MLP enemy is the SELECTION PRESSURE, not an assimilation source. No weights or structure flow from MLP to main via assimilation. Priors are weak/decaying (defends against catastrophic forgetting).
-- **Reproduction mode policy:** an external overlay that SELECTS a mode then writes the canonical `NgeReproductionPolicy.mode` field (only when `modeIsEvolvable: true`). Named `reproductionModeHysteresis` (distinct from `NgeHysteresisState` juvenile grow gate). Window: 3 generations, majority-vote. Mode selection: parthenogenesis (dominating) → polyandric (struggling) → sexual (stalemate).
-- **New core-side primitives (core-owned):**
-  - (a) Deterministic per-enemy substrate coordinate allocator for `WeightSharedCohort`: emits `NeatGenomeSubstrateCoordinate` within `NgeSubstrateConfig` (dimensions: 3, normalization: 'unit-cube'), produces stable `zoneId`s via existing zone-partition. Reproducible from `(swarmSize, enemyIndex, seed)` alone, no runtime allocation order dependency.
-  - (b) Combat-pressure → reproduction-mode policy (inspectable, tested, in `src/neat/nge-evolution/`).
-
-**Acceptance:**
-
-- ARMS RACE mode runs at interactive rates.
-- Main fitness computed against MLP snapshot, not live MLP.
-- Assimilation writes internal priors, not enemy-derived weights/structure.
-- Reproduction mode switches with `reproductionModeHysteresis` (3-gen window).
-- Coordinate allocator: repeated-build hash test (same swarmSize + seed → identical coordinate set, stable ordering, unit-cube conformant).
-- 100% coverage on touched `src/` files via `coverage-guard`.
 
 ### Phase 5 — SWARM Mode (core + benchmark-owned) [PLANNED]
 

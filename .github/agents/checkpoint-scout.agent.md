@@ -18,6 +18,10 @@ agents: []
 skills: ['checkpointing-persistence']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the iew tool.
+
 ## Purpose
 
 Use when starting or scoping save and resume work, expanding Population_Save_Resume_and_Checkpointing.md Step 0 or Step 1, mapping strict versus best-effort restore behavior, RNG or counter persistence, full versus light checkpoints, or deciding whether a persistence issue belongs to checkpointing-persistence. Keywords: checkpoint, save, resume, restore, step 0, state inventory, strict restore, schema version, RNG state, full checkpoint, light checkpoint, migration.

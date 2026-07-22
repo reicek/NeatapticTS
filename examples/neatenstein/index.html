@@ -78,9 +78,10 @@
         if (statusElement) {
           statusElement.textContent = 'Loading Neatenstein...';
         }
-        const bundleSrc = /\/examples\//.test(window.location.pathname)
-          ? '../../docs/assets/neatenstein.bundle.js'
-          : '../../assets/neatenstein.bundle.js';
+        const path = window.location.pathname;
+        const bundleSrc = /\/docs\/examples\//.test(path)
+          ? '../../assets/neatenstein.bundle.js'
+          : '../../docs/assets/neatenstein.bundle.js';
         const scriptElement = document.createElement('script');
 
         scriptElement.src = bundleSrc;
@@ -105,36 +106,6 @@
           }
         };
         document.body.appendChild(scriptElement);
-      })();
-    </script>
-    <script type="module">
-      (function loadNeatensteinWorker() {
-        const statusElement = document.getElementById('status');
-        const workerSrc = /\/examples\//.test(window.location.pathname)
-          ? '../../docs/assets/neatenstein.worker.esm.js'
-          : '../../assets/neatenstein.worker.esm.js';
-        try {
-          const worker = new Worker(workerSrc, { type: 'module' });
-          worker.onerror = function (event) {
-            if (statusElement) {
-              statusElement.textContent =
-                'Failed to load neatenstein.worker.esm.js from ' + workerSrc;
-            }
-            // eslint-disable-next-line no-console
-            console.error('Neatenstein worker error:', event);
-          };
-        } catch (error) {
-          if (statusElement) {
-            statusElement.textContent =
-              'Failed to instantiate Neatenstein worker from ' + workerSrc;
-          }
-          // eslint-disable-next-line no-console
-          console.error(
-            'Failed to instantiate Neatenstein worker from',
-            workerSrc,
-            error,
-          );
-        }
       })();
     </script>
   </body>

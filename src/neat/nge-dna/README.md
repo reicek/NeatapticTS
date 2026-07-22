@@ -1027,3 +1027,51 @@ Error thrown when one DNA payload is missing required identity fields or uses an
 ### NGE_DNA_SubstrateError
 
 Error thrown when one substrate coordinate or zone-partition input is invalid.
+
+## neat/nge-dna/neat.nge-dna.coordinate-allocator.ts
+
+### allocateEnemySubstrateCoordinates
+
+```ts
+allocateEnemySubstrateCoordinates(
+  input: EnemyCoordinateAllocatorInput,
+): EnemyCoordinateAllocatorResult
+```
+
+Allocate one deterministic unit-cube substrate coordinate for a single enemy.
+
+The returned coordinate is a function of `(swarmSize, enemyIndex, seed)` only,
+making the placement reproducible across processes and independent of the
+order in which enemies are materialized. The zone id is derived from the
+existing zone-partition logic so that coordinate and zone remain consistent.
+
+Parameters:
+- `input` - Allocation request including swarm size, enemy index, seed, and zone partition.
+
+Returns: Deterministic coordinate and matching zone id.
+
+Example:
+
+```ts
+const result = allocateEnemySubstrateCoordinates({
+  swarmSize: 8,
+  enemyIndex: 3,
+  seed: 42,
+  zonePartition: { x: { count: 4 }, y: { count: 4 }, z: { count: 4 } },
+});
+console.log(result.coordinate, result.zoneId);
+```
+
+### EnemyCoordinateAllocatorInput
+
+Input contract for the deterministic per-enemy substrate coordinate allocator.
+
+The allocator produces a stable unit-cube coordinate from the tuple
+`(swarmSize, enemyIndex, seed)` so that repeated builds with identical inputs
+always resolve to the same coordinate and zone assignment. No runtime allocation
+order is consulted, which keeps enemy placement reproducible across workers and
+across sessions.
+
+### EnemyCoordinateAllocatorResult
+
+Result of allocating one deterministic enemy substrate coordinate.

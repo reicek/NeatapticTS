@@ -45,6 +45,10 @@ handoffs:
     model: 'glm-5.2:cloud'
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the iew tool.
+
 ## Purpose
 
 Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps. Session logs and learning events follow append-only convergence so every done-state stays reconstructible.

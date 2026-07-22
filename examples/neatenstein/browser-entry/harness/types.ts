@@ -1,0 +1,203 @@
+/**
+ * Shared type definitions for the Neatenstein asymmetric co-evolution harness.
+ *
+ * The harness keeps two populations in tension: a single main NEAT agent that
+ * must survive an episode, and a small enemy population that refreshes on a
+ * deterministic cadence. All harness state is plain data so it can be cloned,
+ * snapshotted, and replayed from a seed.
+ *
+ * @module
+ */
+
+import type { Vector2 } from '../host/game/types';
+
+/**
+ * Genome description used by the main NEAT variant.
+ *
+ * This is intentionally a shallow, clone-safe representation of the phenotype
+ * graph; the harness treats it as an opaque snapshot while the main runner
+ * materializes it through the library construction pipeline.
+ */
+export interface Genome {
+  /** Node genes or layer descriptors that define the network topology. */
+  nodes: unknown[];
+  /** Connection genes or weight matrices that define the network wiring. */
+  connections: unknown[];
+}
+
+/**
+ * One evaluated individual in either population.
+ *
+ * The `variant` payload is backend-specific (a {@link MainVariant} for the
+ * main agent, or an {@link EnemyVariant} for an enemy).
+ */
+export interface Individual<TVariant> {
+  /** Stable variant index within the population. */
+  id: number;
+  /** Backend-specific genotype/phenotype payload. */
+  variant: TVariant;
+  /** Optional cached fitness used by deterministic selection. */
+  fitness?: FitnessScore;
+}
+
+/**
+ * Numeric fitness value; higher is better.
+ */
+export type FitnessScore = number;
+
+/**
+ * Quality signal emitted by one main-agent episode.
+ *
+ * These raw telemetry fields are combined by the fitness composite into a
+ * scalar fitness score. Positive fields are rewards; negative penalties are
+ * applied by subtracting the weighted penalty fields.
+ */
+export interface CombatQualitySignal {
+  /** Ticks (frames) the main agent survived in the episode. */
+  survivalTicks: number;
+  /** Total damage dealt to enemies. */
+  damageDealt: number;
+  /** Confirmed enemy kills. */
+  kills: number;
+  /** Damage taken from enemies (penalty magnitude). */
+  damageTaken: number;
+  /** Fraction of shots that missed (0 = perfect aim, 1 = never hit). */
+  aimMissRate: number;
+  /** Bonus for network complexity that improved performance. */
+  complexityBonus: number;
+  /** Penalty for excessive wiring density (parsimony pressure). */
+  parsimonyDensityPenalty: number;
+}
+
+/**
+ * Deterministic seed pack for a single generation.
+ *
+ * Every variant evaluated in a generation sees the same frozen seed stream so
+ * that fitness differences reflect the variant, not environmental variance.
+ */
+export interface SeedPack {
+  /** Generation this seed pack belongs to. */
+  generation: number;
+  /** Ordered seeds used by the episode RNG for this generation. */
+  seeds: number[];
+}
+
+/**
+ * One main-agent variant under evolution.
+ */
+export interface MainVariant {
+  /** Stable variant id within the main population. */
+  id: number;
+  /** Genome snapshot that can be materialized into a Network. */
+  genome: Genome;
+}
+
+/**
+ * One enemy variant under evolution.
+ *
+ * Enemy populations are currently weight-only: the topology is fixed and the
+ * harness evolves a small vector of neural weights.
+ */
+export interface EnemyVariant {
+  /** Stable variant id within the enemy population. */
+  id: number;
+  /** Evolved neural weights for the fixed enemy topology. */
+  weights: Float32Array;
+}
+
+/**
+ * MLP enemy snapshot as stored in the rolling opponent pool.
+ */
+export interface MlpSnapshot {
+  kind: 'mlp';
+  /** Evolved weights for the fixed MLP topology. */
+  weights: Float32Array;
+}
+
+/**
+ * SWARM enemy snapshot as stored in the rolling opponent pool.
+ */
+export interface SwarmSnapshot {
+  kind: 'swarm';
+  /** Compact DNA string that deterministically regenerates the swarm. */
+  dna: string;
+  /** Stigmergic coordinates that make up the swarm body. */
+  coordinates: Vector2[];
+}
+
+/**
+ * Union of all enemy snapshots that can be stored in a barrier.
+ */
+export type Snapshot = MlpSnapshot | SwarmSnapshot;
+
+/**
+ * Abstract enemy population backend.
+ *
+ * Implementations (MLP, SWARM) expose the same surface so the harness can swap
+ * backends without changing selection, barrier, or main-runner logic.
+ */
+export interface EnemyPopulation {
+  /** Backend discriminator used by snapshot and refresh logic. */
+  kind: 'mlp' | 'swarm';
+  /** Number of variants maintained by this population. */
+  size: number;
+  /**
+   * Return the variant at the given index.
+   *
+   * The exact shape is backend-specific; callers use this to seed an episode
+   * without leaking backend details into the runner.
+   */
+  sample: (index: number) => unknown;
+  /** Return a serializable snapshot of the current population champion. */
+  snapshot: () => Snapshot;
+}
+
+/**
+ * Frozen evaluation barrier.
+ *
+ * A barrier pairs one main-agent variant with one frozen enemy snapshot and a
+ * deterministic seed so the same episode can be replayed exactly for fitness
+ * evaluation.
+ */
+export interface BarrierState {
+  /** Generation the barrier belongs to. */
+  generation: number;
+  /** Main-agent variant being evaluated. */
+  mainSnapshot: MainVariant;
+  /** Frozen enemy snapshot the main agent is evaluated against. */
+  enemySnapshot: Snapshot;
+  /** Deterministic seed used to run the episode. */
+  seed: number;
+}
+
+/**
+ * Configuration for one co-evolution population.
+ */
+export interface PopulationConfig {
+  /** Number of variants to maintain. */
+  size: number;
+  /** Backend discriminator ('mlp' or 'swarm'). */
+  kind: 'mlp' | 'swarm';
+}
+
+/**
+ * Top-level harness configuration.
+ */
+export interface HarnessConfig {
+  /** Maximum number of generations to run. */
+  maxGenerations: number;
+  /** Configuration for the enemy population. */
+  enemy: PopulationConfig;
+}
+
+/**
+ * Result emitted at the end of one generation.
+ */
+export interface GenerationResult {
+  /** Generation number. */
+  generation: number;
+  /** Selected main-agent champion for this generation. */
+  champion: MainVariant;
+  /** Aggregated quality signal for the champion's episode. */
+  quality: CombatQualitySignal;
+}

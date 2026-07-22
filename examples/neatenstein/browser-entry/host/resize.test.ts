@@ -12,6 +12,10 @@ function createRenderState(): NeatensteinRenderState {
     canvasWidth: 640,
     canvasHeight: 360,
     simTick: 1,
+    cameraX: 12.5,
+    cameraY: 12.5,
+    cameraYaw: 0.25,
+    mapSeed: 42,
   };
 }
 

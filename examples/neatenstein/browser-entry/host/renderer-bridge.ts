@@ -16,20 +16,19 @@
  * @module
  */
 
-import { NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION } from '../constants';
+import {
+  NEATENSTEIN_INPUT_MESSAGE_TYPE,
+  NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
+  NEATENSTEIN_WORKER_BUNDLE_FILENAME,
+  type NeatensteinTier,
+} from '../constants';
+import type { InputSnapshot } from './input';
 import type { NeatensteinRenderState } from '../renderer/frame';
 
 /**
- * Supported renderer tiers.
- *
- * - `worker`  â†’ computation and rasterization happen on a dedicated worker
- *   using an {@link OffscreenCanvas}.
- * - `cpu`     â†’ computation happens on a worker; the host blits the packed
- *   frame to a main-thread canvas.
- * - `gpu`     â†’ same split as `cpu`, reserved for future GPU-backed
- *   computation.
+ * Default worker bundle URL used when the caller does not supply one.
  */
-export type NeatensteinTier = 'worker' | 'cpu' | 'gpu';
+const DEFAULT_WORKER_URL = `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`;
 
 /**
  * Configuration needed to create a renderer bridge.
@@ -38,9 +37,11 @@ export interface NeatensteinRendererBridgeOptions {
   /** The visible canvas element on the host page. */
   canvas: HTMLCanvasElement;
   /** Absolute or relative URL to the ESM worker bundle. */
-  workerUrl: string;
+  workerUrl?: string;
   /** Selected renderer tier. */
   tier: NeatensteinTier;
+  /** Deterministic seed used to build the wall grid on the worker. */
+  mapSeed: number;
 }
 
 /**
@@ -53,6 +54,8 @@ export interface NeatensteinRendererBridge {
   requestId: number;
   /** Forward a simulation state snapshot to the worker. */
   postSimState(state: NeatensteinRenderState): void;
+  /** Forward an input snapshot to the worker so it can advance the sim tick. */
+  forwardWorkerInput(snapshot: InputSnapshot): void;
   /** Terminate the worker and release the bridge. */
   destroy(): void;
 }
@@ -71,16 +74,25 @@ export interface NeatensteinRendererBridge {
  * ```ts
  * const bridge = createNeatensteinRendererBridge({
  *   canvas: document.getElementById('game') as HTMLCanvasElement,
- *   workerUrl: '/assets/neatenstein.worker.esm.js',
+ *   workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
  *   tier: 'worker',
+ *   mapSeed: 1,
  * });
- * bridge.postSimState({ canvasWidth: 640, canvasHeight: 360, simTick: 1 });
+ * bridge.postSimState({
+ *   canvasWidth: 640,
+ *   canvasHeight: 360,
+ *   simTick: 1,
+ *   cameraX: 12.5,
+ *   cameraY: 12.5,
+ *   cameraYaw: 0,
+ *   mapSeed: 1,
+ * });
  * ```
  */
 export function createNeatensteinRendererBridge(
   options: NeatensteinRendererBridgeOptions,
 ): NeatensteinRendererBridge {
-  const { canvas, workerUrl, tier } = options;
+  const { canvas, workerUrl = DEFAULT_WORKER_URL, tier, mapSeed } = options;
   const worker = new Worker(workerUrl, { type: 'module' });
 
   let offscreen: OffscreenCanvas | undefined;
@@ -96,6 +108,7 @@ export function createNeatensteinRendererBridge(
       type: 'init',
       tier,
       version: NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
+      mapSeed,
       ...(offscreen ? { canvas: offscreen } : {}),
     },
     transferList,
@@ -106,6 +119,12 @@ export function createNeatensteinRendererBridge(
     requestId: 0,
     postSimState(state: NeatensteinRenderState) {
       worker.postMessage({ type: 'simState', state });
+    },
+    forwardWorkerInput(snapshot: InputSnapshot) {
+      worker.postMessage({
+        type: NEATENSTEIN_INPUT_MESSAGE_TYPE,
+        input: snapshot,
+      });
     },
     destroy() {
       worker.terminate();

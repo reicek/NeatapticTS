@@ -7,7 +7,7 @@
  * sound names, and the fixed map size.
  *
  * Gameplay balance constants (player health/ammo, dash timing, enemy cap,
- * episode bounds) live in {@link ./host/game/constants} because the host-side
+ * episode bounds) live in {@link ./host/game/constants.ts} because the host-side
  * simulation owns those numeric contracts.
  */
 
@@ -54,6 +54,43 @@ export const NEATENSTEIN_AUDIO_SOUND_NAMES = [
 
 /** Fixed square map size in cells (24 x 24). */
 export const NEATENSTEIN_MAP_SIZE = 24;
+
+/**
+ * Published worker bundle filename, resolved relative to the host script that
+ * loads the browser entrypoint.
+ */
+export const NEATENSTEIN_WORKER_BUNDLE_FILENAME =
+  'neatenstein.worker.esm.js' as const;
+
+/**
+ * Fallback canvas width in CSS pixels when neither the client dimensions nor
+ * the computed style provide a usable value.
+ */
+export const NEATENSTEIN_FALLBACK_CANVAS_WIDTH = 640;
+
+/**
+ * Fallback canvas height in CSS pixels when neither the client dimensions nor
+ * the computed style provide a usable value.
+ */
+export const NEATENSTEIN_FALLBACK_CANVAS_HEIGHT = 360;
+
+/**
+ * Fallback status text RGB used when the CPU tier draws the "OffscreenCanvas
+ * not available" message on the visible canvas.
+ */
+export const NEATENSTEIN_FALLBACK_STATUS_TEXT_RGB = {
+  r: 159,
+  g: 220,
+  b: 255,
+} as const;
+
+/**
+ * Host-to-worker message type tag for input snapshots.
+ *
+ * The display worker consumes messages of this type and applies the included
+ * look deltas to its local render camera for the worker tier.
+ */
+export const NEATENSTEIN_INPUT_MESSAGE_TYPE = 'input' as const;
 
 /**
  * Supported renderer tiers for the Neatenstein demo.

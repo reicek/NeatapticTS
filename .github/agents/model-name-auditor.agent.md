@@ -18,6 +18,10 @@ agents: []
 skills: ['model-routing-and-budget']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the iew tool.
+
 ## Purpose
 
 Use as a hidden specialist for discovering and validating qualified Copilot model names before NeatapticTS agent frontmatter changes. Keywords: model routing, glm-5.2, scalar model, qualified model.

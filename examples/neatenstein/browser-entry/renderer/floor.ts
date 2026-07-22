@@ -320,13 +320,13 @@ export interface NeatensteinFloorRenderContext {
   /** Optional backing canvas dimensions. */
   canvas?: { width: number; height: number };
   /** Optional stroke color. */
-  strokeStyle?: string;
+  strokeStyle?: string | CanvasGradient | CanvasPattern;
   /** Optional line width in pixels. */
   lineWidth?: number;
   /** Optional glow blur radius in pixels. */
   shadowBlur?: number;
   /** Optional glow color. */
-  shadowColor?: string;
+  shadowColor?: string | CanvasGradient | CanvasPattern;
 }
 
 /**

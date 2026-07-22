@@ -36,6 +36,15 @@ export interface PlayerState {
   dashTimeRemainingMs: number;
   /** Milliseconds until another dash can be initiated. */
   dashCooldownMs: number;
+  /**
+   * Position before the most recent movement step.
+   *
+   * Used by wall-slide collision to attempt horizontal-only and vertical-only
+   * movement before fully reverting a blocked move.
+   */
+  previousPosition?: Vector2;
+  /** Milliseconds of invulnerability remaining from recent enemy contact. */
+  contactIFrameMs?: number;
 }
 
 /** Minimal enemy state used by the spawn/wave logic. */
@@ -44,6 +53,24 @@ export interface EnemyState {
   position: Vector2;
   /** Current hit points. */
   health: number;
+}
+
+/** One frame-visible neon beam tracer produced by {@link fireNeonBeam}. */
+export interface TracerState {
+  /** Beam origin in world units (player muzzle position). */
+  origin: Vector2;
+  /** Normalized beam direction. */
+  direction: Vector2;
+  /** World-space endpoint of the tracer (wall or enemy hit). */
+  hit: Vector2;
+  /** Distance from origin to hit in world units. */
+  distance: number;
+  /** Kind of target the beam terminated on. */
+  hitType: 'wall' | 'enemy';
+  /** Milliseconds the tracer remains visible. */
+  durationMs: number;
+  /** CSS color string used by the renderer. */
+  color: string;
 }
 
 /** Options accepted by {@link createGameState}. */
@@ -64,8 +91,26 @@ export interface GameState {
   player: PlayerState;
   /** Active enemies in the world. */
   enemies: EnemyState[];
+  /** Active neon beam tracers visible this frame. */
+  tracers: TracerState[];
   /** Total confirmed kills for scoring and evolution pressure. */
   kills: number;
+  /**
+   * Monotonic counter of enemies spawned since episode start.
+   *
+   * Used to derive a unique deterministic RNG seed for every spawn event so
+   * different game histories (different kill counts, active rosters, etc.)
+   * cannot accidentally collide and produce identical spawn positions.
+   */
+  spawnCount: number;
   /** Current evolutionary generation (1 = first human-played generation). */
   generation: number;
+  /**
+   * Target episode duration in milliseconds.
+   *
+   * When set, {@link isEpisodeComplete} uses this value as the time-limit
+   * threshold. If omitted, the episode falls back to the canonical default
+   * duration defined in the constants module.
+   */
+  episodeDurationMs?: number;
 }
