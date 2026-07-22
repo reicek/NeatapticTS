@@ -5,6 +5,10 @@
  * `plans/Neon_Shooter_NGE_Demo.research.md`). They cover the versioned
  * renderer frame protocol, tier-aware column counts, pulse timing,
  * sound names, and the fixed map size.
+ *
+ * Gameplay balance constants (player health/ammo, dash timing, enemy cap,
+ * episode bounds) live in {@link ./host/game/constants} because the host-side
+ * simulation owns those numeric contracts.
  */
 
 /** Versioned format identifier carried in every render frame. */
@@ -50,3 +54,15 @@ export const NEATENSTEIN_AUDIO_SOUND_NAMES = [
 
 /** Fixed square map size in cells (24 x 24). */
 export const NEATENSTEIN_MAP_SIZE = 24;
+
+/**
+ * Supported renderer tiers for the Neatenstein demo.
+ *
+ * - `worker` → computation and rasterization happen on a dedicated worker
+ *   using an {@link OffscreenCanvas}.
+ * - `cpu`    → computation happens on a worker; the host blits the packed
+ *   frame to a main-thread canvas.
+ * - `gpu`    → same split as `cpu`, reserved for future GPU-backed
+ *   computation.
+ */
+export type NeatensteinTier = 'worker' | 'cpu' | 'gpu';

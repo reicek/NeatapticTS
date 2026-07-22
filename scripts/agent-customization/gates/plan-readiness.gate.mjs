@@ -59,7 +59,7 @@ async function runPlanReadinessGate(planPath) {
   }
 
   const sectionMatch = text.match(
-    /^## Latest validation evidence\s*\r?\n([\s\S]*?)(?=\r?\n## |$)/m,
+    /(?:^|\n)## Latest validation evidence\s*\r?\n([\s\S]*?)(?=\r?\n## |$)/,
   );
   const hasSection = sectionMatch !== null;
   const sectionText = hasSection ? sectionMatch[1] : '';

@@ -86,4 +86,13 @@ export const EXAMPLE_DEFINITIONS: readonly ExampleDefinition[] = [
     title: 'Racing Curriculum (NeatapticTS)',
     sourceDir: path.resolve('examples', 'racing_curriculum'),
   },
+  {
+    category: 'flagship',
+    description:
+      'A browser-hosted raycasting demo that hosts the Neatenstein NGE lifecycle: grid DDA raycasting, neon wall/floor rendering, deterministic pulses, and a module worker off-load slot.',
+    dirName: 'neatenstein',
+    label: 'neatenstein',
+    title: 'Neatenstein NGE Demo (NeatapticTS)',
+    sourceDir: path.resolve('examples', 'neatenstein'),
+  },
 ];

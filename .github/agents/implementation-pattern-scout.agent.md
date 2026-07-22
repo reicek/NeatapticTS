@@ -46,6 +46,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 1. Before manual file reads, follow the Cortex-First Search Policy (`research-methodology` skill):
 
+   - **When the active step packet declares a `pre_execute_hook`, invoke it first.** A hook such as `neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }` returns assembled slice context. Use that context as the primary boundary source; fall back to manual file reads only when Cortex is degraded; if the hook fails, use the same fallback.
    - `cortex({ operation: 'freshness_check' })` — verify index currency.
    - `cortex({ operation: 'search_corpus' })` — BM25 + dense hybrid search for broad discovery.
    - `cortex({ operation: 'search_advanced' })` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.

@@ -73,10 +73,19 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - `cortex-index` — before searching the codebase
 - `plan-sync` — after research synthesis
 
+## Pre-execute hook handling
+
+When the active step packet declares a `pre_execute_hook`, invoke the specified tool with the provided args **before** starting any scout dispatch or file reads. The hook returns assembled slice context that informs your research and reduces redundant direct reads of plan or research files.
+
+Canonical example: a hook such as `neataptic-workflow-mcp/get_slice_context` with args `{ slice_id: "..." }` should be called first. If the hook succeeds, use the returned context as the primary source of boundary information. If the hook fails, log the error and proceed with native file reads as fallback.
+
 ## Required Workflow
 
-1. Identify which source areas, seams, or domain boundaries the research question spans.
-2. Route sub-questions to the appropriate domain scouts in parallel:
+1. Retrieve active slice context if available.
+   - When the active step packet declares a `pre_execute_hook` (for example, `neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }`), invoke it first and use the returned context as the primary source for the active plan, phase step contract, and relevant source files.
+   - Only fall back to direct `read_file` calls for plan/research files when Cortex is degraded; if the hook fails, use the same fallback. Treat native file reads as a **degraded-Cortex fallback only**, not the primary path.
+2. Identify which source areas, seams, or domain boundaries the research question spans.
+3. Route sub-questions to the appropriate domain scouts in parallel:
    - `Plan Scout` for roadmap and plan evidence.
    - `Docs Scout` for generated README or JSDoc coverage questions.
    - `Boundary Mapper` for module responsibility seams.
@@ -86,9 +95,9 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - `Visualizer Scout` for demo or browser visualizer questions.
    - `NGE Core Scout`, `NGE Benchmark Scout` for Phase 7 / NGE boundary questions.
    - `NEATchat Scout` for NEATchat system or memory tier questions.
-3. Collect scout findings and cross-reference for contradictions or gaps.
-4. Synthesize into the structured output block below.
-5. Stop. Return the block and nothing else.
+4. Collect scout findings and cross-reference for contradictions or gaps.
+5. Synthesize into the structured output block below.
+6. Stop. Return the block and nothing else.
 
 ## Research Coordination Patterns
 

@@ -14,6 +14,7 @@ import {
   repoRoot,
 } from '../../../rag-index/init-schema.mjs';
 import { validateDatabase } from '../../../rag-index/validate-index.mjs';
+import { resolveStalePlanFixHint } from '../../../rag-index/auto-reindex.mjs';
 import { runCortexMcpSmoke } from './cortex-mcp-smoke.mjs';
 
 const OWNER = '00-helping';
@@ -233,6 +234,19 @@ function resolveFixHint({
   workflowMcpReport,
 }) {
   if (!indexReport.pass) {
+    const stalePaths = indexReport.stale_paths ?? [];
+    const missingPaths = indexReport.missing_paths ?? [];
+    const overAgePaths = indexReport.over_age_paths ?? [];
+
+    if (
+      stalePaths.length > 0 &&
+      missingPaths.length === 0 &&
+      overAgePaths.length === 0 &&
+      stalePaths.every(isPlanPath)
+    ) {
+      return resolveStalePlanFixHint(stalePaths);
+    }
+
     return 'Run: node rag-index/build-index.mjs to rebuild stale index';
   }
 
@@ -249,6 +263,10 @@ function resolveFixHint({
   }
 
   return null;
+}
+
+function isPlanPath(filePath) {
+  return typeof filePath === 'string' && filePath.endsWith('.plans.md');
 }
 
 function parseJson(value) {

@@ -52,7 +52,11 @@ describe('cortex-index.gate.mjs', () => {
 function runGateContractCheck(): SpawnedGateResult {
   const gateResult = spawnSync(
     process.execPath,
-    [CORTEX_INDEX_GATE_PATH, '--json'],
+    [
+      CORTEX_INDEX_GATE_PATH,
+      '--json',
+      '--plan=plans/mcp-active-binding.plans.md',
+    ],
     {
       cwd: REPO_ROOT,
       encoding: 'utf8',

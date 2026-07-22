@@ -1,16 +1,21 @@
 /**
  * @module cortex-tier-tool
- * @description MCP tool factory for the `query_tier_graph` tool.
+ * @description MCP tool factories for Repo Cortex-aware tier tools.
  *
- * Exposes the agent-tier inventory and validation results as a single
- * read-only MCP tool, used by the Repo Cortex MCP server to let agents
- * inspect the delegation graph without running scripts directly.
+ * Exposes `query_tier_graph` (agent-tier inventory) and `get_slice_context`
+ * (assembled plan slice context) as read-only tools that can be served by the
+ * gate MCP server and lazy cortex facade without requiring callers to run raw
+ * scripts.
  */
 import {
   collectTierInventory,
   runValidateAgentGraph,
 } from '../validate-agent-graph.mjs';
 import { createTool, MCP_REPO_ROOT } from './mcp-utils.mjs';
+import { createWorkflowTools } from './neataptic-workflow-mcp.mjs';
+
+/** Default plan used when no `plan_path` is supplied to the slice-context tool. */
+const DEFAULT_SLICE_CONTEXT_PLAN_PATH = 'plans/mcp-active-binding.plans.md';
 
 /**
  * Create the `query_tier_graph` MCP tool descriptor.
@@ -61,5 +66,41 @@ export function createTierGraphTool({ workspaceRoot = MCP_REPO_ROOT } = {}) {
         },
       };
     },
+  });
+}
+
+/**
+ * Create the `get_slice_context` MCP tool descriptor.
+ *
+ * Reuses the canonical slice-context handler from
+ * {@link createWorkflowTools} so that gate and facade servers expose the same
+ * compact context window as the standalone workflow MCP server. The returned
+ * tool accepts `{ slice_id, plan_path? }` and returns a compact summary
+ * (~700 bytes) of essential slice fields. To retrieve the full plan document,
+ * use neataptic-cortex-mcp:load_document instead.
+ *
+ * @param {{ planPath?: string }} [options={}] - Tool options.
+ * @param {string} [options.planPath='plans/mcp-active-binding.plans.md'] - Default repo-relative plan path used when a caller does not supply `plan_path`.
+ * @returns {{ name: string, description: string, annotations: Record<string, unknown>, inputSchema: Record<string, unknown>, handler: Function }} Tool descriptor.
+ */
+export function createSliceContextTool({
+  planPath = DEFAULT_SLICE_CONTEXT_PLAN_PATH,
+} = {}) {
+  const workflowTools = createWorkflowTools({ planPath });
+  const sliceTool = workflowTools.find(
+    (tool) => tool.name === 'get_slice_context',
+  );
+  if (!sliceTool) {
+    throw new Error(
+      'get_slice_context tool descriptor missing from neataptic-workflow-mcp tool set.',
+    );
+  }
+
+  return createTool({
+    name: sliceTool.name,
+    description: sliceTool.description,
+    annotations: sliceTool.annotations,
+    inputSchema: sliceTool.inputSchema,
+    handler: sliceTool.handler,
   });
 }

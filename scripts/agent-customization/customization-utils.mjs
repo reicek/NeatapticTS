@@ -390,13 +390,16 @@ export function summarizeIssues(name, issues) {
  * Parses a plan YAML metadata block into a JavaScript object.
  *
  * Supports the subset used by plan step/phase packets: scalar key–value pairs,
- * lists of scalars, and lists of objects (e.g. `slices`). Empty values on a
- * top-level key are interpreted as the start of a list. Multi-line object lists
- * use the standard YAML `- key: value` indentation pattern.
+ * lists of scalars, lists of objects (e.g. `slices`), and nested objects
+ * (e.g. `pre_execute_hook`). Empty values on a top-level key are interpreted as
+ * the start of a list. Nested object fields with no children parse as an empty
+ * object `{}` so that object-valued fields such as `args:` remain objects.
+ * Multi-line object lists use the standard YAML `- key: value` indentation
+ * pattern.
  *
  * @param yamlText - Raw YAML string (without the surrounding fence).
  * @returns Object with parsed values; lists are arrays, nested object lists are
- *   arrays of objects.
+ *   arrays of objects, and nested objects are plain objects.
  */
 export function parsePlanYamlBlock(yamlText) {
   const lines = yamlText.split(/\r?\n/u);
@@ -425,6 +428,12 @@ export function parsePlanYamlBlock(yamlText) {
       if (next && /^\s*-\s/.test(next.line)) {
         const parsed = parseListBlock(lines, index + 1, next.indent);
         result[key] = parsed.list;
+        index = parsed.nextIndex;
+        continue;
+      }
+      if (next && next.indent > 0 && /^\s*[A-Za-z0-9_]+:/u.test(next.line)) {
+        const parsed = parseObjectFields(lines, index, 0, true, true);
+        result[key] = parsed.object;
         index = parsed.nextIndex;
         continue;
       }
@@ -518,6 +527,9 @@ function parseListBlock(lines, startIndex, baseIndent) {
  * @param startIndex - Index of the `- ` line that starts the object.
  * @param baseIndent - Indentation of the list item marker.
  * @param firstFieldOnNextLine - Whether the first field appears on the next line.
+ * @param emptyDefaultToObject - When true, a bare key with no children parses
+ *   as an empty object `{}`; otherwise it parses as an empty array `[]`. This
+ *   distinguishes nested object contexts from list contexts.
  * @returns Object with `object` and `nextIndex` after the object.
  */
 function parseObjectFields(
@@ -525,6 +537,7 @@ function parseObjectFields(
   startIndex,
   baseIndent,
   firstFieldOnNextLine = false,
+  emptyDefaultToObject = false,
 ) {
   const object = {};
   let index = firstFieldOnNextLine ? startIndex + 1 : startIndex;
@@ -547,7 +560,7 @@ function parseObjectFields(
           object[key] = parsed.list;
           index = parsed.nextIndex;
         } else {
-          object[key] = [];
+          object[key] = emptyDefaultToObject ? {} : [];
           index = startIndex + 1;
         }
       } else {
@@ -587,7 +600,23 @@ function parseObjectFields(
         index = parsed.nextIndex;
         continue;
       }
-      object[key] = [];
+      if (
+        next &&
+        next.indent > currentIndent &&
+        /^\s*[A-Za-z0-9_]+:/u.test(next.line)
+      ) {
+        const parsed = parseObjectFields(
+          lines,
+          index,
+          currentIndent,
+          true,
+          true,
+        );
+        object[key] = parsed.object;
+        index = parsed.nextIndex;
+        continue;
+      }
+      object[key] = emptyDefaultToObject ? {} : [];
       index++;
       continue;
     }

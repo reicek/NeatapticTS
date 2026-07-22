@@ -45,8 +45,26 @@ const GOAL_TO_SKILLS = {
   helping: ['mcp-local-server-workflow'],
 };
 
+/**
+ * Convert a step heading label to its numeric order.
+ *
+ * Purely numeric labels (`01`) are parsed as numbers. Letter-prefixed labels
+ * (`E1`) return the trailing digits so step metadata and goal inference stay
+ * sequential.
+ *
+ * @param {string} stepLabel - Step label captured from the heading.
+ * @returns {number} Numeric step order, or `NaN` when no digits are present.
+ */
+function parseStepNumber(stepLabel) {
+  if (/^\d+$/u.test(stepLabel)) {
+    return Number(stepLabel);
+  }
+  const trailingDigits = stepLabel.match(/\d+$/u);
+  return trailingDigits ? Number(trailingDigits[0]) : NaN;
+}
+
 const COMBINED_PATTERN =
-  /^(?:### Phase (?<phase>[A-Z0-9]+) — (?<phaseTitle>.+?) \[(?<phaseStatus>PLANNED|WIP|DONE)\]|#### Step (?<step>\d{2,})\s*[:\-—]\s*(?<stepTitle>.+?) \[(?<stepStatus>PLANNED|WIP|DONE)\]|```yaml\s*\r?\n(?<yaml>[\s\S]*?)```)[ \t]*\r?$/gmu;
+  /^(?:### Phase (?<phase>[A-Z0-9]+) — (?<phaseTitle>.+?) \[(?<phaseStatus>PLANNED|WIP|DONE)\]|#### Step (?<step>[A-Z]?\d+)\s*[:\-—]\s*(?<stepTitle>.+?) \[(?<stepStatus>PLANNED|WIP|DONE)\]|```yaml\s*\r?\n(?<yaml>[\s\S]*?)```)[ \t]*\r?$/gmu;
 
 const options = parseArgs(process.argv.slice(2));
 
@@ -184,7 +202,8 @@ function tokenizePlan(text) {
         kind: 'step',
         start,
         end,
-        step: Number(groups.step),
+        step: parseStepNumber(groups.step),
+        stepLabel: groups.step,
         title: groups.stepTitle,
         status: groups.stepStatus,
       });
@@ -461,9 +480,10 @@ function inferNextPhaseTitle(phaseToken, context) {
 
 function inferPlaceholderSteps(phaseToken, context) {
   const steps = context.stepsByPhase.get(phaseToken) ?? [];
-  return steps.map(
-    (step) => `Step ${String(step.step).padStart(2, '0')} — ${step.title}`,
-  );
+  return steps.map((step) => {
+    const label = step.stepLabel ?? String(step.step).padStart(2, '0');
+    return `Step ${label} — ${step.title}`;
+  });
 }
 
 function inferNextStepTitle(stepToken, context) {

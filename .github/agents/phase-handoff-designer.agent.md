@@ -61,7 +61,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
 
 2. Identify the source phase and target phase in the handoff being audited.
-3. Read the handoff prompt: check that it is short, names the control decision, and includes the plan reference.
+3. Read the handoff prompt: check that it is short, states the control decision, and instructs the receiver to load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.
 4. Verify the model choice in the handoff matches the target agent's tier and declared models.
 5. Check the active plan status fields:
    - Does the handoff reference a tracker status or completed tranche?
@@ -73,7 +73,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 - **Send-false verification:** Verify the previous phase sends `send: false` to the next phase, meaning it does not block on the next phase's success. Flag phases that block the pipeline.
 - **Next-phase identification:** Verify the next phase is correctly identified and the handoff packet names it explicitly. Flag ambiguous next-phase references.
-- **Prompt packet completeness:** Verify the handoff prompt packet includes: phase name, completed work summary, validation evidence, remaining gaps, and next-phase instructions.
+- **Prompt packet completeness:** Verify the handoff prompt states the next narrow task and instructs context loading via Cortex MCP and any declared pre_execute_hook/get_slice_context. The heavy context (completed work summary, validation evidence, remaining gaps) is loaded by the receiver, not pasted into the prompt.
 - **State handoff:** Verify all phase state (RNG seeds, counters, file lists) is correctly passed to the next phase. Flag missing state that the next phase needs.
 
 ## Cycle Detection Patterns

@@ -84,7 +84,7 @@ Parallel eligible: yes — can run alongside the plan-read step.
 ```text
 Role: <hidden specialist or agent name>
 Task: <one narrow objective>
-Files or plans: <bounded list>
+Context: <active plan/slice or pre_execute_hook to invoke; let the specialist load files via Cortex MCP>
 Constraints: <read-only/edit/validation limits>
 Return: <exact output fields>
 ```
@@ -108,7 +108,7 @@ Task: look into the multithreading stuff and tell me what you find.
 ```text
 Role: boundary-mapper
 Task: identify all public surfaces in src/multithreading that cross the worker boundary
-Files: src/multithreading/**, testing/multithreading/**
+Context: active plan/slice; load files via Cortex MCP and any declared pre_execute_hook/get_slice_context
 Constraints: read-only; no edits
 Return: list of crossing surfaces with transport type and coverage gaps
 ```

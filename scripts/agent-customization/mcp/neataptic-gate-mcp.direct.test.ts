@@ -1,3 +1,4 @@
+import path from 'node:path';
 /**
  * @module neataptic-gate-mcp.direct.test
  * @description Direct-import coverage tests for neataptic-gate-mcp.mjs.
@@ -73,13 +74,90 @@ describe('neataptic-gate-mcp direct imports', () => {
   it('exposes createGateTools with the expected tool surface', async () => {
     const { createGateTools } = await import(SERVER_PATH);
     const tools = createGateTools();
-    const names = tools.map((tool: { name: string }) => tool.name).sort();
+    const names = tools.map((tool: { name: string }) => tool.name).toSorted();
     expect(names).toEqual([
+      'get_slice_context',
       'list_gates',
       'query_customization_routing_table',
       'query_tier_graph',
       'run_gate_check',
     ]);
+  });
+
+  it('get_slice_context input schema in the gate MCP does not advertise a full option', async () => {
+    const { createGateTools } = await import(SERVER_PATH);
+    const tools = createGateTools();
+    const tool = tools.find(
+      (t: { name: string; inputSchema: Record<string, unknown> }) =>
+        t.name === 'get_slice_context',
+    );
+
+    expect(tool?.inputSchema.properties).not.toHaveProperty('full');
+    expect(tool?.inputSchema).toEqual(
+      expect.objectContaining({
+        required: ['slice_id'],
+      }),
+    );
+  });
+
+  it('get_slice_context returns compact through gate tool', async () => {
+    const [{ writeFile, unlink }, { MCP_REPO_ROOT }] = await Promise.all([
+      import('node:fs/promises'),
+      import(UTILS_PATH),
+    ]);
+    const fileName = `__gate-direct-test-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}.plans.md`;
+    const absolutePath = path.join(MCP_REPO_ROOT, 'plans', fileName);
+    await writeFile(
+      absolutePath,
+      `
+# Test Plan
+
+## Implementation phases
+
+### Phase 1 — Test [WIP]
+
+#### Step 01: Active step [WIP]
+
+\`\`\`yaml
+phase: 1
+step: 1
+title: '01: Active step'
+slices:
+  - slice_id: compact-gate-slice
+    title: Compact gate slice
+    status: '[WIP]'
+    goal: compact gate goal
+\`\`\`
+
+## Validation gates
+
+- none
+`.trim(),
+      'utf8',
+    );
+    try {
+      const { createGateTools } = await import(SERVER_PATH);
+      const tools = createGateTools();
+      const tool = tools.find(
+        (t: {
+          name: string;
+          handler: (args: Record<string, unknown>) => unknown;
+        }) => t.name === 'get_slice_context',
+      );
+      const result = (await tool?.handler({
+        slice_id: 'compact-gate-slice',
+        plan_path: absolutePath,
+      })) as Record<string, unknown>;
+      expect(result.compact).toBe(true);
+      expect(result).not.toHaveProperty('stepPacket');
+      expect(result).not.toHaveProperty('sourceChunks');
+      expect(result).toHaveProperty('title', 'Compact gate slice');
+      expect(result).toHaveProperty('goal', 'compact gate goal');
+    } finally {
+      await unlink(absolutePath).catch(() => undefined);
+    }
   });
 
   it('passes a self-check against an in-process server', async () => {

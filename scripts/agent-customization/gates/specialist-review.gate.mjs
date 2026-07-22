@@ -87,8 +87,8 @@ function checkPlanForSpecialistReview(planPath) {
   const evidenceText = evidenceSection[0];
   const matchedMarkers = specialistMarkers.filter((m) => m.test(evidenceText));
 
-  // Require at least 2 markers to confirm specialist review evidence
-  const found = matchedMarkers.length >= 2;
+  // Require at least 3 markers to confirm specialist review evidence
+  const found = matchedMarkers.length >= 3;
 
   return {
     plan: path.basename(planPath),
@@ -119,7 +119,7 @@ if (wipPlans.length === 0) {
       wipPlans: 0,
     },
     fixHint:
-      'No action needed. When a plan is [WIP] with implementation slices, ensure 2-3 Tier-3 specialists review each 04-implementing slice before dispatching 05-green-testing.',
+      'No action needed. When a plan is [WIP] with implementation slices, ensure 3+ Tier-3 specialists review each 04-implementing slice before dispatching 05-green-testing.',
     owner: 'orchestrator (Agent Zero)',
   };
   if (options.json) {
@@ -144,7 +144,7 @@ if (wipPlans.length === 0) {
     },
     fixHint: allFound
       ? 'Specialist review evidence confirmed.'
-      : "Dispatch 2-3 Tier-3 specialists (e.g., implementation-pattern-scout, nge-core-scout) to review each 04-implementing slice BEFORE dispatching 05-green-testing. Record APPROVE/REQUEST_CHANGES verdicts in the plan's VALIDATION_EVIDENCE section.",
+      : "Dispatch 3+ Tier-3 specialists from different relevant viewpoints (e.g., implementation-pattern-scout, nge-core-scout, performance-trace-specialist) to review each 04-implementing slice BEFORE dispatching 05-green-testing. Record APPROVE/REQUEST_CHANGES verdicts in the plan's VALIDATION_EVIDENCE section.",
     owner: 'orchestrator (Agent Zero)',
   };
 

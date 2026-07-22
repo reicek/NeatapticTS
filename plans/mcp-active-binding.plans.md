@@ -4,33 +4,173 @@
 
 ## Current state
 
-Claim: 04-implementing @ 2026-07-18T07:07:18Z
+Claim: 01-planning @ 2026-07-19T17:02:00Z  
+Claim: 04-implementing @ 2026-07-20T12:00:00Z  
+Claim: 04-implementing @ 2026-07-21T21:36:56Z
 
 Active workstream tracker:
 `plans/Neon_Shooter_NGE_Demo.plans.md`.
 
-The racing curriculum plan is now archived to
-`plans/completed/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md`. The Racing
-Perception Redesign plan is paused; the Neon Shooter NGE Demo is the current
-active workstream. The MCP binding keeps `neataptic-workflow-mcp`
-and `neataptic-validation-mcp` pointed at the active shooter plan so step-packet and
+The Cortex Orchestration Single Source of Truth plan is complete and archived
+to `plans/completed/`. The Neon Shooter NGE Demo plan is now the active
+workstream. The MCP binding keeps `neataptic-workflow-mcp` and
+`neataptic-validation-mcp` pointed at the Neon Shooter plan so step-packet and
 validation allow-lists resolve without prompt input.
 
 ```yaml
 PlanUpdate:
   changed_files:
+    - data/mcp-session-override.json
+    - .vscode/mcp.json
     - plans/mcp-active-binding.plans.md
-  preflight: []
+    - plans/Cortex_Orchestration_Single_Source_of_Truth.plans.md
+    - plans/Neon_Shooter_NGE_Demo.plans.md
+    - plans/README.md
+    - plans/Roadmap.md
+  preflight:
+    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Cortex_Orchestration_Single_Source_of_Truth.plans.md'
+    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md'
   validation:
-    - command: 'node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/mcp-active-binding.plans.md'
-  expected_exit: 0
-  result: 'PASS — plan phase packets validate'
+    - command: 'node scripts/agent-customization/gates/step-packet.gate.mjs --json'
+      expected_exit: 0
+    - command: 'node scripts/agent-customization/gates/plan-slice-quality.gate.mjs --json'
+      expected_exit: 0
   gates:
     - 'plan-sync: PASS'
-    - 'routing-table-freshness: PASS'
+    - 'step-packet: PASS'
+    - 'plan-slice-quality: PASS'
   rollback:
+    - 'git checkout -- data/mcp-session-override.json'
+    - 'git checkout -- .vscode/mcp.json'
     - 'git checkout -- plans/mcp-active-binding.plans.md'
-  next: 'Continue monitoring active workstream in plans/Neon_Shooter_NGE_Demo.plans.md; keep this binding file pointing at the current open tracker.'
+    - 'git checkout -- plans/Cortex_Orchestration_Single_Source_of_Truth.plans.md'
+    - 'git checkout -- plans/Neon_Shooter_NGE_Demo.plans.md'
+    - 'git checkout -- plans/README.md'
+    - 'git checkout -- plans/Roadmap.md'
+  next: 'Continue monitoring active workstream in plans/Cortex_Orchestration_Single_Source_of_Truth.plans.md; keep this binding file pointing at the current open tracker.'
+```
+
+### get_slice_context default compact flip
+
+Flipped `neataptic-workflow-mcp/get_slice_context` so compact is the default
+response and the full assembled context window is opt-in via `full: true`.
+
+```yaml
+PlanUpdate:
+  slice_id: mcp-get-slice-context-default-compact
+  changed_files:
+    - scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs
+    - scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts
+    - scripts/agent-customization/mcp/cortex-tier-tool.mjs
+    - scripts/agent-customization/mcp/cortex-tier-tool.direct.test.mjs
+    - scripts/agent-customization/mcp/neataptic-gate-mcp.direct.test.ts
+    - scripts/agent-customization/mcp/cortex-tool-snapshot.json
+    - files/mcp-facade/cortex-tool-snapshot.json
+    - plans/mcp-active-binding.plans.md
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --check scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts scripts/agent-customization/mcp/cortex-tier-tool.mjs scripts/agent-customization/mcp/cortex-tier-tool.test.ts scripts/agent-customization/mcp/cortex-tier-tool.direct.test.mjs scripts/agent-customization/mcp/neataptic-gate-mcp.direct.test.ts scripts/agent-customization/mcp/cortex-tool-snapshot.json files/mcp-facade/cortex-tool-snapshot.json plans/mcp-active-binding.plans.md'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=scripts/agent-customization/mcp/cortex-tier-tool.test.ts'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=scripts/agent-customization/mcp/cortex-tier-tool.direct.test.mjs'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=scripts/agent-customization/mcp/neataptic-gate-mcp.direct.test.ts'
+  rollback:
+    - 'git checkout -- scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs'
+    - 'git checkout -- scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts'
+    - 'git checkout -- scripts/agent-customization/mcp/cortex-tier-tool.mjs'
+    - 'git checkout -- scripts/agent-customization/mcp/cortex-tier-tool.direct.test.mjs'
+    - 'git checkout -- scripts/agent-customization/mcp/neataptic-gate-mcp.direct.test.ts'
+    - 'git checkout -- scripts/agent-customization/mcp/cortex-tool-snapshot.json'
+    - 'git checkout -- files/mcp-facade/cortex-tool-snapshot.json'
+    - 'git checkout -- plans/mcp-active-binding.plans.md'
+  next: 'Run 05-green-testing on the focused MCP test files and attach coverage-guard evidence.'
+```
+
+### get_slice_context response quality pass
+
+Applied six tightly-coupled fixes to `neataptic-workflow-mcp:get_slice_context`
+so the default compact response stays under the 16 KB wire envelope, carries
+relevant RAG chunks with non-empty text, and no longer duplicates the full JSON
+payload in `content[0].text`.
+
+```yaml
+PlanUpdate:
+  slice_id: mcp-get-slice-context-quality-2026-07-21
+  changed_files:
+    - scripts/agent-customization/mcp/mcp-utils.mjs
+    - scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs
+    - scripts/mcp-semantic/tools/search-context.mjs
+    - scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --check scripts/agent-customization/mcp/mcp-utils.mjs scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs scripts/mcp-semantic/tools/search-context.mjs scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=agent-customization/mcp/neataptic-workflow-mcp'
+    - 'npm run jest:mjs -- --testPathPatterns=search-context.direct'
+  validation:
+    - command: 'node scripts/agent-customization/gates/cortex-index.gate.mjs --json'
+      expected_exit: 0
+      result: 'PASS — cortex-index: pass'
+  live_repro:
+    slice: '02-red-phase2'
+    plan: 'plans/Neon_Shooter_NGE_Demo.plans.md'
+    envelope_bytes: 10524
+    chunks_count: 4
+    top_chunk_path: 'examples/neatenstein/browser-entry/host/game/waves.test.ts'
+    all_chunk_texts_non_empty: true
+  rollback:
+    - 'git checkout -- scripts/agent-customization/mcp/mcp-utils.mjs'
+    - 'git checkout -- scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs'
+    - 'git checkout -- scripts/mcp-semantic/tools/search-context.mjs'
+    - 'git checkout -- scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts'
+  next: 'Run 05-green-testing on focused tests and attach coverage-guard evidence.'
+```
+
+**VALIDATION_EVIDENCE:**
+
+- tsc: `npx tsc --noEmit -p tsconfig.json` → OK
+- lint: `npm run lint` → 0 errors (50 unrelated pre-existing warnings)
+- prettier: `npx prettier --check <changed-files>` → OK
+- folder quality (MCP): `node scripts/folder-quality-metrics.mjs --folder=scripts/agent-customization/mcp --json` → pass
+- folder quality (semantic tools): `node scripts/folder-quality-metrics.mjs --folder=scripts/mcp-semantic/tools --json` → pass
+- focused test (workflow): `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=agent-customization/mcp/neataptic-workflow-mcp` → 53/53 PASS
+- focused test (search-context): `npm run jest:mjs -- --testPathPatterns=search-context.direct` → 41/41 PASS
+- live repro (`02-red-phase2`): envelope 10,524 bytes, 4 chunks, top chunk `examples/neatenstein/browser-entry/host/game/waves.test.ts`, all chunk texts non-empty
+- plan-sync: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md` → pass
+- agent-graph: `node scripts/agent-customization/gates/agent-graph.gate.mjs --json` → pass
+- cortex-index: `node scripts/agent-customization/gates/cortex-index.gate.mjs --json` → pass
+
+**VALIDATION_EVIDENCE:**
+
+- tsc: `npx tsc --noEmit -p tsconfig.json` → OK
+- lint: `npm run lint` → 0 issues in touched files (unrelated pre-existing warnings remain)
+- prettier: `npx prettier --check <touched-files>` → OK
+- plan-sync: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md` → pass
+- focused test: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts` → 62/62 PASS
+
+#### mcp-get-slice-context-default-compact green validation (05-green-testing)
+
+```json
+{
+  "pass": true,
+  "slice_id": "mcp-get-slice-context-default-compact",
+  "evidence": {
+    "neataptic-workflow-mcp.test.ts": "PASS — 62/62 tests after compact-default assertion drift fixed (04-implementing preflight)",
+    "cortex-tier-tool.direct.test.mjs": "PASS — 5/5 tests (required NODE_OPTIONS='--experimental-vm-modules')",
+    "neataptic-gate-mcp.direct.test.ts": "PASS — 21/21 tests",
+    "tsc_main": "PASS — npx tsc --noEmit -p tsconfig.json exit 0",
+    "tsc_test": "FAIL — pre-existing errors outside slice (examples/racing_curriculum/*, src/architecture/network/acceleration.network-api.test.ts)",
+    "lint": "PASS — npm run lint exit 0; warnings only in untouched files",
+    "prettier": "PASS — all 8 touched files conform",
+    "plan-sync": "PASS — registered in README/Roadmap",
+    "code-coverage": "PENDING — 05-green-testing to attach coverage-guard evidence"
+  },
+  "fixHint": "Stale assertions in neataptic-workflow-mcp.test.ts were repaired by resolving slices against temporary plan fixtures and the active Neon_Shooter plan instead of the archived Cortex_Orchestration plan. The compact-default implementation remains unchanged.",
+  "owner": "05-green-testing"
+}
 ```
 
 ### Slice-quality gate registration

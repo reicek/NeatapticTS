@@ -89,6 +89,7 @@ export async function queryDenseIndex(options = {}) {
     family,
     query,
     client: options.client,
+    compiledFilter,
   });
   const bm25Results = bm25Rows.map((row) => ({
     ...readChunkRow(row),
@@ -188,12 +189,16 @@ async function loadBm25Rows({
   family,
   query,
   client,
+  compiledFilter,
 }) {
+  const familyFilter = family ? 'AND d.doc_family = ?' : '';
+  const filterSql = compiledFilter ? `AND ${compiledFilter.sql}` : '';
+  const filterParams = compiledFilter ? compiledFilter.params : [];
+
   if (client) {
-    const familyFilter = family ? 'AND d.doc_family = ?' : '';
     const args = family
-      ? [query, family, candidatePoolSize]
-      : [query, candidatePoolSize];
+      ? [query, family, ...filterParams, candidatePoolSize]
+      : [query, ...filterParams, candidatePoolSize];
     const result = await client.execute({
       sql: `
       SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
@@ -201,7 +206,7 @@ async function loadBm25Rows({
       FROM chunks_fts
       JOIN chunks c ON c.chunk_id = chunks_fts.rowid
       JOIN documents d ON d.doc_id = c.doc_id
-      WHERE chunks_fts MATCH ? ${familyFilter}
+      WHERE chunks_fts MATCH ? ${familyFilter} ${filterSql}
       ORDER BY score
       LIMIT ?
     `,
@@ -212,10 +217,9 @@ async function loadBm25Rows({
 
   const database = await getTursoClient(databasePath);
 
-  const familyFilter = family ? 'AND d.doc_family = ?' : '';
   const args = family
-    ? [query, family, candidatePoolSize]
-    : [query, candidatePoolSize];
+    ? [query, family, ...filterParams, candidatePoolSize]
+    : [query, ...filterParams, candidatePoolSize];
   const result = await database.execute({
     sql: `
       SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
@@ -223,7 +227,7 @@ async function loadBm25Rows({
       FROM chunks_fts
       JOIN chunks c ON c.chunk_id = chunks_fts.rowid
       JOIN documents d ON d.doc_id = c.doc_id
-      WHERE chunks_fts MATCH ? ${familyFilter}
+      WHERE chunks_fts MATCH ? ${familyFilter} ${filterSql}
       ORDER BY score
       LIMIT ?
     `,

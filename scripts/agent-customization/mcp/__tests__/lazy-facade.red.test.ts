@@ -1023,6 +1023,39 @@ describe('lazy-facade-core internals', () => {
     await facade.close();
   });
 
+  it('routes a registered local tool without spawning the target', async () => {
+    const { createLazyFacade } = await importLazyFacadeCore();
+    const facade = createLazyFacade(
+      baseConfig({
+        localTools: [
+          {
+            name: 'local_echo',
+            handler: async (args: Record<string, unknown>) =>
+              `echo:${args.message}`,
+          },
+        ],
+      }),
+    );
+    const response = (await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 10,
+      method: 'tools/call',
+      params: { name: 'local_echo', arguments: { message: 'hi' } },
+    })) as JsonRpcResponse;
+    const result = (response.result ?? {}) as Record<string, unknown>;
+    const text = (result.content as Array<{ text: string }>)?.[0]?.text ?? '';
+    expect({
+      isError: result.isError,
+      text,
+      spawnCalls: (spawn as jest.Mock).mock.calls.length,
+    }).toEqual({
+      isError: false,
+      text: JSON.stringify({ value: 'echo:hi' }, null, 2),
+      spawnCalls: 0,
+    });
+    await facade.close();
+  });
+
   it('forwards a call with omitted args as an empty object', async () => {
     const { createLazyFacade } = await importLazyFacadeCore();
     const fakeChild = createFakeChildProcess({

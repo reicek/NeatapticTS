@@ -15,6 +15,7 @@ tools:
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    neataptic-workflow-mcp/get_slice_context,
     devtools/devtools,
   ]
 user-invocable: true
@@ -47,11 +48,12 @@ skills:
     'execute',
     'chrome-devtools-mcp',
     'browser-testing-harness',
+    'devtools',
   ]
 handoffs:
   - label: 'Implement'
     agent: '04-implementing'
-    prompt: 'Continue from the active plan and Step 03 contract. Execute Step 04 for the current phase by implementing the smallest change that satisfies the targeted test, eval, or explicit skip contract.'
+    prompt: 'Implement the active slice. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
     model: 'glm-5.2:cloud'
 ---

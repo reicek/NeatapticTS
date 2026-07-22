@@ -62,7 +62,10 @@ const DEFAULT_FORMAT = 'markdown';
  * @property {number} [alpha] - BM25/dense blend weight (0 = BM25 only, 1 = dense only).
  * @property {boolean|'domain-only'} [expand_query=false] - Enable query expansion.
  * @property {number} [rerank_candidates_count=50] - Number of hybrid candidates to re-rank.
+ * @property {string} [slice_id] - Optional slice identifier filter forwarded to corpus search.
+ * @property {number} [step_number] - Optional step number filter forwarded to corpus search.
  * @property {string} [databasePath] - Optional corpus database path override.
+ * @property {Function} [assembleContextFn] - Optional assembler override for testing.
  */
 
 /**
@@ -116,7 +119,7 @@ function validateBudget(budget) {
  * @param {Object} result - Raw corpus search result.
  * @returns {Object} Chunk compatible with assembleContext.
  */
-function normalizeSearchResultToChunk(result) {
+export function normalizeSearchResultToChunk(result) {
   return {
     ...result,
     body_text: result.text ?? result.body_text ?? '',
@@ -129,7 +132,7 @@ function normalizeSearchResultToChunk(result) {
  * @param {object | undefined} result - Top raw corpus result.
  * @returns {{ chunk_id: number, file_path: string, family: string, text: string } | null} Top result descriptor.
  */
-function buildTopResult(result) {
+export function buildTopResult(result) {
   if (!result) {
     return null;
   }
@@ -148,7 +151,7 @@ function buildTopResult(result) {
  * @param {string} query - Original query string.
  * @returns {Array<{ tool: string, args: object, reason: string }>} Follow-up refs.
  */
-function buildFollowUpRefs(results, query) {
+export function buildFollowUpRefs(results, query) {
   const refs = [];
   if (results[0]) {
     refs.push({
@@ -190,7 +193,8 @@ export async function searchContext(options = {}) {
   const compact = options.compact === true;
   const readTopResult = options.read_top_result === true;
 
-  const searchResponse = await searchCorpus({
+  const searchFn = options.searchCorpusFn ?? searchCorpus;
+  const searchResponse = await searchFn({
     query,
     limit: fetchLimit,
     use_dense: options.use_dense !== false,
@@ -198,6 +202,9 @@ export async function searchContext(options = {}) {
     alpha: options.alpha,
     expand_query: options.expand_query,
     rerank_candidates_count: options.rerank_candidates_count,
+    slice_id: options.slice_id,
+    step_number: options.step_number,
+    metadata: options.metadata,
     databasePath: options.databasePath,
     client: options.client,
   });
@@ -207,7 +214,8 @@ export async function searchContext(options = {}) {
   );
   const topResult = readTopResult ? buildTopResult(chunks[0]) : null;
   const followUpRefs = buildFollowUpRefs(chunks, query);
-  const assembled = await assembleContext(chunks, {
+  const assembleFn = options.assembleContextFn ?? assembleContext;
+  const assembled = await assembleFn(chunks, {
     budget,
     context_format: contextFormat,
     query_class: searchResponse.query_class,
@@ -270,7 +278,22 @@ export async function searchContext(options = {}) {
       });
 
   let context = assembled.context;
-  if (
+  const isJsonContext = contextFormat === 'json';
+  if (isJsonContext) {
+    context = {
+      context: assembled.context,
+      chunks: selectedChunks.map((chunk) => ({
+        file_path: chunk.file_path,
+        heading_path: chunk.heading_path ?? null,
+        char_start: chunk.char_start ?? null,
+        char_end: chunk.char_end ?? null,
+        content: String(chunk.body_text ?? chunk.content ?? chunk.text ?? ''),
+        score: chunk.score ?? null,
+        tier: chunk.tier ?? null,
+      })),
+      tokenCount,
+    };
+  } else if (
     compact &&
     typeof context === 'string' &&
     context.length > COMPACT_CONTEXT_THRESHOLD
@@ -317,3 +340,5 @@ export async function searchContext(options = {}) {
  * registration and direct imports can use either name.
  */
 export const searchContextTool = searchContext;
+
+export { validateBudget, validateContextFormat };

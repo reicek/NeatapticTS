@@ -10,6 +10,7 @@
  *   - run_gate_check  — Run a named gate and return its structured contract result.
  *   - query_tier_graph — Return the current tier inventory and validation summary.
  *   - query_customization_routing_table — Return the canonical routing table and freshness status.
+ *   - get_slice_context — Return an assembled context window for a plan slice from the active step.
  *
  * Usage:
  *   node scripts/agent-customization/mcp/neataptic-gate-mcp.mjs [--self-check] [--json]
@@ -34,7 +35,10 @@ import {
   selfCheckError,
 } from './mcp-utils.mjs';
 import { createCustomizationRoutingTableTool } from './customization-routing-table-tool.mjs';
-import { createTierGraphTool } from './cortex-tier-tool.mjs';
+import {
+  createSliceContextTool,
+  createTierGraphTool,
+} from './cortex-tier-tool.mjs';
 
 const SERVER_NAME = 'neataptic-gate-mcp';
 const SERVER_VERSION = '0.1.0';
@@ -128,7 +132,7 @@ const TIER_1_GATES = [
     id: 'specialist-review',
     owner: 'specialist-review.gate.mjs',
     description:
-      'Checks that [WIP] plans contain specialist review evidence in VALIDATION_EVIDENCE before 05-green-testing is dispatched. Requires 2-3 Tier-3 specialists to review each 04-implementing slice.',
+      'Checks that [WIP] plans contain specialist review evidence in VALIDATION_EVIDENCE before 05-green-testing is dispatched. Requires 3+ Tier-3 specialists from different relevant viewpoints to review each 04-implementing slice.',
   },
 ];
 
@@ -195,6 +199,7 @@ export function createGateTools() {
     }),
     createTierGraphTool(),
     createCustomizationRoutingTableTool(),
+    createSliceContextTool(),
   ];
 }
 

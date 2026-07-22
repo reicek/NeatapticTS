@@ -16,6 +16,7 @@ tools:
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -50,7 +51,7 @@ skills:
 handoffs:
   - label: 'Plan Work'
     agent: '01-planning'
-    prompt: 'Continue SDLC work via 01-planning. Carry only relevant customization evidence and unresolved gap notes.'
+    prompt: 'Plan the next SDLC step. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
     model: 'glm-5.2:cloud'
 ---

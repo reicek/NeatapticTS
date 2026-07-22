@@ -15,6 +15,7 @@ tools:
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    neataptic-workflow-mcp/get_slice_context,
     devtools/devtools,
   ]
 user-invocable: true
@@ -49,11 +50,12 @@ skills:
     'execute',
     'chrome-devtools-mcp',
     'browser-testing-harness',
+    'devtools',
   ]
 handoffs:
   - label: 'Curate Docs'
     agent: '06-documenting'
-    prompt: 'Continue from the active plan and Step 05 validation evidence. Execute Step 06 for the current phase by updating documentation only where the changed surface requires it.'
+    prompt: 'Run docs-quality checks for the active phase. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
     model: 'glm-5.2:cloud'
 ---

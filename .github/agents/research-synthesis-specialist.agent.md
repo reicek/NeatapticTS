@@ -48,9 +48,18 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - `cortex-index` — before searching for research context
 - `plan-sync` — after synthesizing research results
 
+## Pre-execute hook handling
+
+When the active step packet declares a `pre_execute_hook`, invoke the specified tool with the provided args **before** starting any synthesis or file reads. The hook returns assembled slice context that informs your synthesis and reduces redundant direct reads of plan or research files.
+
+Canonical example: a hook such as `neataptic-workflow-mcp/get_slice_context` with args `{ slice_id: "..." }` should be called first. If the hook succeeds, use the returned context as the primary source of boundary information. If the hook fails, log the error and proceed with native file reads as fallback.
+
 ## Approach
 
-1. Before manual file reads, follow the Cortex-First Search Policy (`research-methodology` skill):
+1. Retrieve active slice context if available.
+   - When the active step packet declares a `pre_execute_hook` (for example, `neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }`), invoke it first and use the returned context as the primary source for the active plan, phase step contract, and relevant source files.
+   - Only fall back to direct `read_file` calls for plan/research files when Cortex is degraded; if the hook fails, use the same fallback. Treat native file reads as a **degraded-Cortex fallback only**, not the primary path.
+2. Before manual file reads, follow the Cortex-First Search Policy (`research-methodology` skill):
 
    - `cortex({ operation: 'freshness_check' })` — verify index currency.
    - `cortex({ operation: 'search_corpus' })` — BM25 + dense hybrid search for broad discovery.
@@ -64,12 +73,12 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
    If Cortex RAG cannot answer a needed query, report the gap for RAG enhancement.
 
-2. Receive raw reconnaissance data from multiple scouts coordinated by `research-codebase-coordinator`.
-3. Cross-reference results for contradictions, gaps, or missing evidence using strict source-of-truth ordering.
-4. Extract key terminology, constraints, sequencing hints, and code/plan mismatch risks.
-5. Structure findings into a compact alignment brief for `01-planning`.
-6. Delegate to Tier 4 auxiliaries only when additional synthesis is needed.
-7. Frame the result as a compact handoff into `plan-alignment` rather than a standalone planning document.
+3. Receive raw reconnaissance data from multiple scouts coordinated by `research-codebase-coordinator`.
+4. Cross-reference results for contradictions, gaps, or missing evidence using strict source-of-truth ordering.
+5. Extract key terminology, constraints, sequencing hints, and code/plan mismatch risks.
+6. Structure findings into a compact alignment brief for `01-planning`.
+7. Delegate to Tier 4 auxiliaries only when additional synthesis is needed.
+8. Frame the result as a compact handoff into `plan-alignment` rather than a standalone planning document.
 
 ## Default Flow
 

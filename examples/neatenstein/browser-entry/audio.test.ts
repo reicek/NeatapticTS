@@ -6,12 +6,19 @@ interface MockAudioNode {
   connect: jest.Mock;
 }
 
+interface MockAudioParam {
+  value: number;
+  setValueAtTime: jest.Mock;
+  exponentialRampToValueAtTime: jest.Mock;
+  cancelScheduledValues?: jest.Mock;
+}
+
 interface MockStereoPanner extends MockAudioNode {
-  pan: { value: number; setValueAtTime: jest.Mock };
+  pan: MockAudioParam;
 }
 
 interface MockGain extends MockAudioNode {
-  gain: { value: number; setValueAtTime: jest.Mock };
+  gain: MockAudioParam;
 }
 
 function installMockAudioContext(): {
@@ -32,10 +39,15 @@ function installMockAudioContext(): {
 
   (globalThis as unknown as Record<string, unknown>).AudioContext = class {
     resume = jest.fn();
+    currentTime = 0;
     destination = createMockNode();
     createOscillator = jest.fn(() => ({
       ...createMockNode(),
-      frequency: { value: 0, setValueAtTime: jest.fn() },
+      frequency: {
+        value: 0,
+        setValueAtTime: jest.fn(),
+        exponentialRampToValueAtTime: jest.fn(),
+      },
       start: jest.fn(),
       stop: jest.fn(),
       type: 'sine',
@@ -51,7 +63,11 @@ function installMockAudioContext(): {
     createStereoPanner = jest.fn(() => {
       const node: MockStereoPanner = {
         ...createMockNode(),
-        pan: { value: 0, setValueAtTime: jest.fn() },
+        pan: {
+          value: 0,
+          setValueAtTime: jest.fn(),
+          exponentialRampToValueAtTime: jest.fn(),
+        },
       };
       this.createdNodes.push({ type: 'panner', node });
       return node;
@@ -59,7 +75,12 @@ function installMockAudioContext(): {
     createGain = jest.fn(() => {
       const node: MockGain = {
         ...createMockNode(),
-        gain: { value: 1, setValueAtTime: jest.fn() },
+        gain: {
+          value: 1,
+          setValueAtTime: jest.fn(),
+          exponentialRampToValueAtTime: jest.fn(),
+          cancelScheduledValues: jest.fn(),
+        },
       };
       this.createdNodes.push({ type: 'gain', node });
       return node;
@@ -141,7 +162,7 @@ describe('Neatenstein audio engine', () => {
 
   it('schedules generation-up audio on the same tick as the pulse', async () => {
     const audio = await loadModule('./audio.ts');
-    const pulse = await loadModule('./pulse.ts');
+    const pulse = await loadModule('./renderer/pulse.ts');
     const simTick = 42;
     const audioScheduled = audio.scheduleNeatensteinGenerationUpAudio(simTick);
     const pulseScheduled = pulse.emitNeatensteinGenerationUpPulse(simTick);

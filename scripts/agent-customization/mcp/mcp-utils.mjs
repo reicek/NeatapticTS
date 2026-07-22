@@ -542,16 +542,41 @@ function isJsonRpcError(error) {
 }
 
 /**
+ * Build a short human-readable summary string for a tool result envelope.
+ *
+ * Prefer a slice-specific summary when the payload carries slice boundary
+ * metadata; fall back to a generic hint otherwise.
+ *
+ * @param {Record<string, unknown>} structuredContent - The canonical payload.
+ * @returns {string} One-line summary for the `content[0].text` field.
+ */
+function buildResultSummary(structuredContent) {
+  if (structuredContent?.slice_id != null) {
+    const phase =
+      structuredContent.phase != null ? `phase ${structuredContent.phase}` : '';
+    const step =
+      structuredContent.step_number != null
+        ? `step ${structuredContent.step_number}`
+        : '';
+    const parts = [phase, step].filter(Boolean);
+    const location = parts.length > 0 ? ` (${parts.join(', ')})` : '';
+    return `Compact workflow context for slice ${structuredContent.slice_id}${location}. See structuredContent for full payload.`;
+  }
+  return 'Compact workflow context. See structuredContent for full payload.';
+}
+
+/**
  * Wrap a tool handler return value in the MCP `tools/call` response envelope.
  *
  * If the handler already returned a pre-formatted content array it is passed
- * through unchanged. Plain objects are serialized to a JSON text block and
- * also exposed as `structuredContent` for type-safe callers.
+ * through unchanged. Plain objects are exposed as `structuredContent` for
+ * type-safe callers, and `content[0].text` contains a short human-readable
+ * summary instead of a duplicate full-JSON serialization.
  *
  * @param {unknown} handlerResult - Raw value returned by the tool handler.
  * @returns {{ content: Array<{ type: string, text: string }>, structuredContent: object, isError: false }} Formatted tool result.
  */
-function formatToolResult(handlerResult) {
+export function formatToolResult(handlerResult) {
   if (isPlainObject(handlerResult) && Array.isArray(handlerResult.content)) {
     return {
       isError: false,
@@ -566,7 +591,7 @@ function formatToolResult(handlerResult) {
     content: [
       {
         type: 'text',
-        text: JSON.stringify(structuredContent, null, 2),
+        text: buildResultSummary(structuredContent),
       },
     ],
     structuredContent,

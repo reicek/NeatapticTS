@@ -20,6 +20,7 @@ import process from 'node:process';
 
 import {
   emitSelfCheckReport,
+  formatToolResult,
   MCP_REPO_ROOT,
   parseMcpCliArgs,
   runStdioMcpServer,
@@ -39,6 +40,7 @@ import {
  * @param {string} [config.snapshotPath] - Optional override for `defaultSnapshotPath`.
  * @param {string[]} [config.spawnCommand] - Optional override for `defaultSpawnCommand`.
  * @param {Record<string, string>} [config.env] - Optional env overrides applied on top of `defaultEnv`.
+ * @param {Array<{ name: string, description: string, inputSchema?: Record<string, unknown>, annotations?: Record<string, unknown>, handler: (argumentsObject: Record<string, unknown>) => Promise<unknown> | unknown }>} [config.localTools=[]] - Additional tools served locally by the facade alongside the router tool.
  * @param {'single-tool'|'native'} [config.routingMode='single-tool'] - How the router tool forwards calls.
  *   `single-tool` wraps every operation as a `tools/call` to the real server's
  *   single named tool (used by `cortex`).  `native` forwards known MCP JSON-RPC
@@ -56,6 +58,10 @@ export function createLazyFacade(config) {
   const spawnCommand = config.spawnCommand ?? config.defaultSpawnCommand;
   const env = { ...config.defaultEnv, ...config.env };
   const routingMode = config.routingMode ?? 'single-tool';
+  const localTools = Array.isArray(config.localTools) ? config.localTools : [];
+  const localToolRegistry = new Map(
+    localTools.map((tool) => [tool.name, tool]),
+  );
 
   const initializeResult = {
     protocolVersion: '2024-11-05',
@@ -94,6 +100,7 @@ export function createLazyFacade(config) {
         facadeName: config.name,
         targetName: config.target,
         routingMode,
+        localToolRegistry,
       });
       return buildSuccessResponse(request, result);
     } catch (error) {
@@ -117,6 +124,7 @@ export function createLazyFacade(config) {
       facadeName: config.name,
       targetName: config.target,
       routingMode,
+      localToolRegistry,
     });
   }
 
@@ -198,7 +206,6 @@ function runSelfCheck(config, options) {
       (tool) => isPlainObject(tool) && tool.name === config.name,
     );
     snapshotValid =
-      snapshotToolCount === 1 &&
       routerTool != null &&
       isPlainObject(routerTool.inputSchema) &&
       Array.isArray(routerTool.inputSchema.required) &&
@@ -208,6 +215,7 @@ function runSelfCheck(config, options) {
   }
 
   const report = {
+    name: config.name,
     facade: config.name,
     target: config.target,
     snapshotPath: path
@@ -218,6 +226,10 @@ function runSelfCheck(config, options) {
     canParseSnapshot,
     spawnCommand: config.defaultSpawnCommand.join(' '),
     pass:
+      snapshotValid &&
+      canParseSnapshot &&
+      config.defaultSpawnCommand.length > 0,
+    ok:
       snapshotValid &&
       canParseSnapshot &&
       config.defaultSpawnCommand.length > 0,
@@ -262,6 +274,12 @@ async function handleToolCall(request, context) {
   const routerArgs = isPlainObject(params.arguments) ? params.arguments : {};
   const operation =
     typeof routerArgs.operation === 'string' ? routerArgs.operation : null;
+
+  if (context.localToolRegistry.has(toolName)) {
+    const localTool = context.localToolRegistry.get(toolName);
+    const handlerResult = await localTool.handler(routerArgs);
+    return formatToolResult(handlerResult);
+  }
 
   if (toolName !== context.routerToolName) {
     return createToolErrorResult({

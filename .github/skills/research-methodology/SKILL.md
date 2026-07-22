@@ -94,6 +94,16 @@ NeatapticTS. All investigation, discovery, research, and file-reading work
 should follow this policy before falling back to native tools (`grep`, `glob`,
 `view`).
 
+### Slice-aware context retrieval
+
+When a step packet declares a `pre_execute_hook` (for example,
+`neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }`), invoke it
+**before** any search or file read and use the returned slice context as the
+primary source for the active plan, phase step contract, and relevant source
+files. Only fall back to direct `read_file`/`view` calls for plan/research files
+when the hook is unavailable or Cortex is degraded; treat native file reads as a
+**degraded-Cortex fallback only**, not the primary path.
+
 ### Turso-Native Search Architecture
 
 The Cortex RAG system is backed by a Turso (libSQL) database accessed through

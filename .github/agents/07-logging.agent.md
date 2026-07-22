@@ -15,6 +15,7 @@ tools:
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -39,7 +40,7 @@ skills:
 handoffs:
   - label: 'Plan Next Step'
     agent: '01-planning'
-    prompt: 'Continue from the updated tracker and decide the next Step 01 planning task for the next phase or reroute. Preserve completed evidence and avoid reopening closed work without a clear reason.'
+    prompt: 'Plan the next phase or close the workstream. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
     model: 'glm-5.2:cloud'
 ---
@@ -170,7 +171,7 @@ Use these structured, copy-pasteable templates when refreshing the `Handoff quer
 ### Standard Handoff Template
 
 ```text
-Continue from the current repo state only. Do not rely on prior chat history.
+Continue from the current repo state only. Do not rely on prior chat history. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.
 
 Context: <workstream name> — <one-line status of what was done>
 Current boundary: <active file, module, or step>
@@ -183,7 +184,7 @@ Known worktree cautions: <if any, else "none">
 ### Slice Completion Handoff Template
 
 ```text
-Continue from the current repo state only. Do not rely on prior chat history.
+Continue from the current repo state only. Do not rely on prior chat history. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.
 
 Context: <workstream name> — slice <slice_id> passed green validation
 Changed files: <file list>
@@ -196,7 +197,7 @@ Gate evidence: <one-line gate result>
 ### Phase Closure Handoff Template
 
 ```text
-Continue from the current repo state only. Do not rely on prior chat history.
+Continue from the current repo state only. Do not rely on prior chat history. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.
 
 Context: <workstream name> — Phase <N> complete
 Completed phases: <list>

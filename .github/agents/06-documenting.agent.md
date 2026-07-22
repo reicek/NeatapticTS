@@ -15,6 +15,7 @@ tools:
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -45,7 +46,7 @@ skills:
 handoffs:
   - label: 'Log Session'
     agent: '07-logging'
-    prompt: 'Continue from the active plan, Step 05 validation evidence, and Step 06 documentation changes. Execute Step 07 for the current phase by updating the tracker, handoff query, and logs as appropriate.'
+    prompt: 'Compress the completed phase into logs. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
     model: 'glm-5.2:cloud'
 ---

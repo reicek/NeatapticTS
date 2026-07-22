@@ -31,7 +31,7 @@ skills: ['implementation-standards', 'coverage-guard', 'execute']
 handoffs:
   - label: 'Validate Green'
     agent: '05-green-testing'
-    prompt: 'Continue from the active plan and Step 04 implementation diff. Execute Step 05 validation for the current phase by running focused validation gates and routing failures to the right prior step.'
+    prompt: 'Validate the delivered implementation slice. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
     model: 'glm-5.2:cloud'
 ---
@@ -79,8 +79,9 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Required Workflow
 
-1. **Read the active plan, phase step contract, and all relevant source files.**
-   - Example: Open `plans/step04.md`, read the contract, and load `src/feature.js`.
+1. **Use the declared pre-execute hook to receive slice context before reading any files.**
+   - When the implementation packet includes a `pre_execute_hook` (for example, `neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }`), invoke it first and use the returned context as the primary source for the active plan, phase step contract, and relevant source files.
+   - Only fall back to direct `read_file` calls for plan/research files when Cortex is degraded; if the hook fails, use the same fallback. Treat native file reads as a **degraded-Cortex fallback only**.
 2. **Confirm the implementation packet from `04-implementing` includes:**
    - Target file paths
    - Exact hunks or changes to apply

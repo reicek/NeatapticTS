@@ -163,7 +163,7 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
   - _Example:_
     - Blocker: "validator.js import cycle detected"
     - Next action: "Refactor imports to break cycle"
-    - Handoff prompt: "Ready to refactor imports for validator extraction"
+    - Handoff prompt: "Refactor imports to break the validator.js cycle. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context."
 
 ## Output format
 

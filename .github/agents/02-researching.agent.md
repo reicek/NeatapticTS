@@ -16,6 +16,7 @@ tools:
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -55,7 +56,7 @@ skills:
 handoffs:
   - label: 'Design Red Tests'
     agent: '03-red-testing'
-    prompt: 'Continue from the active plan and Step 02 research evidence. Execute Step 03 for the current phase by designing the smallest red test or explicit skip contract.'
+    prompt: 'Design red tests for the active slice. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
     model: 'glm-5.2:cloud'
 ---
@@ -103,10 +104,18 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - `cortex-index` — before broad discovery, verify index freshness
 - `plan-sync` — after updating the plan with research findings
 
+## Pre-execute hook handling
+
+When the active step packet declares a `pre_execute_hook`, invoke the specified tool with the provided args **before** starting any file reads or research work. The hook returns assembled slice context that informs your research and reduces redundant direct reads of plan or research files.
+
+Canonical example: a hook such as `neataptic-workflow-mcp/get_slice_context` with args `{ slice_id: "..." }` should be called first. If the hook succeeds, use the returned context as the primary source of boundary information. If the hook fails, log the error and proceed with native file reads as fallback.
+
 ## Default Flow
 
-1. **Read the active plan**
-   - Example: Open `plans/step01.md` and locate the Step 02 research question.
+1. **Use the declared pre-execute hook to receive slice context before reading any files.**
+   - When the active step packet declares a `pre_execute_hook`, invoke the specified tool with the provided args first (for example, `neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }`).
+   - Use the returned context as the primary source for the active plan, phase step contract, and relevant source files.
+   - Only fall back to direct `read_file` calls for plan/research files when Cortex is degraded; if the hook fails, use the same fallback. Treat native file reads as a **degraded-Cortex fallback only**, not the primary path.
    - Before delegating, consult `.github/agent-skill-routing-table.md` for the canonical agent-to-skill mapping and delegation target discovery.
 2. **Select the smallest set of specialists**
    - Example: If the question is about code boundaries, choose `boundary-mapper` and `docs-scout`.

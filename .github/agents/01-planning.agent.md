@@ -15,6 +15,7 @@ tools:
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -48,7 +49,7 @@ skills:
 handoffs:
   - label: 'Start Research'
     agent: '02-researching'
-    prompt: 'Continue from the active plan only. Execute Step 02 research for the current phase, refine the Step 01 workset, and leave the next value-adding step ready with explicit skips for non-value gates.'
+    prompt: 'Research the active phase. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
     model: 'glm-5.2:cloud'
 ---

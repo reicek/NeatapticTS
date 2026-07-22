@@ -125,7 +125,11 @@ async function setupTestDb() {
       jsdoc_word_count INTEGER,
       cyclomatic_complexity INTEGER,
       test_coverage TEXT,
-      source_path_pattern TEXT
+      source_path_pattern TEXT,
+      slice_id TEXT,
+      step_number INTEGER,
+      phase TEXT,
+      status TEXT
     )`,
   });
 
