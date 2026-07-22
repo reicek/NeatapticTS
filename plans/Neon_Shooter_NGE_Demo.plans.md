@@ -20,64 +20,10 @@
 
 **Phase 2 — Game Logic & FPS State is [DONE].** Step 01 red-green slices completed and green validated; detailed logs moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.
 
-**Phase 3 — Asymmetric Co-evolution Harness is [DONE].** 11 harness source modules and 11 test suites (83 `it` blocks) are green validated with 100% coverage on touched `examples/neatenstein/browser-entry/harness/` source files. Detailed logs moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3.
+**Active frontier:** Phase 3 — Asymmetric Co-evolution Harness [PLANNED]. Source files exist on disk (`examples/neatenstein/browser-entry/harness/`, `src/neat/nge-main-agent/`, `src/neat/nge-dna/neat.nge-dna.coordinate-allocator.ts`, `src/neat/nge-evolution/neat.nge-evolution.reproduction-mode.ts`) from a prior session, but no validation evidence was logged. Phase 3 and Phase 4 must be re-validated from scratch before any [DONE] status is restored.
 
-**Active frontier:** Phase 4 — NGE Main Agent + Enemy MLPs [WIP]. Step 01 slice tracker reconstructed after accidental git revert; slices 1–5 of 12 are [DONE].
+**Rollback note (2026-07-22):** Phase 3 and Phase 4 were manually rolled back to [PLANNED] because their [DONE]/[WIP] claims had no corresponding entries in `plans/Neon_Shooter_NGE_Demo.logs.md`. The source and test files remain on disk; re-running the focused Jest suites will produce fresh evidence to re-mark them [DONE] if they pass.
 
-**Latest green summary:**
-
-- `04-red-phase4`: 5 red-phase harness test files written before source modules exist, all failing with expected TS2307/module-not-found errors.
-- `04-coordinate-allocator`: implemented `src/neat/nge-dna/neat.nge-dna.coordinate-allocator.ts`, tests pass, 100% coverage.
-- `04-reproduction-mode-policy`: implemented `src/neat/nge-evolution/neat.nge-evolution.reproduction-mode.ts`, tests pass, 100% coverage.
-- `04-enemy-mlp-weight-only`: implemented weight-only MLP enemy path in `examples/neatenstein/browser-entry/harness/enemy-mlp.ts`, created `main-agent.ts` and `arms-race.ts` harness stubs, focused tests pass.
-- `04-main-lifecycle-types`: implemented `src/neat/nge-main-agent/` lifecycle modules (`types`, `lifecycle`, `embryo`, `juvenile`, `adult`, `reproduction`), 3 focused Jest suites pass (32/32 tests), 100% coverage on touched source files.
-- `npm run lint` passes with only pre-existing warnings.
-- Plan gates: plan-sync, step-packet, plan-slice-quality (results in **Latest validation evidence** below).
-
-```yaml
-PlanUpdate:
-  slice_id: '04-main-embryo-build'
-  status: '[WIP]'
-  changed_files:
-    - 'src/neat/nge-main-agent/neat.nge-main-agent.embryo.ts'
-  next: 'Dispatch 04-implementing to build 04-main-embryo-build after green confirmation.'
-```
-
-## Latest validation evidence
-
-status: green-light
-green-light: true
-
-Restoration validation after reconstructing Phase 4 Step 01 slice tracker.
-
-```yaml
-verifier: 01-planning
-timestamp: 2026-07-22T11:49:28.651968+00:00
-green-light: true
-status: green-light
-verification_summary:
-  - 'Phase 1, 2, and 3 are marked [DONE] with compressed coverage notes.'
-  - 'Phase 4 Step 01 has a complete step-level YAML block, 12-slice list, traceable AC-401..AC-411 identifiers, and files_to_change declarations.'
-  - 'All 12 slices have required fields; slices 04-red-phase4 through 04-main-lifecycle-types are [DONE]; remaining 7 slices are [PLANNED].'
-  - 'All slice estimates are ≤ 4 hours (range 2-4 hours, total 33 hours).'
-  - 'Slice dependency graph is acyclic: 04-red-phase4 -> {parallel 04-coordinate-allocator, 04-reproduction-mode-policy, 04-enemy-mlp-weight-only, 04-main-lifecycle-types} -> 04-main-embryo-build -> 04-main-juvenile -> 04-main-adult-equilibrium -> 04-internal-assimilation -> 04-main-reproduction -> 04-arms-race -> 04-green-phase4.'
-gate_verdicts:
-  - gate: plan-sync
-    pass: true
-    evidence: 'All WIP plans are correctly registered in README and Roadmap.'
-    command: 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-    raw_json: '{"pass":true,"evidence":{"wipPlans":["plans/mcp-active-binding.plans.md","plans/Neon_Shooter_NGE_Demo.plans.md"],"missingFromReadme":[],"missingFromRoadmap":[],"plansChecked":7},"fixHint":"All WIP plans are correctly registered in README and Roadmap.","owner":"validate-plan-sync.mjs"}'
-  - gate: step-packet
-    pass: true
-    evidence: 'Active WIP phase/step packets conform to the new format.'
-    command: 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-    raw_json: '{"pass":true,"evidence":{"blocksChecked":["plans/mcp-active-binding.plans.md:yaml@23155","plans/mcp-active-binding.plans.md:yaml@24608","plans/Neon_Shooter_NGE_Demo.plans.md:yaml@31353"],"violations":[],"planReadinessWarnings":[],"preExecuteHooks":[],"plansScanned":3},"fixHint":"All active WIP phase/step packets conform to the new format.","owner":"step-packet.gate.mjs"}'
-  - gate: plan-slice-quality
-    pass: true
-    evidence: 'All WIP plan slices are within the 4-hour estimate limit.'
-    command: 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
-    raw_json: '{"pass":true,"evidence":{"plansChecked":["plans/mcp-active-binding.plans.md","plans/Neon_Shooter_NGE_Demo.plans.md","plans/Racing_Perception_Redesign.plans.md"],"violations":[],"limit":4},"fixHint":"All WIP plan slices are within the 4-hour estimate limit.","owner":"plan-slice-quality.gate.mjs"}'
-```
 ### Phase 1 — World & Renderer (visualizer-owned) [DONE]
 
 **Goal:** Raycasting neon renderer + frame protocol + audio.
@@ -272,400 +218,54 @@ constitution_check:
   - 'principle-4-small-slices'
 ```
 
-### Phase 3 — Asymmetric Co-evolution Harness (benchmark-owned, core-reviewed) [DONE]
+### Phase 3 — Asymmetric Co-evolution Harness (benchmark-owned, core-reviewed) [PLANNED]
 
 **Goal:** Minimal single-main + enemy-population co-evolution harness.
 
-[DONE] Step 01 — Asymmetric Co-evolution Harness red tests and implementation. 11 harness source modules (`types.ts`, `constants.ts`, `fitness.ts`, `seed-pack.ts`, `snapshot.ts`, `enemy-population.ts`, `enemy-mlp.ts`, `enemy-swarm.ts`, `select.ts`, `main-runner.ts`, `barrier.ts`) and 11 test suites (83 `it` blocks) are green validated with 100% coverage on touched source files. Detailed logs moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3.
+[PLANNED] Step 01 — Asymmetric Co-evolution Harness red tests (deferred until phase becomes active).
 
-```yaml
-phase: 3
-title: 'Asymmetric Co-evolution Harness'
-status: '[DONE]'
-goal: 'planning'
-expansion: 'none'
-auto_expand: false
-mode: 'fresh-session'
-source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
-copy_paste: true
-next_phase: 'Phase 4 Step 01 — NGE Main Agent + Enemy MLPs'
-skills:
-  - 'plan-alignment'
-  - 'implementation-standards'
-validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness'
-  - 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-acceptance_criteria:
-  - id: AC-301
-    text: 'Phase 3 harness source modules and tests pass with 100% coverage on touched source files'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein/browser-entry/harness'
-constitution_check:
-  - 'principle-4-small-slices'
-```
+- Single main agent lifecycle runner with combat telemetry adapters.
+- Enemy population abstraction: MLP backend (fixed 8→6→4→2, weight-only, throttled every 5th gen, 32 variants) and WeightSharedCohort backend (singleton DNA, shared weights, coordinate injection).
+- **Rolling opponent snapshot (asymmetric):**
+  - Main evaluates against frozen enemy snapshot (hall-of-fame + recent sample).
+  - Enemy evaluates against frozen main snapshot (main representative = current best variant from last generation).
+  - Refresh every 5 gens (MLP), every 3 gens (SWARM — explicit).
+- **Deterministic seed-pack fairness contract:** all variants (2048 main / 32 MLP / 128 human) evaluated against a fixed frozen seed pack per generation — same seeds for all variants in a generation.
+- **Generation barrier:** main completes full variant batch + selection BEFORE enemy update gate fires.
+- **Authoritative world owner:** one designated display worker owns the authoritative display world; batch-evaluation workers are stateless episode workers (reuse racing's worker-authoritative pattern).
+- **GPU-tier determinism:** variant selection uses index-stable argmax with deterministic tie-break by variant id (lowest id wins ties).
+- **Combat fitness composite:** `survivalTicks + damageDealt + kills - damageTaken - aimMissRate + performance-gated complexityBonus - parsimonyDensityPenalty` (reuse racing's `RacingQualitySignal` pattern, same 800–3000 syn/neuron parsimony band).
 
-```yaml
-phase: 3
-step: 1
-title: 'Asymmetric Co-evolution Harness red tests and implementation'
-status: '[DONE]'
-goal: 'implementing'
-tdd_sequence: 'red-green'
-expansion: 'none'
-auto_expand: false
-mode: 'fresh-session'
-source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
-copy_paste: true
-next_step: 'Phase 4 Step 01 — NGE Main Agent + Enemy MLPs'
-skills:
-  - 'plan-alignment'
-  - 'implementation-standards'
-  - 'planning-acceptance-criteria'
-validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness'
-acceptance_criteria:
-  - id: AC-301
-    text: 'All 11 harness test suites pass with 100% coverage on touched source files'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein/browser-entry/harness'
-constitution_check:
-  - 'principle-4-small-slices'
-```
+**Acceptance:**
 
-### Phase 4 — NGE Main Agent + Enemy MLPs (core + benchmark-owned) [WIP]
+- `genBarrier(seed=K)` reproduces identical `M_N` and enemy state on GPU tier (index-stable argmax + tie-break).
+- Snapshot refresh cadence enforced (5 gens MLP, 3 gens SWARM).
+- MLP throttle fires only on `N % 5 == 0`.
+- Seed-pack fairness: all variants in a generation see identical seeds.
+
+### Phase 4 — NGE Main Agent + Enemy MLPs (core + benchmark-owned) [PLANNED]
 
 **Goal:** Full NGE main agent lifecycle + weight-only MLP co-evolution.
 
-#### Step 01: NGE Main Agent + Enemy MLPs red tests and implementation slices [WIP]
+[PLANNED] Step 01 — NGE Main Agent + Enemy MLPs red tests (deferred until phase becomes active).
 
-```yaml
-phase: 4
-step: 1
-title: 'NGE Main Agent + Enemy MLPs red tests and implementation slices'
-status: '[WIP]'
-goal: 'implementing'
-tdd_sequence: 'red-green'
-expansion: 'slices'
-auto_expand: true
-mode: 'fresh-session'
-source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
-copy_paste: true
-next_step: 'Step 02 — Green validation for NGE Main Agent + Enemy MLPs and arms-race integration'
-skills:
-  - 'plan-alignment'
-  - 'implementation-standards'
-  - 'planning-acceptance-criteria'
-  - 'red-testing'
-  - 'green-testing'
-validation:
-  - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=neatenstein'
-  - 'npm run lint'
-  - 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
-  - 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-acceptance_criteria:
-  - id: AC-401
-    text: 'Red tests for main-agent, MLP, and arms-race harness modules exist and fail before implementation with expected TS2307/module-not-found errors'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness'
-  - id: AC-402
-    text: 'Deterministic substrate coordinate allocator produces reproducible, unit-cube conformant coordinates per (swarmSize, enemyIndex, seed)'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-dna/coordinate-allocator'
-  - id: AC-403
-    text: 'Combat-pressure reproduction-mode policy maps pressure signals to inspectable mode selection with 3-generation hysteresis'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-evolution/reproduction-mode'
-  - id: AC-404
-    text: 'Enemy MLP uses a fixed 8->6->4->2 topology, weight-only mutation, and a runtime guard that rejects structural mutation operators'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/enemy-mlp'
-  - id: AC-405
-    text: 'NGE main-agent lifecycle modules (types, lifecycle, embryo, juvenile, adult, reproduction) are implemented and fully covered'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/neat/nge-main-agent'
-  - id: AC-406
-    text: 'Main-agent embryo builder integrates coordinate allocator and reproduction-mode policy with tier-capped topology'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/embryo'
-  - id: AC-407
-    text: 'Juvenile grow stage applies hysteresis grow-gate and assimilates only internal priors, never enemy-derived structure'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/juvenile'
-  - id: AC-408
-    text: 'Adult equilibrium stage produces a stable candidate for reproduction and snapshot generation'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/adult'
-  - id: AC-409
-    text: 'Internal assimilation writes weak/decaying structural priors back to the main agents own genome'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-assimilation/internal'
-  - id: AC-410
-    text: 'Reproduction stage selects mode via reproductionModeHysteresis and produces offspring via parthenogenesis, polyandric, or sexual paths'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/reproduction'
-  - id: AC-411
-    text: 'ARMS RACE mode runs at interactive rates with main fitness evaluated against a frozen MLP snapshot, not the live enemy population'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/arms-race'
-constitution_check:
-  - 'principle-4-small-slices'
-  - 'principle-5-unique-ids'
-traceability:
-  - id: AC-401
-    criterion: 'red tests fail before implementation'
-    files_changed:
-      - 'examples/neatenstein/browser-entry/harness/main-agent.test.ts'
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.test.ts'
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-snapshot.test.ts'
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-weight-only.test.ts'
-      - 'examples/neatenstein/browser-entry/harness/arms-race.test.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness'
-  - id: AC-402
-    criterion: 'deterministic substrate coordinate allocator'
-    files_changed:
-      - 'src/neat/nge-dna/neat.nge-dna.coordinate-allocator.ts'
-      - 'src/neat/nge-dna/neat.nge-dna.coordinate-allocator.test.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-dna/coordinate-allocator'
-  - id: AC-403
-    criterion: 'combat-pressure reproduction-mode policy'
-    files_changed:
-      - 'src/neat/nge-evolution/neat.nge-evolution.reproduction-mode.ts'
-      - 'src/neat/nge-evolution/neat.nge-evolution.reproduction-mode.test.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-evolution/reproduction-mode'
-  - id: AC-404
-    criterion: 'weight-only MLP enemy'
-    files_changed:
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.ts'
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.test.ts'
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-snapshot.test.ts'
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-weight-only.test.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/enemy-mlp'
-  - id: AC-405
-    criterion: 'main-agent lifecycle types and modules'
-    files_changed:
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.types.ts'
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.lifecycle.ts'
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.embryo.ts'
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.juvenile.ts'
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.adult.ts'
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.reproduction.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/neat/nge-main-agent'
-  - id: AC-406
-    criterion: 'embryo builder integration'
-    files_changed:
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.embryo.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/embryo'
-  - id: AC-407
-    criterion: 'juvenile grow gate and internal assimilation'
-    files_changed:
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.juvenile.ts'
-      - 'src/neat/nge-assimilation/neat.nge-assimilation.internal.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/juvenile'
-  - id: AC-408
-    criterion: 'adult equilibrium candidate'
-    files_changed:
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.adult.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/adult'
-  - id: AC-409
-    criterion: 'weak/decaying internal assimilation priors'
-    files_changed:
-      - 'src/neat/nge-assimilation/neat.nge-assimilation.internal.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-assimilation/internal'
-  - id: AC-410
-    criterion: 'reproduction mode selection and offspring production'
-    files_changed:
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.reproduction.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/reproduction'
-  - id: AC-411
-    criterion: 'ARMS RACE mode integration'
-    files_changed:
-      - 'examples/neatenstein/browser-entry/harness/arms-race.ts'
-      - 'examples/neatenstein/browser-entry/harness/arms-race.test.ts'
-    validation_command: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/arms-race'
-slices:
-  - slice_id: '04-red-phase4'
-    title: 'Write red tests for NGE Main Agent + Enemy MLPs'
-    status: '[DONE]'
-    goal: 'red-testing'
-    estimate_hours: 3
-    files_to_change:
-      - 'examples/neatenstein/browser-entry/harness/main-agent.test.ts'
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.test.ts'
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-snapshot.test.ts'
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-weight-only.test.ts'
-      - 'examples/neatenstein/browser-entry/harness/arms-race.test.ts'
-    acceptance_criteria:
-      - id: AC-401
-        text: 'Red tests exist and fail before implementation'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness'
-    parallelizable: false
-    dependencies: []
-    next_slice: '04-coordinate-allocator'
-  - slice_id: '04-coordinate-allocator'
-    title: 'Implement deterministic substrate coordinate allocator'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'src/neat/nge-dna/neat.nge-dna.coordinate-allocator.ts'
-    acceptance_criteria:
-      - id: AC-402
-        text: 'Allocator tests pass with repeated-build hash reproducibility and unit-cube conformance'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-dna/coordinate-allocator'
-    parallelizable: true
-    dependencies:
-      - '04-red-phase4'
-    next_slice: '04-reproduction-mode-policy'
-  - slice_id: '04-reproduction-mode-policy'
-    title: 'Implement combat-pressure reproduction-mode policy'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 2
-    files_to_change:
-      - 'src/neat/nge-evolution/neat.nge-evolution.reproduction-mode.ts'
-    acceptance_criteria:
-      - id: AC-403
-        text: 'Mode policy tests pass with 3-gen hysteresis and inspectable mode selection'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-evolution/reproduction-mode'
-    parallelizable: true
-    dependencies:
-      - '04-red-phase4'
-    next_slice: '04-enemy-mlp-weight-only'
-  - slice_id: '04-enemy-mlp-weight-only'
-    title: 'Implement weight-only MLP enemy and main-agent coupling'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 4
-    files_to_change:
-      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.ts'
-      - 'examples/neatenstein/browser-entry/harness/main-agent.ts'
-      - 'examples/neatenstein/browser-entry/harness/arms-race.ts'
-    acceptance_criteria:
-      - id: AC-404
-        text: 'MLP enemy weight-only tests pass with fixed topology and structural-mutation guard'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/enemy-mlp'
-    parallelizable: true
-    dependencies:
-      - '04-red-phase4'
-    next_slice: '04-main-lifecycle-types'
-  - slice_id: '04-main-lifecycle-types'
-    title: 'Implement NGE main agent lifecycle types and modules'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 4
-    files_to_change:
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.types.ts'
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.lifecycle.ts'
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.embryo.ts'
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.juvenile.ts'
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.adult.ts'
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.reproduction.ts'
-    acceptance_criteria:
-      - id: AC-405
-        text: 'All lifecycle module tests pass with 100% coverage on touched src/ files'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=src/neat/nge-main-agent'
-    parallelizable: true
-    dependencies:
-      - '04-coordinate-allocator'
-      - '04-reproduction-mode-policy'
-      - '04-enemy-mlp-weight-only'
-    next_slice: '04-main-embryo-build'
-  - slice_id: '04-main-embryo-build'
-    title: 'Integrate embryo builder with allocator and mode policy'
-    status: '[PLANNED]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.embryo.ts'
-    acceptance_criteria:
-      - id: AC-406
-        text: 'Embryo builder tests pass with tier-capped topology integration'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/embryo'
-    parallelizable: false
-    dependencies:
-      - '04-main-lifecycle-types'
-    next_slice: '04-main-juvenile'
-  - slice_id: '04-main-juvenile'
-    title: 'Implement juvenile grow stage and internal assimilation'
-    status: '[PLANNED]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.juvenile.ts'
-      - 'src/neat/nge-assimilation/neat.nge-assimilation.internal.ts'
-    acceptance_criteria:
-      - id: AC-407
-        text: 'Juvenile tests pass with grow-gate and internal-prior assimilation'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/juvenile'
-    parallelizable: false
-    dependencies:
-      - '04-main-embryo-build'
-    next_slice: '04-main-adult-equilibrium'
-  - slice_id: '04-main-adult-equilibrium'
-    title: 'Implement adult equilibrium and snapshot candidate'
-    status: '[PLANNED]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.adult.ts'
-    acceptance_criteria:
-      - id: AC-408
-        text: 'Adult equilibrium tests pass'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/adult'
-    parallelizable: false
-    dependencies:
-      - '04-main-juvenile'
-    next_slice: '04-internal-assimilation'
-  - slice_id: '04-internal-assimilation'
-    title: 'Harden internal assimilation priors'
-    status: '[PLANNED]'
-    goal: 'implementing'
-    estimate_hours: 2
-    files_to_change:
-      - 'src/neat/nge-assimilation/neat.nge-assimilation.internal.ts'
-    acceptance_criteria:
-      - id: AC-409
-        text: 'Internal assimilation tests pass with weak/decaying priors'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-assimilation/internal'
-    parallelizable: false
-    dependencies:
-      - '04-main-adult-equilibrium'
-    next_slice: '04-main-reproduction'
-  - slice_id: '04-main-reproduction'
-    title: 'Implement reproduction stage and mode selection'
-    status: '[PLANNED]'
-    goal: 'implementing'
-    estimate_hours: 3
-    files_to_change:
-      - 'src/neat/nge-main-agent/neat.nge-main-agent.reproduction.ts'
-    acceptance_criteria:
-      - id: AC-410
-        text: 'Reproduction tests pass with mode hysteresis and all three mode paths'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-main-agent/reproduction'
-    parallelizable: false
-    dependencies:
-      - '04-internal-assimilation'
-    next_slice: '04-arms-race'
-  - slice_id: '04-arms-race'
-    title: 'Implement ARMS RACE mode harness integration'
-    status: '[PLANNED]'
-    goal: 'implementing'
-    estimate_hours: 4
-    files_to_change:
-      - 'examples/neatenstein/browser-entry/harness/arms-race.ts'
-    acceptance_criteria:
-      - id: AC-411
-        text: 'ARMS RACE integration tests pass'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/harness/arms-race'
-    parallelizable: false
-    dependencies:
-      - '04-main-reproduction'
-    next_slice: '04-green-phase4'
-  - slice_id: '04-green-phase4'
-    title: 'Green validation and coverage guard for Phase 4'
-    status: '[PLANNED]'
-    goal: 'green-testing'
-    estimate_hours: 3
-    files_to_change:
-      - 'coverage/lcov.info'
-    acceptance_criteria:
-      - id: AC-405
-        text: 'All Phase 4 focused suites remain green'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=neatenstein'
-      - id: AC-405b
-        text: '100% coverage on touched src/ files'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=src/neat/nge-main-agent|src/neat/nge-dna|src/neat/nge-evolution|src/neat/nge-assimilation'
-    parallelizable: false
-    dependencies:
-      - '04-arms-race'
-```
+- Main agent: full NGE lifecycle (Embryo→Juvenile→Adult→Reproducing), tier-capped topology up to tier limit.
+- **All motifs are EXISTING in `NEAT_GENOME_COMPUTATION_TYPE_CATALOGUE`** — no new motifs, no schema version bump. Motifs used: `AttentionHead` (threat prioritization), `GatedRecurrentCell` (aim/strafe state), `EpisodicSlot` (spawn-pattern memory).
+- MLP enemies: fixed topology, weight-only mutation, no structural assimilation.
+- **Assimilation is INTERNAL to the main agent lifecycle** — writes back structural priors derived from the main agent's own equilibrium candidate. The MLP enemy is the SELECTION PRESSURE, not an assimilation source. No weights or structure flow from MLP to main via assimilation. Priors are weak/decaying (defends against catastrophic forgetting).
+- **Reproduction mode policy:** an external overlay that SELECTS a mode then writes the canonical `NgeReproductionPolicy.mode` field (only when `modeIsEvolvable: true`). Named `reproductionModeHysteresis` (distinct from `NgeHysteresisState` juvenile grow gate). Window: 3 generations, majority-vote. Mode selection: parthenogenesis (dominating) → polyandric (struggling) → sexual (stalemate).
+- **New core-side primitives (core-owned):**
+  - (a) Deterministic per-enemy substrate coordinate allocator for `WeightSharedCohort`: emits `NeatGenomeSubstrateCoordinate` within `NgeSubstrateConfig` (dimensions: 3, normalization: 'unit-cube'), produces stable `zoneId`s via existing zone-partition. Reproducible from `(swarmSize, enemyIndex, seed)` alone, no runtime allocation order dependency.
+  - (b) Combat-pressure → reproduction-mode policy (inspectable, tested, in `src/neat/nge-evolution/`).
+
+**Acceptance:**
+
+- ARMS RACE mode runs at interactive rates.
+- Main fitness computed against MLP snapshot, not live MLP.
+- Assimilation writes internal priors, not enemy-derived weights/structure.
+- Reproduction mode switches with `reproductionModeHysteresis` (3-gen window).
+- Coordinate allocator: repeated-build hash test (same swarmSize + seed → identical coordinate set, stable ordering, unit-cube conformant).
+- 100% coverage on touched `src/` files via `coverage-guard`.
 
 ### Phase 5 — SWARM Mode (core + benchmark-owned) [PLANNED]
 

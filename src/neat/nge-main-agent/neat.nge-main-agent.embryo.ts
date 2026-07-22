@@ -1,12 +1,34 @@
-import type {
-  NeatGenomeComputationType,
-  NeatGenomeModuleArchetypeDescriptor,
-} from '../genome/genome.types';
+import type { NeatGenomeComputationType } from '../genome/genome.types';
+import type { NgeZonePartitionConfig } from '../nge-dna/neat.nge-dna.types';
+import type { NgeReproductionPolicyMode } from '../nge-dna/neat.nge-dna.types';
+import { allocateEnemySubstrateCoordinates } from '../nge-dna/neat.nge-dna.coordinate-allocator';
 import type {
   NgeMainAgentEmbryo,
+  NgeMainAgentEmbryoArchetypeDescriptor,
   NgeMainAgentLifecycleConfig,
   NgeMainAgentTopologyBudget,
 } from './neat.nge-main-agent.types';
+
+/**
+ * Default unit-cube zone partition used when the embryo builder allocates
+ * substrate coordinates. Four partitions per axis gives each of the three
+ * embryo archetypes distinct zone assignments under the deterministic allocator.
+ */
+const DEFAULT_EMBRYO_ZONE_PARTITION: NgeZonePartitionConfig = {
+  x: { count: 4 },
+  y: { count: 4 },
+  z: { count: 4 },
+};
+
+/**
+ * Initial reproduction mode for every main-agent lineage.
+ *
+ * The conservative default is parthenogenesis so that an unproven embryo clones
+ * itself until combat-pressure hysteresis later in the lifecycle decides whether
+ * to switch modes.
+ */
+const DEFAULT_EMBRYO_REPRODUCTION_MODE: NgeReproductionPolicyMode =
+  'parthenogenesis';
 
 /**
  * Resolve the exact three existing catalogue motifs allowed for the main agent.
@@ -42,10 +64,11 @@ export function computeEmbryoTopologyBudget(
 /**
  * Build a deterministic main-agent embryo state.
  *
- * The embryo carries the three allowed motif archetypes, a node and edge count
- * within the tier budget, and the canonical schema version A.1.0. The same
- * config always produces the same embryo, which is required for reproducible
- * generation barriers.
+ * The embryo carries the three allowed motif archetypes, each allocated a
+ * deterministic substrate coordinate and zone, plus an initial parthenogenetic
+ * reproduction mode that the hysteresis policy may later update. Node and edge
+ * counts stay within the tier budget. The same config always produces the same
+ * embryo, which is required for reproducible generation barriers.
  *
  * @param config - Lifecycle config with seed and tier budget.
  * @returns A deterministic embryo state ready for juvenile growth.
@@ -56,12 +79,23 @@ export function buildMainAgentEmbryo(
   const budget = computeEmbryoTopologyBudget(config);
   const allowlist = resolveMainAgentMotifAllowlist();
 
-  const archetypes: NeatGenomeModuleArchetypeDescriptor[] = allowlist.map(
-    (computationType, index) => ({
-      archetypeId: `main-agent-${computationType.toLowerCase()}-${index}`,
-      computationType,
-      receivesCoordinates: true,
-    }),
+  const archetypes: NgeMainAgentEmbryoArchetypeDescriptor[] = allowlist.map(
+    (computationType, index) => {
+      const allocation = allocateEnemySubstrateCoordinates({
+        swarmSize: allowlist.length,
+        enemyIndex: index,
+        seed: config.seed,
+        zonePartition: DEFAULT_EMBRYO_ZONE_PARTITION,
+      });
+
+      return {
+        archetypeId: `main-agent-${computationType.toLowerCase()}-${index}`,
+        computationType,
+        receivesCoordinates: true,
+        coordinate: allocation.coordinate,
+        zoneId: allocation.zoneId,
+      };
+    },
   );
 
   const nodeCount = Math.min(budget.maxNodes, allowlist.length);
@@ -78,5 +112,7 @@ export function buildMainAgentEmbryo(
     edgeCount,
     archetypes,
     schemaVersion: 'A.1.0',
+    reproductionMode: DEFAULT_EMBRYO_REPRODUCTION_MODE,
+    modeIsEvolvable: true,
   };
 }

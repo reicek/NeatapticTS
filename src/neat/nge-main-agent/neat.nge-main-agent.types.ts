@@ -1,4 +1,8 @@
-import type { NeatGenomeModuleArchetypeDescriptor } from '../genome/genome.types';
+import type {
+  NeatGenomeModuleArchetypeDescriptor,
+  NeatGenomeSubstrateCoordinate,
+} from '../genome/genome.types';
+import type { NgeReproductionPolicyMode } from '../nge-dna/neat.nge-dna.types';
 
 /**
  * Ordered lifecycle stages for the NGE main agent.
@@ -51,6 +55,20 @@ export interface NgeMainAgentTopologyBudget {
 }
 
 /**
+ * Archetype descriptor specialized for the embryo stage.
+ *
+ * Every embryo archetype receives a deterministic substrate coordinate and zone
+ * assignment from the coordinate allocator so that downstream materialization is
+ * reproducible and zone-aware.
+ */
+export interface NgeMainAgentEmbryoArchetypeDescriptor extends NeatGenomeModuleArchetypeDescriptor {
+  /** Three-axis unit-cube coordinate allocated to this archetype. */
+  coordinate: NeatGenomeSubstrateCoordinate;
+  /** Deterministic zone id matching the allocated coordinate. */
+  zoneId: string;
+}
+
+/**
  * Main agent embryo state.
  *
  * The embryo is the smallest materialized stage. It carries the full motif
@@ -63,10 +81,19 @@ export interface NgeMainAgentEmbryo extends NgeMainAgentLifecycleState {
   nodeCount: number;
   /** Edge count after embryo construction. */
   edgeCount: number;
-  /** Module archetypes present in the embryo. */
-  archetypes: NeatGenomeModuleArchetypeDescriptor[];
+  /** Module archetypes present in the embryo, each with an allocated coordinate. */
+  archetypes: NgeMainAgentEmbryoArchetypeDescriptor[];
   /** DNA schema version; remains A.1.0 because this slice does not introduce new motifs. */
   schemaVersion: string;
+  /**
+   * Initial reproduction mode for the lineage.
+   *
+   * The mode starts as parthenogenesis and may be updated later by the
+   * reproduction-mode hysteresis policy when {@link modeIsEvolvable} is true.
+   */
+  reproductionMode: NgeReproductionPolicyMode;
+  /** Whether the reproduction mode itself may evolve via hysteresis. */
+  modeIsEvolvable: boolean;
 }
 
 /**
