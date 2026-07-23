@@ -59,7 +59,12 @@ Output: draft Step 04 packet for user review before send.
 
 1. Keep phase order linear: Planning, Research, Red Testing, Implementation,
    Green Testing, Documentation, Session Logging.
-2. Every handoff prompt must state the next narrow task and instruct the receiver to load context via Cortex MCP and any declared pre_execute_hook/get_slice_context. Do not embed file lists, plan details, or step-by-step instructions in the prompt.
+2. Every handoff prompt must state ONLY the next narrow task (slice ID or step
+   ID) and instruct the receiver to load context via Cortex MCP and any
+   declared pre_execute_hook/get_slice_context. Do not embed file lists, plan
+   details, or step-by-step instructions in the prompt. All agents except
+   `00-helping` and `01-planning` MUST receive their instructions via RAG.
+   See `execute` skill Section 2.2 for the full RAG-Based Dispatch Policy.
 3. Prefer `send: false` until the repository has evidence that automatic phase
    transitions are safe.
 4. Use `handoffs.model` only with validated qualified model names.
@@ -97,7 +102,11 @@ required skills, required specialists, and action class. Use
 payload. 12. **Phase Compression (mandatory).** When all steps in a phase are marked
 `[DONE]` and green validation has passed, the orchestrator MUST dispatch
 `07-logging` to compress the completed phase before advancing to the next
-phase or performing the phase-to-phase handoff. Compression means:
+phase or performing the phase-to-phase handoff. **Step-level compression**
+should happen as each step completes — move the step's YAML packet and
+details to `.logs.md` and keep a compact `[DONE]` reference in the plan.
+Do not wait for the entire phase to finish before compressing individual
+`[DONE]` steps. Compression means:
 
 1. Move detailed step/slice/VALIDATION_EVIDENCE blocks from the plan file
    to the corresponding `.logs.md` file.

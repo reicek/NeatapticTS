@@ -5,7 +5,11 @@ import type { InputSnapshot } from '../input.ts';
 import { NEATENSTEIN_INPUT_MESSAGE_TYPE } from '../../constants';
 import {
   NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT,
+  NEATENSTEIN_KEY_MAP_LOOK,
   NEATENSTEIN_MOUSE_SENSITIVITY,
+  NEATENSTEIN_POINTER_LOCK_OPTIONS,
+  NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
+  NEATENSTEIN_SECONDARY_MOUSE_BUTTON,
   NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX,
 } from './constants.ts';
 import {
@@ -82,6 +86,12 @@ function createMouseEvent(
   return event;
 }
 
+const TOUCH_ID_PRIMARY = 1;
+const TOUCH_ID_OTHER = 2;
+const TOUCH_ORIGIN_X = 0;
+const TOUCH_ORIGIN_Y = 0;
+const TOUCH_FAR_X = 100;
+
 describe('Neatenstein game controls', () => {
   it('finds a touch by identifier', () => {
     const touches = createTouchList([
@@ -144,10 +154,18 @@ describe('Neatenstein game controls', () => {
     const callback = jest.fn();
     const detach = bindKeyboardLook(target, callback);
 
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowLeft' }));
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight' }));
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowUp' }));
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowDown' }));
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.left }),
+    );
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.right }),
+    );
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.up }),
+    );
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.down }),
+    );
     detach();
 
     const step = NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT;
@@ -228,22 +246,470 @@ describe('Neatenstein game controls', () => {
     });
   });
 
-  it('emits true on left mouse down and false on mouse up for fire', () => {
+  it('emits on left mouse down for fire', () => {
     const target = document.createElement('div');
     const callback = jest.fn();
     const detach = bindMouseFire(target, callback);
 
     target.dispatchEvent(
-      new MouseEvent('mousedown', { button: 0, bubbles: true }),
+      new MouseEvent('mousedown', {
+        button: NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
+        bubbles: true,
+      }),
     );
     target.dispatchEvent(
-      new MouseEvent('mousedown', { button: 2, bubbles: true }),
+      new MouseEvent('mousedown', {
+        button: NEATENSTEIN_SECONDARY_MOUSE_BUTTON,
+        bubbles: true,
+      }),
     );
     document.dispatchEvent(
-      new MouseEvent('mouseup', { button: 0, bubbles: true }),
+      new MouseEvent('mouseup', {
+        button: NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
+        bubbles: true,
+      }),
     );
     detach();
 
-    expect(callback.mock.calls).toEqual([[true], [false]]);
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores non-left mouse button for fire', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const detach = bindMouseFire(target, callback);
+
+    target.dispatchEvent(
+      new MouseEvent('mousedown', {
+        button: NEATENSTEIN_SECONDARY_MOUSE_BUTTON,
+        bubbles: true,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('mouseup', {
+        button: NEATENSTEIN_SECONDARY_MOUSE_BUTTON,
+        bubbles: true,
+      }),
+    );
+    detach();
+
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('does not emit fire on mouse up', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const detach = bindMouseFire(target, callback);
+
+    target.dispatchEvent(
+      new MouseEvent('mousedown', {
+        button: NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
+        bubbles: true,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('mouseup', {
+        button: NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
+        bubbles: true,
+      }),
+    );
+    document.dispatchEvent(
+      new MouseEvent('mouseup', {
+        button: NEATENSTEIN_SECONDARY_MOUSE_BUTTON,
+        bubbles: true,
+      }),
+    );
+    detach();
+
+    expect(callback).toHaveBeenCalledTimes(1);
+  });
+
+  it('requests pointer lock with unadjustedMovement options', () => {
+    const canvas = document.createElement('canvas');
+    const requestPointerLock = jest
+      .fn<(options?: PointerLockOptions) => Promise<void>>()
+      .mockResolvedValue(undefined);
+    Object.defineProperty(canvas, 'requestPointerLock', {
+      value: requestPointerLock,
+      configurable: true,
+    });
+
+    const detach = bindPointerLock(canvas);
+    canvas.click();
+    detach();
+
+    expect(requestPointerLock).toHaveBeenCalledWith(
+      NEATENSTEIN_POINTER_LOCK_OPTIONS,
+    );
+  });
+
+  it('retries pointer lock without options when options are unsupported', async () => {
+    const canvas = document.createElement('canvas');
+    const requestPointerLock = jest
+      .fn<(options?: PointerLockOptions) => Promise<void>>()
+      .mockRejectedValueOnce(new TypeError('Unsupported'))
+      .mockResolvedValue(undefined);
+    Object.defineProperty(canvas, 'requestPointerLock', {
+      value: requestPointerLock,
+      configurable: true,
+    });
+
+    const detach = bindPointerLock(canvas);
+    canvas.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    detach();
+
+    expect(requestPointerLock.mock.calls).toEqual([
+      [NEATENSTEIN_POINTER_LOCK_OPTIONS],
+      [],
+    ]);
+  });
+
+  it('returns undefined when findTouch cannot match the identifier', () => {
+    const touches = createTouchList([
+      { identifier: 1, clientX: 0, clientY: 0 },
+      { identifier: 2, clientX: 10, clientY: 10 },
+    ]);
+    expect(findTouch(touches, 99)).toBeUndefined();
+  });
+
+  it('emits a pitch delta once a vertical touch drag crosses the threshold', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const detach = bindTouchLook(target, callback);
+    const drag = NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX + 5;
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      { identifier: 1, clientX: 0, clientY: drag },
+    ]);
+    detach();
+
+    expect(callback).toHaveBeenCalledWith({
+      yawDelta: 0,
+      pitchDelta: drag * NEATENSTEIN_MOUSE_SENSITIVITY,
+    });
+  });
+
+  it('reports touch active state through callback on start and end', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchend', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    detach();
+
+    expect(activeCallback.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('releases active touch on touchcancel', () => {
+    const target = document.createElement('div');
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, () => undefined, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchcancel', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    detach();
+
+    expect(activeCallback.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('returns silently when the target lacks pointer lock support', () => {
+    const unsupported = document.createElement('div');
+
+    expect(() => {
+      const detach = bindPointerLock(unsupported);
+      unsupported.click();
+      detach();
+    }).not.toThrow();
+  });
+
+  it('gives up when both pointer lock request variants fail', async () => {
+    const canvas = document.createElement('canvas');
+    const requestPointerLock = jest
+      .fn<(options?: PointerLockOptions) => Promise<void>>()
+      .mockRejectedValueOnce(new TypeError('Unsupported'))
+      .mockRejectedValueOnce(new Error('Still fails'));
+    Object.defineProperty(canvas, 'requestPointerLock', {
+      value: requestPointerLock,
+      configurable: true,
+    });
+
+    const detach = bindPointerLock(canvas);
+    canvas.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    detach();
+
+    expect(requestPointerLock.mock.calls).toEqual([
+      [NEATENSTEIN_POINTER_LOCK_OPTIONS],
+      [],
+    ]);
+  });
+
+  it('does not prevent default for unmapped keyboard look keys', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const detach = bindKeyboardLook(target, callback);
+
+    const event = new KeyboardEvent('keydown', { code: 'KeyA' });
+    const preventDefault = jest.spyOn(event, 'preventDefault');
+    target.dispatchEvent(event);
+    detach();
+
+    expect({
+      preventDefaultCalls: preventDefault.mock.calls.length,
+      callbackCalls: callback.mock.calls.length,
+    }).toEqual({ preventDefaultCalls: 0, callbackCalls: 0 });
+  });
+
+  it('ignores a second touch while one is already active', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+    const drag = NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX + 5;
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      {
+        identifier: TOUCH_ID_PRIMARY,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      {
+        identifier: TOUCH_ID_OTHER,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      { identifier: TOUCH_ID_OTHER, clientX: drag, clientY: TOUCH_ORIGIN_Y },
+    ]);
+    detach();
+
+    expect({
+      activeCalls: activeCallback.mock.calls.length,
+      callbackCalls: callback.mock.calls.length,
+    }).toEqual({ activeCalls: 1, callbackCalls: 0 });
+  });
+
+  it('removes touch listeners on detach so callbacks stop firing', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    detach();
+    callback.mockClear();
+    activeCallback.mockClear();
+
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      { identifier: 1, clientX: 100, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchend', [
+      { identifier: 1, clientX: 100, clientY: 0 },
+    ]);
+
+    expect({
+      callbackCalls: callback.mock.calls.length,
+      activeCallbackCalls: activeCallback.mock.calls.length,
+    }).toEqual({ callbackCalls: 0, activeCallbackCalls: 0 });
+  });
+
+  it('does not retry pointer lock when the rejection is unrelated to options', async () => {
+    const canvas = document.createElement('canvas');
+    const requestPointerLock = jest
+      .fn<(options?: PointerLockOptions) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('Unrelated failure'));
+    Object.defineProperty(canvas, 'requestPointerLock', {
+      value: requestPointerLock,
+      configurable: true,
+    });
+
+    const detach = bindPointerLock(canvas);
+    canvas.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    detach();
+
+    expect(requestPointerLock.mock.calls).toEqual([
+      [NEATENSTEIN_POINTER_LOCK_OPTIONS],
+    ]);
+  });
+
+  it('exits pointer lock on detach when the canvas owns it', () => {
+    const canvas = document.createElement('canvas');
+    const requestPointerLock = jest.fn(() => Promise.resolve());
+    Object.defineProperty(canvas, 'requestPointerLock', {
+      value: requestPointerLock,
+      configurable: true,
+    });
+    const exitPointerLock = jest.fn();
+    Object.defineProperty(document, 'exitPointerLock', {
+      value: exitPointerLock,
+      configurable: true,
+    });
+    Object.defineProperty(document, 'pointerLockElement', {
+      value: canvas,
+      configurable: true,
+    });
+
+    const detach = bindPointerLock(canvas);
+    detach();
+
+    expect(exitPointerLock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores touch start when changedTouches is empty', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchstart', []);
+    detach();
+
+    expect({
+      callbackCalls: callback.mock.calls.length,
+      activeCallbackCalls: activeCallback.mock.calls.length,
+    }).toEqual({ callbackCalls: 0, activeCallbackCalls: 0 });
+  });
+
+  it('ignores touch move when no touch is active', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      {
+        identifier: TOUCH_ID_PRIMARY,
+        clientX: TOUCH_FAR_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    detach();
+
+    expect({
+      callbackCalls: callback.mock.calls.length,
+      activeCallbackCalls: activeCallback.mock.calls.length,
+    }).toEqual({ callbackCalls: 0, activeCallbackCalls: 0 });
+  });
+
+  it('ignores touch end when no touch is active', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchend', [
+      {
+        identifier: TOUCH_ID_PRIMARY,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    detach();
+
+    expect({
+      callbackCalls: callback.mock.calls.length,
+      activeCallbackCalls: activeCallback.mock.calls.length,
+    }).toEqual({ callbackCalls: 0, activeCallbackCalls: 0 });
+  });
+
+  it('ignores touch cancel when no touch is active', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchcancel', [
+      {
+        identifier: TOUCH_ID_PRIMARY,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    detach();
+
+    expect({
+      callbackCalls: callback.mock.calls.length,
+      activeCallbackCalls: activeCallback.mock.calls.length,
+    }).toEqual({ callbackCalls: 0, activeCallbackCalls: 0 });
+  });
+
+  it('ignores touch move when the changed touch id does not match the active touch', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+    const drag = NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX + 5;
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      {
+        identifier: TOUCH_ID_PRIMARY,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      {
+        identifier: TOUCH_ID_OTHER,
+        clientX: drag,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    detach();
+
+    expect({
+      callbackCalls: callback.mock.calls.length,
+      activeCallbackCalls: activeCallback.mock.calls.length,
+    }).toEqual({ callbackCalls: 0, activeCallbackCalls: 1 });
+  });
+
+  it('ignores touch end when the changed touch id does not match the active touch', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      {
+        identifier: TOUCH_ID_PRIMARY,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchend', [
+      {
+        identifier: TOUCH_ID_OTHER,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    detach();
+
+    expect({
+      callbackCalls: callback.mock.calls.length,
+      activeCallbackCalls: activeCallback.mock.calls.length,
+    }).toEqual({ callbackCalls: 0, activeCallbackCalls: 1 });
   });
 });

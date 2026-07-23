@@ -1,41 +1,42 @@
 /**
  * Ambient and event pulse system for the Neatenstein neon raycasting demo.
  *
- * Pulses are fake-perspective overlays on the floor grid. They are spawned
- * deterministically from the simulation tick and seed, tracked with a world-space
- * bearing so they stay visually anchored while the camera rotates, and
- * depth-tested against the per-column z-buffer so walls occlude them.
+ * Pulses are small shiny dots that travel along integer floor-grid lines. They are
+ * spawned deterministically from the simulation tick and seed, updated with
+ * world-space velocity along their chosen grid line, and depth-tested against the
+ * per-column z-buffer so walls occlude them.
  *
  * @module
  */
 
 import {
-  NEATENSTEIN_CPU_COLUMN_COUNT,
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_MAP_SIZE,
   NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS,
   NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS,
+  NEATENSTEIN_PULSE_AXIS_X_THRESHOLD,
+  NEATENSTEIN_PULSE_DIRECTION_NEGATIVE_THRESHOLD,
   NEATENSTEIN_PULSE_MAX_CONCURRENT,
-  NEATENSTEIN_PULSE_WORLD_BEARING_TOLERANCE_RAD,
+  NEATENSTEIN_PULSE_WORLD_SPEED_MAX,
+  NEATENSTEIN_PULSE_WORLD_SPEED_MIN,
 } from '../constants';
-
-/** Fixed simulation timestep used to convert ticks to wall-clock milliseconds. */
-const NEATENSTEIN_SIM_TICK_MS = 16;
 
 /** Ambient pulse interval rounded to whole simulation ticks. */
 const NEATENSTEIN_PULSE_AMBIENT_INTERVAL_TICKS = Math.round(
-  NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS / NEATENSTEIN_SIM_TICK_MS,
+  NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS / NEATENSTEIN_FIXED_TIMESTEP_MS,
 );
 
-/** Deterministic ambient pulse screen span, in renderer columns. */
-const NEATENSTEIN_PULSE_SCREEN_WIDTH_COLUMNS = 8;
+/** Ambient pulse lifetime rounded to whole simulation ticks. */
+export const NEATENSTEIN_PULSE_AMBIENT_LIFETIME_TICKS = Math.ceil(
+  NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS / NEATENSTEIN_FIXED_TIMESTEP_MS,
+);
 
-/** Closest perpendicular distance an ambient pulse can spawn at. */
-const NEATENSTEIN_PULSE_MIN_DISTANCE = 2;
+/** Number of cells reserved at each map edge so pulses stay on visible grid lines. */
+const NEATENSTEIN_PULSE_MAP_EDGE_MARGIN = 1;
 
-/** Farthest perpendicular distance an ambient pulse can spawn at. */
-const NEATENSTEIN_PULSE_MAX_DISTANCE = 16;
-
-/** Ticks removed from a pulse when its bearing drifts beyond tolerance. */
-const NEATENSTEIN_PULSE_WORLD_BEARING_FADE_PENALTY_TICKS = 1_000;
+/** Effective span of integer grid lines available for pulse travel. */
+const NEATENSTEIN_PULSE_GRID_SPAN =
+  NEATENSTEIN_MAP_SIZE - NEATENSTEIN_PULSE_MAP_EDGE_MARGIN * 2;
 
 /** Modulus for the Park-Miller-style deterministic LCG. */
 const PARK_MILLER_MODULUS = 2_147_483_647;
@@ -43,17 +44,20 @@ const PARK_MILLER_MODULUS = 2_147_483_647;
 /** Multiplier for the Park-Miller-style deterministic LCG. */
 const PARK_MILLER_MULTIPLIER = 16_807;
 
-/** Full circle in radians. */
-const TAU = Math.PI * 2;
+/**
+ * Axis a pulse travels along.
+ *
+ * - `x` means the pulse moves along a line of constant world X (varying Y).
+ * - `y` means the pulse moves along a line of constant world Y (varying X).
+ */
+export type NeatensteinPulseAxis = 'x' | 'y';
 
 /**
  * Minimal pulse shape needed for z-buffer depth testing.
  */
 export interface NeatensteinDepthTestPulse {
-  /** Inclusive first screen column covered by the pulse. */
-  screenColumnStart: number;
-  /** Inclusive last screen column covered by the pulse. */
-  screenColumnEnd: number;
+  /** Screen column index the projected pulse occupies. */
+  screenColumn: number;
   /** Perpendicular distance from the camera plane to the pulse. */
   distance: number;
 }
@@ -62,16 +66,22 @@ export interface NeatensteinDepthTestPulse {
  * A single rendered pulse.
  */
 export interface NeatensteinPulse extends NeatensteinDepthTestPulse {
-  /** World-space bearing the pulse was emitted on. */
-  worldBearingRad: number;
+  /** World X coordinate of the pulse. */
+  worldX: number;
+  /** World Y coordinate of the pulse. */
+  worldY: number;
   /** Seed that produced the pulse. */
   seed: number;
   /** Whether the pulse is still active. */
   active: boolean;
   /** Remaining lifetime in simulation ticks. */
   lifetimeTicks: number;
-  /** Horizontal screen column of the pulse center. */
-  screenX: number;
+  /** Grid axis this pulse travels along. */
+  axis: NeatensteinPulseAxis;
+  /** Direction of travel along the axis (+1 or -1). */
+  travelDirection: 1 | -1;
+  /** Speed of travel in world units per tick. */
+  travelSpeed: number;
 }
 
 /**
@@ -109,43 +119,28 @@ function lcgToFloat(state: number): number {
 }
 
 /**
- * Wrap an angle to the range [-PI, PI).
- *
- * @param angle - Angle in radians.
- * @returns Wrapped angle.
- */
-function normalizeAngle(angle: number): number {
-  let wrapped = angle % TAU;
-  if (wrapped < -Math.PI) wrapped += TAU;
-  if (wrapped >= Math.PI) wrapped -= TAU;
-  return wrapped;
-}
-
-/**
  * Emit an ambient floor pulse if the current simulation tick qualifies.
  *
- * The pulse position, distance, and screen column are derived from a
- * deterministic LCG seeded with `seed` and `simTick`, so the same seed and tick
- * always produce the same pulse.
+ * The pulse is spawned on a random integer X or Y grid line, at a random
+ * coordinate along that line, with a random travel direction and speed. All
+ * values are derived from a deterministic LCG seeded with `seed` and
+ * `simTick`, so the same seed and tick always produce the same pulse.
  *
  * @param simTick - Current fixed-timestep simulation tick.
  * @param seed - Deterministic seed for this pulse stream.
- * @param columnCount - Number of renderer columns for screen-space placement
- *   (defaults to {@link NEATENSTEIN_CPU_COLUMN_COUNT}).
  * @returns A new ambient pulse, or `null` when the tick does not qualify.
  *
  * @example
  * ```ts
  * const pulse = emitNeatensteinAmbientPulse(0, 12345);
  * if (pulse) {
- *   console.log(pulse.worldBearingRad, pulse.distance);
+ *   console.log(pulse.axis, pulse.worldX, pulse.worldY);
  * }
  * ```
  */
 export function emitNeatensteinAmbientPulse(
   simTick: number,
   seed: number,
-  columnCount: number = NEATENSTEIN_CPU_COLUMN_COUNT,
 ): NeatensteinPulse | null {
   if (!isAmbientTick(simTick)) return null;
 
@@ -153,87 +148,88 @@ export function emitNeatensteinAmbientPulse(
   state = state % PARK_MILLER_MODULUS;
   state = nextLcgState(state);
 
-  const worldBearingRad = lcgToFloat(state) * TAU;
+  const axis: NeatensteinPulseAxis =
+    lcgToFloat(state) < NEATENSTEIN_PULSE_AXIS_X_THRESHOLD ? 'x' : 'y';
   state = nextLcgState(state);
 
-  const distanceRange =
-    NEATENSTEIN_PULSE_MAX_DISTANCE - NEATENSTEIN_PULSE_MIN_DISTANCE;
-  const distance =
-    NEATENSTEIN_PULSE_MIN_DISTANCE + lcgToFloat(state) * distanceRange;
+  const fixedCoord =
+    NEATENSTEIN_PULSE_MAP_EDGE_MARGIN +
+    Math.floor(lcgToFloat(state) * NEATENSTEIN_PULSE_GRID_SPAN);
   state = nextLcgState(state);
 
-  const maxColumn = columnCount - 1;
-  const screenX = lcgToFloat(state) * columnCount;
-  const screenColumnStart = Math.max(
-    0,
-    Math.floor(screenX - NEATENSTEIN_PULSE_SCREEN_WIDTH_COLUMNS / 2),
-  );
-  const screenColumnEnd = Math.min(
-    maxColumn,
-    screenColumnStart + NEATENSTEIN_PULSE_SCREEN_WIDTH_COLUMNS - 1,
-  );
+  const travelCoord =
+    NEATENSTEIN_PULSE_MAP_EDGE_MARGIN +
+    lcgToFloat(state) * NEATENSTEIN_PULSE_GRID_SPAN;
+  state = nextLcgState(state);
 
-  const lifetimeTicks = Math.ceil(
-    NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS / NEATENSTEIN_SIM_TICK_MS,
-  );
+  const travelDirection =
+    lcgToFloat(state) < NEATENSTEIN_PULSE_DIRECTION_NEGATIVE_THRESHOLD ? 1 : -1;
+  state = nextLcgState(state);
+
+  const speedRange =
+    NEATENSTEIN_PULSE_WORLD_SPEED_MAX - NEATENSTEIN_PULSE_WORLD_SPEED_MIN;
+  const travelSpeed =
+    NEATENSTEIN_PULSE_WORLD_SPEED_MIN + lcgToFloat(state) * speedRange;
+
+  const worldX = axis === 'x' ? fixedCoord : travelCoord;
+  const worldY = axis === 'x' ? travelCoord : fixedCoord;
 
   return {
-    worldBearingRad,
+    worldX,
+    worldY,
     seed,
     active: true,
-    lifetimeTicks,
-    distance,
-    screenX,
-    screenColumnStart,
-    screenColumnEnd,
+    lifetimeTicks: NEATENSTEIN_PULSE_AMBIENT_LIFETIME_TICKS,
+    axis,
+    travelDirection,
+    travelSpeed,
+    screenColumn: 0,
+    distance: 0,
   };
 }
 
 /**
  * Update the active pulse list for a new frame.
  *
- * Decrements lifetime, fades pulses whose world bearing has drifted beyond
- * tolerance relative to the current ray bearing, and enforces the concurrent
- * pulse ceiling. The returned array is a shallow copy; pulse objects are
- * immutable copies.
+ * Decrements lifetime, advances each pulse along its grid line by its travel
+ * speed, removes pulses that have expired or been marked inactive, and
+ * enforces the concurrent pulse ceiling. The returned array is a shallow copy;
+ * pulse objects are immutable copies.
  *
  * @param pulses - Current active pulses.
  * @param simTick - Current fixed-timestep simulation tick (unused today but
  *   reserved for future tick-driven spawn logic).
- * @param rayBearingRad - Optional current camera ray bearing. When provided,
- *   pulses whose bearing differs by more than the tolerance are faded faster.
  * @returns Updated pulse list with at most
  *   {@link NEATENSTEIN_PULSE_MAX_CONCURRENT} entries.
  *
  * @example
  * ```ts
- * const next = updateNeatensteinPulses(pulses, tick, cameraBearing);
+ * const next = updateNeatensteinPulses(pulses, tick);
  * ```
  */
 export function updateNeatensteinPulses(
   pulses: readonly NeatensteinPulse[],
   simTick: number,
-  rayBearingRad?: number,
 ): NeatensteinPulse[] {
+  void simTick;
+
   const next = pulses
-    .slice(0, NEATENSTEIN_PULSE_MAX_CONCURRENT)
     .map((pulse) => {
-      let lifetimeTicks = pulse.lifetimeTicks - 1;
+      const lifetimeTicks = pulse.lifetimeTicks - 1;
+      const delta = pulse.travelDirection * pulse.travelSpeed;
+      const worldX = pulse.axis === 'y' ? pulse.worldX + delta : pulse.worldX;
+      const worldY = pulse.axis === 'x' ? pulse.worldY + delta : pulse.worldY;
 
-      if (rayBearingRad !== undefined) {
-        const delta = Math.abs(
-          normalizeAngle(pulse.worldBearingRad - rayBearingRad),
-        );
-        if (delta > NEATENSTEIN_PULSE_WORLD_BEARING_TOLERANCE_RAD) {
-          lifetimeTicks = Math.max(
-            0,
-            lifetimeTicks - NEATENSTEIN_PULSE_WORLD_BEARING_FADE_PENALTY_TICKS,
-          );
-        }
-      }
-
-      return { ...pulse, lifetimeTicks, active: lifetimeTicks > 0 };
-    });
+      return {
+        ...pulse,
+        worldX,
+        worldY,
+        lifetimeTicks,
+        active: lifetimeTicks > 0,
+      };
+    })
+    .filter((pulse) => pulse.active && pulse.lifetimeTicks > 0)
+    .slice(0, NEATENSTEIN_PULSE_MAX_CONCURRENT);
 
   return next;
 }
@@ -241,11 +237,12 @@ export function updateNeatensteinPulses(
 /**
  * Depth-test a pulse against the per-column z-buffer.
  *
- * A pulse is visible only when it is closer than every wall that covers its
- * screen span. If any covered column stores a wall distance strictly less than
- * the pulse distance, the pulse is considered hidden behind that wall.
+ * A pulse is visible when the column it projects to stores a wall distance
+ * greater than or equal to the pulse distance. This allows pulses that sit on
+ * the wall surface (for example wall-impact neon spots) to render while still
+ * hiding pulses behind closer walls.
  *
- * @param pulse - Pulse with a screen span and distance.
+ * @param pulse - Pulse with a screen column and perpendicular distance.
  * @param zBuffer - Per-column depth buffer filled by the wall pass.
  * @returns `true` when the pulse is not occluded by a closer wall.
  *
@@ -258,16 +255,12 @@ export function depthTestPulse(
   pulse: NeatensteinDepthTestPulse,
   zBuffer: Readonly<Float32Array>,
 ): boolean {
-  const start = Math.max(0, Math.floor(pulse.screenColumnStart));
-  const end = Math.min(zBuffer.length - 1, Math.floor(pulse.screenColumnEnd));
+  const column = Math.max(
+    0,
+    Math.min(zBuffer.length - 1, Math.floor(pulse.screenColumn)),
+  );
 
-  for (let column = start; column <= end; column++) {
-    if (pulse.distance >= zBuffer[column]) {
-      return false;
-    }
-  }
-
-  return true;
+  return pulse.distance <= zBuffer[column];
 }
 
 /**

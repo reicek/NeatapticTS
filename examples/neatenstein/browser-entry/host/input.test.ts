@@ -5,7 +5,10 @@ import {
   NEATENSTEIN_DASH_KEY,
   NEATENSTEIN_FIRE_KEY,
   NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT,
+  NEATENSTEIN_KEY_MAP_LOOK,
+  NEATENSTEIN_KEY_MAP_MOVEMENT,
   NEATENSTEIN_MOUSE_SENSITIVITY,
+  NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
   NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX,
 } from './game/constants.ts';
 import { createInputRouter } from './input.ts';
@@ -65,7 +68,7 @@ function createMouseEvent(
   type: 'mousemove' | 'mousedown' | 'mouseup',
   movementX: number = 0,
   movementY: number = 0,
-  button: number = 0,
+  button: number = NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
 ): MouseEvent {
   const event = new MouseEvent(type, { bubbles: true });
   Object.defineProperty(event, 'movementX', { value: movementX });
@@ -93,8 +96,14 @@ describe('Neatenstein host input', () => {
     const target = document.createElement('div');
     router.attach(target);
 
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        code: NEATENSTEIN_KEY_MAP_MOVEMENT.forward,
+      }),
+    );
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_MOVEMENT.left }),
+    );
 
     const snapshot = router.getSnapshot();
     router.detach();
@@ -112,8 +121,12 @@ describe('Neatenstein host input', () => {
     const target = document.createElement('div');
     router.attach(target);
 
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowLeft' }));
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowUp' }));
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.left }),
+    );
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.up }),
+    );
 
     const snapshot = router.getSnapshot();
     router.detach();
@@ -172,7 +185,9 @@ describe('Neatenstein host input', () => {
     const target = document.createElement('div');
     router.attach(target);
 
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowRight' }));
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.right }),
+    );
     const first = router.getSnapshot();
     const second = router.getSnapshot();
     router.detach();
@@ -191,7 +206,11 @@ describe('Neatenstein host input', () => {
     const target = document.createElement('div');
     router.attach(target);
 
-    target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        code: NEATENSTEIN_KEY_MAP_MOVEMENT.forward,
+      }),
+    );
     router.detach();
 
     // After detach, a new snapshot should be clean even without an explicit
@@ -209,7 +228,7 @@ describe('Neatenstein host input', () => {
     const target = document.createElement('div');
     router.attach(target);
 
-    target.dispatchEvent(
+    window.dispatchEvent(
       new KeyboardEvent('keydown', { code: NEATENSTEIN_DASH_KEY }),
     );
 
@@ -224,7 +243,7 @@ describe('Neatenstein host input', () => {
     const target = document.createElement('div');
     router.attach(target);
 
-    target.dispatchEvent(
+    window.dispatchEvent(
       new KeyboardEvent('keydown', { code: NEATENSTEIN_FIRE_KEY }),
     );
 
@@ -234,20 +253,21 @@ describe('Neatenstein host input', () => {
     expect(snapshot.fire).toBe(true);
   });
 
-  it('reflects left mouse button state as fire in the snapshot', () => {
+  it('consumes a pending mouse fire event in getSnapshot', () => {
     const router = createInputRouter();
     const target = document.createElement('div');
     router.attach(target);
 
-    target.dispatchEvent(createMouseEvent('mousedown', 0, 0, 0));
-    const pressed = router.getSnapshot();
-    document.dispatchEvent(createMouseEvent('mouseup', 0, 0, 0));
-    const released = router.getSnapshot();
+    target.dispatchEvent(
+      createMouseEvent('mousedown', 0, 0, NEATENSTEIN_PRIMARY_MOUSE_BUTTON),
+    );
+    const first = router.getSnapshot();
+    const second = router.getSnapshot();
     router.detach();
 
-    expect({ pressed: pressed.fire, released: released.fire }).toEqual({
-      pressed: true,
-      released: false,
+    expect({ first: first.fire, second: second.fire }).toEqual({
+      first: true,
+      second: false,
     });
   });
 
@@ -262,5 +282,210 @@ describe('Neatenstein host input', () => {
     );
 
     router.detach();
+  });
+
+  it('releases movement keys on keyup', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        code: NEATENSTEIN_KEY_MAP_MOVEMENT.forward,
+      }),
+    );
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_MOVEMENT.left }),
+    );
+    window.dispatchEvent(
+      new KeyboardEvent('keyup', {
+        code: NEATENSTEIN_KEY_MAP_MOVEMENT.forward,
+      }),
+    );
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect(snapshot.movement).toEqual({
+      forward: false,
+      backward: false,
+      left: true,
+      right: false,
+    });
+  });
+
+  it('does not lose keyboard look delta when the look key is released', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.left }),
+    );
+    target.dispatchEvent(
+      new KeyboardEvent('keyup', { code: NEATENSTEIN_KEY_MAP_LOOK.left }),
+    );
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect(snapshot.look.yawDelta).toBe(
+      -NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT,
+    );
+  });
+
+  it('releases fire and dash keys on keyup', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_FIRE_KEY }),
+    );
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_DASH_KEY }),
+    );
+    window.dispatchEvent(
+      new KeyboardEvent('keyup', { code: NEATENSTEIN_FIRE_KEY }),
+    );
+    window.dispatchEvent(
+      new KeyboardEvent('keyup', { code: NEATENSTEIN_DASH_KEY }),
+    );
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect({ fire: snapshot.fire, dash: snapshot.dash }).toEqual({
+      fire: false,
+      dash: false,
+    });
+  });
+
+  it('combines mouse, keyboard, and touch look deltas', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    Object.defineProperty(document, 'pointerLockElement', {
+      value: target,
+      configurable: true,
+    });
+    document.dispatchEvent(createMouseEvent('mousemove', 10, 5));
+    target.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.left }),
+    );
+
+    const drag = NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX + 2;
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      { identifier: 1, clientX: drag, clientY: 0 },
+    ]);
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    const step = NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT;
+    expect(snapshot.look).toEqual({
+      yawDelta:
+        10 * NEATENSTEIN_MOUSE_SENSITIVITY -
+        step +
+        drag * NEATENSTEIN_MOUSE_SENSITIVITY,
+      pitchDelta: 5 * NEATENSTEIN_MOUSE_SENSITIVITY,
+    });
+  });
+
+  it('reports pointerLocked as false when the target does not own lock', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    Object.defineProperty(document, 'pointerLockElement', {
+      value: null,
+      configurable: true,
+    });
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect(snapshot.pointerLocked).toBe(false);
+  });
+
+  it('reports touch.active while a touch is being tracked', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    const drag = NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX + 1;
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      { identifier: 1, clientX: drag, clientY: 0 },
+    ]);
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect({
+      active: snapshot.touch.active,
+      yawDelta: snapshot.touch.yawDelta,
+    }).toEqual({
+      active: true,
+      yawDelta: drag * NEATENSTEIN_MOUSE_SENSITIVITY,
+    });
+  });
+
+  it('resets touch.active when the tracked touch ends', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchend', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect(snapshot.touch.active).toBe(false);
+  });
+
+  it('includes a finite timestamp in the snapshot', () => {
+    const router = createInputRouter();
+    router.attach(document.createElement('div'));
+
+    const before = Date.now();
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect(snapshot.timestamp).toBeGreaterThanOrEqual(before);
+  });
+
+  it('the detach closure returned by attach removes all listeners and resets state', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    const detach = router.attach(target);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        code: NEATENSTEIN_KEY_MAP_MOVEMENT.forward,
+      }),
+    );
+    detach();
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_MOVEMENT.left }),
+    );
+
+    expect(router.getSnapshot().movement).toEqual({
+      forward: false,
+      backward: false,
+      left: false,
+      right: false,
+    });
   });
 });

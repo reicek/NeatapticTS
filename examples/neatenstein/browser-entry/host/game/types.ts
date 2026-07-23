@@ -73,6 +73,29 @@ export interface TracerState {
   color: string;
 }
 
+/** Persistent neon impact marker left on a wall by {@link fireNeonBeam}. */
+export interface ImpactSpot {
+  /** Raycast metadata that identifies the exact wall face that was hit. */
+  wallHit: {
+    /** Grid X coordinate of the hit wall cell. */
+    mapX: number;
+    /** Grid Y coordinate of the hit wall cell. */
+    mapY: number;
+    /** Wall side that was hit: `0` = X-side, `1` = Y-side. */
+    side: 0 | 1;
+    /** Fractional coordinate along the hit wall face, in [0, 1). */
+    wallX: number;
+  };
+  /** Exact world-space position of the impact on the wall face. */
+  position: Vector2;
+  /** Simulation time at which the spot was created, in milliseconds. */
+  createdAtMs: number;
+  /** Milliseconds the spot remains visible before expiring. */
+  lifetimeMs: number;
+  /** Perpendicular distance from the camera to the wall hit when created. */
+  perpWallDist: number;
+}
+
 /** Options accepted by {@link createGameState}. */
 export interface CreateGameStateOptions {
   /** Deterministic seed used to initialize RNG-driven state. */
@@ -93,6 +116,8 @@ export interface GameState {
   enemies: EnemyState[];
   /** Active neon beam tracers visible this frame. */
   tracers: TracerState[];
+  /** Persistent neon impact spots left on walls by beam hits. */
+  impacts: ImpactSpot[];
   /** Total confirmed kills for scoring and evolution pressure. */
   kills: number;
   /**

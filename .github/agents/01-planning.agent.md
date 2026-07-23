@@ -377,6 +377,9 @@ slices:
 Guidelines:
 
 - Slice size MUST be <= 4 hours (hard limit enforced by the `plan-slice-quality` gate). Ideally 2-3 hours per slice. Oversized slices must be broken into smaller sequential slices before the plan can pass verification.
+- **Steps MUST contain at most 5 slices** (hard limit enforced by the `plan-slice-quality` and `step-packet` gates). If more than 5 atomic slices are needed, split the work into multiple smaller steps. Monolithic steps with 6+ slices are planning defects.
+- **Targeted steps** (single action like user confirmation, bundle rebuild, green validation) use `expansion: 'none'` with no slices.
+- Slices are atomic — one behavioral intent, ideally ≤ 3 files.
 - Include explicit `acceptance_criteria` per slice.
 - Mark `parallelizable: true` only when slices do not share state or ordering constraints.
 - `01-planning` must indicate slice ordering. Sequential slices must include `next_slice`.
@@ -461,7 +464,7 @@ When operating in verification mode:
    - **Risk coverage:** risks, dependencies, and scope boundaries are recorded and consistent with the phase objective.
    - **Acceptance criteria:** criteria are observable, implementation-agnostic, and mapped to automation checks where applicable.
    - **Dependencies:** slice ordering and inter-step dependencies are acyclic and complete.
-   - **Slice quality:** every slice has `estimate_hours <= 4` (ideally 2-3); run `neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality` and `--gate=step-packet` and confirm both pass. Oversized slices are blockers.
+   - **Slice quality:** every slice has `estimate_hours <= 4` (ideally 2-3); every step has at most 5 slices; run `neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality` and `--gate=step-packet` and confirm both pass. Oversized slices and monolithic steps (>5 slices) are blockers.
 3. **Record the verdict in the plan's `## Latest validation evidence` section:**
    - If the plan is ready for execution, record `green-light: true` (or `status: green-light`) together with a concise verdict and the verification timestamp.
    - If blockers remain, record each blocker with `green-light: false` (or `status: blocked`) and route back to a new `01-planning` patch cycle. Do not dispatch `03-red-testing`, `04-implementing`, or other execution-phase agents until the blockers are resolved and a subsequent verification pass records green light.

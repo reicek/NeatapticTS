@@ -10,10 +10,15 @@
  * @module
  */
 
-import { NEATENSTEIN_MAP_SIZE } from '../../constants';
+import {
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_MAP_SIZE,
+} from '../../constants';
 
-/** Fixed simulation timestep in milliseconds (≈60 Hz). */
-export const NEATENSTEIN_FIXED_TIMESTEP_MS = 16;
+export { NEATENSTEIN_FIXED_TIMESTEP_MS };
+
+/** Number of milliseconds in one second. */
+export const NEATENSTEIN_MS_PER_SECOND = 1000;
 
 /** Maximum player health at the start of an episode. */
 export const NEATENSTEIN_PLAYER_MAX_HEALTH = 100;
@@ -23,6 +28,14 @@ export const NEATENSTEIN_PLAYER_MAX_AMMO = 30;
 
 /** Maximum number of enemies that can be active at the same time. */
 export const NEATENSTEIN_ENEMY_MAX_CONCURRENT = 8;
+
+/**
+ * Radius in world cells around the map origin where enemies may spawn.
+ *
+ * Enemies are placed at a random angle and a random distance up to this value,
+ * so the effective spawn region is a circle centered on the origin.
+ */
+export const NEATENSTEIN_ENEMY_SPAWN_RADIUS = 8;
 
 /** Milliseconds of invulnerability granted by a single dash. */
 export const NEATENSTEIN_DASH_INVULNERABILITY_MS = 200;
@@ -203,6 +216,15 @@ export const NEATENSTEIN_BEAM_DAMAGE = 50;
 export const NEATENSTEIN_TRACER_DURATION_MS = 80;
 
 /**
+ * Distance in cells to offset the beam origin forward from the player center.
+ *
+ * Keeps the tracer origin in front of the camera near-plane so the renderer's
+ * depth projection accepts it instead of rejecting it as depth less than or
+ * equal to the near-clip epsilon.
+ */
+export const NEATENSTEIN_MUZZLE_OFFSET_CELLS = 0.2;
+
+/**
  * CSS color applied to all neon beam tracers.
  *
  * A bright cyan/blue that reads as "neon" against the dark cell-shaded walls.
@@ -232,3 +254,95 @@ export const NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX = 8;
  * pointer lock is unavailable.
  */
 export const NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT = 0.05;
+
+/**
+ * Button identifier for the primary (left) mouse button.
+ *
+ * Used by {@link ./controls.ts#bindMouseFire} so fire activates on left click
+ * and ignores other buttons.
+ */
+export const NEATENSTEIN_PRIMARY_MOUSE_BUTTON = 0;
+
+/**
+ * Button identifier for the secondary (right) mouse button.
+ *
+ * Used by tests to verify that non-primary mouse buttons are ignored for fire
+ * input.
+ */
+export const NEATENSTEIN_SECONDARY_MOUSE_BUTTON = 2;
+
+/**
+ * Deterministic seed used by red-phase combat tests.
+ *
+ * A fixed seed keeps test expectations stable across RNG-driven map and
+ * player-angle generation.
+ */
+export const NEATENSTEIN_TEST_SEED = 1;
+
+/**
+ * Default enemy health used in combat tests.
+ *
+ * Chosen so that a single {@link NEATENSTEIN_BEAM_DAMAGE} hit reduces health
+ * to a non-zero value, while a second hit (or health equal to the beam damage)
+ * produces a confirmed kill.
+ */
+export const NEATENSTEIN_TEST_ENEMY_HEALTH = 100;
+
+/**
+ * Health value representing a dead enemy in contact-damage tests.
+ *
+ * Used to verify that enemies with zero health do not apply contact damage
+ * even when their position overlaps the player.
+ */
+export const NEATENSTEIN_TEST_ENEMY_DEAD_HEALTH = 0;
+
+/**
+ * Distance in cells just beyond {@link NEATENSTEIN_CONTACT_RANGE_CELLS} used
+ * to place an enemy outside contact-damage range for out-of-range testing.
+ */
+export const NEATENSTEIN_TEST_ENEMY_BEYOND_CONTACT_RANGE_CELLS =
+  NEATENSTEIN_CONTACT_RANGE_CELLS + 1;
+
+/**
+ * Distance in cells from the player to a test enemy placed directly on the
+ * beam path.
+ *
+ * Small enough to sit before the nearest wall from the central spawn point
+ * when firing along the +X axis, so the beam reliably hits the enemy first.
+ */
+export const NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS = 2;
+
+/**
+ * Distance in cells from the player to a second test enemy placed farther out
+ * on the same beam path.
+ *
+ * Used to verify that the nearest enemy is chosen when multiple enemies share
+ * the beam.
+ */
+export const NEATENSTEIN_TEST_ENEMY_FAR_DISTANCE_CELLS = 4;
+
+/**
+ * Distance in cells from the player to a test enemy placed behind the outer
+ * wall from the central spawn point.
+ *
+ * The outer wall along the +X axis is roughly 11 cells away from the central
+ * spawn, so this value is chosen to be well beyond the wall so the beam always
+ * terminates on the wall before reaching the enemy.
+ */
+export const NEATENSTEIN_TEST_ENEMY_BEHIND_WALL_DISTANCE_CELLS = 15;
+
+/**
+ * Small offset in cells placed beyond {@link NEATENSTEIN_BEAM_MAX_RANGE_CELLS}
+ * so a test enemy is guaranteed to sit outside the beam's reachable distance.
+ */
+export const NEATENSTEIN_TEST_ENEMY_BEYOND_RANGE_OFFSET_CELLS = 2;
+
+/**
+ * Perpendicular offset in cells used to place a test enemy just outside the
+ * beam hit radius.
+ *
+ * The value is larger than {@link NEATENSTEIN_ENEMY_HIT_RADIUS_CELLS} so the
+ * enemy is missed even though it shares the same forward distance as a hit
+ * enemy.
+ */
+export const NEATENSTEIN_TEST_ENEMY_OFF_BEAM_OFFSET_CELLS = 0.5;

@@ -14,6 +14,7 @@ import {
   NEATENSTEIN_CONTACT_IFRAME_MS,
   NEATENSTEIN_CONTACT_RANGE_CELLS,
 } from './constants';
+import { isInvulnerable } from './state';
 import type { GameState } from './types';
 
 /**
@@ -52,10 +53,7 @@ export function resolveContactDamage(
     },
   };
 
-  if (
-    next.player.dashTimeRemainingMs > 0 ||
-    (next.player.contactIFrameMs ?? 0) > 0
-  ) {
+  if (isInvulnerable(next)) {
     return next;
   }
 

@@ -63,6 +63,7 @@ describe('Neatenstein game types', () => {
       },
       enemies: [],
       tracers: [],
+      impacts: [],
       kills: 0,
       spawnCount: 0,
       generation: 1,

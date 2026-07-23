@@ -501,6 +501,17 @@ function validatePreExecuteHook(hook, blockId, violations, preExecuteHooks) {
 function validateSlices(slices, tddSequence, blockId, violations) {
   const length = slices.length;
   const isGreenOnly = tddSequence === 'green-only';
+  const MAX_SLICES_PER_STEP = 5;
+
+  if (length > MAX_SLICES_PER_STEP) {
+    violations.push({
+      blockId,
+      invalidField: 'slices',
+      invalidValue: length,
+      expected: `at most ${MAX_SLICES_PER_STEP} slices`,
+      message: `Step has ${length} slices, exceeding the ${MAX_SLICES_PER_STEP}-slice-per-step limit. Split it into multiple smaller steps.`,
+    });
+  }
 
   if (isGreenOnly && length < 2) {
     violations.push({

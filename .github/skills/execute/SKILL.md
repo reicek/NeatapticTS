@@ -296,49 +296,142 @@ task tool
 The second form bypasses the agent's `.agent.md` definition, its allowed
 skills, tools, model, and subagent allow-list, and must not be used.
 
-## Section 2.2 — Lean Dispatch Prompts (mandatory)
+## Section 2.2 — RAG-Based Dispatch Policy (mandatory)
 
-Dispatch prompts must be concise. They state the goal and let the receiving
-agent load its own context via RAG. Do not embed step-by-step instructions,
-verbose context dumps, or explanatory boilerplate in the `prompt` string.
+**All dispatched agents MUST receive their instructions via orchestration RAG,
+not via inline prompt text.** The orchestrator does not improvise by spawning
+agents with long instructions. Instead, the orchestrator adds slices or steps
+to the plan, ensures the RAG index is current, and then dispatches with only
+the slice ID and a minimal instruction to load context via RAG.
+
+### RAG Exemptions
+
+Only two agents may be dispatched WITHOUT RAG context:
+
+| Agent         | Why exempt                                                |
+| ------------- | --------------------------------------------------------- |
+| `00-helping`  | Unblocks unplanned issues — no plan/slice exists yet.     |
+| `01-planning` | Creates and updates plans — is the source of RAG content. |
+
+**Every other agent** (`02-researching` through `07-logging`, plus all
+Tier-2/3/4 specialists) MUST be dispatched with a RAG reference (slice ID
+or step ID) and a minimal prompt. The agent loads its full context from
+the plan via Cortex MCP / `get_slice_context` / `pre_execute_hook`.
 
 ### Prompt contract
 
-- State the single goal or slice the recipient owns.
+- State ONLY the slice ID (or step ID) and a one-line instruction to load
+  context via RAG.
 - If the active step packet declares a `pre_execute_hook` (for example,
   `neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }`), the
   receiving agent MUST invoke that hook before any search or file read.
 - In all other cases, the receiving agent MUST follow the Cortex-First Search
   Policy from `research-methodology`: `freshness_check` → `search_corpus` →
   `search_advanced` → `search_context` → native tools only as fallback.
-- Never restate skill workflows, plan details, or file lists in the prompt;
-  reference the active plan/slice and let the specialist retrieve them.
+- **NEVER embed step-by-step instructions, file lists, design specs, or
+  verbose context in the dispatch prompt.** The plan and RAG are the single
+  source of truth. If the plan does not contain enough context for the agent,
+  the orchestrator must dispatch `01-planning` to update the plan first.
 
 ### Before / After example
 
-**Before:**
+**Before (WRONG — improvising with inline instructions):**
 
 ```json
 {
   "target_agent": "04-implementing",
   "caller_tier": 0,
-  "prompt": "Continue from the active plan and Step 03 contract. Execute Step 04 for the current phase by implementing the smallest change that satisfies the targeted test, eval, or explicit skip contract."
+  "prompt": "Continue from the active plan and Step 03 contract. Execute Step 04 for the current phase by implementing the smallest change that satisfies the targeted test, eval, or explicit skip contract. Make sure to update the foo module and bar module."
 }
 ```
 
-**After:**
+**After (CORRECT — RAG-based dispatch with slice ID):**
 
 ```json
 {
   "target_agent": "04-implementing",
   "caller_tier": 0,
-  "prompt": "Implement the active slice. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context."
+  "prompt": "Execute slice 04-rolling-snapshot. Load context via Cortex MCP / get_slice_context."
 }
 ```
+
+### Improvisation Anti-Pattern
+
+When the user requests a change or fix, the orchestrator MUST NOT:
+
+1. Spawn an agent with a long inline instruction describing the change.
+2. Embed file paths, code snippets, or design context in the prompt.
+3. Bypass the plan by putting the full task description in the prompt.
+
+Instead, the orchestrator MUST:
+
+1. Dispatch `01-planning` to add the new slice(s) or step(s) to the plan.
+2. Ensure the RAG index is updated (Cortex freshness check).
+3. Dispatch the execution agent with only the slice ID and RAG instruction.
 
 > Note: This prompt policy is independent of `neataptic-dispatch-mcp` packet
 > validation. The MCP server still enforces routing and shape; the prompt itself
-> must stay lean.
+> must stay lean and RAG-based.
+
+## Section 2.3 — Planning Structure Rules (mandatory)
+
+Plans are organized as **phases → steps → slices**. Each level is a bounded
+unit that enables proper validation loops, logging, and easy rollback. The
+structure follows SOLID principles applied to planning: small, atomic,
+replaceable units grouped into cohesive composites.
+
+### Hierarchy
+
+| Level | Contains   | Sizing Rule                                                                           |
+| ----- | ---------- | ------------------------------------------------------------------------------------- |
+| Phase | 2–8 steps  | A major SDLC boundary (e.g., "World & Renderer").                                     |
+| Step  | 0–5 slices | A cohesive group of atomic tasks. Targeted steps use `expansion: 'none'` (no slices). |
+| Slice | (leaf)     | One atomic behavioral intent, ideally ≤ 3 files.                                      |
+
+### Step Sizing Rules
+
+1. **Steps MUST contain at most 5 slices.** If a step requires more than 5
+   atomic slices, the planner (`01-planning`) MUST split it into multiple
+   smaller steps. Monolithic steps with 6+ slices are planning defects.
+2. **Targeted steps use `expansion: 'none'`** — no slices, just a single
+   action (e.g., user confirmation gate, bundle rebuild, green validation).
+3. **Steps with slices use `expansion: 'slices'`** with 2–5 slices per step.
+4. **Slices are atomic** — one behavioral intent, ideally across no more
+   than three files. If a slice touches many files or systems, split it.
+5. **Insertability** — slices and steps must be structured so new slices
+   can be inserted between existing ones without rewriting the plan. Use
+   `dependencies` and `next_slice` fields to maintain ordering.
+
+### Why Small Steps?
+
+- **Validation loops:** Each step gets its own RED → IMPLEMENT → GREEN
+  cycle. Large steps accumulate context and make loops expensive.
+- **Logging:** Completed steps are compressed to logs individually,
+  keeping the plan file lean.
+- **Rollback:** If a step fails, only that step's slices need rework —
+  not an entire phase.
+- **RAG freshness:** Smaller steps mean the plan changes more frequently,
+  keeping RAG context current for dispatched agents.
+
+### Step Compression Policy
+
+When a step is marked `[DONE]` and green validation has passed, the
+orchestrator (or `07-logging`) MUST compress it to the logs file:
+
+1. Move the step's YAML packet, acceptance criteria, traceability, and
+   slice details to the corresponding `.logs.md` file.
+2. Replace the step content in the plan file with a compact `[DONE]`
+   marker and a reference to the logs file.
+3. Keep the step header and `[DONE]` status visible in the plan.
+
+This is the step-level analog of phase compression. Plan files should
+never carry verbose `[DONE]` step details — those belong in logs.
+
+### Phase Compression Policy (unchanged)
+
+When ALL steps in a phase are `[DONE]`, the orchestrator MUST dispatch
+`07-logging` to compress the completed phase. See Section 5 for the full
+phase compression policy.
 
 ## Section 3 — Goal-to-Agent Mapping Table
 
@@ -560,6 +653,17 @@ Each slice is a bounded unit of work with these fields:
   one behavioral intent, ideally across no more than three files. If a slice
   requires touching many files or systems, the planner (`01-planning`) must
   split it before dispatch. `04` must not silently expand a slice.
+- **STEPS MUST BE SMALL (2–5 SLICES).** A step with `expansion: 'slices'`
+  MUST contain at most 5 slices. If more than 5 atomic slices are needed,
+  the planner MUST split the step into multiple smaller steps. Monolithic
+  steps with 6+ slices are planning defects and must be rejected at the
+  plan verification gate. Targeted steps use `expansion: 'none'` (no slices).
+- **RAG-BASED DISPATCH IS MANDATORY.** All agents except `00-helping` and
+  `01-planning` MUST be dispatched with only a slice ID (or step ID) and a
+  minimal instruction to load context via RAG. The orchestrator MUST NOT
+  improvise by embedding long inline instructions, file lists, or design
+  context in the dispatch prompt. If the plan lacks context for the agent,
+  dispatch `01-planning` to update the plan first. See Section 2.2.
 - **Each iteration uses a NEW agent instance** (fresh context) to avoid
   context contamination. A implementer that failed once must not carry its
   failed context into the retry. Each new instance must be dispatched via
@@ -625,8 +729,13 @@ completed phase before advancing to the next phase. Compression means:
    marker and a reference to the logs file.
 3. Keep the phase header, goal, and status as `[DONE]` in the plan file.
 
+**Step-level compression** (see Section 2.3) should happen as each step
+completes — do not wait for the entire phase to finish before compressing
+individual `[DONE]` steps. This keeps the plan file lean throughout the
+phase, not just at the end.
+
 This keeps plan files lean and focused on active work. Plan files should
-never carry verbose `[DONE]` phase details — those belong in logs.
+never carry verbose `[DONE]` phase or step details — those belong in logs.
 
 Skipping phase compression is a workflow violation. The orchestrator must
 not advance to the next phase until compression is complete.

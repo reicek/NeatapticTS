@@ -1,6 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
-import { NEATENSTEIN_ENEMY_MAX_CONCURRENT } from './constants';
-import { createGameState, spawnWaveTick } from './waves';
+import {
+  NEATENSTEIN_ENEMY_MAX_CONCURRENT,
+  NEATENSTEIN_ENEMY_SPAWN_RADIUS,
+} from './constants';
+import { createGameState } from './state';
+import { spawnWaveTick } from './waves';
 import type { GameState } from './types';
 
 /**
@@ -83,7 +87,7 @@ describe('Neatenstein game waves', () => {
       const result = spawnWaveTick(before, 16);
       const [enemy] = result.state.enemies;
       const radius = Math.hypot(enemy.position.x, enemy.position.y);
-      expect(radius).toBeLessThanOrEqual(8);
+      expect(radius).toBeLessThanOrEqual(NEATENSTEIN_ENEMY_SPAWN_RADIUS);
     });
   });
 

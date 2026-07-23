@@ -283,6 +283,7 @@ export async function searchContext(options = {}) {
     context = {
       context: assembled.context,
       chunks: selectedChunks.map((chunk) => ({
+        chunk_id: chunk.chunk_id ?? null,
         file_path: chunk.file_path,
         heading_path: chunk.heading_path ?? null,
         char_start: chunk.char_start ?? null,

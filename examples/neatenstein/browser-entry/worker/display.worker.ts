@@ -19,10 +19,27 @@
 
 import {
   NEATENSTEIN_CPU_COLUMN_COUNT,
+  NEATENSTEIN_DEFAULT_SEED,
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_GPU_COLUMN_COUNT,
+  NEATENSTEIN_IMPACT_SPOT_COLOR,
+  NEATENSTEIN_IMPACT_SPOT_GLOW_BLUR_PX,
+  NEATENSTEIN_IMPACT_SPOT_GLOW_COLOR,
+  NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS,
+  NEATENSTEIN_IMPACT_SPOT_RADIUS_PX,
   NEATENSTEIN_INPUT_MESSAGE_TYPE,
   NEATENSTEIN_MAP_SIZE,
+  NEATENSTEIN_PULSE_ALPHA_MAX,
+  NEATENSTEIN_PULSE_ALPHA_MIN,
+  NEATENSTEIN_PULSE_GLOW_BLUR_RADIUS,
+  NEATENSTEIN_PULSE_MAX_CONCURRENT,
+  NEATENSTEIN_PULSE_SCREEN_DOT_RADIUS_PX,
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
+  NEATENSTEIN_TRACER_COLOR,
+  NEATENSTEIN_TRACER_GLOW_BLUR_RADIUS,
+  NEATENSTEIN_TRACER_GLOW_COLOR,
+  NEATENSTEIN_TRACER_LINE_WIDTH,
+  NEATENSTEIN_TRACER_NEAR_CLIP_EPSILON,
   NEATENSTEIN_WORKER_COLUMN_COUNT,
 } from '../constants';
 import {
@@ -31,9 +48,21 @@ import {
   type NeatensteinRenderState,
 } from '../renderer/frame';
 import {
+  NEATENSTEIN_FLOOR_CAMERA_HEIGHT_SCREEN_RATIO,
+  NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
   NEATENSTEIN_FLOOR_FOV_RADIANS,
+  NEATENSTEIN_FLOOR_HORIZON_RATIO,
+  projectNeatensteinFloorPoint,
   renderNeatensteinFloor,
+  type NeatensteinFloorCamera,
 } from '../renderer/floor';
+import {
+  depthTestPulse,
+  emitNeatensteinAmbientPulse,
+  NEATENSTEIN_PULSE_AMBIENT_LIFETIME_TICKS,
+  updateNeatensteinPulses,
+  type NeatensteinPulse,
+} from '../renderer/pulse';
 import {
   buildNeatensteinMap,
   createCollisionMap,
@@ -43,10 +72,14 @@ import { castRayDDA } from '../renderer/raycast';
 import {
   createGameState,
   gameTick,
-  NEATENSTEIN_FIXED_TIMESTEP_MS,
   type GameTickInputSnapshot,
 } from '../host/game/tick';
-import type { GameState } from '../host/game/types';
+import type {
+  GameState,
+  ImpactSpot,
+  TracerState,
+  Vector2,
+} from '../host/game/types';
 import {
   NEATENSTEIN_BACKGROUND_RGB,
   NEATENSTEIN_MAX_VIEW_DIST,
@@ -64,6 +97,9 @@ let gameState: GameState | null = null;
 
 /** Collision map built from the init seed; reused for every movement tick. */
 let collisionMap: CollisionMap | null = null;
+
+/** Active ambient floor pulses tracked across frames in the worker tier. */
+let activePulses: NeatensteinPulse[] = [];
 
 /**
  * Input snapshot captured from the most recent `input` message. Consumed by
@@ -84,7 +120,7 @@ const NEATENSTEIN_WORKER_CLEAR_COLOR = formatRgb(NEATENSTEIN_BACKGROUND_RGB);
 const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 191, b: 255 } as const;
 
 /** RGB of the neon wall color for Y-axis-side hits (north/south walls). */
-const NEATENSTEIN_WALL_Y_SIDE_RGB = { r: 255, g: 0, b: 255 } as const;
+const NEATENSTEIN_WALL_Y_SIDE_RGB = { r: 0, g: 80, b: 180 } as const;
 
 /**
  * Format an RGB triple as a CSS `rgb(...)` string.
@@ -109,9 +145,9 @@ function formatRgb(color: { r: number; g: number; b: number }): string {
  */
 function applyWallFog(
   wallColor: { r: number; g: number; b: number },
-  wallDistance: number,
+  perpWallDist: number,
 ): string {
-  const fogFactor = Math.min(wallDistance / NEATENSTEIN_MAX_VIEW_DIST, 1);
+  const fogFactor = Math.min(perpWallDist / NEATENSTEIN_MAX_VIEW_DIST, 1);
   const backgroundColor = NEATENSTEIN_BACKGROUND_RGB;
   return formatRgb({
     r: wallColor.r + (backgroundColor.r - wallColor.r) * fogFactor,
@@ -254,6 +290,9 @@ function buildAndPostFrame(): void {
     });
 
     const stripeWidth = canvasWidth / columnCount;
+    const wallFocalLength =
+      canvasWidth / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+    const zBuffer = new Float32Array(columnCount);
     for (let column = 0; column < columnCount; column++) {
       const hit = castColumnRay(
         column,
@@ -266,7 +305,8 @@ function buildAndPostFrame(): void {
         cameraPlaneY,
       );
 
-      const lineHeight = canvasHeight / hit.perpWallDist;
+      zBuffer[column] = hit.perpWallDist;
+      const lineHeight = wallFocalLength / hit.perpWallDist;
       const drawStart = clamp((canvasHeight - lineHeight) / 2, 0, canvasHeight);
       const drawEnd = clamp((canvasHeight + lineHeight) / 2, 0, canvasHeight);
       context.fillStyle = applyWallFog(
@@ -282,6 +322,38 @@ function buildAndPostFrame(): void {
         drawEnd - drawStart,
       );
     }
+
+    activePulses = updateNeatensteinPulses(activePulses, latestState.simTick);
+    const newPulse = emitNeatensteinAmbientPulse(
+      latestState.simTick,
+      gameState.seed,
+    );
+    if (newPulse && activePulses.length < NEATENSTEIN_PULSE_MAX_CONCURRENT) {
+      activePulses.push(newPulse);
+    }
+    drawNeatensteinPulses(
+      context,
+      activePulses,
+      zBuffer,
+      { x: cameraPositionX, y: cameraPositionY, yaw: cameraYaw },
+      canvasWidth,
+      canvasHeight,
+    );
+    drawNeatensteinTracers(
+      context,
+      gameState.tracers,
+      { x: cameraPositionX, y: cameraPositionY, yaw: cameraYaw },
+      canvasWidth,
+      canvasHeight,
+    );
+    drawImpactSpots(
+      context,
+      gameState.impacts,
+      zBuffer,
+      { x: cameraPositionX, y: cameraPositionY, yaw: cameraYaw },
+      canvasWidth,
+      canvasHeight,
+    );
 
     return;
   }
@@ -310,6 +382,284 @@ function buildAndPostFrame(): void {
   );
 }
 
+/**
+ * CSS color string for the yellow ambient floor pulse.
+ */
+const NEATENSTEIN_PULSE_COLOR = '#fff14a';
+
+/**
+ * Glow color string for the yellow ambient floor pulse.
+ */
+const NEATENSTEIN_PULSE_GLOW_COLOR = 'rgba(255, 241, 74, 0.42)';
+
+/**
+ * Draw the active ambient floor pulses that pass the z-buffer depth test.
+ *
+ * Each pulse is projected from world space to screen space using the same
+ * floor projection as the grid lines, then rendered as a small yellow dot.
+ * Pulses behind walls or behind the camera are discarded.
+ *
+ * @param context - Worker-tier 2D canvas context.
+ * @param pulses - Active pulse list for this frame.
+ * @param zBuffer - Per-column depth buffer from the wall pass.
+ * @param camera - Current camera look state for world-to-screen projection.
+ * @param canvasWidth - Width of the canvas in pixels.
+ * @param canvasHeight - Height of the canvas in pixels.
+ */
+function drawNeatensteinPulses(
+  context: OffscreenCanvasRenderingContext2D,
+  pulses: readonly NeatensteinPulse[],
+  zBuffer: Float32Array,
+  camera: NeatensteinFloorCamera,
+  canvasWidth: number,
+  canvasHeight: number,
+): void {
+  const safeX = Number.isFinite(camera.x) ? camera.x : 0;
+  const safeY = Number.isFinite(camera.y) ? camera.y : 0;
+  const safeYaw = Number.isFinite(camera.yaw) ? camera.yaw : 0;
+
+  const horizonY = canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+  const halfWidth = canvasWidth / 2;
+  const focalLength = halfWidth / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const cosYaw = Math.cos(safeYaw);
+  const sinYaw = Math.sin(safeYaw);
+
+  for (const pulse of pulses) {
+    if (!pulse.active) {
+      continue;
+    }
+
+    const projected = projectNeatensteinFloorPoint(
+      pulse.worldX,
+      pulse.worldY,
+      safeX,
+      safeY,
+      cosYaw,
+      sinYaw,
+      focalLength,
+      halfWidth,
+      horizonY,
+      canvasHeight,
+      NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+    );
+
+    if (projected === null) {
+      continue;
+    }
+
+    const depthTestPulseInput = {
+      screenColumn: (projected.x / canvasWidth) * zBuffer.length,
+      distance: projected.distance,
+    };
+
+    if (!depthTestPulse(depthTestPulseInput, zBuffer)) {
+      continue;
+    }
+
+    const alpha = clamp(
+      pulse.lifetimeTicks / NEATENSTEIN_PULSE_AMBIENT_LIFETIME_TICKS,
+      NEATENSTEIN_PULSE_ALPHA_MIN,
+      NEATENSTEIN_PULSE_ALPHA_MAX,
+    );
+
+    context.shadowColor = NEATENSTEIN_PULSE_GLOW_COLOR;
+    context.shadowBlur = NEATENSTEIN_PULSE_GLOW_BLUR_RADIUS;
+    context.fillStyle = NEATENSTEIN_PULSE_COLOR;
+    context.globalAlpha = alpha;
+    context.beginPath();
+    context.arc(
+      projected.x,
+      projected.y,
+      NEATENSTEIN_PULSE_SCREEN_DOT_RADIUS_PX,
+      0,
+      Math.PI * 2,
+    );
+    context.fill();
+  }
+
+  context.globalAlpha = 1;
+  context.shadowBlur = 0;
+}
+
+/**
+ * Camera-relative transform of a world point for tracer projection.
+ */
+interface TracerCamera {
+  /** Camera world X position. */
+  x: number;
+  /** Camera world Y position. */
+  y: number;
+  /** Camera yaw in radians. */
+  yaw: number;
+}
+
+/**
+ * Project a world-space point into screen coordinates using the same
+ * forced-perspective mapping used by the floor reticule.
+ *
+ * @param point - World-space point to project.
+ * @param camera - Camera position and yaw.
+ * @param canvasWidth - Canvas width in pixels.
+ * @param canvasHeight - Canvas height in pixels.
+ * @returns Screen coordinates, or `null` when the point is behind the camera.
+ */
+function projectTracerPoint(
+  point: Vector2,
+  camera: TracerCamera,
+  canvasWidth: number,
+  canvasHeight: number,
+): { x: number; y: number } | null {
+  const dx = point.x - camera.x;
+  const dy = point.y - camera.y;
+  const cos = Math.cos(camera.yaw);
+  const sin = Math.sin(camera.yaw);
+  const depth = dx * cos + dy * sin;
+  if (depth <= NEATENSTEIN_TRACER_NEAR_CLIP_EPSILON) {
+    return null;
+  }
+  const lateral = -dx * sin + dy * cos;
+  const horizonY = canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+  const cameraHeight =
+    canvasHeight * NEATENSTEIN_FLOOR_CAMERA_HEIGHT_SCREEN_RATIO;
+  const screenY = horizonY + cameraHeight / depth;
+  const planeScale = Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const screenX =
+    canvasWidth / 2 + (lateral / (depth * planeScale)) * (canvasWidth / 2);
+  return { x: screenX, y: screenY };
+}
+
+/**
+ * Draw active neon beam tracers as glowing perspective lines.
+ *
+ * Tracers that are fully or partially behind the camera are skipped so they
+ * do not project to nonsensical screen coordinates.
+ *
+ * @param context - Worker-tier 2D canvas context.
+ * @param tracers - Active tracer list from the game state.
+ * @param camera - Camera position and yaw.
+ * @param canvasWidth - Canvas width in pixels.
+ * @param canvasHeight - Canvas height in pixels.
+ */
+function drawNeatensteinTracers(
+  context: OffscreenCanvasRenderingContext2D,
+  tracers: readonly TracerState[],
+  camera: TracerCamera,
+  canvasWidth: number,
+  canvasHeight: number,
+): void {
+  if (tracers.length === 0) {
+    return;
+  }
+
+  const savedComposite = context.globalCompositeOperation;
+  context.globalCompositeOperation = 'lighter';
+
+  for (const tracer of tracers) {
+    const originScreen = projectTracerPoint(
+      tracer.origin,
+      camera,
+      canvasWidth,
+      canvasHeight,
+    );
+    const hitScreen = projectTracerPoint(
+      tracer.hit,
+      camera,
+      canvasWidth,
+      canvasHeight,
+    );
+    if (!originScreen || !hitScreen) {
+      continue;
+    }
+
+    context.shadowColor = NEATENSTEIN_TRACER_GLOW_COLOR;
+    context.shadowBlur = NEATENSTEIN_TRACER_GLOW_BLUR_RADIUS;
+    context.strokeStyle = NEATENSTEIN_TRACER_COLOR;
+    context.lineWidth = NEATENSTEIN_TRACER_LINE_WIDTH;
+    context.beginPath();
+    context.moveTo(originScreen.x, originScreen.y);
+    context.lineTo(hitScreen.x, hitScreen.y);
+    context.stroke();
+  }
+
+  context.shadowBlur = 0;
+  context.globalCompositeOperation = savedComposite;
+}
+
+/**
+ * Draw active wall-impact neon spots in the worker tier.
+ *
+ * Each spot is projected from its world-space wall hit to the center of the
+ * wall stripe at the matching screen column using the current camera position,
+ * then faded out as its lifetime expires. The spot radius and screen position
+ * are recomputed every frame from the current perpendicular distance so the
+ * marker scales dynamically as the player moves closer or farther away. Spots
+ * that fall behind another wall according to the z-buffer are skipped so the
+ * marker only appears on the visible wall face.
+ *
+ * @param context - Worker-tier 2D canvas context.
+ * @param impacts - Active wall-impact list from the game state.
+ * @param zBuffer - Per-column depth buffer from the wall pass.
+ * @param camera - Camera position and yaw.
+ * @param canvasWidth - Canvas width in pixels.
+ * @param canvasHeight - Canvas height in pixels.
+ */
+function drawImpactSpots(
+  context: OffscreenCanvasRenderingContext2D,
+  impacts: readonly ImpactSpot[],
+  zBuffer: Float32Array,
+  camera: TracerCamera,
+  canvasWidth: number,
+  canvasHeight: number,
+): void {
+  if (impacts.length === 0) {
+    return;
+  }
+
+  const savedComposite = context.globalCompositeOperation;
+  context.globalCompositeOperation = 'lighter';
+
+  const dirX = Math.cos(camera.yaw);
+  const dirY = Math.sin(camera.yaw);
+  const planeScale = Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+
+  for (const impact of impacts) {
+    const relX = impact.position.x - camera.x;
+    const relY = impact.position.y - camera.y;
+    const perpDist = relX * dirX + relY * dirY;
+    if (perpDist <= 0) {
+      continue;
+    }
+
+    const lateral = -relX * dirY + relY * dirX;
+    const screenX =
+      canvasWidth / 2 + (lateral / (perpDist * planeScale)) * (canvasWidth / 2);
+    const screenColumn = (screenX / canvasWidth) * zBuffer.length;
+    if (!depthTestPulse({ screenColumn, distance: perpDist }, zBuffer)) {
+      continue;
+    }
+
+    const alpha = clamp(
+      impact.lifetimeMs / NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS,
+      0,
+      1,
+    );
+
+    const radius = Math.max(1, NEATENSTEIN_IMPACT_SPOT_RADIUS_PX / perpDist);
+
+    context.shadowColor = NEATENSTEIN_IMPACT_SPOT_GLOW_COLOR;
+    context.shadowBlur = NEATENSTEIN_IMPACT_SPOT_GLOW_BLUR_PX;
+    context.fillStyle = NEATENSTEIN_IMPACT_SPOT_COLOR;
+    context.globalAlpha = alpha;
+    context.beginPath();
+    context.arc(screenX, canvasHeight / 2, radius, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  context.globalAlpha = 1;
+  context.shadowBlur = 0;
+  context.globalCompositeOperation = savedComposite;
+}
+
 self.onmessage = (event: MessageEvent) => {
   const data = event.data;
   if (!data || typeof data !== 'object') {
@@ -332,8 +682,9 @@ self.onmessage = (event: MessageEvent) => {
     const seed =
       typeof data.mapSeed === 'number' && Number.isFinite(data.mapSeed)
         ? data.mapSeed
-        : 1;
+        : NEATENSTEIN_DEFAULT_SEED;
     wallGrid = buildWallGrid(seed);
+    activePulses = [];
     collisionMap = createCollisionMap(
       buildNeatensteinMap(seed),
       NEATENSTEIN_MAP_SIZE,

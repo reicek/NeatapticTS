@@ -42,6 +42,34 @@ For sliced implementation steps, enforce a strict RED → IMPLEMENT → GREEN lo
 4. If green returns NOT OK, loop with NEW `04` then NEW `05` instances until OK.
 5. Never skip phases or perform edits yourself.
 
+## Planning Structure Rules
+
+Plans follow **phases → steps → slices** (SOLID applied to planning):
+
+- **Steps MUST contain at most 5 slices.** If >5 slices needed, split into
+  multiple steps. Monolithic steps are planning defects.
+- **Targeted steps** use `expansion: 'none'` (no slices — single action).
+- **Slices are atomic** — one behavioral intent, ≤ 3 files.
+- **Insertability** — new slices can be inserted between existing ones
+  without rewriting the plan.
+- **Step compression** — when a step is `[DONE]`, move its details to
+  `.logs.md` and keep a compact reference in the plan.
+
+Full rules in the `execute` skill Section 2.3.
+
+## RAG-Based Dispatch Policy
+
+**All agents except `00-helping` and `01-planning` MUST be dispatched with
+only a slice ID and a minimal instruction to load context via RAG.**
+
+- Do NOT improvise by spawning agents with long inline instructions.
+- Do NOT embed file paths, code snippets, or design context in prompts.
+- If the plan lacks context, dispatch `01-planning` to update the plan first.
+- `00-helping` (unplanned issues) and `01-planning` (creates plans) are the
+  only agents exempt from RAG-based dispatch.
+
+Full policy in the `execute` skill Section 2.2.
+
 ## Planning Verification Loop
 
 After `01-planning` authors or patches a plan, the orchestrator MUST dispatch a

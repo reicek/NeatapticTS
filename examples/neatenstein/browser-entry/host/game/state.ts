@@ -19,6 +19,7 @@ import {
   NEATENSTEIN_SPAWN_CENTER_X,
   NEATENSTEIN_SPAWN_CENTER_Y,
 } from './constants';
+import { NEATENSTEIN_DEFAULT_SEED } from '../../constants';
 import type {
   CreateGameStateOptions,
   EnemyState,
@@ -54,7 +55,8 @@ export function createGameRng(seed: number): () => number {
  * this module; deterministic replay reconstructs the PRNG from the stored
  * seed via {@link createGameRng}.
  *
- * @param options - Optional reset configuration; `seed` defaults to `1`.
+ * @param options - Optional reset configuration; `seed` defaults to
+ *   {@link NEATENSTEIN_DEFAULT_SEED}.
  * @returns A fresh canonical {@link GameState} for the requested seed.
  *
  * @example
@@ -66,7 +68,7 @@ export function createGameRng(seed: number): () => number {
 export function createGameState(
   options: CreateGameStateOptions = {},
 ): GameState {
-  const seed = options.seed ?? 1;
+  const seed = options.seed ?? NEATENSTEIN_DEFAULT_SEED;
   const rng = createGameRng(seed);
   const spawnPosition = {
     x: NEATENSTEIN_SPAWN_CENTER_X,
@@ -95,6 +97,7 @@ export function createGameState(
     player,
     enemies,
     tracers: [],
+    impacts: [],
     kills: 0,
     spawnCount: 0,
     generation: 1,
@@ -133,7 +136,7 @@ export function canDash(state: GameState): boolean {
 /**
  * Apply damage to the player, clamping health at zero.
  *
- * Damage is ignored while the player is invulnerable from a recent dash.
+ * Damage is ignored while the player is invulnerable (dash i-frames or contact i-frames).
  *
  * @param state - Snapshot before damage.
  * @param amount - Damage amount; clamped to zero if negative.

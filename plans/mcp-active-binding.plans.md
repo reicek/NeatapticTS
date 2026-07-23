@@ -6,7 +6,8 @@
 
 Claim: 01-planning @ 2026-07-19T17:02:00Z  
 Claim: 04-implementing @ 2026-07-20T12:00:00Z  
-Claim: 04-implementing @ 2026-07-21T21:36:56Z
+Claim: 04-implementing @ 2026-07-21T21:36:56Z  
+Claim: 04-implementing @ 2026-07-22T12:12:01Z
 
 Active workstream tracker:
 `plans/Neon_Shooter_NGE_Demo.plans.md`.
@@ -129,6 +130,46 @@ PlanUpdate:
   next: 'Run 05-green-testing on focused tests and attach coverage-guard evidence.'
 ```
 
+### get_slice_context RAG assembly fixes
+
+Tightened `neataptic-workflow-mcp:get_slice_context` RAG assembly so that:
+chunks are deduplicated by `(file_path, char_start/char_end)` overlap, every
+acceptance criterion gets its own `search_context` query and the results are
+merged before the top-N cut, and `*.test.ts` files are boosted and reserved in
+TDD slices. Missing test files are surfaced as `load_chunk` follow-up refs.
+
+```yaml
+PlanUpdate:
+  slice_id: mcp-get-slice-context-rag-assembly-fixes
+  changed_files:
+    - scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs
+    - scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts
+    - plans/mcp-active-binding.plans.md
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --check scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts plans/mcp-active-binding.plans.md'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts'
+  validation:
+    - command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md'
+      expected_exit: 0
+      result: 'PASS — validate-plan-sync: pass'
+  rollback:
+    - 'git checkout -- scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs'
+    - 'git checkout -- scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts'
+    - 'git checkout -- plans/mcp-active-binding.plans.md'
+  next: 'Run 05-green-testing on the focused workflow MCP test file and attach coverage-guard evidence.'
+```
+
+**VALIDATION_EVIDENCE:**
+
+- tsc: `npx tsc --noEmit -p tsconfig.json` → OK
+- lint: `npm run lint` → 0 errors, 123 unrelated pre-existing warnings
+- prettier: `npx prettier --check scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts plans/mcp-active-binding.plans.md` → OK
+- focused test: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts` → 57/57 PASS
+- plan-sync: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md` → pass
+
 **VALIDATION_EVIDENCE:**
 
 - tsc: `npx tsc --noEmit -p tsconfig.json` → OK
@@ -149,7 +190,29 @@ PlanUpdate:
 - lint: `npm run lint` → 0 issues in touched files (unrelated pre-existing warnings remain)
 - prettier: `npx prettier --check <touched-files>` → OK
 - plan-sync: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/mcp-active-binding.plans.md` → pass
-- focused test: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts` → 62/62 PASS
+- focused test: `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=scripts/agent-customization/mcp/neataptic-workflow-mcp.test.ts` → 57/57 PASS
+- code-coverage: `node scripts/agent-customization/gates/code-coverage.gate.mjs --json --coverage-summary-path=coverage/coverage-summary-merged.json --changed-files=scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs` → pass (100% statements/branches/functions/lines)
+- agent-graph: `node scripts/agent-customization/gates/agent-graph.gate.mjs --json` → pass
+
+#### mcp-get-slice-context-rag-assembly-fixes green validation (05-green-testing)
+
+```json
+{
+  "pass": true,
+  "slice_id": "mcp-get-slice-context-rag-assembly-fixes",
+  "evidence": {
+    "neataptic-workflow-mcp.test.ts": "PASS — 57/57 tests (including 4 new RAG-assembly tests)",
+    "tsc": "PASS — npx tsc --noEmit -p tsconfig.json exit 0",
+    "lint": "PASS — npm run lint exit 0; 0 errors in touched files (123 unrelated pre-existing warnings)",
+    "prettier": "PASS — all touched files conform",
+    "plan-sync": "PASS — plans/mcp-active-binding.plans.md registered in README/Roadmap",
+    "agent-graph": "PASS — all flow/gate/agent references resolve",
+    "code-coverage": "PASS — scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs at 100% statements/branches/functions/lines via merged project coverage summary"
+  },
+  "fixHint": null,
+  "owner": "05-green-testing"
+}
+```
 
 #### mcp-get-slice-context-default-compact green validation (05-green-testing)
 

@@ -2193,12 +2193,14 @@ slices:
             '# Context from src/a.ts\n\nFirst relevant chunk body from src/a.ts.\n\nSecond relevant chunk body from src/a.ts.',
           chunks: [
             {
+              chunk_id: 'chunk-1',
               file_path: 'src/a.ts',
               content: 'First relevant chunk body from src/a.ts.',
               char_start: 0,
               char_end: 40,
             },
             {
+              chunk_id: 'chunk-2',
               file_path: 'src/a.ts',
               content: 'Second relevant chunk body from src/a.ts.',
               char_start: 42,
@@ -2231,8 +2233,7 @@ slices:
       for (const chunk of chunks ?? []) {
         expect(typeof chunk.file_path).toBe('string');
         expect((chunk.file_path as string).length).toBeGreaterThan(0);
-        expect(typeof chunk.text).toBe('string');
-        expect((chunk.text as string).trim().length).toBeGreaterThan(0);
+        expect(typeof chunk.chunk_id).not.toBe('undefined');
       }
       expect(searchContextFn).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -2242,9 +2243,19 @@ slices:
           use_rerank: true,
           metadata: {
             filter: {
-              op: 'like',
-              field: 'file_path',
-              value: '%src/a.ts%',
+              op: 'or',
+              predicates: [
+                expect.objectContaining({
+                  op: 'like',
+                  field: 'file_path',
+                  value: expect.stringContaining('__test-active-') as string,
+                }),
+                {
+                  op: 'like',
+                  field: 'file_path',
+                  value: '%src/a.ts%',
+                },
+              ],
             },
           },
         }),
@@ -2352,6 +2363,446 @@ status: '[WIP]'
     } finally {
       await removeTempPlan(planPath);
     }
+  });
+
+  describe('get_slice_context RAG assembly fixes', () => {
+    it('deduplicates chunks with identical or overlapping file ranges', async () => {
+      const mod = await loadModule();
+      const planPath = await writeTempPlan(`
+# Test Plan
+
+## Implementation phases
+
+### Phase 1 — Test [WIP]
+
+#### Step 01 — RAG step [WIP]
+
+\`\`\`yaml
+phase: 1
+step: 1
+title: '01: RAG step'
+slices:
+  - slice_id: dedup-slice
+    title: 'deduplicate chunks'
+    status: '[WIP]'
+    goal: test deduplication
+    files_to_change:
+      - src/constants.ts
+    acceptance_criteria:
+      - id: AC-1
+        text: 'overlapping ranges share same file path'
+\`\`\`
+
+## Validation gates
+
+- none
+`);
+      try {
+        const results = [
+          {
+            chunk_id: 'dedup-a',
+            file_path: 'src/constants.ts',
+            char_start: 0,
+            char_end: 100,
+            text: 'chunk a body',
+            score: 0.9,
+          },
+          {
+            chunk_id: 'dedup-b',
+            file_path: 'src/constants.ts',
+            char_start: 0,
+            char_end: 120,
+            text: 'chunk b body',
+            score: 0.8,
+          },
+          {
+            chunk_id: 'dedup-c',
+            file_path: 'src/constants.ts',
+            char_start: 0,
+            char_end: 100,
+            text: 'chunk c body',
+            score: 0.7,
+          },
+          {
+            chunk_id: 'dedup-d',
+            file_path: 'src/constants.ts',
+            char_start: 200,
+            char_end: 300,
+            text: 'chunk d body',
+            score: 0.6,
+          },
+        ];
+        const tools = mod.createWorkflowTools({
+          planPath,
+          searchContextFn: makeSearchContextFn(
+            results as Array<Record<string, unknown>>,
+          ),
+        }) as WorkflowTool[];
+        const tool = tools.find((t) => t.name === 'get_slice_context');
+        const result = (await (tool as WorkflowTool).handler({
+          slice_id: 'dedup-slice',
+          plan_path: planPath,
+        })) as Record<string, unknown>;
+        const ctx = result.context as Record<string, unknown>;
+        const chunks = ctx.chunks as Array<Record<string, unknown>>;
+        const starts = chunks
+          .map((c) => c.char_start as number)
+          .sort((a, b) => a - b);
+
+        expect({
+          chunkCount: chunks.length,
+          starts,
+          uniqueIds: new Set(chunks.map((c) => c.chunk_id)).size,
+        }).toEqual({
+          chunkCount: 2,
+          starts: [0, 200],
+          uniqueIds: 2,
+        });
+      } finally {
+        await removeTempPlan(planPath);
+      }
+    });
+
+    it('issues one search_context call per acceptance criterion and merges results', async () => {
+      const mod = await loadModule();
+      const planPath = await writeTempPlan(`
+# Test Plan
+
+## Implementation phases
+
+### Phase 1 — Test [WIP]
+
+#### Step 01 — RAG step [WIP]
+
+\`\`\`yaml
+phase: 1
+step: 1
+title: '01: RAG step'
+slices:
+  - slice_id: multiquery-slice
+    title: 'player health ammo'
+    status: '[WIP]'
+    goal: implement hero state
+    files_to_change:
+      - src/hero.ts
+      - src/damage.ts
+      - src/dash.ts
+    acceptance_criteria:
+      - id: AC-207
+        text: 'damage decreases health by exact amount'
+      - id: AC-208
+        text: 'dash grants invulnerability frames during dash'
+\`\`\`
+
+## Validation gates
+
+- none
+`);
+      try {
+        const searchContextFn = jest
+          .fn()
+          .mockImplementation(async (opts: Record<string, unknown>) => {
+            const q = String(opts.query ?? '');
+            // Order matters: AC queries also contain generic words such as
+            // 'health', so match the more specific AC terms first.
+            if (q.includes('damage')) {
+              return {
+                dense_state: 'cold',
+                results: [
+                  {
+                    chunk_id: 'ac-damage',
+                    file_path: 'src/damage.ts',
+                    char_start: 0,
+                    char_end: 10,
+                    text: 'damage chunk',
+                    score: 0.8,
+                  },
+                ],
+              };
+            }
+            if (q.includes('dash')) {
+              return {
+                dense_state: 'cold',
+                results: [
+                  {
+                    chunk_id: 'ac-dash',
+                    file_path: 'src/dash.ts',
+                    char_start: 0,
+                    char_end: 10,
+                    text: 'dash chunk',
+                    score: 0.8,
+                  },
+                ],
+              };
+            }
+            if (
+              q.includes('player') ||
+              q.includes('health') ||
+              q.includes('ammo')
+            ) {
+              return {
+                dense_state: 'cold',
+                results: [
+                  {
+                    chunk_id: 'primary',
+                    file_path: 'src/hero.ts',
+                    char_start: 0,
+                    char_end: 10,
+                    text: 'primary chunk',
+                    score: 0.9,
+                  },
+                ],
+              };
+            }
+            return { dense_state: 'cold', results: [] };
+          }) as jest.Mock;
+        const tools = mod.createWorkflowTools({
+          planPath,
+          searchContextFn: searchContextFn as unknown as jest.Mock,
+        }) as WorkflowTool[];
+        const tool = tools.find((t) => t.name === 'get_slice_context');
+        const result = (await (tool as WorkflowTool).handler({
+          slice_id: 'multiquery-slice',
+          plan_path: planPath,
+        })) as Record<string, unknown>;
+        const ctx = result.context as Record<string, unknown>;
+        const chunks = ctx.chunks as Array<Record<string, unknown>>;
+        const paths = chunks.map((c) => c.file_path as string).sort();
+
+        expect({
+          calls: searchContextFn.mock.calls.length,
+          paths,
+        }).toEqual({
+          calls: 3,
+          paths: ['src/damage.ts', 'src/dash.ts', 'src/hero.ts'],
+        });
+      } finally {
+        await removeTempPlan(planPath);
+      }
+    });
+
+    it('prioritizes *.test.ts chunks in TDD slices even with low base score', async () => {
+      const mod = await loadModule();
+      const planPath = await writeTempPlan(`
+# Test Plan
+
+## Implementation phases
+
+### Phase 1 — Test [WIP]
+
+#### Step 01 — TDD step [WIP]
+
+\`\`\`yaml
+phase: 1
+step: 1
+title: '01: TDD step'
+tdd_sequence: 'red-green'
+slices:
+  - slice_id: tdd-priority-slice
+    title: 'state test priority'
+    status: '[WIP]'
+    goal: verify state behavior
+    files_to_change:
+      - src/constants.ts
+      - src/state.test.ts
+    acceptance_criteria:
+      - id: AC-1
+        text: 'state transitions are deterministic'
+\`\`\`
+
+## Validation gates
+
+- none
+`);
+      try {
+        const results = [
+          {
+            chunk_id: 'test-low',
+            file_path: 'src/state.test.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'test chunk',
+            score: 1,
+          },
+          {
+            chunk_id: 'constants-high',
+            file_path: 'src/constants.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'constants chunk',
+            score: 100,
+          },
+          {
+            chunk_id: 'other-1',
+            file_path: 'src/other1.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'other 1',
+            score: 91,
+          },
+          {
+            chunk_id: 'other-2',
+            file_path: 'src/other2.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'other 2',
+            score: 90,
+          },
+          {
+            chunk_id: 'other-3',
+            file_path: 'src/other3.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'other 3',
+            score: 89,
+          },
+          {
+            chunk_id: 'other-4',
+            file_path: 'src/other4.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'other 4',
+            score: 88,
+          },
+          {
+            chunk_id: 'other-5',
+            file_path: 'src/other5.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'other 5',
+            score: 87,
+          },
+          {
+            chunk_id: 'other-6',
+            file_path: 'src/other6.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'other 6',
+            score: 86,
+          },
+          {
+            chunk_id: 'other-7',
+            file_path: 'src/other7.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'other 7',
+            score: 85,
+          },
+          {
+            chunk_id: 'other-8',
+            file_path: 'src/other8.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'other 8',
+            score: 84,
+          },
+          {
+            chunk_id: 'other-9',
+            file_path: 'src/other9.ts',
+            char_start: 0,
+            char_end: 10,
+            text: 'other 9',
+            score: 82,
+          },
+        ];
+        const tools = mod.createWorkflowTools({
+          planPath,
+          searchContextFn: makeSearchContextFn(
+            results as Array<Record<string, unknown>>,
+          ),
+        }) as WorkflowTool[];
+        const tool = tools.find((t) => t.name === 'get_slice_context');
+        const result = (await (tool as WorkflowTool).handler({
+          slice_id: 'tdd-priority-slice',
+          plan_path: planPath,
+        })) as Record<string, unknown>;
+        const ctx = result.context as Record<string, unknown>;
+        const chunks = ctx.chunks as Array<Record<string, unknown>>;
+        const paths = chunks.map((c) => c.file_path as string);
+
+        expect(paths).toContain('src/state.test.ts');
+      } finally {
+        await removeTempPlan(planPath);
+      }
+    });
+
+    it('emits a load_chunk follow-up ref for missing test files', async () => {
+      const mod = await loadModule();
+      const planPath = await writeTempPlan(`
+# Test Plan
+
+## Implementation phases
+
+### Phase 1 — Test [WIP]
+
+#### Step 01 — TDD step [WIP]
+
+\`\`\`yaml
+phase: 1
+step: 1
+title: '01: TDD step'
+tdd_sequence: 'red-green'
+slices:
+  - slice_id: tdd-missing-slice
+    title: 'missing test file'
+    status: '[WIP]'
+    goal: implement state tests
+    files_to_change:
+      - src/state.test.ts
+    acceptance_criteria:
+      - id: AC-1
+        text: 'state transitions are deterministic'
+\`\`\`
+
+## Validation gates
+
+- none
+`);
+      try {
+        const searchContextFn = jest
+          .fn()
+          .mockImplementation(async (opts: Record<string, unknown>) => {
+            const q = String(opts.query ?? '');
+            if (q.includes('state.test.ts')) {
+              return {
+                dense_state: 'cold',
+                results: [
+                  {
+                    chunk_id: 'missing-test',
+                    file_path: 'src/state.test.ts',
+                    char_start: 0,
+                    char_end: 0,
+                    text: '',
+                    score: 0.5,
+                  },
+                ],
+              };
+            }
+            return { dense_state: 'cold', results: [] };
+          }) as jest.Mock;
+        const tools = mod.createWorkflowTools({
+          planPath,
+          searchContextFn: searchContextFn as unknown as jest.Mock,
+        }) as WorkflowTool[];
+        const tool = tools.find((t) => t.name === 'get_slice_context');
+        const result = (await (tool as WorkflowTool).handler({
+          slice_id: 'tdd-missing-slice',
+          plan_path: planPath,
+        })) as Record<string, unknown>;
+        const ctx = result.context as Record<string, unknown>;
+        const refs = ctx.follow_up_refs as
+          Array<Record<string, unknown>> | undefined;
+        const loadChunkRef = refs?.find(
+          (ref) =>
+            ref.tool === 'load_chunk' &&
+            (ref.args as Record<string, unknown>)?.chunk_id === 'missing-test',
+        );
+
+        expect(loadChunkRef).toBeDefined();
+      } finally {
+        await removeTempPlan(planPath);
+      }
+    });
   });
 
   async function writeTempPlan(content: string): Promise<string> {

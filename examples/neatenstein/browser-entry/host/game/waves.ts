@@ -9,14 +9,12 @@
  * @module
  */
 
-import { NEATENSTEIN_ENEMY_MAX_CONCURRENT } from './constants';
-import { createGameRng, createGameState } from './state';
+import {
+  NEATENSTEIN_ENEMY_MAX_CONCURRENT,
+  NEATENSTEIN_ENEMY_SPAWN_RADIUS,
+} from './constants';
+import { createGameRng } from './state';
 import type { EnemyState, GameState } from './types';
-
-export { createGameState };
-
-/** Radius in world units around the origin where enemies may spawn. */
-const SPAWN_RADIUS = 8;
 
 /** Result of a single spawn tick. */
 export interface SpawnWaveTickResult {
@@ -37,6 +35,13 @@ export interface SpawnWaveTickResult {
  * @param _dtMs - Elapsed simulation time in milliseconds (reserved for future
  *   spawn-rate modulation; currently each tick may spawn at most one enemy).
  * @returns Object reporting how many enemies spawned and the new state.
+ *
+ * @example
+ * ```ts
+ * const before = createGameState({ seed: 1 });
+ * const result = spawnWaveTick(before, 16);
+ * expect(result.spawnedThisTick).toBeLessThanOrEqual(1);
+ * ```
  */
 export function spawnWaveTick(
   state: GameState,
@@ -59,7 +64,7 @@ export function spawnWaveTick(
   // produce the same deterministic spawn position.
   const rng = createGameRng(state.seed + state.spawnCount);
   const angle = rng() * 2 * Math.PI;
-  const distance = rng() * SPAWN_RADIUS;
+  const distance = rng() * NEATENSTEIN_ENEMY_SPAWN_RADIUS;
   const enemy: EnemyState = {
     position: {
       x: Math.cos(angle) * distance,

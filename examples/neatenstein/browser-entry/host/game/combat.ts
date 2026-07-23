@@ -9,6 +9,7 @@
  * @module
  */
 
+import { NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS } from '../../constants';
 import {
   buildNeatensteinMap,
   castRayDDAFromFlatMap,
@@ -18,12 +19,11 @@ import {
   NEATENSTEIN_BEAM_DAMAGE,
   NEATENSTEIN_BEAM_MAX_RANGE_CELLS,
   NEATENSTEIN_ENEMY_HIT_RADIUS_CELLS,
+  NEATENSTEIN_MUZZLE_OFFSET_CELLS,
   NEATENSTEIN_TRACER_DURATION_MS,
 } from './constants';
-import { consumeAmmo, createGameState } from './state';
-import type { GameState, TracerState, Vector2 } from './types';
-
-export { createGameState };
+import { consumeAmmo } from './state';
+import type { GameState, ImpactSpot, TracerState, Vector2 } from './types';
 
 /** Result of attempting to fire the neon beam. */
 export interface FireNeonBeamResult {
@@ -61,10 +61,13 @@ export function fireNeonBeam(state: GameState): FireNeonBeamResult {
     return { state, fired: false, tracer: null };
   }
 
-  const origin = state.player.position;
   const direction: Vector2 = {
     x: Math.cos(state.player.angleRad),
     y: Math.sin(state.player.angleRad),
+  };
+  const origin: Vector2 = {
+    x: state.player.position.x + direction.x * NEATENSTEIN_MUZZLE_OFFSET_CELLS,
+    y: state.player.position.y + direction.y * NEATENSTEIN_MUZZLE_OFFSET_CELLS,
   };
 
   const flatMap = buildNeatensteinMap(state.seed);
@@ -126,6 +129,26 @@ export function fireNeonBeam(state: GameState): FireNeonBeamResult {
 
   let nextState = consumeAmmo(state);
   nextState = { ...nextState, tracers: [...nextState.tracers, tracer] };
+
+  if (hitType === 'wall') {
+    const wallHitCoordinate =
+      wallHit.side === 0
+        ? origin.y + wallHit.perpWallDist * direction.y
+        : origin.x + wallHit.perpWallDist * direction.x;
+    const impact: ImpactSpot = {
+      wallHit: {
+        mapX: wallHit.mapX,
+        mapY: wallHit.mapY,
+        side: wallHit.side,
+        wallX: wallHitCoordinate - Math.floor(wallHitCoordinate),
+      },
+      position: { ...hit },
+      createdAtMs: state.simTimeMs,
+      lifetimeMs: NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS,
+      perpWallDist: wallHit.perpWallDist,
+    };
+    nextState = { ...nextState, impacts: [...nextState.impacts, impact] };
+  }
 
   if (hitType === 'enemy' && hitEnemyIndex >= 0) {
     nextState = applyEnemyDamage(nextState, hitEnemyIndex);

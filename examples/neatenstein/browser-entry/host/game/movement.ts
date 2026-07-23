@@ -13,6 +13,7 @@ import type { InputSnapshot } from '../input';
 import type { CollisionMap } from '../../renderer/map';
 import {
   NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_MS_PER_SECOND,
   NEATENSTEIN_PLAYER_RADIUS_CELLS,
   NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND,
 } from './constants';
@@ -67,7 +68,9 @@ export function movePlayer(
 ): GameState {
   const previousPosition = { ...state.player.position };
   const move = normalizeMoveVector(delta);
-  const speed = NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND * (dtMs / 1000);
+  const speed =
+    NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND *
+    (dtMs / NEATENSTEIN_MS_PER_SECOND);
 
   return {
     ...state,

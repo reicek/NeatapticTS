@@ -15,6 +15,7 @@ import {
   NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT,
   NEATENSTEIN_MOUSE_SENSITIVITY,
   NEATENSTEIN_POINTER_LOCK_OPTIONS,
+  NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
   NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX,
 } from './constants';
 import { type InputSnapshot } from '../input';
@@ -38,10 +39,18 @@ export interface LookDelta {
 export type LookCallback = (delta: LookDelta) => void;
 
 /**
- * Callback invoked whenever the primary fire button (left mouse) is pressed or
- * released.
+ * Callback invoked whenever the primary fire button (left mouse) is pressed.
+ *
+ * The router consumes each press exactly once when the input snapshot is read,
+ * so the callback only signals a new fire event rather than a continuous hold
+ * state.
  */
-export type FireCallback = (active: boolean) => void;
+export type FireCallback = () => void;
+
+/**
+ * Callback invoked when a touch binding starts or ends tracking an active touch.
+ */
+export type TouchActiveCallback = (active: boolean) => void;
 
 /**
  * Detaches a previously installed input binding.
@@ -176,21 +185,22 @@ export function bindMouseLook(
 /**
  * Bind the left mouse button to a fire callback.
  *
- * Fire activates on `mousedown` for the primary (left) button and deactivates on
- * the matching `mouseup` anywhere in the document, so releasing the mouse outside
- * the canvas still ends the shot. This binding is intentionally separate from
- * pointer-lock request handling; both can be attached to the same canvas without
- * interfering with each other.
+ * Fire activates on `mousedown` for the primary (left) button. The router
+ * consumes each press exactly once when the input snapshot is read, so this
+ * binding does not clear the flag on `mouseup`. This ensures a quick click that
+ * falls between simulation ticks still registers one fire event. The binding is
+ * intentionally separate from pointer-lock request handling; both can be
+ * attached to the same canvas without interfering with each other.
  *
  * @param target - Element that receives the `mousedown` event (usually the
  *   canvas).
- * @param callback - Receives `true` on left-button press and `false` on release.
+ * @param callback - Invoked once for each left-button press.
  * @returns A detach function that removes the mouse button listeners.
  *
  * @example
  * ```ts
- * const unbind = bindMouseFire(canvas, (active) => {
- *   inputSnapshot.fire = active;
+ * const unbind = bindMouseFire(canvas, () => {
+ *   pendingFire = true;
  * });
  * ```
  */
@@ -199,28 +209,16 @@ export function bindMouseFire(
   callback: FireCallback,
 ): BindingDetach {
   const handleMouseDown = (event: MouseEvent): void => {
-    if (event.button === 0) {
+    if (event.button === NEATENSTEIN_PRIMARY_MOUSE_BUTTON) {
       event.preventDefault();
-      callback(true);
-    }
-  };
-
-  const handleMouseUp = (event: MouseEvent): void => {
-    if (event.button === 0) {
-      callback(false);
+      callback();
     }
   };
 
   target.addEventListener('mousedown', handleMouseDown);
-  if (typeof document !== 'undefined') {
-    document.addEventListener('mouseup', handleMouseUp);
-  }
 
   return () => {
     target.removeEventListener('mousedown', handleMouseDown);
-    if (typeof document !== 'undefined') {
-      document.removeEventListener('mouseup', handleMouseUp);
-    }
   };
 }
 
@@ -248,19 +246,18 @@ export function bindKeyboardLook(
 ): BindingDetach {
   const step = NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT;
 
+  const KEYBOARD_LOOK_DELTA_BY_CODE: Record<string, LookDelta> = {
+    [NEATENSTEIN_KEY_MAP_LOOK.left]: { yawDelta: -step, pitchDelta: 0 },
+    [NEATENSTEIN_KEY_MAP_LOOK.right]: { yawDelta: step, pitchDelta: 0 },
+    [NEATENSTEIN_KEY_MAP_LOOK.up]: { yawDelta: 0, pitchDelta: -step },
+    [NEATENSTEIN_KEY_MAP_LOOK.down]: { yawDelta: 0, pitchDelta: step },
+  };
+
   const handleKeyDown = (event: KeyboardEvent): void => {
-    if (event.code === NEATENSTEIN_KEY_MAP_LOOK.left) {
+    const delta = KEYBOARD_LOOK_DELTA_BY_CODE[event.code];
+    if (delta !== undefined) {
       event.preventDefault();
-      callback({ yawDelta: -step, pitchDelta: 0 });
-    } else if (event.code === NEATENSTEIN_KEY_MAP_LOOK.right) {
-      event.preventDefault();
-      callback({ yawDelta: step, pitchDelta: 0 });
-    } else if (event.code === NEATENSTEIN_KEY_MAP_LOOK.up) {
-      event.preventDefault();
-      callback({ yawDelta: 0, pitchDelta: -step });
-    } else if (event.code === NEATENSTEIN_KEY_MAP_LOOK.down) {
-      event.preventDefault();
-      callback({ yawDelta: 0, pitchDelta: step });
+      callback(delta);
     }
   };
 
@@ -282,6 +279,8 @@ export function bindKeyboardLook(
  *
  * @param target - Touch surface (usually the canvas or a touch overlay).
  * @param callback - Receives yaw/pitch deltas in radians.
+ * @param onActive - Optional callback invoked with `true` when the first active
+ *   touch starts and `false` when that touch ends or is cancelled.
  * @returns A detach function that removes the touch listeners.
  *
  * @example
@@ -295,6 +294,7 @@ export function bindKeyboardLook(
 export function bindTouchLook(
   target: HTMLElement,
   callback: LookCallback,
+  onActive?: TouchActiveCallback,
 ): BindingDetach {
   let activeTouchId: number | null = null;
   let startX = 0;
@@ -306,6 +306,9 @@ export function bindTouchLook(
   const threshold = NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX;
 
   const endActiveTouch = (): void => {
+    if (activeTouchId !== null) {
+      onActive?.(false);
+    }
     activeTouchId = null;
     engaged = false;
   };
@@ -325,6 +328,7 @@ export function bindTouchLook(
     lastEmittedX = touch.clientX;
     lastEmittedY = touch.clientY;
     engaged = false;
+    onActive?.(true);
   };
 
   const handleTouchMove = (event: TouchEvent): void => {
@@ -383,26 +387,34 @@ export function bindTouchLook(
     }
   };
 
-  target.addEventListener('touchstart', handleTouchStart, { passive: false });
-  target.addEventListener('touchmove', handleTouchMove, { passive: false });
+  const touchListenerOptions: AddEventListenerOptions = { passive: false };
+
+  target.addEventListener('touchstart', handleTouchStart, touchListenerOptions);
+  target.addEventListener('touchmove', handleTouchMove, touchListenerOptions);
   target.addEventListener('touchend', handleTouchEnd);
   target.addEventListener('touchcancel', handleTouchCancel);
 
   return () => {
-    target.removeEventListener('touchstart', handleTouchStart);
-    target.removeEventListener('touchmove', handleTouchMove);
+    target.removeEventListener(
+      'touchstart',
+      handleTouchStart,
+      touchListenerOptions,
+    );
+    target.removeEventListener(
+      'touchmove',
+      handleTouchMove,
+      touchListenerOptions,
+    );
     target.removeEventListener('touchend', handleTouchEnd);
     target.removeEventListener('touchcancel', handleTouchCancel);
   };
 }
 
 /**
- * Forward a captured input snapshot to the display worker.
+ * Forward the worker-consumed subset of an input snapshot to the display worker.
  *
- * The worker consumes movement intent, look deltas, fire, and dash flags so it
- * can run the authoritative game tick off the host main thread. Partial fields
- * are tolerated on the worker side, but this helper always forwards the complete
- * snapshot.
+ * The worker only consumes movement intent, look deltas, fire, and dash flags,
+ * so this helper posts exactly those fields rather than the complete snapshot.
  *
  * @param worker - The dedicated display worker.
  * @param snapshot - The current host input snapshot.

@@ -23,6 +23,7 @@ import {
   bindTouchLook,
   type BindingDetach,
   type LookDelta,
+  type TouchActiveCallback,
 } from './game/controls';
 
 /** Convenience type alias for a keyboard handler reference. */
@@ -93,9 +94,10 @@ export interface InputRouter {
   /**
    * Attach input listeners to a DOM target.
    *
-   * @param target - The element that owns pointer lock and receives key/touch
-   *   events. Mouse-move events are read from `document` so they continue to
-   *   fire while the pointer is locked.
+   * @param target - The element that owns pointer lock and receives mouse/touch
+   *   events. Keyboard movement events are read from `window` so they work even
+   *   when the canvas is not focused. Mouse-move events are read from `document`
+   *   so they continue to fire while the pointer is locked.
    * @throws {Error} if the router is already attached to another target.
    */
   attach(target: HTMLElement): InputRouterDetach;
@@ -152,8 +154,16 @@ export function createInputRouter(): InputRouter {
   let keyboardLookDetach: BindingDetach | null = null;
   let touchLookDetach: BindingDetach | null = null;
 
-  /** True while the primary fire button (left mouse) is held. */
-  let mouseFireActive = false;
+  /**
+   * Pending mouse fire event that has not yet been consumed by `getSnapshot`.
+   *
+   * A quick click between rAF ticks sets this flag once; `getSnapshot` reads and
+   * clears it so every click registers exactly one fire=true snapshot.
+   */
+  let pendingFire = false;
+
+  /** True while at least one active touch is being tracked for look input. */
+  let touchActive = false;
 
   /**
    * Update movement/fire key states from a keyboard event.
@@ -196,6 +206,15 @@ export function createInputRouter(): InputRouter {
   }
 
   /**
+   * Track whether any touch is currently engaged for look input.
+   *
+   * @param active - `true` when a touch starts, `false` when it ends or cancels.
+   */
+  const onTouchActive: TouchActiveCallback = (active): void => {
+    touchActive = active;
+  };
+
+  /**
    * Reset all transient input state without touching event listeners.
    *
    * Used by both the public `detach()` method and the per-attach detach
@@ -211,29 +230,29 @@ export function createInputRouter(): InputRouter {
     keyboardPitchDelta = 0;
     touchYawDelta = 0;
     touchPitchDelta = 0;
-    mouseFireActive = false;
+    pendingFire = false;
+    touchActive = false;
   }
 
-  function bindEventListeners(target: HTMLElement): void {
+  function bindEventListeners(): void {
     keyDownHandler = (event) => updateKeyState(event, true);
     keyUpHandler = (event) => updateKeyState(event, false);
-    target.addEventListener('keydown', keyDownHandler);
-    target.addEventListener('keyup', keyUpHandler);
+    window.addEventListener('keydown', keyDownHandler);
+    window.addEventListener('keyup', keyUpHandler);
   }
 
   function bindLookListeners(target: HTMLElement): void {
     mouseLookDetach = bindMouseLook(target, onMouseLook);
     keyboardLookDetach = bindKeyboardLook(target, onKeyboardLook);
-    touchLookDetach = bindTouchLook(target, onTouchLook);
+    touchLookDetach = bindTouchLook(target, onTouchLook, onTouchActive);
   }
 
   function removeMovementListeners(): void {
-    if (!attachedTarget) return;
     if (keyDownHandler) {
-      attachedTarget.removeEventListener('keydown', keyDownHandler);
+      window.removeEventListener('keydown', keyDownHandler);
     }
     if (keyUpHandler) {
-      attachedTarget.removeEventListener('keyup', keyUpHandler);
+      window.removeEventListener('keyup', keyUpHandler);
     }
     keyDownHandler = null;
     keyUpHandler = null;
@@ -258,10 +277,10 @@ export function createInputRouter(): InputRouter {
 
       attachedTarget = target;
       pointerLockDetach = bindPointerLock(target);
-      mouseFireDetach = bindMouseFire(target, (active) => {
-        mouseFireActive = active;
+      mouseFireDetach = bindMouseFire(target, () => {
+        pendingFire = true;
       });
-      bindEventListeners(target);
+      bindEventListeners();
       bindLookListeners(target);
 
       return () => {
@@ -307,15 +326,16 @@ export function createInputRouter(): InputRouter {
           pitchDelta: mousePitchDelta + touchPitchDelta + keyboardPitchDelta,
         },
         touch: {
-          active: false,
+          active: touchActive,
           yawDelta: touchYawDelta,
           pitchDelta: touchPitchDelta,
         },
         pointerLocked,
-        fire: mouseFireActive || (keyStates[NEATENSTEIN_FIRE_KEY] ?? false),
+        fire: pendingFire || (keyStates[NEATENSTEIN_FIRE_KEY] ?? false),
         dash: keyStates[NEATENSTEIN_DASH_KEY] ?? false,
       };
 
+      pendingFire = false;
       mouseYawDelta = 0;
       mousePitchDelta = 0;
       keyboardYawDelta = 0;

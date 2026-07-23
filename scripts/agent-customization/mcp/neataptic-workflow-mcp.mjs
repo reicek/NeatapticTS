@@ -78,6 +78,12 @@ const ENFORCEMENT_BUDGET = Math.floor(
 const CONTEXT_TOKEN_BUDGET = 2_500;
 /** Maximum number of corpus chunks to retain in the `context.chunks` array. */
 const CONTEXT_RESULT_LIMIT = 10;
+/** Score bonus applied to `*.test.ts` chunks in TDD slices so they outrank implementation chunks. */
+const TEST_FILE_PRIORITY_BONUS = 1_000_000;
+/** Reserved token budget for the dedicated `*.test.ts` search in TDD slices. */
+const TEST_FILE_RESERVED_BUDGET = 500;
+/** Maximum number of acceptance-criterion queries to issue beyond the primary query. */
+const MAX_ACCEPTANCE_CRITERIA_QUERIES = 5;
 /** Soft byte cap for the synthesized `instructions` string. */
 const INSTRUCTIONS_SOFT_LIMIT_BYTES = 2_048;
 /**
@@ -472,6 +478,7 @@ async function buildSliceContextWindow(
     descriptor,
     sliceId,
     searchContextFn,
+    effectivePlanPath,
   );
 
   return buildCompactSliceResponse(
@@ -514,8 +521,11 @@ function buildCompactSliceResponse(descriptor, sliceId, planPath, ragContext) {
     slice_id: sliceId,
     plan: planPath,
     phase: notes.phase ?? null,
+    phase_status: notes.phase_status ?? null,
+    phase_title: notes.phase_title ?? null,
     step_number: descriptor.stepNumber,
     step_title: String(stepMeta.title ?? ''),
+    step_status: notes.step_status ?? null,
     title: notes.title ?? descriptor.sliceTitle ?? sliceId,
     status: notes.status ?? 'unknown',
     goal: notes.goal ?? null,
@@ -536,6 +546,9 @@ function buildCompactSliceResponse(descriptor, sliceId, planPath, ragContext) {
     dependencies: Array.isArray(notes.dependencies) ? notes.dependencies : [],
     next_slice: notes.next_slice ?? null,
     next_step: stepMeta.next_step ?? null,
+    slice_history: Array.isArray(notes.slice_history)
+      ? notes.slice_history
+      : [],
     instructions,
     context: {
       query: rag.query ?? null,
@@ -621,12 +634,18 @@ function buildSliceInstructions(descriptor, sliceId) {
   const stepPart =
     descriptor.stepNumber != null ? `Step ${descriptor.stepNumber} ` : '';
   const lines = [];
-  lines.push(
-    `SLICE: ${sliceId} — ${notes.title ?? descriptor.sliceTitle ?? sliceId}`,
-  );
+  const displayTitle =
+    notes.title ??
+    descriptor.sliceTitle ??
+    String(stepMeta.title ?? '') ??
+    sliceId;
+  lines.push(`SLICE: ${sliceId} — ${displayTitle}`);
   lines.push(
     `${phase}${stepPart}| STATUS: ${notes.status ?? 'unknown'} | GOAL: ${notes.goal ?? 'unspecified'}`,
   );
+  if (notes.phase_status) {
+    lines.push(`PHASE STATUS: ${notes.phase_status}`);
+  }
   if (stepMeta.tdd_sequence) {
     lines.push(
       `TDD: ${stepMeta.tdd_sequence}${stepMeta.mode ? ` | MODE: ${stepMeta.mode}` : ''}`,
@@ -662,11 +681,38 @@ function buildSliceInstructions(descriptor, sliceId) {
   if (deps.length > 0) {
     lines.push(`DEPENDENCIES: ${deps.join(', ')}`);
   }
+  const sliceHistory = Array.isArray(notes.slice_history)
+    ? notes.slice_history
+    : [];
+  if (sliceHistory.length > 0) {
+    const doneCount = sliceHistory.filter(
+      (s) => String(s.status).toUpperCase() === '[DONE]',
+    ).length;
+    const wipCount = sliceHistory.filter(
+      (s) => String(s.status).toUpperCase() === '[WIP]',
+    ).length;
+    lines.push(
+      `SLICE HISTORY: ${sliceHistory.length} slices (${doneCount} DONE, ${wipCount} WIP)`,
+    );
+    const summary = sliceHistory
+      .slice(0, 10)
+      .map((s) => `${s.slice_id}:${s.status}`)
+      .join(', ');
+    lines.push(`  ${summary}${sliceHistory.length > 10 ? '…' : ''}`);
+  }
   if (notes.next_slice) {
     lines.push(`NEXT SLICE: ${notes.next_slice}`);
   }
   if (stepMeta.next_step) {
     lines.push(`NEXT STEP: ${stepMeta.next_step}`);
+  }
+  if (
+    String(notes.status).toUpperCase() === '[WIP]' ||
+    String(notes.step_status).toUpperCase() === '[WIP]'
+  ) {
+    lines.push(
+      'STOP: This step is [WIP]. Complete your assigned task and STOP for orchestrator review. Do not advance to the next step autonomously.',
+    );
   }
   const instructions = lines.join('\n');
   if (Buffer.byteLength(instructions, 'utf8') > INSTRUCTIONS_SOFT_LIMIT_BYTES) {
@@ -690,118 +736,218 @@ function buildSliceInstructions(descriptor, sliceId) {
  * @param {Function} [searchContextFn] - Injectable Cortex search_context implementation.
  * @returns {Promise<{ query: string, text: string, chunks: Array<Record<string, unknown>>, token_count: number, dense_state: string | null, truncated: boolean, follow_up_refs: Array<Record<string, unknown>> }>} RAG context block.
  */
-async function fetchSliceContext(descriptor, sliceId, searchContextFn) {
-  const { query, metadata } = buildSliceQuery(descriptor, sliceId);
+async function fetchSliceContext(
+  descriptor,
+  sliceId,
+  searchContextFn,
+  planPath,
+) {
+  const {
+    query: primaryQuery,
+    queries,
+    metadata,
+  } = buildSliceQuery(descriptor, sliceId, planPath);
   const notes = descriptor.boundaryNotes || {};
+  const testFiles = getTestFilePaths(descriptor);
+  const isTdd = isTddSlice(descriptor);
+
   if (typeof searchContextFn !== 'function') {
-    return emptyRagContext(query);
+    return emptyRagContext(primaryQuery);
   }
 
-  let response;
+  const baseOptions = {
+    limit: CONTEXT_RESULT_LIMIT,
+    budget: CONTEXT_TOKEN_BUDGET,
+    include_metadata: true,
+    context_format: 'json',
+    expand_query: true,
+    use_rerank: true,
+    metadata,
+  };
+
+  /** @type {Array<Record<string, unknown>>} */
+  const responses = [];
   try {
-    response = await searchContextFn({
-      query,
-      limit: CONTEXT_RESULT_LIMIT,
-      budget: CONTEXT_TOKEN_BUDGET,
-      include_metadata: true,
-      context_format: 'json',
-      expand_query: true,
-      use_rerank: true,
-      metadata,
-    });
+    for (const query of queries) {
+      responses.push(await searchContextFn({ ...baseOptions, query }));
+    }
   } catch {
-    return emptyRagContext(query);
+    return emptyRagContext(primaryQuery);
   }
 
-  if (!response || typeof response !== 'object') {
-    return emptyRagContext(query);
+  /** @type {Record<string, unknown> | null} */
+  let testResponse = null;
+  if (isTdd && testFiles.length > 0) {
+    const testQuery = testFiles.map((p) => p.split('/').pop()).join(' ');
+    try {
+      testResponse = await searchContextFn({
+        ...baseOptions,
+        query: testQuery,
+        budget: TEST_FILE_RESERVED_BUDGET,
+        limit: Math.max(testFiles.length, CONTEXT_RESULT_LIMIT),
+      });
+    } catch {
+      testResponse = null;
+    }
   }
 
-  // When `context_format: 'json'` is honored, the assembled context object is
-  // returned in `response.context`. Map the assembled chunk bodies back into
-  // the individual `chunks` entries so callers never see empty `text` fields.
-  const assembled =
-    response.context && typeof response.context === 'object'
-      ? response.context
-      : null;
-  const assembledChunks = Array.isArray(assembled?.chunks)
-    ? assembled.chunks
-    : [];
+  /** @type {Map<string | number, Record<string, unknown>>} */
+  const resultById = new Map();
+  /** @type {Map<string | number, Record<string, unknown>>} */
+  const assembledById = new Map();
+  let denseState = null;
+  let tokenCount = 0;
+  let truncated = false;
+  /** @type {Record<string, unknown> | null} */
+  let searchRef = null;
 
-  const rawResults = response.results;
-  if (!Array.isArray(rawResults) && assembledChunks.length === 0) {
-    return emptyRagContext(query);
+  /**
+   * Ingest a single `search_context` response, merging raw results and any
+   * assembled chunks into the shared maps.
+   *
+   * @param {Record<string, unknown>} response - A single search response.
+   */
+  function ingestResponse(response) {
+    if (!response || typeof response !== 'object') {
+      return;
+    }
+    if (typeof response.dense_state === 'string') {
+      denseState = response.dense_state;
+    }
+    tokenCount +=
+      typeof response.token_count === 'number' ? response.token_count : 0;
+    truncated = truncated || response.truncated === true;
+
+    const rawResults = Array.isArray(response.results) ? response.results : [];
+    for (const result of rawResults) {
+      const id =
+        result.chunk_id ??
+        `${String(result.file_path ?? result.metadata?.file_path ?? 'unknown')}:${String(result.char_start ?? result.metadata?.char_start ?? 'none')}`;
+      const score = Number(result.score ?? 0);
+      const existing = resultById.get(id);
+      if (!existing || score > (existing.score ?? 0)) {
+        resultById.set(id, { ...result, _score: score });
+      }
+    }
+
+    const assembled =
+      response.context && typeof response.context === 'object'
+        ? response.context
+        : null;
+    const chunks = Array.isArray(assembled?.chunks) ? assembled.chunks : [];
+    for (const chunk of chunks) {
+      const id =
+        chunk.chunk_id ??
+        `${String(chunk.file_path ?? 'unknown')}:${String(chunk.char_start ?? 'none')}`;
+      if (!assembledById.has(id)) {
+        assembledById.set(id, chunk);
+      }
+    }
+
+    if (!searchRef && Array.isArray(response.follow_up_refs)) {
+      const ref = response.follow_up_refs.find(
+        (r) => r?.tool === 'search_context' && typeof r.reason === 'string',
+      );
+      if (ref) {
+        searchRef = ref;
+      }
+    }
   }
 
-  const sourceResults = Array.isArray(rawResults) ? rawResults : [];
-  const allChunks = sourceResults
-    .slice(0, CONTEXT_RESULT_LIMIT)
-    .map((result, index) => {
-      const fallbackChunk = assembledChunks[index];
-      const resultPath =
-        result.file_path ??
-        result.metadata?.file_path ??
-        result.path ??
-        fallbackChunk?.file_path ??
-        null;
-      const resultHeading =
-        result.heading_path ||
-        result.metadata?.heading_path ||
-        result.metadata?.context_header ||
-        fallbackChunk?.heading_path ||
-        fallbackChunk?.context_header ||
-        null;
-      const start =
-        result.char_start ??
-        result.metadata?.char_start ??
-        fallbackChunk?.char_start ??
-        null;
-      const end =
-        result.char_end ??
-        result.metadata?.char_end ??
-        fallbackChunk?.char_end ??
-        null;
-      // Prefer the assembled chunk content (which has full body text) over
-      // the metadata-only result fields.
-      const rawText =
-        result.text ??
-        result.content ??
-        result.snippet ??
-        fallbackChunk?.content ??
-        '';
-      // Drop chunks that were truncated by budget enforcement — a partial
-      // chunk is misleading. The agent can use follow_up_refs to load the
-      // full chunk via load_chunk if needed.
-      const isTruncated =
-        result.truncated === true || fallbackChunk?.truncated === true;
-      return {
-        chunk_id: result.chunk_id ?? null,
-        file_path: resultPath,
-        heading_path: resultHeading,
-        char_start: start,
-        char_end: end,
-        text: isTruncated ? '' : rawText,
-      };
-    });
+  for (const response of responses) {
+    ingestResponse(response);
+  }
+  if (testResponse) {
+    ingestResponse(testResponse);
+  }
 
-  // Keep only chunks with non-empty text (drops truncated and empty chunks).
-  const chunks = allChunks.filter(
+  /** @type {Array<Record<string, unknown>>} */
+  let mergedResults = Array.from(resultById.values());
+
+  // Drop chunks that point at the same file and overlapping or identical ranges.
+  mergedResults = deduplicateLocationChunks(mergedResults);
+
+  // In TDD slices, elevate test file chunks so they survive the top-N cut.
+  if (isTdd && testFiles.length > 0) {
+    mergedResults = boostTestFileChunks(mergedResults, testFiles);
+  }
+
+  // Sort by effective score and keep the strongest chunks up to the limit.
+  mergedResults.sort((a, b) => (b._score ?? 0) - (a._score ?? 0));
+
+  /**
+   * Normalize a raw search result into a context chunk, back-filling body text
+   * from any assembled chunk returned by Cortex.
+   *
+   * @param {Record<string, unknown>} result - Raw search result.
+   * @returns {Record<string, unknown>} Normalized chunk.
+   */
+  function mapResultToChunk(result) {
+    const resultId =
+      result.chunk_id ??
+      `${String(result.file_path ?? result.metadata?.file_path ?? 'unknown')}:${String(result.char_start ?? result.metadata?.char_start ?? 'none')}`;
+    const fallbackChunk = assembledById.get(resultId);
+    const resultPath =
+      result.file_path ??
+      result.metadata?.file_path ??
+      result.path ??
+      fallbackChunk?.file_path ??
+      null;
+    const resultHeading =
+      result.heading_path ||
+      result.metadata?.heading_path ||
+      result.metadata?.context_header ||
+      fallbackChunk?.heading_path ||
+      fallbackChunk?.context_header ||
+      null;
+    const start =
+      result.char_start ??
+      result.metadata?.char_start ??
+      fallbackChunk?.char_start ??
+      null;
+    const end =
+      result.char_end ??
+      result.metadata?.char_end ??
+      fallbackChunk?.char_end ??
+      null;
+    // Prefer the assembled chunk content (which has full body text) over the
+    // metadata-only result fields.
+    const rawText =
+      result.text ??
+      result.content ??
+      result.snippet ??
+      fallbackChunk?.content ??
+      fallbackChunk?.text ??
+      '';
+    // Drop chunks that were truncated by budget enforcement — a partial chunk
+    // is misleading. The agent can use follow_up_refs to load the full chunk.
+    const isTruncated =
+      result.truncated === true || fallbackChunk?.truncated === true;
+    return {
+      chunk_id: result.chunk_id ?? null,
+      file_path: resultPath,
+      heading_path: resultHeading,
+      char_start: start,
+      char_end: end,
+      text: isTruncated ? '' : rawText,
+    };
+  }
+
+  const allMapped = mergedResults.map(mapResultToChunk);
+  const allChunks = allMapped.filter(
     (chunk) => typeof chunk.text === 'string' && chunk.text.trim().length > 0,
   );
-
-  // Capture dropped (truncated) chunks so we can generate follow-up refs for
-  // them — the agent can retrieve their full text via load_chunk.
-  const droppedChunks = allChunks.filter(
+  const droppedChunks = allMapped.filter(
     (chunk) =>
       chunk.chunk_id != null &&
       !(typeof chunk.text === 'string' && chunk.text.trim().length > 0),
   );
+  const chunks = allChunks.slice(0, CONTEXT_RESULT_LIMIT);
 
-  // Detect partial-file chunks: a chunk may cover only part of its source
-  // file (char_end < file length).  Reading the file to get its character
-  // count is the only reliable way to detect this — the search engine's
-  // `truncated` flag only marks chunks cut by the token budget, not chunks
-  // that are simply the first slice of a multi-chunk file.
+  // Detect partial-file chunks: a chunk may cover only part of its source file
+  // (char_end < file length). Reading the file is the only reliable way to
+  // detect this — the search engine's `truncated` flag only marks chunks cut
+  // by the token budget, not chunks that are simply the first slice.
   const repoRoot = process.cwd();
   for (const chunk of chunks) {
     if (
@@ -823,23 +969,25 @@ async function fetchSliceContext(descriptor, sliceId, searchContextFn) {
     }
   }
 
-  // Build follow-up refs. We skip redundant load_chunk refs for complete
-  // chunks (the full text is already in the `chunks` array) and instead
-  // generate a targeted search_context ref for files_to_change that have no
-  // chunk in the context, plus keep refs for dropped (truncated) chunks.
+  // Build follow-up refs.
   const followUpRefs = [];
   // Add refs for dropped (truncated) chunks so the agent can retrieve them.
   for (const chunk of droppedChunks.slice(0, 3)) {
     if (chunk.chunk_id != null) {
       followUpRefs.push({
         tool: 'load_chunk',
-        args: { chunk_id: chunk.chunk_id, query },
+        args: { chunk_id: chunk.chunk_id, query: primaryQuery },
         reason: `Full text of ${chunk.file_path ?? 'chunk'} (truncated by budget, not included in context)`,
       });
     }
   }
-  // Generate a targeted search_context ref for files_to_change that have no
-  // chunk in the context, so the agent knows exactly what's missing.
+  // In TDD slices, explicitly retrieve any required test files still missing.
+  if (isTdd && testFiles.length > 0) {
+    followUpRefs.push(
+      ...buildMissingTestFileRefs(chunks, droppedChunks, testFiles),
+    );
+  }
+
   const chunkPaths = new Set(chunks.map((c) => c.file_path).filter(Boolean));
   const droppedPaths = new Set(
     droppedChunks.map((c) => c.file_path).filter(Boolean),
@@ -855,6 +1003,7 @@ async function fetchSliceContext(descriptor, sliceId, searchContextFn) {
       (p) =>
         typeof p === 'string' &&
         p.length > 0 &&
+        !p.endsWith('.test.ts') &&
         !chunkPaths.has(p) &&
         !droppedPaths.has(p),
     );
@@ -868,6 +1017,7 @@ async function fetchSliceContext(descriptor, sliceId, searchContextFn) {
       reason: `${missingFiles.length} file(s) from files_to_change not in context: ${missingFiles.map((p) => p.split('/').pop()).join(', ')}`,
     });
   }
+
   // Add refs for partial-file chunks so the agent can retrieve the rest.
   const partialFiles = chunks.filter((c) => c.partial_file === true);
   for (const chunk of partialFiles.slice(0, 3)) {
@@ -878,67 +1028,63 @@ async function fetchSliceContext(descriptor, sliceId, searchContextFn) {
       reason: `${basename} is partial in context (chunk covers chars 0-${chunk.char_end} of ${chunk.file_chars}); load remaining content`,
     });
   }
-  // Keep the search_context suggestion from the original refs if present.
-  const searchRef = Array.isArray(response.follow_up_refs)
-    ? response.follow_up_refs.find(
-        (ref) =>
-          ref?.tool === 'search_context' && typeof ref.reason === 'string',
-      )
-    : null;
   if (searchRef) {
     followUpRefs.push(searchRef);
   }
 
-  // Build a brief stitched summary: basename + first sentence of JSDoc (or
-  // first meaningful line) of each chunk. This gives agents a quick overview
-  // of what context is available without duplicating the full chunk texts
-  // (which are already in the `chunks` array).
+  /**
+   * Pick a fallback text summary from the first response that carries one.
+   *
+   * @returns {string} Fallback context text.
+   */
+  function firstResponseContextText() {
+    for (const response of [testResponse, ...responses]) {
+      if (!response || typeof response !== 'object') {
+        continue;
+      }
+      if (typeof response.context === 'string' && response.context.length > 0) {
+        return response.context;
+      }
+      const assembled =
+        response.context && typeof response.context === 'object'
+          ? response.context
+          : null;
+      if (
+        typeof assembled?.context === 'string' &&
+        assembled.context.length > 0
+      ) {
+        return assembled.context;
+      }
+    }
+    return '';
+  }
+
+  // Prefer the full assembled context text from the search response — it
+  // contains the actual plan/source content an agent needs. Fall back to a
+  // stitched chunk summary only if no assembled context was returned.
+  const fullContextText = firstResponseContextText();
   const text =
-    chunks.length > 0
-      ? chunks
+    fullContextText.length > 0
+      ? fullContextText
+      : chunks
           .map((chunk) => {
             const fullText = chunk.text || '';
-            const docMatch = fullText.match(/\/\*\*([\s\S]*?)\*\//);
-            let description = docMatch
-              ? docMatch[1]
-                  .split(/\r?\n/)
-                  .map((l) => l.replace(/^\s*\*\s?/, '').trim())
-                  .filter(Boolean)
-                  .join(' ')
-              : (fullText.split(/\r?\n/).find((l) => l.trim().length > 0) ??
-                '');
-            // Shorten the module path in the description to just the basename.
-            description = description.replace(
-              /examples\/neatenstein\/browser-entry\/host\/game\//g,
-              '',
-            );
             const basename = (chunk.file_path ?? 'unknown').split('/').pop();
             const partialNote =
               chunk.partial_file === true
                 ? ` [PARTIAL: chars 0-${chunk.char_end} of ${chunk.file_chars}]`
                 : '';
-            return `${basename} — ${description}${partialNote}`;
+            return `${basename} — ${fullText.split(/\r?\n/).find((l) => l.trim().length > 0) ?? ''}${partialNote}`;
           })
-          .join('\n')
-      : typeof response.context === 'string' && response.context.length > 0
-        ? response.context
-        : typeof assembled?.context === 'string' && assembled.context.length > 0
-          ? assembled.context
-          : '';
+          .join('\n');
 
   return {
-    query,
+    query: primaryQuery,
     text,
-    chunks,
-    token_count:
-      typeof response.token_count === 'number'
-        ? response.token_count
-        : typeof assembled?.tokenCount === 'number'
-          ? assembled.tokenCount
-          : 0,
-    dense_state:
-      typeof response.dense_state === 'string' ? response.dense_state : null,
-    truncated: response.truncated === true,
+    chunks: chunks.map(({ text: _text, ...meta }) => meta),
+    token_count: tokenCount,
+    dense_state: denseState,
+    truncated,
     follow_up_refs: followUpRefs,
   };
 }
@@ -968,6 +1114,276 @@ function buildFilePathFilter(files) {
 }
 
 /**
+ * Build a file_path LIKE predicate that scopes the RAG search to the active
+ * plan file and its companion logs file. For a plan path like
+ * `plans/Neon_Shooter_NGE_Demo.plans.md`, this produces a LIKE filter on
+ * `Neon_Shooter_NGE_Demo` which matches both `.plans.md` and `.logs.md`.
+ *
+ * @param {string} [planPath] - Repo-relative path to the active plan file.
+ * @returns {Record<string, unknown> | undefined} Predicate tree or undefined.
+ */
+function buildPlanFilePathFilter(planPath) {
+  if (typeof planPath !== 'string' || planPath.trim().length === 0) {
+    return undefined;
+  }
+  const normalized = planPath.replace(/\\/g, '/');
+  // Extract the base name without the `.plans.md` suffix so the LIKE
+  // predicate also matches the companion `.logs.md` file.
+  const baseName = normalized
+    .split('/')
+    .pop()
+    .replace(/\.plans\.md$/i, '');
+  if (baseName.length === 0) {
+    return undefined;
+  }
+  return {
+    op: 'like',
+    field: 'file_path',
+    value: `%${baseName}%`,
+  };
+}
+
+/**
+ * Stop words removed from synthesized RAG queries.
+ */
+const STOP_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'by',
+  'for',
+  'from',
+  'has',
+  'in',
+  'is',
+  'it',
+  'its',
+  'of',
+  'on',
+  'or',
+  'that',
+  'the',
+  'to',
+  'with',
+  'all',
+  'any',
+  'into',
+  'their',
+  'then',
+  'they',
+  'this',
+  'will',
+  'with',
+]);
+
+/**
+ * Extract the most useful tokens from a raw text fragment for use as a
+ * `search_context` query. Removes punctuation, stop words, and very short
+ * tokens, then deduplicates and caps the token count.
+ *
+ * @param {string} rawText - Source text (title, goal, acceptance criterion, etc.).
+ * @param {number} [maxTokens=3] - Maximum number of query tokens to retain.
+ * @returns {Array<string>} Cleaned, ordered query tokens.
+ */
+function extractQueryTokens(rawText, maxTokens = 3) {
+  if (typeof rawText !== 'string' || rawText.length === 0) {
+    return [];
+  }
+  return rawText
+    .toLowerCase()
+    .replace(/[^a-z0-9_\-/\s]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length > 1 && !STOP_WORDS.has(token))
+    .filter((token, index, arr) => arr.indexOf(token) === index)
+    .slice(0, maxTokens);
+}
+
+/**
+ * Determine whether a slice is part of a TDD (red-green-refactor) sequence.
+ *
+ * @param {Record<string, unknown>} descriptor - Resolved slice descriptor.
+ * @returns {boolean} True when the slice metadata indicates a TDD red phase.
+ */
+function isTddSlice(descriptor) {
+  const notes = descriptor.boundaryNotes || {};
+  const stepMeta = descriptor.stepMetadata || {};
+  const sequence =
+    stepMeta.tdd_sequence ?? notes.tdd_sequence ?? descriptor.tdd_sequence;
+  return typeof sequence === 'string' && sequence.toLowerCase().includes('red');
+}
+
+/**
+ * Resolve the list of `*.test.ts` paths from a slice descriptor.
+ *
+ * @param {Record<string, unknown>} descriptor - Resolved slice descriptor.
+ * @returns {Array<string>} Test file paths from `files_to_change`.
+ */
+function getTestFilePaths(descriptor) {
+  const notes = descriptor.boundaryNotes || {};
+  const files = Array.isArray(notes.files_to_change)
+    ? notes.files_to_change
+    : Array.isArray(descriptor.files_to_change)
+      ? descriptor.files_to_change
+      : [];
+  return files
+    .map((entry) => (typeof entry === 'string' ? entry : entry?.path))
+    .filter(
+      (p) => typeof p === 'string' && p.length > 0 && p.endsWith('.test.ts'),
+    )
+    .map((p) => p.replace(/\\/g, '/'));
+}
+
+/**
+ * Deduplicate corpus chunks that point at the same file and overlapping or
+ * identical character ranges. Keeps the broadest surviving chunk per starting
+ * offset; chunks that are fully contained within an already-kept chunk are
+ * dropped.
+ *
+ * @param {Array<Record<string, unknown>>} chunks - Raw corpus chunks.
+ * @returns {Array<Record<string, unknown>>} Deduplicated chunks.
+ */
+function deduplicateLocationChunks(chunks) {
+  /** @type {Map<string, Array<Record<string, unknown>>>} */
+  const grouped = new Map();
+  /** @type {Array<Record<string, unknown>>} */
+  const withoutPath = [];
+  for (const chunk of chunks) {
+    const filePath =
+      chunk.file_path ??
+      chunk.metadata?.file_path ??
+      chunk.path ??
+      chunk.metadata?.path;
+    if (typeof filePath !== 'string' || filePath.length === 0) {
+      withoutPath.push(chunk);
+      continue;
+    }
+    const key = filePath.replace(/\\/g, '/');
+    const list = grouped.get(key) ?? [];
+    list.push(chunk);
+    grouped.set(key, list);
+  }
+
+  /** @type {Array<Record<string, unknown>>} */
+  const deduped = [];
+  for (const [, list] of grouped) {
+    const scored = list.map((chunk) => {
+      const start = Number(chunk.char_start ?? chunk.metadata?.char_start ?? 0);
+      const rawEnd = chunk.char_end ?? chunk.metadata?.char_end;
+      const end =
+        typeof rawEnd === 'number' && !Number.isNaN(rawEnd)
+          ? rawEnd
+          : Number.MAX_SAFE_INTEGER;
+      const score = Number(chunk.score ?? chunk._score ?? 0);
+      return { chunk, start, end, score };
+    });
+    // Broadest ranges first for a given start offset, then by score.
+    scored.sort(
+      (a, b) => a.start - b.start || b.end - a.end || b.score - a.score,
+    );
+    /** @type {Array<{ start: number, end: number, chunk: Record<string, unknown> }>} */
+    const kept = [];
+    for (const item of scored) {
+      const contained = kept.some(
+        (k) => k.start <= item.start && k.end >= item.end,
+      );
+      if (!contained) {
+        kept.push(item);
+      }
+    }
+    deduped.push(...kept.map((item) => item.chunk));
+  }
+
+  return [...deduped, ...withoutPath];
+}
+
+/**
+ * Boost the score of every chunk whose file path matches a test file.
+ *
+ * @param {Array<Record<string, unknown>>} chunks - Raw corpus chunks.
+ * @param {Array<string>} testFiles - Paths ending in `.test.ts`.
+ * @param {number} [bonus=TEST_FILE_PRIORITY_BONUS] - Score bonus.
+ * @returns {Array<Record<string, unknown>>} Chunks with adjusted scores.
+ */
+function boostTestFileChunks(
+  chunks,
+  testFiles,
+  bonus = TEST_FILE_PRIORITY_BONUS,
+) {
+  if (testFiles.length === 0) {
+    return chunks;
+  }
+  const testPaths = new Set(testFiles.map((p) => p.replace(/\\/g, '/')));
+  return chunks.map((chunk) => {
+    const filePath =
+      chunk.file_path ??
+      chunk.metadata?.file_path ??
+      chunk.path ??
+      chunk.metadata?.path;
+    if (typeof filePath !== 'string' || filePath.length === 0) {
+      return chunk;
+    }
+    if (!testPaths.has(filePath.replace(/\\/g, '/'))) {
+      return chunk;
+    }
+    const baseScore = Number(chunk.score ?? chunk._score ?? 0);
+    return { ...chunk, score: baseScore + bonus, _score: baseScore + bonus };
+  });
+}
+
+/**
+ * Build targeted `load_chunk` or `search_context` follow-up refs for test files
+ * that are listed in `files_to_change` but have no chunk present in the context.
+ *
+ * @param {Array<Record<string, unknown>>} contextChunks - Chunks kept in the context window.
+ * @param {Array<Record<string, unknown>>} droppedChunks - Chunks that were dropped (empty/truncated) during assembly.
+ * @param {Array<string>} testFiles - Required test file paths.
+ * @returns {Array<Record<string, unknown>>} Follow-up refs for missing test files.
+ */
+function buildMissingTestFileRefs(contextChunks, droppedChunks, testFiles) {
+  if (testFiles.length === 0) {
+    return [];
+  }
+  const presentPaths = new Set(
+    contextChunks
+      .map((c) => c.file_path)
+      .filter((p) => typeof p === 'string' && p.length > 0)
+      .map((p) => p.replace(/\\/g, '/')),
+  );
+  const refs = [];
+  for (const testFile of testFiles) {
+    const normalized = testFile.replace(/\\/g, '/');
+    if (presentPaths.has(normalized)) {
+      continue;
+    }
+    const dropped = droppedChunks.find(
+      (c) =>
+        typeof c.file_path === 'string' &&
+        c.file_path.replace(/\\/g, '/') === normalized &&
+        c.chunk_id != null,
+    );
+    if (dropped) {
+      refs.push({
+        tool: 'load_chunk',
+        args: { chunk_id: dropped.chunk_id },
+        reason: `Required test file ${normalized} is not in context; load chunk ${dropped.chunk_id}`,
+      });
+    } else {
+      const basename = normalized.split('/').pop() ?? normalized;
+      refs.push({
+        tool: 'search_context',
+        args: { query: basename, limit: 3 },
+        reason: `Required test file ${normalized} has no chunks in context; run targeted search`,
+      });
+    }
+  }
+  return refs;
+}
+
+/**
  * Build a Cortex search query and optional metadata filter from the slice descriptor.
  *
  * The query blends semantic slice metadata (title, goal, contracts) with exact
@@ -977,9 +1393,9 @@ function buildFilePathFilter(files) {
  *
  * @param {Record<string, unknown>} descriptor - Resolved slice descriptor.
  * @param {string} sliceId - Exact slice identifier.
- * @returns {{ query: string, metadata?: { filter: Record<string, unknown> } }} Search options.
+ * @returns {{ query: string, queries: Array<string>, metadata?: { filter: Record<string, unknown> } }} Search options.
  */
-function buildSliceQuery(descriptor, _sliceId) {
+function buildSliceQuery(descriptor, _sliceId, planPath) {
   const notes = descriptor.boundaryNotes || {};
   const files = Array.isArray(notes.files_to_change)
     ? notes.files_to_change
@@ -994,50 +1410,43 @@ function buildSliceQuery(descriptor, _sliceId) {
     notes.goal ?? '',
   ].join(' ');
 
-  const stopWords = new Set([
-    'a',
-    'an',
-    'and',
-    'are',
-    'as',
-    'at',
-    'be',
-    'by',
-    'for',
-    'from',
-    'has',
-    'in',
-    'is',
-    'it',
-    'its',
-    'of',
-    'on',
-    'or',
-    'that',
-    'the',
-    'to',
-    'with',
-    'all',
-    'any',
-    'into',
-    'their',
-    'then',
-    'they',
-    'this',
-    'will',
-    'with',
-  ]);
-  const semanticTokens = rawSemantic
-    .toLowerCase()
-    .replace(/[^a-z0-9_\-/\s]/g, ' ')
-    .split(/\s+/)
-    .filter((token) => token.length > 1 && !stopWords.has(token))
-    .filter((token, index, arr) => arr.indexOf(token) === index)
-    .slice(0, 3);
+  const primaryTokens = extractQueryTokens(rawSemantic, 3);
+  const primaryQuery = primaryTokens.join(' ').slice(0, 256);
 
-  const query = semanticTokens.join(' ').slice(0, 256);
-  const filter = buildFilePathFilter(files);
-  return filter ? { query, metadata: { filter } } : { query };
+  const contracts = Array.isArray(descriptor.testContracts)
+    ? descriptor.testContracts
+    : Array.isArray(notes.acceptance_criteria)
+      ? notes.acceptance_criteria
+      : Array.isArray(descriptor.acceptance_criteria)
+        ? descriptor.acceptance_criteria
+        : [];
+  const acQueries = contracts
+    .slice(0, MAX_ACCEPTANCE_CRITERIA_QUERIES)
+    .map((contract) => {
+      const raw =
+        typeof contract === 'string'
+          ? contract
+          : (contract?.text ?? contract?.description ?? '');
+      return extractQueryTokens(raw, 3).join(' ').slice(0, 256);
+    })
+    .filter((q) => q.length > 0 && q !== primaryQuery);
+
+  const queries = [primaryQuery, ...acQueries];
+
+  // Build a combined file_path filter that scopes the RAG search to the
+  // active plan file, its corresponding logs file, and any declared
+  // files_to_change. This prevents the search from returning generic
+  // chunks from unrelated plans or skill docs.
+  const planFilter = buildPlanFilePathFilter(planPath);
+  const filesFilter = buildFilePathFilter(files);
+  let filter;
+  if (planFilter && filesFilter) {
+    filter = { op: 'or', predicates: [planFilter, filesFilter] };
+  } else {
+    filter = planFilter ?? filesFilter;
+  }
+  const metadata = filter ? { filter } : undefined;
+  return { query: primaryQuery, queries, metadata };
 }
 
 /**
@@ -1334,6 +1743,9 @@ function buildDescriptorFromSlice(
   activePlanContext,
 ) {
   const stepMetadata = parseStepPacketMetadata(stepPacket);
+  const allSlices = Array.isArray(stepMetadata.slices)
+    ? stepMetadata.slices
+    : [];
   return {
     stepPacket,
     stepNumber,
@@ -1345,7 +1757,10 @@ function buildDescriptorFromSlice(
       status: String(slice.status ?? ''),
       goal: String(slice.goal ?? ''),
       phase: activePlanContext.activePhase?.number ?? null,
+      phase_status: activePlanContext.activePhase?.status ?? null,
+      phase_title: activePlanContext.activePhase?.title ?? null,
       step: stepNumber,
+      step_status: String(stepMetadata.status ?? ''),
       estimate_hours: slice.estimate_hours ?? null,
       parallelizable: slice.parallelizable ?? null,
       files_to_change: Array.isArray(slice.files_to_change)
@@ -1353,6 +1768,11 @@ function buildDescriptorFromSlice(
         : [],
       dependencies: Array.isArray(slice.dependencies) ? slice.dependencies : [],
       next_slice: slice.next_slice ?? null,
+      slice_history: allSlices.map((s) => ({
+        slice_id: String(s.slice_id ?? ''),
+        status: String(s.status ?? ''),
+        title: String(s.title ?? ''),
+      })),
     },
     testContracts: normalizeTestContracts(slice.acceptance_criteria),
   };
@@ -1373,6 +1793,7 @@ function buildDescriptorFromStep(
   stepNumber,
   activePlanContext,
 ) {
+  const allSlices = Array.isArray(metadata.slices) ? metadata.slices : [];
   return {
     stepPacket,
     stepNumber,
@@ -1380,7 +1801,12 @@ function buildDescriptorFromStep(
     sliceTitle: null,
     boundaryNotes: {
       phase: activePlanContext.activePhase?.number ?? null,
+      phase_status: activePlanContext.activePhase?.status ?? null,
+      phase_title: activePlanContext.activePhase?.title ?? null,
       step: stepNumber,
+      step_status: String(metadata.status ?? ''),
+      status: String(metadata.status ?? ''),
+      goal: String(metadata.goal ?? ''),
       source_boundary: Array.isArray(metadata.source_boundary)
         ? metadata.source_boundary
         : [],
@@ -1394,6 +1820,11 @@ function buildDescriptorFromStep(
         ? metadata.dependencies
         : [],
       next_slice: metadata.next_slice ?? null,
+      slice_history: allSlices.map((s) => ({
+        slice_id: String(s.slice_id ?? ''),
+        status: String(s.status ?? ''),
+        title: String(s.title ?? ''),
+      })),
     },
     testContracts: normalizeTestContracts(metadata.acceptance_criteria),
   };

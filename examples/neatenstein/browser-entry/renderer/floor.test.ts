@@ -1,16 +1,45 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import {
+  NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
   NEATENSTEIN_FLOOR_DEFAULT_HEIGHT,
   NEATENSTEIN_FLOOR_DEFAULT_WIDTH,
+  NEATENSTEIN_FLOOR_FOV_RADIANS,
+  NEATENSTEIN_FLOOR_HORIZON_RATIO,
   NEATENSTEIN_FLOOR_MAX_ALPHA,
   NEATENSTEIN_FLOOR_MIN_ALPHA,
-  NEATENSTEIN_FLOOR_ROW_COUNT,
+  drawNeatensteinFloor,
   renderNeatensteinFloor,
   resolveNeatensteinFloorAlpha,
   type NeatensteinFloorCamera,
 } from './floor';
 
 type MockFloorContext = ReturnType<typeof createMockFloorContext>;
+
+/** Canonical test canvas dimensions used for deterministic projection checks. */
+const TEST_CANVAS_WIDTH = 320;
+/** Canonical test canvas height used for deterministic projection checks. */
+const TEST_CANVAS_HEIGHT = 240;
+/** Dimensions passed explicitly to {@link drawNeatensteinFloor} in explicit-width tests. */
+const TEST_EXPLICIT_DRAW_WIDTH = 640;
+/** Dimensions passed explicitly to {@link drawNeatensteinFloor} in explicit-height tests. */
+const TEST_EXPLICIT_DRAW_HEIGHT = 360;
+/** Canvas dimensions used when testing the {@link renderNeatensteinFloor} wrapper. */
+const TEST_RENDER_CANVAS_WIDTH = 640;
+/** Canvas dimensions used when testing the {@link renderNeatensteinFloor} wrapper. */
+const TEST_RENDER_CANVAS_HEIGHT = 480;
+/** Canonical test camera world position. */
+const TEST_CAMERA_X = 5.5;
+/** Canonical test camera world position. */
+const TEST_CAMERA_Y = 5.5;
+/**
+ * Tolerance in pixels when comparing a projected screen coordinate.
+ *
+ * Grid lines are sampled every half world unit over a 40-unit span, so a
+ * projected world point may not coincide exactly with a rasterized sample.
+ * Use a generous tolerance that covers the resulting screen-space gap rather
+ * than the sub-pixel ideal.
+ */
+const TEST_SCREEN_TOLERANCE = 8;
 
 type MockCall =
   | { type: 'beginPath' }
@@ -101,116 +130,109 @@ function createMockFloorContext(canvasWidth?: number, canvasHeight?: number) {
   };
 }
 
-function parseAlphaFromStyle(style: string | undefined): number {
-  if (style === undefined) {
-    return 0;
-  }
-  const channels = style.split(',');
-  const alpha = channels.at(-1)?.replace(')', '').trim();
-  return Number.parseFloat(alpha ?? '0');
+function camera(yaw: number, x = 0, y = 0): NeatensteinFloorCamera {
+  return { yaw, x, y };
 }
 
-function averageLineToX(ctx: MockFloorContext) {
-  const lineToCalls = ctx.calls.lineTo;
-  if (lineToCalls.length === 0) return 0;
-  const sum = lineToCalls.reduce((acc, [x]) => acc + x, 0);
-  return sum / lineToCalls.length;
-}
-
-function extractHorizontalLines(ctx: MockFloorContext, width: number) {
-  const lines: Array<{ y: number; alpha: number }> = [];
-  let currentStyle: string | undefined;
-
-  for (let index = 0; index < ctx.log.length; index += 1) {
-    const call = ctx.log[index];
-
-    if (call.type === 'strokeStyle') {
-      currentStyle = call.value;
-    }
-
-    if (call.type !== 'beginPath') {
-      continue;
-    }
-
-    const moveTo = ctx.log[index + 1];
-    const lineTo = ctx.log[index + 2];
-    const afterLine = ctx.log[index + 3];
-
-    if (
-      moveTo?.type === 'moveTo' &&
-      lineTo?.type === 'lineTo' &&
-      afterLine?.type === 'stroke' &&
-      moveTo.x === 0 &&
-      lineTo.x === width &&
-      moveTo.y === lineTo.y
-    ) {
-      lines.push({ y: moveTo.y, alpha: parseAlphaFromStyle(currentStyle) });
-
-      // The renderer draws the transverse depth rows first, followed by
-      // longitudinal world-axis grid lines. Some of those grid lines can also
-      // appear as full-width horizontal strokes when they are parallel to the
-      // screen plane, so stop after collecting the depth rows.
-      if (lines.length >= NEATENSTEIN_FLOOR_ROW_COUNT) {
-        break;
-      }
+function extractDrawnPoints(ctx: MockFloorContext) {
+  const points: Array<{ x: number; y: number }> = [];
+  for (const call of ctx.log) {
+    if (call.type === 'moveTo' || call.type === 'lineTo') {
+      points.push({ x: call.x, y: call.y });
     }
   }
-
-  return lines;
+  return points;
 }
 
-function extractVerticalSegments(ctx: MockFloorContext, width: number) {
-  const segments: Array<{
-    startX: number;
-    startY: number;
-    endX: number;
-    endY: number;
-  }> = [];
+function projectScreenToWorld(
+  screenX: number,
+  screenY: number,
+  width: number,
+  height: number,
+  camera: NeatensteinFloorCamera,
+): { worldX: number; worldY: number } {
+  const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+  const halfWidth = width / 2;
+  const focalLength = halfWidth / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const dy = screenY - horizonY;
+  const rowDistance =
+    (NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD * focalLength) / dy;
 
-  for (let index = 0; index < ctx.log.length; index += 1) {
-    if (ctx.log[index].type !== 'beginPath') {
-      continue;
-    }
+  const cos = Math.cos(camera.yaw);
+  const sin = Math.sin(camera.yaw);
+  const rightX = -sin;
+  const rightY = cos;
 
-    const points: Array<{ x: number; y: number }> = [];
-    for (
-      let innerIndex = index + 1;
-      innerIndex < ctx.log.length;
-      innerIndex += 1
-    ) {
-      const innerCall = ctx.log[innerIndex];
-      if (innerCall.type === 'stroke') {
-        break;
-      }
-      if (innerCall.type === 'moveTo' || innerCall.type === 'lineTo') {
-        points.push({ x: innerCall.x, y: innerCall.y });
-      }
-    }
+  const centerWorldX = camera.x + cos * rowDistance;
+  const centerWorldY = camera.y + sin * rowDistance;
+  const stepX = rightX * (NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD / dy);
+  const stepY = rightY * (NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD / dy);
 
-    for (let pointIndex = 0; pointIndex < points.length - 1; pointIndex += 1) {
-      const start = points[pointIndex];
-      const end = points[pointIndex + 1];
-      const isFullWidthHorizontal =
-        start.x === 0 && end.x === width && start.y === end.y;
-      if (!isFullWidthHorizontal) {
-        segments.push({
-          startX: start.x,
-          startY: start.y,
-          endX: end.x,
-          endY: end.y,
-        });
-      }
-    }
-  }
+  const startWorldX = centerWorldX - stepX * halfWidth;
+  const startWorldY = centerWorldY - stepY * halfWidth;
 
-  return segments;
+  return {
+    worldX: startWorldX + stepX * screenX,
+    worldY: startWorldY + stepY * screenX,
+  };
 }
 
-function camera(yaw: number): NeatensteinFloorCamera {
-  return { yaw, x: 0, y: 0 };
+/**
+ * Project a world point to screen space using the same formula as the renderer.
+ *
+ * This lets tests assert against specific screen coordinates rather than
+ * averaging over the whole drawn path.
+ */
+function projectWorldToScreen(
+  worldX: number,
+  worldY: number,
+  width: number,
+  height: number,
+  camera: NeatensteinFloorCamera,
+): { x: number; y: number } {
+  const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+  const halfWidth = width / 2;
+  const focalLength = halfWidth / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const dx = worldX - camera.x;
+  const dy = worldY - camera.y;
+  const cos = Math.cos(camera.yaw);
+  const sin = Math.sin(camera.yaw);
+  const camSpaceY = dx * cos + dy * sin;
+  const camSpaceX = -dx * sin + dy * cos;
+
+  return {
+    x: halfWidth + (camSpaceX / camSpaceY) * focalLength,
+    y:
+      horizonY +
+      (NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD / camSpaceY) * focalLength,
+  };
 }
 
-describe('Neatenstein floor renderer perspective grid', () => {
+function isNearIntegerGridLine(
+  worldX: number,
+  worldY: number,
+  tolerance: number,
+): boolean {
+  const distX = Math.min(worldX - Math.floor(worldX), 1);
+  const wrappedX = Math.min(distX, 1 - distX);
+  const distY = Math.min(worldY - Math.floor(worldY), 1);
+  const wrappedY = Math.min(distY, 1 - distY);
+  return wrappedX < tolerance || wrappedY < tolerance;
+}
+
+function hasPointNear(
+  ctx: MockFloorContext,
+  x: number,
+  y: number,
+  tolerance = TEST_SCREEN_TOLERANCE,
+): boolean {
+  return extractDrawnPoints(ctx).some(
+    (point) =>
+      Math.abs(point.x - x) <= tolerance && Math.abs(point.y - y) <= tolerance,
+  );
+}
+
+describe('Neatenstein floor renderer ray-cast grid', () => {
   it('returns the minimum alpha at the horizon', () => {
     expect(resolveNeatensteinFloorAlpha(0)).toBeCloseTo(
       NEATENSTEIN_FLOOR_MIN_ALPHA,
@@ -223,57 +245,32 @@ describe('Neatenstein floor renderer perspective grid', () => {
     );
   });
 
-  it('renders horizontal depth bands below the horizon', () => {
-    const ctx = createMockFloorContext();
-    renderNeatensteinFloor(ctx, camera(0));
+  it('draws using explicit width and height parameters', () => {
+    const ctx = createMockFloorContext(TEST_CANVAS_WIDTH, TEST_CANVAS_HEIGHT);
+    drawNeatensteinFloor(
+      ctx,
+      TEST_EXPLICIT_DRAW_WIDTH,
+      TEST_EXPLICIT_DRAW_HEIGHT,
+      camera(0),
+    );
 
-    const horizonY = ctx.canvas.height * 0.5;
-    const horizontalLines = extractHorizontalLines(ctx, ctx.canvas.width);
-    const belowHorizon = horizontalLines.filter((line) => line.y > horizonY);
+    const maxY = Math.max(...ctx.calls.lineTo.map(([, y]) => y));
 
-    expect(belowHorizon.length).toBeGreaterThan(0);
+    expect(maxY).toBeGreaterThan(NEATENSTEIN_FLOOR_DEFAULT_HEIGHT);
   });
 
-  it('renders vertical grid segments between adjacent depth rows', () => {
-    const ctx = createMockFloorContext();
-    renderNeatensteinFloor(ctx, camera(0));
+  it('does not draw when canvas dimensions are invalid', () => {
+    const ctx = createMockFloorContext(TEST_CANVAS_WIDTH, TEST_CANVAS_HEIGHT);
+    drawNeatensteinFloor(ctx, 0, 0, camera(0));
 
-    const segments = extractVerticalSegments(ctx, ctx.canvas.width);
-
-    expect(segments.length).toBeGreaterThan(0);
+    expect(ctx.calls.moveTo.length + ctx.calls.lineTo.length).toBe(0);
   });
 
-  it('spacing between horizontal rows grows toward the camera', () => {
-    const ctx = createMockFloorContext();
-    renderNeatensteinFloor(ctx, camera(0));
-
-    const lines = extractHorizontalLines(ctx, ctx.canvas.width);
-    const gaps = lines.slice(1).map((line, index) => line.y - lines[index].y);
-
-    expect(gaps.at(-1)).toBeGreaterThan(gaps[0] ?? 0);
-  });
-
-  it('does not collapse the entire floor into a single point', () => {
-    const ctx = createMockFloorContext();
-    renderNeatensteinFloor(ctx, camera(0));
-
-    const uniqueYs = new Set(ctx.calls.lineTo.map(([, y]) => y));
-
-    expect(uniqueYs.size).toBeGreaterThan(NEATENSTEIN_FLOOR_ROW_COUNT / 2);
-  });
-
-  it('shifts the projection horizontally with camera yaw', () => {
-    const ctxZero = createMockFloorContext();
-    const ctxYawed = createMockFloorContext();
-
-    renderNeatensteinFloor(ctxZero, camera(0));
-    renderNeatensteinFloor(ctxYawed, camera(Math.PI / 4));
-
-    expect(averageLineToX(ctxZero)).not.toBe(averageLineToX(ctxYawed));
-  });
-
-  it('uses the runtime canvas dimensions', () => {
-    const ctx = createMockFloorContext(640, 480);
+  it('reads canvas dimensions through the render wrapper', () => {
+    const ctx = createMockFloorContext(
+      TEST_RENDER_CANVAS_WIDTH,
+      TEST_RENDER_CANVAS_HEIGHT,
+    );
     renderNeatensteinFloor(ctx, camera(0));
 
     const maxY = Math.max(...ctx.calls.lineTo.map(([, y]) => y));
@@ -281,30 +278,155 @@ describe('Neatenstein floor renderer perspective grid', () => {
     expect(maxY).toBeGreaterThan(NEATENSTEIN_FLOOR_DEFAULT_HEIGHT);
   });
 
+  it('projects every drawn point onto an integer world grid line', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const cam = camera(0, TEST_CAMERA_X, TEST_CAMERA_Y);
+    const ctx = createMockFloorContext(width, height);
+    drawNeatensteinFloor(ctx, width, height, cam);
+
+    const points = extractDrawnPoints(ctx);
+    const allOnGrid = points.every((point) => {
+      const world = projectScreenToWorld(point.x, point.y, width, height, cam);
+      return isNearIntegerGridLine(world.worldX, world.worldY, 0.2);
+    });
+
+    expect(allOnGrid).toBe(true);
+  });
+
+  it('only draws floor points below the horizon', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const ctx = createMockFloorContext(width, height);
+    drawNeatensteinFloor(ctx, width, height, camera(0));
+
+    const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+    const allBelow = extractDrawnPoints(ctx).every(
+      (point) => point.y > horizonY - 0.5,
+    );
+
+    expect(allBelow).toBe(true);
+  });
+
+  it('rotates the grid projection when camera yaw changes', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const cam = camera(0, TEST_CAMERA_X, TEST_CAMERA_Y);
+    const yawedCam = camera(Math.PI / 4, TEST_CAMERA_X, TEST_CAMERA_Y);
+    const worldX = 7;
+    const worldY = 6;
+
+    const ctxBase = createMockFloorContext(width, height);
+    const ctxYawed = createMockFloorContext(width, height);
+    drawNeatensteinFloor(ctxBase, width, height, cam);
+    drawNeatensteinFloor(ctxYawed, width, height, yawedCam);
+
+    const base = projectWorldToScreen(worldX, worldY, width, height, cam);
+    const yawed = projectWorldToScreen(worldX, worldY, width, height, yawedCam);
+
+    expect({
+      baseFound: hasPointNear(ctxBase, base.x, base.y),
+      yawedFound: hasPointNear(ctxYawed, yawed.x, yawed.y),
+      xChanged: Math.round(base.x) !== Math.round(yawed.x),
+    }).toEqual({
+      baseFound: true,
+      yawedFound: true,
+      xChanged: true,
+    });
+  });
+
+  it('scrolls the grid when camera Y changes', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const worldX = 7;
+    const worldY = 6;
+    const cam = camera(0, TEST_CAMERA_X, TEST_CAMERA_Y);
+    const scrolledCam = camera(0, TEST_CAMERA_X, TEST_CAMERA_Y + 1);
+
+    const ctxBase = createMockFloorContext(width, height);
+    const ctxScrolled = createMockFloorContext(width, height);
+    drawNeatensteinFloor(ctxBase, width, height, cam);
+    drawNeatensteinFloor(ctxScrolled, width, height, scrolledCam);
+
+    const base = projectWorldToScreen(worldX, worldY, width, height, cam);
+    const scrolled = projectWorldToScreen(
+      worldX,
+      worldY,
+      width,
+      height,
+      scrolledCam,
+    );
+
+    expect({
+      baseFound: hasPointNear(ctxBase, base.x, base.y),
+      scrolledFound: hasPointNear(ctxScrolled, scrolled.x, scrolled.y),
+      xChanged: Math.round(base.x) !== Math.round(scrolled.x),
+    }).toEqual({
+      baseFound: true,
+      scrolledFound: true,
+      xChanged: true,
+    });
+  });
+
+  it('scrolls the grid laterally when camera X changes', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const worldX = 8;
+    const worldY = 6;
+    const cam = camera(0, TEST_CAMERA_X, TEST_CAMERA_Y);
+    const scrolledCam = camera(0, TEST_CAMERA_X + 1, TEST_CAMERA_Y);
+
+    const ctxBase = createMockFloorContext(width, height);
+    const ctxScrolled = createMockFloorContext(width, height);
+    drawNeatensteinFloor(ctxBase, width, height, cam);
+    drawNeatensteinFloor(ctxScrolled, width, height, scrolledCam);
+
+    const base = projectWorldToScreen(worldX, worldY, width, height, cam);
+    const scrolled = projectWorldToScreen(
+      worldX,
+      worldY,
+      width,
+      height,
+      scrolledCam,
+    );
+
+    expect({
+      baseFound: hasPointNear(ctxBase, base.x, base.y),
+      scrolledFound: hasPointNear(ctxScrolled, scrolled.x, scrolled.y),
+      xChanged: Math.round(base.x) !== Math.round(scrolled.x),
+    }).toEqual({
+      baseFound: true,
+      scrolledFound: true,
+      xChanged: true,
+    });
+  });
+
   it('guards non-finite yaw without throwing', () => {
     const ctx = createMockFloorContext();
 
-    expect(() => renderNeatensteinFloor(ctx, camera(Number.NaN))).not.toThrow();
+    expect(() =>
+      drawNeatensteinFloor(
+        ctx,
+        TEST_CANVAS_WIDTH,
+        TEST_CANVAS_HEIGHT,
+        camera(Number.NaN),
+      ),
+    ).not.toThrow();
   });
 
-  it('wraps yaw outside [-π, π] to an equivalent angle', () => {
-    const ctxWrapped = createMockFloorContext();
-    const ctxUnwrapped = createMockFloorContext();
-
-    renderNeatensteinFloor(ctxWrapped, camera(Math.PI));
-    renderNeatensteinFloor(ctxUnwrapped, camera(3 * Math.PI));
-
-    expect(averageLineToX(ctxWrapped)).toBeCloseTo(
-      averageLineToX(ctxUnwrapped),
-    );
-  });
-
-  it('wraps context state mutations in save and restore', () => {
+  it('saves context state before rendering', () => {
     const ctx = createMockFloorContext();
 
-    renderNeatensteinFloor(ctx, camera(0));
+    drawNeatensteinFloor(ctx, TEST_CANVAS_WIDTH, TEST_CANVAS_HEIGHT, camera(0));
 
     expect(ctx.calls.save.length).toBeGreaterThan(0);
+  });
+
+  it('restores context state after rendering', () => {
+    const ctx = createMockFloorContext();
+
+    drawNeatensteinFloor(ctx, TEST_CANVAS_WIDTH, TEST_CANVAS_HEIGHT, camera(0));
+
     expect(ctx.calls.restore.length).toBe(ctx.calls.save.length);
   });
 });

@@ -86,6 +86,15 @@ describe('Neatenstein game state', () => {
       expect(second.player.angleRad).not.toBe(first.player.angleRad);
     });
 
+    it('defaults to seed 1 when createGameState is called with no options', async () => {
+      const { createGameState } = (await import('./state.ts')) as Record<
+        string,
+        any
+      >;
+      const state = createGameState();
+      expect(state.seed).toBe(1);
+    });
+
     it('decrements ammo by exactly one when consumeAmmo is called', async () => {
       const { createGameState, consumeAmmo } =
         (await import('./state.ts')) as Record<string, any>;
@@ -147,14 +156,38 @@ describe('Neatenstein game state', () => {
       expect(after.player.health).toBe(before.player.health);
     });
 
+    it('treats contact i-frames as invulnerable and ignores damage', async () => {
+      const { createGameState, applyDamage, isInvulnerable } =
+        (await import('./state.ts')) as Record<string, any>;
+      const before = createGameState({ seed: 1 });
+      const contactState = {
+        ...before,
+        player: {
+          ...before.player,
+          contactIFrameMs: 100,
+          dashTimeRemainingMs: 0,
+        },
+      };
+      const after = applyDamage(contactState, 10);
+      expect({
+        invulnerable: isInvulnerable(contactState),
+        health: after.player.health,
+      }).toEqual({
+        invulnerable: true,
+        health: before.player.health,
+      });
+    });
+
     it('returns a new state and player reference when damage is ignored during invulnerability', async () => {
       const { createGameState, applyDash, applyDamage } =
         (await import('./state.ts')) as Record<string, any>;
       const before = createGameState({ seed: 1 });
       const dashed = applyDash(before);
       const after = applyDamage(dashed, before.player.health);
-      expect(after).not.toBe(dashed);
-      expect(after.player).not.toBe(dashed.player);
+      expect({
+        stateNew: after !== dashed,
+        playerNew: after.player !== dashed.player,
+      }).toEqual({ stateNew: true, playerNew: true });
     });
 
     it('starts the configured cooldown when applyDash is called', async () => {
@@ -186,8 +219,10 @@ describe('Neatenstein game state', () => {
       const before = createGameState({ seed: 1 });
       const first = applyDash(before);
       const second = applyDash(first);
-      expect(second).not.toBe(first);
-      expect(second.player).not.toBe(first.player);
+      expect({
+        stateNew: second !== first,
+        playerNew: second.player !== first.player,
+      }).toEqual({ stateNew: true, playerNew: true });
     });
 
     it('exports canDash that reflects cooldown state', async () => {

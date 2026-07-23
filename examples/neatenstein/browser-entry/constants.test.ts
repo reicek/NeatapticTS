@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import { describe, expect, it } from '@jest/globals';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
 const loadModule = (path: string): Promise<any> => import(path);
 
 describe('Neatenstein constants module', () => {
@@ -33,20 +34,11 @@ describe('Neatenstein constants module', () => {
     expect({
       ambientIntervalMs: constants.NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS,
       ambientLifetimeMs: constants.NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS,
-      generationUpLifetimeMs:
-        constants.NEATENSTEIN_PULSE_EVENT_GENERATION_UP_LIFETIME_MS,
-      enemyDeathLifetimeMs:
-        constants.NEATENSTEIN_PULSE_EVENT_ENEMY_DEATH_LIFETIME_MS,
       maxConcurrent: constants.NEATENSTEIN_PULSE_MAX_CONCURRENT,
-      bearingToleranceRad:
-        constants.NEATENSTEIN_PULSE_WORLD_BEARING_TOLERANCE_RAD,
     }).toEqual({
-      ambientIntervalMs: 3000,
+      ambientIntervalMs: 2000,
       ambientLifetimeMs: 2700,
-      generationUpLifetimeMs: 600,
-      enemyDeathLifetimeMs: 400,
-      maxConcurrent: 8,
-      bearingToleranceRad: 0.1,
+      maxConcurrent: 11,
     });
   });
 

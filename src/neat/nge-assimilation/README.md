@@ -140,3 +140,78 @@ Parameters:
 - `candidate` - Candidate assembled from the adult equilibrium boundary.
 
 Returns: A schema error when the envelope is inconsistent, otherwise `null`.
+
+## neat/nge-assimilation/neat.nge-assimilation.internal.ts
+
+Internal assimilation prior write-back for the NGE main agent.
+
+This path is owner-local: it derives structural priors from the main agent's
+own equilibrium candidate and writes them back to its own genome with a
+weak, decaying update. Enemy weights and enemy structure are explicitly
+ignored so that assimilation cannot pull foreign topology into the main
+agent.
+
+### InternalAssimilationInput
+
+Input for one internal assimilation write-back pass.
+
+The candidate must come from the main agent's own equilibrium boundary.
+Optional enemy-derived fields are accepted only so they can be rejected.
+An optional `stableCandidate` can be supplied for cross-validation against
+the adult equilibrium's deterministic structural summary.
+
+Example:
+
+```ts
+const input: InternalAssimilationInput = {
+  candidate: equilibriumCandidate,
+  writeBackRate: 0.1,
+  decay: 0.9,
+};
+```
+
+### InternalAssimilationResult
+
+Result of one internal assimilation write-back pass.
+
+The updated module delta contains weak, decayed structural priors that
+slowly drift the main agent's DNA toward its own equilibrium target.
+
+Example:
+
+```ts
+const result: InternalAssimilationResult = writeInternalAssimilationPriors(input);
+console.log(result.updatedModuleDelta.ruleParameters.connectionDensity.currentValue);
+```
+
+### writeInternalAssimilationPriors
+
+```ts
+writeInternalAssimilationPriors(
+  input: InternalAssimilationInput,
+): InternalAssimilationResult
+```
+
+Write weak, decaying structural priors back to the main agent's own genome.
+
+The update is derived solely from the main agent's equilibrium candidate.
+Any enemy-derived weights, structure checksum, or topology hash supplied in
+the input are ignored. Hyperparameters are sanitized to the unit interval,
+and non-finite numeric deltas are left untouched so that a single corrupt
+prior cannot poison unrelated fields.
+
+Parameters:
+- `input` - Internal assimilation input with candidate, rate, and decay.
+
+Returns: The internal assimilation result with updated module priors.
+
+Example:
+
+```ts
+const result = writeInternalAssimilationPriors({
+  candidate,
+  writeBackRate: 0.1,
+  decay: 0.9,
+});
+expect(result.enemyWeightsIncorporated).toBe(false);
+```

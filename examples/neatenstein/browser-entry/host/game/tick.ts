@@ -21,7 +21,7 @@ import {
   type CollisionMap,
 } from '../../renderer/map';
 import { applyDash, createGameState } from './state';
-import type { GameState, Vector2 } from './types';
+import type { GameState, ImpactSpot, TracerState, Vector2 } from './types';
 
 export { createGameState };
 export { NEATENSTEIN_FIXED_TIMESTEP_MS } from './constants';
@@ -95,6 +95,8 @@ export function gameTick(
     map,
     dtMs,
   );
+  next = { ...next, tracers: ageTracers(next.tracers, dtMs) };
+  next = { ...next, impacts: ageImpacts(next.impacts, dtMs) };
   if (snapshot.fire) {
     const fireResult = fireNeonBeam(next);
     next = fireResult.state;
@@ -116,6 +118,41 @@ function applyLook(state: GameState, lookDelta: number): GameState {
       angleRad: state.player.angleRad + lookDelta,
     },
   };
+}
+
+/**
+ * Age active tracers by one tick and remove any that have expired.
+ *
+ * Tracers are immutable snapshots; each surviving tracer gets its remaining
+ * duration reduced by the elapsed timestep.
+ *
+ * @param tracers - Active tracer snapshots before this tick.
+ * @param dtMs - Elapsed time in milliseconds.
+ * @returns New array of tracers still visible after aging.
+ */
+export function ageTracers(
+  tracers: TracerState[],
+  dtMs: number,
+): TracerState[] {
+  return tracers
+    .map((tracer) => ({ ...tracer, durationMs: tracer.durationMs - dtMs }))
+    .filter((tracer) => tracer.durationMs > 0);
+}
+
+/**
+ * Age active wall-impact spots by one tick and remove any that have expired.
+ *
+ * Impact spots are immutable snapshots; each surviving impact gets its
+ * remaining lifetime reduced by the elapsed timestep.
+ *
+ * @param impacts - Active wall-impact snapshots before this tick.
+ * @param dtMs - Elapsed time in milliseconds.
+ * @returns New array of impact spots still visible after aging.
+ */
+export function ageImpacts(impacts: ImpactSpot[], dtMs: number): ImpactSpot[] {
+  return impacts
+    .map((impact) => ({ ...impact, lifetimeMs: impact.lifetimeMs - dtMs }))
+    .filter((impact) => impact.lifetimeMs > 0);
 }
 
 /**
