@@ -123,3 +123,53 @@ export function castRayDDA(
 
   return { perpWallDist, side, mapX, mapY };
 }
+
+/**
+ * Convert a flat `Uint8Array` map into the 2D grid expected by {@link castRayDDA}.
+ *
+ * The flat layout is row-major: index `y * side + x` maps to grid cell
+ * `(x, y)`. The returned grid is indexed by X then Y to match
+ * {@link castRayDDA}.
+ *
+ * @param flatMap - Row-major wall grid where any non-zero value is a wall.
+ * @param side - Width and height of the square grid.
+ * @returns A 2D number grid compatible with {@link castRayDDA}.
+ */
+function flatMapToGrid(flatMap: Uint8Array, side: number): number[][] {
+  const grid: number[][] = [];
+  for (let x = 0; x < side; x++) {
+    const column: number[] = [];
+    for (let y = 0; y < side; y++) {
+      column.push(flatMap[y * side + x]);
+    }
+    grid.push(column);
+  }
+  return grid;
+}
+
+/**
+ * Cast a ray through a flat `Uint8Array` map.
+ *
+ * This wrapper rebuilds the 2D grid view required by {@link castRayDDA} and
+ * delegates to it. It is convenient for host-side systems that store the
+ * canonical map as a flat typed array.
+ *
+ * @param flatMap - Row-major wall grid where any non-zero value is a wall.
+ * @param side - Width and height of the square grid.
+ * @param posX - Ray origin X coordinate in grid units.
+ * @param posY - Ray origin Y coordinate in grid units.
+ * @param dirX - Ray direction X component (does not need to be normalized).
+ * @param dirY - Ray direction Y component (does not need to be normalized).
+ * @returns The first wall hit encountered by the ray.
+ */
+export function castRayDDAFromFlatMap(
+  flatMap: Uint8Array,
+  side: number,
+  posX: number,
+  posY: number,
+  dirX: number,
+  dirY: number,
+): CastRayDDAHit {
+  const grid = flatMapToGrid(flatMap, side);
+  return castRayDDA(grid, side, side, posX, posY, dirX, dirY);
+}

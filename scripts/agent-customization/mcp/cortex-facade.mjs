@@ -2,16 +2,18 @@
  * @module cortex-facade
  * @description Lazy-load MCP facade for the Repo Cortex server.
  *
- * Exposes a single router tool (`cortex`) that accepts `{ operation, args? }`
- * and only spawns the real `scripts/mcp-semantic/repo-cortex-mcp.mjs` process on
- * the first `tools/call`.  This keeps editor MCP startup fast and avoids paying
- * the ONNX embedding/model load cost until a semantic query is actually
- * needed.
+ * Exposes a router tool (`cortex`) that accepts `{ operation, args? }` and only
+ * spawns the real `scripts/mcp-semantic/repo-cortex-mcp.mjs` process on the
+ * first `tools/call`.  It also serves `get_slice_context` locally so agents can
+ * retrieve assembled plan-slice context without waking the heavy embedding
+ * server.  This keeps editor MCP startup fast and avoids paying the ONNX
+ * embedding/model load cost until a semantic query is actually needed.
  */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { createLazyFacade, runFacadeMain } from './lazy-facade-core.mjs';
+import { createSliceContextTool } from './cortex-tier-tool.mjs';
 
 // Derive the script directory so the snapshot JSON can be loaded relative to
 // this module, both in a real ESM runtime and under Jest's CommonJS transform.
@@ -22,6 +24,9 @@ const DEFAULT_SPAWN_COMMAND = [
   'node',
   'scripts/mcp-semantic/repo-cortex-mcp.mjs',
 ];
+
+/** Local tools served directly by the cortex facade. */
+const DEFAULT_LOCAL_TOOLS = [createSliceContextTool()];
 
 /**
  * Create a lazy-load facade for the Repo Cortex MCP server.
@@ -39,6 +44,7 @@ export function createCortexFacade(options = {}) {
     version: '0.1.0',
     defaultSnapshotPath: DEFAULT_SNAPSHOT_PATH,
     defaultSpawnCommand: DEFAULT_SPAWN_COMMAND,
+    localTools: DEFAULT_LOCAL_TOOLS,
     ...options,
   });
 }
@@ -57,6 +63,7 @@ if (isMain) {
       version: '0.1.0',
       defaultSnapshotPath: DEFAULT_SNAPSHOT_PATH,
       defaultSpawnCommand: DEFAULT_SPAWN_COMMAND,
+      localTools: DEFAULT_LOCAL_TOOLS,
     },
     process.argv.slice(2),
   );

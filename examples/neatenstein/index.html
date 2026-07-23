@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Neatenstein NGE Demo (NeatapticTS)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      html,
+      body {
+        background: #060b14;
+        color: #9fdcff;
+        box-sizing: border-box;
+        min-height: 100dvh;
+        font-family:
+          system-ui,
+          Segoe UI,
+          Arial,
+          sans-serif;
+        padding: 16px;
+        overflow: hidden;
+      }
+
+      main {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        gap: 8px;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      #neatenstein-output {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        min-height: 0;
+        overflow: hidden;
+        position: relative;
+      }
+
+      #neatenstein-canvas {
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+      }
+
+      #status {
+        margin: 0;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+      }
+
+      #status:empty {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p id="status" role="status" aria-live="polite"></p>
+      <div id="neatenstein-output">
+        <canvas id="neatenstein-canvas"></canvas>
+      </div>
+    </main>
+    <script>
+      (function loadNeatensteinBundle() {
+        const statusElement = document.getElementById('status');
+        if (statusElement) {
+          statusElement.textContent = 'Loading Neatenstein...';
+        }
+        const path = window.location.pathname;
+        const bundleSrc = /\/docs\/examples\//.test(path)
+          ? '../../assets/neatenstein.bundle.js'
+          : '../../docs/assets/neatenstein.bundle.js';
+        const scriptElement = document.createElement('script');
+
+        scriptElement.src = bundleSrc;
+        scriptElement.defer = true;
+        scriptElement.onload = function () {
+          if (window.neatensteinStart) {
+            window.neatensteinStart('neatenstein-output', 'neatenstein-canvas');
+            if (statusElement) {
+              statusElement.textContent = '';
+            }
+            return;
+          }
+          if (statusElement) {
+            statusElement.textContent =
+              'Bundle loaded, but no Neatenstein start function was found.';
+          }
+        };
+        scriptElement.onerror = function () {
+          if (statusElement) {
+            statusElement.textContent =
+              'Failed to load neatenstein.bundle.js from ' + bundleSrc;
+          }
+        };
+        document.body.appendChild(scriptElement);
+      })();
+    </script>
+  </body>
+</html>

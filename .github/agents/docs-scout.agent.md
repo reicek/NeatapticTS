@@ -18,6 +18,10 @@ agents: []
 skills: ['educational-docs']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when checking generated folder README context, JSDoc drift, missing examples, stale docs, or deciding whether to update source comments versus run npm run docs. Keywords: README, JSDoc, docs, generated docs, drift, examples.

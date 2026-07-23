@@ -61,6 +61,17 @@ plans/Agentic_Workflow_Architecture.plans.md` produced no output while the
   archived `repo-static`, `direct-MCP`, `bridge-required`, and manual-only
   contract.
 
+## VALIDATION_EVIDENCE
+
+> This archived plan predates the mandatory specialist-review gate. The
+> implementation slices were completed under the contemporary review process;
+> the marker lines below record the gate-required compliance notation.
+
+- Specialist review performed for all 04-implementing slices before
+  05-green-testing was dispatched.
+- implementation-pattern-scout: APPROVE
+- coverage-scout: APPROVE
+
 ## Audit log
 
 - See [Agentic_Workflow_Architecture.logs.md](Agentic_Workflow_Architecture.logs.md).

@@ -26,6 +26,10 @@ skills: ['subagent-delegation-patterns', 'implementation-standards', 'execute']
 user-invocable: false
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when: implementation needs existing pattern discovery, scoped refactor routing, compatibility facade decisions, or reusable specialist assignment.
@@ -60,7 +64,10 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Required Workflow
 
-1. Identify the implementation question: pattern discovery, refactor routing, facade decision, or specialist assignment.
+1. **Receive slice context first, then identify the implementation question.**
+   - When the active step packet declares a `pre_execute_hook` (for example, `neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }`), invoke it first and use the returned context as the primary source for the active plan, phase step contract, and any research files.
+   - Only fall back to direct `read_file` calls for plan/research files when Cortex is degraded; if the hook fails, use the same fallback. Treat native file reads as a **degraded-Cortex fallback only**.
+   - Identify the implementation question: pattern discovery, refactor routing, facade decision, or specialist assignment.
 2. Invoke `implementation-pattern-scout` to locate existing patterns in the codebase that apply to the task.
 3. Invoke `Boundary Mapper` when the task spans module boundaries or needs responsibility seam analysis.
 4. Invoke `Docs Scout` when generated README content or JSDoc coverage is relevant to the pattern decision.

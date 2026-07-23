@@ -81,6 +81,7 @@ async function runStepPacketGate() {
   const violations = [];
   const blocksChecked = [];
   const planReadinessWarnings = [];
+  const preExecuteHooks = [];
 
   for (const planFile of planFiles) {
     let text = '';
@@ -123,7 +124,7 @@ async function runStepPacketGate() {
       }
 
       if (metadata.step !== undefined) {
-        validateStepBlock(metadata, blockId, violations);
+        validateStepBlock(metadata, blockId, violations, preExecuteHooks);
 
         if (
           !planHasGreenLight &&
@@ -155,6 +156,7 @@ async function runStepPacketGate() {
       blocksChecked,
       violations,
       planReadinessWarnings,
+      preExecuteHooks,
       plansScanned: planFiles.length,
     },
     fixHint: pass
@@ -278,7 +280,7 @@ function validatePhaseBlock(metadata, blockId, violations) {
   }
 }
 
-function validateStepBlock(metadata, blockId, violations) {
+function validateStepBlock(metadata, blockId, violations, preExecuteHooks) {
   const requiredFields = [
     'phase',
     'step',
@@ -377,6 +379,15 @@ function validateStepBlock(metadata, blockId, violations) {
     });
   }
 
+  if (metadata.pre_execute_hook !== undefined) {
+    validatePreExecuteHook(
+      metadata.pre_execute_hook,
+      blockId,
+      violations,
+      preExecuteHooks,
+    );
+  }
+
   if (metadata.expansion === 'slices') {
     if (metadata.auto_expand !== true) {
       violations.push({
@@ -413,9 +424,94 @@ function validateStepBlock(metadata, blockId, violations) {
   }
 }
 
+/**
+ * Validates that a step-level `pre_execute_hook` has the required shape.
+ *
+ * A valid hook is a non-array object with exactly:
+ * - `tool`: a non-empty string naming the tool to invoke
+ * - `args`: an object (may be empty) passed as arguments to the tool
+ *
+ * Valid hooks are collected in the `preExecuteHooks` evidence array so the
+ * orchestrator can replay them before dispatching a specialist.
+ *
+ * @param hook - The parsed `pre_execute_hook` value.
+ * @param blockId - Identifier of the YAML block being validated.
+ * @param violations - Accumulated violations array; mutated on rejection.
+ * @param preExecuteHooks - Accumulated hooks array; mutated on acceptance.
+ */
+function validatePreExecuteHook(hook, blockId, violations, preExecuteHooks) {
+  if (!hook || typeof hook !== 'object' || Array.isArray(hook)) {
+    violations.push({
+      blockId,
+      invalidField: 'pre_execute_hook',
+      message: 'pre_execute_hook must be an object with { tool, args }',
+    });
+    return;
+  }
+
+  if (!Object.hasOwn(hook, 'tool')) {
+    violations.push({
+      blockId,
+      invalidField: 'pre_execute_hook',
+      message: 'pre_execute_hook is missing required field "tool"',
+    });
+    return;
+  }
+
+  if (typeof hook.tool !== 'string') {
+    violations.push({
+      blockId,
+      invalidField: 'pre_execute_hook',
+      invalidValue: hook.tool,
+      message: 'pre_execute_hook.tool must be a non-empty string',
+    });
+    return;
+  }
+
+  if (hook.tool.length === 0) {
+    violations.push({
+      blockId,
+      invalidField: 'pre_execute_hook',
+      message: 'pre_execute_hook.tool must be a non-empty string',
+    });
+    return;
+  }
+
+  if (!Object.hasOwn(hook, 'args')) {
+    violations.push({
+      blockId,
+      invalidField: 'pre_execute_hook',
+      message: 'pre_execute_hook is missing required field "args"',
+    });
+    return;
+  }
+
+  if (!hook.args || typeof hook.args !== 'object' || Array.isArray(hook.args)) {
+    violations.push({
+      blockId,
+      invalidField: 'pre_execute_hook',
+      message: 'pre_execute_hook.args must be an object',
+    });
+    return;
+  }
+
+  preExecuteHooks.push({ blockId, tool: hook.tool, args: hook.args });
+}
+
 function validateSlices(slices, tddSequence, blockId, violations) {
   const length = slices.length;
   const isGreenOnly = tddSequence === 'green-only';
+  const MAX_SLICES_PER_STEP = 5;
+
+  if (length > MAX_SLICES_PER_STEP) {
+    violations.push({
+      blockId,
+      invalidField: 'slices',
+      invalidValue: length,
+      expected: `at most ${MAX_SLICES_PER_STEP} slices`,
+      message: `Step has ${length} slices, exceeding the ${MAX_SLICES_PER_STEP}-slice-per-step limit. Split it into multiple smaller steps.`,
+    });
+  }
 
   if (isGreenOnly && length < 2) {
     violations.push({

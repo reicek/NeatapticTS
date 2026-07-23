@@ -38,9 +38,27 @@ import {
 /** Matches a phase header line, e.g. `### Phase 2 — Title [WIP]` or `### Phase A — Title [WIP]`. */
 const PHASE_PATTERN =
   /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
-/** Matches a step header line, e.g. `#### Step 03 — Title [PLANNED]`. */
+/**
+ * Matches a step header line, e.g. `#### Step 03 — Title [PLANNED]` or
+ * `#### Step E1 — Title [PLANNED]`.
+ */
 const STEP_PATTERN =
-  /^#### Step (?<step>\d{2,})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+  /^#### Step (?<step>[A-Z]?\d+)\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+
+/**
+ * Normalize a captured step identifier to a number when it is purely numeric,
+ * preserving letter-prefixed labels as strings.
+ *
+ * @param {string} stepIdentifier - Raw capture from {@link STEP_PATTERN}.
+ * @returns {number | string} Numeric value for labels like `01`, original string for labels like `E1`.
+ */
+function normalizeStepIdentifier(stepIdentifier) {
+  if (/^\d+$/u.test(stepIdentifier)) {
+    return Number(stepIdentifier);
+  }
+  return stepIdentifier;
+}
+
 /** Captures the body of the `## Implementation phases` section up to the first validation-gates heading. */
 const IMPLEMENTATION_SECTION_PATTERN =
   /^## Implementation phases\s*(?<body>[\s\S]*?)(?=^## [^\n]*\bvalidation gates\b[^\n]*$)/imu;
@@ -59,7 +77,7 @@ const SESSION_OVERRIDE_PATH = path.join(
  *   planPath: string,
  *   activePhase: { number: number | string, title: string, status: string },
  *   activeStep: {
- *     number: number,
+ *     number: number | string,
  *     title: string,
  *     status: string,
  *     metadata: Record<string, unknown>,
@@ -202,7 +220,7 @@ export async function resolveEffectivePlanPath(
  *   plan: string,
  *   activePhase: { number: number | string, title: string, status: string },
  *   activeStep: {
- *     number: number,
+ *     number: number | string,
  *     title: string,
  *     status: string,
  *     agent: unknown,
@@ -253,7 +271,7 @@ export function createWorkflowSnapshot(activePlanContext) {
  *   plan: string,
  *   activePhase: { number: number | string, title: string, status: string },
  *   activeStep: {
- *     number: number,
+ *     number: number | string,
  *     title: string,
  *     status: string,
  *     agent: unknown,
@@ -331,7 +349,7 @@ function* extractPhaseBlocks(planText) {
  * Yield structured step descriptors from the body of a single phase.
  *
  * @param {string} phaseBody - Phase body text extracted by {@link extractPhaseBlocks}.
- * @yields {{ number: number, title: string, status: string, body: string }} Step descriptors.
+ * @yields {{ number: number | string, title: string, status: string, body: string }} Step descriptors.
  */
 function* extractStepBlocks(phaseBody) {
   const stepMatches = [...phaseBody.matchAll(STEP_PATTERN)];
@@ -344,7 +362,7 @@ function* extractStepBlocks(phaseBody) {
     const nextStepMatch = stepMatches.at(stepIndex + 1);
     const stepBodyEnd = nextStepMatch?.index ?? phaseBody.length;
     yield {
-      number: Number(stepMatch.groups.step),
+      number: normalizeStepIdentifier(stepMatch.groups.step),
       title: stepMatch.groups.title,
       status: stepMatch.groups.status,
       body: phaseBody.slice(stepBodyStart, stepBodyEnd),

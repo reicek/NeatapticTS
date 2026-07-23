@@ -19,6 +19,10 @@ agents: []
 skills: ['chrome-devtools-mcp']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when interacting with demo UIs via Chrome DevTools MCP without screenshots. Queries DOM, clicks elements, types text, verifies layout, checks element properties, navigates to demo pages, monitors console logs, and inspects network requests. Minimizes token usage by preferring DOM queries over screenshots. Can be called by ANY agent.

@@ -72,6 +72,8 @@ const VALID_FIELDS = new Set([
   'depth',
   'char_start',
   'char_end',
+  'slice_id',
+  'step_number',
 ]);
 
 /**
@@ -89,6 +91,7 @@ const NUMERIC_FIELDS = new Set([
   'depth',
   'char_start',
   'char_end',
+  'step_number',
 ]);
 
 /**
@@ -137,6 +140,8 @@ const FIELD_TO_SQL = new Map([
   ['depth', { table: 'chunks', column: 'depth' }],
   ['char_start', { table: 'chunks', column: 'char_start' }],
   ['char_end', { table: 'chunks', column: 'char_end' }],
+  ['slice_id', { table: 'chunks', column: 'slice_id' }],
+  ['step_number', { table: 'chunks', column: 'step_number' }],
 ]);
 
 /**

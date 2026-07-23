@@ -86,6 +86,23 @@ function parseArgs(argv) {
   return opts;
 }
 
+/**
+ * Convert a step heading label to its numeric order.
+ *
+ * Purely numeric labels (`01`) are parsed as numbers. Letter-prefixed labels
+ * (`E1`) return the trailing digits so step advancement stays sequential.
+ *
+ * @param {string} stepLabel - Step label captured from the heading.
+ * @returns {number} Numeric step order, or `NaN` when no digits are present.
+ */
+function parseStepNumber(stepLabel) {
+  if (/^\d+$/u.test(stepLabel)) {
+    return Number(stepLabel);
+  }
+  const trailingDigits = stepLabel.match(/\d+$/u);
+  return trailingDigits ? Number(trailingDigits[0]) : NaN;
+}
+
 function resolveWorkflowPlanPath() {
   if (!fs.existsSync(workflowMcpConfigPath)) {
     return defaultWorkflowPlanPath;
@@ -174,12 +191,13 @@ function extractPhaseSteps(text) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     // Match: #### Step 01 — ... [WIP|PLANNED|DONE]
+    // or: #### Step E1 — ... [WIP|PLANNED|DONE]
     // or: ##### Packet 1 — ... [WIP|PLANNED|DONE]
     const match = line.match(
-      /^#{4,5}\s+(?:Step|Packet)\s+(\d+)\s+(?:—|-)\s+(.+)\s\[([A-Z]+)\]/,
+      /^#{4,5}\s+(?:Step|Packet)\s+([A-Z]?\d+)\s+(?:—|-)\s+(.+)\s\[([A-Z]+)\]/,
     );
     if (match) {
-      const stepNum = parseInt(match[1], 10);
+      const stepNum = parseStepNumber(match[1]);
       const title = match[2].trim();
       const status = match[3];
 
@@ -473,11 +491,7 @@ function appendValidationEvidence(text, evidence) {
   // Insert before the first bullet
   const insertPos = sectionIndex + section.length + firstBulletIndex + 1; // +1 for the \n
 
-  return (
-    text.slice(0, insertPos) +
-    `- ${evidence}\n` +
-    text.slice(insertPos)
-  );
+  return text.slice(0, insertPos) + `- ${evidence}\n` + text.slice(insertPos);
 }
 
 // ============================================================================

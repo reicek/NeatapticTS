@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { readdir, unlink, writeFile } from 'node:fs/promises';
+import { readFile, readdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 /**
@@ -26,12 +26,19 @@ interface StepPacketViolation {
   level?: string;
 }
 
+interface PreExecuteHookEvidence {
+  blockId: string;
+  tool: string;
+  args: Record<string, unknown>;
+}
+
 interface StepPacketGateResult {
   pass: boolean;
   evidence: {
     blocksChecked: string[];
     violations: StepPacketViolation[];
     plansScanned: number;
+    preExecuteHooks?: PreExecuteHookEvidence[];
   };
   fixHint: string;
   owner: string;
@@ -645,6 +652,215 @@ describe('step-packet.gate.mjs', () => {
       } finally {
         await cleanupTempPlanFile(fileName);
       }
+    });
+  });
+
+  describe('pre_execute_hook validation', () => {
+    it('passes when pre_execute_hook is omitted', async () => {
+      const testId = 'hook-omitted';
+      const meta = baseValidStep(testId);
+      const fileName = await createTempPlanFile(meta, testId);
+
+      try {
+        const result = runGate();
+        expect(getViolationsForFile(result, fileName).length).toBe(0);
+      } finally {
+        await cleanupTempPlanFile(fileName);
+      }
+    });
+
+    it('passes when pre_execute_hook has a valid shape', async () => {
+      const testId = 'hook-valid-shape';
+      const meta = {
+        ...baseValidStep(testId),
+        pre_execute_hook: { tool: 'fetchContext', args: { query: 'mutation' } },
+      };
+      const fileName = await createTempPlanFile(meta, testId);
+
+      try {
+        const result = runGate();
+        expect(getViolationsForFile(result, fileName).length).toBe(0);
+      } finally {
+        await cleanupTempPlanFile(fileName);
+      }
+    });
+
+    it('surfaces a valid pre_execute_hook in gate evidence', async () => {
+      const testId = 'hook-surfaced';
+      const hook = { tool: 'fetchContext', args: { query: 'mutation' } };
+      const meta = { ...baseValidStep(testId), pre_execute_hook: hook };
+      const fileName = await createTempPlanFile(meta, testId);
+
+      try {
+        const result = runGate();
+        expect(result.evidence.preExecuteHooks).toContainEqual({
+          blockId: expect.stringContaining(fileName),
+          tool: hook.tool,
+          args: hook.args,
+        });
+      } finally {
+        await cleanupTempPlanFile(fileName);
+      }
+    });
+
+    it('rejects pre_execute_hook that is not an object', async () => {
+      const testId = 'hook-scalar';
+      const meta = {
+        ...baseValidStep(testId),
+        pre_execute_hook: 'fetchContext',
+      };
+      const fileName = await createTempPlanFile(meta, testId);
+
+      try {
+        const result = runGate();
+        const violations = getViolationsForFile(result, fileName);
+        expect(
+          violations.some((v) => v.invalidField === 'pre_execute_hook'),
+        ).toBe(true);
+      } finally {
+        await cleanupTempPlanFile(fileName);
+      }
+    });
+
+    it('rejects pre_execute_hook missing tool', async () => {
+      const testId = 'hook-missing-tool';
+      const meta = {
+        ...baseValidStep(testId),
+        pre_execute_hook: { args: { query: 'mutation' } },
+      };
+      const fileName = await createTempPlanFile(meta, testId);
+
+      try {
+        const result = runGate();
+        const violations = getViolationsForFile(result, fileName);
+        expect(
+          violations.some((v) => v.invalidField === 'pre_execute_hook'),
+        ).toBe(true);
+      } finally {
+        await cleanupTempPlanFile(fileName);
+      }
+    });
+
+    it('rejects pre_execute_hook with non-string tool', async () => {
+      const testId = 'hook-non-string-tool';
+      const meta = {
+        ...baseValidStep(testId),
+        pre_execute_hook: { tool: 123, args: {} },
+      };
+      const fileName = await createTempPlanFile(meta, testId);
+
+      try {
+        const result = runGate();
+        const violations = getViolationsForFile(result, fileName);
+        expect(
+          violations.some((v) => v.invalidField === 'pre_execute_hook'),
+        ).toBe(true);
+      } finally {
+        await cleanupTempPlanFile(fileName);
+      }
+    });
+
+    it('rejects pre_execute_hook with empty tool', async () => {
+      const testId = 'hook-empty-tool';
+      const meta = {
+        ...baseValidStep(testId),
+        pre_execute_hook: { tool: '', args: {} },
+      };
+      const fileName = await createTempPlanFile(meta, testId);
+
+      try {
+        const result = runGate();
+        const violations = getViolationsForFile(result, fileName);
+        expect(
+          violations.some((v) => v.invalidField === 'pre_execute_hook'),
+        ).toBe(true);
+      } finally {
+        await cleanupTempPlanFile(fileName);
+      }
+    });
+
+    it('rejects pre_execute_hook missing args', async () => {
+      const testId = 'hook-missing-args';
+      const meta = {
+        ...baseValidStep(testId),
+        pre_execute_hook: { tool: 'fetchContext' },
+      };
+      const fileName = await createTempPlanFile(meta, testId);
+
+      try {
+        const result = runGate();
+        const violations = getViolationsForFile(result, fileName);
+        expect(
+          violations.some((v) => v.invalidField === 'pre_execute_hook'),
+        ).toBe(true);
+      } finally {
+        await cleanupTempPlanFile(fileName);
+      }
+    });
+
+    it('rejects pre_execute_hook with non-object args', async () => {
+      const testId = 'hook-non-object-args';
+      const meta = {
+        ...baseValidStep(testId),
+        pre_execute_hook: { tool: 'fetchContext', args: 'query' },
+      };
+      const fileName = await createTempPlanFile(meta, testId);
+
+      try {
+        const result = runGate();
+        const violations = getViolationsForFile(result, fileName);
+        expect(
+          violations.some((v) => v.invalidField === 'pre_execute_hook'),
+        ).toBe(true);
+      } finally {
+        await cleanupTempPlanFile(fileName);
+      }
+    });
+  });
+});
+
+describe('C2 pre_execute_hook contracts', () => {
+  describe('04-implementing agent body', () => {
+    it('contains pre_execute_hook instructions in its body', async () => {
+      const agentPath = path.join(
+        REPO_ROOT,
+        '.github',
+        'agents',
+        '04-implementing.agent.md',
+      );
+      const content = await readFile(agentPath, 'utf-8');
+      const body = content.replace(/^---\n[\s\S]*?\n---\n/, '');
+      expect(body).toMatch(/pre_execute_hook/);
+    });
+  });
+
+  describe('plan sample packet', () => {
+    const PLAN_PATH = path.join(
+      REPO_ROOT,
+      'plans',
+      'Cortex_Orchestration_Single_Source_of_Truth.plans.md',
+    );
+    const SAMPLE_MARKER = 'Sample step packet using the new convention';
+
+    async function readSampleBlock(): Promise<string> {
+      const content = await readFile(PLAN_PATH, 'utf-8');
+      const markerIndex = content.indexOf(SAMPLE_MARKER);
+      if (markerIndex === -1) return '';
+      const afterMarker = content.slice(markerIndex + SAMPLE_MARKER.length);
+      const match = afterMarker.match(/```yaml\r?\n([\s\S]*?)```/);
+      return match?.[1] ?? '';
+    }
+
+    it('declares a pre_execute_hook', async () => {
+      const sampleBlock = await readSampleBlock();
+      expect(sampleBlock).toMatch(/pre_execute_hook:/);
+    });
+
+    it('references neataptic-workflow-mcp/get_slice_context in the hook', async () => {
+      const sampleBlock = await readSampleBlock();
+      expect(sampleBlock).toMatch(
+        /pre_execute_hook:\s*\n\s*tool:\s*['"]neataptic-workflow-mcp\/get_slice_context['"]/,
+      );
     });
   });
 });

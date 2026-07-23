@@ -51,6 +51,11 @@ CREATE TABLE IF NOT EXISTS chunks (
   cyclomatic_complexity INTEGER,
   test_coverage TEXT CHECK(test_coverage IN ('full', 'partial', 'none', 'unknown')),
   source_path_pattern TEXT,
+  -- A1: Step-packet slice metadata for plan-family chunks.
+  slice_id TEXT,
+  step_number INTEGER,
+  phase TEXT,
+  status TEXT,
   embedding F8_BLOB(384),
   embedding_model TEXT,
   chunk_sha256 TEXT,

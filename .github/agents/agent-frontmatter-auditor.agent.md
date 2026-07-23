@@ -18,6 +18,10 @@ agents: []
 skills: ['agent-frontmatter-standards', 'updating-agent-frontmatter']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when validating .agent.md frontmatter, tool lists, model strings, subagent allow-lists, handoffs, and user-invocable decisions in NeatapticTS. Keywords: agent frontmatter, YAML validation, tools, models, subagent graph, handoff audit.

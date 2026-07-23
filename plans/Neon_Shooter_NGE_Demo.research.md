@@ -23,7 +23,7 @@ Neatenstein uses **Lineage B (grid DDA raycasting)** — the Wolfenstein 3D / Lo
 - **Map:** 2D square grid. Each cell is 0 (empty) or a positive integer (wall variant/texture id). All walls are the same height, axis-aligned, on the grid.
 - **Visibility:** For each vertical screen column, cast a ray from the player through the camera plane and walk the grid with **DDA** until a wall cell is hit. The perpendicular distance determines wall height on screen.
 - **Walls:** One vertical line per screen column. Textured by sampling a texture column based on where the ray hit the cell edge.
-- **Floors/ceilings:** Solid color (or simple floor-casting texture projection in advanced versions). Neatenstein uses the Flappy ground grid adaptation (§3.3).
+- **Floors/ceilings:** Solid color (or simple floor-casting texture projection in advanced versions). Neatenstein uses a world-space floor grid-line projection (§3.3).
 - **Sprites:** Billboarded, depth-sorted, drawn after walls.
 - **Look up/down:** Not supported (vertical-wall limitation). Horizontal mouse look only (§4.2.6).
 - **Strengths:** Trivial to implement, very fast, perfect for canvas 2D, no BSP precomputation.
@@ -34,6 +34,8 @@ Neatenstein uses **Lineage B (grid DDA raycasting)** — the Wolfenstein 3D / Lo
 - Per-region light levels → we vary neon brightness per map region, encoded as a per-cell "light level" in the grid.
 - Billboarded sprites clipped against walls → our enemy wireframes use the same depth-sort + clip approach.
 - Top-down "map mode" → useful as a debug overlay and potentially as the network-view's spatial context.
+
+**Abandoned approaches (superseded):** multi-hue wall variants and pink-tinted walls were dropped in favor of the fixed two-tone cyan/blue side-shading scheme, which is cheaper, avoids color-blindness problems, and reads clearly under stream compression.
 
 ---
 
@@ -100,151 +102,60 @@ Walls hit on Y-sides are drawn darker than X-sides (divide RGB by 2). This gives
 
 - 2D `Uint8Array` grid (`gridW × gridH`). Cell values:
   - `0` = empty (walkable).
-  - `1..N` = wall variant (neon hue index into `NEATENSTEIN_PALETTE.wallHues`).
+  - any positive value = wall cell (the renderer uses a fixed two-tone side-shading palette; no per-wall hue lookup).
 - Optional: a parallel `Uint8Array` of "light levels" per cell (0-15, DOOM-style) to vary neon brightness per region. This is a cheap way to get visual variety without variable floor heights.
 - The grid is transferred to the worker once at episode start; the renderer caches it locally.
 
-### 3.2 Neon wall rendering (replaces texture sampling)
+### 3.2 Neon wall rendering
 
-Instead of sampling texels, each wall column is a **neon vertical line**:
+The implemented renderer is deliberately simple: vertical wall stripes with distance fog and side-based hue variation. No texture sampling, no neon-grid wall pattern, no continuous horizon glow.
 
-1. Base color: `wallHues[wallVariant]` (from the neon palette, extending `FLAPPY_NEON_PALETTE`).
-2. Distance fog: lerp the base color toward `#060b14` (background, see §3.3) by `1 - perpWallDist / maxViewDist`. Closer walls are brighter; far walls fade to the background.
-3. **Borders (the "neon glow on borders"):** stroke a 1px brighter neon line (`wallEdgeInner`) at `drawStart` and `drawEnd` (top and bottom of the wall slice). This is the signature neon look — the wall body is dim, the edges glow.
-4. **Neon grid wall pattern (the synthwave standard):** vertical mullion lines at every grid-cell boundary projected to screen X (compute screen X of each cell corner via camera transform, stroke a full-height neon line there) + horizontal scanlines at `spacing = clamp(8 * perpWallDist, 4, 64) px`. This is the "TRON grid wall" — the top/bottom borders alone only give edges, not the characteristic vertical mullions. This is a brightness modulation, NOT a sampled texture. Keeps the "neon lines, not pixels" aesthetic.
-5. **Continuous horizon glow:** after all wall columns are drawn, stroke a single continuous `ctx.beginPath()` path along the wall-top pixels with glow + additive blend. The per-column approach produces a dotted/dashed horizon at distance.
-6. **Side shading:** Y-side walls use Lode's `/2` (50% brightness) — divide RGB by 2. The originally-suggested 30% is too subtle for neon-on-black; 50% is the canonical Wolf3D/Lode value and reads clearly.
-7. **COLORMAP-style LUT:** precompute a `Uint32Array` of neon colors indexed by `(distanceBucket << 1 | side)` and look up per column. Avoids per-column `lerp` math; mirrors DOOM's COLORMAP.
+- **CPU tier (`renderer/walls.ts`):** writes each wall column directly into a `Uint8ClampedArray` framebuffer and flushes once per frame with `putImageData`. No per-column `fillRect`, no `globalAlpha` mutations, no `shadowBlur`.
+- **Worker tier (`worker/display.worker.ts`):** draws the same fogged vertical stripes through `CanvasRenderingContext2D`.
+- **Wall colors:**
+  - X-side hits (east/west walls): `#00bfff` (neon cyan).
+  - Y-side hits (north/south walls): `#0050b4` (darker blue).
+  - This replaces the earlier idea of multiple wall hue variants / pink-tinted walls; the two-tone cyan/blue scheme reads clearly against the dark background and keeps the CPU path stateless.
+- **Distance fog:** linearly interpolates the wall color toward the background `#060b14` as `perpWallDist` approaches `NEATENSTEIN_MAX_VIEW_DIST`.
+- **Side shading:** Y-sides are rendered with the darker blue constant; the brightness split is baked into the two base colors rather than computed per column.
 
-#### 3.2.1 Render paths (tier-gated)
+**Superseded:** per-wall-variant hue palettes, neon-grid mullion/scanline wall patterns, top/bottom edge glow strokes, continuous horizon-glow paths, and pre-rendered glow sprites were all cut in favor of the two-tone fogged-stripe approach.
 
-The per-column `fillRect`/`stroke` approach is the slow path. Three tier-gated render paths:
+### 3.3 Floor and ceiling
 
-- **CPU tier — ImageData framebuffer + single putImageData:** Write all wall pixels directly into a `Uint8ClampedArray` backing an `ImageData` (RGBA per pixel), flush once per frame with `putImageData`. Eliminates per-column `fillRect` overhead entirely. This is Lode's recommended pattern ("use a 2D array as screen buffer, copy to screen at once"). `drawStart`/`drawEnd` and all coordinates must be `Math.floor`-ed or `| 0` to avoid sub-pixel anti-aliasing cost (MDN: "Avoid floating-point coordinates"). Glow on CPU tier: pre-rendered glow sprites (one per hue × distance bucket) blitted via `drawImage` (GPU-accelerated, far cheaper than `shadowBlur` per stroke). MDN: "Pre-render similar primitives on an offscreen canvas."
-- **Worker tier — OffscreenCanvas:** `canvas.transferControlToOffscreen()` → pass to worker. Entire DDA + blit runs off the main thread. MDN: "Rendering operations can also be run inside a worker context." Glow on Worker tier: `ctx.filter = "drop-shadow(0 0 4px <hue>)"` with feature detection (Safari disables `filter` — fall back to pre-rendered sprites).
-- **GPU tier — stroke + shadowBlur (premium path):** Keep the stroke + `shadowBlur` path. `shadowBlur` is the most expensive option (MDN explicitly lists it as an anti-pattern) but gives the best glow quality. GPU tier can afford it.
+- **Background:** solid `#060b14` for both ceiling and the empty upper screen. No starfield, no ceiling grid.
+- **Horizon:** a horizontal divider at the vanishing point; the floor renderer draws below it.
 
-#### 3.2.2 Universal optimizations
+#### 3.3.1 World-space floor grid projection (implemented)
 
-- `getContext("2d", { alpha: false })` — free perf for opaque neon-on-black (MDN).
-- Batched polylines / color buckets: group columns by final packed color before issuing `fillStyle`/`strokeStyle` to minimize state changes. The `ImageData` path has no state at all.
-- `fillRect(0,0,w,h)` with `alpha:false` for clearing (faster than `clearRect` on opaque contexts).
+The floor is rendered by projecting **world-space integer grid lines** into screen space (`renderer/floor.ts`):
 
-#### 3.2.3 Glow strategies (tier-gated)
+1. For each integer X and Y grid line within a bounded range around the camera, sample points along the line are transformed by the camera yaw and perspective-projected onto the canvas.
+2. Visible projected segments are batched into a single path per alpha band and stroked twice: a wide, low-alpha halo first, then the core 1px line. This gives a subtle neon glow without `shadowBlur` cost.
+3. Alpha is depth-graded from 0.12 near the horizon to 0.58 near the bottom edge, replacing the Flappy curve helpers with a local linear mapping.
+4. The grid is drawn every frame on the dynamic canvas layer; no separate static floor layer is kept.
 
-`shadowBlur` is the documented anti-pattern. Four ranked alternatives, tier-gated:
+This is **not** the earlier fake-perspective Flappy grid or a per-pixel floor-caster; it is a world-fixed line projection that rotates correctly with the camera and matches the DDA wall geometry.
 
-1. **Pre-rendered glow sprites (CPU tier):** Pre-render each wall-hue glow as a soft radial-gradient `ImageData` sprite (once, at load). Composite via `drawImage` per column-edge. GPU-accelerated, far cheaper than `shadowBlur`.
-2. **CSS `filter: blur()` / `drop-shadow()` on a separate glow canvas layer (Worker/GPU tier):** Draw only neon edge lines (no blur) onto a second `<canvas>` overlaid via CSS `position:absolute`. Apply `filter: blur(4px)` + `opacity` via CSS. Browser GPU-accelerates the blur. Feature-detect `ctx.filter` (Safari may disable).
-3. **Radial gradients (per-edge, no blur):** Small `createRadialGradient` at each wall-edge endpoint. Cheaper than `shadowBlur`, gives localized glow "nodes." Doesn't glow along the whole line.
-4. **`shadowBlur` (GPU tier only):** Keep as premium path. Most expensive, best quality.
+#### 3.3.2 Pulses — dots on grid lines (implemented)
 
-**Layered canvas architecture (MDN-recommended):**
+Pulses are small yellow dots that travel along the integer world grid lines (`renderer/pulse.ts`):
 
-- Layer 1 (static, drawn once on resize): background `#060b14`, horizon line, floor grid, ceiling.
-- Layer 2 (dynamic, per-frame): walls, enemies, projectiles, glow.
-- Layer 3 (UI, per-frame or on-event): HUD, crosshair, mode dial, stats.
-  This avoids re-drawing the static background every frame.
+- **Shape:** screen-space dots (`NEATENSTEIN_PULSE_SCREEN_DOT_RADIUS_PX = 1.5`) with a small glow blur, rendered above the floor grid.
+- **Movement:** world-space velocity along the chosen grid line, driven by the fixed simulation tick.
+- **Emission:** deterministic Park-Miller LCG seeded with the episode seed and `simTick`; ambient interval is `2000` ms (lifetime `2700` ms), max `11` concurrent pulses.
+- **Depth test:** each pulse is projected to a screen column and compared against the per-column z-buffer; pulses behind closer walls are hidden.
+- **Event pulses:** generation-up and enemy-death pulses are driven by the same deterministic sim-tick events.
 
-**Additive blending:** Use `globalCompositeOperation = "lighter"` for glow/border strokes and projectile tracers so overlapping neon saturates toward white (TRON/synthwave standard). Reset to `"source-over"` for wall body fill.
-
-### 3.3 Floor and ceiling — Flappy Bird ground grid reuse
-
-- Solid `#060b14` background (matches `FLAPPY_NEON_PALETTE.background`). Use `#060b14` consistently, NOT `#000` — keeps palette continuity with Flappy and gives neon edges a slightly warmer blend target.
-- A faint neon **horizon line** at the vanishing point (reuse `FLAPPY_NEON_PALETTE.horizonLine` + `horizonGlow`).
-
-**The floor reuses Flappy Bird's synthwave ground grid** (`examples/flappy_bird/browser-entry/playback/background/ground-grid/`) for visual coherence across the library. Both demos share the same neon aesthetic; the floor grid is the strongest style cue and should be familiar to anyone who has seen the Flappy demo.
-
-#### 3.3.1 What Flappy's ground grid is
-
-Flappy's ground grid is a **synthwave forced-perspective grid** — the classic TRON-style floor:
-
-- **Horizontal depth bands:** 16 lines (`FLAPPY_GROUND_GRID_HORIZONTAL_LINE_COUNT = 16`) spaced by a power curve (`FLAPPY_GROUND_GRID_DEPTH_CURVE_EXPONENT = 2.35`) so they bunch up near the horizon and spread out near the viewer. This is the "receding into distance" effect.
-- **Vertical perspective rays:** lines converging to a centered vanishing point at the horizon. They wrap/scroll with parallax to imply forward motion.
-- **Depth-graded styling per line:** alpha (0.12 far → 0.58 near), blur (6px far → 0px near — inverse, far lines are _more_ blurred for atmospheric fog), thickness (1px far → 3px near). All driven by `resolvePlaybackGroundGridDepthCurve(depthRatio)`.
-- **Colors:** `groundGridLine: '#0a8ea0'` (teal), `groundGridFog: 'rgba(10, 142, 160, 0.55)'`, `groundGridPulseFill: '#fff14a'` (yellow pulse accents).
-- **Pulse system:** occasional yellow squares (`#fff14a`) that travel along grid lines every 6s, lifetime 5.9s — "occasional accent lights rather than a constant distraction."
-- **Layered composition:** sky (starfield) → ground grid → horizon seam (glowing divider line). The horizon is both a crisp divider and a glow source.
-
-#### 3.3.2 Neatenstein adaptation (camera-rotated grid)
-
-The key difference: Flappy is a **side-scroller** (2D camera, grid scrolls horizontally). Neatenstein is a **first-person raycaster** (camera rotates, grid is the floor below the horizon). The grid geometry changes with camera rotation, not just scroll offset. But the _visual style_ — depth-curved horizontal bands, converging vertical rays, depth-graded alpha/blur/thickness, pulse accents, horizon seam — transfers directly.
-
-| Flappy                                                 | Neatenstein adaptation                                                                                                                                                                                                                                                                                                                                                                                   |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Horizontal bands at fixed depth curve                  | Same 16 bands, same `DEPTH_CURVE_EXPONENT = 2.35`, same power-curve spacing                                                                                                                                                                                                                                                                                                                              |
-| Vertical rays converge to fixed vanishing point        | Vertical rays converge to **camera yaw-rotated** vanishing point (rotates with mouse look)                                                                                                                                                                                                                                                                                                               |
-| Rays scroll with `scrollBasePx` (horizontal parallax)  | Rays shift with **player position** — the grid cells under the player move. Cheap version: offset the vanishing point by player movement; true version: floor-cast grid lines that match wall DDA columns (Phase 8 stretch)                                                                                                                                                                              |
-| `groundGridLine: '#0a8ea0'` (teal)                     | **Same color** — reuse `FLAPPY_NEON_PALETTE.groundGridLine` for coherence                                                                                                                                                                                                                                                                                                                                |
-| `groundGridFog` atmospheric fog                        | Same fog, same depth-graded alpha                                                                                                                                                                                                                                                                                                                                                                        |
-| Pulse squares every 6s (screen-space, scroll-anchored) | **Fake-perspective-anchored pulses** — reuse ambient color (`#fff14a`), depth-graded sprite styling. **Adapt:** interval 6000→3000ms, lifetime 5900→2700ms (90% ratio, §3.3.6); emission driver to sim tick (§3.3.7); vertical-pulse continuity to world-bearing match (§3.3.5); + event pulses (§3.3.8). Pulses render on Layer 2 (dynamic), depth-tested against z-buffer (§3.4.1). See §3.3.5–§3.3.9. |
-| Horizon seam (glowing divider)                         | **Same horizon seam** — this is the line where walls meet floor. Reuse `horizonLine` + `horizonGlow`                                                                                                                                                                                                                                                                                                     |
-| Static background layer (drawn once on resize)         | **Same** — the floor grid is a static-layer canvas (§3.2.3 layered architecture), redrawn only on resize or camera yaw change                                                                                                                                                                                                                                                                            |
-
-**Reuse the geometry helpers directly:** `resolvePlaybackGroundGridDepthCurve`, `resolvePlaybackGroundGridLineAlpha`, `resolvePlaybackGroundGridLineBlur`, `resolvePlaybackGroundGridLineThickness` — all depth-ratio-driven, camera-agnostic. They work unchanged. Only the vertical-ray vanishing point needs camera yaw rotation.
-
-**Reuse the palette:** `groundGridLine`, `groundGridFog`, `groundGridPulseFill`, `horizonLine`, `horizonGlow` — all from `FLAPPY_NEON_PALETTE`. This gives instant visual coherence with Flappy Bird.
-
-**Reuse the pulse system:** ambient pulses reuse `groundGridPulseFill = '#fff14a'` (color) and the depth-graded sprite styling unchanged. The interval and lifetime are **adapted** (not reused): `NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS = 3000`, `NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS = 2700` (90% ratio, vs Flappy's 6000/5900ms which is too sparse for 15–25s episodes). See §3.3.6.
-
-**The caveat (a plus, not a minus):** Flappy's grid is a _fake perspective_ (2D forced-perspective, not true 3D). In a raycaster, the floor is genuinely below the camera and the grid should ideally be floor-cast (true perspective from the raycaster's per-column geometry). But Flappy's fake-perspective grid is the perfect cheap substitute — it _looks_ like a 3D grid floor without the per-pixel floor-casting cost. The vertical rays won't perfectly align with wall columns, but at the neon aesthetic's level of abstraction (glowing lines on black), the slight misalignment reads as atmospheric, not wrong. If perfect alignment is wanted later (Phase 8 stretch), the vertical rays can be replaced with true floor-cast grid lines that match the wall DDA columns.
+**Superseded:** the earlier fake-perspective pulse design (bearing-tolerance re-matching, screen-space anchoring, Flappy depth-curve helpers) was replaced by this world-space grid-line approach because it stays consistent with the rotating floor and needs no continuity cache or grazing-angle clamp.
 
 #### 3.3.3 Ceiling
 
-- Ceiling mirrors the floor grid with a cooler hue (or the same grid inverted above the horizon). Alternatively, solid `#060b14` with just the horizon glow — the ceiling is less visible in a raycaster (walls fill most of the upper screen) and can be simpler than the floor.
-- Recommend: ceiling = solid `#060b14` + horizon glow for v1; ceiling grid as a Phase 8 stretch goal if the arena feels too empty overhead.
+Solid `#060b14`; no ceiling grid in the current build.
 
-#### 3.3.4 Scanline-coherent floor-casting (Phase 8 stretch)
+#### 3.3.4 Scanline-coherent floor-casting (superseded)
 
-- If true floor-casting is added later (replacing the fake-perspective grid), do it per-_scanline_ (not per-pixel): all pixels in a floor scanline share the same depth row, only X interpolation changes. Cite Lode Part 2 (`raycasting2.html`).
-- If floor-casting is added, borrow DOOM's visplane merging: merge runs of identical `(floorHeight, hue, lightLevel)` before rasterizing to keep span count bounded.
-
-#### 3.3.5 Pulse system adaptation (fake-perspective-anchored, sim-tick-driven)
-
-Flappy's pulses are **screen-space**: they travel along grid lines drawn in screen coordinates, tied to `scrollBasePx`, with a fixed vanishing point. Neatenstein's camera yaws, so a screen-space pulse would swim against the world when the player turns.
-
-**Anchor reconciliation:** The v1 floor is a fake-perspective grid (§3.3.2) whose vertical rays converge to a camera-yaw-rotated vanishing point. Pulses are anchored to this **same fake-perspective space** — they travel along the fake-perspective grid lines (depth bands and yaw-rotated rays), NOT world-space grid cells. This keeps pulses consistent with the v1 grid without promoting the whole grid to true floor-casting (which is Phase 8 scope). When Phase 8 adds true floor-casting, pulses promote to world-anchored at the same time.
-
-**Pulse contract (fake-perspective-anchored):**
-
-- Horizontal pulses (depth bands): camera-agnostic, reuse Flappy helpers unchanged (`resolvePlaybackGroundGridHorizontalPulsePath`, travel ratio, size/alpha). Lifetime is adapted to 2700ms (§3.3.6), not Flappy's 5900ms.
-- Vertical pulses (perspective rays): continuity cache stores a **world bearing** (`worldBearingRad = player.yaw + rayScreenAngle`) at pulse birth, re-matched by nearest `Δθ` (wrapped to `[-π, π]`) each frame. If `|Δθ| > 0.1 rad`, the pulse fades out for its remaining lifetime — never re-anchors to a new ray. This preserves continuity under camera yaw without snapping.
-- **Grazing-angle clamp:** pulse projected edge length clamped to ≥2px (so grazing-angle pulses don't alias to nothing). Thickness from the depth curve is unchanged.
-- **Rendering layer:** pulses are dynamic (move every sim tick), so they render on **Layer 2** (dynamic, per-frame), NOT Layer 1 (static grid). The static grid (lines, horizon) stays on Layer 1; pulses are a dynamic sub-layer above it.
-- **Wall occlusion:** pulses are depth-tested against the per-column z-buffer (§3.4.1). Each pulse's projected screen columns are clipped where `zBuffer[x] < pulseDist` (wall is closer). This prevents pulses from showing through walls. Cheap — reuses the existing z-buffer, one compare per pulse column.
-
-#### 3.3.6 Pulse density for combat
-
-Flappy's `PULSE_INTERVAL_MS = 6000` is calibrated for a calm side-scroller. Neatenstein has 15–25s episodes (§12.2); at 6s cadence the viewer sees only 2–4 pulses per episode — below the "floor is alive" threshold.
-
-- **Ambient baseline:** `NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS = 3000` (lifetime 2700ms, 90% ratio). ~5–8 ambient pulses per episode. Reads as "the floor is alive" without competing with combat silhouettes. This is an **adaptation** of Flappy's 6000ms, not a reuse.
-- **Event pulses (see §3.3.8):** additional pulses fired by game events, on top of the ambient baseline.
-- **Hard ceiling:** max 8 concurrent pulses on screen (ambient + event). Above this, drop oldest event pulses first; never drop an in-flight ambient pulse mid-travel (it would pop). The low-health dim (§3.3.8 #3) is an alpha/interval modifier, NOT a concurrent pulse — it does not count against the ceiling.
-
-#### 3.3.7 Pulse determinism contract
-
-Pulses MUST reproduce identically under replay (Phase 2 determinism acceptance, Phase 6 replay buffer).
-
-- **Driver:** sim tick count (fixed-timestep). NOT `frameIndex` (tier-dependent: 60Hz GPU vs 30Hz CPU produce different counts). NOT wall-clock (drifts across runs).
-- **Emission:** `if (simTick % PULSE_AMBIENT_INTERVAL_TICKS === 0) emitPulse(seededRng.next())`. `PULSE_AMBIENT_INTERVAL_TICKS = round(3000 / tickMs)`.
-- **Position:** `cellX = seededRng.nextInt(0, gridW)`, `cellY = seededRng.nextInt(0, gridH)`, `dir = seededRng.pick([+X, +Y])`. The RNG is the episode seed (same seed → same pulse sequence).
-- **Lifetime:** advanced by sim ticks, not ms: `pulseTicksRemaining--` per tick; despawn at 0.
-- **Event pulses** (§3.3.8) fire on the **same sim tick** as their triggering sim event (enemy death, generation-up), never deferred to a render tick. This closes the Phase 6 replay contract hole.
-- **Render-side interpolation** (§4.1.2) may display the pulse between sim states via `lerp(pulsePrevPos, pulseCurrPos, alpha)` — cosmetic, does not affect sim determinism.
-
-#### 3.3.8 Event pulses — secondary legibility signal
-
-Event pulses turn the floor from decoration into a secondary legibility channel that communicates state without adding HUD text (respects Phase 7's ≤20-word transient cap). Three bindings, all sim-tick-driven, all deterministic:
-
-1. **Generation-up ripple (flagship):** On generation counter increment, emit a radial pulse wave from the arena center (or player position in human modes) — a single expanding ring on the floor grid, lifetime 600ms, white-hot (lerp `#fff14a` → `#ffffff`), additive blend. This is the visual half of the generation-up audio-visual pair (§3.3.9).
-2. **Enemy death pulse:** On enemy death, emit a single brief pulse at the enemy's world cell, tinted to the enemy's hue (`NEATENSTEIN_PALETTE.enemyHues[type]`), lifetime 400ms. Reinforces the death burst (§4.3.2) with a floor-level echo. Bounded by 8-enemy cap.
-3. **Low-health dim:** When player health < 30%, dim ambient pulses (alpha × 0.5) and slow them (interval × 1.5). No new pulses; a global modulation. Reverts on heal. This is a modifier, not a concurrent pulse.
-
-**Rejected (clutter risk):** player-damage pulse (competes with damage flash §4.3.2), per-projectile pulses (strobe during firefights), ambient combat-tint (fights enemy-hue system §3.4).
-
-#### 3.3.9 Generation-up audio-visual pair
-
-The generation-up sound (§9.2 #6, rising arpeggio 330→660→990 Hz, 200ms) and the generation-up ripple (§3.3.8 #1, white-hot expanding floor ring, 600ms) fire **on the same sim tick**. The audio is the signal, the floor ripple is the reinforcement — together they make "the enemies just learned" unmistakable. Audio punches in (200ms), ripple lingers (600ms). They share a start, not an end.
+A true per-pixel/per-scanline floor-caster (Lode Part 2) was considered as a Phase 8 stretch goal. It was abandoned in favor of the cheaper world-space grid-line projection in §3.3.1, which is fast enough for the CPU tier and visually consistent with the wall DDA.
 
 ### 3.4 Enemy wireframe sprites
 
@@ -280,12 +191,22 @@ The generation-up sound (§9.2 #6, rising arpeggio 330→660→990 Hz, 200ms) an
 - **2-state pose:** "idle" (slow vertical bob, dim) and "alert/aggro" (brighter, expanded outline, slight forward lean). State transition on detecting player.
 - **Health indication:** hue shift along `FLAPPY_REGULAR_NEON_RAMP` (green→yellow→red) for health, keep opacity purely for distance fog. Decouples the two. Pair with shape encoding for color-blind safety (full-HP = solid diamond, wounded = diamond + inner cross, critical = diamond + pulsing ring).
 
-### 3.5 Projectiles
+### 3.5 Beam tracers and wall-impact spots
 
-- Neon line segments (tracers) oriented along velocity: 2px core line + `shadowBlur` glow.
-- Player projectiles: `#00bfff` (neon blue, per `FLAPPY_NEON_PALETTE`).
-- Enemy projectiles: `#ff4a8d` (reuse `championBird` pink for contrast).
-- Depth-sorted with enemies.
+The weapon is a hitscan neon beam, not a slow projectile.
+
+- **Tracer:** a world-space line from the gun origin to the hit point, projected to screen space in the worker tier.
+  - Color: `#f0f8ff` (bright white with a cool tint).
+  - Glow: `rgba(240,248,255,0.5)` with `shadowBlur = 6`.
+  - Line width: 2px.
+  - Duration: 80ms.
+  - Distance scaling: the projected screen length and position follow perspective projection; far endpoints shrink toward the vanishing point.
+- **Wall-impact spot:** a small glowing circle at the world-space wall hit point.
+  - Color: `#f0f8ff`, glow `rgba(240,248,255,0.5)`, radius 4px, glow blur 6px.
+  - Lifetime: 3000ms.
+  - Projected with the same camera transform as sprites; scale falls with distance.
+
+**Superseded:** slow-moving colored projectile lines (blue player, pink enemy) were replaced by the instant white beam + persistent white impact spot, which reads more clearly as a laser weapon and is cheaper to render.
 
 ### 3.6 Player weapon overlay
 
@@ -408,7 +329,7 @@ Per the user's instruction: use the same map for all modes. This simplifies the 
 - **Sightline constraint:** maximum straight-line sightline ≤ 12 cells. Place pillars/wall stubs in long corridors to break sightlines and force mid-range encounters where silhouettes read (diamond/triangle LOD, not the dot LOD).
 - **Structure:** a central arena with surrounding corridors and a few interior rooms/pillars. Provides cover, sightlines, and flanking routes — the spatial variety the NGE agents need to develop interesting behavior.
 - **Generation:** seeded procedural (recursive backtracker + extra connections, like the PredatorPrey maze) OR hand-authored. Seeded procedural is better for the demo (different seeds = different arenas, same code). Reuse the PredatorPrey quarter-symmetric generation if symmetry is desired, or a simpler random-walk for organic layouts.
-- **Wall variants:** 3-5 neon hues assigned to different regions to give visual variety (the "light level" idea from DOOM, expressed as hue variation).
+- **Wall cells:** wall cells are positive values in the grid; the renderer applies the fixed two-tone side-shading palette (§3.2). Optional per-cell light levels can still modulate brightness.
 
 ### 5.2 Map transfer
 
@@ -419,15 +340,15 @@ Per the user's instruction: use the same map for all modes. This simplifies the 
 
 ## 6. Performance Budget (tier-aware)
 
-| Tier           | Columns | Enemies | Glow                                                            | Target fps       |
-| -------------- | ------- | ------- | --------------------------------------------------------------- | ---------------- |
-| GPU 2048/2048  | 320     | 8       | full shadowBlur                                                 | 60               |
-| Worker 256/256 | 240     | 8       | limited shadowBlur / `ctx.filter` drop-shadow                   | 60               |
-| CPU 128/128    | 160     | 8       | no shadowBlur, pre-rendered glow sprites, no texture modulation | 60 (fallback 30) |
+| Tier           | Columns | Enemies | Glow                                                  | Target fps       |
+| -------------- | ------- | ------- | ----------------------------------------------------- | ---------------- |
+| GPU 2048/2048  | 320     | 8       | full shadowBlur                                       | 60               |
+| Worker 256/256 | 240     | 8       | limited shadowBlur / `ctx.filter` drop-shadow         | 60               |
+| CPU 128/128    | 160     | 8       | no shadowBlur, no glow sprites, no texture modulation | 60 (fallback 30) |
 
 - Column count is the primary render cost lever (DDA per column). 320 columns at 60fps is trivial on any modern CPU; the bottleneck is `shadowBlur`, not DDA.
 - Enemy count is capped at 8 across all tiers (legibility constraint, not performance).
-- `shadowBlur` is the expensive operation; tier-gate it aggressively. CPU tier uses the ImageData framebuffer + pre-rendered glow sprites path (§3.2.1); Worker tier uses OffscreenCanvas + `ctx.filter`; GPU tier keeps `shadowBlur` (§3.2.1, §3.2.3).
+- `shadowBlur` is the expensive operation; tier-gate it aggressively. CPU tier uses the ImageData framebuffer path (§3.2); Worker tier draws fogged vertical stripes through `CanvasRenderingContext2D` (§3.2); GPU tier keeps `shadowBlur` for beam/impact effects (§3.5).
 
 ---
 
@@ -443,7 +364,7 @@ To be explicit about the boundary (license safety + design clarity):
 
 What we _do_ take from the carlini clone conceptually (game-feel, not code):
 
-- The _idea_ of light levels per region (we express this as neon hue/brightness variation per grid cell).
+- The _idea_ of light levels per region (we express this as per-cell brightness variation, not hue).
 - The _idea_ of billboarded sprites clipped against walls (we use wireframe sprites, not textured billboards, but the depth-sort + clip approach is the same).
 - The _idea_ of a muzzle flash light (we express this as a brief `shadowBlur` burst, not a dynamic light source).
 - Game-feel techniques: camera bob, gun bob, hit-stop, screen shake, exploding-cube death, alert-propagation enemy AI (all attributed to carlini's design notes; no code reproduced).
@@ -452,19 +373,19 @@ What we _do_ take from the carlini clone conceptually (game-feel, not code):
 
 ## 8. Reuse from Flappy Bird / Existing Repo
 
-| Flappy pattern                                              | Neatenstein reuse                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `FLAPPY_NEON_PALETTE`                                       | Extended as `NEATENSTEIN_PALETTE` (wall hues, enemy hues, horizon)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| **Flappy ground grid** (`playback/background/ground-grid/`) | **Floor renderer.** **Reused unchanged:** `resolvePlaybackGroundGridDepthCurve`, `resolvePlaybackGroundGridLineAlpha/Blur/Thickness` (depth-ratio-driven, camera-agnostic); `FLAPPY_NEON_PALETTE.groundGridLine/Fog/horizonLine/horizonGlow`; ambient `groundGridPulseFill=#fff14a`; `resolvePlaybackGroundGridUnitHash` (deterministic selection); travel range 0.14–0.62. **Adapted:** vertical-ray vanishing point → camera-yaw-rotated; vertical-pulse continuity → world-bearing match (§3.3.5); pulse emission driver → sim tick (§3.3.7); `PULSE_INTERVAL_MS=6000` → `NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS=3000`; `PULSE_LIFETIME_MS=5900` → `NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS=2700` (90% ratio, §3.3.6); + event pulses (§3.3.8). See §3.3.5–§3.3.9. |
-| `FLAPPY_GROUND_GRID_*` constants                            | Reuse: `HORIZONTAL_LINE_COUNT=16`, `DEPTH_CURVE_EXPONENT=2.35`, alpha/blur/thickness ranges, travel range 0.14/0.62. **Adapt:** `PULSE_INTERVAL_MS=6000` → `3000`, `PULSE_LIFETIME_MS=5900` → `2700` (§3.3.6); add `NEATENSTEIN_PULSE_EVENT_*` constants (§3.3.8).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `WorkerPlaybackFrameSnapshot` SoA + transfer list           | `NeatensteinRenderFrame` (player, enemies, projectiles as typed arrays)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `resolveWorkerPlaybackSnapshotTransferList`                 | `resolveNeatensteinSnapshotTransferList`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| WeakMap buffer pool                                         | Snapshot buffer reuse to avoid per-frame allocation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `requestId`-gated playback step                             | `request-render-step` / `render-step` protocol                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Fixed-timestep RAF loop                                     | Same loop structure, extended for FPS controls + interpolation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `autoEnableAcceleration` + `AccelerationStatus`             | Startup tier detection + chip label                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Racing `resolveAccelerationChipPresentation`                | Extended additively with `batchParallelCount`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| Two-region layout + `ResizeObserver`                        | Canvas + sidebar, responsive                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Flappy pattern                                              | Neatenstein reuse                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `FLAPPY_NEON_PALETTE`                                       | Extended as `NEATENSTEIN_PALETTE` (enemy hues, horizon, beam/impact colors). The fixed wall side-shading palette in §3.2 is independent of per-wall hue variants.                                                                                                                                                                                                                                      |
+| **Flappy ground grid** (`playback/background/ground-grid/`) | **Inspiration only.** The implemented floor uses a new world-space grid-line projection (`renderer/floor.ts`) rather than the Flappy fake-perspective helpers. Only the palette color `groundGridLine` and the yellow pulse accent color `groundGridPulseFill` were reused visually. Pulse timing is local to Neatenstein (`NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS = 2000`, lifetime `2700`). See §3.3. |
+| `FLAPPY_GROUND_GRID_*` constants                            | **Not reused.** Neatenstein defines its own floor constants (`NEATENSTEIN_FLOOR_*`) and pulse timing (`NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS = 2000`, lifetime `2700`). The projection math is local to `renderer/floor.ts`. See §3.3.                                                                                                                                                                 |
+| `WorkerPlaybackFrameSnapshot` SoA + transfer list           | `NeatensteinRenderFrame` (player, enemies, projectiles as typed arrays)                                                                                                                                                                                                                                                                                                                                |
+| `resolveWorkerPlaybackSnapshotTransferList`                 | `resolveNeatensteinSnapshotTransferList`                                                                                                                                                                                                                                                                                                                                                               |
+| WeakMap buffer pool                                         | Snapshot buffer reuse to avoid per-frame allocation                                                                                                                                                                                                                                                                                                                                                    |
+| `requestId`-gated playback step                             | `request-render-step` / `render-step` protocol                                                                                                                                                                                                                                                                                                                                                         |
+| Fixed-timestep RAF loop                                     | Same loop structure, extended for FPS controls + interpolation                                                                                                                                                                                                                                                                                                                                         |
+| `autoEnableAcceleration` + `AccelerationStatus`             | Startup tier detection + chip label                                                                                                                                                                                                                                                                                                                                                                    |
+| Racing `resolveAccelerationChipPresentation`                | Extended additively with `batchParallelCount`                                                                                                                                                                                                                                                                                                                                                          |
+| Two-region layout + `ResizeObserver`                        | Canvas + sidebar, responsive                                                                                                                                                                                                                                                                                                                                                                           |
 
 ---
 
@@ -525,13 +446,14 @@ What we _do_ take from the carlini clone conceptually (game-feel, not code):
 
 ---
 
-## 11. Open Questions for Implementation
+## 11. Resolved and remaining questions
 
-1. **Y-shearing (fake look up/down):** The plan specifies mouse look. True 3D look up/down is impossible in raycasting (walls are vertical). Y-shearing (moving the horizon line) fakes it but distorts. Recommend: horizontal mouse look only (rotate), no vertical look. The dash mechanic provides the "dodge" feel without vertical aim.
-2. **Minimap:** DOOM had a map mode. A small top-down minimap in the corner (neon grid + player dot + enemy dots) would help spatial awareness and is cheap to draw. Recommend as a Phase 7 UI element, toggleable with `M`.
-3. **Sprite rendering method:** Canvas 2D `drawImage` (if we use pre-rendered wireframe sprites) vs. direct line drawing. Direct line drawing is more flexible (wireframes scale without aliasing) but slower. Recommend direct line drawing for the neon aesthetic; the wireframe is only ~6 lines per enemy.
-
-> Note: the original "floor-casting vs solid black" question is resolved in §3.3 — reuse Flappy Bird's synthwave ground grid (camera-adapted) for v1; true floor-casting is a Phase 8 stretch goal (§3.3.4).
+1. **Floor rendering — RESOLVED:** world-space grid-line projection (§3.3.1) superseded both the fake-perspective Flappy grid and the per-pixel floor-caster idea.
+2. **Pulse anchoring — RESOLVED:** world-space grid-line dots (§3.3.2) superseded the bearing-tolerance, fake-perspective pulse design.
+3. **Wall colors — RESOLVED:** fixed two-tone cyan/blue side-shading (§3.2) superseded hue-varied / pink walls.
+4. **Y-shearing (fake look up/down):** The plan specifies mouse look. True 3D look up/down is impossible in raycasting (walls are vertical). Y-shearing (moving the horizon line) fakes it but distorts. Recommend: horizontal mouse look only (rotate), no vertical look. The dash mechanic provides the "dodge" feel without vertical aim.
+5. **Minimap:** DOOM had a map mode. A small top-down minimap in the corner (neon grid + player dot + enemy dots) would help spatial awareness and is cheap to draw. Recommend as a future UI element, toggleable with `M`.
+6. **Sprite rendering method:** Direct line drawing for the neon aesthetic; the wireframe is only a few lines per enemy.
 
 ---
 
@@ -579,7 +501,7 @@ An **episode** = one life, 15–25s, bounded by the fixed timestep (§4.1) for d
 
 The research file's "worker offload" framing implies one worker does everything. The plan's fitness evaluation requires three distinct roles:
 
-1. **Render worker** (OffscreenCanvas, DDA + blit) — §3.2.1. Worker tier only.
+1. **Render worker** (OffscreenCanvas, DDA + blit) — §3.2. Worker tier only.
 2. **Authoritative world worker** (game state, sim, NGE inference for the display agent) — plan Phase 3. On Worker tier, this is the same worker as the render worker. On CPU/GPU tiers, this worker produces `NeatensteinRenderFrame` for the main thread to render.
 3. **Stateless batch workers** (variant episode evaluation, no canvas, no persistent state) — plan Phase 3. A separate pool. Never touch a canvas. Run `(seed, ticcmd stream, variant network)` → fitness scalar.
 
@@ -676,3 +598,5 @@ This pairs with the existing health shape-encoding (§3.4.5) and gives stream-co
 - **W3C WCAG 2.1 §1.4.3 Contrast (Minimum):** https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum — 4.5:1 body text, 3:1 large text, red-on-black protanopia advisory. Referenced; no text reproduced.
 - **Jan Willem Nijman, "The Art of Screenshake" (GDC):** — hit-stop and screen-shake technique referenced for §4.3.2. Talk, no text reproduced.
 - **Flappy Bird example (this repo):** `examples/flappy_bird/` — palette, frame snapshot, worker channel, and RAF loop patterns reused. Internal, no external license.
+
+---

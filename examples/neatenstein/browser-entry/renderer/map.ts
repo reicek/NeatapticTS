@@ -10,6 +10,24 @@
 
 import { NEATENSTEIN_MAP_SIZE } from '../constants';
 
+/**
+ * Read-only interface used by the host movement system to test whether a
+ * given grid cell is solid.
+ *
+ * The minimal surface keeps movement code decoupled from the exact flat-map
+ * layout and makes red-phase tests trivial to stub.
+ */
+export interface CollisionMap {
+  /**
+   * Return `true` if the cell at integer grid coordinate `(x, y)` blocks
+   * movement.
+   *
+   * @param x - Integer grid X coordinate.
+   * @param y - Integer grid Y coordinate.
+   */
+  isSolid(x: number, y: number): boolean;
+}
+
 /** Linear PRNG modulus: the largest Mersenne prime fitting in a signed 32-bit int. */
 const LCG_MODULUS = 2_147_483_647;
 
@@ -105,4 +123,36 @@ export function buildNeatensteinMap(seed: number): Uint8Array {
   }
 
   return map;
+}
+
+/**
+ * Build a {@link CollisionMap} from a flat `Uint8Array` wall grid.
+ *
+ * Any non-zero cell value is treated as solid, and coordinates outside the
+ * square grid boundary are also reported as solid so the player cannot step
+ * out of the arena.
+ *
+ * @param flatMap - Row-major wall grid built by {@link buildNeatensteinMap}.
+ * @param side - Width and height of the square grid.
+ * @returns A collision map ready for {@link resolveWallCollision}.
+ *
+ * @example
+ * ```ts
+ * const map = buildNeatensteinMap(123);
+ * const collision = createCollisionMap(map, NEATENSTEIN_MAP_SIZE);
+ * console.log(collision.isSolid(0, 0)); // true (perimeter wall)
+ * ```
+ */
+export function createCollisionMap(
+  flatMap: Uint8Array,
+  side: number,
+): CollisionMap {
+  return {
+    isSolid(x: number, y: number): boolean {
+      if (x < 0 || x >= side || y < 0 || y >= side) {
+        return true;
+      }
+      return flatMap[y * side + x] !== 0;
+    },
+  };
 }

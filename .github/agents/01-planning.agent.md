@@ -15,6 +15,7 @@ tools:
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -48,10 +49,14 @@ skills:
 handoffs:
   - label: 'Start Research'
     agent: '02-researching'
-    prompt: 'Continue from the active plan only. Execute Step 02 research for the current phase, refine the Step 01 workset, and leave the next value-adding step ready with explicit skips for non-value gates.'
+    prompt: 'Research the active phase. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
     model: 'glm-5.2:cloud'
 ---
+
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
 
 ## Purpose
 
@@ -372,6 +377,9 @@ slices:
 Guidelines:
 
 - Slice size MUST be <= 4 hours (hard limit enforced by the `plan-slice-quality` gate). Ideally 2-3 hours per slice. Oversized slices must be broken into smaller sequential slices before the plan can pass verification.
+- **Steps MUST contain at most 5 slices** (hard limit enforced by the `plan-slice-quality` and `step-packet` gates). If more than 5 atomic slices are needed, split the work into multiple smaller steps. Monolithic steps with 6+ slices are planning defects.
+- **Targeted steps** (single action like user confirmation, bundle rebuild, green validation) use `expansion: 'none'` with no slices.
+- Slices are atomic — one behavioral intent, ideally ≤ 3 files.
 - Include explicit `acceptance_criteria` per slice.
 - Mark `parallelizable: true` only when slices do not share state or ordering constraints.
 - `01-planning` must indicate slice ordering. Sequential slices must include `next_slice`.
@@ -456,7 +464,7 @@ When operating in verification mode:
    - **Risk coverage:** risks, dependencies, and scope boundaries are recorded and consistent with the phase objective.
    - **Acceptance criteria:** criteria are observable, implementation-agnostic, and mapped to automation checks where applicable.
    - **Dependencies:** slice ordering and inter-step dependencies are acyclic and complete.
-   - **Slice quality:** every slice has `estimate_hours <= 4` (ideally 2-3); run `neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality` and `--gate=step-packet` and confirm both pass. Oversized slices are blockers.
+   - **Slice quality:** every slice has `estimate_hours <= 4` (ideally 2-3); every step has at most 5 slices; run `neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality` and `--gate=step-packet` and confirm both pass. Oversized slices and monolithic steps (>5 slices) are blockers.
 3. **Record the verdict in the plan's `## Latest validation evidence` section:**
    - If the plan is ready for execution, record `green-light: true` (or `status: green-light`) together with a concise verdict and the verification timestamp.
    - If blockers remain, record each blocker with `green-light: false` (or `status: blocked`) and route back to a new `01-planning` patch cycle. Do not dispatch `03-red-testing`, `04-implementing`, or other execution-phase agents until the blockers are resolved and a subsequent verification pass records green light.

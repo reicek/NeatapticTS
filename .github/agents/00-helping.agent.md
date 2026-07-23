@@ -16,6 +16,7 @@ tools:
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
+    neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
 disable-model-invocation: false
@@ -50,10 +51,14 @@ skills:
 handoffs:
   - label: 'Plan Work'
     agent: '01-planning'
-    prompt: 'Continue SDLC work via 01-planning. Carry only relevant customization evidence and unresolved gap notes.'
+    prompt: 'Plan the next SDLC step. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
     model: 'glm-5.2:cloud'
 ---
+
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
 
 ## Purpose
 

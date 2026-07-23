@@ -232,3 +232,97 @@ describe('search-context conservative defaults and compact mode', () => {
     });
   });
 });
+
+/**
+ * Red-phase contract for the A2 slice_id filter parameter in searchContext.
+ * The implementation currently ignores the slice_id option, so the test
+ * observes both matching chunks and fails until the filter is applied.
+ */
+describe('search-context slice_id filter parameter', () => {
+  it('returns only chunks whose slice_id equals the requested slice_id', async () => {
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), 'search-context-slice-id-red-'),
+    );
+    const databasePath = path.join(tempDir, 'corpus.sqlite');
+    const db = createClient({ url: 'file:' + databasePath });
+    try {
+      await db.executeMultiple(`
+        CREATE TABLE documents (
+          doc_id INTEGER PRIMARY KEY,
+          doc_family TEXT NOT NULL,
+          file_path TEXT NOT NULL,
+          title TEXT,
+          mtime_ms INTEGER,
+          file_size INTEGER,
+          sha256 TEXT,
+          indexed_at INTEGER
+        );
+        CREATE TABLE chunks (
+          chunk_id INTEGER PRIMARY KEY,
+          doc_id INTEGER NOT NULL,
+          chunk_index INTEGER NOT NULL DEFAULT 0,
+          heading_path TEXT,
+          body_text TEXT NOT NULL,
+          char_start INTEGER NOT NULL DEFAULT 0,
+          char_end INTEGER NOT NULL DEFAULT 0,
+          parent_chunk_id INTEGER,
+          depth INTEGER NOT NULL DEFAULT 0,
+          context_header TEXT,
+          symbol_name TEXT,
+          signature_text TEXT,
+          jsdoc_text TEXT,
+          export_type TEXT,
+          module_path TEXT,
+          arch_layer TEXT,
+          jsdoc_quality TEXT,
+          jsdoc_word_count INTEGER,
+          cyclomatic_complexity INTEGER,
+          test_coverage TEXT,
+          source_path_pattern TEXT,
+          slice_id TEXT,
+          step_number INTEGER,
+          phase TEXT,
+          status TEXT
+        );
+        CREATE VIRTUAL TABLE chunks_fts USING fts5(
+          body_text,
+          content='chunks',
+          content_rowid='chunk_id'
+        );
+        INSERT INTO documents VALUES (1, 'readme', 'README.md', 'Readme', 1, 1, 'sha', 1);
+        INSERT INTO chunks (chunk_id, doc_id, body_text, char_end, slice_id, step_number, phase, status)
+          VALUES
+            (1, 1, 'slice filter fixture body alpha', 31, 'A2-red-tests', 2, 'A', 'red'),
+            (2, 1, 'slice filter fixture body beta', 30, 'A1-green', 1, 'A', 'green');
+        INSERT INTO chunks_fts (rowid, body_text) VALUES
+          (1, 'slice filter fixture body alpha'),
+          (2, 'slice filter fixture body beta');
+      `);
+    } finally {
+      await db.close();
+    }
+
+    try {
+      const result = runModuleEvaluation<{ chunkIds: number[] }>(`
+        import { searchContext } from './scripts/mcp-semantic/tools/search-context.mjs';
+        const databasePath = ${JSON.stringify(databasePath)};
+        const response = await searchContext({
+          databasePath,
+          query: 'slice filter fixture body',
+          slice_id: 'A2-red-tests',
+          use_dense: false,
+          limit: 10,
+        });
+        console.log(JSON.stringify({ chunkIds: response.results.map((r) => r.chunk_id) }));
+      `);
+
+      expect(result.chunkIds).toEqual([1]);
+    } finally {
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch {
+        // Ignore best-effort cleanup failures.
+      }
+    }
+  });
+});

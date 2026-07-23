@@ -1,6 +1,29 @@
 import path from 'node:path';
 import { repoRoot } from './init-schema.mjs';
 
+/**
+ * Parse a raw CLI argument list into a structured flags object.
+ *
+ * Supports `--key=value`, `--key value`, and positional arguments. Flags that
+ * are not explicitly marked as repeatable are overwritten by later occurrences;
+ * repeatable flags accumulate all supplied values into an array.
+ *
+ * @param {string[]} argv - Raw argument strings (usually `process.argv.slice(2)`).
+ * @param {object} [options={}] - Parser options.
+ * @param {string[]} [options.repeatableFlags=[]] - Flag names that may appear
+ *   multiple times and should be collected into arrays. Callers must opt in
+ *   explicitly for each repeatable flag; there are no default repeatable flags.
+ * @returns {{ _: string[], [key: string]: unknown }} Parsed flags with positional
+ *   arguments under `_` and flag values keyed by flag name.
+ *
+ * @example
+ * ```js
+ * const flags = parseCliArgs(['--files=a', '--files=b'], {
+ *   repeatableFlags: ['files'],
+ * });
+ * console.log(flags.files); // ['a', 'b']
+ * ```
+ */
 export function parseCliArgs(argv, options = {}) {
   const flags = { _: [] };
   const repeatableFlags = new Set(options.repeatableFlags ?? []);

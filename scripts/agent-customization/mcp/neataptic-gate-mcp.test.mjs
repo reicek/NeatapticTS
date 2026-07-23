@@ -80,8 +80,9 @@ describe('neataptic-gate-mcp native-ESM coverage', () => {
   it('exposes createGateTools with the expected tool surface', async () => {
     const { createGateTools } = await loadServer();
     const tools = createGateTools();
-    const names = tools.map((tool) => tool.name).sort();
+    const names = tools.map((tool) => tool.name).toSorted();
     assert.deepEqual(names, [
+      'get_slice_context',
       'list_gates',
       'query_customization_routing_table',
       'query_tier_graph',

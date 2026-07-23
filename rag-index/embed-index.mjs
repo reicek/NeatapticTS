@@ -9,6 +9,7 @@
  *
  * @param {boolean} [--dry-run]                     - Count queued chunks without writing embeddings.
  * @param {boolean} [--json]                         - Emit JSON summary `{ embedded, skipped, queued, dryRun }`.
+ * @param {string}  [--files=<path>]                - Re-embed chunks for the specified repo-relative file path; repeatable. Run build-index.mjs first to re-chunk changed files.
  * @param {string}  [--database <path>]              - Override corpus database path.
  * @param {string}  [--model-directory <path>]       - Override local model cache directory.
  * @param {string}  [--model-id <id>]                - Override model identifier.
@@ -31,7 +32,16 @@ import {
 } from './cli-utils.mjs';
 import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
 
+/**
+ * Default sentence-transformer model identifier used when no model is
+ * configured on the CLI or in `options.modelId`.
+ */
 export const DEFAULT_MODEL_ID = 'all-MiniLM-L6-v2';
+
+/**
+ * Default local directory that caches the ONNX tokenizer and model files.
+ * Used when `options.modelDirectory` is not provided.
+ */
 export const DEFAULT_MODEL_DIRECTORY = path.join(
   repoRoot,
   'rag-index',
@@ -42,6 +52,43 @@ const DEFAULT_MAX_SEQUENCE_LENGTH = 512;
 /** Maximum number of SQL statements per client.batch() call. */
 const BATCH_SIZE = 1000;
 
+/**
+ * Build or incrementally update the dense embedding index in the consolidated
+ * `chunks` table, including step-packet slice metadata for plan-family chunks.
+ *
+ * Reads every chunk, computes an embedding with the configured embedder, and
+ * writes the quantized vector to `chunks.embedding`. It also parses step-packet
+ * YAML for `plan`-family chunks and persists `slice_id`, `step_number`,
+ * `phase`, and `status` on each chunk row.
+ *
+ * @param {object} [options={}] - Build options.
+ * @param {string} [options.corpusDatabasePath] - Override path to the corpus database.
+ * @param {string} [options.databasePath] - Alias for `corpusDatabasePath`.
+ * @param {string} [options.modelId] - Model identifier; defaults to {@link DEFAULT_MODEL_ID}.
+ * @param {boolean} [options.dryRun] - Count queued chunks without writing.
+ * @param {object} [options.modelMeta] - Pre-loaded model metadata object.
+ * @param {string} [options.modelMetaPath] - Path to `model-meta.json`.
+ * @param {string} [options.modelDirectory] - Directory containing `model.onnx`; defaults to {@link DEFAULT_MODEL_DIRECTORY}.
+ * @param {number} [options.dimension] - Embedding dimension; falls back to `modelMeta.dimension`.
+ * @param {string} [options.modelSha256] - Model SHA-256; falls back to `modelMeta.model_sha256`.
+ * @param {string[]} [options.files] - Repo-relative file paths to limit re-indexing to. When provided, only chunks whose `file_path` matches one of these paths are embedded; all other chunks are skipped.
+ * @param {Function} [options.embedText] - Override embedding function (used in tests).
+ * @param {import('@libsql/client').Client} [options.client] - Existing libSQL client (used in tests).
+ * @returns {Promise<object>} Summary with `embedded`, `skipped`, `queued`, `modelId`, `dryRun`, and `purged` counts.
+ * @throws {Error} When `dimension` or `modelSha256` cannot be resolved.
+ *
+ * @example
+ * ```js
+ * const summary = await buildEmbeddingIndex({
+ *   client,
+ *   embedText: async ({ text }) => new Float32Array(384).fill(0.1),
+ *   dimension: 384,
+ *   modelSha256: 'fake-sha256',
+ *   modelId: 'fake-model',
+ * });
+ * console.log(summary.embedded, summary.skipped);
+ * ```
+ */
 export async function buildEmbeddingIndex(options = {}) {
   const corpusDatabasePath = path.resolve(
     options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath,
@@ -80,6 +127,7 @@ export async function buildEmbeddingIndex(options = {}) {
   return buildEmbeddingIndexWithClient({
     client,
     embedText,
+    files: options.files,
     modelId,
     modelSha256,
     dimension,
@@ -105,6 +153,7 @@ export async function buildEmbeddingIndex(options = {}) {
 async function buildEmbeddingIndexWithClient({
   client,
   embedText,
+  files,
   modelId,
   modelSha256,
   dimension,
@@ -119,11 +168,27 @@ async function buildEmbeddingIndexWithClient({
     skipped: 0,
   };
 
+  const targetFiles =
+    Array.isArray(files) && files.length > 0 ? new Set(files) : null;
+
+  if (targetFiles && targetFiles.size > 0) {
+    const fileList = Array.from(targetFiles);
+    const placeholders = fileList.map(() => '?').join(',');
+    const matchResult = await client.execute({
+      sql: `SELECT COUNT(*) as count FROM documents WHERE file_path IN (${placeholders})`,
+      args: fileList,
+    });
+    if (Number(matchResult.rows[0]?.count ?? 0) === 0) {
+      console.warn(`No matching documents found for: ${fileList.join(', ')}`);
+    }
+  }
+
   const chunkRowsResult = await client.execute({
     sql: `
       SELECT c.chunk_id, c.chunk_index, c.heading_path, c.body_text, c.char_start, c.char_end,
         c.parent_chunk_id, c.depth, c.context_header, c.symbol_name, c.signature_text,
         c.jsdoc_text, c.export_type, c.module_path,
+        c.slice_id, c.step_number, c.phase, c.status,
         d.file_path, d.doc_family
       FROM chunks c
       LEFT JOIN documents d ON d.doc_id = c.doc_id
@@ -135,7 +200,16 @@ async function buildEmbeddingIndexWithClient({
   const pendingUpdates = [];
 
   for (const chunkRow of chunkRows) {
-    const chunkSha256 = createChunkSha256(chunkRow);
+    if (targetFiles && !targetFiles.has(chunkRow.file_path)) {
+      summary.skipped += 1;
+      continue;
+    }
+
+    const sliceMetadata = extractSliceMetadata(
+      chunkRow.body_text,
+      chunkRow.doc_family,
+    );
+    const chunkSha256 = createChunkSha256(chunkRow, sliceMetadata);
 
     // Check if embedding is already up-to-date.
     const existingResult = await client.execute({
@@ -170,7 +244,7 @@ async function buildEmbeddingIndexWithClient({
     );
 
     pendingUpdates.push({
-      sql: 'UPDATE chunks SET embedding = vector8(?), embedding_model = ?, chunk_sha256 = ?, embedded_at = ? WHERE chunk_id = ?',
+      sql: 'UPDATE chunks SET embedding = vector8(?), embedding_model = ?, chunk_sha256 = ?, embedded_at = ?, slice_id = ?, step_number = ?, phase = ?, status = ? WHERE chunk_id = ?',
       args: [
         Buffer.from(
           embeddingVector.buffer,
@@ -180,6 +254,10 @@ async function buildEmbeddingIndexWithClient({
         modelId,
         chunkSha256,
         Date.now(),
+        sliceMetadata.slice_id,
+        sliceMetadata.step_number,
+        sliceMetadata.phase,
+        sliceMetadata.status,
         chunkRow.chunk_id,
       ],
     });
@@ -196,6 +274,16 @@ async function buildEmbeddingIndexWithClient({
   // Flush any remaining pending updates.
   if (pendingUpdates.length > 0) {
     await client.batch(pendingUpdates.splice(0), 'write');
+  }
+
+  // Update freshness markers for every document targeted by this run.
+  if (!dryRun && targetFiles && targetFiles.size > 0) {
+    const fileList = Array.from(targetFiles);
+    const placeholders = fileList.map(() => '?').join(',');
+    await client.execute({
+      sql: `UPDATE documents SET indexed_at = ? WHERE file_path IN (${placeholders})`,
+      args: [Date.now(), ...fileList],
+    });
   }
 
   await releaseEmbedText(embedText);
@@ -223,7 +311,7 @@ export function normalizeEmbeddingVector(vectorLike, dimension) {
   return normalizedVector;
 }
 
-function createChunkSha256(chunkRow) {
+function createChunkSha256(chunkRow, sliceMetadata) {
   return createHash('sha256')
     .update(
       JSON.stringify({
@@ -237,10 +325,59 @@ function createChunkSha256(chunkRow) {
         doc_family: chunkRow.doc_family ?? null,
         file_path: chunkRow.file_path ?? null,
         heading_path: chunkRow.heading_path ?? null,
+        phase: sliceMetadata?.phase ?? null,
+        slice_id: sliceMetadata?.slice_id ?? null,
+        status: sliceMetadata?.status ?? null,
+        step_number: sliceMetadata?.step_number ?? null,
         symbol_name: chunkRow.symbol_name ?? null,
       }),
     )
     .digest('hex');
+}
+
+/**
+ * Extract step-packet slice metadata from a plan-family chunk body.
+ *
+ * Looks for the first fenced YAML block in `bodyText`, then reads the
+ * top-level `phase`, `step`, and `status` keys plus the `slice_id` of the
+ * first slice under `slices`. Non-plan chunks, missing YAML blocks, or
+ * malformed values yield `null` fields.
+ *
+ * @param {string} bodyText - Chunk body text.
+ * @param {string | null} docFamily - Document family (e.g. `'plan'`).
+ * @returns {{ slice_id: string | null, step_number: number | null, phase: string | null, status: string | null }} Parsed slice metadata.
+ */
+function extractSliceMetadata(bodyText, docFamily) {
+  const emptyMetadata = {
+    phase: null,
+    slice_id: null,
+    status: null,
+    step_number: null,
+  };
+
+  if (docFamily !== 'plan' || typeof bodyText !== 'string') {
+    return emptyMetadata;
+  }
+
+  const yamlMatch = bodyText.match(/```yaml\s*\n([\s\S]*?)\n\s*```/);
+  if (!yamlMatch) return emptyMetadata;
+
+  const yamlText = yamlMatch[1];
+  // Intentionally scoped to single-line scalar values. Plan step packets use
+  // a constrained YAML form; multi-line or nested values are not expected here.
+  const phaseMatch = yamlText.match(/^phase\s*:\s*['"]?([^'"\n]+)['"]?/m);
+  const statusMatch = yamlText.match(/^status\s*:\s*['"]?([^'"\n]+)['"]?/m);
+  const stepMatch = yamlText.match(/^step\s*:\s*(\d+)/m);
+  const sliceMatch = yamlText.match(
+    /^\s*-\s+slice_id\s*:\s*['"]?([^'"\n]+)['"]?/m,
+  );
+
+  return {
+    phase: phaseMatch?.[1]?.trim() ?? null,
+    slice_id: sliceMatch?.[1]?.trim() ?? null,
+    status: statusMatch?.[1]?.trim() ?? null,
+    step_number: stepMatch ? Number(stepMatch[1]) : null,
+  };
 }
 
 export async function readModelMeta(options = {}) {
@@ -515,14 +652,18 @@ function resolveSpecialToken(value, fallbackToken) {
 }
 
 async function main() {
-  const args = parseCliArgs(process.argv.slice(2));
+  const args = parseCliArgs(process.argv.slice(2), {
+    repeatableFlags: ['files'],
+  });
   if (args.help) {
     printHelp({
       title: 'Embedding index builder',
-      usage: 'node rag-index/embed-index.mjs [--dry-run] [--json]',
+      usage:
+        'node rag-index/embed-index.mjs [--dry-run] [--json] [--files=<path>]...',
       options: [
         '--dry-run                  Count work without writing embeddings.',
         '--json                     Emit JSON summary.',
+        '--files=<path>             Re-embed chunks for the specified repo-relative file path. Repeatable. Use build-index.mjs first to re-chunk changed files.',
         '--database <path>          Override the corpus database path.',
         '--model-directory <path>   Override the local model cache directory.',
         '--model-id <id>            Override the model identifier.',
@@ -535,10 +676,12 @@ async function main() {
   }
 
   try {
+    const files = typeof args.files === 'string' ? [args.files] : args.files;
     const summary = await buildEmbeddingIndex({
       corpusDatabasePath: args.database,
       dimension: args.dimension,
       dryRun: Boolean(args['dry-run']),
+      files,
       modelDirectory: args['model-directory'],
       modelId: args['model-id'],
       modelSha256: args['model-sha256'],

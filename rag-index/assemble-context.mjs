@@ -115,7 +115,7 @@ export const DEFAULT_FAMILY_PRIORITY = [
  * @returns {string}
  */
 function getBodyText(chunk) {
-  return String(chunk.body_text ?? chunk.content ?? '');
+  return String(chunk.body_text ?? chunk.content ?? chunk.text ?? '');
 }
 
 /**
@@ -443,7 +443,9 @@ function truncateAtSentenceBoundary(text, maxChars) {
   if (text.length <= maxChars) return { text, truncated: false };
   const clamped = Math.max(1, maxChars);
   const candidate = text.slice(0, clamped);
-  const boundaryRegex = /[.!?]+(?:\s|$)/g;
+  // Prefer sentence boundaries (`.!?`), then line boundaries (newlines) for
+  // code-heavy content that may lack prose sentence endings.
+  const boundaryRegex = /[.!?]+(?:\s|$)|\n/g;
   let lastBoundaryEnd = -1;
   let match;
   while ((match = boundaryRegex.exec(candidate)) !== null) {

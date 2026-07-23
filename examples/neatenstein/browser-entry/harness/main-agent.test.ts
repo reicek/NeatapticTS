@@ -1,0 +1,83 @@
+import { describe, expect, it } from '@jest/globals';
+
+/**
+ * Red-phase contract tests for examples/neatenstein/browser-entry/harness/main-agent.ts.
+ *
+ * Covers the Phase 4 NGE main-agent harness integration:
+ * - AC-401: lifecycle stages advance through Embryo -> Juvenile -> Adult -> Reproducing.
+ * - AC-402: tier-capped topology is enforced at every lifecycle transition.
+ * - AC-403: motif set is exactly the existing catalogue allowlist.
+ */
+
+describe('Neatenstein harness main-agent', () => {
+  describe('AC-401: lifecycle runner contract', () => {
+    it('exports runMainAgentGeneration as a function', async () => {
+      const mod = (await import('./main-agent.ts')) as Record<string, unknown>;
+      expect(typeof mod.runMainAgentGeneration).toBe('function');
+    });
+
+    it('returns a CombatQualitySignal for a valid generation', async () => {
+      const { runMainAgentGeneration } =
+        (await import('./main-agent.ts')) as Record<string, any>;
+      const result = runMainAgentGeneration({ seed: 1, generation: 0 });
+      expect({
+        hasSurvivalTicks: typeof result.survivalTicks === 'number',
+        hasDamageDealt: typeof result.damageDealt === 'number',
+        hasKills: typeof result.kills === 'number',
+        hasDamageTaken: typeof result.damageTaken === 'number',
+        hasAimMissRate: typeof result.aimMissRate === 'number',
+        hasComplexityBonus: typeof result.complexityBonus === 'number',
+        hasParsimonyDensityPenalty:
+          typeof result.parsimonyDensityPenalty === 'number',
+      }).toEqual({
+        hasSurvivalTicks: true,
+        hasDamageDealt: true,
+        hasKills: true,
+        hasDamageTaken: true,
+        hasAimMissRate: true,
+        hasComplexityBonus: true,
+        hasParsimonyDensityPenalty: true,
+      });
+    });
+
+    it('advances the lifecycle stage from the previous generation', async () => {
+      const { runMainAgentGeneration } =
+        (await import('./main-agent.ts')) as Record<string, any>;
+      const first = runMainAgentGeneration({ seed: 1, generation: 0 });
+      const second = runMainAgentGeneration({ seed: 1, generation: 1 });
+      expect(second.stage).not.toEqual(first.stage);
+    });
+
+    it('produces deterministic output for the same config', async () => {
+      const { runMainAgentGeneration } =
+        (await import('./main-agent.ts')) as Record<string, any>;
+      const config = { seed: 7, generation: 2 };
+      const first = runMainAgentGeneration(config);
+      const second = runMainAgentGeneration(config);
+      expect(first).toEqual(second);
+    });
+
+    it('accepts a frozen enemy snapshot for evaluation', async () => {
+      const { runMainAgentGeneration } =
+        (await import('./main-agent.ts')) as Record<string, any>;
+      const result = runMainAgentGeneration({
+        seed: 3,
+        generation: 1,
+        enemySnapshot: { kind: 'mlp', weights: new Float32Array(80) },
+      });
+      expect(typeof result.survivalTicks).toBe('number');
+    });
+  });
+
+  describe('AC-402 + AC-403: topology and motif constraints', () => {
+    it('exports a tier budget for the main agent', async () => {
+      const mod = (await import('./main-agent.ts')) as Record<string, unknown>;
+      expect(typeof mod.NeatensteinMainAgentTierBudget).toBe('object');
+    });
+
+    it('exports the allowed motif catalogue', async () => {
+      const mod = (await import('./main-agent.ts')) as Record<string, unknown>;
+      expect(Array.isArray(mod.NeatensteinMainAgentMotifAllowlist)).toBe(true);
+    });
+  });
+});

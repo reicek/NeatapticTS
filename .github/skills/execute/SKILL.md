@@ -86,7 +86,7 @@ boundary crisp.
 The `neataptic-dispatch-mcp` server is a read-only helper that turns a
 proposed delegation into a validated dispatch packet. **Every Tier 0, Tier 1,
 and Tier 2 orchestrator MUST consult `neataptic-dispatch-mcp` before
-deleting to any agent.** The server does **not** spawn subagents; it validates
+delegating to any agent.** The server does **not** spawn subagents; it validates
 the request and returns the exact packet to use with the `task` tool.
 
 For the canonical mapping from `goal` values to Tier-1 target agents, see
@@ -141,7 +141,7 @@ via `00.cross-tier-helper` instead of delegating.
 {
   "target_agent": "plan-scout",
   "caller_tier": 1,
-  "prompt": "Continue from the active plan.",
+  "prompt": "Select the relevant plan. Load context via Cortex MCP / get_slice_context.",
   "context_tier": "default"
 }
 ```
@@ -174,7 +174,7 @@ via `00.cross-tier-helper` instead of delegating.
     "name": "01-planning",
     "description": "...",
     "model": "...",
-    "prompt": "Continue from the active plan.",
+    "prompt": "Select the relevant plan. Load context via Cortex MCP / get_slice_context.",
     "context_tier": "default",
     "skills": ["planning"]
   }
@@ -236,21 +236,21 @@ with `caller_tier: 0` and the target name from the goal-to-agent mapping
 table:
 
 ```json
-{ "target_agent": "00-helping",        "caller_tier": 0, "prompt": "Cross-tier escalation: concurrency limit exceeded." }
-{ "target_agent": "01-planning",       "caller_tier": 0, "prompt": "Plan the next implementation step for worker fairness." }
-{ "target_agent": "02-researching",    "caller_tier": 0, "prompt": "Map prior art for sparse activation functions." }
-{ "target_agent": "03-red-testing",    "caller_tier": 0, "prompt": "Write failing tests for checkpoint save/resume." }
-{ "target_agent": "04-implementing",   "caller_tier": 0, "prompt": "Implement slice 4.2 — add rolling snapshot support." }
-{ "target_agent": "05-green-testing",  "caller_tier": 0, "prompt": "Validate slice 4.2 against acceptance criteria." }
-{ "target_agent": "06-documenting",    "caller_tier": 0, "prompt": "Run docs-quality checks for the recent split." }
-{ "target_agent": "07-logging",        "caller_tier": 0, "prompt": "Compress completed phase 3 into logs." }
+{ "target_agent": "00-helping",        "caller_tier": 0, "prompt": "Cross-tier escalation: concurrency limit exceeded. Load context via Cortex MCP / get_slice_context." }
+{ "target_agent": "01-planning",       "caller_tier": 0, "prompt": "Plan the next implementation step. Load context via Cortex MCP / get_slice_context." }
+{ "target_agent": "02-researching",    "caller_tier": 0, "prompt": "Map prior art for sparse activation functions. Load context via Cortex MCP / get_slice_context." }
+{ "target_agent": "03-red-testing",    "caller_tier": 0, "prompt": "Write failing tests for checkpoint save/resume. Load context via Cortex MCP / get_slice_context." }
+{ "target_agent": "04-implementing",   "caller_tier": 0, "prompt": "Implement slice 4.2: rolling snapshot. Load context via Cortex MCP / get_slice_context." }
+{ "target_agent": "05-green-testing",  "caller_tier": 0, "prompt": "Validate slice 4.2. Load context via Cortex MCP / get_slice_context." }
+{ "target_agent": "06-documenting",    "caller_tier": 0, "prompt": "Run docs-quality checks for the recent split. Load context via Cortex MCP / get_slice_context." }
+{ "target_agent": "07-logging",        "caller_tier": 0, "prompt": "Compress completed phase 3. Load context via Cortex MCP / get_slice_context." }
 ```
 
 A Tier-1 orchestrator that delegates downward uses its own tier, for example:
 
 ```json
-{ "target_agent": "plan-scout", "caller_tier": 1, "prompt": "Select the relevant plan for checkpointing." }
-{ "target_agent": "docs-scout",  "caller_tier": 1, "prompt": "Find README drift in src/neat/selection/." }
+{ "target_agent": "plan-scout", "caller_tier": 1, "prompt": "Select the relevant plan for checkpointing. Load context via Cortex MCP / get_slice_context." }
+{ "target_agent": "docs-scout",  "caller_tier": 1, "prompt": "Find README drift in src/neat/selection/ via Cortex MCP." }
 ```
 
 ### Example consultation flow
@@ -274,14 +274,14 @@ A Tier-1 orchestrator that delegates downward uses its own tier, for example:
 ```text
 neataptic-dispatch-mcp / build_dispatch_packet
   { "target_agent": "04-implementing", "caller_tier": 0,
-    "prompt": "Implement slice 4.2 — add rolling snapshot support." }
+    "prompt": "Implement slice 4.2: rolling snapshot. Load context via Cortex MCP / get_slice_context." }
 
 → returns ok: true, dispatch_packet: { agent_type: "04-implementing", ... }
 
 task tool
   agent_type: "04-implementing"
   name: "04-implementing-4-2-rolling-snapshot"
-  prompt: "Implement slice 4.2 — add rolling snapshot support."
+  prompt: "Implement slice 4.2: rolling snapshot. Load context via Cortex MCP / get_slice_context."
 ```
 
 **Incorrect (workflow violation):**
@@ -290,11 +290,148 @@ task tool
 task tool
   agent_type: "general-purpose"   ← violates the agent definition
   name: "some-helper"
-  prompt: "Implement slice 4.2 — add rolling snapshot support."
+  prompt: "Implement slice 4.2: rolling snapshot. Load context via Cortex MCP / get_slice_context."
 ```
 
 The second form bypasses the agent's `.agent.md` definition, its allowed
 skills, tools, model, and subagent allow-list, and must not be used.
+
+## Section 2.2 — RAG-Based Dispatch Policy (mandatory)
+
+**All dispatched agents MUST receive their instructions via orchestration RAG,
+not via inline prompt text.** The orchestrator does not improvise by spawning
+agents with long instructions. Instead, the orchestrator adds slices or steps
+to the plan, ensures the RAG index is current, and then dispatches with only
+the slice ID and a minimal instruction to load context via RAG.
+
+### RAG Exemptions
+
+Only two agents may be dispatched WITHOUT RAG context:
+
+| Agent         | Why exempt                                                |
+| ------------- | --------------------------------------------------------- |
+| `00-helping`  | Unblocks unplanned issues — no plan/slice exists yet.     |
+| `01-planning` | Creates and updates plans — is the source of RAG content. |
+
+**Every other agent** (`02-researching` through `07-logging`, plus all
+Tier-2/3/4 specialists) MUST be dispatched with a RAG reference (slice ID
+or step ID) and a minimal prompt. The agent loads its full context from
+the plan via Cortex MCP / `get_slice_context` / `pre_execute_hook`.
+
+### Prompt contract
+
+- State ONLY the slice ID (or step ID) and a one-line instruction to load
+  context via RAG.
+- If the active step packet declares a `pre_execute_hook` (for example,
+  `neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }`), the
+  receiving agent MUST invoke that hook before any search or file read.
+- In all other cases, the receiving agent MUST follow the Cortex-First Search
+  Policy from `research-methodology`: `freshness_check` → `search_corpus` →
+  `search_advanced` → `search_context` → native tools only as fallback.
+- **NEVER embed step-by-step instructions, file lists, design specs, or
+  verbose context in the dispatch prompt.** The plan and RAG are the single
+  source of truth. If the plan does not contain enough context for the agent,
+  the orchestrator must dispatch `01-planning` to update the plan first.
+
+### Before / After example
+
+**Before (WRONG — improvising with inline instructions):**
+
+```json
+{
+  "target_agent": "04-implementing",
+  "caller_tier": 0,
+  "prompt": "Continue from the active plan and Step 03 contract. Execute Step 04 for the current phase by implementing the smallest change that satisfies the targeted test, eval, or explicit skip contract. Make sure to update the foo module and bar module."
+}
+```
+
+**After (CORRECT — RAG-based dispatch with slice ID):**
+
+```json
+{
+  "target_agent": "04-implementing",
+  "caller_tier": 0,
+  "prompt": "Execute slice 04-rolling-snapshot. Load context via Cortex MCP / get_slice_context."
+}
+```
+
+### Improvisation Anti-Pattern
+
+When the user requests a change or fix, the orchestrator MUST NOT:
+
+1. Spawn an agent with a long inline instruction describing the change.
+2. Embed file paths, code snippets, or design context in the prompt.
+3. Bypass the plan by putting the full task description in the prompt.
+
+Instead, the orchestrator MUST:
+
+1. Dispatch `01-planning` to add the new slice(s) or step(s) to the plan.
+2. Ensure the RAG index is updated (Cortex freshness check).
+3. Dispatch the execution agent with only the slice ID and RAG instruction.
+
+> Note: This prompt policy is independent of `neataptic-dispatch-mcp` packet
+> validation. The MCP server still enforces routing and shape; the prompt itself
+> must stay lean and RAG-based.
+
+## Section 2.3 — Planning Structure Rules (mandatory)
+
+Plans are organized as **phases → steps → slices**. Each level is a bounded
+unit that enables proper validation loops, logging, and easy rollback. The
+structure follows SOLID principles applied to planning: small, atomic,
+replaceable units grouped into cohesive composites.
+
+### Hierarchy
+
+| Level | Contains   | Sizing Rule                                                                           |
+| ----- | ---------- | ------------------------------------------------------------------------------------- |
+| Phase | 2–8 steps  | A major SDLC boundary (e.g., "World & Renderer").                                     |
+| Step  | 0–5 slices | A cohesive group of atomic tasks. Targeted steps use `expansion: 'none'` (no slices). |
+| Slice | (leaf)     | One atomic behavioral intent, ideally ≤ 3 files.                                      |
+
+### Step Sizing Rules
+
+1. **Steps MUST contain at most 5 slices.** If a step requires more than 5
+   atomic slices, the planner (`01-planning`) MUST split it into multiple
+   smaller steps. Monolithic steps with 6+ slices are planning defects.
+2. **Targeted steps use `expansion: 'none'`** — no slices, just a single
+   action (e.g., user confirmation gate, bundle rebuild, green validation).
+3. **Steps with slices use `expansion: 'slices'`** with 2–5 slices per step.
+4. **Slices are atomic** — one behavioral intent, ideally across no more
+   than three files. If a slice touches many files or systems, split it.
+5. **Insertability** — slices and steps must be structured so new slices
+   can be inserted between existing ones without rewriting the plan. Use
+   `dependencies` and `next_slice` fields to maintain ordering.
+
+### Why Small Steps?
+
+- **Validation loops:** Each step gets its own RED → IMPLEMENT → GREEN
+  cycle. Large steps accumulate context and make loops expensive.
+- **Logging:** Completed steps are compressed to logs individually,
+  keeping the plan file lean.
+- **Rollback:** If a step fails, only that step's slices need rework —
+  not an entire phase.
+- **RAG freshness:** Smaller steps mean the plan changes more frequently,
+  keeping RAG context current for dispatched agents.
+
+### Step Compression Policy
+
+When a step is marked `[DONE]` and green validation has passed, the
+orchestrator (or `07-logging`) MUST compress it to the logs file:
+
+1. Move the step's YAML packet, acceptance criteria, traceability, and
+   slice details to the corresponding `.logs.md` file.
+2. Replace the step content in the plan file with a compact `[DONE]`
+   marker and a reference to the logs file.
+3. Keep the step header and `[DONE]` status visible in the plan.
+
+This is the step-level analog of phase compression. Plan files should
+never carry verbose `[DONE]` step details — those belong in logs.
+
+### Phase Compression Policy (unchanged)
+
+When ALL steps in a phase are `[DONE]`, the orchestrator MUST dispatch
+`07-logging` to compress the completed phase. See Section 5 for the full
+phase compression policy.
 
 ## Section 3 — Goal-to-Agent Mapping Table
 
@@ -392,7 +529,7 @@ receives a slice, implements it, and returns evidence.
 ### The RED → IMPLEMENT → GREEN Loop
 
 ```text
-Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green light" → "1. Red Testing 03-red-testing creates failing tests"; "1. Red Testing 03-red-testing creates failing tests" → "2. Implementation 04-implementing makes tests pass"; "2. Implementation 04-implementing makes tests pass" → "2a. Specialist Review 2-3 Tier-3 specialists review implementation BEFORE green testing"; "2a. Specialist Review 2-3 Tier-3 specialists review implementation BEFORE green testing" → "2b. All specialists approve?" (Yes), "2b. All specialists approve?" → "2. Implementation 04-implementing makes tests pass" (No — REQUEST_CHANGES → NEW 04 instance with fix packet); "2b. All specialists approve?" (Yes) → "3. Green Testing 05-green-testing validates implementation"; "3. Green Testing 05-green-testing validates implementation" → "4. Loop-back orchestrator passes observations to a NEW 04 instance" (observations (not OK)), "5. Advance move to next step/slice" (OK); "4. Loop-back orchestrator passes observations to a NEW 04 instance" → "2. Implementation 04-implementing makes tests pass"; "5. Advance move to next step/slice".
+Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green light" → "1. Red Testing 03-red-testing creates failing tests"; "1. Red Testing 03-red-testing creates failing tests" → "2. Implementation 04-implementing makes tests pass"; "2. Implementation 04-implementing makes tests pass" → "2a. Specialist Review 3+ Tier-3 specialists from different relevant viewpoints review implementation BEFORE green testing"; "2a. Specialist Review 3+ Tier-3 specialists from different relevant viewpoints review implementation BEFORE green testing" → "2b. All specialists approve?" (Yes), "2b. All specialists approve?" → "2. Implementation 04-implementing makes tests pass" (No — REQUEST_CHANGES → NEW 04 instance with fix packet); "2b. All specialists approve?" (Yes) → "3. Green Testing 05-green-testing validates implementation"; "3. Green Testing 05-green-testing validates implementation" → "4. Loop-back orchestrator passes observations to a NEW 04 instance" (observations (not OK)), "5. Advance move to next step/slice" (OK); "4. Loop-back orchestrator passes observations to a NEW 04 instance" → "2. Implementation 04-implementing makes tests pass"; "5. Advance move to next step/slice".
 ```
 
 ### Loop Steps
@@ -410,8 +547,8 @@ Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green li
    not expand scope.
    2a. **Specialist Review** (MANDATORY). After `04-implementing` returns
    and BEFORE dispatching `05-green-testing`, the orchestrator MUST
-   dispatch 2–3 Tier-3 specialist agents (e.g.,
-   `implementation-pattern-scout`, `nge-core-scout`,
+   dispatch 3+ Tier-3 specialist agents from **different relevant
+   viewpoints** (e.g., `implementation-pattern-scout`, `nge-core-scout`,
    `performance-trace-specialist`) to review the implementation in
    parallel. Each specialist reads the changed files, verifies
    correctness, code quality, domain compliance, and checks for gaps
@@ -463,9 +600,9 @@ Each slice is a bounded unit of work with these fields:
    full slice objects.
 2. Assign the next uncompleted non-parallelizable slice, or all ready
    parallelizable slices, to `04-implementing`.
-3. Wait for implementation evidence, then dispatch 2–3 Tier-3
-   specialists to review the implementation BEFORE green testing (see
-   Section 5.7).
+3. Wait for implementation evidence, then dispatch 3+ Tier-3
+   specialists from different relevant viewpoints to review the
+   implementation BEFORE green testing (see Section 5.7).
 4. If any specialist returns REQUEST_CHANGES, compile observations into
    a fix packet, dispatch a NEW `04-implementing`, then re-review with
    fresh specialist instances. Loop until all specialists APPROVE.
@@ -494,12 +631,13 @@ Each slice is a bounded unit of work with these fields:
   and use the returned `dispatch_packet`. Direct `task` use without a prior
   dispatch packet is a workflow violation.
 - **MANDATORY PRE-GREEN SPECIALIST REVIEW.** Before dispatching
-  `05-green-testing`, the orchestrator MUST dispatch 2–3 Tier-3
-  specialists to review each `04-implementing` slice. Specialists check
-  correctness, domain compliance, code quality, and gaps that tests
-  alone cannot catch. If any specialist returns REQUEST_CHANGES, the
-  orchestrator dispatches a NEW `04-implementing` with a fix packet and
-  re-reviews with fresh specialist instances until ALL return APPROVE.
+  `05-green-testing`, the orchestrator MUST dispatch 3+ Tier-3
+  specialists from **different relevant viewpoints** to review each
+  `04-implementing` slice. Specialists check correctness, domain
+  compliance, code quality, and gaps that tests alone cannot catch. If
+  any specialist returns REQUEST_CHANGES, the orchestrator dispatches a
+  NEW `04-implementing` with a fix packet and re-reviews with fresh
+  specialist instances until ALL return APPROVE.
   See **Section 5.7 — Pre-Green Specialist Review Policy** for details.
 - **The ORCHESTRATOR manages the loop, NOT the implementer.** The
   implementer receives a slice and returns evidence; it does not decide
@@ -515,6 +653,17 @@ Each slice is a bounded unit of work with these fields:
   one behavioral intent, ideally across no more than three files. If a slice
   requires touching many files or systems, the planner (`01-planning`) must
   split it before dispatch. `04` must not silently expand a slice.
+- **STEPS MUST BE SMALL (2–5 SLICES).** A step with `expansion: 'slices'`
+  MUST contain at most 5 slices. If more than 5 atomic slices are needed,
+  the planner MUST split the step into multiple smaller steps. Monolithic
+  steps with 6+ slices are planning defects and must be rejected at the
+  plan verification gate. Targeted steps use `expansion: 'none'` (no slices).
+- **RAG-BASED DISPATCH IS MANDATORY.** All agents except `00-helping` and
+  `01-planning` MUST be dispatched with only a slice ID (or step ID) and a
+  minimal instruction to load context via RAG. The orchestrator MUST NOT
+  improvise by embedding long inline instructions, file lists, or design
+  context in the dispatch prompt. If the plan lacks context for the agent,
+  dispatch `01-planning` to update the plan first. See Section 2.2.
 - **Each iteration uses a NEW agent instance** (fresh context) to avoid
   context contamination. A implementer that failed once must not carry its
   failed context into the retry. Each new instance must be dispatched via
@@ -580,8 +729,13 @@ completed phase before advancing to the next phase. Compression means:
    marker and a reference to the logs file.
 3. Keep the phase header, goal, and status as `[DONE]` in the plan file.
 
+**Step-level compression** (see Section 2.3) should happen as each step
+completes — do not wait for the entire phase to finish before compressing
+individual `[DONE]` steps. This keeps the plan file lean throughout the
+phase, not just at the end.
+
 This keeps plan files lean and focused on active work. Plan files should
-never carry verbose `[DONE]` phase details — those belong in logs.
+never carry verbose `[DONE]` phase or step details — those belong in logs.
 
 Skipping phase compression is a workflow violation. The orchestrator must
 not advance to the next phase until compression is complete.
@@ -679,9 +833,10 @@ directly. This flat dispatch pattern works within any concurrent limit.
 ## Section 5.7 — Pre-Green Specialist Review Policy (Mandatory)
 
 Before dispatching `05-green-testing` for any `04-implementing` slice, the
-orchestrator MUST dispatch 2–3 Tier-3 specialist agents to review the
-implementation. This is a **mandatory gate** — green testing MUST NOT be
-dispatched until all dispatched specialists return APPROVE.
+orchestrator MUST dispatch 3+ Tier-3 specialist agents from **different
+relevant viewpoints** to review the implementation. This is a **mandatory
+gate** — green testing MUST NOT be dispatched until all dispatched
+specialists return APPROVE.
 
 ### Why Specialist Review Before Green Testing?
 
@@ -703,11 +858,18 @@ cannot do.
 
 ### Specialist Count
 
-| Slice Complexity                                | Specialist Count | Recommended Specialists                                                                            |
-| ----------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------- |
-| Simple (1 file, < 50 lines changed)             | 2                | `implementation-pattern-scout` + one domain scout                                                  |
-| Moderate (2-3 files, 50-200 lines)              | 2                | `implementation-pattern-scout` + domain-specific scout                                             |
-| Complex (3+ files, 200+ lines, or cross-module) | 3                | `implementation-pattern-scout` + domain scout + `performance-trace-specialist` or `coverage-scout` |
+| Slice Complexity                                | Specialist Count | Recommended Specialists (different viewpoints)                                                                          |
+| ----------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Simple (1 file, < 50 lines changed)             | 3                | `implementation-pattern-scout` + domain scout + one more relevant viewpoint                                             |
+| Moderate (2-3 files, 50-200 lines)              | 3                | `implementation-pattern-scout` + domain-specific scout + one more relevant viewpoint                                    |
+| Complex (3+ files, 200+ lines, or cross-module) | 3+               | `implementation-pattern-scout` + domain scout + `performance-trace-specialist` or `coverage-scout` (add more as needed) |
+
+> **The 3 specialists must represent DIFFERENT relevant viewpoints.** At minimum,
+> the set should cover: **pattern/quality** (e.g., `implementation-pattern-scout`),
+> **domain** (the scout aligned with the slice's subject area), and a **third
+> distinct angle** such as performance, coverage, security, browser/runtime, or
+> another domain-specific concern. Dispatching two scouts from the same viewpoint
+> does not satisfy this requirement.
 
 ### Specialist Selection
 

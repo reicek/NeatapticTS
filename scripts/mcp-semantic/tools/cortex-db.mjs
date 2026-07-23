@@ -189,7 +189,8 @@ export async function readChunk(client, chunkId) {
         c.parent_chunk_id, c.depth, c.context_header,
         c.symbol_name, c.signature_text, c.jsdoc_text, c.export_type,
         c.module_path, c.arch_layer, c.jsdoc_quality, c.jsdoc_word_count,
-        c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern
+        c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern,
+        c.slice_id, c.step_number, c.phase, c.status
       FROM chunks c
       JOIN documents d ON d.doc_id = c.doc_id
       WHERE c.chunk_id = ?
@@ -291,12 +292,13 @@ export function sanitizeFtsQuery(raw) {
  * Normalize a raw SQLite chunk row into a typed chunk descriptor.
  *
  * Includes v2 semantic chunking columns (depth, parent_chunk_id,
- * context_header, symbol_name, signature_text, jsdoc_text, export_type, module_path)
- * and v3 metadata enrichment columns (arch_layer, jsdoc_quality, jsdoc_word_count,
- * cyclomatic_complexity, test_coverage, source_path_pattern).
+ * context_header, symbol_name, signature_text, jsdoc_text, export_type, module_path),
+ * v3 metadata enrichment columns (arch_layer, jsdoc_quality, jsdoc_word_count,
+ * cyclomatic_complexity, test_coverage, source_path_pattern), and the A1
+ * step-packet slice metadata columns (slice_id, step_number, phase, status).
  *
  * @param {Record<string, unknown>} row - Raw row from `chunks` joined with `documents`.
- * @returns {{ chunk_id: number, file_path: string, family: string, chunk_index: number, heading_path: string | null, text: string, char_start: number, char_end: number, depth: number, parent_chunk_id: number | null, context_header: string | null, symbol_name: string | null, signature_text: string | null, jsdoc_text: string | null, export_type: string | null, module_path: string | null, arch_layer: string | null, jsdoc_quality: string | null, jsdoc_word_count: number | null, cyclomatic_complexity: number | null, test_coverage: string | null, source_path_pattern: string | null }} Normalized chunk descriptor with v3 metadata.
+ * @returns {{ chunk_id: number, file_path: string, family: string, chunk_index: number, heading_path: string | null, text: string, char_start: number, char_end: number, depth: number, parent_chunk_id: number | null, context_header: string | null, symbol_name: string | null, signature_text: string | null, jsdoc_text: string | null, export_type: string | null, module_path: string | null, arch_layer: string | null, jsdoc_quality: string | null, jsdoc_word_count: number | null, cyclomatic_complexity: number | null, test_coverage: string | null, source_path_pattern: string | null, slice_id: string | null, step_number: number | null, phase: string | null, status: string | null }} Normalized chunk descriptor with v3 and A1 metadata.
  */
 export function readChunkRow(row) {
   return {
@@ -322,8 +324,12 @@ export function readChunkRow(row) {
     module_path: row.module_path ?? null,
     parent_chunk_id:
       row.parent_chunk_id != null ? Number(row.parent_chunk_id) : null,
+    phase: row.phase ?? null,
     signature_text: row.signature_text ?? null,
+    slice_id: row.slice_id ?? null,
     source_path_pattern: row.source_path_pattern ?? null,
+    status: row.status ?? null,
+    step_number: row.step_number != null ? Number(row.step_number) : null,
     symbol_name: row.symbol_name ?? null,
     test_coverage: row.test_coverage ?? null,
     text: row.body_text,

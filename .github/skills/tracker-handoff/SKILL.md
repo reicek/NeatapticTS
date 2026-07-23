@@ -167,7 +167,7 @@ Preferred shape:
 ## Handoff query
 
 ```text
-Continue from the current repo state only. Do not rely on prior chat history.
+Continue from the current repo state only. Do not rely on prior chat history. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.
 <workstream-specific continuation prompt>
 ```
 ````

@@ -59,7 +59,12 @@ Output: draft Step 04 packet for user review before send.
 
 1. Keep phase order linear: Planning, Research, Red Testing, Implementation,
    Green Testing, Documentation, Session Logging.
-2. Every handoff prompt must name the current plan file and the next narrow task.
+2. Every handoff prompt must state ONLY the next narrow task (slice ID or step
+   ID) and instruct the receiver to load context via Cortex MCP and any
+   declared pre_execute_hook/get_slice_context. Do not embed file lists, plan
+   details, or step-by-step instructions in the prompt. All agents except
+   `00-helping` and `01-planning` MUST receive their instructions via RAG.
+   See `execute` skill Section 2.2 for the full RAG-Based Dispatch Policy.
 3. Prefer `send: false` until the repository has evidence that automatic phase
    transitions are safe.
 4. Use `handoffs.model` only with validated qualified model names.
@@ -97,7 +102,11 @@ required skills, required specialists, and action class. Use
 payload. 12. **Phase Compression (mandatory).** When all steps in a phase are marked
 `[DONE]` and green validation has passed, the orchestrator MUST dispatch
 `07-logging` to compress the completed phase before advancing to the next
-phase or performing the phase-to-phase handoff. Compression means:
+phase or performing the phase-to-phase handoff. **Step-level compression**
+should happen as each step completes — move the step's YAML packet and
+details to `.logs.md` and keep a compact `[DONE]` reference in the plan.
+Do not wait for the entire phase to finish before compressing individual
+`[DONE]` steps. Compression means:
 
 1. Move detailed step/slice/VALIDATION_EVIDENCE blocks from the plan file
    to the corresponding `.logs.md` file.
@@ -178,26 +187,50 @@ packets, before execution continues.
 
 ### Field Definitions
 
-| Field                | Required | Description                                                                                                                                                  |
-| -------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `phase`              | Yes      | Phase number (integer)                                                                                                                                       |
-| `step`               | Yes      | Step number within the phase (integer)                                                                                                                       |
-| `goal`               | Yes      | What outcome this step needs. Must be one of: `planning`, `researching`, `red-testing`, `implementing`, `green-testing`, `documenting`, `logging`, `helping` |
-| `tdd_sequence`       | No       | How the orchestrator should decompose this step across phases. Must be one of: `red-green`, `green-only`. When absent, single-phase dispatch                 |
-| `status`             | Yes      | Step status: `[PLANNED]`, `[WIP]`, or `[DONE]`                                                                                                               |
-| `mode`               | Yes      | Session mode: `fresh-session` or `perpetual`                                                                                                                 |
-| `source_of_truth`    | Yes      | Path to the authoritative plan file                                                                                                                          |
-| `copy_paste`         | Yes      | Whether the step packet is a paste-ready prompt (`true`/`false`)                                                                                             |
-| `next_step`          | Yes      | Description of the next step, or `null` for terminal steps                                                                                                   |
-| `skills`             | Yes      | List of skill names the agent should load                                                                                                                    |
-| `specialists`        | No       | List of hidden specialist agent names for delegation                                                                                                         |
-| `validation`         | Yes      | List of validation commands or evidence gates                                                                                                                |
-| `constitution_check` | No       | Stable principle identifiers from `plans/constitution.md` that this step exercises. Informational; preserved by plan-sync and reported in handoffs.          |
+| Field                | Required | Description                                                                                                                                                                                                                                                             |
+| -------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `phase`              | Yes      | Phase number (integer)                                                                                                                                                                                                                                                  |
+| `step`               | Yes      | Step number within the phase (integer)                                                                                                                                                                                                                                  |
+| `goal`               | Yes      | What outcome this step needs. Must be one of: `planning`, `researching`, `red-testing`, `implementing`, `green-testing`, `documenting`, `logging`, `helping`                                                                                                            |
+| `tdd_sequence`       | No       | How the orchestrator should decompose this step across phases. Must be one of: `red-green`, `green-only`. When absent, single-phase dispatch                                                                                                                            |
+| `status`             | Yes      | Step status: `[PLANNED]`, `[WIP]`, or `[DONE]`                                                                                                                                                                                                                          |
+| `mode`               | Yes      | Session mode: `fresh-session` or `perpetual`                                                                                                                                                                                                                            |
+| `source_of_truth`    | Yes      | Path to the authoritative plan file                                                                                                                                                                                                                                     |
+| `copy_paste`         | Yes      | Whether the step packet is a paste-ready prompt (`true`/`false`)                                                                                                                                                                                                        |
+| `next_step`          | Yes      | Description of the next step, or `null` for terminal steps                                                                                                                                                                                                              |
+| `skills`             | Yes      | List of skill names the agent should load                                                                                                                                                                                                                               |
+| `specialists`        | No       | List of hidden specialist agent names for delegation                                                                                                                                                                                                                    |
+| `validation`         | Yes      | List of validation commands or evidence gates                                                                                                                                                                                                                           |
+| `pre_execute_hook`   | No       | Optional pre-execution hook declaring `{ tool, args }`. The named tool (e.g. `neataptic-workflow-mcp/get_slice_context`) is invoked with the provided args before the RED/IMPLEMENT phase begins, giving the dispatched specialist deterministic context from the plan. |
+| `constitution_check` | No       | Stable principle identifiers from `plans/constitution.md` that this step exercises. Informational; preserved by plan-sync and reported in handoffs.                                                                                                                     |
 
 The orchestrator resolves `goal` to the dispatched agent using the routing
 table in `.github/copilot-instructions.md` §3. When `tdd_sequence` is present,
 the orchestrator decomposes the step across the specified phases rather than
 dispatching a single agent.
+
+### Pre-execute hook
+
+A step packet may declare a `pre_execute_hook` so that the specialist retrieves
+plan-specific context before reading files or beginning implementation. When the
+field is present, the orchestrator (or the receiving agent) MUST call the named
+tool with the supplied `args` before the RED phase begins. The hook must have the
+shape `{ tool: string, args: object }` and is validated by the `step-packet`
+gate.
+
+The canonical use is to fetch a slice context from the workflow MCP server:
+
+```yaml
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp/get_slice_context'
+  args:
+    slice_id: 'C1-gate-and-skill'
+```
+
+This keeps the specialist's starting context deterministic and scoped to the
+active slice, rather than relying on prior session memory. When no hook is
+present, the receiving agent must follow the Cortex-First Search Policy from
+`research-methodology` to load its own context.
 
 ### Backward Compatibility
 

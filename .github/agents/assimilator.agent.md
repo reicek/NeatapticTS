@@ -38,6 +38,10 @@ per-area comparison with NeatapticTS, synthesis, and ISO 42001 learning-event
 recording. It does **not** make implementation edits inside `src/` or commit
 anything; it only produces documented recommendations.
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Trigger
 
 - `/assimilate <github-url> [target-folder]` detected by `01-planning` or `02-researching`.

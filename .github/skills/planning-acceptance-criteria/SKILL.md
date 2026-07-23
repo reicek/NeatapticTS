@@ -99,14 +99,26 @@ that were deleted, not just "old code removed."
 ## Decision Tree: Splitting Work
 
 ```text
-Flowchart summary: "Acceptance criteria" → "Multiple independent behaviors?"; "Multiple independent behaviors?" → "Split into slices" (Yes), "Single step" (No); "Split into slices" → "Each slice has its own files_to_change"; "Single step"; "Each slice has its own files_to_change" → "Each slice has its own acceptance criteria"; "Each slice has its own acceptance criteria" → "Define parallelizable flag"; "Define parallelizable flag".
+Flowchart summary: "Acceptance criteria" → "Multiple independent behaviors?"; "Multiple independent behaviors?" → "Split into slices" (Yes), "Single step" (No); "Split into slices" → "More than 5 slices?"; "More than 5 slices?" → "Split into multiple steps" (Yes), "Group into one step (2-5 slices)" (No); "Split into multiple steps" → "Each step has 2-5 slices"; "Group into one step (2-5 slices)" → "Each slice has its own files_to_change"; "Each step has 2-5 slices" → "Each step has its own acceptance criteria"; "Each slice has its own files_to_change" → "Each slice has its own acceptance criteria"; "Each slice has its own acceptance criteria" → "Define parallelizable flag"; "Each step has its own acceptance criteria" → "Define parallelizable flag"; "Define parallelizable flag".
 ```
+
+## Step and Slice Sizing Rules
+
+- **Slices are atomic:** one behavioral intent, ideally ≤ 3 files.
+- **Steps contain 2–5 slices.** If more than 5 atomic slices are needed,
+  split the work into multiple steps. Monolithic steps with 6+ slices are
+  planning defects.
+- **Targeted steps** use `expansion: 'none'` (no slices — single action
+  like user confirmation, bundle rebuild, or green validation).
+- **Insertability:** slices and steps must be structured so new slices can
+  be inserted between existing ones without rewriting the plan.
 
 ## Guardrails
 
 - Do not write implementation-wish criteria ("use X algorithm"); prefer observable behavior criteria ("given input Y, output Z is produced").
 - Do not omit non-goals when the task scope is ambiguous; explicit non-goals prevent silent scope creep.
 - Do not include more than ten criteria without splitting the task; large criteria sets indicate the task needs decomposition.
+- **Do not create steps with more than 5 slices.** If >5 slices are needed, split into multiple steps. The `plan-slice-quality` and `step-packet` gates enforce a 5-slice-per-step maximum.
 - Do not proceed to implementation recommendations within this skill; this skill outputs criteria only.
 - Do not tie a criterion to a validation method that does not exist yet; if the validation command needs to be written, note it as a dependency.
 

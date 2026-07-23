@@ -105,6 +105,19 @@ let cachedDenseReadiness = null;
 let cachedRerankerReadiness = null;
 
 /**
+ * Reset the process-lifetime readiness caches.
+ *
+ * Exported for tests so each test starts with a clean cache and cannot be
+ * influenced by a previous probe result. Affected caches:
+ * - {@link cachedDenseReadiness}
+ * - {@link cachedRerankerReadiness}
+ */
+export function resetReadinessCaches() {
+  cachedDenseReadiness = null;
+  cachedRerankerReadiness = null;
+}
+
+/**
  * Search the indexed corpus using BM25 or hybrid dense reranking.
  *
  * Selects the search strategy based on dense-index readiness and the
@@ -128,6 +141,8 @@ let cachedRerankerReadiness = null;
  * @param {string} [options.classification_hints.family] - Override family filter from classification routing.
  * @param {object} [options.metadata] - Optional metadata filter with a `filter` predicate tree.
  * @param {object} [options.metadata.filter] - Structured filter predicate tree (14 ops: eq, neq, in, not_in, gt, gte, lt, lte, like, is_null, is_not_null, and, or, not).
+ * @param {string} [options.slice_id] - Optional slice identifier filter; only chunks with `slice_id = ?` are returned.
+ * @param {number} [options.step_number] - Optional step number filter; only chunks with `step_number = ?` are returned.
  * @param {string} [options.databasePath] - Override corpus SQLite database path.
  * @param {string} [options.modelDirectory] - Override ONNX model directory path.
  * @param {string} [options.modelId] - Override ONNX model identifier.
@@ -221,13 +236,58 @@ async function searchCorpusImpl(options = {}) {
   const skipFamilyClassification = options.skip_family_classification === true;
   const useDense = options.use_dense !== false;
 
-  // Validate and compile metadata filter if provided
+  // Validate and compile metadata filter if provided.
+  // When slice_id or step_number are supplied as top-level options, they are
+  // combined with any metadata.filter using AND so both paths use a single
+  // compiled SQL fragment.
   const metadataFilter = options.metadata?.filter;
-  let compiledFilter = null;
+  const extraPredicates = [];
+  if (
+    typeof options.slice_id === 'string' &&
+    options.slice_id.trim().length > 0
+  ) {
+    extraPredicates.push({
+      op: 'eq',
+      field: 'slice_id',
+      value: options.slice_id,
+    });
+  }
+  if (
+    options.step_number !== undefined &&
+    options.step_number !== null &&
+    String(options.step_number).trim() !== '' &&
+    Number.isFinite(Number(options.step_number))
+  ) {
+    extraPredicates.push({
+      op: 'eq',
+      field: 'step_number',
+      value: Number(options.step_number),
+    });
+  }
+
+  let combinedFilter = null;
   if (metadataFilter !== undefined && metadataFilter !== null) {
+    if (extraPredicates.length > 0) {
+      combinedFilter = {
+        op: 'and',
+        predicates: [metadataFilter, ...extraPredicates],
+      };
+    } else {
+      combinedFilter = metadataFilter;
+    }
+  } else if (extraPredicates.length > 0) {
+    combinedFilter =
+      extraPredicates.length === 1
+        ? extraPredicates[0]
+        : { op: 'and', predicates: extraPredicates };
+  }
+
+  const compileFilterFn = options.compileFilterFn ?? compileFilterToSqlAliased;
+  let compiledFilter = null;
+  if (combinedFilter !== null) {
     try {
-      validateFilter(metadataFilter);
-      compiledFilter = compileFilterToSqlAliased(metadataFilter);
+      validateFilter(combinedFilter);
+      compiledFilter = compileFilterFn(combinedFilter);
     } catch (error) {
       throw cortexError(
         ErrorCodes.INVALID_METADATA_FILTER,
@@ -340,6 +400,7 @@ async function searchCorpusImpl(options = {}) {
     limit,
     rawQuery,
     client: options.client,
+    compiledFilter,
   });
   if (exactSymbolResponse) {
     return exactSymbolResponse;
@@ -372,7 +433,7 @@ async function searchCorpusImpl(options = {}) {
           compiledFilter,
           family: classifiedFamily,
           limit,
-          query: rawQuery,
+          query,
           readinessReport,
           client: options.client,
         })),
@@ -389,15 +450,10 @@ async function searchCorpusImpl(options = {}) {
       diskann_used: false,
       rrf_used: false,
       ...(classifiedFamily ? { family: classifiedFamily } : {}),
-      ...(classificationMetadata
-        ? {
-            query_class: classificationMetadata.query_class,
-            confidence: classificationMetadata.confidence,
-            classification_fallback:
-              classificationMetadata.classification_fallback,
-            family_fallback: classificationMetadata.family_fallback ?? false,
-          }
-        : {}),
+      query_class: classificationMetadata.query_class,
+      confidence: classificationMetadata.confidence,
+      classification_fallback: classificationMetadata.classification_fallback,
+      family_fallback: classificationMetadata.family_fallback,
       ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
       query: rawQuery,
       results: [],
@@ -494,20 +550,16 @@ async function searchCorpusImpl(options = {}) {
     const denseResponse = {
       ...denseResult,
       results: denseResult.results,
-      ...(classificationMetadata
-        ? {
-            query_class: classificationMetadata.query_class,
-            confidence: classificationMetadata.confidence,
-            classification_fallback:
-              classificationMetadata.classification_fallback,
-            family_fallback: classificationMetadata.family_fallback ?? false,
-          }
-        : {}),
+      query_class: classificationMetadata.query_class,
+      confidence: classificationMetadata.confidence,
+      classification_fallback: classificationMetadata.classification_fallback,
+      family_fallback: classificationMetadata.family_fallback,
       ...(expansionMetadata ? { expansion: expansionMetadata } : {}),
       dense_state: 'warm',
       dense_strategy: denseStrategy,
       diskann_used: true,
       rrf_used: true,
+      use_dense: true,
     };
 
     // Cross-encoder re-ranking: when use_rerank is requested, check reranker
@@ -545,6 +597,7 @@ async function searchCorpusImpl(options = {}) {
       ...denseResponse,
       rerank_candidates_count: rerankCandidatesCount,
       results: rerankedResults.slice(0, limit),
+      rerank_state: 'warm',
       use_rerank: true,
     };
   }
@@ -908,10 +961,10 @@ export async function searchCorpus(options = {}) {
     );
 
     if (options.compact === true) {
-      response.results = (response.results ?? []).map(compactSearchResult);
+      response.results = response.results.map(compactSearchResult);
     }
     response.compact = options.compact === true;
-    response.response_tokens = estimateResponseTokens(response.results ?? []);
+    response.response_tokens = estimateResponseTokens(response.results);
 
     response.latency_ms = performance.now() - startTime;
     response.freshness = await buildResponseFreshness(
@@ -1181,11 +1234,12 @@ function normalizeRerankReason(reason, state) {
  * `symbol_name` equals the raw query, otherwise `null` so the normal BM25 or
  * dense search path can proceed.
  *
- * @param {{ classificationMetadata?: object | null, databasePath?: string, family: string | null, limit: number, rawQuery: string }} params - Lookup parameters.
+ * @param {{ classificationMetadata?: object | null, compiledFilter?: { sql: string, params: Array<unknown> } | null, databasePath?: string, family: string | null, limit: number, rawQuery: string }} params - Lookup parameters.
  * @returns {object | null} Exact-symbol response, or `null` when no symbol matches.
  */
 async function tryExactSymbolLookup({
   classificationMetadata,
+  compiledFilter,
   databasePath,
   family,
   limit,
@@ -1193,6 +1247,7 @@ async function tryExactSymbolLookup({
   client,
 }) {
   const rows = await runExactSymbolLookup({
+    compiledFilter,
     databasePath,
     family,
     limit,
@@ -1231,10 +1286,11 @@ async function tryExactSymbolLookup({
  * corpus database is missing or the lookup fails, returns an empty array so
  * the caller can fall back to the normal search path.
  *
- * @param {{ databasePath?: string, family: string | null, limit: number, rawQuery: string }} params - Lookup parameters.
+ * @param {{ compiledFilter?: { sql: string, params: Array<unknown> } | null, databasePath?: string, family: string | null, limit: number, rawQuery: string }} params - Lookup parameters.
  * @returns {Array<object>} Matching chunk rows, or an empty array when no symbol matches.
  */
 async function runExactSymbolLookup({
+  compiledFilter,
   databasePath,
   family,
   limit,
@@ -1244,6 +1300,8 @@ async function runExactSymbolLookup({
   const resolvedClient = client ?? (await getTursoClient(databasePath));
   try {
     const familyFilter = family ? 'AND d.doc_family = ?' : '';
+    const filterSql = compiledFilter ? `AND ${compiledFilter.sql}` : '';
+    const filterParams = compiledFilter ? compiledFilter.params : [];
     const sql = `
       SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
         c.body_text, c.char_start, c.char_end,
@@ -1253,11 +1311,13 @@ async function runExactSymbolLookup({
         c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern
       FROM chunks c
       JOIN documents d ON d.doc_id = c.doc_id
-      WHERE c.symbol_name = ? ${familyFilter}
+      WHERE c.symbol_name = ? ${familyFilter} ${filterSql}
       ORDER BY c.chunk_id
       LIMIT ?
     `;
-    const args = family ? [rawQuery, family, limit] : [rawQuery, limit];
+    const args = family
+      ? [rawQuery, family, ...filterParams, limit]
+      : [rawQuery, ...filterParams, limit];
 
     const result = await resolvedClient.execute({ sql, args });
     return result.rows.map((row) => ({
@@ -1398,3 +1458,24 @@ async function runBm25Search({
     })),
   };
 }
+
+export {
+  compactSearchResult,
+  createDegradedBm25Response,
+  createEmptyBm25Response,
+  estimateResponseTokens,
+  getDenseReadiness,
+  getRerankerReadiness,
+  normalizeAlpha,
+  normalizeDenseReason,
+  normalizeRerankReason,
+  recordSearchImpressions,
+  resolveChunkCountForStrategy,
+  resolveDenseStrategyForSearch,
+  runBm25Search,
+  runExactSymbolLookup,
+  searchCorpusImpl,
+  shouldBypassDenseReadinessCache,
+  shouldBypassRerankerReadinessCache,
+  tryExactSymbolLookup,
+};

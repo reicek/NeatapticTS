@@ -21,6 +21,7 @@ import {
 } from '../customization-utils.mjs';
 
 const SLICE_HOURS_LIMIT = 4;
+const MAX_SLICES_PER_STEP = 5;
 const YAML_BLOCK_PATTERN = /```yaml\r?\n([\s\S]*?)```/g;
 
 const options = parseArgs(process.argv.slice(2));
@@ -87,6 +88,17 @@ async function runPlanSliceQualityGate() {
       if (!Array.isArray(metadata.slices) || metadata.slices.length === 0)
         continue;
 
+      // Check slice count per step (max 5)
+      if (metadata.slices.length > MAX_SLICES_PER_STEP) {
+        violations.push({
+          plan: planFile,
+          stepId: `step-${metadata.step}`,
+          sliceCount: metadata.slices.length,
+          limit: MAX_SLICES_PER_STEP,
+          message: `Step ${metadata.step} has ${metadata.slices.length} slices, exceeding the ${MAX_SLICES_PER_STEP}-slice-per-step limit. Split it into multiple smaller steps.`,
+        });
+      }
+
       for (const slice of metadata.slices) {
         const sliceId = slice?.slice_id ?? 'unknown';
         if (
@@ -115,8 +127,8 @@ async function runPlanSliceQualityGate() {
       limit: SLICE_HOURS_LIMIT,
     },
     fixHint: pass
-      ? 'All WIP plan slices are within the 4-hour estimate limit.'
-      : `Oversized slices found. Break each violating slice into smaller slices (<= 4 hours, ideally 2-3 hours): ${violations.map((v) => `${v.plan}:${v.sliceId} (${v.estimateHours}h)`).join(', ')}`,
+      ? 'All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.'
+      : `Issues found: ${violations.map((v) => v.message).join('; ')}`,
     owner: 'plan-slice-quality.gate.mjs',
   };
 }

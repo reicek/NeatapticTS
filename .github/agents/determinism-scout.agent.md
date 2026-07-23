@@ -18,6 +18,10 @@ agents: []
 skills: ['reproducibility-contracts']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when mapping same-seed claims, replay boundaries, RNG-state requirements, ordering drift, floating-point caveats, or deciding whether a reproducibility issue belongs to reproducibility-contracts. Keywords: determinism, reproducibility, replay, RNG state, ordering, floating point, same seed, exact resume.

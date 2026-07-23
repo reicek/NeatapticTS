@@ -18,6 +18,10 @@ agents: []
 skills: ['implementation-standards']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when implementation needs nearby source patterns, naming conventions, helper boundaries, existing utilities, or owner-local test conventions before edits. Keywords: pattern, naming convention, helper, utility, test setup.
@@ -46,6 +50,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 1. Before manual file reads, follow the Cortex-First Search Policy (`research-methodology` skill):
 
+   - **When the active step packet declares a `pre_execute_hook`, invoke it first.** A hook such as `neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }` returns assembled slice context. Use that context as the primary boundary source; fall back to manual file reads only when Cortex is degraded; if the hook fails, use the same fallback.
    - `cortex({ operation: 'freshness_check' })` — verify index currency.
    - `cortex({ operation: 'search_corpus' })` — BM25 + dense hybrid search for broad discovery.
    - `cortex({ operation: 'search_advanced' })` — full pipeline with reranking, compact mode, `read_top_result`, and `follow_up_refs`.

@@ -10,11 +10,13 @@
  * @param {boolean} [--json] - Emit JSON summary `{ scanned, indexed, skipped, chunks, elapsedMs }`.
  * @param {boolean} [--json-health] - Emit compact health summary JSON.
  * @param {string}  [--database <path>] - Path to the SQLite database file (default: `rag-index/data/turso-replica.sqlite`).
+ * @param {string[]} [--files=<path>] - Repeatable flag that limits indexing to the listed repo-relative paths. When omitted, the full corpus is indexed.
  * @param {boolean} [--help] - Show help and exit.
  *
  * @returns {void} Exits 0 on success, 1 on fatal error. JSON summary written to stdout
  *   when `--json` is passed.
  */
+/* global console, process */
 import fg from 'fast-glob';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -77,7 +79,13 @@ export async function buildSemanticIndex(options = {}) {
   const databasePath = path.resolve(
     options.databasePath ?? defaultDatabasePath,
   );
-  const documents = options.corpusDocuments ?? (await collectCorpusDocuments());
+  const allDocuments =
+    options.corpusDocuments ?? (await collectCorpusDocuments());
+  const targetFiles = normalizeFiles(options.files);
+  const isTargeted = Array.isArray(targetFiles) && targetFiles.length > 0;
+  const documents = isTargeted
+    ? allDocuments.filter(({ filePath }) => targetFiles.includes(filePath))
+    : allDocuments;
   const tsSourceChunksByFilePath =
     await collectTypeScriptChunksByFilePath(documents);
   const coverageReport =
@@ -90,7 +98,7 @@ export async function buildSemanticIndex(options = {}) {
     chunks: 0,
     purged: 0,
     dryRun: Boolean(options.dryRun),
-    totalDocuments: documents.length,
+    totalDocuments: allDocuments.length,
     newDocuments: 0,
     elapsedMs: 0,
   };
@@ -142,27 +150,33 @@ async function buildSemanticIndexWithClient({
   options,
   tsSourceChunksByFilePath,
 }) {
+  const targetFiles = normalizeFiles(options.files);
+  const isTargeted = Array.isArray(targetFiles) && targetFiles.length > 0;
+
   // Step 1: Purge documents that are no longer in the corpus.
-  const currentDocumentPaths = new Set(
-    documents.map(({ filePath }) => filePath),
-  );
-  const existingDocsResult = await client.execute({
-    sql: 'SELECT file_path FROM documents',
-    args: [],
-  });
-  const deletePromises = [];
-  for (const row of existingDocsResult.rows) {
-    if (!currentDocumentPaths.has(row.file_path)) {
-      deletePromises.push(
-        client.execute({
-          sql: 'DELETE FROM documents WHERE file_path = ?',
-          args: [row.file_path],
-        }),
-      );
+  // Skip purge during targeted re-indexing so unrelated documents are kept.
+  if (!isTargeted) {
+    const currentDocumentPaths = new Set(
+      documents.map(({ filePath }) => filePath),
+    );
+    const existingDocsResult = await client.execute({
+      sql: 'SELECT file_path FROM documents',
+      args: [],
+    });
+    const deletePromises = [];
+    for (const row of existingDocsResult.rows) {
+      if (!currentDocumentPaths.has(row.file_path)) {
+        deletePromises.push(
+          client.execute({
+            sql: 'DELETE FROM documents WHERE file_path = ?',
+            args: [row.file_path],
+          }),
+        );
+      }
     }
+    await Promise.all(deletePromises);
+    summary.purged = deletePromises.length;
   }
-  await Promise.all(deletePromises);
-  summary.purged = deletePromises.length;
 
   const buildLoopStartTime = Date.now();
 
@@ -423,19 +437,27 @@ async function collectTypeScriptChunksByFilePath(documents) {
   }, new Map());
 }
 
+function normalizeFiles(files) {
+  if (files === undefined || files === null) return undefined;
+  return Array.isArray(files) ? files : [files];
+}
+
 async function main() {
-  const args = parseCliArgs(process.argv.slice(2));
+  const args = parseCliArgs(process.argv.slice(2), {
+    repeatableFlags: ['files'],
+  });
   if (args.help) {
     printHelp({
       title: 'Semantic index builder',
       usage:
-        'node rag-index/build-index.mjs [--dry-run] [--force] [--json] [--database path]',
+        'node rag-index/build-index.mjs [--dry-run] [--force] [--json] [--database path] [--files=<path>]...',
       options: [
         '--dry-run         Scan corpus without writing SQLite rows',
         '--force           Re-index unchanged documents even if freshness proof matches',
         '--json            Emit JSON summary',
         '--json-health     Emit compact health summary JSON',
         '--database <path> Path to SQLite database file (default: rag-index/data/turso-replica.sqlite)',
+        '--files=<path>...  Repeatable flag that limits indexing to a repo-relative path',
         '--with-graph      Build entity/relationship graph after corpus build',
         '--help            Show this help',
       ],
@@ -445,12 +467,14 @@ async function main() {
 
   const emitJsonHealth = Boolean(args['json-health']);
   const withGraph = Boolean(args['with-graph']);
+  const files = normalizeFiles(args.files);
 
   try {
     const summary = await buildSemanticIndex({
       dryRun: Boolean(args['dry-run']),
       force: Boolean(args.force),
       databasePath: args.database,
+      files,
     });
     if (emitJsonHealth) {
       console.log(JSON.stringify(createJsonHealthSummary(summary), null, 2));

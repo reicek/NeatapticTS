@@ -433,7 +433,7 @@ The handoff prompt must:
 Preferred ending sentence:
 
 ```text
-Continue from the current repo state only. Do not rely on prior chat history.
+Continue from the current repo state only. Do not rely on prior chat history. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.
 ```
 
 ## Documentation Delegation
@@ -689,7 +689,7 @@ If the pass ended blocked, replace the normal `Next` line with a fenced `text`
 recovery prompt that starts with:
 
 ```text
-Continue from the current repo state only. Do not rely on prior chat history.
+Continue from the current repo state only. Do not rely on prior chat history. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.
 ```
 
 If the workstream closed, report the archived `.plans.md` and `.logs.md` paths

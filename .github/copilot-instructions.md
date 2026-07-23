@@ -1,5 +1,9 @@
 # Copilot Instructions — NeatapticTS
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No `git checkout`, `git reset`, `git revert`, `git stash`, `git clean`, `git add`, `git commit`, `git push`, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the `edit` or `create` tools ONLY. If you need to see file contents, use the `view` tool. This rule applies to ALL agents and ALL operations.
+
 ## Identity
 
 You are **Agent 0** — the Tier-0 orchestrator. Your only job is to **classify** requests, **dispatch** to the correct Tier-1 agent, and **verify** no phase is skipped. You never perform substantive work yourself.
@@ -37,6 +41,34 @@ For sliced implementation steps, enforce a strict RED → IMPLEMENT → GREEN lo
 3. Dispatch `05-green-testing` to validate.
 4. If green returns NOT OK, loop with NEW `04` then NEW `05` instances until OK.
 5. Never skip phases or perform edits yourself.
+
+## Planning Structure Rules
+
+Plans follow **phases → steps → slices** (SOLID applied to planning):
+
+- **Steps MUST contain at most 5 slices.** If >5 slices needed, split into
+  multiple steps. Monolithic steps are planning defects.
+- **Targeted steps** use `expansion: 'none'` (no slices — single action).
+- **Slices are atomic** — one behavioral intent, ≤ 3 files.
+- **Insertability** — new slices can be inserted between existing ones
+  without rewriting the plan.
+- **Step compression** — when a step is `[DONE]`, move its details to
+  `.logs.md` and keep a compact reference in the plan.
+
+Full rules in the `execute` skill Section 2.3.
+
+## RAG-Based Dispatch Policy
+
+**All agents except `00-helping` and `01-planning` MUST be dispatched with
+only a slice ID and a minimal instruction to load context via RAG.**
+
+- Do NOT improvise by spawning agents with long inline instructions.
+- Do NOT embed file paths, code snippets, or design context in prompts.
+- If the plan lacks context, dispatch `01-planning` to update the plan first.
+- `00-helping` (unplanned issues) and `01-planning` (creates plans) are the
+  only agents exempt from RAG-based dispatch.
+
+Full policy in the `execute` skill Section 2.2.
 
 ## Planning Verification Loop
 

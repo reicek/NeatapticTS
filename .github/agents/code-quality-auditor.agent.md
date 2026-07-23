@@ -19,6 +19,10 @@ agents: ['file-change-summarizer']
 skills: ['green-validation-gates', 'implementation-standards']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when running quality gates and interpreting results for 05-green-testing, including npm run quality:folder, npm run build, and lint commands. Keywords: quality gate, folder quality, build validation, lint results, violation classification, repair packet.

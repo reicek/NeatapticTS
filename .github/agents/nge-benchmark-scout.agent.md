@@ -18,6 +18,10 @@ agents: []
 skills: ['nge-benchmark-workflow']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when mapping NGE benchmark methodology such as predator/prey coevolution, ant-hive observability, racing curriculum tiers, rolling opponent snapshots, fairness contracts, or deciding whether a Phase 7 demo issue belongs to nge-benchmark-workflow. Keywords: NGE benchmark, predator prey, ant hive, racing curriculum, rolling snapshot, fairness, observability, ablation.

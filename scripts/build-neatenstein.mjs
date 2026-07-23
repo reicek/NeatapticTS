@@ -1,15 +1,15 @@
 /**
- * Build script stub for the Neatenstein neon raycasting demo.
+ * Build script for the Neatenstein neon raycasting demo.
  *
  * Mirrors the Flappy Bird build pattern: a dedicated worker bundle plus a host
  * bundle. The worker bundle carries the shared raycaster so the Worker tier can
  * render via OffscreenCanvas, while the CPU/GPU tiers render on the main thread.
  *
- * This is intentionally a scaffold stub for Phase 1. It wires the expected dual
- * entry points but does not yet produce final minified assets.
+ * Produces two published assets in `docs/assets/`:
+ *   - `neatenstein.bundle.js`         (IIFE host bundle)
+ *   - `neatenstein.worker.esm.js`     (ESM worker bundle)
  */
 import { build } from 'esbuild';
-import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -24,21 +24,40 @@ const workerEntry = resolve(
   'examples/neatenstein/browser-entry/worker/neatenstein.worker.ts',
 );
 
-if (!existsSync(hostEntry) || !existsSync(workerEntry)) {
-  console.log(
-    'Neatenstein build: Phase 1 scaffold stub — host/worker entry points not yet implemented.',
-  );
-  process.exit(0);
-}
+const hostOutfile = resolve(
+  repositoryRoot,
+  'docs/assets/neatenstein.bundle.js',
+);
+const workerOutfile = resolve(
+  repositoryRoot,
+  'docs/assets/neatenstein.worker.esm.js',
+);
 
-await build({
-  entryPoints: [hostEntry, workerEntry],
+/**
+ * Shared esbuild options used by both the host and worker bundles.
+ */
+const sharedBuildOptions = {
   bundle: true,
-  outdir: resolve(repositoryRoot, 'docs/assets'),
   platform: 'browser',
-  format: 'iife',
   minify: true,
   sourcemap: true,
+  target: 'es2023',
   external: ['fs', 'child_process', 'path'],
   logLevel: 'info',
+};
+
+// Host bundle: classic IIFE loaded by a regular <script> tag.
+await build({
+  ...sharedBuildOptions,
+  entryPoints: [hostEntry],
+  outfile: hostOutfile,
+  format: 'iife',
+});
+
+// Worker bundle: ESM loaded as a module worker.
+await build({
+  ...sharedBuildOptions,
+  entryPoints: [workerEntry],
+  outfile: workerOutfile,
+  format: 'esm',
 });

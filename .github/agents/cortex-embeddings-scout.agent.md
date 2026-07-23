@@ -18,6 +18,10 @@ agents: []
 skills: [repo-cortex-embeddings]
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when mapping ONNX embedding model cache state, embeddings index readiness, hybrid BM25+dense ranking gaps, or deciding whether an embeddings issue belongs to Semantic_Knowledge_Embeddings. Hands off to the embeddings skill when available. Keywords: cortex embeddings, ONNX embeddings, dense retrieval, embed-index, sqlite-vec, hybrid ranking, MRR, embeddings scout.

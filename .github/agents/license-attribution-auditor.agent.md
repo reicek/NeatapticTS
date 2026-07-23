@@ -18,6 +18,10 @@ agents: []
 skills: ['license-attribution-audit']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use as a hidden specialist for checking source references and license notes when external workflow standards inform NeatapticTS agents, skills, scripts, or plans. Keywords: license, attribution, Agent Skills, OpenSpec, Superpowers, VS Code docs.

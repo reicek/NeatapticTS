@@ -18,6 +18,10 @@ agents: []
 skills: ['docs-academic-citation-audit', 'auditing-js-docs']
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when auditing NeatapticTS educational documentation, JSDoc quality, Mermaid diagrams, citations, and generated README alignment. Keywords: academic docs, citation audit, JSDoc, Mermaid, generated README, atemporal docs.

@@ -28,6 +28,10 @@ skills: ['green-validation-gates', 'test-fix-workflow', 'execute']
 user-invocable: false
 ---
 
+## CRITICAL RULE — NEVER RUN GIT
+
+**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+
 ## Purpose
 
 Use when: validation fails, failure ownership is unclear, reroute decisions are needed, or focused tests and coverage gates need ordered interpretation.

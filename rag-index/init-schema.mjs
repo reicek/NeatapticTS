@@ -72,6 +72,37 @@ async function applySchemaToClient(client, schemaSql) {
   }
 }
 
+/**
+ * Idempotently add A1 slice-metadata columns to an existing `chunks` table.
+ *
+ * Fresh databases already receive the columns from `schema-turso.sql`, but
+ * existing `rag-index/data/turso-replica.sqlite` files created before A1 need
+ * an `ALTER TABLE` migration. The migration checks `PRAGMA table_info(chunks)`
+ * and only adds columns that are missing, so it is safe to run repeatedly.
+ *
+ * @param {import('@libsql/client').Client} client - libSQL client instance.
+ * @returns {Promise<void>}
+ */
+async function migrateSliceMetadataColumns(client) {
+  const sliceColumns = [
+    { name: 'slice_id', type: 'TEXT' },
+    { name: 'step_number', type: 'INTEGER' },
+    { name: 'phase', type: 'TEXT' },
+    { name: 'status', type: 'TEXT' },
+  ];
+
+  const info = await client.execute({ sql: 'PRAGMA table_info(chunks)' });
+  const existingColumns = new Set(info.rows.map((row) => row.name));
+
+  for (const { name, type } of sliceColumns) {
+    if (!existingColumns.has(name)) {
+      await client.execute({
+        sql: `ALTER TABLE chunks ADD COLUMN ${name} ${type}`,
+      });
+    }
+  }
+}
+
 export async function initSemanticIndex(options = {}) {
   // When a libSQL client is provided, return it directly — the schema is
   // already initialized by the caller (e.g. createSchemaClient or init-turso).
@@ -90,5 +121,6 @@ export async function initSemanticIndex(options = {}) {
     'schema-turso.sql',
   );
   await applySchemaToClient(client, await readFile(schemaPath, 'utf8'));
+  await migrateSliceMetadataColumns(client);
   return client;
 }
