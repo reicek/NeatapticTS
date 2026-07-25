@@ -1,5 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import { NEATENSTEIN_CPU_COLUMN_COUNT } from '../constants';
+const expectedColumnCount = 320;
 
 const loadModule = (path: string): Promise<any> => import(path);
 
@@ -20,7 +20,7 @@ describe('Neatenstein render frame helpers', () => {
     const { buildNeatensteinRenderFrame } = await loadModule('./frame.ts');
     const frame = buildNeatensteinRenderFrame(
       createMinimalRenderState(),
-      NEATENSTEIN_CPU_COLUMN_COUNT,
+      expectedColumnCount,
     );
     expect({ format: frame.format, version: frame.version }).toEqual({
       format: 'neatenstein-frame-v1',
@@ -30,7 +30,7 @@ describe('Neatenstein render frame helpers', () => {
 
   it('allocates SoA typed arrays sized to columnCount', async () => {
     const { buildNeatensteinRenderFrame } = await loadModule('./frame.ts');
-    const columnCount = NEATENSTEIN_CPU_COLUMN_COUNT;
+    const columnCount = expectedColumnCount;
     const frame = buildNeatensteinRenderFrame(
       createMinimalRenderState(),
       columnCount,
@@ -77,7 +77,7 @@ describe('Neatenstein render frame helpers', () => {
     } = await loadModule('./frame.ts');
     const frame = buildNeatensteinRenderFrame(
       createMinimalRenderState(),
-      NEATENSTEIN_CPU_COLUMN_COUNT,
+      expectedColumnCount,
     );
     const transferList = resolveNeatensteinRenderFrameTransferList(frame);
     expect({
@@ -105,11 +105,11 @@ describe('Neatenstein render frame helpers', () => {
     const { buildNeatensteinRenderFrame } = await loadModule('./frame.ts');
     const first = buildNeatensteinRenderFrame(
       createMinimalRenderState(),
-      NEATENSTEIN_CPU_COLUMN_COUNT,
+      expectedColumnCount,
     );
     const second = buildNeatensteinRenderFrame(
       createMinimalRenderState(),
-      NEATENSTEIN_CPU_COLUMN_COUNT,
+      expectedColumnCount,
     );
     expect(second.requestId).toBe(first.requestId + 1);
   });
@@ -117,10 +117,7 @@ describe('Neatenstein render frame helpers', () => {
   it('includes canvas and simulation metadata in the frame', async () => {
     const { buildNeatensteinRenderFrame } = await loadModule('./frame.ts');
     const state = createMinimalRenderState();
-    const frame = buildNeatensteinRenderFrame(
-      state,
-      NEATENSTEIN_CPU_COLUMN_COUNT,
-    );
+    const frame = buildNeatensteinRenderFrame(state, expectedColumnCount);
     expect({
       canvasWidth: frame.canvasWidth,
       canvasHeight: frame.canvasHeight,
@@ -129,7 +126,7 @@ describe('Neatenstein render frame helpers', () => {
     }).toEqual({
       canvasWidth: state.canvasWidth,
       canvasHeight: state.canvasHeight,
-      columnCount: NEATENSTEIN_CPU_COLUMN_COUNT,
+      columnCount: expectedColumnCount,
       simTick: state.simTick,
     });
   });

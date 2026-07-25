@@ -23,9 +23,9 @@ describe('Neatenstein constants module', () => {
       worker: constants.NEATENSTEIN_WORKER_COLUMN_COUNT,
       cpu: constants.NEATENSTEIN_CPU_COLUMN_COUNT,
     }).toEqual({
-      gpu: 320,
-      worker: 240,
-      cpu: 160,
+      gpu: 640,
+      worker: 480,
+      cpu: 320,
     });
   });
 
@@ -54,8 +54,8 @@ describe('Neatenstein constants module', () => {
     ]);
   });
 
-  it('exports the fixed 24x24 map size', async () => {
+  it('exports the fixed 60x60 map size', async () => {
     const constants = await loadModule('./constants.ts');
-    expect(constants.NEATENSTEIN_MAP_SIZE).toBe(24);
+    expect(constants.NEATENSTEIN_MAP_SIZE).toBe(120);
   });
 });

@@ -30,12 +30,26 @@ export const NEATENSTEIN_PLAYER_MAX_AMMO = 30;
 export const NEATENSTEIN_ENEMY_MAX_CONCURRENT = 8;
 
 /**
- * Radius in world cells around the map origin where enemies may spawn.
+ * Radius in world cells around the map center where enemies may spawn.
  *
- * Enemies are placed at a random angle and a random distance up to this value,
- * so the effective spawn region is a circle centered on the origin.
+ * Enemies are placed at a random angle and a random distance between
+ * {@link NEATENSTEIN_ENEMY_SPAWN_MIN_DISTANCE_CELLS} and this value, so the
+ * effective spawn region is an annulus centered on
+ * {@link NEATENSTEIN_SPAWN_CENTER_X} / {@link NEATENSTEIN_SPAWN_CENTER_Y}.
  */
 export const NEATENSTEIN_ENEMY_SPAWN_RADIUS = 8;
+
+/**
+ * Minimum distance in world cells between an enemy spawn and the player spawn
+ * center.
+ *
+ * Keeps enemies from appearing inside {@link NEATENSTEIN_CONTACT_RANGE_CELLS},
+ * which would deal immediate contact damage and end the episode far earlier
+ * than the intended 15–25 second duration band. The value is chosen to be
+ * larger than the contact range so the player has a brief reaction window
+ * even before movement begins.
+ */
+export const NEATENSTEIN_ENEMY_SPAWN_MIN_DISTANCE_CELLS = 1;
 
 /** Milliseconds of invulnerability granted by a single dash. */
 export const NEATENSTEIN_DASH_INVULNERABILITY_MS = 200;
@@ -194,10 +208,10 @@ export const NEATENSTEIN_FIRE_KEY = 'KeyF' as const;
 /**
  * Maximum cell distance a neon beam can travel before it is forced to end.
  *
- * Set generously larger than the map diagonal so the beam always reaches
+ * Set generously larger than the 60×60 map diagonal so the beam always reaches
  * the far wall from any valid player position.
  */
-export const NEATENSTEIN_BEAM_MAX_RANGE_CELLS = 48;
+export const NEATENSTEIN_BEAM_MAX_RANGE_CELLS = 96;
 
 /**
  * Hit points removed from an enemy by a single neon beam hit.
@@ -325,11 +339,11 @@ export const NEATENSTEIN_TEST_ENEMY_FAR_DISTANCE_CELLS = 4;
  * Distance in cells from the player to a test enemy placed behind the outer
  * wall from the central spawn point.
  *
- * The outer wall along the +X axis is roughly 11 cells away from the central
- * spawn, so this value is chosen to be well beyond the wall so the beam always
- * terminates on the wall before reaching the enemy.
+ * The outer wall along the +X axis is roughly 20 cells away from the central
+ * spawn on a 42×42 map, so this value is chosen to be well beyond the wall so
+ * the beam always terminates on the wall before reaching the enemy.
  */
-export const NEATENSTEIN_TEST_ENEMY_BEHIND_WALL_DISTANCE_CELLS = 15;
+export const NEATENSTEIN_TEST_ENEMY_BEHIND_WALL_DISTANCE_CELLS = 30;
 
 /**
  * Small offset in cells placed beyond {@link NEATENSTEIN_BEAM_MAX_RANGE_CELLS}

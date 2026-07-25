@@ -221,8 +221,8 @@ describe('neataptic-workflow-mcp get_slice_context contract', () => {
         params: {
           name: 'get_slice_context',
           arguments: {
-            slice_id: '01-floor-reuse',
-            plan_path: 'plans/Neon_Shooter_NGE_Demo.plans.md',
+            slice_id: '07-triage',
+            plan_path: 'plans/temporal-fix-all-tests-and-coverage.plans.md',
           },
         },
       },

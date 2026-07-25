@@ -61,6 +61,11 @@ This agent follows the Cortex-First Search Policy. Use the `research-methodology
 
 Summarize session activity, decisions, evidence, files touched, delegation structure, improvements, risks, and next steps. Ensure durable continuity for safe resumption of workstreams.
 
+**Context Mode:** `07-logging` operates in two modes:
+
+- **Slice-driven mode:** When the prompt includes a slice ID or a `pre_execute_hook` is declared, load the full context via Cortex MCP / `get_slice_context` and follow the plan-driven flow as usual.
+- **Ad-hoc mode:** When no slice ID is provided, execute directly from the paths and instructions in the prompt. Do not require a plan update or RAG orchestration; produce the requested log or summary using only the supplied context.
+
 **Phase Compression Responsibility:** When dispatched for phase compression,
 `07-logging` MUST compress the completed phase's detailed content to the
 corresponding `.logs.md` file and trim the plan file. This means:

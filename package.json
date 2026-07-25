@@ -73,6 +73,7 @@
     "build:flappy-bird": "npm run build:flappy-worker && npm run build:flappy-bird:host",
     "build:neat-chat": "npx esbuild examples/neatChat/browser-entry.ts --bundle --outfile=docs/assets/neat-chat.bundle.js --platform=browser --format=iife --minify --sourcemap --external:fs --external:child_process --external:path",
     "build:racing-curriculum": "npx esbuild examples/racing_curriculum/index.ts --bundle --outfile=docs/assets/racing-curriculum.bundle.js --platform=browser --format=iife --minify --sourcemap --external:fs --external:child_process --external:path",
+    "build:neatenstein": "node scripts/build-neatenstein.mjs",
     "generate:neat-chat-default-snapshot": "node scripts/generate-neat-chat-default-snapshot.mjs",
     "evaluate:neat-chat-regression-pack": "npx esbuild examples/neatChat/evaluate-regression-pack.ts --bundle --platform=node --format=esm --outfile=dist-docs/scripts/evaluate-neat-chat-regression-pack.js && node ./dist-docs/scripts/evaluate-neat-chat-regression-pack.js",
     "trace:analyze": "npm run docs:build-scripts && node ./dist-docs/scripts/analyze-trace/analyze-trace.js",

@@ -608,6 +608,42 @@ const output = await dispatchActivation(network, [0.5, -0.2], device);
 // output is Float32Array from GPU if eligible, otherwise from CPU
 ```
 
+### getGPUEligibilityInfo
+
+```ts
+getGPUEligibilityInfo(
+  network: default,
+  device: any,
+): GPUEligibilityResult
+```
+
+Probes whether `device` can run the WebGPU activation path for `network`.
+
+Parameters:
+- `network` - Network to evaluate.
+- `device` - WebGPU device, or null/undefined when unavailable.
+
+Returns: Eligibility verdict with a human-readable reason.
+
+### hasSelfConnectionInGraph
+
+```ts
+hasSelfConnectionInGraph(
+  network: default,
+): boolean
+```
+
+Detects self-connections stored in the per-node `connections.self` list.
+
+In acyclic topologies the network-level `selfconns` array is intentionally
+empty, but the per-node list still records the connection. GPU kernels cannot
+handle recurrent self-connections, so the fallback seam inspects both stores.
+
+Parameters:
+- `network` - Network to inspect.
+
+Returns: True when at least one node has a self-connection.
+
 ### isGPUEligible
 
 ```ts

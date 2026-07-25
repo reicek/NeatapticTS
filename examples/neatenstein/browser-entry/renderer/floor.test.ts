@@ -1,4 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals';
+import { FLAPPY_NEON_PALETTE } from '../../../flappy_bird/constants/constants.palette';
 import {
   NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
   NEATENSTEIN_FLOOR_DEFAULT_HEIGHT,
@@ -7,7 +8,9 @@ import {
   NEATENSTEIN_FLOOR_HORIZON_RATIO,
   NEATENSTEIN_FLOOR_MAX_ALPHA,
   NEATENSTEIN_FLOOR_MIN_ALPHA,
+  drawNeatensteinCeiling,
   drawNeatensteinFloor,
+  renderNeatensteinCeiling,
   renderNeatensteinFloor,
   resolveNeatensteinFloorAlpha,
   type NeatensteinFloorCamera,
@@ -428,5 +431,149 @@ describe('Neatenstein floor renderer ray-cast grid', () => {
     drawNeatensteinFloor(ctx, TEST_CANVAS_WIDTH, TEST_CANVAS_HEIGHT, camera(0));
 
     expect(ctx.calls.restore.length).toBe(ctx.calls.save.length);
+  });
+});
+
+/** Deterministic seed used for all ceiling mirror fixtures. */
+const CEILING_FIXTURE_SEED = 42;
+
+function createSeededRandom(seed: number): () => number {
+  let state = seed >>> 0;
+
+  return () => {
+    // Park-Miller LCG, matching the deterministic PRNG used by pulses.
+    state = (state * 16807) % 2147483647;
+    return state / 2147483647;
+  };
+}
+
+function parseHexColor(
+  hex: string,
+): { r: number; g: number; b: number } | null {
+  const digits = hex.replace('#', '');
+  if (digits.length !== 6) {
+    return null;
+  }
+
+  const r = parseInt(digits.slice(0, 2), 16);
+  const g = parseInt(digits.slice(2, 4), 16);
+  const b = parseInt(digits.slice(4, 6), 16);
+
+  if (!Number.isFinite(r + g + b)) {
+    return null;
+  }
+
+  return { r, g, b };
+}
+
+describe('Neatenstein ceiling mirror renderer', () => {
+  it('exports a ceiling grid drawing function', () => {
+    expect(typeof drawNeatensteinCeiling).toBe('function');
+  });
+
+  it('exports a canvas-backed ceiling render wrapper', () => {
+    expect(typeof renderNeatensteinCeiling).toBe('function');
+  });
+
+  it('draws at least one ceiling point', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const rng = createSeededRandom(CEILING_FIXTURE_SEED);
+    const cam = camera(
+      0,
+      TEST_CAMERA_X + rng() * 2 - 1,
+      TEST_CAMERA_Y + rng() * 2 - 1,
+    );
+    const ctx = createMockFloorContext(width, height);
+
+    drawNeatensteinCeiling(ctx, width, height, cam);
+
+    expect(extractDrawnPoints(ctx).length).toBeGreaterThan(0);
+  });
+
+  it('draws ceiling points above the horizon', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const rng = createSeededRandom(CEILING_FIXTURE_SEED);
+    const cam = camera(
+      0,
+      TEST_CAMERA_X + rng() * 2 - 1,
+      TEST_CAMERA_Y + rng() * 2 - 1,
+    );
+    const ctx = createMockFloorContext(width, height);
+
+    drawNeatensteinCeiling(ctx, width, height, cam);
+
+    const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+    const allAbove = extractDrawnPoints(ctx).every(
+      (point) => point.y < horizonY + 0.5,
+    );
+
+    expect(allAbove).toBe(true);
+  });
+
+  it('mirrors the floor grid vertically across the horizon', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const rng = createSeededRandom(CEILING_FIXTURE_SEED);
+    const cam = camera(
+      0,
+      TEST_CAMERA_X + rng() * 2 - 1,
+      TEST_CAMERA_Y + rng() * 2 - 1,
+    );
+    const ctxFloor = createMockFloorContext(width, height);
+    const ctxCeiling = createMockFloorContext(width, height);
+
+    drawNeatensteinFloor(ctxFloor, width, height, cam);
+    drawNeatensteinCeiling(ctxCeiling, width, height, cam);
+
+    const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+    const floorPoints = extractDrawnPoints(ctxFloor);
+    const ceilingPoints = extractDrawnPoints(ctxCeiling);
+
+    const ceilingByX = new Map<number, number[]>();
+    for (const point of ceilingPoints) {
+      const bucket = Math.round(point.x);
+      const existing = ceilingByX.get(bucket);
+      if (existing === undefined) {
+        ceilingByX.set(bucket, [point.y]);
+      } else {
+        existing.push(point.y);
+      }
+    }
+
+    const everyFloorPointMirrored = floorPoints.every((floorPoint) => {
+      const ys = ceilingByX.get(Math.round(floorPoint.x));
+      if (ys === undefined) {
+        return false;
+      }
+      const expectedY = 2 * horizonY - floorPoint.y;
+      return ys.some((y) => Math.abs(y - expectedY) <= TEST_SCREEN_TOLERANCE);
+    });
+
+    expect(everyFloorPointMirrored).toBe(true);
+  });
+
+  it('uses the same floor grid line color for the ceiling texture lookup', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const rng = createSeededRandom(CEILING_FIXTURE_SEED);
+    const cam = camera(
+      0,
+      TEST_CAMERA_X + rng() * 2 - 1,
+      TEST_CAMERA_Y + rng() * 2 - 1,
+    );
+    const ctx = createMockFloorContext(width, height);
+
+    drawNeatensteinCeiling(ctx, width, height, cam);
+
+    const parsed = parseHexColor(FLAPPY_NEON_PALETTE.groundGridLine);
+    const expectedPrefix =
+      parsed !== null ? `rgba(${parsed.r}, ${parsed.g}, ${parsed.b}` : '';
+    const usesGridColor = ctx.calls.strokeStyle.some(
+      (style) => typeof style === 'string' && style.startsWith(expectedPrefix),
+    );
+
+    expect(usesGridColor).toBe(true);
   });
 });

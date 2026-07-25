@@ -18,14 +18,18 @@
  *   node scripts/agent-customization/gates/code-coverage.gate.mjs --json --changed-files=src/foo.ts,src/bar.ts
  *   node scripts/agent-customization/gates/code-coverage.gate.mjs --json --scripts=scripts/agent-customization/gates/code-coverage.gate.mjs
  *   node scripts/agent-customization/gates/code-coverage.gate.mjs --json --coverage-summary-path=coverage/coverage-summary.json --changed-files=src/foo.ts
+ *   node scripts/agent-customization/gates/code-coverage.gate.mjs --json --exemptions=exemptions.json --changed-files=src/foo.ts,src/bar.ts
+ *   node scripts/agent-customization/gates/code-coverage.gate.mjs --json --exemptions='{"src/types.ts":"type-only","src/legacy.ts":"legacy-dominant"}' --changed-files=src/types.ts
  *
  * @param {boolean} [--json] - Emit the standard gate JSON contract.
  * @param {string} [--changed-files=<paths>] - Comma or newline separated repo-relative paths.
  * @param {string} [--scripts=<paths>] - Alias for --changed-files.
  * @param {string} [--coverage-summary-path=<path>] - Repo-relative path to the Istanbul summary JSON.
+ * @param {string} [--coverage-baseline-path=<path>] - Repo-relative path to the committed coverage baseline JSON.
+ * @param {string} [--exemptions=<json-or-path>] - JSON object or path to a JSON file mapping repo-relative paths to exemption kinds (`type-only` or `legacy-dominant`).
  * @returns {void} Exits 0 when coverage is green, 1 otherwise.
  */
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -62,6 +66,11 @@ const TEST_DIR_RE = /(^|\/)__tests__\//iu;
  *   `coverage/coverage-baseline.json`.
  * @param {string[]} [options.changedFiles] - Explicit repo-relative source paths
  *   to check. When omitted, the gate derives the list from `git status`.
+ * @param {Record<string, string|{kind: string}>} [options.exemptions] - Optional
+ *   file-level coverage exemptions. `type-only` skips a file because it contains
+ *   no executable code. `legacy-dominant` accepts the file's current coverage as
+ *   the threshold when no baseline exists, preserving the existing baseline
+ *   contract when one is present.
  * @returns {Promise<object>} Standard gate contract:
  *   `{ pass, evidence, fixHint, owner }`.
  */
@@ -70,9 +79,14 @@ export async function runCodeCoverageGate(options = {}) {
     options.coverageSummaryPath ?? COVERAGE_SUMMARY_PATH;
   const coverageBaselinePath =
     options.coverageBaselinePath ?? COVERAGE_BASELINE_PATH;
+  const exemptions = options.exemptions
+    ? normalizeExemptions(options.exemptions)
+    : {};
   const changedFiles =
     options.changedFiles ?? (await deriveChangedSourceFiles());
-  const targetFiles = filterTargetFiles(changedFiles);
+  const targetFiles = filterTargetFiles(changedFiles).filter(
+    (file) => !isTypeOnlyExempt(file, exemptions),
+  );
 
   let coverageSummary = null;
   try {
@@ -120,16 +134,25 @@ export async function runCodeCoverageGate(options = {}) {
   const fileReports = [];
   const missingFiles = [];
   const failedFiles = [];
+  const exemptFiles = Object.entries(exemptions).map(([file, exemption]) => ({
+    file,
+    kind: typeof exemption === 'string' ? exemption : exemption.kind,
+  }));
 
   for (const targetFile of targetFiles) {
     const relativeKey = targetFile;
     const entry = lookupCoverageEntry(coverageSummary, relativeKey);
     const baselineEntry = lookupCoverageEntry(baselineSummary, relativeKey);
 
+    const isLegacyDominant = isLegacyDominantExempt(targetFile, exemptions);
+
     if (!entry) {
       // A changed source file that is absent from the current coverage summary
       // is treated as 0 % covered. If the baseline records 0 % as well, the
-      // file passes (legacy not-run code); otherwise it fails.
+      // file passes (legacy not-run code). Legacy-dominant files with no
+      // baseline are also accepted because only their new/changed surface is in
+      // scope, and a missing summary entry means Istanbul found no executable
+      // code for them in this run.
       const missingMetrics = {
         lines: 0,
         statements: 0,
@@ -139,7 +162,7 @@ export async function runCodeCoverageGate(options = {}) {
       const missingThresholds = Object.fromEntries(
         REQUIRED_METRICS.map((metric) => [
           metric,
-          baselineEntry ? (baselineEntry[metric]?.pct ?? 0) : 100,
+          resolveThreshold(metric, baselineEntry, null, isLegacyDominant),
         ]),
       );
       const missingAllCovered = REQUIRED_METRICS.every(
@@ -152,6 +175,7 @@ export async function runCodeCoverageGate(options = {}) {
       fileReports.push({
         file: targetFile,
         found: false,
+        exempt: isLegacyDominant ? 'legacy-dominant' : null,
         baseline: baselineEntry
           ? Object.fromEntries(
               REQUIRED_METRICS.map((metric) => [
@@ -173,7 +197,7 @@ export async function runCodeCoverageGate(options = {}) {
     const thresholds = Object.fromEntries(
       REQUIRED_METRICS.map((metric) => [
         metric,
-        baselineEntry ? (baselineEntry[metric]?.pct ?? 0) : 100,
+        resolveThreshold(metric, baselineEntry, entry, isLegacyDominant),
       ]),
     );
     const allCovered = REQUIRED_METRICS.every(
@@ -183,6 +207,7 @@ export async function runCodeCoverageGate(options = {}) {
     fileReports.push({
       file: targetFile,
       found: true,
+      exempt: isLegacyDominant ? 'legacy-dominant' : null,
       baseline: baselineEntry
         ? Object.fromEntries(
             REQUIRED_METRICS.map((metric) => [
@@ -211,6 +236,7 @@ export async function runCodeCoverageGate(options = {}) {
       coverageSummaryPath,
       coverageBaselinePath,
       targetFiles,
+      exemptFiles,
       fileReports,
       missingFiles,
       failedFiles,
@@ -232,6 +258,7 @@ function parseGateArgs(argv) {
   const changedFiles = [];
   let coverageSummaryPath = null;
   let coverageBaselinePath = null;
+  let exemptions = null;
 
   for (let index = 0; index < argv.length; index++) {
     const rawArg = argv[index];
@@ -263,6 +290,14 @@ function parseGateArgs(argv) {
         coverageBaselinePath = nextArg;
         index += 1;
       }
+    } else if (rawArg.startsWith('--exemptions=')) {
+      exemptions = rawArg.slice('--exemptions='.length);
+    } else if (rawArg === '--exemptions') {
+      const nextArg = argv[index + 1];
+      if (nextArg !== undefined && !nextArg.startsWith('--')) {
+        exemptions = nextArg;
+        index += 1;
+      }
     }
   }
 
@@ -271,6 +306,7 @@ function parseGateArgs(argv) {
     changedFiles: changedFiles.length > 0 ? changedFiles : null,
     coverageSummaryPath,
     coverageBaselinePath,
+    exemptions,
   };
 }
 
@@ -287,6 +323,110 @@ function splitPathList(value) {
     .map((entry) => entry.trim())
     .filter(Boolean)
     .map((entry) => entry.replace(/\\/g, '/'));
+}
+
+/**
+ * Resolves the required coverage threshold for a single metric.
+ *
+ * The default contract is 100 % for new files and the recorded baseline
+ * percentage for legacy files. When a file is marked as `legacy-dominant`, the
+ * threshold falls back to its current coverage percentage if no baseline
+ * exists, so the gate verifies that the newly changed surface does not regress
+ * the file rather than demanding whole-file 100 % coverage immediately.
+ *
+ * @param {string} metric - Istanbul metric name (`lines`, `statements`,
+ *   `functions`, or `branches`).
+ * @param {object|undefined} baselineEntry - Baseline summary entry for the file.
+ * @param {object|undefined} entry - Current coverage summary entry for the file.
+ * @param {boolean} isLegacyDominant - Whether the file has a legacy-dominant
+ *   exemption.
+ * @returns {number} Required percentage for the metric.
+ */
+function resolveThreshold(metric, baselineEntry, entry, isLegacyDominant) {
+  if (baselineEntry) {
+    return baselineEntry[metric]?.pct ?? 0;
+  }
+  if (isLegacyDominant && entry) {
+    return entry[metric]?.pct ?? 0;
+  }
+  return 100;
+}
+
+/**
+ * Loads and parses an exemptions value.
+ *
+ * Accepts either a repo-relative path to a JSON file or an inline JSON object.
+ * The JSON must map repo-relative source paths to an exemption kind string
+ * (`type-only` or `legacy-dominant`) or to an object with a `kind` property.
+ *
+ * @param {string} value - Path to a JSON file or an inline JSON object string.
+ * @returns {Promise<Record<string, string|{kind: string}>>} Parsed exemptions.
+ * @throws {Error} When the value is neither a readable file nor valid JSON.
+ */
+async function loadExemptions(value) {
+  const normalized = value.replace(/\\/g, '/').trim();
+  const candidatePath = path.join(repoRoot, normalized);
+
+  let stats;
+  try {
+    stats = await stat(candidatePath);
+  } catch {
+    stats = null;
+  }
+
+  if (stats?.isFile()) {
+    const contents = await readFile(candidatePath, 'utf8');
+    return JSON.parse(contents);
+  }
+
+  // Inline JSON: support both single-quoted shell wrappers and bare JSON.
+  const json = normalized.replace(/^'|'$/g, '');
+  return JSON.parse(json);
+}
+
+/**
+ * Normalizes exemptions into a consistent map of repo-relative paths to kind
+ * strings.
+ *
+ * @param {Record<string, string|{kind: string}>} exemptions - Raw exemption map.
+ * @returns {Record<string, string>} Normalized map of path → kind.
+ */
+function normalizeExemptions(exemptions) {
+  const normalized = {};
+  for (const [rawPath, value] of Object.entries(exemptions)) {
+    const file = rawPath.replace(/\\/g, '/');
+    const kind = typeof value === 'string' ? value : value?.kind;
+    if (kind !== 'type-only' && kind !== 'legacy-dominant') {
+      throw new Error(
+        `Unsupported exemption kind "${kind}" for ${file}. Use "type-only" or "legacy-dominant".
+`,
+      );
+    }
+    normalized[file] = kind;
+  }
+  return normalized;
+}
+
+/**
+ * Checks whether a file is exempt as type-only.
+ *
+ * @param {string} filePath - Repo-relative path.
+ * @param {Record<string, string>} exemptions - Normalized exemption map.
+ * @returns {boolean} True when the file is declared type-only.
+ */
+function isTypeOnlyExempt(filePath, exemptions) {
+  return exemptions[filePath] === 'type-only';
+}
+
+/**
+ * Checks whether a file is exempt as legacy-dominant.
+ *
+ * @param {string} filePath - Repo-relative path.
+ * @param {Record<string, string>} exemptions - Normalized exemption map.
+ * @returns {boolean} True when the file is declared legacy-dominant.
+ */
+function isLegacyDominantExempt(filePath, exemptions) {
+  return exemptions[filePath] === 'legacy-dominant';
 }
 
 /**
@@ -382,10 +522,14 @@ export function buildFixHint(missingFiles, failedFiles) {
 
 export async function main(argv = process.argv.slice(2)) {
   const options = parseGateArgs(argv);
+  const exemptions = options.exemptions
+    ? await loadExemptions(options.exemptions)
+    : null;
   const report = await runCodeCoverageGate({
     changedFiles: options.changedFiles ?? undefined,
     coverageSummaryPath: options.coverageSummaryPath ?? undefined,
     coverageBaselinePath: options.coverageBaselinePath ?? undefined,
+    exemptions,
   });
 
   if (options.json) {

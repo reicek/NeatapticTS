@@ -1,8 +1,5 @@
 import { describe, expect, it } from '@jest/globals';
-import {
-  NEATENSTEIN_CPU_COLUMN_COUNT,
-  NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
-} from '../constants';
+import { NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION } from '../constants';
 import type { NeatensteinRenderState } from '../renderer/frame';
 
 const loadModule = (path: string): Promise<any> => import(path);
@@ -35,14 +32,14 @@ describe('Neatenstein host canvas resize', () => {
         wallSidesLength: result.frame.wallSides.length,
         zBufferLength: result.frame.zBuffer.length,
       }).toEqual({
-        columnStride: 4,
+        columnStride: 2,
         frameFormat: NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
-        frameColumnCount: NEATENSTEIN_CPU_COLUMN_COUNT,
+        frameColumnCount: 320,
         frameCanvasWidth: 640,
         frameCanvasHeight: 360,
-        wallDistancesLength: NEATENSTEIN_CPU_COLUMN_COUNT,
-        wallSidesLength: NEATENSTEIN_CPU_COLUMN_COUNT,
-        zBufferLength: NEATENSTEIN_CPU_COLUMN_COUNT,
+        wallDistancesLength: 320,
+        wallSidesLength: 320,
+        zBufferLength: 320,
       });
     });
   });

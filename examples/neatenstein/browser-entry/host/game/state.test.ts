@@ -238,5 +238,17 @@ describe('Neatenstein game state', () => {
         afterDash: false,
       });
     });
+
+    it('spawns the player at the center of a 60x60 map', async () => {
+      const { createGameState } = (await import('./state.ts')) as Record<
+        string,
+        any
+      >;
+      const state = createGameState({ seed: 42 });
+      expect(state.player.position).toEqual({
+        x: 30.5,
+        y: 30.5,
+      });
+    });
   });
 });

@@ -38,6 +38,12 @@ const NEATENSTEIN_PULSE_MAP_EDGE_MARGIN = 1;
 const NEATENSTEIN_PULSE_GRID_SPAN =
   NEATENSTEIN_MAP_SIZE - NEATENSTEIN_PULSE_MAP_EDGE_MARGIN * 2;
 
+/** Ambient pulse layer identifier for the floor grid. */
+export const NEATENSTEIN_PULSE_LAYER_FLOOR = 'floor' as const;
+
+/** Ambient pulse layer identifier for the ceiling grid. */
+export const NEATENSTEIN_PULSE_LAYER_CEILING = 'ceiling' as const;
+
 /** Modulus for the Park-Miller-style deterministic LCG. */
 const PARK_MILLER_MODULUS = 2_147_483_647;
 
@@ -82,6 +88,10 @@ export interface NeatensteinPulse extends NeatensteinDepthTestPulse {
   travelDirection: 1 | -1;
   /** Speed of travel in world units per tick. */
   travelSpeed: number;
+  /** Render layer: floor or ceiling mirror. */
+  layer:
+    | typeof NEATENSTEIN_PULSE_LAYER_FLOOR
+    | typeof NEATENSTEIN_PULSE_LAYER_CEILING;
 }
 
 /**
@@ -128,6 +138,7 @@ function lcgToFloat(state: number): number {
  *
  * @param simTick - Current fixed-timestep simulation tick.
  * @param seed - Deterministic seed for this pulse stream.
+ * @param layer - Render layer for the pulse; defaults to the floor grid.
  * @returns A new ambient pulse, or `null` when the tick does not qualify.
  *
  * @example
@@ -141,6 +152,9 @@ function lcgToFloat(state: number): number {
 export function emitNeatensteinAmbientPulse(
   simTick: number,
   seed: number,
+  layer:
+    | typeof NEATENSTEIN_PULSE_LAYER_FLOOR
+    | typeof NEATENSTEIN_PULSE_LAYER_CEILING = NEATENSTEIN_PULSE_LAYER_FLOOR,
 ): NeatensteinPulse | null {
   if (!isAmbientTick(simTick)) return null;
 
@@ -185,6 +199,7 @@ export function emitNeatensteinAmbientPulse(
     travelSpeed,
     screenColumn: 0,
     distance: 0,
+    layer,
   };
 }
 
@@ -216,7 +231,9 @@ export function updateNeatensteinPulses(
   const next = pulses
     .map((pulse) => {
       const lifetimeTicks = pulse.lifetimeTicks - 1;
-      const delta = pulse.travelDirection * pulse.travelSpeed;
+      const layerMultiplier =
+        pulse.layer === NEATENSTEIN_PULSE_LAYER_CEILING ? -1 : 1;
+      const delta = pulse.travelDirection * pulse.travelSpeed * layerMultiplier;
       const worldX = pulse.axis === 'y' ? pulse.worldX + delta : pulse.worldX;
       const worldY = pulse.axis === 'x' ? pulse.worldY + delta : pulse.worldY;
 

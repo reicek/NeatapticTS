@@ -18,6 +18,8 @@ import {
   NEATENSTEIN_FALLBACK_CANVAS_WIDTH,
   NEATENSTEIN_FALLBACK_STATUS_TEXT_RGB,
   NEATENSTEIN_WORKER_BUNDLE_FILENAME,
+  NEATENSTEIN_GPU_COLUMN_COUNT,
+  NEATENSTEIN_WORKER_COLUMN_COUNT,
 } from './constants';
 import { forwardWorkerInput } from './host/game/controls';
 import { createGameState } from './host/game/state';
@@ -113,18 +115,81 @@ function drawCanvasStatus(canvas: HTMLCanvasElement, message: string): void {
   context.fillText(message, canvas.width / 2, canvas.height / 2);
 }
 
+const NEATENSTEIN_MAX_CANVAS_WIDTH = NEATENSTEIN_GPU_COLUMN_COUNT * 2;
+const NEATENSTEIN_MAX_CANVAS_HEIGHT = NEATENSTEIN_WORKER_COLUMN_COUNT * 2;
+
+/**
+ * Scale a canvas backing-store size so it uses the largest render resolution
+ * supported by the Neatenstein raycasting output bounds while preserving the
+ * source aspect ratio.
+ *
+ * The maximum width is derived from the GPU raycasting column count, and the
+ * maximum height is derived from the worker-tier column count. They are aliased
+ * locally as canvas bounds because this file is concerned with the host canvas
+ * backing-store size rather than renderer internals.
+ *
+ * The returned size will:
+ *
+ * - preserve the source canvas aspect ratio
+ * - use as much of the maximum output bounds as possible
+ * - never exceed `NEATENSTEIN_MAX_CANVAS_WIDTH`
+ * - never exceed `NEATENSTEIN_MAX_CANVAS_HEIGHT`
+ *
+ * This function may upscale or downscale the source dimensions. That is
+ * intentional: the CSS canvas size provides the aspect ratio, while the
+ * raycasting bounds define the desired maximum render resolution.
+ *
+ * @param sourceWidth - Source canvas width in CSS pixels.
+ * @param sourceHeight - Source canvas height in CSS pixels.
+ * @returns The largest backing-store size that fits within the raycasting output bounds.
+ */
+function fitCanvasBackingStoreToMax(
+  sourceWidth: number,
+  sourceHeight: number,
+): { width: number; height: number } {
+  // Guard against invalid source sizes. The caller normally falls back before
+  // this point, but this keeps the helper safe if reused elsewhere.
+  if (sourceWidth <= 0 || sourceHeight <= 0) {
+    return {
+      width: NEATENSTEIN_MAX_CANVAS_WIDTH,
+      height: NEATENSTEIN_MAX_CANVAS_HEIGHT,
+    };
+  }
+
+  // Choose the limiting axis by taking the smaller scale factor.
+  //
+  // Do not include `1` here. A `1` cap would make this a downscale-only helper,
+  // preventing smaller CSS canvases from using the full available raycasting
+  // output resolution.
+  const scale = Math.min(
+    NEATENSTEIN_MAX_CANVAS_WIDTH / sourceWidth,
+    NEATENSTEIN_MAX_CANVAS_HEIGHT / sourceHeight,
+  );
+
+  return {
+    // Canvas backing-store dimensions must be integer device pixels.
+    // Clamp to at least 1px so unusual aspect ratios never floor to zero.
+    width: Math.max(1, Math.floor(sourceWidth * scale)),
+    height: Math.max(1, Math.floor(sourceHeight * scale)),
+  };
+}
+
 /**
  * Start the Neatenstein demo on the host page.
  *
  * Resolves the canvas, matches the canvas backing store to its CSS pixel size,
- * spawns the display worker bridge, initializes a deterministic game state,
- * and starts the render loop that ships simulation snapshots to the worker.
+ * caps the backing store to the supported maximum output size while preserving
+ * aspect ratio, spawns the display worker bridge, initializes a deterministic
+ * game state, and starts the render loop that ships simulation snapshots to the
+ * worker.
  *
  * Uses a CPU fallback when OffscreenCanvas is not available so the entry point
  * never crashes on load.
  *
- * @param _outputId - Host container element id (reserved for future HUD).
+ * @param _outputId - Host container element id, reserved for future HUD output.
  * @param canvasId - Visible canvas element id to bind the renderer to.
+ * @returns A stop function that cancels rendering, detaches input, and destroys
+ * the renderer bridge.
  */
 function neatensteinStart(
   _outputId: string,
@@ -136,20 +201,39 @@ function neatensteinStart(
   }
 
   // Match the canvas backing store to its CSS pixel size for crisp rendering.
-  // When jsdom (or a zero-layout viewport) reports zero client dimensions,
-  // fall back to the computed CSS size so tests and hidden containers still
-  // get a usable backing store.
+  // The backing store controls the actual render resolution, while CSS controls
+  // the displayed layout size.
+  //
+  // When jsdom, tests, hidden containers, or a zero-layout viewport report zero
+  // client dimensions, fall back to the computed CSS size so the renderer still
+  // receives a usable drawing buffer.
   let backingWidth = canvas.clientWidth;
   let backingHeight = canvas.clientHeight;
+
   if (backingWidth === 0 || backingHeight === 0) {
     const style = getComputedStyle(canvas);
+
+    // Prefer the authored CSS size when layout dimensions are unavailable.
+    // If parsing fails, fall back to the existing Neatenstein defaults.
     backingWidth =
       Number.parseInt(style.width, 10) || NEATENSTEIN_FALLBACK_CANVAS_WIDTH;
     backingHeight =
       Number.parseInt(style.height, 10) || NEATENSTEIN_FALLBACK_CANVAS_HEIGHT;
   }
-  canvas.width = backingWidth;
-  canvas.height = backingHeight;
+
+  // Resize the canvas backing store to the largest render size supported by the
+  // raycasting output bounds while preserving the canvas's CSS aspect ratio.
+  //
+  // The CSS dimensions are used only to determine aspect ratio. The backing
+  // store may be upscaled or downscaled so the worker receives the maximum
+  // usable render resolution without stretching the scene.
+  const fittedBackingStore = fitCanvasBackingStoreToMax(
+    backingWidth,
+    backingHeight,
+  );
+
+  canvas.width = fittedBackingStore.width;
+  canvas.height = fittedBackingStore.height;
 
   const useWorkerTier = supportsWorkerOffscreenCanvas();
   const tier = useWorkerTier ? 'worker' : 'cpu';

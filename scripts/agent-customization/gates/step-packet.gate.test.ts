@@ -838,6 +838,7 @@ describe('C2 pre_execute_hook contracts', () => {
     const PLAN_PATH = path.join(
       REPO_ROOT,
       'plans',
+      'completed',
       'Cortex_Orchestration_Single_Source_of_Truth.plans.md',
     );
     const SAMPLE_MARKER = 'Sample step packet using the new convention';

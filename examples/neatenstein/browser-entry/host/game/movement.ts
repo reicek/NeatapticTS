@@ -2,15 +2,19 @@
  * Player movement and wall-collision resolution for the Neatenstein host-side
  * simulation.
  *
- * This module owns the translation half of AC-205: reading keyboard movement
- * intent, normalizing diagonal speed, stepping the player forward at a fixed
- * speed, and sliding or reverting when a wall is hit.
+ * This module owns the translation half of the player simulation:
+ *
+ * - reading directional movement intent
+ * - rotating local movement into world space
+ * - normalizing diagonal movement so it does not outrun cardinal movement
+ * - stepping the player by a fixed timestep
+ * - resolving wall collisions with simple axis-slide behavior
  *
  * @module
  */
 
-import type { InputSnapshot } from '../input';
 import type { CollisionMap } from '../../renderer/map';
+import type { InputSnapshot } from '../input';
 import {
   NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_MS_PER_SECOND,
@@ -23,11 +27,59 @@ import type { GameState, Vector2 } from './types';
 export { createGameState };
 
 /**
+ * Small epsilon used when converting a player radius AABB into occupied cells.
+ *
+ * Subtracting epsilon from the max edge prevents exact boundary contact from
+ * being treated as penetration into the neighboring cell.
+ */
+const NEATENSTEIN_COLLISION_EDGE_EPSILON = 1e-9;
+
+/**
+ * Neutral movement vector.
+ */
+const ZERO_VECTOR: Vector2 = { x: 0, y: 0 };
+
+/**
+ * Return whether a number is finite.
+ *
+ * @param value - Candidate numeric value.
+ * @returns Whether the value is a finite number.
+ */
+function isFiniteNumber(value: number): boolean {
+  return Number.isFinite(value);
+}
+
+/**
+ * Resolve a safe movement timestep.
+ *
+ * Invalid or non-positive timesteps fall back to the canonical fixed timestep
+ * so malformed caller input cannot poison player position.
+ *
+ * @param dtMs - Candidate timestep in milliseconds.
+ * @returns Positive finite timestep.
+ */
+function resolveMovementTimestepMs(dtMs: number): number {
+  return isFiniteNumber(dtMs) && dtMs > 0
+    ? dtMs
+    : NEATENSTEIN_FIXED_TIMESTEP_MS;
+}
+
+/**
+ * Return whether a vector has finite numeric components.
+ *
+ * @param vector - Vector to inspect.
+ * @returns Whether both components are finite.
+ */
+function isFiniteVector(vector: Vector2): boolean {
+  return isFiniteNumber(vector.x) && isFiniteNumber(vector.y);
+}
+
+/**
  * Normalize a movement vector so diagonal movement does not outrun cardinal
  * movement.
  *
- * A zero-length vector is returned unchanged as `(0, 0)` to avoid a division
- * by zero when the player releases all movement keys.
+ * A zero-length or non-finite vector is returned as `(0, 0)` to avoid division
+ * by zero and prevent invalid input from contaminating player state.
  *
  * @param vector - Raw movement vector, typically built from `{-1, 0, 1}`
  *   per-axis inputs.
@@ -40,37 +92,50 @@ export { createGameState };
  * ```
  */
 export function normalizeMoveVector(vector: Vector2): Vector2 {
-  const length = Math.hypot(vector.x, vector.y);
-  if (length === 0) {
-    return { x: 0, y: 0 };
+  if (!isFiniteVector(vector)) {
+    return { ...ZERO_VECTOR };
   }
-  return { x: vector.x / length, y: vector.y / length };
+
+  const length = Math.hypot(vector.x, vector.y);
+
+  if (!isFiniteNumber(length) || length === 0) {
+    return { ...ZERO_VECTOR };
+  }
+
+  return {
+    x: vector.x / length,
+    y: vector.y / length,
+  };
 }
 
 /**
- * Step the player forward by a raw movement vector for one fixed timestep.
+ * Step the player by a movement vector for one timestep.
  *
- * The previous position is remembered so wall-slide collision can attempt
- * horizontal-only and vertical-only recovery before fully reverting a move.
+ * The previous position is preserved so collision resolution can try
+ * horizontal-only and vertical-only recovery before fully reverting the move.
  *
  * @param state - Snapshot before movement.
- * @param delta - Desired movement direction; diagonal inputs are normalized by
- *   callers such as {@link updatePlayerMovement} before this function runs.
- * @param dtMs - Movement duration in milliseconds; defaults to the fixed
- *   simulation timestep.
- * @returns New snapshot with the player moved one step and `previousPosition`
- *   set to the pre-move location.
+ * @param delta - Desired movement direction.
+ * @param dtMs - Movement duration in milliseconds.
+ * @returns New snapshot with the player moved and `previousPosition` recorded.
  */
 export function movePlayer(
   state: GameState,
   delta: Vector2,
   dtMs: number = NEATENSTEIN_FIXED_TIMESTEP_MS,
 ): GameState {
-  const previousPosition = { ...state.player.position };
   const move = normalizeMoveVector(delta);
-  const speed =
+
+  // Avoid needless state allocation when there is no movement.
+  if (move.x === 0 && move.y === 0) {
+    return state;
+  }
+
+  const resolvedDtMs = resolveMovementTimestepMs(dtMs);
+  const previousPosition = { ...state.player.position };
+  const stepDistance =
     NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND *
-    (dtMs / NEATENSTEIN_MS_PER_SECOND);
+    (resolvedDtMs / NEATENSTEIN_MS_PER_SECOND);
 
   return {
     ...state,
@@ -78,8 +143,8 @@ export function movePlayer(
       ...state.player,
       previousPosition,
       position: {
-        x: state.player.position.x + move.x * speed,
-        y: state.player.position.y + move.y * speed,
+        x: state.player.position.x + move.x * stepDistance,
+        y: state.player.position.y + move.y * stepDistance,
       },
     },
   };
@@ -89,36 +154,44 @@ export function movePlayer(
  * Resolve wall collision by sliding along the first non-blocking axis or
  * reverting to the previous position.
  *
- * The resolution order is:
- *   1. Accept the new position if it is not blocked.
- *   2. Try X-only movement (new X, old Y).
- *   3. Try Y-only movement (old X, new Y).
- *   4. Revert to the previous position.
+ * Resolution order:
  *
- * This gives classic FPS wall-slide behavior for movement that grazes a
- * single wall face.
+ * 1. Accept the new position if it is not blocked.
+ * 2. Try X-only movement: new X, old Y.
+ * 3. Try Y-only movement: old X, new Y.
+ * 4. Revert to the previous position.
+ *
+ * This gives classic FPS wall-slide behavior for movement that grazes a single
+ * wall face.
  *
  * @param state - Snapshot after an attempted move.
  * @param collisionMap - Map queried for solid cells.
- * @returns New snapshot with the resolved player position and
- *   `previousPosition` preserved from the input snapshot.
+ * @returns State with resolved player position.
  */
 export function resolveWallCollision(
   state: GameState,
   collisionMap: CollisionMap,
 ): GameState {
   if (!isPositionBlocked(state.player.position, collisionMap)) {
-    return { ...state, player: { ...state.player } };
+    return state;
   }
 
   const previous = state.player.previousPosition ?? state.player.position;
 
-  const xOnly = { x: state.player.position.x, y: previous.y };
+  const xOnly = {
+    x: state.player.position.x,
+    y: previous.y,
+  };
+
   if (!isPositionBlocked(xOnly, collisionMap)) {
     return updatePlayerPosition(state, xOnly, previous);
   }
 
-  const yOnly = { x: previous.x, y: state.player.position.y };
+  const yOnly = {
+    x: previous.x,
+    y: state.player.position.y,
+  };
+
   if (!isPositionBlocked(yOnly, collisionMap)) {
     return updatePlayerPosition(state, yOnly, previous);
   }
@@ -127,18 +200,17 @@ export function resolveWallCollision(
 }
 
 /**
- * Apply keyboard movement intent to the player for one tick.
+ * Apply directional movement intent to the player for one tick.
  *
- * W/A/S/D booleans are rotated into world space using the player's current
- * look angle, normalized to preserve diagonal speed, and then stepped and
- * collision-resolved.
+ * Movement booleans are rotated into world space using the player's current
+ * look angle. The resulting vector is normalized, stepped, and collision
+ * resolved.
  *
  * @param state - Snapshot before movement.
  * @param movement - Directional movement intent from the input router.
  * @param collisionMap - Map queried for solid cells.
- * @param dtMs - Movement duration in milliseconds; defaults to the fixed
- *   simulation timestep.
- * @returns New snapshot with the player moved, slid along walls if needed.
+ * @param dtMs - Movement duration in milliseconds.
+ * @returns New snapshot with the player moved and collision-resolved.
  */
 export function updatePlayerMovement(
   state: GameState,
@@ -151,32 +223,71 @@ export function updatePlayerMovement(
   const left = movement.left ? 1 : 0;
   const right = movement.right ? 1 : 0;
 
-  const yaw = state.player.angleRad;
+  const localForward = forward - backward;
+  const localRight = right - left;
+
+  // No movement input means no movement or collision allocation is required.
+  if (localForward === 0 && localRight === 0) {
+    return state;
+  }
+
+  const yaw = isFiniteNumber(state.player.angleRad) ? state.player.angleRad : 0;
+
   const forwardX = Math.cos(yaw);
   const forwardY = Math.sin(yaw);
   const rightX = -Math.sin(yaw);
   const rightY = Math.cos(yaw);
 
-  const moveX = (forward - backward) * forwardX + (right - left) * rightX;
-  const moveY = (forward - backward) * forwardY + (right - left) * rightY;
+  const delta = normalizeMoveVector({
+    x: localForward * forwardX + localRight * rightX,
+    y: localForward * forwardY + localRight * rightY,
+  });
 
-  const delta = normalizeMoveVector({ x: moveX, y: moveY });
   const moved = movePlayer(state, delta, dtMs);
+
+  // If movePlayer returned the same state, there is nothing to resolve.
+  if (moved === state) {
+    return state;
+  }
+
   return resolveWallCollision(moved, collisionMap);
 }
 
+/**
+ * Return whether a player position overlaps any solid map cell.
+ *
+ * The player is approximated as an axis-aligned square around its center. This
+ * is intentionally simple and stable for grid collision. Out-of-bounds cells
+ * are treated as solid by {@link CollisionMap}.
+ *
+ * @param position - Player center position in world/grid units.
+ * @param collisionMap - Collision map queried for solid cells.
+ * @returns Whether the position is blocked.
+ */
 function isPositionBlocked(
   position: Vector2,
   collisionMap: CollisionMap,
 ): boolean {
+  if (!isFiniteVector(position)) {
+    return true;
+  }
+
   const radius = NEATENSTEIN_PLAYER_RADIUS_CELLS;
+
   const minX = Math.floor(position.x - radius);
   const minY = Math.floor(position.y - radius);
-  const maxX = Math.floor(position.x + radius);
-  const maxY = Math.floor(position.y + radius);
 
-  for (let x = minX; x <= maxX; x++) {
-    for (let y = minY; y <= maxY; y++) {
+  // Subtract epsilon from the max edge so exact boundary contact does not count
+  // as being inside the neighboring cell.
+  const maxX = Math.floor(
+    position.x + radius - NEATENSTEIN_COLLISION_EDGE_EPSILON,
+  );
+  const maxY = Math.floor(
+    position.y + radius - NEATENSTEIN_COLLISION_EDGE_EPSILON,
+  );
+
+  for (let x = minX; x <= maxX; x += 1) {
+    for (let y = minY; y <= maxY; y += 1) {
       if (collisionMap.isSolid(x, y)) {
         return true;
       }
@@ -186,6 +297,15 @@ function isPositionBlocked(
   return false;
 }
 
+/**
+ * Return a state with an updated player position.
+ *
+ * @param state - Source game state.
+ * @param position - Resolved player position.
+ * @param previousPosition - Previous player position preserved for future
+ *   collision resolution.
+ * @returns New state with updated player position fields.
+ */
 function updatePlayerPosition(
   state: GameState,
   position: Vector2,

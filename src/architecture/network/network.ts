@@ -145,7 +145,11 @@ import {
 import { testNetwork as _testNetwork } from './stats/network.stats.utils';
 import { exportToONNX } from './onnx/network.onnx';
 import { activateGPU } from './gpu/network.gpu.activate';
-import { isGPUEligible } from './gpu/network.gpu.fallback';
+import {
+  getGPUEligibilityInfo,
+  isGPUEligible,
+} from './gpu/network.gpu.fallback';
+import { isDeviceReady } from './gpu/network.gpu.device';
 import {
   activate as _activate,
   generateStandalone,
@@ -193,6 +197,8 @@ import {
   forwardWindowedAsync as _forwardWindowedAsync,
 } from './network.utils';
 import type {
+  AccelerationStatus,
+  ActivationBackend,
   ActivationSchedule,
   ActivationSchedulingDiagnostics,
   CompactSerializedNetworkTuple,
@@ -200,6 +206,8 @@ import type {
   ConstructPart,
   ConstructResult,
   ExplicitIORoles,
+  GPUEligibilityResult,
+  NetworkActivationOptions,
   NetworkArchitectureDescriptor,
   MutationMethod,
   NetworkBootstrapInternals,
@@ -462,6 +470,10 @@ export default class Network implements NetworkView {
   public _slabDirty: boolean = true;
   /** @internal Whether to store slab weights in float32. */
   public _useFloat32Weights: boolean = true;
+  /** Backend used during the most recent activation. */
+  lastActivationBackend?: ActivationBackend;
+  /** @internal Whether the legacy `useGPU` deprecation warning has already been emitted for this instance. */
+  private _useGPUDeprecationWarned: boolean = false;
   /** @internal Node index dirty marker. */
   public _nodeIndexDirty: boolean = true;
   /** @internal Cached fast activation array A. */
@@ -682,6 +694,7 @@ export default class Network implements NetworkView {
    */
   addNodeBetween(): void {
     _addNodeBetweenImpl.call(this);
+    this._invalidateActivationBackend();
   }
 
   /**
@@ -1055,13 +1068,29 @@ export default class Network implements NetworkView {
   ): number[];
 
   /**
+   * Modern acceleration overload. Supports explicit backend selection and
+   * optional observer callbacks. A `backend` of `'gpu'` or `'auto'` may return
+   * a `Promise<Float32Array>` when a compatible device is available.
+   *
+   * @param input - Input vector of length `this.input`.
+   * @param options - Activation options including backend and observer.
+   * @param _maxActivationDepth - Unused; kept for signature compatibility.
+   * @returns Output values, or a promise when the GPU path is selected.
+   */
+  activate(
+    input: number[] | Float32Array,
+    options: NetworkActivationOptions,
+    _maxActivationDepth?: number,
+  ): number[] | Promise<Float32Array>;
+
+  /**
    * Activates the network using the given input array.
    *
    * Performs a forward pass through the network, calculating the activation of
    * each node. By default the CPU path is used and a plain `number[]` is
    * returned. Callers can opt into the WebGPU fast path by setting `gpuDevice`
-   * and passing `{ useGPU: true }`; that overload returns a
-   * `Promise<Float32Array>` because GPU readback is asynchronous.
+   * and passing `{ backend: 'gpu' }` or `{ backend: 'auto' }`; those overloads
+   * may return a `Promise<Float32Array>` because GPU readback is asynchronous.
    *
    * @param {number[] | Float32Array} input - An array or Float32Array of numerical values corresponding to the network's input nodes.
    * @param {boolean} [training=false] - Flag indicating if the activation is part of a training process.
@@ -1078,7 +1107,7 @@ export default class Network implements NetworkView {
    * Implementation signature used by the overloads above.
    *
    * Existing callers passing a boolean `training` flag are unchanged. The GPU
-   * path is used only when an options bag with `useGPU: true` is supplied,
+   * path is used only when `backend: 'gpu'` or `backend: 'auto'` is supplied,
    * `gpuDevice` is set, and `isGPUEligible` returns true. In every other case
    * the standard CPU `network.activate()` implementation runs.
    *
@@ -1089,23 +1118,125 @@ export default class Network implements NetworkView {
    */
   activate(
     input: number[] | Float32Array,
-    trainingOrOptions:
-      boolean | { training?: boolean; useGPU?: boolean } = false,
+    trainingOrOptions: boolean | NetworkActivationOptions = false,
     _maxActivationDepth = 1000, // eslint-disable-line @typescript-eslint/no-unused-vars
   ): number[] | Promise<Float32Array> {
     const options =
       typeof trainingOrOptions === 'object'
         ? trainingOrOptions
-        : { training: trainingOrOptions, useGPU: false };
+        : { training: trainingOrOptions };
     const training = options.training ?? false;
-    const useGPU = options.useGPU ?? false;
+    const backend = this._resolveActivationBackend(options);
+    const observer = options.observer;
+    const previousBackend = this.lastActivationBackend;
 
-    const device = this.gpuDevice;
-    if (useGPU && isGPUEligible(this, device)) {
-      return activateGPU(device, this, input);
+    if (backend === 'gpu' || backend === 'auto') {
+      const device = this.gpuDevice;
+      if (isDeviceReady(device) && isGPUEligible(this, device)) {
+        this.lastActivationBackend = 'gpu';
+        if (observer?.onBackendChange) {
+          observer.onBackendChange({
+            backend: 'gpu',
+            previous: previousBackend,
+          });
+        }
+        return activateGPU(device, this, input);
+      }
+
+      this.lastActivationBackend = 'cpu';
+      const eligibility = getGPUEligibilityInfo(this, device);
+      const reason = `GPU unavailable; ${eligibility.reason}`;
+      if (observer?.onFallback) {
+        observer.onFallback({ backend: 'cpu', requested: backend, reason });
+      }
+      if (observer?.onBackendChange) {
+        observer.onBackendChange({
+          backend: 'cpu',
+          previous: previousBackend,
+        });
+      }
+    } else {
+      this.lastActivationBackend = 'cpu';
+      if (observer?.onBackendChange) {
+        observer.onBackendChange({ backend: 'cpu', previous: previousBackend });
+      }
     }
 
     return _activate.call(this, input as number[], training);
+  }
+
+  /**
+   * Returns a snapshot of the network's acceleration state.
+   *
+   * @returns Status describing the last used backend, GPU readiness, and worker support.
+   */
+  getAccelerationStatus(): AccelerationStatus {
+    return {
+      mode: this.lastActivationBackend ?? 'cpu',
+      gpu: { available: this.isGPUReady() },
+      worker: { available: false },
+    };
+  }
+
+  /**
+   * Whether a WebGPU device has been assigned and is currently ready for use.
+   *
+   * @returns True when {@link gpuDevice} is set and not lost.
+   */
+  isGPUReady(): boolean {
+    return isDeviceReady(this.gpuDevice);
+  }
+
+  /**
+   * Probes whether this network can use its current GPU device for activation.
+   *
+   * @returns Eligibility verdict and a human-readable reason.
+   */
+  getGPUEligibility(): GPUEligibilityResult {
+    return getGPUEligibilityInfo(this, this.gpuDevice);
+  }
+
+  /**
+   * Resolves the requested backend, applying legacy `useGPU` deprecation rules.
+   *
+   * @param options - Activation options supplied by the caller.
+   * @returns Requested backend label. `'auto'` is resolved to the concrete
+   *          `'cpu'` or `'gpu'` path by the caller.
+   */
+  private _resolveActivationBackend(
+    options: NetworkActivationOptions,
+  ): ActivationBackend {
+    if (options.useGPU) {
+      this._warnUseGPUDeprecated();
+      return 'gpu';
+    }
+    if (options.backend) {
+      return options.backend;
+    }
+    return 'cpu';
+  }
+
+  /**
+   * Emits a one-time deprecation warning for the legacy `useGPU` option.
+   */
+  private _warnUseGPUDeprecated(): void {
+    if (this._useGPUDeprecationWarned) {
+      return;
+    }
+    this._useGPUDeprecationWarned = true;
+    console.warn(
+      '[Network] `useGPU: true` is deprecated. Use `backend: "gpu"` or `backend: "auto"` instead.',
+    );
+  }
+
+  /**
+   * Invalidates any cached activation backend so the next forward pass reselects
+   * the appropriate CPU or GPU path from scratch. Structural edits can change
+   * GPU eligibility (gates, self-connections, unsupported activations), so the
+   * cached backend must not survive them.
+   */
+  private _invalidateActivationBackend(): void {
+    this.lastActivationBackend = undefined;
   }
 
   /**
@@ -1238,6 +1369,7 @@ export default class Network implements NetworkView {
    */
   clear(): void {
     _clearState.call(this);
+    this._invalidateActivationBackend();
   }
 
   /**
@@ -1259,7 +1391,9 @@ export default class Network implements NetworkView {
    * @see {@link applyMorphDeltas} for the NGE wrapper that verifies structural changes.
    */
   mutate(method: MutationMethod): void {
-    return _mutateImpl.call(this, method);
+    const result = _mutateImpl.call(this, method);
+    this._invalidateActivationBackend();
+    return result;
   }
 
   /**
@@ -1275,7 +1409,9 @@ export default class Network implements NetworkView {
    * @see {@link Node.connect}
    */
   connect(from: Node, to: Node, weight?: number): Connection[] {
-    return _connect.call(this, from, to, weight);
+    const created = _connect.call(this, from, to, weight);
+    this._invalidateActivationBackend();
+    return created;
   }
 
   /**
@@ -1289,7 +1425,9 @@ export default class Network implements NetworkView {
    * @returns Flattened created connection objects in request order.
    */
   connectBatch(requests: readonly NetworkConnectionRequest[]): Connection[] {
-    return _connectBatch.call(this, requests);
+    const created = _connectBatch.call(this, requests);
+    this._invalidateActivationBackend();
+    return created;
   }
 
   /**
@@ -1305,7 +1443,9 @@ export default class Network implements NetworkView {
    * @see {@link Node.gate}
    */
   gate(node: Node, connection: Connection) {
-    return _gate.call(this, node, connection);
+    const result = _gate.call(this, node, connection);
+    this._invalidateActivationBackend();
+    return result;
   }
 
   /**
@@ -1323,7 +1463,9 @@ export default class Network implements NetworkView {
    * @throws {Error} If the specified `node` is not found in the network's `nodes` list.
    */
   remove(node: Node) {
-    return _removeNodeStandalone.call(this, node);
+    const result = _removeNodeStandalone.call(this, node);
+    this._invalidateActivationBackend();
+    return result;
   }
 
   /**
@@ -1337,7 +1479,8 @@ export default class Network implements NetworkView {
    * @see {@link Node.disconnect}
    */
   disconnect(from: Node, to: Node): void {
-    return _disconnect.call(this, from, to);
+    _disconnect.call(this, from, to);
+    this._invalidateActivationBackend();
   }
 
   /**
@@ -1351,7 +1494,9 @@ export default class Network implements NetworkView {
    * @see {@link Node.ungate}
    */
   ungate(connection: Connection) {
-    return _ungate.call(this, connection);
+    const result = _ungate.call(this, connection);
+    this._invalidateActivationBackend();
+    return result;
   }
 
   /**

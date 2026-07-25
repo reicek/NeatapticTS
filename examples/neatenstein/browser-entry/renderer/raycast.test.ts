@@ -77,11 +77,11 @@ describe('Neatenstein raycast helpers', () => {
     expect(result.side).toBe(1);
   });
 
-  it('builds a map of the fixed 24x24 size', async () => {
+  it('builds a map of the fixed 60x60 size', async () => {
     const { buildNeatensteinMap } = await loadModule('./raycast.ts');
     const map = buildNeatensteinMap(12345);
     expect(map).toBeInstanceOf(Uint8Array);
-    expect(map.length).toBe(24 * 24);
+    expect(map.length).toBe(60 * 60);
   });
 
   it('produces deterministic maps for the same seed', async () => {
@@ -89,5 +89,26 @@ describe('Neatenstein raycast helpers', () => {
     const first = buildNeatensteinMap(12345);
     const second = buildNeatensteinMap(12345);
     expect(Array.from(second)).toEqual(Array.from(first));
+  });
+
+  describe('DDA step cap contract', () => {
+    it('exits a 60x60 empty grid within a 150-step ceiling', async () => {
+      const { castRayDDAFromFlatMap } = await loadModule('./raycast.ts');
+      const side = 60;
+      const flatMap = new Uint8Array(side * side);
+      const posX = 1.5;
+      const posY = 1.5;
+      const result = castRayDDAFromFlatMap(flatMap, side, posX, posY, 1, 1);
+      const startMapX = Math.floor(posX);
+      const startMapY = Math.floor(posY);
+      const stepsTaken =
+        Math.abs(result.mapX - startMapX) + Math.abs(result.mapY - startMapY);
+      expect(stepsTaken).toBeLessThanOrEqual(150);
+    });
+
+    it('exports an explicit DDA step cap constant covering the 60x60 diagonal', async () => {
+      const { NEATENSTEIN_DDA_MAX_STEPS } = await loadModule('./raycast.ts');
+      expect(NEATENSTEIN_DDA_MAX_STEPS).toBeGreaterThanOrEqual(2 * 60);
+    });
   });
 });

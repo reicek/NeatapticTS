@@ -11,7 +11,10 @@
 
 import {
   NEATENSTEIN_ENEMY_MAX_CONCURRENT,
+  NEATENSTEIN_ENEMY_SPAWN_MIN_DISTANCE_CELLS,
   NEATENSTEIN_ENEMY_SPAWN_RADIUS,
+  NEATENSTEIN_SPAWN_CENTER_X,
+  NEATENSTEIN_SPAWN_CENTER_Y,
 } from './constants';
 import { createGameRng } from './state';
 import type { EnemyState, GameState } from './types';
@@ -28,8 +31,13 @@ export interface SpawnWaveTickResult {
  * Advance enemy spawning by one fixed tick.
  *
  * Spawns at most one enemy per call and enforces the active-enemy concurrency
- * cap. The returned state is always a new immutable snapshot, even when no
- * enemy is spawned, so callers can replay history without accidental mutation.
+ * cap. Enemies appear at a random angle and a random distance between
+ * {@link NEATENSTEIN_ENEMY_SPAWN_MIN_DISTANCE_CELLS} and
+ * {@link NEATENSTEIN_ENEMY_SPAWN_RADIUS} cells from the map center so their
+ * cell coordinates always fall inside the 60×60 grid and never start inside
+ * the player's contact-damage range. The returned state is always a new
+ * immutable snapshot, even when no enemy is spawned, so callers can replay
+ * history without accidental mutation.
  *
  * @param state - Snapshot before the spawn tick.
  * @param _dtMs - Elapsed simulation time in milliseconds (reserved for future
@@ -38,8 +46,9 @@ export interface SpawnWaveTickResult {
  *
  * @example
  * ```ts
+ * import { NEATENSTEIN_FIXED_TIMESTEP_MS } from './constants';
  * const before = createGameState({ seed: 1 });
- * const result = spawnWaveTick(before, 16);
+ * const result = spawnWaveTick(before, NEATENSTEIN_FIXED_TIMESTEP_MS);
  * expect(result.spawnedThisTick).toBeLessThanOrEqual(1);
  * ```
  */
@@ -64,11 +73,15 @@ export function spawnWaveTick(
   // produce the same deterministic spawn position.
   const rng = createGameRng(state.seed + state.spawnCount);
   const angle = rng() * 2 * Math.PI;
-  const distance = rng() * NEATENSTEIN_ENEMY_SPAWN_RADIUS;
+  const distance =
+    NEATENSTEIN_ENEMY_SPAWN_MIN_DISTANCE_CELLS +
+    rng() *
+      (NEATENSTEIN_ENEMY_SPAWN_RADIUS -
+        NEATENSTEIN_ENEMY_SPAWN_MIN_DISTANCE_CELLS);
   const enemy: EnemyState = {
     position: {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
+      x: NEATENSTEIN_SPAWN_CENTER_X + Math.cos(angle) * distance,
+      y: NEATENSTEIN_SPAWN_CENTER_Y + Math.sin(angle) * distance,
     },
     health: 1,
   };

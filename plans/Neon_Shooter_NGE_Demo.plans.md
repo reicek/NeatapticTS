@@ -1,6 +1,6 @@
 ﻿# Neatenstein NGE Demo (alias "Neat Shooter")
 
-**Status:** [WIP] — Phase 2 Step 02 [WIP]: User confirmation gate · **Plan ID:** NEATENSTEIN_NGE_DEMO · **Created:** 2026-07-17
+**Status:** [WIP] — Phase 3 [WIP] · Step 01 [PLANNED]: Asymmetric Co-evolution Harness red tests and implementation slices (awaiting user go-ahead to expand) · Phase 2 [DONE] · **Plan ID:** NEATENSTEIN_NGE_DEMO · **Created:** 2026-07-17
 **Consensus:** 4 specialists (NGE Core, NGE Benchmark, Visualizer, Game Director) — all APPROVED after 2 review rounds.
 **Downstream of:** `plans/completed/NEAT_Genesis_EvoDevo.md` (NGE core), `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` (co-evolution harness reference, not duplicated).
 **Engine research:** `plans/Neon_Shooter_NGE_Demo.research.md` — DOOM/raycasting algorithm notes, neon renderer design (Lineage B grid DDA, locked), Flappy ground grid reuse, license attribution, and reuse map. **Read this before implementing Phase 1.**
@@ -10,59 +10,90 @@
 
 ## Current state
 
-**Phase 1 — World & Renderer is [DONE].** All 13 Step 01 slices are green validated and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 1. User confirmed (2026-07-22): 3D rendering works, mouse look works at `http://localhost:8080/docs/examples/neatenstein/index.html`.
+Claim: 01-planning @ 2026-07-23T16:56:53-04:00 — Phase 2 [DONE]; Phase 3 [WIP] Step 01 [PLANNED]: Asymmetric Co-evolution Harness. User manually confirmed the 4-cell central arena clearance change.
 
-**Phase 2 — Game Logic & FPS State is [WIP].** All 10 implementation slices completed and green validated (43 suites, 354 tests pass). Step 01 [DONE]. Step 02 (user confirmation gate) is [WIP] — the active step. Details compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2. Browser integration verified through iterative user-driven testing: WASD, mouse-look, fire, floor grid, pulses, impact spots, wall colors, collision slide.
+**Phase 2 — Game Logic & FPS State is [DONE].** All original work (Step 01 through Step 04) plus follow-up Step 05 are complete and green validated. Step 05 increased the procedural map's central arena clearance from 2 cells to 4 cells; user manually confirmed the change. Detailed Phase 2 logs are compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.
 
-**Active frontier:** Step 02 — User confirmation gate [WIP]. Awaiting user manual browser review at `http://localhost:8080/docs/examples/neatenstein/index.html`. User may request visual fixes or adjustments before approving Phase 3.
+**Phase 1 — World & Renderer is [DONE].** All 13 Step 01 slices are green validated and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 1. Phase 1 follow-up stripe-width change is [DONE] (counts GPU 640 / Worker 480 / CPU 320). User confirmed (2026-07-22): 3D rendering works, mouse look works at `http://localhost:8080/docs/examples/neatenstein/index.html`.
 
-**USER CONFIRMATION GATE:** Before proceeding to Phase 3, the user must manually confirm in the browser:
+**Phase 3 — Asymmetric Co-evolution Harness is [WIP] awaiting user go-ahead.** Step 01 slices are NOT yet authored or expanded. The next session should dispatch a fresh `01-planning` instance to author Phase 3 Step 01 packets once the user explicitly requests Phase 3 work.
 
-1. WASD moves the player in the world.
-2. Left-click fires the neon beam (visible tracer).
-3. Space triggers dash.
-4. Enemies are visible (at least placeholder sprites).
-5. The world feels responsive and controllable.
+**Active frontier:** Phase 3 Step 01 — Asymmetric Co-evolution Harness red tests and implementation slices (to be authored when user gives go-ahead). Do not proceed without explicit user scope agreement.
 
-Completed Phase 2 slice logs are in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.
+Completed Phase 2 slice logs (Steps 01–05) are in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.
 
 ## Latest validation evidence
 
-status: green-light
 green-light: true
+verified_step: 'Phase 2 [DONE] — all Phase 2 steps (01–05) completed and compressed to logs; Phase 3 [WIP] awaiting user go-ahead'
+finalization_timestamp: '2026-07-23T17:00:00-04:00'
 
-````yaml
-verifier: 01-planning verification agent (fresh context)
-timestamp: 2026-07-21T15:58:10-04:00
-green-light: true
-status: green-light
-verification_summary:
-  - 'Phase 1 is [DONE] and satisfies the dependency precondition for Phase 2.'
-  - 'Phase 2 — Game Logic & FPS State is [DONE]. All 10 slices completed and green validated (43 suites, 354 tests pass).'
-  - 'Phase 2 Step 01 step-level YAML block is complete with all slices marked [DONE].'
-  - 'Browser integration verified through iterative user-driven testing during Phase 2.'
-  - 'Detailed Phase 2 evidence compressed to plans/Neon_Shooter_NGE_Demo.logs.md §Phase 2.'
-gate_verdicts:
-  - gate: plan-slice-quality
-    pass: true
-    evidence: 'All WIP plan slices are within the 4-hour estimate limit. Phase 2 slices checked: 02-red-phase2 (2h), 02-game-scaffold (2h), 02-hero-state (2h), 02-enemy-waves (3h), 02-controls (3h), 02-projectiles (3h), 02-collision (3h), 02-episode-loop (3h), 02-worker-game-sync (4h), 02-green-phase2 (2h).'
-    command: 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
-    raw_json: '{"pass":true,"evidence":{"plansChecked":["plans/mcp-active-binding.plans.md","plans/Neon_Shooter_NGE_Demo.plans.md","plans/Racing_Perception_Redesign.plans.md","plans/__gate-debug-1784660517090.plans.md","plans/__gate-debug-1784660579515.plans.md"],"violations":[],"limit":4},"fixHint":"All WIP plan slices are within the 4-hour estimate limit.","owner":"plan-slice-quality.gate.mjs"}'
-  - gate: step-packet
-    pass: true
-    evidence: 'Active WIP phase/step packets conform to the new format and the plan-readiness green-light marker is detected.'
-    command: 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-    raw_json: '{"pass":true,"evidence":{"blocksChecked":["plans/mcp-active-binding.plans.md:yaml@19927","plans/mcp-active-binding.plans.md:yaml@21380","plans/Neon_Shooter_NGE_Demo.plans.md:yaml@16123","plans/Neon_Shooter_NGE_Demo.plans.md:yaml@19100"],"violations":[],"planReadinessWarnings":[],"preExecuteHooks":[],"plansScanned":5},"fixHint":"All active WIP phase/step packets conform to the new format.","owner":"step-packet.gate.mjs"}'
-  - gate: plan-sync
-    pass: true
-    evidence: 'All WIP plans are correctly registered in README and Roadmap.'
-    command: 'neataptic-gate-mcp:run_gate_check --gate=plan-sync'
-    raw_json: '{"pass":true,"evidence":{"wipPlans":["plans/mcp-active-binding.plans.md","plans/Neon_Shooter_NGE_Demo.plans.md"],"missingFromReadme":[],"missingFromRoadmap":[],"plansChecked":9},"fixHint":"All WIP plans are correctly registered in README and Roadmap.","owner":"validate-plan-sync.mjs"}'
-  - gate: validate-plan-sync
-    pass: true
-    evidence: 'PASS plan sync: 0 errors, 0 warnings (plan: plans/Neon_Shooter_NGE_Demo.plans.md)'
-    command: 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Neon_Shooter_NGE_Demo.plans.md'
-    raw_json: '{"name":"plan sync","ok":true,"issues":[],"counts":{"errors":0,"warnings":0},"summaryText":"PASS plan sync: 0 errors, 0 warnings (plan: plans/Neon_Shooter_NGE_Demo.plans.md)","plan":{"path":"plans/Neon_Shooter_NGE_Demo.plans.md","status":"WIP"},"downstreamTrackers":["plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md","plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md","plans/Racing_Perception_Redesign.plans.md","plans/mcp-active-binding.plans.md"]}'
+[DONE] 01-planning Phase 2 finalization. Detailed evidence archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived detailed validation evidence.
+
+[DONE] 01-planning Step 05 prior verification. Detailed evidence archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived detailed validation evidence.
+
+[DONE] 04-implementing slice 05-impl-clearance. Detailed evidence archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived detailed validation evidence.
+
+### 04-implementing slice-fix `02-fix-impl`
+
+[DONE] Slice 02-fix-impl green-light; full verification summary and preflight evidence moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Step 02.
+
+### 01-planning green light
+
+[DONE] 01-planning green light. Detailed evidence archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived detailed validation evidence.
+
+### 05-green-testing slice `02-fix-green`
+
+[DONE] Slice 02-fix-green green validation passed. Full preflight evidence and gate verdicts moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Step 02.
+
+### 01-planning green light (Step 03 patch)
+
+[DONE] 01-planning green light (Step 03 patch). Detailed evidence archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived detailed validation evidence.
+
+[DONE] 03-red-testing slice `03-red`. Detailed evidence archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived detailed validation evidence.
+
+[DONE] 05-green-testing slice `03-green` (attempt + re-run). Detailed evidence archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived detailed validation evidence.
+
+## PlanUpdate
+
+[DONE] PlanUpdate for slice 02-fix-impl archived to `plans/Neon_Shooter_NGE_Demo.logs.md` §Step 02.
+
+[DONE] Slice 03-ceiling implementation handoff archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived PlanUpdate packets.
+
+[DONE] Slice 03-map implementation handoff archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived PlanUpdate packets.
+
+[DONE] Slice-fix 03-map: enemy spawn separation from player spawn archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived PlanUpdate packets.
+
+### Phase 1 follow-up: halve vertical wall stripe width [DONE]
+
+```yaml
+PlanUpdate:
+  slice_id: 'phase1-stripe-width-follow-up'
+  status: [DONE]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/constants.ts'
+    - 'examples/neatenstein/browser-entry/host/resize.ts'
+    - 'examples/neatenstein/browser-entry/constants.test.ts'
+    - 'examples/neatenstein/browser-entry/host/resize.test.ts'
+    - 'examples/neatenstein/browser-entry/renderer/frame.test.ts'
+    - 'examples/neatenstein/browser-entry/renderer/pulse.test.ts'
+    - 'plans/Neon_Shooter_NGE_Demo.plans.md'
+  new_counts:
+    NEATENSTEIN_GPU_COLUMN_COUNT: 640
+    NEATENSTEIN_WORKER_COLUMN_COUNT: 480
+    NEATENSTEIN_CPU_COLUMN_COUNT: 320
+  green_validation:
+    - 'Focused Jest 4 suites / 26 tests pass'
+    - 'Broad Neatenstein Jest 44 suites / 380 tests pass'
+    - 'npx tsc --noEmit -p tsconfig.json pass'
+    - 'npx eslint examples/neatenstein/browser-entry/constants.ts pass'
+    - 'npx prettier --check examples/neatenstein/browser-entry/constants.ts pass'
+    - 'node scripts/build-neatenstein.mjs pass'
+    - 'Visible-browser smoke pass (canvas 3376×1235, window.neatensteinStart callable, no runtime JS errors, browserVisibility: visible-foreground)'
+  next: 'Phase 3 Step 01 — Asymmetric Co-evolution Harness — remains [PLANNED] awaiting explicit user go-ahead.'
+```
+
+**Verdict:** GREEN. Detailed red-phase, implementation, and validation evidence archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 1 follow-up.
 
 ## Implementation phases
 
@@ -70,61 +101,11 @@ gate_verdicts:
 
 **Goal:** Raycasting neon renderer + frame protocol + audio.
 
-```yaml
-phase: 1
-title: 'World & Renderer'
-status: '[DONE]'
-goal: 'planning'
-expansion: 'steps'
-auto_expand: false
-mode: 'fresh-session'
-source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
-copy_paste: true
-next_phase: 'Step 01 — World & Renderer scaffold and raycaster'
-skills:
-  - 'plan-alignment'
-  - 'implementation-standards'
-  - 'planning-acceptance-criteria'
-validation:
-  - 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
-  - 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-acceptance_criteria:
-  - id: AC-001
-    text: 'GPU tier raycaster runs at 60fps with no long task > 16ms'
-    validation: 'Chrome DevTools performance trace'
-  - id: AC-002
-    text: 'Neon walls render with borders and distance fog; no overdraw outside canvas'
-    validation: 'Browser smoke test'
-  - id: AC-003
-    text: 'Frame protocol is versioned, uses transfer-list zero-copy, and requestId increments'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/frame'
-  - id: AC-004
-    text: 'At least 3 audio cues are wired and audible'
-    validation: 'Manual browser check'
-  - id: AC-005
-    text: 'README.md is present at examples/neatenstein/ root'
-    validation: 'ls examples/neatenstein/README.md'
-  - id: AC-006
-    text: 'Pulses render fake-perspective-anchored without swim or snap during camera rotation'
-    validation: 'Browser smoke test'
-  - id: AC-007
-    text: 'Pulse emission is deterministic: same seed + same inputs produce identical pulse positions/timings'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/pulse'
-  - id: AC-008
-    text: 'Pulses are depth-tested against walls'
-    validation: 'Browser smoke test'
-  - id: AC-009
-    text: 'Generation-up fires as an audio-visual pair on the same sim tick'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/audio'
-constitution_check:
-  - 'principle-4-small-slices'
-placeholder_steps:
-  - 'Step 01 — World & Renderer scaffold and raycaster'
-````
+[DONE] Phase 1 phase YAML archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 1 detailed YAML packets.
 
 - Raycasting renderer (~800 lines): map grid, DDA ray cast, neon wall rendering (pure neon-line with optional line-pattern texture modulation, NOT sampled texels), enemy wireframe sprites, projectiles.
 - **Floor: reuse Flappy Bird's synthwave ground grid** (camera-adapted). Reuse `FLAPPY_GROUND_GRID_*` constants, depth-curve/alpha/blur/thickness helpers, and `FLAPPY_NEON_PALETTE` ground colors. Adapt vertical rays to camera yaw rotation. **Pulse system is fake-perspective-anchored** (research §3.3.5): horizontal pulses reuse Flappy helpers unchanged; vertical pulses use world-bearing continuity (cache `worldBearingRad`, match by `Δθ` with 0.1 rad tolerance; off-screen bearings fade, never re-anchor). Pulses render on Layer 2 (dynamic), depth-tested against the z-buffer (§3.4.1). **Pulse emission is sim-tick-driven** (not wall-clock, not frameIndex) for Phase 2 determinism (§3.3.7). **Ambient density** `NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS=3000` (adapted from Flappy's 6000ms, §3.3.6); **event pulses** for generation-up ripple (white-hot expanding ring, 600ms, synced with generation-up sound §3.3.9), enemy death pulse (enemy-hue tint, 400ms), low-health dim (alpha × 0.5 when health < 30%). 8-concurrent-pulse ceiling. See research file §3.3.5–§3.3.9. This gives visual coherence with the Flappy demo and a secondary legibility channel for combat events.
-- Tier-aware column count: GPU 320 cols, Worker 240, CPU 160. Glow passes skip on CPU. CPU fallback: lines only, no texture modulation, no glow.
+- Tier-aware column count: GPU 640 cols, Worker 480, CPU 320. Glow passes skip on CPU. CPU fallback: lines only, no texture modulation, no glow.
 - Worker offload: all NGE inference + enemy AI + projectile physics on workers; renderer reads packed `NeatensteinRenderFrame` (SoA typed arrays, transfer list, zero-copy, requestId-gated). Worker tier may use `OffscreenCanvas` via `transferControlToOffscreen()` for off-main-thread rendering (see research file §3.2.1). **Two render architectures by tier:** (a) CPU/GPU — display worker produces `NeatensteinRenderFrame`, main thread renders; (b) Worker — display worker renders directly via OffscreenCanvas, frame transfer bypassed. On Worker tier, display worker responsibilities = sim tick + NGE inference + OffscreenCanvas render.
 - **Render path (tier-gated, see research file §3.2.1):** CPU tier → `ImageData` framebuffer + single `putImageData` (no per-column `fillRect`); Worker tier → `OffscreenCanvas`; GPU tier → stroke + `shadowBlur` (premium). All tiers: `getContext("2d", { alpha: false })`, integer-floored coordinates. Feature-detect `transferControlToOffscreen` and `ctx.filter`; fall back to CPU ImageData path if unavailable.
 - **`transferControlToOffscreen()` is irreversible.** On tier downgrade from Worker → CPU/GPU, the host must create a fresh `<canvas>` element (old canvas is permanently worker-owned). `onBackendChange` handler accounts for canvas recreation + re-attach ResizeObserver + re-bind pointer lock.
@@ -153,95 +134,19 @@ placeholder_steps:
 
 #### Step 01: World & Renderer scaffold and raycaster [DONE]
 
-```yaml
-phase: 1
-step: 1
-title: 'World & Renderer scaffold and raycaster'
-status: '[DONE]'
-goal: 'implementing'
-tdd_sequence: 'red-green'
-expansion: 'slices'
-auto_expand: false
-mode: 'fresh-session'
-source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
-copy_paste: true
-next_step: 'Phase 2 Step 01 — Game Logic & FPS State red tests'
-slices:
-  - slice_id: '01-red-phase1'
-    status: '[DONE]'
-  - slice_id: '01-scaffold'
-    status: '[DONE]'
-  - slice_id: '01-frame-protocol'
-    status: '[DONE]'
-  - slice_id: '01-raycaster-grid'
-    status: '[DONE]'
-  - slice_id: '01-neon-walls'
-    status: '[DONE]'
-  - slice_id: '01-floor-reuse'
-    status: '[DONE]'
-  - slice_id: '01-sprites-zbuffer'
-    status: '[DONE]'
-  - slice_id: '01-pulse-system'
-    status: '[DONE]'
-  - slice_id: '01-audio'
-    status: '[DONE]'
-  - slice_id: '01-worker-offload'
-    status: '[DONE]'
-  - slice_id: '01-interpolation-resize'
-    status: '[DONE]'
-  - slice_id: '01-host-shell'
-    status: '[DONE]'
-  - slice_id: '01-green-phase1'
-    status: '[DONE]'
-```
+[DONE] Phase 1 Step 01 YAML archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 1 detailed YAML packets.
 
 [DONE] All 13 Phase 1 slices completed and green validated. Detailed slice logs moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 1.
 
-### Phase 2 — Game Logic & FPS State (visualizer + benchmark-owned) [WIP]
+### Phase 2 — Game Logic & FPS State (visualizer + benchmark-owned) [DONE]
 
 **Goal:** FPS game state, controls, deterministic episode.
 
-[DONE] All 10 Phase 2 slices completed and green validated (43 suites, 354 tests). Browser integration verified through iterative user-driven testing. Detailed slice logs moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.
+Phase 2 is complete and green validated. Step 01 (10 slices, 43 suites, 354 tests) [DONE]; Step 02 (bundle path resolution fix) [DONE]; Step 03 (ceiling mirror and 42×42 larger map) [DONE] — functional suites and visible-browser smoke pass; AC-231 100% coverage-guard exception accepted and logged. Step 04 (user confirmation gate) [DONE] — user confirmed browser OK. Step 05 (increase central arena clearance to 4 cells) [DONE] — 05-red-clearance [DONE], 05-impl-clearance [DONE], 05-green-clearance [DONE] via user manual confirmation. Detailed slice logs for Steps 01–05 moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2. Phase 3 [WIP] — awaiting user go-ahead to expand Step 01 slices.
 
-**Slice summary:** 02-red-phase2 → 02-game-scaffold → 02-hero-state → 02-enemy-waves → 02-controls → 02-projectiles → 02-collision → 02-episode-loop → 02-worker-game-sync → 02-green-phase2. All [DONE].
+**Slice summary:** 02-red-phase2 → 02-game-scaffold → 02-hero-state → 02-enemy-waves → 02-controls → 02-projectiles → 02-collision → 02-episode-loop → 02-worker-game-sync → 02-green-phase2 → 03-red → 03-ceiling → 03-map → 03-green → 05-red-clearance [DONE] → 05-impl-clearance [DONE] → 05-green-clearance [DONE]. Steps 01–05 [DONE].
 
-```yaml
-phase: 2
-title: 'Game Logic & FPS State'
-status: '[WIP]'
-goal: 'planning'
-expansion: 'steps'
-auto_expand: false
-mode: 'fresh-session'
-source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
-copy_paste: true
-next_phase: 'Step 02 — User confirmation gate'
-skills:
-  - 'plan-alignment'
-  - 'implementation-standards'
-  - 'planning-acceptance-criteria'
-validation:
-  - 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
-  - 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-acceptance_criteria:
-  - id: AC-211
-    text: 'Phase 2 Step 01 has a complete step-level YAML block, slices list, traceable AC-### identifiers, and files_to_change declarations'
-    validation: 'neataptic-gate-mcp:run_gate_check --gate=step-packet'
-  - id: AC-212
-    text: 'All Phase 2 slices are ≤ 4 hours and the dependency graph is acyclic'
-    validation: 'neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality'
-  - id: AC-213
-    text: 'FPS game state, controls, hitscan combat, enemy waves, and deterministic episode loop are implemented and green validated'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game'
-  - id: AC-214
-    text: 'Visible-browser smoke test passes for WASD, mouse look, pointer lock, Space dash, left-click fire, and iOS Safari touch look'
-    validation: 'Visible-browser smoke at http://localhost:8080/docs/examples/neatenstein/index.html'
-constitution_check:
-  - 'principle-4-small-slices'
-placeholder_steps:
-  - 'Step 01 — Game Logic & FPS State red tests and implementation slices [DONE]'
-  - 'Step 02 — User confirmation gate [WIP]'
-```
+[DONE] Phase 2 phase YAML archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2 detailed YAML packets.
 
 - FPS game state: health, ammo, enemy waves (continuous trickle, not clumps), collision, projectiles (hitscan neon beam).
 - Controls: WASD + mouse look (pointer lock with `unadjustedMovement: true`, see research file §4.2.6) + left-click fire + Space dash (200ms i-frames). Arrow-key look fallback if no pointer lock. Touch drag-to-look fallback for iOS Safari. **On Worker tier:** `mousemove` deltas forwarded from main thread to display worker via `postMessage` (pointer lock is on the canvas DOM element, which stays main-thread even with OffscreenCanvas).
@@ -261,40 +166,54 @@ placeholder_steps:
 
 [DONE] All 10 slices completed and green validated (43 suites, 354 tests). Browser integration verified through iterative user-driven testing. Full step packet with AC-201 through AC-217, traceability, and slice details archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.
 
-#### Step 02: User confirmation gate [WIP]
+#### Step 02: Fix bundle path resolution [DONE]
 
-**Active step — awaiting user manual browser review.** All Phase 2 implementation is [DONE]. The user must manually verify the demo at `http://localhost:8080/docs/examples/neatenstein/index.html` before Phase 3 begins. User may request visual fixes or adjustments.
+**Step objective:** Fix the deployed Neatenstein host page so it loads `neatenstein.bundle.js` from the docs-level asset path (`../../assets/...`) instead of the stale repo-root path (`../../docs/assets/...`). Align the source HTML detection logic with the Flappy Bird pattern, regenerate the docs copy, update the host-shell Jest contract, and verify with a visible-browser smoke test.
 
-```yaml
-phase: 2
-step: 2
-title: 'User confirmation gate'
-status: '[WIP]'
-goal: 'green-testing'
-expansion: 'none'
-auto_expand: false
-mode: 'fresh-session'
-source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
-copy_paste: true
-next_step: 'Phase 3 Step 01 — Asymmetric Co-evolution Harness red tests'
-skills:
-  - 'plan-alignment'
-  - 'phase-handoff-workflow'
-validation:
-  - 'User manual browser confirmation at http://localhost:8080/docs/examples/neatenstein/index.html'
-acceptance_criteria:
-  - id: AC-217
-    text: 'User confirms WASD moves the player, left-click fires a visible neon beam, Space triggers dash, enemies are visible, and the world feels responsive'
-    validation: 'User browser confirmation at http://localhost:8080/docs/examples/neatenstein/index.html'
-constitution_check:
-  - 'principle-4-small-slices'
-```
+[DONE] Slices 02-fix-red, 02-fix-impl, and 02-fix-green all green validated. Detailed step packet, slice records, and VALIDATION_EVIDENCE moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Step 02.
 
-### Phase 3 — Asymmetric Co-evolution Harness (benchmark-owned, core-reviewed) [PLANNED]
+#### Step 03: Ceiling mirror and larger map [DONE]
+
+**Step objective:** Add a ceiling mirror of the floor grid and enlarge the map area by ~3x.
+
+[DONE] All four slices completed and green validated: `03-red` red tests authored, `03-ceiling` ceiling mirror implemented, `03-map` 42×42 map expansion implemented, `03-green` functional suites and visible-browser smoke passed. AC-231 100% coverage-guard exception accepted and logged because `examples/neatenstein/` files are demo-only and the default Jest config excludes `/examples/` from coverage. Detailed validation evidence archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Step 03.
+
+[DONE] Phase 2 Step 03 YAML archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2 detailed YAML packets.
+
+#### Step 03: 03-green validation evidence [DONE]
+
+- Plan gates: `plan-slice-quality` → pass; `step-packet` → pass; `plan-sync` → pass; `specialist-review` → pass.
+- Type-check: `npx tsc --noEmit -p tsconfig.json` → pass.
+- Build: `node scripts/build-neatenstein.mjs` → pass; `npm run docs:examples` → pass.
+- Lint: `npm run lint` → pass (0 errors; 114 pre-existing `any` warnings).
+- Focused Jest renderer suites: `floor.test.ts` (19/19), `map.test.ts` (4/4), `raycast.test.ts` (7/7), `pulse.test.ts` (14/14) all pass.
+- Focused Jest game suite: `examples/neatenstein/browser-entry/host/game` → 11 suites, 139/139 tests pass.
+- Full `neatenstein` pattern run: 44 suites, 380/380 tests pass — AC-230 satisfied.
+- Visible-browser smoke test: pass — host/worker bundles load, `window.neatensteinStart` callable, no runtime errors, ceiling mirror and 42×42 map best-effort confirmed — AC-232 satisfied.
+- AC-231 coverage-guard exception: default `jest.config.mjs` excludes `/examples/` from `collectCoverageFrom`; six of nine touched files are below 100% because example/demo files are not unit-test-exhaustive. Exception accepted and logged to `.github/ai-learning/learning-log.jsonl` (session `green-03-20260723-154616`).
+- Detailed evidence moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Step 03.
+
+#### Step 04: User confirmation gate [DONE]
+
+**Step objective:** Manual browser verification after Step 03 is green validated.
+
+[DONE] User confirmed browser OK: no visible enemies (expected, not wired to AI), ceiling and larger map work great. No visual fixes required. Detailed confirmation archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Step 04. Phase 3 [PLANNED] — not yet expanded, awaiting explicit user go-ahead.
+
+[DONE] Phase 2 Step 04 YAML archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2 detailed YAML packets.
+
+#### Step 05: Increase central arena clearance to 4 cells [DONE]
+
+**Step objective:** Increase the procedural map's central open arena from a 2-cell radius to a 4-cell radius so the player spawn neighborhood is larger. This is a small follow-up to Step 03's larger map work; it changes `examples/neatenstein/browser-entry/renderer/map.ts` and updates the matching test in `examples/neatenstein/browser-entry/renderer/map.test.ts`.
+
+[DONE] Step 05: `CENTRAL_ARENA_CLEARANCE_CELLS` increased from `2` to `4` in `examples/neatenstein/browser-entry/renderer/map.ts`; matching test added in `map.test.ts`; focused map suite, type check, lint, and prettier passed; user manually confirmed visible-browser smoke shows the larger central open area. Phase 2 complete.
+
+[DONE] Phase 2 Step 05 YAML archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2 detailed YAML packets.
+
+### Phase 3 — Asymmetric Co-evolution Harness (benchmark-owned, core-reviewed) [WIP]
 
 **Goal:** Minimal single-main + enemy-population co-evolution harness.
 
-[PLANNED] Step 01 — Asymmetric Co-evolution Harness red tests (deferred until phase becomes active).
+**[WIP]** Step 01 — Asymmetric Co-evolution Harness red tests and implementation slices **[PLANNED]** (awaiting user go-ahead to expand slices).
 
 - Single main agent lifecycle runner with combat telemetry adapters.
 - Enemy population abstraction: MLP backend (fixed 8→6→4→2, weight-only, throttled every 5th gen, 32 variants) and WeightSharedCohort backend (singleton DNA, shared weights, coordinate injection).
@@ -441,7 +360,7 @@ constitution_check:
 
 Phase 2 validation is governed by the Step 01 slice-level acceptance criteria (AC-201..AC-210, AC-215..AC-217) plus the explicit browser-integration gates. Required automated gates for any active slice:
 
-- `npx jest --config=jest.config.mjs --no-cache --testPathPattern=neatenstein/host/game`
+- `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=neatenstein/host/game`
 - `npm run lint`
 - `neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality`
 - `neataptic-gate-mcp:run_gate_check --gate=step-packet`
@@ -503,7 +422,7 @@ Phase 2 validation is governed by the Step 01 slice-level acceptance criteria (A
 9. **Mode 4 too punishing.** Density decay on kill-streak; asymptotic growth (slows as it approaches 100%).
 10. **Demo faking intelligence.** Ablations (no-snapshot, static-enemy, no-complexity-bonus, coordinate-shuffle) + arms-race lag observable prove coevolution drives adaptation. Publish ablation results in demo UI.
 11. **2048 variants single-pass on GPU may exceed `DEFAULT_ACCELERATION_GPU_NODE_THRESHOLD` (1024) only for large nets.** Document fallback in UI.
-12. **`shadowBlur` expensive at 320 cols × 32 sprites (8 enemies + 24 projectiles max).** Tier-gate glow; profile with `chrome-devtools-mcp`; offer "glow off" fallback.
+12. **`shadowBlur` expensive at 640 cols × 32 sprites (8 enemies + 24 projectiles max).** Tier-gate glow; profile with `chrome-devtools-mcp`; offer "glow off" fallback.
 13. **Fake-perspective-anchored pulses may alias at grazing angles / clutter during heavy combat.** Mitigate: 2px screen-size minimum for grazing pulses (§3.3.5); 8-concurrent-pulse ceiling with oldest-event-first drop (§3.3.6); ambient pulses never dropped mid-travel; depth-test against z-buffer (§3.4.1) prevents bleed-through. Profile pulse projection cost (≤8 sprites/frame, negligible vs 8 enemies + 24 projectiles).
 
 ---
@@ -541,12 +460,29 @@ All observations addressed in v2. Non-blocking notes:
 
 ## Next Steps
 
-Phase 2 implementation is complete. All 10 slices are [DONE] and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2. The active step is Step 02 — User confirmation gate [WIP].
+Phase 2 is [DONE]; Steps 01–05 are completed and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2. AC-231 coverage-guard exception for demo-only `examples/neatenstein/` files is accepted and logged.
 
-1. User serves the demo at `http://localhost:8080/docs/examples/neatenstein/index.html` (bundle already rebuilt v6).
-2. User manually confirms the USER CONFIRMATION GATE checks (WASD, left-click fire, Space dash, enemy visibility, responsiveness).
-3. User may request visual fixes or adjustments before approving.
-4. Only after user confirmation may the orchestrator mark Step 02 [DONE], Phase 2 [DONE], and begin Phase 3.
+1. **HOLD** — Phase 3 Step 01 slices are NOT authored or expanded. Do not create or dispatch them until the user explicitly requests Phase 3 work.
+2. When the user gives go-ahead for Phase 3, dispatch a fresh `01-planning` instance to author Phase 3 Step 01 packets for the Asymmetric Co-evolution Harness.
+3. Every phase transition still requires the `01-planning` verification pass to record `green-light: true` in `## Latest validation evidence` before any `03-red-testing` / `04-implementing` / `05-green-testing` dispatches.
+
+## Decision Record
+
+```yaml
+decision_record:
+  id: 'DR-20260723-01'
+  context: 'User requested "make the map area 3x bigger." This can be interpreted as 3x cell count (≈42x42, 1764 cells vs original 576) or 3x linear side (72x72, 5184 cells, which is 9x area).'
+  options:
+    - id: optA
+      desc: '42x42 cells — 3x total cell area, preserves beam range and DDA caps with minimal changes'
+    - id: optB
+      desc: '72x72 cells — 3x linear side, 9x total area, requires larger DDA cap and possibly combat range rescaling'
+  chosen: optA
+  rationale: 'The phrase "area 3x bigger" most naturally means total enclosed cell area triples. 42x42 (1764 cells) is ~3x the original 24x24 (576 cells), keeps the DDA safety cap within one increment, and avoids rebalancing projectile/beam range. If the user intended 72x72, this decision can be revisited before slice 03-map starts.'
+  owner: '01-planning'
+  rollback_plan: 'Change NEATENSTEIN_MAP_SIZE to 72 and rerun map/raycast/game tests; update DDA cap and spawn/bounds constants as needed.'
+  created_at: '2026-07-23T09:00:00-04:00'
+```
 
 ## Prior validation evidence
 
@@ -559,16 +495,14 @@ Phase 2 implementation is complete. All 10 slices are [DONE] and compressed to `
 ```text
 Continue from the current repo state only. Do not rely on prior chat history. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.
 
-Context: Neatenstein NGE Demo — Phase 2 [WIP], Step 01 [DONE] (all 10 slices green validated, 43 suites, 354 tests). Active step is Step 02 — User confirmation gate [WIP]. EXPLICIT STOP for user manual browser review before Phase 3.
-Current boundary: All Phase 2 implementation is [DONE]. Step 02 (user confirmation gate) is the active [WIP] step. User manual browser review is the only outstanding gate.
-What is already covered: Phase 1 [DONE]. Phase 2 Step 01 [DONE] — all 10 slices completed. Detailed logs in plans/Neon_Shooter_NGE_Demo.logs.md §Phase 2. Bundle rebuilt (v6). 43 suites, 354 tests pass. Lint clean. tsc clean for neatenstein files.
-Next narrow task: Wait for the user to manually review the demo at http://localhost:8080/docs/examples/neatenstein/index.html and provide visual feedback or confirmation. Do not start Phase 3 without user confirmation.
-Required validations (USER CONFIRMATION GATE):
-  - User confirms WASD moves the player
-  - User confirms left-click fires a visible neon beam/tracer
-  - User confirms Space triggers dash
-  - User confirms enemies are visible (placeholder sprites)
-  - User confirms the world feels responsive
-  - User may request visual fixes or adjustments before approving
-Known worktree cautions: Phase 2 code lives under examples/neatenstein/browser-entry/host/game/; do not modify Phase 3+ without a new plan step. Pre-existing repo-wide lint warnings and code-coverage drift are non-blocking.
+Context: Neatenstein NGE Demo — Phase 1 [DONE], Phase 2 [DONE], Phase 3 [WIP] awaiting user go-ahead. Step 01 (10 slices, 43 suites, 354 tests), Step 02 (bundle path resolution fix), Step 03 (ceiling mirror + 42×42 map, 4 slices, 44 suites, 380 tests), Step 04 (user confirmation gate), and Step 05 (increase central arena clearance to 4 cells) are all [DONE]. Phase 3 Step 01 — Asymmetric Co-evolution Harness — is [PLANNED] but NOT yet expanded or authored.
+What is already covered: Phase 1 [DONE] and Phase 2 [DONE] — world/renderer, game logic, controls, hitscan, enemy waves, deterministic episode loop, bundle path fix, ceiling mirror, 42×42 map expansion, 4-cell central arena clearance, Phase 1 follow-up stripe-width change (GPU 640 / Worker 480 / CPU 320), and user browser confirmation. Detailed logs in plans/Neon_Shooter_NGE_Demo.logs.md §Phase 1 / §Phase 2.
+Current boundary: Phase 3 [WIP] — Asymmetric Co-evolution Harness. Step 01 slices are NOT yet authored.
+Next narrow task: WAIT for the user to explicitly request Phase 3 work. When the user gives go-ahead, dispatch a fresh 01-planning instance to author Phase 3 Step 01 packets (red tests + implementation slices for the asymmetric co-evolution harness). Do not dispatch 03-red-testing / 04-implementing / 05-green-testing for Phase 3 until the Step 01 packet has passed 01-planning verification and recorded green-light: true in ## Latest validation evidence.
+Required validations before Phase 3 execution:
+  - neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality
+  - neataptic-gate-mcp:run_gate_check --gate=step-packet
+  - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Neon_Shooter_NGE_Demo.plans.md
+  - 01-planning verification records green-light: true in ## Latest validation evidence for Phase 3 Step 01
+Known worktree cautions: Phase 3 will touch benchmark/core territory (asymmetric co-evolution harness, opponent snapshots, SoA worker transport) and requires explicit scope agreement before slices are written. Pre-existing repo-wide lint warnings and code-coverage drift are non-blocking.
 ```

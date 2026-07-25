@@ -23,7 +23,7 @@ const TEMP_PREFIX = 'plan-workflow-test-';
 const ACTIVE_PLAN =
   'plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md';
 const DOWNSTREAM_TRACKER_PLANS = [
-  'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md',
+  'plans/Neon_Shooter_NGE_Demo.plans.md',
   'plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md',
   'plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md',
 ];
@@ -571,7 +571,7 @@ describe('downstream synchronization contract', () => {
 ## Scope
 
 This plan is downstream of:
-- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md
+- plans/Neon_Shooter_NGE_Demo.plans.md
 - plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md
 - plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md
 

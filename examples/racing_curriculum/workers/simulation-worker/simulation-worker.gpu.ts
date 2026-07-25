@@ -6,85 +6,34 @@
  * crossover threshold findings: in the racing-browser demo the GPU dispatch
  * overhead only pays off once the batch is large enough.
  *
- * The module does not import the WebGPU API directly; it relies on the
- * existing GPU seam in `src/architecture/network/gpu/` and on the
- * `Network.activate` opt-in flag. This keeps the worker boundary thin and
- * avoids duplicating device-management logic.
+ * The module does not import the WebGPU API directly; it delegates the
+ * threshold decision to the generic acceleration layer via
+ * {@link shouldAutoEnableGpu}. This keeps the worker boundary thin and
+ * avoids duplicating device-management or eligibility logic.
  */
 
 import type { Network } from '../../../../src/browser-entry.ts';
-import { SUPPORTED_ACTIVATION_INDICES } from '../../../../src/architecture/network/gpu/network.gpu.kernel.ts';
-
-/**
- * Phase 2 crossover threshold for the racing-browser worker.
- *
- * Below this agent count the per-car CPU path is cheaper because the fixed
- * WebGPU dispatch and readback overhead dominates. At or above the threshold
- * the parallel GPU path begins to amortize that overhead.
- *
- * @see plans/NEAT_Genesis_EvoDevo_GPU_Acceleration.plans.md — Resolved questions
- */
-export const RACING_BROWSER_GPU_THRESHOLD = 130;
-
-/** Activation indices the current GPU kernel supports. */
-const SUPPORTED_ACTIVATIONS = new Set<number>(
-  SUPPORTED_ACTIVATION_INDICES as unknown as number[],
-);
+import { shouldAutoEnableGpu } from '../../../../src/acceleration/index.ts';
 
 /**
  * Decide whether a racing generation batch should opt into the GPU path.
  *
- * The decision uses the Phase 2 racing-browser crossover threshold and a
- * lightweight structural eligibility check on the representative network.
- * Device readiness is intentionally checked at activation time by
- * {@link Network.activate} so this predicate can be used in worker planning
- * without requiring a live WebGPU device.
+ * The decision is delegated to the generic acceleration layer's
+ * {@link shouldAutoEnableGpu} helper, which compares the network size and
+ * batch parallelism against the library-wide GPU node and batch thresholds.
+ * Any structural incompatibilities are handled by {@link Network.activate}'s
+ * internal fallback at activation time.
  *
  * @param agentCount - Number of cars / networks in the batch.
  * @param network - Representative network from the batch.
- * @returns True when the batch is large enough and the network is
- *   structurally GPU-compatible.
+ * @returns True when the generic acceleration policy recommends GPU for this
+ *   network and batch size.
  */
 export function shouldUseGPUForBatch(
   agentCount: number,
   network: Network,
 ): boolean {
-  if (agentCount < RACING_BROWSER_GPU_THRESHOLD) {
-    return false;
-  }
-
-  return isNetworkStructurallyGPUEligible(network);
-}
-
-/**
- * Check structural GPU eligibility without requiring a live WebGPU device.
- *
- * Mirrors the device-independent portion of the eligibility checks used by
- * the batched GPU seam so worker-side batch planning can decide before a
- * device is bound.
- *
- * @param network - Network to inspect.
- * @returns True when the network has no gating, self-connections, or
- *   unsupported activations.
- */
-function isNetworkStructurallyGPUEligible(network: Network): boolean {
-  if (network.gates.length > 0) {
-    return false;
-  }
-
-  if (network.selfconns.length > 0) {
-    return false;
-  }
-
-  const hasUnsupportedActivation = network.nodes.some((node) => {
-    const index = (node.squash as { index?: number }).index;
-    return typeof index === 'number' && !SUPPORTED_ACTIVATIONS.has(index);
-  });
-  if (hasUnsupportedActivation) {
-    return false;
-  }
-
-  return true;
+  return shouldAutoEnableGpu(network.nodes.length, agentCount);
 }
 
 /**

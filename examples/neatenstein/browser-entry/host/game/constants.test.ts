@@ -76,4 +76,24 @@ describe('Neatenstein game constants', () => {
       );
     });
   });
+
+  describe('AC-216 / 03-red: 60x60 map gameplay constants', () => {
+    it('exports a beam max range that reaches across a 60x60 map', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(
+        mod.NEATENSTEIN_BEAM_MAX_RANGE_CELLS as number,
+      ).toBeGreaterThanOrEqual(60 * Math.SQRT2);
+    });
+
+    it('exports player spawn coordinates at the center of a 60x60 map', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect({
+        x: mod.NEATENSTEIN_SPAWN_CENTER_X as number,
+        y: mod.NEATENSTEIN_SPAWN_CENTER_Y as number,
+      }).toEqual({
+        x: 30.5,
+        y: 30.5,
+      });
+    });
+  });
 });

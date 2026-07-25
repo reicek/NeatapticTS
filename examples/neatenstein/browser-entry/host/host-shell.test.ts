@@ -43,4 +43,11 @@ describe('Neatenstein host HTML shell', () => {
       expect(html).not.toContain('neatenstein.worker.esm.js');
     });
   });
+
+  describe('AC-003-RED: docs bundle path resolution', () => {
+    it('does not contain an invalid ../../docs/assets/ segment in the docs copy', () => {
+      const html = readHostShell();
+      expect(html).not.toContain('../../docs/assets/');
+    });
+  });
 });

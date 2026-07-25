@@ -16,40 +16,40 @@ export const NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION =
   'neatenstein-frame-v1' as const;
 
 /** Column count for the GPU tier (premium shadow/glow path). */
-export const NEATENSTEIN_GPU_COLUMN_COUNT = 320;
+export const NEATENSTEIN_GPU_COLUMN_COUNT = 640;
 
 /** Column count for the Web Worker tier (OffscreenCanvas path). */
-export const NEATENSTEIN_WORKER_COLUMN_COUNT = 240;
+export const NEATENSTEIN_WORKER_COLUMN_COUNT = 480;
 
 /** Column count for the CPU fallback tier (ImageData framebuffer). */
-export const NEATENSTEIN_CPU_COLUMN_COUNT = 160;
+export const NEATENSTEIN_CPU_COLUMN_COUNT = 320;
 
 /** Wall-clock milliseconds between ambient floor pulses. */
-export const NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS = 2000;
+export const NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS = 1000;
 
 /** Milliseconds an ambient pulse remains visible. */
-export const NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS = 2700;
+export const NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS = 4000;
 
 /** Maximum number of concurrent floor pulses across all sources. */
-export const NEATENSTEIN_PULSE_MAX_CONCURRENT = 11;
+export const NEATENSTEIN_PULSE_MAX_CONCURRENT = 20;
 
 /** Minimum rendered alpha for an ambient floor pulse. */
-export const NEATENSTEIN_PULSE_ALPHA_MIN = 0.2;
+export const NEATENSTEIN_PULSE_ALPHA_MIN = 0.05;
 
 /** Maximum rendered alpha for an ambient floor pulse. */
 export const NEATENSTEIN_PULSE_ALPHA_MAX = 0.9;
 
 /** Glow blur radius in pixels for ambient floor pulses. */
-export const NEATENSTEIN_PULSE_GLOW_BLUR_RADIUS = 2;
+export const NEATENSTEIN_PULSE_GLOW_BLUR_RADIUS = 1.5;
 
 /** World-space travel speed lower bound for ambient pulses (world units per tick). */
 export const NEATENSTEIN_PULSE_WORLD_SPEED_MIN = 0.02;
 
 /** World-space travel speed upper bound for ambient pulses (world units per tick). */
-export const NEATENSTEIN_PULSE_WORLD_SPEED_MAX = 0.06;
+export const NEATENSTEIN_PULSE_WORLD_SPEED_MAX = 0.08;
 
 /** Screen-space dot radius for ambient floor pulses, in pixels. */
-export const NEATENSTEIN_PULSE_SCREEN_DOT_RADIUS_PX = 1.5;
+export const NEATENSTEIN_PULSE_SCREEN_DOT_RADIUS_PX = 1;
 
 /**
  * Probability threshold for choosing the X axis when spawning an ambient pulse.
@@ -115,7 +115,7 @@ export const NEATENSTEIN_IMPACT_SPOT_COLOR = '#f0f8ff';
 export const NEATENSTEIN_IMPACT_SPOT_GLOW_COLOR = 'rgba(240,248,255,0.5)';
 
 /** Glow blur radius in pixels for wall-impact neon spots. */
-export const NEATENSTEIN_IMPACT_SPOT_GLOW_BLUR_PX = 6;
+export const NEATENSTEIN_IMPACT_SPOT_GLOW_BLUR_PX = 2;
 
 /** Fixed simulation timestep used by the display worker and host tick loop. */
 export const NEATENSTEIN_FIXED_TIMESTEP_MS = 16;
@@ -130,8 +130,8 @@ export const NEATENSTEIN_AUDIO_SOUND_NAMES = [
   'generation-up',
 ] as const;
 
-/** Fixed square map size in cells (24 x 24). */
-export const NEATENSTEIN_MAP_SIZE = 24;
+/** Fixed square map size in cells (120 x 120). */
+export const NEATENSTEIN_MAP_SIZE = 120;
 
 /**
  * Default deterministic seed used when no seed is supplied.

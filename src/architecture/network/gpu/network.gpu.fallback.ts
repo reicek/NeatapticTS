@@ -13,6 +13,7 @@
  */
 
 import type Network from '../network';
+import type { GPUEligibilityResult } from '../network.types';
 import { canUseGPU } from './network.gpu.capability';
 import { activateGPU } from './network.gpu.activate';
 import { isDeviceReady } from './network.gpu.device';
@@ -27,6 +28,20 @@ import { SUPPORTED_ACTIVATION_INDICES } from './network.gpu.kernel';
 const SUPPORTED_ACTIVATIONS = new Set<number>(
   SUPPORTED_ACTIVATION_INDICES as unknown as number[],
 );
+
+/**
+ * Detects self-connections stored in the per-node `connections.self` list.
+ *
+ * In acyclic topologies the network-level `selfconns` array is intentionally
+ * empty, but the per-node list still records the connection. GPU kernels cannot
+ * handle recurrent self-connections, so the fallback seam inspects both stores.
+ *
+ * @param network - Network to inspect.
+ * @returns True when at least one node has a self-connection.
+ */
+function hasSelfConnectionInGraph(network: Network): boolean {
+  return network.nodes.some((node) => node.connections.self.length > 0);
+}
 
 /**
  * Shared GPU eligibility predicate used by the single-network fallback seam and
@@ -62,9 +77,67 @@ export function isGPUEligible(
   if (!device || !network._useFloat32Weights) {
     return false;
   }
-  return (
-    isDeviceReady(device) && canUseGPU(network, device, SUPPORTED_ACTIVATIONS)
-  );
+
+  const hasSelfConnection =
+    network.selfconns.length > 0 ||
+    hasSelfConnectionInGraph(network) ||
+    network.connections.some((connection) => connection.from === connection.to);
+
+  if (
+    network.gates.length > 0 ||
+    hasSelfConnection ||
+    !isDeviceReady(device) ||
+    !canUseGPU(network, device, SUPPORTED_ACTIVATIONS)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Probes whether `device` can run the WebGPU activation path for `network`.
+ *
+ * @param network - Network to evaluate.
+ * @param device - WebGPU device, or null/undefined when unavailable.
+ * @returns Eligibility verdict with a human-readable reason.
+ */
+export function getGPUEligibilityInfo(
+  network: Network,
+  device: GPUDevice | null | undefined,
+): GPUEligibilityResult {
+  if (!device) {
+    return { eligible: false, reason: 'no gpuDevice set' };
+  }
+  if (!isDeviceReady(device)) {
+    return { eligible: false, reason: 'device is lost or not ready' };
+  }
+  if (!network._useFloat32Weights) {
+    return { eligible: false, reason: 'network does not use float32 weights' };
+  }
+  if (network.gates.length > 0) {
+    return {
+      eligible: false,
+      reason: 'network contains gated connections which are not GPU-compatible',
+    };
+  }
+  const hasSelfConnection =
+    network.selfconns.length > 0 ||
+    hasSelfConnectionInGraph(network) ||
+    network.connections.some((connection) => connection.from === connection.to);
+  if (hasSelfConnection) {
+    return {
+      eligible: false,
+      reason: 'network contains self-connections which are not GPU-compatible',
+    };
+  }
+  if (!canUseGPU(network, device, SUPPORTED_ACTIVATIONS)) {
+    return {
+      eligible: false,
+      reason: 'network structure is not GPU-compatible',
+    };
+  }
+  return { eligible: true, reason: 'network and device are GPU-compatible' };
 }
 
 /**
