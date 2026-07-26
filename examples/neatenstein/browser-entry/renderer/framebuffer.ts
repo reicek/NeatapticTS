@@ -32,7 +32,7 @@ export const NEATENSTEIN_FRAMEBUFFER_CHANNELS = 4;
  * Walls at or beyond this distance are fully absorbed into the background
  * color by the distance-fog pass.
  */
-export const NEATENSTEIN_MAX_VIEW_DIST = 20;
+export const NEATENSTEIN_MAX_VIEW_DIST = 30;
 
 /**
  * Background RGB used by the distance-fog pass.

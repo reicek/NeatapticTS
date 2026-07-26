@@ -24,7 +24,7 @@ export const NEATENSTEIN_MS_PER_SECOND = 1000;
 export const NEATENSTEIN_PLAYER_MAX_HEALTH = 100;
 
 /** Maximum ammo the player can carry at the start of an episode. */
-export const NEATENSTEIN_PLAYER_MAX_AMMO = 30;
+export const NEATENSTEIN_PLAYER_MAX_AMMO = 50;
 
 /** Maximum number of enemies that can be active at the same time. */
 export const NEATENSTEIN_ENEMY_MAX_CONCURRENT = 8;

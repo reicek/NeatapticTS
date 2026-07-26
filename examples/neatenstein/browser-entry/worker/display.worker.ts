@@ -147,16 +147,16 @@ const NEATENSTEIN_WORKER_MAX_CANVAS_HEIGHT =
 const NEATENSTEIN_WORKER_CLEAR_COLOR = formatRgb(NEATENSTEIN_BACKGROUND_RGB);
 
 /** RGB of the neon wall color for X-axis-side hits. */
-const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 191, b: 255 } as const;
+const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 183, b: 255 } as const;
 
 /** RGB of the neon wall color for Y-axis-side hits. */
-const NEATENSTEIN_WALL_Y_SIDE_RGB = { r: 0, g: 80, b: 180 } as const;
+const NEATENSTEIN_WALL_Y_SIDE_RGB = { r: 0, g: 164, b: 229 } as const;
 
 /** CSS color string for the yellow ambient pulse dot. */
-const NEATENSTEIN_PULSE_COLOR = '#fff14a';
+const NEATENSTEIN_PULSE_COLOR = '#B7FF00';
 
 /** CSS shadow color string for the yellow ambient pulse glow. */
-const NEATENSTEIN_PULSE_GLOW_COLOR = 'rgba(255, 241, 74, 0.42)';
+const NEATENSTEIN_PULSE_GLOW_COLOR = 'rgba(185, 255, 0, 0.42)';
 
 /**
  * Integer render size used by the worker after applying max-resolution bounds.

@@ -154,3 +154,10 @@ Use the tone model for educational docs; generated READMEs are produced by `npm 
 ### §10 Cortex-First Search Policy (Summary)
 
 Prefer Cortex RAG tools (`search_corpus`, `search_context`, `search_advanced`, `load_document`, `load_chunk`, `traverse_graph`, `expand_query`) before native tools. If Cortex cannot answer, report the gap and fall back temporarily. Full search order and gap escalation live in the `research-methodology` skill.
+
+<!-- mermaid-ai-skills:start -->
+## Mermaid Diagrams
+
+When the user asks to create, edit, or visualize a diagram, follow the
+instructions in `.github/instructions/mermaid.instructions.md`.
+<!-- mermaid-ai-skills:end -->

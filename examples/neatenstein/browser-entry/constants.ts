@@ -25,13 +25,13 @@ export const NEATENSTEIN_WORKER_COLUMN_COUNT = 480;
 export const NEATENSTEIN_CPU_COLUMN_COUNT = 320;
 
 /** Wall-clock milliseconds between ambient floor pulses. */
-export const NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS = 1000;
+export const NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS = 500;
 
 /** Milliseconds an ambient pulse remains visible. */
 export const NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS = 4000;
 
 /** Maximum number of concurrent floor pulses across all sources. */
-export const NEATENSTEIN_PULSE_MAX_CONCURRENT = 20;
+export const NEATENSTEIN_PULSE_MAX_CONCURRENT = 40;
 
 /** Minimum rendered alpha for an ambient floor pulse. */
 export const NEATENSTEIN_PULSE_ALPHA_MIN = 0.05;
@@ -40,7 +40,7 @@ export const NEATENSTEIN_PULSE_ALPHA_MIN = 0.05;
 export const NEATENSTEIN_PULSE_ALPHA_MAX = 0.9;
 
 /** Glow blur radius in pixels for ambient floor pulses. */
-export const NEATENSTEIN_PULSE_GLOW_BLUR_RADIUS = 1.5;
+export const NEATENSTEIN_PULSE_GLOW_BLUR_RADIUS = 3;
 
 /** World-space travel speed lower bound for ambient pulses (world units per tick). */
 export const NEATENSTEIN_PULSE_WORLD_SPEED_MIN = 0.02;
@@ -49,7 +49,7 @@ export const NEATENSTEIN_PULSE_WORLD_SPEED_MIN = 0.02;
 export const NEATENSTEIN_PULSE_WORLD_SPEED_MAX = 0.08;
 
 /** Screen-space dot radius for ambient floor pulses, in pixels. */
-export const NEATENSTEIN_PULSE_SCREEN_DOT_RADIUS_PX = 1;
+export const NEATENSTEIN_PULSE_SCREEN_DOT_RADIUS_PX = 1.5;
 
 /**
  * Probability threshold for choosing the X axis when spawning an ambient pulse.

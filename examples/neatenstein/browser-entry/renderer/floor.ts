@@ -73,7 +73,7 @@ export const NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD = 0.5;
 export const NEATENSTEIN_FLOOR_CAMERA_HEIGHT_SCREEN_RATIO = 0.5;
 
 /** Minimum line opacity near the horizon. */
-export const NEATENSTEIN_FLOOR_MIN_ALPHA = 0.12;
+export const NEATENSTEIN_FLOOR_MIN_ALPHA = 0.05;
 
 /** Maximum line opacity near the camera. */
 export const NEATENSTEIN_FLOOR_MAX_ALPHA = 0.58;
@@ -114,7 +114,7 @@ const NEATENSTEIN_FLOOR_ALPHA_BANDS = 4;
  *
  * This fixed range bounds per-frame work independently of map size.
  */
-const NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE = 20;
+const NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE = 30;
 
 /**
  * Number of samples per projected world grid line.

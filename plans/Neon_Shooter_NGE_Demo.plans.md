@@ -1,6 +1,6 @@
 ﻿# Neatenstein NGE Demo (alias "Neat Shooter")
 
-**Status:** [WIP] — Phase 3 [WIP] · Step 01 [PLANNED]: Asymmetric Co-evolution Harness red tests and implementation slices (awaiting user go-ahead to expand) · Phase 2 [DONE] · **Plan ID:** NEATENSTEIN_NGE_DEMO · **Created:** 2026-07-17
+**Status:** [WIP] — Phase 3 [WIP] · scope expanded; Step 01 [PLANNED]: Tech-debt cleanup + test/coverage repair · Step 02 [PLANNED]: Center-screen DOOM-style gun · Step 03 [PLANNED]: Asymmetric Co-evolution Harness red tests and implementation slices · Phase 2 [DONE] · **Plan ID:** NEATENSTEIN_NGE_DEMO · **Created:** 2026-07-17
 **Consensus:** 4 specialists (NGE Core, NGE Benchmark, Visualizer, Game Director) — all APPROVED after 2 review rounds.
 **Downstream of:** `plans/completed/NEAT_Genesis_EvoDevo.md` (NGE core), `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` (co-evolution harness reference, not duplicated).
 **Engine research:** `plans/Neon_Shooter_NGE_Demo.research.md` — DOOM/raycasting algorithm notes, neon renderer design (Lineage B grid DDA, locked), Flappy ground grid reuse, license attribution, and reuse map. **Read this before implementing Phase 1.**
@@ -10,23 +10,33 @@
 
 ## Current state
 
-Claim: 01-planning @ 2026-07-23T16:56:53-04:00 — Phase 2 [DONE]; Phase 3 [WIP] Step 01 [PLANNED]: Asymmetric Co-evolution Harness. User manually confirmed the 4-cell central arena clearance change.
+Claim: 01-planning @ 2026-07-26T16:41:51-04:00 — Phase 2 [DONE]; Phase 3 [WIP] scope expanded. Step 01 [PLANNED]: Tech-debt cleanup + test/coverage repair. Step 02 [PLANNED]: Center-screen DOOM-style gun. Step 03 [PLANNED]: Asymmetric Co-evolution Harness. User manually confirmed the 4-cell central arena clearance change; user has now given go-ahead to expand Phase 3 scope but not yet to author/execute slices.
 
 **Phase 2 — Game Logic & FPS State is [DONE].** All original work (Step 01 through Step 04) plus follow-up Step 05 are complete and green validated. Step 05 increased the procedural map's central arena clearance from 2 cells to 4 cells; user manually confirmed the change. Detailed Phase 2 logs are compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.
 
 **Phase 1 — World & Renderer is [DONE].** All 13 Step 01 slices are green validated and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 1. Phase 1 follow-up stripe-width change is [DONE] (counts GPU 640 / Worker 480 / CPU 320). User confirmed (2026-07-22): 3D rendering works, mouse look works at `http://localhost:8080/docs/examples/neatenstein/index.html`.
 
-**Phase 3 — Asymmetric Co-evolution Harness is [WIP] awaiting user go-ahead.** Step 01 slices are NOT yet authored or expanded. The next session should dispatch a fresh `01-planning` instance to author Phase 3 Step 01 packets once the user explicitly requests Phase 3 work.
+**Phase 3 — Asymmetric Co-evolution Harness is [WIP] and scope has been expanded.** The user has given go-ahead to expand Phase 3's scope, but has explicitly said not to execute Step 01 yet. Step 01–03 packets are NOT yet authored or expanded; this pass only updates planning-level requirements and step boundaries so that later Step 01 slicing starts from the right place.
 
-**Active frontier:** Phase 3 Step 01 — Asymmetric Co-evolution Harness red tests and implementation slices (to be authored when user gives go-ahead). Do not proceed without explicit user scope agreement.
+**Active frontier:** Phase 3 Step 01 — Tech-debt cleanup and test/coverage repair. Before any co-evolution harness work begins, the library must be returned to a clean baseline: all tests passing, 100% coverage on all `src/` main library files and `examples/neatenstein`, legacy code removed, and bugs from recent manual changes fixed. Step 02 will add a center-screen DOOM-style gun. Step 03 will then deliver the Asymmetric Co-evolution Harness itself.
 
 Completed Phase 2 slice logs (Steps 01–05) are in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.
 
 ## Latest validation evidence
 
 green-light: true
-verified_step: 'Phase 2 [DONE] — all Phase 2 steps (01–05) completed and compressed to logs; Phase 3 [WIP] awaiting user go-ahead'
+verified_step: 'Phase 2 [DONE] — all Phase 2 steps (01–05) completed and compressed to logs; Phase 3 [WIP] scope expanded'
 finalization_timestamp: '2026-07-23T17:00:00-04:00'
+
+### Phase 3 scope-expansion planning note (2026-07-26)
+
+Phase 3 scope has been expanded per user instruction. New Phase 3 step boundaries are:
+
+- Step 01 — Tech-debt cleanup + test/coverage repair (NOT yet sliced or authored)
+- Step 02 — Add center-screen DOOM-style gun (NOT yet sliced or authored)
+- Step 03 — Asymmetric Co-evolution Harness (NOT yet sliced or authored; this was the prior "Step 01")
+
+This is a planning-level update only. **No Phase 3 green-light exists yet for execution.** A fresh `01-planning` verification pass must author Step 01 slices and record `green-light: true` in `## Latest validation evidence` before any `03-red-testing` / `04-implementing` / `05-green-testing` dispatches for Phase 3.
 
 [DONE] 01-planning Phase 2 finalization. Detailed evidence archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Archived detailed validation evidence.
 
@@ -209,11 +219,36 @@ Phase 2 is complete and green validated. Step 01 (10 slices, 43 suites, 354 test
 
 [DONE] Phase 2 Step 05 YAML archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2 detailed YAML packets.
 
-### Phase 3 — Asymmetric Co-evolution Harness (benchmark-owned, core-reviewed) [WIP]
+### Phase 3 — Tech-debt cleanup, center-screen gun, and Asymmetric Co-evolution Harness (benchmark-owned, core-reviewed) [WIP]
 
-**Goal:** Minimal single-main + enemy-population co-evolution harness.
+**Goal:** Return the repo to a clean baseline, add a center-screen DOOM-style gun, then deliver the minimal single-main + enemy-population co-evolution harness.
 
-**[WIP]** Step 01 — Asymmetric Co-evolution Harness red tests and implementation slices **[PLANNED]** (awaiting user go-ahead to expand slices).
+**Step/slice discipline note:** Phase 3 work MUST be split into discrete, independently sliceable steps. Do NOT merge tech-debt cleanup, the gun feature, and the co-evolution harness into a single monolithic step. Each step below is a separate planning/execution boundary and must be sliced into ≤5 atomic slices (≤3 files per slice, ≤4 hours per slice, insertable ordering via `dependencies`/`next_slice`). This is a prerequisite, not a recommendation — Step 01 cannot advance until it is properly decomposed.
+
+#### Step 01: Tech-debt cleanup and test/coverage repair [PLANNED]
+
+**Step objective:** Before any new co-evolution feature work begins, pay down accumulated technical debt from recent manual enhancements. The user has made several manual changes across multiple files that broke multiple tests; those tests must be updated to match the new reality and all changes must be reviewed. Any bugs revealed by tests must be fixed in both new and legacy code.
+
+- **Clean baseline requirement:** all tests in the library must be passing, and there must be **100% coverage on all `src/` main library files and `examples/neatenstein`** before any co-evolution work starts.
+- Update tests to account for new map sizes, colors, and recent coding changes.
+- Review all manual changes the user made; if any architectural or directional intent is not understood with **>90% certainty**, stop and ask for clarification.
+- Give advice where better modern implementation techniques exist.
+- **No legacy compatibility work.** Full, deep updates are required. Remove any existing legacy code that is unused or deprecated. No backward-compatibility wrappers, no dual-path code, no deferred cleanup.
+- Acceptance for this step: full test suite green, 100% `src/` and `examples/neatenstein` coverage, all touched legacy code removed, and any discovered defects fixed.
+
+#### Step 02: Add center-screen DOOM-style gun [PLANNED]
+
+**Step objective:** Add a gun in the center of the screen, DOOM-style, as a separate step from tech-debt cleanup.
+
+- Rectangular plasma cannon, modern TRON/DOOM design.
+- Pulsing neon teal lines.
+- **Neon White surface color `#FBFFFF`** with teal accents (user clarified: originally blue, then changed to orange).
+- Include a small recoil animation when shooting.
+- This step MUST remain separate from Step 01 and Step 03; do not merge it into either.
+
+#### Step 03: Asymmetric Co-evolution Harness red tests and implementation slices [PLANNED]
+
+**Step objective:** Deliver the minimal single-main + enemy-population co-evolution harness, renumbered to follow the clean-baseline and gun steps.
 
 - Single main agent lifecycle runner with combat telemetry adapters.
 - Enemy population abstraction: MLP backend (fixed 8→6→4→2, weight-only, throttled every 5th gen, 32 variants) and WeightSharedCohort backend (singleton DNA, shared weights, coordinate injection).
@@ -292,7 +327,7 @@ Phase 2 is complete and green validated. Step 01 (10 slices, 43 suites, 354 test
 - **Death feedback:** freeze frame 400ms → death scrub (10s @ 4×, lethal moment highlighted) → "THEY LEARNED FROM THAT" banner → generation/wave tick → instant respawn (no menu, no "try again?" button).
 - **Player-favoring rubber-band:** 0.3× enemy learn rate for first 3 deaths.
 - Survival-time sparkline in HUD.
-- **Human-mode entry moment:** pressing 3 or 4 triggers a 1.5s camera handoff — camera flies into the agent's POV, "NOW YOU" card (neon, 1s), then spawn.
+- **Human-mode entry moment:** pressing W, A, S or D triggers a 1.5s camera handoff, "NOW YOU" card (neon green, 1s), then spawn in the center. Once in human mode, it will remain like that until the browser (session) resets.
 
 **Acceptance:**
 
@@ -460,11 +495,13 @@ All observations addressed in v2. Non-blocking notes:
 
 ## Next Steps
 
-Phase 2 is [DONE]; Steps 01–05 are completed and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2. AC-231 coverage-guard exception for demo-only `examples/neatenstein/` files is accepted and logged.
+Phase 2 is [DONE]; Steps 01–05 are completed and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2. AC-231 coverage-guard exception for demo-only `examples/neatenstein/` files is accepted and logged. Phase 3 scope has been expanded per user go-ahead, but Step 01–03 packets are NOT yet authored or expanded.
 
-1. **HOLD** — Phase 3 Step 01 slices are NOT authored or expanded. Do not create or dispatch them until the user explicitly requests Phase 3 work.
-2. When the user gives go-ahead for Phase 3, dispatch a fresh `01-planning` instance to author Phase 3 Step 01 packets for the Asymmetric Co-evolution Harness.
-3. Every phase transition still requires the `01-planning` verification pass to record `green-light: true` in `## Latest validation evidence` before any `03-red-testing` / `04-implementing` / `05-green-testing` dispatches.
+1. **HOLD** — Do NOT author or execute Phase 3 slices yet. The user explicitly said: "You will not plan these yet, we are not executing step 01 yet, we are expanding its scope."
+2. When the user later requests Phase 3 Step 01 execution, dispatch a fresh `01-planning` instance to author Step 01 packets for **Tech-debt cleanup and test/coverage repair** (not the co-evolution harness). Step 01 must be properly decomposed into ≤5 atomic slices (≤3 files per slice, ≤4 hours per slice).
+3. Only after Step 01 is [DONE] and green validated may Step 02 (center-screen DOOM-style gun) and Step 03 (Asymmetric Co-evolution Harness) be planned and sliced.
+4. Every phase transition still requires the `01-planning` verification pass to record `green-light: true` in `## Latest validation evidence` before any `03-red-testing` / `04-implementing` / `05-green-testing` dispatches.
+5. The first order of business for Phase 3 execution is: **all library tests passing + 100% `src/` and `examples/neatenstein` coverage + removal of unused/deprecated legacy code + bug fixes from recent manual changes.**
 
 ## Decision Record
 
@@ -495,14 +532,14 @@ decision_record:
 ```text
 Continue from the current repo state only. Do not rely on prior chat history. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.
 
-Context: Neatenstein NGE Demo — Phase 1 [DONE], Phase 2 [DONE], Phase 3 [WIP] awaiting user go-ahead. Step 01 (10 slices, 43 suites, 354 tests), Step 02 (bundle path resolution fix), Step 03 (ceiling mirror + 42×42 map, 4 slices, 44 suites, 380 tests), Step 04 (user confirmation gate), and Step 05 (increase central arena clearance to 4 cells) are all [DONE]. Phase 3 Step 01 — Asymmetric Co-evolution Harness — is [PLANNED] but NOT yet expanded or authored.
-What is already covered: Phase 1 [DONE] and Phase 2 [DONE] — world/renderer, game logic, controls, hitscan, enemy waves, deterministic episode loop, bundle path fix, ceiling mirror, 42×42 map expansion, 4-cell central arena clearance, Phase 1 follow-up stripe-width change (GPU 640 / Worker 480 / CPU 320), and user browser confirmation. Detailed logs in plans/Neon_Shooter_NGE_Demo.logs.md §Phase 1 / §Phase 2.
-Current boundary: Phase 3 [WIP] — Asymmetric Co-evolution Harness. Step 01 slices are NOT yet authored.
-Next narrow task: WAIT for the user to explicitly request Phase 3 work. When the user gives go-ahead, dispatch a fresh 01-planning instance to author Phase 3 Step 01 packets (red tests + implementation slices for the asymmetric co-evolution harness). Do not dispatch 03-red-testing / 04-implementing / 05-green-testing for Phase 3 until the Step 01 packet has passed 01-planning verification and recorded green-light: true in ## Latest validation evidence.
+Context: Neatenstein NGE Demo — Phase 1 [DONE], Phase 2 [DONE], Phase 3 [WIP] scope expanded but packets NOT yet authored/executed. Phase 2 Steps 01–05 are all [DONE] (world/renderer, game logic, controls, hitscan, enemy waves, deterministic episode loop, bundle path fix, ceiling mirror, 42×42 map expansion, 4-cell central arena clearance, stripe-width follow-up, user browser confirmation). Phase 3 now contains three planned steps: Step 01 — Tech-debt cleanup + test/coverage repair; Step 02 — Center-screen DOOM-style gun; Step 03 — Asymmetric Co-evolution Harness. None of these are sliced or authored yet.
+What is already covered: Phase 1 [DONE] and Phase 2 [DONE] — detailed logs in plans/Neon_Shooter_NGE_Demo.logs.md §Phase 1 / §Phase 2. Phase 3 planning-level requirements and step boundaries have been expanded per user instruction.
+Current boundary: Phase 3 [WIP] — planning-level scope expansion complete; awaiting user instruction to author Step 01 packets.
+Next narrow task: WAIT for the user to explicitly request Phase 3 Step 01 execution. When the user gives go-ahead, dispatch a fresh 01-planning instance to author Phase 3 Step 01 packets for Tech-debt cleanup and test/coverage repair. Do NOT dispatch 03-red-testing / 04-implementing / 05-green-testing for Phase 3 until the Step 01 packet has passed 01-planning verification and recorded green-light: true in ## Latest validation evidence. Remember: Step 01 must be decomposed into ≤5 atomic slices (≤3 files per slice, ≤4 hours per slice); do not merge tech-debt cleanup with the gun or co-evolution harness.
 Required validations before Phase 3 execution:
   - neataptic-gate-mcp:run_gate_check --gate=plan-slice-quality
   - neataptic-gate-mcp:run_gate_check --gate=step-packet
   - node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Neon_Shooter_NGE_Demo.plans.md
   - 01-planning verification records green-light: true in ## Latest validation evidence for Phase 3 Step 01
-Known worktree cautions: Phase 3 will touch benchmark/core territory (asymmetric co-evolution harness, opponent snapshots, SoA worker transport) and requires explicit scope agreement before slices are written. Pre-existing repo-wide lint warnings and code-coverage drift are non-blocking.
+Known worktree cautions: Phase 3 will first repair accumulated tech debt and coverage gaps across `src/` and `examples/neatenstein` (no legacy compatibility; remove unused/deprecated code). After the baseline is clean it will add a DOOM-style center-screen gun, and only then proceed to benchmark/core territory (asymmetric co-evolution harness, opponent snapshots, SoA worker transport). Pre-existing repo-wide lint warnings and code-coverage drift must be resolved by Step 01, not carried forward.
 ```

@@ -246,8 +246,8 @@ describe('Neatenstein game state', () => {
       >;
       const state = createGameState({ seed: 42 });
       expect(state.player.position).toEqual({
-        x: 30.5,
-        y: 30.5,
+        x: 60.5,
+        y: 60.5,
       });
     });
   });
