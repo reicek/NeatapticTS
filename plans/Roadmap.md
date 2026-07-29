@@ -380,6 +380,16 @@ CI workflow wiring, and documentation). Avoid unrelated architecture or runtime 
 - Plan: [completed/coverage-metrics-and-gap-closure.plans.md](completed/coverage-metrics-and-gap-closure.plans.md) [DONE]
 - Current internal state: archived after `npm run test:silent` passed at `427` suites / `4654` tests with `All files` and `src` at `100/100/100/100`, `npm run --silent docs:quality:metrics` reported `filesBelow100: 0`, and `npm run --silent docs:quality:gate` passed.
 
+## Standalone Meta-Workflow Lane — Orchestration Fix-Loop Hardening [WIP]
+
+**Outcome:** eliminate critical orchestration friction points discovered across fix-loop iterations (r5→r8): reduce specialist review overhead for trivial fixes, keep slice context retrievable post-completion, auto-rebuild the Cortex index, relax the single-expect rule, store test selection as file paths, allow `04-implementing` targeted test runs, add a pre-specialist smoke gate, track fix-loop convergence, lint plan commands, redesign the specialist review workflow with a shared validation phase, and document the true concurrency limit (10 agents, nested dispatch supported).
+
+- Orchestration fix-loop hardening
+- Plan: [orchestration-fixes.plans.md](orchestration-fixes.plans.md) [WIP]
+- Current internal state: Phase A [WIP] — planning the policy and gate changes; plan file created, awaiting registration and gate validation.
+
+**Coordination rule:** this lane is confined to `.github/skills/`, `.github/agents/`, `.github/flows/`, `scripts/agent-customization/gates/`, `scripts/agent-customization/mcp/`, plan tracker files, and documentation. It must not modify `src/` library code or existing public APIs. Treat [completed/Agentic_Workflow_Architecture.plans.md](completed/Agentic_Workflow_Architecture.plans.md), [completed/Agentic_Flows_and_Gates_Upgrade.plans.md](completed/Agentic_Flows_and_Gates_Upgrade.plans.md), [completed/Orchestration_System_Optimization.plans.md](completed/Orchestration_System_Optimization.plans.md), [completed/holistic-agent-skill-optimization.plans.md](completed/holistic-agent-skill-optimization.plans.md), and [completed/Cortex_Orchestration_Single_Source_of_Truth.plans.md](completed/Cortex_Orchestration_Single_Source_of_Truth.plans.md) as the archived baselines for agent architecture, flow/gates contracts, delegation tier graph, holistic skill optimization, and Cortex context retrieval.
+
 ## Phase 0 — Hygiene + Refactor Baseline [DONE]
 
 **Outcome:** keep iteration speed high, reduce refactor risk, and finish the structural cleanup needed before broad mechanical modernization.

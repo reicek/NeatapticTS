@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Writer for concise acceptance criteria, edge cases, and scope boundaries.'
 name: 'acceptance-criteria-writer'
 tier: 4
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

@@ -28,6 +28,7 @@ import { readdir, readFile, writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import libCoverage from 'istanbul-lib-coverage';
 import { repoRoot } from '../customization-utils.mjs';
 
 const DEFAULT_COVERAGE_DIR = path.join(repoRoot, 'coverage');
@@ -36,6 +37,7 @@ const DEFAULT_SUMMARY_PATH = path.join(
   'coverage-summary.json',
 );
 const SUMMARY_NAME = 'coverage-summary.json';
+const COVERAGE_FINAL_NAME = 'coverage-final.json';
 const METRICS = ['lines', 'statements', 'functions', 'branches'];
 const COVERAGE_DIRS = [
   'src/',
@@ -78,6 +80,88 @@ async function collectSummaryPaths(coverageDir, summaryPath) {
   }
 
   return summaryPaths.sort();
+}
+
+/**
+ * Recursively collect every `coverage-final.json` path under a directory.
+ *
+ * Jest's `json` coverage reporter writes a raw Istanbul coverage map as
+ * `coverage-final.json`. For multi-project runs this can appear at the
+ * configured coverage root as well as under per-project directories. We
+ * collect all of them so that sequential targeted test runs (which each emit
+ * their own raw map) can be aggregated into the merged summary.
+ *
+ * @param {string} coverageDir - Absolute path to the coverage root.
+ * @returns {Promise<string[]>} Sorted list of raw coverage map paths.
+ */
+async function collectCoverageFinalPaths(coverageDir) {
+  const finalPaths = [];
+  const queue = [coverageDir];
+
+  while (queue.length > 0) {
+    const currentDir = queue.shift();
+    const entries = await readdir(currentDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const entryPath = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        queue.push(entryPath);
+      } else if (entry.isFile() && entry.name === COVERAGE_FINAL_NAME) {
+        finalPaths.push(entryPath);
+      }
+    }
+  }
+
+  return finalPaths.sort();
+}
+
+/**
+ * Convert raw Istanbul coverage maps into per-file summary entries, keeping
+ * the most favourable entry for each file across all collected maps.
+ *
+ * @param {string[]} finalPaths - Paths to `coverage-final.json` files.
+ * @param {Function} readFileImpl - `fs.promises.readFile` seam.
+ * @returns {Promise<Record<string, Record<string, {total: number, covered: number, skipped: number, pct: number}>>>}
+ */
+async function loadCoverageFinalFileEntries(finalPaths, readFileImpl) {
+  const { createCoverageMap } = libCoverage;
+  /** @type {Record<string, Record<string, {total: number, covered: number, skipped: number, pct: number}>>} */
+  const fileEntries = {};
+
+  for (const finalPath of finalPaths) {
+    let raw;
+    try {
+      raw = await readFileImpl(finalPath, 'utf8');
+    } catch {
+      continue;
+    }
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      continue;
+    }
+
+    let map;
+    try {
+      map = createCoverageMap(data);
+    } catch {
+      continue;
+    }
+
+    for (const file of map.files()) {
+      const fileCov = map.fileCoverageFor(file);
+      const summary = fileCov.toSummary().data;
+      const relativeKey = toRepoRelativeKey(file);
+      const existing = fileEntries[relativeKey];
+      if (!existing || isBetterCoverage(summary, existing)) {
+        fileEntries[relativeKey] = summary;
+      }
+    }
+  }
+
+  return fileEntries;
 }
 
 /**
@@ -128,6 +212,7 @@ export async function mergeCoverageSummaries(options = {}) {
     path.join(coverageDir, path.basename(DEFAULT_SUMMARY_PATH));
   const readFileImpl = options.readFile ?? readFile;
   const summaryPaths = await collectSummaryPaths(coverageDir, summaryPath);
+  const finalPaths = await collectCoverageFinalPaths(coverageDir);
   const mergedFiles = [];
   /** @type {Record<string, Record<string, {total: number, covered: number, skipped: number, pct: number}>>} */
   const fileEntries = {};
@@ -160,9 +245,23 @@ export async function mergeCoverageSummaries(options = {}) {
     }
   }
 
+  const finalFileEntries = await loadCoverageFinalFileEntries(
+    finalPaths,
+    readFileImpl,
+  );
+  for (const finalPath of finalPaths) {
+    mergedFiles.push(path.relative(repoRoot, finalPath));
+  }
+  for (const [relativeKey, entry] of Object.entries(finalFileEntries)) {
+    const existing = fileEntries[relativeKey];
+    if (!existing || isBetterCoverage(entry, existing)) {
+      fileEntries[relativeKey] = entry;
+    }
+  }
+
   if (mergedFiles.length === 0) {
     throw new Error(
-      `No ${SUMMARY_NAME} files found under ${coverageDir}. Run Jest with coverage first.`,
+      `No ${SUMMARY_NAME} or ${COVERAGE_FINAL_NAME} files found under ${coverageDir}. Run Jest with coverage first.`,
     );
   }
 

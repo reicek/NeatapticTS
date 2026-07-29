@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Capturer for ISO-42001-style local AI system learning events.'
 name: 'learning-event-capturer'
 tier: 4
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

@@ -1,11 +1,11 @@
 import { describe, expect, it } from '@jest/globals';
 
 /**
- * Red-phase contract tests for examples/neatenstein/browser-entry/host/game/constants.ts.
+ * Contract tests for examples/neatenstein/browser-entry/host/game/constants.ts.
  *
- * These tests define the numeric constants that the rest of the game logic
- * depends on. The source module does not exist yet, so every test fails with
- * a module-not-found error until the 02-game-scaffold slice provides them.
+ * These tests lock the numeric constants that the rest of the game logic
+ * depends on. The source module is implemented; updates here must stay in sync
+ * with the exported values in the source file.
  */
 
 describe('Neatenstein game constants', () => {
@@ -77,22 +77,27 @@ describe('Neatenstein game constants', () => {
     });
   });
 
-  describe('AC-216 / 03-red: 60x60 map gameplay constants', () => {
-    it('exports a beam max range that reaches across a 60x60 map', async () => {
+  describe('AC-216 / 03-red: 120x120 map gameplay constants', () => {
+    it('exports a positive bolt speed in cells per second', async () => {
       const mod = (await import('./constants.ts')) as Record<string, unknown>;
       expect(
-        mod.NEATENSTEIN_BEAM_MAX_RANGE_CELLS as number,
-      ).toBeGreaterThanOrEqual(60 * Math.SQRT2);
+        mod.NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND as number,
+      ).toBeGreaterThan(0);
     });
 
-    it('exports player spawn coordinates at the center of a 60x60 map', async () => {
+    it('exports a bolt max range of 30 cells', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_BOLT_MAX_RANGE_CELLS as number).toBe(30);
+    });
+
+    it('exports player spawn coordinates at the center of a 120x120 map', async () => {
       const mod = (await import('./constants.ts')) as Record<string, unknown>;
       expect({
         x: mod.NEATENSTEIN_SPAWN_CENTER_X as number,
         y: mod.NEATENSTEIN_SPAWN_CENTER_Y as number,
       }).toEqual({
-        x: 30.5,
-        y: 30.5,
+        x: 60.5,
+        y: 60.5,
       });
     });
   });

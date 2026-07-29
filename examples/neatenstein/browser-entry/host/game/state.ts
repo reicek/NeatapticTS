@@ -20,6 +20,7 @@ import {
   NEATENSTEIN_SPAWN_CENTER_Y,
 } from './constants';
 import { NEATENSTEIN_DEFAULT_SEED } from '../../constants';
+import { createInitialGunState } from '../../renderer/gun';
 import type {
   CreateGameStateOptions,
   EnemyState,
@@ -96,8 +97,10 @@ export function createGameState(
     episodeDurationMs: NEATENSTEIN_EPISODE_DEFAULT_DURATION_MS,
     player,
     enemies,
-    tracers: [],
     impacts: [],
+    gun: createInitialGunState(),
+    bolts: [],
+    lightEnabled: true,
     kills: 0,
     spawnCount: 0,
     generation: 1,

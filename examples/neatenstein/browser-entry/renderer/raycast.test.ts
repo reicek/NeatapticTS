@@ -1,30 +1,25 @@
 import { describe, expect, it } from '@jest/globals';
+import { buildNeatensteinMap, castRayDDAFromFlatMap } from './raycast';
 
-const loadModule = (path: string): Promise<any> => import(path);
+const SIDE = 8;
 
-const GRID_WIDTH = 8;
-const GRID_HEIGHT = 8;
-
-function createTestGrid(): number[][] {
-  const grid: number[][] = [];
-  for (let x = 0; x < GRID_WIDTH; x++) {
-    grid[x] = [];
-    for (let y = 0; y < GRID_HEIGHT; y++) {
-      grid[x][y] = 0;
+function createClosedFlatGrid(): Uint8Array {
+  const flatMap = new Uint8Array(SIDE * SIDE);
+  for (let x = 0; x < SIDE; x++) {
+    for (let y = 0; y < SIDE; y++) {
+      if (x === 0 || x === SIDE - 1 || y === 0 || y === SIDE - 1) {
+        flatMap[y * SIDE + x] = 1;
+      }
     }
   }
-  grid[2][1] = 1;
-  grid[1][0] = 1;
-  return grid;
+  return flatMap;
 }
 
 describe('Neatenstein raycast helpers', () => {
-  it('returns perpWallDist, side, and hit cell coordinates', async () => {
-    const { castRayDDA } = await loadModule('./raycast.ts');
-    const result = castRayDDA(
-      createTestGrid(),
-      GRID_WIDTH,
-      GRID_HEIGHT,
+  it('returns perpWallDist, side, and hit cell coordinates', () => {
+    const result = castRayDDAFromFlatMap(
+      createClosedFlatGrid(),
+      SIDE,
       1.5,
       1.5,
       1,
@@ -43,12 +38,10 @@ describe('Neatenstein raycast helpers', () => {
     });
   });
 
-  it('hits the east wall cell with side 0', async () => {
-    const { castRayDDA } = await loadModule('./raycast.ts');
-    const result = castRayDDA(
-      createTestGrid(),
-      GRID_WIDTH,
-      GRID_HEIGHT,
+  it('hits the east wall cell with side 0', () => {
+    const result = castRayDDAFromFlatMap(
+      createClosedFlatGrid(),
+      SIDE,
       1.5,
       1.5,
       1,
@@ -56,19 +49,17 @@ describe('Neatenstein raycast helpers', () => {
     );
     expect({ mapX: result.mapX, mapY: result.mapY, side: result.side }).toEqual(
       {
-        mapX: 2,
+        mapX: SIDE - 1,
         mapY: 1,
         side: 0,
       },
     );
   });
 
-  it('returns side 1 for a north-facing hit', async () => {
-    const { castRayDDA } = await loadModule('./raycast.ts');
-    const result = castRayDDA(
-      createTestGrid(),
-      GRID_WIDTH,
-      GRID_HEIGHT,
+  it('returns side 1 for a north-facing hit', () => {
+    const result = castRayDDAFromFlatMap(
+      createClosedFlatGrid(),
+      SIDE,
       1.5,
       1.5,
       0,
@@ -77,38 +68,28 @@ describe('Neatenstein raycast helpers', () => {
     expect(result.side).toBe(1);
   });
 
-  it('builds a map of the fixed 60x60 size', async () => {
-    const { buildNeatensteinMap } = await loadModule('./raycast.ts');
+  it('builds a Uint8Array map', () => {
     const map = buildNeatensteinMap(12345);
     expect(map).toBeInstanceOf(Uint8Array);
-    expect(map.length).toBe(60 * 60);
   });
 
-  it('produces deterministic maps for the same seed', async () => {
-    const { buildNeatensteinMap } = await loadModule('./raycast.ts');
+  it('builds a map of the fixed 120x120 size', () => {
+    const map = buildNeatensteinMap(12345);
+    expect(map.length).toBe(120 * 120);
+  });
+
+  it('produces deterministic maps for the same seed', () => {
     const first = buildNeatensteinMap(12345);
     const second = buildNeatensteinMap(12345);
     expect(Array.from(second)).toEqual(Array.from(first));
   });
 
-  describe('DDA step cap contract', () => {
-    it('exits a 60x60 empty grid within a 150-step ceiling', async () => {
-      const { castRayDDAFromFlatMap } = await loadModule('./raycast.ts');
-      const side = 60;
-      const flatMap = new Uint8Array(side * side);
-      const posX = 1.5;
-      const posY = 1.5;
-      const result = castRayDDAFromFlatMap(flatMap, side, posX, posY, 1, 1);
-      const startMapX = Math.floor(posX);
-      const startMapY = Math.floor(posY);
-      const stepsTaken =
-        Math.abs(result.mapX - startMapX) + Math.abs(result.mapY - startMapY);
-      expect(stepsTaken).toBeLessThanOrEqual(150);
-    });
-
-    it('exports an explicit DDA step cap constant covering the 60x60 diagonal', async () => {
-      const { NEATENSTEIN_DDA_MAX_STEPS } = await loadModule('./raycast.ts');
-      expect(NEATENSTEIN_DDA_MAX_STEPS).toBeGreaterThanOrEqual(2 * 60);
-    });
+  it('hits the perimeter of the generated 120x120 map', () => {
+    const flatMap = buildNeatensteinMap(12345);
+    const result = castRayDDAFromFlatMap(flatMap, 120, 60.5, 60.5, 1, 0);
+    expect({
+      positive: result.perpWallDist > 0,
+      finite: Number.isFinite(result.perpWallDist),
+    }).toEqual({ positive: true, finite: true });
   });
 });

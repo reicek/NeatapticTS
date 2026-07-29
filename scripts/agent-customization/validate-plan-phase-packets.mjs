@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { pathToFileURL } from 'node:url';
 import {
   extractStatus,
   fileExists,
@@ -96,6 +97,10 @@ const FORBIDDEN_SECTIONS = ['**Copy-paste prompt:**'];
 const MIGRATION_HINT =
   'Legacy plan block detected. Run: node scripts/agent-customization/migrate-plan-format.mjs --plan=<plan-file>';
 
+const STALE_TESTPATHPATTERN_FLAG = '--testPathPattern';
+const VALIDATION_PATH_HINT =
+  'Store validation entries as file paths (e.g. scripts/foo.test.ts), not Jest CLI flags.';
+
 const options = parseArgs(process.argv.slice(2));
 
 if (options.help) {
@@ -113,72 +118,120 @@ if (options.help) {
   process.exit(0);
 }
 
-const planPath = options.plan;
-const normalizedPlanPath = normalizePath(planPath);
-const planText = await readWorkspaceFile(planPath);
-const planStatus = extractStatus(planText);
-const isArchivedClosedPlan =
-  planStatus === 'DONE' && normalizedPlanPath.startsWith('plans/completed/');
+let planPath = options.plan;
+let normalizedPlanPath = normalizePath(planPath);
+let planText = '';
+let planStatus = null;
+let isArchivedClosedPlan = false;
 const issues = [];
-const phases = [...extractPhaseBlocks(planText)].map((phaseBlock) => ({
-  ...phaseBlock,
-  stepBlocks: [...extractStepBlocks(phaseBlock.body)],
-}));
+let phases = [];
 
-if (phases.length === 0 && !isArchivedClosedPlan) {
-  issues.push(
-    issue('error', planPath, 'No implementation phase packets found.'),
-  );
+async function main() {
+  if (options.help) {
+    printUsage({
+      title: 'Validate copy-pasteable plan phase/step packets.',
+      usage:
+        'node scripts/agent-customization/validate-plan-phase-packets.mjs [--json] [--plan=plans/PlanName.plans.md]',
+      options: [
+        [
+          '--plan=<path>',
+          'Plan file whose implementation phases should be validated.',
+        ],
+      ],
+    });
+    return;
+  }
+
+  planText = await readWorkspaceFile(planPath);
+  const report = await validatePlanText(planText, planPath);
+  writeReport(report, options);
+  process.exitCode = report.ok ? 0 : 1;
 }
 
-for (const [phaseIndex, phaseBlock] of phases.entries()) {
-  const previousPhase = phaseIndex === 0 ? null : phases.at(phaseIndex - 1);
-  await validatePhase(phaseBlock, previousPhase?.headingPhase ?? null);
+/**
+ * Validate the implementation-phase packets in a plan document.
+ *
+ * Exported so tests can exercise the validator without spawning a child
+ * process. The function resets internal state, parses phase/step YAML packets,
+ * and returns the same report shape the CLI emits, including `ok`, `counts`,
+ * `issues`, and a `phases` summary.
+ *
+ * @param text - Plan markdown content.
+ * @param planFilePath - Repo-relative path used for messages and source_of_truth checks.
+ * @returns Validation report with `ok`, `counts`, `issues`, and `phases` fields.
+ */
+export async function validatePlanText(text, planFilePath) {
+  planPath = planFilePath;
+  normalizedPlanPath = normalizePath(planPath);
+  planText = text;
+  planStatus = extractStatus(planText);
+  isArchivedClosedPlan =
+    planStatus === 'DONE' && normalizedPlanPath.startsWith('plans/completed/');
+  issues.length = 0;
+  phases = [...extractPhaseBlocks(planText)].map((phaseBlock) => ({
+    ...phaseBlock,
+    stepBlocks: [...extractStepBlocks(phaseBlock.body)],
+  }));
+
+  if (phases.length === 0 && !isArchivedClosedPlan) {
+    issues.push(
+      issue('error', planPath, 'No implementation phase packets found.'),
+    );
+  }
+
+  for (const [phaseIndex, phaseBlock] of phases.entries()) {
+    const previousPhase = phaseIndex === 0 ? null : phases.at(phaseIndex - 1);
+    await validatePhase(phaseBlock, previousPhase?.headingPhase ?? null);
+  }
+
+  const wipCount = phases.filter(
+    (phaseBlock) => phaseBlock.headingStatus === 'WIP',
+  ).length;
+
+  if (isArchivedClosedPlan && wipCount !== 0) {
+    issues.push(
+      issue(
+        'error',
+        planPath,
+        `Archived [DONE] plans must not contain [WIP] phases, found ${wipCount}.`,
+      ),
+    );
+  }
+
+  if (!isArchivedClosedPlan && wipCount !== 1) {
+    issues.push(
+      issue(
+        'warning',
+        planPath,
+        `Expected exactly one [WIP] phase, found ${wipCount}.`,
+      ),
+    );
+  }
+
+  return {
+    ...summarizeIssues('plan phase packets', issues),
+    plan: planPath,
+    phases: phases.map((phaseBlock) => ({
+      phase: phaseBlock.headingPhase,
+      title: phaseBlock.headingTitle,
+      status: phaseBlock.headingStatus,
+      schema: phaseBlock.metadata?.step !== undefined ? 'step' : 'phase',
+      goal:
+        phaseBlock.stepBlocks.find(
+          (stepBlock) => stepBlock.headingStatus === 'WIP',
+        )?.metadata?.goal ??
+        phaseBlock.metadata?.goal ??
+        null,
+    })),
+  };
 }
 
-const wipCount = phases.filter(
-  (phaseBlock) => phaseBlock.headingStatus === 'WIP',
-).length;
-
-if (isArchivedClosedPlan && wipCount !== 0) {
-  issues.push(
-    issue(
-      'error',
-      planPath,
-      `Archived [DONE] plans must not contain [WIP] phases, found ${wipCount}.`,
-    ),
-  );
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }
-
-if (!isArchivedClosedPlan && wipCount !== 1) {
-  issues.push(
-    issue(
-      'warning',
-      planPath,
-      `Expected exactly one [WIP] phase, found ${wipCount}.`,
-    ),
-  );
-}
-
-const report = {
-  ...summarizeIssues('plan phase packets', issues),
-  plan: planPath,
-  phases: phases.map((phaseBlock) => ({
-    phase: phaseBlock.headingPhase,
-    title: phaseBlock.headingTitle,
-    status: phaseBlock.headingStatus,
-    schema: phaseBlock.metadata?.step !== undefined ? 'step' : 'phase',
-    goal:
-      phaseBlock.stepBlocks.find(
-        (stepBlock) => stepBlock.headingStatus === 'WIP',
-      )?.metadata?.goal ??
-      phaseBlock.metadata?.goal ??
-      null,
-  })),
-};
-
-writeReport(report, options);
-process.exitCode = report.ok ? 0 : 1;
 
 function* extractPhaseBlocks(text) {
   const implementationMatch =
@@ -416,6 +469,8 @@ async function validatePhasePacket(phaseBlock, phasePath) {
         'Metadata validation must be a non-empty list.',
       ),
     );
+  } else {
+    validateValidationList(metadata.validation, `${phasePath}/validation`);
   }
 
   if (
@@ -709,6 +764,8 @@ async function validateStepPacketInPhase(
           'Metadata validation must be a non-empty list.',
         ),
       );
+    } else {
+      validateValidationList(metadata.validation, `${stepPath}/validation`);
     }
 
     if (
@@ -792,6 +849,81 @@ async function validateStepPacketInPhase(
       );
     }
   }
+}
+
+/**
+ * Heuristic check for whether a plan validation entry looks like a repo-relative
+ * file path rather than a Jest CLI flag or free-form command.
+ *
+ * Accepts strings that contain a path separator or a file extension, plus the
+ * special relative paths `.` and `..`. Rejects multi-line strings and strings
+ * that start with `-` so CLI flags are never treated as paths.
+ *
+ * @param value - Candidate validation entry.
+ * @returns `true` when the entry should be treated as a file path.
+ */
+export function looksLikeFilePath(value) {
+  if (typeof value !== 'string') return false;
+  if (value.includes('\n')) return false;
+  if (value.startsWith('-')) return false;
+  // Treat a plain dot or dot-dot as a path. A slash/backslash or a file
+  // extension fragment are good enough heuristic for our plan entries.
+  return /[\\/]|\.[^.\s]|^\.{1,2}$/u.test(value);
+}
+
+/**
+ * Validate a list of plan validation entries.
+ *
+ * Each entry must be a string. Entries that contain the stale
+ * `--testPathPattern` / `--testPathPatterns` CLI flag are rejected as errors,
+ * and entries that do not look like a repo-relative file path produce a warning
+ * reminding authors to store file paths instead of shell commands.
+ *
+ * @param validation - Validation strings from a phase or step packet.
+ * @param contextPath - Repo-relative path used to annotate any issues.
+ * @param issuesList - Optional issue sink; defaults to the module-level issues array.
+ * @returns The issue sink that was populated.
+ */
+export function validateValidationList(
+  validation,
+  contextPath,
+  issuesList = issues,
+) {
+  for (const [entryIndex, entry] of validation.entries()) {
+    const entryPath = `${contextPath}[${entryIndex}]`;
+    if (typeof entry !== 'string') {
+      issuesList.push(
+        issue(
+          'error',
+          entryPath,
+          `Validation entry must be a string, found ${typeof entry}.`,
+        ),
+      );
+      continue;
+    }
+
+    if (entry.includes(STALE_TESTPATHPATTERN_FLAG)) {
+      issuesList.push(
+        issue(
+          'error',
+          entryPath,
+          `Validation entry contains stale ${STALE_TESTPATHPATTERN_FLAG} flag; ${VALIDATION_PATH_HINT}: ${entry}`,
+        ),
+      );
+      continue;
+    }
+
+    if (!looksLikeFilePath(entry)) {
+      issuesList.push(
+        issue(
+          'warning',
+          entryPath,
+          `Validation entry does not look like a file path: ${entry}. ${VALIDATION_PATH_HINT}`,
+        ),
+      );
+    }
+  }
+  return issuesList;
 }
 
 async function validateSlices(slices, stepPath, tddSequence) {

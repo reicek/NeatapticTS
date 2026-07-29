@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
  * NeatapticTS Dispatch MCP Server
  *
@@ -31,7 +31,7 @@ import {
   selfCheckError,
 } from './mcp-utils.mjs';
 
-const SERVER_NAME = 'neataptic-dispatch-mcp';
+const SERVER_NAME = 'neataptic_dispatch_mcp';
 const SERVER_VERSION = '0.1.0';
 
 const ALLOWED_CALLER_TIERS = [0, 1, 2, 3, 4];

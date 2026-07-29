@@ -23,11 +23,6 @@ import {
   NEATENSTEIN_DEFAULT_SEED,
   NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_GPU_COLUMN_COUNT,
-  NEATENSTEIN_IMPACT_SPOT_COLOR,
-  NEATENSTEIN_IMPACT_SPOT_GLOW_BLUR_PX,
-  NEATENSTEIN_IMPACT_SPOT_GLOW_COLOR,
-  NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS,
-  NEATENSTEIN_IMPACT_SPOT_RADIUS_PX,
   NEATENSTEIN_INPUT_MESSAGE_TYPE,
   NEATENSTEIN_MAP_SIZE,
   NEATENSTEIN_PULSE_ALPHA_MAX,
@@ -36,11 +31,6 @@ import {
   NEATENSTEIN_PULSE_MAX_CONCURRENT,
   NEATENSTEIN_PULSE_SCREEN_DOT_RADIUS_PX,
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
-  NEATENSTEIN_TRACER_COLOR,
-  NEATENSTEIN_TRACER_GLOW_BLUR_RADIUS,
-  NEATENSTEIN_TRACER_GLOW_COLOR,
-  NEATENSTEIN_TRACER_LINE_WIDTH,
-  NEATENSTEIN_TRACER_NEAR_CLIP_EPSILON,
   NEATENSTEIN_WORKER_COLUMN_COUNT,
 } from '../constants';
 import {
@@ -51,7 +41,6 @@ import {
 import {
   drawNeatensteinCeiling,
   drawNeatensteinFloor,
-  NEATENSTEIN_FLOOR_CAMERA_HEIGHT_SCREEN_RATIO,
   NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
   NEATENSTEIN_FLOOR_FOV_RADIANS,
   NEATENSTEIN_FLOOR_HORIZON_RATIO,
@@ -79,16 +68,13 @@ import {
   gameTick,
   type GameTickInputSnapshot,
 } from '../host/game/tick';
-import type {
-  GameState,
-  ImpactSpot,
-  TracerState,
-  Vector2,
-} from '../host/game/types';
+import type { GameState } from '../host/game/types';
 import {
   NEATENSTEIN_BACKGROUND_RGB,
   NEATENSTEIN_MAX_VIEW_DIST,
 } from '../renderer/framebuffer';
+import { renderGunOverlay } from '../renderer/gun';
+import { drawBolts, drawImpactSpots } from '../renderer/bolt-render';
 
 type DisplayTier = 'worker' | 'cpu' | 'gpu';
 
@@ -415,7 +401,8 @@ function castColumnRay(
  *
  * Worker-tier painter order:
  *
- * clear → floor → ceiling → walls → pulses → tracers → impact spots
+ * clear → floor → ceiling → walls → pulses → impact spots → bolts → dynamic
+ * light → gun overlay
  */
 function buildAndPostFrame(): void {
   if (!latestState || !currentTier || !wallMap || !gameState) {
@@ -569,19 +556,32 @@ function buildAndPostFrame(): void {
       canvasHeight,
     );
 
-    drawNeatensteinTracers(
-      context,
-      gameState.tracers,
-      { x: cameraPositionX, y: cameraPositionY, yaw: cameraYaw },
-      canvasWidth,
-      canvasHeight,
-    );
-
     drawImpactSpots(
       context,
       gameState.impacts,
       zBuffer,
       { x: cameraPositionX, y: cameraPositionY, yaw: cameraYaw },
+      canvasWidth,
+      canvasHeight,
+      gameState.simTimeMs,
+    );
+
+    drawBolts(
+      context,
+      gameState.bolts ?? [],
+      { x: cameraPositionX, y: cameraPositionY, yaw: cameraYaw },
+      canvasWidth,
+      canvasHeight,
+      gameState.simTimeMs,
+    );
+
+    if (gameState.lightEnabled) {
+      drawDynamicLight(context, canvasWidth, canvasHeight);
+    }
+
+    renderGunOverlay(
+      context,
+      gameState.gun ?? { recoilOffset: 0 },
       canvasWidth,
       canvasHeight,
     );
@@ -614,6 +614,12 @@ function buildAndPostFrame(): void {
     frame.wallDistances[column] = hit.perpWallDist;
     frame.wallSides[column] = hit.side;
     frame.zBuffer[column] = hit.perpWallDist;
+  }
+
+  if (gameState) {
+    frame.gun = gameState.gun;
+    frame.bolts = gameState.bolts;
+    frame.lightEnabled = gameState.lightEnabled;
   }
 
   self.postMessage(
@@ -722,184 +728,45 @@ function drawNeatensteinPulses(
   context.shadowBlur = 0;
 }
 
-/** Camera-relative transform of a world point for tracer projection. */
-interface TracerCamera {
-  /** Camera world X position. */
-  x: number;
-  /** Camera world Y position. */
-  y: number;
-  /** Camera yaw in radians. */
-  yaw: number;
-}
-
 /**
- * Project a world-space point into screen coordinates.
+ * Apply a localized teal dynamic-light glow when enabled.
  *
- * @param point - World-space point.
- * @param camera - Camera position and yaw.
- * @param canvasWidth - Canvas width.
- * @param canvasHeight - Canvas height.
- * @returns Screen coordinates, or `null` if behind the camera.
- */
-function projectTracerPoint(
-  point: Vector2,
-  camera: TracerCamera,
-  canvasWidth: number,
-  canvasHeight: number,
-): { x: number; y: number } | null {
-  const dx = point.x - camera.x;
-  const dy = point.y - camera.y;
-
-  const cos = Math.cos(camera.yaw);
-  const sin = Math.sin(camera.yaw);
-  const depth = dx * cos + dy * sin;
-
-  if (depth <= NEATENSTEIN_TRACER_NEAR_CLIP_EPSILON) {
-    return null;
-  }
-
-  const lateral = -dx * sin + dy * cos;
-  const horizonY = canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO;
-  const cameraHeight =
-    canvasHeight * NEATENSTEIN_FLOOR_CAMERA_HEIGHT_SCREEN_RATIO;
-  const screenY = horizonY + cameraHeight / depth;
-  const planeScale = Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
-  const screenX =
-    canvasWidth / 2 + (lateral / (depth * planeScale)) * (canvasWidth / 2);
-
-  if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) {
-    return null;
-  }
-
-  return { x: screenX, y: screenY };
-}
-
-/**
- * Draw active neon beam tracers as glowing perspective lines.
+ * The glow is centered near the player / gun area and uses a radial gradient
+ * with a soft falloff so it only brightens a small region of the screen
+ * instead of tinting the entire viewport.
  *
  * @param context - Worker-tier 2D canvas context.
- * @param tracers - Active tracer list.
- * @param camera - Camera position and yaw.
  * @param canvasWidth - Canvas width.
  * @param canvasHeight - Canvas height.
  */
-function drawNeatensteinTracers(
+function drawDynamicLight(
   context: OffscreenCanvasRenderingContext2D,
-  tracers: readonly TracerState[],
-  camera: TracerCamera,
   canvasWidth: number,
   canvasHeight: number,
 ): void {
-  if (tracers.length === 0) {
-    return;
-  }
+  const centerX = canvasWidth * 0.5;
+  const centerY = canvasHeight * 0.82;
+  const radius = Math.min(canvasWidth, canvasHeight) * 0.28;
 
   const savedComposite = context.globalCompositeOperation;
-  context.globalCompositeOperation = 'lighter';
-
-  for (const tracer of tracers) {
-    const originScreen = projectTracerPoint(
-      tracer.origin,
-      camera,
-      canvasWidth,
-      canvasHeight,
-    );
-    const hitScreen = projectTracerPoint(
-      tracer.hit,
-      camera,
-      canvasWidth,
-      canvasHeight,
-    );
-
-    if (!originScreen || !hitScreen) {
-      continue;
-    }
-
-    context.shadowColor = NEATENSTEIN_TRACER_GLOW_COLOR;
-    context.shadowBlur = NEATENSTEIN_TRACER_GLOW_BLUR_RADIUS;
-    context.strokeStyle = NEATENSTEIN_TRACER_COLOR;
-    context.lineWidth = NEATENSTEIN_TRACER_LINE_WIDTH;
-    context.beginPath();
-    context.moveTo(originScreen.x, originScreen.y);
-    context.lineTo(hitScreen.x, hitScreen.y);
-    context.stroke();
-  }
-
-  context.shadowBlur = 0;
-  context.globalCompositeOperation = savedComposite;
-}
-
-/**
- * Draw active wall-impact neon spots in the worker tier.
- *
- * @param context - Worker-tier 2D canvas context.
- * @param impacts - Active wall-impact list.
- * @param zBuffer - Per-column depth buffer.
- * @param camera - Camera position and yaw.
- * @param canvasWidth - Canvas width.
- * @param canvasHeight - Canvas height.
- */
-function drawImpactSpots(
-  context: OffscreenCanvasRenderingContext2D,
-  impacts: readonly ImpactSpot[],
-  zBuffer: Float32Array,
-  camera: TracerCamera,
-  canvasWidth: number,
-  canvasHeight: number,
-): void {
-  if (impacts.length === 0) {
-    return;
-  }
-
-  const savedComposite = context.globalCompositeOperation;
-  context.globalCompositeOperation = 'lighter';
-
-  const dirX = Math.cos(camera.yaw);
-  const dirY = Math.sin(camera.yaw);
-  const planeScale = Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
-
-  for (const impact of impacts) {
-    const relX = impact.position.x - camera.x;
-    const relY = impact.position.y - camera.y;
-    const perpDist = relX * dirX + relY * dirY;
-
-    if (!Number.isFinite(perpDist) || perpDist <= 0) {
-      continue;
-    }
-
-    const lateral = -relX * dirY + relY * dirX;
-    const screenX =
-      canvasWidth / 2 + (lateral / (perpDist * planeScale)) * (canvasWidth / 2);
-
-    if (!Number.isFinite(screenX)) {
-      continue;
-    }
-
-    const screenColumn = (screenX / canvasWidth) * zBuffer.length;
-
-    if (!depthTestPulse({ screenColumn, distance: perpDist }, zBuffer)) {
-      continue;
-    }
-
-    const alpha = clamp(
-      impact.lifetimeMs / NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS,
-      0,
-      1,
-    );
-
-    const radius = Math.max(1, NEATENSTEIN_IMPACT_SPOT_RADIUS_PX / perpDist);
-
-    context.shadowColor = NEATENSTEIN_IMPACT_SPOT_GLOW_COLOR;
-    context.shadowBlur = NEATENSTEIN_IMPACT_SPOT_GLOW_BLUR_PX;
-    context.fillStyle = NEATENSTEIN_IMPACT_SPOT_COLOR;
-    context.globalAlpha = alpha;
-    context.beginPath();
-    context.arc(screenX, canvasHeight / 2, radius, 0, Math.PI * 2);
-    context.fill();
-  }
-
+  context.globalCompositeOperation = 'screen';
   context.globalAlpha = 1;
-  context.shadowBlur = 0;
+
+  const gradient = context.createRadialGradient(
+    centerX,
+    centerY,
+    0,
+    centerX,
+    centerY,
+    radius,
+  );
+  gradient.addColorStop(0, 'rgba(0, 240, 255, 0.25)');
+  gradient.addColorStop(0.5, 'rgba(0, 240, 255, 0.08)');
+  gradient.addColorStop(1, 'rgba(0, 240, 255, 0)');
+
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, canvasWidth, canvasHeight);
+
   context.globalCompositeOperation = savedComposite;
 }
 
@@ -926,6 +793,7 @@ function mergePendingTickInput(
     lookDelta: next.lookDelta,
     fire: previous.fire || next.fire,
     dash: previous.dash || next.dash,
+    lightToggle: previous.lightToggle || next.lightToggle,
   };
 }
 
@@ -937,7 +805,13 @@ function mergePendingTickInput(
  */
 function inputMessageToTickInput(raw: unknown): GameTickInputSnapshot {
   if (!raw || typeof raw !== 'object') {
-    return { move: { x: 0, y: 0 }, lookDelta: 0, fire: false, dash: false };
+    return {
+      move: { x: 0, y: 0 },
+      lookDelta: 0,
+      fire: false,
+      dash: false,
+      lightToggle: false,
+    };
   }
 
   const input = raw as Record<string, unknown>;
@@ -984,6 +858,7 @@ function inputMessageToTickInput(raw: unknown): GameTickInputSnapshot {
     lookDelta,
     fire: input.fire === true,
     dash: input.dash === true,
+    lightToggle: input.lightToggle === true,
   };
 }
 
@@ -1046,6 +921,7 @@ self.onmessage = (event: MessageEvent) => {
         lookDelta: 0,
         fire: false,
         dash: false,
+        lightToggle: false,
       };
 
       gameState = gameTick(

@@ -1,4 +1,4 @@
-# Workflow Update Sync Hook Design
+﻿# Workflow Update Sync Hook Design
 
 ## Overview
 

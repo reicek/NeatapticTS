@@ -278,21 +278,33 @@ for (let i = 0; i < items.length; i++) {
 
 ### Single-Expect Rule
 
-Each `it()` block must have exactly one top-level `expect()`:
+Prefer one top-level `expect()` per `it()` for independent contracts. When
+multiple assertions all verify the same behavior state, up to three related
+`expect()` calls are allowed in one `it()` block. Unrelated assertions must still
+be split into separate `it()` blocks.
 
 ```ts
-// ✅ Prefer
+// ✅ Prefer — independent contract
 it('returns sorted array', () => {
   const result = toSorted(input);
   expect(result).toEqual(expected);
 });
 
-// ❌ Avoid
+// ✅ Also acceptable — same behavior state
+it('expires an active token at the boundary', () => {
+  const result = isExpired(activeToken, expiryTime);
+  expect(result.activeBeforeExpiry).toBe(true);
+  expect(result.inactiveAtExpiry).toBe(true);
+  expect(result.reason).toBe('expired');
+});
+
+// ❌ Avoid — unrelated assertions in one test
 it('returns sorted array', () => {
   const result = toSorted(input);
   expect(result).toEqual(expected);
   expect(result).not.toBe(input);
   expect(result.length).toBe(input.length);
+  expect(other).toBeDefined(); // unrelated — split into its own it()
 });
 ```
 
@@ -456,6 +468,13 @@ Prefer focused slices:
 - `npx jest --config=jest.config.mjs --no-cache --testPathPattern=<file-or-folder>`
 - `npm run quality:folder -- --folder=<folder>`
 
+`04-implementing` may use targeted tests on the changed files as a preflight
+step. Running a focused `npx jest --testPathPattern=<changed-test>` call is
+permitted to verify the immediate behavior of the slice before handoff. It
+must still not run the full suite or coverage gates (`coverage-guard`,
+`npm run coverage`, etc.) — those remain the responsibility of
+`05-green-testing` after the orchestrator dispatches it.
+
 Only run the full suite when explicitly requested by the user, required by the
 active step packet's `validation` list, or at a phase boundary with user approval.
 
@@ -488,12 +507,15 @@ npm ci
 
 ### Test File Review
 
-Flag any test files with multiple top-level `expect()` per `it()`:
+Flag test files where unrelated assertions are bundled into a single `it()`:
 
 ```bash
 # Manual review or add to CI lint
 grep -r "expect(" testing/**/*.test.ts | grep -B5 "it("
 ```
+
+Up to three related `expect()` calls that verify the same behavior state are
+allowed; unrelated assertions must be split into separate `it()` blocks.
 
 ### JSDoc Verification
 
@@ -585,7 +607,8 @@ advance to the next phase until compression is complete.
 ## Guardrails
 
 - Do not accept `any` or `unknown` types without explicit justification.
-- Do not write tests with multiple top-level `expect()` calls.
+- Do not bundle unrelated assertions into a single `it()` block. Up to three
+  related `expect()` calls that verify the same behavior state are allowed.
 - Do not use in-place array mutation methods when immutable alternatives exist.
 - Do not edit generated `src/**/README.md` files directly; improve JSDoc and run `npm run docs`.
 - Do not skip `npm run quality:folder` after changes to `src/`.

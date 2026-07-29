@@ -450,6 +450,35 @@ export function parsePlanYamlBlock(yamlText) {
 }
 
 /**
+ * Normalize an acceptance_criteria list into test-contract objects.
+ *
+ * Only string `validation` values are preserved; non-string values are dropped
+ * so the wire format stays compact and deterministic.
+ *
+ * @param {unknown} criteria - Raw acceptance criteria from plan metadata.
+ * @returns {Array<{ id: string, text: string, validation?: string }>} Test contracts.
+ */
+export function normalizeTestContracts(criteria) {
+  if (!Array.isArray(criteria)) {
+    return [];
+  }
+
+  return criteria.map((criterion) => {
+    const text = String(criterion.text ?? '');
+    const explicitId = String(criterion.id ?? '').trim();
+    const extractedId = explicitId || (text.match(/AC-\d+/)?.[0] ?? '');
+    return {
+      id: extractedId,
+      text,
+      validation:
+        typeof criterion.validation === 'string'
+          ? criterion.validation
+          : undefined,
+    };
+  });
+}
+
+/**
  * Returns the next non-empty line and its indentation (number of leading spaces).
  *
  * @param lines - Line array.

@@ -1,5 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
+import type * as EnemyMlp from './enemy-mlp';
+
 /**
  * Red-phase contract tests for examples/neatenstein/browser-entry/harness/enemy-mlp.ts
  * weight-only mutation guard (Phase 4 slice 04-enemy-mlp-weight-only).
@@ -8,11 +10,16 @@ import { describe, expect, it } from '@jest/globals';
  * mutation, and a runtime guard that rejects structural mutation operators.
  */
 
+interface EnemyMlpModule {
+  createMlpEnemyPopulation: typeof EnemyMlp.createMlpEnemyPopulation;
+  guardMlpStructuralMutation: typeof EnemyMlp.guardMlpStructuralMutation;
+}
+
 describe('Neatenstein harness enemy-mlp weight-only', () => {
   describe('AC-404: fixed topology', () => {
     it('produces weight vectors sized for the 8->6->4->2 topology', async () => {
       const { createMlpEnemyPopulation } =
-        (await import('./enemy-mlp.ts')) as Record<string, any>;
+        (await import('./enemy-mlp.ts')) as EnemyMlpModule;
       const population = createMlpEnemyPopulation({ seed: 1 });
       const variant = population.sample(0) as { weights: Float32Array };
       expect(variant.weights.length).toBe(8 * 6 + 6 * 4 + 4 * 2);
@@ -27,19 +34,19 @@ describe('Neatenstein harness enemy-mlp weight-only', () => {
 
     it('allows weight mutation operators', async () => {
       const { guardMlpStructuralMutation } =
-        (await import('./enemy-mlp.ts')) as Record<string, any>;
+        (await import('./enemy-mlp.ts')) as EnemyMlpModule;
       expect(guardMlpStructuralMutation({ type: 'weight' })).toBe(true);
     });
 
     it('rejects add-node structural mutation operators', async () => {
       const { guardMlpStructuralMutation } =
-        (await import('./enemy-mlp.ts')) as Record<string, any>;
+        (await import('./enemy-mlp.ts')) as EnemyMlpModule;
       expect(guardMlpStructuralMutation({ type: 'add-node' })).toBe(false);
     });
 
     it('rejects add-connection structural mutation operators', async () => {
       const { guardMlpStructuralMutation } =
-        (await import('./enemy-mlp.ts')) as Record<string, any>;
+        (await import('./enemy-mlp.ts')) as EnemyMlpModule;
       expect(guardMlpStructuralMutation({ type: 'add-connection' })).toBe(
         false,
       );
@@ -47,7 +54,7 @@ describe('Neatenstein harness enemy-mlp weight-only', () => {
 
     it('rejects remove-node structural mutation operators', async () => {
       const { guardMlpStructuralMutation } =
-        (await import('./enemy-mlp.ts')) as Record<string, any>;
+        (await import('./enemy-mlp.ts')) as EnemyMlpModule;
       expect(guardMlpStructuralMutation({ type: 'remove-node' })).toBe(false);
     });
   });

@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Coordinator for tuning and hardening Flappy Bird architecture profiles.'
 name: 'flappy-architecture-polish'
 tier: 2
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

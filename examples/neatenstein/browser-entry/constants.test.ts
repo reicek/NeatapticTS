@@ -36,9 +36,9 @@ describe('Neatenstein constants module', () => {
       ambientLifetimeMs: constants.NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS,
       maxConcurrent: constants.NEATENSTEIN_PULSE_MAX_CONCURRENT,
     }).toEqual({
-      ambientIntervalMs: 2000,
-      ambientLifetimeMs: 2700,
-      maxConcurrent: 11,
+      ambientIntervalMs: 500,
+      ambientLifetimeMs: 4000,
+      maxConcurrent: 40,
     });
   });
 
@@ -54,7 +54,7 @@ describe('Neatenstein constants module', () => {
     ]);
   });
 
-  it('exports the fixed 60x60 map size', async () => {
+  it('exports the fixed 120x120 map size', async () => {
     const constants = await loadModule('./constants.ts');
     expect(constants.NEATENSTEIN_MAP_SIZE).toBe(120);
   });

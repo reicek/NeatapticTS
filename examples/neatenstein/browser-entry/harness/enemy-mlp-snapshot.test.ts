@@ -1,5 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
 
+import { isMlpSnapshot } from './arms-race';
+import type * as ArmsRace from './arms-race';
+import type * as EnemyMlp from './enemy-mlp';
+import type { MlpSnapshot } from './types';
+
 /**
  * Red-phase contract tests for examples/neatenstein/browser-entry/harness/arms-race.ts
  * focused on the frozen MLP snapshot guarantee.
@@ -7,6 +12,14 @@ import { describe, expect, it } from '@jest/globals';
  * Covers AC-409: Main agent fitness is evaluated against a frozen MLP snapshot,
  * not the live enemy MLP population.
  */
+
+interface ArmsRaceModule {
+  runArmsRaceGeneration: typeof ArmsRace.runArmsRaceGeneration;
+}
+
+interface EnemyMlpModule {
+  createMlpEnemyPopulation: typeof EnemyMlp.createMlpEnemyPopulation;
+}
 
 describe('Neatenstein harness enemy-mlp snapshot', () => {
   describe('AC-409: frozen snapshot vs live population', () => {
@@ -17,20 +30,29 @@ describe('Neatenstein harness enemy-mlp snapshot', () => {
 
     it('evaluates main fitness against the supplied enemy snapshot', async () => {
       const { runArmsRaceGeneration } =
-        (await import('./arms-race.ts')) as Record<string, any>;
-      const snapshot = { kind: 'mlp', weights: new Float32Array(80) };
+        (await import('./arms-race.ts')) as ArmsRaceModule;
+      const snapshot: MlpSnapshot = {
+        kind: 'mlp',
+        weights: new Float32Array(80),
+      };
       const result = runArmsRaceGeneration({
         seed: 1,
         generation: 1,
         enemySnapshot: snapshot,
       });
+      if (!isMlpSnapshot(result.enemySnapshot)) {
+        throw new Error('Expected result.enemySnapshot to be an MlpSnapshot');
+      }
       expect(result.enemySnapshot.weights).toEqual(snapshot.weights);
     });
 
     it('returns the same main fitness when replayed with the same frozen snapshot', async () => {
       const { runArmsRaceGeneration } =
-        (await import('./arms-race.ts')) as Record<string, any>;
-      const snapshot = { kind: 'mlp', weights: new Float32Array(80) };
+        (await import('./arms-race.ts')) as ArmsRaceModule;
+      const snapshot: MlpSnapshot = {
+        kind: 'mlp',
+        weights: new Float32Array(80),
+      };
       const first = runArmsRaceGeneration({
         seed: 1,
         generation: 1,
@@ -46,10 +68,16 @@ describe('Neatenstein harness enemy-mlp snapshot', () => {
 
     it('produces different main fitness for different frozen snapshots', async () => {
       const { runArmsRaceGeneration } =
-        (await import('./arms-race.ts')) as Record<string, any>;
-      const firstSnapshot = { kind: 'mlp', weights: new Float32Array(80) };
+        (await import('./arms-race.ts')) as ArmsRaceModule;
+      const firstSnapshot: MlpSnapshot = {
+        kind: 'mlp',
+        weights: new Float32Array(80),
+      };
       firstSnapshot.weights[0] = 0.1;
-      const secondSnapshot = { kind: 'mlp', weights: new Float32Array(80) };
+      const secondSnapshot: MlpSnapshot = {
+        kind: 'mlp',
+        weights: new Float32Array(80),
+      };
       secondSnapshot.weights[0] = 0.9;
       const first = runArmsRaceGeneration({
         seed: 1,
@@ -66,18 +94,30 @@ describe('Neatenstein harness enemy-mlp snapshot', () => {
 
     it('does not mutate the live MLP population when evaluating from a snapshot', async () => {
       const { createMlpEnemyPopulation } =
-        (await import('./enemy-mlp.ts')) as Record<string, any>;
+        (await import('./enemy-mlp.ts')) as EnemyMlpModule;
       const { runArmsRaceGeneration } =
-        (await import('./arms-race.ts')) as Record<string, any>;
+        (await import('./arms-race.ts')) as ArmsRaceModule;
       const population = createMlpEnemyPopulation({ seed: 1 });
-      const liveBefore = population.snapshot().weights[0];
+      const liveSnapshot = population.snapshot();
+      if (!isMlpSnapshot(liveSnapshot)) {
+        throw new Error(
+          'Expected population.snapshot() to return an MlpSnapshot',
+        );
+      }
+      const liveBefore = liveSnapshot.weights[0];
       const frozen = population.snapshot();
       runArmsRaceGeneration({
         seed: 1,
         generation: 5,
         enemySnapshot: frozen,
       });
-      expect(population.snapshot().weights[0]).toBe(liveBefore);
+      const afterSnapshot = population.snapshot();
+      if (!isMlpSnapshot(afterSnapshot)) {
+        throw new Error(
+          'Expected population.snapshot() to return an MlpSnapshot',
+        );
+      }
+      expect(afterSnapshot.weights[0]).toBe(liveBefore);
     });
   });
 });

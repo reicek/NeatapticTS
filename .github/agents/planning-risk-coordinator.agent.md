@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Coordinator for ambiguity review, blast-radius, dependency, and budget risk.'
 name: 'planning-risk-coordinator'
 tier: 2
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

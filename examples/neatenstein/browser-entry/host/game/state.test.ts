@@ -251,4 +251,33 @@ describe('Neatenstein game state', () => {
       });
     });
   });
+
+  describe('AC-105: weapon and projectile initialization', () => {
+    it('initializes the gun overlay with zero recoil', async () => {
+      const { createGameState } = (await import('./state.ts')) as Record<
+        string,
+        any
+      >;
+      const state = createGameState({ seed: 1 });
+      expect(state.gun).toEqual({ recoilOffset: 0 });
+    });
+
+    it('initializes an empty bolt array', async () => {
+      const { createGameState } = (await import('./state.ts')) as Record<
+        string,
+        any
+      >;
+      const state = createGameState({ seed: 1 });
+      expect(state.bolts).toEqual([]);
+    });
+
+    it('initializes the dynamic light toggle to enabled', async () => {
+      const { createGameState } = (await import('./state.ts')) as Record<
+        string,
+        any
+      >;
+      const state = createGameState({ seed: 1 });
+      expect(state.lightEnabled).toBe(true);
+    });
+  });
 });

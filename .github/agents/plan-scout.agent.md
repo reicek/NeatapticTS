@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Scout for selecting plan documents, triggers, and alignment briefs.'
 name: 'plan-scout'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

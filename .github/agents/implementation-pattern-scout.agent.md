@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Scout for nearby source patterns, naming conventions, and test setup.'
 name: implementation-pattern-scout
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Red-test orchestrator for failing tests, fixtures, mocks, and coverage strategy.'
 name: '03-red-testing'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,
@@ -70,6 +70,8 @@ Use when creating failing tests, test plans, fixtures, assertions, mocks, and co
 
 This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
 
+**MCP Tool Names:** Use HYPHENS (not underscores) when calling MCP tools. Example: `neataptic-workflow-mcp-get_slice_context`, NOT `neataptic_workflow_mcp_get_slice_context`.
+
 ## Mission
 
 Create the smallest failing test, eval assertion, or explicit skip contract for the current phase before implementation. Respect TDD policy and record red evidence in the active plan. Always choose the narrowest meaningful test type and leave Step 04 with a precise green target.
@@ -81,8 +83,8 @@ Create the smallest failing test, eval assertion, or explicit skip contract for 
 - Always use 'red-test-contracts', 'test-fix-workflow', and 'coverage-tranche' skills when relevant.
 - Never broaden validation before the red contract is clear.
 - Always prefer the smallest test type that exposes the target behavior.
-- Keep one top-level expect(...) per Jest test.
-- Each red contract must be single-purpose; always split multiple assertions into separate tests.
+- Prefer one top-level expect(...) per it() for independent contracts. When multiple assertions verify the same behavior state, up to three related expect(...) calls are allowed in one it() block.
+- Each red contract must be single-purpose; always split unrelated assertions into separate tests.
 - Always use deterministic setup, stable seeds, and minimal fixture surface.
 - Always define setup and cleanup with the test change; reset all state in test boundary.
 - Always document fixture type and rationale in the plan.

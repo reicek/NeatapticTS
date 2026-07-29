@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Scout for checkpoint save, resume, restore, and persistence boundaries.'
 name: checkpoint-scout
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

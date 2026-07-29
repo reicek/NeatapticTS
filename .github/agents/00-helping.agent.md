@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Cross-tier helper for AI system maintenance, workflow gaps, and CI.'
 name: '00-helping'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,
@@ -67,6 +67,8 @@ Use for local AI system maintenance, workflow gap troubleshooting, config checks
 ## Cortex-First Search Policy
 
 This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
+
+**MCP Tool Names:** Use HYPHENS (not underscores) when calling MCP tools. Example: `neataptic-workflow-mcp-get_slice_context`, NOT `neataptic_workflow_mcp_get_slice_context`.
 
 ## Mission
 

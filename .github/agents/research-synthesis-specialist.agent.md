@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Specialist for synthesizing scout recon into alignment briefs.'
 name: research-synthesis-specialist
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

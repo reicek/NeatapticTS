@@ -1715,6 +1715,7 @@ All flows declare exit gates that must pass before completion. The Tier-1 gate c
 | ---------------------------- | ------------------ | --------------------------------------------------------------------------------- |
 | `plan-sync`                  | `01-planning`      | Confirms plan tracker alignment with `plans/README.md` and `plans/Roadmap.md`     |
 | `step-packet`                | `01-planning`      | Validates step packet structure and required fields                               |
+| `plan-command-lint`          | `04-implementing`  | Validates shell commands and flags referenced in plan Markdown against CLI help   |
 | `agent-graph`                | `00-helping`       | Verifies agent delegation graph integrity and frontmatter consistency             |
 | `learning-event`             | `07-logging`       | Validates learning event was recorded in `.github/ai-learning/learning-log.jsonl` |
 | `planning-output-contract`   | `01-planning`      | Verifies planning output shape and completeness                                   |

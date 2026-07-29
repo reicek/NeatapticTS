@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Scout for worker payload shapes, transfer lists, and serialization.'
 name: 'worker-payload-scout'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

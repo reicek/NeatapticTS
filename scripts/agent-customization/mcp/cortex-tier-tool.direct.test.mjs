@@ -7,9 +7,11 @@
  * caused by `isolateModulesAsync` + dynamic ESM imports under the
  * `agent-customization-scripts` ts-jest transform.
  */
+import { jest } from '@jest/globals';
 import {
   createSliceContextTool,
   createTierGraphTool,
+  rebuildIndex,
 } from './cortex-tier-tool.mjs';
 
 describe('cortex-tier-tool.mjs direct import coverage', () => {
@@ -88,6 +90,65 @@ describe('cortex-tier-tool.mjs direct import coverage', () => {
         }),
       );
     });
+
+    it('includes violations when includeViolations is true', async () => {
+      const tool = createTierGraphTool();
+      const result = await tool.handler({ includeViolations: true });
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          agents: expect.arrayContaining([]),
+          violations: expect.any(Array),
+          validation: expect.objectContaining({
+            ok: true,
+            issueCount: expect.any(Number),
+          }),
+        }),
+      );
+    });
+
+    it('omits both agents and violations when both flags are false', async () => {
+      const tool = createTierGraphTool();
+      const result = await tool.handler({
+        includeAgents: false,
+        includeViolations: false,
+      });
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          agents: [],
+          violations: [],
+          validation: expect.objectContaining({
+            ok: true,
+            issueCount: expect.any(Number),
+          }),
+        }),
+      );
+    });
+
+    it('uses an empty issue list when validation omits issues', async () => {
+      jest.unstable_mockModule('../validate-agent-graph.mjs', () => ({
+        collectTierInventory: jest.fn().mockResolvedValue({
+          generated_at: '2024-01-01T00:00:00.000Z',
+          summary: {},
+          agents: [],
+        }),
+        runValidateAgentGraph: jest.fn().mockResolvedValue({ ok: false }),
+      }));
+      jest.resetModules();
+
+      const { createTierGraphTool: factory } =
+        await import('./cortex-tier-tool.mjs');
+
+      const tool = factory();
+      const result = await tool.handler({ includeAgents: false });
+
+      expect(result.violations).toEqual([]);
+      expect(result.validation).toEqual({
+        ok: false,
+        issueCount: 0,
+      });
+    });
   });
 
   describe('createSliceContextTool', () => {
@@ -116,6 +177,98 @@ describe('cortex-tier-tool.mjs direct import coverage', () => {
           },
         }),
       );
+    });
+
+    it('throws when the workflow tool set omits get_slice_context', async () => {
+      jest.unstable_mockModule('./neataptic-workflow-mcp.mjs', () => ({
+        createWorkflowTools: jest.fn().mockReturnValue([]),
+      }));
+      jest.resetModules();
+
+      const { createSliceContextTool: factory } =
+        await import('./cortex-tier-tool.mjs');
+
+      expect(factory).toThrow(
+        'get_slice_context tool descriptor missing from neataptic-workflow-mcp tool set.',
+      );
+    });
+  });
+
+  describe('rebuildIndex', () => {
+    it('returns success true when buildSemanticIndex resolves', async () => {
+      const buildSemanticIndex = jest.fn().mockResolvedValue(undefined);
+      jest.unstable_mockModule('../../../rag-index/build-index.mjs', () => ({
+        buildSemanticIndex,
+      }));
+      jest.resetModules();
+
+      const { rebuildIndex: rebuild } = await import('./cortex-tier-tool.mjs');
+      const result = await rebuild({ databasePath: './tmp/rebuild-test.db' });
+
+      expect(buildSemanticIndex).toHaveBeenCalledWith({
+        databasePath: './tmp/rebuild-test.db',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('returns success false with the error message when buildSemanticIndex throws', async () => {
+      jest.unstable_mockModule('../../../rag-index/build-index.mjs', () => ({
+        buildSemanticIndex: jest
+          .fn()
+          .mockRejectedValue(new Error('index build failed')),
+      }));
+      jest.resetModules();
+
+      const { rebuildIndex: rebuild } = await import('./cortex-tier-tool.mjs');
+      const result = await rebuild();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('index build failed');
+    });
+
+    it('uses an injected buildModule for success', async () => {
+      const buildSemanticIndex = jest.fn().mockResolvedValue(undefined);
+      const buildModule = { buildSemanticIndex };
+
+      const result = await rebuildIndex(
+        { databasePath: './tmp/injected.db' },
+        buildModule,
+      );
+
+      expect(buildSemanticIndex).toHaveBeenCalledWith({
+        databasePath: './tmp/injected.db',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('uses an injected buildModule for Error failures', async () => {
+      const buildSemanticIndex = jest
+        .fn()
+        .mockRejectedValue(new Error('injected error'));
+      const buildModule = { buildSemanticIndex };
+
+      const result = await rebuildIndex(
+        { databasePath: './tmp/injected.db' },
+        buildModule,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('injected error');
+    });
+
+    it('uses an injected buildModule for non-Error rejections', async () => {
+      const buildSemanticIndex = jest.fn().mockImplementation(() => {
+        throw 'string rejection';
+      });
+      const buildModule = { buildSemanticIndex };
+
+      const result = await rebuildIndex(
+        { databasePath: './tmp/injected.db' },
+        buildModule,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('string rejection');
     });
   });
 });

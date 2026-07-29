@@ -7,6 +7,10 @@ import { describe, expect, it } from '@jest/globals';
  * and breaks ties by the lowest variant id.
  */
 
+interface SelectModule {
+  selectVariant: <TVariant>(variants: readonly TVariant[]) => TVariant;
+}
+
 describe('Neatenstein harness select', () => {
   describe('AC-301: deterministic variant selection', () => {
     it('exports selectVariant as a function', async () => {
@@ -15,10 +19,7 @@ describe('Neatenstein harness select', () => {
     });
 
     it('selects the variant with the highest fitness', async () => {
-      const { selectVariant } = (await import('./select.ts')) as Record<
-        string,
-        any
-      >;
+      const { selectVariant } = (await import('./select.ts')) as SelectModule;
       const variants = [
         { id: 0, fitness: 10 },
         { id: 1, fitness: 30 },
@@ -28,10 +29,7 @@ describe('Neatenstein harness select', () => {
     });
 
     it('tie-breaks by the lowest variant id', async () => {
-      const { selectVariant } = (await import('./select.ts')) as Record<
-        string,
-        any
-      >;
+      const { selectVariant } = (await import('./select.ts')) as SelectModule;
       const variants = [
         { id: 2, fitness: 50 },
         { id: 0, fitness: 50 },
@@ -41,10 +39,7 @@ describe('Neatenstein harness select', () => {
     });
 
     it('is stable for identical input order', async () => {
-      const { selectVariant } = (await import('./select.ts')) as Record<
-        string,
-        any
-      >;
+      const { selectVariant } = (await import('./select.ts')) as SelectModule;
       const variants = [
         { id: 0, fitness: 5 },
         { id: 1, fitness: 5 },
@@ -55,30 +50,21 @@ describe('Neatenstein harness select', () => {
     });
 
     it('throws when given an empty population', async () => {
-      const { selectVariant } = (await import('./select.ts')) as Record<
-        string,
-        any
-      >;
+      const { selectVariant } = (await import('./select.ts')) as SelectModule;
       expect(() => selectVariant([])).toThrow(
         'Cannot select a variant from an empty population.',
       );
     });
 
     it('treats missing fitness as negative infinity', async () => {
-      const { selectVariant } = (await import('./select.ts')) as Record<
-        string,
-        any
-      >;
+      const { selectVariant } = (await import('./select.ts')) as SelectModule;
       const unscored = { id: 0 };
       const scored = { id: 1, fitness: 10 };
       expect(selectVariant([unscored, scored])).toBe(scored);
     });
 
     it('ignores later variants without a fitness score', async () => {
-      const { selectVariant } = (await import('./select.ts')) as Record<
-        string,
-        any
-      >;
+      const { selectVariant } = (await import('./select.ts')) as SelectModule;
       const scored = { id: 0, fitness: 10 };
       const unscored = { id: 1 };
       expect(selectVariant([scored, unscored])).toBe(scored);

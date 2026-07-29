@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Coordinator for triaging green-test failures and coverage gate interpretation.'
 name: 'green-test-failure-triage-coordinator'
 tier: 2
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

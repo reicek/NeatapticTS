@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @module neataptic-gate-mcp.test
  * @description Green tests for the gate MCP server entry point.
  */

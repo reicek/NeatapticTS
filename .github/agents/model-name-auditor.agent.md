@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Auditor for discovering and validating qualified Copilot model names.'
 name: model-name-auditor
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

@@ -12,10 +12,15 @@
 
 import {
   NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_LIGHT_TOGGLE_KEY,
   NEATENSTEIN_MAP_SIZE,
 } from '../../constants';
 
-export { NEATENSTEIN_FIXED_TIMESTEP_MS };
+export {
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_LIGHT_TOGGLE_KEY,
+  NEATENSTEIN_MAP_SIZE,
+};
 
 /** Number of milliseconds in one second. */
 export const NEATENSTEIN_MS_PER_SECOND = 1000;
@@ -112,7 +117,7 @@ export const NEATENSTEIN_CONTACT_RANGE_CELLS = 0.5;
 /**
  * Hit points removed from the player on each contact-damage tick.
  *
- * Smaller than the beam damage so melee pressure is threatening but not
+ * Smaller than the bolt damage so melee pressure is threatening but not
  * instantly lethal.
  */
 export const NEATENSTEIN_CONTACT_DAMAGE = 10;
@@ -206,52 +211,13 @@ export const NEATENSTEIN_DASH_KEY = 'Space' as const;
 export const NEATENSTEIN_FIRE_KEY = 'KeyF' as const;
 
 /**
- * Maximum cell distance a neon beam can travel before it is forced to end.
+ * Distance in cells to offset the bolt origin forward from the player center.
  *
- * Set generously larger than the 60×60 map diagonal so the beam always reaches
- * the far wall from any valid player position.
- */
-export const NEATENSTEIN_BEAM_MAX_RANGE_CELLS = 96;
-
-/**
- * Hit points removed from an enemy by a single neon beam hit.
- *
- * Chosen so a freshly spawned enemy with moderate health is destroyed by
- * one or two well-placed shots.
- */
-export const NEATENSTEIN_BEAM_DAMAGE = 50;
-
-/**
- * Milliseconds a fired tracer remains visible in the world.
- *
- * Short enough to read as a transient laser flash rather than a lingering
- * beam, but long enough to be clearly visible at 60 FPS.
- */
-export const NEATENSTEIN_TRACER_DURATION_MS = 80;
-
-/**
- * Distance in cells to offset the beam origin forward from the player center.
- *
- * Keeps the tracer origin in front of the camera near-plane so the renderer's
- * depth projection accepts it instead of rejecting it as depth less than or
- * equal to the near-clip epsilon.
+ * Keeps the projectile origin in front of the camera near-plane so the
+ * renderer's depth projection accepts it instead of rejecting it as depth
+ * less than or equal to the near-clip epsilon.
  */
 export const NEATENSTEIN_MUZZLE_OFFSET_CELLS = 0.2;
-
-/**
- * CSS color applied to all neon beam tracers.
- *
- * A bright cyan/blue that reads as "neon" against the dark cell-shaded walls.
- */
-export const NEATENSTEIN_BEAM_COLOR = '#00bfff';
-
-/**
- * Perpendicular distance within which an enemy center is considered hit by
- * the beam.
- *
- * Tuned to feel generous without making thin grazing shots count as hits.
- */
-export const NEATENSTEIN_ENEMY_HIT_RADIUS_CELLS = 0.4;
 
 /**
  * Minimum touch drag distance in CSS pixels before a touch-move is treated
@@ -296,8 +262,8 @@ export const NEATENSTEIN_TEST_SEED = 1;
 /**
  * Default enemy health used in combat tests.
  *
- * Chosen so that a single {@link NEATENSTEIN_BEAM_DAMAGE} hit reduces health
- * to a non-zero value, while a second hit (or health equal to the beam damage)
+ * Chosen so that a single {@link NEATENSTEIN_BOLT_DAMAGE} hit reduces health
+ * to a non-zero value, while a second hit (or health equal to the bolt damage)
  * produces a confirmed kill.
  */
 export const NEATENSTEIN_TEST_ENEMY_HEALTH = 100;
@@ -311,6 +277,87 @@ export const NEATENSTEIN_TEST_ENEMY_HEALTH = 100;
 export const NEATENSTEIN_TEST_ENEMY_DEAD_HEALTH = 0;
 
 /**
+ * Hit points removed from an enemy by a single traveling plasma bolt hit.
+ *
+ * Chosen so a freshly spawned enemy with moderate health is destroyed by
+ * one or two well-placed shots.
+ */
+export const NEATENSTEIN_BOLT_DAMAGE = 50;
+
+/**
+ * Travel speed of a plasma bolt in world cells per second.
+ *
+ * Tuned so a bolt reaches the arena edge quickly, giving it a snappy
+ * projectile feel while remaining fast enough to compete with the original
+ * hitscan weapon.
+ */
+export const NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND = 36;
+
+/**
+ * Fixed visual travel duration of a plasma bolt in milliseconds.
+ *
+ * Using a constant duration instead of distance/speed makes every bolt travel
+ * at the same screen-space rate regardless of target distance.
+ */
+export const NEATENSTEIN_BOLT_TRAVEL_DURATION_MS = 300;
+
+/**
+ * Maximum lifetime of a plasma bolt in milliseconds.
+ *
+ * Caps the distance a bolt can travel and prevents deactivated bolts from
+ * lingering in the simulation.
+ */
+export const NEATENSTEIN_BOLT_LIFETIME_MS = 2000;
+
+/**
+ * Radius in world cells used for bolt/enemy collision.
+ *
+ * Tuned to feel generous without making thin grazing shots count as hits.
+ */
+export const NEATENSTEIN_BOLT_HIT_RADIUS_CELLS = 0.4;
+
+/**
+ * Maximum distance a plasma bolt can travel in world cells.
+ *
+ * Bolts are deleted once they travel this far. They stop existing, cannot hit
+ * anything, and fade out visually over the same range.
+ */
+export const NEATENSTEIN_BOLT_MAX_RANGE_CELLS = 30;
+
+/**
+ * Maximum screen-space recoil offset applied to the gun overlay after firing.
+ *
+ * Expressed in pixels relative to the bottom-center HUD coordinate. A larger
+ * value makes each shot feel punchier; a smaller value keeps the overlay stable.
+ */
+export const NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX = 8;
+
+/**
+ * Recoil decay rate in pixels per second.
+ *
+ * Determines how quickly the gun overlay returns to its rest position after a
+ * shot. The value is chosen so the recoil settles within roughly one tick at
+ * 60 FPS while still producing a visible kick.
+ */
+export const NEATENSTEIN_GUN_RECOIL_DECAY_PX_PER_SECOND = 480;
+
+/**
+ * CSS color applied to the dynamic light overlay.
+ *
+ * A bright teal that matches the gun accent color and reads as a neon muzzle
+ * flash or carried light source.
+ */
+export const NEATENSTEIN_DYNAMIC_LIGHT_COLOR = '#00f0ff';
+
+/**
+ * World-cell radius of the dynamic light overlay.
+ *
+ * Defines how far the teal light illuminates nearby floor/wall geometry from
+ * the player position when enabled.
+ */
+export const NEATENSTEIN_DYNAMIC_LIGHT_RADIUS_CELLS = 6;
+
+/**
  * Distance in cells just beyond {@link NEATENSTEIN_CONTACT_RANGE_CELLS} used
  * to place an enemy outside contact-damage range for out-of-range testing.
  */
@@ -319,44 +366,19 @@ export const NEATENSTEIN_TEST_ENEMY_BEYOND_CONTACT_RANGE_CELLS =
 
 /**
  * Distance in cells from the player to a test enemy placed directly on the
- * beam path.
+ * bolt path.
  *
  * Small enough to sit before the nearest wall from the central spawn point
- * when firing along the +X axis, so the beam reliably hits the enemy first.
+ * when firing along the +X axis, so the bolt reliably hits the enemy first.
  */
 export const NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS = 2;
 
 /**
- * Distance in cells from the player to a second test enemy placed farther out
- * on the same beam path.
- *
- * Used to verify that the nearest enemy is chosen when multiple enemies share
- * the beam.
- */
-export const NEATENSTEIN_TEST_ENEMY_FAR_DISTANCE_CELLS = 4;
-
-/**
- * Distance in cells from the player to a test enemy placed behind the outer
- * wall from the central spawn point.
- *
- * The outer wall along the +X axis is roughly 20 cells away from the central
- * spawn on a 42×42 map, so this value is chosen to be well beyond the wall so
- * the beam always terminates on the wall before reaching the enemy.
- */
-export const NEATENSTEIN_TEST_ENEMY_BEHIND_WALL_DISTANCE_CELLS = 30;
-
-/**
- * Small offset in cells placed beyond {@link NEATENSTEIN_BEAM_MAX_RANGE_CELLS}
- * so a test enemy is guaranteed to sit outside the beam's reachable distance.
- */
-export const NEATENSTEIN_TEST_ENEMY_BEYOND_RANGE_OFFSET_CELLS = 2;
-
-/**
  * Perpendicular offset in cells used to place a test enemy just outside the
- * beam hit radius.
+ * bolt hit radius.
  *
- * The value is larger than {@link NEATENSTEIN_ENEMY_HIT_RADIUS_CELLS} so the
+ * The value is larger than {@link NEATENSTEIN_BOLT_HIT_RADIUS_CELLS} so the
  * enemy is missed even though it shares the same forward distance as a hit
  * enemy.
  */
-export const NEATENSTEIN_TEST_ENEMY_OFF_BEAM_OFFSET_CELLS = 0.5;
+export const NEATENSTEIN_TEST_ENEMY_OFF_BOLT_OFFSET_CELLS = 0.5;

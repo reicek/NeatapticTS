@@ -108,7 +108,7 @@ const strictTier2StructuredFields = [
 const strictAllowedModels = new Set([
   'glm-5.2:cloud (ollama)',
   'anthropic/claude-sonnet-4-20250514',
-  'kimi-k2.7-code:cloud',
+  'kimi-k3:cloud',
 ]);
 
 if (options.help) {

@@ -86,7 +86,11 @@ batched calls (`npm run build`, `npm run jest:base`, `npm run jest:esm-ts`,
    - `.github/agents/` changes: agent frontmatter and graph validation.
    - `.github/skills/` changes: skill frontmatter validation.
    - `.github/flows/` changes: flow gate resolution checks.
-   - `src/` or `scripts/agent-customization/` source-file changes: run
+   - `src/` or `scripts/agent-customization/` source-file changes: the
+     orchestrator MUST first run
+     `node scripts/agent-customization/gates/pre-specialist-smoke.gate.mjs --json --changed-files=<paths>`
+     and confirm `pass: true` before dispatching Tier-3 specialists for
+     review. After the smoke gate passes, run
      `node scripts/agent-customization/gates/code-coverage.gate.mjs --json`
      and confirm `pass: true` before marking the step `[DONE]`.
 
@@ -124,13 +128,15 @@ batched calls (`npm run build`, `npm run jest:base`, `npm run jest:esm-ts`,
 
 ## Tier-1 Gate Catalog
 
-| Gate ID          | Check                                                                      | Owner                                                       |
-| ---------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `plan-sync`      | Plan registered in README + Roadmap; status coherent                       | `scripts/agent-customization/gates/plan-sync.gate.mjs`      |
-| `step-packet`    | Active step has yaml block, status, next_step, validation, stop conditions | `scripts/agent-customization/gates/step-packet.gate.mjs`    |
-| `agent-graph`    | All flow/gate/agent references resolve to real files                       | `scripts/agent-customization/gates/agent-graph.gate.mjs`    |
-| `learning-event` | A learning event exists for any gate exception or cross-tier call          | `scripts/agent-customization/gates/learning-event.gate.mjs` |
-| `code-coverage`  | Changed `src/` and `scripts/agent-customization/` files are at 100%        | `scripts/agent-customization/gates/code-coverage.gate.mjs`  |
+| Gate ID                | Check                                                                                      | Owner                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `plan-sync`            | Plan registered in README + Roadmap; status coherent                                       | `scripts/agent-customization/gates/plan-sync.gate.mjs`            |
+| `step-packet`          | Active step has yaml block, status, next_step, validation, stop conditions                 | `scripts/agent-customization/gates/step-packet.gate.mjs`          |
+| `plan-command-lint`    | Plan validation commands reference real CLI flags (no flag drift)                          | `scripts/agent-customization/gates/plan-command-lint.gate.mjs`    |
+| `agent-graph`          | All flow/gate/agent references resolve to real files                                       | `scripts/agent-customization/gates/agent-graph.gate.mjs`          |
+| `learning-event`       | A learning event exists for any gate exception or cross-tier call                          | `scripts/agent-customization/gates/learning-event.gate.mjs`       |
+| `pre-specialist-smoke` | Narrowest Jest selection for changed files passes before Tier-3 specialists are dispatched | `scripts/agent-customization/gates/pre-specialist-smoke.gate.mjs` |
+| `code-coverage`        | Changed `src/` and `scripts/agent-customization/` files are at 100%                        | `scripts/agent-customization/gates/code-coverage.gate.mjs`        |
 
 ## GPU Real-Device Gate
 

@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+﻿import { spawnSync } from 'node:child_process';
 import { readFile, readdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 

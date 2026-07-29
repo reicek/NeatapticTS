@@ -1,4 +1,4 @@
-# scripts/agent-customization
+﻿# scripts/agent-customization
 
 Operator and agent reference for the NeatapticTS agent customization scripts.
 These scripts validate, inventory, and report on the `.github/agents/*.agent.md`

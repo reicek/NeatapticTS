@@ -210,11 +210,7 @@ function carveCentralArena(map: Uint8Array, side: number): void {
 
   for (let x = min; x <= max; x++) {
     for (let y = min; y <= max; y++) {
-      // The production map is large enough for this region to be in bounds.
-      // The guard makes the helper safe if NEATENSTEIN_MAP_SIZE changes later.
-      if (!isOutOfBounds(x, y, side)) {
-        map[cellIndex(x, y, side)] = FLOOR_CELL;
-      }
+      map[cellIndex(x, y, side)] = FLOOR_CELL;
     }
   }
 }
@@ -260,16 +256,6 @@ export function buildNeatensteinMap(seed: number): Uint8Array {
 }
 
 /**
- * Validate the declared square side for collision-map access.
- *
- * @param side - Width and height of the square grid.
- * @returns Whether the side is a usable positive integer.
- */
-function isValidMapSide(side: number): boolean {
-  return Number.isInteger(side) && side > 0;
-}
-
-/**
  * Build a {@link CollisionMap} from a flat `Uint8Array` wall grid.
  *
  * Any non-zero cell value is treated as solid. Coordinates outside the square
@@ -296,27 +282,18 @@ export function createCollisionMap(
   flatMap: Uint8Array,
   side: number,
 ): CollisionMap {
+  if (!Number.isInteger(side) || side <= 0) {
+    throw new Error('Invalid map dimensions: expected a square Uint8Array.');
+  }
+
   return {
     isSolid(x: number, y: number): boolean {
-      // Invalid map dimensions should fail closed. Treating everything as
-      // solid is safer for movement than allowing entities through walls.
-      if (!isValidMapSide(side)) {
-        return true;
-      }
-
       // Out-of-bounds cells are solid by design.
       if (isOutOfBounds(x, y, side)) {
         return true;
       }
 
-      // If the backing array is shorter than expected, fail closed for missing
-      // cells instead of reading undefined as open floor.
-      const index = cellIndex(x, y, side);
-      if (index >= flatMap.length) {
-        return true;
-      }
-
-      return flatMap[index] !== FLOOR_CELL;
+      return flatMap[cellIndex(x, y, side)] !== FLOOR_CELL;
     },
   };
 }

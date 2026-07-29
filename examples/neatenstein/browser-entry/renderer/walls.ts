@@ -7,8 +7,7 @@
  *
  * For optimal performance, callers should use {@link writeNeonWallColumn} for
  * each wall stripe and then flush the finished framebuffer once with
- * `ctx.putImageData(...)`. The legacy {@link renderNeonWallColumn} wrapper is
- * retained for compatibility and still performs a write followed by a flush.
+ * `ctx.putImageData(...)`.
  *
  * @module
  */
@@ -17,7 +16,6 @@ import {
   clampInt,
   NEATENSTEIN_BACKGROUND_RGB,
   NEATENSTEIN_MAX_VIEW_DIST,
-  resolveNeatensteinFramebufferSize,
 } from './framebuffer';
 
 /** Number of RGBA channels per framebuffer pixel. */
@@ -143,38 +141,6 @@ function resolveFoggedWallColor(base: ParsedRgb, fogT: number): ParsedRgb {
 }
 
 /**
- * Resolve framebuffer dimensions for a wall render operation.
- *
- * Explicit dimensions are preferred because flat RGBA buffer length alone
- * cannot represent rectangular buffers unambiguously. When dimensions are not
- * supplied, this falls back to {@link resolveNeatensteinFramebufferSize}.
- *
- * @param framebuffer - Flat RGBA framebuffer.
- * @param framebufferWidth - Optional explicit framebuffer width.
- * @param framebufferHeight - Optional explicit framebuffer height.
- * @returns Resolved framebuffer size.
- */
-function resolveWallFramebufferSize(
-  framebuffer: Uint8ClampedArray,
-  framebufferWidth?: number,
-  framebufferHeight?: number,
-): { width: number; height: number } {
-  if (
-    framebufferWidth !== undefined &&
-    framebufferHeight !== undefined &&
-    isPositiveIntegerDimension(framebufferWidth) &&
-    isPositiveIntegerDimension(framebufferHeight)
-  ) {
-    return {
-      width: framebufferWidth,
-      height: framebufferHeight,
-    };
-  }
-
-  return resolveNeatensteinFramebufferSize(framebuffer);
-}
-
-/**
  * Write a single neon wall column into the CPU ImageData framebuffer.
  *
  * This function performs no canvas flush. It is the preferred hot-path helper
@@ -252,59 +218,4 @@ export function writeNeonWallColumn(
     framebuffer[offset + 2] = finalColor.b;
     framebuffer[offset + 3] = NEATENSTEIN_WALL_ALPHA;
   }
-}
-
-/**
- * Render a single neon wall column into the CPU ImageData framebuffer and flush
- * the framebuffer to the canvas.
- *
- * This is a backwards-compatible convenience wrapper. For full-frame rendering,
- * prefer {@link writeNeonWallColumn} for each column and flush once after all
- * columns have been written.
- *
- * @param framebuffer - Flat RGBA framebuffer.
- * @param column - Horizontal column index to write.
- * @param drawStart - Top row of the wall stripe, inclusive.
- * @param drawEnd - Bottom row of the wall stripe, exclusive.
- * @param hexColor - Wall color as `#rrggbb`.
- * @param perpWallDist - Perpendicular wall distance.
- * @param ctx - Canvas-like context with `putImageData`.
- * @param framebufferWidth - Optional explicit framebuffer width in pixels.
- * @param framebufferHeight - Optional explicit framebuffer height in pixels.
- * @throws {Error} When `hexColor` is not a valid `#rrggbb` string.
- *
- * @example
- * ```ts
- * renderNeonWallColumn(framebuffer, 0, 120, 360, '#00bfff', 1, ctx, 640, 480);
- * ```
- */
-export function renderNeonWallColumn(
-  framebuffer: Uint8ClampedArray,
-  column: number,
-  drawStart: number,
-  drawEnd: number,
-  hexColor: string,
-  perpWallDist: number,
-  ctx: NeatensteinWallRenderContext,
-  framebufferWidth?: number,
-  framebufferHeight?: number,
-): void {
-  const { width, height } = resolveWallFramebufferSize(
-    framebuffer,
-    framebufferWidth,
-    framebufferHeight,
-  );
-
-  writeNeonWallColumn(
-    framebuffer,
-    width,
-    height,
-    column,
-    drawStart,
-    drawEnd,
-    hexColor,
-    perpWallDist,
-  );
-
-  ctx.putImageData({ data: framebuffer, width, height }, 0, 0);
 }

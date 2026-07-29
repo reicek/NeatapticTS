@@ -7,6 +7,7 @@ import {
   NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT,
   NEATENSTEIN_KEY_MAP_LOOK,
   NEATENSTEIN_KEY_MAP_MOVEMENT,
+  NEATENSTEIN_LIGHT_TOGGLE_KEY,
   NEATENSTEIN_MOUSE_SENSITIVITY,
   NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
   NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX,
@@ -334,6 +335,64 @@ describe('Neatenstein host input', () => {
     );
   });
 
+  it('consumes fire and dash latches on the first getSnapshot after press', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_FIRE_KEY }),
+    );
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_DASH_KEY }),
+    );
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect({ fire: snapshot.fire, dash: snapshot.dash }).toEqual({
+      fire: true,
+      dash: true,
+    });
+  });
+
+  it('reflects the keyboard light toggle in the snapshot', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_LIGHT_TOGGLE_KEY }),
+    );
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect(snapshot.lightToggle).toBe(true);
+  });
+
+  it('consumes the light toggle latch and allows re-toggling', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_LIGHT_TOGGLE_KEY }),
+    );
+    const first = router.getSnapshot();
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', { code: NEATENSTEIN_LIGHT_TOGGLE_KEY }),
+    );
+    const second = router.getSnapshot();
+    router.detach();
+
+    expect({ first: first.lightToggle, second: second.lightToggle }).toEqual({
+      first: true,
+      second: true,
+    });
+  });
+
   it('releases fire and dash keys on keyup', () => {
     const router = createInputRouter();
     const target = document.createElement('div');
@@ -345,6 +404,10 @@ describe('Neatenstein host input', () => {
     window.dispatchEvent(
       new KeyboardEvent('keydown', { code: NEATENSTEIN_DASH_KEY }),
     );
+
+    // Latches are one-shot: consume them on the first frame after press.
+    router.getSnapshot();
+
     window.dispatchEvent(
       new KeyboardEvent('keyup', { code: NEATENSTEIN_FIRE_KEY }),
     );
@@ -487,5 +550,99 @@ describe('Neatenstein host input', () => {
       left: false,
       right: false,
     });
+  });
+
+  it('resets movement keys when the document becomes hidden', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        code: NEATENSTEIN_KEY_MAP_MOVEMENT.forward,
+      }),
+    );
+
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'hidden',
+      configurable: true,
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect(snapshot.movement.forward).toBe(false);
+  });
+
+  it('ignores a detach closure whose token no longer matches the attachment', () => {
+    const router = createInputRouter();
+    const firstTarget = document.createElement('div');
+    const firstDetach = router.attach(firstTarget);
+    router.detach();
+
+    const secondTarget = document.createElement('div');
+    router.attach(secondTarget);
+
+    // Calling the first detach closure should be a no-op because the attachment
+    // id has changed.
+    expect(() => firstDetach()).not.toThrow();
+    router.detach();
+  });
+
+  it('does not prevent default for non-gameplay keys', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    const event = new KeyboardEvent('keydown', {
+      code: 'KeyX',
+      cancelable: true,
+    });
+    window.dispatchEvent(event);
+    router.detach();
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('leaves key state unchanged when visibility becomes visible', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        code: NEATENSTEIN_KEY_MAP_MOVEMENT.forward,
+      }),
+    );
+
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      configurable: true,
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect(snapshot.movement.forward).toBe(true);
+  });
+
+  it('resets movement keys when the window loses focus', () => {
+    const router = createInputRouter();
+    const target = document.createElement('div');
+    router.attach(target);
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        code: NEATENSTEIN_KEY_MAP_MOVEMENT.forward,
+      }),
+    );
+    window.dispatchEvent(new Event('blur'));
+
+    const snapshot = router.getSnapshot();
+    router.detach();
+
+    expect(snapshot.movement.forward).toBe(false);
   });
 });

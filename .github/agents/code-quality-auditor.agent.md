@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Auditor for quality gates, build validation, and lint result interpretation.'
 name: code-quality-auditor
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

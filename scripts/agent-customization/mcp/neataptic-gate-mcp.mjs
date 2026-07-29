@@ -40,7 +40,7 @@ import {
   createTierGraphTool,
 } from './cortex-tier-tool.mjs';
 
-const SERVER_NAME = 'neataptic-gate-mcp';
+const SERVER_NAME = 'neataptic_gate_mcp';
 const SERVER_VERSION = '0.1.0';
 
 const TIER_1_GATES = [
@@ -61,6 +61,12 @@ const TIER_1_GATES = [
     owner: 'plan-slice-quality.gate.mjs',
     description:
       'Checks that every WIP plan slice has estimate_hours <= 4. Oversized slices must be broken down before verification can pass.',
+  },
+  {
+    id: 'plan-command-lint',
+    owner: 'plan-command-lint.gate.mjs',
+    description:
+      'Validates shell commands referenced in plan Markdown files against actual CLI help output to catch flag drift.',
   },
   {
     id: 'agent-graph',
@@ -171,7 +177,7 @@ export function createGateTools() {
             type: 'string',
             enum: TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
             description:
-              'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, cortex-first-search, devtools-coverage, delegate-skill-coverage, code-coverage, or specialist-review).',
+              'Gate ID to run (plan-sync, step-packet, plan-slice-quality, plan-command-lint, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, cortex-first-search, devtools-coverage, delegate-skill-coverage, code-coverage, or specialist-review).',
           },
         },
         required: ['gate'],

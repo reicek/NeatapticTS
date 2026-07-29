@@ -426,15 +426,6 @@ export function projectNeatensteinSprite(
   const left = screenX - halfThickness;
   const right = screenX + halfThickness;
 
-  if (
-    !Number.isFinite(screenX) ||
-    !isPositiveFinite(scale) ||
-    !Number.isFinite(left) ||
-    !Number.isFinite(right)
-  ) {
-    return createInvisibleSpriteProjection(perpDist);
-  }
-
   return {
     screenX,
     scale,
@@ -540,11 +531,6 @@ function renderNeatensteinSpriteColumnRgb(
 
   for (let row = clampedStart; row < clampedEnd; row += 1) {
     const offset = (row * width + x) * NEATENSTEIN_RGBA_CHANNELS;
-
-    // Defensive guard for malformed buffers or mismatched dimensions.
-    if (offset + 3 >= framebuffer.length) {
-      break;
-    }
 
     framebuffer[offset] = color.r;
     framebuffer[offset + 1] = color.g;

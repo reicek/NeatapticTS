@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Scout for Cortex embeddings index and hybrid ranking gaps.'
 name: 'cortex-embeddings-scout'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

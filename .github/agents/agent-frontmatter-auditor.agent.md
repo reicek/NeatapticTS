@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Auditor for .agent.md frontmatter, tool lists, models, and subagent graphs.'
 name: agent-frontmatter-auditor
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

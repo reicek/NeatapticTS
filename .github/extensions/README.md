@@ -1,4 +1,4 @@
-# NeatapticTS Extension Catalog Pattern
+﻿# NeatapticTS Extension Catalog Pattern
 
 This document describes how future NeatapticTS contributors can package reusable workflow pieces by borrowing concepts from the public Spec-Kit extension/preset model and mapping them onto the existing agent/skill/MCP architecture.
 

@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Auditor for plan registration across .plans.md, README, and Roadmap.'
 name: plan-registration-auditor
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

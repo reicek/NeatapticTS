@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Grader for skill outputs with evidence-backed assertions.'
 name: 'skill-output-eval-grader'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

@@ -304,11 +304,10 @@ export function endEpisode(state: GameState): GameState {
       ...enemy,
       position: { ...enemy.position },
     })),
-    tracers: state.tracers.map((tracer) => ({
-      ...tracer,
-      origin: { ...tracer.origin },
-      direction: { ...tracer.direction },
-      hit: { ...tracer.hit },
+    bolts: (state.bolts ?? []).map((bolt) => ({
+      ...bolt,
+      position: { ...bolt.position },
+      direction: { ...bolt.direction },
     })),
     impacts: state.impacts.map((impact) => ({
       ...impact,

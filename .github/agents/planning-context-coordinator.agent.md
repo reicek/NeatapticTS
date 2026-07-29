@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Coordinator for compact planning context, README evidence, and ambiguity triage.'
 name: 'planning-context-coordinator'
 tier: 2
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

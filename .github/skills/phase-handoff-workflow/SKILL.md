@@ -1,4 +1,4 @@
----
+﻿---
 name: phase-handoff-workflow
 description: 'Use when: designing phase gates, handoffs, or slice boundaries.'
 argument-hint: 'Name the source phase, target phase, current plan state, and whether the handoff should be user-reviewed or auto-sent.'

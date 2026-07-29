@@ -6,6 +6,7 @@ import { NEATENSTEIN_INPUT_MESSAGE_TYPE } from '../../constants';
 import {
   NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT,
   NEATENSTEIN_KEY_MAP_LOOK,
+  NEATENSTEIN_LIGHT_TOGGLE_KEY,
   NEATENSTEIN_MOUSE_SENSITIVITY,
   NEATENSTEIN_POINTER_LOCK_OPTIONS,
   NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
@@ -13,6 +14,7 @@ import {
   NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX,
 } from './constants.ts';
 import {
+  bindKeyboardLightToggle,
   bindKeyboardLook,
   bindMouseFire,
   bindMouseLook,
@@ -213,7 +215,7 @@ describe('Neatenstein game controls', () => {
     expect(callback).not.toHaveBeenCalled();
   });
 
-  it('forwards a full input snapshot to the worker', () => {
+  it('forwards a look-wrapped input snapshot to the worker', () => {
     const worker = { postMessage: jest.fn() } as unknown as Worker;
     const snapshot = {
       movement: {
@@ -225,6 +227,7 @@ describe('Neatenstein game controls', () => {
       look: { yawDelta: 0.1, pitchDelta: 0.2 },
       fire: true,
       dash: false,
+      lightToggle: false,
     } as unknown as InputSnapshot;
 
     forwardWorkerInput(worker, snapshot);
@@ -238,10 +241,13 @@ describe('Neatenstein game controls', () => {
           left: false,
           right: true,
         },
-        yawDelta: 0.1,
-        pitchDelta: 0.2,
+        look: {
+          yawDelta: 0.1,
+          pitchDelta: 0.2,
+        },
         fire: true,
         dash: false,
+        lightToggle: false,
       },
     });
   });
@@ -429,6 +435,68 @@ describe('Neatenstein game controls', () => {
     expect(activeCallback.mock.calls).toEqual([[true], [false]]);
   });
 
+  it('continues emitting deltas once a touch drag is engaged', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const detach = bindTouchLook(target, callback);
+    const drag = NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX + 5;
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      { identifier: 1, clientX: drag, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      { identifier: 1, clientX: drag + 2, clientY: 0 },
+    ]);
+    detach();
+
+    expect(callback).toHaveBeenCalledTimes(2);
+  });
+
+  it('emits the trailing delta once a touch drag is engaged', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const detach = bindTouchLook(target, callback);
+    const drag = NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX + 5;
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      { identifier: 1, clientX: drag, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      { identifier: 1, clientX: drag + 2, clientY: 0 },
+    ]);
+    detach();
+
+    expect(callback).toHaveBeenLastCalledWith({
+      yawDelta: 2 * NEATENSTEIN_MOUSE_SENSITIVITY,
+      pitchDelta: 0,
+    });
+  });
+
+  it('ignores a touchcancel whose changedTouches do not contain the active touch', () => {
+    const target = document.createElement('div');
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, () => undefined, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchcancel', [
+      { identifier: 2, clientX: 0, clientY: 0 },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchend', [
+      { identifier: 1, clientX: 0, clientY: 0 },
+    ]);
+    detach();
+
+    expect(activeCallback.mock.calls).toEqual([[true], [false]]);
+  });
+
   it('returns silently when the target lacks pointer lock support', () => {
     const unsupported = document.createElement('div');
 
@@ -477,7 +545,7 @@ describe('Neatenstein game controls', () => {
     }).toEqual({ preventDefaultCalls: 0, callbackCalls: 0 });
   });
 
-  it('ignores a second touch while one is already active', () => {
+  it('does not emit a look delta for a second touch while one is already active', () => {
     const target = document.createElement('div');
     const callback = jest.fn();
     const activeCallback = jest.fn();
@@ -503,10 +571,39 @@ describe('Neatenstein game controls', () => {
     ]);
     detach();
 
-    expect({
-      activeCalls: activeCallback.mock.calls.length,
-      callbackCalls: callback.mock.calls.length,
-    }).toEqual({ activeCalls: 1, callbackCalls: 0 });
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('does not report a second touch as active while one is already active', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      {
+        identifier: TOUCH_ID_PRIMARY,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      {
+        identifier: TOUCH_ID_OTHER,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      {
+        identifier: TOUCH_ID_OTHER,
+        clientX: TOUCH_FAR_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    detach();
+
+    expect(activeCallback).toHaveBeenCalledTimes(1);
   });
 
   it('removes touch listeners on detach so callbacks stop firing', () => {
@@ -656,7 +753,7 @@ describe('Neatenstein game controls', () => {
     }).toEqual({ callbackCalls: 0, activeCallbackCalls: 0 });
   });
 
-  it('ignores touch move when the changed touch id does not match the active touch', () => {
+  it('does not emit a look delta when the changed touch id does not match the active touch', () => {
     const target = document.createElement('div');
     const callback = jest.fn();
     const activeCallback = jest.fn();
@@ -679,13 +776,35 @@ describe('Neatenstein game controls', () => {
     ]);
     detach();
 
-    expect({
-      callbackCalls: callback.mock.calls.length,
-      activeCallbackCalls: activeCallback.mock.calls.length,
-    }).toEqual({ callbackCalls: 0, activeCallbackCalls: 1 });
+    expect(callback).not.toHaveBeenCalled();
   });
 
-  it('ignores touch end when the changed touch id does not match the active touch', () => {
+  it('does not change active state when the changed touch id does not match the active touch', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      {
+        identifier: TOUCH_ID_PRIMARY,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchmove', [
+      {
+        identifier: TOUCH_ID_OTHER,
+        clientX: TOUCH_FAR_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    detach();
+
+    expect(activeCallback).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not emit a look delta when touch end id does not match the active touch', () => {
     const target = document.createElement('div');
     const callback = jest.fn();
     const activeCallback = jest.fn();
@@ -707,9 +826,148 @@ describe('Neatenstein game controls', () => {
     ]);
     detach();
 
-    expect({
-      callbackCalls: callback.mock.calls.length,
-      activeCallbackCalls: activeCallback.mock.calls.length,
-    }).toEqual({ callbackCalls: 0, activeCallbackCalls: 1 });
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('does not change active state when touch end id does not match the active touch', () => {
+    const target = document.createElement('div');
+    const callback = jest.fn();
+    const activeCallback = jest.fn();
+    const detach = bindTouchLook(target, callback, activeCallback);
+
+    dispatchFakeTouchEvent(target, 'touchstart', [
+      {
+        identifier: TOUCH_ID_PRIMARY,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    dispatchFakeTouchEvent(target, 'touchend', [
+      {
+        identifier: TOUCH_ID_OTHER,
+        clientX: TOUCH_ORIGIN_X,
+        clientY: TOUCH_ORIGIN_Y,
+      },
+    ]);
+    detach();
+
+    expect(activeCallback).toHaveBeenCalledTimes(1);
+  });
+
+  describe('AC-108: light toggle binding', () => {
+    it('bindKeyboardLightToggle invokes callback on the configured key', () => {
+      const target = document.createElement('div');
+      const callback = jest.fn();
+      const detach = bindKeyboardLightToggle(target, callback);
+
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', { code: NEATENSTEIN_LIGHT_TOGGLE_KEY }),
+      );
+      detach();
+
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('bindKeyboardLightToggle ignores other keys', () => {
+      const target = document.createElement('div');
+      const callback = jest.fn();
+      const detach = bindKeyboardLightToggle(target, callback);
+
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.left }),
+      );
+      detach();
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('bindKeyboardLightToggle ignores repeated keydown events', () => {
+      const target = document.createElement('div');
+      const callback = jest.fn();
+      const detach = bindKeyboardLightToggle(target, callback);
+
+      const event = new KeyboardEvent('keydown', {
+        code: NEATENSTEIN_LIGHT_TOGGLE_KEY,
+      });
+      Object.defineProperty(event, 'repeat', { value: true });
+      target.dispatchEvent(event);
+      detach();
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('bindKeyboardLightToggle detach can be called multiple times safely', () => {
+      const target = document.createElement('div');
+      const callback = jest.fn();
+      const detach = bindKeyboardLightToggle(target, callback);
+      detach();
+      expect(() => detach()).not.toThrow();
+    });
+
+    it('bindKeyboardLightToggle ignores keydown events after detach', () => {
+      const target = document.createElement('div');
+      const callback = jest.fn();
+      const detach = bindKeyboardLightToggle(target, callback);
+      detach();
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', { code: NEATENSTEIN_LIGHT_TOGGLE_KEY }),
+      );
+      expect(callback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('idempotent detach', () => {
+    it('bindPointerLock detach can be called multiple times safely', () => {
+      const canvas = document.createElement('canvas');
+      const detach = bindPointerLock(canvas);
+      detach();
+      expect(() => detach()).not.toThrow();
+    });
+
+    it('bindMouseLook detach can be called multiple times safely', () => {
+      const canvas = document.createElement('canvas');
+      const callback = jest.fn();
+      const detach = bindMouseLook(canvas, callback);
+      detach();
+      expect(() => detach()).not.toThrow();
+    });
+
+    it('bindMouseFire detach can be called multiple times safely', () => {
+      const target = document.createElement('div');
+      const callback = jest.fn();
+      const detach = bindMouseFire(target, callback);
+      detach();
+      expect(() => detach()).not.toThrow();
+    });
+
+    it('bindKeyboardLook detach remains safe after keydown events following detach', () => {
+      const target = document.createElement('div');
+      const callback = jest.fn();
+      const detach = bindKeyboardLook(target, callback);
+      detach();
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.left }),
+      );
+      expect(() => detach()).not.toThrow();
+    });
+
+    it('bindKeyboardLook ignores keydown events after detach', () => {
+      const target = document.createElement('div');
+      const callback = jest.fn();
+      const detach = bindKeyboardLook(target, callback);
+      detach();
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', { code: NEATENSTEIN_KEY_MAP_LOOK.left }),
+      );
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('bindTouchLook detach can be called multiple times safely', () => {
+      const target = document.createElement('div');
+      const callback = jest.fn();
+      const detach = bindTouchLook(target, callback);
+      detach();
+      expect(() => detach()).not.toThrow();
+    });
   });
 });

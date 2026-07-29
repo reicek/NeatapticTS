@@ -1,4 +1,4 @@
----
+﻿---
 name: execute
 description: 'Use when: enforcing delegation discipline, tier graph, and RED→IMPLEMENT→GREEN loop.'
 argument-hint: 'Describe the delegation decision or routing question.'
@@ -296,6 +296,41 @@ task tool
 The second form bypasses the agent's `.agent.md` definition, its allowed
 skills, tools, model, and subagent allow-list, and must not be used.
 
+## Section 2.1.1 — MCP Tool Name Format (mandatory)
+
+MCP tools are exposed using HYPHENS as separators between the server key
+and the tool name. The format is: `<server-key>-<tool-name>`.
+
+For example, the `neataptic-workflow-mcp` server exposes tools as:
+
+- `neataptic-workflow-mcp-get_slice_context`
+- `neataptic-workflow-mcp-get_active_workflow_snapshot`
+- `neataptic-workflow-mcp-get_customization_inventory`
+
+The `neataptic-gate-mcp` server exposes:
+
+- `neataptic-gate-mcp-run_gate_check`
+- `neataptic-gate-mcp-query_tier_graph`
+- `neataptic-gate-mcp-query_customization_routing_table`
+- `neataptic-gate-mcp-list_gates`
+- `neataptic-gate-mcp-get_slice_context`
+
+The `neataptic-validation-mcp` server exposes:
+
+- `neataptic-validation-mcp-get_active_validation_allowlist`
+- `neataptic-validation-mcp-run_allowlisted_validation`
+
+The `neataptic-dispatch-mcp` server exposes:
+
+- `neataptic-dispatch-mcp-build_dispatch_packet`
+- `neataptic-dispatch-mcp-list_dispatchable_agents`
+- `neataptic-dispatch-mcp-get_dispatch_policy`
+
+**NEVER use underscores in MCP tool names.** The separator between server
+key and tool name is always a HYPHEN. Calling `neataptic_workflow_mcp_get_slice_context`
+(all underscores) will fail — the correct name is
+`neataptic-workflow-mcp-get_slice_context` (hyphens).
+
 ## Section 2.2 — RAG-Based Dispatch Policy (mandatory)
 
 **All dispatched agents MUST receive their instructions via orchestration RAG,
@@ -529,7 +564,7 @@ receives a slice, implements it, and returns evidence.
 ### The RED → IMPLEMENT → GREEN Loop
 
 ```text
-Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green light" → "1. Red Testing 03-red-testing creates failing tests"; "1. Red Testing 03-red-testing creates failing tests" → "2. Implementation 04-implementing makes tests pass"; "2. Implementation 04-implementing makes tests pass" → "2a. Specialist Review 3+ Tier-3 specialists from different relevant viewpoints review implementation BEFORE green testing"; "2a. Specialist Review 3+ Tier-3 specialists from different relevant viewpoints review implementation BEFORE green testing" → "2b. All specialists approve?" (Yes), "2b. All specialists approve?" → "2. Implementation 04-implementing makes tests pass" (No — REQUEST_CHANGES → NEW 04 instance with fix packet); "2b. All specialists approve?" (Yes) → "3. Green Testing 05-green-testing validates implementation"; "3. Green Testing 05-green-testing validates implementation" → "4. Loop-back orchestrator passes observations to a NEW 04 instance" (observations (not OK)), "5. Advance move to next step/slice" (OK); "4. Loop-back orchestrator passes observations to a NEW 04 instance" → "2. Implementation 04-implementing makes tests pass"; "5. Advance move to next step/slice".
+Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green light" → "1. Red Testing 03-red-testing creates failing tests"; "1. Red Testing 03-red-testing creates failing tests" → "2. Implementation 04-implementing makes tests pass"; "2. Implementation 04-implementing makes tests pass" → "2a. Shared Validation Gate run shared-validation.gate.mjs on changed files before specialists"; "2a. Shared Validation Gate run shared-validation.gate.mjs on changed files before specialists" → "2a. Shared validation passes?" (Yes), "2a. Shared validation passes?" → "2b. Specialist Review 3+ Tier-3 specialists from different relevant viewpoints review implementation BEFORE green testing" (Yes); "2a. Shared validation passes?" → "2. Implementation 04-implementing makes tests pass" (No — loop back without dispatching specialists); "2b. Specialist Review 3+ Tier-3 specialists from different relevant viewpoints review implementation BEFORE green testing" → "2c. All specialists approve?" (Yes), "2c. All specialists approve?" → "2. Implementation 04-implementing makes tests pass" (No — REQUEST_CHANGES → NEW 04 instance with fix packet); "2c. All specialists approve?" (Yes) → "3. Green Testing 05-green-testing validates implementation"; "3. Green Testing 05-green-testing validates implementation" → "4. Loop-back orchestrator passes observations to a NEW 04 instance" (observations (not OK)), "5. Advance move to next step/slice" (OK); "4. Loop-back orchestrator passes observations to a NEW 04 instance" → "4a. Convergence Tracker gate count failed fix-loop iterations for the slice in ## Latest validation evidence"; "4a. Convergence Tracker gate count failed fix-loop iterations for the slice in ## Latest validation evidence" → "4a. Iterations > 4?" (Yes); "4a. Iterations > 4?" → "ESCALATE dispatch 00-helping" (Yes); "4a. Iterations > 4?" → "2. Implementation 04-implementing makes tests pass" (No); "5. Advance move to next step/slice".
 ```
 
 ### Loop Steps
@@ -545,17 +580,27 @@ Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green li
 2. **Implementation** (`04-implementing`) implements the code to make the
    tests pass. The implementer works within the slice boundary and does
    not expand scope.
-   2a. **Specialist Review** (MANDATORY). After `04-implementing` returns
-   and BEFORE dispatching `05-green-testing`, the orchestrator MUST
-   dispatch 3+ Tier-3 specialist agents from **different relevant
-   viewpoints** (e.g., `implementation-pattern-scout`, `nge-core-scout`,
-   `performance-trace-specialist`) to review the implementation in
-   parallel. Each specialist reads the changed files, verifies
-   correctness, code quality, domain compliance, and checks for gaps
-   that tests alone cannot catch. Specialists return either APPROVE
+   2a. **Shared Validation Gate** (MANDATORY). Immediately after
+   `04-implementing` returns and BEFORE dispatching any Tier-3
+   specialists, the orchestrator MUST run the
+   `scripts/agent-customization/gates/shared-validation.gate.mjs` gate
+   with the slice's changed files. The gate runs the narrowest Jest
+   selection against the test files implied by the changed source files,
+   then runs `npm run build` and `npm run lint`. If the gate fails, the
+   orchestrator loops back to `04-implementing` with the captured
+   stdout/stderr and the JSON artifact as observations; it MUST NOT
+   dispatch specialists for review while shared validation is failing.
+   2b. **Specialist Review** (MANDATORY). Only after the shared
+   validation gate passes, and BEFORE dispatching `05-green-testing`, the
+   orchestrator MUST dispatch 3+ Tier-3 specialist agents from
+   **different relevant viewpoints** (e.g., `implementation-pattern-scout`,
+   `nge-core-scout`, `performance-trace-specialist`) to review the
+   implementation in parallel. Each specialist reads the changed files,
+   verifies correctness, code quality, domain compliance, and checks for
+   gaps that tests alone cannot catch. Specialists return either APPROVE
    or REQUEST_CHANGES with specific observations. See **Section 5.7
    — Pre-Green Specialist Review Policy** for the full protocol.
-   2b. **Fix Loop**. If any specialist returns REQUEST_CHANGES, the
+   2c. **Fix Loop**. If any specialist returns REQUEST_CHANGES, the
    orchestrator compiles all observations into a fix packet, dispatches
    a NEW `04-implementing` instance with the fix packet, and then
    re-dispatches the same specialists (fresh instances) to re-review.
@@ -570,6 +615,15 @@ Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green li
    `05-green-testing` agent that finds failures MUST return observations to
    the orchestrator; it is forbidden from dispatching `04-implementing` or
    editing source code itself.
+   4a. **Convergence Tracker Gate** (MANDATORY). Before each loop-back to
+   `04-implementing`, the orchestrator MUST run the
+   `convergence-tracker.gate.mjs` gate with the slice's `slice_id`. The
+   gate scans `## Latest validation evidence` for
+   `fix-loop: <slice-id> iteration <n> status=<failed|passed>` markers,
+   counts iterations for the slice, and resets to 0 if any marker has
+   `status=passed`. If the count exceeds 4 without a green pass, the gate
+   fails and the orchestrator MUST escalate to `00-helping` instead of
+   spawning another `04-implementing` instance.
 5. **Advance**: When green gives OK, the orchestrator records
    `VALIDATION_EVIDENCE` and moves to the next step or slice.
 6. **Phase Compression**: When all steps in a phase are marked `[DONE]` and
@@ -600,23 +654,36 @@ Each slice is a bounded unit of work with these fields:
    full slice objects.
 2. Assign the next uncompleted non-parallelizable slice, or all ready
    parallelizable slices, to `04-implementing`.
-3. Wait for implementation evidence, then dispatch 3+ Tier-3
+3. Wait for implementation evidence, then run
+   `scripts/agent-customization/gates/shared-validation.gate.mjs`
+   with the slice's changed files. If it fails, route the failure back
+   to `04-implementing`; do NOT dispatch specialists while shared
+   validation is failing.
+4. Only after the shared validation gate passes, dispatch 3+ Tier-3
    specialists from different relevant viewpoints to review the
    implementation BEFORE green testing (see Section 5.7).
-4. If any specialist returns REQUEST_CHANGES, compile observations into
-   a fix packet, dispatch a NEW `04-implementing`, then re-review with
-   fresh specialist instances. Loop until all specialists APPROVE.
-5. After all specialists approve, invoke `05-green-testing` to validate.
-6. If `05` returns failure, spawn a new `04-implementing` with a focused
-   `slice-fix` packet, re-review with specialists, then re-run `05` until
-   the slice passes.
-7. When a slice passes, record `VALIDATION_EVIDENCE` and move to the next
+5. If any specialist returns REQUEST_CHANGES, run the
+   `convergence-tracker.gate.mjs` gate for the slice. If it reports more
+   than 4 failed fix-loop iterations without a green pass, escalate to
+   `00-helping`. Otherwise, compile observations into a fix packet,
+   dispatch a NEW `04-implementing`, then re-run the shared-validation
+   gate and re-review with fresh specialist instances. Loop until the
+   shared-validation gate passes AND all specialists APPROVE.
+6. After the shared-validation gate passes and all specialists approve,
+   invoke `05-green-testing` to validate.
+7. If `05` returns failure, run the `convergence-tracker.gate.mjs` gate
+   for the slice. If it reports more than 4 failed fix-loop iterations
+   without a green pass, escalate to `00-helping`. Otherwise, spawn a new
+   `04-implementing` with a focused `slice-fix` packet, then run the smoke
+   gate, re-review with specialists, and re-run `05` until the slice
+   passes.
+8. When a slice passes, record `VALIDATION_EVIDENCE` and move to the next
    slice.
-8. After all slices pass, call `06-documenting` to run docs-quality checks
+9. After all slices pass, call `06-documenting` to run docs-quality checks
    and close the step.
-9. After all steps in a phase are `[DONE]` and green validation has passed,
-   dispatch `07-logging` to compress the completed phase to logs before
-   advancing to the next phase. See **Phase Compression Policy** below.
+10. After all steps in a phase are `[DONE]` and green validation has passed,
+    dispatch `07-logging` to compress the completed phase to logs before
+    advancing to the next phase. See **Phase Compression Policy** below.
 
 ### Critical Rules
 
@@ -637,18 +704,41 @@ Each slice is a bounded unit of work with these fields:
   compliance, code quality, and gaps that tests alone cannot catch. If
   any specialist returns REQUEST_CHANGES, the orchestrator dispatches a
   NEW `04-implementing` with a fix packet and re-reviews with fresh
-  specialist instances until ALL return APPROVE.
+  specialist instances until ALL return APPROVE. Specialists receive the
+  shared-validation artifact and do not re-run tests, build, or lint.
   See **Section 5.7 — Pre-Green Specialist Review Policy** for details.
+- **MANDATORY PRE-SPECIALIST SHARED-VALIDATION GATE.** After `04-implementing`
+  returns and BEFORE dispatching any Tier-3 specialists, the orchestrator
+  MUST run `scripts/agent-customization/gates/shared-validation.gate.mjs`
+  with the slice's changed files. The gate runs the narrowest Jest selection
+  implied by those files, then `npm run build` and `npm run lint`. If the
+  gate fails, the orchestrator loops back to `04-implementing` with the gate's
+  `evidence` as the fix packet; it MUST NOT dispatch specialists while shared
+  validation is failing.
+- **MANDATORY CONVERGENCE TRACKER GATE.** Before each loop-back to
+  `04-implementing` after a failed green run or specialist REQUEST_CHANGES,
+  the orchestrator MUST run
+  `scripts/agent-customization/gates/convergence-tracker.gate.mjs` with the
+  slice's `slice_id`. The gate counts `fix-loop: <slice-id> iteration <n>
+status=<failed|passed>` markers in `## Latest validation evidence` and
+  resets to 0 when a `passed` marker is present. If the count exceeds 4
+  without a green pass, the orchestrator MUST escalate to `00-helping`
+  instead of dispatching another `04-implementing` iteration.
 - **The ORCHESTRATOR manages the loop, NOT the implementer.** The
   implementer receives a slice and returns evidence; it does not decide
   when to loop back or advance.
-- **`04-implementing` MUST NOT RUN TESTS.** The implementation agent's job
-  is to write code that compiles and passes lint. It may run `tsc`, `lint`,
-  and `prettier` as preflight checks, but it must **never** run `jest`,
-  `coverage`, or any test command. Validation is the exclusive responsibility
-  of `05-green-testing`, dispatched by the orchestrator after `04` returns.
-  If `04` discovers a failing test during code exploration, it records the
-  observation and hands off; it does not fix-and-test in the same turn.
+- **`04-implementing` may run TARGETED tests only.** The implementation
+  agent's primary job is to write code that compiles and passes lint, but
+  it may also run a focused Jest slice (`npx jest --testPathPattern=...` or
+  equivalent) on files it changed as a preflight smoke check. It must
+  **never** run the full test suite (`npm run test:silent`, `npm test`,
+  `npm run jest:*` matrices), `coverage`, or any broad regression command.
+  Validation of the slice acceptance criteria remains the exclusive
+  responsibility of `05-green-testing`, dispatched by the orchestrator
+  after `04` returns. If `04` discovers a failing test during code
+  exploration or a targeted preflight run, it records the observation and
+  hands off; it does not attempt to bypass the RED/IMPLEMENT/GREEN loop by
+  fix-and-test in the same turn.
 - **SLICES MUST BE THIN.** A single `04-implementing` slice should change
   one behavioral intent, ideally across no more than three files. If a slice
   requires touching many files or systems, the planner (`01-planning`) must
@@ -668,11 +758,14 @@ Each slice is a bounded unit of work with these fields:
   context contamination. A implementer that failed once must not carry its
   failed context into the retry. Each new instance must be dispatched via
   a fresh `build_dispatch_packet` call.
-- **No loop-back threshold.** Continue loop-backs until the issue is
-  fully resolved or a true technical limit is reached. Slow progress is
-  still progress — no concessions. The orchestrator must keep dispatching
-  fresh `04-implementing` / `05-green-testing` iterations without an
-  artificial attempt limit.
+- **Mandatory convergence tracker gate before each loop-back.** Before
+  dispatching another `04-implementing` iteration after a failed green run or
+  specialist `REQUEST_CHANGES`, the orchestrator MUST run
+  `convergence-tracker.gate.mjs` for the slice. If the slice has failed more
+  than 4 fix-loop iterations without a green pass (`status=passed`), the
+  gate fails and the orchestrator MUST escalate to `00-helping` instead of
+  continuing the loop. Slow progress is still progress, but unbounded
+  oscillation is a planning/orchestration failure, not a virtue.
 - **The orchestrator MUST NOT perform code edits itself.** The
   orchestrator's job is to classify, dispatch, wait, and advance — never
   to implement.
@@ -885,20 +978,32 @@ The orchestrator selects specialists based on the slice's domain:
 
 ### Review Protocol
 
-1. **Dispatch all specialists in parallel** (background mode) — they are
+1. **Run shared validation once.** Before dispatching specialists, run:
+   ```bash
+   node scripts/agent-customization/gates/shared-validation.gate.mjs --json --changed-files=path1,path2,...
+   ```
+   The gate writes a JSON artifact (default `artifacts/shared-validation.json`)
+   containing the focused test result, build result, and lint result. If the
+   gate fails, return the output to `04-implementing` and do not dispatch
+   specialists.
+2. **Dispatch all specialists in parallel** (background mode) — they are
    independent reviewers.
-2. **Each specialist receives**: the slice description, the files changed,
-   the design intent, and instructions to report APPROVE or
-   REQUEST_CHANGES with specific observations.
-3. **Wait for all specialists** to complete.
-4. **If ALL return APPROVE**: proceed to `05-green-testing`.
-5. **If ANY return REQUEST_CHANGES**: compile ALL observations from ALL
+3. **Each specialist receives**: the slice description, the files changed,
+   the design intent, the shared-validation artifact path, and instructions to
+   report APPROVE or REQUEST_CHANGES with specific observations.
+4. **Specialists do not re-run tests, build, or lint.** They use the shared
+   artifact as the validation baseline and apply their perspective-specific
+   judgment to the changed code.
+5. **Wait for all specialists** to complete.
+6. **If ALL return APPROVE**: proceed to `05-green-testing`.
+7. **If ANY return REQUEST_CHANGES**: compile ALL observations from ALL
    specialists into a single fix packet, dispatch a NEW `04-implementing`
-   instance with the fix packet, then re-dispatch the same specialists
-   (fresh instances) to re-review. Loop until all return APPROVE.
-6. **Record evidence**: the orchestrator records specialist review results
-   in the plan's `VALIDATION_EVIDENCE` section, including which specialists
-   reviewed, their verdicts, and any fix cycles.
+   instance with the fix packet, re-run the shared-validation gate on the new
+   changed-file set, then re-dispatch the same specialists (fresh instances)
+   to re-review. Loop until all return APPROVE.
+8. **Record evidence**: the orchestrator records the shared-validation
+   artifact path, specialist review results, and any fix cycles in the plan's
+   `VALIDATION_EVIDENCE` section before dispatching `05-green-testing`.
 
 ### Gate Enforcement
 

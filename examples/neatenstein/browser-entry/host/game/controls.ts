@@ -16,6 +16,7 @@ import { type InputSnapshot } from '../input';
 import {
   NEATENSTEIN_KEY_MAP_LOOK,
   NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT,
+  NEATENSTEIN_LIGHT_TOGGLE_KEY,
   NEATENSTEIN_MOUSE_SENSITIVITY,
   NEATENSTEIN_POINTER_LOCK_OPTIONS,
   NEATENSTEIN_PRIMARY_MOUSE_BUTTON,
@@ -49,6 +50,14 @@ export type LookCallback = (delta: LookDelta) => void;
 export type FireCallback = () => void;
 
 /**
+ * Callback invoked when the dynamic light toggle input is pressed.
+ *
+ * The binding is responsible for the `keydown` edge only; the central router
+ * decides whether the toggle is latched or consumed immediately.
+ */
+export type LightToggleCallback = () => void;
+
+/**
  * Callback invoked when touch look starts or ends tracking an active touch.
  */
 export type TouchActiveCallback = (active: boolean) => void;
@@ -80,24 +89,6 @@ export function findTouch(
   }
 
   return undefined;
-}
-
-/**
- * Invoke a callback only while the binding is still attached.
- *
- * This prevents late async pointer-lock failures or unusual event ordering from
- * invoking user code after teardown.
- *
- * @param isDetached - Function returning whether the binding is detached.
- * @param callback - Callback to invoke if still attached.
- */
-function invokeIfAttached(
-  isDetached: () => boolean,
-  callback: () => void,
-): void {
-  if (!isDetached()) {
-    callback();
-  }
 }
 
 /**
@@ -169,8 +160,6 @@ async function requestPointerLockWithFallback(
 export function bindPointerLock(canvas: HTMLElement): BindingDetach {
   let detached = false;
 
-  const isDetached = (): boolean => detached;
-
   const requestLock = (): void => {
     void requestPointerLockWithFallback(canvas);
   };
@@ -219,11 +208,7 @@ export function bindMouseLook(
   let detached = false;
 
   const handleMouseMove = (event: MouseEvent): void => {
-    if (
-      detached ||
-      typeof document === 'undefined' ||
-      document.pointerLockElement !== canvas
-    ) {
+    if (detached || document.pointerLockElement !== canvas) {
       return;
     }
 
@@ -233,9 +218,7 @@ export function bindMouseLook(
     });
   };
 
-  if (typeof document !== 'undefined') {
-    document.addEventListener('mousemove', handleMouseMove);
-  }
+  document.addEventListener('mousemove', handleMouseMove);
 
   return () => {
     if (detached) {
@@ -244,9 +227,7 @@ export function bindMouseLook(
 
     detached = true;
 
-    if (typeof document !== 'undefined') {
-      document.removeEventListener('mousemove', handleMouseMove);
-    }
+    document.removeEventListener('mousemove', handleMouseMove);
   };
 }
 
@@ -328,16 +309,62 @@ export function bindKeyboardLook(
   };
 
   const handleKeyDown = (event: KeyboardEvent): void => {
-    if (detached) {
-      return;
-    }
-
     const delta = keyboardLookDeltaByCode[event.code];
 
     if (delta !== undefined) {
       event.preventDefault();
       callback(delta);
     }
+  };
+
+  target.addEventListener('keydown', handleKeyDown as EventListener);
+
+  return () => {
+    if (detached) {
+      return;
+    }
+
+    detached = true;
+    target.removeEventListener('keydown', handleKeyDown as EventListener);
+  };
+}
+
+/**
+ * Bind the configured light-toggle key to a callback.
+ *
+ * The binding only triggers on the initial `keydown` edge for the exact
+ * configured key code. Repeated keydown events from the browser (sent while the
+ * key is held) are ignored so the light does not flicker. The binding prevents
+ * the default browser action and invokes the supplied callback once per press.
+ *
+ * @param target - Event target that receives `keydown` events.
+ * @param callback - Invoked once for each light-toggle press.
+ * @returns Idempotent detach function.
+ *
+ * @example
+ * ```ts
+ * const unbind = bindKeyboardLightToggle(window, () => {
+ *   state.lightEnabled = !state.lightEnabled;
+ * });
+ * ```
+ */
+export function bindKeyboardLightToggle(
+  target: HTMLElement | Window,
+  callback: LightToggleCallback,
+): BindingDetach {
+  let detached = false;
+
+  const handleKeyDown = (event: KeyboardEvent): void => {
+    if (
+      detached ||
+      event.code !== NEATENSTEIN_LIGHT_TOGGLE_KEY ||
+      event.repeat
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    callback();
   };
 
   target.addEventListener('keydown', handleKeyDown as EventListener);
@@ -392,11 +419,9 @@ export function bindTouchLook(
    * Clear current touch tracking and notify active-state listeners.
    */
   const endActiveTouch = (): void => {
-    if (activeTouchId !== null) {
-      activeTouchId = null;
-      engaged = false;
-      onActive?.(false);
-    }
+    activeTouchId = null;
+    engaged = false;
+    onActive?.(false);
   };
 
   const handleTouchStart = (event: TouchEvent): void => {
@@ -503,7 +528,12 @@ export function bindTouchLook(
     }
 
     detached = true;
-    endActiveTouch();
+
+    // Detach removes listeners and silently clears internal tracking state.
+    // The active callback reflects only real touch lifecycle events; it must
+    // not emit an artificial onActive(false) during teardown.
+    activeTouchId = null;
+    engaged = false;
 
     target.removeEventListener(
       'touchstart',
@@ -531,8 +561,9 @@ export function bindTouchLook(
 /**
  * Forward the worker-consumed subset of an input snapshot to the display worker.
  *
- * The worker consumes movement intent, look deltas, fire, and dash flags. This
- * helper posts exactly those fields instead of the complete snapshot.
+ * The worker consumes movement intent, look deltas, fire, dash, and light
+ * toggle flags. This helper posts exactly those fields instead of the complete
+ * snapshot.
  *
  * @param worker - Dedicated display worker.
  * @param snapshot - Current host input snapshot.
@@ -555,10 +586,9 @@ export function forwardWorkerInput(
         yawDelta: snapshot.look.yawDelta,
         pitchDelta: snapshot.look.pitchDelta,
       },
-      yawDelta: snapshot.look.yawDelta,
-      pitchDelta: snapshot.look.pitchDelta,
       fire: snapshot.fire,
       dash: snapshot.dash,
+      lightToggle: snapshot.lightToggle,
     },
   });
 }

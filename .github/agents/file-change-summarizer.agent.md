@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Summarizer for changed files, risks, and handoff evidence.'
 name: 'file-change-summarizer'
 tier: 4
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

@@ -1,4 +1,4 @@
----
+﻿---
 name: research-methodology
 description: 'Use when: executing disciplined Cortex-first discovery workflows.'
 argument-hint: 'Describe the investigation target, suspected subsystem, whether Cortex search is needed, known plan files, and whether the goal is reconnaissance only or an implementation brief.'
@@ -86,6 +86,15 @@ Always follow this ordered reconnaissance pattern before deep code search:
 
 This order prevents premature deep dives into code before the architectural
 context is clear.
+
+## MCP Tool Name Format
+
+MCP tools are exposed using HYPHENS as separators between the server key
+and the tool name. The format is: `<server-key>-<tool-name>`. **NEVER use
+underscores in MCP tool names.** For example, call
+`neataptic-cortex-mcp-search_corpus` (hyphens), NOT
+`neataptic_cortex_mcp_search_corpus` (all underscores). The separator
+between server key and tool name is always a HYPHEN.
 
 ## Cortex-First Search
 

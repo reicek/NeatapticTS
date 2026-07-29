@@ -1,14 +1,14 @@
 import { describe, expect, it } from '@jest/globals';
-import { buildNeatensteinMap } from './map';
+import { buildNeatensteinMap, createCollisionMap } from './map';
 
-/** Expected square map dimension for the 60×60 target behavior. */
-const EXPECTED_MAP_SIZE = 60;
+/** Expected square map dimension for the 120×120 target behavior. */
+const EXPECTED_MAP_SIZE = 120;
 
 /** Deterministic seed used for repeatable map fixtures. */
 const TEST_SEED = 12345;
 
 describe('Neatenstein map generation', () => {
-  it('returns a Uint8Array of length 60*60', () => {
+  it('returns a Uint8Array of length 120*120', () => {
     const map = buildNeatensteinMap(TEST_SEED);
     expect(map.length).toBe(EXPECTED_MAP_SIZE * EXPECTED_MAP_SIZE);
   });
@@ -60,5 +60,71 @@ describe('Neatenstein map generation', () => {
     const first = buildNeatensteinMap(TEST_SEED);
     const second = buildNeatensteinMap(TEST_SEED);
     expect(second).toEqual(first);
+  });
+
+  it('normalizes a zero seed into a map of the expected length', () => {
+    const map = buildNeatensteinMap(0);
+    expect(map.length).toBe(EXPECTED_MAP_SIZE * EXPECTED_MAP_SIZE);
+  });
+
+  it('normalizes a zero seed into a Uint8Array', () => {
+    const map = buildNeatensteinMap(0);
+    expect(map).toBeInstanceOf(Uint8Array);
+  });
+
+  it('normalizes a seed equal to the modulus into a map of the expected length', () => {
+    const map = buildNeatensteinMap(2_147_483_647);
+    expect(map.length).toBe(EXPECTED_MAP_SIZE * EXPECTED_MAP_SIZE);
+  });
+
+  it('normalizes a seed equal to the modulus into a Uint8Array', () => {
+    const map = buildNeatensteinMap(2_147_483_647);
+    expect(map).toBeInstanceOf(Uint8Array);
+  });
+});
+
+describe('createCollisionMap', () => {
+  it('reports out-of-bounds cells as solid', () => {
+    const flatMap = buildNeatensteinMap(TEST_SEED);
+    const collision = createCollisionMap(flatMap, EXPECTED_MAP_SIZE);
+
+    expect({
+      negativeX: collision.isSolid(-1, 5),
+      negativeY: collision.isSolid(5, -1),
+      oversizedX: collision.isSolid(EXPECTED_MAP_SIZE, 5),
+      oversizedY: collision.isSolid(5, EXPECTED_MAP_SIZE),
+    }).toEqual({
+      negativeX: true,
+      negativeY: true,
+      oversizedX: true,
+      oversizedY: true,
+    });
+  });
+
+  it('reports a perimeter cell as solid and a central floor cell as open', () => {
+    const flatMap = buildNeatensteinMap(TEST_SEED);
+    const collision = createCollisionMap(flatMap, EXPECTED_MAP_SIZE);
+    const center = Math.floor(EXPECTED_MAP_SIZE / 2);
+
+    expect({
+      cornerSolid: collision.isSolid(0, 0),
+      centerOpen: collision.isSolid(center, center),
+    }).toEqual({ cornerSolid: true, centerOpen: false });
+  });
+
+  it('throws when the side is a non-integer', () => {
+    const flatMap = new Uint8Array(4);
+
+    expect(() => createCollisionMap(flatMap, 1.5)).toThrow(
+      'Invalid map dimensions: expected a square Uint8Array.',
+    );
+  });
+
+  it('throws when the side is zero', () => {
+    const flatMap = new Uint8Array(4);
+
+    expect(() => createCollisionMap(flatMap, 0)).toThrow(
+      'Invalid map dimensions: expected a square Uint8Array.',
+    );
   });
 });

@@ -1,8 +1,8 @@
----
+﻿---
 name: assimilator
 description: 'Tier-3 hidden specialist that fetches an external GitHub repository, persists verbatim surfaces, compares them with NeatapticTS, fills per-area analysis templates, writes a synthesis, and records an ISO 42001 learning event.'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 user-invocable: false
 disable-model-invocation: true
 agents: []

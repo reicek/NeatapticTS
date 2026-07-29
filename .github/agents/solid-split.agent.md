@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Coordinator for SOLID module splits, folderization, and generated README updates.'
 name: 'solid-split'
 tier: 2
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

@@ -12,21 +12,37 @@
  * @module
  */
 
-import { NEATENSTEIN_MAP_SIZE } from '../../constants';
 import {
   buildNeatensteinMap,
   createCollisionMap,
   type CollisionMap,
 } from '../../renderer/map';
-import { fireNeonBeam } from './combat';
-import { NEATENSTEIN_FIXED_TIMESTEP_MS } from './constants';
+import { fireBolt } from './combat';
+import {
+  NEATENSTEIN_BOLT_MAX_RANGE_CELLS,
+  NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_GUN_RECOIL_DECAY_PX_PER_SECOND,
+  NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX,
+  NEATENSTEIN_MAP_SIZE,
+} from './constants';
 import { updateEpisode } from './episode';
 import { updatePlayerMovement } from './movement';
 import { applyDash, createGameState } from './state';
-import type { GameState, ImpactSpot, TracerState, Vector2 } from './types';
+import type {
+  BoltState,
+  GameState,
+  GunState,
+  ImpactSpot,
+  Vector2,
+} from './types';
 
 export { createGameState };
-export { NEATENSTEIN_FIXED_TIMESTEP_MS } from './constants';
+export {
+  NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND,
+  NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+} from './constants';
 
 /**
  * Normalized input snapshot consumed by {@link gameTick}.
@@ -47,6 +63,9 @@ export interface GameTickInputSnapshot {
 
   /** `true` when the dash action is requested this tick. */
   dash: boolean;
+
+  /** `true` when the light toggle action is requested this tick. */
+  lightToggle?: boolean;
 }
 
 /**
@@ -64,6 +83,9 @@ interface NormalizedGameTickInputSnapshot {
 
   /** Whether dash is active this tick. */
   dash: boolean;
+
+  /** Whether light toggle is active this tick. */
+  lightToggle: boolean;
 }
 
 /**
@@ -160,6 +182,7 @@ function normalizeGameTickInput(
         : 0,
     fire: snapshot.fire === true,
     dash: snapshot.dash === true,
+    lightToggle: snapshot.lightToggle === true,
   };
 }
 
@@ -173,11 +196,13 @@ function normalizeGameTickInput(
  * 3. Apply player look.
  * 4. Apply dash if requested.
  * 5. Apply player movement against collision.
- * 6. Age existing tracers and wall-impact spots.
- * 7. Fire the neon beam if requested.
+ * 6. Move active plasma bolts and remove any that hit a wall or leave the map.
+ * 7. Age wall-impact spots.
+ * 8. Decay gun recoil toward zero.
+ * 9. Fire a traveling plasma bolt if requested.
  *
- * Aging before firing means newly spawned tracers/impacts keep their full
- * lifetime until the next tick.
+ * Bolts move before firing so newly spawned bolts start at the muzzle and are
+ * not advanced until the following tick.
  *
  * @param state - Snapshot before this tick.
  * @param snapshot - Partial input snapshot for this tick.
@@ -219,6 +244,11 @@ export function gameTick(
     next = applyDash(next);
   }
 
+  // Step 3b: Toggle the dynamic light overlay when requested.
+  if (input.lightToggle) {
+    next = toggleDynamicLight(next);
+  }
+
   // Step 4: Resolve player movement against the collision map.
   next = updatePlayerMovement(
     next,
@@ -227,17 +257,34 @@ export function gameTick(
     resolvedDtMs,
   );
 
-  // Step 5: Age existing transient visual effects.
+  // Step 5: Move active plasma bolts and cull inactive ones.
   next = {
     ...next,
-    tracers: ageTracers(next.tracers, resolvedDtMs),
+    bolts: updateBolts(
+      next.bolts ?? [],
+      resolvedDtMs,
+      next.simTimeMs,
+      map,
+    ).filter((bolt) => bolt.active),
     impacts: ageImpacts(next.impacts, resolvedDtMs),
+    gun: decayGunRecoil(next.gun ?? { recoilOffset: 0 }, resolvedDtMs),
   };
 
-  // Step 6: Fire after aging so newly-created effects start at full lifetime.
+  // Step 6: Fire after updating bolts so newly spawned bolts start at the
+  // muzzle and are advanced on the following tick.
   if (input.fire) {
-    const fireResult = fireNeonBeam(next);
+    const fireResult = fireBolt(next);
     next = fireResult.state;
+
+    if (fireResult.fired) {
+      next = {
+        ...next,
+        gun: {
+          ...next.gun,
+          recoilOffset: NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX,
+        },
+      };
+    }
   }
 
   return next;
@@ -267,27 +314,108 @@ function applyLook(state: GameState, lookDelta: number): GameState {
 }
 
 /**
- * Age active tracers by one tick and remove any that have expired.
+ * Advance active plasma bolts by one tick.
  *
- * Tracers are immutable snapshots; each surviving tracer gets its remaining
- * duration reduced by the elapsed timestep.
+ * Each active bolt is moved along its direction by `speed * dt`. Bolts are
+ * primarily deactivated once their on-screen travel time reaches
+ * {@link NEATENSTEIN_BOLT_TRAVEL_DURATION_MS} so a close target never makes
+ * the bolt vanish before the 300 ms screen travel completes. Bolts that leave
+ * the world bounds, hit a wall, or exceed the maximum travel range are also
+ * deactivated but kept in the returned array so callers can still read their
+ * final state. Bolts that were already inactive are removed.
  *
- * @param tracers - Active tracer snapshots before this tick.
+ * @param bolts - Active bolt snapshots before this tick.
  * @param dtMs - Elapsed time in milliseconds.
- * @returns New array of tracers still visible after aging.
+ * @param currentTimeMs - Current simulation time in milliseconds, used to
+ *   decide when the bolt's screen travel has finished.
+ * @param collisionMap - Optional collision map used to deactivate bolts that
+ *   hit a wall.
+ * @returns New array of bolts after movement and deactivation.
  */
-export function ageTracers(
-  tracers: TracerState[],
+export function updateBolts(
+  bolts: BoltState[],
   dtMs: number,
-): TracerState[] {
+  currentTimeMs: number,
+  collisionMap?: CollisionMap,
+): BoltState[] {
   const resolvedDtMs = resolveTickDurationMs(dtMs);
+  const dtSeconds = resolvedDtMs / 1000;
 
-  return tracers
-    .map((tracer) => ({
-      ...tracer,
-      durationMs: tracer.durationMs - resolvedDtMs,
-    }))
-    .filter((tracer) => tracer.durationMs > 0);
+  return bolts
+    .filter((bolt) => bolt.active)
+    .map((bolt) => {
+      const step = bolt.speedCellsPerSecond * dtSeconds;
+      const nextPosition: Vector2 = {
+        x: bolt.position.x + bolt.direction.x * step,
+        y: bolt.position.y + bolt.direction.y * step,
+      };
+      const outOfBounds =
+        nextPosition.x < 0 ||
+        nextPosition.x >= NEATENSTEIN_MAP_SIZE ||
+        nextPosition.y < 0 ||
+        nextPosition.y >= NEATENSTEIN_MAP_SIZE;
+      const hitWall = collisionMap
+        ? collisionMap.isSolid(
+            Math.floor(nextPosition.x),
+            Math.floor(nextPosition.y),
+          )
+        : false;
+      const distanceTraveled =
+        bolt.origin &&
+        Number.isFinite(bolt.origin.x) &&
+        Number.isFinite(bolt.origin.y)
+          ? Math.hypot(
+              nextPosition.x - bolt.origin.x,
+              nextPosition.y - bolt.origin.y,
+            )
+          : 0;
+      const beyondMaxRange =
+        distanceTraveled >= NEATENSTEIN_BOLT_MAX_RANGE_CELLS;
+      const elapsedMs = Math.max(0, currentTimeMs - bolt.createdAtMs);
+      const travelExpired = elapsedMs >= NEATENSTEIN_BOLT_TRAVEL_DURATION_MS;
+      const active =
+        !outOfBounds && !hitWall && !beyondMaxRange && !travelExpired;
+
+      return {
+        ...bolt,
+        position: active ? nextPosition : bolt.position,
+        active,
+      };
+    });
+}
+
+/**
+ * Decay gun recoil toward zero over time.
+ *
+ * The recoil offset is reduced by the configured decay rate each second and
+ * clamped so it never becomes negative or exceeds the maximum offset.
+ *
+ * @param gun - Gun overlay state before decay.
+ * @param dtMs - Elapsed time in milliseconds.
+ * @returns Updated gun state with decayed recoil offset.
+ */
+export function decayGunRecoil(gun: GunState, dtMs: number): GunState {
+  const resolvedDtMs = resolveTickDurationMs(dtMs);
+  const decayPixels =
+    NEATENSTEIN_GUN_RECOIL_DECAY_PX_PER_SECOND * (resolvedDtMs / 1000);
+  const nextOffset = Math.max(0, gun.recoilOffset - decayPixels);
+
+  return {
+    ...gun,
+    recoilOffset: Math.min(nextOffset, NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX),
+  };
+}
+
+/**
+ * Toggle the dynamic teal light overlay on or off.
+ *
+ * @param state - Any state object carrying an optional `lightEnabled` flag.
+ * @returns New state with `lightEnabled` flipped.
+ */
+export function toggleDynamicLight<T extends { lightEnabled?: boolean }>(
+  state: T,
+): T {
+  return { ...state, lightEnabled: !state.lightEnabled };
 }
 
 /**

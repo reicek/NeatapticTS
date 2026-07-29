@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @module neataptic-gate-mcp.test
  * @description Native-ESM coverage tests for neataptic-gate-mcp.mjs.
  *

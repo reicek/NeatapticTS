@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Coordinator for acceptance criteria, coverage expectations, and red-test scope.'
 name: 'planning-test-strategy-coordinator'
 tier: 2
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

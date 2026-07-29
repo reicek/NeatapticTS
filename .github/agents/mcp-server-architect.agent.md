@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Architect for local MCP server contracts, schemas, and trust controls.'
 name: mcp-server-architect
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

@@ -21,9 +21,9 @@ describe('Neatenstein game episode', () => {
 
     it('completes a default episode within 15-25 seconds', async () => {
       const { createEpisode, runEpisode } =
-        (await import('./episode.ts')) as Record<string, any>;
+        (await import('./episode.ts')) as typeof import('./episode.ts');
       const episode = createEpisode({ seed: 1 });
-      const final = runEpisode(episode, []);
+      const final = runEpisode(episode);
       expect({
         withinMin: final.episodeTimeMs >= 15000,
         withinMax: final.episodeTimeMs <= 25000,
@@ -35,10 +35,9 @@ describe('Neatenstein game episode', () => {
 
     it('produces identical final state when replayed with the same seed', async () => {
       const { createEpisode, runEpisode } =
-        (await import('./episode.ts')) as Record<string, any>;
-      const inputs: unknown[] = [];
-      const run1 = runEpisode(createEpisode({ seed: 7 }), inputs);
-      const run2 = runEpisode(createEpisode({ seed: 7 }), inputs);
+        (await import('./episode.ts')) as typeof import('./episode.ts');
+      const run1 = runEpisode(createEpisode({ seed: 7 }));
+      const run2 = runEpisode(createEpisode({ seed: 7 }));
       expect({
         health: run1.player.health,
         ammo: run1.player.ammo,

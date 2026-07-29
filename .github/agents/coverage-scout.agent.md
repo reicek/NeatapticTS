@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Scout for coverage gaps, dead-code detection, and next tranche targets.'
 name: coverage-scout
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,
@@ -102,7 +102,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - **Uncovered function:** An exported or internal function with no test calling it. Classify as reachable (add test) or dead code (remove function).
 - **Uncovered line:** A line within a function that no test path reaches. Usually inside an uncovered branch. Classify with the branch.
 - **Dead code classification:** A path is dead code if NO legal input combination can reach it. Verify by reading the source and all call sites before classifying. Dead code should be removed, not tested.
-- **Reachable live path classification:** A path is reachable if a legal input combination can reach it. Add the smallest owner-local test to exercise it. One `it()` block, one top-level `expect()`.
+- **Reachable live path classification:** A path is reachable if a legal input combination can reach it. Add the smallest owner-local test to exercise it. Prefer one top-level `expect()` per `it()`; up to three related `expect()` calls are allowed when they verify the same behavior state.
 - **Coverage tranche target:** Identify the next file below 100% that has the most uncovered lines. This is the highest-value tranche target.
 
 ## If Blocked

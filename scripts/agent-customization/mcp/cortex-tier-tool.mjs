@@ -104,3 +104,31 @@ export function createSliceContextTool({
     handler: sliceTool.handler,
   });
 }
+
+/**
+ * Rebuild the semantic index used by Repo Cortex search tools.
+ *
+ * This helper is the reusable implementation behind the `cortex-index` gate's
+ * `--auto-rebuild` mode and the `04-implementing` preflight freshness check.
+ * It runs the same incremental builder as `node rag-index/build-index.mjs` and
+ * returns a structured result so callers can decide whether to re-validate.
+ *
+ * @param {{ databasePath?: string }} [options={}] - Rebuild options.
+ * @param {string} [options.databasePath] - Absolute or repo-relative path to the SQLite database. Defaults to the canonical semantic-index database.
+ * @returns {Promise<{ success: boolean; error?: string }>} Result object. `success` is true when the builder finished without throwing; `error` contains the message on failure.
+ */
+export async function rebuildIndex(options = {}, buildModule = null) {
+  try {
+    const { buildSemanticIndex } =
+      buildModule ?? (await import('../../../rag-index/build-index.mjs'));
+    await buildSemanticIndex({
+      databasePath: options.databasePath,
+    });
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}

@@ -12,6 +12,7 @@ import {
   NEATENSTEIN_CPU_COLUMN_COUNT,
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
 } from '../constants';
+import type { BoltState, GunState } from '../host/game/types';
 
 /**
  * Simulation/render state snapshot needed to build a frame.
@@ -82,6 +83,12 @@ export interface NeatensteinRenderFrame {
   enemyScale: Float32Array;
   /** Per-column projectile horizontal screen position. */
   projectileScreenX: Float32Array;
+  /** Current plasma-cannon gun state for the render overlay. */
+  gun?: GunState;
+  /** Active plasma bolts for the render overlay. */
+  bolts?: BoltState[];
+  /** Whether the teal dynamic world light is enabled this frame. */
+  lightEnabled?: boolean;
 }
 
 let nextRequestId = 0;

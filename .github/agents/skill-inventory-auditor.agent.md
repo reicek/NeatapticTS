@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Auditor for inventorying skills and agents and tracking customization drift.'
 name: 'skill-inventory-auditor'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

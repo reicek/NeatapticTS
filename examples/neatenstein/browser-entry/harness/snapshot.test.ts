@@ -1,11 +1,18 @@
 import { describe, expect, it } from '@jest/globals';
 
+import type * as Snapshot from './snapshot';
+
 /**
  * Red-phase contract tests for examples/neatenstein/browser-entry/harness/snapshot.ts.
  *
  * Covers AC-302: the rolling opponent snapshot must refresh every 5
  * generations for MLP enemies and every 3 generations for SWARM enemies.
  */
+
+interface SnapshotModule {
+  shouldRefreshMlpSnapshot: typeof Snapshot.shouldRefreshMlpSnapshot;
+  shouldRefreshSwarmSnapshot: typeof Snapshot.shouldRefreshSwarmSnapshot;
+}
 
 describe('Neatenstein harness snapshot', () => {
   describe('AC-302: refresh cadence', () => {
@@ -21,7 +28,7 @@ describe('Neatenstein harness snapshot', () => {
 
     it('refreshes MLP snapshot only every 5 generations', async () => {
       const { shouldRefreshMlpSnapshot } =
-        (await import('./snapshot.ts')) as Record<string, any>;
+        (await import('./snapshot.ts')) as SnapshotModule;
       expect({
         gen4: shouldRefreshMlpSnapshot(4),
         gen5: shouldRefreshMlpSnapshot(5),
@@ -37,7 +44,7 @@ describe('Neatenstein harness snapshot', () => {
 
     it('refreshes SWARM snapshot only every 3 generations', async () => {
       const { shouldRefreshSwarmSnapshot } =
-        (await import('./snapshot.ts')) as Record<string, any>;
+        (await import('./snapshot.ts')) as SnapshotModule;
       expect({
         gen2: shouldRefreshSwarmSnapshot(2),
         gen3: shouldRefreshSwarmSnapshot(3),

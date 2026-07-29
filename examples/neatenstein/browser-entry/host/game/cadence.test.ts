@@ -25,7 +25,7 @@ describe('Neatenstein game cadence', () => {
       const {
         estimateGenerationsPerMinute,
         NEATENSTEIN_TARGET_MIN_GENERATIONS_PER_MINUTE,
-      } = (await import('./cadence.ts')) as Record<string, any>;
+      } = (await import('./cadence.ts')) as typeof import('./cadence.ts');
       const rate = estimateGenerationsPerMinute({
         episodeDurationMs: 20000,
         evaluationOverheadMs: 2000,

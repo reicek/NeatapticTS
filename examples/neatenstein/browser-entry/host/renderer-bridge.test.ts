@@ -4,7 +4,7 @@ import {
   NEATENSTEIN_WORKER_BUNDLE_FILENAME,
 } from '../constants';
 
-const loadModule = (path: string): Promise<any> => import(path);
+const loadModule = <T>(path: string): Promise<T> => import(path) as Promise<T>;
 
 interface MockWorker {
   postMessage: jest.Mock;
@@ -47,9 +47,9 @@ describe('Neatenstein host renderer bridge', () => {
     it('returns an object with postSimState, destroy, and a worker property', async () => {
       const { instances } = installMockWorker();
       const { canvas } = createMockCanvas();
-      const { createNeatensteinRendererBridge } = await loadModule(
-        './renderer-bridge.ts',
-      );
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
       const bridge = createNeatensteinRendererBridge({
         canvas,
         workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
@@ -59,7 +59,7 @@ describe('Neatenstein host renderer bridge', () => {
       expect({
         hasPostSimState: typeof bridge.postSimState === 'function',
         hasDestroy: typeof bridge.destroy === 'function',
-        ownsWorker: instances.includes(bridge.worker),
+        ownsWorker: instances.includes(bridge.worker as unknown as MockWorker),
       }).toEqual({
         hasPostSimState: true,
         hasDestroy: true,
@@ -71,9 +71,9 @@ describe('Neatenstein host renderer bridge', () => {
       const { instances } = installMockWorker();
       const { canvas, offscreen, transferControlToOffscreen } =
         createMockCanvas();
-      const { createNeatensteinRendererBridge } = await loadModule(
-        './renderer-bridge.ts',
-      );
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
       createNeatensteinRendererBridge({
         canvas,
         workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
@@ -98,9 +98,9 @@ describe('Neatenstein host renderer bridge', () => {
     it('cpu tier registers onmessage and exposes the latest frame requestId', async () => {
       const { instances } = installMockWorker();
       const { canvas } = createMockCanvas();
-      const { createNeatensteinRendererBridge } = await loadModule(
-        './renderer-bridge.ts',
-      );
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
       const bridge = createNeatensteinRendererBridge({
         canvas,
         workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
@@ -126,9 +126,9 @@ describe('Neatenstein host renderer bridge', () => {
     it('gpu tier registers onmessage and exposes the latest frame requestId', async () => {
       const { instances } = installMockWorker();
       const { canvas } = createMockCanvas();
-      const { createNeatensteinRendererBridge } = await loadModule(
-        './renderer-bridge.ts',
-      );
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
       const bridge = createNeatensteinRendererBridge({
         canvas,
         workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
@@ -154,9 +154,9 @@ describe('Neatenstein host renderer bridge', () => {
     it('init message includes the versioned frame format and tier name', async () => {
       const { instances } = installMockWorker();
       const { canvas } = createMockCanvas();
-      const { createNeatensteinRendererBridge } = await loadModule(
-        './renderer-bridge.ts',
-      );
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
       createNeatensteinRendererBridge({
         canvas,
         workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
@@ -180,9 +180,9 @@ describe('Neatenstein host renderer bridge', () => {
     it('destroy terminates the worker', async () => {
       const { instances } = installMockWorker();
       const { canvas } = createMockCanvas();
-      const { createNeatensteinRendererBridge } = await loadModule(
-        './renderer-bridge.ts',
-      );
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
       const bridge = createNeatensteinRendererBridge({
         canvas,
         workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,

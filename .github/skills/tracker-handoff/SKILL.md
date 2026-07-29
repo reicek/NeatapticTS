@@ -297,6 +297,28 @@ node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json
 - If validation is intentionally deferred, say why and what exact next command
   remains.
 
+### Fix-loop iteration markers
+
+When a slice enters a fix loop (e.g., red tests, specialist REQUEST_CHANGES, or
+a green-testing failure), record each iteration in the plan's `## Latest
+validation evidence` section using the exact marker format:
+
+```text
+fix-loop: <slice-id> iteration <n> status=<failed|passed>
+```
+
+- Use `failed` when the iteration did not produce a green pass and the loop must
+  continue.
+- Use `passed` when the iteration produced a green pass; the convergence tracker
+  gate resets the slice's iteration count to 0 on any `passed` marker.
+- Prefix the marker with `- ` when it appears in a list under `## Latest
+validation evidence`.
+
+The `convergence-tracker.gate.mjs` gate scans this section for markers matching
+the target `slice_id`, counts them, and escalates to `00-helping` when the count
+exceeds 4 without a `passed` marker. Keep markers concise and durable; do not
+paste full test transcripts next to them.
+
 ## Edge Cases And Recovery Rules
 
 ### Reopening Archived Work

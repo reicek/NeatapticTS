@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Implementation orchestrator for scoped code changes via specialists.'
 name: '04-implementing'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,
@@ -59,6 +59,11 @@ skills:
     'execute',
     'browser-testing-harness',
   ]
+validation:
+  [
+    '.github/skills/implementation-standards/SKILL.md',
+    '.github/skills/execute/SKILL.md',
+  ]
 handoffs:
   - label: 'Validate Green'
     agent: '05-green-testing'
@@ -79,6 +84,8 @@ Use when making scoped code changes through focused implementation specialists, 
 
 This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
 
+**MCP Tool Names:** Use HYPHENS (not underscores) when calling MCP tools. Example: `neataptic-workflow-mcp-get_slice_context`, NOT `neataptic_workflow_mcp_get_slice_context`.
+
 ## Mission
 
 Make the smallest implementation change that satisfies the active phase step contract. Always delegate domain work to specialists and durable skills. Never attempt to solve outside your assigned scope.
@@ -91,7 +98,7 @@ Make the smallest implementation change that satisfies the active phase step con
 - Never copy workflow rules from skills into agents; always reference skills.
 - Keep all changes strictly within the active plan boundary.
 - Always update `plans/*.md` tracker before validation handoff.
-- **DO NOT run tests.** `04-implementing` writes code and runs compile/lint preflight only. Test execution is owned by `05-green-testing` after the orchestrator dispatches it.
+- **Targeted tests only.** `04-implementing` writes code and runs compile/lint preflight. It may also run a targeted Jest smoke test on the files it changed (e.g. `npx jest --testPathPattern=<changed-test-file>`). Broad test suites, `coverage`, and repo-wide Jest commands remain owned by `05-green-testing`. See the `implementation-standards` skill for the targeted-test rule.
 - Only one file, one writer for concurrent edits—never edit the same file in parallel.
 - Always re-read the target file before writing if concurrent edits are possible.
 - If a patch does not apply cleanly, stop and merge only the current-step intent; never force or overwrite.
@@ -110,8 +117,10 @@ authoritative edit boundary. Implementers MUST:
 - Respect `slice_id` and only change files listed in `slice.files_to_change`.
 - Prepare a `HandoffPayload` that includes `slice_id`, the changed files,
   preflight outputs (tsc, lint, prettier), and a list of tests that
-  `05-green-testing` should run. **Do not include coverage results or jest
-  output** — `04` does not run tests.
+  `05-green-testing` should run. **Do not include coverage results or broad
+  suite output** — those are owned by `05-green-testing`. A targeted Jest
+  smoke test on changed files (e.g. `npx jest --testPathPattern=<changed-test-file>`)
+  may be included when it was run.
 - Include in the `PlanUpdate` block the `slice_id` and any `parallelizable`
   metadata so Agent Zero can orchestrate subsequent slices.
 - Target each slice to be thin: one behavioral intent, ideally ≤3 files,
@@ -119,9 +128,7 @@ authoritative edit boundary. Implementers MUST:
 - If the implementing agent discovers work outside the slice boundary that
   must be changed, stop, record a decision, and call `01-planning` to
   re-slice or expand the step — do not silently expand the owned slice.
-- **Never run `jest`, `coverage`, or any test command.** If a test fails
-  or is missing, record the observation and hand off to `05-green-testing`
-  or loop back through the orchestrator.
+- **Targeted Jest only; no broad suites.** A targeted Jest smoke test on changed files (e.g. `npx jest --testPathPattern=<changed-test-file>`) is permitted, but broad suites, `coverage`, and repo-wide Jest commands are not. If a test fails or is missing, record the observation and hand off to `05-green-testing` or loop back through the orchestrator.
 
 Failure of slice validation should not be auto-fixed by `04` without an
 explicit `slice-fix` handoff: prepare a targeted `slice-fix` packet that
@@ -140,8 +147,9 @@ references the failing `slice_id`, failing tests, and suggested remediations.
   - `npm run lint` or `npm run quality:folder -- --folder=<touched_folder>` when applicable
   - `git status --porcelain` (must be clean or contain only intended edits)
   - `npx prettier --check .` or `npm run prettier` to ensure consistent formatting
+  - (optional) A targeted Jest smoke test on changed files, e.g. `npx jest --testPathPattern=<changed-test-file>`.
 
-  **DO NOT run `jest`, `coverage`, or any test command.** `04-implementing` writes code that compiles and lints; `05-green-testing` runs tests. If you need to know whether a test passes, record the test name and hand off to `05-green-testing`.
+  **Do not run broad test suites, `coverage`, or repo-wide Jest commands.** `05-green-testing` owns full validation. See the `implementation-standards` skill for the targeted-test rule.
 
 These preflight checks are required to reduce surprises during validation and must be included in the plan update before `plan-sync` is invoked.
 

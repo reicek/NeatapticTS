@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { access, constants, unlink, writeFile } from 'node:fs/promises';

@@ -69,6 +69,26 @@ function makeTotal() {
   };
 }
 
+function makeFinalData(fileName, hitCount = 1) {
+  const absolutePath = path.join(REPO_ROOT, fileName);
+  return {
+    [absolutePath]: {
+      path: absolutePath,
+      statementMap: {
+        0: {
+          start: { line: 1, column: 0 },
+          end: { line: 1, column: 5 },
+        },
+      },
+      fnMap: {},
+      branchMap: {},
+      s: { 0: hitCount },
+      f: {},
+      b: {},
+    },
+  };
+}
+
 async function loadMerge() {
   return import('./merge-coverage-summaries.mjs');
 }
@@ -210,14 +230,93 @@ describe('merge-coverage-summaries native-ESM coverage', () => {
     assert.equal(result.mergedFiles.length, 1);
   });
 
-  it('throws when no project coverage-summary.json files exist', async () => {
+  it('throws when no project coverage-summary.json or coverage-final.json files exist', async () => {
     const { mergeCoverageSummaries } = await loadMerge();
     const coverageDir = path.join(tempDir, 'coverage');
     mkdirSync(path.join(coverageDir, 'project-empty'), { recursive: true });
     await assert.rejects(
       mergeCoverageSummaries({ coverageDir }),
-      /No coverage-summary.json files found/,
+      /No coverage-summary\.json or coverage-final\.json files found/,
     );
+  });
+
+  it('merges a root coverage-final.json into the summary', async () => {
+    const { mergeCoverageSummaries } = await loadMerge();
+    const coverageDir = path.join(tempDir, 'coverage');
+    mkdirSync(coverageDir, { recursive: true });
+    const summaryPath = path.join(coverageDir, 'merged-summary.json');
+    writeFileSync(
+      path.join(coverageDir, 'coverage-final.json'),
+      JSON.stringify(makeFinalData('src/final.ts')),
+    );
+
+    const result = await mergeCoverageSummaries({ coverageDir, summaryPath });
+    assert.equal(result.mergedFiles.length, 1);
+    const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
+    assert.ok(merged['src/final.ts']);
+    assert.equal(merged['src/final.ts'].lines.pct, 100);
+    assert.equal(merged['src/final.ts'].statements.pct, 100);
+  });
+
+  it('merges coverage-final.json from nested project directories', async () => {
+    const { mergeCoverageSummaries } = await loadMerge();
+    const coverageDir = path.join(tempDir, 'coverage');
+    const nestedProject = path.join(coverageDir, 'project-mjs', 'nested');
+    mkdirSync(nestedProject, { recursive: true });
+    const summaryPath = path.join(coverageDir, 'merged-summary.json');
+    writeFileSync(
+      path.join(nestedProject, 'coverage-final.json'),
+      JSON.stringify(makeFinalData('src/nested-final.ts')),
+    );
+
+    const result = await mergeCoverageSummaries({ coverageDir, summaryPath });
+    assert.equal(result.mergedFiles.length, 1);
+    const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
+    assert.ok(merged['src/nested-final.ts']);
+  });
+
+  it('keeps the better entry when a file appears in both coverage-final.json and coverage-summary.json', async () => {
+    const { mergeCoverageSummaries } = await loadMerge();
+    const coverageDir = path.join(tempDir, 'coverage');
+    mkdirSync(coverageDir, { recursive: true });
+    const summaryPath = path.join(coverageDir, 'merged-summary.json');
+    const fileName = 'src/both.ts';
+    const summaryData = makeSummaryData(fileName, {
+      statementsCovered: 6,
+      statementsPct: 50,
+      linesCovered: 5,
+      linesPct: 50,
+    });
+
+    writeFileSync(
+      path.join(coverageDir, 'coverage-summary.json'),
+      JSON.stringify({ ...makeTotal(), ...summaryData }),
+    );
+    writeFileSync(
+      path.join(coverageDir, 'coverage-final.json'),
+      JSON.stringify(makeFinalData(fileName, 1)),
+    );
+
+    await mergeCoverageSummaries({ coverageDir, summaryPath });
+    const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
+    assert.equal(merged[fileName].statements.pct, 100);
+    assert.equal(merged[fileName].lines.pct, 100);
+  });
+
+  it('ignores unreadable or malformed coverage-final.json files', async () => {
+    const { mergeCoverageSummaries } = await loadMerge();
+    const coverageDir = path.join(tempDir, 'coverage');
+    mkdirSync(coverageDir, { recursive: true });
+    const summaryPath = path.join(coverageDir, 'merged-summary.json');
+    writeFileSync(
+      path.join(coverageDir, 'coverage-final.json'),
+      'not valid json',
+    );
+
+    const result = await mergeCoverageSummaries({ coverageDir, summaryPath });
+    assert.equal(result.mergedFiles.length, 1);
+    const merged = JSON.parse(readFileSync(summaryPath, 'utf8'));
+    assert.deepEqual(merged, { total: merged.total });
   });
 
   it('emits merged summary metadata from the CLI entry point', () => {

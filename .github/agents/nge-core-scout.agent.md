@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Scout for NGE algorithm-core boundaries such as DNA, motifs, and lifecycle.'
 name: nge-core-scout
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

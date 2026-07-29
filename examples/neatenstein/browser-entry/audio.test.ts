@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-const loadModule = (path: string): Promise<any> => import(path);
+const loadModule = <T>(path: string): Promise<T> => import(path) as Promise<T>;
 
 interface MockAudioNode {
   connect: jest.Mock;
@@ -96,7 +96,7 @@ function installMockAudioContext(): {
 
 describe('Neatenstein audio engine', () => {
   it('exports the sound-name list or a factory function', async () => {
-    const audio = await loadModule('./audio.ts');
+    const audio = await loadModule<typeof import('./audio.ts')>('./audio.ts');
     const hasNames = Array.isArray(audio.NEATENSTEIN_AUDIO_SOUND_NAMES);
     const hasFactory = typeof audio.createNeatensteinAudioEngine === 'function';
     expect(hasNames || hasFactory).toBe(true);
@@ -104,7 +104,7 @@ describe('Neatenstein audio engine', () => {
 
   it('resumes the AudioContext on engine resume', async () => {
     const { instances } = installMockAudioContext();
-    const audio = await loadModule('./audio.ts');
+    const audio = await loadModule<typeof import('./audio.ts')>('./audio.ts');
     const engine = audio.createNeatensteinAudioEngine();
     engine.resume();
     expect(instances[0].resume).toHaveBeenCalled();
@@ -112,7 +112,7 @@ describe('Neatenstein audio engine', () => {
 
   it('accepts the six known sound names and rejects unknown names', async () => {
     installMockAudioContext();
-    const audio = await loadModule('./audio.ts');
+    const audio = await loadModule<typeof import('./audio.ts')>('./audio.ts');
     const engine = audio.createNeatensteinAudioEngine();
     const known = [
       'fire',
@@ -121,7 +121,7 @@ describe('Neatenstein audio engine', () => {
       'dash',
       'kill',
       'generation-up',
-    ];
+    ] as const;
     const acceptsAll = known.every((name) => {
       try {
         engine.playSound(name);
@@ -132,6 +132,7 @@ describe('Neatenstein audio engine', () => {
     });
     let throwsForUnknown = false;
     try {
+      // @ts-expect-error unknown sound names must be rejected at runtime
       engine.playSound('unknown-sound');
     } catch {
       throwsForUnknown = true;
@@ -144,7 +145,7 @@ describe('Neatenstein audio engine', () => {
 
   it('applies positional pan and distance attenuation', async () => {
     const { instances } = installMockAudioContext();
-    const audio = await loadModule('./audio.ts');
+    const audio = await loadModule<typeof import('./audio.ts')>('./audio.ts');
     const engine = audio.createNeatensteinAudioEngine();
     engine.playSound('enemy-hit', {
       angleRad: Math.PI / 4,
@@ -161,8 +162,10 @@ describe('Neatenstein audio engine', () => {
   });
 
   it('schedules generation-up audio on the same tick as the pulse', async () => {
-    const audio = await loadModule('./audio.ts');
-    const pulse = await loadModule('./renderer/pulse.ts');
+    const audio = await loadModule<typeof import('./audio.ts')>('./audio.ts');
+    const pulse = await loadModule<typeof import('./renderer/pulse.ts')>(
+      './renderer/pulse.ts',
+    );
     const simTick = 42;
     const audioScheduled = audio.scheduleNeatensteinGenerationUpAudio(simTick);
     const pulseScheduled = pulse.emitNeatensteinGenerationUpPulse(simTick);
@@ -171,7 +174,7 @@ describe('Neatenstein audio engine', () => {
 
   it('does not instantiate an AudioContext at module load time in Node', async () => {
     const { instances } = installMockAudioContext();
-    await loadModule('./audio.ts');
+    await loadModule<typeof import('./audio.ts')>('./audio.ts');
     expect(instances.length).toBe(0);
   });
 });

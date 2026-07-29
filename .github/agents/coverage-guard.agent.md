@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Coverage gate checker for 100% regression checks on changed src/ files.'
 name: coverage-guard
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

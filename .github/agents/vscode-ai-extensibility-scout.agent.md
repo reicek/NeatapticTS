@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Scout for VS Code AI extensibility, MCP, hooks, and Prompt TSX.'
 name: 'vscode-ai-extensibility-scout'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

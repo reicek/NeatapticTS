@@ -221,8 +221,8 @@ describe('neataptic-workflow-mcp get_slice_context contract', () => {
         params: {
           name: 'get_slice_context',
           arguments: {
-            slice_id: '07-triage',
-            plan_path: 'plans/temporal-fix-all-tests-and-coverage.plans.md',
+            slice_id: 'B3-impl',
+            plan_path: 'plans/orchestration-fixes.plans.md',
           },
         },
       },

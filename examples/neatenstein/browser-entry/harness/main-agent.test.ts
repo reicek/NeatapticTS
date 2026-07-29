@@ -1,5 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
+import type * as MainAgent from './main-agent';
+
 /**
  * Red-phase contract tests for examples/neatenstein/browser-entry/harness/main-agent.ts.
  *
@@ -8,6 +10,12 @@ import { describe, expect, it } from '@jest/globals';
  * - AC-402: tier-capped topology is enforced at every lifecycle transition.
  * - AC-403: motif set is exactly the existing catalogue allowlist.
  */
+
+interface MainAgentModule {
+  runMainAgentGeneration: typeof MainAgent.runMainAgentGeneration;
+  NeatensteinMainAgentTierBudget: typeof MainAgent.NeatensteinMainAgentTierBudget;
+  NeatensteinMainAgentMotifAllowlist: typeof MainAgent.NeatensteinMainAgentMotifAllowlist;
+}
 
 describe('Neatenstein harness main-agent', () => {
   describe('AC-401: lifecycle runner contract', () => {
@@ -18,7 +26,7 @@ describe('Neatenstein harness main-agent', () => {
 
     it('returns a CombatQualitySignal for a valid generation', async () => {
       const { runMainAgentGeneration } =
-        (await import('./main-agent.ts')) as Record<string, any>;
+        (await import('./main-agent.ts')) as MainAgentModule;
       const result = runMainAgentGeneration({ seed: 1, generation: 0 });
       expect({
         hasSurvivalTicks: typeof result.survivalTicks === 'number',
@@ -42,7 +50,7 @@ describe('Neatenstein harness main-agent', () => {
 
     it('advances the lifecycle stage from the previous generation', async () => {
       const { runMainAgentGeneration } =
-        (await import('./main-agent.ts')) as Record<string, any>;
+        (await import('./main-agent.ts')) as MainAgentModule;
       const first = runMainAgentGeneration({ seed: 1, generation: 0 });
       const second = runMainAgentGeneration({ seed: 1, generation: 1 });
       expect(second.stage).not.toEqual(first.stage);
@@ -50,7 +58,7 @@ describe('Neatenstein harness main-agent', () => {
 
     it('produces deterministic output for the same config', async () => {
       const { runMainAgentGeneration } =
-        (await import('./main-agent.ts')) as Record<string, any>;
+        (await import('./main-agent.ts')) as MainAgentModule;
       const config = { seed: 7, generation: 2 };
       const first = runMainAgentGeneration(config);
       const second = runMainAgentGeneration(config);
@@ -59,7 +67,7 @@ describe('Neatenstein harness main-agent', () => {
 
     it('accepts a frozen enemy snapshot for evaluation', async () => {
       const { runMainAgentGeneration } =
-        (await import('./main-agent.ts')) as Record<string, any>;
+        (await import('./main-agent.ts')) as MainAgentModule;
       const result = runMainAgentGeneration({
         seed: 3,
         generation: 1,

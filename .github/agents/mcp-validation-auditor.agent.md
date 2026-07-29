@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Auditor for MCP workflow servers, allow-lists, and runtime evidence.'
 name: mcp-validation-auditor
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

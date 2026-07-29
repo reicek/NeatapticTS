@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import { NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION } from '../constants';
 import type { NeatensteinRenderState } from '../renderer/frame';
 
-const loadModule = (path: string): Promise<any> => import(path);
+const loadModule = <T>(path: string): Promise<T> => import(path) as Promise<T>;
 
 function createRenderState(): NeatensteinRenderState {
   return {
@@ -19,7 +19,8 @@ function createRenderState(): NeatensteinRenderState {
 describe('Neatenstein host canvas resize', () => {
   describe('handleNeatensteinResize', () => {
     it('re-derives column stride and reallocates SoA frame buffers for the tier', async () => {
-      const { handleNeatensteinResize } = await loadModule('./resize.ts');
+      const { handleNeatensteinResize } =
+        await loadModule<typeof import('./resize.ts')>('./resize.ts');
       const state = createRenderState();
       const result = handleNeatensteinResize(state, 'cpu');
       expect({

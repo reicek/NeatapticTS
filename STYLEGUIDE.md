@@ -2,7 +2,7 @@
 
 This repository is an educational neural-network library. Clarity, pedagogy, and reproducibility matter as much as correctness. This style guide enforces strict naming, documentation, and testing practices to make the codebase approachable and maintainable.
 
-> Modernization note (2025 refresh): This guide now embeds ES2023+ language features and deeper performance + memory best practices for browser + Node targets. The neural components should be both *educative* and *fast*: predictable object shapes, pooled typed arrays, cache‑friendly data layouts, and off‑main‑thread scheduling where appropriate. Sections added/expanded: ES2023 Modern Features, Memory & Layout, Typed-Array Pooling (deep dive), Caching Strategy, Parallelism & Scheduling, Microbenchmarking, and Determinism.
+> Modernization note (2025 refresh): This guide now embeds ES2023+ language features and deeper performance + memory best practices for browser + Node targets. The neural components should be both _educative_ and _fast_: predictable object shapes, pooled typed arrays, cache‑friendly data layouts, and off‑main‑thread scheduling where appropriate. Sections added/expanded: ES2023 Modern Features, Memory & Layout, Typed-Array Pooling (deep dive), Caching Strategy, Parallelism & Scheduling, Microbenchmarking, and Determinism.
 
 ---
 
@@ -13,7 +13,7 @@ This repository is an educational neural-network library. Clarity, pedagogy, and
 - Keep behavior stable: no semantic changes without tests and/or benchmarks.
 - Use ES2023 idioms where they improve clarity (private `#` fields, readonly types).
 - Protect performance-sensitive code (especially `src/neat/**`) behind micro-benchmarks before changing algorithms.
-- Optimize for *steady-state throughput* of large populations in browsers (GC pressure minimization, cache locality, minimal hidden class churn).
+- Optimize for _steady-state throughput_ of large populations in browsers (GC pressure minimization, cache locality, minimal hidden class churn).
 - Maintain deterministic simulation modes (seeded RNG + stable iteration ordering) for reproducible research demos.
 - Encourage ergonomic profiling: embed lightweight instrumentation hooks guarded by feature flags (no permanent perf tax).
 - Provide clear extension seams for WASM / WebGPU acceleration without forcing them.
@@ -28,7 +28,7 @@ This repository is an educational neural-network library. Clarity, pedagogy, and
 - Exceptions:
   - `x` and `y` are allowed only as coordinate parameter names in public APIs where it improves readability.
   - Very short, trivial loop indices (`i`, `j`) are allowed in tiny loops (1–3 lines) but prefer `stepIndex`, `rowIndex`, etc.
---
+    \--
 
 ## Control flow preference
 
@@ -46,7 +46,8 @@ switch (true) {
 }
 ```
 
-  This makes evaluation order intentional and avoids long `else if` chains.
+This makes evaluation order intentional and avoids long `else if` chains.
+
 - Do not use `switch` where behaviour depends on complex short-circuiting across unrelated predicates; in those cases prefer `if/else`.
 - When converting `else if` chains to `switch`/`switch(true)`, ensure coverage by tests and keep behavior identical.
 - Use camelCase for local variables, parameters, and non-exported functions.
@@ -56,7 +57,7 @@ Consistent naming makes intent obvious and reduces cognitive load when reading l
 
 ### ES2023+ Modern Language Features (Use Intentionally)
 
-Adopt modern features when they *increase clarity or safety* — not just novelty.
+Adopt modern features when they _increase clarity or safety_ — not just novelty.
 
 - Private fields & methods: `#privateField` for internal state, especially pooled buffers and scratch counters. Prefer these over closures that allocate per-instance.
 - Static initialization blocks: use sparingly to precompute lookup tables (e.g. activation function dispatch maps) once per class.
@@ -101,7 +102,7 @@ export const trainingDemoTimeout = 5000;
 
 In classes prefer `static #PRIVATE_CONSTANT` and name them in CLEAR_DESCRIPTIVE_STYLE but in this repo we use `#CamelCase` for private statics to emphasize readability.
 
-Prefer *numeric* constants over string literals inside tight loops. Convert human-readable string configuration to numeric codes **during setup** (one-time) then operate on numeric codes during simulation/evolution.
+Prefer _numeric_ constants over string literals inside tight loops. Convert human-readable string configuration to numeric codes **during setup** (one-time) then operate on numeric codes during simulation/evolution.
 
 Freeze large shared configuration objects (`Object.freeze`) after construction to lock hidden class shape early and help engines optimize property access.
 
@@ -142,18 +143,18 @@ Add an inline `@remarks` note to methods that rely on pooled buffers so readers 
 
 #### Deep Dive: Patterns & Anti‑Patterns
 
-| Scenario | Recommended Pattern | Rationale |
-|----------|--------------------|-----------|
-| Repeated forward pass over many genomes | Single contiguous weight `Float32Array` slice per network, views for layers | Improves cache line utilization & enables vectorized/WebGPU future path |
-| Short-lived intermediate activations | Class-static pooled `Float32Array` sized to max layer width | Avoid per-pass allocation & GC | 
-| Variable-sized temporary (depends on layer count) | Size bucket pools (e.g. powers of two) + checkout function | Amortizes large reallocation spikes |
-| Rare debug path (export JSON) | Allocate ad-hoc arrays normally | Keeps pooling surface minimal |
+| Scenario                                          | Recommended Pattern                                                         | Rationale                                                               |
+| ------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Repeated forward pass over many genomes           | Single contiguous weight `Float32Array` slice per network, views for layers | Improves cache line utilization & enables vectorized/WebGPU future path |
+| Short-lived intermediate activations              | Class-static pooled `Float32Array` sized to max layer width                 | Avoid per-pass allocation & GC                                          |
+| Variable-sized temporary (depends on layer count) | Size bucket pools (e.g. powers of two) + checkout function                  | Amortizes large reallocation spikes                                     |
+| Rare debug path (export JSON)                     | Allocate ad-hoc arrays normally                                             | Keeps pooling surface minimal                                           |
 
 ##### Pool Implementation Guidelines
 
-1. Centralize pools per *concern* (activation scratch, mutation temp weights, maze vision) — avoid one generic mega-pool.
+1. Centralize pools per _concern_ (activation scratch, mutation temp weights, maze vision) — avoid one generic mega-pool.
 2. Provide a small internal helper: `checkoutActivationBuffer(requiredLength)` that returns a view large enough (grows underlying array if needed) — **never** shrink synchronously (let caller reuse).
-3. Return *views* (`subarray`) instead of copying when safe; document aliasing semantics.
+3. Return _views_ (`subarray`) instead of copying when safe; document aliasing semantics.
 4. Always clear or `fill(0)` buffers on paths where stale values could impact logic or determinism; skip clearing when the algorithm overwrites every index deterministically (document the invariant).
 5. NEVER expose pooled buffers directly through public API return values; copy if external mutation risk exists.
 6. For cross-call reentrancy (e.g., parallel evaluation in a Worker pool) either:
@@ -199,7 +200,12 @@ class ActivationRunner {
    * Compute layer activations.
    * @remarks Non-reentrant (shared scratch). Zero-fills only in deterministic mode.
    */
-  static runLayer(weights: Float32Array, inputs: Float32Array, length: number, deterministic = false): Float32Array {
+  static runLayer(
+    weights: Float32Array,
+    inputs: Float32Array,
+    length: number,
+    deterministic = false,
+  ): Float32Array {
     const out = ActivationRunner.#acquire(length);
     if (deterministic) out.fill(0);
     // Hot loop: overwrite every index (safe to skip fill in non-deterministic mode)
@@ -213,7 +219,7 @@ class ActivationRunner {
 
 ##### Anti-Patterns
 
-- Creating new typed arrays inside *nested* loops.
+- Creating new typed arrays inside _nested_ loops.
 - Using `Array<number>` for dense numeric vectors in hot paths (boxed numbers, poorer locality).
 - Returning pooled buffers to user code that might store them long-term.
 - Over-pooling (managing pools for objects created a handful of times per second—added complexity with no benefit).
@@ -247,7 +253,7 @@ Provide helper offsets so code never hardcodes numeric positions; document struc
 
 ### Caching Strategy & Invalidations
 
-Use caching where recomputation cost dominates and inputs are stable; *never* silently cache mutable objects without versioning.
+Use caching where recomputation cost dominates and inputs are stable; _never_ silently cache mutable objects without versioning.
 
 - Derive cache keys from structural hashes (counts + configuration) not from object identity.
 - Maintain a simple `generationTag` (increment per topology mutation) — invalidate any topology-derived caches when it changes.
@@ -287,7 +293,7 @@ self.onmessage = ({ data }) => {
 
 ### Microbenchmarking & Profiling
 
-Include minimal benchmarks for *changed hot paths* before merging.
+Include minimal benchmarks for _changed hot paths_ before merging.
 
 - Use high-resolution timers: `performance.now()` in browser, `perf_hooks.performance` in Node.
 - Warm up: execute the function ~200–500 times before measuring to stabilize JIT optimizations.
@@ -346,7 +352,6 @@ Example snippet:
 ```
 
 ---
-
 
 ### Vision inputs and grouped indices
 
@@ -411,14 +416,18 @@ static simulateAgent(...) { /* method */ }
 All tests in the repository must follow these rules to keep examples, tutorials, and regressions easy to reason about and to ensure the learner-friendly structure.
 
 - Single expectation per `it()` block:
-  - Each `it('should ...', () => { ... })` should have exactly one top-level expectation (`expect(...)`).
-  - If a scenario requires verifying multiple outcomes, split them into multiple `it()` tests.
+  - Prefer one top-level `expect(...)` per `it()` for independent contracts.
+  - When multiple assertions all verify the same behavior state, up to three
+    related `expect(...)` calls are allowed in one `it()` block.
+  - If a scenario requires verifying unrelated outcomes, split them into
+    multiple `it()` tests.
   - Use helper functions or shared `beforeEach`/`describe`-scoped data to avoid repeating setup.
 
 - Follow the AAA pattern (Arrange, Act, Assert):
   - Arrange: build inputs, stub dependencies, create the system under test.
   - Act: perform the operation under test.
-  - Assert: make a single expectation that clearly states the outcome.
+  - Assert: make one focused expectation. When several assertions verify the
+    same behavior state, up to three related expectations are allowed.
 
 - Group tests into scenarios with `describe()`. Nest scenarios as needed — there is no limit on nesting depth.
   - Define common test data at the `describe()` level using `const` or `let` with `beforeEach` if mutability is required.
@@ -445,14 +454,19 @@ describe('MazeMovement.simulateAgent', () => {
     maze = [
       [0, 0, 0],
       [0, 0, 0],
-      [0, 0, 0]
+      [0, 0, 0],
     ];
   });
 
   describe('when network always chooses greedy path', () => {
     it('succeeds in reaching the exit', () => {
       // Act
-      const result = MazeMovement.simulateAgent(fakeGreedyNetwork, maze, start, exit);
+      const result = MazeMovement.simulateAgent(
+        fakeGreedyNetwork,
+        maze,
+        start,
+        exit,
+      );
       // Assert (single expectation)
       expect(result.success).toBe(true);
     });
@@ -461,7 +475,12 @@ describe('MazeMovement.simulateAgent', () => {
 ```
 
 Notes on the single-expectation rule:
-- Use helper assertions when you need to check multiple derived values by creating separate `it()` blocks. For example, one `it()` for success boolean and another `it()` for fitness threshold.
+
+- Prefer one focused expectation per `it()`. When several assertions verify the
+  same behavior state, up to three related `expect(...)` calls in one `it()` are
+  allowed. Unrelated derived values should still be split into separate `it()`
+  blocks when they represent distinct contracts (for example, one `it()` for
+  success boolean and another `it()` for fitness threshold).
 
 ---
 
@@ -491,10 +510,11 @@ Notes on the single-expectation rule:
 
 - When modernizing a file:
   1. Read the existing file and nearby tests.
- 2. Make a small, focused change (naming, JSDoc, constant extraction).
- 3. Run per-file TypeScript diagnostics.
- 4. Run tests for the affected behavior (or the full suite if safe).
- 5. Commit with a focused message: `style(test): enforce AAA + single-expect tests for mazeMovement`.
+
+2.  Make a small, focused change (naming, JSDoc, constant extraction).
+3.  Run per-file TypeScript diagnostics.
+4.  Run tests for the affected behavior (or the full suite if safe).
+5.  Commit with a focused message: `style(test): enforce AAA + single-expect tests for mazeMovement`.
 
 ---
 

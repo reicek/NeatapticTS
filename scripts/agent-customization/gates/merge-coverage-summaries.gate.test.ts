@@ -155,7 +155,7 @@ describe('merge-coverage-summaries utility contract', () => {
     const coverageDir = path.join(tempDir, 'coverage');
     mkdirSync(path.join(coverageDir, 'project-empty'), { recursive: true });
     await expect(runMerge({ coverageDir })).rejects.toThrow(
-      /No coverage-summary.json files found/,
+      /No coverage-summary.json or coverage-final.json files found/,
     );
   });
 

@@ -17,6 +17,7 @@ import {
   NEATENSTEIN_KEY_MAP_MOVEMENT,
 } from './game/constants';
 import {
+  bindKeyboardLightToggle,
   bindKeyboardLook,
   bindMouseFire,
   bindMouseLook,
@@ -96,6 +97,14 @@ export interface InputSnapshot {
    * are not lost.
    */
   dash: boolean;
+
+  /**
+   * Dynamic light toggle input for the current snapshot.
+   *
+   * Toggle presses are latched until consumed so quick taps between render
+   * frames are not lost.
+   */
+  lightToggle: boolean;
 }
 
 /** Detaches all event listeners installed by the router. */
@@ -149,6 +158,7 @@ export function createInputRouter(): InputRouter {
 
   let pendingFire = false;
   let pendingDash = false;
+  let pendingLightToggle = false;
   let touchActive = false;
 
   let keyDownHandler: KeyboardEventHandler | null = null;
@@ -160,6 +170,7 @@ export function createInputRouter(): InputRouter {
   let mouseFireDetach: BindingDetach | null = null;
   let mouseLookDetach: BindingDetach | null = null;
   let keyboardLookDetach: BindingDetach | null = null;
+  let keyboardLightToggleDetach: BindingDetach | null = null;
   let touchLookDetach: BindingDetach | null = null;
 
   /**
@@ -198,7 +209,9 @@ export function createInputRouter(): InputRouter {
     // Prevent common gameplay keys from scrolling or activating page controls.
     if (
       isActionKey(event.code) ||
-      Object.values(NEATENSTEIN_KEY_MAP_MOVEMENT).includes(event.code)
+      (
+        Object.values(NEATENSTEIN_KEY_MAP_MOVEMENT) as readonly string[]
+      ).includes(event.code)
     ) {
       event.preventDefault();
     }
@@ -267,6 +280,7 @@ export function createInputRouter(): InputRouter {
     touchPitchDelta = 0;
     pendingFire = false;
     pendingDash = false;
+    pendingLightToggle = false;
     touchActive = false;
   }
 
@@ -304,21 +318,13 @@ export function createInputRouter(): InputRouter {
    * Remove keyboard and lifecycle listeners.
    */
   function removeMovementListeners(): void {
-    if (keyDownHandler) {
-      window.removeEventListener('keydown', keyDownHandler);
-    }
-
-    if (keyUpHandler) {
-      window.removeEventListener('keyup', keyUpHandler);
-    }
-
-    if (windowBlurHandler) {
-      window.removeEventListener('blur', windowBlurHandler);
-    }
-
-    if (visibilityChangeHandler) {
-      document.removeEventListener('visibilitychange', visibilityChangeHandler);
-    }
+    window.removeEventListener('keydown', keyDownHandler as EventListener);
+    window.removeEventListener('keyup', keyUpHandler as EventListener);
+    window.removeEventListener('blur', windowBlurHandler as EventListener);
+    document.removeEventListener(
+      'visibilitychange',
+      visibilityChangeHandler as EventListener,
+    );
 
     keyDownHandler = null;
     keyUpHandler = null;
@@ -356,6 +362,9 @@ export function createInputRouter(): InputRouter {
     mouseFireDetach?.();
     mouseFireDetach = null;
 
+    keyboardLightToggleDetach?.();
+    keyboardLightToggleDetach = null;
+
     removeLookListeners();
     removeMovementListeners();
 
@@ -379,6 +388,10 @@ export function createInputRouter(): InputRouter {
 
       mouseFireDetach = bindMouseFire(target, () => {
         pendingFire = true;
+      });
+
+      keyboardLightToggleDetach = bindKeyboardLightToggle(window, () => {
+        pendingLightToggle = true;
       });
 
       bindEventListeners();
@@ -423,11 +436,13 @@ export function createInputRouter(): InputRouter {
         // Include both latched edge-triggered actions and currently held keys.
         fire: pendingFire || (keyStates[NEATENSTEIN_FIRE_KEY] ?? false),
         dash: pendingDash || (keyStates[NEATENSTEIN_DASH_KEY] ?? false),
+        lightToggle: pendingLightToggle,
       };
 
       // Consume deltas and one-shot actions after snapshot creation.
       pendingFire = false;
       pendingDash = false;
+      pendingLightToggle = false;
       mouseYawDelta = 0;
       mousePitchDelta = 0;
       keyboardYawDelta = 0;

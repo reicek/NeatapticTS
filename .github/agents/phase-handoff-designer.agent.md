@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Designer for sequential handoffs between the seven phase agents.'
 name: phase-handoff-designer
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

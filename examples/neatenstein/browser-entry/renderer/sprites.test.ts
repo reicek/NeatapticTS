@@ -292,7 +292,7 @@ describe('neatenstein sprites', () => {
         '#gg0000',
         ctx,
       ),
-    ).toThrow('Invalid hex color components in "#gg0000"');
+    ).toThrow('Expected #rrggbb hex color, got "#gg0000"');
   });
 
   it('skips a sprite column that is fully off-screen vertically', async () => {
@@ -302,5 +302,276 @@ describe('neatenstein sprites', () => {
     renderNeatensteinSpriteColumn(framebuffer, 2, 8, 4, '#00bfff');
 
     expect(framebuffer.every((v) => v === 0)).toBe(true);
+  });
+
+  describe('projectNeatensteinSprite rejection cases', () => {
+    it('returns an invisible projection for invalid canvas dimensions', async () => {
+      const { projectNeatensteinSprite } = await import('./sprites');
+      const projection = projectNeatensteinSprite(
+        { worldX: 5, worldY: 5 },
+        {
+          posX: 1,
+          posY: 1,
+          dirX: 1,
+          dirY: 0,
+          planeX: 0,
+          planeY: 0.66,
+        },
+        Number.NaN,
+        64,
+      );
+      expect(projection.visible).toBe(false);
+    });
+
+    it('returns an invisible projection for non-finite sprite or camera values', async () => {
+      const { projectNeatensteinSprite } = await import('./sprites');
+      const camera = {
+        posX: 1,
+        posY: 1,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+      const badSprite = projectNeatensteinSprite(
+        { worldX: Number.NaN, worldY: 5 },
+        camera,
+        64,
+        64,
+      );
+      const badCamera = projectNeatensteinSprite(
+        { worldX: 5, worldY: 5 },
+        { ...camera, posX: Number.POSITIVE_INFINITY },
+        64,
+        64,
+      );
+      expect({
+        badSpriteVisible: badSprite.visible,
+        badCameraVisible: badCamera.visible,
+      }).toEqual({ badSpriteVisible: false, badCameraVisible: false });
+    });
+
+    it('returns an invisible projection for a degenerate camera matrix', async () => {
+      const { projectNeatensteinSprite } = await import('./sprites');
+      const projection = projectNeatensteinSprite(
+        { worldX: 5, worldY: 5 },
+        {
+          posX: 1,
+          posY: 1,
+          dirX: 1,
+          dirY: 0,
+          planeX: 1,
+          planeY: 0,
+        },
+        64,
+        64,
+      );
+      expect(projection.visible).toBe(false);
+    });
+
+    it('returns an invisible projection for a sprite too close to the camera', async () => {
+      const { projectNeatensteinSprite } = await import('./sprites');
+      const projection = projectNeatensteinSprite(
+        { worldX: 0.05, worldY: 0 },
+        {
+          posX: 0,
+          posY: 0,
+          dirX: 1,
+          dirY: 0,
+          planeX: 0,
+          planeY: 0.66,
+        },
+        64,
+        64,
+      );
+      expect(projection.visible).toBe(false);
+    });
+  });
+
+  describe('clipNeatensteinSprite edge cases', () => {
+    it('returns an empty visible span when the z-buffer is empty', async () => {
+      const { clipNeatensteinSprite } = await import('./sprites');
+      const camera = {
+        posX: 1,
+        posY: 1,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+      const clip = clipNeatensteinSprite(
+        { worldX: 3, worldY: 1 },
+        camera,
+        64,
+        64,
+        new Float32Array(0),
+      );
+      expect(clip.visibleColumns).toEqual([]);
+    });
+  });
+
+  describe('renderNeatensteinSprite early returns', () => {
+    it('does not flush the canvas for an invisible projection', async () => {
+      const { renderNeatensteinSprite } = await import('./sprites');
+      const calls: unknown[][] = [];
+      const trackingCtx = {
+        putImageData(...args: unknown[]) {
+          calls.push(args);
+        },
+      };
+
+      renderNeatensteinSprite(
+        new Uint8ClampedArray(8 * 8 * 4),
+        new Float32Array(8).fill(5),
+        {
+          screenX: 4,
+          scale: 6,
+          perpDist: 2,
+          left: 1,
+          right: 6,
+          visible: false,
+        },
+        '#ff0040',
+        trackingCtx,
+      );
+      expect(calls.length).toBe(0);
+    });
+
+    it('does not flush the canvas when the z-buffer is empty', async () => {
+      const { renderNeatensteinSprite } = await import('./sprites');
+      const calls: unknown[][] = [];
+      const ctx = {
+        putImageData(...args: unknown[]) {
+          calls.push(args);
+        },
+      };
+
+      renderNeatensteinSprite(
+        new Uint8ClampedArray(8 * 8 * 4),
+        new Float32Array(0),
+        {
+          screenX: 4,
+          scale: 6,
+          perpDist: 2,
+          left: 1,
+          right: 6,
+          visible: true,
+        },
+        '#ff0040',
+        ctx,
+      );
+      expect(calls.length).toBe(0);
+    });
+
+    it('does not flush the canvas when framebuffer dimensions cannot be drawn', async () => {
+      const { renderNeatensteinSprite } = await import('./sprites');
+      const calls: unknown[][] = [];
+      const ctx = {
+        putImageData(...args: unknown[]) {
+          calls.push(args);
+        },
+      };
+
+      renderNeatensteinSprite(
+        new Uint8ClampedArray(0),
+        new Float32Array(8).fill(5),
+        {
+          screenX: 4,
+          scale: 6,
+          perpDist: 2,
+          left: 1,
+          right: 6,
+          visible: true,
+        },
+        '#ff0040',
+        ctx,
+      );
+      expect(calls.length).toBe(0);
+    });
+
+    it('uses precomputed visible columns when present on the projection', async () => {
+      const { clipNeatensteinSprite, renderNeatensteinSprite } =
+        await import('./sprites');
+      const { buildNeatensteinZBuffer } = await import('./zbuffer');
+
+      const framebuffer = new Uint8ClampedArray(8 * 8 * 4).fill(0);
+      const zBuffer = buildNeatensteinZBuffer(8).fill(5);
+
+      const camera = {
+        posX: 1,
+        posY: 1,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+      const clip = clipNeatensteinSprite(
+        { worldX: 3, worldY: 1 },
+        camera,
+        8,
+        8,
+        zBuffer,
+      );
+
+      const calls: unknown[][] = [];
+      const ctx = {
+        putImageData(...args: unknown[]) {
+          calls.push(args);
+        },
+      };
+
+      renderNeatensteinSprite(framebuffer, zBuffer, clip, '#00bfff', ctx);
+      expect(calls.length).toBe(1);
+    });
+  });
+
+  describe('renderNeatensteinSpriteColumn edge cases', () => {
+    it('does not write when dimensions resolve to an invalid size', async () => {
+      const { renderNeatensteinSpriteColumn } = await import('./sprites');
+      const framebuffer = new Uint8ClampedArray(0);
+      renderNeatensteinSpriteColumn(framebuffer, 2, 0, 4, '#00bfff', 0, 8);
+      expect(framebuffer.every((v) => v === 0)).toBe(true);
+    });
+
+    it('resolves dimensions from explicit width and height', async () => {
+      const { renderNeatensteinSpriteColumn } = await import('./sprites');
+      const framebuffer = new Uint8ClampedArray(8 * 8 * 4).fill(0);
+      renderNeatensteinSpriteColumn(framebuffer, 2, 4, 4, '#00bfff', 8, 8);
+      // drawStart >= drawEnd so no writes; reaching this without throwing
+      // confirms the explicit dimension path was resolved.
+      expect(framebuffer.every((v) => v === 0)).toBe(true);
+    });
+
+    it('resolves width from a height-only hint', async () => {
+      const { renderNeatensteinSpriteColumn } = await import('./sprites');
+      const framebuffer = new Uint8ClampedArray(8 * 8 * 4).fill(0);
+      renderNeatensteinSpriteColumn(
+        framebuffer,
+        2,
+        4,
+        4,
+        '#00bfff',
+        undefined,
+        8,
+      );
+      expect(framebuffer.every((v) => v === 0)).toBe(true);
+    });
+
+    it('does not write for non-finite or out-of-bounds columns', async () => {
+      const { renderNeatensteinSpriteColumn } = await import('./sprites');
+      const framebuffer = new Uint8ClampedArray(8 * 8 * 4).fill(0);
+      renderNeatensteinSpriteColumn(
+        framebuffer,
+        Number.NaN,
+        0,
+        4,
+        '#00bfff',
+        8,
+        8,
+      );
+      renderNeatensteinSpriteColumn(framebuffer, -1, 0, 4, '#00bfff', 8, 8);
+      renderNeatensteinSpriteColumn(framebuffer, 8, 0, 4, '#00bfff', 8, 8);
+      expect(framebuffer.every((v) => v === 0)).toBe(true);
+    });
   });
 });

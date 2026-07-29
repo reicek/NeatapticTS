@@ -55,25 +55,31 @@ export interface EnemyState {
   health: number;
 }
 
-/** One frame-visible neon beam tracer produced by {@link fireNeonBeam}. */
-export interface TracerState {
-  /** Beam origin in world units (player muzzle position). */
-  origin: Vector2;
-  /** Normalized beam direction. */
-  direction: Vector2;
-  /** World-space endpoint of the tracer (wall or enemy hit). */
-  hit: Vector2;
-  /** Distance from origin to hit in world units. */
-  distance: number;
-  /** Kind of target the beam terminated on. */
-  hitType: 'wall' | 'enemy';
-  /** Milliseconds the tracer remains visible. */
-  durationMs: number;
-  /** CSS color string used by the renderer. */
-  color: string;
+/** Mutable-style snapshot of the on-screen weapon overlay state. */
+export interface GunState {
+  /** Current vertical screen-space recoil offset applied to the gun overlay. */
+  recoilOffset: number;
 }
 
-/** Persistent neon impact marker left on a wall by {@link fireNeonBeam}. */
+/** One traveling plasma projectile owned by the host simulation. */
+export interface BoltState {
+  /** Current world-space position. */
+  position: Vector2;
+  /** Normalized travel direction. */
+  direction: Vector2;
+  /** Movement speed in world cells per second. */
+  speedCellsPerSecond: number;
+  /** `true` while the bolt is still moving; `false` after expiry or deactivation. */
+  active: boolean;
+  /** Simulation time at which the bolt was created, in milliseconds. */
+  createdAtMs: number;
+  /** Optional spawn origin used for screen-space interpolation. */
+  origin?: Vector2;
+  /** Optional distance in cells the bolt should travel from origin. */
+  targetDistance?: number;
+}
+
+/** Persistent neon impact marker left on a wall by a plasma bolt hit. */
 export interface ImpactSpot {
   /** Raycast metadata that identifies the exact wall face that was hit. */
   wallHit: {
@@ -94,6 +100,12 @@ export interface ImpactSpot {
   lifetimeMs: number;
   /** Perpendicular distance from the camera to the wall hit when created. */
   perpWallDist: number;
+  /**
+   * Expected travel time in milliseconds for the spawning bolt to reach the
+   * wall. The impact spot is rendered only once the bolt has arrived, i.e.
+   * when `simTimeMs - createdAtMs >= boltTravelTimeMs`.
+   */
+  boltTravelTimeMs: number;
 }
 
 /** Options accepted by {@link createGameState}. */
@@ -114,10 +126,14 @@ export interface GameState {
   player: PlayerState;
   /** Active enemies in the world. */
   enemies: EnemyState[];
-  /** Active neon beam tracers visible this frame. */
-  tracers: TracerState[];
-  /** Persistent neon impact spots left on walls by beam hits. */
+  /** Persistent neon impact spots left on walls by bolt hits. */
   impacts: ImpactSpot[];
+  /** Current weapon overlay state, including screen-space recoil. */
+  gun?: GunState;
+  /** Active traveling plasma bolts in the world. */
+  bolts?: BoltState[];
+  /** Whether the dynamic teal light overlay is enabled this frame. */
+  lightEnabled?: boolean;
   /** Total confirmed kills for scoring and evolution pressure. */
   kills: number;
   /**

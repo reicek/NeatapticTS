@@ -62,11 +62,19 @@ Desired end state: validate-index passes, snapshot is current, and cortex-index 
 
 ## Required Workflow
 
-1. Start with the narrowest classifier:
+1. Before dispatching `04-implementing` or any execution-phase agent, run the
+   unified Cortex lifecycle gate with automatic repair enabled:
+   `node scripts/agent-customization/gates/cortex-index.gate.mjs --auto-rebuild --json`
+   If the index is stale, the gate rebuilds it and re-validates. Block the
+   dispatch until the gate reports `{ pass: true }`; if `auto_rebuild_success` is
+   false, treat the failure as a hard infrastructure blocker and escalate to
+   `00-helping`.
+
+2. Start with the narrowest classifier:
    `node rag-index/validate-index.mjs --json`
    Treat `stale_paths`, `missing_paths`, and `over_age_paths` as the decision
    surface.
-2. Choose the smallest safe repair:
+3. Choose the smallest safe repair:
    - **Over-age only**: run `npm run index:session-start` to touch still-fresh
      rows and rebuild only changed or new corpus files.
    - **Stale or missing corpus rows**: run
@@ -80,22 +88,24 @@ Desired end state: validate-index passes, snapshot is current, and cortex-index 
      only when broader docs outputs also need regeneration.
    - **Dense-search readiness after corpus change**: run `npm run index:prewarm`
      after the index is healthy.
-3. Prefer a post-build health summary when available:
+4. Prefer a post-build health summary when available:
    `node rag-index/build-index.mjs --json-health`
    If that returns `status: "error"` or is unavailable on the checkout, fall
    back to the builder's `--json` summary plus a fresh
    `validate-index.mjs --json` pass.
-4. Run the unified lifecycle gate for final proof:
-   `node scripts/agent-customization/gates/cortex-index.gate.mjs --json`
+5. Run the unified lifecycle gate for final proof. Use the `--auto-rebuild`
+   flag so a stale index is repaired automatically and the result is re-validated
+   before reporting:
+   `node scripts/agent-customization/gates/cortex-index.gate.mjs --auto-rebuild --json`
    Read its evidence as four separate surfaces: `index_fresh`,
    `corpus_mcp_alive`, `workflow_mcp_alive`, and snapshot currency.
-5. For workflow MCP binding drift, prefer the least sticky override first:
+6. For workflow MCP binding drift, prefer the least sticky override first:
    - Use a per-call `plan_path` override when the calling tool supports it.
    - If the whole session is pointed at the wrong plan, run
      `node scripts/agent-customization/plan-session-redirect.mjs --plan=<plan> --json`,
      confirm the returned `plan_path`, then rerun the failing self-check or
      gate.
-6. After each repair, rerun the same narrow check before escalating. Do not
+7. After each repair, rerun the same narrow check before escalating. Do not
    chain multiple fixes on guesswork.
 
 ## Command Sequence
@@ -111,6 +121,8 @@ Desired end state: validate-index passes, snapshot is current, and cortex-index 
 - Dense-search prewarm: `npm run index:prewarm`
 - Unified gate when available:
   `node scripts/agent-customization/gates/cortex-index.gate.mjs --json`
+- Unified gate with automatic stale-index repair:
+  `node scripts/agent-customization/gates/cortex-index.gate.mjs --auto-rebuild --json`
 - Corpus MCP fallback:
   `node scripts/agent-customization/gates/cortex-mcp-smoke.mjs --json`
 - Workflow MCP self-check fallback:
@@ -208,9 +220,9 @@ Prefer existing automation surfaces over bespoke shell glue:
   chains build-index, build-browser-snapshot, dense prewarm, and the Cortex gate
   after file writes.
 - **CI or maintenance gates**: run
-  `node scripts/agent-customization/gates/cortex-index.gate.mjs --json` after
-  corpus-changing source, plan, agent, or skill edits when the pipeline needs a
-  single pass or fail Cortex verdict.
+  `node scripts/agent-customization/gates/cortex-index.gate.mjs --auto-rebuild --json`
+  after corpus-changing source, plan, agent, or skill edits when the pipeline needs a
+  self-healing pass or fail Cortex verdict.
 - **Dense-search consumers**: pair corpus rebuilds with `npm run index:prewarm`
   only in environments that actually need warm dense search.
 
@@ -241,10 +253,26 @@ search_corpus("network inference") → returns current results
 cortex-index gate: { pass: true, evidence: { index_fresh: true, ... } }
 ```
 
+## Slice Context Retention
+
+Completed plan steps are compressed from the active `.plans.md` file into the
+companion `.logs.md` archive (e.g. `plans/orchestration-fixes.plans.md` →
+`plans/orchestration-fixes.logs.md`). Agents and tools that rely on
+`get_slice_context` must continue to resolve slices after compression.
+
+- The workflow MCP `get_slice_context` tool first searches the active plan.
+- When a slice is absent from the active plan, the tool falls back to the
+  `.logs.md` archive, scans the archived YAML step/slice packets, and returns
+  the recovered context.
+- Archived responses include `archived: true` so callers know the context was
+  retrieved from the compressed log archive rather than the active plan.
+- This retention behavior applies to any repo-relative plan path within
+  `plans/`, including temporary test fixtures, as long as the companion log file
+  contains the archived step packet.
+
 ## Guardrails
 
-- Do not hand-edit the Turso (libSQL) corpus database
-  (`rag-index/data/turso-replica.sqlite` in local-only fallback mode) or
+- Do not hand-edit the Turso (libSQL) corpus database (`rag-index/data/turso-replica.sqlite` in local-only fallback mode) or
   `rag-index/snapshots/semantic-snapshot.json`.
 - Do not use database file modification time as a freshness proxy when index
   content timestamps are available.

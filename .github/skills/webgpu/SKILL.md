@@ -1,4 +1,4 @@
----
+﻿---
 name: webgpu
 description: 'Use when: designing, implementing, debugging, or validating WebGPU compute acceleration for neural-network inference in NeatapticTS.'
 argument-hint: 'Specify the WebGPU topic (lifecycle, WGSL kernel, buffer layout, pipeline, error handling, testing, CPU parity), the target files, the network/demos in scope, and the acceptance criteria (fallback behavior, f32 tolerance, browser support).'
@@ -17,7 +17,7 @@ tools:
   - neataptic-cortex-mcp-load_document
   - neataptic-devtools-mcp
   - neataptic-validation-mcp-run_allowlisted_validation
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 compatibility: 'All agents working on GPU inference, compute kernels, or WebGPU integration in NeatapticTS.'
 ---
 

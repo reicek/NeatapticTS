@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Runner for focused unit tests and bounded validation targets.'
 name: 'unit-test-runner'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,

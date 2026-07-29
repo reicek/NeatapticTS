@@ -1,8 +1,8 @@
----
+﻿---
 description: 'Green-test orchestrator for validation, triage, and regression fixes.'
 name: '05-green-testing'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: kimi-k3:cloud
 tools:
   [
     read,
@@ -71,6 +71,8 @@ Use when running or reasoning through tests, triaging failures, fixing regressio
 ## Cortex-First Search Policy
 
 This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
+
+**MCP Tool Names:** Use HYPHENS (not underscores) when calling MCP tools. Example: `neataptic-workflow-mcp-get_slice_context`, NOT `neataptic_workflow_mcp_get_slice_context`.
 
 ## Mission
 

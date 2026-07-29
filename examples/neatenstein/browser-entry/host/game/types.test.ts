@@ -1,10 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
 import type {
+  BoltState,
   CreateGameStateOptions,
   EnemyState,
   GameState,
   PlayerState,
-  TracerState,
   Vector2,
 } from './types';
 
@@ -62,8 +62,9 @@ describe('Neatenstein game types', () => {
         dashCooldownMs: 0,
       },
       enemies: [],
-      tracers: [],
       impacts: [],
+      bolts: [],
+      lightEnabled: true,
       kills: 0,
       spawnCount: 0,
       generation: 1,
@@ -71,16 +72,14 @@ describe('Neatenstein game types', () => {
     expect(state.seed).toBe(1);
   });
 
-  it('accepts a TracerState shape', () => {
-    const tracer: TracerState = {
-      origin: { x: 0, y: 0 },
+  it('accepts a BoltState shape', () => {
+    const bolt: BoltState = {
+      position: { x: 0, y: 0 },
       direction: { x: 1, y: 0 },
-      hit: { x: 5, y: 0 },
-      distance: 5,
-      hitType: 'wall',
-      durationMs: 80,
-      color: '#00bfff',
+      speedCellsPerSecond: 10,
+      active: true,
+      createdAtMs: 0,
     };
-    expect(tracer.hitType).toBe('wall');
+    expect(bolt.active).toBe(true);
   });
 });

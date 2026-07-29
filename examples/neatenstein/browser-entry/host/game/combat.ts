@@ -1,16 +1,10 @@
 /**
- * Hitscan plasma-burst combat for the Neatenstein host-side simulation.
+ * Traveling plasma-bolt combat for the Neatenstein host-side simulation.
  *
- * This module owns the player's primary weapon. Gameplay remains deterministic
- * and hitscan: firing instantly resolves the nearest enemy or wall along the
- * aim ray, consumes ammo, applies damage, and emits visual tracer state.
- *
- * A true moving plasma projectile cannot be implemented in this file alone
- * because projectile travel requires persistent projectile state, per-tick
- * movement, collision updates, and renderer support. Instead, this module
- * enhances the existing hitscan weapon visually by emitting a short segmented
- * plasma trail along the resolved beam path. The result reads less like a
- * single laser line while preserving the existing combat contract.
+ * This module owns the player's primary weapon. Gameplay remains deterministic:
+ * firing resolves the nearest enemy or wall along the aim ray, consumes ammo,
+ * applies damage, and spawns a traveling {@link BoltState} projectile plus a
+ * wall-impact marker when the ray terminates on a wall.
  *
  * @module
  */
@@ -24,56 +18,34 @@ import {
   castRayDDAFromFlatMap,
 } from '../../renderer/raycast';
 import {
-  NEATENSTEIN_BEAM_COLOR,
-  NEATENSTEIN_BEAM_DAMAGE,
-  NEATENSTEIN_BEAM_MAX_RANGE_CELLS,
-  NEATENSTEIN_ENEMY_HIT_RADIUS_CELLS,
+  NEATENSTEIN_BOLT_DAMAGE,
+  NEATENSTEIN_BOLT_HIT_RADIUS_CELLS,
+  NEATENSTEIN_BOLT_MAX_RANGE_CELLS,
+  NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND,
+  NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
   NEATENSTEIN_MUZZLE_OFFSET_CELLS,
-  NEATENSTEIN_TRACER_DURATION_MS,
 } from './constants';
 import { consumeAmmo } from './state';
-import type { GameState, ImpactSpot, TracerState, Vector2 } from './types';
+import type { BoltState, GameState, ImpactSpot, Vector2 } from './types';
+
+/** Re-export the muzzle offset so tests can assert bolt spawn position. */
+export { NEATENSTEIN_MUZZLE_OFFSET_CELLS } from './constants';
+
+/** Re-export the bolt damage constant for test contracts. */
+export { NEATENSTEIN_BOLT_DAMAGE } from './constants';
 
 /**
- * Number of additional visual trail segments emitted for each shot.
- *
- * These extra tracers are purely visual. Damage and impact resolution still
- * happen once, at the nearest valid hit.
+ * Result of attempting to fire the traveling plasma bolt.
  */
-const NEATENSTEIN_PLASMA_TRAIL_SEGMENTS = 3;
-
-/**
- * Fraction of the total hit distance covered by the primary plasma core.
- *
- * A shorter leading segment makes the shot read more like a bright plasma bolt
- * than a full-length laser line.
- */
-const NEATENSTEIN_PLASMA_CORE_DISTANCE_RATIO = 0.42;
-
-/**
- * Fractional lifetime multiplier applied to each trailing plasma segment.
- *
- * Later trail segments live for a shorter time, creating a quick fading tail.
- */
-const NEATENSTEIN_PLASMA_TRAIL_DURATION_FALLOFF = 0.72;
-
-/**
- * Minimum visual segment distance in world cells.
- *
- * Prevents extremely close shots from producing zero-length visual tracers.
- */
-const NEATENSTEIN_PLASMA_MIN_SEGMENT_DISTANCE_CELLS = 0.05;
-
-/** Result of attempting to fire the neon beam/plasma burst. */
-export interface FireNeonBeamResult {
-  /** Snapshot after the shot: ammo consumed, tracers appended, damage applied. */
+export interface FireBoltResult {
+  /** Snapshot after the shot: ammo consumed, bolt appended, damage applied. */
   state: GameState;
 
   /** `true` when a shot was actually fired this frame. */
   fired: boolean;
 
-  /** Primary visible tracer for this frame, or `null` when the weapon did not fire. */
-  tracer: TracerState | null;
+  /** Spawned bolt for this frame, or `null` when the weapon did not fire. */
+  bolt: BoltState | null;
 }
 
 /**
@@ -85,53 +57,6 @@ export interface FireNeonBeamResult {
  */
 let cachedMapSeed: number | null = null;
 let cachedFlatMap: Uint8Array | null = null;
-
-/**
- * Return whether a number is finite.
- *
- * @param value - Candidate number.
- * @returns Whether the value is finite.
- */
-function isFiniteNumber(value: number): boolean {
-  return Number.isFinite(value);
-}
-
-/**
- * Resolve a finite player angle.
- *
- * Invalid angles fall back to `0` so malformed state cannot propagate `NaN`
- * into ray direction, enemy projection, or tracer positions.
- *
- * @param angleRad - Candidate player angle in radians.
- * @returns Finite angle in radians.
- */
-function resolvePlayerAngle(angleRad: number): number {
-  return isFiniteNumber(angleRad) ? angleRad : 0;
-}
-
-/**
- * Resolve a finite positive beam range.
- *
- * @returns Safe maximum weapon range in world cells.
- */
-function resolveBeamMaxRange(): number {
-  return isFiniteNumber(NEATENSTEIN_BEAM_MAX_RANGE_CELLS) &&
-    NEATENSTEIN_BEAM_MAX_RANGE_CELLS > 0
-    ? NEATENSTEIN_BEAM_MAX_RANGE_CELLS
-    : 1;
-}
-
-/**
- * Clamp a value to the inclusive `[min, max]` range.
- *
- * @param value - Value to clamp.
- * @param min - Lower bound.
- * @param max - Upper bound.
- * @returns Clamped value.
- */
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 /**
  * Return a deterministic flat map for the supplied seed.
@@ -148,17 +73,6 @@ function resolveCombatMap(seed: number): Uint8Array {
   cachedFlatMap = buildNeatensteinMap(seed);
 
   return cachedFlatMap;
-}
-
-/**
- * Return whether a DDA wall distance represents a usable wall hit.
- *
- * @param distance - Candidate wall distance.
- * @param maxRange - Maximum weapon range.
- * @returns Whether the wall is finite, in front of the muzzle, and in range.
- */
-function isWallHitInRange(distance: number, maxRange: number): boolean {
-  return isFiniteNumber(distance) && distance >= 0 && distance <= maxRange;
 }
 
 /**
@@ -181,153 +95,37 @@ function pointAlongRay(
 }
 
 /**
- * Create a tracer segment between two distances along the same ray.
+ * Fire the traveling plasma bolt and return the updated state plus the bolt.
  *
- * The renderer consumes tracers as origin/hit pairs, so each plasma trail
- * segment is represented as its own short tracer.
- *
- * @param origin - Shot muzzle origin.
- * @param direction - Normalized shot direction.
- * @param startDistance - Segment start distance from the muzzle.
- * @param endDistance - Segment end distance from the muzzle.
- * @param hitType - Type of final combat hit for color/renderer semantics.
- * @param durationMs - Segment lifetime in milliseconds.
- * @returns Tracer state for one plasma segment.
- */
-function createTracerSegment(
-  origin: Vector2,
-  direction: Vector2,
-  startDistance: number,
-  endDistance: number,
-  hitType: 'wall' | 'enemy',
-  durationMs: number,
-): TracerState {
-  const safeStart = Math.max(0, startDistance);
-  const safeEnd = Math.max(
-    safeStart + NEATENSTEIN_PLASMA_MIN_SEGMENT_DISTANCE_CELLS,
-    endDistance,
-  );
-
-  const segmentOrigin = pointAlongRay(origin, direction, safeStart);
-  const segmentHit = pointAlongRay(origin, direction, safeEnd);
-
-  return {
-    origin: segmentOrigin,
-    direction,
-    hit: segmentHit,
-    distance: safeEnd - safeStart,
-    hitType,
-    durationMs,
-    color: NEATENSTEIN_BEAM_COLOR,
-  };
-}
-
-/**
- * Create a plasma-like visual trail for a hitscan shot.
- *
- * The first tracer is the primary bright plasma core. Additional tracers are
- * shorter fading segments behind it, giving the renderer multiple overlapping
- * glowing strokes without changing combat resolution.
- *
- * @param origin - Shot origin.
- * @param direction - Normalized shot direction.
- * @param hitDistance - Resolved combat hit distance.
- * @param hitType - Resolved combat hit type.
- * @returns Ordered tracer list, with the primary tracer first.
- */
-function createPlasmaTracerTrail(
-  origin: Vector2,
-  direction: Vector2,
-  hitDistance: number,
-  hitType: 'wall' | 'enemy',
-): TracerState[] {
-  const safeDistance = Math.max(
-    NEATENSTEIN_PLASMA_MIN_SEGMENT_DISTANCE_CELLS,
-    hitDistance,
-  );
-
-  const coreLength = clamp(
-    safeDistance * NEATENSTEIN_PLASMA_CORE_DISTANCE_RATIO,
-    NEATENSTEIN_PLASMA_MIN_SEGMENT_DISTANCE_CELLS,
-    safeDistance,
-  );
-
-  const coreStart = Math.max(0, safeDistance - coreLength);
-  const tracers: TracerState[] = [
-    createTracerSegment(
-      origin,
-      direction,
-      coreStart,
-      safeDistance,
-      hitType,
-      NEATENSTEIN_TRACER_DURATION_MS,
-    ),
-  ];
-
-  // Add trailing visual segments behind the bright core. These are not separate
-  // hits; they only make the shot feel more like a moving plasma burst.
-  for (
-    let segment = 1;
-    segment <= NEATENSTEIN_PLASMA_TRAIL_SEGMENTS;
-    segment += 1
-  ) {
-    const segmentEnd =
-      coreStart * (1 - segment / (NEATENSTEIN_PLASMA_TRAIL_SEGMENTS + 1));
-    const segmentStart = segmentEnd * 0.72;
-    const duration =
-      NEATENSTEIN_TRACER_DURATION_MS *
-      Math.pow(NEATENSTEIN_PLASMA_TRAIL_DURATION_FALLOFF, segment);
-
-    tracers.push(
-      createTracerSegment(
-        origin,
-        direction,
-        segmentStart,
-        segmentEnd,
-        hitType,
-        duration,
-      ),
-    );
-  }
-
-  return tracers;
-}
-
-/**
- * Fire the neon plasma burst and return the updated state plus visible tracer.
- *
- * Gameplay remains hitscan:
+ * Combat resolution remains immediate and deterministic:
  *
  * 1. Ammo is checked.
  * 2. The shot ray is built from player position and yaw.
- * 3. The nearest wall within range is found.
- * 4. Living enemies are tested against the beam cylinder.
+ * 3. The nearest wall along the ray is found.
+ * 4. Living enemies are tested against the bolt path cylinder.
  * 5. The nearest valid enemy before the wall takes damage.
- * 6. Plasma-like visual tracers are appended.
- * 7. Wall impacts are emitted only when a real in-range wall was hit.
+ * 6. A traveling {@link BoltState} is appended.
+ * 7. Wall-impact spots are emitted only when the ray terminates on a wall.
  *
  * @param state - Snapshot before firing.
- * @returns Immutable result with the new state, fire flag, and primary tracer.
+ * @returns Immutable result with the new state, fire flag, and spawned bolt.
  *
  * @example
  * ```ts
- * const result = fireNeonBeam(state);
- * if (result.fired && result.tracer) {
- *   drawTracer(result.tracer);
+ * const result = fireBolt(state);
+ * if (result.fired && result.bolt) {
+ *   state.bolts.push(result.bolt);
  * }
  * ```
  */
-export function fireNeonBeam(state: GameState): FireNeonBeamResult {
+export function fireBolt(state: GameState): FireBoltResult {
   if (state.player.ammo <= 0) {
-    return { state, fired: false, tracer: null };
+    return { state, fired: false, bolt: null };
   }
 
-  const maxRange = resolveBeamMaxRange();
-  const angleRad = resolvePlayerAngle(state.player.angleRad);
-
   const direction: Vector2 = {
-    x: Math.cos(angleRad),
-    y: Math.sin(angleRad),
+    x: Math.cos(state.player.angleRad),
+    y: Math.sin(state.player.angleRad),
   };
 
   const origin: Vector2 = {
@@ -345,14 +143,17 @@ export function fireNeonBeam(state: GameState): FireNeonBeamResult {
     direction.y,
   );
 
-  const wallHitInRange = isWallHitInRange(wallHit.perpWallDist, maxRange);
+  const rawWallDistance = Number.isFinite(wallHit.perpWallDist)
+    ? wallHit.perpWallDist
+    : Number.POSITIVE_INFINITY;
 
-  let hitType: 'wall' | 'enemy' = 'wall';
-  let hitDistance = wallHitInRange ? wallHit.perpWallDist : maxRange;
+  let hitType: 'wall' | 'enemy' | 'range' =
+    rawWallDistance <= NEATENSTEIN_BOLT_MAX_RANGE_CELLS ? 'wall' : 'range';
+  let hitDistance = Math.min(rawWallDistance, NEATENSTEIN_BOLT_MAX_RANGE_CELLS);
   let hitEnemyIndex = -1;
 
-  // Test every living enemy against the beam and keep the nearest valid hit
-  // before the current wall/range endpoint.
+  // Test every living enemy against the bolt path and keep the nearest valid
+  // hit before the wall.
   for (let index = 0; index < state.enemies.length; index += 1) {
     const enemy = state.enemies[index];
 
@@ -360,17 +161,9 @@ export function fireNeonBeam(state: GameState): FireNeonBeamResult {
       continue;
     }
 
-    const distanceAlongBeam = projectOntoBeam(
-      origin,
-      direction,
-      enemy.position,
-    );
+    const distanceAlongBolt = projectOntoRay(origin, direction, enemy.position);
 
-    if (
-      distanceAlongBeam <= 0 ||
-      distanceAlongBeam > maxRange ||
-      distanceAlongBeam > hitDistance
-    ) {
+    if (distanceAlongBolt <= 0 || distanceAlongBolt > hitDistance) {
       continue;
     }
 
@@ -378,37 +171,38 @@ export function fireNeonBeam(state: GameState): FireNeonBeamResult {
       origin,
       direction,
       enemy.position,
-      distanceAlongBeam,
+      distanceAlongBolt,
     );
 
-    if (missDistance <= NEATENSTEIN_ENEMY_HIT_RADIUS_CELLS) {
+    if (missDistance <= NEATENSTEIN_BOLT_HIT_RADIUS_CELLS) {
       hitType = 'enemy';
-      hitDistance = distanceAlongBeam;
+      hitDistance = distanceAlongBolt;
       hitEnemyIndex = index;
     }
   }
 
   const hit = pointAlongRay(origin, direction, hitDistance);
-  const plasmaTracers = createPlasmaTracerTrail(
-    origin,
-    direction,
-    hitDistance,
-    hitType,
-  );
-  const primaryTracer = plasmaTracers[0] ?? null;
 
   let nextState = consumeAmmo(state);
 
-  // Append all visual plasma segments in one immutable update.
-  nextState = {
-    ...nextState,
-    tracers: [...nextState.tracers, ...plasmaTracers],
+  const bolt: BoltState = {
+    position: { ...origin },
+    direction: { ...direction },
+    speedCellsPerSecond: NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND,
+    active: true,
+    createdAtMs: state.simTimeMs,
+    origin: { ...origin },
+    targetDistance: Math.max(0, hitDistance),
   };
 
-  // Only create a wall impact when the shot truly terminated on an in-range
-  // wall. If the beam reached max range without hitting a wall, no impact spot
-  // should appear in empty space.
-  if (hitType === 'wall' && wallHitInRange) {
+  nextState = {
+    ...nextState,
+    bolts: [...(nextState.bolts ?? []), bolt],
+  };
+
+  // Only create a wall impact when the shot truly terminated on a wall within
+  // the bolt's maximum range. Beyond that range the bolt vanishes in mid-air.
+  if (hitType === 'wall') {
     const wallHitCoordinate =
       wallHit.side === 0
         ? origin.y + wallHit.perpWallDist * direction.y
@@ -425,6 +219,7 @@ export function fireNeonBeam(state: GameState): FireNeonBeamResult {
       createdAtMs: state.simTimeMs,
       lifetimeMs: NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS,
       perpWallDist: wallHit.perpWallDist,
+      boltTravelTimeMs: NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
     };
 
     nextState = {
@@ -440,22 +235,22 @@ export function fireNeonBeam(state: GameState): FireNeonBeamResult {
   return {
     state: nextState,
     fired: true,
-    tracer: primaryTracer,
+    bolt,
   };
 }
 
 /**
- * Project a point onto the beam ray and return signed distance from origin.
+ * Project a point onto the bolt ray and return signed distance from origin.
  *
- * Negative values mean the point is behind the beam origin and should be
+ * Negative values mean the point is behind the bolt origin and should be
  * ignored.
  *
- * @param origin - Beam origin.
- * @param direction - Normalized beam direction.
+ * @param origin - Bolt origin.
+ * @param direction - Normalized bolt direction.
  * @param point - Enemy position to test.
- * @returns Signed distance along the beam from origin to closest approach.
+ * @returns Signed distance along the bolt from origin to closest approach.
  */
-function projectOntoBeam(
+function projectOntoRay(
   origin: Vector2,
   direction: Vector2,
   point: Vector2,
@@ -466,13 +261,13 @@ function projectOntoBeam(
 }
 
 /**
- * Compute the perpendicular distance from a point to the beam ray.
+ * Compute the perpendicular distance from a point to the bolt ray.
  *
- * @param origin - Beam origin.
- * @param direction - Normalized beam direction.
+ * @param origin - Bolt origin.
+ * @param direction - Normalized bolt direction.
  * @param point - Enemy position to test.
- * @param t - Distance along the beam to closest approach.
- * @returns Euclidean distance from the point to the beam.
+ * @param t - Distance along the bolt to closest approach.
+ * @returns Euclidean distance from the point to the bolt.
  */
 function perpendicularDistance(
   origin: Vector2,
@@ -487,24 +282,19 @@ function perpendicularDistance(
 }
 
 /**
- * Apply beam damage to the enemy at the given index.
+ * Apply bolt damage to the enemy at the given index.
  *
  * Health is clamped at zero and the kill counter increments only when an enemy
  * transitions from alive to dead in this shot.
  *
- * @param state - Snapshot with tracers already appended.
+ * @param state - Snapshot with the bolt already appended.
  * @param enemyIndex - Index into {@link GameState.enemies}.
  * @returns New snapshot with updated enemy health and kill count.
  */
 function applyEnemyDamage(state: GameState, enemyIndex: number): GameState {
   const enemy = state.enemies[enemyIndex];
-
-  if (!enemy || enemy.health <= 0) {
-    return state;
-  }
-
-  const newHealth = Math.max(0, enemy.health - NEATENSTEIN_BEAM_DAMAGE);
-  const killedByThisShot = enemy.health > 0 && newHealth === 0;
+  const newHealth = Math.max(0, enemy.health - NEATENSTEIN_BOLT_DAMAGE);
+  const killedByThisShot = newHealth === 0;
 
   const newEnemies = state.enemies.map((existing, index) =>
     index === enemyIndex ? { ...existing, health: newHealth } : existing,
