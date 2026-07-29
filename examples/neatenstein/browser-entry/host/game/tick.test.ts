@@ -94,6 +94,117 @@ describe('Neatenstein game tick', () => {
         state.simTimeMs + NEATENSTEIN_FIXED_TIMESTEP_MS,
       );
     });
+
+    it('filters bolts that expire during the tick from next state', async () => {
+      const { createGameState, gameTick, NEATENSTEIN_BOLT_TRAVEL_DURATION_MS } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./tick.ts')) as Record<string, any>;
+      const state = createGameState({ seed: 1 });
+      const bolt = {
+        position: { x: 0, y: 0 },
+        direction: { x: 1, y: 0 },
+        speedCellsPerSecond: 1,
+        active: true,
+        createdAtMs: 0,
+      };
+      const stateWithBolt = { ...state, bolts: [bolt] };
+      const next = gameTick(
+        stateWithBolt,
+        { move: { x: 0, y: 0 }, lookDelta: 0 },
+        undefined,
+        NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
+      );
+      expect(next.bolts.length).toBe(0);
+    });
+
+    it('keeps a freshly fired bolt active in next state', async () => {
+      const { createGameState, gameTick } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./tick.ts')) as Record<string, any>;
+      const { NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./constants.ts')) as Record<string, any>;
+      const state = createGameState({ seed: 1 });
+      const next = gameTick(state, {
+        move: { x: 0, y: 0 },
+        lookDelta: 0,
+        fire: true,
+      });
+      expect(next.bolts.length).toBeGreaterThan(0);
+      expect(next.bolts.every((b: { active: boolean }) => b.active)).toBe(true);
+      expect(next.gun.recoilOffset).toBe(NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX);
+    });
+
+    it('retains existing bolts that remain active through the tick', async () => {
+      const { createGameState, gameTick } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./tick.ts')) as Record<string, any>;
+      const state = createGameState({ seed: 1 });
+      const bolt = {
+        position: { x: 0, y: 0 },
+        direction: { x: 1, y: 0 },
+        speedCellsPerSecond: 1,
+        active: true,
+        createdAtMs: state.simTimeMs,
+      };
+      const stateWithBolt = { ...state, bolts: [bolt] };
+      const next = gameTick(
+        stateWithBolt,
+        { move: { x: 0, y: 0 }, lookDelta: 0 },
+        undefined,
+        16,
+      );
+      expect(next.bolts.length).toBe(1);
+      expect(next.bolts[0].active).toBe(true);
+    });
+
+    it('tolerates a missing bolts array during the tick', async () => {
+      const { createGameState, gameTick } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./tick.ts')) as Record<string, any>;
+      const state = createGameState({ seed: 1 });
+      const stateWithoutBolts = { ...state, bolts: undefined };
+      const next = gameTick(
+        stateWithoutBolts,
+        { move: { x: 0, y: 0 }, lookDelta: 0 },
+        undefined,
+        16,
+      );
+      expect(next.bolts).toEqual([]);
+    });
+
+    it('tolerates a missing gun state during the tick', async () => {
+      const { createGameState, gameTick } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./tick.ts')) as Record<string, any>;
+      const state = createGameState({ seed: 1 });
+      const stateWithoutGun = { ...state, gun: undefined };
+      const next = gameTick(
+        stateWithoutGun,
+        { move: { x: 0, y: 0 }, lookDelta: 0 },
+        undefined,
+        16,
+      );
+      expect(next.gun.recoilOffset).toBe(0);
+    });
+
+    it('does not set gun recoil when firing with no ammo', async () => {
+      const { createGameState, gameTick } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./tick.ts')) as Record<string, any>;
+      const state = createGameState({ seed: 1 });
+      const emptyAmmoState = {
+        ...state,
+        player: { ...state.player, ammo: 0 },
+      };
+      const next = gameTick(emptyAmmoState, {
+        move: { x: 0, y: 0 },
+        lookDelta: 0,
+        fire: true,
+      });
+      expect(next.bolts.length).toBe(0);
+      expect(next.gun.recoilOffset).toBe(0);
+    });
   });
 
   describe('ageImpacts helper', () => {
@@ -139,8 +250,8 @@ describe('Neatenstein game tick', () => {
       );
     });
 
-    it('deactivates a bolt that leaves the world bounds', async () => {
-      const { updateBolts } =
+    it('stops movement but keeps a bolt active when it leaves the world bounds', async () => {
+      const { updateBolts, NEATENSTEIN_BOLT_TRAVEL_DURATION_MS } =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
         (await import('./tick.ts')) as Record<string, any>;
       const bolts = [
@@ -152,8 +263,13 @@ describe('Neatenstein game tick', () => {
           createdAtMs: 0,
         },
       ];
-      const next = updateBolts(bolts, 16, 16);
-      expect(next[0].active).toBe(false);
+      const next = updateBolts(
+        bolts,
+        16,
+        NEATENSTEIN_BOLT_TRAVEL_DURATION_MS - 1,
+      );
+      expect(next[0].active).toBe(true);
+      expect(next[0].position.x).toBeCloseTo(-1, 6);
     });
 
     it('removes inactive bolts from the returned array', async () => {
@@ -173,8 +289,8 @@ describe('Neatenstein game tick', () => {
       expect(next.length).toBe(0);
     });
 
-    it('deactivates a bolt that exceeds the max travel range', async () => {
-      const { updateBolts } =
+    it('stops movement but keeps a bolt active when it exceeds the max travel range', async () => {
+      const { updateBolts, NEATENSTEIN_BOLT_TRAVEL_DURATION_MS } =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
         (await import('./tick.ts')) as Record<string, any>;
       const { NEATENSTEIN_BOLT_MAX_RANGE_CELLS } =
@@ -190,8 +306,16 @@ describe('Neatenstein game tick', () => {
           origin: { x: 0, y: 0 },
         },
       ];
-      const next = updateBolts(bolts, 16, 16);
-      expect(next[0].active).toBe(false);
+      const next = updateBolts(
+        bolts,
+        16,
+        NEATENSTEIN_BOLT_TRAVEL_DURATION_MS - 1,
+      );
+      expect(next[0].active).toBe(true);
+      expect(next[0].position.x).toBeCloseTo(
+        NEATENSTEIN_BOLT_MAX_RANGE_CELLS,
+        6,
+      );
     });
 
     it('keeps a bolt active just before its screen travel duration expires', async () => {
@@ -258,45 +382,6 @@ describe('Neatenstein game tick', () => {
       const gun = { recoilOffset: 10 };
       const next = decayGunRecoil(gun, 16);
       expect(next.recoilOffset).toBeLessThan(gun.recoilOffset);
-    });
-  });
-
-  describe('AC-107: dynamic light toggle', () => {
-    it('exports toggleDynamicLight', async () => {
-      const { toggleDynamicLight } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
-      expect(typeof toggleDynamicLight).toBe('function');
-    });
-
-    it('flips the light enabled flag', async () => {
-      const { toggleDynamicLight } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
-      const state = { lightEnabled: true };
-      const next = toggleDynamicLight(state);
-      expect(next.lightEnabled).toBe(false);
-    });
-  });
-
-  describe('AC-201: light toggle tick integration', () => {
-    it('flips state.lightEnabled when gameTick receives lightToggle', async () => {
-      const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
-      const state = createGameState({ seed: 1 });
-      const next = gameTick(state, { lightToggle: true });
-      expect(next.lightEnabled).toBe(!state.lightEnabled);
-    });
-
-    it('re-toggles state.lightEnabled on a second lightToggle request', async () => {
-      const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
-      const state = createGameState({ seed: 1 });
-      const first = gameTick(state, { lightToggle: true });
-      const second = gameTick(first, { lightToggle: true });
-      expect(second.lightEnabled).toBe(state.lightEnabled);
     });
   });
 });

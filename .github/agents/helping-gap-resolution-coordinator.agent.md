@@ -2,7 +2,7 @@
 description: 'Coordinator for resolving missing specialists, skills, and routing gaps.'
 name: 'helping-gap-resolution-coordinator'
 tier: 2
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -11,6 +11,7 @@ tools:
     execute,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,

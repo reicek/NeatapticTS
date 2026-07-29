@@ -2,7 +2,7 @@
 description: 'Designer for sequential handoffs between the seven phase agents.'
 name: phase-handoff-designer
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -43,10 +43,11 @@ Check that handoffs are forward-moving, short, reviewable, model-qualified, and 
 
 ## Gate Enforcement
 
-Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+Before completing any task, run the `slice-advancement` consolidated gate via `neataptic-gate-mcp:run_gate_check`:
 
-- `plan-sync` — after auditing handoff alignment
-- `step-packet` — when validating phase transition packets
+- `slice-advancement` — consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint in one call. Pass `--slice-id` and `--changed-files` via args.
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually.**
 
 ## Approach
 

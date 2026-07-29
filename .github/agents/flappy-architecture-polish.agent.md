@@ -2,7 +2,7 @@
 description: 'Coordinator for tuning and hardening Flappy Bird architecture profiles.'
 name: 'flappy-architecture-polish'
 tier: 2
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -12,6 +12,7 @@ tools:
     todo,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -66,8 +67,10 @@ Complete one focused polish pass at a time for one Flappy Bird architecture prof
 
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
 
-- `plan-sync` — after polishing iteration
+- `slice-advancement` — after polishing iteration (consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files`.
 - `cortex-index` — before searching for architecture patterns
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually — use `slice-advancement`.**
 
 ## Required Workflow
 

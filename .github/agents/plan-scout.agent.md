@@ -2,7 +2,7 @@
 description: 'Scout for selecting plan documents, triggers, and alignment briefs.'
 name: 'plan-scout'
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -49,7 +49,9 @@ You gather evidence from `plans/` directory, identify the smallest relevant plan
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
 
 - `cortex-index` — before searching for plan documents
-- `plan-sync` — after selecting a plan
+- `slice-advancement` — after selecting a plan (consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files`.
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually — use `slice-advancement`.**
 
 ## Approach
 

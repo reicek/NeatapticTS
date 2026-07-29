@@ -2,13 +2,14 @@
 description: 'Coordinator for ambiguity review, blast-radius, dependency, and budget risk.'
 name: 'planning-risk-coordinator'
 tier: 2
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -62,10 +63,11 @@ Review a proposed plan or implementation approach for ambiguity, blast radius, r
 
 ## Gate Enforcement
 
-Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+Before completing any task, run the `slice-advancement` consolidated gate via `neataptic-gate-mcp:run_gate_check`:
 
-- `plan-sync` — after risk assessment
-- `step-packet` — when scoping validation
+- `slice-advancement` — consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint in one call. Pass `--slice-id` and `--changed-files` via args.
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually.**
 
 ## Required Workflow
 

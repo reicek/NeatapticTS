@@ -2,13 +2,14 @@
 description: 'Coordinator for cross-area codebase research and scout synthesis.'
 name: 'research-codebase-coordinator'
 tier: 2
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
     search,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -75,7 +76,9 @@ Coordinate parallel read-only codebase research across multiple source areas, do
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
 
 - `cortex-index` — before searching the codebase
-- `plan-sync` — after research synthesis
+- `slice-advancement` — after research synthesis (consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files`.
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually — use `slice-advancement`.**
 
 ## Pre-execute hook handling
 

@@ -2,7 +2,7 @@
 description: 'Analyst for coverage gaps, dead-code classification, and test mapping.'
 name: test-coverage-analyst
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

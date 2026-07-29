@@ -87,8 +87,6 @@ export interface NeatensteinRenderFrame {
   gun?: GunState;
   /** Active plasma bolts for the render overlay. */
   bolts?: BoltState[];
-  /** Whether the teal dynamic world light is enabled this frame. */
-  lightEnabled?: boolean;
 }
 
 let nextRequestId = 0;

@@ -2,7 +2,7 @@
 description: 'Mapper for module boundaries, orchestration files, and split planning.'
 name: boundary-mapper
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

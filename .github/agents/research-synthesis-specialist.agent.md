@@ -2,7 +2,7 @@
 description: 'Specialist for synthesizing scout recon into alignment briefs.'
 name: research-synthesis-specialist
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -50,7 +50,9 @@ You do NOT run scouts directly (that is `research-codebase-coordinator`'s job) a
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
 
 - `cortex-index` — before searching for research context
-- `plan-sync` — after synthesizing research results
+- `slice-advancement` — after synthesizing research results (consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files`.
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually — use `slice-advancement`.**
 
 ## Pre-execute hook handling
 

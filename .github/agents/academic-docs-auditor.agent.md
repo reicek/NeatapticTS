@@ -2,7 +2,7 @@
 description: 'Auditor for educational docs, JSDoc quality, Mermaid diagrams, citations, and README alignment.'
 name: academic-docs-auditor
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

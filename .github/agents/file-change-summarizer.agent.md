@@ -2,7 +2,7 @@
 description: 'Summarizer for changed files, risks, and handoff evidence.'
 name: 'file-change-summarizer'
 tier: 4
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -47,7 +47,9 @@ Summarize changed files, affected customization surfaces, validation evidence, a
 
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
 
-- `plan-sync` — after summarizing changes
+- `slice-advancement` — after summarizing changes (consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files`.
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually — use `slice-advancement`.**
 
 ## Default Flow
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import {
   NEATENSTEIN_GUN_ACCENT_COLOR,
   NEATENSTEIN_IMPACT_SPOT_COLOR,
@@ -81,14 +81,20 @@ function sendInputMessage(yawDelta: number) {
   }
 }
 
-function sendActionInputMessage(fire: boolean, lightToggle: boolean) {
+function sendActionInputMessage(fire: boolean) {
   if (typeof workerSelf.onmessage === 'function') {
     workerSelf.onmessage({
       data: {
         type: NEATENSTEIN_INPUT_MESSAGE_TYPE,
-        input: { fire, lightToggle },
+        input: { fire },
       },
     } as unknown as MessageEvent);
+  }
+}
+
+function sendRawMessage(data: unknown) {
+  if (typeof workerSelf.onmessage === 'function') {
+    workerSelf.onmessage({ data } as unknown as MessageEvent);
   }
 }
 
@@ -311,7 +317,7 @@ describe('Neatenstein display worker', () => {
     sendInitMessage('cpu');
     workerSelf.postMessage.mockClear();
 
-    sendActionInputMessage(true, false);
+    sendActionInputMessage(true);
     sendSimStateMessage();
 
     const frameCall = findPostByType<{
@@ -327,7 +333,7 @@ describe('Neatenstein display worker', () => {
     sendInitMessage('cpu');
     workerSelf.postMessage.mockClear();
 
-    sendActionInputMessage(true, false);
+    sendActionInputMessage(true);
     sendSimStateMessage();
 
     const frameCall = findPostByType<{
@@ -335,38 +341,6 @@ describe('Neatenstein display worker', () => {
     }>(workerSelf.postMessage, 'frame');
 
     expect((frameCall?.frame?.bolts ?? []).length).toBeGreaterThan(0);
-  });
-
-  it('keeps dynamic light enabled by default in the cpu frame', async () => {
-    jest.resetModules();
-    await loadModule('./display.worker.ts');
-    sendInitMessage('cpu');
-    workerSelf.postMessage.mockClear();
-
-    sendActionInputMessage(false, false);
-    sendSimStateMessage();
-
-    const frameCall = findPostByType<{
-      frame: { lightEnabled?: boolean };
-    }>(workerSelf.postMessage, 'frame');
-
-    expect(frameCall?.frame?.lightEnabled).toBe(true);
-  });
-
-  it('toggles dynamic light off in the cpu frame', async () => {
-    jest.resetModules();
-    await loadModule('./display.worker.ts');
-    sendInitMessage('cpu');
-    workerSelf.postMessage.mockClear();
-
-    sendActionInputMessage(false, true);
-    sendSimStateMessage();
-
-    const frameCall = findPostByType<{
-      frame: { lightEnabled?: boolean };
-    }>(workerSelf.postMessage, 'frame');
-
-    expect(frameCall?.frame?.lightEnabled).toBe(false);
   });
 
   it('initializes a 2D worker canvas context', async () => {
@@ -378,82 +352,10 @@ describe('Neatenstein display worker', () => {
 
     // The worker lazily creates the 2D context during the first frame build,
     // not at init time, so drive a frame before asserting.
-    sendActionInputMessage(false, false);
+    sendActionInputMessage(false);
     sendSimStateMessage();
 
     expect(canvas.getContext).toHaveBeenCalledWith('2d');
-  });
-
-  it('draws dynamic light with screen blending in the worker tier', async () => {
-    jest.resetModules();
-    await loadModule('./display.worker.ts');
-    const { context, setters } = createMockContext();
-    const canvas = createMockCanvas(context);
-    sendInitMessage('worker', canvas);
-    workerSelf.postMessage.mockClear();
-
-    sendActionInputMessage(false, false);
-    sendSimStateMessage();
-
-    expect(setters.globalCompositeOperation).toHaveBeenCalledWith('screen');
-  });
-
-  it('creates a localized radial gradient for dynamic light in the worker tier', async () => {
-    jest.resetModules();
-    await loadModule('./display.worker.ts');
-    const { context } = createMockContext();
-    const canvas = createMockCanvas(context);
-    sendInitMessage('worker', canvas);
-    workerSelf.postMessage.mockClear();
-
-    sendActionInputMessage(false, false);
-    sendSimStateMessage();
-
-    expect(context.createRadialGradient).toHaveBeenCalledWith(
-      640,
-      expect.any(Number),
-      0,
-      640,
-      expect.any(Number),
-      expect.any(Number),
-    );
-  });
-
-  it('fades the dynamic light radial gradient to transparent in the worker tier', async () => {
-    jest.resetModules();
-    await loadModule('./display.worker.ts');
-    const { context } = createMockContext();
-    const canvas = createMockCanvas(context);
-    sendInitMessage('worker', canvas);
-    workerSelf.postMessage.mockClear();
-
-    sendActionInputMessage(false, false);
-    sendSimStateMessage();
-
-    const radialGradient = (context.createRadialGradient as jest.Mock).mock
-      .results[0].value as { addColorStop: jest.Mock };
-    expect(radialGradient.addColorStop).toHaveBeenCalledWith(
-      1,
-      'rgba(0, 240, 255, 0)',
-    );
-  });
-
-  it('fills the full viewport for dynamic light in the worker tier', async () => {
-    jest.resetModules();
-    await loadModule('./display.worker.ts');
-    const { context } = createMockContext();
-    const canvas = createMockCanvas(context);
-    sendInitMessage('worker', canvas);
-    workerSelf.postMessage.mockClear();
-
-    sendActionInputMessage(false, false);
-    sendSimStateMessage();
-
-    // The worker tier upscales the 640×360 source canvas to the constrained
-    // render size (1280×720). The radial gradient is applied through a
-    // full-canvas fill so it blends with the existing scene using the screen
-    // composite operation.
-    expect(context.fillRect).toHaveBeenCalledWith(0, 0, 1280, 720);
   });
 
   it('draws bolts as circles in the worker tier', async () => {
@@ -464,7 +366,7 @@ describe('Neatenstein display worker', () => {
     sendInitMessage('worker', canvas);
     workerSelf.postMessage.mockClear();
 
-    sendActionInputMessage(true, false);
+    sendActionInputMessage(true);
     sendSimStateMessage();
 
     expect(context.arc).toHaveBeenCalled();
@@ -656,7 +558,7 @@ describe('Neatenstein display worker', () => {
     sendInitMessage('worker', canvas);
     workerSelf.postMessage.mockClear();
 
-    sendActionInputMessage(false, false);
+    sendActionInputMessage(false);
     sendSimStateMessage();
 
     expect(setters.fillStyle).toHaveBeenCalledWith(
@@ -664,17 +566,190 @@ describe('Neatenstein display worker', () => {
     );
   });
 
-  it('does not draw dynamic light after it is toggled off in the worker tier', async () => {
+  it('does not post a frame when simState arrives before init', async () => {
     jest.resetModules();
     await loadModule('./display.worker.ts');
-    const { context, setters } = createMockContext();
-    const canvas = createMockCanvas(context);
-    sendInitMessage('worker', canvas);
-    workerSelf.postMessage.mockClear();
-
-    sendActionInputMessage(false, true);
     sendSimStateMessage();
 
-    expect(setters.globalCompositeOperation).not.toHaveBeenCalledWith('screen');
+    expect(findPostByType(workerSelf.postMessage, 'frame')).toBeUndefined();
+  });
+
+  it('does not acknowledge init with an unrecognised tier', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    sendRawMessage({ type: 'init', tier: 'bad' });
+
+    expect(
+      findPostByType(workerSelf.postMessage, 'initialized'),
+    ).toBeUndefined();
+  });
+
+  it('initializes with the default seed when mapSeed is omitted', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    sendRawMessage({
+      type: 'init',
+      tier: 'cpu',
+      version: NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
+    });
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage();
+
+    expect(findPostByType(workerSelf.postMessage, 'frame')).toBeDefined();
+  });
+
+  it('uses the default version when the init message omits version', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    sendRawMessage({ type: 'init', tier: 'cpu', mapSeed: 42 });
+
+    const initializedCall = findPostByType(
+      workerSelf.postMessage,
+      'initialized',
+    );
+    expect(initializedCall).toEqual(
+      expect.objectContaining({
+        type: 'initialized',
+        tier: 'cpu',
+        version: NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
+      }),
+    );
+  });
+
+  it('does not render a worker frame when no canvas is transferred', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    sendInitMessage('worker');
+
+    expect(() => sendSimStateMessage()).not.toThrow();
+    expect(findPostByType(workerSelf.postMessage, 'frame')).toBeUndefined();
+  });
+
+  it('resizes the worker canvas to match the constrained render size', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    const { context } = createMockContext();
+    const canvas = {
+      getContext: jest.fn(() => context),
+      width: 100,
+      height: 100,
+    };
+    sendInitMessage('worker', canvas);
+
+    sendSimStateMessage();
+
+    expect(canvas.width).toBe(1280);
+    expect(canvas.height).toBe(720);
+  });
+
+  it('reuses the worker 2D context across frames', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    const { context } = createMockContext();
+    const canvas = createMockCanvas(context);
+    sendInitMessage('worker', canvas);
+
+    sendSimStateMessage();
+    sendSimStateMessage();
+
+    expect(canvas.getContext).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not crash when the canvas returns no 2D context', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    const canvas = {
+      getContext: jest.fn(() => null),
+      width: 640,
+      height: 360,
+    };
+    sendInitMessage('worker', canvas);
+
+    expect(() => sendSimStateMessage()).not.toThrow();
+  });
+
+  it('ignores non-object messages', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    const before = workerSelf.postMessage.mock.calls.length;
+
+    sendRawMessage('not an object');
+
+    expect(workerSelf.postMessage.mock.calls.length).toBe(before);
+  });
+
+  it('ignores messages with an unknown type', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    const before = workerSelf.postMessage.mock.calls.length;
+
+    sendRawMessage({ type: 'unknown' });
+
+    expect(workerSelf.postMessage.mock.calls.length).toBe(before);
+  });
+
+  it('posts a packed frame for the gpu tier', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    sendInitMessage('gpu');
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage();
+
+    expect(findPostByType(workerSelf.postMessage, 'frame')).toBeDefined();
+  });
+
+  it('does not post a frame for simState with invalid dimensions', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    sendInitMessage('cpu');
+
+    sendRawMessage({
+      type: 'simState',
+      state: {
+        canvasWidth: Number.NaN,
+        canvasHeight: 360,
+        simTick: 1,
+        cameraX: 12.5,
+        cameraY: 12.5,
+        cameraYaw: 0.25,
+        mapSeed: 42,
+      },
+    });
+
+    expect(findPostByType(workerSelf.postMessage, 'frame')).toBeUndefined();
+  });
+
+  describe('AC-402R: no dynamic light overlay in worker tier', () => {
+    it('does not use screen blending for dynamic light', async () => {
+      jest.resetModules();
+      await loadModule('./display.worker.ts');
+      const { context, setters } = createMockContext();
+      const canvas = createMockCanvas(context);
+      sendInitMessage('worker', canvas);
+      workerSelf.postMessage.mockClear();
+
+      sendActionInputMessage(false);
+      sendSimStateMessage();
+
+      expect(setters.globalCompositeOperation).not.toHaveBeenCalledWith(
+        'screen',
+      );
+    });
+
+    it('does not create a radial gradient for dynamic light', async () => {
+      jest.resetModules();
+      await loadModule('./display.worker.ts');
+      const { context } = createMockContext();
+      const canvas = createMockCanvas(context);
+      sendInitMessage('worker', canvas);
+      workerSelf.postMessage.mockClear();
+
+      sendActionInputMessage(false);
+      sendSimStateMessage();
+
+      expect(context.createRadialGradient).not.toHaveBeenCalled();
+    });
   });
 });

@@ -3,9 +3,9 @@
  * Tier-1 gate: specialist-review-severity
  *
  * Classifies a proposed fix as TRIVIAL or FULL based on the changed files.
- * TRIVIAL fixes (test-only, JSDoc-only, formatting-only) need only one
- * specialist reviewer. FULL fixes that touch runtime logic under src/ or
- * examples/ require the standard 3+ specialist review.
+ * TRIVIAL fixes (test-only, JSDoc-only, formatting-only, skill/policy .md)
+ * skip specialist review entirely. FULL fixes that touch runtime logic
+ * under src/ or examples/ require exactly 1 specialist reviewer.
  *
  * Gate contract: { pass: boolean, evidence: object, fixHint: string, owner: string }
  *
@@ -87,6 +87,7 @@ export function classifySeverity(changedFiles) {
   if (changedFiles.length === 0) {
     return {
       severity: 'TRIVIAL',
+      specialistCount: 0,
       trivialFiles: [],
       nonTrivialFiles: [],
     };
@@ -110,6 +111,7 @@ export function classifySeverity(changedFiles) {
   if (nonTrivialFiles.length === 0) {
     return {
       severity: 'TRIVIAL',
+      specialistCount: 0,
       trivialFiles,
       nonTrivialFiles,
     };
@@ -117,6 +119,7 @@ export function classifySeverity(changedFiles) {
 
   return {
     severity: 'FULL',
+    specialistCount: 1,
     trivialFiles,
     nonTrivialFiles,
   };
@@ -185,7 +188,7 @@ if (
         reason,
       },
       fixHint:
-        'TRIVIAL fixes dispatch 1 specialist; FULL fixes dispatch 3+ specialists from different relevant viewpoints before green testing.',
+        'TRIVIAL fixes skip specialist review entirely; FULL fixes dispatch 1 specialist before green testing.',
       owner:
         'scripts/agent-customization/gates/specialist-review-severity.gate.mjs',
     };

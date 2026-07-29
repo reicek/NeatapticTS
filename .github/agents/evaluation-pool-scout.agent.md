@@ -2,7 +2,7 @@
 description: 'Scout for worker-pool scheduling, ordered results, and queue backpressure.'
 name: evaluation-pool-scout
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

@@ -2,7 +2,7 @@
 description: 'Coordinator for SOLID module splits, folderization, and generated README updates.'
 name: 'solid-split'
 tier: 2
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -12,6 +12,7 @@ tools:
     todo,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -70,7 +71,9 @@ Complete exactly one durable SOLID split step at a time, keeping the codebase al
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
 
 - `agent-graph` — after module boundary identification
-- `plan-sync` — after completing a split
+- `slice-advancement` — after completing a split (consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files`.
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually — use `slice-advancement`.**
 
 ## Required Workflow
 

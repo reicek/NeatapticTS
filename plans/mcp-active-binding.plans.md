@@ -23,14 +23,14 @@ are open or archived.
 
 ## Current active plan
 
-The active workstream plan is: `plans/orchestration-fixes.plans.md`
+The active workstream plan is: `plans/Neon_Shooter_NGE_Demo.plans.md`
 
-Session override: `data/mcp-session-override.json` → `plans/orchestration-fixes.plans.md`
+Session override: `data/mcp-session-override.json` → `plans/Neon_Shooter_NGE_Demo.plans.md`
 
 Previous workstream plans (archived/completed):
 
 - `plans/completed/Agentic_Workflow_Architecture.plans.md`
-- `plans/Neon_Shooter_NGE_Demo.plans.md`
+- `plans/completed/orchestration-fixes.plans.md`
 
 ## Implementation phases
 
@@ -77,4 +77,4 @@ Permanent binding — no slice-level validation evidence. This file is perpetual
 
 ## Handoff query
 
-Permanent MCP binding file. Active plan: `plans/orchestration-fixes.plans.md` via `data/mcp-session-override.json`.
+Permanent MCP binding file. Active plan: `plans/Neon_Shooter_NGE_Demo.plans.md` via `data/mcp-session-override.json`.

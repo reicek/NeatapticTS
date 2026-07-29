@@ -2,7 +2,7 @@
 description: 'Scout for NEATchat memory, retrieval, routing, and session semantics.'
 name: neatchat-scout
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

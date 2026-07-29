@@ -2,7 +2,7 @@
 description: 'Scout for browser runtime, bundle, and worker delivery blockers.'
 name: browser-runtime-scout
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

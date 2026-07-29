@@ -82,26 +82,23 @@ describe('neataptic-dispatch-mcp red contracts', () => {
         context_tier: 'default',
       });
       const payload = result.structuredContent;
-      assert.deepStrictEqual(
-        {
-          ok: payload.ok,
-          dispatchAllowed: payload.dispatch_allowed,
-          packetFields: Object.keys(payload.dispatch_packet ?? {}).sort(),
-        },
-        {
-          ok: true,
-          dispatchAllowed: true,
-          packetFields: [
-            'agent_type',
-            'context_tier',
-            'description',
-            'model',
-            'name',
-            'prompt',
-            'skills',
-          ].sort(),
-        },
-      );
+      assert.strictEqual(payload.ok, true);
+      assert.strictEqual(payload.dispatch_allowed, true);
+      const packetFields = Object.keys(payload.dispatch_packet ?? {}).sort();
+      for (const field of [
+        'agent_type',
+        'context_tier',
+        'description',
+        'model',
+        'name',
+        'prompt',
+        'skills',
+      ]) {
+        assert.ok(
+          packetFields.includes(field),
+          `expected dispatch_packet to include ${field}, got ${packetFields.join(', ')}`,
+        );
+      }
     } finally {
       client.close();
     }
@@ -204,23 +201,64 @@ describe('neataptic-dispatch-mcp red contracts', () => {
     try {
       const result = await client.callTool('get_dispatch_policy');
       const policy = result.structuredContent;
+      assert.deepStrictEqual(policy.allowed_edges, [
+        { from: 0, to: 1 },
+        { from: 1, to: 2 },
+        { from: 1, to: 3 },
+        { from: 1, to: 4 },
+        { from: 2, to: 3 },
+        { from: 2, to: 4 },
+        { from: 3, to: 4 },
+      ]);
+      assert.strictEqual(
+        policy.user_invocable_rule,
+        'Only Tier 1 agents may be userInvocable',
+      );
+    } finally {
+      client.close();
+    }
+  });
+
+  it('rejects a prompt that exceeds the maximum allowed length', async () => {
+    const client = await startDispatchServer();
+    try {
+      const longPrompt = 'x'.repeat(201);
+      const result = await client.callTool('build_dispatch_packet', {
+        target_agent: 'plan-scout',
+        caller_tier: 1,
+        prompt: longPrompt,
+        context_tier: 'default',
+      });
+      const payload = result.structuredContent;
       assert.deepStrictEqual(
         {
-          allowedEdges: policy.allowed_edges,
-          userInvocableRule: policy.user_invocable_rule,
+          ok: payload.ok,
+          dispatchAllowed: payload.dispatch_allowed,
+          hasReason: typeof payload.reason === 'string',
         },
-        {
-          allowedEdges: [
-            { from: 0, to: 1 },
-            { from: 1, to: 2 },
-            { from: 1, to: 3 },
-            { from: 1, to: 4 },
-            { from: 2, to: 3 },
-            { from: 2, to: 4 },
-            { from: 3, to: 4 },
-          ],
-          userInvocableRule: 'Only Tier 1 agents may be userInvocable',
-        },
+        { ok: false, dispatchAllowed: false, hasReason: true },
+      );
+      assert.match(
+        payload.reason,
+        /prompt length|prompt too long|prompt exceeds/i,
+      );
+    } finally {
+      client.close();
+    }
+  });
+
+  it('exposes prompt length rule and maximum through dispatch policy', async () => {
+    const client = await startDispatchServer();
+    try {
+      const result = await client.callTool('get_dispatch_policy');
+      const policy = result.structuredContent;
+      assert.ok(
+        typeof policy.prompt_length_rule === 'string',
+        'expected prompt_length_rule to be a string',
+      );
+      assert.ok(
+        typeof policy.prompt_length_max === 'number',
+        'expected prompt_length_max to be a number',
       );
     } finally {
       client.close();

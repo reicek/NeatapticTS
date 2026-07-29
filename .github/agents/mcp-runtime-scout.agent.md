@@ -2,7 +2,7 @@
 description: 'Scout for MCP runtime visibility gaps and active agent or model facts.'
 name: mcp-runtime-scout
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

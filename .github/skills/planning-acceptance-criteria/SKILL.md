@@ -118,7 +118,7 @@ Flowchart summary: "Acceptance criteria" → "Multiple independent behaviors?"; 
 - Do not write implementation-wish criteria ("use X algorithm"); prefer observable behavior criteria ("given input Y, output Z is produced").
 - Do not omit non-goals when the task scope is ambiguous; explicit non-goals prevent silent scope creep.
 - Do not include more than ten criteria without splitting the task; large criteria sets indicate the task needs decomposition.
-- **Do not create steps with more than 5 slices.** If >5 slices are needed, split into multiple steps. The `plan-slice-quality` and `step-packet` gates enforce a 5-slice-per-step maximum.
+- **Do not create steps with more than 5 slices.** If >5 slices are needed, split into multiple steps. The `slice-advancement` consolidated gate (which includes plan-slice-quality and step-packet) enforces a 5-slice-per-step maximum.
 - Do not proceed to implementation recommendations within this skill; this skill outputs criteria only.
 - Do not tie a criterion to a validation method that does not exist yet; if the validation command needs to be written, note it as a dependency.
 

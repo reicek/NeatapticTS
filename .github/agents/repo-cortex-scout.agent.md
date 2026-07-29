@@ -2,7 +2,7 @@
 description: 'Scout for Repo Cortex index freshness and semantic index diagnostics.'
 name: 'repo-cortex-scout'
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

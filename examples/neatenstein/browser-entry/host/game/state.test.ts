@@ -36,10 +36,8 @@ describe('Neatenstein game state', () => {
     });
 
     it('initializes player health and ammo to their documented maximums', async () => {
-      const { createGameState } = (await import('./state.ts')) as Record<
-        string,
-        any
-      >;
+      const { createGameState } =
+        (await import('./state.ts')) as typeof import('./state.ts');
       const state = createGameState({ seed: 1 });
       expect({
         health: state.player.health,
@@ -55,10 +53,8 @@ describe('Neatenstein game state', () => {
     });
 
     it('returns identical canonical state for the same seed', async () => {
-      const { createGameState } = (await import('./state.ts')) as Record<
-        string,
-        any
-      >;
+      const { createGameState } =
+        (await import('./state.ts')) as typeof import('./state.ts');
       const first = createGameState({ seed: 42 });
       const second = createGameState({ seed: 42 });
       expect({
@@ -77,27 +73,23 @@ describe('Neatenstein game state', () => {
     });
 
     it('produces different canonical state for different seeds', async () => {
-      const { createGameState } = (await import('./state.ts')) as Record<
-        string,
-        any
-      >;
+      const { createGameState } =
+        (await import('./state.ts')) as typeof import('./state.ts');
       const first = createGameState({ seed: 1 });
       const second = createGameState({ seed: 2 });
       expect(second.player.angleRad).not.toBe(first.player.angleRad);
     });
 
     it('defaults to seed 1 when createGameState is called with no options', async () => {
-      const { createGameState } = (await import('./state.ts')) as Record<
-        string,
-        any
-      >;
+      const { createGameState } =
+        (await import('./state.ts')) as typeof import('./state.ts');
       const state = createGameState();
       expect(state.seed).toBe(1);
     });
 
     it('decrements ammo by exactly one when consumeAmmo is called', async () => {
       const { createGameState, consumeAmmo } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const after = consumeAmmo(before);
       expect(after.player.ammo).toBe(before.player.ammo - 1);
@@ -105,7 +97,7 @@ describe('Neatenstein game state', () => {
 
     it('does not allow health to drop below zero from oversized damage', async () => {
       const { createGameState, applyDamage } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const after = applyDamage(before, before.player.health + 50);
       expect(after.player.health).toBe(0);
@@ -113,7 +105,7 @@ describe('Neatenstein game state', () => {
 
     it('grants exactly 200 ms of dash invulnerability when applyDash is called', async () => {
       const { createGameState, applyDash } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const after = applyDash(before);
       expect(after.player.dashTimeRemainingMs).toBe(
@@ -123,7 +115,7 @@ describe('Neatenstein game state', () => {
 
     it('reduces player health by the exact damage amount', async () => {
       const { createGameState, applyDamage } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const after = applyDamage(before, 23);
       expect(after.player.health).toBe(before.player.health - 23);
@@ -131,7 +123,7 @@ describe('Neatenstein game state', () => {
 
     it('ignores negative damage and leaves health unchanged', async () => {
       const { createGameState, applyDamage } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const after = applyDamage(before, -10);
       expect(after.player.health).toBe(before.player.health);
@@ -139,7 +131,7 @@ describe('Neatenstein game state', () => {
 
     it('clamps ammo at zero after repeated consumeAmmo calls', async () => {
       const { createGameState, consumeAmmo } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       let state = createGameState({ seed: 1 });
       for (let i = 0; i < NEATENSTEIN_PLAYER_MAX_AMMO + 5; i++) {
         state = consumeAmmo(state);
@@ -149,7 +141,7 @@ describe('Neatenstein game state', () => {
 
     it('prevents damage while the player is invulnerable from a dash', async () => {
       const { createGameState, applyDash, applyDamage } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const dashed = applyDash(before);
       const after = applyDamage(dashed, before.player.health);
@@ -158,7 +150,7 @@ describe('Neatenstein game state', () => {
 
     it('treats contact i-frames as invulnerable and ignores damage', async () => {
       const { createGameState, applyDamage, isInvulnerable } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const contactState = {
         ...before,
@@ -178,9 +170,24 @@ describe('Neatenstein game state', () => {
       });
     });
 
+    it('treats missing contact i-frames as not invulnerable', async () => {
+      const { createGameState, isInvulnerable } =
+        (await import('./state.ts')) as typeof import('./state.ts');
+      const before = createGameState({ seed: 1 });
+      const noIFrameState = {
+        ...before,
+        player: {
+          ...before.player,
+          contactIFrameMs: undefined,
+          dashTimeRemainingMs: 0,
+        },
+      };
+      expect(isInvulnerable(noIFrameState)).toBe(false);
+    });
+
     it('returns a new state and player reference when damage is ignored during invulnerability', async () => {
       const { createGameState, applyDash, applyDamage } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const dashed = applyDash(before);
       const after = applyDamage(dashed, before.player.health);
@@ -192,7 +199,7 @@ describe('Neatenstein game state', () => {
 
     it('starts the configured cooldown when applyDash is called', async () => {
       const { createGameState, applyDash } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const after = applyDash(before);
       expect(after.player.dashCooldownMs).toBe(NEATENSTEIN_DASH_COOLDOWN_MS);
@@ -200,7 +207,7 @@ describe('Neatenstein game state', () => {
 
     it('does not refresh dash while the cooldown is active', async () => {
       const { createGameState, applyDash } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const first = applyDash(before);
       const second = applyDash(first);
@@ -215,7 +222,7 @@ describe('Neatenstein game state', () => {
 
     it('returns a new state and player reference when dash is gated by cooldown', async () => {
       const { createGameState, applyDash } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const first = applyDash(before);
       const second = applyDash(first);
@@ -227,7 +234,7 @@ describe('Neatenstein game state', () => {
 
     it('exports canDash that reflects cooldown state', async () => {
       const { createGameState, applyDash, canDash } =
-        (await import('./state.ts')) as Record<string, any>;
+        (await import('./state.ts')) as typeof import('./state.ts');
       const before = createGameState({ seed: 1 });
       const dashed = applyDash(before);
       expect({
@@ -240,10 +247,8 @@ describe('Neatenstein game state', () => {
     });
 
     it('spawns the player at the center of a 60x60 map', async () => {
-      const { createGameState } = (await import('./state.ts')) as Record<
-        string,
-        any
-      >;
+      const { createGameState } =
+        (await import('./state.ts')) as typeof import('./state.ts');
       const state = createGameState({ seed: 42 });
       expect(state.player.position).toEqual({
         x: 60.5,
@@ -254,30 +259,17 @@ describe('Neatenstein game state', () => {
 
   describe('AC-105: weapon and projectile initialization', () => {
     it('initializes the gun overlay with zero recoil', async () => {
-      const { createGameState } = (await import('./state.ts')) as Record<
-        string,
-        any
-      >;
+      const { createGameState } =
+        (await import('./state.ts')) as typeof import('./state.ts');
       const state = createGameState({ seed: 1 });
       expect(state.gun).toEqual({ recoilOffset: 0 });
     });
 
     it('initializes an empty bolt array', async () => {
-      const { createGameState } = (await import('./state.ts')) as Record<
-        string,
-        any
-      >;
+      const { createGameState } =
+        (await import('./state.ts')) as typeof import('./state.ts');
       const state = createGameState({ seed: 1 });
       expect(state.bolts).toEqual([]);
-    });
-
-    it('initializes the dynamic light toggle to enabled', async () => {
-      const { createGameState } = (await import('./state.ts')) as Record<
-        string,
-        any
-      >;
-      const state = createGameState({ seed: 1 });
-      expect(state.lightEnabled).toBe(true);
     });
   });
 });

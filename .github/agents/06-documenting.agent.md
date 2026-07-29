@@ -2,7 +2,7 @@
 description: 'Documentation orchestrator for docs, JSDoc, examples, and changelogs.'
 name: '06-documenting'
 tier: 1
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -12,6 +12,7 @@ tools:
     todo,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,

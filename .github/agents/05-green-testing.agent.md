@@ -2,7 +2,7 @@
 description: 'Green-test orchestrator for validation, triage, and regression fixes.'
 name: '05-green-testing'
 tier: 1
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -12,6 +12,7 @@ tools:
     todo,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -205,8 +206,10 @@ EVIDENCE: [summary of what was validated]
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
 
 - `cortex-index` — after coverage changes that affect the semantic index
-- `plan-sync` — after updating the plan with validation results
+- `slice-advancement` — after updating the plan with validation results (consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files` via args.
 - `routing-table-freshness` — after any agent/skill routing change
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually.**
 
 ## Slice Validation Contract
 

@@ -36,6 +36,13 @@ const SERVER_VERSION = '0.1.0';
 
 const ALLOWED_CALLER_TIERS = [0, 1, 2, 3, 4];
 
+/**
+ * Maximum allowed prompt length in characters. Prompts exceeding this limit
+ * are rejected to enforce RAG-based dispatch (short prompt + slice ID, not
+ * inline instructions). See execute skill Section 2.2.
+ */
+const PROMPT_LENGTH_MAX = 200;
+
 const TIER_LABELS = {
   1: 'User-invocable phase orchestrators',
   2: 'Tier 2 coordinators',
@@ -129,8 +136,8 @@ function createDispatchTools() {
       description:
         'Validate a requested delegation and, if allowed, return a structured dispatch packet ' +
         'for the target agent. Returns ok=false with a reason when the target is unknown, ' +
-        'the caller tier is invalid, the delegation direction is illegal, or the target ' +
-        'violates the user-invocable rule.',
+        'the caller tier is invalid, the delegation direction is illegal, the target ' +
+        'violates the user-invocable rule, or the prompt exceeds the maximum allowed length.',
       annotations: { readOnlyHint: true },
       inputSchema: {
         type: 'object',
@@ -177,6 +184,19 @@ function createDispatchTools() {
           argumentsObject.context_tier === 'long_context'
             ? 'long_context'
             : 'default';
+
+        // Reject prompts that exceed the maximum allowed length.
+        // This enforces RAG-based dispatch: the prompt should be a short
+        // instruction with a slice ID, not inline design context.
+        if (prompt.length > PROMPT_LENGTH_MAX) {
+          return {
+            ok: false,
+            dispatch_allowed: false,
+            reason: `Prompt length ${prompt.length} exceeds the maximum allowed length of ${PROMPT_LENGTH_MAX} characters. Use RAG-based dispatch: state only the slice ID and a one-line instruction to load context via Cortex MCP.`,
+            prompt_length: prompt.length,
+            prompt_length_max: PROMPT_LENGTH_MAX,
+          };
+        }
 
         const report = await runCustomizationInventory();
         const agents = report.agents ?? [];
@@ -254,6 +274,9 @@ function createDispatchTools() {
       handler: async () => ({
         allowed_edges: ALLOWED_EDGES,
         user_invocable_rule: 'Only Tier 1 agents may be userInvocable',
+        prompt_length_rule:
+          'Prompts exceeding the maximum length are rejected to enforce RAG-based dispatch.',
+        prompt_length_max: PROMPT_LENGTH_MAX,
         notes: [
           'This server returns a dispatch packet only; it does not spawn subagents.',
           'Tier 0 (orchestrator) may only call Tier 1 agents.',
@@ -483,6 +506,47 @@ async function runDispatchSelfCheck({ server }) {
       selfCheckError(
         'dispatch-mcp',
         'get_dispatch_policy did not return the expected user-invocable rule.',
+      ),
+    );
+  }
+
+  if (
+    typeof policyPayload.prompt_length_rule !== 'string' ||
+    typeof policyPayload.prompt_length_max !== 'number'
+  ) {
+    issues.push(
+      selfCheckError(
+        'dispatch-mcp',
+        'get_dispatch_policy did not return prompt_length_rule and prompt_length_max.',
+      ),
+    );
+  }
+
+  // Verify that an overlong prompt is rejected.
+  const longPromptResult = await invokeServerRequest(server, {
+    method: 'tools/call',
+    params: {
+      name: 'build_dispatch_packet',
+      arguments: {
+        target_agent: 'plan-scout',
+        caller_tier: 1,
+        prompt: 'x'.repeat(PROMPT_LENGTH_MAX + 1),
+        context_tier: 'default',
+      },
+    },
+  });
+
+  const longPromptPayload = longPromptResult.structuredContent ?? {};
+  if (
+    longPromptPayload.ok !== false ||
+    longPromptPayload.dispatch_allowed !== false ||
+    typeof longPromptPayload.prompt_length !== 'number' ||
+    typeof longPromptPayload.prompt_length_max !== 'number'
+  ) {
+    issues.push(
+      selfCheckError(
+        'dispatch-mcp',
+        'build_dispatch_packet did not reject an overlong prompt with prompt_length fields.',
       ),
     );
   }

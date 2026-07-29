@@ -67,8 +67,7 @@ export function createInitialGunState(): GunState {
  * back to the idle position as the recoil decays.
  *
  * The sprite is drawn as a chunky DOOM-style plasma cannon: a tapered Neon
- * White body, a glowing central energy core, a base energy cell, and teal
- * accent bolts.
+ * White body, a glowing central energy core, and teal accent bolts.
  *
  * @param ctx - 2D canvas context to draw into.
  * @param gun - Current weapon overlay state.
@@ -97,20 +96,6 @@ export function renderGunOverlay(
   if (gun.recoilOffset !== 0) {
     ctx.translate(0, -gun.recoilOffset);
   }
-
-  // Drop shadow under the weapon.
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-  ctx.beginPath();
-  ctx.ellipse(
-    centerX,
-    gunBottomY,
-    gunWidth * 0.55,
-    height * 0.015,
-    0,
-    0,
-    Math.PI * 2,
-  );
-  ctx.fill();
 
   // Tapered main chassis with a left-to-right plastic shading gradient.
   const baseHalfWidth = gunWidth / 2;
@@ -171,23 +156,6 @@ export function renderGunOverlay(
   ctx.lineTo(coreRightBottom, coreBottom);
   ctx.closePath();
   ctx.fill();
-
-  // Base energy cell.
-  const cellWidth = gunWidth * 0.55;
-  const cellHeight = gunHeight * 0.18;
-  const cellTop = gunBottomY - gunHeight * 0.18 - cellHeight;
-  const cellGradient = ctx.createLinearGradient(
-    centerX - cellWidth / 2,
-    cellTop,
-    centerX + cellWidth / 2,
-    cellTop,
-  );
-  cellGradient.addColorStop(0, '#004448');
-  cellGradient.addColorStop(0.5, NEATENSTEIN_GUN_ACCENT_COLOR);
-  cellGradient.addColorStop(1, '#004448');
-
-  ctx.fillStyle = cellGradient;
-  ctx.fillRect(centerX - cellWidth / 2, cellTop, cellWidth, cellHeight);
 
   // Lower teal accent bolts on each side.
   ctx.fillStyle = NEATENSTEIN_GUN_ACCENT_COLOR;

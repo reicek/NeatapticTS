@@ -19,12 +19,12 @@ skills:
 Use this skill when an orchestrator must decide how many Tier-3 specialist
 reviewers to dispatch before green testing.
 
-The `execute` skill requires specialist review for every `04-implementing`
-slice, but not every fix is equally risky. A one-line test fixture change, a
-JSDoc-only edit, or a formatting-only change does not need the full 3+
-specialist panel. This skill owns the severity classifier that distinguishes
-trivial fixes from non-trivial ones and tells the orchestrator how many
-specialists to dispatch.
+The `execute` skill requires specialist review for `04-implementing` slices
+that touch runtime code, but not every fix is equally risky. Documentation,
+policy, test-only, and formatting changes need zero specialist review. Runtime
+code changes need exactly 1 specialist. This skill owns the severity classifier
+that distinguishes trivial fixes from non-trivial ones and tells the orchestrator
+how many specialists to dispatch (0 or 1).
 
 When tracker files need updating, `tracker-handoff` owns the plan/log shape.
 When the classifier itself needs changing, `implementation-standards` and
@@ -46,7 +46,7 @@ Do NOT use for skipping specialist review on non-trivial runtime changes. Do NOT
 ## Workflow Diagram
 
 ```text
-Flowchart summary: "Changed files" → "shared-validation.gate.mjs"; "shared-validation.gate.mjs" → "pass?"; "pass?" → "classifySeverity" (Yes), "handoff to 04-implementing" (No); "classifySeverity" → "TRIVIAL"; "classifySeverity" → "FULL"; "TRIVIAL" → "dispatch 1 specialist with shared artifact"; "FULL" → "dispatch 3+ specialists with shared artifact"; "dispatch 1 specialist with shared artifact" → "green testing"; "dispatch 3+ specialists with shared artifact" → "green testing".
+Flowchart summary: "Changed files" → "shared-validation.gate.mjs"; "shared-validation.gate.mjs" → "pass?"; "pass?" → "classifySeverity" (Yes), "handoff to 04-implementing" (No); "classifySeverity" → "TRIVIAL"; "classifySeverity" → "FULL"; "TRIVIAL" → "skip specialist review (0 specialists)"; "FULL" → "dispatch 1 specialist with shared artifact"; "skip specialist review (0 specialists)" → "green testing"; "dispatch 1 specialist with shared artifact" → "green testing".
 ```
 
 ## Task Packet
@@ -83,11 +83,12 @@ Question: How many specialists should the orchestrator dispatch before green tes
    - `FULL` — at least one file touches runtime logic under `src/`,
      `examples/`, or `benchmarks/`.
 6. Dispatch the appropriate specialist review panel:
-   - `TRIVIAL`: dispatch **1** Tier-3 specialist (usually
-     `implementation-pattern-scout`) for a quick pattern check.
-   - `FULL`: dispatch **3+** Tier-3 specialists from **different relevant
-     viewpoints** (e.g., `implementation-pattern-scout` + domain scout +
-     `performance-trace-specialist` or `coverage-scout`).
+   - `TRIVIAL`: dispatch **0** specialists — skip specialist review entirely.
+     The shared-validation artifact is sufficient. Proceed directly to
+     green testing.
+   - `FULL`: dispatch **1** Tier-3 specialist (usually
+     `implementation-pattern-scout` or a domain-specific scout) for a focused
+     code-quality and pattern check.
 7. Record the classification, the shared-validation artifact path, and the
    dispatched specialist list in the plan's `VALIDATION_EVIDENCE` section before
    dispatching `05-green-testing`.
@@ -163,7 +164,7 @@ must be recorded in `VALIDATION_EVIDENCE` with the reason.
 ## Decision Tree
 
 ```text
-Flowchart summary: "Fix ready for review" → "Run shared-validation.gate.mjs"; "Run shared-validation.gate.mjs" → "pass?"; "pass?" → "Run classifySeverity" (Yes), "Return to 04-implementing" (No); "Run classifySeverity" → "TRIVIAL?"; "TRIVIAL?" → "Dispatch 1 specialist with shared artifact" (Yes), "Dispatch 3+ specialists with shared artifact" (No); "Dispatch 1 specialist with shared artifact" → "Record evidence" → "Green testing"; "Dispatch 3+ specialists with shared artifact" → "Record evidence" → "Green testing".
+Flowchart summary: "Fix ready for review" → "Run shared-validation.gate.mjs"; "Run shared-validation.gate.mjs" → "pass?"; "pass?" → "Run classifySeverity" (Yes), "Return to 04-implementing" (No); "Run classifySeverity" → "TRIVIAL?"; "TRIVIAL?" → "Skip specialist review (0 specialists)" (Yes), "Dispatch 1 specialist with shared artifact" (No); "Skip specialist review (0 specialists)" → "Record evidence" → "Green testing"; "Dispatch 1 specialist with shared artifact" → "Record evidence" → "Green testing".
 ```
 
 ## Before / After Examples
@@ -180,7 +181,7 @@ Result: wasted review cycles on low-risk edits.
 ```text
 Changed files: testing/foo.test.ts
 Classification: TRIVIAL
-Action: dispatch 1 implementation-pattern-scout specialist.
+Action: skip specialist review entirely — shared-validation artifact is sufficient.
 Result: faster feedback, same quality bar for non-trivial changes preserved.
 ```
 
@@ -188,14 +189,12 @@ Result: faster feedback, same quality bar for non-trivial changes preserved.
 
 - Do not classify a fix as TRIVIAL when any changed file touches runtime
   logic under `src/`, `examples/`, or `benchmarks/`.
-- Do not skip specialist review entirely for any `04-implementing` slice — the
-  `execute` skill still requires pre-green review.
+- Do not dispatch more than 1 specialist for any slice. The balanced policy
+  caps specialist review at 1 reviewer for FULL changes and 0 for TRIVIAL.
 - Do not rely solely on path inspection when the diff is ambiguous; use the
   override mechanism and document the reason.
-- Do not dispatch fewer than 3 specialists for a FULL fix unless the plan
-  explicitly records an exception approved by `00-helping`.
-- Do not let each specialist re-run tests, build, or lint independently — use
-  the shared-validation gate once and pass its artifact to the panel.
+- Do not let any specialist re-run tests, build, or lint independently — use
+  the shared-validation gate once and pass its artifact to the reviewer.
 - Do not prepend calendar dates to plan headings or session logs.
 
 ## Expected Final Output

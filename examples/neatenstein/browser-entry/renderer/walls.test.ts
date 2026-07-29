@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const loadModule = (path: string): Promise<any> => import(path);

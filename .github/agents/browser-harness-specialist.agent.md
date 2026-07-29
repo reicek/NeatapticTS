@@ -2,7 +2,7 @@
 description: 'Run local-server browser smoke scenarios and delegate browser diagnostics to the Chrome DevTools MCP specialists.'
 name: browser-harness-specialist
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

@@ -2,7 +2,7 @@
 description: 'Implementation orchestrator for scoped code changes via specialists.'
 name: '04-implementing'
 tier: 1
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -12,6 +12,7 @@ tools:
     todo,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -151,15 +152,17 @@ references the failing `slice_id`, failing tests, and suggested remediations.
 
   **Do not run broad test suites, `coverage`, or repo-wide Jest commands.** `05-green-testing` owns full validation. See the `implementation-standards` skill for the targeted-test rule.
 
-These preflight checks are required to reduce surprises during validation and must be included in the plan update before `plan-sync` is invoked.
+These preflight checks are required to reduce surprises during validation and must be included in the plan update before `slice-advancement` is invoked.
 
 ## Gate Enforcement
 
-Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+Before completing any task, run the `slice-advancement` consolidated gate via `neataptic-gate-mcp:run_gate_check`:
 
-- `plan-sync` — after updating the plan with implementation changes
-- `agent-graph` — after any agent delegation change
-- `learning-event` — after discovering a workflow gap or improvement
+- `slice-advancement` — consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint in one call. Pass `--slice-id` and `--changed-files` via args.
+- `agent-graph` — after any agent delegation change (not covered by slice-advancement)
+- `learning-event` — after discovering a workflow gap or improvement (not covered by slice-advancement)
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually.**
 
 All gates listed above must be executed via the named MCP commands (or equivalent scripts) and their one-line pass/fail evidence attached to the plan's `VALIDATION_EVIDENCE` before handoff to `05-green-testing`.
 
@@ -172,7 +175,7 @@ The following skills must be invoked (or their checks executed) and evidence att
   - Example commands: `npx tsc --noEmit -p tsconfig.json`, `npm run lint`.
 
 - **`tracker-handoff`**: evidence that the `PlanUpdate` YAML block is present in the plan and the `Handoff query` is refreshed.
-  - Required evidence: the `PlanUpdate` block (in `plans/*.md`) and a one-line gate run confirming plan-sync (see MCP Gate Commands below).
+  - Required evidence: the `PlanUpdate` block (in `plans/*.md`) and a one-line gate run confirming slice-advancement (see MCP Gate Commands below).
 
 All evidence must either be a repo-path artifact (e.g., `artifacts/coverage-<id>.json`) or a one-line summary such as `tsc: OK`, `lint: 0 issues`, `coverage: statements/branches/functions/lines = 100%`.
 
@@ -180,8 +183,7 @@ All evidence must either be a repo-path artifact (e.g., `artifacts/coverage-<id>
 
 Run the named validation or sync commands and attach their one-line pass/fail result to `VALIDATION_EVIDENCE`:
 
-- Plan sync: `node .github/hooks/workflow-update-sync.mjs --plan=plans/<plan>.plans.md --json` → expected pass evidence: `plan-sync: pass`
-- Plan validation: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/<plan>.plans.md` → expected: `validate-plan-sync: pass`
+- Slice advancement (consolidated): `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=<id> --args.changed-files=<files>` → expected: `slice-advancement: pass`
 - Phase compression / closure gates: `node scripts/agent-customization/gates/phase-compression.gate.mjs --json` → expected: `phase-compression: pass`
 
 If an MCP gate command fails, record the one-line failure reason in `VALIDATION_EVIDENCE` and escalate or fix before handoff.
@@ -211,7 +213,7 @@ Implementers MUST prepare a `HandoffPayload` block for inclusion in a PR descrip
 }
 ```
 
-Include this JSON (or the YAML `PlanUpdate` block) as prepared PR description text and as a `VALIDATION_EVIDENCE` entry in the plan before invoking `plan-sync`. **Do not create the PR automatically; the user will run the provided commands and then return the resulting `pr_url` as evidence.**
+Include this JSON (or the YAML `PlanUpdate` block) as prepared PR description text and as a `VALIDATION_EVIDENCE` entry in the plan before invoking `slice-advancement`. **Do not create the PR automatically; the user will run the provided commands and then return the resulting `pr_url` as evidence.**
 
 ## PR & Review Preparation Checklist (agents prepare; user executes)
 
@@ -332,7 +334,7 @@ PlanUpdate:
   next: 'Run 05-green-testing and attach coverage-guard evidence'
 ```
 
-Attach this block to the plan and include it in `VALIDATION_EVIDENCE` before invoking `plan-sync`.
+Attach this block to the plan and include it in `VALIDATION_EVIDENCE` before invoking `slice-advancement`.
 
 ## Delegation Targets
 

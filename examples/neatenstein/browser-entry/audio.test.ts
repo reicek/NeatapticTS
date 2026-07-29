@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 
 const loadModule = <T>(path: string): Promise<T> => import(path) as Promise<T>;
 

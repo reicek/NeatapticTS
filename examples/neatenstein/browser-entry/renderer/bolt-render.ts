@@ -202,9 +202,9 @@ export function drawBolts(
     return;
   }
 
-  const safeX = Number.isFinite(camera.x) ? camera.x : 0;
-  const safeY = Number.isFinite(camera.y) ? camera.y : 0;
-  const safeYaw = Number.isFinite(camera.yaw) ? camera.yaw : 0;
+  const safeX = camera.x;
+  const safeY = camera.y;
+  const safeYaw = camera.yaw;
 
   const horizonY = canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO;
   const halfWidth = canvasWidth / 2;
@@ -219,7 +219,8 @@ export function drawBolts(
   context.globalCompositeOperation = 'lighter';
 
   for (const bolt of bolts) {
-    if (!bolt.active) {
+    const elapsedMs = simTimeMs - bolt.createdAtMs;
+    if (elapsedMs < 0 || elapsedMs > NEATENSTEIN_BOLT_TRAVEL_DURATION_MS) {
       continue;
     }
 
@@ -274,11 +275,6 @@ export function drawBolts(
       }
     }
 
-    const safeSimTimeMs = Number.isFinite(simTimeMs) ? simTimeMs : 0;
-    const safeCreatedAtMs = Number.isFinite(bolt.createdAtMs)
-      ? bolt.createdAtMs
-      : safeSimTimeMs;
-    const elapsedMs = safeSimTimeMs - safeCreatedAtMs;
     const travelRatio = clamp(
       elapsedMs / NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
       0,

@@ -2,7 +2,7 @@
 description: 'Red-test orchestrator for failing tests, fixtures, mocks, and coverage strategy.'
 name: '03-red-testing'
 tier: 1
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -12,6 +12,7 @@ tools:
     todo,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -161,10 +162,12 @@ it('should not leak memory across evaluation cycles', async () => {
 
 ## Gate Enforcement
 
-Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+Before completing any task, run the `slice-advancement` consolidated gate via `neataptic-gate-mcp:run_gate_check`:
 
-- `step-packet` — after authoring red test contracts
-- `cortex-index` — before broad test discovery
+- `slice-advancement` — consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint in one call. Pass `--slice-id` and `--changed-files` via args.
+- `cortex-index` — before broad test discovery (not covered by slice-advancement)
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually.**
 
 ## Default Flow
 

@@ -63,9 +63,6 @@ export interface GameTickInputSnapshot {
 
   /** `true` when the dash action is requested this tick. */
   dash: boolean;
-
-  /** `true` when the light toggle action is requested this tick. */
-  lightToggle?: boolean;
 }
 
 /**
@@ -83,9 +80,6 @@ interface NormalizedGameTickInputSnapshot {
 
   /** Whether dash is active this tick. */
   dash: boolean;
-
-  /** Whether light toggle is active this tick. */
-  lightToggle: boolean;
 }
 
 /**
@@ -182,7 +176,6 @@ function normalizeGameTickInput(
         : 0,
     fire: snapshot.fire === true,
     dash: snapshot.dash === true,
-    lightToggle: snapshot.lightToggle === true,
   };
 }
 
@@ -242,11 +235,6 @@ export function gameTick(
   // state such as dash velocity, cooldown, or flags.
   if (input.dash) {
     next = applyDash(next);
-  }
-
-  // Step 3b: Toggle the dynamic light overlay when requested.
-  if (input.lightToggle) {
-    next = toggleDynamicLight(next);
   }
 
   // Step 4: Resolve player movement against the collision map.
@@ -316,20 +304,20 @@ function applyLook(state: GameState, lookDelta: number): GameState {
 /**
  * Advance active plasma bolts by one tick.
  *
- * Each active bolt is moved along its direction by `speed * dt`. Bolts are
- * primarily deactivated once their on-screen travel time reaches
+ * Each active bolt is moved along its direction by `speed * dt`. Bolts remain
+ * active until their on-screen travel time reaches
  * {@link NEATENSTEIN_BOLT_TRAVEL_DURATION_MS} so a close target never makes
  * the bolt vanish before the 300 ms screen travel completes. Bolts that leave
- * the world bounds, hit a wall, or exceed the maximum travel range are also
- * deactivated but kept in the returned array so callers can still read their
- * final state. Bolts that were already inactive are removed.
+ * the world bounds, hit a wall, or exceed the maximum travel range stop moving
+ * but stay active and remain in the returned array until the visual travel
+ * duration expires. Bolts that were already inactive are removed.
  *
  * @param bolts - Active bolt snapshots before this tick.
  * @param dtMs - Elapsed time in milliseconds.
  * @param currentTimeMs - Current simulation time in milliseconds, used to
  *   decide when the bolt's screen travel has finished.
- * @param collisionMap - Optional collision map used to deactivate bolts that
- *   hit a wall.
+ * @param collisionMap - Optional collision map used to stop bolts that hit a
+ *   wall.
  * @returns New array of bolts after movement and deactivation.
  */
 export function updateBolts(
@@ -373,12 +361,12 @@ export function updateBolts(
         distanceTraveled >= NEATENSTEIN_BOLT_MAX_RANGE_CELLS;
       const elapsedMs = Math.max(0, currentTimeMs - bolt.createdAtMs);
       const travelExpired = elapsedMs >= NEATENSTEIN_BOLT_TRAVEL_DURATION_MS;
-      const active =
-        !outOfBounds && !hitWall && !beyondMaxRange && !travelExpired;
+      const movementStopped = outOfBounds || hitWall || beyondMaxRange;
+      const active = !travelExpired;
 
       return {
         ...bolt,
-        position: active ? nextPosition : bolt.position,
+        position: movementStopped ? bolt.position : nextPosition,
         active,
       };
     });
@@ -404,18 +392,6 @@ export function decayGunRecoil(gun: GunState, dtMs: number): GunState {
     ...gun,
     recoilOffset: Math.min(nextOffset, NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX),
   };
-}
-
-/**
- * Toggle the dynamic teal light overlay on or off.
- *
- * @param state - Any state object carrying an optional `lightEnabled` flag.
- * @returns New state with `lightEnabled` flipped.
- */
-export function toggleDynamicLight<T extends { lightEnabled?: boolean }>(
-  state: T,
-): T {
-  return { ...state, lightEnabled: !state.lightEnabled };
 }
 
 /**

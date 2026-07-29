@@ -2,7 +2,7 @@
 description: 'Scout for same-seed determinism, replay boundaries, and ordering drift.'
 name: determinism-scout
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

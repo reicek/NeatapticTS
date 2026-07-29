@@ -2,7 +2,7 @@
 description: 'Coordinator for triaging green-test failures and coverage gate interpretation.'
 name: 'green-test-failure-triage-coordinator'
 tier: 2
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -10,6 +10,7 @@ tools:
     execute,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,

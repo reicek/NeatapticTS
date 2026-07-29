@@ -43,6 +43,8 @@ Do NOT use for plan alignment or selection - use `plan-alignment` instead. Do NO
 
 ## Workflow Diagram
 
+> **IMPORTANT — Consolidated Gate:** Agents should use the `slice-advancement` consolidated gate (`neataptic-gate-mcp:run_gate_check --gate=slice-advancement`) instead of running plan-sync, step-packet, plan-slice-quality, and plan-command-lint individually. The workflow below describes the internal steps for reference only — the `slice-advancement` gate runs all of them in one call.
+
 ```text
 Flowchart summary: "Plan edited" → "Run workflow-update-sync"; "Run workflow-update-sync" → "Run validate-plan-sync"; "Run validate-plan-sync" → "Run plan-command-lint"; "Run plan-command-lint" → "Pass?"; "Pass?" → "Sync complete" (Yes), "Fix stale flags / status / README / roadmap" (No); "Sync complete"; "Fix stale flags / status / README / roadmap" → "Run workflow-update-sync".
 ```

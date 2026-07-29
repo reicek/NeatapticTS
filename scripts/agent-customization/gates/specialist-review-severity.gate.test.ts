@@ -114,6 +114,7 @@ describe('specialist-review-severity.gate.mjs', () => {
         severity: 'FULL',
         trivialFiles: ['src/foo.test.ts'],
         nonTrivialFiles: ['src/foo.ts'],
+        specialistCount: 1,
       });
     });
 
@@ -141,6 +142,7 @@ describe('specialist-review-severity.gate.mjs', () => {
         severity: 'TRIVIAL',
         trivialFiles: [],
         nonTrivialFiles: [],
+        specialistCount: 0,
       });
     });
 

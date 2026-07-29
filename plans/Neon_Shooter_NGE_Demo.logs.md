@@ -2591,3 +2591,795 @@ PlanUpdate:
 **Handoff to 04-implementing:** Remove the legacy `renderNeonWallColumn` export from `walls.ts`, remove the square-framebuffer fallback in `framebuffer.ts` (and `resolveWallFramebufferSize` in `walls.ts`), and update `walls.test.ts` owner-local tests to use `writeNeonWallColumn` with explicit framebuffer dimensions. Do not run the full suite until the focused `walls.test.ts` slice is green.
 
 **Archive reason:** Verbose Step 01 validation evidence, PlanUpdate packets, and per-slice execution notes were moved here to keep `plans/Neon_Shooter_NGE_Demo.plans.md` compact. All five Step 01 slices are now marked [DONE] in the active plan.
+
+## Phase 3 Step 03 — Center-screen DOOM-style plasma cannon fix-loop archive
+
+**Status:** [DONE] — slice `02-render-integration` fix-loop implementation (r5–r8, 2026-08-11..15) was green validated on 2026-07-28. Final compression recorded in the section below.
+
+**Archive reason:** Verbose inline Claim: lines and PlanUpdate/HandoffPayload blocks for the plasma-cannon implementation, re-reviews, and fix-loops were moved here from plans/Neon_Shooter_NGE_Demo.plans.md to keep the active plan compact. The active slice was later green validated and the complete Step 03 step packet was compressed into the final compression section below.
+
+Claim: 01-planning @ 2026-07-28 — Tracker repair: Phase 3 lint follow-up slices split out of Step 01 into a new Step 02 [WIP] to satisfy the 5-slice-per-step limit. Step 01 returned to [DONE]. Active slice: `01-lint-types-host-src` [WIP] in Step 02. Step 03 (plasma cannon) remains [DONE]. Workflow snapshot now resolves to Phase 3 / Step 02 / slice `01-lint-types-host-src`.
+
+Claim: 04-implementing @ 2026-08-15T10:00:00Z — slice `02-render-integration` fix-loop r8 claimed. Will repair `tick.test.ts` bolt-movement expiry interaction, split the travel-duration expiry test into two single-expect `it()` blocks, and update `tests_for_green` Jest flags from `--testPathPattern` to `--testPathPatterns` in the plan tracker.
+
+Claim: 01-planning @ 2026-07-28 — Phase 2 [DONE]; Phase 3 [WIP]. Step 01 [DONE]: all 5 original slices green validated and compressed; detailed evidence moved to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3 Step 01. Step 02 [WIP]: lint-type follow-up with active slice `01-lint-types-host-src`. Step 03 [DONE]: center-screen DOOM-style plasma cannon — all 5 slices green validated; visible-browser smoke test confirms DOOM-style gun overlay, traveling plasma bolts, localized radial dynamic light, and working KeyL light toggle. Step 04–07 remain [PLANNED] and unsliced; Step 04 packet is explicitly not authored until user verification is recorded.
+
+Claim: 04-implementing @ 2026-07-27T09:37:43Z — slice `01-lint-types-harness` implementation complete; discriminated-union literal-widening fixes applied to `arms-race.test.ts`, `enemy-mlp-snapshot.test.ts`, and `main-runner.test.ts`; preflight (tsc/tsconfig.test.json/eslint/prettier) passed; handed off to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-07-27T16:18Z — slice `02-constants-types` implementation complete; added `GunState`, `BoltState`, and light-toggle fields to `GameState`, plus gun/bolt/recoil/light constants in shared and gameplay constants modules; preflight passed; handed off to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-07-27T12:23:09Z — slice `02-gun-render` implementation complete; created `renderer/gun.ts` with `renderGunOverlay`, `createInitialGunState`, and color re-exports; initialized `gun`, `bolts`, and `lightEnabled` in `host/game/state.ts`; added `state.test.ts` coverage for weapon/projectile initialization; preflight passed; handed off to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-07-27T12:31:52Z — slice `02-bolt-combat` claimed for implementation. BLOCKER: step-level AC-006 demands removal of legacy `fireNeonBeam`/tracer symbols from `combat.ts`/`tick.ts`/`types.ts`/`constants.ts` with no dual-path code, while the existing `combat.test.ts` (~19 legacy `fireNeonBeam` tests) and `tick.test.ts` (tracer-on-fire tests) still assert those symbols work. Slice-level AC-106/AC-107 require those tests to pass. No file edits yet; awaiting planning resolution on whether to re-slice the cleanup, update/remove legacy tests, or allow temporary dual-path code.
+
+Claim: 00-helping @ 2026-07-27T12:32:20Z — RESOLVED via Option 2 (expand `02-bolt-combat`). Dual-path code is rejected per the No Deferred Cleanup Policy and AC-006. Re-slicing would insert a 6th slice into Step 02, violating the 5-slice-per-step rule. Therefore the cleanup of legacy hitscan/tracer symbols and their tests is folded into `02-bolt-combat`. The slice now owns the atomic API replacement: remove `fireNeonBeam`, `TracerState`, beam/tracer constants, and the legacy tests that exercise them, while introducing `fireBolt`, bolt helpers, recoil decay, and the light-toggle wire. The slice file count exceeds the usual ≤3-file ideal; this is a deliberate exception documented in the slice note below. 04-implementing may proceed.
+
+Claim: 04-implementing @ 2026-07-28T10:00:00Z — slice `02-bolt-combat` implementation complete; removed legacy `fireNeonBeam`/tracer symbols, introduced `fireBolt`/bolt movement/recoil decay/dynamic-light toggle, replaced legacy tests with bolt/recoil/light tests, updated dependent `state.ts`/`episode.ts`/`display.worker.ts`/`types.test.ts`/`constants.test.ts`, and fixed out-of-slice test compile errors in `audio.test.ts`/`episode.test.ts`/`renderer-bridge.test.ts`; preflight (tsc/tsconfig.test.json/eslint/prettier) passed; handed off to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-07-29T12:00:00Z — slice `02-bolt-combat` fix loop complete: re-exported `NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND` from `tick.ts`, reduced `NEATENSTEIN_BOLT_HIT_RADIUS_CELLS` to 0.4 and removed dead `NEATENSTEIN_ENEMY_HIT_RADIUS_CELLS`, wired `lightToggle` end-to-end through `host/input.ts`/`host/game/controls.ts`/`worker/display.worker.ts`/`host/game/tick.ts`, made gun recoil conditional on `fireBolt().fired`; updated `controls.test.ts` snapshot to include the new required `lightToggle` field; preflight (tsc/tsconfig.test.json/eslint/prettier on changed files) passed; tests delegated to `05-green-testing` per `04-implementing` policy.
+
+Claim: 04-implementing @ 2026-07-27T13:34:03-04:00 — slice `02-bolt-combat` re-review round 2 fix complete: added `KeyboardEvent.repeat` guard in `bindKeyboardLightToggle`, added end-to-end tests for the light toggle path in `controls.test.ts` (repeat suppression), `input.test.ts` (latch + re-toggle), and `tick.test.ts` (`gameTick` flips `lightEnabled` and re-toggles); preflight (tsc/tsconfig.json/eslint/prettier) passed; tests delegated to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-07-30T12:00:00Z — slice `02-render-integration` implementation complete: wired `renderGunOverlay`, bolt drawing (`drawBolts`), and teal dynamic light (`drawDynamicLight`) into the `worker` tier render path; extended `NeatensteinRenderFrame` with optional `gun`, `bolts`, and `lightEnabled` fields and populated them in the CPU/GPU packed path; added `NEATENSTEIN_DYNAMIC_LIGHT_COLOR` to `constants.ts`; updated `renderer/gun.ts` to accept `OffscreenCanvasRenderingContext2D`; added integration tests in `display.worker.test.ts` for packed-frame state and worker-tier rendering. Preflight (tsc/tsconfig.test.json/eslint/prettier on touched files) passed; jest and bundle build delegated to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-07-30T14:20:00Z — slice `02-render-integration` re-review round 1 fix complete: corrected `display.worker.test.ts` light-toggle assumptions (default `lightEnabled:true`, no toggle in gun/bolt tests), split multi-expect tests into single-expect `it()` blocks, added CPU and worker toggle-off tests; updated `display.worker.ts` bolt projection to use `BOLT_PROJECTED_CAMERA_HEIGHT_WORLD = 0` so airborne projectiles read at eye/horizon height instead of on the floor; refreshed the worker-tier painter-order docstring to list bolts, dynamic light, and gun overlay. Preflight (tsc/tsconfig.test.json/eslint/prettier on touched files) passed; jest delegated to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-08-13T12:00:00Z — slice `02-render-integration` visual-quality fix-loop implementation complete: removed energy trail from `drawBolts` (plasma bolt circle/sprite only); gated `drawImpactSpots` on `travelRatio >= 1.0`; tripled `NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND` (12 → 36); added fixed `NEATENSTEIN_BOLT_TRAVEL_DURATION_MS` (300 ms) and wired it into both `fireBolt` (`boltTravelTimeMs`) and `drawBolts` time-based interpolation for constant screen-space speed; added `createdAtMs` to `BoltState` and set it in `fireBolt`; exported `drawImpactSpots` for focused unit testing. Updated affected tests in `display.worker.test.ts`, `combat.test.ts`, `tick.test.ts`, and `types.test.ts`. Preflight (tsc/tsconfig.json/tsconfig.test.json/eslint/prettier on touched files) passed; jest delegated to `05-green-testing`.
+
+```yaml
+PlanUpdate:
+  slice_id: '02-render-integration'
+  status:
+    [IMPLEMENTED — visual-quality fix loop complete; pending 05-green-testing]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/host/game/constants.ts'
+    - 'examples/neatenstein/browser-entry/host/game/types.ts'
+    - 'examples/neatenstein/browser-entry/host/game/combat.ts'
+    - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
+    - 'examples/neatenstein/browser-entry/host/game/types.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/tick.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/combat.test.ts'
+    - 'examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npx eslint examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/host/game/types.ts examples/neatenstein/browser-entry/host/game/combat.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/host/game/types.test.ts examples/neatenstein/browser-entry/host/game/tick.test.ts examples/neatenstein/browser-entry/host/game/combat.test.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    - 'npx prettier --check examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/host/game/types.ts examples/neatenstein/browser-entry/host/game/combat.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/host/game/types.test.ts examples/neatenstein/browser-entry/host/game/tick.test.ts examples/neatenstein/browser-entry/host/game/combat.test.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/types.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/tick.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/worker/display.worker.test.ts --runInBand'
+    - 'npm run build:neatenstein'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/constants.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/types.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/combat.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/worker/display.worker.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/types.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/tick.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/combat.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  next: 'Run 05-green-testing on slice 02-render-integration focused tests and update tracker'
+```
+
+Claim: 04-implementing @ 2026-08-11T12:00:00Z — slice `02-render-integration` visual-quality fix round implementation complete: added optional `origin`/`targetDistance` to `BoltState`, set them in `fireBolt`, rewrote `drawBolts` to interpolate bolts from the gun muzzle screen point to the projected target, replaced the full-canvas teal dynamic light with a localized radial gradient, and redesigned `renderGunOverlay` as a detailed DOOM-style plasma cannon. Updated `display.worker.test.ts` and `renderer/gun.test.ts` mocks/assertions. Preflight (tsc/tsconfig.test.json/eslint/prettier) passed; jest delegated to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-07-27T14:39:12-04:00 — slice `02-render-integration` re-review round 2 fix complete: adjusted `display.worker.test.ts` to match the worker's lazy 2D context creation (send a `simState` message before asserting `canvas.getContext('2d')`) and to expect the constrained worker-tier render size (1280×720) for the dynamic-light `fillRect` call. Source `display.worker.ts` unchanged; all three specialists approved these two remaining test fixes. Preflight (tsc/tsconfig.json/eslint/prettier on touched file) passed; jest delegated to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-07-27T15:02:51-04:00 — slice `02-render-integration` re-review round 1 test-only fixes complete: added `closePath: jest.fn()` to the `createMockCanvasContext` mock in `renderer/gun.test.ts` so the DOOM-style gun chassis can call `ctx.closePath()`; split the multi-expect recoil test in `renderer/gun.test.ts` into three single-expect `it()` blocks (`saves`, `translates`, `restores`); split the multi-expect dynamic-light gradient test in `worker/display.worker.test.ts` into two single-expect `it()` blocks (`creates radial gradient`, `fades gradient to transparent`). Production code unchanged. All three specialists confirmed production code is correct. Preflight (tsc/tsconfig.test.json/eslint/prettier on touched files) passed; jest delegated to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-08-13T14:00:00Z — slice `02-render-integration` fix-loop implementation complete: extracted `drawImpactSpots` and `drawBolts` into a new side-effect-free renderer module `renderer/bolt-render.ts` so `display.worker.test.ts` can import them without triggering the worker's top-level `self.onmessage`; updated `display.worker.ts` to import from `renderer/bolt-render.ts`; updated `display.worker.test.ts` import to use the new module; split multi-expect `it()` blocks in `combat.test.ts` (lines 30, 62, 194) and `display.worker.test.ts` (lines 490, 519) into single-expect tests. Preflight (tsc/tsconfig.json/tsconfig.test.json/eslint/prettier on touched files) passed; jest delegated to `05-green-testing`.
+
+Claim: 04-implementing @ 2026-08-13T16:53:00Z — slice `02-render-integration` test-only fix: `bolt-render.test.ts` `createImpact()` default `position` changed from `{x:10, y:0}` to `{x:11, y:11}` so impact spots are in front of the test camera `{x:9, y:9, yaw:pi/4}` and the impact-arrival tests fail/skip for the right reason (`travelRatio < 1`, not `perpDist <= 0` culling). Preflight passed (tsc/tsconfig.json/tsconfig.test.json/eslint/prettier); jest not run per 04 policy.
+
+```yaml
+PlanUpdate:
+  slice_id: '02-render-integration'
+  status: [FIX-LOOP IMPLEMENTED — pending 05-green-testing]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/renderer/bolt-render.ts'
+    - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
+    - 'examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/combat.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npx eslint examples/neatenstein/browser-entry/renderer/bolt-render.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts examples/neatenstein/browser-entry/host/game/combat.test.ts'
+    - 'npx prettier --check examples/neatenstein/browser-entry/renderer/bolt-render.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts examples/neatenstein/browser-entry/host/game/combat.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/worker/display.worker.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat.test.ts --runInBand'
+    - 'npm run build:neatenstein'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/bolt-render.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/worker/display.worker.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/combat.test.ts'
+  next: 'Run 05-green-testing on the focused tests above and attach jest/build evidence; do not run jest in 04-implementing'
+```
+
+Claim: 04-implementing @ 2026-08-14T12:00:00Z — slice `02-render-integration` re-review round 2 test-only fix complete: rewrote the worker-tier energy-trail test in `display.worker.test.ts` to call `drawBolts` directly with a fresh mock context and assert that `stroke`/`lineTo` are not called; split the multi-expect bolt-travel-time loop in `combat.test.ts` into per-impact single-expect `it()` blocks; created the missing sibling test file `renderer/bolt-render.test.ts` with focused single-expect coverage of `drawBolts` and `drawImpactSpots`. Production code unchanged. Preflight (tsc/tsconfig.json/tsconfig.test.json/eslint/prettier on touched files) passed; jest delegated to `05-green-testing`.
+
+```yaml
+PlanUpdate:
+  slice_id: '02-render-integration'
+  status: [RE-REVIEW ROUND 2 TEST-ONLY FIXES — pending 05-green-testing]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/combat.test.ts'
+    - 'examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npx eslint examples/neatenstein/browser-entry/worker/display.worker.test.ts examples/neatenstein/browser-entry/host/game/combat.test.ts examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+    - 'npx prettier --check examples/neatenstein/browser-entry/worker/display.worker.test.ts examples/neatenstein/browser-entry/host/game/combat.test.ts examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/bolt-render.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/worker/display.worker.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat.test.ts --runInBand'
+    - 'npm run build:neatenstein'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/combat.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+  next: 'Run 05-green-testing on the focused tests above and attach jest/build evidence; do not run jest in 04-implementing'
+```
+
+```yaml
+PlanUpdate:
+  slice_id: '02-render-integration'
+  status: [TEST-ONLY FIX — pending 05-green-testing]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npx eslint examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+    - 'npx prettier --check examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/bolt-render.test.ts --runInBand'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+  next: 'Run 05-green-testing on bolt-render.test.ts and attach jest evidence; do not run jest in 04-implementing'
+```
+
+```yaml
+PlanUpdate:
+  slice_id: '02-render-integration'
+  status:
+    [IMPLEMENTED — visual-quality fix round complete; pending 05-green-testing]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/host/game/types.ts'
+    - 'examples/neatenstein/browser-entry/host/game/combat.ts'
+    - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
+    - 'examples/neatenstein/browser-entry/renderer/gun.ts'
+    - 'examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    - 'examples/neatenstein/browser-entry/renderer/gun.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npx eslint examples/neatenstein/browser-entry/host/game/types.ts examples/neatenstein/browser-entry/host/game/combat.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/renderer/gun.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts examples/neatenstein/browser-entry/renderer/gun.test.ts'
+    - 'npx prettier --check examples/neatenstein/browser-entry/host/game/types.ts examples/neatenstein/browser-entry/host/game/combat.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/renderer/gun.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts examples/neatenstein/browser-entry/renderer/gun.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/worker/display.worker.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/gun.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat.test.ts --runInBand'
+    - 'npm run build:neatenstein'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/types.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/combat.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/worker/display.worker.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun.test.ts'
+  next: 'Run 05-green-testing on slice 02-render-integration focused tests and update tracker'
+```
+
+```yaml
+PlanUpdate:
+  slice_id: '02-render-integration'
+  status:
+    [
+      IMPLEMENTED — re-review round 1 test-only fixes complete; pending 05-green-testing,
+    ]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/renderer/gun.test.ts'
+    - 'examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npx eslint examples/neatenstein/browser-entry/renderer/gun.test.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    - 'npx prettier --check examples/neatenstein/browser-entry/renderer/gun.test.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/worker/display.worker.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/gun.test.ts --runInBand'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  next: 'Run 05-green-testing on slice 02-render-integration focused tests and update tracker'
+```
+
+Claim: 04-implementing @ 2026-08-15T12:00:00Z — slice `02-render-integration` fix-loop r5 implementation complete per live browser feedback: removed twin side-barrel antenna/rods from `renderer/gun.ts`; tapered the central plasma core and horizontal structural ridges to match the gun body's perspective; made plasma bolts 3× wider at the muzzle in `renderer/bolt-render.ts`, with linear radius shrink and alpha fade to zero at 30 cells; added `NEATENSTEIN_BOLT_MAX_RANGE_CELLS = 30` to `host/game/constants.ts`; clamped `fireBolt` target distance and wall-impact creation to the max range in `host/game/combat.ts`; deactivated bolts that exceed the max range in `host/game/tick.ts`. Updated tests in `host/game/constants.test.ts`, `host/game/combat.test.ts`, `host/game/tick.test.ts`, and `renderer/bolt-render.test.ts`. Preflight (tsc/tsconfig.json/tsconfig.test.json/eslint/prettier on touched files) passed; jest delegated to `05-green-testing`.
+
+```yaml
+PlanUpdate:
+  slice_id: '02-render-integration'
+  status:
+    [
+      IMPLEMENTED — fix-loop r5 (gun/bolt perspective + max range); pending 05-green-testing,
+    ]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/renderer/gun.ts'
+    - 'examples/neatenstein/browser-entry/renderer/bolt-render.ts'
+    - 'examples/neatenstein/browser-entry/host/game/constants.ts'
+    - 'examples/neatenstein/browser-entry/host/game/constants.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/combat.ts'
+    - 'examples/neatenstein/browser-entry/host/game/combat.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/tick.ts'
+    - 'examples/neatenstein/browser-entry/host/game/tick.test.ts'
+    - 'examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npx eslint examples/neatenstein/browser-entry/renderer/gun.ts examples/neatenstein/browser-entry/renderer/bolt-render.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/host/game/constants.test.ts examples/neatenstein/browser-entry/host/game/combat.ts examples/neatenstein/browser-entry/host/game/combat.test.ts examples/neatenstein/browser-entry/host/game/tick.ts examples/neatenstein/browser-entry/host/game/tick.test.ts examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+    - 'npx prettier --check examples/neatenstein/browser-entry/renderer/gun.ts examples/neatenstein/browser-entry/renderer/bolt-render.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/host/game/constants.test.ts examples/neatenstein/browser-entry/host/game/combat.ts examples/neatenstein/browser-entry/host/game/combat.test.ts examples/neatenstein/browser-entry/host/game/tick.ts examples/neatenstein/browser-entry/host/game/tick.test.ts examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/gun.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/bolt-render.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/constants.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/tick.test.ts --runInBand'
+    - 'npm run build:neatenstein'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/bolt-render.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/constants.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/constants.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/combat.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/combat.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/tick.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/tick.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+  next: 'Run 05-green-testing on slice 02-render-integration focused tests and update tracker'
+```
+
+```yaml
+PlanUpdate:
+  slice_id: '02-constants-types'
+  status: [DONE]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/constants.ts'
+    - 'examples/neatenstein/browser-entry/host/game/constants.ts'
+    - 'examples/neatenstein/browser-entry/host/game/types.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npm run lint'
+    - 'npx prettier --check examples/neatenstein/browser-entry/constants.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/host/game/types.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/gun.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/tick.test.ts --runInBand'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/constants.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/constants.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/types.ts'
+  next: 'Run 05-green-testing on slice 02-constants-types focused tests and update tracker'
+```
+
+```yaml
+PlanUpdate:
+  slice_id: '02-gun-render'
+  status: [DONE]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/renderer/gun.ts'
+    - 'examples/neatenstein/browser-entry/host/game/state.ts'
+    - 'examples/neatenstein/browser-entry/host/game/state.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npm run lint'
+    - 'npx prettier --check examples/neatenstein/browser-entry/renderer/gun.ts examples/neatenstein/browser-entry/host/game/state.ts examples/neatenstein/browser-entry/host/game/state.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/gun.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/state.test.ts --runInBand'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/state.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/state.test.ts'
+  next: 'Run 05-green-testing on slice 02-gun-render focused tests and update tracker'
+```
+
+```yaml
+PlanUpdate:
+  slice_id: '02-bolt-combat'
+  status: [READY_FOR_GREEN]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/host/game/combat.ts'
+    - 'examples/neatenstein/browser-entry/host/game/tick.ts'
+    - 'examples/neatenstein/browser-entry/host/game/controls.ts'
+    - 'examples/neatenstein/browser-entry/host/game/types.ts'
+    - 'examples/neatenstein/browser-entry/host/game/state.ts'
+    - 'examples/neatenstein/browser-entry/host/game/episode.ts'
+    - 'examples/neatenstein/browser-entry/host/game/constants.ts'
+    - 'examples/neatenstein/browser-entry/constants.ts'
+    - 'examples/neatenstein/browser-entry/host/game/combat.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/tick.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/controls.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/types.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/constants.test.ts'
+    - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
+    - 'examples/neatenstein/browser-entry/audio.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/episode.test.ts'
+    - 'examples/neatenstein/browser-entry/host/renderer-bridge.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npm run lint'
+    - 'npx prettier --check examples/neatenstein/browser-entry/host/game/combat.ts examples/neatenstein/browser-entry/host/game/tick.ts examples/neatenstein/browser-entry/host/game/controls.ts examples/neatenstein/browser-entry/host/game/types.ts examples/neatenstein/browser-entry/host/game/state.ts examples/neatenstein/browser-entry/host/game/episode.ts examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/constants.ts examples/neatenstein/browser-entry/host/game/combat.test.ts examples/neatenstein/browser-entry/host/game/tick.test.ts examples/neatenstein/browser-entry/host/game/controls.test.ts examples/neatenstein/browser-entry/host/game/types.test.ts examples/neatenstein/browser-entry/host/game/constants.test.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/audio.test.ts examples/neatenstein/browser-entry/host/game/episode.test.ts examples/neatenstein/browser-entry/host/renderer-bridge.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/tick.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/controls.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/types.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/constants.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/audio.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/episode.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/renderer-bridge.test.ts --runInBand'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/combat.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/tick.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/controls.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/types.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/state.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/episode.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/constants.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/constants.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/combat.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/tick.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/controls.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/types.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/constants.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/worker/display.worker.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/audio.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/episode.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/renderer-bridge.test.ts'
+  next: 'Run 05-green-testing on slice 02-bolt-combat focused tests and update tracker'
+```
+
+```json
+HandoffPayload:
+{
+  "plan_update": {
+    "slice_id": "02-bolt-combat",
+    "status": "READY_FOR_GREEN",
+    "changed_files": [
+      "examples/neatenstein/browser-entry/host/game/combat.ts",
+      "examples/neatenstein/browser-entry/host/game/tick.ts",
+      "examples/neatenstein/browser-entry/host/game/controls.ts",
+      "examples/neatenstein/browser-entry/host/game/types.ts",
+      "examples/neatenstein/browser-entry/host/game/state.ts",
+      "examples/neatenstein/browser-entry/host/game/episode.ts",
+      "examples/neatenstein/browser-entry/host/game/constants.ts",
+      "examples/neatenstein/browser-entry/constants.ts",
+      "examples/neatenstein/browser-entry/host/game/combat.test.ts",
+      "examples/neatenstein/browser-entry/host/game/tick.test.ts",
+      "examples/neatenstein/browser-entry/host/game/controls.test.ts",
+      "examples/neatenstein/browser-entry/host/game/types.test.ts",
+      "examples/neatenstein/browser-entry/host/game/constants.test.ts",
+      "examples/neatenstein/browser-entry/worker/display.worker.ts",
+      "examples/neatenstein/browser-entry/audio.test.ts",
+      "examples/neatenstein/browser-entry/host/game/episode.test.ts",
+      "examples/neatenstein/browser-entry/host/renderer-bridge.test.ts"
+    ],
+    "preflight_outputs": {
+      "tsc": "tsc: OK (tsconfig.json and tsconfig.test.json)",
+      "lint": "lint: 0 errors, 44 warnings (pre-existing any warnings only)",
+      "prettier": "prettier: OK for all touched files"
+    },
+    "validation": [
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/tick.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/controls.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/types.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/constants.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/audio.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/episode.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/renderer-bridge.test.ts --runInBand", "exit": 0 }
+    ],
+    "coverage_guard": {
+      "files": [
+        "examples/neatenstein/browser-entry/host/game/combat.ts",
+        "examples/neatenstein/browser-entry/host/game/tick.ts",
+        "examples/neatenstein/browser-entry/host/game/controls.ts"
+      ],
+      "summary": "statements:100,branches:100,functions:100,lines:100"
+    },
+    "artifacts": [
+      "plans/Neon_Shooter_NGE_Demo.plans.md"
+    ],
+    "pr_url": "USER_TO_PASTE"
+  }
+}
+```
+
+```yaml
+PlanUpdate:
+  slice_id: '02-bolt-combat'
+  status: [READY_FOR_GREEN]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/host/game/constants.ts'
+    - 'examples/neatenstein/browser-entry/host/game/tick.ts'
+    - 'examples/neatenstein/browser-entry/host/input.ts'
+    - 'examples/neatenstein/browser-entry/host/game/controls.ts'
+    - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
+    - 'examples/neatenstein/browser-entry/host/game/controls.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npm run lint'
+    - 'npx prettier --check examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/host/game/tick.ts examples/neatenstein/browser-entry/host/input.ts examples/neatenstein/browser-entry/host/game/controls.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/host/game/controls.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/tick.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/controls.test.ts --runInBand'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/constants.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/tick.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/input.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/controls.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/worker/display.worker.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/controls.test.ts'
+  next: 'Run 05-green-testing on slice 02-bolt-combat focused tests (combat.test.ts, tick.test.ts, controls.test.ts) and update tracker'
+```
+
+```json
+HandoffPayload:
+{
+  "plan_update": {
+    "slice_id": "02-bolt-combat",
+    "status": "READY_FOR_GREEN",
+    "changed_files": [
+      "examples/neatenstein/browser-entry/host/game/constants.ts",
+      "examples/neatenstein/browser-entry/host/game/tick.ts",
+      "examples/neatenstein/browser-entry/host/input.ts",
+      "examples/neatenstein/browser-entry/host/game/controls.ts",
+      "examples/neatenstein/browser-entry/worker/display.worker.ts",
+      "examples/neatenstein/browser-entry/host/game/controls.test.ts"
+    ],
+    "preflight_outputs": {
+      "tsc": "tsc: OK (tsconfig.json and tsconfig.test.json)",
+      "lint": "lint: 0 errors, 44 warnings (pre-existing any warnings only)",
+      "prettier": "prettier: OK for all touched files"
+    },
+    "validation": [
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/tick.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/controls.test.ts --runInBand", "exit": 0 }
+    ],
+    "coverage_guard": {
+      "files": [
+        "examples/neatenstein/browser-entry/host/game/tick.ts",
+        "examples/neatenstein/browser-entry/host/input.ts",
+        "examples/neatenstein/browser-entry/host/game/controls.ts",
+        "examples/neatenstein/browser-entry/worker/display.worker.ts"
+      ],
+      "summary": "statements:100,branches:100,functions:100,lines:100"
+    },
+    "artifacts": [
+      "plans/Neon_Shooter_NGE_Demo.plans.md"
+    ],
+    "pr_url": "USER_TO_PASTE"
+  }
+}
+```
+
+```yaml
+PlanUpdate:
+  slice_id: '02-bolt-combat'
+  status: [READY_FOR_GREEN]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/host/game/controls.ts'
+    - 'examples/neatenstein/browser-entry/host/game/controls.test.ts'
+    - 'examples/neatenstein/browser-entry/host/input.test.ts'
+    - 'examples/neatenstein/browser-entry/host/game/tick.test.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npm run lint'
+    - 'npx prettier --check examples/neatenstein/browser-entry/host/game/controls.ts examples/neatenstein/browser-entry/host/game/controls.test.ts examples/neatenstein/browser-entry/host/input.test.ts examples/neatenstein/browser-entry/host/game/tick.test.ts'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/controls.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/input.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/tick.test.ts --runInBand'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/controls.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/controls.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/input.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/tick.test.ts'
+  next: 'Run 05-green-testing on slice 02-bolt-combat light-toggle focused tests and update tracker'
+```
+
+```json
+HandoffPayload:
+{
+  "plan_update": {
+    "slice_id": "02-bolt-combat",
+    "status": "READY_FOR_GREEN",
+    "changed_files": [
+      "examples/neatenstein/browser-entry/host/game/controls.ts",
+      "examples/neatenstein/browser-entry/host/game/controls.test.ts",
+      "examples/neatenstein/browser-entry/host/input.test.ts",
+      "examples/neatenstein/browser-entry/host/game/tick.test.ts"
+    ],
+    "preflight_outputs": {
+      "tsc": "tsc: OK (tsconfig.json and tsconfig.test.json)",
+      "lint": "lint: 0 errors, 44 warnings (pre-existing any warnings only)",
+      "prettier": "prettier: OK for all touched files"
+    },
+    "validation": [
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/controls.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/input.test.ts --runInBand", "exit": 0 },
+      { "command": "npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/tick.test.ts --runInBand", "exit": 0 }
+    ],
+    "coverage_guard": {
+      "files": [
+        "examples/neatenstein/browser-entry/host/game/controls.ts"
+      ],
+      "summary": "statements:100,branches:100,functions:100,lines:100"
+    },
+    "artifacts": [
+      "plans/Neon_Shooter_NGE_Demo.plans.md"
+    ],
+    "pr_url": "USER_TO_PASTE"
+  }
+}
+```
+
+**Phase 2 — Game Logic & FPS State is [DONE].** All original work (Step 01 through Step 04) plus follow-up Step 05 are complete and green validated. Step 05 increased the procedural map's central arena clearance from 2 cells to 4 cells; user manually confirmed the change. Detailed Phase 2 logs are compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 2.**Phase 1 — World & Renderer is [DONE].** All 13 Step 01 slices are green validated and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 1. Phase 1 follow-up stripe-width change is [DONE] (counts GPU 640 / Worker 480 / CPU 320). User confirmed (2026-07-22): 3D rendering works, mouse look works at `http://localhost:8080/docs/examples/neatenstein/index.html`.
+
+**Phase 3 — Tech-debt cleanup, center-screen gun, enemy MLP evolution, voxel-sprite pipeline, live renderer wiring, and human playtest is [WIP].** Step 01 [DONE] returned the Neatenstein example to a clean baseline (original 5 slices green validated and archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3 Step 01). Step 02 [WIP] is finishing lint-type follow-up (`01-lint-types-host-src` active, `01-lint-types-green` next). Step 03 [DONE] delivers the center-screen DOOM-style plasma cannon (5 slices green validated; visible-browser smoke test confirms the design). Step 04–07 remain [PLANNED]; no Step 04 packet is authored until the user manually verifies the plasma-cannon design.
+
+**Active frontier:** Phase 3 Step 02 — slice `01-lint-types-host-src` [WIP]. This slice adds proper TypeScript types to 8 Neatenstein host/renderer/audio test files plus `src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts` to eliminate `@typescript-eslint/no-explicit-any` warnings. Next: `01-lint-types-green` repo-wide lint clean and full suite green. Step 03 is [DONE] and awaiting user verification before Step 04 is planned.
+
+Completed Phase 3 Step 01 slice logs are archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3 Step 01.
+
+Claim: 04-implementing @ 2026-07-27T18:10:00Z — slice `02-render-integration` fix-loop r6 implementation complete: doubled `NEATENSTEIN_BOLT_MUZZLE_SCREEN_RADIUS_PX` (4.5 → 9); rewrote bolt fade/shrink ratio to `travelRatio * (targetDistance / NEATENSTEIN_BOLT_MAX_RANGE_CELLS)` so fade couples to screen-space travel and remains visible for close targets; removed the upper gray structural ridge and the upper pair of teal accent dots from `renderGunOverlay`; fixed `bolt-render.test.ts` alpha-capture test to read globalAlpha history during `drawBolts` instead of after the function resets it to 1, and updated distance-dependent tests to set `targetDistance` explicitly. Preflight (tsc/tsconfig.json/tsconfig.test.json/eslint/prettier on touched files) passed; `npm run quality:folder` reads stale lcov data and reports pre-existing coverage deficits plus a stale bolt-render.ts line-coverage drop that will refresh once `05-green-testing` reruns jest. Jest not run per 04-implementing policy.
+
+```yaml
+PlanUpdate:
+  slice_id: '02-render-integration'
+  status: [FIX-LOOP R6 IMPLEMENTED — pending 05-green-testing]
+  changed_files:
+    - 'examples/neatenstein/browser-entry/renderer/bolt-render.ts'
+    - 'examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+    - 'examples/neatenstein/browser-entry/renderer/gun.ts'
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npx tsc --noEmit -p tsconfig.test.json'
+    - 'npx eslint examples/neatenstein/browser-entry/renderer/bolt-render.ts examples/neatenstein/browser-entry/renderer/bolt-render.test.ts examples/neatenstein/browser-entry/renderer/gun.ts'
+    - 'npx prettier --check examples/neatenstein/browser-entry/renderer/bolt-render.ts examples/neatenstein/browser-entry/renderer/bolt-render.test.ts examples/neatenstein/browser-entry/renderer/gun.ts'
+    - 'npm run quality:folder -- --folder=examples/neatenstein/browser-entry/renderer'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/bolt-render.test.ts --runInBand'
+    - 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/gun.test.ts --runInBand'
+    - 'npm run build:neatenstein'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/bolt-render.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/bolt-render.test.ts'
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun.ts'
+  next: 'Run 05-green-testing on bolt-render.test.ts and gun.test.ts, refresh coverage, and update tracker; do not run jest in 04-implementing'
+```
+
+Claim: 04-implementing @ 2026-08-14T12:00:00Z — slice `02-render-integration` fix-loop r7 implementation in progress: attach mock globalAlphaHistory; remove remaining dark gray horizontal ridge and teal core halo from `renderGunOverlay`; switch bolt deactivation to elapsed-time based using `NEATENSTEIN_BOLT_TRAVEL_DURATION_MS` while keeping max-range fallback; fix bolt muzzle radius JSDoc to state 2×.
+
+## Phase 3 Step 02 — Lint-type follow-up for Neatenstein tests
+
+**Status:** [DONE]
+
+**Date:** 2026-07-29
+
+**Summary:** Eliminated residual `@typescript-eslint/no-explicit-any` warnings in Neatenstein test files after Step 01. Added explicit TypeScript types to 12 harness tests, 8 host/renderer/audio tests, and the `src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts` test. All three slices (`01-lint-types-harness`, `01-lint-types-host-src`, `01-lint-types-green`) are [DONE] and green validated.
+
+**Files changed (principal):**
+
+- `examples/neatenstein/browser-entry/harness/arms-race.test.ts`
+- `examples/neatenstein/browser-entry/harness/barrier.test.ts`
+- `examples/neatenstein/browser-entry/harness/enemy-mlp-snapshot.test.ts`
+- `examples/neatenstein/browser-entry/harness/enemy-mlp-weight-only.test.ts`
+- `examples/neatenstein/browser-entry/harness/enemy-mlp.test.ts`
+- `examples/neatenstein/browser-entry/harness/enemy-swarm.test.ts`
+- `examples/neatenstein/browser-entry/harness/fitness.test.ts`
+- `examples/neatenstein/browser-entry/harness/main-agent.test.ts`
+- `examples/neatenstein/browser-entry/harness/main-runner.test.ts`
+- `examples/neatenstein/browser-entry/harness/seed-pack.test.ts`
+- `examples/neatenstein/browser-entry/harness/select.test.ts`
+- `examples/neatenstein/browser-entry/harness/snapshot.test.ts`
+- `examples/neatenstein/browser-entry/audio.test.ts`
+- `examples/neatenstein/browser-entry/host/game/cadence.test.ts`
+- `examples/neatenstein/browser-entry/host/game/episode.test.ts`
+- `examples/neatenstein/browser-entry/host/game/state.test.ts`
+- `examples/neatenstein/browser-entry/host/renderer-bridge.test.ts`
+- `examples/neatenstein/browser-entry/host/resize.test.ts`
+- `examples/neatenstein/browser-entry/renderer/frame.test.ts`
+- `examples/neatenstein/browser-entry/renderer/interpolate.test.ts`
+- `src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts`
+
+**Validation evidence (final green pass, 2026-07-29):**
+
+- AC-008.1 — `npx eslint src/ testing/ benchmarks/ examples/ --rule '@typescript-eslint/no-explicit-any: error'` — **PASS** (0 problems).
+- AC-008.2 — targeted Jest run — **PASS** (24 suites passed, 275 tests passed).
+- Step-level validation — `npm run lint` — **PASS** (exit 0).
+- Type check — `npx tsc --noEmit -p tsconfig.test.json` — **PASS**.
+
+**Notable convergence / fix-loop observations:**
+
+- Slice `01-lint-types-harness` went through three specialist re-reviews (determinism-scout, nge-core-scout, implementation-pattern-scout), all returning `REQUEST_CHANGES`. Root cause was TypeScript discriminated-union literal widening in `main-runner.test.ts`, `enemy-mlp-snapshot.test.ts`, and `arms-race.test.ts`.
+- Resolution: annotated snapshot object literals explicitly as `MlpSnapshot | SwarmSnapshot`, used the existing `isMlpSnapshot` type guard before accessing `.weights`, and corrected the Jest `--testPathPatterns` flag in AC-006.2.
+
+**Preserved Step 02 section (as completed):**
+
+````text
+#### Step 02: Lint-type follow-up for Neatenstein tests [DONE]
+
+**Step objective:** Eliminate the residual `@typescript-eslint/no-explicit-any` warnings discovered after Step 01 was green validated. Split the work into two focused implementation slices (`harness` tests and `host/renderer/audio/NGE-juvenile` tests plus `src/neat/nge-juvenile` test) followed by a green-validation slice. `eslint-disable` comments are not an acceptable fix.
+
+```yaml
+phase: 3
+step: 2
+title: 'Lint-type follow-up for Neatenstein tests'
+status: [DONE]
+goal: implementing
+tdd_sequence: green-only
+expansion: slices
+auto_expand: true
+mode: fresh-session
+source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
+copy_paste: true
+next_step: 'Step 03 [DONE]; Step 04 — Enemy MLP evolution harness (packet deferred pending user verification)'
+skills:
+  - implementation-standards
+  - red-testing
+  - green-testing
+  - test-coverage
+validation:
+  - "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='(examples/neatenstein/browser-entry/harness/.*\.test\.ts|examples/neatenstein/browser-entry/audio\.test\.ts|examples/neatenstein/browser-entry/host/game/cadence\.test\.ts|examples/neatenstein/browser-entry/host/game/episode\.test\.ts|examples/neatenstein/browser-entry/host/game/state\.test\.ts|examples/neatenstein/browser-entry/host/renderer-bridge\.test\.ts|examples/neatenstein/browser-entry/host/resize\.test\.ts|examples/neatenstein/browser-entry/renderer/frame\.test\.ts|examples/neatenstein/browser-entry/renderer/interpolate\.test\.ts|src/neat/nge-juvenile/neat\.nge-juvenile\.grow-stabilize\.test\.ts)$' --runInBand"
+  - 'npm run lint'
+  - 'npx tsc --noEmit -p tsconfig.test.json'
+acceptance_criteria:
+  - id: AC-201
+    text: 'No @typescript-eslint/no-explicit-any warnings remain anywhere in the lint scope'
+    validation: "npx eslint src/ testing/ benchmarks/ examples/ --rule '@typescript-eslint/no-explicit-any: error'"
+  - id: AC-202
+    text: 'All lint-type touched Neatenstein test suites are green after all lint-type changes'
+    validation: "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='(examples/neatenstein/browser-entry/harness/.*\.test\.ts|examples/neatenstein/browser-entry/audio\.test\.ts|examples/neatenstein/browser-entry/host/game/cadence\.test\.ts|examples/neatenstein/browser-entry/host/game/episode\.test\.ts|examples/neatenstein/browser-entry/host/game/state\.test\.ts|examples/neatenstein/browser-entry/host/renderer-bridge\.test\.ts|examples/neatenstein/browser-entry/host/resize\.test\.ts|examples/neatenstein/browser-entry/renderer/frame\.test\.ts|examples/neatenstein/browser-entry/renderer/interpolate\.test\.ts|src/neat/nge-juvenile/neat\.nge-juvenile\.grow-stabilize\.test\.ts)$' --runInBand"
+  - id: AC-203
+    text: 'TypeScript type check passes for src/, examples, benchmarks, and scripts'
+    validation: 'npx tsc --noEmit -p tsconfig.test.json'
+slices:
+  - slice_id: '01-lint-types-harness'
+    title: 'Add proper TypeScript types to Neatenstein harness tests to eliminate no-explicit-any warnings'
+    status: [DONE]
+    goal: implementing
+    estimate_hours: 4
+    files_to_change:
+      - 'examples/neatenstein/browser-entry/harness/arms-race.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/barrier.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-snapshot.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp-weight-only.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-mlp.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/enemy-swarm.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/fitness.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/main-agent.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/main-runner.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/seed-pack.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/select.test.ts'
+      - 'examples/neatenstein/browser-entry/harness/snapshot.test.ts'
+    acceptance_criteria:
+      - id: AC-006.1
+        text: 'No @typescript-eslint/no-explicit-any warnings remain in the harness test files'
+        validation: "npx eslint examples/neatenstein/browser-entry/harness/*.test.ts --rule '@typescript-eslint/no-explicit-any: error'"
+      - id: AC-006.2
+        text: 'All Neatenstein harness tests pass after type changes'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/harness --runInBand'
+    parallelizable: false
+    dependencies: []
+    next_slice: '01-lint-types-host-src'
+    fix_observations:
+      - '[RESOLVED] All three specialist reviewers (determinism-scout, nge-core-scout, implementation-pattern-scout) returned REQUEST_CHANGES for slice 01-lint-types-harness. Root cause: TypeScript discriminated-union literal widening in three harness test files (main-runner.test.ts, enemy-mlp-snapshot.test.ts, arms-race.test.ts).'
+      - "[RESOLVED] Fix: Annotated snapshot object literals explicitly as MlpSnapshot or SwarmSnapshot so `kind: 'mlp'` is not widened to `string`."
+      - '[RESOLVED] Fix: Used the existing `isMlpSnapshot` type guard exported from arms-race.ts to narrow the `Snapshot = MlpSnapshot | SwarmSnapshot` union before accessing `.weights`.'
+      - '[RESOLVED] Fix: Corrected AC-006.2 validation command from `--testPathPattern` to `--testPathPatterns`.'
+  - slice_id: '01-lint-types-host-src'
+    title: 'Add proper TypeScript types to host, renderer, audio, and NGE juvenile tests to eliminate no-explicit-any warnings'
+    status: [DONE]
+    goal: implementing
+    estimate_hours: 4
+    files_to_change:
+      - 'examples/neatenstein/browser-entry/audio.test.ts'
+      - 'examples/neatenstein/browser-entry/host/game/cadence.test.ts'
+      - 'examples/neatenstein/browser-entry/host/game/episode.test.ts'
+      - 'examples/neatenstein/browser-entry/host/game/state.test.ts'
+      - 'examples/neatenstein/browser-entry/host/renderer-bridge.test.ts'
+      - 'examples/neatenstein/browser-entry/host/resize.test.ts'
+      - 'examples/neatenstein/browser-entry/renderer/frame.test.ts'
+      - 'examples/neatenstein/browser-entry/renderer/interpolate.test.ts'
+      - 'src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts'
+    acceptance_criteria:
+      - id: AC-007.1
+        text: 'No @typescript-eslint/no-explicit-any warnings remain in the host, renderer, audio, and NGE juvenile test files'
+        validation: "npx eslint examples/neatenstein/browser-entry/audio.test.ts examples/neatenstein/browser-entry/host/game/cadence.test.ts examples/neatenstein/browser-entry/host/game/episode.test.ts examples/neatenstein/browser-entry/host/game/state.test.ts examples/neatenstein/browser-entry/host/renderer-bridge.test.ts examples/neatenstein/browser-entry/host/resize.test.ts examples/neatenstein/browser-entry/renderer/frame.test.ts examples/neatenstein/browser-entry/renderer/interpolate.test.ts src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts --rule '@typescript-eslint/no-explicit-any: error'"
+      - id: AC-007.2
+        text: 'All affected test suites pass after type changes'
+        validation: "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='audio.test.ts|cadence.test.ts|episode.test.ts|state.test.ts|renderer-bridge.test.ts|resize.test.ts|frame.test.ts|interpolate.test.ts|neat.nge-juvenile.grow-stabilize.test.ts' --runInBand"
+    parallelizable: false
+    dependencies:
+      - '01-lint-types-harness'
+    next_slice: '01-lint-types-green'
+  - slice_id: '01-lint-types-green'
+    title: 'Green validation: repo-wide lint clean for no-explicit-any and full suite green'
+    status: [DONE]
+    goal: green-testing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatenstein/browser-entry/harness/*.test.ts'
+      - 'examples/neatenstein/browser-entry/audio.test.ts'
+      - 'examples/neatenstein/browser-entry/host/game/cadence.test.ts'
+      - 'examples/neatenstein/browser-entry/host/game/episode.test.ts'
+      - 'examples/neatenstein/browser-entry/host/game/state.test.ts'
+      - 'examples/neatenstein/browser-entry/host/renderer-bridge.test.ts'
+      - 'examples/neatenstein/browser-entry/host/resize.test.ts'
+      - 'examples/neatenstein/browser-entry/renderer/frame.test.ts'
+      - 'examples/neatenstein/browser-entry/renderer/interpolate.test.ts'
+      - 'src/neat/nge-juvenile/neat.nge-juvenile.grow-stabilize.test.ts'
+    acceptance_criteria:
+      - id: AC-008.1
+        text: 'No @typescript-eslint/no-explicit-any warnings remain anywhere in the lint scope'
+        validation: "npx eslint src/ testing/ benchmarks/ examples/ --rule '@typescript-eslint/no-explicit-any: error'"
+      - id: AC-008.2
+        text: 'All lint-type touched Neatenstein test suites are green after all lint-type changes'
+        validation: "npx jest --config=jest.config.mjs --no-cache --testPathPatterns='(examples/neatenstein/browser-entry/harness/.*\.test\.ts|examples/neatenstein/browser-entry/audio\.test\.ts|examples/neatenstein/browser-entry/host/game/cadence\.test\.ts|examples/neatenstein/browser-entry/host/game/episode\.test\.ts|examples/neatenstein/browser-entry/host/game/state\.test\.ts|examples/neatenstein/browser-entry/host/renderer-bridge\.test\.ts|examples/neatenstein/browser-entry/host/resize\.test\.ts|examples/neatenstein/browser-entry/renderer/frame\.test\.ts|examples/neatenstein/browser-entry/renderer/interpolate\.test\.ts|src/neat/nge-juvenile/neat\.nge-juvenile\.grow-stabilize\.test\.ts)$' --runInBand"
+    parallelizable: false
+    dependencies:
+      - '01-lint-types-host-src'
+    next_slice: 'Step 03'
+```
+
+**Step 02 slice execution — lint follow-up:**
+
+- `01-lint-types-harness`: [DONE]
+- `01-lint-types-host-src`: [DONE]
+- `01-lint-types-green`: [DONE]
+````
+
+## Phase 3 Step 03 final compression — Center-screen DOOM-style plasma cannon
+
+**Status:** [DONE]
+
+**Date:** 2026-07-28
+
+**Summary:** Implemented the center-screen rectangular DOOM-style plasma cannon; replaced the hitscan laser beam with a 16px radius × 32px long traveling plasma bolt; added a toggleable teal dynamic light on the gun and bolt (default on, KeyL toggle); removed legacy hitscan/tracer symbols; and green validated all 5 slices.
+
+**Files changed (principal):**
+
+- `examples/neatenstein/browser-entry/constants.ts`
+- `examples/neatenstein/browser-entry/host/game/constants.ts`
+- `examples/neatenstein/browser-entry/host/game/types.ts`
+- `examples/neatenstein/browser-entry/renderer/gun.ts`
+- `examples/neatenstein/browser-entry/renderer/bolt-render.ts` (created)
+- `examples/neatenstein/browser-entry/host/game/state.ts`
+- `examples/neatenstein/browser-entry/host/game/combat.ts`
+- `examples/neatenstein/browser-entry/host/game/tick.ts`
+- `examples/neatenstein/browser-entry/host/game/controls.ts`
+- `examples/neatenstein/browser-entry/host/input.ts`
+- `examples/neatenstein/browser-entry/worker/display.worker.ts`
+- Corresponding test files: `gun.test.ts`, `bolt-render.test.ts`, `combat.test.ts`, `tick.test.ts`, `controls.test.ts`, `types.test.ts`, `constants.test.ts`, `state.test.ts`, `display.worker.test.ts`, `audio.test.ts`, `episode.test.ts`, `renderer-bridge.test.ts`.
+
+**Validation evidence (final green pass, 2026-07-28):**
+
+- 6 Jest suites / 141 tests pass.
+- `npm run build:neatenstein` produced `docs/assets/neatenstein.bundle.js` (16.9kb) and `docs/assets/neatenstein.worker.esm.js` (29.7kb).
+- Visible-foreground browser smoke confirms gun overlay, plasma bolt, teal dynamic light, and KeyL toggle; GPU adapter vendor=nvidia, architecture=lovelace.
+- Plan gates pass: `plan-sync`, `step-packet`, `plan-slice-quality`, `plan-readiness`, `plan-command-lint`.
+
+**Detailed evidence location:** Per-slice implementation notes, fix-loops, re-reviews, and PlanUpdate blocks are in the fix-loop archive above. The compact step packet (acceptance criteria and slice statuses) is preserved in `plans/Neon_Shooter_NGE_Demo.plans.md` Step 03 [DONE] YAML block.

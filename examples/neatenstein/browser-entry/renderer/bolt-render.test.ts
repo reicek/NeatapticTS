@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 
 import {
   NEATENSTEIN_BOLT_MAX_RANGE_CELLS,
@@ -291,6 +291,101 @@ describe('bolt-render', () => {
 
       expect(context.arc).not.toHaveBeenCalled();
     });
+
+    it('skips a bolt whose elapsed time is outside the travel window', () => {
+      const context = createMockContext();
+
+      drawBolts(
+        context,
+        [createBolt({ createdAtMs: 0 })],
+        createCamera(),
+        640,
+        360,
+        -1,
+      );
+
+      expect(context.arc).not.toHaveBeenCalled();
+    });
+
+    it('skips a bolt that projects behind the camera', () => {
+      const context = createMockContext();
+
+      drawBolts(
+        context,
+        [createBolt({ position: { x: -1, y: 0 }, origin: { x: -1, y: 0 } })],
+        createCamera(),
+        640,
+        360,
+        NEATENSTEIN_BOLT_TRAVEL_DURATION_MS / 2,
+      );
+
+      expect(context.arc).not.toHaveBeenCalled();
+    });
+
+    it('draws a bolt that lacks origin, direction and targetDistance', () => {
+      const context = createMockContext();
+
+      drawBolts(
+        context,
+        [
+          createBolt({
+            origin: undefined,
+            direction: undefined,
+            targetDistance: undefined,
+            position: { x: 5, y: 0 },
+          }),
+        ],
+        createCamera(),
+        640,
+        360,
+        NEATENSTEIN_BOLT_TRAVEL_DURATION_MS / 2,
+      );
+
+      expect(context.arc).toHaveBeenCalled();
+    });
+
+    it('falls back to distanceTraveled when origin and targetDistance are missing', () => {
+      const context = createMockContext();
+
+      drawBolts(
+        context,
+        [
+          createBolt({
+            origin: undefined,
+            targetDistance: undefined,
+            position: { x: 5, y: 0 },
+          }),
+        ],
+        createCamera(),
+        640,
+        360,
+        NEATENSTEIN_BOLT_TRAVEL_DURATION_MS / 2,
+      );
+
+      expect(context.arc).toHaveBeenCalled();
+    });
+
+    it('falls back to the current position when the projected target is behind the camera', () => {
+      const context = createMockContext();
+
+      drawBolts(
+        context,
+        [
+          createBolt({
+            origin: { x: 1, y: 0 },
+            direction: { x: -1, y: 0 },
+            targetDistance: 2,
+            position: { x: 0.5, y: 0 },
+          }),
+        ],
+        createCamera(),
+        640,
+        360,
+        NEATENSTEIN_BOLT_TRAVEL_DURATION_MS / 2,
+      );
+
+      expect(context.arc).toHaveBeenCalled();
+    });
   });
 
   describe('drawImpactSpots', () => {
@@ -361,6 +456,104 @@ describe('bolt-render', () => {
         640,
         360,
         100,
+      );
+
+      expect(context.arc).toHaveBeenCalled();
+    });
+
+    it('skips an impact spot behind the camera', () => {
+      const context = createMockContext();
+      const zBuffer = new Float32Array(640).fill(Number.POSITIVE_INFINITY);
+      const impact = createImpact();
+
+      drawImpactSpots(
+        context,
+        [impact],
+        zBuffer,
+        { x: 12, y: 12, yaw: Math.PI / 4 },
+        640,
+        360,
+        100,
+      );
+
+      expect(context.arc).not.toHaveBeenCalled();
+    });
+
+    it('skips an impact spot occluded by a closer wall', () => {
+      const context = createMockContext();
+      const zBuffer = new Float32Array(640).fill(1);
+      const impact = createImpact();
+
+      drawImpactSpots(
+        context,
+        [impact],
+        zBuffer,
+        { x: 9, y: 9, yaw: Math.PI / 4 },
+        640,
+        360,
+        100,
+      );
+
+      expect(context.arc).not.toHaveBeenCalled();
+    });
+
+    it('skips an impact spot with a non-finite screen X', () => {
+      const context = createMockContext();
+      const zBuffer = new Float32Array(640).fill(Number.POSITIVE_INFINITY);
+      const impact = createImpact();
+
+      drawImpactSpots(
+        context,
+        [impact],
+        zBuffer,
+        { x: 9, y: 9, yaw: Math.PI / 4 },
+        Number.POSITIVE_INFINITY,
+        360,
+        100,
+      );
+
+      expect(context.arc).not.toHaveBeenCalled();
+    });
+
+    it('renders an impact spot immediately when bolt travel time is zero', () => {
+      const context = createMockContext();
+      const zBuffer = new Float32Array(640).fill(Number.POSITIVE_INFINITY);
+      const impact = createImpact({ boltTravelTimeMs: 0 });
+
+      drawImpactSpots(
+        context,
+        [impact],
+        zBuffer,
+        { x: 9, y: 9, yaw: Math.PI / 4 },
+        640,
+        360,
+        0,
+      );
+
+      expect(context.arc).toHaveBeenCalled();
+    });
+  });
+
+  describe('AC-404R: bolt stays visible for the full travel duration on close walls', () => {
+    it('draws a close-wall plasma bolt that was deactivated by a wall hit before the visual travel duration expires', () => {
+      const context = createMockContext();
+
+      drawBolts(
+        context,
+        [
+          createBolt({
+            active: false,
+            position: { x: 0.5, y: 0 },
+            origin: { x: 0, y: 0 },
+            direction: { x: 1, y: 0 },
+            targetDistance: 0.5,
+            createdAtMs: 0,
+          }),
+        ],
+        createCamera(),
+        640,
+        360,
+        NEATENSTEIN_BOLT_TRAVEL_DURATION_MS - 1,
       );
 
       expect(context.arc).toHaveBeenCalled();

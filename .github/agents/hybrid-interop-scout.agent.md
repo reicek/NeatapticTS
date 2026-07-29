@@ -2,7 +2,7 @@
 description: 'Scout for parameter-vector layouts and hybrid training interop.'
 name: hybrid-interop-scout
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

@@ -2,7 +2,7 @@
 description: 'Research orchestrator for codebase patterns, APIs, dependencies, and prior art.'
 name: '02-researching'
 tier: 1
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -13,6 +13,7 @@ tools:
     agent,
     web,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -108,7 +109,9 @@ Gather only the minimum evidence needed to refine Step 01 workset, without editi
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
 
 - `cortex-index` — before broad discovery, verify index freshness
-- `plan-sync` — after updating the plan with research findings
+- `slice-advancement` — after updating the plan with research findings (consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files` via args.
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually.**
 
 ## Pre-execute hook handling
 

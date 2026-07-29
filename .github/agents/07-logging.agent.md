@@ -2,7 +2,7 @@
 description: 'Logging orchestrator for session summaries, evidence, and next steps.'
 name: '07-logging'
 tier: 1
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -12,8 +12,8 @@ tools:
     todo,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
-    neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
     neataptic-workflow-mcp/get_slice_context,
   ]
@@ -78,6 +78,11 @@ corresponding `.logs.md` file and trim the plan file. This means:
    marker and a reference to the logs file.
 3. Keep the phase header, goal, and status as `[DONE]` in the plan file.
 
+Do NOT run tests, lint, tsc, or build during compression. Only run plan-level
+gates. Code-level validation was already performed by `04-implementing` and
+`05-green-testing` before compression; `07-logging` records that evidence, it
+does not reproduce it.
+
 This keeps plan files lean and focused on active work. Plan files should never
 carry verbose `[DONE]` phase details — those belong in logs.
 
@@ -95,6 +100,7 @@ carry verbose `[DONE]` phase details — those belong in logs.
 - Keep active trackers in plans/. Move closed/compressed plans/logs to plans/completed/.
 - Never record secrets, credentials, API keys, tokens, or unnecessary transcript detail.
   - Example: If a log entry would expose a password, omit and summarize: "Sensitive credential used, not recorded."
+- During compression or tracker closure, never run code-level validation commands (jest, tsc, npm run build, npm run lint, etc.). Delegate code validation to `05-green-testing` or `04-implementing` via the orchestrator; logging's role is only to record evidence that other phases already produced.
 - Prefer summaries, file paths, symbols, decisions, and validation evidence.
 - Treat .github/ai-learning/learning-log.jsonl as append-only and schema-stable. Preserve backward compatibility; never rewrite historical entries.
 - Never set PHASE_COMPLETE: true or TASK_STATUS: SUCCESS while open steps, stale/missing handoff queries, unresolved validation gaps, or archival work remain.
@@ -108,14 +114,26 @@ carry verbose `[DONE]` phase details — those belong in logs.
 - Use `07.phase-compression` when dispatched for phase compression after all
   steps in a phase are marked `[DONE]` — compress detailed step/slice/
   VALIDATION_EVIDENCE blocks to `.logs.md` and trim the plan file to a compact
-  `[DONE]` marker with a reference to the logs file
+  `[DONE]` marker with a reference to the logs file. Do NOT run tests, lint,
+  tsc, or build during compression. Only run plan-level gates.
 
 ## Gate Enforcement
 
-Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`.
+`07-logging` is scoped to plan-level gates only and must NOT invoke
+`shared-validation` or any gate that runs tests, build, lint, tsc, or other
+code-level validation commands.
 
-- `plan-sync` — after plan status changes or closures
+Allowed plan-level gates:
+
+- `slice-advancement` — consolidated plan validation (plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files`.
 - `learning-event` — after recording learning events
+- `phase-compression` — after compressing a completed phase
+- `log-completion-marker` — after marking a workstream or phase complete
+- `stale-wip-plans` — when checking for stale in-progress plans
+- `convergence-tracker` — when reviewing fix-loop iteration counts before closure
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually — use `slice-advancement`.**
 
 ## Default Flow
 

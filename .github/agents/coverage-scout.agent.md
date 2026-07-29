@@ -2,7 +2,7 @@
 description: 'Scout for coverage gaps, dead-code detection, and next tranche targets.'
 name: coverage-scout
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

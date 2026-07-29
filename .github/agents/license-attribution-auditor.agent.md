@@ -2,7 +2,7 @@
 description: 'Auditor for source references and license attribution in workflows.'
 name: license-attribution-auditor
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

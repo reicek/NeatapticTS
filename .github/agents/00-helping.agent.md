@@ -2,7 +2,7 @@
 description: 'Cross-tier helper for AI system maintenance, workflow gaps, and CI.'
 name: '00-helping'
 tier: 1
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -13,6 +13,7 @@ tools:
     agent,
     web,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -84,17 +85,17 @@ Maintain agent/skill system usability. Diagnose and repair workflow gaps, config
 
 When diagnosing CI failures, route to the correct specialist based on the failure pattern:
 
-| Failure Pattern              | Common Symptoms                                                      | Routing Target                                                                         |
-| ---------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `npm` install/lockfile drift | `npm ci` fails, `package-lock.json` mismatch                         | `helping-gap-resolution-coordinator` (dependency gap)                                  |
-| `webpack` build error        | Module resolution failure, missing entry, bundler config error       | `browser-runtime-scout` or `helping-gap-resolution-coordinator`                        |
-| `tsc` type error             | `error TS2xxx`, missing type, incompatible signature                 | `implementation-pattern-scout` (type boundary) or `helping-gap-resolution-coordinator` |
-| `jest` test failure          | Test assertion failure, snapshot mismatch, timeout                   | `failure-triage-specialist` or `unit-test-runner`                                      |
-| `eslint` lint error          | `no-explicit-any`, unused import, rule violation                     | `code-quality-auditor`                                                                 |
-| Gate validation failure      | `plan-sync`, `step-packet`, `agent-graph` gate returns `pass: false` | `helping-agent-maintenance-coordinator`                                                |
-| Agent frontmatter error      | `validate-agent-frontmatter` reports unknown skill/agent             | `agent-frontmatter-auditor`                                                            |
-| Routing table stale          | `routing-table-freshness` gate fails                                 | `helping-agent-maintenance-coordinator`                                                |
-| Cortex index degraded        | Search returns zero results, freshness check fails                   | `repo-cortex-scout` or `helping-gap-resolution-coordinator`                            |
+| Failure Pattern              | Common Symptoms                                                | Routing Target                                                                         |
+| ---------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `npm` install/lockfile drift | `npm ci` fails, `package-lock.json` mismatch                   | `helping-gap-resolution-coordinator` (dependency gap)                                  |
+| `webpack` build error        | Module resolution failure, missing entry, bundler config error | `browser-runtime-scout` or `helping-gap-resolution-coordinator`                        |
+| `tsc` type error             | `error TS2xxx`, missing type, incompatible signature           | `implementation-pattern-scout` (type boundary) or `helping-gap-resolution-coordinator` |
+| `jest` test failure          | Test assertion failure, snapshot mismatch, timeout             | `failure-triage-specialist` or `unit-test-runner`                                      |
+| `eslint` lint error          | `no-explicit-any`, unused import, rule violation               | `code-quality-auditor`                                                                 |
+| Gate validation failure      | `slice-advancement`, `agent-graph` gate returns `pass: false`  | `helping-agent-maintenance-coordinator`                                                |
+| Agent frontmatter error      | `validate-agent-frontmatter` reports unknown skill/agent       | `agent-frontmatter-auditor`                                                            |
+| Routing table stale          | `routing-table-freshness` gate fails                           | `helping-agent-maintenance-coordinator`                                                |
+| Cortex index degraded        | Search returns zero results, freshness check fails             | `repo-cortex-scout` or `helping-gap-resolution-coordinator`                            |
 
 ## Constraints
 

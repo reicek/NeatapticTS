@@ -2,7 +2,7 @@
 description: 'Scout for NGE benchmark methodology and demo fairness concerns.'
 name: nge-benchmark-scout
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

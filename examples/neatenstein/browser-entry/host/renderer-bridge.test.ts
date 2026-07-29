@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import {
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
   NEATENSTEIN_WORKER_BUNDLE_FILENAME,
@@ -163,13 +163,13 @@ describe('Neatenstein host renderer bridge', () => {
         tier: 'gpu',
         mapSeed: 42,
       });
-      const initCall = instances[0].postMessage.mock.calls[0];
+      const initMessage = instances[0].postMessage.mock.calls[0]?.[0] as
+        Record<string, unknown> | undefined;
       expect({
         hasVersion:
-          initCall &&
-          initCall[0]?.version === NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
-        hasTier: initCall && initCall[0]?.tier === 'gpu',
-        hasMapSeed: initCall && initCall[0]?.mapSeed === 42,
+          initMessage?.version === NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
+        hasTier: initMessage?.tier === 'gpu',
+        hasMapSeed: initMessage?.mapSeed === 42,
       }).toEqual({
         hasVersion: true,
         hasTier: true,

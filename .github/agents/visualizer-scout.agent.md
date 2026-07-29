@@ -2,7 +2,7 @@
 description: 'Scout for visualizer UI issues such as layout, tooltips, and parity.'
 name: 'visualizer-scout'
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

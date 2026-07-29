@@ -2,7 +2,7 @@
 description: 'Writer for concise documentation examples and JSDoc usage snippets.'
 name: docs-example-writer
 tier: 4
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

@@ -2,7 +2,7 @@
 description: 'Auditor for plan registration across .plans.md, README, and Roadmap.'
 name: plan-registration-auditor
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -44,9 +44,11 @@ Validate that plans are correctly registered across `.plans.md` files, `plans/RE
 
 ## Gate Enforcement
 
-Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+Before completing any task, run the `slice-advancement` consolidated gate via `neataptic-gate-mcp:run_gate_check`:
 
-- `plan-sync` — after validating plan registration
+- `slice-advancement` — after validating plan registration (consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files`.
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually — use `slice-advancement`.**
 
 ## Approach
 
@@ -70,8 +72,9 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - Status field (`[PLANNED]`, `[WIP]`, `[DONE]`) is present.
    - Plan name and file path are registered in `plans/README.md` with the correct trigger phrase.
    - Roadmap placement aligns with declared status.
-5. Run the allow-listed validation script if it exists:
-   - `node scripts/agent-customization/validate-plan-sync.mjs --json`
+5. Run the consolidated gate if a slice-id is available, otherwise the allow-listed validation script:
+   - `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=<id> --args.changed-files=<files>` (preferred)
+   - `node scripts/agent-customization/validate-plan-sync.mjs --json` (fallback for plan-only checks)
 6. Parse the script output to extract:
    - Registration status (all plans found, missing registrations, orphaned plans).
    - Status field consistency (field values match across files).
@@ -89,14 +92,11 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 ## Validation Script Reference Paths
 
 ```bash
-# Plan sync validation:
-node scripts/agent-customization/validate-plan-sync.mjs --json --plan=<plan-path>
+# Consolidated slice gate (replaces individual plan-sync, step-packet, plan-slice-quality, plan-command-lint):
+neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=<id> --args.changed-files=<files>
 
-# Workflow update sync:
+# Workflow update sync (reference only — slice-advancement runs this internally):
 node .github/hooks/workflow-update-sync.mjs --plan=<plan-path> --json
-
-# Plan sync gate:
-neataptic-gate-mcp:run_gate_check --gate plan-sync
 ```
 
 ## If Blocked

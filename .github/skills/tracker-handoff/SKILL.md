@@ -319,6 +319,75 @@ the target `slice_id`, counts them, and escalates to `00-helping` when the count
 exceeds 4 without a `passed` marker. Keep markers concise and durable; do not
 paste full test transcripts next to them.
 
+## RAG Fix-Packet Schema
+
+When a slice enters a fix loop, the orchestrator MUST also append a structured
+`fix_packet` block to the active `.plans.md` file. The block is the single
+source of truth for the next `04-implementing` instance and is loaded via
+Cortex RAG instead of being embedded in the dispatch prompt.
+
+### Deterministic fix-packet ID
+
+```text
+fix-packet-<slice_id>-iteration-<n>
+```
+
+- `slice_id` — the slice that needs repair.
+- `n` — the loop iteration (matches the `fix-loop` marker count for that slice).
+
+Surface the ID as an HTML comment anchor directly above the YAML block:
+
+```html
+<!-- fix-packet-C2-impl-iteration-1 -->
+```
+
+### Required YAML schema
+
+```yaml
+fix_packet:
+  slice_id: '<slice_id>'
+  iteration: <n>
+  status: FAILED | REQUEST_CHANGES | OBSERVATIONS
+  goal: '<short goal slug>'
+  trigger: shared-validation-gate | specialist-review | green-testing
+  shared_validation_artifact: '<path/to/artifact.json>' # optional
+  observations:
+    - source: '<agent or gate name>'
+      type: '<classification>'
+      detail: '<concise, actionable observation>'
+  requested_changes: # only when status is REQUEST_CHANGES
+    - '<specific requested change>'
+```
+
+### Evidence section placement
+
+Place the `fix_packet` block in one of these locations:
+
+1. **Default**: inside `## Latest validation evidence`, immediately after the
+   matching `fix-loop: <slice_id> iteration <n> status=<failed|passed>` marker.
+2. **Alternative**: in a dedicated `## Fix packets` section, with a short
+   reference from `## Latest validation evidence` such as
+   `fix-packet-<slice_id>-iteration-<n> recorded in ## Fix packets`.
+
+### Dispatch reference
+
+When the orchestrator dispatches a NEW `04-implementing` instance for a fix
+packet, the prompt MUST contain only the deterministic ID and a RAG load
+instruction:
+
+```text
+Execute fix-packet-<slice_id>-iteration-<n>. Load context via Cortex MCP / search_context with query 'fix-packet-<slice_id>-iteration-<n>'.
+```
+
+### Update rules
+
+- Do not create duplicate `fix_packet` blocks for the same iteration; update
+  the existing block if new information arrives before the next dispatch.
+- Keep observations concise and actionable. Full command transcripts belong
+  in the `.logs.md` archive, not in the fix packet.
+- Once the slice passes, leave the fix-packet block in place as durable
+  evidence; do not delete it.
+
 ## Edge Cases And Recovery Rules
 
 ### Reopening Archived Work

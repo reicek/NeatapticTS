@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 
 /**
  * Minimal mock 2D canvas context for verifying gun render side effects.
@@ -56,14 +56,14 @@ describe('Neatenstein gun overlay renderer', () => {
   });
 
   describe('AC-101: geometry and side effects', () => {
-    it('draws at least one filled rectangle for the gun body', async () => {
+    it('does not draw a filled rectangle for the gun body', async () => {
       const { renderGunOverlay, createInitialGunState } =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
         (await import('./gun.ts')) as Record<string, any>;
       const ctx = createMockCanvasContext();
       const gun = createInitialGunState();
       renderGunOverlay(ctx, gun, 640, 360);
-      expect(ctx.fillRect).toHaveBeenCalled();
+      expect(ctx.fillRect).not.toHaveBeenCalled();
     });
 
     it('saves the canvas state before applying recoil', async () => {
@@ -113,6 +113,17 @@ describe('Neatenstein gun overlay renderer', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
         (await import('./gun.ts')) as Record<string, any>;
       expect(NEATENSTEIN_GUN_ACCENT_COLOR).toBe('#00f0ff');
+    });
+  });
+
+  describe('AC-403R: no elliptical shadow bar', () => {
+    it('does not draw an elliptical shadow under the cannon', async () => {
+      const { renderGunOverlay, createInitialGunState } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./gun.ts')) as Record<string, any>;
+      const ctx = createMockCanvasContext();
+      renderGunOverlay(ctx, createInitialGunState(), 640, 360);
+      expect(ctx.ellipse).not.toHaveBeenCalled();
     });
   });
 });

@@ -132,8 +132,6 @@ export interface GameState {
   gun?: GunState;
   /** Active traveling plasma bolts in the world. */
   bolts?: BoltState[];
-  /** Whether the dynamic teal light overlay is enabled this frame. */
-  lightEnabled?: boolean;
   /** Total confirmed kills for scoring and evolution pressure. */
   kills: number;
   /**

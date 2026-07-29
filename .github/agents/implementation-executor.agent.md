@@ -2,7 +2,7 @@
 description: 'Executor for scoped file edits and patch application under implementation standards.'
 name: implementation-executor
 tier: 2
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -12,6 +12,7 @@ tools:
     todo,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -77,9 +78,11 @@ Execute scoped file edits delegated from `04-implementing`. You are a pure execu
 
 Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
 
-- `plan-sync` — after completing an implementation step
+- `slice-advancement` — after completing an implementation step (consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint). Pass `--slice-id` and `--changed-files`.
 - `agent-graph` — if delegation changes are needed
 - `learning-event` — when discovering workflow gaps
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually — use `slice-advancement`.**
 
 ## Required Workflow
 

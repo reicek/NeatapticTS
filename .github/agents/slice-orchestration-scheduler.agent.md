@@ -2,7 +2,7 @@
 description: 'Scheduler for slice packets, status tracking, and PlanUpdate blocks.'
 name: 'slice-orchestration-scheduler'
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

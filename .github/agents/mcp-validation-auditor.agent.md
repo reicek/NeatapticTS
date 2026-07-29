@@ -2,7 +2,7 @@
 description: 'Auditor for MCP workflow servers, allow-lists, and runtime evidence.'
 name: mcp-validation-auditor
 tier: 3
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -77,8 +77,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 ## Allow-Listed Validation Command Catalog
 
-- **Plan sync:** `node .github/hooks/workflow-update-sync.mjs --plan=<plan-path> --json`
-- **Plan validation:** `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=<plan-path>`
+- **Slice advancement (consolidated):** `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=<id> --args.changed-files=<files>` (replaces individual plan-sync, step-packet, plan-slice-quality, plan-command-lint)
 - **Agent graph validation:** `node scripts/agent-customization/validate-agent-graph.mjs --json`
 - **Agent frontmatter validation:** `node scripts/agent-customization/validate-agent-frontmatter.mjs --json`
 - **Routing table gate:** `npm run agents:routing-table:gate`

@@ -2,7 +2,7 @@
 description: 'Coordinator for pattern discovery, refactor routing, and specialist assignment.'
 name: 'implementation-pattern-coordinator'
 tier: 2
-model: kimi-k3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -11,6 +11,7 @@ tools:
     agent,
     execute,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
