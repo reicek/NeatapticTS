@@ -1,0 +1,25 @@
+<!doctype html>
+<html><body>
+<canvas id="c" width="640" height="480"></canvas>
+<pre id="log"></pre>
+<script>
+const log = (msg) => { document.getElementById("log").textContent += msg + "\\n"; };
+const canvas = document.getElementById("c");
+try {
+  const off = canvas.transferControlToOffscreen();
+  log("offscreen ok " + off.width + "x" + off.height);
+  const worker = new Worker("/docs/assets/neatenstein.worker.esm.js", {type: "module"});
+  log("worker created");
+  worker.onerror = (e) => log("worker error: " + e.message + " @ " + e.filename + ":" + e.lineno);
+  worker.onmessage = (e) => log("worker msg: " + JSON.stringify(e.data));
+  worker.postMessage({type:"init", tier:"worker", version:1, mapSeed:1, canvasWidth:640, canvasHeight:480, canvas: off}, [off]);
+  log("init sent");
+  setTimeout(() => {
+    worker.postMessage({type:"simState", state:{canvasWidth:640, canvasHeight:480, simTick:1, cameraX:1.5, cameraY:1.5, cameraYaw:0, mapSeed:1, movement:{forward:false,backward:false,left:false,right:false}, enemies:[]}});
+    log("simState sent");
+  }, 1000);
+} catch (err) {
+  log("ERR " + err.message);
+}
+</script>
+</body></html>

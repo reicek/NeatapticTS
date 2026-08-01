@@ -20,19 +20,7 @@ tools:
   ]
 user-invocable: true
 disable-model-invocation: false
-agents:
-  [
-    'planning-context-coordinator',
-    'planning-risk-coordinator',
-    'planning-test-strategy-coordinator',
-    'acceptance-criteria-writer',
-    'plan-scout',
-    'model-name-auditor',
-    'plan-registration-auditor',
-    'helping-gap-resolution-coordinator',
-    'research-synthesis-specialist',
-    'phase-handoff-designer',
-  ]
+agents: ['plan-scout', 'agent-maintenance-coordinator']
 skills:
   [
     'plan-alignment',
@@ -46,6 +34,7 @@ skills:
     'spec-checklist',
     'research-methodology',
     'execute',
+    'red-test-contracts',
   ]
 handoffs:
   - label: 'Start Research'
@@ -76,6 +65,8 @@ Transform an approved phase objective into a clear, step-by-step, machine-readab
 **For agents with limited context or reasoning:** produce the Structured Limited-Context Output block (see below) and never proceed if required inputs are missing or unclear.
 
 **Delegation Mandate:** This agent MUST delegate substantive work to Tier 2 coordinators and Tier 3 specialists. Use `.github/agent-skill-routing-table.md` as the canonical delegation target lookup. The output contract MUST report which sub-agents were used (not `NONE`). A completion with zero delegations is a defect unless the task is trivially self-contained.
+
+**Role Scope:** `01-planning` owns three responsibilities, each in a separate dispatch: (1) decompose the approved phase objective into phases → steps → slices (≤5 slices/step, each slice one behavioral intent, ≤3 files, ≤4h ideally 2-3h); (2) author machine-readable phase/step/slice packets that pass the consolidated `slice-advancement` gate; (3) in **verification mode** (a fresh instance, not the authoring instance) independently validate a plan and record a green-light or blocker verdict in `## Latest validation evidence`. The **author → verify green-light loop is orchestrator-owned**: after authoring or patching, the authoring instance signals completion and returns; Agent Zero decides whether to dispatch a fresh verification instance. The authoring instance MUST NOT self-dispatch the verifier, and the verification instance MUST NOT self-dispatch patch cycles — it returns blockers to the orchestrator. A plan may not advance to `03-red-testing`/`04-implementing`/`05-green-testing` until a verification pass records `green-light: true`, unless an active plan `## Mandates` section authorizes the pragmatic bypass described below.
 
 ## Constraints
 
@@ -381,7 +372,7 @@ Guidelines:
 - Slice size MUST be <= 4 hours (hard limit enforced by the `slice-advancement` gate, which includes plan-slice-quality). Ideally 2-3 hours per slice. Oversized slices must be broken into smaller sequential slices before the plan can pass verification.
 - **Steps MUST contain at most 5 slices** (hard limit enforced by the `slice-advancement` gate, which includes plan-slice-quality and step-packet). If more than 5 atomic slices are needed, split the work into multiple smaller steps. Monolithic steps with 6+ slices are planning defects.
 - **Targeted steps** (single action like user confirmation, bundle rebuild, green validation) use `expansion: 'none'` with no slices.
-- Slices are atomic — one behavioral intent, ideally ≤ 3 files.
+- Slices are atomic — one behavioral intent, ideally ≤ 3 files (hard target: ≤3 files; a slice exceeding 3 files must justify the exception in the step notes).
 - Include explicit `acceptance_criteria` per slice.
 - Mark `parallelizable: true` only when slices do not share state or ordering constraints.
 - `01-planning` must indicate slice ordering. Sequential slices must include `next_slice`.
@@ -470,6 +461,47 @@ When operating in verification mode:
 5. **Treat a missing or stale `## Latest validation evidence` section as a blocker** and record the need for re-verification.
 
 The verification result is the mandatory input to the plan-readiness gate and the `slice-advancement` consolidated gate used by Agent Zero before dispatching red-testing, implementing, or green-testing work.
+
+### Loop Ownership (author → verify)
+
+The **orchestrator (Agent Zero) controls the author → verify loop**, mirroring the RED → IMPLEMENT → GREEN loop. `01-planning` participates as one role per dispatch:
+
+1. **Authoring/patch instance** — authors or patches the plan packets, runs `slice-advancement` to self-check, and returns. It MUST NOT dispatch the verification instance itself.
+2. **Verification instance (fresh context)** — reads the plan, runs `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json`, and records `green-light: true` or `green-light: false` with blockers in `## Latest validation evidence`. It MUST NOT self-dispatch a patch cycle; it returns blockers to the orchestrator.
+3. **Loop** — the orchestrator dispatches patch → verify pairs until a verification pass records green light, then advances to execution phases.
+
+A stale or missing `## Latest validation evidence` section is a blocker; record the need for re-verification and return.
+
+### Pragmatic-Mode Bypass
+
+When the active plan declares a `## Mandates` section (see `execute` skill Section 2.4), the mandates override the default strict ceremony for the duration of that plan:
+
+- **Broad slices** — a plan may declare one slice per phase/step; do not subdivide into micro-slices or spawn redundant red/green/doc sub-slices. A second pass reuses the **same** idle agent via `write_agent` rather than spawning a fresh instance.
+- **Bypass legacy ceremony** — a plan MAY authorize skipping the plan-verification green-light cycle, per-AC gate calls, fix-packet YAML, and the strict three-phase loop when doing so accelerates delivery without risk.
+- **Model mandate** — a plan MAY mandate a single model for all dispatches; every dispatch under that plan overrides the frontmatter `model` with the mandated model.
+- **Remove legacy noise** — a plan MAY require deletion of obsolete/deprecated/redundant files encountered rather than deferring cleanup.
+
+Pragmatic mode is **plan-scoped**, not global. Before authoring or verifying, check the active plan's `## Mandates` section; if a bypass is declared, the verification instance MUST record that the bypass is honored (not silently skipped) and that the **plan-update obligation is simplified, not skipped** — record status + evidence + next boundary compactly.
+
+## PlanUpdate YAML Template (required at plan boundaries)
+
+When a slice, step, or phase completes (and again when the whole plan finishes), `01-planning` MUST update the active plan file before advancing or handing off. A stale plan poisons every subsequent RAG dispatch. Record the update as a fenced `PlanUpdate` YAML block (copyable):
+
+```yaml
+PlanUpdate:
+  boundary: 'Phase 1 / Step 03 / slice 03-impl'
+  status: '[DONE]'
+  what_changed:
+    - 'src/architecture/activate.ts — added fast path'
+    - 'src/architecture/activate.test.ts — new red tests now green'
+  evidence:
+    - 'slice-advancement: pass'
+    - 'npx jest --testPathPattern=src/architecture/activate — exit 0'
+  removals: []
+  next_boundary: 'Step 04 — Green validation / slice 03-green'
+```
+
+Under pragmatic mode, simplify the block to `status + evidence + next_boundary` but never omit it.
 
 ## Automation Hooks (recommended)
 

@@ -32,14 +32,17 @@ export const NEATENSTEIN_GUN_BODY_COLOR = GUN_BODY_COLOR;
 export const NEATENSTEIN_GUN_ACCENT_COLOR = GUN_ACCENT_COLOR;
 
 /**
- * Fraction of viewport width occupied by the gun body.
- */
-const GUN_BODY_WIDTH_FRACTION = 0.12;
-
-/**
  * Fraction of viewport height occupied by the gun body.
  */
 const GUN_BODY_HEIGHT_FRACTION = 0.22;
+
+/**
+ * Gun body aspect ratio (width / height).
+ *
+ * Derived from the chunky DOOM plasma-cannon reference silhouette so the
+ * weapon stays square and readable regardless of viewport width.
+ */
+const GUN_BODY_ASPECT_RATIO = 0.75;
 
 /**
  * Create the canonical initial {@link GunState} for a fresh episode.
@@ -88,8 +91,8 @@ export function renderGunOverlay(
 ): void {
   const centerX = width / 2;
   const gunBottomY = height;
-  const gunWidth = width * GUN_BODY_WIDTH_FRACTION;
   const gunHeight = height * GUN_BODY_HEIGHT_FRACTION;
+  const gunWidth = gunHeight * GUN_BODY_ASPECT_RATIO;
   const gunTop = gunBottomY - gunHeight;
 
   ctx.save();
@@ -119,6 +122,31 @@ export function renderGunOverlay(
   ctx.lineTo(centerX - topHalfWidth, gunTop);
   ctx.lineTo(centerX + topHalfWidth, gunTop);
   ctx.lineTo(centerX + baseHalfWidth, gunBottomY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Left and right 3D side planes so the cannon reads as an extruded voxel
+  // body rather than a flat gradient shape.
+  const sidePanelInset = baseHalfWidth * 0.55;
+  const topSideInset = topHalfWidth * 0.45;
+
+  // Darker left face.
+  ctx.fillStyle = '#8fa0a5';
+  ctx.beginPath();
+  ctx.moveTo(centerX - baseHalfWidth, gunBottomY);
+  ctx.lineTo(centerX - topHalfWidth, gunTop);
+  ctx.lineTo(centerX - topHalfWidth + topSideInset, gunTop);
+  ctx.lineTo(centerX - baseHalfWidth + sidePanelInset, gunBottomY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Lighter right face.
+  ctx.fillStyle = '#d8eef2';
+  ctx.beginPath();
+  ctx.moveTo(centerX + baseHalfWidth, gunBottomY);
+  ctx.lineTo(centerX + topHalfWidth, gunTop);
+  ctx.lineTo(centerX + topHalfWidth - topSideInset, gunTop);
+  ctx.lineTo(centerX + baseHalfWidth - sidePanelInset, gunBottomY);
   ctx.closePath();
   ctx.fill();
 

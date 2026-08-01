@@ -38,8 +38,6 @@ import {
   type NeatensteinRenderState,
 } from '../renderer/frame';
 import {
-  drawNeatensteinCeiling,
-  drawNeatensteinFloor,
   NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
   NEATENSTEIN_FLOOR_FOV_RADIANS,
   NEATENSTEIN_FLOOR_HORIZON_RATIO,
@@ -82,6 +80,8 @@ import {
 import {
   clipNeatensteinSprite,
   renderNeatensteinSprite,
+  resolveNeatensteinEnemyFrame,
+  type NeatensteinCamera,
   type NeatensteinSprite,
   type NeatensteinSpriteRenderContext,
 } from '../renderer/sprites';
@@ -93,11 +93,27 @@ let workerCanvas: OffscreenCanvas | null = null;
 let workerContext: OffscreenCanvasRenderingContext2D | null = null;
 let latestState: NeatensteinRenderState | null = null;
 
+/**
+ * Host resize dimensions received before the worker canvas is assigned.
+ *
+ * Resize messages can arrive before the `init` message finishes setting up
+ * `workerCanvas`, so the last valid host dimension is stashed and applied once
+ * the canvas is available.
+ */
+let pendingResizeDimensions: { width: number; height: number } | null = null;
+
 /** Canonical flat deterministic map used by the worker raycaster. */
 let wallMap: Uint8Array | null = null;
 
 /** Reusable worker-tier z-buffer, resized only when the render width changes. */
 let workerZBuffer: Float32Array | null = null;
+
+/**
+ * Persistent RGBA framebuffer written directly by the worker tier.
+ *
+ * Re-allocated only when the canvas backing-store dimensions change.
+ */
+let workerFramebuffer: Uint8ClampedArray<ArrayBuffer> | null = null;
 
 /** Deterministic game state maintained and advanced by the worker. */
 let gameState: GameState | null = null;
@@ -130,19 +146,20 @@ let activeEnemySprites: NeatensteinSprite[] = [];
  */
 let pendingTickInput: GameTickInputSnapshot | null = null;
 
-/**
- * Background clear color used before each worker-tier frame.
- *
- * Derived from {@link NEATENSTEIN_BACKGROUND_RGB} so the worker tier matches
- * the CPU/GPU fog background exactly.
- */
-const NEATENSTEIN_WORKER_CLEAR_COLOR = formatRgb(NEATENSTEIN_BACKGROUND_RGB);
-
 /** RGB of the neon wall color for X-axis-side hits. */
-const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 183, b: 255 } as const;
+const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 200, b: 255 } as const;
 
 /** RGB of the neon wall color for Y-axis-side hits. */
-const NEATENSTEIN_WALL_Y_SIDE_RGB = { r: 0, g: 164, b: 229 } as const;
+const NEATENSTEIN_WALL_Y_SIDE_RGB = { r: 0, g: 90, b: 150 } as const;
+
+/** Height in screen pixels of one horizontal wall block band. */
+const NEATENSTEIN_WALL_BLOCK_HEIGHT_PX = 24;
+
+/** Darkening factor applied to horizontal wall block edges. */
+const NEATENSTEIN_WALL_EDGE_DARKEN_FACTOR = 0.65;
+
+/** Size in pixels of the floor/ceiling checker grid cell. */
+const NEATENSTEIN_FLOOR_GRID_CELL_PX = 32;
 
 /** CSS color string for the yellow ambient pulse dot. */
 const NEATENSTEIN_PULSE_COLOR = '#B7FF00';
@@ -150,15 +167,16 @@ const NEATENSTEIN_PULSE_COLOR = '#B7FF00';
 /** CSS shadow color string for the yellow ambient pulse glow. */
 const NEATENSTEIN_PULSE_GLOW_COLOR = 'rgba(185, 255, 0, 0.42)';
 
+/** Number of RGBA channels per framebuffer pixel. */
+const NEATENSTEIN_FRAMEBUFFER_CHANNELS = 4;
+
 /**
- * Format an RGB triple as a CSS `rgb(...)` string.
- *
- * @param color - Object with r, g, b components.
- * @returns A CSS `rgb(...)` color string.
+ * Darkening factor applied to the background RGB for the worker ceiling fill.
  */
-function formatRgb(color: { r: number; g: number; b: number }): string {
-  return `rgb(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)})`;
-}
+const NEATENSTEIN_WORKER_CEILING_DARKEN_FACTOR = 0.5;
+
+/** Floor fill color for the worker-tier direct renderer (Flappy horizon teal). */
+const NEATENSTEIN_WORKER_FLOOR_RGB = { r: 10, g: 142, b: 160 } as const;
 
 /**
  * Clamp a value to a `[min, max]` range.
@@ -199,12 +217,51 @@ function syncWorkerCanvasSize(
   width: number,
   height: number,
 ): void {
+  let resized = false;
+
   if (canvas.width !== width) {
     canvas.width = width;
+    resized = true;
   }
 
   if (canvas.height !== height) {
     canvas.height = height;
+    resized = true;
+  }
+
+  if (
+    resized ||
+    workerFramebuffer === null ||
+    workerFramebuffer.length !== width * height * 4
+  ) {
+    workerFramebuffer = new Uint8ClampedArray(width * height * 4);
+  }
+}
+
+/**
+ * Apply a host-resized CSS-box dimension to the worker canvas and latest state.
+ *
+ * The host owns the visible canvas CSS box, while the worker owns the backing
+ * store. This helper updates both so the next frame renders at the new size
+ * even if it arrives before the next `simState` tick.
+ *
+ * @param width - Host-derived render width in pixels.
+ * @param height - Host-derived render height in pixels.
+ */
+function applyWorkerResize(width: number, height: number): void {
+  if (!isPositiveFiniteDimension(width) || !isPositiveFiniteDimension(height)) {
+    return;
+  }
+
+  if (workerCanvas !== null) {
+    syncWorkerCanvasSize(workerCanvas, width, height);
+  } else {
+    pendingResizeDimensions = { width, height };
+  }
+
+  if (latestState !== null) {
+    latestState.canvasWidth = width;
+    latestState.canvasHeight = height;
   }
 }
 
@@ -268,47 +325,231 @@ function resolveWallFogFactor(perpWallDist: number): number {
  *
  * @param wallColor - Raw wall RGB.
  * @param perpWallDist - Perpendicular distance from camera to wall.
- * @returns CSS color string for the fogged wall stripe.
+ * @returns Fogged RGB triple for direct framebuffer writes.
  */
-function applyWallFog(
+function resolveWallFogRgb(
   wallColor: { r: number; g: number; b: number },
   perpWallDist: number,
-): string {
+): { r: number; g: number; b: number } {
   const fogFactor = resolveWallFogFactor(perpWallDist);
   const backgroundColor = NEATENSTEIN_BACKGROUND_RGB;
 
-  return formatRgb({
+  return {
     r: wallColor.r + (backgroundColor.r - wallColor.r) * fogFactor,
     g: wallColor.g + (backgroundColor.g - wallColor.g) * fogFactor,
     b: wallColor.b + (backgroundColor.b - wallColor.b) * fogFactor,
-  });
+  };
 }
 
 /**
- * Neon colors used to distinguish active enemy types in the worker sprite pass.
+ * Fill the worker framebuffer with a dark ceiling and a slightly lighter floor.
  *
- * The palette is intentionally small and high-contrast so enemy wireframes
- * remain readable against the dark raycast scene and the cyan wall shading.
+ * This is the worker-tier replacement for the full-canvas `getImageData` copy.
+ * Rows above the horizon get a darkened background, rows at and below the
+ * horizon get a floor color. The wall pass will overwrite the middle vertical
+ * band, so no separate background clear is required.
+ *
+ * @param canvasWidth - Canvas width in pixels.
+ * @param canvasHeight - Canvas height in pixels.
  */
-const NEATENSTEIN_ENEMY_HUES = [
-  '#ff0055',
-  '#ffaa00',
-  '#00ffaa',
-  '#aa00ff',
-] as const;
+function fillWorkerCeilingAndFloor(
+  canvasWidth: number,
+  canvasHeight: number,
+): void {
+  if (workerFramebuffer === null) {
+    return;
+  }
+
+  const horizon = Math.floor(canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO);
+  const background = NEATENSTEIN_BACKGROUND_RGB;
+  const ceilingBase = {
+    r: background.r * NEATENSTEIN_WORKER_CEILING_DARKEN_FACTOR,
+    g: background.g * NEATENSTEIN_WORKER_CEILING_DARKEN_FACTOR,
+    b: background.b * NEATENSTEIN_WORKER_CEILING_DARKEN_FACTOR,
+  };
+  const ceilingLine = {
+    r: Math.min(255, ceilingBase.r + 18),
+    g: Math.min(255, ceilingBase.g + 24),
+    b: Math.min(255, ceilingBase.b + 32),
+  };
+  const floorBase = NEATENSTEIN_WORKER_FLOOR_RGB;
+  const floorAlt = {
+    r: Math.min(255, floorBase.r + 16),
+    g: Math.min(255, floorBase.g + 22),
+    b: Math.min(255, floorBase.b + 24),
+  };
+
+  for (let row = 0; row < canvasHeight; row += 1) {
+    const isCeiling = row < horizon;
+    const rowOffset = row * canvasWidth * NEATENSTEIN_FRAMEBUFFER_CHANNELS;
+    const rowCell = Math.floor(row / NEATENSTEIN_FLOOR_GRID_CELL_PX);
+
+    for (let col = 0; col < canvasWidth; col += 1) {
+      const colCell = Math.floor(col / NEATENSTEIN_FLOOR_GRID_CELL_PX);
+      const isGridLine =
+        (row % NEATENSTEIN_FLOOR_GRID_CELL_PX) < 2 ||
+        (col % NEATENSTEIN_FLOOR_GRID_CELL_PX) < 2;
+      const isCheckerCell = (rowCell + colCell) % 2 === 0;
+
+      const color = isCeiling
+        ? isGridLine
+          ? ceilingLine
+          : ceilingBase
+        : isGridLine || isCheckerCell
+          ? floorAlt
+          : floorBase;
+
+      const offset = rowOffset + col * NEATENSTEIN_FRAMEBUFFER_CHANNELS;
+      workerFramebuffer[offset] = color.r;
+      workerFramebuffer[offset + 1] = color.g;
+      workerFramebuffer[offset + 2] = color.b;
+      workerFramebuffer[offset + 3] = 255;
+    }
+  }
+}
 
 /**
- * Resolve the neon color for an enemy sprite from its type index.
+ * Write a single vertical wall stripe into the persistent worker framebuffer.
  *
- * Unknown or negative types fall back to the first hue so every active enemy
- * still renders with a valid color.
+ * The stripe is fogged toward the background based on perpendicular distance.
+ * This replaces the previous `context.fillRect` wall pass.
  *
- * @param type - Enemy type index from the controller state.
- * @returns `#rrggbb` color string for the sprite renderer.
+ * @param xStart - Screen column to write.
+ * @param drawStart - Top row of the wall stripe, inclusive.
+ * @param drawEnd - Bottom row of the wall stripe, exclusive.
+ * @param wallColor - Raw neon wall RGB.
+ * @param perpWallDist - Perpendicular wall distance for distance fog.
  */
-function resolveEnemySpriteColor(type = 0): string {
-  const safeType = Math.max(0, Math.trunc(type));
-  return NEATENSTEIN_ENEMY_HUES[safeType % NEATENSTEIN_ENEMY_HUES.length];
+function writeWallStripeToFramebuffer(
+  xStart: number,
+  drawStart: number,
+  drawEnd: number,
+  wallColor: { r: number; g: number; b: number },
+  perpWallDist: number,
+): void {
+  if (workerFramebuffer === null) {
+    return;
+  }
+
+  const { width, height } = resolveWorkerFramebufferDimensions();
+  if (width === 0 || height === 0) {
+    return;
+  }
+
+  const x = Math.floor(xStart);
+  if (x < 0 || x >= width) {
+    return;
+  }
+
+  const clampedStart = clamp(drawStart, 0, height);
+  const clampedEnd = clamp(drawEnd, 0, height);
+  if (clampedStart >= clampedEnd) {
+    return;
+  }
+
+  const fogged = resolveWallFogRgb(wallColor, perpWallDist);
+  const baseR = Math.round(fogged.r);
+  const baseG = Math.round(fogged.g);
+  const baseB = Math.round(fogged.b);
+  const edgeR = Math.round(baseR * NEATENSTEIN_WALL_EDGE_DARKEN_FACTOR);
+  const edgeG = Math.round(baseG * NEATENSTEIN_WALL_EDGE_DARKEN_FACTOR);
+  const edgeB = Math.round(baseB * NEATENSTEIN_WALL_EDGE_DARKEN_FACTOR);
+
+  for (let row = clampedStart; row < clampedEnd; row += 1) {
+    const rowInStripe = row - Math.floor(drawStart);
+    const isBlockEdge =
+      (rowInStripe % NEATENSTEIN_WALL_BLOCK_HEIGHT_PX) < 2 ||
+      rowInStripe < 2 ||
+      row === clampedEnd - 1;
+
+    const r = isBlockEdge ? edgeR : baseR;
+    const g = isBlockEdge ? edgeG : baseG;
+    const b = isBlockEdge ? edgeB : baseB;
+
+    const offset = (row * width + x) * NEATENSTEIN_FRAMEBUFFER_CHANNELS;
+    workerFramebuffer[offset] = r;
+    workerFramebuffer[offset + 1] = g;
+    workerFramebuffer[offset + 2] = b;
+    workerFramebuffer[offset + 3] = 255;
+  }
+}
+
+/**
+ * Resolve the pixel dimensions of the persistent worker framebuffer.
+ *
+ * @returns Width and height, or zeros if the buffer has not been allocated.
+ */
+function resolveWorkerFramebufferDimensions(): {
+  width: number;
+  height: number;
+} {
+  if (workerFramebuffer === null) {
+    return { width: 0, height: 0 };
+  }
+
+  // zBuffer length tracks the canvas width and is always allocated before the
+  // wall pass writes into the framebuffer.
+  if (workerZBuffer !== null && workerZBuffer.length > 0) {
+    const width = workerZBuffer.length;
+    const height = workerFramebuffer.length / (width * 4);
+    return { width, height: Math.floor(height) };
+  }
+
+  const side = Math.floor(
+    Math.sqrt(workerFramebuffer.length / NEATENSTEIN_FRAMEBUFFER_CHANNELS),
+  );
+  return { width: side, height: side };
+}
+
+/**
+ * Render all active enemy sprites into the persistent worker framebuffer.
+ *
+ * This is the worker-tier sprite pass. It clips each sprite against the wall
+ * z-buffer, resolves the camera-relative voxel frame, and renders it into the
+ * persistent CPU framebuffer. The no-op render context prevents per-sprite
+ * canvas flushes; the caller flushes once after the pass.
+ *
+ * @param zBuffer - Per-column wall-depth buffer.
+ * @param spriteCamera - Camera transform used by the sprite renderer.
+ * @param canvasWidth - Canvas width in pixels.
+ * @param canvasHeight - Canvas height in pixels.
+ */
+function renderWorkerSprites(
+  zBuffer: Float32Array,
+  spriteCamera: NeatensteinCamera,
+  canvasWidth: number,
+  canvasHeight: number,
+): void {
+  const noOpSpriteCtx = buildNoOpSpriteRenderContext();
+
+  const visibleSprites = activeEnemySprites
+    .map((sprite) => ({
+      sprite,
+      projection: clipNeatensteinSprite(
+        sprite,
+        spriteCamera,
+        canvasWidth,
+        canvasHeight,
+        zBuffer,
+      ),
+    }))
+    .filter(({ projection }) => projection.visibleColumns.length > 0)
+    .toSorted((a, b) => b.projection.perpDist - a.projection.perpDist);
+
+  for (const { sprite, projection } of visibleSprites) {
+    const frame = resolveNeatensteinEnemyFrame(sprite, spriteCamera);
+    if (frame === null) {
+      continue;
+    }
+
+    renderNeatensteinSprite(
+      workerFramebuffer!,
+      zBuffer,
+      projection,
+      frame,
+      noOpSpriteCtx,
+    );
+  }
 }
 
 /**
@@ -379,8 +620,8 @@ function castColumnRay(
  *
  * Worker-tier painter order:
  *
- * clear → floor → ceiling → walls → pulses → impact spots → bolts → gun
- * overlay
+ * ceiling/floor fill → walls → sprites → flush → pulses → impact spots →
+ * bolts → gun overlay
  */
 function buildAndPostFrame(): void {
   if (!latestState || !currentTier || !wallMap || !gameState || !collisionMap) {
@@ -425,6 +666,9 @@ function buildAndPostFrame(): void {
     .map((enemy) => ({
       worldX: enemy.position.x,
       worldY: enemy.position.y,
+      facing: enemy.yawRad,
+      animationState: enemy.animationState,
+      frameIndex: 0,
       type: enemy.index,
     }));
 
@@ -452,28 +696,15 @@ function buildAndPostFrame(): void {
     }
 
     const columnCount = resolveWorkerCanvasColumnCount(canvasWidth);
+    const zBuffer = resolveWorkerZBuffer(columnCount);
 
-    context.fillStyle = NEATENSTEIN_WORKER_CLEAR_COLOR;
-    context.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    // Draw with explicit dimensions so floor/ceiling cannot accidentally read
-    // stale context canvas dimensions.
-    drawNeatensteinFloor(context, canvasWidth, canvasHeight, {
-      x: cameraPositionX,
-      y: cameraPositionY,
-      yaw: cameraYaw,
-    });
-
-    drawNeatensteinCeiling(context, canvasWidth, canvasHeight, {
-      x: cameraPositionX,
-      y: cameraPositionY,
-      yaw: cameraYaw,
-    });
+    // Fill the persistent framebuffer with a minimal ceiling/floor pair instead
+    // of copying the canvas back from the GPU.
+    fillWorkerCeilingAndFloor(canvasWidth, canvasHeight);
 
     const stripeWidth = canvasWidth / columnCount;
     const wallFocalLength =
       canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
-    const zBuffer = resolveWorkerZBuffer(columnCount);
 
     for (let column = 0; column < columnCount; column += 1) {
       const hit = castColumnRay(
@@ -493,12 +724,10 @@ function buildAndPostFrame(): void {
       const drawStart = clamp((canvasHeight - lineHeight) / 2, 0, canvasHeight);
       const drawEnd = clamp((canvasHeight + lineHeight) / 2, 0, canvasHeight);
 
-      context.fillStyle = applyWallFog(
+      const wallColor =
         hit.side === 0
           ? NEATENSTEIN_WALL_X_SIDE_RGB
-          : NEATENSTEIN_WALL_Y_SIDE_RGB,
-        hit.perpWallDist,
-      );
+          : NEATENSTEIN_WALL_Y_SIDE_RGB;
 
       // Integer stripe bounds prevent subpixel gaps when the column count does
       // not divide the canvas width evenly.
@@ -506,61 +735,39 @@ function buildAndPostFrame(): void {
       const xEnd = Math.floor((column + 1) * stripeWidth);
       const stripePixelWidth = Math.max(0, xEnd - xStart);
 
-      context.fillRect(
-        xStart,
-        drawStart,
-        stripePixelWidth,
-        drawEnd - drawStart,
-      );
-    }
-
-    // When active enemies exist, snapshot the wall/floor/ceiling output into a
-    // CPU-style framebuffer so the sprite renderer can write neon enemy bars
-    // with z-buffer occlusion, then flush the combined result back once.
-    if (
-      activeEnemySprites.length > 0 &&
-      typeof context.getImageData === 'function'
-    ) {
-      const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
-      const spriteFramebuffer = imageData.data;
-      const spriteCamera = {
-        posX: cameraPositionX,
-        posY: cameraPositionY,
-        dirX: cameraDirectionX,
-        dirY: cameraDirectionY,
-        planeX: cameraPlaneX,
-        planeY: cameraPlaneY,
-      };
-      const noOpSpriteCtx = buildNoOpSpriteRenderContext();
-
-      const visibleSprites = activeEnemySprites
-        .map((sprite) => ({
-          sprite,
-          projection: clipNeatensteinSprite(
-            sprite,
-            spriteCamera,
-            canvasWidth,
-            canvasHeight,
-            zBuffer,
-          ),
-        }))
-        .filter(({ projection }) => projection.visibleColumns.length > 0)
-        .toSorted((a, b) => b.projection.perpDist - a.projection.perpDist);
-
-      for (const { sprite, projection } of visibleSprites) {
-        const color = resolveEnemySpriteColor(sprite.type);
-        renderNeatensteinSprite(
-          spriteFramebuffer,
-          zBuffer,
-          projection,
-          color,
-          noOpSpriteCtx,
+      for (let xOffset = 0; xOffset < stripePixelWidth; xOffset += 1) {
+        writeWallStripeToFramebuffer(
+          xStart + xOffset,
+          drawStart,
+          drawEnd,
+          wallColor,
+          hit.perpWallDist,
         );
       }
+    }
 
-      // Flush the framebuffer (now containing walls + sprites) back to the
-      // worker canvas before the transparent overlay passes run.
-      context.putImageData(imageData, 0, 0);
+    const spriteCamera = {
+      posX: cameraPositionX,
+      posY: cameraPositionY,
+      dirX: cameraDirectionX,
+      dirY: cameraDirectionY,
+      planeX: cameraPlaneX,
+      planeY: cameraPlaneY,
+    };
+
+    renderWorkerSprites(zBuffer, spriteCamera, canvasWidth, canvasHeight);
+
+    // Flush the completed framebuffer (walls + ceiling/floor + sprites) back to
+    // the canvas once per frame.
+    context.putImageData(
+      new ImageData(workerFramebuffer!, canvasWidth, canvasHeight),
+      0,
+      0,
+    );
+    context.fillStyle = 'rgba(255,0,0,1)';
+    context.fillRect(0, 0, 40, 40);
+    if (typeof (context as any).commit === 'function') {
+      (context as any).commit();
     }
 
     // Update and emit ambient pulses after the wall z-buffer exists.
@@ -879,6 +1086,7 @@ self.onmessage = (event: MessageEvent) => {
     activeEnemySprites = [];
     pendingTickInput = null;
     workerZBuffer = null;
+    workerFramebuffer = null;
     workerContext = null;
     enemyControllerState = null;
 
@@ -886,6 +1094,15 @@ self.onmessage = (event: MessageEvent) => {
       workerCanvas = data.canvas as OffscreenCanvas;
     } else {
       workerCanvas = null;
+    }
+
+    if (workerCanvas !== null && pendingResizeDimensions !== null) {
+      syncWorkerCanvasSize(
+        workerCanvas,
+        pendingResizeDimensions.width,
+        pendingResizeDimensions.height,
+      );
+      pendingResizeDimensions = null;
     }
 
     const seed =
@@ -908,6 +1125,16 @@ self.onmessage = (event: MessageEvent) => {
       version,
     });
 
+    return;
+  }
+
+  if (data.type === 'resize') {
+    const width =
+      typeof data.width === 'number' ? (data.width as number) : Number.NaN;
+    const height =
+      typeof data.height === 'number' ? (data.height as number) : Number.NaN;
+
+    applyWorkerResize(width, height);
     return;
   }
 
@@ -948,3 +1175,41 @@ self.onmessage = (event: MessageEvent) => {
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyGetEnemyControllerState =
   (): EnemyControllerState | null => enemyControllerState;
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetLatestState = (): NeatensteinRenderState | null =>
+  latestState;
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlySetActiveEnemySprites = (
+  sprites: NeatensteinSprite[],
+): void => {
+  activeEnemySprites = sprites;
+};
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyAllocateWorkerFramebuffer = (
+  width: number,
+  height: number,
+): void => {
+  workerFramebuffer = new Uint8ClampedArray(width * height * 4);
+};
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlySetWorkerZBuffer = (columns: number): void => {
+  workerZBuffer = new Float32Array(columns).fill(Number.POSITIVE_INFINITY);
+};
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyResolveWorkerFramebufferDimensions =
+  resolveWorkerFramebufferDimensions;
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyFillWorkerCeilingAndFloor = fillWorkerCeilingAndFloor;
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyWriteWallStripeToFramebuffer =
+  writeWallStripeToFramebuffer;
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyRenderWorkerSprites = renderWorkerSprites;

@@ -25,6 +25,16 @@ import {
   clipNeatensteinSpriteSpan,
   type NeatensteinSpriteClip,
 } from './zbuffer';
+import { NEATENSTEIN_FLOOR_FOV_RADIANS } from './floor';
+import { buildVoxelEnemy } from '../../../neatenstein/scripts/voxel-enemy';
+import {
+  renderVoxelSnapshot,
+  type VoxelSnapshot,
+} from '../../../neatenstein/scripts/snapshot-renderer';
+import {
+  ENEMY_ANIMATION_FRAME_COUNTS,
+  type EnemyAnimationState,
+} from '../../../neatenstein/scripts/enemy-animator';
 
 /**
  * Number of RGBA channels per framebuffer pixel.
@@ -40,19 +50,15 @@ const NEATENSTEIN_RGBA_CHANNELS = 4;
 const NEATENSTEIN_CAMERA_DETERMINANT_EPSILON = 1e-9;
 
 /**
- * Fully opaque alpha value written for neon sprite pixels.
- */
-const NEATENSTEIN_SPRITE_ALPHA = 255;
-
-/**
  * World-space size of a sprite in grid cells.
  *
  * The projected screen size is:
  *
  * ```ts
- * canvasHeight / perpDist * NEATENSTEIN_SPRITE_WORLD_SIZE
+ * focalLength / perpDist * NEATENSTEIN_SPRITE_WORLD_SIZE
  * ```
  *
+ * where `focalLength` is derived from {@link NEATENSTEIN_FLOOR_FOV_RADIANS}.
  * Keeping this value in world units makes enemies scale consistently as they
  * move toward or away from the camera.
  */
@@ -67,12 +73,12 @@ export const NEATENSTEIN_SPRITE_WORLD_SIZE = 0.5;
 export const NEATENSTEIN_SPRITE_NEAR_CLIP = 0.1;
 
 /**
- * Fraction of projected sprite scale used as horizontal neon-bar thickness.
+ * Fraction of projected sprite scale used as horizontal sprite thickness.
  *
- * The rendered sprite is a vertical wireframe-like bar centered on the
- * projected screen X coordinate.
+ * A value of 1.0 makes the projected sprite width match its height, which
+ * matches the square aspect of the 192×192 reference robot silhouettes.
  */
-export const NEATENSTEIN_SPRITE_THICKNESS_RATIO = 0.4;
+export const NEATENSTEIN_SPRITE_THICKNESS_RATIO = 1.0;
 
 /**
  * Minimal canvas-like context consumed by the CPU sprite renderer.
@@ -121,6 +127,12 @@ export interface NeatensteinSprite {
   worldX: number;
   /** Sprite Y position in world cells. */
   worldY: number;
+  /** Sprite yaw in radians. 0 points toward +X; a {@link resolveNeatensteinEnemyFrame} helper uses this together with the camera position to select a pre-rendered voxel frame. */
+  facing?: number;
+  /** Current animation state used to pick a frame from the voxel atlas. */
+  animationState?: EnemyAnimationState;
+  /** Animation frame index. Currently only frame 0 is pre-rendered in the runtime atlas. */
+  frameIndex?: number;
   /** Optional enemy type index for hue selection by higher-level callers. */
   type?: number;
 }
@@ -144,18 +156,6 @@ export interface NeatensteinSpriteProjection {
 }
 
 /**
- * Parsed RGB triplet from a `#rrggbb` hex color string.
- */
-interface ParsedRgb {
-  /** Red channel in `[0, 255]`. */
-  r: number;
-  /** Green channel in `[0, 255]`. */
-  g: number;
-  /** Blue channel in `[0, 255]`. */
-  b: number;
-}
-
-/**
  * Resolved framebuffer dimensions.
  */
 interface ResolvedSpriteFramebufferSize {
@@ -164,14 +164,6 @@ interface ResolvedSpriteFramebufferSize {
   /** Framebuffer height in pixels. */
   height: number;
 }
-
-/**
- * Cache of parsed sprite colors.
- *
- * Sprite colors are normally reused across many frames, so parsing once avoids
- * repeated string work in the render path.
- */
-const SPRITE_COLOR_CACHE = new Map<string, ParsedRgb>();
 
 /**
  * Return whether a number is a positive finite integer dimension.
@@ -210,35 +202,6 @@ function createInvisibleSpriteProjection(
     right: -1,
     visible: false,
   };
-}
-
-/**
- * Parse a strict `#rrggbb` hex color string into an RGB triplet.
- *
- * @param hex - Color string in `#rrggbb` format.
- * @returns Parsed `{ r, g, b }` channels.
- * @throws {Error} When the string is not a valid `#rrggbb` color.
- */
-function parseHexColor(hex: string): ParsedRgb {
-  const cached = SPRITE_COLOR_CACHE.get(hex);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const match = /^#([0-9a-fA-F]{6})$/.exec(hex);
-  if (match === null) {
-    throw new Error(`Expected #rrggbb hex color, got "${hex}"`);
-  }
-
-  const digits = match[1];
-  const rgb = {
-    r: Number.parseInt(digits.slice(0, 2), 16),
-    g: Number.parseInt(digits.slice(2, 4), 16),
-    b: Number.parseInt(digits.slice(4, 6), 16),
-  };
-
-  SPRITE_COLOR_CACHE.set(hex, rgb);
-  return rgb;
 }
 
 /**
@@ -345,6 +308,140 @@ function isDrawableSpriteProjection(
 }
 
 /**
+ * Discrete yaw directions stored in the enemy voxel atlas.
+ */
+const NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS = 8;
+
+/**
+ * Full rotation in radians.
+ */
+const NEATENSTEIN_FULL_ROTATION_RADIANS = Math.PI * 2;
+
+/**
+ * Angular step between adjacent yaw atlas entries, in radians.
+ */
+const NEATENSTEIN_VOXEL_ATLAS_YAW_STEP_RADIANS =
+  NEATENSTEIN_FULL_ROTATION_RADIANS / NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS;
+
+/**
+ * Size in pixels of each pre-rendered voxel frame in the runtime atlas.
+ */
+const NEATENSTEIN_VOXEL_ATLAS_FRAME_SIZE = 128;
+
+/**
+ * Pre-rendered runtime atlas: one yaw strip per animation state, each strip
+ * holding {@link NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS} frames at index 0.
+ */
+const NEATENSTEIN_VOXEL_ATLAS: Record<
+  EnemyAnimationState,
+  readonly VoxelSnapshot[]
+> = buildNeatensteinVoxelAtlas();
+
+/**
+ * Build the canonical enemy voxel grid once at module load time.
+ *
+ * The runtime atlas holds 8 camera-relative yaw snapshots for every animation
+ * state, which keeps the per-frame render path allocation-free.
+ *
+ * @returns Record mapping each animation state to its pre-rendered yaw frames.
+ */
+function buildNeatensteinVoxelAtlas(): Record<
+  EnemyAnimationState,
+  readonly VoxelSnapshot[]
+> {
+  const grid = buildVoxelEnemy();
+  const states = Object.keys(
+    ENEMY_ANIMATION_FRAME_COUNTS,
+  ) as EnemyAnimationState[];
+
+  const atlas = {} as Record<EnemyAnimationState, readonly VoxelSnapshot[]>;
+
+  for (const state of states) {
+    const frames: VoxelSnapshot[] = [];
+    for (
+      let yawIndex = 0;
+      yawIndex < NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS;
+      yawIndex += 1
+    ) {
+      frames.push(
+        renderVoxelSnapshot(grid, yawIndex, {
+          width: NEATENSTEIN_VOXEL_ATLAS_FRAME_SIZE,
+          height: NEATENSTEIN_VOXEL_ATLAS_FRAME_SIZE,
+        }),
+      );
+    }
+    atlas[state] = frames;
+  }
+
+  return atlas;
+}
+
+/**
+ * Convert a relative yaw angle to the nearest atlas yaw index.
+ *
+ * @param relativeYaw - Camera-relative yaw in radians, already normalized to
+ *   the sprite's facing direction.
+ * @returns Integer index in `[0, NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS - 1]`.
+ */
+function yawIndexFromRelativeYaw(relativeYaw: number): number {
+  const normalized =
+    ((relativeYaw % NEATENSTEIN_FULL_ROTATION_RADIANS) +
+      NEATENSTEIN_FULL_ROTATION_RADIANS) %
+    NEATENSTEIN_FULL_ROTATION_RADIANS;
+
+  const rawIndex = Math.round(
+    normalized / NEATENSTEIN_VOXEL_ATLAS_YAW_STEP_RADIANS,
+  );
+  return rawIndex % NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS;
+}
+
+/**
+ * Resolve the pre-rendered voxel frame for an enemy sprite facing a camera.
+ *
+ * Returns `null` when the sprite does not carry the animation or facing data
+ * required by the runtime atlas.
+ *
+ * @param sprite - Enemy sprite with optional facing and animation fields.
+ * @param camera - Camera whose position determines the relative yaw.
+ * @returns The matching {@link VoxelSnapshot}, or `null` if not resolvable.
+ */
+export function resolveNeatensteinEnemyFrame(
+  sprite: NeatensteinSprite,
+  camera: NeatensteinCamera,
+): VoxelSnapshot | null {
+  if (
+    sprite.animationState === undefined ||
+    sprite.facing === undefined ||
+    !Number.isFinite(sprite.facing)
+  ) {
+    return null;
+  }
+
+  if (
+    !Number.isFinite(sprite.worldX) ||
+    !Number.isFinite(sprite.worldY) ||
+    !Number.isFinite(camera.posX) ||
+    !Number.isFinite(camera.posY)
+  ) {
+    return null;
+  }
+
+  const cameraRelativeYaw = Math.atan2(
+    camera.posY - sprite.worldY,
+    camera.posX - sprite.worldX,
+  );
+  const relativeYaw = cameraRelativeYaw - sprite.facing;
+  const yawIndex = yawIndexFromRelativeYaw(relativeYaw);
+
+  const stateFrames = NEATENSTEIN_VOXEL_ATLAS[sprite.animationState];
+  if (stateFrames === undefined || stateFrames[yawIndex] === undefined) {
+    return null;
+  }
+
+  return stateFrames[yawIndex];
+}
+
+/**
  * Project a world-space sprite into screen coordinates.
  *
  * The projection uses the inverse camera matrix, matching the classic
@@ -419,9 +516,11 @@ export function projectNeatensteinSprite(
     return createInvisibleSpriteProjection(perpDist);
   }
 
+  const focalLength =
+    canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
   const screenX = (canvasWidth / 2) * (1 + transformX / transformY);
   const scale =
-    Math.abs(canvasHeight / transformY) * NEATENSTEIN_SPRITE_WORLD_SIZE;
+    Math.abs(focalLength / transformY) * NEATENSTEIN_SPRITE_WORLD_SIZE;
   const halfThickness = (scale * NEATENSTEIN_SPRITE_THICKNESS_RATIO) / 2;
   const left = screenX - halfThickness;
   const right = screenX + halfThickness;
@@ -483,113 +582,6 @@ export function clipNeatensteinSprite(
 }
 
 /**
- * Write a vertical RGB sprite column into a flat RGBA framebuffer.
- *
- * This internal helper assumes color and framebuffer dimensions have already
- * been resolved by the caller.
- *
- * @param framebuffer - Flat RGBA framebuffer.
- * @param width - Framebuffer width in pixels.
- * @param height - Framebuffer height in pixels.
- * @param column - Horizontal column index to write.
- * @param drawStart - Top row of the sprite stripe, inclusive.
- * @param drawEnd - Bottom row of the sprite stripe, exclusive.
- * @param color - Parsed RGB sprite color.
- */
-function renderNeatensteinSpriteColumnRgb(
-  framebuffer: Uint8ClampedArray,
-  width: number,
-  height: number,
-  column: number,
-  drawStart: number,
-  drawEnd: number,
-  color: ParsedRgb,
-): void {
-  if (
-    !isPositiveIntegerDimension(width) ||
-    !isPositiveIntegerDimension(height)
-  ) {
-    return;
-  }
-
-  // Do not clamp invalid columns to the edge; that can create false edge pixels.
-  if (!Number.isFinite(column)) {
-    return;
-  }
-
-  const x = Math.trunc(column);
-  if (x < 0 || x >= width) {
-    return;
-  }
-
-  const clampedStart = clampInt(drawStart, 0, height);
-  const clampedEnd = clampInt(drawEnd, 0, height);
-
-  if (clampedStart >= clampedEnd) {
-    return;
-  }
-
-  for (let row = clampedStart; row < clampedEnd; row += 1) {
-    const offset = (row * width + x) * NEATENSTEIN_RGBA_CHANNELS;
-
-    framebuffer[offset] = color.r;
-    framebuffer[offset + 1] = color.g;
-    framebuffer[offset + 2] = color.b;
-    framebuffer[offset + 3] = NEATENSTEIN_SPRITE_ALPHA;
-  }
-}
-
-/**
- * Render a single sprite column into the CPU ImageData framebuffer.
- *
- * This public helper is useful for tests and low-level callers. For full sprite
- * rendering, prefer {@link renderNeatensteinSprite}, which parses color and
- * resolves dimensions once before drawing all visible columns.
- *
- * If `framebufferWidth` and `framebufferHeight` are omitted, the function falls
- * back to legacy square framebuffer inference.
- *
- * @param framebuffer - Flat RGBA framebuffer.
- * @param column - Horizontal column index to write.
- * @param drawStart - Top row of the sprite stripe, inclusive.
- * @param drawEnd - Bottom row of the sprite stripe, exclusive.
- * @param hexColor - Sprite color as `#rrggbb`.
- * @param framebufferWidth - Optional explicit framebuffer width in pixels.
- * @param framebufferHeight - Optional explicit framebuffer height in pixels.
- *
- * @example
- * ```ts
- * renderNeatensteinSpriteColumn(framebuffer, 4, 2, 6, '#00bfff', 640, 480);
- * ```
- */
-export function renderNeatensteinSpriteColumn(
-  framebuffer: Uint8ClampedArray,
-  column: number,
-  drawStart: number,
-  drawEnd: number,
-  hexColor: string,
-  framebufferWidth?: number,
-  framebufferHeight?: number,
-): void {
-  const color = parseHexColor(hexColor);
-  const { width, height } = resolveFramebufferSize(
-    framebuffer,
-    framebufferWidth,
-    framebufferHeight,
-  );
-
-  renderNeatensteinSpriteColumnRgb(
-    framebuffer,
-    width,
-    height,
-    column,
-    drawStart,
-    drawEnd,
-    color,
-  );
-}
-
-/**
  * Return precomputed visible columns from a projection if present.
  *
  * This lets callers pass the result of {@link clipNeatensteinSprite} directly
@@ -610,6 +602,71 @@ function getPrecomputedVisibleColumns(
 }
 
 /**
+ * Copy one column of a pre-rendered voxel frame onto a screen column.
+ *
+ * `visibleColumns` already guarantees that the screen column is closer than
+ * the wall at that X, so this helper does not re-check the z-buffer. It skips
+ * transparent frame pixels (alpha == 0) and clamps vertical writes to the
+ * framebuffer bounds.
+ *
+ * @param framebuffer - Flat RGBA framebuffer to write into.
+ * @param width - Framebuffer width in pixels.
+ * @param height - Framebuffer height in pixels.
+ * @param screenColumn - Horizontal framebuffer column to write.
+ * @param drawStart - Top screen row of the projected sprite, inclusive.
+ * @param drawEnd - Bottom screen row of the projected sprite, exclusive.
+ * @param frame - Pre-rendered voxel snapshot.
+ * @param frameX - Column of the voxel frame to sample.
+ */
+function renderNeatensteinVoxelSpriteColumn(
+  framebuffer: Uint8ClampedArray,
+  width: number,
+  height: number,
+  screenColumn: number,
+  drawStart: number,
+  drawEnd: number,
+  frame: VoxelSnapshot,
+  frameX: number,
+): void {
+  const clampedStart = clampInt(drawStart, 0, height);
+  const clampedEnd = clampInt(drawEnd, 0, height);
+  if (clampedStart >= clampedEnd || screenColumn < 0 || screenColumn >= width) {
+    return;
+  }
+
+  const frameHeight = frame.height;
+  const frameWidth = frame.width;
+  const frameData = frame.data;
+  if (frameHeight === 0 || frameWidth === 0) {
+    return;
+  }
+
+  const safeFrameX = clampInt(frameX, 0, frameWidth - 1);
+  const spriteHeightPixels = clampedEnd - clampedStart;
+
+  for (let rowOffset = 0; rowOffset < spriteHeightPixels; rowOffset += 1) {
+    const screenY = clampedStart + rowOffset;
+    const v = rowOffset / (drawEnd - drawStart);
+    const frameY = Math.floor(v * (frameHeight - 1));
+    const safeFrameY = clampInt(frameY, 0, frameHeight - 1);
+
+    const frameOffset =
+      (safeFrameY * frameWidth + safeFrameX) * NEATENSTEIN_RGBA_CHANNELS;
+    const alpha = frameData[frameOffset + 3];
+    if (alpha === 0) {
+      continue;
+    }
+
+    const screenOffset =
+      (screenY * width + screenColumn) * NEATENSTEIN_RGBA_CHANNELS;
+    framebuffer[screenOffset] = frameData[frameOffset];
+    framebuffer[screenOffset + 1] = frameData[frameOffset + 1];
+    framebuffer[screenOffset + 2] = frameData[frameOffset + 2];
+    framebuffer[screenOffset + 3] = alpha;
+  }
+}
+
+/**
  * Render a projected sprite into the CPU ImageData framebuffer with z-buffer
  * occlusion.
  *
@@ -623,17 +680,22 @@ function getPrecomputedVisibleColumns(
  * @param zBuffer - Per-column wall-depth buffer filled by the wall pass.
  * @param projection - Screen-space projection from
  *   {@link projectNeatensteinSprite} or {@link clipNeatensteinSprite}.
- * @param color - Neon color as `#rrggbb`.
+ * @param source - Pre-rendered {@link VoxelSnapshot} to draw, or a legacy color
+ *   string. Color strings are ignored; the renderer now requires a voxel frame.
  * @param ctx - Canvas-like context with `putImageData`.
  */
 export function renderNeatensteinSprite(
   framebuffer: Uint8ClampedArray,
   zBuffer: Readonly<Float32Array>,
   projection: NeatensteinSpriteProjection,
-  color: string,
+  source: string | VoxelSnapshot,
   ctx: NeatensteinSpriteRenderContext,
 ): void {
   if (!isDrawableSpriteProjection(projection) || zBuffer.length === 0) {
+    return;
+  }
+
+  if (typeof source === 'string') {
     return;
   }
 
@@ -662,8 +724,7 @@ export function renderNeatensteinSprite(
     return;
   }
 
-  // Parse once per sprite, not once per column.
-  const parsedColor = parseHexColor(color);
+  const spanPixels = projection.right - projection.left;
 
   // Center sprite vertically on the horizon/midline.
   const halfScale = projection.scale / 2;
@@ -672,16 +733,27 @@ export function renderNeatensteinSprite(
   const drawEnd = Math.floor(centerY + halfScale);
 
   for (const column of visibleColumns) {
-    renderNeatensteinSpriteColumnRgb(
+    const u = spanPixels > 0 ? (column - projection.left) / spanPixels : 0;
+    const frameX = Math.floor(u * (source.width - 1));
+
+    renderNeatensteinVoxelSpriteColumn(
       framebuffer,
       width,
       height,
       column,
       drawStart,
       drawEnd,
-      parsedColor,
+      source,
+      frameX,
     );
   }
 
   ctx.putImageData({ data: framebuffer, width, height }, 0, 0);
 }
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyResolveFramebufferSize = resolveFramebufferSize;
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyRenderNeatensteinVoxelSpriteColumn =
+  renderNeatensteinVoxelSpriteColumn;

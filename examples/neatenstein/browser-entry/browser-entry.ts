@@ -145,17 +145,37 @@ function neatensteinStart(
   // client dimensions gives the actual rendered box, which differs from the
   // viewport when the page includes status bars, gaps, or flex layout.
   const htmlCanvas = canvas;
-  function updateCanvasBackingStore(): void {
-    const clientWidth = htmlCanvas.clientWidth;
-    const clientHeight = htmlCanvas.clientHeight;
 
-    const fixedBackingHeight = 480;
+  /**
+   * Fixed render height in pixels used for the canvas backing store and for
+   * the worker-tier render dimensions forwarded in simState.
+   */
+  const NEATENSTEIN_FIXED_RENDER_HEIGHT = 480;
+
+  /**
+   * Compute the CSS-derived render dimensions for the visible canvas.
+   *
+   * The width is proportional to the canvas CSS box aspect ratio so the
+   * rendered scene is never stretched, while the height stays fixed at 480px
+   * to keep the raycaster projection math stable.
+   *
+   * @param element - Visible host canvas.
+   * @returns Render width and height in pixels.
+   */
+  function resolveCanvasRenderDimensions(element: HTMLCanvasElement): {
+    width: number;
+    height: number;
+  } {
+    const clientWidth = element.clientWidth;
+    const clientHeight = element.clientHeight;
+
     if (clientWidth && clientHeight) {
-      htmlCanvas.width = Math.round(
-        fixedBackingHeight * (clientWidth / clientHeight),
-      );
-      htmlCanvas.height = fixedBackingHeight;
-      return;
+      return {
+        width: Math.round(
+          NEATENSTEIN_FIXED_RENDER_HEIGHT * (clientWidth / clientHeight),
+        ),
+        height: NEATENSTEIN_FIXED_RENDER_HEIGHT,
+      };
     }
 
     // Fall back to viewport dimensions when the canvas has not been laid out yet.
@@ -163,28 +183,76 @@ function neatensteinStart(
     const viewportHeight = window.innerHeight;
     const fallbackWidth =
       viewportWidth && viewportHeight
-        ? Math.round(fixedBackingHeight * (viewportWidth / viewportHeight))
+        ? Math.round(
+            NEATENSTEIN_FIXED_RENDER_HEIGHT * (viewportWidth / viewportHeight),
+          )
         : NEATENSTEIN_FALLBACK_CANVAS_WIDTH;
 
-    htmlCanvas.width = fallbackWidth;
-    htmlCanvas.height = fixedBackingHeight;
+    return {
+      width: fallbackWidth,
+      height: NEATENSTEIN_FIXED_RENDER_HEIGHT,
+    };
   }
 
-  updateCanvasBackingStore();
+  /**
+   * Apply computed render dimensions to the visible canvas backing store.
+   *
+   * Safe to call only when the canvas is still owned by the host (i.e., the
+   * CPU fallback tier). The worker tier transfers the canvas to the worker,
+   * after which direct width/height assignment throws.
+   *
+   * @param element - Visible host canvas.
+   * @param dimensions - Render width and height in pixels.
+   */
+  function applyCanvasBackingStore(
+    element: HTMLCanvasElement,
+    dimensions: { width: number; height: number },
+  ): void {
+    element.width = dimensions.width;
+    element.height = dimensions.height;
+  }
+
+  let currentRenderDimensions = resolveCanvasRenderDimensions(htmlCanvas);
+  applyCanvasBackingStore(htmlCanvas, currentRenderDimensions);
+
+  let bridge: NeatensteinRendererBridge | null = null;
+
+  const useWorkerTier = supportsWorkerOffscreenCanvas();
+  const tier = useWorkerTier ? 'worker' : 'cpu';
+
+  /**
+   * React to a change in the visible canvas CSS box.
+   *
+   * For the worker tier, the host canvas is transferred to the worker, so the
+   * host cannot mutate its backing store. Instead the new dimensions are routed
+   * to the bridge, which posts them to the worker, and the render loop uses
+   * the CSS-derived dimensions directly. For the CPU fallback tier, the host
+   * still owns the canvas and updates the backing store as before.
+   */
+  function updateRendererSize(): void {
+    currentRenderDimensions = resolveCanvasRenderDimensions(htmlCanvas);
+
+    if (useWorkerTier && bridge !== null) {
+      bridge.resize(
+        currentRenderDimensions.width,
+        currentRenderDimensions.height,
+      );
+      return;
+    }
+
+    applyCanvasBackingStore(htmlCanvas, currentRenderDimensions);
+  }
 
   let resizeObserver: ResizeObserver | null = null;
   if (typeof ResizeObserver !== 'undefined') {
-    resizeObserver = new ResizeObserver(updateCanvasBackingStore);
+    resizeObserver = new ResizeObserver(updateRendererSize);
     resizeObserver.observe(htmlCanvas);
   }
 
   const handleResize = () => {
-    updateCanvasBackingStore();
+    updateRendererSize();
   };
   window.addEventListener('resize', handleResize);
-
-  const useWorkerTier = supportsWorkerOffscreenCanvas();
-  const tier = useWorkerTier ? 'worker' : 'cpu';
 
   if (!useWorkerTier) {
     drawCanvasStatus(
@@ -196,7 +264,7 @@ function neatensteinStart(
   // Seed a deterministic game state so the render loop has a simulation clock.
   const initialState = createGameState({ seed: 1 });
 
-  const bridge = createNeatensteinRendererBridge({
+  bridge = createNeatensteinRendererBridge({
     canvas,
     workerUrl: resolveWorkerUrl(),
     tier,
@@ -211,6 +279,7 @@ function neatensteinStart(
     bridge,
     initialState,
     inputRouter,
+    () => currentRenderDimensions,
   );
 
   const stop = () => {
@@ -238,6 +307,9 @@ function neatensteinStart(
  * @param canvas - The visible canvas bound to the worker renderer.
  * @param bridge - Host/worker bridge that forwards simulation snapshots.
  * @param initialState - Deterministic game state providing camera and seed.
+ * @param inputRouter - Host input router used to build movement snapshots.
+ * @param getRenderDimensions - Returns the current CSS-derived render
+ *   dimensions. Mutable because resize updates it.
  * @returns A function that cancels the queued animation frame.
  */
 function startRenderLoop(
@@ -245,6 +317,7 @@ function startRenderLoop(
   bridge: NeatensteinRendererBridge,
   initialState: GameState,
   inputRouter: InputRouter,
+  getRenderDimensions: () => { width: number; height: number },
 ): () => void {
   let simTick = initialState.seed;
   let cameraYaw = initialState.player.angleRad;
@@ -262,9 +335,11 @@ function startRenderLoop(
     // simulation state for this frame.
     forwardWorkerInput(bridge.worker, snapshot);
 
+    const renderDimensions = getRenderDimensions();
+
     bridge.postSimState({
-      canvasWidth: canvas.width,
-      canvasHeight: canvas.height,
+      canvasWidth: renderDimensions.width,
+      canvasHeight: renderDimensions.height,
       simTick,
       cameraX: initialState.player.position.x,
       cameraY: initialState.player.position.y,

@@ -22,20 +22,7 @@ tools:
 user-invocable: true
 disable-model-invocation: false
 agents:
-  [
-    helping-gap-resolution-coordinator,
-    helping-agent-maintenance-coordinator,
-    skill-inventory-auditor,
-    agent-frontmatter-auditor,
-    skill-frontmatter-auditor,
-    model-name-auditor,
-    skill-trigger-eval-designer,
-    skill-output-eval-grader,
-    coverage-guard,
-    learning-event-capturer,
-    file-change-summarizer,
-    slice-orchestration-scheduler,
-  ]
+  [agent-maintenance-coordinator, coverage-analyst, learning-event-capturer]
 skills:
   [
     agent-frontmatter-standards,
@@ -48,6 +35,10 @@ skills:
     phase-handoff-workflow,
     tracker-handoff,
     execute,
+    skill-frontmatter-standards,
+    mcp-local-server-workflow,
+    skill-description-evals,
+    skill-output-evals,
   ]
 handoffs:
   - label: 'Plan Work'
@@ -63,7 +54,25 @@ handoffs:
 
 ## Purpose
 
-Use for local AI system maintenance, workflow gap troubleshooting, config checks, CI support, and safe continuous-improvement updates. Policy-sensitive escalations defer to the plan's constitution authority before overriding local rules.
+Use for local AI system maintenance, workflow gap troubleshooting, config
+checks, CI support, and safe continuous-improvement updates. Policy-sensitive
+escalations defer to the plan's constitution authority before overriding
+local rules.
+
+**In scope:**
+
+- Diagnosing and routing workflow gaps, gate failures, and routing-table drift.
+- Coordinating agent/skill frontmatter maintenance and CI wiring.
+- Triage of unplanned blockers that no numbered SDLC orchestrator owns.
+- Capturing reusable learning events from recurring gaps.
+
+**Out of scope (hand off instead):**
+
+- Authoring or patching plans → `01-planning`.
+- Substantive implementation/research/testing/docs/logging → the matching
+  numbered orchestrator (`02`–`07`).
+- Policy overrides or repo-wide standard changes → escalate to Agent Zero.
+- Anything failing the Low-Risk Checklist below.
 
 ## Cortex-First Search Policy
 
@@ -79,7 +88,30 @@ Maintain agent/skill system usability. Diagnose and repair workflow gaps, config
 - Prefer the smallest, reversible, reviewable, and safe fix.
 - If unsure, do NOT proceed—escalate or hand off.
 
-**Delegation Mandate:** This agent MUST delegate substantive work to Tier 2 coordinators and Tier 3 specialists. Use `.github/agent-skill-routing-table.md` as the canonical delegation target lookup. The output contract MUST report which sub-agents were used (not `NONE`). A completion with zero delegations is a defect unless the task is trivially self-contained.
+**Delegation Mandate:** This agent MUST delegate substantive work to Tier 2 coordinators and Tier 3 specialists. Use `.github/agent-skill-routing-table.md` as the canonical delegation target lookup. Before every delegation, consult `neataptic-dispatch-mcp / build_dispatch_packet` (with `caller_tier: 1`) to validate the dispatch and obtain the exact packet — direct `task` calls without that consultation are a workflow violation. The output contract MUST report which sub-agents were used (not `NONE`). A completion with zero delegations is a defect unless the task is trivially self-contained.
+
+## Skill Usage
+
+This agent is RAG-exempt (no plan/slice exists for unplanned issues), so it
+carries its own durable knowledge via the skills below. Invoke the named skill
+for its owned workflow rather than restating policy inline.
+
+| Skill                          | Use when                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `execute`                      | Delegation discipline, tier graph, and RED→IMPLEMENT→GREEN loop enforcement.          |
+| `routing-optimization-policy`  | Tier boundary, gate protocol, or routing-table freshness violations.                  |
+| `agent-frontmatter-standards`  | Agent frontmatter shape, validation, and tier-graph rules.                            |
+| `skill-frontmatter-standards`  | SKILL.md frontmatter shape and metadata validation.                                   |
+| `agent-inventory-audit`        | Before/after a customization change batch to baseline and confirm agent/skill counts. |
+| `model-routing-and-budget`     | Model routing, budget, or tier-appropriate model assignment questions.                |
+| `customize-cloud-agent`        | Cloud model swap, fallback config, or `disable-model-invocation` review.              |
+| `subagent-delegation-patterns` | Constructing safe, self-contained specialist task packets.                            |
+| `capturing-learning-event`     | Recording a reusable gap/fix as an ISO-42001-style learning event.                    |
+| `phase-handoff-workflow`       | Phase ordering, handoff mechanics, and `[DONE]` phase compression.                    |
+| `tracker-handoff`              | Standardizing plan/log trackers and handoff blocks.                                   |
+| `mcp-local-server-workflow`    | Classifying local MCP runtime facts and trust boundaries.                             |
+| `skill-description-evals`      | Grading trigger precision/recall of a skill or agent description.                     |
+| `skill-output-evals`           | Evaluating skill output quality against rubrics.                                      |
 
 ## CI Failure Pattern Catalog
 
@@ -100,11 +132,19 @@ When diagnosing CI failures, route to the correct specialist based on the failur
 ## Constraints
 
 - **NEVER** edit global user settings, repo-wide policies, or anything outside `.github/` unless explicitly instructed.
+- **Read vs write boundary:** this agent may read any `.github/**` file for
+  diagnosis. Direct edits are limited to single low-risk local fixes that pass
+  the Low-Risk Checklist; everything else is delegated to a specialist.
 - Keep instructions and changes minimal—reference skills for detail.
 - Use `.github/agent-skill-routing-table.md` for routing and delegation checks.
 - Only apply low-risk, local fixes (see checklist below).
 - **ALWAYS** ask before changing project behavior, coding standards, or policy.
 - If you cannot answer YES to every checklist item, escalate or hand off.
+- **NEVER** delegate without first consulting
+  `neataptic-dispatch-mcp / build_dispatch_packet`; if `dispatch_allowed` is
+  false, escalate via `00.cross-tier-helper`.
+- **Escalate to Agent Zero** (not just `00.cross-tier-helper`) when a change
+  would alter repo-wide standards, model budget policy, or tier-graph rules.
 - **Phase compression awareness:** When a phase is marked `[DONE]`, the
   orchestrator MUST dispatch `07-logging` to compress the completed phase
   before advancing. If `00-helping` is invoked for plan maintenance and
@@ -147,6 +187,13 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 - `agent-graph` — after any agent/skill/frontmatter modification
 - `routing-table-freshness` — after any agent/skill routing change
 - `cortex-index` — after any source or documentation change that affects the semantic index
+- `learning-event` — after recording a learning event in
+  `.github/ai-learning/learning-log.jsonl`
+
+A gate returning `pass: false` is a routing signal, not a wording problem: route
+the failing surface to the owning specialist (see CI Failure Pattern Catalog)
+and continue retrying until resolved or a true technical limit is reached. No
+artificial retry threshold; record each failure for audit.
 
 ## Default Flow
 
@@ -167,6 +214,51 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
    - Example: If a missing config is a recurring issue, log it.
 8. **Hand back** to SDLC orchestrator or escalate if blocked.
    - Example: If blocked, escalate to `00.cross-tier-helper`.
+
+## Worked Examples
+
+### Example A — Routing-table freshness gap
+
+A `routing-table-freshness` gate fails after a new specialist was added without
+regenerating the table.
+
+```text
+1. Classify: routing-table drift (maintenance).
+2. Apply checklist: regenerate is local, small, reversible, validated → all YES.
+3. Consult neataptic-dispatch-mcp / build_dispatch_packet
+   { target_agent: "helping-agent-maintenance-coordinator", caller_tier: 1,
+    prompt: "Regenerate routing table and validate. Load context via Cortex MCP." }
+4. Delegate the regenerate + validate to helping-agent-maintenance-coordinator.
+5. Validate: neataptic-gate-mcp-run_gate_check { gate: "routing-table-freshness" }.
+6. Capture a learning event (category: routing-update) if the gap is recurring.
+7. Report SUB_ORCHESTRATORS_USED: helping-agent-maintenance-coordinator.
+```
+
+### Example B — CI `npm ci` lockfile drift
+
+CI fails on `npm ci` with a `package-lock.json` mismatch.
+
+```text
+1. Classify: CI/config — npm install/lockfile drift (see CI Failure Pattern Catalog).
+2. Apply checklist: editing package-lock is NOT a single local file and affects
+   runtime → checklist item 5 is NO.
+3. Do NOT self-fix. Consult build_dispatch_packet for helping-gap-resolution-coordinator
+   (dependency gap), caller_tier: 1.
+4. Delegate the dependency-gap resolution; record evidence in the output contract.
+5. If the dependency change would touch package.json behavior, escalate to
+   01-planning or Agent Zero instead of merging.
+```
+
+### Example C — Uncompressed `[DONE]` phase discovered during maintenance
+
+While inspecting plan state, an uncompressed `[DONE]` phase is found.
+
+```text
+1. Flag the gap in KEY_FINDINGS and BLOCKERS.
+2. Recommend dispatching 07-logging for phase compression (do not compress it
+   yourself — phase compression is owned by 07-logging).
+3. Set TASK_STATUS: PARTIAL; SUGGESTED_NEXT_AGENT: 07-logging.
+```
 
 ## Delegation Targets
 

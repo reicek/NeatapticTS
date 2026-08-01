@@ -6,8 +6,8 @@
  * render via OffscreenCanvas, while the CPU/GPU tiers render on the main thread.
  *
  * Produces two published assets in `docs/assets/`:
- *   - `neatenstein.bundle.js`         (IIFE host bundle)
- *   - `neatenstein.worker.esm.js`     (ESM worker bundle)
+ *   - `neatenstein.bundle.js`   (IIFE host bundle)
+ *   - `neatenstein.worker.js`   (classic IIFE worker bundle)
  */
 import { build } from 'esbuild';
 import { dirname, resolve } from 'node:path';
@@ -30,7 +30,7 @@ const hostOutfile = resolve(
 );
 const workerOutfile = resolve(
   repositoryRoot,
-  'docs/assets/neatenstein.worker.esm.js',
+  'docs/assets/neatenstein.worker.js',
 );
 
 /**
@@ -54,10 +54,10 @@ await build({
   format: 'iife',
 });
 
-// Worker bundle: ESM loaded as a module worker.
+// Worker bundle: classic IIFE loaded as a standard (non-module) Worker.
 await build({
   ...sharedBuildOptions,
   entryPoints: [workerEntry],
   outfile: workerOutfile,
-  format: 'esm',
+  format: 'iife',
 });

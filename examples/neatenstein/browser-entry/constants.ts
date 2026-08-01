@@ -118,10 +118,12 @@ export const NEATENSTEIN_DEFAULT_SEED = 1;
 
 /**
  * Published worker bundle filename, resolved relative to the host script that
- * loads the browser entrypoint.
+ * loads the browser entrypoint. This is a classic (non-module) worker bundle
+ * because OffscreenCanvas transfer is not reliable with module workers in the
+ * Chromium versions used by this demo's target runtime.
  */
 export const NEATENSTEIN_WORKER_BUNDLE_FILENAME =
-  'neatenstein.worker.esm.js' as const;
+  'neatenstein.worker.js' as const;
 
 /**
  * Fallback canvas width in CSS pixels when neither the client dimensions nor

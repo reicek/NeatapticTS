@@ -302,7 +302,7 @@ describe('Neatenstein browser entry', () => {
       {
         workerCount: 1,
         workerUrl:
-          'http://localhost:8080/docs/assets/neatenstein.worker.esm.js',
+          'http://localhost:8080/docs/assets/neatenstein.worker.js',
       },
     );
   });
@@ -646,5 +646,106 @@ describe('Neatenstein browser entry', () => {
       width: 640,
       height: 480,
     });
+  });
+
+  it('routes worker-tier resizes to the bridge instead of mutating the transferred canvas', async () => {
+    setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
+    installOffscreenCanvasSupport();
+    const canvas = document.getElementById(
+      'neatenstein-canvas',
+    ) as HTMLCanvasElement;
+    setCanvasSize(canvas, 854, 480);
+    await loadModule('./browser-entry.ts');
+    getGlobalStart()('neatenstein-output', 'neatenstein-canvas');
+    const worker = workers[0];
+
+    const initialWidth = canvas.width;
+    const initialHeight = canvas.height;
+
+    setCanvasSize(canvas, 1024, 768);
+    window.dispatchEvent(new Event('resize'));
+
+    expect(canvas.width).toBe(initialWidth);
+    expect(canvas.height).toBe(initialHeight);
+
+    const resizeCall = worker?.postMessageCalls.find((call) => {
+      const first = call[0];
+      return (
+        first !== null &&
+        typeof first === 'object' &&
+        (first as Record<string, unknown>).type === 'resize'
+      );
+    });
+    expect(resizeCall).toBeDefined();
+    const resizeMessage = resizeCall![0] as {
+      type: string;
+      width: number;
+      height: number;
+    };
+    expect({
+      width: resizeMessage.width,
+      height: resizeMessage.height,
+    }).toEqual({
+      width: 640,
+      height: 480,
+    });
+  });
+
+  it('uses CSS-derived dimensions for the first simState in the worker tier', async () => {
+    setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
+    installOffscreenCanvasSupport();
+    const canvas = document.getElementById(
+      'neatenstein-canvas',
+    ) as HTMLCanvasElement;
+    setCanvasSize(canvas, 854, 480);
+    const rafCallbacks: FrameRequestCallback[] = [];
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+      rafCallbacks.push(callback);
+      return rafCallbacks.length;
+    };
+    try {
+      await loadModule('./browser-entry.ts');
+      getGlobalStart()('neatenstein-output', 'neatenstein-canvas');
+      const worker = workers[0];
+
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      setCanvasSize(canvas, 1024, 768);
+      window.dispatchEvent(new Event('resize'));
+
+      if (rafCallbacks.length > 0) {
+        rafCallbacks[0](0);
+      }
+
+      const simStateCall = worker?.postMessageCalls.find((call) => {
+        const first = call[0];
+        return (
+          first !== null &&
+          typeof first === 'object' &&
+          (first as Record<string, unknown>).type === 'simState'
+        );
+      });
+      expect(simStateCall).toBeDefined();
+      const postedState = (
+        simStateCall![0] as {
+          state: { canvasWidth: number; canvasHeight: number };
+        }
+      ).state;
+      expect({
+        width: postedState.canvasWidth,
+        height: postedState.canvasHeight,
+      }).toEqual({
+        width: 640,
+        height: 480,
+      });
+      expect(canvas.width).not.toBe(postedState.canvasWidth);
+    } finally {
+      globalThis.requestAnimationFrame = originalRaf;
+    }
   });
 });

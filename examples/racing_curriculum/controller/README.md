@@ -973,7 +973,7 @@ Returns: Normalized Tier 1 vector (70 channels), Tier 2 vector (77 channels), Ti
 
 ```ts
 assembleTier3Observation(
-  envState: EnvironmentState & ObservationExtensions & PitStrategyState & { teammateRadioSlots?: readonly (readonly number[] | Float32Array<ArrayBufferLike>)[] | undefined; },
+  envState: EnvironmentState & ObservationExtensions & PitStrategyState & { teammateRadioSlots?: readonly (Float32Array<ArrayBufferLike> | readonly number[])[] | undefined; },
   trackSpec: TrackSpec,
 ): Float32Array<ArrayBufferLike>
 ```
@@ -1117,7 +1117,7 @@ observation.slice(
 
 ```ts
 assembleTier6Observation(
-  envState: EnvironmentState & ObservationExtensions & PitStrategyState & { opponentPerceptionSlots?: readonly (readonly number[] | Float32Array<ArrayBufferLike>)[] | undefined; },
+  envState: EnvironmentState & ObservationExtensions & PitStrategyState & { opponentPerceptionSlots?: readonly (Float32Array<ArrayBufferLike> | readonly number[])[] | undefined; },
   trackSpec: TrackSpec,
 ): Float32Array<ArrayBufferLike>
 ```
@@ -1170,7 +1170,7 @@ buildOpponentPerceptionSlots(
   cars: readonly CarState[],
   focalCarIndex: number,
   focalCar: CarState,
-): readonly (readonly number[] | Float32Array<ArrayBufferLike>)[]
+): readonly (Float32Array<ArrayBufferLike> | readonly number[])[]
 ```
 
 Builds the opponent-perception slots for a focal car from the multi-car roster.
@@ -1228,7 +1228,7 @@ buildTeammateRadioSlots(
   focalCarX: number,
   focalCarY: number,
   focalCarHeading: number,
-): readonly (readonly number[] | Float32Array<ArrayBufferLike>)[]
+): readonly (Float32Array<ArrayBufferLike> | readonly number[])[]
 ```
 
 Builds the teammate radio slots for a focal car from the multi-car roster.

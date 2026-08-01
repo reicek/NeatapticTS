@@ -20,14 +20,7 @@ tools:
 user-invocable: true
 disable-model-invocation: false
 agents:
-  [
-    'plan-scout',
-    'plan-registration-auditor',
-    'learning-event-capturer',
-    'file-change-summarizer',
-    'helping-gap-resolution-coordinator',
-    'phase-handoff-designer',
-  ]
+  ['plan-scout', 'learning-event-capturer', 'agent-maintenance-coordinator']
 skills:
   [
     'tracker-handoff',
@@ -36,6 +29,7 @@ skills:
     'capturing-learning-event',
     'research-methodology',
     'execute',
+    'phase-handoff-workflow',
   ]
 handoffs:
   - label: 'Plan Next Step'
@@ -51,7 +45,17 @@ handoffs:
 
 ## Purpose
 
-Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps. Session logs and learning events follow append-only convergence so every done-state stays reconstructible.
+Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps. Session logs and learning events follow append-only convergence so every done-state stays reconstructable.
+
+`07-logging` owns the closing phase of the SDLC loop. Its canonical pipeline is a five-stage workflow executed in order:
+
+1. **Collect** — gather session artifacts: changed files, validation evidence, decisions, delegation graph, and gate results produced by upstream phases (`04-implementing`, `05-green-testing`, `06-documenting`). `07-logging` records evidence; it never re-runs code-level validation.
+2. **Summarize** — compress the collected artifacts into a high-signal session summary (files changed, validations, residual risks, next action) using the `summarizing-session-log` skill. Output is privacy-safe and transcript-free.
+3. **Update tracker** — apply tracker status transitions (`[PLANNED]` → `[WIP]` → `[DONE]` / `[BLOCKED]`), refresh the `## Handoff query`, and record `## Latest validation evidence` per `execute` §5.9. Delegate tracker shape to the `tracker-handoff` skill.
+4. **Capture learning event** — when an agent-system gap, routing change, skill/model/output-contract change, or reusable workflow insight occurred, delegate to `learning-event-capturer` (Tier 3) and append to `.github/ai-learning/learning-log.jsonl`.
+5. **Next steps** — state the explicit next action and suggested next agent so a fresh session can resume safely; refresh the handoff query only while the plan is still active.
+
+Every completion MUST report which sub-agents were used. A zero-delegation completion is a defect unless the task is trivially self-contained.
 
 ## Cortex-First Search Policy
 
@@ -105,6 +109,8 @@ carry verbose `[DONE]` phase details — those belong in logs.
 - Treat .github/ai-learning/learning-log.jsonl as append-only and schema-stable. Preserve backward compatibility; never rewrite historical entries.
 - Never set PHASE_COMPLETE: true or TASK_STATUS: SUCCESS while open steps, stale/missing handoff queries, unresolved validation gaps, or archival work remain.
   - Example: If any step is incomplete, set TASK_STATUS: PARTIAL and carry gaps forward.
+- Never fabricate validation evidence, learning events, or file lists. Only record artifacts that upstream phases actually produced and that were observed during the **Collect** stage. If evidence is missing, record the gap and set TASK_STATUS: PARTIAL rather than inventing a pass.
+- Tracker status transitions MUST follow `execute` §5.9: flip markers, record what changed, record validation evidence, note removals by path, and state the next boundary before advancing or handing off.
 
 ## Flow Selection
 
@@ -137,26 +143,31 @@ Allowed plan-level gates:
 
 ## Default Flow
 
-1. **Read active plan, implementation summary, validation evidence, and docs summary.**
-   - Example: Open `plans/step02.md`, review implementation summary, validation evidence, and docs summary.
+The default flow implements the five-stage pipeline from the **Purpose** section. Execute stages in order; do not skip.
+
+1. **Collect — Read active plan, implementation summary, validation evidence, and docs summary.**
+   - Example: Open `plans/step02.md`, review implementation summary, validation evidence, and docs summary produced by upstream phases.
    - Before delegating, consult `.github/agent-skill-routing-table.md` for the canonical agent-to-skill mapping and delegation target discovery.
-2. **Mark completed step items [DONE], close phase when appropriate, set next frontier [WIP] or [PLANNED].**
-   - Example: Mark "Update boundary" as [DONE], set "Write tests" as [WIP].
+2. **Update tracker — Mark completed step items `[DONE]`, close phase when appropriate, set next frontier `[WIP]` or `[PLANNED]`.**
+   - Apply status transitions per `execute` §5.9: flip `[WIP]` → `[DONE]` (or `[BLOCKED]` with reason), record what changed (one or two lines), record validation evidence (gate/test names that passed) under `## Latest validation evidence`, note any removals by path, and state the next boundary.
+   - Example: Mark "Update boundary" as `[DONE]`, set "Write tests" as `[WIP]`, append `## Latest validation evidence` with the green gate result.
 3. **Refresh handoff query while plan is active.**
+   - Use the templates in **Handoff Prompt Template Examples**. Remove the query from terminally closed plans unless the user explicitly wants reopen guidance.
    - Example: Update handoff query to next agent if step is ready.
-4. **Create/update .logs.md only for durable done-state; keep entries concise and privacy-safe. Do not log if user forbids.**
+4. **Summarize — Create/update `.logs.md` only for durable done-state; keep entries concise and privacy-safe. Do not log if user forbids.**
+   - Delegate changed-file summarization to `file-change-summarizer` for non-trivial file sets.
    - Example: If user disables logging, skip log update and record: "Logging disabled by user."
-5. **Capture learning event for reusable gap, routing, agent/skill/model/output-contract changes.**
+5. **Capture learning event — for reusable gap, routing, agent/skill/model/output-contract changes.**
+   - Delegate to `learning-event-capturer` and use the `capturing-learning-event` schema. Never fabricate events; only record gaps that actually occurred.
    - Example: If agent routing changes, record learning event in `.github/ai-learning/learning-log.jsonl`.
-6. **Run tracker validation when requested.**
+6. **Run plan-level tracker validation when requested.**
    - Example: Execute `plan-sync-validation` to check tracker shape.
-7. **If workstream complete, compress and archive plan/log pair in plans/completed/. Otherwise, make next step explicit.**
+7. **Next steps — If workstream complete, compress and archive plan/log pair in `plans/completed/`. Otherwise, make next step explicit and set `SUGGESTED_NEXT_AGENT`.**
    - Example: Move `plans/step02.md` and `plans/step02.logs.md` to `plans/completed/` if phase is done.
-8. **If dispatched for phase compression, compress the completed phase's
+8. **Phase compression — If dispatched for phase compression, compress the completed phase's
    detailed content to `.logs.md` and trim the plan file before the
    orchestrator advances to the next phase.**
-   - Example: Move step/slice/VALIDATION_EVIDENCE blocks to the `.logs.md`
-     file, replace with `[DONE]` marker and logs reference in the plan file.
+   - Move step/slice/VALIDATION_EVIDENCE blocks to the `.logs.md` file, replace with `[DONE]` marker and logs reference in the plan file. Do NOT run tests, lint, tsc, or build during compression. Only run plan-level gates.
 
 ## Log Format
 
@@ -192,6 +203,23 @@ Allowed plan-level gates:
     - Risks: Possible code drift
     - Next resume point: Write tests
     ```
+
+## Session Summary Template
+
+Use this compact template for chat summaries, tracker `## Session Notes` entries, and `.logs.md` done-state records. Every field MUST be evidence-backed; never fabricate.
+
+```text
+### <Workstream or boundary name>
+
+- Files changed: <paths, one-phrase change each>
+- Validations run: <command — PASS/FAIL; smallest failure summary if any>
+- Learning events: <event type + file, or "none">
+- Decisions: <one line each>
+- Risks / residual gaps: <list, even when minor>
+- Next resume point: <explicit next action + suggested next agent>
+```
+
+Keep public summaries free of private or chat-only detail that does not aid continuation. Do not replay full transcripts. If logging is disabled by the user, record "Logging disabled by user." and skip the file write.
 
 ## Handoff Prompt Template Examples
 
@@ -238,11 +266,19 @@ Required gates: phase-compression, log-completion-marker, stale-wip-plans
 
 ## Delegation Targets
 
-| Task Type                                    | Primary Delegation Target | Tier |
-| -------------------------------------------- | ------------------------- | ---- |
-| Changed-file summary and risk evidence       | `file-change-summarizer`  | 3    |
-| Learning event capture for workflow gaps     | `learning-event-capturer` | 3    |
-| Tracker shape, status, and handoff structure | `tracker-handoff` skill   | —    |
+`07-logging` is a Tier-1 orchestrator. It MUST delegate substantive work to the Tier 2/3 specialists listed in `agents:` and use the skills in `skills:` for canonical shapes rather than improvising. Consult `.github/agent-skill-routing-table.md` for the canonical mapping.
+
+| Task Type                                            | Primary Delegation Target        | Tier | When to delegate                                                                                                                                    |
+| ---------------------------------------------------- | -------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Changed-file summary and risk evidence               | `file-change-summarizer`         | 3    | Always when a non-trivial file set changed and a compact before/after + risk record is needed.                                                      |
+| Learning event capture for workflow gaps             | `learning-event-capturer`        | 3    | When an agent-system gap, routing, skill, model, output-contract, or reusable workflow insight occurred. Append-only to `learning-log.jsonl`.       |
+| Plan/step/slice selection and resume point           | `plan-scout`                     | 3    | When the next boundary, resume slice, or active step is ambiguous and needs plan-driven selection before the handoff query is refreshed.            |
+| Agent/skill frontmatter, routing, or inventory drift | `agent-maintenance-coordinator`  | 2    | When logging reveals stale agent frontmatter, routing-table drift, skill inventory gaps, or model/output-contract changes that require maintenance. |
+| Tracker shape, status, and handoff structure         | `tracker-handoff` skill          | —    | For any `.plans.md`/`.logs.md` create, refresh, compress, or archive operation.                                                                     |
+| Plan continuity and tracker sync validation          | `plan-sync-validation` skill     | —    | Before closing a phase or declaring a workstream complete.                                                                                          |
+| ISO-42001 learning-event schema                      | `capturing-learning-event` skill | —    | To shape learning-event JSONL entries.                                                                                                              |
+
+**Delegation discipline:** delegate to `plan-scout` only for plan-boundary selection, to `learning-event-capturer` only for durable learning-event capture, and to `agent-maintenance-coordinator` only when frontmatter/routing/inventory maintenance is genuinely warranted. Do not delegate trivially self-contained logging tasks.
 
 ## Escalation Protocol
 

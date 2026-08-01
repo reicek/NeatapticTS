@@ -43,7 +43,7 @@ const DEFAULT_WORKER_URL = `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`;
 export interface NeatensteinRendererBridgeOptions {
   /** The visible canvas element on the host page. */
   canvas: HTMLCanvasElement;
-  /** Absolute or relative URL to the ESM worker bundle. */
+  /** Absolute or relative URL to the worker bundle. */
   workerUrl?: string;
   /** Selected renderer tier. */
   tier: NeatensteinTier;
@@ -62,6 +62,8 @@ export interface NeatensteinRendererBridge {
   requestId: number;
   /** Forward a simulation state snapshot to the worker. */
   postSimState(state: NeatensteinRenderState): void;
+  /** Forward a host-resized CSS-box dimension to the worker. */
+  resize(width: number, height: number): void;
   /** Forward an input snapshot to the worker so it can advance the sim tick. */
   forwardWorkerInput(snapshot: InputSnapshot): void;
   /** Terminate the worker and release the bridge. */
@@ -183,7 +185,7 @@ export function createNeatensteinRendererBridge(
   // without re-constraining.
   const initialRenderSize = resolveInitialCanvasRenderSize(canvas);
 
-  const worker = new Worker(workerUrl, { type: 'module' });
+  const worker = new Worker(workerUrl);
 
   let destroyed = false;
   let initialized = false;
@@ -216,6 +218,16 @@ export function createNeatensteinRendererBridge(
    */
   function postSimStateNow(state: NeatensteinRenderState): void {
     worker.postMessage({ type: 'simState', state });
+  }
+
+  /**
+   * Send a host-resized CSS-box dimension to the worker immediately.
+   *
+   * @param width - Host-derived render width in pixels.
+   * @param height - Host-derived render height in pixels.
+   */
+  function postResizeMessage(width: number, height: number): void {
+    worker.postMessage({ type: 'resize', width, height });
   }
 
   /**
@@ -268,6 +280,14 @@ export function createNeatensteinRendererBridge(
       }
 
       postSimStateNow(state);
+    },
+
+    resize(width: number, height: number): void {
+      if (destroyed) {
+        return;
+      }
+
+      postResizeMessage(width, height);
     },
 
     forwardWorkerInput(snapshot: InputSnapshot): void {

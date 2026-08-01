@@ -190,7 +190,6 @@ describe('Neatenstein host renderer bridge', () => {
       });
       expect(Worker).toHaveBeenCalledWith(
         `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
-        { type: 'module' },
       );
       const initMessage = instances[0].postMessage.mock.calls[0]?.[0] as
         Record<string, unknown> | undefined;
@@ -710,6 +709,45 @@ describe('Neatenstein host renderer bridge', () => {
       }
       expect(firstConsumer).not.toHaveBeenCalled();
       expect(secondConsumer).toHaveBeenCalledWith(frame);
+    });
+
+    it('posts a resize message to the worker', async () => {
+      const { instances } = installMockWorker();
+      const { canvas } = createMockCanvas();
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
+      const bridge = createNeatensteinRendererBridge({
+        canvas,
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
+        tier: 'cpu',
+        mapSeed: 42,
+      });
+      const worker = instances[0];
+      bridge.resize(1024, 768);
+      expect(worker.postMessage.mock.calls.at(-1)?.[0]).toEqual({
+        type: 'resize',
+        width: 1024,
+        height: 768,
+      });
+    });
+
+    it('does not post a resize message after the bridge is destroyed', async () => {
+      const { instances } = installMockWorker();
+      const { canvas } = createMockCanvas();
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
+      const bridge = createNeatensteinRendererBridge({
+        canvas,
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
+        tier: 'cpu',
+        mapSeed: 42,
+      });
+      const worker = instances[0];
+      bridge.destroy();
+      bridge.resize(1024, 768);
+      expect(worker.postMessage).toHaveBeenCalledTimes(1);
     });
 
     it('ignores frame messages whose payload lacks a numeric requestId', async () => {

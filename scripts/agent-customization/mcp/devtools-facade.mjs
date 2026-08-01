@@ -141,6 +141,7 @@ if (isMain) {
       defaultSnapshotPath: DEFAULT_SNAPSHOT_PATH,
       defaultSpawnCommand: DEFAULT_SPAWN_COMMAND,
       defaultEnv: DEFAULT_ENV,
+      routingMode: 'native',
     },
     process.argv.slice(2),
   );

@@ -1294,7 +1294,7 @@ backward compatibility.
 - **Complex** — Cross-module refactors, architecture changes, GPU/browser-critical
   slices, migrations that touch shared contracts, anything with high
   blast-radius or context-contamination risk. Complex slices get the
-  500-character prompt limit and MUST NOT use the reuse-idle-agent fast-path.
+  1000-character prompt limit and MUST NOT use the reuse-idle-agent fast-path.
 
 When the orchestrator is unsure, default to `moderate`. Over-classifying as
 trivial (to get the fast-path) when the work is moderate or complex is a
