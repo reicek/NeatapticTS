@@ -1,10 +1,12 @@
 ﻿# Neatenstein NGE Demo (alias "Neat Shooter")
 
-**Status:** [WIP] — Phase 1 [DONE] · Phase 2 [DONE] · Phase 3 [WIP] · Step 09 [DONE]: Bugfix — canvas stretch + missing enemies · fix-packet-09-green-iteration-2 green validated · Step 10 [WIP]: Fix enemy sprite rendering bugs (voxel pipeline, projection, FPS) — implementation slices done, awaiting 10-green validation · Step 11 [PLANNED]: Enhance cannon overlay · Steps 01–08 [DONE] · **Plan ID:** NEATENSTEIN_NGE_DEMO · **Created:** 2026-07-17 · **Next step:** 05-green-testing Step 10 green validation (focused jest, coverage guard, lint, visible-browser smoke)
+**Status:** [WIP] — Phase 1 [DONE] · Phase 2 [DONE] · Phase 3 [WIP] · Step 09 [DONE]: Bugfix — canvas stretch + missing enemies · fix-packet-09-green-iteration-2 green validated · Step 10 [WIP]: Replace enemy sprite renderer with encoded robot sprite set (plans/robot-sprite-data.js), restore walls/floor/ceiling raycast scene, correct projection, eliminate full-canvas getImageData/putImageData · red slice 10-red-encoded-sprite [WIP] · implementation slices reset to [PLANNED] · Step 11 [PLANNED]: Enhance cannon overlay · Steps 01–08 [DONE] · **Plan ID:** NEATENSTEIN_NGE_DEMO · **Created:** 2026-07-17 · **Next step:** 03-red-testing Step 10 red slice 10-red-encoded-sprite
 **Consensus:** 4 specialists (NGE Core, NGE Benchmark, Visualizer, Game Director) — all APPROVED after 2 review rounds.
 **Downstream of:** `plans/completed/NEAT_Genesis_EvoDevo.md` (NGE core), `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` (co-evolution harness reference, not duplicated).
 **Engine research:** `plans/Neon_Shooter_NGE_Demo.research.md` — DOOM/raycasting algorithm notes, neon renderer design (Lineage B grid DDA, locked), Flappy ground grid reuse, license attribution, and reuse map. **Read this before implementing Phase 1.**
 **Rendering direction:** Lineage B (grid DDA raycasting) — locked. See research file §1.
+
+**Sprite rendering resolution mandate:** All robot/enemy sprites are authored and rendered at a logical resolution of **48×48 pixels**, then scaled 4× to 192×192 for display. The renderer, sprite projection, raycasting collision checks, and voxel calculations must operate on the 48×48 logical grid and only scale at the final blit. This preserves the reference artwork exactly while keeping CPU cost ~16× lower than native 192×192 per-pixel operations. The `plans/robot-sprite-data.js` module is the source-of-truth encoded sprite set (8 directions × 4 poses: `stand`, `walk1`, `walk2`, `shoot`). Walk cycle: `stand → walk1 → walk2 → walk1`. The `shoot` frame uses semitransparent muzzle-blast palette indices 7/8 so the blast can be overlaid on any walk frame with a natural glow; recoil and cannon pixels remain opaque. Art is user-approved and locked.
 
 ---
 
@@ -14,11 +16,14 @@ Claim: 04-implementing completed fix-packet-09-green-iteration-2 @ 2026-07-31T21
 Claim: 05-green-testing validated slice 09-green after fix-packet-09-green-iteration-2 @ 2026-08-01T17:00:00-04:00
 Claim: 04-implementing completed slice 09-worker-sprite-pass @ 2026-07-31T14:02:00Z
 Claim: 04-implementing applied fix-packet-09-worker-controller-iteration-1 @ 2026-08-01T11:30:00Z
-Claim: 04-implementing completed Step 10 implementation slices (10-projection-fix, 10-voxel-renderer, 10-framebuffer-opt) @ 2026-08-02T14:30:00Z
+Claim: 01-planning revised Step 10 packet to use the approved encoded sprite set in plans/robot-sprite-data.js and reset the implementation slices to [PLANNED] @ 2026-08-03T12:00:00Z
+Claim: user approved 8-directional robot sprite art target and encoded 48×48 logical sprite set in `plans/robot-sprite-data.js` @ 2026-08-01T17:12:00-04:00
+Claim: user approved 4-pose animation set (stand, walk1, walk2, shoot) with walk2 replacing the redundant duplicate stand frame and semitransparent muzzle blast @ 2026-08-01T17:29:00-04:00
+Claim: art/data files regenerated with 8 directions × 4 poses and 9-entry palette (indices 7/8 for 50% alpha blast) @ 2026-08-01T17:30:00-04:00
 
-**NEXT STEP (resume here in new session):** Step 09 is [DONE]. Step 10 [WIP]: the three implementation slices are complete and all focused preflight checks pass (tsc, lint, prettier, 80 focused tests, 100% coverage on sprites.ts and display.worker.ts). The red-testing slice (10-red-renderer) was not separately executed because this session was dispatched with a direct "Execute Step 10" request and slice packets were not yet formalized in the workflow MCP (get_slice_context returned notFound); red-style assertions were added inside the implementation pass and are recorded as a pragmatic workflow deviation in the Step 10 PlanUpdate. Hand off to 05-green-testing to run the full Step 10 green validation matrix: focused jest suites, coverage guard, lint, and visible-browser smoke on ultra-wide (AC-10e-004). The canvas-resize-after-transfer bug remains fixed and green-validated.
+**NEXT STEP (resume here in new session):** Step 09 is [DONE]. Step 10 [WIP]: the previous implementation slices built against the Step 06 procedural voxel pipeline and have been superseded by the approved encoded sprite set in `plans/robot-sprite-data.js`. The Step 10 packet has been revised: red-testing slice `10-red-encoded-sprite` is [WIP], implementation slices `10-impl-encoded-sprite`, `10-impl-projection`, `10-impl-framebuffer` are [PLANNED], and green slice `10-green` is [PLANNED]. Hand off to 03-red-testing to author the new red tests that assert (a) sprites sample `ROBOT_SPRITE_FRAMES`/`ROBOT_SPRITE_PALETTE`, (b) projection uses the 48×48 logical grid, (c) no full-canvas `getImageData`/`putImageData` is called per frame, and (d) walls/floor/ceiling are rendered to a persistent `Uint8ClampedArray` framebuffer. The canvas-resize-after-transfer bug remains fixed and green-validated.
 
-Phase 3 Steps 01–08 are [DONE] and compressed to `plans/Neon_Shooter_NGE_Demo.plans.md`. Step 09 — Bugfix for canvas horizontal stretch on ultra-wide and missing enemy sprites — is [DONE] and sliced into 5 atomic slices. Slices `09-canvas-backing`, `09-render-state-enemies`, `09-worker-controller`, `09-worker-sprite-pass`, and `09-green` are [DONE]; fix-packet-09-green-iteration-2 has been green validated. Step 10 — Fix enemy sprite rendering bugs: use the Step 06 voxel asset pipeline and the attached `robot-proposal-192*.png` reference frames, correct the sprite projection formula, and eliminate the full-canvas `getImageData`/`putImageData` FPS killer that makes the demo unplayable — is [PLANNED] to follow Step 09. Step 11 — Enhance cannon overlay: fix horizontal stretch on ultra-wide displays, add detail, and introduce a dedicated voxel/3D gun-sprite projection so the cannon has real depth — is [PLANNED] to follow Step 10. Detailed per-step claims, PlanUpdate blocks, and validation evidence for Steps 07–08 are archived in the logs.
+Phase 3 Steps 01–08 are [DONE] and compressed to `plans/Neon_Shooter_NGE_Demo.plans.md`. Step 09 — Bugfix for canvas horizontal stretch on ultra-wide and missing enemy sprites — is [DONE] and sliced into 5 atomic slices. Slices `09-canvas-backing`, `09-render-state-enemies`, `09-worker-controller`, `09-worker-sprite-pass`, and `09-green` are [DONE]; fix-packet-09-green-iteration-2 has been green validated. Step 10 — Replace the failed enemy sprite renderer using the approved encoded `plans/robot-sprite-data.js` sprite set (logical 48×48, 4× display scale, 8 directions × 4 poses), restore the wall/floor/ceiling raycast scene, correct sprite projection from the logical grid, and eliminate the full-canvas `getImageData`/`putImageData` FPS killer. All sprite math (projection, raycasting, sampling) must run on the 48×48 logical grid and only scale by `ROBOT_SPRITE_SCALE = 4` at final blit. The old neon-bar renderer and procedural voxel snapshot path must be removed in the same slices that introduce the replacement (No Deferred Cleanup Policy). Step 11 — Enhance cannon overlay: fix horizontal stretch on ultra-wide displays, add detail, and introduce a dedicated voxel/3D gun-sprite projection so the cannon has real depth — is [PLANNED] to follow Step 10. Detailed per-step claims, PlanUpdate blocks, and validation evidence for Steps 07–08 are archived in the logs.
 
 ### PlanUpdate for Step 10 packet authoring + Step 11 renumber
 
@@ -371,9 +376,9 @@ Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing
 - Visible-browser smoke test of `examples/neatenstein/index.html` on 3440×1384 ultra-wide display → PASS; no `InvalidStateError: Cannot resize canvas after call to transferControlToOffscreen()`; worker backing store final resize 1193×480 (fixed 480px height, width scaled by aspect ratio); raycasted scene fills viewport; only benign `/favicon.ico` 404 observed.
 - `green-light: true` — Step 09 green validated by 05-green-testing (2026-08-01).
 
-**Step 10 planning validation (rendering bug fixes):**
+**Step 10 planning validation (encoded robot sprite set + raycast scene restoration):**
 
-- `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id="Step 10" --args.changed-files="plans/Neon_Shooter_NGE_Demo.plans.md"`
+- `node scripts/agent-customization/gates/slice-advancement.gate.mjs --json --slice-id=Step-10 --changed-files=plans/Neon_Shooter_NGE_Demo.plans.md`
 - Result:
 
 ```json
@@ -408,7 +413,7 @@ Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing
   "evidence": {
     "gate": "slice-advancement",
     "tier": 1,
-    "sliceId": "Step 10",
+    "sliceId": "Step-10",
     "severity": "TRIVIAL",
     "specialistCount": 0,
     "gatesRun": [
@@ -447,12 +452,14 @@ Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing
     "failedGates": [],
     "erroredGates": []
   },
-  "fixHint": "All 4 gates passed for slice Step 10 (TRIVIAL).",
+  "fixHint": "All 4 gates passed for slice Step-10 (TRIVIAL).",
   "owner": "orchestrator (Agent Zero)"
 }
 ```
 
-- `green-light: true` — Step 10 rendering-bugfix slice plan verified; structural slice-advancement gate passed (2026-08-01). Full-file slice-advancement (including code-coverage) is expected to fail until the new source/test files are created.
+- `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json` → PASS (0 stale WIP plans).
+- `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Neon_Shooter_NGE_Demo.plans.md` → PASS (0 errors, 0 warnings).
+- `green-light: true` — Step 10 packet revision verified: structural slice-advancement gate passed (2026-08-03). The old voxel-pipeline implementation slices are superseded and reset to `[PLANNED]`; red slice `10-red-encoded-sprite` is the next boundary. Full-file slice-advancement (including code-coverage) is expected to fail until the new source/test files are created by the execution-phase agents.
 
 **Step 11 planning validation (cannon overlay — 3D voxel depth + stretch fix):**
 
@@ -567,13 +574,13 @@ fix_packet:
 ```text
 Continue from the current repo state only. Do not rely on prior chat history. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.
 
-Context: Neatenstein NGE Demo — Phase 1 [DONE], Phase 2 [DONE], Phase 3 [WIP]. Phase 3 Steps 01–08 are [DONE] and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` (§Phase 3 Step 01–08). Step 09 — Bugfix for canvas horizontal stretch + missing enemy sprites — is [DONE] and green validated. Step 10 — Fix enemy sprite rendering bugs (voxel pipeline, correct projection, eliminate FPS-killing framebuffer copy) — is [WIP]: the three implementation slices (10-projection-fix, 10-voxel-renderer, 10-framebuffer-opt) are complete and all focused preflight checks pass; the 10-green validation slice is [WIP]. Step 11 — Enhance cannon overlay — is [PLANNED] to follow Step 10.
+Context: Neatenstein NGE Demo — Phase 1 [DONE], Phase 2 [DONE], Phase 3 [WIP]. Phase 3 Steps 01–08 are [DONE] and compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` (§Phase 3 Step 01–08). Step 09 — Bugfix for canvas horizontal stretch + missing enemy sprites — is [DONE] and green validated. Step 10 — Replace the enemy sprite renderer with the approved encoded `plans/robot-sprite-data.js` pipeline, restore wall/floor/ceiling raycast scene, correct projection from the 48×48 logical grid, and eliminate the full-canvas `getImageData`/`putImageData` FPS killer — is [WIP]: the red slice `10-red-encoded-sprite` is [WIP]; implementation slices `10-impl-encoded-sprite`, `10-impl-projection`, `10-impl-framebuffer` are [PLANNED]; green slice `10-green` is [PLANNED]. Step 11 — Enhance cannon overlay — is [PLANNED] to follow Step 10.
 
-What is already covered: All prior Phase 3 steps are archived in the logs. Step 09 covers two live bugs: (1) the visible canvas is horizontally stretched on ultra-wide monitors because `updateCanvasBackingStore()` sizes the backing store from the viewport instead of the canvas CSS box; (2) no enemies are rendered because the worker render loop never calls the existing `renderer/sprites.ts` sprite renderer and the host-to-worker render state carries no enemy positions. Investigation since the last handoff found three additional rendering bugs in the enemy sprite path that must be fixed before the cannon overlay and that are now the explicit focus of Step 10: (A) the runtime sprite renderer draws flat neon bars instead of using the Step 06 voxel asset pipeline and the attached `robot-proposal-192*.png` reference frames, so the enemies lack 3D voxel animated versions; (B) sprite projection uses an incorrect focal-length formula (`canvasHeight / transformY` style scaling) causing oversized sprites; (C) the worker does a full-canvas `getImageData`/`putImageData` copy every frame during the sprite pass, making the demo unplayably slow. Separately, the center-screen plasma cannon in `renderer/gun.ts` is stretched horizontally on ultra-wide because `gunWidth` is currently computed from viewport `width` independently of `gunHeight`, and it lacks 3D voxel depth; both gun issues are now Step 11.
+What is already covered: All prior Phase 3 steps are archived in the logs. Step 09 covers two live bugs: (1) the visible canvas is horizontally stretched on ultra-wide monitors because `updateCanvasBackingStore()` sizes the backing store from the viewport instead of the canvas CSS box; (2) no enemies are rendered because the worker render loop never calls the existing `renderer/sprites.ts` sprite renderer and the host-to-worker render state carries no enemy positions. The approved encoded sprite set in `plans/robot-sprite-data.js` now supersedes the old Step 06 procedural voxel snapshot pipeline and the `robot-proposal-192*.png` reference frames. Step 10 must therefore (A) import `ROBOT_SPRITE_FRAMES`/`ROBOT_SPRITE_SCALE`/`ROBOT_SPRITE_PALETTE` directly from `plans/robot-sprite-data.js` and decode the 48×48 logical frames at runtime, (B) restore raycast wall/floor/ceiling rendering into a persistent `Uint8ClampedArray` framebuffer, (C) fix sprite projection using the logical 48×48 grid and only scale 4× at final blit, and (D) remove the full-canvas `getImageData`/`putImageData` path plus dead neon-bar/voxel helper code under the No Deferred Cleanup Policy. The semitransparent muzzle-blast palette indices 7/8 must composite as 128-alpha red/white over any walk frame. Separately, the center-screen plasma cannon in `renderer/gun.ts` is stretched horizontally on ultra-wide because `gunWidth` is currently computed from viewport `width` independently of `gunHeight`, and it lacks 3D voxel depth; both gun issues are now Step 11.
 
-Current boundary: Phase 3 active frontier is Step 10 — enemy sprite rendering bug fixes [WIP] (implementation complete, 10-green validation in progress), then Step 11 — cannon overlay enhancement [PLANNED].
+Current boundary: Phase 3 active frontier is Step 10 — encoded enemy sprite renderer replacement and raycast scene restoration [WIP] (red-testing in progress), then Step 11 — cannon overlay enhancement [PLANNED].
 
-Next narrow task: **RESUME HERE** — Dispatch 05-green-testing to run the full Step 10 green validation matrix. Green agent should: (1) run `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry` and confirm all focused tests pass, (2) run `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=examples/neatenstein/browser-entry` and confirm 100% statements/branches/functions/lines on the four touched source/test files (`sprites.ts`, `display.worker.ts`, and their tests), (3) run `npm run lint` and `npx tsc --noEmit -p tsconfig.json`, (4) re-run `slice-advancement` gate for each implementation slice with `--slice-id=10-projection-fix --changed-files=examples/neatenstein/browser-entry/renderer/sprites.ts,examples/neatenstein/browser-entry/renderer/sprites.test.ts`, `--slice-id=10-voxel-renderer --changed-files=examples/neatenstein/browser-entry/renderer/sprites.ts,examples/neatenstein/browser-entry/renderer/sprites.test.ts`, and `--slice-id=10-framebuffer-opt --changed-files=examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/worker/display.worker.test.ts`, (5) run visible-browser smoke of `examples/neatenstein/index.html` on ultra-wide display and confirm voxel enemy sprites render at correct size and the demo maintains smooth FPS (AC-10e-004). Once Step 10 green validation passes, mark Step 10 [DONE] and begin Step 11: aspect-correct gun sizing and gun-sprite projection in `renderer/gun.ts`.
+Next narrow task: **RESUME HERE** — Dispatch 03-red-testing to author red tests for the new Step 10 red slice `10-red-encoded-sprite`. Red agent should: (1) write failing assertions in `examples/neatenstein/browser-entry/renderer/sprites.test.ts` that `renderNeatensteinSprite` samples pixel data from `plans/robot-sprite-data.js` `ROBOT_SPRITE_FRAMES` (not flat color bars or voxel snapshots), that pose/direction lookup includes `stand`/`walk1`/`walk2`/`shoot` across 8 directions, and that palette indices 7/8 produce semitransparent muzzle-blast pixels; (2) write failing assertions in `examples/neatenstein/browser-entry/worker/display.worker.test.ts` that the worker renders walls/floor/ceiling to a persistent `Uint8ClampedArray` framebuffer, does not call `getImageData`/`putImageData` on the full canvas per frame, and calls `putImageData` at most once per frame; (3) write failing assertions that `projectNeatensteinSprite` uses the 48×48 logical grid and produces a screen size proportional to `canvasHeight / perpDist` with correct focal length; (4) run the new red tests and confirm they fail for the expected reasons before any implementation changes. Once red tests are recorded, proceed to 04-implementing slices `10-impl-encoded-sprite`, `10-impl-projection`, and `10-impl-framebuffer` in order.
 
 Required validations:
   - neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json
@@ -594,10 +601,10 @@ Known worktree cautions: The approved reference art files `plans/robot-proposal-
 - Step 07 — Wire enemies into live renderer — [DONE]; all five slices (`07-red-renderer`, `07-renderer-bridge`, `07-enemy-controller`, `07-enemy-render`, `07-wave-loop`) are [DONE] and green validated. Full step packet and validation evidence are compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3 Step 07 final compression.
 - Step 08 — Canvas sizing fix: fixed 480px height with aspect-ratio width — [DONE]; full step packet, acceptance criteria, slice details, and validation evidence are compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3 Step 08.
 - Step 09 — Bugfix: canvas horizontal stretch + missing enemy sprites — [DONE]; all 5 slices (`09-canvas-backing`, `09-render-state-enemies`, `09-worker-controller`, `09-worker-sprite-pass`, `09-green`) are [DONE] and green validated; fix-packet-09-green-iteration-2 (canvas resize after transfer) visible-browser smoke on ultra-wide passed.
-- Step 10 — Fix enemy sprite rendering bugs: use voxel asset pipeline, correct projection formula, eliminate full-canvas getImageData/putImageData FPS killer — [WIP]; implementation slices (10-projection-fix, 10-voxel-renderer, 10-framebuffer-opt) are [DONE] and preflight green; 10-green validation is [WIP].
+- Step 10 — Replace enemy sprite renderer with encoded `plans/robot-sprite-data.js` set, restore walls/floor/ceiling raycast scene, correct projection, eliminate full-canvas getImageData/putImageData — [WIP]; red slice `10-red-encoded-sprite` is [WIP]; implementation slices `10-impl-encoded-sprite`, `10-impl-projection`, `10-impl-framebuffer` are [PLANNED]; green slice `10-green` is [PLANNED].
 - Step 11 — Enhance cannon overlay: fix horizontal stretch, add detail, voxel/3D look via sprite projection — [PLANNED]; awaiting Step 10 completion.
 
-**Active frontier:** Phase 3 Step 10 — Fix enemy sprite rendering bugs [WIP] (implementation complete, awaiting 10-green validation); Step 09 — canvas stretch + missing enemy sprites [DONE] with fix-packet-09-green-iteration-2 green validated on ultra-wide; Step 11 — cannon overlay enhancement [PLANNED]; Steps 01–08 are [DONE].
+**Active frontier:** Phase 3 Step 10 — encoded enemy sprite renderer replacement and raycast scene restoration [WIP] (red-testing slice `10-red-encoded-sprite` in progress); Step 09 — canvas stretch + missing enemy sprites [DONE] with fix-packet-09-green-iteration-2 green validated on ultra-wide; Step 11 — cannon overlay enhancement [PLANNED]; Steps 01–08 are [DONE].
 
 ## Implementation phases
 
@@ -1101,24 +1108,25 @@ PlanUpdate:
   next: 'Hand off to 05-green-testing to run the full 09-green validation matrix (focused jest suites, coverage guard, lint, visible-browser smoke on ultra-wide).'
 ```
 
-#### Step 10: Fix enemy sprite rendering bugs — voxel pipeline, correct projection, no full-canvas framebuffer copy [WIP]
+#### Step 10: Replace failed enemy sprite renderer — encoded `plans/robot-sprite-data.js` pipeline, correct projection, restored raycast scene, no full-canvas framebuffer copy [WIP]
 
-**Step objective:** Repair three runtime rendering bugs discovered while wiring enemies into the worker sprite pass. (1) The runtime sprite renderer in `renderer/sprites.ts` currently draws flat neon vertical bars via `renderNeatensteinSpriteColumnRgb`; it must instead sample the voxel enemy frames produced by the Step 06 asset pipeline (`examples/neatenstein/scripts/voxel-enemy.ts`, `snapshot-renderer.ts`, etc.) and the attached `robot-proposal-192*.png` reference frames so that enemies show 3D voxel animated versions of the reference sprites. (2) The projection helper `projectNeatensteinSprite` uses an incorrect focal-length formula (`canvasHeight / transformY` style scaling) that makes sprites oversized; replace it with correct screen-space perspective projection. (3) The worker sprite pass in `worker/display.worker.ts` performs a full-canvas `getImageData`/`putImageData` copy every frame, which kills FPS and makes the demo unplayable; refactor the render loop to write walls/floor/ceiling and sprites into a persistent `Uint8ClampedArray` framebuffer and commit it once per frame (or draw sprites directly into the context without re-reading the whole canvas).
+**Step objective:** Replace the failed enemy sprite renderer with the approved encoded sprite pipeline from `plans/robot-sprite-data.js`. (1) The runtime sprite renderer in `renderer/sprites.ts` currently draws flat neon vertical bars and/or samples the procedural voxel generator from Step 06; it must instead read the 8-direction × 4-pose encoded frames (`stand`, `walk1`, `walk2`, `shoot`) from `plans/robot-sprite-data.js`, operate on the 48×48 logical grid, and scale 4× only at final blit so enemies show animated robot sprites at the correct resolution. The `shoot` pose combines with lower-body walk frames using palette indices 7/8 for the semitransparent muzzle blast. (2) Correct the sprite projection formula so screen scale is derived from a constant focal length (`canvasHeight / perpDist * worldSize`) with horizontal/vertical consistency, not the old oversized `canvasHeight / transformY` style scaling. (3) Restore walls/floor/ceiling raycast rendering in the worker render loop and eliminate the full-canvas `getImageData`/`putImageData` copy by writing the entire scene into a persistent `Uint8ClampedArray` framebuffer that is committed once per frame.
 
 **Boundary notes:**
 
-- The Step 06 voxel asset pipeline and the attached `plans/robot-proposal-192*.png` reference frames are the source of truth for enemy sprite frames. The runtime renderer must load the generated manifest/sprite sheet (e.g., `examples/neatenstein/generated/`) or import the snapshot renderer API, not duplicate voxel generation logic. Parity with the reference frames is validated by the `06-reference-parity` slice tests; new runtime frames must match those proportions and palette.
-- Public API of `renderer/sprites.ts` should remain stable where possible; `worker/display.worker.ts` still calls `renderNeatensteinSprite` and `clipNeatensteinSprite`, but their internals change.
-- The z-buffer helpers in `renderer/sprites.ts` (if any) should be reused/extended rather than duplicated.
+- `plans/robot-sprite-data.js` is the source of truth for enemy sprite frames: `ROBOT_SPRITE_FRAMES` contains 8 directions × 4 poses (`stand`, `walk1`, `walk2`, `shoot`) on a 48×48 logical grid, `ROBOT_SPRITE_SCALE = 4` is applied only at final blit, and `ROBOT_SPRITE_PALETTE` uses indices 7/8 for the 50%-alpha muzzle blast. The runtime renderer must import this module directly and must not duplicate voxel generation logic or depend on `examples/neatenstein/generated/` or `robot-proposal-192*.png` reference frames.
+- Public API of `renderer/sprites.ts` should remain stable where possible; `worker/display.worker.ts` still calls `renderNeatensteinSprite` and `clipNeatensteinSprite`, but their internals change to use the encoded sprite set.
+- The z-buffer helpers in `renderer/sprites.ts` should be reused/extended rather than duplicated.
+- Sprite math (projection, raycasting collision checks, per-pixel sampling) must run on the 48×48 logical grid and only scale 4× at the final canvas output.
 - The worker must remain testable under Node/Jest with mocked `CanvasRenderingContext2D` / `OffscreenCanvasRenderingContext2D`; avoid browser-only APIs in the hot path.
-- Dead code from the neon-bar renderer and the full-canvas snapshot must be removed in the same step that introduces the replacement (No Deferred Cleanup Policy).
+- Dead code from the neon-bar renderer, the procedural voxel snapshot path, and the full-canvas snapshot must be removed in the same step that introduces the replacement (No Deferred Cleanup Policy).
 
 **Step 10 packet:**
 
 ```yaml
 phase: 3
 step: 10
-title: 'Fix enemy sprite rendering bugs: voxel pipeline, correct projection, eliminate full-canvas framebuffer copy'
+title: 'Replace enemy sprite renderer with encoded robot sprite set and restore raycast scene'
 status: '[WIP]'
 goal: 'green-testing'
 tdd_sequence: 'red-green'
@@ -1135,87 +1143,91 @@ skills:
   - 'frontend-integration'
   - 'browser-runtime'
 validation:
-  - 'neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=Step 10 --args.changed-files=plans/Neon_Shooter_NGE_Demo.plans.md,examples/neatenstein/browser-entry/renderer/sprites.ts,examples/neatenstein/browser-entry/renderer/sprites.test.ts,examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  - 'neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=Step 10 --args.changed-files=plans/Neon_Shooter_NGE_Demo.plans.md,plans/robot-sprite-data.js,examples/neatenstein/browser-entry/renderer/sprites.ts,examples/neatenstein/browser-entry/renderer/sprites.test.ts,examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/worker/display.worker.test.ts'
   - 'neataptic-gate-mcp:run_gate_check --gate=stale-wip-plans --json'
   - 'npm run lint'
 acceptance_criteria:
   - id: 'AC-10-001'
-    text: 'Enemy sprites render using the Step 06 voxel asset pipeline and the attached robot-proposal reference frames (not flat neon color bars).'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/sprites.test.ts'
+    text: 'Enemy sprites render using the approved plans/robot-sprite-data.js encoded sprite set (8 directions × 4 poses on a 48×48 logical grid, final blit scaled 4× to 192×192), not flat neon bars or procedural voxel snapshots.'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/renderer/sprites.test.ts'
   - id: 'AC-10-002'
-    text: 'Sprite projection scale matches the correct focal-length formula and is not oversized on screen.'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/sprites.test.ts'
+    text: 'Raycast walls, floor, and ceiling are rendered into the scene before sprites so sprites appear correctly occluded and grounded.'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/worker/display.worker.test.ts'
   - id: 'AC-10-003'
-    text: 'Worker render loop does not call getImageData/putImageData on the full canvas during the sprite pass.'
-    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    text: 'Sprite projection scale derives from the 48×48 logical sprite grid and correct camera transform; it is not oversized or based on canvasWidth / transformY hacks.'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/renderer/sprites.test.ts'
   - id: 'AC-10-004'
-    text: 'All touched source files build, lint, and have 100% coverage.'
-    validation: 'npm run lint; npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=examples/neatenstein/browser-entry'
+    text: 'The render loop does not call getImageData or putImageData on the full canvas per frame; it writes to a persistent Uint8ClampedArray framebuffer and blits once.'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  - id: 'AC-10-005'
+    text: 'Dead neon-bar renderer code, procedural voxel snapshot imports/paths, and full-canvas snapshot helpers are removed in the same slices that add the replacement (No Deferred Cleanup Policy); touched source files build, lint, and have 100% coverage.'
+    validation: 'npm run lint; npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein/browser-entry'
 constitution_check:
   - 'principle-3-verbatim-binding'
   - 'principle-4-small-slices'
   - 'principle-5-unique-ids'
 slices:
-  - slice_id: '10-red-renderer'
-    title: 'Write red tests for voxel rendering, projection formula, and framebuffer copy bugs'
-    status: '[DONE]'
+  - slice_id: '10-red-encoded-sprite'
+    title: 'Write red tests for encoded sprite rendering, projection, and framebuffer copy bugs'
+    status: '[WIP]'
     goal: 'red-testing'
-    estimate_hours: 2
+    estimate_hours: 3
     files_to_change:
       - 'examples/neatenstein/browser-entry/renderer/sprites.test.ts'
       - 'examples/neatenstein/browser-entry/worker/display.worker.test.ts'
     acceptance_criteria:
       - id: 'AC-10a-001'
-        text: 'A failing assertion exists that renderNeatensteinSprite samples voxel pixel data instead of drawing a single flat color bar.'
+        text: 'A failing assertion exists that renderNeatensteinSprite samples ROBOT_SPRITE_FRAMES pixel data (imported from plans/robot-sprite-data.js) instead of drawing a flat color bar.'
       - id: 'AC-10a-002'
-        text: 'A failing assertion exists that projected sprite scale is proportional to canvasHeight / perpDist with the correct focal length (not canvasWidth or transformY-derived scale).'
+        text: 'A failing assertion exists that projected sprite scale is computed from the 48×48 logical grid and proportional to canvasHeight / perpDist with the correct focal length.'
       - id: 'AC-10a-003'
-        text: 'A failing assertion exists that the worker sprite pass does not call getImageData or putImageData per frame.'
+        text: 'A failing assertion exists that the worker render loop does not call getImageData or putImageData on the full canvas during the sprite/wall pass.'
+      - id: 'AC-10a-004'
+        text: 'A failing assertion exists that walls/floor/ceiling raycast pixels are written to a persistent Uint8ClampedArray framebuffer before sprites are drawn.'
     parallelizable: false
     dependencies: []
-    next_slice: '10-projection-fix'
-  - slice_id: '10-projection-fix'
-    title: 'Correct the sprite projection focal-length formula'
-    status: '[DONE]'
+    next_slice: '10-impl-encoded-sprite'
+  - slice_id: '10-impl-encoded-sprite'
+    title: 'Wire runtime sprite renderer to plans/robot-sprite-data.js and remove dead neon-bar/voxel code'
+    status: '[PLANNED]'
+    goal: 'implementing'
+    estimate_hours: 4
+    files_to_change:
+      - 'examples/neatenstein/browser-entry/renderer/sprites.ts'
+      - 'examples/neatenstein/browser-entry/renderer/sprites.test.ts'
+    acceptance_criteria:
+      - id: 'AC-10b-001'
+        text: 'sprites.ts imports ROBOT_SPRITE_FRAMES, ROBOT_SPRITE_SCALE, and ROBOT_SPRITE_PALETTE from plans/robot-sprite-data.js and decodes palette indices into RGBA.'
+      - id: 'AC-10b-002'
+        text: 'Flat neon-bar drawing code (renderNeatensteinSpriteColumnRgb and related helpers) and any procedural voxel snapshot imports/builders are deleted.'
+      - id: 'AC-10b-003'
+        text: 'Encoded sprite pixels are written to the framebuffer with z-buffer occlusion; muzzle-blast palette indices 7/8 produce semitransparent red/white pixels.'
+    parallelizable: false
+    dependencies:
+      - '10-red-encoded-sprite'
+    next_slice: '10-impl-projection'
+  - slice_id: '10-impl-projection'
+    title: 'Correct sprite projection from the 48×48 logical grid'
+    status: '[PLANNED]'
     goal: 'implementing'
     estimate_hours: 2
     files_to_change:
       - 'examples/neatenstein/browser-entry/renderer/sprites.ts'
       - 'examples/neatenstein/browser-entry/renderer/sprites.test.ts'
     acceptance_criteria:
-      - id: 'AC-10b-001'
-        text: 'projectNeatensteinSprite computes screen scale using a constant focal length or canvasHeight/perpDist * worldSize (with correct horizontal/vertical consistency).'
-      - id: 'AC-10b-002'
-        text: 'Sprite screen size is verified against a known camera distance and does not overshoot the viewport.'
-      - id: 'AC-10b-003'
-        text: 'Tests for the old oversized formula fail before the fix and pass after.'
-    parallelizable: false
-    dependencies:
-      - '10-red-renderer'
-    next_slice: '10-voxel-renderer'
-  - slice_id: '10-voxel-renderer'
-    title: 'Wire runtime sprite renderer to the Step 06 voxel asset pipeline'
-    status: '[DONE]'
-    goal: 'implementing'
-    estimate_hours: 4
-    files_to_change:
-      - 'examples/neatenstein/browser-entry/renderer/sprites.ts'
-      - 'examples/neatenstein/browser-entry/renderer/sprites.test.ts'
-      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
-    acceptance_criteria:
       - id: 'AC-10c-001'
-        text: 'renderNeatensteinSprite loads enemy voxel frames from the Step 06 generated manifest or snapshot renderer output.'
+        text: 'projectNeatensteinSprite computes screen position and size from logical 48×48 sprite dimensions, applying ROBOT_SPRITE_SCALE = 4 only at final blit.'
       - id: 'AC-10c-002'
-        text: 'Flat neon-bar drawing code (renderNeatensteinSpriteColumnRgb and related helpers) is removed.'
+        text: 'Sprite screen size is verified against a known camera distance and does not overshoot the viewport.'
       - id: 'AC-10c-003'
-        text: 'Voxel pixels are written to the framebuffer with z-buffer occlusion and the worker still calls the same public entry points.'
+        text: 'Direction selection (0..7) is exercised for the 8 encoded directions; pose selection cycles stand/walk1/walk2/shoot.'
     parallelizable: false
     dependencies:
-      - '10-projection-fix'
-    next_slice: '10-framebuffer-opt'
-  - slice_id: '10-framebuffer-opt'
-    title: 'Eliminate full-canvas getImageData/putImageData copy in worker sprite pass'
-    status: '[DONE]'
+      - '10-impl-encoded-sprite'
+    next_slice: '10-impl-framebuffer'
+  - slice_id: '10-impl-framebuffer'
+    title: 'Restore raycast scene and eliminate full-canvas getImageData/putImageData'
+    status: '[PLANNED]'
     goal: 'implementing'
     estimate_hours: 3
     files_to_change:
@@ -1223,18 +1235,18 @@ slices:
       - 'examples/neatenstein/browser-entry/worker/display.worker.test.ts'
     acceptance_criteria:
       - id: 'AC-10d-001'
-        text: 'The worker allocates a persistent Uint8ClampedArray framebuffer and writes wall/floor/ceiling + sprite pixels directly into it.'
+        text: 'The worker allocates a persistent Uint8ClampedArray framebuffer and renders walls, floor, and ceiling before drawing sprites.'
       - id: 'AC-10d-002'
-        text: 'putImageData is called at most once per frame (or not at all if drawing directly to context).'
+        text: 'putImageData is called at most once per frame to blit the persistent framebuffer; no getImageData call remains in the per-frame render path.'
       - id: 'AC-10d-003'
-        text: 'No getImageData call remains in the per-frame sprite pass block; old snapshot code is deleted.'
+        text: 'Old full-canvas snapshot helpers and any dead raycast stubs are deleted in the same slice.'
     parallelizable: false
     dependencies:
-      - '10-voxel-renderer'
+      - '10-impl-projection'
     next_slice: '10-green'
   - slice_id: '10-green'
     title: 'Green validation: focused tests, build, lint, coverage guard, visible-browser smoke'
-    status: '[WIP]'
+    status: '[PLANNED]'
     goal: 'green-testing'
     estimate_hours: 3
     files_to_change:
@@ -1244,36 +1256,51 @@ slices:
     acceptance_criteria:
       - id: 'AC-10e-001'
         text: 'Focused jest suites for sprites and worker pass with zero failures.'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry'
       - id: 'AC-10e-002'
         text: '100% coverage on touched source files in examples/neatenstein/browser-entry.'
-        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=examples/neatenstein/browser-entry'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein/browser-entry'
       - id: 'AC-10e-003'
         text: 'npm run lint exits 0 and tsc --noEmit passes.'
         validation: 'npm run lint; npx tsc --noEmit -p tsconfig.json'
       - id: 'AC-10e-004'
-        text: 'Visible-browser smoke shows voxel enemy sprites at correct size and maintains smooth FPS (no full-canvas copy).'
+        text: 'Visible-browser smoke shows encoded robot sprites at correct size with walls/floor/ceiling visible and maintains smooth FPS (no full-canvas copy).'
         validation: 'Manual visible-browser smoke test of examples/neatenstein/index.html; capture browserVisibility: visible-foreground evidence and approximate FPS.'
     parallelizable: false
     dependencies:
-      - '10-framebuffer-opt'
+      - '10-impl-framebuffer'
     next_slice: null
 ```
 
 **Validation evidence:**
 
-- `npx tsc --noEmit -p tsconfig.json` → PASS.
-- `npm run lint` → PASS (0 issues).
-- `npx prettier --check examples/neatenstein/browser-entry/renderer/sprites.ts examples/neatenstein/browser-entry/renderer/sprites.test.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts` → PASS.
-- `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/sprites.test.ts|examples/neatenstein/browser-entry/worker/display.worker.test.ts` → PASS (80 tests, 2 suites).
-- Focused coverage (`npx jest --config=jest.config.mjs --no-cache --coverage --collectCoverageFrom=examples/neatenstein/browser-entry/renderer/sprites.ts --collectCoverageFrom=examples/neatenstein/browser-entry/worker/display.worker.ts --testPathPatterns=...`) → `sprites.ts` 100/100/100/100; `display.worker.ts` 100/100/100/100.
-- `node scripts/agent-customization/gates/slice-advancement.gate.mjs --json --slice-id=10-projection-fix --changed-files=examples/neatenstein/browser-entry/renderer/sprites.ts,examples/neatenstein/browser-entry/renderer/sprites.test.ts` → PASS (7/7 sub-gates; severity FULL).
-- `node scripts/agent-customization/gates/slice-advancement.gate.mjs --json --slice-id=10-voxel-renderer --changed-files=examples/neatenstein/browser-entry/renderer/sprites.ts,examples/neatenstein/browser-entry/renderer/sprites.test.ts` → PASS (7/7 sub-gates; severity FULL).
-- `node scripts/agent-customization/gates/slice-advancement.gate.mjs --json --slice-id=10-framebuffer-opt --changed-files=examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/worker/display.worker.test.ts` → PASS (7/7 sub-gates; severity FULL).
-- `neataptic-gate-mcp:run_gate_check --gate=slice-advancement` returned invalid JSON from the MCP wrapper; the underlying `slice-advancement.gate.mjs` script was run directly and passed for all three implementation slices and for the consolidated Step 10 file set.
+- 2026-08-03: Step 10 packet revised to use the approved encoded sprite set in `plans/robot-sprite-data.js`. The previous implementation evidence (tsc, lint, prettier, 80 focused tests, 100% coverage on `sprites.ts`/`display.worker.ts`, and per-slice `slice-advancement` passes for the old voxel pipeline slices) is superseded because the source of truth changed and the implementation slices have been reset to `[PLANNED]`.
+- `node scripts/agent-customization/gates/slice-advancement.gate.mjs --json --slice-id=Step-10 --changed-files=plans/Neon_Shooter_NGE_Demo.plans.md` → PASS (plan-only, TRIVIAL severity; 4/4 sub-gates: plan-sync, step-packet, plan-slice-quality, plan-command-lint).
 - `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json` → PASS (0 stale plans).
 - `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Neon_Shooter_NGE_Demo.plans.md` → PASS (0 errors, 0 warnings).
-- Visible-browser smoke (AC-10e-004) is pending 05-green-testing.
+- Source-level validations (tsc, lint, focused jest, coverage guard, visible-browser smoke) are pending execution-phase work and are recorded under the new red/implement/green slices.
+
+### PlanUpdate for Step 10 packet revision to encoded `robot-sprite-data.js`
+
+```yaml
+PlanUpdate:
+  boundary: 'Phase 3 / Step 10 packet revision'
+  status: '[DONE]'
+  what_changed:
+    - 'plans/Neon_Shooter_NGE_Demo.plans.md — revised Step 10 title, objective, boundary notes, and YAML packet to use plans/robot-sprite-data.js as source-of-truth encoded sprite set (8 directions × 4 poses, 48×48 logical grid, ROBOT_SPRITE_SCALE = 4, semitransparent muzzle-blast palette indices 7/8)'
+    - 'plans/Neon_Shooter_NGE_Demo.plans.md — reset Step 10 implementation slices to [PLANNED]; red slice 10-red-encoded-sprite is [WIP]'
+    - 'plans/Neon_Shooter_NGE_Demo.plans.md — updated Current state, Handoff query, Phase 3 status line, active frontier, and top-level status line'
+    - 'plans/Neon_Shooter_NGE_Demo.plans.md — archived old voxel-pipeline validation evidence as superseded'
+    - 'plans/README.md — created to register active WIP plan'
+    - 'plans/Roadmap.md — created to register active WIP plan'
+  evidence:
+    - 'node scripts/agent-customization/gates/slice-advancement.gate.mjs --json --slice-id=Step-10 --changed-files=plans/Neon_Shooter_NGE_Demo.plans.md → pass (4/4 structural sub-gates)'
+    - 'node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json → pass (0 stale WIP plans)'
+    - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/Neon_Shooter_NGE_Demo.plans.md → pass (0 errors, 0 warnings)'
+  removals:
+    - 'Old Step 10 implementation slices (10-projection-fix, 10-voxel-renderer, 10-framebuffer-opt) are superseded and reset to [PLANNED] under new IDs (10-impl-projection, 10-impl-encoded-sprite, 10-impl-framebuffer). Old voxel-pipeline validation evidence is archived as superseded.'
+  next_boundary: '03-red-testing slice 10-red-encoded-sprite — author red tests for encoded sprite rendering, projection, and framebuffer copy bugs'
+```
 
 #### Step 11: Enhance cannon overlay — fix horizontal stretch, add detail, voxel/3D look via sprite projection [PLANNED]
 
