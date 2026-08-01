@@ -21,6 +21,77 @@ import {
   NEATENSTEIN_MLP_REFRESH_INTERVAL_GENERATIONS,
   NEATENSTEIN_SWARM_REFRESH_INTERVAL_GENERATIONS,
 } from './constants.ts';
+import type { EnemyPopulation, MlpSnapshot } from './types.ts';
+
+/**
+ * Rolling store of frozen enemy snapshots indexed by variant id.
+ *
+ * Snapshots are deep-copied from the live population when
+ * {@link refreshEnemySnapshots} is called and are never mutated afterwards.
+ * This keeps evaluation barriers isolated from in-place population evolution.
+ */
+const enemySnapshotStore = new Map<number, MlpSnapshot>();
+
+/**
+ * Refresh the rolling enemy snapshot store from a live population.
+ *
+ * Each variant in the population is deep-copied into a frozen snapshot so
+ * subsequent mutations of the population weights do not leak into stored
+ * snapshots. Only the MLP backend is supported; other backends leave the
+ * store empty.
+ *
+ * @param population - Live enemy population to snapshot.
+ *
+ * @example
+ * ```ts
+ * const population = createMlpEnemyPopulation({ seed: 1 });
+ * refreshEnemySnapshots(population);
+ * const snapshot = getEnemySnapshot(0);
+ * console.log(snapshot.weights.length); // 102
+ * ```
+ */
+export function refreshEnemySnapshots(population: EnemyPopulation): void {
+  enemySnapshotStore.clear();
+
+  if (population.kind !== 'mlp') {
+    return;
+  }
+
+  for (let variantId = 0; variantId < population.size; variantId++) {
+    const variant = population.sample(variantId) as {
+      weights: Float32Array;
+    };
+    const frozenWeights = Object.freeze(Array.from(variant.weights));
+    const snapshot: MlpSnapshot = {
+      kind: 'mlp',
+      weights: frozenWeights as unknown as Float32Array,
+    };
+    enemySnapshotStore.set(variantId, Object.freeze(snapshot));
+  }
+}
+
+/**
+ * Return the frozen snapshot for a previously refreshed enemy variant.
+ *
+ * @param variantId - Variant index within the enemy population.
+ * @returns Frozen {@link MlpSnapshot} for the variant.
+ * @throws Error when no snapshot has been refreshed for the variant.
+ *
+ * @example
+ * ```ts
+ * refreshEnemySnapshots(population);
+ * const snapshot = getEnemySnapshot(0);
+ * ```
+ */
+export function getEnemySnapshot(variantId: number): MlpSnapshot {
+  const snapshot = enemySnapshotStore.get(variantId);
+  if (!snapshot) {
+    throw new Error(
+      `No enemy snapshot for variant ${variantId}; call refreshEnemySnapshots first.`,
+    );
+  }
+  return snapshot;
+}
 
 /**
  * Decide whether the MLP enemy population should produce a new champion snapshot

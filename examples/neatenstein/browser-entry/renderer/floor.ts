@@ -47,10 +47,12 @@ export const NEATENSTEIN_FLOOR_DEFAULT_HEIGHT = 240;
 export const NEATENSTEIN_FLOOR_HORIZON_RATIO = 0.5;
 
 /**
- * Horizontal field of view in radians.
+ * Vertical field of view in radians.
  *
- * This should match the wall raycaster's horizontal FOV so floor/ceiling
- * perspective aligns with projected wall columns.
+ * The renderer treats this as the vertical FOV and derives focal length from
+ * canvas height (fixed at 480 px). The camera plane is scaled by the viewport
+ * aspect ratio so horizontal FOV widens on wider screens, matching the
+ * wall raycaster's aspect-correct projection.
  */
 export const NEATENSTEIN_FLOOR_FOV_RADIANS = Math.PI / 3;
 
@@ -497,7 +499,8 @@ function drawNeatensteinGrid(
   const safeCamera = sanitizeNeatensteinFloorCamera(camera);
   const horizonY = canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO;
   const halfWidth = canvasWidth / 2;
-  const focalLength = halfWidth / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const focalLength =
+    canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
 
   // If any projection constant somehow becomes invalid, skip the frame rather
   // than writing invalid coordinates into the canvas path.
@@ -713,7 +716,7 @@ function strokeNeatensteinFloorBand(
  * Project a world-space floor point to screen space.
  *
  * The point is translated into camera-relative coordinates, rotated into
- * camera space, and projected using the shared horizontal FOV. Points behind
+ * camera space, and projected using the shared vertical FOV. Points behind
  * or too close to the camera plane are rejected.
  *
  * @param worldX - World X coordinate.

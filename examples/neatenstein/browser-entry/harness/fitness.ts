@@ -13,7 +13,11 @@
  * @module
  */
 
-import type { CombatQualitySignal, FitnessScore } from './types';
+import type {
+  CombatQualitySignal,
+  EnemyTeamFitnessConfig,
+  FitnessScore,
+} from './types';
 import {
   NEATENSTEIN_WEIGHT_SURVIVAL_TICKS,
   NEATENSTEIN_WEIGHT_DAMAGE_DEALT,
@@ -22,6 +26,8 @@ import {
   NEATENSTEIN_WEIGHT_AIM_MISS_RATE,
   NEATENSTEIN_WEIGHT_COMPLEXITY_BONUS,
   NEATENSTEIN_WEIGHT_PARSIMONY_DENSITY_PENALTY,
+  NEATENSTEIN_ENEMY_TEAM_DAMAGE_WEIGHT,
+  NEATENSTEIN_ENEMY_TEAM_SURVIVAL_WEIGHT,
 } from './constants';
 
 /**
@@ -108,4 +114,42 @@ export function computeCombatQualitySignal(
   }
 
   return baseScore;
+}
+
+/**
+ * Compute a team-level enemy fitness scalar from collective damage and survival.
+ *
+ * The enemy population is evaluated as a team: one scalar represents how much
+ * pressure the entire enemy swarm applied to the main agent. Higher values
+ * mean a more threatening swarm.
+ *
+ * ```text
+ * fitness = damageDealt * damageWeight + enemiesSurvived * survivalWeight
+ * ```
+ *
+ * The default weights reward both damage dealt and survival equally, but
+ * callers can override either weight through the optional `config` object to
+ * experiment with different selection pressures.
+ *
+ * @param damageDealt - Total damage the enemy team dealt to the main agent.
+ * @param enemiesSurvived - Number of enemy variants still alive at episode end.
+ * @param config - Optional weights overriding the defaults.
+ * @returns A scalar fitness score; higher is better.
+ *
+ * @example
+ * ```ts
+ * const score = computeEnemyTeamFitness(120, 4, { damageWeight: 2 });
+ * console.log(score); // 244 when using default survivalWeight of 1
+ * ```
+ */
+export function computeEnemyTeamFitness(
+  damageDealt: number,
+  enemiesSurvived: number,
+  config?: EnemyTeamFitnessConfig,
+): FitnessScore {
+  const damageWeight =
+    config?.damageWeight ?? NEATENSTEIN_ENEMY_TEAM_DAMAGE_WEIGHT;
+  const survivalWeight =
+    config?.survivalWeight ?? NEATENSTEIN_ENEMY_TEAM_SURVIVAL_WEIGHT;
+  return damageDealt * damageWeight + enemiesSurvived * survivalWeight;
 }

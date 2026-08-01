@@ -7,6 +7,7 @@ import {
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
 } from '../constants';
 import { drawBolts, drawImpactSpots } from '../renderer/bolt-render';
+import type { EnemyControllerState } from '../../scripts/enemy-controller';
 
 const loadModule = (path: string): Promise<unknown> => import(path);
 
@@ -343,6 +344,30 @@ describe('Neatenstein display worker', () => {
     expect((frameCall?.frame?.bolts ?? []).length).toBeGreaterThan(0);
   });
 
+  it('persists enemy controller state across simState ticks', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetEnemyControllerState?(): EnemyControllerState | null;
+    };
+
+    sendInitMessage('cpu');
+    const initial = workerModule.__testOnlyGetEnemyControllerState?.();
+    expect(initial?.enemies).toHaveLength(0);
+
+    workerSelf.postMessage.mockClear();
+    sendSimStateMessage();
+    const afterOne = workerModule.__testOnlyGetEnemyControllerState?.();
+    expect(afterOne?.enemies).toHaveLength(1);
+
+    workerSelf.postMessage.mockClear();
+    sendSimStateMessage();
+    const afterTwo = workerModule.__testOnlyGetEnemyControllerState?.();
+    expect(afterTwo?.enemies).toHaveLength(2);
+    expect(afterTwo?.enemies[0].position).not.toEqual(
+      afterOne?.enemies[0].position,
+    );
+  });
+
   it('initializes a 2D worker canvas context', async () => {
     jest.resetModules();
     await loadModule('./display.worker.ts');
@@ -626,7 +651,7 @@ describe('Neatenstein display worker', () => {
     expect(findPostByType(workerSelf.postMessage, 'frame')).toBeUndefined();
   });
 
-  it('resizes the worker canvas to match the constrained render size', async () => {
+  it('resizes the worker canvas to match the host-provided render size', async () => {
     jest.resetModules();
     await loadModule('./display.worker.ts');
     const { context } = createMockContext();
@@ -639,8 +664,8 @@ describe('Neatenstein display worker', () => {
 
     sendSimStateMessage();
 
-    expect(canvas.width).toBe(1280);
-    expect(canvas.height).toBe(720);
+    expect(canvas.width).toBe(640);
+    expect(canvas.height).toBe(360);
   });
 
   it('reuses the worker 2D context across frames', async () => {

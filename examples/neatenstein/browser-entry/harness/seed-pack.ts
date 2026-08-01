@@ -121,8 +121,48 @@ export function createSeedPack({
     throw new Error('variantCount must be a positive integer');
   }
 
-  return {
+  return makeSeedPack({
     generation,
     seeds: generateDeterministicSeeds(generation, variantCount),
-  };
+  });
+}
+
+/**
+ * Build a frozen seed pack from a generation label and a seed list.
+ *
+ * @param pack - Raw seed pack data.
+ * @returns Frozen {@link SeedPack}.
+ */
+function makeSeedPack(pack: { generation: number; seeds: number[] }): SeedPack {
+  const seeds = Object.freeze([...pack.seeds]);
+  return Object.freeze({
+    generation: pack.generation,
+    seeds,
+  }) as unknown as SeedPack;
+}
+
+/**
+ * Create a deterministic enemy seed pack from a single seed.
+ *
+ * The pack contains one seed per MLP enemy variant so every variant in a
+ * generation is evaluated against the same frozen environmental randomness.
+ * Calling this with the same seed always produces the same ordered, frozen
+ * pack.
+ *
+ * @param seed - Deterministic seed for the generation.
+ * @returns A frozen seed pack with {@link NEATENSTEIN_MLP_VARIANT_COUNT} seeds.
+ *
+ * @example
+ * ```ts
+ * const pack = makeEnemySeedPack(123);
+ * console.log(pack.seeds.length); // 32
+ * ```
+ */
+export function makeEnemySeedPack(seed: number): SeedPack {
+  if (!Number.isFinite(seed) || !Number.isInteger(seed)) {
+    throw new Error('seed must be a finite integer');
+  }
+
+  const seeds = generateDeterministicSeeds(seed, NEATENSTEIN_MLP_VARIANT_COUNT);
+  return makeSeedPack({ generation: seed, seeds });
 }

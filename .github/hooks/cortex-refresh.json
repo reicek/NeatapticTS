@@ -2,19 +2,14 @@
   "hooks": {
     "SessionStart": [
       {
-        "type": "command",
-        "command": "node scripts/agent-customization/hooks/session-start-cortex-mcp-preflight.mjs",
-        "cwd": ".",
-        "timeout": 240
+        "command": "node scripts/agent-customization/hooks/pre-dispatch-freshness-hook.mjs"
       }
     ],
     "PostToolUse": [
       {
-        "type": "command",
-        "command": "node scripts/agent-customization/hooks/refresh-cortex-after-write.mjs",
-        "cwd": ".",
-        "timeout": 180
+        "command": "node scripts/agent-customization/hooks/post-write-reindex-hook.mjs"
       }
     ]
-  }
+  },
+  "note": "Re-registered 2026-07-31 for Phase 3 (Cortex Freshness and File-Lock Awareness). SessionStart triggers pre-dispatch freshness check; PostToolUse triggers targeted post-write reindex. The old heavy hooks (refresh-cortex-after-write.mjs, session-start-cortex-mcp-preflight.mjs) remain available as manual scripts but are no longer auto-registered."
 }

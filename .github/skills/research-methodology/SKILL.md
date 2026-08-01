@@ -354,6 +354,50 @@ Approach: search_advanced with expand_query=true, read_top_result=true
 - Do not default to demo-local compensation when investigation points to a
   reusable library fix.
 
+## Cortex Freshness Hooks (Phase 3)
+
+Phase 3 introduced two automated Cortex hooks that maintain index freshness
+without agent intervention. Researchers and implementers should be aware of
+these hooks but do NOT need to trigger them manually.
+
+### Post-Write Reindex Hook
+
+- **Trigger:** fires after every `edit`/`create`/`apply_patch` tool call.
+- **Action:** extracts the written file path and spawns a fire-and-forget
+  background process that calls `targeted-reindex.mjs → reindexFiles([path])`
+  to re-index only the touched file.
+- **Eligibility:** `.md`/`.ts`/`.mjs`/`.js` files under `plans/`,
+  `.github/skills/`, `.github/agents/`, `src/`, `examples/`,
+  `scripts/agent-customization/`, `rag-index/`, `scripts/mcp-semantic/`.
+- **No-op for ineligible files.** Never blocks the host tool.
+- Logs to `artifacts/post-write-reindex.log`.
+
+### Pre-Dispatch Freshness Hook
+
+- **Trigger:** fires at SessionStart and before each dispatch.
+- **Action:** checks index age against a grace window (default 300s,
+  `CORTEX_GRACE_WINDOW_S`) and staleness threshold (default 300s,
+  `CORTEX_STALENESS_THRESHOLD_S`). If the index is stale beyond grace +
+  threshold, triggers a background full reindex.
+- **Never blocks dispatch.** Tooling errors degrade gracefully.
+- For complex slices, the orchestrator MAY set `wait_for_reindex: true`.
+
+### Prevention-Over-Detection Policy
+
+The Phase 3 hooks embody a **prevention-over-detection** policy: rather than
+waiting for stale-search symptoms to surface (wrong results, missing
+chunks, coverage gaps), the system proactively reindexes files immediately
+after writes and refreshes the full index when staleness exceeds the
+configured threshold. This means:
+
+- Researchers should NOT manually run `build-index.mjs` or `embed-index.mjs`
+  after editing corpus files — the post-write hook handles it.
+- If search results seem stale, check `artifacts/post-write-reindex.log` and
+  `artifacts/pre-dispatch-freshness.log` to confirm the hooks are running,
+  rather than re-running the index manually.
+- The freshness manifest (`artifacts/cortex-freshness-manifest.json`) tracks
+  the last full reindex timestamp and can be inspected to diagnose staleness.
+
 ## Expected Final Output
 
 A strong research-methodology pass should report:

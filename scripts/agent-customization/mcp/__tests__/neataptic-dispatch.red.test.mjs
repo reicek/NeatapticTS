@@ -222,7 +222,7 @@ describe('neataptic-dispatch-mcp red contracts', () => {
   it('rejects a prompt that exceeds the maximum allowed length', async () => {
     const client = await startDispatchServer();
     try {
-      const longPrompt = 'x'.repeat(201);
+      const longPrompt = 'x'.repeat(501);
       const result = await client.callTool('build_dispatch_packet', {
         target_agent: 'plan-scout',
         caller_tier: 1,

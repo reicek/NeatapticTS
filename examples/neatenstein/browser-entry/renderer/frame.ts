@@ -13,6 +13,7 @@ import {
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
 } from '../constants';
 import type { BoltState, GunState } from '../host/game/types';
+import type { NeatensteinSprite } from './sprites';
 
 /**
  * Simulation/render state snapshot needed to build a frame.
@@ -47,6 +48,8 @@ export interface NeatensteinRenderState {
     /** True while the strafe-right key is held. */
     right: boolean;
   };
+  /** Optional enemy positions for the sprite pass. */
+  enemies?: NeatensteinSprite[];
 }
 
 /**

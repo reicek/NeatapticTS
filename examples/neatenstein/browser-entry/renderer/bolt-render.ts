@@ -120,7 +120,8 @@ export function drawImpactSpots(
 
   const dirX = Math.cos(camera.yaw);
   const dirY = Math.sin(camera.yaw);
-  const planeScale = Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const planeScale =
+    (canvasWidth / canvasHeight) * Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
 
   for (const impact of impacts) {
     const elapsedMs = simTimeMs - impact.createdAtMs;
@@ -208,7 +209,8 @@ export function drawBolts(
 
   const horizonY = canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO;
   const halfWidth = canvasWidth / 2;
-  const focalLength = halfWidth / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const focalLength =
+    canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
   const cosYaw = Math.cos(safeYaw);
   const sinYaw = Math.sin(safeYaw);
 

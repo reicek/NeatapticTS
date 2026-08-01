@@ -128,6 +128,7 @@ export function createAgentRows(agents) {
     .map((agent) => ({
       name: agent.name,
       tier: agent.tier ?? '-',
+      complexity: agent.complexity ?? 'moderate',
       model: formatModel(agent.model),
       agents: formatList(agent.agents),
       skills: formatList(agent.skills),
@@ -189,20 +190,24 @@ function renderRoutingTableMarkdown({
     '',
     '## Agents',
     '',
-    '| Name | Tier | Model | Agents | Skills |',
-    '| --- | --- | --- | --- | --- |',
-    ...agentRows.map(renderTableRow),
+    '| Name | Tier | Complexity | Model | Agents | Skills |',
+    '| --- | --- | --- | --- | --- | --- |',
+    ...agentRows.map(renderAgentRow),
     '',
     '## Skills',
     '',
     '| Name | Tier | Model | Agents | Skills |',
     '| --- | --- | --- | --- | --- |',
-    ...skillRows.map(renderTableRow),
+    ...skillRows.map(renderSkillRow),
     '',
   ].join('\n');
 }
 
-function renderTableRow(row) {
+function renderAgentRow(row) {
+  return `| ${row.name} | ${row.tier} | ${row.complexity} | ${row.model} | ${row.agents} | ${row.skills} |`;
+}
+
+function renderSkillRow(row) {
   return `| ${row.name} | ${row.tier} | ${row.model} | ${row.agents} | ${row.skills} |`;
 }
 

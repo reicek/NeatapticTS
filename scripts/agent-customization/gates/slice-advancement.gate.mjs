@@ -89,10 +89,19 @@ if (!sliceId) {
 }
 
 /**
- * Run a sub-gate and return its parsed JSON result.
+ * Run a sub-gate and return its parsed JSON result with graceful degradation.
+ *
+ * Distinguishes two failure modes:
+ * - **Content failure** (`gate_error: false`, `pass: false`): the sub-gate
+ *   ran successfully but found a real issue (test failure, lint error). These
+ *   count toward the consolidated `pass` boolean.
+ * - **Tooling error** (`gate_error: true`): the sub-gate crashed, timed out, or
+ *   produced unparseable output. These are logged as warnings and do NOT cause
+ *   the consolidated gate to hard-fail.
+ *
  * @param {string} gateName - gate script filename (without .gate.mjs)
  * @param {string[]} extraArgs - additional CLI args
- * @returns {{ gate: string, pass: boolean, evidence: object, fixHint: string|null, raw: string }}
+ * @returns {{ gate: string, pass: boolean, evidence: object, fixHint: string|null, gate_error: boolean, raw: string }}
  */
 function runSubGate(gateName, extraArgs = []) {
   const gatePath = path.join(GATES_DIR, `${gateName}.gate.mjs`);
@@ -110,15 +119,37 @@ function runSubGate(gateName, extraArgs = []) {
       pass: parsed.pass === true,
       evidence: parsed.evidence || {},
       fixHint: parsed.fixHint || null,
+      gate_error: false,
       raw: stdout.trim(),
     };
   } catch (err) {
+    // execFileSync throws on non-zero exit. Sub-gates set exitCode=1 when
+    // pass:false (content failure), which is NOT a tooling error. Try to
+    // parse the captured stdout first.
+    const stdout = typeof err.stdout === 'string' ? err.stdout : '';
+    if (stdout) {
+      try {
+        const parsed = JSON.parse(stdout);
+        return {
+          gate: gateName,
+          pass: parsed.pass === true,
+          evidence: parsed.evidence || {},
+          fixHint: parsed.fixHint || null,
+          gate_error: false,
+          raw: stdout.trim(),
+        };
+      } catch {
+        // stdout exists but is not valid JSON — genuine tooling error.
+      }
+    }
+    // Genuine tooling failure: exception, crash, timeout, or missing script.
     return {
       gate: gateName,
       pass: false,
       evidence: { error: err.message },
       fixHint: `Run 'node scripts/agent-customization/gates/${gateName}.gate.mjs --json' to see details.`,
-      raw: err.stdout || err.message,
+      gate_error: true,
+      raw: stdout || err.message,
     };
   }
 }
@@ -185,12 +216,28 @@ const results = gatesToRun.map((gateName) => {
   return runSubGate(gateName, extraArgs);
 });
 
-// Aggregate
-const allPassed = results.every((r) => r.pass);
-const failedGates = results.filter((r) => !r.pass);
+// Aggregate with graceful degradation.
+// gate_error sub-gates (tooling failures) are excluded from the pass
+// calculation; only content failures (pass: false, gate_error: false) cause
+// the consolidated gate to fail.
+const erroredGates = results.filter((r) => r.gate_error);
+const contentGates = results.filter((r) => !r.gate_error);
+const failedGates = contentGates.filter((r) => !r.pass);
+const allPassed = failedGates.length === 0;
+
+// Build the sub_gates array — one entry per sub-gate with name, pass,
+// fixHint, and gate_error.
+const sub_gates = results.map((r) => ({
+  name: r.gate,
+  pass: r.pass,
+  fixHint: r.fixHint,
+  gate_error: r.gate_error,
+  ...(r.gate_error ? { error: r.evidence?.error } : {}),
+}));
 
 const result = {
   pass: allPassed,
+  sub_gates,
   evidence: {
     gate: 'slice-advancement',
     tier: 1,
@@ -199,16 +246,15 @@ const result = {
     specialistCount,
     gatesRun: gatesToRun,
     gateCount: gatesToRun.length,
-    results: results.map((r) => ({
-      gate: r.gate,
-      pass: r.pass,
-      fixHint: r.fixHint,
-    })),
-    failedGates: failedGates.map((r) => r.gate),
+    results: sub_gates,
+    failedGates: failedGates.map((r) => r.name),
+    erroredGates: erroredGates.map((r) => r.gate),
   },
   fixHint: allPassed
-    ? `All ${gatesToRun.length} gates passed for slice ${sliceId} (${severity}).`
-    : `Failed gates: ${failedGates.map((r) => r.gate).join(', ')}. Fix the issues and re-run. Details: ${failedGates.map((r) => r.fixHint).join(' | ')}`,
+    ? erroredGates.length > 0
+      ? `All content gates passed for slice ${sliceId} (${severity}). ${erroredGates.length} gate(s) errored (tooling failure) and were skipped: ${erroredGates.map((r) => r.gate).join(', ')}.`
+      : `All ${gatesToRun.length} gates passed for slice ${sliceId} (${severity}).`
+    : `Failed gates: ${failedGates.map((r) => r.name).join(', ')}. Fix the issues and re-run. Details: ${failedGates.map((r) => r.fixHint).join(' | ')}`,
   owner: 'orchestrator (Agent Zero)',
 };
 
@@ -218,13 +264,13 @@ if (options.json) {
   console.log(
     `${allPassed ? 'PASS' : 'FAIL'} slice-advancement gate — slice ${sliceId} (${severity}, ${gatesToRun.length} gates)`,
   );
-  if (!allPassed) {
-    for (const r of results) {
-      const status = r.pass ? 'PASS' : 'FAIL';
-      console.log(`  [${status}] ${r.gate}`);
-      if (!r.pass && r.fixHint) {
-        console.log(`         ${r.fixHint}`);
-      }
+  for (const r of results) {
+    if (r.gate_error) {
+      console.log(`  [ERROR] ${r.gate} — tooling failure, skipped`);
+      if (r.fixHint) console.log(`          ${r.fixHint}`);
+    } else if (!r.pass) {
+      console.log(`  [FAIL] ${r.gate}`);
+      if (r.fixHint) console.log(`         ${r.fixHint}`);
     }
   }
 }

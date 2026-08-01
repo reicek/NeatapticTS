@@ -216,4 +216,57 @@ describe('Neatenstein harness fitness', () => {
       expect(above).toBeLessThan(inside);
     });
   });
+
+  describe('AC-503: team-level enemy fitness', () => {
+    it('exports computeEnemyTeamFitness as a function', async () => {
+      const mod = (await import('./fitness.ts')) as Record<string, unknown>;
+      expect(typeof mod.computeEnemyTeamFitness).toBe('function');
+    });
+
+    it('returns a higher scalar when collective damage dealt increases', async () => {
+      const { computeEnemyTeamFitness } =
+        (await import('./fitness.ts')) as unknown as {
+          computeEnemyTeamFitness: (
+            damageDealt: number,
+            enemiesSurvived: number,
+            config?: Record<string, unknown>,
+          ) => number;
+        };
+      const low = computeEnemyTeamFitness(10, 1);
+      const high = computeEnemyTeamFitness(100, 1);
+      expect(high).toBeGreaterThan(low);
+    });
+
+    it('returns a higher scalar when more enemies survive', async () => {
+      const { computeEnemyTeamFitness } =
+        (await import('./fitness.ts')) as unknown as {
+          computeEnemyTeamFitness: (
+            damageDealt: number,
+            enemiesSurvived: number,
+            config?: Record<string, unknown>,
+          ) => number;
+        };
+      const low = computeEnemyTeamFitness(0, 2);
+      const high = computeEnemyTeamFitness(0, 6);
+      expect(high).toBeGreaterThan(low);
+    });
+
+    it('honours custom weights from the optional config', async () => {
+      const { computeEnemyTeamFitness } =
+        (await import('./fitness.ts')) as unknown as {
+          computeEnemyTeamFitness: (
+            damageDealt: number,
+            enemiesSurvived: number,
+            config?: { damageWeight?: number; survivalWeight?: number },
+          ) => number;
+        };
+      const defaultScore = computeEnemyTeamFitness(10, 2);
+      const weightedScore = computeEnemyTeamFitness(10, 2, {
+        damageWeight: 10,
+        survivalWeight: 0,
+      });
+      expect(weightedScore).not.toBe(defaultScore);
+      expect(weightedScore).toBeGreaterThan(defaultScore);
+    });
+  });
 });

@@ -48,7 +48,7 @@ export interface CreateMlpEnemyPopulationOptions {
  * ```ts
  * const population = createMlpEnemyPopulation({ seed: 7 });
  * const variant = population.sample(0) as EnemyVariant;
- * console.log(variant.weights.length); // 80
+ * console.log(variant.weights.length); // 102
  * ```
  */
 export function createMlpEnemyPopulation(
@@ -98,7 +98,7 @@ export interface MlpEnemyPopulation extends EnemyPopulation {
 /**
  * Allowed weight-only mutation operator types for the MLP enemy backend.
  *
- * The MLP backend uses a fixed 8→6→4→2 topology, so structural operators such
+ * The MLP backend uses a fixed 8→6→4→4 topology, so structural operators such
  * as add-node or add-connection would corrupt the feed-forward shape. This
  * allowlist is the single source of truth for operator types that are safe to
  * apply to an MLP enemy.
@@ -126,6 +126,112 @@ export function guardMlpStructuralMutation(operator: {
   type: string;
 }): boolean {
   return MLP_ALLOWED_MUTATION_TYPES.has(operator.type);
+}
+
+/**
+ * Ordered output labels for the MLP enemy backend.
+ *
+ * The four outputs produced by {@link activateMlp} are mapped to:
+ * move, strafe, turn, and fire.
+ */
+export const NEATENSTEIN_MLP_OUTPUT_LABELS: readonly string[] = [
+  'move',
+  'strafe',
+  'turn',
+  'fire',
+];
+
+/**
+ * Activate the fixed-topology MLP for a set of world inputs.
+ *
+ * The weight vector must include all connection weights followed by the
+ * per-layer bias terms, in layer order. The default topology is
+ * {@link NEATENSTEIN_MLP_TOPOLOGY} (8→6→4→4), which requires 102 values:
+ * 88 connection weights plus 14 biases.
+ *
+ * @param weights - Flat weight vector (connections + biases).
+ * @param inputs - Input vector matching the first layer size.
+ * @param topology - Layer sizes; defaults to the fixed enemy topology.
+ * @returns Float32Array of outputs for the final layer.
+ *
+ * @throws Error when `inputs` or `weights` do not match the topology.
+ *
+ * @example
+ * ```ts
+ * const out = activateMlp(
+ *   new Float32Array(102),
+ *   new Float32Array(8),
+ * );
+ * console.log(out.length); // 4
+ * ```
+ */
+export function activateMlp(
+  weights: Float32Array,
+  inputs: Float32Array,
+  topology: readonly number[] = NEATENSTEIN_MLP_TOPOLOGY,
+): Float32Array {
+  if (inputs.length !== topology[0]) {
+    throw new Error(
+      `MLP input size ${inputs.length} does not match topology input ${topology[0]}`,
+    );
+  }
+  const expected = countParameters(topology);
+  if (weights.length !== expected) {
+    throw new Error(
+      `MLP weight vector length ${weights.length} does not match expected ${expected}`,
+    );
+  }
+
+  let activations = new Float32Array(inputs);
+  let offset = 0;
+  for (let layer = 1; layer < topology.length; layer++) {
+    const inSize = topology[layer - 1];
+    const outSize = topology[layer];
+    const next = new Float32Array(outSize);
+    for (let o = 0; o < outSize; o++) {
+      let sum = 0;
+      for (let i = 0; i < inSize; i++) {
+        sum += activations[i] * weights[offset + o * inSize + i];
+      }
+      sum += weights[offset + inSize * outSize + o];
+      next[o] = Math.tanh(sum);
+    }
+    offset += inSize * outSize + outSize;
+    activations = next;
+  }
+  return activations;
+}
+
+/**
+ * Map raw MLP outputs to a labelled action record.
+ *
+ * @param outputs - Raw output vector from {@link activateMlp}.
+ * @param labels - Ordered output labels; defaults to
+ *   {@link NEATENSTEIN_MLP_OUTPUT_LABELS}.
+ * @returns Record keyed by label with the corresponding output value.
+ *
+ * @throws Error when `outputs` and `labels` have different lengths.
+ *
+ * @example
+ * ```ts
+ * const actions = interpretMlpOutputs(new Float32Array([0.1, 0.2, 0.3, 0.4]));
+ * console.log(actions.move); // 0.1
+ * ```
+ */
+export function interpretMlpOutputs(
+  outputs: Float32Array,
+  labels: readonly string[] = NEATENSTEIN_MLP_OUTPUT_LABELS,
+): Record<string, number> {
+  if (outputs.length !== labels.length) {
+    throw new Error(
+      `Output length ${outputs.length} does not match label count ${labels.length}`,
+    );
+  }
+  const result: Record<string, number> = {};
+  for (let i = 0; i < labels.length; i++) {
+    result[labels[i]] = Number(Number(outputs[i]).toPrecision(6));
+  }
+  return result;
 }
 
 /**
@@ -158,7 +264,7 @@ function createVariants(seed: number): EnemyVariant[] {
  */
 function createVariantWeights(seed: number, variantId: number): Float32Array {
   const rng = seedrandom(`${seed}:variant:${variantId}`);
-  const weightCount = countWeights(NEATENSTEIN_MLP_TOPOLOGY);
+  const weightCount = countParameters(NEATENSTEIN_MLP_TOPOLOGY);
   const weights = new Float32Array(weightCount);
   for (let i = 0; i < weightCount; i++) {
     weights[i] = rng() * 2 - 1;
@@ -175,7 +281,7 @@ function createVariantWeights(seed: number, variantId: number): Float32Array {
  */
 function createChampionWeights(seed: number, generation: number): Float32Array {
   const rng = seedrandom(`${seed}:refresh:${generation}`);
-  const weightCount = countWeights(NEATENSTEIN_MLP_TOPOLOGY);
+  const weightCount = countParameters(NEATENSTEIN_MLP_TOPOLOGY);
   const weights = new Float32Array(weightCount);
   for (let i = 0; i < weightCount; i++) {
     weights[i] = rng() * 2 - 1;
@@ -184,16 +290,19 @@ function createChampionWeights(seed: number, generation: number): Float32Array {
 }
 
 /**
- * Count the total number of connection weights for a fully-connected feed-
- * forward topology.
+ * Count the total number of parameters for a fully-connected feed-forward
+ * topology with per-layer bias.
+ *
+ * For each adjacent pair of layers this includes every connection weight plus
+ * one bias per output neuron.
  *
  * @param topology - Ordered layer sizes.
- * @returns Total weight count.
+ * @returns Total parameter count (connection weights + biases).
  */
-function countWeights(topology: readonly number[]): number {
+function countParameters(topology: readonly number[]): number {
   let total = 0;
   for (let i = 0; i < topology.length - 1; i++) {
-    total += topology[i] * topology[i + 1];
+    total += topology[i] * topology[i + 1] + topology[i + 1];
   }
   return total;
 }

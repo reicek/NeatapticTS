@@ -8,10 +8,10 @@
  * - builds a packed {@link NeatensteinRenderFrame} and posts it back to the
  *   host for the `cpu` and `gpu` tiers.
  *
- * The worker also defensively constrains render dimensions to the Neatenstein
- * maximum output bounds. This keeps direct OffscreenCanvas rendering aligned
- * with the same maximum resolution policy used by the host canvas backing
- * store.
+ * The worker renders at the host-provided backing-store dimensions. It only
+ * guards against non-finite or non-positive dimensions and synchronizes the
+ * transferred OffscreenCanvas to the incoming state size for the `worker` tier;
+ * it does not impose a maximum render resolution.
  *
  * @module
  */
@@ -31,7 +31,6 @@ import {
   NEATENSTEIN_PULSE_MAX_CONCURRENT,
   NEATENSTEIN_PULSE_SCREEN_DOT_RADIUS_PX,
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
-  NEATENSTEIN_WORKER_COLUMN_COUNT,
 } from '../constants';
 import {
   buildNeatensteinRenderFrame,
@@ -75,6 +74,17 @@ import {
 } from '../renderer/framebuffer';
 import { renderGunOverlay } from '../renderer/gun';
 import { drawBolts, drawImpactSpots } from '../renderer/bolt-render';
+import {
+  createEnemyControllerState,
+  updateEnemyController,
+  type EnemyControllerState,
+} from '../../scripts/enemy-controller';
+import {
+  clipNeatensteinSprite,
+  renderNeatensteinSprite,
+  type NeatensteinSprite,
+  type NeatensteinSpriteRenderContext,
+} from '../renderer/sprites';
 
 type DisplayTier = 'worker' | 'cpu' | 'gpu';
 
@@ -99,30 +109,26 @@ let collisionMap: CollisionMap | null = null;
 let activePulses: NeatensteinPulse[] = [];
 
 /**
+ * Enemy AI controller state maintained across simulation ticks so fire
+ * cooldowns, ammunition, and de-rez timing advance deterministically.
+ */
+let enemyControllerState: EnemyControllerState | null = null;
+
+/**
+ * Active enemy sprite positions computed by the controller this frame.
+ *
+ * Stored separately from {@link latestState} so the next slice can render
+ * sprites after the wall pass without recomputing controller state.
+ */
+let activeEnemySprites: NeatensteinSprite[] = [];
+
+/**
  * Input snapshot captured from the most recent `input` message.
  *
  * Movement/look use the latest value, while one-shot actions such as fire and
  * dash are latched until the next simulation tick consumes them.
  */
 let pendingTickInput: GameTickInputSnapshot | null = null;
-
-/**
- * Worker-side maximum canvas width.
- *
- * The source constant is named for GPU raycasting columns, but in this worker
- * context it represents the maximum horizontal render resolution.
- */
-const NEATENSTEIN_WORKER_MAX_CANVAS_WIDTH = NEATENSTEIN_GPU_COLUMN_COUNT * 2;
-
-/**
- * Worker-side maximum canvas height.
- *
- * The source constant is named for worker columns in the wider renderer
- * terminology, but in this worker context it is used as the maximum vertical
- * render resolution.
- */
-const NEATENSTEIN_WORKER_MAX_CANVAS_HEIGHT =
-  NEATENSTEIN_WORKER_COLUMN_COUNT * 2;
 
 /**
  * Background clear color used before each worker-tier frame.
@@ -143,16 +149,6 @@ const NEATENSTEIN_PULSE_COLOR = '#B7FF00';
 
 /** CSS shadow color string for the yellow ambient pulse glow. */
 const NEATENSTEIN_PULSE_GLOW_COLOR = 'rgba(185, 255, 0, 0.42)';
-
-/**
- * Integer render size used by the worker after applying max-resolution bounds.
- */
-interface ConstrainedRenderSize {
-  /** Constrained backing-store width in pixels. */
-  width: number;
-  /** Constrained backing-store height in pixels. */
-  height: number;
-}
 
 /**
  * Format an RGB triple as a CSS `rgb(...)` string.
@@ -187,70 +183,28 @@ function isPositiveFiniteDimension(value: number): boolean {
 }
 
 /**
- * Resolve a constrained render size from the latest host-provided dimensions.
- *
- * The host is expected to constrain the visible canvas backing store before
- * transfer, but the worker repeats the operation defensively because it is the
- * final owner of the direct OffscreenCanvas render target.
- *
- * The result:
- *
- * - preserves the source aspect ratio
- * - uses the largest size inside the worker max bounds
- * - may upscale or downscale relative to the incoming size
- * - always returns positive integer dimensions
- *
- * @param sourceWidth - Incoming render width from the host state.
- * @param sourceHeight - Incoming render height from the host state.
- * @returns Constrained integer render size, or `null` for invalid input.
- */
-// Pre-existing defensive sizing helper; not modified by Step 04.
-/* istanbul ignore next */
-function resolveConstrainedRenderSize(
-  sourceWidth: number,
-  sourceHeight: number,
-): ConstrainedRenderSize | null {
-  if (
-    !isPositiveFiniteDimension(sourceWidth) ||
-    !isPositiveFiniteDimension(sourceHeight)
-  ) {
-    return null;
-  }
-
-  // Use the smaller scale so both dimensions fit within the maximum bounds.
-  // Do not cap at 1: the CSS/host size provides aspect ratio, while these
-  // bounds define the intended maximum render resolution.
-  const scale = Math.min(
-    NEATENSTEIN_WORKER_MAX_CANVAS_WIDTH / sourceWidth,
-    NEATENSTEIN_WORKER_MAX_CANVAS_HEIGHT / sourceHeight,
-  );
-
-  return {
-    width: Math.max(1, Math.floor(sourceWidth * scale)),
-    height: Math.max(1, Math.floor(sourceHeight * scale)),
-  };
-}
-
-/**
- * Synchronize the transferred OffscreenCanvas with the constrained render size.
+ * Synchronize the transferred OffscreenCanvas with the host-provided render
+ * size.
  *
  * This is critical for direct worker rendering. Projection math, floor/ceiling
  * drawing, wall stripes, z-buffer columns, and the actual canvas backing store
  * must agree on the same dimensions.
  *
  * @param canvas - Transferred worker-owned canvas.
- * @param size - Constrained render size.
+ * @param width - Host-provided backing-store width.
+ * @param height - Host-provided backing-store height.
  */
 function syncWorkerCanvasSize(
   canvas: OffscreenCanvas,
-  size: ConstrainedRenderSize,
+  width: number,
+  height: number,
 ): void {
-  if (canvas.width !== size.width) {
-    canvas.width = size.width;
+  if (canvas.width !== width) {
+    canvas.width = width;
   }
 
-  if (canvas.height !== size.height) {
-    canvas.height = size.height;
+  if (canvas.height !== height) {
+    canvas.height = height;
   }
 }
 
@@ -258,24 +212,20 @@ function syncWorkerCanvasSize(
  * Resolve the direct worker-tier raycast column count.
  *
  * The worker tier renders directly into the OffscreenCanvas, so its horizontal
- * ray density should match the constrained backing-store width. This prevents a
- * lower-resolution column set from being stretched across a wider canvas.
+ * ray density should match the host-provided backing-store width.
  *
- * @param canvasWidth - Constrained canvas backing-store width.
+ * @param canvasWidth - Canvas backing-store width in pixels.
  * @returns Number of direct worker raycast columns.
  */
 function resolveWorkerCanvasColumnCount(canvasWidth: number): number {
-  return Math.min(
-    NEATENSTEIN_WORKER_MAX_CANVAS_WIDTH,
-    Math.max(1, Math.floor(canvasWidth)),
-  );
+  return Math.max(1, Math.floor(canvasWidth));
 }
 
 /**
  * Map a packed-frame tier to the column count used in typed frame payloads.
  *
  * Direct worker rendering does not use this helper; it raycasts at the
- * constrained canvas width instead.
+ * host-provided canvas width instead.
  *
  * @param tier - Active renderer tier.
  * @returns Packed-frame column count.
@@ -332,6 +282,52 @@ function applyWallFog(
     g: wallColor.g + (backgroundColor.g - wallColor.g) * fogFactor,
     b: wallColor.b + (backgroundColor.b - wallColor.b) * fogFactor,
   });
+}
+
+/**
+ * Neon colors used to distinguish active enemy types in the worker sprite pass.
+ *
+ * The palette is intentionally small and high-contrast so enemy wireframes
+ * remain readable against the dark raycast scene and the cyan wall shading.
+ */
+const NEATENSTEIN_ENEMY_HUES = [
+  '#ff0055',
+  '#ffaa00',
+  '#00ffaa',
+  '#aa00ff',
+] as const;
+
+/**
+ * Resolve the neon color for an enemy sprite from its type index.
+ *
+ * Unknown or negative types fall back to the first hue so every active enemy
+ * still renders with a valid color.
+ *
+ * @param type - Enemy type index from the controller state.
+ * @returns `#rrggbb` color string for the sprite renderer.
+ */
+function resolveEnemySpriteColor(type = 0): string {
+  const safeType = Math.max(0, Math.trunc(type));
+  return NEATENSTEIN_ENEMY_HUES[safeType % NEATENSTEIN_ENEMY_HUES.length];
+}
+
+/**
+ * Build a canvas-like context that does not flush per sprite.
+ *
+ * The worker tier renders all sprites into a single snapshot framebuffer and
+ * flushes it back to the OffscreenCanvas once after the sprite pass. The
+ * renderer's `putImageData` contract still expects a context, so this no-op
+ * adapter satisfies the type without redundant per-sprite copies.
+ *
+ * @returns Canvas-like context with a no-op `putImageData`.
+ */
+function buildNoOpSpriteRenderContext(): NeatensteinSpriteRenderContext {
+  return {
+    putImageData: () => {
+      // Intentionally empty: the worker flushes the framebuffer once after all
+      // sprites are drawn.
+    },
+  };
 }
 
 /** Return type of the shared raycaster used to build every column. */
@@ -391,17 +387,15 @@ function buildAndPostFrame(): void {
     return;
   }
 
-  const constrainedSize = resolveConstrainedRenderSize(
-    latestState.canvasWidth,
-    latestState.canvasHeight,
-  );
+  const canvasWidth = latestState.canvasWidth;
+  const canvasHeight = latestState.canvasHeight;
 
-  if (constrainedSize === null) {
+  if (
+    !isPositiveFiniteDimension(canvasWidth) ||
+    !isPositiveFiniteDimension(canvasHeight)
+  ) {
     return;
   }
-
-  const canvasWidth = constrainedSize.width;
-  const canvasHeight = constrainedSize.height;
 
   const cameraPositionX = gameState.player.position.x;
   const cameraPositionY = gameState.player.position.y;
@@ -410,18 +404,43 @@ function buildAndPostFrame(): void {
   // Derive camera direction and projection plane from the player yaw.
   const cameraDirectionX = Math.cos(cameraYaw);
   const cameraDirectionY = Math.sin(cameraYaw);
-  const planeScale = Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const planeScale =
+    (canvasWidth / canvasHeight) * Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
   const cameraPlaneX = -cameraDirectionY * planeScale;
   const cameraPlaneY = cameraDirectionX * planeScale;
+
+  // Advance the enemy controller with the worker-authoritative state and
+  // collision data. Persist the returned controller state so per-enemy ammo,
+  // fire cooldowns, and de-rez timing advance across frames instead of
+  // resetting every tick.
+  const controlled = updateEnemyController(
+    enemyControllerState!,
+    gameState,
+    collisionMap,
+    NEATENSTEIN_FIXED_TIMESTEP_MS,
+  );
+  enemyControllerState = controlled;
+  activeEnemySprites = controlled.enemies
+    .filter((enemy) => enemy.active)
+    .map((enemy) => ({
+      worldX: enemy.position.x,
+      worldY: enemy.position.y,
+      type: enemy.index,
+    }));
+
+  // Stash the active enemy sprites on the incoming render state so the next
+  // slice's sprite pass can render them for any tier without recomputing the
+  // controller state.
+  latestState.enemies = activeEnemySprites;
 
   if (currentTier === 'worker') {
     if (!workerCanvas) {
       return;
     }
 
-    // The worker owns the transferred canvas, so it must enforce the final
-    // constrained backing-store dimensions before any drawing happens.
-    syncWorkerCanvasSize(workerCanvas, constrainedSize);
+    // The worker owns the transferred canvas, so it must synchronize the
+    // backing store to the host-provided dimensions before any drawing.
+    syncWorkerCanvasSize(workerCanvas, canvasWidth, canvasHeight);
 
     if (!workerContext) {
       workerContext = workerCanvas.getContext('2d');
@@ -453,7 +472,7 @@ function buildAndPostFrame(): void {
 
     const stripeWidth = canvasWidth / columnCount;
     const wallFocalLength =
-      canvasWidth / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+      canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
     const zBuffer = resolveWorkerZBuffer(columnCount);
 
     for (let column = 0; column < columnCount; column += 1) {
@@ -493,6 +512,55 @@ function buildAndPostFrame(): void {
         stripePixelWidth,
         drawEnd - drawStart,
       );
+    }
+
+    // When active enemies exist, snapshot the wall/floor/ceiling output into a
+    // CPU-style framebuffer so the sprite renderer can write neon enemy bars
+    // with z-buffer occlusion, then flush the combined result back once.
+    if (
+      activeEnemySprites.length > 0 &&
+      typeof context.getImageData === 'function'
+    ) {
+      const imageData = context.getImageData(0, 0, canvasWidth, canvasHeight);
+      const spriteFramebuffer = imageData.data;
+      const spriteCamera = {
+        posX: cameraPositionX,
+        posY: cameraPositionY,
+        dirX: cameraDirectionX,
+        dirY: cameraDirectionY,
+        planeX: cameraPlaneX,
+        planeY: cameraPlaneY,
+      };
+      const noOpSpriteCtx = buildNoOpSpriteRenderContext();
+
+      const visibleSprites = activeEnemySprites
+        .map((sprite) => ({
+          sprite,
+          projection: clipNeatensteinSprite(
+            sprite,
+            spriteCamera,
+            canvasWidth,
+            canvasHeight,
+            zBuffer,
+          ),
+        }))
+        .filter(({ projection }) => projection.visibleColumns.length > 0)
+        .toSorted((a, b) => b.projection.perpDist - a.projection.perpDist);
+
+      for (const { sprite, projection } of visibleSprites) {
+        const color = resolveEnemySpriteColor(sprite.type);
+        renderNeatensteinSprite(
+          spriteFramebuffer,
+          zBuffer,
+          projection,
+          color,
+          noOpSpriteCtx,
+        );
+      }
+
+      // Flush the framebuffer (now containing walls + sprites) back to the
+      // worker canvas before the transparent overlay passes run.
+      context.putImageData(imageData, 0, 0);
     }
 
     // Update and emit ambient pulses after the wall z-buffer exists.
@@ -620,7 +688,8 @@ function drawNeatensteinPulses(
 
   const horizonY = canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO;
   const halfWidth = canvasWidth / 2;
-  const focalLength = halfWidth / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const focalLength =
+    canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
   const cosYaw = Math.cos(safeYaw);
   const sinYaw = Math.sin(safeYaw);
 
@@ -807,9 +876,11 @@ self.onmessage = (event: MessageEvent) => {
     currentTier = tier;
     latestState = null;
     activePulses = [];
+    activeEnemySprites = [];
     pendingTickInput = null;
     workerZBuffer = null;
     workerContext = null;
+    enemyControllerState = null;
 
     if (data.canvas) {
       workerCanvas = data.canvas as OffscreenCanvas;
@@ -827,6 +898,7 @@ self.onmessage = (event: MessageEvent) => {
     wallMap = buildNeatensteinMap(seed);
     collisionMap = createCollisionMap(wallMap, NEATENSTEIN_MAP_SIZE);
     gameState = createGameState({ seed });
+    enemyControllerState = createEnemyControllerState(gameState);
 
     const version = data.version ?? NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION;
 
@@ -872,3 +944,7 @@ self.onmessage = (event: MessageEvent) => {
     pendingTickInput = mergePendingTickInput(pendingTickInput, nextInput);
   }
 };
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetEnemyControllerState =
+  (): EnemyControllerState | null => enemyControllerState;

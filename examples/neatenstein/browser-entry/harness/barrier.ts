@@ -17,16 +17,56 @@ import { computeCombatQualitySignal } from './fitness';
 import { runMainGeneration } from './main-runner';
 import { createSeedPack } from './seed-pack';
 import { selectVariant } from './select';
+import { getEnemySnapshot, refreshEnemySnapshots } from './snapshot';
 import { shouldRefreshMlpSnapshot } from './snapshot';
 import type {
   BarrierState,
   CombatQualitySignal,
+  EnemyPopulation,
   Genome,
   Individual,
   MainVariant,
   SeedPack,
   Snapshot,
 } from './types';
+
+/**
+ * Build an enemy evaluation barrier for a generation.
+ *
+ * The barrier pairs a frozen enemy variant snapshot with the deterministic
+ * seed pack for the generation. It refreshes the rolling snapshot store from
+ * the provided population, then selects a variant deterministically from
+ * `generation` so the same inputs always produce the same barrier. The returned
+ * snapshot is never the live population object: it is a deep-copied, frozen
+ * snapshot from the store.
+ *
+ * @param generation - Current co-evolution generation.
+ * @param population - Live enemy population (MLP backend expected).
+ * @param seedPack - Deterministic seed pack for this generation.
+ * @returns Frozen object with `{ snapshot, seedPack }`.
+ *
+ * @example
+ * ```ts
+ * const population = createMlpEnemyPopulation({ seed: 1 });
+ * const seedPack = makeEnemySeedPack(123);
+ * const barrier = buildEnemyEvaluationBarrier(5, population, seedPack);
+ * console.log(barrier.snapshot.kind); // 'mlp'
+ * ```
+ */
+export function buildEnemyEvaluationBarrier(
+  generation: number,
+  population: EnemyPopulation,
+  seedPack: SeedPack,
+): { snapshot: Snapshot; seedPack: SeedPack } {
+  refreshEnemySnapshots(population);
+  const variantId = generation % population.size;
+  const snapshot = getEnemySnapshot(variantId);
+
+  return Object.freeze({
+    snapshot,
+    seedPack,
+  });
+}
 
 /**
  * Configuration accepted by {@link genBarrier}.

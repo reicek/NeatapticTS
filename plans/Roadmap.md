@@ -48,6 +48,30 @@ NEAT algorithms, or cloud/Turso deployment topology. Keep
 `data/eval-baselines/` in place; it is persistent evaluation data, not a
 generated runtime artifact.
 
+## Standalone RAG Orchestration Improvements Lane [WIP]
+
+**Outcome:** make the NeatapticTS multi-tier agent orchestration system lean
+for simple tasks and robust for complex tasks. Introduces complexity-triaged
+dispatch (trivial/moderate/complex), consolidated slice-gate (5 gates → 1 for
+trivial), fix-packet fast-path via write_agent for trivial slices, post-write
+hook for proactive Cortex reindexing, pre-dispatch freshness hook as safety
+net, gate error wrapper for JSON parse failure resilience, file-lock tracker
+for parallel dispatch conflict prevention, and graceful degradation policy for
+gate tooling failures.
+
+- RAG orchestration improvements (lean-adaptive)
+- Plan: [RAG_Orchestration_Improvements.plans.md](RAG_Orchestration_Improvements.plans.md) [WIP]
+- Current internal state: plan schema patched to canonical phase/step/slice YAML with AC-### IDs; awaiting fresh 01-planning verification green-light before execution dispatch.
+- Key innovation: post-write hook reindexes changed files immediately after
+  every edit/create (proactive freshness), so the pre-dispatch freshness hook
+  rarely needs to trigger a full reindex. Prevention over detection.
+
+**Coordination rule:** this lane is confined to `scripts/agent-customization/`
+(gates, hooks, cortex, dispatch), `.github/skills/execute/SKILL.md`,
+`.github/skills/research-methodology/SKILL.md`, `.github/copilot-instructions.md`,
+`.github/agents/*.agent.md`, and plan tracker files. It must not modify `src/`
+library code, core NEAT algorithms, or existing public APIs.
+
 ## Standalone CI Failure Hardening Lane [DONE]
 
 **Outcome:** make the `npm test` matrix pass in the GitHub Actions `ubuntu-latest`

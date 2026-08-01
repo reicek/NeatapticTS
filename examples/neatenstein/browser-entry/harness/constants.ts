@@ -25,15 +25,36 @@ export const NEATENSTEIN_SWARM_REFRESH_INTERVAL_GENERATIONS = 3;
  * Fixed layer topology for the MLP enemy backend.
  *
  * The MLP receives eight world inputs (similar to the main agent's raycast
- * buffer), compresses through two hidden layers, and produces two movement
- * outputs.
+ * buffer), compresses through two hidden layers, and produces four movement
+ * outputs: move, strafe, turn, and fire.
  */
-export const NEATENSTEIN_MLP_TOPOLOGY: readonly number[] = [8, 6, 4, 2];
+export const NEATENSTEIN_MLP_TOPOLOGY: readonly number[] = [8, 6, 4, 4];
 
 /**
  * Number of weight-only MLP enemy variants maintained by the population.
  */
 export const NEATENSTEIN_MLP_VARIANT_COUNT = 32;
+
+/**
+ * Total number of enemy variants maintained across the enemy population.
+ *
+ * This is the full MLP population size; each generation selects up to
+ * {@link NEATENSTEIN_MAX_ACTIVE_ENEMIES} to spawn on screen at once.
+ */
+export const NEATENSTEIN_ENEMY_POPULATION_SIZE = 32;
+
+/**
+ * Maximum number of enemies that may be active on screen at the same time.
+ */
+export const NEATENSTEIN_MAX_ACTIVE_ENEMIES = 8;
+
+/**
+ * Deterministic episode duration used for one enemy evaluation, in milliseconds.
+ *
+ * A 10-second episode is long enough for movement and combat differences to
+ * surface without making headless batch evaluation prohibitively expensive.
+ */
+export const NEATENSTEIN_ENEMY_EVALUATION_DURATION_MS = 10_000;
 
 /**
  * Maximum number of agents in the SWARM enemy backend.
@@ -80,3 +101,19 @@ export const NEATENSTEIN_WEIGHT_COMPLEXITY_BONUS = 0.1;
  * Default penalty weight for excessive wiring density (parsimony pressure).
  */
 export const NEATENSTEIN_WEIGHT_PARSIMONY_DENSITY_PENALTY = 0.01;
+
+/**
+ * Default weight for collective damage dealt by the enemy team.
+ *
+ * Damage dealt is the primary reward signal for the enemy population because
+ * it directly measures pressure applied to the main agent.
+ */
+export const NEATENSTEIN_ENEMY_TEAM_DAMAGE_WEIGHT = 1;
+
+/**
+ * Default weight for enemy survival count.
+ *
+ * Surviving enemies receive a smaller reward than damage dealt so that
+ * aggressive behavior is preferred over passive longevity.
+ */
+export const NEATENSTEIN_ENEMY_TEAM_SURVIVAL_WEIGHT = 1;

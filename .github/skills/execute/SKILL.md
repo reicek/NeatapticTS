@@ -472,6 +472,38 @@ When ALL steps in a phase are `[DONE]`, the orchestrator MUST dispatch
 `07-logging` to compress the completed phase. See Section 5 for the full
 phase compression policy.
 
+## Section 2.4 — Plan-Mandated Pragmatic Mode (mandatory)
+
+The strict RED → IMPLEMENT → GREEN loop and per-slice gate ceremony are the
+**default**. An active plan MAY declare pragmatic mandates that override the
+default for the duration of that plan. When a plan's `## Mandates` section
+declares any of the following, agents and orchestrators executing that plan
+MUST follow the mandate over the default ceremony:
+
+1. **Broad slices.** When a plan declares broad slices (e.g., one slice per
+   phase), the orchestrator dispatches **one agent per phase/slice** and does
+   not subdivide into micro-slices or spawn redundant red/green/doc
+   sub-slices. A phase that needs a second pass is handled by sending a
+   follow-up to the **same** (still idle) agent via `write_agent`, not by
+   spawning a fresh instance.
+2. **Bypass legacy ceremony.** When a plan authorizes bypassing procedure,
+   agents MAY skip the plan-verification green-light cycle, per-AC gate calls,
+   fix-packet YAML ceremony, and the strict three-phase loop when doing so
+   accelerates delivery without introducing risk. Ship working software; do
+   not author documentation about changes instead of making the changes.
+3. **Model mandate.** When a plan mandates a single model for all agents
+   (e.g., `glm-5.2:cloud`), every dispatch under that plan MUST override the
+   agent's frontmatter `model` with the mandated model. No agent may opt out.
+4. **Remove legacy noise.** When a plan declares noise removal as a
+   deliverable, agents MUST delete obsolete/deprecated/redundant files and
+   flows they encounter (orphan hook scripts, superseded contracts, dead
+   agents/skills) rather than leaving them for a later cleanup.
+
+Pragmatic mode is **plan-scoped**, not global. The mandates apply only to the
+plan that declares them; other plans retain the default strict ceremony. When
+uncertain whether a mandate applies, the orchestrator checks the active plan's
+`## Mandates` section before dispatching.
+
 ## Section 3 — Goal-to-Agent Mapping Table
 
 When an orchestrator receives a task packet with a `goal` field, it maps
@@ -574,6 +606,13 @@ Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green li
 
 ### Loop Steps
 
+> **Complexity-tier applicability.** The steps below run for every slice unless
+> annotated. The tier gating is: step 1 (Red Testing) is **complex-only** (and
+> `green-only` steps skip it regardless); step 2b specialist review and step 2c
+> fix loop are **moderate/complex** (trivial skips both); step 4a convergence
+> tracker is **complex-only** (trivial/moderate slices do not invoke it). Steps
+> 0, 2, 2a, 3, and 5 apply to **all tiers**.
+
 0. **Plan Verification Gate.** A fresh `01-planning` agent reads the active
    plan, checks completeness, risk coverage, acceptance criteria, and
    dependencies, and records a green light in `## Latest validation evidence`.
@@ -581,7 +620,9 @@ Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green li
    dispatched until this gate passes.
 1. **Red Testing** (`03-red-testing`) creates failing tests that define
    expected behavior. The tests must fail for the right reason (missing
-   implementation, not a syntax error or bad fixture).
+   implementation, not a syntax error or bad fixture). _(complex tier only;
+   trivial and moderate slices skip the RED phase unless `tdd_sequence`
+   requires it)_
 2. **Implementation** (`04-implementing`) implements the code to make the
    tests pass. The implementer works within the slice boundary and does
    not expand scope.
@@ -607,6 +648,7 @@ Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green li
    cannot catch. The specialist returns either APPROVE or
    REQUEST_CHANGES with specific observations. See **Section 5.7
    — Pre-Green Specialist Review Policy** for the full protocol.
+   _(moderate/complex only; trivial slices skip 2b and 2c)_
    2c. **Fix Loop**. If the specialist returns REQUEST_CHANGES, the
    orchestrator appends a single `fix_packet` block (see Section 5.8)
    to the active plan under a deterministic fix-packet ID, dispatches
@@ -634,9 +676,12 @@ Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green li
    counts iterations for the slice, and resets to 0 if any marker has
    `status=passed`. If the count exceeds 4 without a green pass, the gate
    fails and the orchestrator MUST escalate to `00-helping` instead of
-   spawning another `04-implementing` instance.
+   spawning another `04-implementing` instance. _(complex tier only;
+   trivial and moderate slices do not invoke the convergence tracker)_
 5. **Advance**: When green gives OK, the orchestrator records
-   `VALIDATION_EVIDENCE` and moves to the next step or slice.
+   `VALIDATION_EVIDENCE`, updates the active plan with the latest details
+   (status, what changed, evidence — see Section 5.9), and moves to the next
+   step or slice.
 6. **Phase Compression**: When all steps in a phase are marked `[DONE]` and
    green validation has passed, the orchestrator MUST dispatch `07-logging`
    to compress the completed phase before advancing to the next phase. This
@@ -660,6 +705,14 @@ Each slice is a bounded unit of work with these fields:
 | `next_slice`          | The `slice_id` to proceed to after this one passes     |
 
 ### Orchestration Loop Steps
+
+> **Complexity-tier applicability.** Steps 1, 2, 3, 6, 8, 9, and 10 apply to all
+> tiers. Steps 4 (specialist severity gate) and 5 (specialist fix loop) are
+> **moderate/complex** — trivial slices skip straight from the shared-validation
+> gate (step 3) to green testing (step 6). Step 7's convergence-tracker
+> invocation is **complex-only**; trivial and moderate slices loop back without
+> it. The RED phase (step 1 of the Loop Steps above) is dispatched before step 2
+> here and is **complex-only** (unless `tdd_sequence` requires it).
 
 1. Read the active step packet and expand placeholder slice titles into
    full slice objects.
@@ -703,6 +756,18 @@ Each slice is a bounded unit of work with these fields:
     advancing to the next phase. See **Phase Compression Policy** below.
 
 ### Critical Rules
+
+> **Complexity gating of critical rules.** Most critical rules below apply to
+> **all tiers**. The following are **complexity-gated**: the
+> SEVERITY-GATED PRE-GREEN SPECIALIST REVIEW rule and the MANDATORY CONVERGENCE
+> TRACKER GATE rule are skipped for **trivial** slices (specialist review is
+> skipped whenever the severity gate classifies TRIVIAL; the convergence tracker
+> is not invoked for trivial slices). The RED → IMPLEMENT → GREEN loop's RED
+> phase is **complex-only** (and `green-only` steps skip it regardless). All
+> other rules — MANDATORY PLAN VERIFICATION GATE, MANDATORY DISPATCH
+> CONSULTATION, MANDATORY PRE-SPECIALIST SHARED-VALIDATION GATE, RAG-BASED
+> DISPATCH, No Deferred Cleanup, GPU/BROWSER visible-window validation, and
+> targeted-tests-only — apply to **every tier**.
 
 - **MANDATORY PLAN VERIFICATION GATE — before RED/IMPLEMENT, run the
   `plan-readiness` gate and the `slice-advancement` consolidated gate and
@@ -1207,6 +1272,283 @@ following are true:
 If the observations cannot be stored in the plan or cannot be retrieved by RAG,
 the orchestrator MUST fall back to the standard Section 2.2 rule and MUST NOT
 embed the observations inline in the dispatch prompt.
+
+## Section 5.8.1 — Complexity Triage
+
+The dispatch packet builder (`scripts/agent-customization/dispatch/build-dispatch-packet.mjs`)
+classifies every slice into one of three complexity levels. The complexity hint
+controls the prompt-length budget (Section 5.8.2) and the fix-packet fast-path
+eligibility (Section 5.8.2 "Reuse Idle Agent"). Callers MAY pass a `complexity`
+field to `build_dispatch_packet`; when omitted it defaults to `moderate` for
+backward compatibility.
+
+### Heuristics
+
+- **Trivial** — One-line fixes, config changes, bundle rebuilds, comment and
+  formatting edits, dependency bumps with no API change, single-constant
+  updates. The fix fits in a short follow-up message without new design
+  context. Trivial slices get the stricter 200-character prompt limit.
+- **Moderate** — Multi-file feature slices, new modules, new tests, a single
+  new behavior that touches a bounded set of files. Most implementation slices
+  are moderate. Moderate slices get the 500-character prompt limit.
+- **Complex** — Cross-module refactors, architecture changes, GPU/browser-critical
+  slices, migrations that touch shared contracts, anything with high
+  blast-radius or context-contamination risk. Complex slices get the
+  500-character prompt limit and MUST NOT use the reuse-idle-agent fast-path.
+
+When the orchestrator is unsure, default to `moderate`. Over-classifying as
+trivial (to get the fast-path) when the work is moderate or complex is a
+triage defect: the stricter prompt budget and the fast-path assumptions will
+both break.
+
+### Where the classification is stored
+
+The complexity is echoed in the dispatch packet as `dispatch_packet.complexity`
+and in the top-level `complexity` field of the `build_dispatch_packet` result.
+The orchestrator SHOULD record the chosen complexity next to the slice in the
+plan's validation evidence so the handoff query and downstream agents can see it.
+
+### Complexity Triage Flowchart
+
+The flowchart below maps each complexity tier to the ceremony level it requires.
+Trivial slices collapse to `implement → shared-validation → green` with no
+specialist review, no convergence tracker, and no fix-packet ceremony. Moderate
+slices add the slice/severity gate and a specialist only when the slice is FULL.
+Complex slices run the full RED → IMPLEMENT → GREEN loop with all gates and a
+mandatory specialist review. See the **Complexity Tier Ceremony Matrix** in the
+active plan for the authoritative tier → ceremony mapping.
+
+```mermaid
+flowchart TD
+    Start(["New slice / request"]) --> Classify["Classify complexity<br/>trivial | moderate | complex"]
+    Classify --> Trivial["Trivial"]
+    Classify --> Moderate["Moderate"]
+    Classify --> Complex["Complex"]
+    Trivial --> TImpl["04-implementing<br/>no specialist, no convergence tracker,<br/>no fix-packet ceremony"]
+    TImpl --> TShared["shared-validation gate"]
+    TShared --> TGreen["05-green-testing"]
+    Moderate --> MImpl["04-implementing"]
+    MImpl --> MShared["shared-validation gate"]
+    MShared --> MGate["specialist-review-severity gate"]
+    MGate --> MSpecialist{"FULL?"}
+    MSpecialist -->|No| MGreen["05-green-testing"]
+    MSpecialist -->|Yes| MReview["1 Tier-3 specialist review"]
+    MReview --> MGreen
+    Complex --> CRed["03-red-testing RED phase"]
+    CRed --> CImpl["04-implementing"]
+    CImpl --> CShared["shared-validation gate"]
+    CShared --> CReview["1 Tier-3 specialist review<br/>all gates"]
+    CReview --> CGreen["05-green-testing"]
+    CGreen --> CConv["convergence-tracker gate"]
+    CConv --> CLoop{"green OK?"}
+    CLoop -->|No| CImpl
+    CLoop -->|Yes| Advance["Advance to next slice"]
+    TGreen --> Advance
+    MGreen --> Advance
+```
+
+## Section 5.8.2 — Reuse Idle Agent (Fix-Packet Fast-Path)
+
+For **trivial** slices, when a specialist returns `REQUEST_CHANGES` with a small
+fix, the orchestrator MAY send the fix directly to the idle implementation
+agent via `write_agent` instead of spawning a fresh `04-implementing` instance.
+This is the "fix-packet fast-path" and is only available for trivial slices.
+
+### Criteria (all must hold)
+
+- The slice was classified **trivial** by the dispatch packet builder.
+- The fix targets the **same slice** that the idle implementation agent already
+  worked on (the agent's context already contains the slice boundary).
+- A specialist returned `REQUEST_CHANGES` and the requested change is **small**:
+  a one-line or few-line correction, a config tweak, a bundle rebuild, a
+  comment/formatting fix — no new design context is required.
+- No plan updates are required to apply the fix (the slice boundary and
+  validation contract are unchanged).
+
+### Counter-criteria (any one disqualifies the fast-path)
+
+- The slice is **moderate** or **complex** — spawn a fresh `04-implementing`
+  instance with a standard fix packet instead.
+- **Context contamination risk** — the idle agent's context has drifted (it has
+  processed unrelated work since the slice, or the requested change requires
+  loading new files that were not part of the original slice).
+- The fix **requires plan updates** (slice boundary change, new validation
+  commands, scope expansion) — this MUST go through `01-planning`, not an inline
+  fix.
+- The requested change is not small (multi-file, new behavior, architectural) —
+  spawn a fresh instance.
+
+### Recording inline fixes
+
+When the orchestrator uses the fast-path, it MUST record the inline fix in the
+plan's validation evidence using the deterministic marker:
+
+```text
+fix-inline: <slice-id> iteration <n>
+```
+
+The marker MUST appear in the `## Latest validation evidence` section next to
+the slice, alongside (not instead of) the standard `fix-loop: <slice-id>
+iteration <n> status=<passed|failed>` marker. This keeps the convergence
+tracker honest: an inline fix is still a fix-loop iteration and is counted as
+one. If the inline fix does not produce a green pass, the orchestrator MUST
+fall back to the standard fix-packet flow (Section 5.8) and spawn a fresh
+`04-implementing` instance for the next iteration.
+
+## Section 5.8.3 — Gate Reliability (Consolidated Gate Graceful Degradation)
+
+The consolidated `slice-advancement` gate (Section 5) calls multiple sub-gates
+(plan-sync, step-packet, plan-slice-quality, plan-command-lint, and for FULL
+slices shared-validation, code-coverage, specialist-review) in a single
+invocation. Each sub-gate result is reported in the `sub_gates` array with
+`{ name, pass, fixHint, gate_error }`.
+
+There are two distinct failure modes, and the orchestrator MUST treat them
+differently:
+
+### Tooling failure — `gate_error: true`
+
+A `gate_error: true` entry means the sub-gate script itself failed to run:
+it crashed, timed out, threw an unhandled exception, or produced unparseable
+output. This is an infrastructure/tooling problem, NOT a content problem.
+
+When any sub-gate reports `gate_error: true`:
+
+- **Log a warning** and proceed to the next orchestration step.
+- **Do NOT retry** the gate or block dispatch.
+- **Do NOT treat it as a content failure.** The consolidated gate's top-level
+  `pass` boolean is computed only from sub-gates with `gate_error: false`.
+- Record the errored gate name(s) in `VALIDATION_EVIDENCE` for awareness, but
+  do not loop back or escalate solely because of a tooling error.
+
+### Content failure — `pass: false`, `gate_error: false`
+
+A `pass: false` entry with `gate_error: false` means the sub-gate ran
+successfully but found a real issue: a test failure, a lint error, a coverage
+gap, or a plan-format violation. This is a content problem that the
+implementer or planner must fix.
+
+When any sub-gate reports `pass: false` (and `gate_error: false`):
+
+- **Follow the existing loop-back protocol.** The consolidated gate returns
+  `pass: false` and the orchestrator routes the failure back to
+  `04-implementing` (or `01-planning` for plan-format issues) with the
+  aggregated `fixHint`.
+- Record the failing gate(s) and their `fixHint` values in
+  `VALIDATION_EVIDENCE`.
+
+### Consolidated gate output shape
+
+```json
+{
+  "pass": true,
+  "sub_gates": [
+    {
+      "name": "plan-sync",
+      "pass": true,
+      "fixHint": "...",
+      "gate_error": false
+    },
+    {
+      "name": "step-packet",
+      "pass": false,
+      "fixHint": "Fix ...",
+      "gate_error": false
+    },
+    {
+      "name": "plan-slice-quality",
+      "pass": true,
+      "fixHint": "...",
+      "gate_error": false
+    }
+  ],
+  "fixHint": "Failed gates: step-packet. Fix the issues and re-run. ...",
+  "evidence": {
+    "failedGates": ["step-packet"],
+    "erroredGates": []
+  }
+}
+```
+
+The orchestrator MUST use the `sub_gates` array (not just the top-level
+`pass`) to determine the correct response: `gate_error: true` entries are
+infrastructure warnings, while `pass: false` entries are actionable content
+failures.
+
+## Section 5.8.4 — Cortex Freshness and File-Lock Awareness
+
+Phase 3 introduced two automated Cortex hooks and a file-lock tracker that
+change how agents interact with the search index and parallel slices.
+
+### Auto-Reindex (Post-Write Hook)
+
+Agents do **NOT** need to manually trigger a Cortex reindex after writes. The
+post-write reindex hook (`post-write-reindex-hook.mjs`, registered as a
+PostToolUse hook in `.github/hooks/cortex-refresh.json`) fires after every
+`edit`/`create`/`apply_patch` call, extracts the written file path, and spawns
+a fire-and-forget background process that calls
+`targeted-reindex.mjs → reindexFiles([filePath])`.
+
+- Only eligible file types (`.md`, `.ts`, `.mjs`, `.js` under `plans/`,
+  `.github/skills/`, `.github/agents/`, `src/`, `examples/`,
+  `scripts/agent-customization/`, `rag-index/`, `scripts/mcp-semantic/`) are
+  reindexed.
+- The hook never blocks the host tool and never throws into the host.
+- Reindex errors are logged to `artifacts/post-write-reindex.log`.
+
+### Pre-Dispatch Freshness Hook
+
+Before each dispatch (and at SessionStart), the pre-dispatch freshness hook
+(`pre-dispatch-freshness-hook.mjs`) checks the index age against a
+configurable grace window (default 300s, `CORTEX_GRACE_WINDOW_S`) and
+staleness threshold (default 300s, `CORTEX_STALENESS_THRESHOLD_S`). If the
+index is stale beyond grace + threshold, a background full reindex is
+triggered. The hook **never blocks dispatch**; tooling errors degrade
+gracefully. For complex slices, the orchestrator MAY set
+`wait_for_reindex: true` to make the hook wait for the reindex to complete.
+
+### File-Lock Tracker
+
+The file-lock tracker (`file-lock-tracker.mjs`) provides `acquire(files)`,
+`release(lockId)`, and `isConflict(files)` for serializing parallel slices
+with overlapping file sets while parallelizing disjoint slices. Slices that
+touch disjoint files run concurrently; slices with overlapping files
+serialize via the lock tracker. The tracker is process-scoped (in-memory).
+
+## Section 5.9 — Plan Update at End (Mandatory)
+
+When a slice, step, or phase completes — and again when the entire plan
+finishes — the orchestrator MUST update the active plan file with the latest
+details before advancing or handing off. A stale plan is a planning defect:
+dispatched agents load context from the plan via RAG, so an un-updated plan
+poisons every subsequent dispatch.
+
+### What to record
+
+1. **Status transitions.** Flip the slice/step/phase marker from `[WIP]` to
+   `[DONE]` (or `[BLOCKED]` with a reason).
+2. **What changed.** A one- or two-line summary of the files touched and the
+   capability delivered — not a full diff.
+3. **Evidence.** The validation command(s) that passed (test names, gate
+   names, build/lint results) under a `## Latest validation evidence`
+   heading or inline next to the slice.
+4. **Removals.** Any legacy/noise files deleted under the M4 mandate, listed
+   by path so the handoff knows what is gone.
+5. **Next boundary.** The current phase/slice the next session should resume
+   from, so the handoff query stays accurate.
+
+### When to update
+
+- After every slice passes green (or is bypassed under pragmatic mode).
+- After every phase compresses.
+- At the end of the whole plan, so a fresh CLI session can resume cleanly.
+
+### Under pragmatic mode
+
+When the active plan declares pragmatic mandates (Section 2.4), the
+plan-update obligation is **not** skipped — it is simplified. Record the
+outcome compactly (status + evidence + next boundary) without the full
+fix-packet YAML ceremony. Keep the plan current; keep it lean.
 
 ## Section 7 — Cortex-First Search Policy (Mandatory)
 

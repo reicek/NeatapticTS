@@ -70,6 +70,19 @@ export interface CombatQualitySignal {
 }
 
 /**
+ * Optional tuning knobs for the team-level enemy fitness composite.
+ *
+ * Callers can override the default weights when comparing alternative
+ * selection pressures (e.g., aggressive swarms vs. survival-focused swarms).
+ */
+export interface EnemyTeamFitnessConfig {
+  /** Weight applied to collective damage dealt to the main agent. */
+  damageWeight?: number;
+  /** Weight applied to the number of enemies that survived the episode. */
+  survivalWeight?: number;
+}
+
+/**
  * Deterministic seed pack for a single generation.
  *
  * Every variant evaluated in a generation sees the same frozen seed stream so

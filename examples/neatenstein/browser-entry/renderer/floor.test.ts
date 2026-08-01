@@ -156,7 +156,7 @@ function projectScreenToWorld(
 ): { worldX: number; worldY: number } {
   const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
   const halfWidth = width / 2;
-  const focalLength = halfWidth / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const focalLength = height / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
   const dy = screenY - horizonY;
   const rowDistance =
     (NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD * focalLength) / dy;
@@ -195,7 +195,7 @@ function projectWorldToScreen(
 ): { x: number; y: number } {
   const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
   const halfWidth = width / 2;
-  const focalLength = halfWidth / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const focalLength = height / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
   const dx = worldX - camera.x;
   const dy = worldY - camera.y;
   const cos = Math.cos(camera.yaw);

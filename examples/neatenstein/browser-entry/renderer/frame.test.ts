@@ -113,6 +113,27 @@ describe('Neatenstein render frame helpers', () => {
     });
   });
 
+  it('uses the default column count when none is supplied', async () => {
+    const { NEATENSTEIN_CPU_COLUMN_COUNT } =
+      await loadModule<typeof import('../constants')>('../constants');
+    const { buildNeatensteinRenderFrame } =
+      await loadModule<typeof import('./frame.ts')>('./frame.ts');
+    const frame = buildNeatensteinRenderFrame(createMinimalRenderState());
+    expect(frame.columnCount).toBe(NEATENSTEIN_CPU_COLUMN_COUNT);
+    expect(frame.wallDistances.length).toBe(NEATENSTEIN_CPU_COLUMN_COUNT);
+  });
+
+  it('accepts an optional enemy payload in the render state', async () => {
+    const { buildNeatensteinRenderFrame } =
+      await loadModule<typeof import('./frame.ts')>('./frame.ts');
+    const state = createMinimalRenderState();
+    (state as Record<string, unknown>).enemies = [
+      { worldX: 1, worldY: 2, type: 3 },
+    ];
+    const frame = buildNeatensteinRenderFrame(state, expectedColumnCount);
+    expect(frame.simTick).toBe(state.simTick);
+  });
+
   it('increments requestId across frame builds', async () => {
     const { buildNeatensteinRenderFrame } =
       await loadModule<typeof import('./frame.ts')>('./frame.ts');

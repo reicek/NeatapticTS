@@ -14,12 +14,9 @@
  */
 
 import {
-  NEATENSTEIN_FALLBACK_CANVAS_HEIGHT,
   NEATENSTEIN_FALLBACK_CANVAS_WIDTH,
   NEATENSTEIN_FALLBACK_STATUS_TEXT_RGB,
   NEATENSTEIN_WORKER_BUNDLE_FILENAME,
-  NEATENSTEIN_GPU_COLUMN_COUNT,
-  NEATENSTEIN_WORKER_COLUMN_COUNT,
 } from './constants';
 import { forwardWorkerInput } from './host/game/controls';
 import { createGameState } from './host/game/state';
@@ -115,72 +112,13 @@ function drawCanvasStatus(canvas: HTMLCanvasElement, message: string): void {
   context.fillText(message, canvas.width / 2, canvas.height / 2);
 }
 
-const NEATENSTEIN_MAX_CANVAS_WIDTH = NEATENSTEIN_GPU_COLUMN_COUNT * 2;
-const NEATENSTEIN_MAX_CANVAS_HEIGHT = NEATENSTEIN_WORKER_COLUMN_COUNT * 2;
-
-/**
- * Scale a canvas backing-store size so it uses the largest render resolution
- * supported by the Neatenstein raycasting output bounds while preserving the
- * source aspect ratio.
- *
- * The maximum width is derived from the GPU raycasting column count, and the
- * maximum height is derived from the worker-tier column count. They are aliased
- * locally as canvas bounds because this file is concerned with the host canvas
- * backing-store size rather than renderer internals.
- *
- * The returned size will:
- *
- * - preserve the source canvas aspect ratio
- * - use as much of the maximum output bounds as possible
- * - never exceed `NEATENSTEIN_MAX_CANVAS_WIDTH`
- * - never exceed `NEATENSTEIN_MAX_CANVAS_HEIGHT`
- *
- * This function may upscale or downscale the source dimensions. That is
- * intentional: the CSS canvas size provides the aspect ratio, while the
- * raycasting bounds define the desired maximum render resolution.
- *
- * @param sourceWidth - Source canvas width in CSS pixels.
- * @param sourceHeight - Source canvas height in CSS pixels.
- * @returns The largest backing-store size that fits within the raycasting output bounds.
- */
-function fitCanvasBackingStoreToMax(
-  sourceWidth: number,
-  sourceHeight: number,
-): { width: number; height: number } {
-  // Guard against invalid source sizes. The caller normally falls back before
-  // this point, but this keeps the helper safe if reused elsewhere.
-  if (sourceWidth <= 0 || sourceHeight <= 0) {
-    return {
-      width: NEATENSTEIN_MAX_CANVAS_WIDTH,
-      height: NEATENSTEIN_MAX_CANVAS_HEIGHT,
-    };
-  }
-
-  // Choose the limiting axis by taking the smaller scale factor.
-  //
-  // Do not include `1` here. A `1` cap would make this a downscale-only helper,
-  // preventing smaller CSS canvases from using the full available raycasting
-  // output resolution.
-  const scale = Math.min(
-    NEATENSTEIN_MAX_CANVAS_WIDTH / sourceWidth,
-    NEATENSTEIN_MAX_CANVAS_HEIGHT / sourceHeight,
-  );
-
-  return {
-    // Canvas backing-store dimensions must be integer device pixels.
-    // Clamp to at least 1px so unusual aspect ratios never floor to zero.
-    width: Math.max(1, Math.floor(sourceWidth * scale)),
-    height: Math.max(1, Math.floor(sourceHeight * scale)),
-  };
-}
-
 /**
  * Start the Neatenstein demo on the host page.
  *
- * Resolves the canvas, matches the canvas backing store to its CSS pixel size,
- * caps the backing store to the supported maximum output size while preserving
- * aspect ratio, spawns the display worker bridge, initializes a deterministic
- * game state, and starts the render loop that ships simulation snapshots to the
+ * Resolves the canvas, sets the canvas backing store to the CSS-derived render
+ * size (480px height with width proportional to the canvas's CSS box aspect
+ * ratio), spawns the display worker bridge, initializes a deterministic game
+ * state, and starts the render loop that ships simulation snapshots to the
  * worker.
  *
  * Uses a CPU fallback when OffscreenCanvas is not available so the entry point
@@ -200,40 +138,50 @@ function neatensteinStart(
     throw new Error(`Canvas element #${canvasId} not found`);
   }
 
-  // Match the canvas backing store to its CSS pixel size for crisp rendering.
-  // The backing store controls the actual render resolution, while CSS controls
-  // the displayed layout size.
-  //
-  // When jsdom, tests, hidden containers, or a zero-layout viewport report zero
-  // client dimensions, fall back to the computed CSS size so the renderer still
-  // receives a usable drawing buffer.
-  let backingWidth = canvas.clientWidth;
-  let backingHeight = canvas.clientHeight;
+  // Keep the backing store at a fixed 480px height with a width proportional
+  // to the canvas's CSS display aspect ratio. The CSS shell stretches the
+  // canvas to fill the available container space, and the browser upscales
+  // this fixed-height backing store to the stretched display size. Reading
+  // client dimensions gives the actual rendered box, which differs from the
+  // viewport when the page includes status bars, gaps, or flex layout.
+  const htmlCanvas = canvas;
+  function updateCanvasBackingStore(): void {
+    const clientWidth = htmlCanvas.clientWidth;
+    const clientHeight = htmlCanvas.clientHeight;
 
-  if (backingWidth === 0 || backingHeight === 0) {
-    const style = getComputedStyle(canvas);
+    const fixedBackingHeight = 480;
+    if (clientWidth && clientHeight) {
+      htmlCanvas.width = Math.round(
+        fixedBackingHeight * (clientWidth / clientHeight),
+      );
+      htmlCanvas.height = fixedBackingHeight;
+      return;
+    }
 
-    // Prefer the authored CSS size when layout dimensions are unavailable.
-    // If parsing fails, fall back to the existing Neatenstein defaults.
-    backingWidth =
-      Number.parseInt(style.width, 10) || NEATENSTEIN_FALLBACK_CANVAS_WIDTH;
-    backingHeight =
-      Number.parseInt(style.height, 10) || NEATENSTEIN_FALLBACK_CANVAS_HEIGHT;
+    // Fall back to viewport dimensions when the canvas has not been laid out yet.
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const fallbackWidth =
+      viewportWidth && viewportHeight
+        ? Math.round(fixedBackingHeight * (viewportWidth / viewportHeight))
+        : NEATENSTEIN_FALLBACK_CANVAS_WIDTH;
+
+    htmlCanvas.width = fallbackWidth;
+    htmlCanvas.height = fixedBackingHeight;
   }
 
-  // Resize the canvas backing store to the largest render size supported by the
-  // raycasting output bounds while preserving the canvas's CSS aspect ratio.
-  //
-  // The CSS dimensions are used only to determine aspect ratio. The backing
-  // store may be upscaled or downscaled so the worker receives the maximum
-  // usable render resolution without stretching the scene.
-  const fittedBackingStore = fitCanvasBackingStoreToMax(
-    backingWidth,
-    backingHeight,
-  );
+  updateCanvasBackingStore();
 
-  canvas.width = fittedBackingStore.width;
-  canvas.height = fittedBackingStore.height;
+  let resizeObserver: ResizeObserver | null = null;
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(updateCanvasBackingStore);
+    resizeObserver.observe(htmlCanvas);
+  }
+
+  const handleResize = () => {
+    updateCanvasBackingStore();
+  };
+  window.addEventListener('resize', handleResize);
 
   const useWorkerTier = supportsWorkerOffscreenCanvas();
   const tier = useWorkerTier ? 'worker' : 'cpu';
@@ -266,6 +214,11 @@ function neatensteinStart(
   );
 
   const stop = () => {
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+      resizeObserver = null;
+    }
+    window.removeEventListener('resize', handleResize);
     cancelRenderLoop();
     inputRouter.detach();
     bridge.destroy();
@@ -318,6 +271,7 @@ function startRenderLoop(
       cameraYaw,
       mapSeed: initialState.seed,
       movement: snapshot.movement,
+      enemies: [],
     });
 
     // The authoritative camera yaw is accumulated on the host so it persists
@@ -331,6 +285,10 @@ function startRenderLoop(
   animationFrameId = requestAnimationFrame(tick);
 
   return () => {
+    // Defensive guard for teardown being called before the first animation
+    // frame is scheduled. This branch is not reachable through the public
+    // start flow, so it is excluded from branch coverage.
+    /* istanbul ignore next */
     if (animationFrameId !== null) {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;

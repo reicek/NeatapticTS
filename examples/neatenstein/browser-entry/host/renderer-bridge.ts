@@ -5,29 +5,30 @@
  * display worker. It is responsible for:
  *
  * - spawning the module worker,
- * - constraining the render size before messages cross the worker boundary,
+ * - forwarding the host-derived render size to the worker without constraints,
  * - transferring an {@link OffscreenCanvas} on the `worker` tier,
  * - forwarding simulation state to the worker,
  * - forwarding input snapshots to the worker,
  * - exposing the latest rendered frame request id for CPU/GPU tiers,
  * - and terminating the worker on teardown.
  *
- * The bridge intentionally remains thin, but it enforces the canvas/backing
- * store size invariant because this is the last host-side boundary before the
- * worker owns direct rendering.
+ * The bridge intentionally remains thin; it forwards the host-provided canvas
+ * backing-store dimensions because this is the last host-side boundary before
+ * the worker owns direct rendering.
  *
  * @module
  */
 
 import {
-  NEATENSTEIN_GPU_COLUMN_COUNT,
   NEATENSTEIN_INPUT_MESSAGE_TYPE,
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
   NEATENSTEIN_WORKER_BUNDLE_FILENAME,
-  NEATENSTEIN_WORKER_COLUMN_COUNT,
   type NeatensteinTier,
 } from '../constants';
-import type { NeatensteinRenderState } from '../renderer/frame';
+import type {
+  NeatensteinRenderFrame,
+  NeatensteinRenderState,
+} from '../renderer/frame';
 import type { InputSnapshot } from './input';
 
 /**
@@ -36,26 +37,8 @@ import type { InputSnapshot } from './input';
 const DEFAULT_WORKER_URL = `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`;
 
 /**
- * Maximum bridge-managed canvas width.
- *
- * The source constant is named for the GPU raycasting column count, but at the
- * bridge boundary it represents the maximum horizontal backing-store size that
- * should be sent to the display worker.
- */
-const NEATENSTEIN_BRIDGE_MAX_CANVAS_WIDTH = NEATENSTEIN_GPU_COLUMN_COUNT * 2;
-
-/**
- * Maximum bridge-managed canvas height.
- *
- * The source constant is named for the worker column count in renderer terms,
- * but at the bridge boundary it represents the maximum vertical backing-store
- * size that should be sent to the display worker.
- */
-const NEATENSTEIN_BRIDGE_MAX_CANVAS_HEIGHT =
-  NEATENSTEIN_WORKER_COLUMN_COUNT * 2;
-
-/**
- * Configuration needed to create a renderer bridge.
+ * Configuration needed to create a host side renderer bridge that spawns the
+ * display worker and transfers the OffscreenCanvas to the selected tier.
  */
 export interface NeatensteinRendererBridgeOptions {
   /** The visible canvas element on the host page. */
@@ -69,7 +52,8 @@ export interface NeatensteinRendererBridgeOptions {
 }
 
 /**
- * Public surface of the host renderer bridge.
+ * Public surface of the host renderer bridge that callers use to forward
+ * state, send input, and consume rendered frames from the display worker.
  */
 export interface NeatensteinRendererBridge {
   /** The spawned display worker. */
@@ -82,16 +66,17 @@ export interface NeatensteinRendererBridge {
   forwardWorkerInput(snapshot: InputSnapshot): void;
   /** Terminate the worker and release the bridge. */
   destroy(): void;
-}
-
-/**
- * Integer render size after applying Neatenstein output constraints.
- */
-interface ConstrainedBridgeRenderSize {
-  /** Constrained backing-store width in pixels. */
-  width: number;
-  /** Constrained backing-store height in pixels. */
-  height: number;
+  /**
+   * Register a callback that receives every rendered frame produced by the
+   * worker on the `cpu` and `gpu` tiers.
+   *
+   * The consumer is called synchronously when a `frame` message arrives, before
+   * the bridge updates its latest request id. This lets the host overlay or
+   * capture pipeline consume the same frame payload without an extra copy.
+   *
+   * @param consumer - Function invoked with each incoming render frame.
+   */
+  setFrameConsumer(consumer: (frame: NeatensteinRenderFrame) => void): void;
 }
 
 /**
@@ -105,58 +90,18 @@ function isPositiveFiniteDimension(value: number): boolean {
 }
 
 /**
- * Resolve a constrained canvas backing-store size.
+ * Resolve the initial canvas dimensions the bridge forwards to the worker.
  *
- * The source dimensions provide the aspect ratio. The returned dimensions use
- * as much of the Neatenstein maximum render bounds as possible while preserving
- * that aspect ratio.
- *
- * This function may upscale or downscale relative to the source size. That is
- * intentional: the source size defines shape, while the Neatenstein bounds
- * define maximum render resolution.
- *
- * @param sourceWidth - Source width in pixels.
- * @param sourceHeight - Source height in pixels.
- * @returns Constrained integer size, or `null` when the source is invalid.
- */
-function resolveConstrainedBridgeRenderSize(
-  sourceWidth: number,
-  sourceHeight: number,
-): ConstrainedBridgeRenderSize | null {
-  if (
-    !isPositiveFiniteDimension(sourceWidth) ||
-    !isPositiveFiniteDimension(sourceHeight)
-  ) {
-    return null;
-  }
-
-  // Choose the limiting scale so neither axis exceeds the max bounds.
-  // Do not cap this at 1: smaller canvases should still be able to use the
-  // maximum backing-store resolution while preserving their aspect ratio.
-  const scale = Math.min(
-    NEATENSTEIN_BRIDGE_MAX_CANVAS_WIDTH / sourceWidth,
-    NEATENSTEIN_BRIDGE_MAX_CANVAS_HEIGHT / sourceHeight,
-  );
-
-  return {
-    width: Math.max(1, Math.floor(sourceWidth * scale)),
-    height: Math.max(1, Math.floor(sourceHeight * scale)),
-  };
-}
-
-/**
- * Resolve the best initial backing-store size for a visible canvas.
- *
- * The bridge prefers the canvas backing-store dimensions because earlier host
- * setup may already have constrained them. If they are unavailable, it falls
- * back to layout dimensions.
+ * The bridge prefers the canvas backing-store dimensions because the host
+ * browser entry already set them to the fixed 480px-height, viewport-aspect-ratio
+ * size. If those are unavailable, it falls back to layout dimensions.
  *
  * @param canvas - Visible host canvas.
- * @returns Constrained render size, or `null` if no usable dimensions exist.
+ * @returns A dimension pair, or `null` if no usable dimensions exist.
  */
 function resolveInitialCanvasRenderSize(
   canvas: HTMLCanvasElement,
-): ConstrainedBridgeRenderSize | null {
+): { width: number; height: number } | null {
   const backingWidth = canvas.width;
   const backingHeight = canvas.height;
 
@@ -164,64 +109,17 @@ function resolveInitialCanvasRenderSize(
     isPositiveFiniteDimension(backingWidth) &&
     isPositiveFiniteDimension(backingHeight)
   ) {
-    return resolveConstrainedBridgeRenderSize(backingWidth, backingHeight);
+    return { width: backingWidth, height: backingHeight };
   }
 
-  return resolveConstrainedBridgeRenderSize(
-    canvas.clientWidth,
-    canvas.clientHeight,
-  );
-}
-
-/**
- * Apply a constrained backing-store size to the visible canvas.
- *
- * This must happen before `transferControlToOffscreen()` for the worker tier so
- * the transferred canvas starts with the correct dimensions.
- *
- * @param canvas - Visible host canvas.
- * @param size - Constrained backing-store size.
- */
-function applyCanvasBackingStoreSize(
-  canvas: HTMLCanvasElement,
-  size: ConstrainedBridgeRenderSize,
-): void {
-  if (canvas.width !== size.width) {
-    canvas.width = size.width;
+  if (
+    isPositiveFiniteDimension(canvas.clientWidth) &&
+    isPositiveFiniteDimension(canvas.clientHeight)
+  ) {
+    return { width: canvas.clientWidth, height: canvas.clientHeight };
   }
 
-  if (canvas.height !== size.height) {
-    canvas.height = size.height;
-  }
-}
-
-/**
- * Return a simulation state with constrained render dimensions.
- *
- * This makes the bridge a hard boundary: even if an upstream caller sends
- * unconstrained dimensions, the worker receives the maximum allowed size for
- * the same aspect ratio.
- *
- * @param state - Raw simulation/render state from the host loop.
- * @returns State with constrained canvas dimensions.
- */
-function constrainRenderState(
-  state: NeatensteinRenderState,
-): NeatensteinRenderState {
-  const constrainedSize = resolveConstrainedBridgeRenderSize(
-    state.canvasWidth,
-    state.canvasHeight,
-  );
-
-  if (constrainedSize === null) {
-    return state;
-  }
-
-  return {
-    ...state,
-    canvasWidth: constrainedSize.width,
-    canvasHeight: constrainedSize.height,
-  };
+  return null;
 }
 
 /**
@@ -235,12 +133,17 @@ function isMessageRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Create a host-side bridge to the Neatenstein display worker.
+ * Create and initialize a host-side bridge to the Neatenstein display worker.
  *
- * For the `worker` tier, the canvas backing store is constrained first and then
- * transferred to the worker through
+ * For the `worker` tier, the canvas backing store is already sized by the host
+ * browser entry and is then transferred to the worker through
  * {@link HTMLCanvasElement.transferControlToOffscreen}. For `cpu` and `gpu`
  * tiers, the canvas stays on the host and the worker posts packed frames back.
+ *
+ * The bridge forwards the host-provided canvas dimensions in the `init`
+ * message and passes subsequent {@link NeatensteinRenderState} values through
+ * unchanged, so the worker renders at the fixed 480px-height, viewport-aspect-ratio
+ * size.
  *
  * The bridge queues the latest simulation state and latest input snapshot until
  * the worker acknowledges initialization. This avoids losing early host-loop
@@ -274,12 +177,11 @@ export function createNeatensteinRendererBridge(
 ): NeatensteinRendererBridge {
   const { canvas, workerUrl = DEFAULT_WORKER_URL, tier, mapSeed } = options;
 
+  // Read the canvas dimensions set by the host browser entry. The host already
+  // sized the backing store to the fixed 480px-height, viewport-aspect-ratio
+  // render size, so the bridge only forwards those dimensions to the worker
+  // without re-constraining.
   const initialRenderSize = resolveInitialCanvasRenderSize(canvas);
-  if (initialRenderSize !== null) {
-    // Enforce the render-size invariant before creating/transferring the worker
-    // canvas. This is especially important for OffscreenCanvas ownership.
-    applyCanvasBackingStoreSize(canvas, initialRenderSize);
-  }
 
   const worker = new Worker(workerUrl, { type: 'module' });
 
@@ -288,6 +190,7 @@ export function createNeatensteinRendererBridge(
   let latestRequestId = 0;
   let pendingState: NeatensteinRenderState | null = null;
   let pendingInput: InputSnapshot | null = null;
+  let frameConsumer: ((frame: NeatensteinRenderFrame) => void) | null = null;
 
   let offscreen: OffscreenCanvas | undefined;
   const transferList: Transferable[] = [];
@@ -301,7 +204,7 @@ export function createNeatensteinRendererBridge(
       );
     }
 
-    // Transfer after the backing store has been constrained.
+    // Transfer after the host already sized the backing store.
     offscreen = canvas.transferControlToOffscreen();
     transferList.push(offscreen);
   }
@@ -309,13 +212,9 @@ export function createNeatensteinRendererBridge(
   /**
    * Send a simulation state immediately if the bridge is alive.
    *
-   * @param state - Constrained state to send.
+   * @param state - Render state to send.
    */
   function postSimStateNow(state: NeatensteinRenderState): void {
-    if (destroyed) {
-      return;
-    }
-
     worker.postMessage({ type: 'simState', state });
   }
 
@@ -325,10 +224,6 @@ export function createNeatensteinRendererBridge(
    * @param snapshot - Input snapshot to send.
    */
   function forwardWorkerInputNow(snapshot: InputSnapshot): void {
-    if (destroyed) {
-      return;
-    }
-
     worker.postMessage({
       type: NEATENSTEIN_INPUT_MESSAGE_TYPE,
       input: snapshot,
@@ -342,10 +237,6 @@ export function createNeatensteinRendererBridge(
    * can produce many messages before the worker is ready.
    */
   function flushPendingMessages(): void {
-    if (destroyed || !initialized) {
-      return;
-    }
-
     if (pendingInput !== null) {
       forwardWorkerInputNow(pendingInput);
       pendingInput = null;
@@ -369,16 +260,14 @@ export function createNeatensteinRendererBridge(
         return;
       }
 
-      const constrainedState = constrainRenderState(state);
-
       if (!initialized) {
         // Keep only the newest render state so worker startup cannot create a
         // backlog of obsolete frames.
-        pendingState = constrainedState;
+        pendingState = state;
         return;
       }
 
-      postSimStateNow(constrainedState);
+      postSimStateNow(state);
     },
 
     forwardWorkerInput(snapshot: InputSnapshot): void {
@@ -403,7 +292,12 @@ export function createNeatensteinRendererBridge(
       destroyed = true;
       pendingState = null;
       pendingInput = null;
+      frameConsumer = null;
       worker.terminate();
+    },
+
+    setFrameConsumer(consumer: (frame: NeatensteinRenderFrame) => void): void {
+      frameConsumer = consumer;
     },
   };
 
@@ -426,6 +320,10 @@ export function createNeatensteinRendererBridge(
       typeof data.frame.requestId === 'number'
     ) {
       latestRequestId = data.frame.requestId;
+
+      if (frameConsumer !== null) {
+        frameConsumer(data.frame as unknown as NeatensteinRenderFrame);
+      }
     }
   };
 

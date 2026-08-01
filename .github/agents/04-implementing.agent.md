@@ -44,6 +44,7 @@ agents:
     'mcp-server-architect',
     'helping-gap-resolution-coordinator',
     'browser-harness-specialist',
+    'webgpu-scout',
   ]
 skills:
   [
