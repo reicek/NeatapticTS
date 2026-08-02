@@ -32,9 +32,8 @@ jest.unstable_mockModule('node:fs', () => ({
   mkdirSync: (...args) => mockMkdirSync(...args),
 }));
 
-const { extractFilePath, triggerBackgroundReindex, safeLog } = await import(
-  './post-write-reindex-hook.mjs'
-);
+const { extractFilePath, triggerBackgroundReindex, safeLog } =
+  await import('./post-write-reindex-hook.mjs');
 
 describe('post-write-reindex-hook', () => {
   beforeEach(() => {

@@ -114,9 +114,7 @@ describe('pre-dispatch-freshness-hook', () => {
 
     it('returns null when lastReindex is not finite', () => {
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(
-        JSON.stringify({ lastReindex: 'NaN' }),
-      );
+      mockReadFileSync.mockReturnValue(JSON.stringify({ lastReindex: 'NaN' }));
       assert.strictEqual(readManifestTimestamp(), null);
     });
   });
@@ -133,9 +131,7 @@ describe('pre-dispatch-freshness-hook', () => {
     it('reports fresh when within grace window', () => {
       const recent = Date.now() - 100_000; // 100s ago
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(
-        JSON.stringify({ lastReindex: recent }),
-      );
+      mockReadFileSync.mockReturnValue(JSON.stringify({ lastReindex: recent }));
       const result = checkStaleness(300, 300);
       assert.strictEqual(result.shouldReindex, false);
       assert.ok(result.ageS >= 99 && result.ageS <= 102);
@@ -144,9 +140,7 @@ describe('pre-dispatch-freshness-hook', () => {
     it('reports stale when beyond grace + threshold', () => {
       const old = Date.now() - 700_000; // 700s ago > 600s threshold
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(
-        JSON.stringify({ lastReindex: old }),
-      );
+      mockReadFileSync.mockReturnValue(JSON.stringify({ lastReindex: old }));
       const result = checkStaleness(300, 300);
       assert.strictEqual(result.shouldReindex, true);
       assert.ok(result.ageS >= 698);

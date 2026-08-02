@@ -15,9 +15,8 @@ jest.unstable_mockModule('node:child_process', () => ({
   spawn: (...args) => mockSpawn(...args),
 }));
 
-const { isEligibleFile, reindexFiles, resetReindexState } = await import(
-  './targeted-reindex.mjs'
-);
+const { isEligibleFile, reindexFiles, resetReindexState } =
+  await import('./targeted-reindex.mjs');
 
 function makeExitingChild(code, stderr = '') {
   const child = {
@@ -48,9 +47,7 @@ describe('isEligibleFile', () => {
 
   it('accepts .mjs under scripts/agent-customization/', () => {
     assert.strictEqual(
-      isEligibleFile(
-        'scripts/agent-customization/cortex/targeted-reindex.mjs',
-      ),
+      isEligibleFile('scripts/agent-customization/cortex/targeted-reindex.mjs'),
       true,
     );
   });
@@ -149,7 +146,10 @@ describe('reindexFiles', () => {
     let call = 0;
     mockSpawn.mockImplementation(() => {
       call += 1;
-      return makeExitingChild(call === 1 ? 0 : 1, call === 2 ? 'embed failed' : '');
+      return makeExitingChild(
+        call === 1 ? 0 : 1,
+        call === 2 ? 'embed failed' : '',
+      );
     });
 
     const result = await reindexFiles(['src/neat/neat.ts']);

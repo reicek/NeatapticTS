@@ -387,8 +387,8 @@ function fillWorkerCeilingAndFloor(
     for (let col = 0; col < canvasWidth; col += 1) {
       const colCell = Math.floor(col / NEATENSTEIN_FLOOR_GRID_CELL_PX);
       const isGridLine =
-        (row % NEATENSTEIN_FLOOR_GRID_CELL_PX) < 2 ||
-        (col % NEATENSTEIN_FLOOR_GRID_CELL_PX) < 2;
+        row % NEATENSTEIN_FLOOR_GRID_CELL_PX < 2 ||
+        col % NEATENSTEIN_FLOOR_GRID_CELL_PX < 2;
       const isCheckerCell = (rowCell + colCell) % 2 === 0;
 
       const color = isCeiling
@@ -458,7 +458,7 @@ function writeWallStripeToFramebuffer(
   for (let row = clampedStart; row < clampedEnd; row += 1) {
     const rowInStripe = row - Math.floor(drawStart);
     const isBlockEdge =
-      (rowInStripe % NEATENSTEIN_WALL_BLOCK_HEIGHT_PX) < 2 ||
+      rowInStripe % NEATENSTEIN_WALL_BLOCK_HEIGHT_PX < 2 ||
       rowInStripe < 2 ||
       row === clampedEnd - 1;
 

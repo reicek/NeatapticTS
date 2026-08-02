@@ -93,7 +93,8 @@ export async function readAgent(relativePath) {
     handoffs: raw.includes('\nhandoffs:'),
     userInvocable: data['user-invocable'] ?? true,
     disableModelInvocation: data['disable-model-invocation'] ?? false,
-    complexity: typeof data.complexity === 'string' ? data.complexity : 'moderate',
+    complexity:
+      typeof data.complexity === 'string' ? data.complexity : 'moderate',
   };
 }
 

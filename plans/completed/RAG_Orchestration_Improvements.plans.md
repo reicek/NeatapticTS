@@ -669,7 +669,7 @@ PlanUpdate:
 - agents:routing-table:gate: pass=true (table fresh, hash matches)
 - validate-agent-frontmatter --json: ok=true, 0 issues (exit 0)
 - validate-skill-frontmatter --json: ok=true, 0 issues (exit 0)
-- prettier --check .github/agents/*.agent.md .github/skills/*/SKILL.md: All matched files use Prettier code style!
+- prettier --check .github/agents/_.agent.md .github/skills/_/SKILL.md: All matched files use Prettier code style!
 - agent-graph gate: pass=true, issueCount=0, agentCount=23, byTier {1:8, 2:4, 3:10, 4:1}
 - tier-enforcement gate: pass=true, issueCount=0, userInvocableTotal=8
 - routing-table-freshness gate: pass=true, matchesExpectedBody=true
@@ -760,7 +760,8 @@ PlanUpdate:
       tier: 3
       pov: 'Author property-based (generative) red tests'
       justification: '(c) autonomous multi-step test authoring'
-      skills: ['property-based-testing', 'red-test-contracts', 'creating-unit-tests']
+      skills:
+        ['property-based-testing', 'red-test-contracts', 'creating-unit-tests']
       shared_by: ['03-red-testing']
   roster_changes:
     '00-helping': 'unchanged [agent-maintenance-coordinator, coverage-analyst, learning-event-capturer]'
@@ -791,7 +792,7 @@ Validation evidence (P5-multi-tier-tree):
 - agents:routing-table:gate: pass=true (table fresh, hash d3b6f511...4afe7a matches, sourceFileCount=99, agentCount=32, skillCount=67)
 - validate-agent-frontmatter --json: ok=true, 0 errors, 0 warnings (exit 0)
 - validate-skill-frontmatter --json: ok=true, 0 errors, 0 warnings (exit 0)
-- prettier --check .github/agents/*.agent.md .github/skills/*/SKILL.md: All matched files use Prettier code style!
+- prettier --check .github/agents/_.agent.md .github/skills/_/SKILL.md: All matched files use Prettier code style!
 - agent-graph gate: pass=true, issueCount=0, agentCount=32, byTier {1:8, 2:4, 3:19, 4:1}, userInvocableTotal=8
 - tier-enforcement gate: pass=true, issueCount=0, byTier {1:8, 2:4, 3:19, 4:1}
 - routing-table-freshness gate: pass=true, matchesExpectedBody=true

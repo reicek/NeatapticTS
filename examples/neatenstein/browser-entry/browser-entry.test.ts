@@ -301,8 +301,7 @@ describe('Neatenstein browser entry', () => {
     expect({ workerCount: workers.length, workerUrl: workers[0]?.url }).toEqual(
       {
         workerCount: 1,
-        workerUrl:
-          'http://localhost:8080/docs/assets/neatenstein.worker.js',
+        workerUrl: 'http://localhost:8080/docs/assets/neatenstein.worker.js',
       },
     );
   });

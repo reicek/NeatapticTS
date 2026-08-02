@@ -606,6 +606,8 @@ Known worktree cautions: The approved reference art files `plans/robot-proposal-
 
 **Active frontier:** Phase 3 Step 10 — encoded enemy sprite renderer replacement and raycast scene restoration [WIP] (red-testing slice `10-red-encoded-sprite` in progress); Step 09 — canvas stretch + missing enemy sprites [DONE] with fix-packet-09-green-iteration-2 green validated on ultra-wide; Step 11 — cannon overlay enhancement [PLANNED]; Steps 01–08 are [DONE].
 
+Claim: 04-implementing @ 2026-01-20T00:00:00Z
+
 ## Implementation phases
 
 ### Phase 1 — Arena + Hero FPS controls (game-director-owned) [DONE]
