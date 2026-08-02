@@ -14,6 +14,7 @@ import {
   NEATENSTEIN_GUN_BODY_COLOR as GUN_BODY_COLOR,
 } from '../constants';
 import type { GunState } from '../host/game/types';
+import { GUN_BARREL_VOXEL_GRID, projectGunSprite } from './gun-sprite';
 
 /**
  * CSS color applied to the gun body overlay.
@@ -42,7 +43,7 @@ const GUN_BODY_HEIGHT_FRACTION = 0.22;
  * Derived from the chunky DOOM plasma-cannon reference silhouette so the
  * weapon stays square and readable regardless of viewport width.
  */
-const GUN_BODY_ASPECT_RATIO = 0.75;
+export const GUN_BODY_ASPECT_RATIO = 0.75;
 
 /**
  * Create the canonical initial {@link GunState} for a fresh episode.
@@ -199,6 +200,57 @@ export function renderGunOverlay(
       );
       ctx.fill();
     }
+  }
+
+  // Raised barrel band near the muzzle.
+  ctx.fillStyle = '#c8d4d8';
+  const bandY = gunTop + gunHeight * 0.18;
+  const bandHeight = gunHeight * 0.05;
+  const bandWidth = gunWidth * 0.92;
+  ctx.fillRect(centerX - bandWidth / 2, bandY, bandWidth, bandHeight);
+
+  // Dark side-vent slits on the lower chassis.
+  ctx.fillStyle = '#4a5a5e';
+  const ventWidth = gunWidth * 0.08;
+  const ventHeight = gunHeight * 0.08;
+  const ventY = gunTop + gunHeight * 0.62;
+  for (const side of [-1, 1] as const) {
+    ctx.fillRect(
+      centerX + side * baseHalfWidth * 0.72 - ventWidth / 2,
+      ventY,
+      ventWidth,
+      ventHeight,
+    );
+  }
+
+  // Teal top sight post above the muzzle.
+  ctx.fillStyle = NEATENSTEIN_GUN_ACCENT_COLOR;
+  const sightWidth = gunWidth * 0.14;
+  const sightHeight = gunHeight * 0.06;
+  ctx.fillRect(
+    centerX - sightWidth / 2,
+    gunTop - sightHeight * 0.7,
+    sightWidth,
+    sightHeight,
+  );
+
+  // Project a small 3D voxel barrel above the main chassis.
+  const barrelScale = gunHeight * 0.05;
+  const barrelBaseY = gunTop - gunHeight * 0.02;
+  const projectedVoxels = projectGunSprite({
+    voxelGrid: GUN_BARREL_VOXEL_GRID,
+    screenX: centerX,
+    screenY: barrelBaseY,
+    scale: barrelScale,
+  });
+  for (const voxel of projectedVoxels) {
+    ctx.fillStyle = voxel.color;
+    ctx.fillRect(
+      voxel.screenX - voxel.size / 2,
+      voxel.screenY - voxel.size / 2,
+      voxel.size,
+      voxel.size,
+    );
   }
 
   ctx.restore();

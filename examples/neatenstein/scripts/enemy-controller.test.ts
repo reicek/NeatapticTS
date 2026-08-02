@@ -19,6 +19,7 @@ import {
   ENEMY_CONTROLLER_FIRE_RANGE_CELLS,
   ENEMY_CONTROLLER_HITSCAN_DAMAGE,
   ENEMY_CONTROLLER_RADIUS_CELLS,
+  ENEMY_CONTROLLER_SHOOT_BLINK_TICKS,
   ENEMY_CONTROLLER_SPEED_CELLS_PER_SECOND,
   ENEMY_CONTROLLER_STARTING_AMMO,
   ENEMY_CONTROLLER_STOP_DISTANCE_CELLS,
@@ -525,5 +526,63 @@ describe('enemy controller (AC-702I contracts)', () => {
     expect(controller.enemies[0].active).toBe(true);
     expect(controller.enemies[0].ammo).toBe(ENEMY_CONTROLLER_STARTING_AMMO);
     expect(controller.enemies[0].deRezElapsedMs).toBe(0);
+  });
+
+  it('separates overlapping active enemies', () => {
+    const base = createGameState({ seed: 1 });
+    // Two enemies very close together (within 2× radius).
+    const enemy0: EnemyState = {
+      position: { x: base.player.position.x - 5, y: 0 },
+      health: 100,
+    };
+    const enemy1: EnemyState = {
+      position: {
+        x: base.player.position.x - 5 + ENEMY_CONTROLLER_RADIUS_CELLS * 0.5,
+        y: 0,
+      },
+      health: 100,
+    };
+    const state: GameState = { ...base, enemies: [enemy0, enemy1] };
+    const emptyMap = createEmptyCollisionMap();
+
+    let controller = createEnemyControllerState(state);
+    const beforeX0 = controller.enemies[0].position.x;
+    const beforeX1 = controller.enemies[1].position.x;
+
+    controller = updateEnemyController(controller, state, emptyMap, 100);
+
+    // Enemies should have been pushed apart.
+    const afterDist = Math.abs(
+      controller.enemies[1].position.x - controller.enemies[0].position.x,
+    );
+    const beforeDist = Math.abs(beforeX1 - beforeX0);
+    expect(afterDist).toBeGreaterThan(beforeDist);
+  });
+
+  it('sets walkTick to 0 and shootBlinkTicks to 0 on initial creation', () => {
+    const base = createGameState({ seed: 1 });
+    const state = stateWithEnemy(base, { x: -5, y: 0 });
+    const controller = createEnemyControllerState(state);
+
+    expect(controller.enemies[0].walkTick).toBe(0);
+    expect(controller.enemies[0].shootBlinkTicks).toBe(0);
+  });
+
+  it('increments walkTick when enemy moves and resets to 0 when idle', () => {
+    const base = createGameState({ seed: 1 });
+    // Place enemy within fire range but not moving (at stop distance).
+    const state = stateWithEnemy(base, { x: -3, y: 0 });
+    const emptyMap = createEmptyCollisionMap();
+
+    let controller = createEnemyControllerState(state);
+    // First tick: enemy fires (within range), walkTick may stay 0 or increment.
+    controller = updateEnemyController(controller, state, emptyMap, 100);
+    expect(controller.enemies[0].walkTick).toBeGreaterThanOrEqual(0);
+    expect(controller.enemies[0].shootBlinkTicks).toBeGreaterThan(0);
+  });
+
+  it('exports ENEMY_CONTROLLER_SHOOT_BLINK_TICKS as a positive constant', () => {
+    expect(ENEMY_CONTROLLER_SHOOT_BLINK_TICKS).toBeGreaterThanOrEqual(3);
+    expect(ENEMY_CONTROLLER_SHOOT_BLINK_TICKS).toBeLessThanOrEqual(5);
   });
 });

@@ -7,7 +7,7 @@
  * - 8-direction × 4-state sprite atlas generation and manifest.
  * - Deterministic output for identical generation parameters.
  * - 192×192 front/back/left/right reference snapshots.
- * - Perceptual parity with the approved `plans/robot-proposal-192-*.png`
+ * - Perceptual parity with the approved `examples/neatenstein/robot-proposal-192-*.png`
  *   art targets.
  * - Back-view mirror rule: right-arm cannon appears on the viewer's left.
  */
@@ -31,7 +31,7 @@ import {
 } from './generate-enemy-sprites';
 import { ENEMY_ANIMATION_FRAME_COUNTS } from './enemy-animator';
 
-const PLANS_DIR = 'plans';
+const PLANS_DIR = 'examples/neatenstein';
 const REFERENCE_FILES: Record<string, string> = {
   front: 'robot-proposal-192.png',
   back: 'robot-proposal-192-back.png',
@@ -430,7 +430,7 @@ describe('reference parity and back-view mirror rule', () => {
   });
 
   it('front/back/left/right snapshots resemble the approved references', () => {
-    // Thresholds are deliberately loose. The approved `plans/robot-proposal-192-*.png`
+    // Thresholds are deliberately loose. The approved `examples/neatenstein/robot-proposal-192-*.png`
     // files are stylized 6-color art targets, while the generator renders a shaded
     // voxel silhouette. We therefore measure silhouette overlap (IoU) and a
     // color-class overlap after quantizing both images to the reference palette.

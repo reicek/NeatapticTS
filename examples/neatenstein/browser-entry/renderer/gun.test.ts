@@ -56,14 +56,33 @@ describe('Neatenstein gun overlay renderer', () => {
   });
 
   describe('AC-101: geometry and side effects', () => {
-    it('does not draw a filled rectangle for the gun body', async () => {
-      const { renderGunOverlay, createInitialGunState } =
+    it('does not draw a filled rectangle covering the entire gun body', async () => {
+      const { renderGunOverlay, createInitialGunState, GUN_BODY_ASPECT_RATIO } =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
         (await import('./gun.ts')) as Record<string, any>;
       const ctx = createMockCanvasContext();
-      const gun = createInitialGunState();
-      renderGunOverlay(ctx, gun, 640, 360);
-      expect(ctx.fillRect).not.toHaveBeenCalled();
+      const width = 640;
+      const height = 360;
+      renderGunOverlay(ctx, createInitialGunState(), width, height);
+
+      const gunHeight = height * 0.22;
+      const gunWidth = gunHeight * GUN_BODY_ASPECT_RATIO;
+      const centerX = width / 2;
+      const bodyLeft = centerX - gunWidth / 2;
+      const bodyRight = centerX + gunWidth / 2;
+      const gunTop = height - gunHeight;
+      const eps = 1;
+
+      const fillRectCalls = (
+        ctx.fillRect as unknown as {
+          mock: { calls: [number, number, number, number][] };
+        }
+      ).mock.calls;
+      for (const [x, y, w, h] of fillRectCalls) {
+        const coversFullWidth = x <= bodyLeft + eps && x + w >= bodyRight - eps;
+        const coversFullHeight = y <= gunTop + eps && y + h >= height - eps;
+        expect(coversFullWidth && coversFullHeight).toBe(false);
+      }
     });
 
     it('saves the canvas state before applying recoil', async () => {
@@ -124,6 +143,53 @@ describe('Neatenstein gun overlay renderer', () => {
       const ctx = createMockCanvasContext();
       renderGunOverlay(ctx, createInitialGunState(), 640, 360);
       expect(ctx.ellipse).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('AC-11a: aspect-correct sizing and detail', () => {
+    it('exposes GUN_BODY_ASPECT_RATIO and keeps body width proportional to body height across aspect ratios', async () => {
+      const { renderGunOverlay, createInitialGunState, GUN_BODY_ASPECT_RATIO } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./gun.ts')) as Record<string, any>;
+      expect(GUN_BODY_ASPECT_RATIO).toBeDefined();
+
+      const gun = createInitialGunState();
+      for (const [viewportWidth, viewportHeight] of [
+        [640, 360],
+        [2560, 1080],
+      ]) {
+        const ctx = createMockCanvasContext();
+        renderGunOverlay(ctx, gun, viewportWidth, viewportHeight);
+
+        const lineToCalls = (
+          ctx.lineTo as unknown as { mock: { calls: number[][] } }
+        ).mock.calls;
+        const moveToCalls = (
+          ctx.moveTo as unknown as { mock: { calls: number[][] } }
+        ).mock.calls;
+
+        const xs = [
+          moveToCalls[0][0],
+          lineToCalls[0][0],
+          lineToCalls[1][0],
+          lineToCalls[2][0],
+        ];
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const gunTop = lineToCalls[0][1];
+        const gunHeight = viewportHeight - gunTop;
+
+        expect((maxX - minX) / gunHeight).toBeCloseTo(GUN_BODY_ASPECT_RATIO);
+      }
+    });
+
+    it('draws a barrel-band detail with fillRect', async () => {
+      const { renderGunOverlay, createInitialGunState } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./gun.ts')) as Record<string, any>;
+      const ctx = createMockCanvasContext();
+      renderGunOverlay(ctx, createInitialGunState(), 640, 360);
+      expect(ctx.fillRect).toHaveBeenCalled();
     });
   });
 });

@@ -30,9 +30,11 @@ export const NEATENSTEIN_FRAMEBUFFER_CHANNELS = 4;
  * Maximum view distance for the Neatenstein neon renderer.
  *
  * Walls at or beyond this distance are fully absorbed into the background
- * color by the distance-fog pass.
+ * color by the distance-fog pass. Perimeter walls at the spawn distance
+ * (~60 map cells) therefore remain visible but faded instead of being
+ * hard-clipped to invisibility.
  */
-export const NEATENSTEIN_MAX_VIEW_DIST = 30;
+export const NEATENSTEIN_MAX_VIEW_DIST = 140;
 
 /**
  * Background RGB used by the distance-fog pass.

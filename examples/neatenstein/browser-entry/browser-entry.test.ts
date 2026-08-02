@@ -11,7 +11,12 @@ import {
   afterEach,
 } from '@jest/globals';
 
-import type { NeatensteinStart, NeatensteinStop } from './browser-entry';
+import {
+  NEATENSTEIN_HOST_POST_INTERVAL_MS,
+  type NeatensteinStart,
+  type NeatensteinStop,
+} from './browser-entry';
+import { NEATENSTEIN_INPUT_MESSAGE_TYPE } from './constants';
 
 interface MockWorkerInstance {
   url: string | URL;
@@ -743,6 +748,75 @@ describe('Neatenstein browser entry', () => {
         height: 480,
       });
       expect(canvas.width).not.toBe(postedState.canvasWidth);
+    } finally {
+      globalThis.requestAnimationFrame = originalRaf;
+    }
+  });
+
+  it('throttles simState posts to roughly 30 fps while still forwarding input every frame', async () => {
+    setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
+    installOffscreenCanvasSupport();
+    const canvas = document.getElementById(
+      'neatenstein-canvas',
+    ) as HTMLCanvasElement;
+    setCanvasSize(canvas, 854, 480);
+    const rafCallbacks: FrameRequestCallback[] = [];
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+      rafCallbacks.push(callback);
+      return rafCallbacks.length;
+    };
+    try {
+      await loadModule('./browser-entry.ts');
+      getGlobalStart()('neatenstein-output', 'neatenstein-canvas');
+      const worker = workers[0];
+
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      const timestamps = [0, 16, 33, 49, 66, 83, 99];
+      for (let i = 0; i < timestamps.length; i += 1) {
+        rafCallbacks[i](timestamps[i]);
+      }
+
+      const simStateCalls = worker?.postMessageCalls.filter((call) => {
+        const first = call[0];
+        return (
+          first !== null &&
+          typeof first === 'object' &&
+          (first as Record<string, unknown>).type === 'simState'
+        );
+      });
+      const inputCalls = worker?.postMessageCalls.filter((call) => {
+        const first = call[0];
+        return (
+          first !== null &&
+          typeof first === 'object' &&
+          (first as Record<string, unknown>).type ===
+            NEATENSTEIN_INPUT_MESSAGE_TYPE
+        );
+      });
+
+      // Model the throttle to verify the observed post count matches the
+      // configured interval rather than the raw frame count.
+      let expectedPostCount = 0;
+      let lastPostTimestamp = -NEATENSTEIN_HOST_POST_INTERVAL_MS;
+      for (const timestamp of timestamps) {
+        if (
+          timestamp - lastPostTimestamp >=
+          NEATENSTEIN_HOST_POST_INTERVAL_MS
+        ) {
+          expectedPostCount += 1;
+          lastPostTimestamp = timestamp;
+        }
+      }
+
+      expect(simStateCalls?.length).toBe(expectedPostCount);
+      // Input forwarding must remain unthrottled for responsive look.
+      expect(inputCalls?.length).toBe(timestamps.length);
     } finally {
       globalThis.requestAnimationFrame = originalRaf;
     }

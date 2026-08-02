@@ -26,15 +26,13 @@ import {
   type NeatensteinSpriteClip,
 } from './zbuffer';
 import { NEATENSTEIN_FLOOR_FOV_RADIANS } from './floor';
-import { buildVoxelEnemy } from '../../../neatenstein/scripts/voxel-enemy';
 import {
-  renderVoxelSnapshot,
-  type VoxelSnapshot,
-} from '../../../neatenstein/scripts/snapshot-renderer';
-import {
-  ENEMY_ANIMATION_FRAME_COUNTS,
-  type EnemyAnimationState,
-} from '../../../neatenstein/scripts/enemy-animator';
+  ROBOT_SPRITE_FRAMES,
+  ROBOT_SPRITE_PALETTE,
+  ROBOT_SPRITE_SCALE,
+} from '../../robot-sprite-data.js';
+import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
+import { type EnemyAnimationState } from '../../../neatenstein/scripts/enemy-animator';
 
 /**
  * Number of RGBA channels per framebuffer pixel.
@@ -62,7 +60,7 @@ const NEATENSTEIN_CAMERA_DETERMINANT_EPSILON = 1e-9;
  * Keeping this value in world units makes enemies scale consistently as they
  * move toward or away from the camera.
  */
-export const NEATENSTEIN_SPRITE_WORLD_SIZE = 0.5;
+export const NEATENSTEIN_SPRITE_WORLD_SIZE = 1.0;
 
 /**
  * Minimum perpendicular distance at which a sprite is drawn.
@@ -135,6 +133,12 @@ export interface NeatensteinSprite {
   frameIndex?: number;
   /** Optional enemy type index for hue selection by higher-level callers. */
   type?: number;
+  /** Sim tick counter driving the walk cycle (stand → walk1 → stand → walk2). When provided, overrides position-based walk alternation. */
+  walkTick?: number;
+  /** Remaining shoot-blink ticks; when > 0 the renderer composites the shoot upper body over the walk lower body. */
+  shootBlinkTicks?: number;
+  /** Optional team color [r, g, b] to swap palette indices 5/6/7 at runtime, preserving alpha. */
+  teamColor?: readonly [number, number, number];
 }
 
 /**
@@ -308,7 +312,7 @@ function isDrawableSpriteProjection(
 }
 
 /**
- * Discrete yaw directions stored in the enemy voxel atlas.
+ * Discrete yaw directions stored in the encoded robot sprite atlas.
  */
 const NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS = 8;
 
@@ -324,56 +328,258 @@ const NEATENSTEIN_VOXEL_ATLAS_YAW_STEP_RADIANS =
   NEATENSTEIN_FULL_ROTATION_RADIANS / NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS;
 
 /**
- * Size in pixels of each pre-rendered voxel frame in the runtime atlas.
+ * Encoded robot sprite frame: rows of palette indices into
+ * {@link ROBOT_SPRITE_PALETTE}.
  */
-const NEATENSTEIN_VOXEL_ATLAS_FRAME_SIZE = 128;
+export type EncodedRobotSpriteFrame = readonly (readonly number[])[];
 
 /**
- * Pre-rendered runtime atlas: one yaw strip per animation state, each strip
- * holding {@link NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS} frames at index 0.
+ * Renderable sprite source: a pre-rendered voxel snapshot, an encoded robot
+ * frame, or a legacy color string (ignored).
  */
-const NEATENSTEIN_VOXEL_ATLAS: Record<
-  EnemyAnimationState,
-  readonly VoxelSnapshot[]
-> = buildNeatensteinVoxelAtlas();
+export type NeatensteinSpriteSource =
+  VoxelSnapshot | EncodedRobotSpriteFrame | string;
+
+/** Distance traveled in world cells between walk-cycle pose swaps. */
+const NEATENSTEIN_WALK_CYCLE_HALF_STEP_CELLS = 0.5;
+
+/** Row index where the upper body (shoot) and lower body (walk) split. Rows 0–34 are upper body; rows 35–47 are lower body. */
+const NEATENSTEIN_SPRITE_UPPER_BODY_SPLIT_ROW = 35;
+
+/** Walk cycle pose sequence indexed by `walkTick % 4`: stand → walk1 → stand → walk2. */
+const NEATENSTEIN_WALK_CYCLE_POSES = [
+  'stand',
+  'walk1',
+  'stand',
+  'walk2',
+] as const;
 
 /**
- * Build the canonical enemy voxel grid once at module load time.
+ * Map canonical animation states to encoded pose names.
  *
- * The runtime atlas holds 8 camera-relative yaw snapshots for every animation
- * state, which keeps the per-frame render path allocation-free.
+ * The runtime only carries one idle pose (`stand`) plus a two-frame walk cycle
+ * and a single shoot pose. Unknown or unmapped states fall back to `stand`.
  *
- * @returns Record mapping each animation state to its pre-rendered yaw frames.
+ * The `move` state is resolved dynamically by
+ * {@link resolveNeatensteinEnemyFrame} so walking enemies alternate between
+ * `walk1` and `walk2` as they travel.
  */
-function buildNeatensteinVoxelAtlas(): Record<
+const NEATENSTEIN_ANIMATION_TO_POSE: Record<
   EnemyAnimationState,
-  readonly VoxelSnapshot[]
-> {
-  const grid = buildVoxelEnemy();
-  const states = Object.keys(
-    ENEMY_ANIMATION_FRAME_COUNTS,
-  ) as EnemyAnimationState[];
+  'stand' | 'walk1' | 'walk2' | 'shoot'
+> = {
+  idle: 'stand',
+  move: 'walk1',
+  fire: 'shoot',
+  death: 'stand',
+  damage: 'stand',
+};
 
-  const atlas = {} as Record<EnemyAnimationState, readonly VoxelSnapshot[]>;
+/**
+ * Camera-relative yaw indices mapped to encoded direction names.
+ *
+ * Index 0 means the sprite faces the camera; index 4 means it faces away.
+ */
+const NEATENSTEIN_ENCODED_DIRECTIONS = [
+  'front',
+  'frontRight',
+  'right',
+  'backRight',
+  'back',
+  'backLeft',
+  'left',
+  'frontLeft',
+] as const;
 
-  for (const state of states) {
-    const frames: VoxelSnapshot[] = [];
-    for (
-      let yawIndex = 0;
-      yawIndex < NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS;
-      yawIndex += 1
-    ) {
-      frames.push(
-        renderVoxelSnapshot(grid, yawIndex, {
-          width: NEATENSTEIN_VOXEL_ATLAS_FRAME_SIZE,
-          height: NEATENSTEIN_VOXEL_ATLAS_FRAME_SIZE,
-        }),
-      );
+/**
+ * Decode an encoded robot sprite frame into a pre-rendered RGBA snapshot.
+ *
+ * Each palette index is mapped through {@link ROBOT_SPRITE_PALETTE}, preserving
+ * semitransparent muzzle-blast colors (indices 7 and 8). The decoded frame is
+ * scaled up by {@link ROBOT_SPRITE_SCALE} using nearest-neighbor sampling so
+ * the renderer can sample it directly.
+ *
+ * @param frame - Encoded rows of palette indices.
+ * @returns Decoded RGBA {@link VoxelSnapshot}.
+ */
+function decodeRobotSpriteFrame(
+  frame: EncodedRobotSpriteFrame,
+  palette: readonly (readonly [
+    number,
+    number,
+    number,
+    number,
+  ])[] = ROBOT_SPRITE_PALETTE,
+): VoxelSnapshot {
+  const logicalHeight = frame.length;
+  const logicalWidth = (frame[0] as number[]).length;
+  const width = logicalWidth * ROBOT_SPRITE_SCALE;
+  const height = logicalHeight * ROBOT_SPRITE_SCALE;
+  const data = new Uint8ClampedArray(
+    width * height * NEATENSTEIN_RGBA_CHANNELS,
+  );
+
+  for (let y = 0; y < height; y += 1) {
+    const logicalY = Math.floor(y / ROBOT_SPRITE_SCALE);
+    const row = frame[logicalY] as number[];
+    for (let x = 0; x < width; x += 1) {
+      const logicalX = Math.floor(x / ROBOT_SPRITE_SCALE);
+      const color = palette[row[logicalX]] as [number, number, number, number];
+      const offset = (y * width + x) * NEATENSTEIN_RGBA_CHANNELS;
+      data[offset] = color[0];
+      data[offset + 1] = color[1];
+      data[offset + 2] = color[2];
+      data[offset + 3] = color[3];
     }
-    atlas[state] = frames;
   }
 
-  return atlas;
+  return { width, height, data };
+}
+
+/**
+ * Lazily decoded frame cache.
+ *
+ * Encoded frames are immutable, so reference identity is a stable cache key.
+ */
+const decodedRobotSpriteCache = new Map<
+  EncodedRobotSpriteFrame,
+  VoxelSnapshot
+>();
+
+/**
+ * Return a decoded RGBA snapshot for an encoded robot frame, caching the
+ * result so repeated renders of the same direction/pose are allocation-free.
+ *
+ * @param frame - Encoded robot sprite frame.
+ * @returns Decoded RGBA {@link VoxelSnapshot}.
+ */
+function resolveDecodedRobotSpriteFrame(
+  frame: EncodedRobotSpriteFrame,
+): VoxelSnapshot {
+  const cached = decodedRobotSpriteCache.get(frame);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const decoded = decodeRobotSpriteFrame(frame);
+  decodedRobotSpriteCache.set(frame, decoded);
+  return decoded;
+}
+
+/**
+ * Build a modified palette with a team color applied to indices 5/6/7.
+ *
+ * The RGB channels of palette entries 5, 6, and 7 are replaced with the
+ * team color while their original alpha values are preserved. All other
+ * palette entries remain unchanged. When no team color is specified the
+ * default {@link ROBOT_SPRITE_PALETTE} is used.
+ *
+ * @param teamColor - [r, g, b] team color to apply.
+ * @returns Modified palette array.
+ */
+function buildTeamColorPalette(
+  teamColor: readonly [number, number, number],
+): readonly (readonly [number, number, number, number])[] {
+  return ROBOT_SPRITE_PALETTE.map((color, i) => {
+    if (i === 5 || i === 6 || i === 7) {
+      return [teamColor[0], teamColor[1], teamColor[2], color[3]] as const;
+    }
+    return color;
+  });
+}
+
+/**
+ * Lazily decoded team-color frame cache, keyed by encoded frame reference
+ * then by color tuple string.
+ */
+const teamColorDecodedCache = new Map<
+  EncodedRobotSpriteFrame,
+  Map<string, VoxelSnapshot>
+>();
+
+/**
+ * Return a decoded RGBA snapshot for an encoded robot frame with a team
+ * color applied to palette indices 5/6/7, caching the result.
+ *
+ * @param frame - Encoded robot sprite frame.
+ * @param teamColor - [r, g, b] team color.
+ * @returns Decoded RGBA {@link VoxelSnapshot} with team color applied.
+ */
+function resolveDecodedRobotSpriteFrameWithTeamColor(
+  frame: EncodedRobotSpriteFrame,
+  teamColor: readonly [number, number, number],
+): VoxelSnapshot {
+  let colorMap = teamColorDecodedCache.get(frame);
+  if (colorMap === undefined) {
+    colorMap = new Map();
+    teamColorDecodedCache.set(frame, colorMap);
+  }
+  const colorKey = `${teamColor[0]},${teamColor[1]},${teamColor[2]}`;
+  const cached = colorMap.get(colorKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const modifiedPalette = buildTeamColorPalette(teamColor);
+  const decoded = decodeRobotSpriteFrame(frame, modifiedPalette);
+  colorMap.set(colorKey, decoded);
+  return decoded;
+}
+
+/**
+ * Cache for composite shoot+walk frames keyed by direction index and walk pose.
+ *
+ * The composite frame takes the upper body (rows 0 to split row − 1) from
+ * the shoot pose and the lower body (split row and below) from the walk
+ * pose, allowing the enemy to shoot while walking.
+ */
+const compositeShootWalkCache = new Map<string, EncodedRobotSpriteFrame>();
+
+/**
+ * Build a composite encoded frame: upper body from the shoot pose and
+ * lower body from the walk pose.
+ *
+ * @param directionIndex - Yaw atlas direction index 0–7.
+ * @param walkPoseName - Lower-body walk pose ('stand', 'walk1', or 'walk2').
+ * @returns Composite encoded frame.
+ */
+function resolveCompositeShootWalkFrame(
+  directionIndex: number,
+  walkPoseName: 'stand' | 'walk1' | 'walk2',
+): EncodedRobotSpriteFrame {
+  const key = `${directionIndex}:${walkPoseName}`;
+  const cached = compositeShootWalkCache.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const direction = NEATENSTEIN_ENCODED_DIRECTIONS[directionIndex];
+  const directionFrames = ROBOT_SPRITE_FRAMES[direction];
+  const shootFrame = directionFrames.shoot as EncodedRobotSpriteFrame;
+  const walkFrame = directionFrames[walkPoseName] as EncodedRobotSpriteFrame;
+
+  const upperRows = shootFrame.slice(
+    0,
+    NEATENSTEIN_SPRITE_UPPER_BODY_SPLIT_ROW,
+  );
+  const lowerRows = walkFrame.slice(NEATENSTEIN_SPRITE_UPPER_BODY_SPLIT_ROW);
+  const composite = [...upperRows, ...lowerRows] as EncodedRobotSpriteFrame;
+
+  compositeShootWalkCache.set(key, composite);
+  return composite;
+}
+
+/**
+ * Determine whether a source value is an encoded robot sprite frame.
+ *
+ * @param source - Candidate renderable source.
+ * @returns Whether the candidate is an encoded frame.
+ */
+function isEncodedRobotSpriteFrame(
+  source: NeatensteinSpriteSource,
+): source is EncodedRobotSpriteFrame {
+  if (!Array.isArray(source)) {
+    return false;
+  }
+  return source.length > 0 && Array.isArray(source[0]);
 }
 
 /**
@@ -396,19 +602,19 @@ function yawIndexFromRelativeYaw(relativeYaw: number): number {
 }
 
 /**
- * Resolve the pre-rendered voxel frame for an enemy sprite facing a camera.
+ * Resolve the encoded robot sprite frame for an enemy sprite facing a camera.
  *
  * Returns `null` when the sprite does not carry the animation or facing data
  * required by the runtime atlas.
  *
  * @param sprite - Enemy sprite with optional facing and animation fields.
  * @param camera - Camera whose position determines the relative yaw.
- * @returns The matching {@link VoxelSnapshot}, or `null` if not resolvable.
+ * @returns The matching {@link EncodedRobotSpriteFrame}, or `null` if not resolvable.
  */
 export function resolveNeatensteinEnemyFrame(
   sprite: NeatensteinSprite,
   camera: NeatensteinCamera,
-): VoxelSnapshot | null {
+): EncodedRobotSpriteFrame | null {
   if (
     sprite.animationState === undefined ||
     sprite.facing === undefined ||
@@ -433,12 +639,75 @@ export function resolveNeatensteinEnemyFrame(
   const relativeYaw = cameraRelativeYaw - sprite.facing;
   const yawIndex = yawIndexFromRelativeYaw(relativeYaw);
 
-  const stateFrames = NEATENSTEIN_VOXEL_ATLAS[sprite.animationState];
-  if (stateFrames === undefined || stateFrames[yawIndex] === undefined) {
+  const poseName = NEATENSTEIN_ANIMATION_TO_POSE[sprite.animationState];
+  if (poseName === undefined) {
     return null;
   }
 
-  return stateFrames[yawIndex];
+  // Determine the walk pose for the lower body.
+  // When walkTick is provided, use the sim-tick-based cycle
+  // (stand → walk1 → stand → walk2). Otherwise fall back to the
+  // position-based alternation for backward compatibility.
+  let walkPoseName: 'stand' | 'walk1' | 'walk2';
+  if (sprite.walkTick !== undefined) {
+    walkPoseName = NEATENSTEIN_WALK_CYCLE_POSES[sprite.walkTick % 4];
+  } else if (sprite.animationState === 'move') {
+    const walkPhase =
+      Math.floor(
+        (sprite.worldX + sprite.worldY) /
+          NEATENSTEIN_WALK_CYCLE_HALF_STEP_CELLS,
+      ) % 2;
+    walkPoseName = walkPhase === 0 ? 'walk1' : 'walk2';
+  } else {
+    walkPoseName = poseName === 'shoot' ? 'stand' : poseName;
+  }
+
+  // Determine if the shoot blink is active.
+  // When shootBlinkTicks is provided, the blink is active when > 0 and the
+  // upper body shows the shoot frame; when it expires the upper body reverts
+  // to the walk frame even if the enemy is still firing (AC-10f-005).
+  // When shootBlinkTicks is not provided, fall back to showing the shoot
+  // composite for the 'fire' animation state (backward compatibility).
+  const isShootBlinkActive =
+    sprite.shootBlinkTicks !== undefined
+      ? sprite.shootBlinkTicks > 0
+      : sprite.animationState === 'fire';
+
+  // When the shoot blink is active, composite the upper body from the
+  // shoot frame and the lower body from the walk pose (AC-10f-002).
+  if (isShootBlinkActive) {
+    return resolveCompositeShootWalkFrame(yawIndex, walkPoseName);
+  }
+
+  return ROBOT_SPRITE_FRAMES[NEATENSTEIN_ENCODED_DIRECTIONS[yawIndex]][
+    walkPoseName
+  ] as EncodedRobotSpriteFrame;
+}
+
+/**
+ * Resolve the decoded sprite for an enemy, applying team color if specified.
+ *
+ * This is a convenience function that combines frame resolution with
+ * team-color palette decoding. When no team color is specified, the
+ * standard palette is used and the result is cached like the normal decode
+ * path.
+ *
+ * @param sprite - Enemy sprite with optional walk tick, shoot blink, and team color.
+ * @param camera - Camera whose position determines the relative yaw.
+ * @returns Decoded RGBA {@link VoxelSnapshot}, or `null` if not resolvable.
+ */
+export function resolveNeatensteinEnemySprite(
+  sprite: NeatensteinSprite,
+  camera: NeatensteinCamera,
+): VoxelSnapshot | null {
+  const frame = resolveNeatensteinEnemyFrame(sprite, camera);
+  if (frame === null) {
+    return null;
+  }
+  if (sprite.teamColor !== undefined) {
+    return resolveDecodedRobotSpriteFrameWithTeamColor(frame, sprite.teamColor);
+  }
+  return resolveDecodedRobotSpriteFrame(frame);
 }
 
 /**
@@ -680,16 +949,19 @@ function renderNeatensteinVoxelSpriteColumn(
  * @param zBuffer - Per-column wall-depth buffer filled by the wall pass.
  * @param projection - Screen-space projection from
  *   {@link projectNeatensteinSprite} or {@link clipNeatensteinSprite}.
- * @param source - Pre-rendered {@link VoxelSnapshot} to draw, or a legacy color
- *   string. Color strings are ignored; the renderer now requires a voxel frame.
+ * @param source - Pre-rendered {@link VoxelSnapshot}, an {@link EncodedRobotSpriteFrame},
+ *   or a legacy color string. Color strings are ignored.
  * @param ctx - Canvas-like context with `putImageData`.
+ * @param teamColor - Optional [r, g, b] team color to swap palette indices
+ *   5/6/7 when decoding an encoded frame source. Ignored for VoxelSnapshot sources.
  */
 export function renderNeatensteinSprite(
   framebuffer: Uint8ClampedArray,
   zBuffer: Readonly<Float32Array>,
   projection: NeatensteinSpriteProjection,
-  source: string | VoxelSnapshot,
+  source: NeatensteinSpriteSource,
   ctx: NeatensteinSpriteRenderContext,
+  teamColor?: readonly [number, number, number],
 ): void {
   if (!isDrawableSpriteProjection(projection) || zBuffer.length === 0) {
     return;
@@ -698,6 +970,12 @@ export function renderNeatensteinSprite(
   if (typeof source === 'string') {
     return;
   }
+
+  const frame = isEncodedRobotSpriteFrame(source)
+    ? teamColor !== undefined
+      ? resolveDecodedRobotSpriteFrameWithTeamColor(source, teamColor)
+      : resolveDecodedRobotSpriteFrame(source)
+    : source;
 
   // In the normal renderer path, zBuffer.length is the framebuffer width.
   const { width, height } = resolveFramebufferSize(
@@ -734,7 +1012,7 @@ export function renderNeatensteinSprite(
 
   for (const column of visibleColumns) {
     const u = spanPixels > 0 ? (column - projection.left) / spanPixels : 0;
-    const frameX = Math.floor(u * (source.width - 1));
+    const frameX = Math.floor(u * (frame.width - 1));
 
     renderNeatensteinVoxelSpriteColumn(
       framebuffer,
@@ -743,7 +1021,7 @@ export function renderNeatensteinSprite(
       column,
       drawStart,
       drawEnd,
-      source,
+      frame,
       frameX,
     );
   }

@@ -27,6 +27,16 @@ import type { NeatensteinRendererBridge } from './host/renderer-bridge';
 import { NEATENSTEIN_BACKGROUND_RGB } from './renderer/framebuffer';
 
 /**
+ * Minimum interval between host render-state posts to the worker.
+ *
+ * The host animation loop can run at the display refresh rate (e.g. 165 Hz).
+ * Posting every frame creates an unbounded backlog in the worker message queue,
+ * so posts are throttled to roughly 30 fps while input forwarding remains
+ * unthrottled for responsiveness.
+ */
+export const NEATENSTEIN_HOST_POST_INTERVAL_MS = 33;
+
+/**
  * Exported shape expected by the host shell on `window`.
  *
  * @param outputId - Host container element id (currently unused; reserved for future HUD).
@@ -322,12 +332,19 @@ function startRenderLoop(
   let simTick = initialState.seed;
   let cameraYaw = initialState.player.angleRad;
   let animationFrameId: number | null = null;
+  let lastPostTimestamp = -NEATENSTEIN_HOST_POST_INTERVAL_MS;
 
   /**
    * Render loop: ship an updated render state snapshot to the worker every
-   * animation frame.
+   * animation frame, but throttle the expensive `postSimState` posts to the
+   * configured interval so the worker queue does not grow without bound.
+   *
+   * Input forwarding stays unthrottled so mouse/keyboard/touch look remains
+   * responsive even when a render snapshot is not posted this frame.
+   *
+   * @param timestamp - High-resolution animation-frame timestamp in ms.
    */
-  function tick(): void {
+  function tick(timestamp: number): void {
     simTick += 1;
     const snapshot = inputRouter.getSnapshot();
 
@@ -336,18 +353,23 @@ function startRenderLoop(
     forwardWorkerInput(bridge.worker, snapshot);
 
     const renderDimensions = getRenderDimensions();
+    const elapsedSincePost = timestamp - lastPostTimestamp;
 
-    bridge.postSimState({
-      canvasWidth: renderDimensions.width,
-      canvasHeight: renderDimensions.height,
-      simTick,
-      cameraX: initialState.player.position.x,
-      cameraY: initialState.player.position.y,
-      cameraYaw,
-      mapSeed: initialState.seed,
-      movement: snapshot.movement,
-      enemies: [],
-    });
+    if (elapsedSincePost >= NEATENSTEIN_HOST_POST_INTERVAL_MS) {
+      bridge.postSimState({
+        canvasWidth: renderDimensions.width,
+        canvasHeight: renderDimensions.height,
+        simTick,
+        cameraX: initialState.player.position.x,
+        cameraY: initialState.player.position.y,
+        cameraYaw,
+        mapSeed: initialState.seed,
+        movement: snapshot.movement,
+        enemies: [],
+      });
+
+      lastPostTimestamp = timestamp;
+    }
 
     // The authoritative camera yaw is accumulated on the host so it persists
     // across frames while the worker uses the per-frame delta for responsive

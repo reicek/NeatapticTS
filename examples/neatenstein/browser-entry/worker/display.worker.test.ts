@@ -8,6 +8,7 @@ import {
 } from '../constants';
 import { drawBolts, drawImpactSpots } from '../renderer/bolt-render';
 import type { EnemyControllerState } from '../../scripts/enemy-controller';
+import * as robotSpriteData from '../../robot-sprite-data.js';
 
 const loadModule = (path: string): Promise<unknown> => import(path);
 
@@ -251,8 +252,8 @@ describe('Neatenstein display worker', () => {
     workerSelf.postMessage.mockClear();
     workerSelf.requestAnimationFrame.mockClear();
 
-    // The worker tier constructs a real ImageData object to flush its
-    // persistent CPU framebuffer. Node's test environment has no ImageData, so
+    // The worker tier constructs a real ImageData object as a canvas snapshot
+    // for encoded sprite rendering. Node's test environment has no ImageData, so
     // provide a minimal compatible stand-in.
     Object.defineProperty(globalThis, 'ImageData', {
       value: class {
@@ -419,7 +420,7 @@ describe('Neatenstein display worker', () => {
     );
   });
 
-  it('renders enemy sprites into the worker framebuffer without reading back the canvas', async () => {
+  it('renders enemy sprites using a single canvas snapshot and flush per frame', async () => {
     jest.resetModules();
     const workerModule = (await loadModule('./display.worker.ts')) as {
       __testOnlyGetEnemyControllerState?(): EnemyControllerState | null;
@@ -432,8 +433,8 @@ describe('Neatenstein display worker', () => {
 
     // Advance enough ticks to spawn several active enemies. The deterministic
     // spawn ring around the map center keeps them within the camera FOV, so
-    // multiple sprites project to visible columns and run through the voxel
-    // render path that writes into the persistent framebuffer.
+    // multiple sprites project to visible columns and run through the encoded
+    // robot sprite render path.
     for (let i = 0; i < 8; i += 1) {
       sendSimStateMessage();
     }
@@ -441,14 +442,14 @@ describe('Neatenstein display worker', () => {
     const controller = workerModule.__testOnlyGetEnemyControllerState?.();
     expect(controller?.enemies.length).toBeGreaterThanOrEqual(2);
 
-    // The new worker pipeline writes directly to a persistent CPU framebuffer,
-    // so it must never read the canvas back and must flush exactly once per
-    // sim tick.
-    expect(getImageData).not.toHaveBeenCalled();
+    // The restored GPU pipeline snapshots the canvas once, renders all encoded
+    // sprites into that snapshot, and flushes it back exactly once per sim
+    // tick when enemies are present.
+    expect(getImageData).toHaveBeenCalledTimes(8);
     expect(putImageData).toHaveBeenCalledTimes(8);
 
-    // If at least one enemy projected to visible columns, the flushed
-    // framebuffer contains non-zero sprite pixels from a voxel frame.
+    // If at least one enemy projected to visible columns, the flushed snapshot
+    // contains non-zero sprite pixels from an encoded robot frame.
     const lastCall =
       putImageData.mock.calls[putImageData.mock.calls.length - 1];
     const flushedData = (lastCall[0] as { data: Uint8ClampedArray }).data;
@@ -474,9 +475,9 @@ describe('Neatenstein display worker', () => {
 
     const controller = workerModule.__testOnlyGetEnemyControllerState?.();
     expect(controller?.enemies.length).toBeGreaterThanOrEqual(2);
-    // The optimized pipeline does not depend on a canvas read-back, so the
-    // absence of getImageData should not prevent rendering.
-    expect(putImageData).toHaveBeenCalledTimes(8);
+    // Without a canvas read-back path the sprite pass is skipped, but the
+    // worker must still render the frame and must not throw.
+    expect(putImageData).toHaveBeenCalledTimes(0);
   });
 
   it('initializes a 2D worker canvas context', async () => {
@@ -863,6 +864,21 @@ describe('Neatenstein display worker', () => {
     expect(canvas.getContext).toHaveBeenCalledTimes(1);
   });
 
+  it('calls commit() on the worker 2D context when available', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    const { context, putImageData } = createMockContext();
+    const commit = jest.fn();
+    (context as unknown as { commit: typeof commit }).commit = commit;
+    const canvas = createMockCanvas(context);
+    sendInitMessage('worker', canvas);
+
+    sendSimStateMessage();
+
+    expect(putImageData).toHaveBeenCalledTimes(1);
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+
   it('does not crash when the canvas returns no 2D context', async () => {
     jest.resetModules();
     await loadModule('./display.worker.ts');
@@ -960,201 +976,171 @@ describe('Neatenstein display worker', () => {
     });
   });
 
-  describe('worker framebuffer helpers edge coverage', () => {
-    it('resolves zero dimensions when the worker framebuffer is missing', async () => {
+  describe('encoded robot sprite red contracts', () => {
+    it('worker sprite pass uses encoded robot frames with a single canvas snapshot per frame', async () => {
       jest.resetModules();
-      const workerModule = (await loadModule('./display.worker.ts')) as {
-        __testOnlyResolveWorkerFramebufferDimensions?(): {
-          width: number;
-          height: number;
-        };
-      };
+      await loadModule('./display.worker.ts');
 
-      expect(
-        workerModule.__testOnlyResolveWorkerFramebufferDimensions?.(),
-      ).toEqual({ width: 0, height: 0 });
+      const { context, getImageData, putImageData } = createMockContext();
+      const canvas = createMockCanvas(context);
+      sendInitMessage('worker', canvas);
+      workerSelf.postMessage.mockClear();
+
+      const realSprites = await import('../renderer/sprites');
+      const renderSpy = jest.spyOn(realSprites, 'renderNeatensteinSprite');
+
+      for (let i = 0; i < 8; i += 1) {
+        sendSimStateMessage();
+      }
+
+      expect(getImageData).toHaveBeenCalledTimes(8);
+      expect(putImageData).toHaveBeenCalledTimes(8);
+
+      const typedRobotSpriteData = robotSpriteData as unknown as {
+        ROBOT_SPRITE_FRAMES: Record<string, Record<string, number[][]>>;
+      };
+      const encodedFrames: number[][][] = [];
+      for (const direction of Object.values(
+        typedRobotSpriteData.ROBOT_SPRITE_FRAMES,
+      )) {
+        for (const frame of Object.values(direction)) {
+          encodedFrames.push(frame);
+        }
+      }
+
+      expect(renderSpy.mock.calls.length).toBeGreaterThan(0);
+      const arraysEqual = (a: unknown, b: unknown): boolean =>
+        JSON.stringify(a) === JSON.stringify(b);
+      const receivedEncodedFrame = renderSpy.mock.calls.some((call) =>
+        encodedFrames.some((frame) =>
+          arraysEqual(frame, call[3] as number[][]),
+        ),
+      );
+      expect(receivedEncodedFrame).toBe(true);
     });
 
-    it('falls back to square dimensions when no z-buffer is allocated', async () => {
+    it('flushes encoded robot sprite pixels from the canvas snapshot', async () => {
       jest.resetModules();
-      const workerModule = (await loadModule('./display.worker.ts')) as {
-        __testOnlyAllocateWorkerFramebuffer?(
-          width: number,
-          height: number,
-        ): void;
-        __testOnlyResolveWorkerFramebufferDimensions?(): {
-          width: number;
-          height: number;
-        };
-      };
+      await loadModule('./display.worker.ts');
 
-      workerModule.__testOnlyAllocateWorkerFramebuffer?.(8, 8);
-      expect(
-        workerModule.__testOnlyResolveWorkerFramebufferDimensions?.(),
-      ).toEqual({ width: 8, height: 8 });
+      const { context, getImageData, putImageData } = createMockContext();
+      const canvas = createMockCanvas(context);
+      sendInitMessage('worker', canvas);
+      workerSelf.postMessage.mockClear();
+
+      for (let i = 0; i < 8; i += 1) {
+        sendSimStateMessage();
+      }
+
+      expect(getImageData).toHaveBeenCalledTimes(8);
+      expect(putImageData).toHaveBeenCalledTimes(8);
+
+      const typedRobotSpriteData = robotSpriteData as unknown as {
+        ROBOT_SPRITE_PALETTE: [number, number, number, number][];
+      };
+      const encodedRed = typedRobotSpriteData.ROBOT_SPRITE_PALETTE[5];
+
+      let foundEncodedRed = false;
+      for (const call of putImageData.mock.calls) {
+        const data = (call[0] as { data: Uint8ClampedArray }).data;
+        for (let i = 0; i < data.length; i += 4) {
+          if (
+            data[i] === encodedRed[0] &&
+            data[i + 1] === encodedRed[1] &&
+            data[i + 2] === encodedRed[2] &&
+            data[i + 3] === encodedRed[3]
+          ) {
+            foundEncodedRed = true;
+            break;
+          }
+        }
+        if (foundEncodedRed) {
+          break;
+        }
+      }
+
+      expect(foundEncodedRed).toBe(true);
     });
 
-    it('does not fill the ceiling/floor when the framebuffer is missing', async () => {
+    it('does not draw the debug red square overlay', async () => {
       jest.resetModules();
-      const workerModule = (await loadModule('./display.worker.ts')) as {
-        __testOnlyFillWorkerCeilingAndFloor?(
-          width: number,
-          height: number,
-        ): void;
-      };
+      await loadModule('./display.worker.ts');
 
-      expect(() =>
-        workerModule.__testOnlyFillWorkerCeilingAndFloor?.(8, 8),
-      ).not.toThrow();
+      const { context } = createMockContext();
+      const canvas = createMockCanvas(context);
+      sendInitMessage('worker', canvas);
+      workerSelf.postMessage.mockClear();
+
+      sendSimStateMessage();
+
+      const redSquareCall = (context.fillRect as jest.Mock).mock.calls.find(
+        (call: unknown[]) =>
+          call[0] === 0 && call[1] === 0 && call[2] === 40 && call[3] === 40,
+      );
+      expect(redSquareCall).toBeUndefined();
     });
 
-    it('fills the worker framebuffer with ceiling and floor colors', async () => {
+    it('clears the full canvas before drawing the frame', async () => {
       jest.resetModules();
-      const workerModule = (await loadModule('./display.worker.ts')) as {
-        __testOnlyAllocateWorkerFramebuffer?(
-          width: number,
-          height: number,
-        ): void;
-        __testOnlyFillWorkerCeilingAndFloor?(
-          width: number,
-          height: number,
-        ): void;
-      };
+      await loadModule('./display.worker.ts');
 
-      workerModule.__testOnlyAllocateWorkerFramebuffer?.(4, 4);
+      const { context } = createMockContext();
+      const canvas = createMockCanvas(context);
+      sendInitMessage('worker', canvas);
+      workerSelf.postMessage.mockClear();
 
-      expect(() =>
-        workerModule.__testOnlyFillWorkerCeilingAndFloor?.(4, 4),
-      ).not.toThrow();
+      sendSimStateMessage();
+
+      const fullCanvasClear = (context.fillRect as jest.Mock).mock.calls.find(
+        (call: unknown[]) =>
+          call[0] === 0 && call[1] === 0 && call[2] === 640 && call[3] === 360,
+      );
+      expect(fullCanvasClear).toBeDefined();
     });
 
-    it('returns early from wall stripe writes when the framebuffer is missing', async () => {
+    it('draws floor and ceiling perspective grids in the worker tier', async () => {
       jest.resetModules();
-      const workerModule = (await loadModule('./display.worker.ts')) as {
-        __testOnlyWriteWallStripeToFramebuffer?(
-          xStart: number,
-          drawStart: number,
-          drawEnd: number,
-          rgb: { r: number; g: number; b: number },
-          perpWallDist: number,
-        ): void;
-      };
+      await loadModule('./display.worker.ts');
 
-      expect(() =>
-        workerModule.__testOnlyWriteWallStripeToFramebuffer?.(
-          0,
-          0,
-          4,
-          { r: 255, g: 0, b: 0 },
-          1,
-        ),
-      ).not.toThrow();
+      const { context } = createMockContext();
+      const canvas = createMockCanvas(context);
+      sendInitMessage('worker', canvas);
+      workerSelf.postMessage.mockClear();
+
+      sendSimStateMessage();
+
+      expect(context.stroke).toHaveBeenCalled();
     });
 
-    it('returns early from wall stripe writes with zero or invalid dimensions', async () => {
+    it('draws fogged wall stripes with fillRect in the worker tier', async () => {
       jest.resetModules();
-      const workerModule = (await loadModule('./display.worker.ts')) as {
-        __testOnlyAllocateWorkerFramebuffer?(
-          width: number,
-          height: number,
-        ): void;
-        __testOnlySetWorkerZBuffer?(columns: number): void;
-        __testOnlyWriteWallStripeToFramebuffer?(
-          xStart: number,
-          drawStart: number,
-          drawEnd: number,
-          rgb: { r: number; g: number; b: number },
-          perpWallDist: number,
-        ): void;
-      };
+      await loadModule('./display.worker.ts');
 
-      // Zero-dimension framebuffer path.
-      workerModule.__testOnlyAllocateWorkerFramebuffer?.(0, 0);
-      workerModule.__testOnlySetWorkerZBuffer?.(0);
-      expect(() =>
-        workerModule.__testOnlyWriteWallStripeToFramebuffer?.(
-          0,
-          0,
-          4,
-          { r: 255, g: 0, b: 0 },
-          1,
-        ),
-      ).not.toThrow();
+      const { context, setters } = createMockContext();
+      const canvas = createMockCanvas(context);
+      sendInitMessage('worker', canvas);
+      workerSelf.postMessage.mockClear();
 
-      // Out-of-bounds and empty stripe paths on a valid 8x8 buffer.
-      workerModule.__testOnlyAllocateWorkerFramebuffer?.(8, 8);
-      workerModule.__testOnlySetWorkerZBuffer?.(8);
-      expect(() =>
-        workerModule.__testOnlyWriteWallStripeToFramebuffer?.(
-          -1,
-          0,
-          4,
-          { r: 255, g: 0, b: 0 },
-          1,
-        ),
-      ).not.toThrow();
-      expect(() =>
-        workerModule.__testOnlyWriteWallStripeToFramebuffer?.(
-          8,
-          0,
-          4,
-          { r: 255, g: 0, b: 0 },
-          1,
-        ),
-      ).not.toThrow();
-      expect(() =>
-        workerModule.__testOnlyWriteWallStripeToFramebuffer?.(
-          4,
-          2,
-          2,
-          { r: 255, g: 0, b: 0 },
-          1,
-        ),
-      ).not.toThrow();
-    });
-  });
+      sendSimStateMessage();
 
-  describe('worker sprite pass edge coverage', () => {
-    it('skips sprites that resolve to a null voxel frame', async () => {
-      jest.resetModules();
-      const workerModule = (await loadModule('./display.worker.ts')) as {
-        __testOnlyAllocateWorkerFramebuffer?(
-          width: number,
-          height: number,
-        ): void;
-        __testOnlySetActiveEnemySprites?(
-          sprites: Record<string, unknown>[],
-        ): void;
-        __testOnlyRenderWorkerSprites?(
-          zBuffer: Float32Array,
-          camera: Record<string, number>,
-          width: number,
-          height: number,
-        ): void;
-      };
-
-      workerModule.__testOnlyAllocateWorkerFramebuffer?.(8, 8);
-      workerModule.__testOnlySetActiveEnemySprites?.([
-        { worldX: 1, worldY: 0 },
-      ]);
-
-      const zBuffer = new Float32Array(8).fill(Number.POSITIVE_INFINITY);
-
-      expect(() =>
-        workerModule.__testOnlyRenderWorkerSprites?.(
-          zBuffer,
-          {
-            posX: 0,
-            posY: 0,
-            dirX: 1,
-            dirY: 0,
-            planeX: 0,
-            planeY: 0.66,
-          },
-          8,
-          8,
-        ),
-      ).not.toThrow();
+      const wallStripeCall = (context.fillRect as jest.Mock).mock.calls.find(
+        (call: unknown[]) => {
+          const [x, , w, h] = call as number[];
+          return (
+            typeof x === 'number' &&
+            typeof w === 'number' &&
+            w > 0 &&
+            w < canvas.width &&
+            typeof h === 'number' &&
+            h > 0 &&
+            h < canvas.height
+          );
+        },
+      );
+      expect(wallStripeCall).toBeDefined();
+      expect(setters.fillStyle).toHaveBeenCalledWith(
+        expect.stringMatching(/^rgb\(/),
+      );
     });
   });
 });

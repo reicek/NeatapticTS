@@ -68,9 +68,13 @@ const config = {
         '^neataptic$': '<rootDir>/src/neataptic.ts',
       },
       transform: {
-        '^.+\\.ts$': [
+        '^.+\\.[tj]s$': [
           'ts-jest',
-          { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
+          {
+            useESM: true,
+            tsconfig: 'tsconfig.neatenstein.json',
+            diagnostics: true,
+          },
         ],
       },
       setupFilesAfterEnv: ['<rootDir>/testing/jest-setup.ts'],
@@ -90,6 +94,8 @@ const config = {
         'examples/neatenstein/browser-entry/renderer/sprites.ts',
         'examples/neatenstein/browser-entry/renderer/floor.ts',
         'examples/neatenstein/browser-entry/renderer/bolt-render.ts',
+        'examples/neatenstein/browser-entry/renderer/gun.ts',
+        'examples/neatenstein/browser-entry/renderer/gun-sprite.ts',
         'examples/neatenstein/browser-entry/constants.ts',
         'examples/neatenstein/browser-entry/harness/constants.ts',
         'examples/neatenstein/browser-entry/harness/enemy-mlp.ts',

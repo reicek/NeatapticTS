@@ -107,6 +107,14 @@ export const NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND = 6;
 export const NEATENSTEIN_PLAYER_RADIUS_CELLS = 0.25;
 
 /**
+ * Enemy collision radius in world cells.
+ *
+ * Enemies are authored on a 192×192 block footprint. With a floor cell size of
+ * 252 blocks, the enemy radius is half the footprint: 96 blocks, or 96/252 cells.
+ */
+export const NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS = 96 / 252;
+
+/**
  * Cell distance within which an enemy triggers contact damage.
  *
  * Measured from the player center to the enemy center; chosen to feel fair

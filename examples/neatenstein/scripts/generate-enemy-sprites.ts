@@ -242,7 +242,7 @@ export function makePngChunk(type: string, data: Buffer): Buffer {
  *
  * Supports 8-bit RGBA (`colorType=6`) PNGs with all five filter types and
  * no interlacing. Used by the reference-parity tests to load the approved
- * `plans/robot-proposal-192-*.png` files.
+ * `examples/neatenstein/robot-proposal-192-*.png` files.
  *
  * @param buffer - PNG file contents.
  * @returns Decoded width, height, and RGBA pixel data.

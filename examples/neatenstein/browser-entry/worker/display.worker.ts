@@ -38,6 +38,8 @@ import {
   type NeatensteinRenderState,
 } from '../renderer/frame';
 import {
+  drawNeatensteinCeiling,
+  drawNeatensteinFloor,
   NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
   NEATENSTEIN_FLOOR_FOV_RADIANS,
   NEATENSTEIN_FLOOR_HORIZON_RATIO,
@@ -81,7 +83,6 @@ import {
   clipNeatensteinSprite,
   renderNeatensteinSprite,
   resolveNeatensteinEnemyFrame,
-  type NeatensteinCamera,
   type NeatensteinSprite,
   type NeatensteinSpriteRenderContext,
 } from '../renderer/sprites';
@@ -107,13 +108,6 @@ let wallMap: Uint8Array | null = null;
 
 /** Reusable worker-tier z-buffer, resized only when the render width changes. */
 let workerZBuffer: Float32Array | null = null;
-
-/**
- * Persistent RGBA framebuffer written directly by the worker tier.
- *
- * Re-allocated only when the canvas backing-store dimensions change.
- */
-let workerFramebuffer: Uint8ClampedArray<ArrayBuffer> | null = null;
 
 /** Deterministic game state maintained and advanced by the worker. */
 let gameState: GameState | null = null;
@@ -147,19 +141,10 @@ let activeEnemySprites: NeatensteinSprite[] = [];
 let pendingTickInput: GameTickInputSnapshot | null = null;
 
 /** RGB of the neon wall color for X-axis-side hits. */
-const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 200, b: 255 } as const;
+const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 183, b: 255 } as const;
 
 /** RGB of the neon wall color for Y-axis-side hits. */
-const NEATENSTEIN_WALL_Y_SIDE_RGB = { r: 0, g: 90, b: 150 } as const;
-
-/** Height in screen pixels of one horizontal wall block band. */
-const NEATENSTEIN_WALL_BLOCK_HEIGHT_PX = 24;
-
-/** Darkening factor applied to horizontal wall block edges. */
-const NEATENSTEIN_WALL_EDGE_DARKEN_FACTOR = 0.65;
-
-/** Size in pixels of the floor/ceiling checker grid cell. */
-const NEATENSTEIN_FLOOR_GRID_CELL_PX = 32;
+const NEATENSTEIN_WALL_Y_SIDE_RGB = { r: 0, g: 164, b: 229 } as const;
 
 /** CSS color string for the yellow ambient pulse dot. */
 const NEATENSTEIN_PULSE_COLOR = '#B7FF00';
@@ -167,16 +152,18 @@ const NEATENSTEIN_PULSE_COLOR = '#B7FF00';
 /** CSS shadow color string for the yellow ambient pulse glow. */
 const NEATENSTEIN_PULSE_GLOW_COLOR = 'rgba(185, 255, 0, 0.42)';
 
-/** Number of RGBA channels per framebuffer pixel. */
-const NEATENSTEIN_FRAMEBUFFER_CHANNELS = 4;
-
 /**
- * Darkening factor applied to the background RGB for the worker ceiling fill.
+ * Format an RGB triple as a CSS `rgb(...)` string.
+ *
+ * @param color - RGB color object.
+ * @returns CSS color string.
  */
-const NEATENSTEIN_WORKER_CEILING_DARKEN_FACTOR = 0.5;
+function formatRgb(color: { r: number; g: number; b: number }): string {
+  return `rgb(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)})`;
+}
 
-/** Floor fill color for the worker-tier direct renderer (Flappy horizon teal). */
-const NEATENSTEIN_WORKER_FLOOR_RGB = { r: 10, g: 142, b: 160 } as const;
+/** Worker clear color matching the dark neon void background. */
+const NEATENSTEIN_WORKER_CLEAR_COLOR = formatRgb(NEATENSTEIN_BACKGROUND_RGB);
 
 /**
  * Clamp a value to a `[min, max]` range.
@@ -217,24 +204,12 @@ function syncWorkerCanvasSize(
   width: number,
   height: number,
 ): void {
-  let resized = false;
-
   if (canvas.width !== width) {
     canvas.width = width;
-    resized = true;
   }
 
   if (canvas.height !== height) {
     canvas.height = height;
-    resized = true;
-  }
-
-  if (
-    resized ||
-    workerFramebuffer === null ||
-    workerFramebuffer.length !== width * height * 4
-  ) {
-    workerFramebuffer = new Uint8ClampedArray(width * height * 4);
   }
 }
 
@@ -321,251 +296,40 @@ function resolveWallFogFactor(perpWallDist: number): number {
 }
 
 /**
- * Blend a neon wall color toward the background based on wall distance.
+ * Apply distance fog to a neon wall color and return a CSS color string.
  *
  * @param wallColor - Raw wall RGB.
  * @param perpWallDist - Perpendicular distance from camera to wall.
- * @returns Fogged RGB triple for direct framebuffer writes.
+ * @returns CSS `rgb(...)` string for `context.fillStyle`.
  */
-function resolveWallFogRgb(
+function applyWallFog(
   wallColor: { r: number; g: number; b: number },
   perpWallDist: number,
-): { r: number; g: number; b: number } {
+): string {
   const fogFactor = resolveWallFogFactor(perpWallDist);
-  const backgroundColor = NEATENSTEIN_BACKGROUND_RGB;
+  const bg = NEATENSTEIN_BACKGROUND_RGB;
 
-  return {
-    r: wallColor.r + (backgroundColor.r - wallColor.r) * fogFactor,
-    g: wallColor.g + (backgroundColor.g - wallColor.g) * fogFactor,
-    b: wallColor.b + (backgroundColor.b - wallColor.b) * fogFactor,
-  };
-}
-
-/**
- * Fill the worker framebuffer with a dark ceiling and a slightly lighter floor.
- *
- * This is the worker-tier replacement for the full-canvas `getImageData` copy.
- * Rows above the horizon get a darkened background, rows at and below the
- * horizon get a floor color. The wall pass will overwrite the middle vertical
- * band, so no separate background clear is required.
- *
- * @param canvasWidth - Canvas width in pixels.
- * @param canvasHeight - Canvas height in pixels.
- */
-function fillWorkerCeilingAndFloor(
-  canvasWidth: number,
-  canvasHeight: number,
-): void {
-  if (workerFramebuffer === null) {
-    return;
-  }
-
-  const horizon = Math.floor(canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO);
-  const background = NEATENSTEIN_BACKGROUND_RGB;
-  const ceilingBase = {
-    r: background.r * NEATENSTEIN_WORKER_CEILING_DARKEN_FACTOR,
-    g: background.g * NEATENSTEIN_WORKER_CEILING_DARKEN_FACTOR,
-    b: background.b * NEATENSTEIN_WORKER_CEILING_DARKEN_FACTOR,
-  };
-  const ceilingLine = {
-    r: Math.min(255, ceilingBase.r + 18),
-    g: Math.min(255, ceilingBase.g + 24),
-    b: Math.min(255, ceilingBase.b + 32),
-  };
-  const floorBase = NEATENSTEIN_WORKER_FLOOR_RGB;
-  const floorAlt = {
-    r: Math.min(255, floorBase.r + 16),
-    g: Math.min(255, floorBase.g + 22),
-    b: Math.min(255, floorBase.b + 24),
-  };
-
-  for (let row = 0; row < canvasHeight; row += 1) {
-    const isCeiling = row < horizon;
-    const rowOffset = row * canvasWidth * NEATENSTEIN_FRAMEBUFFER_CHANNELS;
-    const rowCell = Math.floor(row / NEATENSTEIN_FLOOR_GRID_CELL_PX);
-
-    for (let col = 0; col < canvasWidth; col += 1) {
-      const colCell = Math.floor(col / NEATENSTEIN_FLOOR_GRID_CELL_PX);
-      const isGridLine =
-        row % NEATENSTEIN_FLOOR_GRID_CELL_PX < 2 ||
-        col % NEATENSTEIN_FLOOR_GRID_CELL_PX < 2;
-      const isCheckerCell = (rowCell + colCell) % 2 === 0;
-
-      const color = isCeiling
-        ? isGridLine
-          ? ceilingLine
-          : ceilingBase
-        : isGridLine || isCheckerCell
-          ? floorAlt
-          : floorBase;
-
-      const offset = rowOffset + col * NEATENSTEIN_FRAMEBUFFER_CHANNELS;
-      workerFramebuffer[offset] = color.r;
-      workerFramebuffer[offset + 1] = color.g;
-      workerFramebuffer[offset + 2] = color.b;
-      workerFramebuffer[offset + 3] = 255;
-    }
-  }
-}
-
-/**
- * Write a single vertical wall stripe into the persistent worker framebuffer.
- *
- * The stripe is fogged toward the background based on perpendicular distance.
- * This replaces the previous `context.fillRect` wall pass.
- *
- * @param xStart - Screen column to write.
- * @param drawStart - Top row of the wall stripe, inclusive.
- * @param drawEnd - Bottom row of the wall stripe, exclusive.
- * @param wallColor - Raw neon wall RGB.
- * @param perpWallDist - Perpendicular wall distance for distance fog.
- */
-function writeWallStripeToFramebuffer(
-  xStart: number,
-  drawStart: number,
-  drawEnd: number,
-  wallColor: { r: number; g: number; b: number },
-  perpWallDist: number,
-): void {
-  if (workerFramebuffer === null) {
-    return;
-  }
-
-  const { width, height } = resolveWorkerFramebufferDimensions();
-  if (width === 0 || height === 0) {
-    return;
-  }
-
-  const x = Math.floor(xStart);
-  if (x < 0 || x >= width) {
-    return;
-  }
-
-  const clampedStart = clamp(drawStart, 0, height);
-  const clampedEnd = clamp(drawEnd, 0, height);
-  if (clampedStart >= clampedEnd) {
-    return;
-  }
-
-  const fogged = resolveWallFogRgb(wallColor, perpWallDist);
-  const baseR = Math.round(fogged.r);
-  const baseG = Math.round(fogged.g);
-  const baseB = Math.round(fogged.b);
-  const edgeR = Math.round(baseR * NEATENSTEIN_WALL_EDGE_DARKEN_FACTOR);
-  const edgeG = Math.round(baseG * NEATENSTEIN_WALL_EDGE_DARKEN_FACTOR);
-  const edgeB = Math.round(baseB * NEATENSTEIN_WALL_EDGE_DARKEN_FACTOR);
-
-  for (let row = clampedStart; row < clampedEnd; row += 1) {
-    const rowInStripe = row - Math.floor(drawStart);
-    const isBlockEdge =
-      rowInStripe % NEATENSTEIN_WALL_BLOCK_HEIGHT_PX < 2 ||
-      rowInStripe < 2 ||
-      row === clampedEnd - 1;
-
-    const r = isBlockEdge ? edgeR : baseR;
-    const g = isBlockEdge ? edgeG : baseG;
-    const b = isBlockEdge ? edgeB : baseB;
-
-    const offset = (row * width + x) * NEATENSTEIN_FRAMEBUFFER_CHANNELS;
-    workerFramebuffer[offset] = r;
-    workerFramebuffer[offset + 1] = g;
-    workerFramebuffer[offset + 2] = b;
-    workerFramebuffer[offset + 3] = 255;
-  }
-}
-
-/**
- * Resolve the pixel dimensions of the persistent worker framebuffer.
- *
- * @returns Width and height, or zeros if the buffer has not been allocated.
- */
-function resolveWorkerFramebufferDimensions(): {
-  width: number;
-  height: number;
-} {
-  if (workerFramebuffer === null) {
-    return { width: 0, height: 0 };
-  }
-
-  // zBuffer length tracks the canvas width and is always allocated before the
-  // wall pass writes into the framebuffer.
-  if (workerZBuffer !== null && workerZBuffer.length > 0) {
-    const width = workerZBuffer.length;
-    const height = workerFramebuffer.length / (width * 4);
-    return { width, height: Math.floor(height) };
-  }
-
-  const side = Math.floor(
-    Math.sqrt(workerFramebuffer.length / NEATENSTEIN_FRAMEBUFFER_CHANNELS),
-  );
-  return { width: side, height: side };
-}
-
-/**
- * Render all active enemy sprites into the persistent worker framebuffer.
- *
- * This is the worker-tier sprite pass. It clips each sprite against the wall
- * z-buffer, resolves the camera-relative voxel frame, and renders it into the
- * persistent CPU framebuffer. The no-op render context prevents per-sprite
- * canvas flushes; the caller flushes once after the pass.
- *
- * @param zBuffer - Per-column wall-depth buffer.
- * @param spriteCamera - Camera transform used by the sprite renderer.
- * @param canvasWidth - Canvas width in pixels.
- * @param canvasHeight - Canvas height in pixels.
- */
-function renderWorkerSprites(
-  zBuffer: Float32Array,
-  spriteCamera: NeatensteinCamera,
-  canvasWidth: number,
-  canvasHeight: number,
-): void {
-  const noOpSpriteCtx = buildNoOpSpriteRenderContext();
-
-  const visibleSprites = activeEnemySprites
-    .map((sprite) => ({
-      sprite,
-      projection: clipNeatensteinSprite(
-        sprite,
-        spriteCamera,
-        canvasWidth,
-        canvasHeight,
-        zBuffer,
-      ),
-    }))
-    .filter(({ projection }) => projection.visibleColumns.length > 0)
-    .toSorted((a, b) => b.projection.perpDist - a.projection.perpDist);
-
-  for (const { sprite, projection } of visibleSprites) {
-    const frame = resolveNeatensteinEnemyFrame(sprite, spriteCamera);
-    if (frame === null) {
-      continue;
-    }
-
-    renderNeatensteinSprite(
-      workerFramebuffer!,
-      zBuffer,
-      projection,
-      frame,
-      noOpSpriteCtx,
-    );
-  }
+  return formatRgb({
+    r: wallColor.r + (bg.r - wallColor.r) * fogFactor,
+    g: wallColor.g + (bg.g - wallColor.g) * fogFactor,
+    b: wallColor.b + (bg.b - wallColor.b) * fogFactor,
+  });
 }
 
 /**
  * Build a canvas-like context that does not flush per sprite.
  *
- * The worker tier renders all sprites into a single snapshot framebuffer and
- * flushes it back to the OffscreenCanvas once after the sprite pass. The
- * renderer's `putImageData` contract still expects a context, so this no-op
- * adapter satisfies the type without redundant per-sprite copies.
+ * The worker tier renders all sprites into a single canvas snapshot and flushes
+ * it back once after the sprite pass. The renderer's `putImageData` contract
+ * still expects a context, so this no-op adapter satisfies the type without
+ * redundant per-sprite copies.
  *
  * @returns Canvas-like context with a no-op `putImageData`.
  */
 function buildNoOpSpriteRenderContext(): NeatensteinSpriteRenderContext {
   return {
     putImageData: () => {
-      // Intentionally empty: the worker flushes the framebuffer once after all
+      // Intentionally empty: the worker flushes the snapshot once after all
       // sprites are drawn.
     },
   };
@@ -620,8 +384,9 @@ function castColumnRay(
  *
  * Worker-tier painter order:
  *
- * ceiling/floor fill → walls → sprites → flush → pulses → impact spots →
- * bolts → gun overlay
+ * clear → floor grid → ceiling grid → fogged wall stripes → sprite snapshot
+ * → encoded enemy sprites → sprite flush → pulses → impact spots → bolts →
+ * gun overlay
  */
 function buildAndPostFrame(): void {
   if (!latestState || !currentTier || !wallMap || !gameState || !collisionMap) {
@@ -698,9 +463,18 @@ function buildAndPostFrame(): void {
     const columnCount = resolveWorkerCanvasColumnCount(canvasWidth);
     const zBuffer = resolveWorkerZBuffer(columnCount);
 
-    // Fill the persistent framebuffer with a minimal ceiling/floor pair instead
-    // of copying the canvas back from the GPU.
-    fillWorkerCeilingAndFloor(canvasWidth, canvasHeight);
+    // Clear the full canvas to the dark neon void background.
+    context.fillStyle = NEATENSTEIN_WORKER_CLEAR_COLOR;
+    context.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // Draw perspective floor and ceiling grids behind the walls.
+    const floorCamera = {
+      x: cameraPositionX,
+      y: cameraPositionY,
+      yaw: cameraYaw,
+    };
+    drawNeatensteinFloor(context, canvasWidth, canvasHeight, floorCamera);
+    drawNeatensteinCeiling(context, canvasWidth, canvasHeight, floorCamera);
 
     const stripeWidth = canvasWidth / columnCount;
     const wallFocalLength =
@@ -735,39 +509,59 @@ function buildAndPostFrame(): void {
       const xEnd = Math.floor((column + 1) * stripeWidth);
       const stripePixelWidth = Math.max(0, xEnd - xStart);
 
-      for (let xOffset = 0; xOffset < stripePixelWidth; xOffset += 1) {
-        writeWallStripeToFramebuffer(
-          xStart + xOffset,
-          drawStart,
-          drawEnd,
-          wallColor,
-          hit.perpWallDist,
-        );
-      }
+      context.fillStyle = applyWallFog(wallColor, hit.perpWallDist);
+      context.fillRect(
+        xStart,
+        drawStart,
+        stripePixelWidth,
+        drawEnd - drawStart,
+      );
     }
 
-    const spriteCamera = {
-      posX: cameraPositionX,
-      posY: cameraPositionY,
-      dirX: cameraDirectionX,
-      dirY: cameraDirectionY,
-      planeX: cameraPlaneX,
-      planeY: cameraPlaneY,
-    };
+    // Render encoded enemy sprites into a single canvas snapshot and flush it
+    // once. The no-op render context prevents per-sprite putImageData calls.
+    if (
+      activeEnemySprites.length > 0 &&
+      typeof context.getImageData === 'function'
+    ) {
+      const spriteSnapshot = context.getImageData(
+        0,
+        0,
+        canvasWidth,
+        canvasHeight,
+      );
+      const spriteContext = buildNoOpSpriteRenderContext();
+      const spriteCamera = {
+        posX: cameraPositionX,
+        posY: cameraPositionY,
+        dirX: cameraDirectionX,
+        dirY: cameraDirectionY,
+        planeX: cameraPlaneX,
+        planeY: cameraPlaneY,
+      };
 
-    renderWorkerSprites(zBuffer, spriteCamera, canvasWidth, canvasHeight);
+      for (const sprite of activeEnemySprites) {
+        const frame = resolveNeatensteinEnemyFrame(sprite, spriteCamera);
+        if (!frame) {
+          continue;
+        }
+        const projection = clipNeatensteinSprite(
+          sprite,
+          spriteCamera,
+          canvasWidth,
+          canvasHeight,
+          zBuffer,
+        );
+        renderNeatensteinSprite(
+          spriteSnapshot.data,
+          zBuffer,
+          projection,
+          frame,
+          spriteContext,
+        );
+      }
 
-    // Flush the completed framebuffer (walls + ceiling/floor + sprites) back to
-    // the canvas once per frame.
-    context.putImageData(
-      new ImageData(workerFramebuffer!, canvasWidth, canvasHeight),
-      0,
-      0,
-    );
-    context.fillStyle = 'rgba(255,0,0,1)';
-    context.fillRect(0, 0, 40, 40);
-    if (typeof (context as any).commit === 'function') {
-      (context as any).commit();
+      context.putImageData(spriteSnapshot, 0, 0);
     }
 
     // Update and emit ambient pulses after the wall z-buffer exists.
@@ -830,6 +624,13 @@ function buildAndPostFrame(): void {
     );
 
     renderGunOverlay(context, gameState.gun!, canvasWidth, canvasHeight);
+
+    const commitableContext = context as OffscreenCanvasRenderingContext2D & {
+      commit?: () => void;
+    };
+    if (typeof commitableContext.commit === 'function') {
+      commitableContext.commit();
+    }
 
     return;
   } else {
@@ -1086,7 +887,6 @@ self.onmessage = (event: MessageEvent) => {
     activeEnemySprites = [];
     pendingTickInput = null;
     workerZBuffer = null;
-    workerFramebuffer = null;
     workerContext = null;
     enemyControllerState = null;
 
@@ -1181,35 +981,4 @@ export const __testOnlyGetLatestState = (): NeatensteinRenderState | null =>
   latestState;
 
 /* istanbul ignore next -- test-only introspection hook */
-export const __testOnlySetActiveEnemySprites = (
-  sprites: NeatensteinSprite[],
-): void => {
-  activeEnemySprites = sprites;
-};
-
-/* istanbul ignore next -- test-only introspection hook */
-export const __testOnlyAllocateWorkerFramebuffer = (
-  width: number,
-  height: number,
-): void => {
-  workerFramebuffer = new Uint8ClampedArray(width * height * 4);
-};
-
-/* istanbul ignore next -- test-only introspection hook */
-export const __testOnlySetWorkerZBuffer = (columns: number): void => {
-  workerZBuffer = new Float32Array(columns).fill(Number.POSITIVE_INFINITY);
-};
-
-/* istanbul ignore next -- test-only introspection hook */
-export const __testOnlyResolveWorkerFramebufferDimensions =
-  resolveWorkerFramebufferDimensions;
-
-/* istanbul ignore next -- test-only introspection hook */
-export const __testOnlyFillWorkerCeilingAndFloor = fillWorkerCeilingAndFloor;
-
-/* istanbul ignore next -- test-only introspection hook */
-export const __testOnlyWriteWallStripeToFramebuffer =
-  writeWallStripeToFramebuffer;
-
-/* istanbul ignore next -- test-only introspection hook */
-export const __testOnlyRenderWorkerSprites = renderWorkerSprites;
+export const __testOnlySyncWorkerCanvasSize = syncWorkerCanvasSize;

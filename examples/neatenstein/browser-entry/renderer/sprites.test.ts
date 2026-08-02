@@ -6,6 +6,7 @@ import { describe, expect, it } from '@jest/globals';
 import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
 import { NEATENSTEIN_FLOOR_FOV_RADIANS } from './floor';
 import type { NeatensteinSpriteProjection } from './sprites';
+import * as robotSpriteData from '../../robot-sprite-data.js';
 
 /**
  * Build a tiny pre-rendered voxel-like frame for unit tests.
@@ -129,7 +130,7 @@ describe('neatenstein sprites', () => {
     const canvasHeight = 64;
     const focalLength =
       canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
-    const expectedScale = Math.abs(focalLength / perpDist) * 0.5;
+    const expectedScale = Math.abs(focalLength / perpDist);
 
     const projection = projectNeatensteinSprite(
       { worldX, worldY: 0 },
@@ -168,7 +169,8 @@ describe('neatenstein sprites', () => {
     );
 
     expect(clip.visibleColumns).toEqual([
-      25, 26, 27, 28, 29, 30, 31, 33, 34, 35, 36, 37, 38,
+      18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 33, 34, 35, 36,
+      37, 38, 39, 40, 41, 42, 43, 44, 45,
     ]);
   });
 
@@ -1020,6 +1022,327 @@ describe('neatenstein sprites', () => {
       );
 
       expect(framebuffer.every((value) => value === 0)).toBe(true);
+    });
+  });
+
+  describe('encoded robot sprite red contracts', () => {
+    it('samples ROBOT_SPRITE_FRAMES pixel data instead of drawing a flat color bar', async () => {
+      const { renderNeatensteinSprite } = await import('./sprites');
+      const frame = robotSpriteData.ROBOT_SPRITE_FRAMES.front
+        .stand as unknown as VoxelSnapshot;
+
+      const framebuffer = new Uint8ClampedArray(64 * 64 * 4).fill(0);
+      const zBuffer = new Float32Array(64).fill(10);
+      const calls: unknown[][] = [];
+      const ctx = {
+        putImageData(...args: unknown[]) {
+          calls.push(args);
+        },
+      };
+
+      renderNeatensteinSprite(
+        framebuffer,
+        zBuffer,
+        {
+          screenX: 32,
+          scale: 48,
+          perpDist: 1,
+          left: 0,
+          right: 63,
+          visible: true,
+        },
+        frame,
+        ctx,
+      );
+
+      // Fails today: the renderer still expects a VoxelSnapshot and throws
+      // before it can flush or sample the encoded frame.
+      expect(calls.length).toBe(1);
+
+      const white = robotSpriteData.ROBOT_SPRITE_PALETTE[4];
+      let foundWhite = false;
+      for (let i = 0; i < framebuffer.length; i += 4) {
+        if (
+          framebuffer[i] === white[0] &&
+          framebuffer[i + 1] === white[1] &&
+          framebuffer[i + 2] === white[2] &&
+          framebuffer[i + 3] === white[3]
+        ) {
+          foundWhite = true;
+          break;
+        }
+      }
+      expect(foundWhite).toBe(true);
+    });
+
+    it('computes projected sprite scale from the 48×48 logical grid', async () => {
+      const { projectNeatensteinSprite } = await import('./sprites');
+      const camera = {
+        posX: 0,
+        posY: 0,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+      const projection = projectNeatensteinSprite(
+        { worldX: 2, worldY: 0 },
+        camera,
+        64,
+        64,
+      );
+
+      const focalLength = 64 / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+      const expectedScale = focalLength / projection.perpDist;
+
+      // Fails today: the projection still multiplies by the old
+      // NEATENSTEIN_SPRITE_WORLD_SIZE factor of 0.5.
+      expect(projection.scale).toBeCloseTo(expectedScale, 5);
+    });
+  });
+
+  describe('walkTick-based walk cycle (AC-10f-001)', () => {
+    it('uses walkTick to alternate stand → walk1 → stand → walk2', async () => {
+      const { resolveNeatensteinEnemyFrame } = await import('./sprites');
+      const camera = {
+        posX: 5,
+        posY: 0,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+
+      const baseSprite = {
+        worldX: 0,
+        worldY: 0,
+        facing: 0,
+        animationState: 'move' as const,
+      };
+
+      // walkTick 0 → stand
+      const frame0 = resolveNeatensteinEnemyFrame(
+        { ...baseSprite, walkTick: 0 },
+        camera,
+      );
+      // walkTick 1 → walk1
+      const frame1 = resolveNeatensteinEnemyFrame(
+        { ...baseSprite, walkTick: 1 },
+        camera,
+      );
+      // walkTick 2 → stand
+      const frame2 = resolveNeatensteinEnemyFrame(
+        { ...baseSprite, walkTick: 2 },
+        camera,
+      );
+      // walkTick 3 → walk2
+      const frame3 = resolveNeatensteinEnemyFrame(
+        { ...baseSprite, walkTick: 3 },
+        camera,
+      );
+
+      expect(frame0).not.toBeNull();
+      // stand and walk1 should be different frames
+      expect(frame0).not.toBe(frame1);
+      // stand and walk2 should be different frames
+      expect(frame0).not.toBe(frame3);
+      // walkTick 0 and 2 should both resolve to stand (same frame)
+      expect(frame0).toBe(frame2);
+      // walk1 and walk2 should be different
+      expect(frame1).not.toBe(frame3);
+    });
+
+    it('composites shoot+walk when shootBlinkTicks > 0 with walkTick set', async () => {
+      const { resolveNeatensteinEnemyFrame } = await import('./sprites');
+      const camera = {
+        posX: 5,
+        posY: 0,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+
+      const walkFrame = resolveNeatensteinEnemyFrame(
+        {
+          worldX: 0,
+          worldY: 0,
+          facing: 0,
+          animationState: 'move' as const,
+          walkTick: 1,
+          shootBlinkTicks: 0,
+        },
+        camera,
+      );
+      const blinkFrame = resolveNeatensteinEnemyFrame(
+        {
+          worldX: 0,
+          worldY: 0,
+          facing: 0,
+          animationState: 'move' as const,
+          walkTick: 1,
+          shootBlinkTicks: 4,
+        },
+        camera,
+      );
+
+      expect(walkFrame).not.toBeNull();
+      expect(blinkFrame).not.toBeNull();
+      // The composite (blink) frame should differ from the pure walk frame
+      expect(blinkFrame).not.toBe(walkFrame);
+    });
+
+    it('reverts to walk frame when shootBlinkTicks expires (AC-10f-005)', async () => {
+      const { resolveNeatensteinEnemyFrame } = await import('./sprites');
+      const camera = {
+        posX: 5,
+        posY: 0,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+
+      const baseSprite = {
+        worldX: 0,
+        worldY: 0,
+        facing: 0,
+        animationState: 'fire' as const,
+        walkTick: 1,
+      };
+
+      // When blink is active (shootBlinkTicks > 0), should show composite
+      const blinkFrame = resolveNeatensteinEnemyFrame(
+        { ...baseSprite, shootBlinkTicks: 4 },
+        camera,
+      );
+      // When blink expired (shootBlinkTicks = 0), should show walk frame
+      // even though animationState is still 'fire'
+      const expiredFrame = resolveNeatensteinEnemyFrame(
+        { ...baseSprite, shootBlinkTicks: 0 },
+        camera,
+      );
+      // walk-only frame (animationState = 'move', no blink)
+      const walkFrame = resolveNeatensteinEnemyFrame(
+        {
+          worldX: 0,
+          worldY: 0,
+          facing: 0,
+          animationState: 'move' as const,
+          walkTick: 1,
+          shootBlinkTicks: 0,
+        },
+        camera,
+      );
+
+      expect(blinkFrame).not.toBeNull();
+      expect(expiredFrame).not.toBeNull();
+      // After blink expires, upper body reverts to walk frame (same as pure walk)
+      expect(expiredFrame).toBe(walkFrame);
+      // Blink frame differs from expired frame
+      expect(blinkFrame).not.toBe(expiredFrame);
+    });
+  });
+
+  describe('resolveNeatensteinEnemySprite (team color + decode)', () => {
+    it('returns a decoded VoxelSnapshot without team color', async () => {
+      const { resolveNeatensteinEnemySprite } = await import('./sprites');
+      const camera = {
+        posX: 5,
+        posY: 0,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+
+      const result = resolveNeatensteinEnemySprite(
+        {
+          worldX: 0,
+          worldY: 0,
+          facing: 0,
+          animationState: 'idle' as const,
+        },
+        camera,
+      );
+
+      expect(result).not.toBeNull();
+      expect(result).toHaveProperty('data');
+      expect(result).toHaveProperty('width');
+      expect(result).toHaveProperty('height');
+    });
+
+    it('applies team color to palette indices 5/6/7 and preserves alpha', async () => {
+      const { resolveNeatensteinEnemySprite } = await import('./sprites');
+      const camera = {
+        posX: 5,
+        posY: 0,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+
+      const teamColor: readonly [number, number, number] = [100, 200, 50];
+
+      const result = resolveNeatensteinEnemySprite(
+        {
+          worldX: 0,
+          worldY: 0,
+          facing: 0,
+          animationState: 'idle' as const,
+          teamColor,
+        },
+        camera,
+      );
+
+      expect(result).not.toBeNull();
+      if (result === null) return;
+      expect(result.width).toBeGreaterThan(0);
+      expect(result.height).toBeGreaterThan(0);
+
+      // Scan the decoded frame for pixels matching the team color.
+      // Palette indices 5/6/7 should have RGB replaced with teamColor
+      // while alpha is preserved from the original palette.
+      let foundTeamColorPixel = false;
+      for (let i = 0; i < result.data.length; i += 4) {
+        const r = result.data[i];
+        const g = result.data[i + 1];
+        const b = result.data[i + 2];
+        const a = result.data[i + 3];
+        if (r === 100 && g === 200 && b === 50 && a > 0) {
+          foundTeamColorPixel = true;
+          break;
+        }
+      }
+      expect(foundTeamColorPixel).toBe(true);
+    });
+
+    it('caches team color decoded frames', async () => {
+      const { resolveNeatensteinEnemySprite } = await import('./sprites');
+      const camera = {
+        posX: 5,
+        posY: 0,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+
+      const teamColor: readonly [number, number, number] = [100, 200, 50];
+      const sprite = {
+        worldX: 0,
+        worldY: 0,
+        facing: 0,
+        animationState: 'idle' as const,
+        teamColor,
+      };
+
+      const result1 = resolveNeatensteinEnemySprite(sprite, camera);
+      const result2 = resolveNeatensteinEnemySprite(sprite, camera);
+
+      // Should return the same cached object
+      expect(result1).toBe(result2);
     });
   });
 });

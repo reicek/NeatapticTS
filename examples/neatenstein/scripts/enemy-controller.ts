@@ -11,13 +11,25 @@
  */
 
 import type { CollisionMap } from '../browser-entry/renderer/map';
-import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../browser-entry/host/game/constants';
+import {
+  NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS,
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+} from '../browser-entry/host/game/constants';
 import { normalizeMoveVector } from '../browser-entry/host/game/movement';
 import type {
   EnemyState,
   GameState,
   Vector2,
 } from '../browser-entry/host/game/types';
+
+/**
+ * Number of sim ticks the muzzle-flash shoot blink lasts on the upper body.
+ *
+ * When an enemy fires, the upper body shows the shoot frame for this many
+ * ticks before reverting to the walk frame. Must be in the 3–5 range per
+ * AC-10f-005.
+ */
+export const ENEMY_CONTROLLER_SHOOT_BLINK_TICKS = 4;
 
 /**
  * Animation and AI state for a single controlled enemy, produced by the
@@ -46,6 +58,10 @@ export interface ControlledEnemy {
   deRezElapsedMs: number;
   /** `true` while the enemy is still active (not fully de-rezzed). */
   active: boolean;
+  /** Sim tick counter driving the walk cycle (stand → walk1 → stand → walk2). Increments each tick the enemy moves; resets to 0 when idle. */
+  walkTick: number;
+  /** Remaining sim ticks for the muzzle-flash shoot blink on the upper body. When > 0 the renderer composites the shoot upper body over the walk lower body. */
+  shootBlinkTicks: number;
 }
 
 /**
@@ -79,8 +95,14 @@ export interface EnemyControllerState {
  */
 export const ENEMY_CONTROLLER_SPEED_CELLS_PER_SECOND = 2.5;
 
-/** Collision radius in world cells; matches the player radius for consistency. */
-export const ENEMY_CONTROLLER_RADIUS_CELLS = 0.25;
+/**
+ * Collision radius in world cells.
+ *
+ * Enemies have a 192×192 block footprint and each floor cell spans 252 blocks,
+ * giving a radius of 96 / 252 ≈ 0.381 cells.
+ */
+export const ENEMY_CONTROLLER_RADIUS_CELLS =
+  NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS;
 
 /** Maximum cell distance at which an enemy will attempt to fire. */
 export const ENEMY_CONTROLLER_FIRE_RANGE_CELLS = 8;
@@ -308,6 +330,8 @@ export function createEnemyControllerState(
       fireCooldownMs: 0,
       deRezElapsedMs: 0,
       active: true,
+      walkTick: 0,
+      shootBlinkTicks: 0,
     })),
     hitscanEvents: [],
   };
@@ -349,6 +373,8 @@ function updateControlledEnemy(
       fireCooldownMs: 0,
       deRezElapsedMs: 0,
       active: true,
+      walkTick: 0,
+      shootBlinkTicks: 0,
     } as ControlledEnemy);
 
   const ammo = isRespawn
@@ -359,6 +385,8 @@ function updateControlledEnemy(
     (isRespawn ? 0 : previousOrDefault.fireCooldownMs) - dtMs,
   );
   let deRezElapsedMs = isRespawn ? 0 : previousOrDefault.deRezElapsedMs;
+  let walkTick = isRespawn ? 0 : previousOrDefault.walkTick;
+  let shootBlinkTicks = isRespawn ? 0 : previousOrDefault.shootBlinkTicks;
   let position = isRespawn
     ? { ...enemyState.position }
     : { ...previousOrDefault.position };
@@ -387,6 +415,8 @@ function updateControlledEnemy(
       fireCooldownMs,
       deRezElapsedMs,
       active,
+      walkTick: 0,
+      shootBlinkTicks: 0,
     };
   }
 
@@ -421,6 +451,9 @@ function updateControlledEnemy(
     position = resolved;
   }
 
+  // Update walk tick: increment each tick the enemy moves, reset when idle.
+  walkTick = moved ? walkTick + 1 : 0;
+
   let isFiring = false;
   if (
     fireCooldownMs <= 0 &&
@@ -435,6 +468,14 @@ function updateControlledEnemy(
       direction: { x: Math.cos(yawRad), y: Math.sin(yawRad) },
       damage: ENEMY_CONTROLLER_HITSCAN_DAMAGE,
     });
+  }
+
+  // Decrement shoot blink from the previous tick, then refresh if firing.
+  if (shootBlinkTicks > 0) {
+    shootBlinkTicks -= 1;
+  }
+  if (isFiring) {
+    shootBlinkTicks = ENEMY_CONTROLLER_SHOOT_BLINK_TICKS;
   }
 
   if (isFiring) {
@@ -455,7 +496,57 @@ function updateControlledEnemy(
       : fireCooldownMs,
     deRezElapsedMs,
     active: true,
+    walkTick,
+    shootBlinkTicks,
   };
+}
+
+/**
+ * Push active enemies apart so their 192×192-block footprints do not overlap.
+ *
+ * A single pairwise pass is sufficient because the AI moves slowly and the
+ * collision radius is small. The separation is applied symmetrically, so two
+ * overlapping enemies each move half the overlap distance.
+ *
+ * @param enemies - Resolved enemy descriptors produced by
+ *   {@link updateControlledEnemy} this tick.
+ */
+function separateEnemies(enemies: ControlledEnemy[]): void {
+  const combinedDiameter = ENEMY_CONTROLLER_RADIUS_CELLS * 2;
+
+  for (let i = 0; i < enemies.length; i += 1) {
+    const a = enemies[i];
+    if (!a.active) {
+      continue;
+    }
+
+    for (let j = i + 1; j < enemies.length; j += 1) {
+      const b = enemies[j];
+      if (!b.active) {
+        continue;
+      }
+
+      const dx = b.position.x - a.position.x;
+      const dy = b.position.y - a.position.y;
+      const distanceSquared = dx * dx + dy * dy;
+      const combinedRadius = combinedDiameter;
+      const combinedRadiusSquared = combinedRadius * combinedRadius;
+
+      if (distanceSquared >= combinedRadiusSquared) {
+        continue;
+      }
+
+      const distance = Math.sqrt(distanceSquared) || 1;
+      const overlap = combinedRadius - distance;
+      const offsetX = (dx / distance) * (overlap * 0.5);
+      const offsetY = (dy / distance) * (overlap * 0.5);
+
+      a.position.x -= offsetX;
+      a.position.y -= offsetY;
+      b.position.x += offsetX;
+      b.position.y += offsetY;
+    }
+  }
 }
 
 /**
@@ -501,6 +592,8 @@ export function updateEnemyController(
       ),
     );
   }
+
+  separateEnemies(enemies);
 
   return {
     enemies,

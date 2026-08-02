@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Robot Sprite Preview — Neat Shooter NGE</title>
+  <style>
+    body { background: #111; color: #eee; font-family: sans-serif; padding: 1rem; }
+    h1 { margin: 0 0 0.5rem; font-size: 1.2rem; }
+    .note { color: #aaa; font-size: 0.85rem; margin-bottom: 1rem; }
+    .controls { margin-bottom: 1rem; }
+    button { background: #222; color: #eee; border: 1px solid #555; padding: 0.4rem 0.8rem; margin-right: 0.3rem; cursor: pointer; }
+    button.active { background: #444; border-color: #888; }
+    .grid { display: grid; grid-template-columns: repeat(4, 200px); gap: 1rem; }
+    .cell { text-align: center; }
+    .cell canvas { image-rendering: pixelated; width: 192px; height: 192px; background: #050505; border: 1px solid #333; }
+    .label { font-size: 0.75rem; margin-top: 0.3rem; color: #bbb; }
+  </style>
+</head>
+<body>
+  <h1>Robot Sprite Preview — 48×48 logical, 4× scale</h1>
+  <div class="note">
+    Shows all 8 directions × 4 poses. Click a color to test palette swapping.
+    Walk cycle: stand → walk1 → stand → walk2 → stand.
+    Shoot combines the upper body of the shoot frame over the current walk frame; the muzzle blast pixels are semitransparent.
+  </div>
+  <div class="controls" id="controls">
+    <button data-color="#DD2200" class="active">Ares Red</button>
+    <button data-color="#00CCFF">Cyan</button>
+    <button data-color="#FFAA00">Orange</button>
+    <button data-color="#FFEE00">Yellow</button>
+    <button data-color="#39FF14">Neon Green</button>
+  </div>
+  <div class="grid" id="grid"></div>
+
+  <script type="module">
+    import { ROBOT_SPRITE_SCALE, ROBOT_SPRITE_PALETTE, ROBOT_SPRITE_FRAMES } from './robot-sprite-data.js';
+
+    const grid = document.getElementById('grid');
+    const buttons = document.querySelectorAll('#controls button');
+
+    const directions = ['front','frontRight','right','backRight','back','backLeft','left','frontLeft'];
+    const poses = ['stand','walk1','walk2','shoot'];
+    let accentColor = '#DD2200';
+    let frameIndex = 0;
+    const walkCycle = ['stand','walk1','stand','walk2'];
+
+    function parseColor(hex) {
+      const n = parseInt(hex.slice(1), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 255];
+    }
+
+    function makeCanvas(w, h) {
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      return c;
+    }
+
+    function drawSprite(ctx, frame, color, ox = 0, oy = 0) {
+      const team = parseColor(color);
+      const pal = ROBOT_SPRITE_PALETTE.map((rgba, i) => {
+        // 5 = base accent, 6 = bright accent, 7 = semitransparent accent
+        if (i === 5 || i === 6 || i === 7) {
+          return [team[0], team[1], team[2], rgba[3]];
+        }
+        return rgba;
+      });
+      for (let y = 0; y < frame.length; y++) {
+        const row = frame[y];
+        for (let x = 0; x < row.length; x++) {
+          const idx = row[x];
+          if (idx === 0) continue;
+          const [r,g,b,a] = pal[idx];
+          ctx.fillStyle = `rgba(${r},${g},${b},${a/255})`;
+          ctx.fillRect(ox + x * ROBOT_SPRITE_SCALE, oy + y * ROBOT_SPRITE_SCALE, ROBOT_SPRITE_SCALE, ROBOT_SPRITE_SCALE);
+        }
+      }
+    }
+
+    function renderCell(dir) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const c = makeCanvas(192, 192);
+      c.id = `cv-${dir}`;
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = dir;
+      cell.appendChild(c);
+      cell.appendChild(label);
+      grid.appendChild(cell);
+      return c;
+    }
+
+    const canvases = {};
+    directions.forEach(dir => canvases[dir] = renderCell(dir));
+
+    function tick() {
+      frameIndex = (frameIndex + 1) % walkCycle.length;
+      const lowerPose = walkCycle[frameIndex];
+      for (const dir of directions) {
+        const ctx = canvases[dir].getContext('2d');
+        ctx.clearRect(0, 0, 192, 192);
+        // Background grid for transparency feel
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(0, 0, 192, 192);
+        // Draw lower body from walk frame
+        const lower = ROBOT_SPRITE_FRAMES[dir][lowerPose];
+        // Crop at row 35: lower body only
+        const lowerCrop = lower.slice(35).map(r => r.slice(0, 48));
+        drawSprite(ctx, lowerCrop, accentColor, 0, 35 * ROBOT_SPRITE_SCALE);
+        // Draw upper body from shoot frame
+        const shoot = ROBOT_SPRITE_FRAMES[dir].shoot;
+        const upperCrop = shoot.slice(0, 35).map(r => r.slice(0, 48));
+        drawSprite(ctx, upperCrop, accentColor, 0, 0);
+      }
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        accentColor = btn.dataset.color;
+      });
+    });
+
+    tick();
+    setInterval(tick, 160);
+  </script>
+</body>
+</html>

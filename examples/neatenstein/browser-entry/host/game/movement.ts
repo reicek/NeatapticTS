@@ -16,13 +16,14 @@
 import type { CollisionMap } from '../../renderer/map';
 import type { InputSnapshot } from '../input';
 import {
+  NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS,
   NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_MS_PER_SECOND,
   NEATENSTEIN_PLAYER_RADIUS_CELLS,
   NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND,
 } from './constants';
 import { createGameState } from './state';
-import type { GameState, Vector2 } from './types';
+import type { EnemyState, GameState, Vector2 } from './types';
 
 export { createGameState };
 
@@ -172,7 +173,7 @@ export function resolveWallCollision(
   state: GameState,
   collisionMap: CollisionMap,
 ): GameState {
-  if (!isPositionBlocked(state.player.position, collisionMap)) {
+  if (!isPositionBlocked(state.player.position, collisionMap, state.enemies)) {
     return state;
   }
 
@@ -183,7 +184,7 @@ export function resolveWallCollision(
     y: previous.y,
   };
 
-  if (!isPositionBlocked(xOnly, collisionMap)) {
+  if (!isPositionBlocked(xOnly, collisionMap, state.enemies)) {
     return updatePlayerPosition(state, xOnly, previous);
   }
 
@@ -192,7 +193,7 @@ export function resolveWallCollision(
     y: state.player.position.y,
   };
 
-  if (!isPositionBlocked(yOnly, collisionMap)) {
+  if (!isPositionBlocked(yOnly, collisionMap, state.enemies)) {
     return updatePlayerPosition(state, yOnly, previous);
   }
 
@@ -267,6 +268,7 @@ export function updatePlayerMovement(
 function isPositionBlocked(
   position: Vector2,
   collisionMap: CollisionMap,
+  enemies: ReadonlyArray<EnemyState> = [],
 ): boolean {
   if (!isFiniteVector(position)) {
     return true;
@@ -291,6 +293,21 @@ function isPositionBlocked(
       if (collisionMap.isSolid(x, y)) {
         return true;
       }
+    }
+  }
+
+  // Hero cannot walk through enemies. Treat each enemy as a circle with the
+  // shared enemy collision radius.
+  const playerRadius = radius;
+  const enemyRadius = NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS;
+  const combinedRadius = playerRadius + enemyRadius;
+  const combinedRadiusSquared = combinedRadius * combinedRadius;
+
+  for (const enemy of enemies) {
+    const dx = position.x - enemy.position.x;
+    const dy = position.y - enemy.position.y;
+    if (dx * dx + dy * dy < combinedRadiusSquared) {
+      return true;
     }
   }
 
