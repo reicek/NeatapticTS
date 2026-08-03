@@ -1,6 +1,6 @@
 ﻿# Neatenstein NGE Demo (alias "Neat Shooter")
 
-**Status:** [WIP] — Phase 1 [DONE] · Phase 2 [DONE] · Phase 3 [WIP] · Step 09 [DONE]: Bugfix — canvas stretch + missing enemies · fix-packet-09-green-iteration-2 green validated · Step 10 [WIP]: fix slices [DONE] (10-fix-walls-fog, 10-fix-floorceiling-neon, 10-fix-perf-throttle) · 10-fix-collision-walk [DONE: impl-complete-awaiting-green] · 10-fix-sprite-composite [PLANNED] · 10-green-visiblebrowser [PLANNED] · Step 11 [PLANNED]: Enhance cannon overlay · red slice 11-red-gun [DONE] · Steps 01–08 [DONE] · **Plan ID:** NEATENSTEIN_NGE_DEMO · **Created:** 2026-07-17 · **Next step:** 05-green-testing for 10-fix-collision-walk visible-browser smoke, then 04-implementing for 10-fix-sprite-composite
+**Status:** [WIP] — Phase 1 [DONE] · Phase 2 [DONE] · Phase 3 [WIP] · Step 09 [DONE]: Bugfix — canvas stretch + missing enemies · fix-packet-09-green-iteration-2 green validated · Step 10 [WIP]: fix slices [DONE] (10-fix-walls-fog, 10-fix-floorceiling-neon, 10-fix-perf-throttle, 10-fix-collision-walk, 10-fix-sprite-composite, 10-fix-worker-wiring) · 10-green-visiblebrowser superseded by Step 10.2 · Step 10.2 [PLANNED]: 8 runtime issues from manual validation — 4 impl slices + 1 green slice · Step 11 [PLANNED]: Enhance cannon overlay · red slice 11-red-gun [DONE] · Steps 01–08 [DONE] · **Plan ID:** NEATENSTEIN_NGE_DEMO · **Created:** 2026-07-17 · **Next step:** Step 10.2 — implement 4 fix slices (10.2-fix-sprite-facing-sort, 10.2-fix-walk-anim-rendercap, 10.2-fix-collision-sync, 10.2-fix-bolt-ai-spawn) then 10.2-green-visiblebrowser
 **Consensus:** 4 specialists (NGE Core, NGE Benchmark, Visualizer, Game Director) — all APPROVED after 2 review rounds.
 **Downstream of:** `plans/completed/NEAT_Genesis_EvoDevo.md` (NGE core), `plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md` (co-evolution harness reference, not duplicated).
 **Engine research:** `plans/Neon_Shooter_NGE_Demo.research.md` — DOOM/raycasting algorithm notes, neon renderer design (Lineage B grid DDA, locked), Flappy ground grid reuse, license attribution, and reuse map. **Read this before implementing Phase 1.**
@@ -154,7 +154,7 @@ PlanUpdate:
   next: 'Hand off to 05-green-testing for full neatenstein test run and visible-browser screenshot validation.'
 ```
 
-**NEXT STEP (resume here in new session):** Step 09 is [DONE]. Step 10 is [WIP] and reopened due to a false-close: runtime evidence shows walls are invisible beyond the 30-cell hard fog clip, floor/ceiling are rendered as non-neon and per-frame expensive, a debug red square masks the real scene, and the host render loop posts unthrottled causing ~33s load / backlog. Fix slices `10-fix-walls-fog`, `10-fix-floorceiling-neon`, and `10-fix-perf-throttle` are [DONE]. New fix slice `10-fix-collision-walk` and green slice `10-green-visiblebrowser` are [PLANNED]. Do NOT proceed to Step 11 until the user confirms Step 10 is actually green.
+**NEXT STEP (resume here in new session):** Step 09 is [DONE]. Step 10 is [WIP] — all fix slices implemented (10-fix-walls-fog, 10-fix-floorceiling-neon, 10-fix-perf-throttle, 10-fix-collision-walk, 10-fix-sprite-composite, 10-fix-worker-wiring); the original 10-green-visiblebrowser is superseded by Step 10.2. Step 10.2 [PLANNED] addresses 8 runtime issues found during manual validation of bundle v=20260802-7: (I1) collision inconsistency, (I2) walk animation vertical jump, (I3) enemy facing from all angles, (I4) plasma bolt collision, (I5) depth sorting, (I6) render distance cap, (I7) enemy AI stopping/spawn logic, (I8) spawn positions at map edges. Research caches are in `examples/neatenstein/shooter-research-cache-{1..8}.md`. Step 10.2 has 4 implementation slices + 1 green slice, all sequential. Do NOT proceed to Step 11 until Step 10.2 is green-validated.
 
 Phase 3 Steps 01–08 are [DONE] and compressed to `plans/Neon_Shooter_NGE_Demo.plans.md`. Step 09 — Bugfix for canvas horizontal stretch on ultra-wide and missing enemy sprites — is [DONE] and sliced into 5 atomic slices. Slices `09-canvas-backing`, `09-render-state-enemies`, `09-worker-controller`, `09-worker-sprite-pass`, and `09-green` are [DONE]; fix-packet-09-green-iteration-2 has been green validated. Step 10 — Replace the failed enemy sprite renderer using the approved encoded `examples/neatenstein/robot-sprite-data.js` sprite set (logical 48×48, 4× display scale, 8 directions × 4 poses), restore the wall/floor/ceiling raycast scene, correct sprite projection from the logical grid, and eliminate the full-canvas `getImageData`/`putImageData` FPS killer — is [WIP] and reopened due to a false-close: `NEATENSTEIN_MAX_VIEW_DIST` hard-clips walls at 30 cells so perimeter walls at ~60 cells are invisible, floor/ceiling are rendered as non-neon and per-frame expensive, `display.worker.ts` still contains a debug red square that masks validation, and the host render loop posts unthrottled causing ~33s load / backlog. Fix slices `10-fix-walls-fog`, `10-fix-floorceiling-neon`, and `10-fix-perf-throttle` are [DONE]. New fix slice `10-fix-collision-walk` and green slice `10-green-visiblebrowser` are [PLANNED] and must be green-validated with a real visible-browser screenshot before close. Step 11 — Enhance cannon overlay: fix horizontal stretch on ultra-wide displays, add detail, and introduce a dedicated voxel/3D gun-sprite projection so the cannon has real depth — is [PLANNED] to follow Step 10 after user confirmation. Detailed per-step claims, PlanUpdate blocks, and validation evidence for Steps 07–08 are archived in the logs.
 
@@ -439,6 +439,67 @@ PlanUpdate:
 
 Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing results are archived in `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3 Step 07 and §Phase 3 Step 08.
 
+**Step 10.2 planning validation (8 runtime issues from manual validation):**
+
+Slice-advancement gate run for each Step 10.2 slice. Plan-structure gates (plan-sync, step-packet, plan-slice-quality, plan-command-lint) pass for all slices. Coverage failures are expected — the code has not been implemented yet; coverage will be achieved during implementation.
+
+- `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=10.2-fix-sprite-facing-sort --args.changed-files=examples/neatenstein/browser-entry/renderer/sprites.ts,examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/renderer/sprites.test.ts`
+- Result: plan-sync ✓, step-packet ✓, plan-slice-quality ✓ (5 slices, all ≤4h), plan-command-lint ✓, shared-validation ✓, specialist-review ✓. code-coverage ✗ (display.worker.ts below 100% — expected pre-implementation).
+
+- `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=10.2-fix-walk-anim-rendercap --args.changed-files=examples/neatenstein/generate-robot-sprites.py,examples/neatenstein/robot-sprite-data.js,examples/neatenstein/browser-entry/renderer/framebuffer.ts,examples/neatenstein/browser-entry/renderer/raycast.ts`
+- Result: plan-sync ✓, step-packet ✓, plan-slice-quality ✓, plan-command-lint ✓, shared-validation ✓, specialist-review ✓. code-coverage ✗ (framebuffer.ts, raycast.ts below 100% — expected pre-implementation).
+
+- `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=10.2-fix-collision-sync --args.changed-files=plans/Neon_Shooter_NGE_Demo.plans.md,examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/host/game/movement.ts,examples/neatenstein/browser-entry/host/game/types.ts`
+- Result: plan-sync ✓, step-packet ✓, plan-slice-quality ✓, plan-command-lint ✓, shared-validation ✓, specialist-review ✓. code-coverage ✗ (types.ts missing from summary — expected pre-implementation).
+
+- `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=10.2-fix-bolt-ai-spawn --args.changed-files=plans/Neon_Shooter_NGE_Demo.plans.md,examples/neatenstein/browser-entry/host/game/tick.ts,examples/neatenstein/browser-entry/host/game/combat.ts,examples/neatenstein/scripts/enemy-controller.ts`
+- Result: plan-sync ✓, step-packet ✓, plan-slice-quality ✓, plan-command-lint ✓, shared-validation ✓, specialist-review ✓. code-coverage ✗ (tick.ts, combat.ts below 100% — expected pre-implementation).
+
+- `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=10.2-green-visiblebrowser --args.changed-files=plans/Neon_Shooter_NGE_Demo.plans.md`
+- Result: **pass: true** — all 4 gates passed (TRIVIAL, no source files changed).
+
+**Step 10.2 plan structure verdict:** All 5 slices conform to the plan schema (≤5 slices, ≤4h each, unique IDs, sequential dependencies). Coverage failures are expected at planning time — they will be resolved during 04-implementing. The plan is ready for execution.
+
+- `green-light: true` — Step 10.2 plan structure verified; all 5 slices conform, 23 verification gaps patched, structural gates pass (2026-08-02). Full-file slice-advancement including code-coverage is expected to fail until implementation; coverage will be achieved during the red-green implementation slices.
+
+**Step 10.2 verification-gap patch (23 gaps applied):**
+
+All 23 verification gaps from the 4 specialist reviewers (`<!-- plan-verification-gaps-10.2 -->`) have been patched into the 4 implementation slices:
+
+- `10.2-fix-sprite-facing-sort` — added `display.worker.test.ts`; added AC-10.2a-004 (ultra-wide regression) and AC-10.2a-005 (hero-perspective bearing coverage); relaxed the `facing` guard note; noted optional z-buffer hardening.
+- `10.2-fix-walk-anim-rendercap` — added `robot-sprite-data.json`, `walls.ts`, `sprites.ts`, `display.worker.ts`; added AC-10.2b-004 (worker cap z-buffer), AC-10.2b-005 (far-wall no-hit), AC-10.2b-006 (far-sprite cull); noted `NEATENSTEIN_MAX_VIEW_DIST` trade-off.
+- `10.2-fix-collision-sync` — added `collision.ts`; added AC-10.2c-004 (skip inactive enemies in combat); noted worker `simState` update reorder.
+- `10.2-fix-bolt-ai-spawn` — added `types.ts`, `bolt-render.ts`, `display.worker.ts`, `enemy-controller.test.ts`, `waves.test.ts`, `episode.test.ts`; added AC-10.2d-006 (radius/visual shortening) and AC-10.2d-007 (scan-inward fallback); noted BoltState fields, `MlpEnemyPopulation` plumbing, and `advanceWave` wiring.
+
+Updated step-level `slice-advancement` changed-files lists to match the expanded `files_to_change` arrays.
+
+Post-patch validation:
+- `neataptic-gate-mcp:run_gate_check --gate=slice-advancement` for all 4 implementation slices: plan-sync ✓, step-packet ✓, plan-slice-quality ✓, plan-command-lint ✓, shared-validation ✓, specialist-review ✓; code-coverage ✗ on the future files (expected pre-implementation).
+- `node scripts/agent-customization/validate-plan-phase-packets.mjs --json --plan=plans/Neon_Shooter_NGE_Demo.plans.md` — returned 12 errors / 8 warnings, all pre-existing in other steps/phases (Step 09 title mismatch; Step 10/11 missing sections; Phase 4/5 missing YAML metadata; Phase 6 legacy format). No errors introduced by the Step 10.2 patch.
+- `neataptic-gate-mcp:run_gate_check --gate=stale-wip-plans --json` — pass.
+- `npm run lint` — exit 0.
+
+**Step 10.2 patch verdict:** The 23 verification gaps are now reflected in the four implementation slices. The only gate failures are code-coverage on not-yet-implemented files, which is expected. The patch is ready for implementation.
+
+```yaml
+PlanUpdate:
+  boundary: 'Phase 3 / Step 10.2 / verification-gap patch'
+  status: '[PATCHED]'
+  what_changed:
+    - 'Updated 10.2-fix-sprite-facing-sort files_to_change, ACs, and notes (gaps 1–5)'
+    - 'Updated 10.2-fix-walk-anim-rendercap files_to_change, ACs, and notes (gaps 6–11)'
+    - 'Updated 10.2-fix-collision-sync files_to_change, ACs, and notes (gaps 12–14)'
+    - 'Updated 10.2-fix-bolt-ai-spawn files_to_change, ACs, and notes (gaps 15–23)'
+    - 'Expanded step-level slice-advancement changed-files lists'
+  evidence:
+    - 'slice-advancement: plan-sync ✓, step-packet ✓, plan-slice-quality ✓, plan-command-lint ✓, shared-validation ✓, specialist-review ✓; code-coverage ✗ expected pre-implementation'
+    - 'validate-plan-phase-packets: 12 pre-existing errors in other steps/phases; no Step 10.2 regressions'
+    - 'stale-wip-plans: pass'
+    - 'npm run lint: exit 0'
+  removals: []
+  next_boundary: 'Step 10.2 — implement 10.2-fix-sprite-facing-sort (04-implementing)'
+```
+
 **Step 09 planning validation (after slicing):**
 
 - `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=Step 09 --args.changed-files=plans/Neon_Shooter_NGE_Demo.plans.md`
@@ -518,10 +579,30 @@ Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing
 {
   "pass": true,
   "sub_gates": [
-    { "name": "plan-sync", "pass": true, "fixHint": "All WIP plans are correctly registered in README and Roadmap.", "gate_error": false },
-    { "name": "step-packet", "pass": true, "fixHint": "All active WIP phase/step packets conform to the new format.", "gate_error": false },
-    { "name": "plan-slice-quality", "pass": true, "fixHint": "All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.", "gate_error": false },
-    { "name": "plan-command-lint", "pass": true, "fixHint": "Verify the plan path: plans/orchestration-fixes.plans.md", "gate_error": false }
+    {
+      "name": "plan-sync",
+      "pass": true,
+      "fixHint": "All WIP plans are correctly registered in README and Roadmap.",
+      "gate_error": false
+    },
+    {
+      "name": "step-packet",
+      "pass": true,
+      "fixHint": "All active WIP phase/step packets conform to the new format.",
+      "gate_error": false
+    },
+    {
+      "name": "plan-slice-quality",
+      "pass": true,
+      "fixHint": "All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.",
+      "gate_error": false
+    },
+    {
+      "name": "plan-command-lint",
+      "pass": true,
+      "fixHint": "Verify the plan path: plans/orchestration-fixes.plans.md",
+      "gate_error": false
+    }
   ],
   "evidence": {
     "gate": "slice-advancement",
@@ -586,10 +667,30 @@ Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing
 {
   "pass": true,
   "sub_gates": [
-    { "name": "plan-sync", "pass": true, "fixHint": "All WIP plans are correctly registered in README and Roadmap.", "gate_error": false },
-    { "name": "step-packet", "pass": true, "fixHint": "All active WIP phase/step packets conform to the new format.", "gate_error": false },
-    { "name": "plan-slice-quality", "pass": true, "fixHint": "All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.", "gate_error": false },
-    { "name": "plan-command-lint", "pass": true, "fixHint": "Verify the plan path: plans/orchestration-fixes.plans.md", "gate_error": false }
+    {
+      "name": "plan-sync",
+      "pass": true,
+      "fixHint": "All WIP plans are correctly registered in README and Roadmap.",
+      "gate_error": false
+    },
+    {
+      "name": "step-packet",
+      "pass": true,
+      "fixHint": "All active WIP phase/step packets conform to the new format.",
+      "gate_error": false
+    },
+    {
+      "name": "plan-slice-quality",
+      "pass": true,
+      "fixHint": "All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.",
+      "gate_error": false
+    },
+    {
+      "name": "plan-command-lint",
+      "pass": true,
+      "fixHint": "Verify the plan path: plans/orchestration-fixes.plans.md",
+      "gate_error": false
+    }
   ],
   "evidence": {
     "gate": "slice-advancement",
@@ -597,7 +698,12 @@ Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing
     "sliceId": "10-fix-sprite-composite",
     "severity": "TRIVIAL",
     "specialistCount": 0,
-    "gatesRun": ["plan-sync", "step-packet", "plan-slice-quality", "plan-command-lint"],
+    "gatesRun": [
+      "plan-sync",
+      "step-packet",
+      "plan-slice-quality",
+      "plan-command-lint"
+    ],
     "gateCount": 4,
     "failedGates": [],
     "erroredGates": []
@@ -716,13 +822,48 @@ Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing
 {
   "pass": false,
   "sub_gates": [
-    { "name": "plan-sync", "pass": true, "fixHint": "All WIP plans are correctly registered in README and Roadmap.", "gate_error": false },
-    { "name": "step-packet", "pass": true, "fixHint": "All active WIP phase/step packets conform to the new format.", "gate_error": false },
-    { "name": "plan-slice-quality", "pass": true, "fixHint": "All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.", "gate_error": false },
-    { "name": "plan-command-lint", "pass": true, "fixHint": "Verify the plan path: plans/orchestration-fixes.plans.md", "gate_error": false },
-    { "name": "shared-validation", "pass": true, "fixHint": null, "gate_error": false },
-    { "name": "code-coverage", "pass": false, "fixHint": "Missing from coverage summary: examples/neatenstein/browser-entry/browser-entry.ts. Run the test suite with coverage. Files below 100% coverage: examples/neatenstein/browser-entry/renderer/framebuffer.ts, examples/neatenstein/browser-entry/worker/display.worker.ts, examples/neatenstein/browser-entry/browser-entry.ts. Add focused unit tests until lines/statements/functions/branches are all 100%.", "gate_error": false },
-    { "name": "specialist-review", "pass": true, "fixHint": "Specialist review evidence confirmed.", "gate_error": false }
+    {
+      "name": "plan-sync",
+      "pass": true,
+      "fixHint": "All WIP plans are correctly registered in README and Roadmap.",
+      "gate_error": false
+    },
+    {
+      "name": "step-packet",
+      "pass": true,
+      "fixHint": "All active WIP phase/step packets conform to the new format.",
+      "gate_error": false
+    },
+    {
+      "name": "plan-slice-quality",
+      "pass": true,
+      "fixHint": "All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.",
+      "gate_error": false
+    },
+    {
+      "name": "plan-command-lint",
+      "pass": true,
+      "fixHint": "Verify the plan path: plans/orchestration-fixes.plans.md",
+      "gate_error": false
+    },
+    {
+      "name": "shared-validation",
+      "pass": true,
+      "fixHint": null,
+      "gate_error": false
+    },
+    {
+      "name": "code-coverage",
+      "pass": false,
+      "fixHint": "Missing from coverage summary: examples/neatenstein/browser-entry/browser-entry.ts. Run the test suite with coverage. Files below 100% coverage: examples/neatenstein/browser-entry/renderer/framebuffer.ts, examples/neatenstein/browser-entry/worker/display.worker.ts, examples/neatenstein/browser-entry/browser-entry.ts. Add focused unit tests until lines/statements/functions/branches are all 100%.",
+      "gate_error": false
+    },
+    {
+      "name": "specialist-review",
+      "pass": true,
+      "fixHint": "Specialist review evidence confirmed.",
+      "gate_error": false
+    }
   ],
   "evidence": {
     "gate": "slice-advancement",
@@ -730,7 +871,15 @@ Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing
     "sliceId": "Step 10 fix",
     "severity": "FULL",
     "specialistCount": 1,
-    "gatesRun": ["plan-sync", "step-packet", "plan-slice-quality", "plan-command-lint", "shared-validation", "code-coverage", "specialist-review"],
+    "gatesRun": [
+      "plan-sync",
+      "step-packet",
+      "plan-slice-quality",
+      "plan-command-lint",
+      "shared-validation",
+      "code-coverage",
+      "specialist-review"
+    ],
     "gateCount": 7,
     "failedGates": [null]
   },
@@ -767,13 +916,48 @@ Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing
 {
   "pass": false,
   "sub_gates": [
-    { "name": "plan-sync", "pass": true, "fixHint": "All WIP plans are correctly registered in README and Roadmap.", "gate_error": false },
-    { "name": "step-packet", "pass": true, "fixHint": "All active WIP phase/step packets conform to the new format.", "gate_error": false },
-    { "name": "plan-slice-quality", "pass": true, "fixHint": "All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.", "gate_error": false },
-    { "name": "plan-command-lint", "pass": true, "fixHint": "Verify the plan path: plans/orchestration-fixes.plans.md", "gate_error": false },
-    { "name": "shared-validation", "pass": true, "fixHint": null, "gate_error": false },
-    { "name": "code-coverage", "pass": false, "fixHint": "Missing from coverage summary: examples/neatenstein/scripts/enemy-controller.ts, examples/neatenstein/browser-entry/host/game/constants.ts, examples/neatenstein/browser-entry/host/game/movement.ts, examples/neatenstein/browser-entry/renderer/sprites.ts. Run the test suite with coverage. Files below 100% coverage: examples/neatenstein/scripts/enemy-controller.ts, examples/neatenstein/browser-entry/host/game/constants.ts, examples/neatenstein/browser-entry/host/game/movement.ts, examples/neatenstein/browser-entry/renderer/sprites.ts. Add focused unit tests until lines/statements/functions/branches are all 100%.", "gate_error": false },
-    { "name": "specialist-review", "pass": true, "fixHint": "Specialist review evidence confirmed.", "gate_error": false }
+    {
+      "name": "plan-sync",
+      "pass": true,
+      "fixHint": "All WIP plans are correctly registered in README and Roadmap.",
+      "gate_error": false
+    },
+    {
+      "name": "step-packet",
+      "pass": true,
+      "fixHint": "All active WIP phase/step packets conform to the new format.",
+      "gate_error": false
+    },
+    {
+      "name": "plan-slice-quality",
+      "pass": true,
+      "fixHint": "All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.",
+      "gate_error": false
+    },
+    {
+      "name": "plan-command-lint",
+      "pass": true,
+      "fixHint": "Verify the plan path: plans/orchestration-fixes.plans.md",
+      "gate_error": false
+    },
+    {
+      "name": "shared-validation",
+      "pass": true,
+      "fixHint": null,
+      "gate_error": false
+    },
+    {
+      "name": "code-coverage",
+      "pass": false,
+      "fixHint": "Missing from coverage summary: examples/neatenstein/scripts/enemy-controller.ts, examples/neatenstein/browser-entry/host/game/constants.ts, examples/neatenstein/browser-entry/host/game/movement.ts, examples/neatenstein/browser-entry/renderer/sprites.ts. Run the test suite with coverage. Files below 100% coverage: examples/neatenstein/scripts/enemy-controller.ts, examples/neatenstein/browser-entry/host/game/constants.ts, examples/neatenstein/browser-entry/host/game/movement.ts, examples/neatenstein/browser-entry/renderer/sprites.ts. Add focused unit tests until lines/statements/functions/branches are all 100%.",
+      "gate_error": false
+    },
+    {
+      "name": "specialist-review",
+      "pass": true,
+      "fixHint": "Specialist review evidence confirmed.",
+      "gate_error": false
+    }
   ],
   "evidence": {
     "gate": "slice-advancement",
@@ -781,7 +965,15 @@ Step 07 and Step 08 detailed validation evidence, fix packets, and green-testing
     "sliceId": "Step 10 fix",
     "severity": "FULL",
     "specialistCount": 1,
-    "gatesRun": ["plan-sync", "step-packet", "plan-slice-quality", "plan-command-lint", "shared-validation", "code-coverage", "specialist-review"],
+    "gatesRun": [
+      "plan-sync",
+      "step-packet",
+      "plan-slice-quality",
+      "plan-command-lint",
+      "shared-validation",
+      "code-coverage",
+      "specialist-review"
+    ],
     "gateCount": 7,
     "failedGates": [null]
   },
@@ -976,10 +1168,11 @@ Known worktree cautions: The approved reference art files `examples/neatenstein/
 - Step 07 — Wire enemies into live renderer — [DONE]; all five slices (`07-red-renderer`, `07-renderer-bridge`, `07-enemy-controller`, `07-enemy-render`, `07-wave-loop`) are [DONE] and green validated. Full step packet and validation evidence are compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3 Step 07 final compression.
 - Step 08 — Canvas sizing fix: fixed 480px height with aspect-ratio width — [DONE]; full step packet, acceptance criteria, slice details, and validation evidence are compressed to `plans/Neon_Shooter_NGE_Demo.logs.md` §Phase 3 Step 08.
 - Step 09 — Bugfix: canvas horizontal stretch + missing enemy sprites — [DONE]; all 5 slices (`09-canvas-backing`, `09-render-state-enemies`, `09-worker-controller`, `09-worker-sprite-pass`, `09-green`) are [DONE] and green validated; fix-packet-09-green-iteration-2 (canvas resize after transfer) visible-browser smoke on ultra-wide passed.
-- Step 10 — Replace enemy sprite renderer with encoded `examples/neatenstein/robot-sprite-data.js` set, restore walls/floor/ceiling raycast scene, correct projection, eliminate full-canvas getImageData/putImageData — [WIP] and reopened due to false-close; fix slices `10-fix-walls-fog`, `10-fix-floorceiling-neon`, `10-fix-perf-throttle`, `10-green-visiblebrowser` are [PLANNED]; previous implementation slices `10-impl-encoded-sprite`, `10-impl-projection`, `10-impl-framebuffer` and green slice `10-green` are archived in logs.
-- Step 11 — Enhance cannon overlay: fix horizontal stretch, add detail, voxel/3D look via sprite projection — [PLANNED]; red slice `11-red-gun` is [DONE]; implementation slices `11-aspect-detail` / `11-voxel-sprite` are [DONE]; green slice `11-green` is [PLANNED] (Step 10 fix takes priority).
+- Step 10 — Replace enemy sprite renderer with encoded `examples/neatenstein/robot-sprite-data.js` set, restore walls/floor/ceiling raycast scene, correct projection, eliminate full-canvas getImageData/putImageData — [WIP]; all fix slices (10-fix-walls-fog, 10-fix-floorceiling-neon, 10-fix-perf-throttle, 10-fix-collision-walk, 10-fix-sprite-composite, 10-fix-worker-wiring) are [DONE]; 10-green-visiblebrowser superseded by Step 10.2.
+- Step 10.2 — FIX: 8 runtime issues from manual validation of bundle v=20260802-7 (collision sync, walk jump, enemy facing, bolt collision, depth sort, render cap, AI behavior, spawn positions) — [PLANNED]; 5 slices (10.2-fix-sprite-facing-sort, 10.2-fix-walk-anim-rendercap, 10.2-fix-collision-sync, 10.2-fix-bolt-ai-spawn, 10.2-green-visiblebrowser); research caches in `examples/neatenstein/shooter-research-cache-{1..8}.md`.
+- Step 11 — Enhance cannon overlay: fix horizontal stretch, add detail, voxel/3D look via sprite projection — [PLANNED]; red slice `11-red-gun` is [DONE]; implementation slices `11-aspect-detail` / `11-voxel-sprite` are [DONE]; green slice `11-green` is [PLANNED] (Step 10.2 fix takes priority).
 
-**Active frontier:** Phase 3 Step 10 — wall/floor/ceiling visibility + perf fix [WIP] with fix slices `10-fix-walls-fog`, `10-fix-floorceiling-neon`, `10-fix-perf-throttle`, `10-green-visiblebrowser` [PLANNED]; Step 11 — cannon overlay enhancement [PLANNED]; Step 09 — canvas stretch + missing enemy sprites [DONE] with fix-packet-09-green-iteration-2 green validated on ultra-wide; Steps 01–08 are [DONE].
+**Active frontier:** Phase 3 Step 10.2 — 8 runtime issues from manual validation [PLANNED] with 5 slices (10.2-fix-sprite-facing-sort, 10.2-fix-walk-anim-rendercap, 10.2-fix-collision-sync, 10.2-fix-bolt-ai-spawn, 10.2-green-visiblebrowser); Step 10 fix slices all [DONE], 10-green-visiblebrowser superseded; Step 11 — cannon overlay enhancement [PLANNED]; Step 09 — canvas stretch + missing enemy sprites [DONE] with fix-packet-09-green-iteration-2 green validated on ultra-wide; Steps 01–08 are [DONE].
 
 Claim: 04-implementing @ 2026-01-20T00:00:00Z
 
@@ -1513,7 +1706,7 @@ auto_expand: true
 mode: 'fresh-session'
 source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
 copy_paste: true
-next_step: 'Step 11 — Enhance cannon overlay [PLANNED]'
+next_step: 'Step 10.2 — 8 runtime issues from manual validation [PLANNED]'
 owner: 'visualizer'
 reviewer: 'game-director'
 skills:
@@ -1650,6 +1843,312 @@ slices:
       - '10-fix-sprite-composite'
     next_slice: null
 ```
+
+#### Step 10.2: FIX — 8 runtime issues from manual validation of bundle v=20260802-7 [PLANNED]
+
+**Reason for Step 10.2:** The user performed manual visible-browser validation of bundle v=20260802-7 (after Step 10 fix slices were implemented) and identified 8 runtime issues. Detailed root-cause analysis for each issue is in `examples/neatenstein/shooter-research-cache-{1..8}.md`.
+
+- **I1 — collision inconsistency (research-cache-1):** `isPositionBlocked` (movement.ts:268-315) tests the hero against `gameState.enemies` positions, but those positions are never updated after spawning — the actual moving enemy positions live in worker-side `enemyControllerState`. Result: hero walks through enemies. Secondary: dead enemies' spawn points remain permanent invisible obstacles.
+- **I2 — walk animation vertical jump (research-cache-2):** `generate-robot-sprites.py` assigns `y_off = -1` to both `walk1` and `walk2` poses, baking a 1-logical-pixel (4-screen-pixel at 4× scale) whole-body upward jump every time the animation switches from `stand` to a walk frame. The renderer does NOT add any vertical offset — the jump is entirely in the generated sprite data.
+- **I3 — enemy perspective from all angles (research-cache-3):** Every enemy's `facing` (yawRad) is forced to point directly at the player (`enemy-controller.ts:424-429`), which cancels out the relative-yaw math in `resolveNeatensteinEnemyFrame` (`sprites.ts:635-640`). `relativeYaw ≈ 0` for every enemy every frame → `yawIndex 0` → `front` atlas frame for ALL enemies regardless of screen position. Side enemies look "paper-thin".
+- **I4 — plasma bolt collision (research-cache-4):** Plasma bolts do NOT collide with enemies while traveling. Enemy hits are an instant hitscan-style ray test performed ONCE at fire time in `fireBolt()` (combat.ts). The traveling `BoltState` projectile is moved every tick by `updateBolts()` (tick.ts:323-373) without ever checking enemies again. Bolts visually pass through enemies.
+- **I5 — depth sorting: enemy behind enemy (research-cache-5):** The sprite pass does NOT sort enemies by distance and never updates the z-buffer with sprite depths. Sprites are rendered in `activeEnemySprites` array order, so a farther enemy drawn after a nearer one overwrites its pixels.
+- **I6 — render distance cap at 30 cells (research-cache-6):** The raycasting DDA loop runs `while(true)` with NO distance limit (`raycast.ts:159-191`). It only stops when hitting a wall cell. Open corridors can step 50-60 cells. The fog constant `NEATENSTEIN_MAX_VIEW_DIST = 140` is a soft fade, not a hard cap. Floor/ceiling already cap at 30 cells.
+- **I7 — enemy AI stopping and spawn logic (research-cache-7):** (a) `ENEMY_CONTROLLER_STOP_DISTANCE_CELLS = 0.3` causes every living enemy to stop walking once within 0.3 cells of player — groups freeze at stand-off distance. (b) Each enemy gets only 3 hitscan shots; after 3rd shot, enemy enters death animation even at full health — makes enemies appear to stop and vanish. (c) Dead enemies never removed from `GameState.enemies` — once 8 ever spawned, spawner thinks arena is full forever. (d) `advanceWave` exists but is NOT called by the live game loop.
+- **I8 — enemy spawn positions at map edges (research-cache-8):** All enemies spawn in an annulus around the map center (radius 8 cells from (60.5, 60.5) — same place the player starts). Should spawn at 8 map edges for proper gameplay distribution.
+
+**Scope note:** These 8 issues are grouped into 4 implementation slices + 1 green slice. Slices are sequential because `display.worker.ts` is touched by slices 1, 2, and 3.
+
+**Research artifacts:**
+- `examples/neatenstein/shooter-research-cache-1.md` — collision inconsistency (I1)
+- `examples/neatenstein/shooter-research-cache-2.md` — walk animation vertical jump (I2)
+- `examples/neatenstein/shooter-research-cache-3.md` — enemy perspective from all angles (I3)
+- `examples/neatenstein/shooter-research-cache-4.md` — plasma bolt collision (I4)
+- `examples/neatenstein/shooter-research-cache-5.md` — depth sorting (I5)
+- `examples/neatenstein/shooter-research-cache-6.md` — render distance cap (I6)
+- `examples/neatenstein/shooter-research-cache-7.md` — enemy AI stopping and spawn logic (I7)
+- `examples/neatenstein/shooter-research-cache-8.md` — enemy spawn positions (I8)
+
+**Step 10.2 packet:**
+
+```yaml
+phase: 3
+step: 10.2
+title: 'FIX — 8 runtime issues from manual validation of bundle v=20260802-7'
+status: '[PLANNED]'
+goal: 'implementing'
+tdd_sequence: 'red-green'
+expansion: 'slices'
+auto_expand: true
+mode: 'fresh-session'
+source_of_truth: 'plans/Neon_Shooter_NGE_Demo.plans.md'
+copy_paste: true
+next_step: 'Step 11 — Enhance cannon overlay [PLANNED]'
+owner: 'visualizer'
+reviewer: 'game-director'
+skills:
+  - 'implementation-standards'
+  - 'frontend-integration'
+  - 'browser-runtime'
+validation:
+  - 'neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=10.2-fix-sprite-facing-sort --args.changed-files=examples/neatenstein/browser-entry/renderer/sprites.ts,examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/renderer/sprites.test.ts,examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  - 'neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=10.2-fix-walk-anim-rendercap --args.changed-files=examples/neatenstein/generate-robot-sprites.py,examples/neatenstein/robot-sprite-data.js,examples/neatenstein/robot-sprite-data.json,examples/neatenstein/browser-entry/renderer/framebuffer.ts,examples/neatenstein/browser-entry/renderer/raycast.ts,examples/neatenstein/browser-entry/renderer/walls.ts,examples/neatenstein/browser-entry/renderer/sprites.ts,examples/neatenstein/browser-entry/worker/display.worker.ts'
+  - 'neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=10.2-fix-collision-sync --args.changed-files=examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/host/game/movement.ts,examples/neatenstein/browser-entry/host/game/collision.ts,examples/neatenstein/browser-entry/host/game/types.ts,examples/neatenstein/browser-entry/host/game/waves.ts,examples/neatenstein/browser-entry/host/game/combat.ts'
+  - 'neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=10.2-fix-bolt-ai-spawn --args.changed-files=examples/neatenstein/browser-entry/host/game/tick.ts,examples/neatenstein/browser-entry/host/game/combat.ts,examples/neatenstein/scripts/enemy-controller.ts,examples/neatenstein/browser-entry/host/game/types.ts,examples/neatenstein/browser-entry/host/game/waves.ts,examples/neatenstein/browser-entry/host/game/episode.ts,examples/neatenstein/browser-entry/host/game/constants.ts,examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/renderer/bolt-render.ts,examples/neatenstein/scripts/enemy-controller.test.ts,examples/neatenstein/browser-entry/host/game/waves.test.ts,examples/neatenstein/browser-entry/host/game/episode.test.ts'
+  - 'neataptic-gate-mcp:run_gate_check --gate=stale-wip-plans --json'
+  - 'npm run lint'
+acceptance_criteria:
+  - id: AC-10.2-001
+    text: 'Hero cannot walk through living enemies; dead enemies do not block movement'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/host/game/movement'
+  - id: AC-10.2-002
+    text: 'Walk animation does not produce a whole-body vertical jump between stand and walk frames'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/renderer/sprites'
+  - id: AC-10.2-003
+    text: 'Enemies at different screen positions show different 8-direction atlas frames from hero perspective (front for ahead, side for perpendicular, back for behind)'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/renderer/sprites'
+  - id: AC-10.2-004
+    text: 'Plasma bolts collide with enemies while traveling and stop at the impact point'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/host/game/tick'
+  - id: AC-10.2-005
+    text: 'Farther enemies do not overwrite nearer enemies in the rendered frame (painter sort)'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/worker/display.worker'
+  - id: AC-10.2-006
+    text: 'Raycasting DDA loop stops at 30 cells hard cap; columns beyond cap are background-colored'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/renderer/raycast'
+  - id: AC-10.2-007
+    text: 'Enemies chase the player until killed; enemies do not die from ammo depletion; dead enemies are removed from gameState; next wave spawns only after all alive enemies are cleared'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/scripts/enemy-controller'
+  - id: AC-10.2-008
+    text: 'Enemies spawn at 8 map edges (not center annulus); one enemy per edge direction'
+    validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/host/game/waves'
+  - id: AC-10.2-009
+    text: 'All touched source files build, lint, and have 100% coverage on changed files'
+    validation: 'npx tsc -p tsconfig.json --noEmit; npm run lint; npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein'
+constitution_check:
+  - 'principle-4-small-slices'
+  - 'principle-5-unique-ids'
+slices:
+  - slice_id: '10.2-fix-sprite-facing-sort'
+    title: 'Fix 8-way enemy facing (hero perspective) + sprite depth sorting'
+    status: '[PLANNED]'
+    goal: 'implementing'
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatenstein/browser-entry/renderer/sprites.ts'
+      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
+      - 'examples/neatenstein/browser-entry/renderer/sprites.test.ts'
+      - 'examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    acceptance_criteria:
+      - id: AC-10.2a-001
+        text: 'Enemies at different screen positions show different 8-direction atlas frames from hero perspective — front for ahead, side for perpendicular, back for behind'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/renderer/sprites'
+      - id: AC-10.2a-002
+        text: 'Farther enemies do not overwrite nearer enemies — sprites sorted far-to-near before render'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/worker/display.worker'
+      - id: AC-10.2a-003
+        text: '100% coverage on changed src files'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein/browser-entry/renderer/sprites'
+      - id: AC-10.2a-004
+        text: 'Ultra-wide aspect-ratio regression test passes — 8-way facing and depth sort remain correct at 21:9 or wider'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/sprites|display.worker'
+      - id: AC-10.2a-005
+        text: 'Hero-perspective bearing test cases cover front, side, and back at multiple yaw offsets'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/sprites'
+    parallelizable: false
+    dependencies: []
+    next_slice: '10.2-fix-walk-anim-rendercap'
+    notes: 'Fixes I3 (facing) + I5 (depth sort). In sprites.ts resolveNeatensteinEnemyFrame (~:635-640), replace enemy-facing-relative yaw with hero-perspective view angle: cameraYaw = atan2(camera.dirY, camera.dirX); viewAngle = atan2(sprite.worldY - camera.posY, sprite.worldX - camera.posX) - cameraYaw; yawIndex = yawIndexFromRelativeYaw(-viewAngle). Relax the `facing` guard at sprites.ts:618-624 so it does not force all enemies to point at the player; the hero-perspective view angle now drives frame selection. In display.worker.ts sprite render loop (~:580-625), sort activeEnemySprites by perpDist descending before drawing; optionally write zBuffer[column] = projection.perpDist after drawing each sprite column to prevent distant wall columns from overwriting sprites. Add integration regression tests in display.worker.test.ts covering perspective and depth sorting. See research-cache-3 and research-cache-5.'
+  - slice_id: '10.2-fix-walk-anim-rendercap'
+    title: 'Fix walk animation vertical jump + add render distance hard cap'
+    status: '[PLANNED]'
+    goal: 'implementing'
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatenstein/generate-robot-sprites.py'
+      - 'examples/neatenstein/robot-sprite-data.js'
+      - 'examples/neatenstein/robot-sprite-data.json'
+      - 'examples/neatenstein/browser-entry/renderer/framebuffer.ts'
+      - 'examples/neatenstein/browser-entry/renderer/raycast.ts'
+      - 'examples/neatenstein/browser-entry/renderer/walls.ts'
+      - 'examples/neatenstein/browser-entry/renderer/sprites.ts'
+      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
+    acceptance_criteria:
+      - id: AC-10.2b-001
+        text: 'Walk frames (walk1, walk2) have y_off = 0, matching stand/shoot — no whole-body vertical jump'
+        validation: 'node -e "const d=require(\"./examples/neatenstein/robot-sprite-data.js\"); console.log(\"data loaded\")"'
+      - id: AC-10.2b-002
+        text: 'Raycasting DDA loop stops at 30-cell hard cap; columns beyond cap return perpWallDist=Infinity'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/renderer/raycast'
+      - id: AC-10.2b-003
+        text: '100% coverage on changed src files'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein/browser-entry/renderer/raycast'
+      - id: AC-10.2b-004
+        text: 'Worker skips wall drawing and sets zBuffer[column] = Infinity when perpWallDist >= cap'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/worker/display.worker'
+      - id: AC-10.2b-005
+        text: 'Far-wall columns are treated as empty/no-hit in walls.ts'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/walls'
+      - id: AC-10.2b-006
+        text: 'Sprites beyond 30 cells are culled in projectNeatensteinSprite'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/renderer/sprites'
+    parallelizable: false
+    dependencies:
+      - '10.2-fix-sprite-facing-sort'
+    next_slice: '10.2-fix-collision-sync'
+    notes: 'Fixes I2 (walk jump) + I6 (render cap). In generate-robot-sprites.py _pose_params, change walk1 y_off from -1 to 0 and walk2 y_off from -1 to 0; regenerate robot-sprite-data.js and robot-sprite-data.json. In framebuffer.ts add NEATENSTEIN_RENDER_DISTANCE_CAP = 30. In raycast.ts DDA loop, add max-distance guard returning perpWallDist=Infinity when cap exceeded. In walls.ts far-wall columns should be treated as empty/no-hit. In sprites.ts projectNeatensteinSprite adds perpDist >= 30 far-clip to cull far sprites. In display.worker.ts skip wall drawing when perpWallDist >= cap and set zBuffer[column] = Infinity for capped columns. Consider lowering NEATENSTEIN_MAX_VIEW_DIST from 140 to 30 to align the soft fade with the hard cap; implementer evaluates visual trade-off and records decision. See research-cache-2 and research-cache-6. File count >3 justified: sprite data regeneration and render-distance cap touch independent visual subsystems (sprite atlas, raycast, wall column, sprite projection, worker z-buffer); splitting would create sub-1h slices with cross-file interface mismatches.'
+  - slice_id: '10.2-fix-collision-sync'
+    title: 'Fix hero-enemy collision: sync controller positions to gameState + skip dead enemies'
+    status: '[PLANNED]'
+    goal: 'implementing'
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
+      - 'examples/neatenstein/browser-entry/host/game/movement.ts'
+      - 'examples/neatenstein/browser-entry/host/game/collision.ts'
+      - 'examples/neatenstein/browser-entry/host/game/types.ts'
+      - 'examples/neatenstein/browser-entry/host/game/waves.ts'
+      - 'examples/neatenstein/browser-entry/host/game/combat.ts'
+    acceptance_criteria:
+      - id: AC-10.2c-001
+        text: 'Hero cannot walk through living enemies — isPositionBlocked uses synced controller positions'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/host/game/movement'
+      - id: AC-10.2c-002
+        text: 'Dead/inactive enemies do not block movement — isPositionBlocked skips health<=0 or active===false'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/host/game/movement'
+      - id: AC-10.2c-003
+        text: '100% coverage on changed src files'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein/browser-entry/host/game/movement'
+      - id: AC-10.2c-004
+        text: 'fireBolt and resolveContactDamage skip inactive/dead enemies'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat'
+    parallelizable: false
+    dependencies:
+      - '10.2-fix-walk-anim-rendercap'
+    next_slice: '10.2-fix-bolt-ai-spawn'
+    notes: 'Fixes I1 (collision sync). In display.worker.ts, reorder simState update so updateEnemyController runs before gameTick to ensure same-tick positions are available. After updateEnemyController, copy each controlled enemy position/health/active back to corresponding gameState.enemies entry. In types.ts add optional active?: boolean to EnemyState. In waves.ts set active: true on spawn. In movement.ts isPositionBlocked skip enemies where active===false or health<=0. In collision.ts resolveContactDamage skip inactive/dead enemies. In combat.ts skip inactive enemies in fireBolt and contact damage. File count >3 justified: collision sync requires coordinated changes across game state types, movement, collision, combat, and worker — these files form a single behavioral contract that cannot be split without breaking the interface.'
+  - slice_id: '10.2-fix-bolt-ai-spawn'
+    title: 'Fix bolt-enemy collision + enemy AI behavior + edge-based spawn positions'
+    status: '[PLANNED]'
+    goal: 'implementing'
+    estimate_hours: 4
+    files_to_change:
+      - 'examples/neatenstein/browser-entry/host/game/tick.ts'
+      - 'examples/neatenstein/browser-entry/host/game/combat.ts'
+      - 'examples/neatenstein/scripts/enemy-controller.ts'
+      - 'examples/neatenstein/browser-entry/host/game/types.ts'
+      - 'examples/neatenstein/browser-entry/host/game/waves.ts'
+      - 'examples/neatenstein/browser-entry/host/game/episode.ts'
+      - 'examples/neatenstein/browser-entry/host/game/constants.ts'
+      - 'examples/neatenstein/browser-entry/worker/display.worker.ts'
+      - 'examples/neatenstein/browser-entry/renderer/bolt-render.ts'
+      - 'examples/neatenstein/scripts/enemy-controller.test.ts'
+      - 'examples/neatenstein/browser-entry/host/game/waves.test.ts'
+      - 'examples/neatenstein/browser-entry/host/game/episode.test.ts'
+    acceptance_criteria:
+      - id: AC-10.2d-001
+        text: 'Plasma bolts collide with enemies while traveling using swept segment-vs-circle test and stop at impact point'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/host/game/tick'
+      - id: AC-10.2d-002
+        text: 'Enemies chase player until killed — stop distance removed; enemies do not die from ammo depletion'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/scripts/enemy-controller'
+      - id: AC-10.2d-003
+        text: 'Dead enemies removed from gameState; next wave spawns only after all alive enemies cleared'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/host/game/waves'
+      - id: AC-10.2d-004
+        text: 'Enemies spawn at 8 map edges (not center annulus); one per edge direction'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein/browser-entry/host/game/waves'
+      - id: AC-10.2d-005
+        text: '100% coverage on changed src files'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=examples/neatenstein/scripts/enemy-controller'
+      - id: AC-10.2d-006
+        text: 'Bolt collision radius matches enemy body radius and bolt is visually shortened to hit distance'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/combat|examples/neatenstein/browser-entry/renderer/bolt-render'
+      - id: AC-10.2d-007
+        text: 'Spawn logic falls back to a center-arena scan inward if all 8 edges are blocked'
+        validation: 'npx jest --config=jest.config.mjs --no-cache --testPathPatterns=examples/neatenstein/browser-entry/host/game/waves'
+    parallelizable: false
+    dependencies:
+      - '10.2-fix-collision-sync'
+    next_slice: '10.2-green-visiblebrowser'
+    notes: 'Fixes I4 (bolt collision) + I7 (AI/spawn logic) + I8 (spawn positions). In types.ts add hitEnemyIndex? and enemyHitDistance? fields to BoltState. In combat.ts fireBolt stores the nearest enemy index on the bolt and uses actual enemy collision radius instead of arbitrary hit radius. In tick.ts updateBolts, add continuous segment-vs-circle enemy collision; on hit, stop bolt at impact, apply damage, deactivate. In bolt-render.ts shorten the bolt visual at the hit distance. In enemy-controller.ts set ENEMY_CONTROLLER_STOP_DISTANCE_CELLS=0 or remove distance guard; remove ammo-depletion death trigger — enemies only die when health<=0. In waves.ts change spawnWaveTick to check alive enemies before spawning; spawn at 8 map edges via findEdgeSpawnCell; add scan-inward fallback to center arena if all edges are blocked; remove dead enemies after de-rez. In episode.ts wire advanceWave when previous batch cleared; remove time-limit terminal condition; describe MlpEnemyPopulation plumbing from worker to episode/wave system (advanceWave requires a population argument threaded from worker simState). In display.worker.ts wire advanceWave call. In constants.ts add batch size / edge spawn constants. Update tests in enemy-controller.test.ts, waves.test.ts, and episode.test.ts. File count >3 justified: bolt collision, AI behavior, and spawn logic are deeply intertwined plus new BoltState fields and bolt-render/visual shortening; splitting would create slices <1h with cross-file interface mismatches. See research-cache-4, research-cache-7, research-cache-8.'
+  - slice_id: '10.2-green-visiblebrowser'
+    title: 'Green validation — visible-browser smoke for all 8 fixes'
+    status: '[PLANNED]'
+    goal: 'green-testing'
+    estimate_hours: 2
+    files_to_change: []
+    acceptance_criteria:
+      - id: AC-10.2e-001
+        text: 'Visible-browser screenshot shows enemies at different 8-direction poses from hero perspective (not all front)'
+        validation: 'browser-harness-specialist / browser-ui-specialist visible-foreground smoke with 8-way facing check'
+      - id: AC-10.2e-002
+        text: 'Visible-browser screenshot shows no whole-body vertical jump during walk animation'
+        validation: 'browser-harness-specialist visible-foreground smoke with walk-cycle check'
+      - id: AC-10.2e-003
+        text: 'Visible-browser screenshot shows bolt stopping at enemy impact point (not passing through)'
+        validation: 'browser-harness-specialist visible-foreground smoke with bolt collision check'
+      - id: AC-10.2e-004
+        text: 'Visible-browser screenshot shows nearer enemies occluding farther enemies (depth sort correct)'
+        validation: 'browser-harness-specialist visible-foreground smoke with depth-sort check'
+      - id: AC-10.2e-005
+        text: 'Visible-browser screenshot shows enemies spawning at map edges (not center ring around hero)'
+        validation: 'browser-harness-specialist visible-foreground smoke with spawn-position check'
+      - id: AC-10.2e-006
+        text: 'Hero cannot walk through living enemies in the visible browser'
+        validation: 'browser-harness-specialist visible-foreground smoke with collision check'
+      - id: AC-10.2e-007
+        text: 'Enemies chase hero until killed; no enemies vanish from ammo depletion'
+        validation: 'browser-harness-specialist visible-foreground smoke with AI-behavior check'
+      - id: AC-10.2e-008
+        text: 'All touched source files build, lint, and pass targeted jest suites'
+        validation: 'npx tsc -p tsconfig.json --noEmit; npm run lint; npx jest --config=jest.config.mjs --no-cache --testPathPattern=examples/neatenstein'
+    parallelizable: false
+    dependencies:
+      - '10.2-fix-bolt-ai-spawn'
+    next_slice: null
+    notes: 'Green validation slice — no source changes. All validation is visible-foreground browser smoke via browser-harness-specialist / browser-ui-specialist. Must verify all 8 fixes are visually correct in a real visible browser window (not mock, not headless).'
+```
+
+<!-- plan-verification-gaps-10.2 -->
+## Plan Verification Gaps — Step 10.2 (from 4 specialist verification agents, all RED)
+
+All 4 verification agents returned RED. The following gaps must be patched into the Step 10.2 slices before implementation.
+
+### Gaps for Slice 10.2-fix-sprite-facing-sort (Issues 3 + 5)
+
+1. **Add `display.worker.test.ts` to `files_to_change`** — cache-3 and cache-5 both require an integration regression test in `display.worker.test.ts` for perspective and depth sorting. Currently only `sprites.test.ts` is listed.
+2. **Add explicit relaxation of the `facing` guard** — cache-3 notes that `sprites.ts:618-624` has a guard that may need relaxing for hero-perspective bearing cases. Mention this in slice notes.
+3. **Add ultra-wide regression test case** — cache-3 calls for an ultra-wide resolution regression test. Add an AC or note for this.
+4. **Add hero-perspective bearing test cases** — cache-3 calls for updated test cases covering hero-perspective bearing (front/side/back at various angles).
+5. **Add optional z-buffer hardening** — cache-5 mentions writing `zBuffer[column] = projection.perpDist` after drawing each sprite to prevent sprites from being overwritten by distant wall columns. Add as optional note.
+
+### Gaps for Slice 10.2-fix-walk-anim-rendercap (Issues 2 + 6)
+
+6. **Add `robot-sprite-data.json` to `files_to_change`** — the slice notes say "regenerate robot-sprite-data.js and robot-sprite-data.json" but only the `.js` file is listed.
+7. **Add `display.worker.ts` to `files_to_change`** — cache-6 requires the worker to skip wall drawing when `perpWallDist >= cap` and set `zBuffer[column] = Infinity` for capped columns.
+8. **Add `sprites.ts` to `files_to_change`** — cache-6 requires adding `perpDist >= 30` far-clip in `projectNeatensteinSprite` to cull far sprites.
+9. **Add `walls.ts` to `files_to_change`** — cache-6 says far-wall columns should be treated as empty/no-hit.
+10. **Add ACs for full render-distance contract** — current AC-10.2b-002 only checks the raycast guard. Add ACs for: (a) worker skips wall drawing when perpWallDist >= cap, (b) zBuffer set to Infinity for capped columns, (c) sprites beyond 30 cells are culled.
+11. **Consider lowering `NEATENSTEIN_MAX_VIEW_DIST`** from 140 to 30 to align the soft fade with the hard cap.
+
+### Gaps for Slice 10.2-fix-collision-sync (Issue 1)
+
+12. **Add `collision.ts` to `files_to_change`** — cache-1 lists it for `resolveContactDamage` updates (skip inactive enemies).
+13. **Add worker `simState` reorder** — cache-1 recommends reordering so `updateEnemyController` runs before `gameTick` to ensure same-tick positions. Add to slice notes.
+14. **Add AC for combat/contact damage skip** — no AC explicitly verifies that `fireBolt` and `resolveContactDamage` skip inactive/dead enemies. Add AC-10.2c-004.
+
+### Gaps for Slice 10.2-fix-bolt-ai-spawn (Issues 4 + 7 + 8)
+
+15. **Add `types.ts` to `files_to_change`** — cache-4 requires adding `hitEnemyIndex?` and `enemyHitDistance?` fields to `BoltState`.
+16. **Add `bolt-render.ts` to `files_to_change`** — cache-4 requires visual shortening of the bolt at the hit distance.
+17. **Add nearest-enemy storage on bolt** — cache-4 says `combat.ts` should store the nearest enemy index on the bolt. Add to notes.
+18. **Add ACs for bolt radius alignment and visual shortening** — AC-10.2d-001 covers swept collision but not radius alignment or visual shortening. Add AC-10.2d-006.
+19. **Add `display.worker.ts` to `files_to_change`** — cache-7 and cache-8 both list it for `advanceWave` wiring.
+20. **Add `host/waves.ts` to `files_to_change`** — `advanceWave` lives in `waves.ts` and requires `MlpEnemyPopulation` argument. No population plumbing is described. Add notes.
+21. **Add test files to `files_to_change`** — `enemy-controller.test.ts`, `waves.test.ts`, `episode.test.ts` need updates. Add to slice.
+22. **Add scan-inward fallback** — cache-8 mentions a center-arena fallback if an edge is fully blocked. Add to notes and AC.
+23. **Describe `MlpEnemyPopulation` plumbing** — `advanceWave` requires a population argument. The slice must describe how this is threaded from the worker to the episode/wave system.
 
 #### Step 11: Enhance cannon overlay — fix horizontal stretch, add detail, voxel/3D look via sprite projection [PLANNED]
 
@@ -1810,7 +2309,7 @@ slices:
 
 ### PlanUpdate for Step 11 implementation slices (11-aspect-detail, 11-voxel-sprite)
 
-```yaml
+````yaml
 PlanUpdate:
   slice_ids:
     - '11-aspect-detail'
@@ -1863,6 +2362,9 @@ PlanUpdate:
   changed_files:
     - 'examples/neatenstein/browser-entry/renderer/sprites.ts'
     - 'examples/neatenstein/scripts/enemy-controller.ts'
+  supporting_tests_added:
+    - 'examples/neatenstein/browser-entry/renderer/sprites.test.ts (walkTick walk cycle, shoot blink composite, resolveNeatensteinEnemySprite, team color palette, renderNeatensteinSprite with teamColor)'
+    - 'examples/neatenstein/scripts/enemy-controller.test.ts (ENEMY_CONTROLLER_SHOOT_BLINK_TICKS export, walkTick/shootBlinkTicks fields, enemy overlap separation, zero-distance fallback)'
   preflight:
     - 'npx tsc --noEmit -p tsconfig.json'
     - 'npm run lint'
@@ -1877,8 +2379,18 @@ PlanUpdate:
     - 'enemy-controller.ts: Added ENEMY_CONTROLLER_SHOOT_BLINK_TICKS=4 constant export; added walkTick:number and shootBlinkTicks:number to ControlledEnemy interface; updated createEnemyControllerState, previousOrDefault, updateControlledEnemy (walk tick increment when moved, shoot blink decrement+refresh), and both return blocks'
     - 'sprites.ts: Added walkTick/shootBlinkTicks/teamColor optional fields to NeatensteinSprite; added NEATENSTEIN_SPRITE_UPPER_BODY_SPLIT_ROW=35 and NEATENSTEIN_WALK_CYCLE_POSES constants; modified decodeRobotSpriteFrame to accept optional palette; added buildTeamColorPalette, resolveDecodedRobotSpriteFrameWithTeamColor, resolveCompositeShootWalkFrame with caches; rewrote resolveNeatensteinEnemyFrame for walkTick-based walk cycle + shoot blink compositing with backward-compat fallbacks; added resolveNeatensteinEnemySprite export; extended renderNeatensteinSprite with optional teamColor parameter'
   specialist_review:
-    agent: TBD
-    verdict: PENDING
+    agent: implementation-pattern-scout (glm-5.2:cloud)
+    verdict: APPROVED (after one-line fix: sprite.teamColor added as 6th arg to renderNeatensteinSprite in display.worker.ts)
+    observations_addressed:
+      - 'BLOCKING: renderNeatensteinSprite called in display.worker.ts without sprite.teamColor as 6th argument — palette swap never took effect at runtime. FIXED by 04-impl-worker-wiring follow-up.'
+    follow_up_slice: 10-fix-worker-wiring (idle agent write_agent fix, same context)
+    follow_up_evidence:
+      - 'display.worker.ts: added sprite.teamColor as 6th arg to renderNeatensteinSprite call'
+      - 'display.worker.test.ts: new regression test asserting teamColor is passed as call[5]'
+      - 'display.worker.test.ts: updated red-contract test for palette swap behavior (now works correctly)'
+      - 'tsc: OK, lint: OK, 48 tests PASS'
+      - 'Bundle rebuilt: docs/assets/neatenstein.bundle.js + .map, neatenstein.worker.js + .map'
+      - 'Cache-buster bumped to v=20260802-7 in index.html'
   tests_for_green:
     - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=sprites|enemy-controller|display.worker'
     - 'npm run lint'
@@ -1887,23 +2399,50 @@ PlanUpdate:
   rollback:
     - 'git checkout -- examples/neatenstein/browser-entry/renderer/sprites.ts'
     - 'git checkout -- examples/neatenstein/scripts/enemy-controller.ts'
-  next: 'Dispatch specialist review (determinism-reviewer for sim-tick walk cycle + blink timer), then hand off to 05-green-testing for full green validation matrix'
-```
+    - 'git checkout -- examples/neatenstein/browser-entry/renderer/sprites.test.ts'
+    - 'git checkout -- examples/neatenstein/scripts/enemy-controller.test.ts'
+  gates:
+    - 'slice-advancement (slice-id=10-fix-sprite-composite, changed-files=sprites.ts,enemy-controller.ts): PASS — 7/7 sub-gates, severity FULL'
+  next: 'AWAITING USER MANUAL VALIDATION. Bundle ready at v=20260802-7. Once user confirms walls/floor/ceiling/sprites/collision/walk-anim/shoot-blink/palette/FPS all working visually, dispatch 05-green-testing for 10-green-visiblebrowser visible-browser smoke validation.'
+````
 
 ### Validation evidence for 10-fix-sprite-composite
 
 - `npx tsc --noEmit -p tsconfig.json` → exit 0, tsc: OK
 - `npm run lint` → exit 0, lint: 0 issues
-- `npx prettier --check examples/neatenstein/browser-entry/renderer/sprites.ts examples/neatenstein/scripts/enemy-controller.ts` → exit 0, prettier: OK (after --write fix)
-- `npx jest --config=jest.config.mjs --no-cache examples/neatenstein/browser-entry/renderer/sprites.test.ts examples/neatenstein/scripts/enemy-controller.test.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts` → exit 0, 3 suites passed, 109 tests passed
+- `npx prettier --check examples/neatenstein/browser-entry/renderer/sprites.ts examples/neatenstein/scripts/enemy-controller.ts` → exit 0, prettier: OK (after --write fix on sprites.ts)
+- `npx jest --config=jest.config.mjs --no-cache examples/neatenstein/browser-entry/renderer/sprites.test.ts examples/neatenstein/scripts/enemy-controller.test.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts` → exit 0, 3 suites passed, 123 tests passed (including 14 new tests)
+- Coverage: `sprites.ts` 100/100/100/100, `enemy-controller.ts` 100/100/100/100 (after merge-coverage-summaries)
+- `node scripts/agent-customization/gates/slice-advancement.gate.mjs --json --slice-id="10-fix-sprite-composite" --changed-files="examples/neatenstein/browser-entry/renderer/sprites.ts,examples/neatenstein/scripts/enemy-controller.ts"` → `pass: true` (7/7 sub-gates, severity FULL)
 - Pre-existing failure: `examples/neatenstein/scripts/generate-enemy-sprites.test.ts` — ENOENT `robot-proposal-192.png` (missing reference image, not in edit boundary, unrelated to this slice's changes)
-    - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun.test.ts'
-    - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun-sprite.ts'
-    - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun-sprite.test.ts'
-    - 'git checkout -- jest.config.mjs'
-    - 'git checkout -- plans/Neon_Shooter_NGE_Demo.plans.md'
-  next: 'Run 05-green-testing with focused gun suites and visible-browser smoke; attach coverage-guard evidence.'
-```
+
+### Specialist review for 10-fix-sprite-composite (implementation-pattern-scout, glm-5.2:cloud)
+
+- Verdict: **APPROVED** (after one-line fix applied via idle-agent write_agent follow-up)
+- Blocking observation found: `renderNeatensteinSprite` called in `display.worker.ts` without `sprite.teamColor` as 6th argument — palette swap never took effect at runtime
+- Fix applied (10-fix-worker-wiring follow-up): Added `sprite.teamColor` as 6th arg to `renderNeatensteinSprite` call in `display.worker.ts`
+- Regression test added: `display.worker.test.ts` asserts `teamColor` is passed as call[5]
+- Red-contract test updated: palette swap behavior now works correctly
+- Post-fix validation: tsc OK, lint OK, 48 tests PASS
+- Shared-validation gate: PASS
+
+### Worker-wiring follow-up (10-fix-worker-wiring, idle agent write_agent)
+
+- `display.worker.ts`: Added `resolveEnemyTeamColor(typeIndex)` helper (golden-angle HSL hue per enemy type)
+- `display.worker.ts`: Wired `walkTick`, `shootBlinkTicks`, `teamColor` into `activeEnemySprites` map
+- `display.worker.ts`: Added `sprite.teamColor` as 6th arg to `renderNeatensteinSprite` call
+- `display.worker.test.ts`: New test for teamColor passing + updated red-contract test
+- Bundle rebuilt: `node scripts/build-neatenstein.mjs` → `docs/assets/neatenstein.bundle.js` + `.map`, `docs/assets/neatenstein.worker.js` + `.map`
+- Cache-buster bumped to `v=20260802-7` in `examples/neatenstein/index.html`
+- All implementation complete. **AWAITING USER MANUAL VALIDATION** before green testing.
+  - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun.test.ts'
+  - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun-sprite.ts'
+  - 'git checkout -- examples/neatenstein/browser-entry/renderer/gun-sprite.test.ts'
+  - 'git checkout -- jest.config.mjs'
+  - 'git checkout -- plans/Neon_Shooter_NGE_Demo.plans.md'
+    next: 'Run 05-green-testing with focused gun suites and visible-browser smoke; attach coverage-guard evidence.'
+
+````
 
 **11-red-gun red contract summary:**
 - Owner-local test file: `examples/neatenstein/browser-entry/renderer/gun.test.ts` adds AC-11a-001 (exported fixed aspect ratio + width ∝ height at 16:9 and 21:9) and AC-11a-002 (`ctx.fillRect` barrel-band detail).
@@ -2046,7 +2585,7 @@ PlanUpdate:
   workflow_notes:
     - 'Implementation slices were executed as one coherent pass because they share the encoded sprite asset and the persistent framebuffer. Red-style assertions were already present from slice 10-red-encoded-sprite and were turned green by the implementation.'
     - 'All non-plan robot-sprite assets were relocated from plans/ to examples/neatenstein/ so plans/ now contains only .plans.md plan files (plus README.md and Roadmap.md required by the plan-sync gate).'
-```
+````
 
 ### Validation evidence for Step 10 implementation slices
 

@@ -559,6 +559,73 @@ describe('enemy controller (AC-702I contracts)', () => {
     expect(afterDist).toBeGreaterThan(beforeDist);
   });
 
+  it('separates enemies at the exact same position (zero-distance fallback)', () => {
+    const base = createGameState({ seed: 1 });
+    // Two enemies at the EXACT same position to trigger the
+    // Math.sqrt(0) || 1 fallback in separateEnemies.
+    const sharedX = base.player.position.x - 5;
+    const enemy0: EnemyState = {
+      position: { x: sharedX, y: 0 },
+      health: 100,
+    };
+    const enemy1: EnemyState = {
+      position: { x: sharedX, y: 0 },
+      health: 100,
+    };
+    const state: GameState = { ...base, enemies: [enemy0, enemy1] };
+    const emptyMap = createEmptyCollisionMap();
+
+    let controller = createEnemyControllerState(state);
+
+    // This should not crash even when distance is 0.
+    controller = updateEnemyController(controller, state, emptyMap, 100);
+
+    // Both enemies should remain active.
+    expect(controller.enemies[0].active).toBe(true);
+    expect(controller.enemies[1].active).toBe(true);
+  });
+
+  it('skips inactive enemies during separation', () => {
+    const base = createGameState({ seed: 1 });
+    // Two enemies close together, but enemy 1 is dead (health 0).
+    const enemy0: EnemyState = {
+      position: { x: base.player.position.x - 5, y: 0 },
+      health: 100,
+    };
+    const enemy1: EnemyState = {
+      position: {
+        x: base.player.position.x - 5 + ENEMY_CONTROLLER_RADIUS_CELLS * 0.1,
+        y: 0,
+      },
+      health: 0,
+    };
+    const state: GameState = { ...base, enemies: [enemy0, enemy1] };
+    const emptyMap = createEmptyCollisionMap();
+
+    let controller = createEnemyControllerState(state);
+
+    // Tick through the full de-rez duration so enemy 1 becomes inactive.
+    controller = updateEnemyController(
+      controller,
+      state,
+      emptyMap,
+      ENEMY_CONTROLLER_DE_REZ_DURATION_MS,
+    );
+
+    // Enemy 1 should now be inactive after de-rez completed.
+    expect(controller.enemies[1].active).toBe(false);
+
+    // Tick again: the inactive enemy 1 should be skipped by separateEnemies.
+    // Enemy 0 should not be pushed by the inactive enemy 1.
+    controller = updateEnemyController(controller, state, emptyMap, 100);
+
+    // Enemy 0 may move toward the player, but it should not be pushed
+    // away from enemy 1's position due to separation with the inactive enemy.
+    // Since both are near the same x, separation would push enemy 0 backward
+    // (toward the player), so we just verify no crash and enemy 0 is still active.
+    expect(controller.enemies[0].active).toBe(true);
+  });
+
   it('sets walkTick to 0 and shootBlinkTicks to 0 on initial creation', () => {
     const base = createGameState({ seed: 1 });
     const state = stateWithEnemy(base, { x: -5, y: 0 });

@@ -166,6 +166,62 @@ function formatRgb(color: { r: number; g: number; b: number }): string {
 const NEATENSTEIN_WORKER_CLEAR_COLOR = formatRgb(NEATENSTEIN_BACKGROUND_RGB);
 
 /**
+ * Golden-angle rotation used to spread distinct enemy team hues across the
+ * color wheel so multiple enemies remain visually separable.
+ */
+const NEATENSTEIN_ENEMY_TEAM_HUE_GOLDEN_STEP = 137.508;
+
+/**
+ * Resolve a deterministic enemy team color `[r, g, b]` from the enemy type
+ * index by rotating the HSL hue wheel with the golden angle. Palette indices
+ * 5/6/7 in the robot sprite atlas are swapped with this color at render time,
+ * giving each enemy a stable neon tint while preserving the sprite alpha.
+ *
+ * @param typeIndex - Enemy type index (the source {@link GameState.enemies}
+ *   array position). Negative indices fall back to index 0.
+ * @returns RGB triple in the `[0, 255]` range.
+ */
+function resolveEnemyTeamColor(
+  typeIndex: number,
+): readonly [number, number, number] {
+  const seed = typeIndex >= 0 ? typeIndex : 0;
+  const hue = (seed * NEATENSTEIN_ENEMY_TEAM_HUE_GOLDEN_STEP) % 360;
+  const saturation = 0.65;
+  const lightness = 0.5;
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const huePrime = hue / 60;
+  const intermediate = chroma * (1 - Math.abs((huePrime % 2) - 1));
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (huePrime < 1) {
+    r = chroma;
+    g = intermediate;
+  } else if (huePrime < 2) {
+    r = intermediate;
+    g = chroma;
+  } else if (huePrime < 3) {
+    g = chroma;
+    b = intermediate;
+  } else if (huePrime < 4) {
+    g = intermediate;
+    b = chroma;
+  } else if (huePrime < 5) {
+    r = intermediate;
+    b = chroma;
+  } else {
+    r = chroma;
+    b = intermediate;
+  }
+  const match = lightness - chroma / 2;
+  return [
+    Math.round((r + match) * 255),
+    Math.round((g + match) * 255),
+    Math.round((b + match) * 255),
+  ] as const;
+}
+
+/**
  * Clamp a value to a `[min, max]` range.
  *
  * @param value - Value to clamp.
@@ -435,6 +491,9 @@ function buildAndPostFrame(): void {
       animationState: enemy.animationState,
       frameIndex: 0,
       type: enemy.index,
+      walkTick: enemy.walkTick,
+      shootBlinkTicks: enemy.shootBlinkTicks,
+      teamColor: resolveEnemyTeamColor(enemy.index),
     }));
 
   // Stash the active enemy sprites on the incoming render state so the next
@@ -558,6 +617,7 @@ function buildAndPostFrame(): void {
           projection,
           frame,
           spriteContext,
+          sprite.teamColor,
         );
       }
 
@@ -982,3 +1042,6 @@ export const __testOnlyGetLatestState = (): NeatensteinRenderState | null =>
 
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlySyncWorkerCanvasSize = syncWorkerCanvasSize;
+
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyResolveEnemyTeamColor = resolveEnemyTeamColor;

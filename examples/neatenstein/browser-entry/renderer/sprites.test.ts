@@ -1344,5 +1344,79 @@ describe('neatenstein sprites', () => {
       // Should return the same cached object
       expect(result1).toBe(result2);
     });
+
+    it('returns null when frame resolution fails', async () => {
+      const { resolveNeatensteinEnemySprite } = await import('./sprites');
+      const camera = {
+        posX: 5,
+        posY: 0,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+
+      const result = resolveNeatensteinEnemySprite(
+        {
+          worldX: 0,
+          worldY: 0,
+          facing: 0,
+          animationState: 'unknown' as unknown as 'idle',
+        },
+        camera,
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it('renders an encoded frame with team color via renderNeatensteinSprite', async () => {
+      const { renderNeatensteinSprite } = await import('./sprites');
+      const frame = robotSpriteData.ROBOT_SPRITE_FRAMES.front
+        .stand as unknown as VoxelSnapshot;
+
+      const framebuffer = new Uint8ClampedArray(64 * 64 * 4).fill(0);
+      const zBuffer = new Float32Array(64).fill(10);
+      const calls: unknown[][] = [];
+      const ctx = {
+        putImageData(...args: unknown[]) {
+          calls.push(args);
+        },
+      };
+
+      const teamColor: readonly [number, number, number] = [100, 200, 50];
+
+      renderNeatensteinSprite(
+        framebuffer,
+        zBuffer,
+        {
+          screenX: 32,
+          scale: 48,
+          perpDist: 1,
+          left: 0,
+          right: 63,
+          visible: true,
+        },
+        frame,
+        ctx,
+        teamColor,
+      );
+
+      expect(calls.length).toBe(1);
+
+      // Verify team color pixels are present in the framebuffer.
+      let foundTeamColor = false;
+      for (let i = 0; i < framebuffer.length; i += 4) {
+        if (
+          framebuffer[i] === 100 &&
+          framebuffer[i + 1] === 200 &&
+          framebuffer[i + 2] === 50 &&
+          framebuffer[i + 3] > 0
+        ) {
+          foundTeamColor = true;
+          break;
+        }
+      }
+      expect(foundTeamColor).toBe(true);
+    });
   });
 });

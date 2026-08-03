@@ -1019,9 +1019,74 @@ describe('Neatenstein display worker', () => {
       expect(receivedEncodedFrame).toBe(true);
     });
 
+    it('passes each enemy teamColor as the 6th argument to renderNeatensteinSprite', async () => {
+      jest.resetModules();
+      const workerModule = (await loadModule('./display.worker.ts')) as {
+        __testOnlyGetEnemyControllerState?(): EnemyControllerState | null;
+        __testOnlyResolveEnemyTeamColor?(
+          index: number,
+        ): readonly [number, number, number];
+      };
+
+      const { context, getImageData, putImageData } = createMockContext();
+      const canvas = createMockCanvas(context);
+      sendInitMessage('worker', canvas);
+      workerSelf.postMessage.mockClear();
+
+      const realSprites = await import('../renderer/sprites');
+      const renderSpy = jest.spyOn(realSprites, 'renderNeatensteinSprite');
+
+      for (let i = 0; i < 8; i += 1) {
+        sendSimStateMessage();
+      }
+
+      expect(getImageData).toHaveBeenCalledTimes(8);
+      expect(putImageData).toHaveBeenCalledTimes(8);
+      expect(renderSpy.mock.calls.length).toBeGreaterThan(0);
+
+      const controller = workerModule.__testOnlyGetEnemyControllerState?.();
+      expect(controller?.enemies.length).toBeGreaterThanOrEqual(2);
+
+      const resolveTeamColor = workerModule.__testOnlyResolveEnemyTeamColor;
+      expect(resolveTeamColor).toBeDefined();
+
+      const arraysEqual = (a: unknown, b: unknown): boolean =>
+        JSON.stringify(a) === JSON.stringify(b);
+
+      // Every render call must pass a teamColor triple as the 6th argument,
+      // and it must match resolveEnemyTeamColor(enemy.index) for an active enemy.
+      const expectedTeamColors = controller!.enemies
+        .filter((enemy) => enemy.active)
+        .map((enemy) => resolveTeamColor!(enemy.index));
+
+      const everyCallHasTeamColor = renderSpy.mock.calls.every((call) => {
+        const passed = call[5];
+        return (
+          Array.isArray(passed) &&
+          passed.length === 3 &&
+          expectedTeamColors.some((color) => arraysEqual(color, passed))
+        );
+      });
+      expect(everyCallHasTeamColor).toBe(true);
+
+      // The first render call's 6th argument is the teamColor of one of the
+      // active enemies, locking in the wiring regression.
+      const firstTeamColor = renderSpy.mock.calls[0][5];
+      expect(
+        expectedTeamColors.some((color) => arraysEqual(color, firstTeamColor)),
+      ).toBe(true);
+
+      renderSpy.mockRestore();
+    });
+
     it('flushes encoded robot sprite pixels from the canvas snapshot', async () => {
       jest.resetModules();
-      await loadModule('./display.worker.ts');
+      const workerModule = (await loadModule('./display.worker.ts')) as {
+        __testOnlyGetEnemyControllerState?(): EnemyControllerState | null;
+        __testOnlyResolveEnemyTeamColor?(
+          index: number,
+        ): readonly [number, number, number];
+      };
 
       const { context, getImageData, putImageData } = createMockContext();
       const canvas = createMockCanvas(context);
@@ -1035,31 +1100,44 @@ describe('Neatenstein display worker', () => {
       expect(getImageData).toHaveBeenCalledTimes(8);
       expect(putImageData).toHaveBeenCalledTimes(8);
 
-      const typedRobotSpriteData = robotSpriteData as unknown as {
-        ROBOT_SPRITE_PALETTE: [number, number, number, number][];
-      };
-      const encodedRed = typedRobotSpriteData.ROBOT_SPRITE_PALETTE[5];
+      const controller = workerModule.__testOnlyGetEnemyControllerState?.();
+      expect(controller?.enemies.length).toBeGreaterThanOrEqual(2);
+      const resolveTeamColor = workerModule.__testOnlyResolveEnemyTeamColor;
+      expect(resolveTeamColor).toBeDefined();
 
-      let foundEncodedRed = false;
+      // With team coloring wired, palette indices 5/6/7 are swapped with each
+      // active enemy's team color while preserving alpha. The encoded robot
+      // frame therefore flushes team-tinted pixels (alpha 255 for the opaque
+      // red base at index 5) rather than the raw red palette entry.
+      const expectedTeamColors = controller!.enemies
+        .filter((enemy) => enemy.active)
+        .map((enemy) => resolveTeamColor!(enemy.index));
+
+      let foundTeamColoredPixel = false;
       for (const call of putImageData.mock.calls) {
         const data = (call[0] as { data: Uint8ClampedArray }).data;
         for (let i = 0; i < data.length; i += 4) {
+          if (data[i + 3] !== 255) {
+            continue;
+          }
           if (
-            data[i] === encodedRed[0] &&
-            data[i + 1] === encodedRed[1] &&
-            data[i + 2] === encodedRed[2] &&
-            data[i + 3] === encodedRed[3]
+            expectedTeamColors.some(
+              (color) =>
+                data[i] === color[0] &&
+                data[i + 1] === color[1] &&
+                data[i + 2] === color[2],
+            )
           ) {
-            foundEncodedRed = true;
+            foundTeamColoredPixel = true;
             break;
           }
         }
-        if (foundEncodedRed) {
+        if (foundTeamColoredPixel) {
           break;
         }
       }
 
-      expect(foundEncodedRed).toBe(true);
+      expect(foundTeamColoredPixel).toBe(true);
     });
 
     it('does not draw the debug red square overlay', async () => {
