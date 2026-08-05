@@ -84,6 +84,8 @@ const config = {
         'examples/neatenstein/browser-entry/host/game/constants.ts',
         'examples/neatenstein/browser-entry/host/game/combat.ts',
         'examples/neatenstein/browser-entry/host/game/tick.ts',
+        'examples/neatenstein/browser-entry/host/game/waves.ts',
+        'examples/neatenstein/browser-entry/host/game/episode.ts',
         'examples/neatenstein/browser-entry/host/input.ts',
         'examples/neatenstein/browser-entry/host/game/controls.ts',
         'examples/neatenstein/browser-entry/host/renderer-bridge.ts',

@@ -34,6 +34,9 @@ export const NEATENSTEIN_PLAYER_MAX_AMMO = 50;
 /** Maximum number of enemies that can be active at the same time. */
 export const NEATENSTEIN_ENEMY_MAX_CONCURRENT = 8;
 
+/** Total number of enemy waves an episode spawns before ending. */
+export const NEATENSTEIN_ENEMY_WAVE_COUNT = 9;
+
 /**
  * Radius in world cells around the map center where enemies may spawn.
  *
@@ -42,7 +45,7 @@ export const NEATENSTEIN_ENEMY_MAX_CONCURRENT = 8;
  * effective spawn region is an annulus centered on
  * {@link NEATENSTEIN_SPAWN_CENTER_X} / {@link NEATENSTEIN_SPAWN_CENTER_Y}.
  */
-export const NEATENSTEIN_ENEMY_SPAWN_RADIUS = 8;
+export const NEATENSTEIN_ENEMY_SPAWN_RADIUS = 85;
 
 /**
  * Minimum distance in world cells between an enemy spawn and the player spawn
@@ -322,7 +325,8 @@ export const NEATENSTEIN_BOLT_LIFETIME_MS = 2000;
  *
  * Tuned to feel generous without making thin grazing shots count as hits.
  */
-export const NEATENSTEIN_BOLT_HIT_RADIUS_CELLS = 0.4;
+export const NEATENSTEIN_BOLT_HIT_RADIUS_CELLS =
+  NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS;
 
 /**
  * Maximum distance a plasma bolt can travel in world cells.

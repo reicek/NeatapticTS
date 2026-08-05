@@ -6,6 +6,12 @@ import { describe, expect, it } from '@jest/globals';
 import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
 import { NEATENSTEIN_FLOOR_FOV_RADIANS } from './floor';
 import type { NeatensteinSpriteProjection } from './sprites';
+import {
+  resolveNeatensteinEnemyFrame,
+  type EncodedRobotSpriteFrame,
+  type NeatensteinCamera,
+  type NeatensteinSprite,
+} from './sprites';
 import * as robotSpriteData from '../../robot-sprite-data.js';
 
 /**
@@ -1120,36 +1126,36 @@ describe('neatenstein sprites', () => {
         animationState: 'move' as const,
       };
 
-      // walkTick 0 → stand
+      // walkTick 0 → stand (4-tick slowing: floor(0/4)%4 = 0)
       const frame0 = resolveNeatensteinEnemyFrame(
         { ...baseSprite, walkTick: 0 },
         camera,
       );
-      // walkTick 1 → walk1
-      const frame1 = resolveNeatensteinEnemyFrame(
-        { ...baseSprite, walkTick: 1 },
+      // walkTick 4 → walk1 (floor(4/4)%4 = 1)
+      const frame4 = resolveNeatensteinEnemyFrame(
+        { ...baseSprite, walkTick: 4 },
         camera,
       );
-      // walkTick 2 → stand
-      const frame2 = resolveNeatensteinEnemyFrame(
-        { ...baseSprite, walkTick: 2 },
+      // walkTick 8 → stand (floor(8/4)%4 = 2)
+      const frame8 = resolveNeatensteinEnemyFrame(
+        { ...baseSprite, walkTick: 8 },
         camera,
       );
-      // walkTick 3 → walk2
-      const frame3 = resolveNeatensteinEnemyFrame(
-        { ...baseSprite, walkTick: 3 },
+      // walkTick 12 → walk2 (floor(12/4)%4 = 3)
+      const frame12 = resolveNeatensteinEnemyFrame(
+        { ...baseSprite, walkTick: 12 },
         camera,
       );
 
       expect(frame0).not.toBeNull();
       // stand and walk1 should be different frames
-      expect(frame0).not.toBe(frame1);
+      expect(frame0).not.toBe(frame4);
       // stand and walk2 should be different frames
-      expect(frame0).not.toBe(frame3);
-      // walkTick 0 and 2 should both resolve to stand (same frame)
-      expect(frame0).toBe(frame2);
+      expect(frame0).not.toBe(frame12);
+      // walkTick 0 and 8 should both resolve to stand (same frame)
+      expect(frame0).toBe(frame8);
       // walk1 and walk2 should be different
-      expect(frame1).not.toBe(frame3);
+      expect(frame4).not.toBe(frame12);
     });
 
     it('composites shoot+walk when shootBlinkTicks > 0 with walkTick set', async () => {
@@ -1418,5 +1424,175 @@ describe('neatenstein sprites', () => {
       }
       expect(foundTeamColor).toBe(true);
     });
+  });
+});
+
+describe('hero-perspective enemy facing', () => {
+  const camera: NeatensteinCamera = {
+    posX: 0,
+    posY: 0,
+    dirX: 1,
+    dirY: 0,
+    planeX: 0,
+    planeY: 0.66,
+  };
+
+  it.each([
+    ['front', 1, 0],
+    ['frontRight', 1, -1],
+    ['right', 0, -1],
+    ['backRight', -1, -1],
+    ['back', -1, 0],
+    ['backLeft', -1, 1],
+    ['left', 0, 1],
+    ['frontLeft', 1, 1],
+  ] as Array<[string, number, number]>)(
+    'resolves %s frame for sprite at (%i, %i)',
+    (expected, dx, dy) => {
+      const sprite: NeatensteinSprite = {
+        worldX: dx,
+        worldY: dy,
+        facing: Math.atan2(-dy, -dx),
+        animationState: 'idle',
+      };
+
+      const frame = resolveNeatensteinEnemyFrame(sprite, camera);
+
+      expect(frame).toEqual(
+        (
+          robotSpriteData.ROBOT_SPRITE_FRAMES as unknown as Record<
+            string,
+            Record<string, EncodedRobotSpriteFrame>
+          >
+        )[expected].stand,
+      );
+    },
+  );
+
+  it('reuses the decoded frame cache across repeated enemy resolutions', async () => {
+    const { resolveNeatensteinEnemySprite } = await import('./sprites');
+
+    const sprite: NeatensteinSprite = {
+      worldX: 0,
+      worldY: 0,
+      facing: 0,
+      animationState: 'idle',
+    };
+    const camera: NeatensteinCamera = {
+      posX: 1,
+      posY: 0,
+      dirX: 1,
+      dirY: 0,
+      planeX: 0,
+      planeY: 0.66,
+    };
+
+    const first = resolveNeatensteinEnemySprite(sprite, camera);
+    const second = resolveNeatensteinEnemySprite(sprite, camera);
+
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    expect(first).toBe(second);
+  });
+
+  it('falls back to position-based walk pose when walkTick is omitted', async () => {
+    const { resolveNeatensteinEnemyFrame } = await import('./sprites');
+
+    const camera: NeatensteinCamera = {
+      posX: 1,
+      posY: 0,
+      dirX: 1,
+      dirY: 0,
+      planeX: 0,
+      planeY: 0.66,
+    };
+
+    const frameA = resolveNeatensteinEnemyFrame(
+      {
+        worldX: 0,
+        worldY: 0,
+        facing: 0,
+        animationState: 'move',
+      },
+      camera,
+    );
+    const frameB = resolveNeatensteinEnemyFrame(
+      {
+        worldX: 0.5,
+        worldY: 0,
+        facing: 0,
+        animationState: 'move',
+      },
+      camera,
+    );
+
+    expect(frameA).not.toBeNull();
+    expect(frameB).not.toBeNull();
+    expect(frameA).not.toEqual(frameB);
+  });
+
+  it('falls back to stand pose for fire animation without walkTick', async () => {
+    const { resolveNeatensteinEnemyFrame } = await import('./sprites');
+
+    const camera: NeatensteinCamera = {
+      posX: 1,
+      posY: 0,
+      dirX: 1,
+      dirY: 0,
+      planeX: 0,
+      planeY: 0.66,
+    };
+
+    const frame = resolveNeatensteinEnemyFrame(
+      {
+        worldX: 0,
+        worldY: 0,
+        facing: 0,
+        animationState: 'fire',
+      },
+      camera,
+    );
+
+    expect(frame).not.toBeNull();
+  });
+
+  it('culls sprites that are farther than 30 cells from the camera', async () => {
+    const { projectNeatensteinSprite } = await import('./sprites');
+
+    const camera = {
+      posX: 12.5,
+      posY: 12.5,
+      dirX: 1,
+      dirY: 0,
+      planeX: 0,
+      planeY: 0.66,
+    };
+    const projection = projectNeatensteinSprite(
+      { worldX: 60.5, worldY: 12.5 },
+      camera,
+      640,
+      360,
+    );
+
+    expect(projection.visible).toBe(false);
+  });
+
+  it('keeps walk frames vertically aligned with the stand frame', () => {
+    function lastOpaqueRow(frame: readonly (readonly number[])[]): number {
+      for (let y = frame.length - 1; y >= 0; y -= 1) {
+        if (frame[y].some((index) => index !== 0)) {
+          return y;
+        }
+      }
+      return -1;
+    }
+
+    for (const [, poses] of Object.entries(
+      robotSpriteData.ROBOT_SPRITE_FRAMES,
+    )) {
+      const standRow = lastOpaqueRow(poses.stand);
+      expect(lastOpaqueRow(poses.walk1)).toBe(standRow);
+      expect(lastOpaqueRow(poses.walk2)).toBe(standRow);
+    }
   });
 });

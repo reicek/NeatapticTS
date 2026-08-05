@@ -1,5 +1,11 @@
 import { describe, expect, it } from '@jest/globals';
 
+import {
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_LIGHT_TOGGLE_KEY,
+  NEATENSTEIN_MAP_SIZE,
+} from './constants.ts';
+
 /**
  * Contract tests for examples/neatenstein/browser-entry/host/game/constants.ts.
  *
@@ -75,6 +81,30 @@ describe('Neatenstein game constants', () => {
         true,
       );
     });
+
+    it('re-exports the shared light toggle key', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(typeof mod.NEATENSTEIN_LIGHT_TOGGLE_KEY).toBe('string');
+    });
+
+    it('re-exports the shared map size constant', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(typeof mod.NEATENSTEIN_MAP_SIZE).toBe('number');
+      expect((mod.NEATENSTEIN_MAP_SIZE as number) > 0).toBe(true);
+    });
+  });
+
+  it('re-exports the fixed timestep and shared constants via named imports', () => {
+    expect(typeof NEATENSTEIN_FIXED_TIMESTEP_MS).toBe('number');
+    expect(typeof NEATENSTEIN_LIGHT_TOGGLE_KEY).toBe('string');
+    expect(NEATENSTEIN_MAP_SIZE).toBeGreaterThan(0);
+  });
+
+  it('re-exports the shared constants through the namespace object', async () => {
+    const mod = await import('./constants.ts');
+    expect(typeof mod.NEATENSTEIN_FIXED_TIMESTEP_MS).toBe('number');
+    expect(typeof mod.NEATENSTEIN_LIGHT_TOGGLE_KEY).toBe('string');
+    expect(mod.NEATENSTEIN_MAP_SIZE).toBeGreaterThan(0);
   });
 
   describe('AC-216 / 03-red: 120x120 map gameplay constants', () => {

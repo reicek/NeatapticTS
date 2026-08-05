@@ -53,6 +53,10 @@ export interface EnemyState {
   position: Vector2;
   /** Current hit points. */
   health: number;
+  /** Whether the enemy is still active (not fully de-rezzed). */
+  active?: boolean;
+  /** Position synced from the enemy AI controller for hero collision. */
+  controllerPosition?: Vector2;
 }
 
 /** Mutable-style snapshot of the on-screen weapon overlay state. */
@@ -77,6 +81,10 @@ export interface BoltState {
   origin?: Vector2;
   /** Optional distance in cells the bolt should travel from origin. */
   targetDistance?: number;
+  /** Collision radius of the bolt in world cells. */
+  radius?: number;
+  /** Index of the first enemy this bolt collided with, if any. */
+  hitEnemyIndex?: number;
 }
 
 /** Persistent neon impact marker left on a wall by a plasma bolt hit. */

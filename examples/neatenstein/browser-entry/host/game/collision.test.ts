@@ -166,5 +166,46 @@ describe('Neatenstein game collision', () => {
         before.player.health - NEATENSTEIN_CONTACT_DAMAGE,
       );
     });
+
+    describe('AC-10.2c-003: resolveContactDamage ignores inactive enemies', () => {
+      it('does not apply contact damage from an inactive overlapping enemy', () => {
+        const before = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+        before.enemies.push({
+          position: { ...before.player.position },
+          health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+          active: false,
+        });
+        const after = resolveContactDamage(
+          before,
+          NEATENSTEIN_FIXED_TIMESTEP_MS,
+        );
+        expect(after.player.health).toBe(before.player.health);
+      });
+    });
+
+    it('skips contact damage when the player position is non-finite', () => {
+      const before = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+      before.player.position = { x: NaN, y: NaN };
+      before.enemies.push({
+        position: { x: 0, y: 0 },
+        health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+      });
+      const after = resolveContactDamage(before, NEATENSTEIN_FIXED_TIMESTEP_MS);
+      expect(after.player.health).toBe(before.player.health);
+    });
+
+    it('does not decrement i-frame timer on negative elapsed time', () => {
+      const before = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+      before.player.contactIFrameMs = NEATENSTEIN_CONTACT_IFRAME_MS;
+      const after = resolveContactDamage(before, -100);
+      expect(after.player.contactIFrameMs).toBe(NEATENSTEIN_CONTACT_IFRAME_MS);
+    });
+
+    it('does not decrement i-frame timer on NaN elapsed time', () => {
+      const before = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+      before.player.contactIFrameMs = NEATENSTEIN_CONTACT_IFRAME_MS;
+      const after = resolveContactDamage(before, NaN);
+      expect(after.player.contactIFrameMs).toBe(NEATENSTEIN_CONTACT_IFRAME_MS);
+    });
   });
 });

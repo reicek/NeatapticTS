@@ -157,7 +157,7 @@ export function fireBolt(state: GameState): FireBoltResult {
   for (let index = 0; index < state.enemies.length; index += 1) {
     const enemy = state.enemies[index];
 
-    if (enemy.health <= 0) {
+    if (enemy.health <= 0 || enemy.active === false) {
       continue;
     }
 
@@ -193,6 +193,8 @@ export function fireBolt(state: GameState): FireBoltResult {
     createdAtMs: state.simTimeMs,
     origin: { ...origin },
     targetDistance: Math.max(0, hitDistance),
+    radius: NEATENSTEIN_BOLT_HIT_RADIUS_CELLS,
+    hitEnemyIndex: hitEnemyIndex,
   };
 
   nextState = {
@@ -291,7 +293,10 @@ function perpendicularDistance(
  * @param enemyIndex - Index into {@link GameState.enemies}.
  * @returns New snapshot with updated enemy health and kill count.
  */
-function applyEnemyDamage(state: GameState, enemyIndex: number): GameState {
+export function applyEnemyDamage(
+  state: GameState,
+  enemyIndex: number,
+): GameState {
   const enemy = state.enemies[enemyIndex];
   const newHealth = Math.max(0, enemy.health - NEATENSTEIN_BOLT_DAMAGE);
   const killedByThisShot = newHealth === 0;

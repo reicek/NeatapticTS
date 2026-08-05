@@ -15,6 +15,18 @@ function createClosedFlatGrid(): Uint8Array {
   return flatMap;
 }
 
+function createOpenPerimeterGrid(side: number): Uint8Array {
+  const flatMap = new Uint8Array(side * side);
+  for (let x = 0; x < side; x += 1) {
+    for (let y = 0; y < side; y += 1) {
+      if (x === 0 || x === side - 1 || y === 0 || y === side - 1) {
+        flatMap[y * side + x] = 1;
+      }
+    }
+  }
+  return flatMap;
+}
+
 describe('Neatenstein raycast helpers', () => {
   it('returns perpWallDist, side, and hit cell coordinates', () => {
     const result = castRayDDAFromFlatMap(
@@ -91,5 +103,19 @@ describe('Neatenstein raycast helpers', () => {
       positive: result.perpWallDist > 0,
       finite: Number.isFinite(result.perpWallDist),
     }).toEqual({ positive: true, finite: true });
+  });
+
+  it('caps DDA traversal at 30 cells and returns Infinity for long open sight lines', () => {
+    const side = 64;
+    const result = castRayDDAFromFlatMap(
+      createOpenPerimeterGrid(side),
+      side,
+      32.5,
+      32.5,
+      1,
+      0,
+    );
+    expect(Number.isFinite(result.perpWallDist)).toBe(false);
+    expect(result.perpWallDist).toBe(Infinity);
   });
 });

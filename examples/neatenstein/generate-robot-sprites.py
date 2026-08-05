@@ -561,9 +561,9 @@ def _pose_params(pose):
     if pose == 'stand':
         return 0, 0, False
     if pose == 'walk1':
-        return -1, 1, False
+        return 0, 1, False
     if pose == 'walk2':
-        return -1, 2, False
+        return 0, 2, False
     if pose == 'shoot':
         return 0, 0, True
     return 0, 0, False

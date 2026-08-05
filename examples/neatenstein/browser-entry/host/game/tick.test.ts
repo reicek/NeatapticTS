@@ -1,7 +1,17 @@
 import { describe, expect, it } from '@jest/globals';
 import { NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS } from '../../constants';
-import { NEATENSTEIN_FIXED_TIMESTEP_MS } from './constants';
-import type { ImpactSpot } from './types';
+import { buildNeatensteinMap, createCollisionMap } from '../../renderer/map';
+import { fireBolt } from './combat';
+import {
+  NEATENSTEIN_BOLT_DAMAGE,
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_MAP_SIZE,
+  NEATENSTEIN_TEST_ENEMY_HEALTH,
+  NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+  NEATENSTEIN_TEST_SEED,
+} from './constants';
+import { createGameState } from './state';
+import type { BoltState, EnemyState, ImpactSpot } from './types';
 
 /**
  * Minimal impact-spot factory for tests that only care about lifetime semantics.
@@ -92,6 +102,32 @@ describe('Neatenstein game tick', () => {
       const next = gameTick(state, {}, undefined, Number.NaN);
       expect(next.simTimeMs).toBe(
         state.simTimeMs + NEATENSTEIN_FIXED_TIMESTEP_MS,
+      );
+    });
+
+    it('uses an explicit collision map when provided', async () => {
+      const { createGameState, gameTick } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./tick.ts')) as Record<string, any>;
+      const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+      const flatMap = buildNeatensteinMap(state.seed);
+      const collisionMap = createCollisionMap(flatMap, NEATENSTEIN_MAP_SIZE);
+      const next = gameTick(state, {}, collisionMap);
+      expect(next.simTimeMs).toBe(
+        state.simTimeMs + NEATENSTEIN_FIXED_TIMESTEP_MS,
+      );
+    });
+
+    it('rotates the player by a non-zero look delta', async () => {
+      const { createGameState, gameTick } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./tick.ts')) as Record<string, any>;
+      const state = createGameState({ seed: 1 });
+      const lookDelta = 0.1;
+      const next = gameTick(state, { lookDelta });
+      expect(next.player.angleRad).toBeCloseTo(
+        state.player.angleRad + lookDelta,
+        6,
       );
     });
 
@@ -383,5 +419,290 @@ describe('Neatenstein game tick', () => {
       const next = decayGunRecoil(gun, 16);
       expect(next.recoilOffset).toBeLessThan(gun.recoilOffset);
     });
+  });
+});
+
+describe('AC-10.2d-001: traveling bolt collides with enemy and stops at impact point', () => {
+  function createEmptyCollisionMap(): { isSolid: () => false } {
+    return { isSolid: () => false };
+  }
+
+  it('deactivates a bolt at the enemy impact point', async () => {
+    const { updateBolts } = (await import('./tick.ts')) as Record<
+      string,
+      unknown
+    >;
+    const collisionMap = createEmptyCollisionMap();
+    const bolt = {
+      position: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      speedCellsPerSecond: 36,
+      active: true,
+      createdAtMs: 0,
+      origin: { x: 0, y: 0 },
+    };
+    const enemies = [{ position: { x: 2, y: 0 }, health: 100, active: true }];
+    const next = (
+      updateBolts as unknown as (
+        bolts: unknown[],
+        dtMs: number,
+        currentTimeMs: number,
+        collisionMap?: unknown,
+        enemies?: unknown[],
+      ) => Array<{
+        active: boolean;
+        position: { x: number; y: number };
+        [key: string]: unknown;
+      }>
+    )([bolt], 1000, 100, collisionMap, enemies);
+    const updated = next[0];
+    const hitEnemyIndex = updated.hitEnemyIndex;
+    expect(updated.active === false || hitEnemyIndex === 0).toBe(true);
+    expect(updated.position.x).toBeCloseTo(2, 0);
+  });
+
+  it('records a finite bolt radius on the spawned bolt', () => {
+    const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const stateWithAmmo = {
+      ...state,
+      player: { ...state.player, ammo: state.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              state.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y: state.player.position.y,
+          },
+          health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+        },
+      ],
+    };
+    const result = fireBolt(stateWithAmmo);
+    expect(result.bolt).not.toBeNull();
+    expect(typeof result.bolt!.radius).toBe('number');
+    expect(Number.isFinite(result.bolt!.radius)).toBe(true);
+  });
+
+  it('skips a dead enemy in the bolt path', async () => {
+    const { updateBolts } = (await import('./tick.ts')) as Record<
+      string,
+      unknown
+    >;
+    const collisionMap = createEmptyCollisionMap();
+    const bolt: BoltState = {
+      position: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      speedCellsPerSecond: 36,
+      active: true,
+      createdAtMs: 0,
+      origin: { x: 0, y: 0 },
+    };
+    const enemies: EnemyState[] = [
+      { position: { x: 2, y: 0 }, health: 0, active: true } as EnemyState,
+    ];
+    const next = (
+      updateBolts as unknown as (
+        bolts: BoltState[],
+        dtMs: number,
+        currentTimeMs: number,
+        collisionMap?: { isSolid: () => boolean },
+        enemies?: EnemyState[],
+      ) => BoltState[]
+    )([bolt], 1000, 100, collisionMap, enemies);
+    expect(next[0].active).toBe(true);
+    expect(next[0].hitEnemyIndex).toBeUndefined();
+  });
+
+  it('skips an enemy that sits behind the bolt origin', async () => {
+    const { updateBolts } = (await import('./tick.ts')) as Record<
+      string,
+      unknown
+    >;
+    const collisionMap = createEmptyCollisionMap();
+    const bolt: BoltState = {
+      position: { x: 10, y: 0 },
+      direction: { x: 1, y: 0 },
+      speedCellsPerSecond: 36,
+      active: true,
+      createdAtMs: 0,
+      origin: { x: 10, y: 0 },
+    };
+    const enemies: EnemyState[] = [
+      { position: { x: 5, y: 0 }, health: 100, active: true } as EnemyState,
+    ];
+    const next = (
+      updateBolts as unknown as (
+        bolts: BoltState[],
+        dtMs: number,
+        currentTimeMs: number,
+        collisionMap?: { isSolid: () => boolean },
+        enemies?: EnemyState[],
+      ) => BoltState[]
+    )([bolt], 1000, 100, collisionMap, enemies);
+    expect(next[0].active).toBe(true);
+    expect(next[0].hitEnemyIndex).toBeUndefined();
+  });
+
+  it('hits the nearest enemy when multiple enemies are on the bolt path', async () => {
+    const { updateBolts } = (await import('./tick.ts')) as Record<
+      string,
+      unknown
+    >;
+    const collisionMap = createEmptyCollisionMap();
+    const bolt: BoltState = {
+      position: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      speedCellsPerSecond: 36,
+      active: true,
+      createdAtMs: 0,
+      origin: { x: 0, y: 0 },
+    };
+    const enemies: EnemyState[] = [
+      { position: { x: 4, y: 0 }, health: 100, active: true } as EnemyState,
+      { position: { x: 2, y: 0 }, health: 100, active: true } as EnemyState,
+    ];
+    const next = (
+      updateBolts as unknown as (
+        bolts: BoltState[],
+        dtMs: number,
+        currentTimeMs: number,
+        collisionMap?: { isSolid: () => boolean },
+        enemies?: EnemyState[],
+      ) => BoltState[]
+    )([bolt], 1000, 100, collisionMap, enemies);
+    expect(next[0].active).toBe(false);
+    expect(next[0].hitEnemyIndex).toBe(1);
+  });
+
+  it('keeps the nearest enemy index when a farther enemy is checked later', async () => {
+    const { updateBolts } = (await import('./tick.ts')) as Record<
+      string,
+      unknown
+    >;
+    const collisionMap = createEmptyCollisionMap();
+    const bolt: BoltState = {
+      position: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      speedCellsPerSecond: 36,
+      active: true,
+      createdAtMs: 0,
+      origin: { x: 0, y: 0 },
+    };
+    const enemies: EnemyState[] = [
+      { position: { x: 2, y: 0 }, health: 100, active: true } as EnemyState,
+      { position: { x: 4, y: 0 }, health: 100, active: true } as EnemyState,
+    ];
+    const next = (
+      updateBolts as unknown as (
+        bolts: BoltState[],
+        dtMs: number,
+        currentTimeMs: number,
+        collisionMap?: { isSolid: () => boolean },
+        enemies?: EnemyState[],
+      ) => BoltState[]
+    )([bolt], 1000, 100, collisionMap, enemies);
+    expect(next[0].active).toBe(false);
+    expect(next[0].hitEnemyIndex).toBe(0);
+  });
+
+  it('uses the bolt radius when present and misses outside it', async () => {
+    const { updateBolts } = (await import('./tick.ts')) as Record<
+      string,
+      unknown
+    >;
+    const collisionMap = createEmptyCollisionMap();
+    const bolt: BoltState = {
+      position: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      speedCellsPerSecond: 36,
+      active: true,
+      createdAtMs: 0,
+      origin: { x: 0, y: 0 },
+      radius: 0.1,
+    };
+    const enemies: EnemyState[] = [
+      { position: { x: 2, y: 0.5 }, health: 100, active: true } as EnemyState,
+    ];
+    const next = (
+      updateBolts as unknown as (
+        bolts: BoltState[],
+        dtMs: number,
+        currentTimeMs: number,
+        collisionMap?: { isSolid: () => boolean },
+        enemies?: EnemyState[],
+      ) => BoltState[]
+    )([bolt], 1000, 100, collisionMap, enemies);
+    expect(next[0].active).toBe(true);
+    expect(next[0].hitEnemyIndex).toBeUndefined();
+  });
+
+  it('applies enemy damage through gameTick when a bolt hits an active enemy', async () => {
+    const { gameTick } =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+      (await import('./tick.ts')) as Record<string, any>;
+    const collisionMap = createEmptyCollisionMap();
+    const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    // Suppress wave spawning so the pre-placed enemy index stays at 0.
+    const stateWithBoltAndEnemy = {
+      ...state,
+      spawnCount: 999,
+      bolts: [
+        {
+          position: { x: 5, y: 5 },
+          direction: { x: 1, y: 0 },
+          speedCellsPerSecond: 36,
+          active: true,
+          createdAtMs: 0,
+          origin: { x: 5, y: 5 },
+        },
+      ],
+      enemies: [
+        {
+          position: { x: 5.3, y: 5 },
+          health: 100,
+          active: true,
+        },
+      ],
+    };
+    const snapshot = {
+      move: { x: 0, y: 0 },
+      lookDelta: 0,
+      fire: false,
+      dash: false,
+    };
+    const next = gameTick(stateWithBoltAndEnemy, snapshot, collisionMap);
+    expect(next.enemies[0].health).toBe(100 - NEATENSTEIN_BOLT_DAMAGE);
+    expect(next.bolts).toHaveLength(0);
+  });
+
+  it('stops a bolt when it reaches its target distance', async () => {
+    const { updateBolts } = (await import('./tick.ts')) as Record<
+      string,
+      unknown
+    >;
+    const collisionMap = createEmptyCollisionMap();
+    const bolt: BoltState = {
+      position: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      speedCellsPerSecond: 36,
+      active: true,
+      createdAtMs: 0,
+      origin: { x: 0, y: 0 },
+      targetDistance: 5,
+    };
+    const next = (
+      updateBolts as unknown as (
+        bolts: BoltState[],
+        dtMs: number,
+        currentTimeMs: number,
+        collisionMap?: { isSolid: () => boolean },
+        enemies?: EnemyState[],
+      ) => BoltState[]
+    )([bolt], 200, 200, collisionMap);
+    // Bolt would travel 7.2 cells (≥ targetDistance 5, < maxRange 30, < 300ms)
+    // so reachedTarget stops movement while keeping the bolt active.
+    expect(next[0].active).toBe(true);
+    expect(next[0].position).toEqual({ x: 0, y: 0 });
   });
 });

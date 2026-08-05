@@ -133,7 +133,11 @@ function squaredDistance(a: ContactPosition, b: ContactPosition): number {
  * @returns Whether the enemy can damage the player.
  */
 function isLivingContactEnemy(enemy: GameState['enemies'][number]): boolean {
-  return enemy.health > 0 && isFinitePosition(enemy.position);
+  return (
+    enemy.health > 0 &&
+    enemy.active !== false &&
+    isFinitePosition(enemy.position)
+  );
 }
 
 /**

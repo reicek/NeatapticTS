@@ -14,6 +14,7 @@
  */
 
 import { buildNeatensteinMap } from './map';
+import { NEATENSTEIN_RENDER_DISTANCE_CAP } from './framebuffer';
 
 export { buildNeatensteinMap };
 
@@ -124,7 +125,8 @@ function computePerpendicularWallDistance(
  * @param posY - Ray origin Y coordinate in grid units.
  * @param dirX - Ray direction X component in renderer camera-space scale.
  * @param dirY - Ray direction Y component in renderer camera-space scale.
- * @returns The first wall hit.
+ * @returns The first wall hit, or a sentinel with `perpWallDist = Infinity`
+ *   when no wall is found within {@link NEATENSTEIN_RENDER_DISTANCE_CAP} cells.
  */
 export function castRayDDAFromFlatMap(
   flatMap: Uint8Array,
@@ -156,6 +158,7 @@ export function castRayDDAFromFlatMap(
     stepY > 0 ? (mapY + 1 - posY) * deltaDistY : (posY - mapY) * deltaDistY;
 
   let sideHit: 0 | 1;
+  let steps = 0;
   while (true) {
     // Step into the next map cell through the closest pending grid boundary.
     if (sideDistX < sideDistY) {
@@ -168,8 +171,9 @@ export function castRayDDAFromFlatMap(
       mapY += stepY;
     }
 
-    // Non-zero cells are walls. The closed Neatenstein perimeter guarantees
-    // this loop terminates.
+    steps += 1;
+
+    // Non-zero cells are walls.
     if (flatMap[mapY * side + mapX] !== 0) {
       return {
         perpWallDist: computePerpendicularWallDistance(
@@ -183,6 +187,16 @@ export function castRayDDAFromFlatMap(
           stepY,
           sideHit,
         ),
+        side: sideHit,
+        mapX,
+        mapY,
+      };
+    }
+
+    // Hard cap: stop walking after a fixed number of empty cells.
+    if (steps >= NEATENSTEIN_RENDER_DISTANCE_CAP) {
+      return {
+        perpWallDist: Number.POSITIVE_INFINITY,
         side: sideHit,
         mapX,
         mapY,

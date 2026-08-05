@@ -1,20 +1,23 @@
 import { describe, expect, it } from '@jest/globals';
-
 import {
+  applyEnemyDamage,
   fireBolt,
   NEATENSTEIN_BOLT_DAMAGE,
   NEATENSTEIN_MUZZLE_OFFSET_CELLS,
 } from './combat';
 import {
+  NEATENSTEIN_BOLT_HIT_RADIUS_CELLS,
   NEATENSTEIN_BOLT_MAX_RANGE_CELLS,
   NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
+  NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS,
   NEATENSTEIN_TEST_ENEMY_HEALTH,
   NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
   NEATENSTEIN_TEST_ENEMY_OFF_BOLT_OFFSET_CELLS,
   NEATENSTEIN_TEST_SEED,
 } from './constants';
+import { castRayDDAFromFlatMap } from '../../renderer/raycast';
 import { createGameState } from './state';
-import type { GameState } from './types';
+import type { BoltState, GameState } from './types';
 
 /**
  * Red-phase contract tests for examples/neatenstein/browser-entry/host/game/combat.ts.
@@ -289,5 +292,168 @@ describe('Neatenstein game combat', () => {
         mod.switchWeapon ?? mod.weaponIndex ?? mod.weaponState,
       ).toBeUndefined();
     });
+
+    describe('AC-10.2c-003: fireBolt ignores inactive enemies', () => {
+      it('does not damage an inactive enemy on the bolt path', () => {
+        const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+        const state: GameState = {
+          ...base,
+          player: {
+            ...base.player,
+            angleRad: 0,
+            ammo: base.player.maxAmmo,
+          },
+          enemies: [
+            {
+              position: {
+                x:
+                  base.player.position.x +
+                  NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+                y: base.player.position.y,
+              },
+              health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+              active: false,
+            },
+          ],
+        };
+        const result = fireBolt(state);
+        expect(result.state.enemies[0].health).toBe(
+          NEATENSTEIN_TEST_ENEMY_HEALTH,
+        );
+      });
+    });
+
+    describe('Coverage: edge cases', () => {
+      it('returns Infinity when a ray exceeds the render-distance cap without hitting a wall', () => {
+        const flatMap = new Uint8Array(64 * 64).fill(0);
+        const hit = castRayDDAFromFlatMap(flatMap, 64, 32.5, 32.5, 1, 0);
+        expect(hit.perpWallDist).toBe(Number.POSITIVE_INFINITY);
+      });
+
+      it('appends a bolt to a non-empty existing bolts array', () => {
+        const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+        const existingBolt: BoltState = {
+          position: { x: 0, y: 0 },
+          direction: { x: 1, y: 0 },
+          speedCellsPerSecond: 1,
+          active: true,
+          createdAtMs: 0,
+          origin: { x: 0, y: 0 },
+          targetDistance: 1,
+        };
+        const state: GameState = {
+          ...base,
+          player: { ...base.player, ammo: base.player.maxAmmo },
+          bolts: [existingBolt],
+        };
+        const result = fireBolt(state);
+        expect(result.state.bolts).toHaveLength(2);
+        expect(result.state.bolts![0]).toBe(existingBolt);
+      });
+
+      it('does not damage enemies outside the hit index', () => {
+        const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+        const state: GameState = {
+          ...base,
+          enemies: [
+            {
+              position: { x: 0, y: 0 },
+              health: NEATENSTEIN_BOLT_DAMAGE,
+            },
+            {
+              position: { x: 1, y: 0 },
+              health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+            },
+          ],
+        };
+        const after = applyEnemyDamage(state, 0);
+        expect(after.enemies[0].health).toBe(0);
+        expect(after.enemies[1].health).toBe(NEATENSTEIN_TEST_ENEMY_HEALTH);
+      });
+
+      it('caps the bolt at max range when the wall ray exceeds the render-distance cap', () => {
+        const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+        const state: GameState = {
+          ...base,
+          player: {
+            ...base.player,
+            position: { x: 52.5, y: 52.5 },
+            angleRad: 0.5934119456780721,
+            ammo: base.player.maxAmmo,
+          },
+        };
+        const result = fireBolt(state);
+        expect(result.state.impacts.length).toBe(0);
+        expect(result.bolt!.targetDistance).toBe(
+          NEATENSTEIN_BOLT_MAX_RANGE_CELLS,
+        );
+      });
+
+      it('creates a bolts array when none exists', () => {
+        const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+        const { bolts, ...stateWithoutBolts } = {
+          ...base,
+          player: { ...base.player, ammo: base.player.maxAmmo },
+        };
+        void bolts;
+        const result = fireBolt(stateWithoutBolts as GameState);
+        expect(result.state.bolts).toHaveLength(1);
+      });
+    });
+  });
+});
+
+describe('AC-10.2d-006: bolt collision radius matches enemy body radius', () => {
+  it('uses the enemy body radius as the bolt hit radius', () => {
+    expect(NEATENSTEIN_BOLT_HIT_RADIUS_CELLS).toBe(
+      NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS,
+    );
+  });
+
+  it('misses an enemy just outside the body radius', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              base.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y:
+              base.player.position.y +
+              NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS +
+              0.01,
+          },
+          health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+        },
+      ],
+    };
+    const result = fireBolt(state);
+    expect(result.state.enemies[0].health).toBe(NEATENSTEIN_TEST_ENEMY_HEALTH);
+  });
+
+  it('records bolt radius and hitEnemyIndex on the spawned bolt', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              base.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y: base.player.position.y,
+          },
+          health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+        },
+      ],
+    };
+    const result = fireBolt(state);
+    const bolt = result.bolt as unknown as Record<string, unknown>;
+    expect(typeof bolt.radius).toBe('number');
+    expect(Number.isInteger(bolt.hitEnemyIndex)).toBe(true);
   });
 });

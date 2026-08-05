@@ -253,10 +253,22 @@ export function drawBolts(
       typeof bolt.targetDistance === 'number' &&
       bolt.targetDistance > 0
     ) {
+      // Prefer the actual impact point when the bolt hit an enemy, falling
+      // back to the precomputed wall/termination distance otherwise.
+      const impactDistance =
+        typeof bolt.hitEnemyIndex === 'number' &&
+        bolt.hitEnemyIndex >= 0 &&
+        typeof bolt.radius === 'number' &&
+        bolt.radius > 0
+          ? Math.hypot(
+              bolt.position.x - bolt.origin.x,
+              bolt.position.y - bolt.origin.y,
+            )
+          : bolt.targetDistance;
       const targetWorldX =
-        bolt.origin.x + bolt.direction.x * bolt.targetDistance;
+        bolt.origin.x + bolt.direction.x * impactDistance;
       const targetWorldY =
-        bolt.origin.y + bolt.direction.y * bolt.targetDistance;
+        bolt.origin.y + bolt.direction.y * impactDistance;
       const projectedTarget = projectNeatensteinFloorPoint(
         targetWorldX,
         targetWorldY,

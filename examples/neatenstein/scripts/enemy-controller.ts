@@ -110,10 +110,11 @@ export const ENEMY_CONTROLLER_FIRE_RANGE_CELLS = 8;
 /**
  * Minimum cell distance the enemy tries to maintain from the player.
  *
- * Keeps the seek behavior from producing excessive overlap once the enemy is
- * already close enough for contact damage.
+ * Enemies chase the player but stop at this distance to prevent overlapping
+ * the player's position. Set to 1.0 cell so enemies maintain a visible gap
+ * while remaining within firing range.
  */
-export const ENEMY_CONTROLLER_STOP_DISTANCE_CELLS = 0.3;
+export const ENEMY_CONTROLLER_STOP_DISTANCE_CELLS = 1.0;
 
 /**
  * Cooldown between hitscan shots in milliseconds, preventing enemies from
@@ -325,7 +326,7 @@ export function createEnemyControllerState(
       position: { ...enemy.position },
       health: enemy.health,
       yawRad: 0,
-      animationState: 'idle',
+      animationState: enemy.health <= 0 ? 'death' : 'idle',
       ammo: ENEMY_CONTROLLER_STARTING_AMMO,
       fireCooldownMs: 0,
       deRezElapsedMs: 0,
@@ -392,18 +393,10 @@ function updateControlledEnemy(
     : { ...previousOrDefault.position };
   let yawRad = isRespawn ? 0 : previousOrDefault.yawRad;
 
-  // Death / de-rez path: health depleted or ammunition exhausted.
-  if (enemyState.health <= 0 || ammo <= 0) {
+  // Death / de-rez path: only health depletion can kill an enemy.
+  if (enemyState.health <= 0) {
     deRezElapsedMs += dtMs;
     const active = deRezElapsedMs < ENEMY_CONTROLLER_DE_REZ_DURATION_MS;
-
-    if (enemyState.health > 0) {
-      // When ammo depletion triggers de-rez, face the player one last time.
-      const toPlayer = vectorTo(position, gameState.player.position);
-      if (toPlayer.distance > 0) {
-        yawRad = Math.atan2(toPlayer.direction.y, toPlayer.direction.x);
-      }
-    }
 
     return {
       index,

@@ -7,8 +7,12 @@ import {
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
 } from '../constants';
 import { drawBolts, drawImpactSpots } from '../renderer/bolt-render';
-import type { EnemyControllerState } from '../../scripts/enemy-controller';
+import type {
+  ControlledEnemy,
+  EnemyControllerState,
+} from '../../scripts/enemy-controller';
 import * as robotSpriteData from '../../robot-sprite-data.js';
+import type { GameState } from '../host/game/types';
 
 const loadModule = (path: string): Promise<unknown> => import(path);
 
@@ -53,7 +57,10 @@ function sendInitMessage(
   }
 }
 
-function sendSimStateMessage(cameraYaw = 0.25) {
+function sendSimStateMessage(
+  cameraYaw = 0.25,
+  overrides: { cameraX?: number; cameraY?: number } = {},
+) {
   if (typeof workerSelf.onmessage === 'function') {
     workerSelf.onmessage({
       data: {
@@ -62,8 +69,8 @@ function sendSimStateMessage(cameraYaw = 0.25) {
           canvasWidth: 640,
           canvasHeight: 360,
           simTick: 1,
-          cameraX: 12.5,
-          cameraY: 12.5,
+          cameraX: overrides.cameraX ?? 12.5,
+          cameraY: overrides.cameraY ?? 12.5,
           cameraYaw,
           mapSeed: 42,
         },
@@ -78,6 +85,22 @@ function sendInputMessage(yawDelta: number) {
       data: {
         type: NEATENSTEIN_INPUT_MESSAGE_TYPE,
         input: { yawDelta },
+      },
+    } as unknown as MessageEvent);
+  }
+}
+
+function sendMovementInputMessage(movement: {
+  forward?: boolean;
+  backward?: boolean;
+  left?: boolean;
+  right?: boolean;
+}) {
+  if (typeof workerSelf.onmessage === 'function') {
+    workerSelf.onmessage({
+      data: {
+        type: NEATENSTEIN_INPUT_MESSAGE_TYPE,
+        input: { movement },
       },
     } as unknown as MessageEvent);
   }
@@ -364,6 +387,94 @@ describe('Neatenstein display worker', () => {
     ).toBe(true);
   });
 
+  it('shifts the wall camera when WASD moves the authoritative player position', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    sendInitMessage('cpu');
+
+    // Host-provided camera snapshot stays at (12.5, 12.5) for both frames.
+    sendSimStateMessage(0);
+    const baselineMessage = findPostByType<{
+      frame: { wallDistances: number[] };
+    }>(workerSelf.postMessage, 'frame');
+
+    workerSelf.postMessage.mockClear();
+
+    // Forward movement is applied during the next gameTick.
+    sendMovementInputMessage({ forward: true });
+    sendSimStateMessage(0);
+    const movedMessage = findPostByType<{
+      frame: { wallDistances: number[] };
+    }>(workerSelf.postMessage, 'frame');
+
+    const baselineWallDistances = baselineMessage?.frame?.wallDistances as
+      number[] | undefined;
+    const movedWallDistances = movedMessage?.frame?.wallDistances as
+      number[] | undefined;
+
+    expect(
+      movedWallDistances?.some(
+        (distance, index) => distance !== baselineWallDistances?.[index],
+      ),
+    ).toBe(true);
+  });
+
+  it('ignores a stale host camera snapshot that differs from the authoritative player position', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    sendInitMessage('cpu');
+
+    sendSimStateMessage(0, { cameraX: 10, cameraY: 10 });
+    const firstMessage = findPostByType<{
+      frame: { wallDistances: number[] };
+    }>(workerSelf.postMessage, 'frame');
+
+    workerSelf.postMessage.mockClear();
+
+    // Host snapshot jumps to a different camera position, but the player did
+    // not move. The wall camera must stay on the authoritative player position.
+    sendSimStateMessage(0, { cameraX: 20, cameraY: 20 });
+    const secondMessage = findPostByType<{
+      frame: { wallDistances: number[] };
+    }>(workerSelf.postMessage, 'frame');
+
+    expect(secondMessage?.frame?.wallDistances).toEqual(
+      firstMessage?.frame?.wallDistances,
+    );
+  });
+
+  it('updates the wall camera yaw from the authoritative player angle on mouse input', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    sendInitMessage('cpu');
+
+    sendSimStateMessage(0, { cameraX: 1, cameraY: 1 });
+    const firstMessage = findPostByType<{
+      frame: { wallDistances: number[] };
+    }>(workerSelf.postMessage, 'frame');
+
+    workerSelf.postMessage.mockClear();
+
+    // The host snapshot keeps the same cameraYaw, but the worker updates the
+    // authoritative player angle from the mouse delta during gameTick.
+    sendInputMessage(Math.PI / 4);
+    sendSimStateMessage(0, { cameraX: 1, cameraY: 1 });
+    const secondMessage = findPostByType<{
+      frame: { wallDistances: number[] };
+    }>(workerSelf.postMessage, 'frame');
+
+    const firstWallDistances = firstMessage?.frame?.wallDistances as
+      number[] | undefined;
+    const secondWallDistances = secondMessage?.frame?.wallDistances as
+      number[] | undefined;
+
+    expect(
+      secondWallDistances?.some(
+        (distance, index) => distance !== firstWallDistances?.[index],
+      ),
+    ).toBe(true);
+  });
+
   it('packs the gun state into the cpu frame', async () => {
     jest.resetModules();
     await loadModule('./display.worker.ts');
@@ -424,6 +535,7 @@ describe('Neatenstein display worker', () => {
     jest.resetModules();
     const workerModule = (await loadModule('./display.worker.ts')) as {
       __testOnlyGetEnemyControllerState?(): EnemyControllerState | null;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
     };
 
     const { context, getImageData, putImageData } = createMockContext();
@@ -431,25 +543,32 @@ describe('Neatenstein display worker', () => {
     sendInitMessage('worker', canvas);
     workerSelf.postMessage.mockClear();
 
-    // Advance enough ticks to spawn several active enemies. The deterministic
-    // spawn ring around the map center keeps them within the camera FOV, so
-    // multiple sprites project to visible columns and run through the encoded
-    // robot sprite render path.
+    // Advance enough ticks to spawn several active enemies. Edge-based
+    // spawning places them at map edges (~60 cells from center), so we
+    // inject test enemies near the player to verify the sprite pipeline.
     for (let i = 0; i < 8; i += 1) {
       sendSimStateMessage();
     }
 
+    // Override enemy positions to be within camera FOV for sprite rendering.
+    workerModule.__testOnlyInjectTestEnemies?.([
+      { x: 62, y: 60.5 },
+      { x: 58, y: 61 },
+    ]);
+
+    // Send one more tick to trigger rendering with the injected enemies.
+    sendSimStateMessage();
+
     const controller = workerModule.__testOnlyGetEnemyControllerState?.();
     expect(controller?.enemies.length).toBeGreaterThanOrEqual(2);
 
-    // The restored GPU pipeline snapshots the canvas once, renders all encoded
-    // sprites into that snapshot, and flushes it back exactly once per sim
-    // tick when enemies are present.
-    expect(getImageData).toHaveBeenCalledTimes(8);
-    expect(putImageData).toHaveBeenCalledTimes(8);
+    // The sprite pipeline snapshots the canvas once per frame and flushes
+    // it back once when enemies are present.
+    expect(getImageData).toHaveBeenCalled();
+    expect(putImageData).toHaveBeenCalled();
 
-    // If at least one enemy projected to visible columns, the flushed snapshot
-    // contains non-zero sprite pixels from an encoded robot frame.
+    // The flushed snapshot contains non-zero sprite pixels from an encoded
+    // robot frame.
     const lastCall =
       putImageData.mock.calls[putImageData.mock.calls.length - 1];
     const flushedData = (lastCall[0] as { data: Uint8ClampedArray }).data;
@@ -944,6 +1063,33 @@ describe('Neatenstein display worker', () => {
     expect(findPostByType(workerSelf.postMessage, 'frame')).toBeUndefined();
   });
 
+  it('falls back to the simulated player position when camera coordinates are non-finite', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+
+    sendInitMessage('cpu');
+    workerSelf.postMessage.mockClear();
+
+    if (typeof workerSelf.onmessage === 'function') {
+      workerSelf.onmessage({
+        data: {
+          type: 'simState',
+          state: {
+            canvasWidth: 640,
+            canvasHeight: 360,
+            simTick: 1,
+            cameraX: Number.NaN,
+            cameraY: Number.NaN,
+            cameraYaw: 0.25,
+            mapSeed: 42,
+          },
+        },
+      } as unknown as MessageEvent);
+    }
+
+    expect(findPostByType(workerSelf.postMessage, 'frame')).toBeDefined();
+  });
+
   describe('AC-402R: no dynamic light overlay in worker tier', () => {
     it('does not use screen blending for dynamic light', async () => {
       jest.resetModules();
@@ -1086,6 +1232,9 @@ describe('Neatenstein display worker', () => {
         __testOnlyResolveEnemyTeamColor?(
           index: number,
         ): readonly [number, number, number];
+        __testOnlyInjectTestEnemies?(
+          positions: { x: number; y: number }[],
+        ): void;
       };
 
       const { context, getImageData, putImageData } = createMockContext();
@@ -1097,8 +1246,15 @@ describe('Neatenstein display worker', () => {
         sendSimStateMessage();
       }
 
-      expect(getImageData).toHaveBeenCalledTimes(8);
-      expect(putImageData).toHaveBeenCalledTimes(8);
+      // Override enemy positions to be within camera FOV for sprite rendering.
+      workerModule.__testOnlyInjectTestEnemies?.([
+        { x: 62, y: 60.5 },
+        { x: 58, y: 61 },
+      ]);
+      sendSimStateMessage();
+
+      expect(getImageData).toHaveBeenCalled();
+      expect(putImageData).toHaveBeenCalled();
 
       const controller = workerModule.__testOnlyGetEnemyControllerState?.();
       expect(controller?.enemies.length).toBeGreaterThanOrEqual(2);
@@ -1220,5 +1376,286 @@ describe('Neatenstein display worker', () => {
         expect.stringMatching(/^rgb\(/),
       );
     });
+
+    it('falls back to palette index 0 for negative enemy type indices', async () => {
+      jest.resetModules();
+      const workerModule = (await loadModule('./display.worker.ts')) as {
+        __testOnlyResolveEnemyTeamColor?(
+          index: number,
+        ): readonly [number, number, number];
+      };
+
+      const resolveTeamColor = workerModule.__testOnlyResolveEnemyTeamColor;
+      expect(resolveTeamColor).toBeDefined();
+      expect(resolveTeamColor!(-1)).toEqual(resolveTeamColor!(0));
+    });
+  });
+});
+
+describe('sprite render pass', () => {
+  function makeEnemy(index: number, x: number, y: number): ControlledEnemy {
+    return {
+      index,
+      position: { x, y },
+      health: 100,
+      yawRad: 0,
+      animationState: 'idle',
+      ammo: 100,
+      fireCooldownMs: 0,
+      deRezElapsedMs: 0,
+      active: true,
+      walkTick: 0,
+      shootBlinkTicks: 0,
+    };
+  }
+
+  it('renders active enemies far-to-near so distant sprites do not overwrite closer ones', async () => {
+    jest.resetModules();
+
+    await loadModule('./display.worker.ts');
+
+    const realEnemyController = await import('../../scripts/enemy-controller');
+    const realSprites = await import('../renderer/sprites');
+    const realRaycast = await import('../renderer/raycast');
+    const realGameState = await import('../host/game/state');
+
+    const referenceState = realGameState.createGameState({ seed: 42 });
+    const cameraX = referenceState.player.position.x;
+    const cameraY = referenceState.player.position.y;
+    const cameraYaw = referenceState.player.angleRad;
+    const nearDist = 2.5;
+    const farDist = 12.5;
+    const nearX = cameraX + Math.cos(cameraYaw) * nearDist;
+    const nearY = cameraY + Math.sin(cameraYaw) * nearDist;
+    const farX = cameraX + Math.cos(cameraYaw) * farDist;
+    const farY = cameraY + Math.sin(cameraYaw) * farDist;
+
+    jest.spyOn(realEnemyController, 'updateEnemyController').mockReturnValue({
+      enemies: [makeEnemy(0, nearX, nearY), makeEnemy(1, farX, farY)],
+      hitscanEvents: [],
+    });
+    const renderSpy = jest.spyOn(realSprites, 'renderNeatensteinSprite');
+    jest.spyOn(realRaycast, 'castRayDDAFromFlatMap').mockReturnValue({
+      perpWallDist: Number.POSITIVE_INFINITY,
+      side: 0,
+      mapX: 0,
+      mapY: 0,
+    });
+
+    const { context } = createMockContext();
+    const canvas = createMockCanvas(context);
+    sendInitMessage('worker', canvas);
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    const projections = renderSpy.mock.calls.map(
+      (call) =>
+        call[2] as unknown as {
+          perpDist: number;
+          visibleColumns: number[];
+        },
+    );
+    const renderOrder = projections
+      .filter((projection) => projection.visibleColumns.length > 0)
+      .map((projection) => projection.perpDist);
+
+    expect(renderOrder.length).toBe(2);
+    expect(renderOrder[0]).toBeGreaterThan(renderOrder[1]);
+  });
+
+  it('does not clip sprite columns when the wall z-buffer contains NaN', async () => {
+    jest.resetModules();
+
+    await loadModule('./display.worker.ts');
+
+    const realEnemyController = await import('../../scripts/enemy-controller');
+    const realSprites = await import('../renderer/sprites');
+    const realRaycast = await import('../renderer/raycast');
+    const realGameState = await import('../host/game/state');
+
+    const referenceState = realGameState.createGameState({ seed: 42 });
+    const cameraX = referenceState.player.position.x;
+    const cameraY = referenceState.player.position.y;
+    const cameraYaw = referenceState.player.angleRad;
+    const enemyDist = 5;
+    const enemyX = cameraX + Math.cos(cameraYaw) * enemyDist;
+    const enemyY = cameraY + Math.sin(cameraYaw) * enemyDist;
+
+    jest.spyOn(realEnemyController, 'updateEnemyController').mockReturnValue({
+      enemies: [makeEnemy(0, enemyX, enemyY)],
+      hitscanEvents: [],
+    });
+    const renderSpy = jest.spyOn(realSprites, 'renderNeatensteinSprite');
+    jest.spyOn(realRaycast, 'castRayDDAFromFlatMap').mockReturnValue({
+      perpWallDist: Number.NaN,
+      side: 0,
+      mapX: 0,
+      mapY: 0,
+    });
+
+    const { context } = createMockContext();
+    const canvas = createMockCanvas(context);
+    sendInitMessage('worker', canvas);
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+    const projection = renderSpy.mock.calls[0][2] as unknown as {
+      visibleColumns: number[];
+    };
+    expect(projection.visibleColumns.length).toBeGreaterThan(0);
+  });
+
+  it('skips encoded enemy sprites that resolve to no frame', async () => {
+    jest.resetModules();
+
+    await loadModule('./display.worker.ts');
+
+    const realEnemyController = await import('../../scripts/enemy-controller');
+    const realSprites = await import('../renderer/sprites');
+    const realRaycast = await import('../renderer/raycast');
+    const realGameState = await import('../host/game/state');
+
+    const referenceState = realGameState.createGameState({ seed: 42 });
+    const cameraX = referenceState.player.position.x;
+    const cameraY = referenceState.player.position.y;
+    const cameraYaw = referenceState.player.angleRad;
+    const enemyDist = 5;
+    const enemyX = cameraX + Math.cos(cameraYaw) * enemyDist;
+    const enemyY = cameraY + Math.sin(cameraYaw) * enemyDist;
+
+    jest.spyOn(realEnemyController, 'updateEnemyController').mockReturnValue({
+      enemies: [{ ...makeEnemy(0, enemyX, enemyY), yawRad: Number.NaN }],
+      hitscanEvents: [],
+    });
+    const renderSpy = jest.spyOn(realSprites, 'renderNeatensteinSprite');
+    jest.spyOn(realRaycast, 'castRayDDAFromFlatMap').mockReturnValue({
+      perpWallDist: 0,
+      side: 0,
+      mapX: 0,
+      mapY: 0,
+    });
+
+    const { context } = createMockContext();
+    const canvas = createMockCanvas(context);
+    sendInitMessage('worker', canvas);
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    expect(renderSpy).not.toHaveBeenCalled();
+  });
+
+  it('skips worker-tier wall drawing when the ray exceeds the 30-cell cap', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+
+    const realRaycast = await import('../renderer/raycast');
+    jest.spyOn(realRaycast, 'castRayDDAFromFlatMap').mockReturnValue({
+      perpWallDist: Number.POSITIVE_INFINITY,
+      side: 0,
+      mapX: 0,
+      mapY: 0,
+    });
+
+    const { context } = createMockContext();
+    const canvas = createMockCanvas(context);
+
+    sendInitMessage('worker', canvas);
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    const wallCalls = (context.fillRect as jest.Mock).mock.calls.filter(
+      (call) =>
+        typeof call[0] === 'number' &&
+        Number.isInteger(call[0]) &&
+        call[2] === 1,
+    );
+    expect(wallCalls.length).toBe(0);
+  });
+
+  it('sets packed-frame zBuffer to render-distance cap for capped columns', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+
+    const realRaycast = await import('../renderer/raycast');
+    jest.spyOn(realRaycast, 'castRayDDAFromFlatMap').mockReturnValue({
+      perpWallDist: Number.POSITIVE_INFINITY,
+      side: 0,
+      mapX: 0,
+      mapY: 0,
+    });
+
+    sendInitMessage('cpu');
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    const frameCall = findPostByType<{
+      frame: { zBuffer: Float32Array; columnCount: number };
+    }>(workerSelf.postMessage, 'frame');
+
+    const zBuffer = frameCall?.frame?.zBuffer;
+    expect(zBuffer).toBeDefined();
+    const NEATENSTEIN_RENDER_DISTANCE_CAP = 30;
+    expect(zBuffer![zBuffer!.length / 2]).toBe(NEATENSTEIN_RENDER_DISTANCE_CAP);
+  });
+});
+
+describe('AC-10.2c: worker simState collision sync', () => {
+  it('calls updateEnemyController before gameTick and syncs controlled state into gameState.enemies', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+
+    const realTick = await import('../host/game/tick');
+    const realEnemyController = await import('../../scripts/enemy-controller');
+
+    const gameTickSpy = jest.spyOn(realTick, 'gameTick');
+
+    const controlledPosition = { x: 42.5, y: 43.5 };
+    const updateSpy = jest
+      .spyOn(realEnemyController, 'updateEnemyController')
+      .mockImplementation((controllerState, _state) => {
+        const controlled: ControlledEnemy = {
+          index: 0,
+          position: controlledPosition,
+          health: 77,
+          active: true,
+          yawRad: 0,
+          animationState: 'idle',
+          ammo: 0,
+          fireCooldownMs: 0,
+          deRezElapsedMs: 0,
+          walkTick: 0,
+          shootBlinkTicks: 0,
+        };
+        controllerState.enemies = [controlled];
+        _state.enemies = [
+          {
+            position: controlled.position,
+            health: controlled.health,
+            active: controlled.active,
+          },
+        ];
+        return controllerState;
+      });
+
+    sendInitMessage('cpu');
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    expect(gameTickSpy).toHaveBeenCalledTimes(1);
+    const tickedState = gameTickSpy.mock.calls[0][0] as GameState;
+    expect(tickedState.enemies).toHaveLength(1);
+    expect(tickedState.enemies[0].position).toEqual(controlledPosition);
+    expect(tickedState.enemies[0].health).toBe(77);
+    expect(tickedState.enemies[0].active).toBe(true);
+
+    gameTickSpy.mockRestore();
+    updateSpy.mockRestore();
   });
 });

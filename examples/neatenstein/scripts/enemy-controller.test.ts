@@ -25,6 +25,7 @@ import {
   ENEMY_CONTROLLER_STOP_DISTANCE_CELLS,
   updateEnemyController,
 } from './enemy-controller';
+import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../browser-entry/host/game/constants';
 
 /**
  * Red/green contract tests for examples/neatenstein/scripts/enemy-controller.ts.
@@ -278,7 +279,19 @@ describe('enemy controller (AC-702I contracts)', () => {
     expect(controller.hitscanEvents).toHaveLength(0);
   });
 
-  it('enters de-rez when ammunition is depleted', () => {
+  it('enters de-rez when health reaches zero', () => {
+    const base = createGameState({ seed: 1 });
+    const state = stateWithEnemy(base, { x: 3, y: 0 }, 0);
+    const emptyMap = createEmptyCollisionMap();
+
+    let controller = createEnemyControllerState(state);
+    controller = updateEnemyController(controller, state, emptyMap, 100);
+
+    expect(controller.enemies[0].animationState).toBe('death');
+    expect(controller.enemies[0].active).toBe(true);
+  });
+
+  it('does not enter de-rez when ammunition is depleted', () => {
     const base = createGameState({ seed: 1 });
     const state = stateWithEnemy(base, { x: 3, y: 0 });
     const emptyMap = createEmptyCollisionMap();
@@ -294,43 +307,30 @@ describe('enemy controller (AC-702I contracts)', () => {
     expect(controller.enemies[0].ammo).toBe(0);
     expect(controller.enemies[0].animationState).toBe('fire');
 
-    // Next tick: ammo-depletion triggers de-rez.
+    // Next tick: ammo is gone but the enemy stays alive and keeps moving/firing.
     controller = updateEnemyController(controller, state, emptyMap, fireDt);
-    expect(controller.enemies[0].animationState).toBe('death');
+    expect(controller.enemies[0].animationState).not.toBe('death');
     expect(controller.enemies[0].active).toBe(true);
   });
 
-  it('handles ammo-depletion de-rez while sharing the player cell', () => {
+  it('handles zero-health de-rez while sharing the player cell', () => {
     const base = createGameState({ seed: 1 });
-    const state = stateWithEnemyAt(base, { ...base.player.position });
+    const state = stateWithEnemyAt(base, { ...base.player.position }, 0);
     const emptyMap = createEmptyCollisionMap();
 
     let controller = createEnemyControllerState(state);
+    controller = updateEnemyController(controller, state, emptyMap, 100);
 
-    // Fire until the magazine is empty while occupying the same cell as the
-    // player. The death-path facing branch must still handle distance zero.
-    const fireDt = ENEMY_CONTROLLER_FIRE_COOLDOWN_MS + 100;
-    for (let i = 0; i < ENEMY_CONTROLLER_STARTING_AMMO + 1; i += 1) {
-      controller = updateEnemyController(controller, state, emptyMap, fireDt);
-    }
-
-    expect(controller.enemies[0].ammo).toBe(0);
     expect(controller.enemies[0].animationState).toBe('death');
     expect(controller.enemies[0].active).toBe(true);
   });
 
   it('fully de-rezzes after the configured duration', () => {
     const base = createGameState({ seed: 1 });
-    const state = stateWithEnemy(base, { x: 3, y: 0 });
+    const state = stateWithEnemy(base, { x: 3, y: 0 }, 0);
     const emptyMap = createEmptyCollisionMap();
 
     let controller = createEnemyControllerState(state);
-
-    // Deplete ammo.
-    const fireDt = ENEMY_CONTROLLER_FIRE_COOLDOWN_MS + 100;
-    for (let i = 0; i < ENEMY_CONTROLLER_STARTING_AMMO + 1; i += 1) {
-      controller = updateEnemyController(controller, state, emptyMap, fireDt);
-    }
 
     expect(controller.enemies[0].animationState).toBe('death');
 
@@ -490,16 +490,14 @@ describe('enemy controller (AC-702I contracts)', () => {
 
   it('resets controller state for a respawned enemy at the same index', () => {
     const base = createGameState({ seed: 1 });
-    const state = stateWithEnemy(base, { x: 3, y: 0 });
+    // Start with zero health so the enemy fully de-rezzes by health, not by
+    // ammunition depletion (which no longer triggers death).
+    const state = stateWithEnemy(base, { x: 3, y: 0 }, 0);
     const emptyMap = createEmptyCollisionMap();
 
     let controller = createEnemyControllerState(state);
 
-    // Deplete ammo and de-rez fully.
-    const fireDt = ENEMY_CONTROLLER_FIRE_COOLDOWN_MS + 100;
-    for (let i = 0; i < ENEMY_CONTROLLER_STARTING_AMMO + 1; i += 1) {
-      controller = updateEnemyController(controller, state, emptyMap, fireDt);
-    }
+    // Advance through the full de-rez window so the enemy becomes inactive.
     controller = updateEnemyController(
       controller,
       state,
@@ -508,7 +506,6 @@ describe('enemy controller (AC-702I contracts)', () => {
     );
 
     expect(controller.enemies[0].active).toBe(false);
-    expect(controller.enemies[0].ammo).toBe(0);
 
     // Respawn a fresh enemy at index 0, out of fire range so ammo is not
     // immediately consumed by a shot.
@@ -626,6 +623,27 @@ describe('enemy controller (AC-702I contracts)', () => {
     expect(controller.enemies[0].active).toBe(true);
   });
 
+  it('does not separate active enemies that are already far apart', () => {
+    const base = createGameState({ seed: 1 });
+    const separation = ENEMY_CONTROLLER_RADIUS_CELLS * 4;
+    const enemy0: EnemyState = {
+      position: { x: base.player.position.x - 10, y: 0 },
+      health: 100,
+    };
+    const enemy1: EnemyState = {
+      position: { x: base.player.position.x - 10 - separation, y: 0 },
+      health: 100,
+    };
+    const state: GameState = { ...base, enemies: [enemy0, enemy1] };
+    const emptyMap = createEmptyCollisionMap();
+
+    let controller = createEnemyControllerState(state);
+    controller = updateEnemyController(controller, state, emptyMap, 100);
+
+    expect(controller.enemies[0].active).toBe(true);
+    expect(controller.enemies[1].active).toBe(true);
+  });
+
   it('sets walkTick to 0 and shootBlinkTicks to 0 on initial creation', () => {
     const base = createGameState({ seed: 1 });
     const state = stateWithEnemy(base, { x: -5, y: 0 });
@@ -651,5 +669,58 @@ describe('enemy controller (AC-702I contracts)', () => {
   it('exports ENEMY_CONTROLLER_SHOOT_BLINK_TICKS as a positive constant', () => {
     expect(ENEMY_CONTROLLER_SHOOT_BLINK_TICKS).toBeGreaterThanOrEqual(3);
     expect(ENEMY_CONTROLLER_SHOOT_BLINK_TICKS).toBeLessThanOrEqual(5);
+  });
+});
+
+describe('AC-10.2d-002: enemies chase player until killed, never stop from ammo depletion', () => {
+  it('does not stop chasing before reaching the player', () => {
+    expect(ENEMY_CONTROLLER_STOP_DISTANCE_CELLS).toBe(1.0);
+  });
+
+  it('moves an enemy that is outside the stop distance', () => {
+    const base = createGameState({ seed: 42 });
+    const state = stateWithEnemyAt(base, {
+      x: base.player.position.x + 2.0,
+      y: base.player.position.y,
+    });
+    const emptyMap = createEmptyCollisionMap();
+
+    let controller = createEnemyControllerState(state);
+    const startX = controller.enemies[0].position.x;
+    controller = updateEnemyController(
+      controller,
+      state,
+      emptyMap,
+      NEATENSTEIN_FIXED_TIMESTEP_MS,
+    );
+
+    expect(controller.enemies[0].position.x).not.toBe(startX);
+  });
+
+  it('keeps firing enemies alive after ammunition depletion', () => {
+    const base = createGameState({ seed: 42 });
+    const state = stateWithEnemy(base, { x: 3, y: 0 });
+    const emptyMap = createEmptyCollisionMap();
+
+    let controller = createEnemyControllerState(state);
+    const initialHealth = controller.enemies[0].health;
+    const fireDt = ENEMY_CONTROLLER_FIRE_COOLDOWN_MS + 100;
+
+    for (let i = 0; i < ENEMY_CONTROLLER_STARTING_AMMO; i += 1) {
+      controller = updateEnemyController(controller, state, emptyMap, fireDt);
+    }
+
+    // One tick past ammo exhaustion plus the full de-rez window.
+    controller = updateEnemyController(controller, state, emptyMap, fireDt);
+    controller = updateEnemyController(
+      controller,
+      state,
+      emptyMap,
+      ENEMY_CONTROLLER_DE_REZ_DURATION_MS,
+    );
+
+    expect(controller.enemies[0].active).toBe(true);
+    expect(controller.enemies[0].animationState).not.toBe('death');
+    expect(controller.enemies[0].health).toBe(initialHealth);
   });
 });

@@ -20,7 +20,7 @@
  * @module
  */
 
-import { clampInt } from './framebuffer';
+import { clampInt, NEATENSTEIN_RENDER_DISTANCE_CAP } from './framebuffer';
 import {
   clipNeatensteinSpriteSpan,
   type NeatensteinSpriteClip,
@@ -346,7 +346,7 @@ const NEATENSTEIN_WALK_CYCLE_HALF_STEP_CELLS = 0.5;
 /** Row index where the upper body (shoot) and lower body (walk) split. Rows 0–34 are upper body; rows 35–47 are lower body. */
 const NEATENSTEIN_SPRITE_UPPER_BODY_SPLIT_ROW = 35;
 
-/** Walk cycle pose sequence indexed by `walkTick % 4`: stand → walk1 → stand → walk2. */
+/** Walk cycle pose sequence indexed by `floor(walkTick / 4) % 4`: stand → walk1 → stand → walk2 (4x slowed). */
 const NEATENSTEIN_WALK_CYCLE_POSES = [
   'stand',
   'walk1',
@@ -632,11 +632,8 @@ export function resolveNeatensteinEnemyFrame(
     return null;
   }
 
-  const cameraRelativeYaw = Math.atan2(
-    camera.posY - sprite.worldY,
-    camera.posX - sprite.worldX,
-  );
-  const relativeYaw = cameraRelativeYaw - sprite.facing;
+  const cameraYaw = Math.atan2(camera.dirY, camera.dirX);
+  const relativeYaw = cameraYaw + Math.PI - sprite.facing;
   const yawIndex = yawIndexFromRelativeYaw(relativeYaw);
 
   const poseName = NEATENSTEIN_ANIMATION_TO_POSE[sprite.animationState];
@@ -650,7 +647,8 @@ export function resolveNeatensteinEnemyFrame(
   // position-based alternation for backward compatibility.
   let walkPoseName: 'stand' | 'walk1' | 'walk2';
   if (sprite.walkTick !== undefined) {
-    walkPoseName = NEATENSTEIN_WALK_CYCLE_POSES[sprite.walkTick % 4];
+    walkPoseName =
+      NEATENSTEIN_WALK_CYCLE_POSES[Math.floor(sprite.walkTick / 4) % 4];
   } else if (sprite.animationState === 'move') {
     const walkPhase =
       Math.floor(
@@ -782,6 +780,11 @@ export function projectNeatensteinSprite(
   // transformY is the perpendicular camera-space depth.
   const perpDist = transformY;
   if (!isPositiveFinite(perpDist) || perpDist <= NEATENSTEIN_SPRITE_NEAR_CLIP) {
+    return createInvisibleSpriteProjection(perpDist);
+  }
+
+  // Cull sprites beyond the shared render-distance cap.
+  if (perpDist >= NEATENSTEIN_RENDER_DISTANCE_CAP) {
     return createInvisibleSpriteProjection(perpDist);
   }
 

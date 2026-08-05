@@ -246,11 +246,6 @@ export function updatePlayerMovement(
 
   const moved = movePlayer(state, delta, dtMs);
 
-  // If movePlayer returned the same state, there is nothing to resolve.
-  if (moved === state) {
-    return state;
-  }
-
   return resolveWallCollision(moved, collisionMap);
 }
 
@@ -265,7 +260,7 @@ export function updatePlayerMovement(
  * @param collisionMap - Collision map queried for solid cells.
  * @returns Whether the position is blocked.
  */
-function isPositionBlocked(
+export function isPositionBlocked(
   position: Vector2,
   collisionMap: CollisionMap,
   enemies: ReadonlyArray<EnemyState> = [],
@@ -296,16 +291,22 @@ function isPositionBlocked(
     }
   }
 
-  // Hero cannot walk through enemies. Treat each enemy as a circle with the
-  // shared enemy collision radius.
+  // Hero cannot walk through living, active enemies. Treat each enemy as a
+  // circle with the shared enemy collision radius, using the synced controller
+  // position so the block matches the rendered enemy location.
   const playerRadius = radius;
   const enemyRadius = NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS;
   const combinedRadius = playerRadius + enemyRadius;
   const combinedRadiusSquared = combinedRadius * combinedRadius;
 
   for (const enemy of enemies) {
-    const dx = position.x - enemy.position.x;
-    const dy = position.y - enemy.position.y;
+    if (enemy.health <= 0 || enemy.active === false) {
+      continue;
+    }
+
+    const enemyPosition = enemy.controllerPosition ?? enemy.position;
+    const dx = position.x - enemyPosition.x;
+    const dy = position.y - enemyPosition.y;
     if (dx * dx + dy * dy < combinedRadiusSquared) {
       return true;
     }

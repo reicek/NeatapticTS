@@ -11,10 +11,11 @@ import {
   NEATENSTEIN_SPAWN_CENTER_Y,
 } from './constants';
 import { NEATENSTEIN_MAP_SIZE } from '../../constants';
+import { createCollisionMap, type CollisionMap } from '../../renderer/map';
 import { createGameState } from './state';
-import { spawnWaveTick } from './waves';
+import { allEnemiesCleared, spawnWaveTick } from './waves';
 import { createEpisode, runEpisode } from './episode';
-import type { GameState } from './types';
+import type { EnemyState, GameState } from './types';
 
 /**
  * Contract tests for examples/neatenstein/browser-entry/host/game/waves.ts.
@@ -202,5 +203,186 @@ describe('Neatenstein game waves', () => {
         NEATENSTEIN_EPISODE_MAX_DURATION_MS,
       );
     });
+  });
+});
+
+describe('AC-10.2d-003/004/007: edge-based waves and batch gating', () => {
+  function createSolidEdgeCollisionMap(): CollisionMap {
+    return createCollisionMap(
+      new Uint8Array(NEATENSTEIN_MAP_SIZE * NEATENSTEIN_MAP_SIZE).fill(1),
+      NEATENSTEIN_MAP_SIZE,
+    );
+  }
+
+  function distanceToNearestEdge(position: { x: number; y: number }): number {
+    return Math.min(
+      position.x,
+      position.y,
+      NEATENSTEIN_MAP_SIZE - position.x,
+      NEATENSTEIN_MAP_SIZE - position.y,
+    );
+  }
+
+  function classifyEdgeDirection(position: { x: number; y: number }): string {
+    const threshold = 1.5;
+    const nearLeft = position.x <= threshold;
+    const nearRight = NEATENSTEIN_MAP_SIZE - position.x <= threshold;
+    const nearTop = position.y <= threshold;
+    const nearBottom = NEATENSTEIN_MAP_SIZE - position.y <= threshold;
+
+    let direction = '';
+    if (nearTop) direction += 'N';
+    if (nearBottom) direction += 'S';
+    if (nearLeft) direction += 'W';
+    if (nearRight) direction += 'E';
+
+    return direction || 'none';
+  }
+
+  it('spawns enemies near a map edge', () => {
+    const before = createGameState({ seed: 42 });
+    const result = spawnWaveTick(before, NEATENSTEIN_FIXED_TIMESTEP_MS);
+    const distance = distanceToNearestEdge(result.state.enemies[0].position);
+    expect(distance).toBeLessThanOrEqual(1.5);
+  });
+
+  it('covers all eight edge directions across a full batch', () => {
+    // Seed 15334 produces an open cell at every cardinal and intercardinal edge,
+    // so all eight directions can be observed without falling back to the center.
+    let state: GameState = createGameState({ seed: 15334 });
+    const directions = new Set<string>();
+
+    for (let i = 0; i < NEATENSTEIN_ENEMY_MAX_CONCURRENT; i += 1) {
+      const result = spawnWaveTick(state, NEATENSTEIN_FIXED_TIMESTEP_MS);
+      state = result.state;
+      directions.add(classifyEdgeDirection(state.enemies[i].position));
+    }
+
+    expect(Array.from(directions).sort()).toEqual([
+      'E',
+      'N',
+      'NE',
+      'NW',
+      'S',
+      'SE',
+      'SW',
+      'W',
+    ]);
+  });
+
+  it('starts a new batch once all current enemies are dead', () => {
+    let state: GameState = createGameState({ seed: 42 });
+    for (let i = 0; i < NEATENSTEIN_ENEMY_MAX_CONCURRENT; i += 1) {
+      state = spawnWaveTick(state, NEATENSTEIN_FIXED_TIMESTEP_MS).state;
+    }
+
+    const allDead: GameState = {
+      ...state,
+      enemies: state.enemies.map((enemy) => ({ ...enemy, health: 0 })),
+    };
+
+    const result = spawnWaveTick(allDead, NEATENSTEIN_FIXED_TIMESTEP_MS);
+    expect(result.spawnedThisTick).toBeGreaterThan(0);
+  });
+
+  it('starts a new batch once all current enemies are deactivated', () => {
+    let state: GameState = createGameState({ seed: 15334 });
+    for (let i = 0; i < NEATENSTEIN_ENEMY_MAX_CONCURRENT; i += 1) {
+      state = spawnWaveTick(state, NEATENSTEIN_FIXED_TIMESTEP_MS).state;
+    }
+
+    const allInactive: GameState = {
+      ...state,
+      enemies: state.enemies.map((enemy) => ({
+        ...enemy,
+        health: 1,
+        active: false,
+      })),
+    };
+
+    const result = spawnWaveTick(allInactive, NEATENSTEIN_FIXED_TIMESTEP_MS);
+    expect(result.spawnedThisTick).toBeGreaterThan(0);
+    expect(result.state.enemies.some((enemy) => enemy.health > 0)).toBe(true);
+  });
+
+  it('starts a new batch when current enemies are missing health values', () => {
+    let state: GameState = createGameState({ seed: 15334 });
+    for (let i = 0; i < NEATENSTEIN_ENEMY_MAX_CONCURRENT; i += 1) {
+      state = spawnWaveTick(state, NEATENSTEIN_FIXED_TIMESTEP_MS).state;
+    }
+
+    const missingHealth: GameState = {
+      ...state,
+      enemies: state.enemies.map((enemy) => ({
+        ...enemy,
+        active: true,
+      })) as EnemyState[],
+    };
+    missingHealth.enemies.forEach((enemy) => {
+      delete (enemy as { health?: number }).health;
+    });
+
+    const result = spawnWaveTick(missingHealth, NEATENSTEIN_FIXED_TIMESTEP_MS);
+    expect(result.spawnedThisTick).toBeGreaterThan(0);
+    expect(result.state.enemies.length).toBeGreaterThan(0);
+  });
+
+  it('falls back to the map center when every edge cell is solid', () => {
+    const base = createGameState({ seed: 42 });
+    const before: GameState = {
+      ...base,
+      enemies: [],
+      spawnCount: 1,
+    };
+    const solidMap = createSolidEdgeCollisionMap();
+    const result = (
+      spawnWaveTick as unknown as (
+        state: GameState,
+        dtMs: number,
+        collisionMap: CollisionMap,
+      ) => { spawnedThisTick: number; state: GameState }
+    )(before, NEATENSTEIN_FIXED_TIMESTEP_MS, solidMap);
+    const [enemy] = result.state.enemies;
+    const centerDistance = Math.hypot(
+      enemy.position.x - NEATENSTEIN_SPAWN_CENTER_X,
+      enemy.position.y - NEATENSTEIN_SPAWN_CENTER_Y,
+    );
+    expect(centerDistance).toBeLessThanOrEqual(2.0);
+  });
+});
+
+describe('allEnemiesCleared helper', () => {
+  it('returns true for an empty roster', () => {
+    expect(allEnemiesCleared([])).toBe(true);
+  });
+
+  it('returns true when all enemies are dead', () => {
+    const enemies: EnemyState[] = [
+      { position: { x: 0, y: 0 }, health: 0, active: true } as EnemyState,
+      { position: { x: 1, y: 1 }, health: 0, active: true } as EnemyState,
+    ];
+    expect(allEnemiesCleared(enemies)).toBe(true);
+  });
+
+  it('returns true when all enemies are deactivated', () => {
+    const enemies: EnemyState[] = [
+      { position: { x: 0, y: 0 }, health: 1, active: false } as EnemyState,
+    ];
+    expect(allEnemiesCleared(enemies)).toBe(true);
+  });
+
+  it('treats missing health as dead', () => {
+    const enemies: EnemyState[] = [
+      { position: { x: 0, y: 0 }, active: true } as EnemyState,
+    ];
+    expect(allEnemiesCleared(enemies)).toBe(true);
+  });
+
+  it('returns false when any enemy is alive and active', () => {
+    const enemies: EnemyState[] = [
+      { position: { x: 0, y: 0 }, health: 0, active: true } as EnemyState,
+      { position: { x: 1, y: 1 }, health: 1, active: true } as EnemyState,
+    ];
+    expect(allEnemiesCleared(enemies)).toBe(false);
   });
 });

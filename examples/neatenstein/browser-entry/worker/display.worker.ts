@@ -71,6 +71,7 @@ import type { GameState } from '../host/game/types';
 import {
   NEATENSTEIN_BACKGROUND_RGB,
   NEATENSTEIN_MAX_VIEW_DIST,
+  NEATENSTEIN_RENDER_DISTANCE_CAP,
 } from '../renderer/framebuffer';
 import { renderGunOverlay } from '../renderer/gun';
 import { drawBolts, drawImpactSpots } from '../renderer/bolt-render';
@@ -459,9 +460,19 @@ function buildAndPostFrame(): void {
     return;
   }
 
+  // Use the worker-authoritative simulated player position for every render
+  // pass (walls, floor, ceiling, pulses, bolts, and sprites). The host still
+  // sends a camera snapshot, but it is intentionally not used for rendering so
+  // that WASD movement and mouse rotation stay in sync across the whole frame.
   const cameraPositionX = gameState.player.position.x;
   const cameraPositionY = gameState.player.position.y;
   const cameraYaw = gameState.player.angleRad;
+
+  // Sprite projection uses the same authoritative camera position as the wall
+  // renderer to prevent enemies from appearing to move when the player walks.
+  const spriteCameraX = cameraPositionX;
+  const spriteCameraY = cameraPositionY;
+  const spriteCameraYaw = cameraYaw;
 
   // Derive camera direction and projection plane from the player yaw.
   const cameraDirectionX = Math.cos(cameraYaw);
@@ -471,18 +482,18 @@ function buildAndPostFrame(): void {
   const cameraPlaneX = -cameraDirectionY * planeScale;
   const cameraPlaneY = cameraDirectionX * planeScale;
 
-  // Advance the enemy controller with the worker-authoritative state and
-  // collision data. Persist the returned controller state so per-enemy ammo,
-  // fire cooldowns, and de-rez timing advance across frames instead of
-  // resetting every tick.
-  const controlled = updateEnemyController(
-    enemyControllerState!,
-    gameState,
-    collisionMap,
-    NEATENSTEIN_FIXED_TIMESTEP_MS,
-  );
-  enemyControllerState = controlled;
-  activeEnemySprites = controlled.enemies
+  // Sprite projection uses the authoritative simulated player transform so
+  // enemy positions (advanced by the controller) stay in the same camera
+  // space as the sprite renderer.
+  const spriteDirectionX = Math.cos(spriteCameraYaw);
+  const spriteDirectionY = Math.sin(spriteCameraYaw);
+  const spritePlaneX = -spriteDirectionY * planeScale;
+  const spritePlaneY = spriteDirectionX * planeScale;
+
+  // The enemy controller is advanced before gameTick in the simState handler
+  // so gameState.enemies already reflects the latest controlled positions.
+  // Build the active sprite list from the persisted controller state.
+  activeEnemySprites = enemyControllerState!.enemies
     .filter((enemy) => enemy.active)
     .map((enemy) => ({
       worldX: enemy.position.x,
@@ -551,30 +562,45 @@ function buildAndPostFrame(): void {
         cameraPlaneY,
       );
 
-      zBuffer[column] = hit.perpWallDist;
+      const perpWallDist = hit.perpWallDist;
+      const isCapped =
+        !Number.isFinite(perpWallDist) ||
+        perpWallDist >= NEATENSTEIN_RENDER_DISTANCE_CAP;
 
-      const lineHeight = wallFocalLength / hit.perpWallDist;
-      const drawStart = clamp((canvasHeight - lineHeight) / 2, 0, canvasHeight);
-      const drawEnd = clamp((canvasHeight + lineHeight) / 2, 0, canvasHeight);
+      zBuffer[column] =
+        Number.isFinite(perpWallDist) && perpWallDist > 0
+          ? perpWallDist
+          : NEATENSTEIN_RENDER_DISTANCE_CAP;
 
-      const wallColor =
-        hit.side === 0
-          ? NEATENSTEIN_WALL_X_SIDE_RGB
-          : NEATENSTEIN_WALL_Y_SIDE_RGB;
+      // Skip wall drawing and per-column effects for capped/far rays.
+      if (!isCapped) {
+        const lineHeight = wallFocalLength / hit.perpWallDist;
+        const drawStart = clamp(
+          (canvasHeight - lineHeight) / 2,
+          0,
+          canvasHeight,
+        );
+        const drawEnd = clamp((canvasHeight + lineHeight) / 2, 0, canvasHeight);
 
-      // Integer stripe bounds prevent subpixel gaps when the column count does
-      // not divide the canvas width evenly.
-      const xStart = Math.floor(column * stripeWidth);
-      const xEnd = Math.floor((column + 1) * stripeWidth);
-      const stripePixelWidth = Math.max(0, xEnd - xStart);
+        const wallColor =
+          hit.side === 0
+            ? NEATENSTEIN_WALL_X_SIDE_RGB
+            : NEATENSTEIN_WALL_Y_SIDE_RGB;
 
-      context.fillStyle = applyWallFog(wallColor, hit.perpWallDist);
-      context.fillRect(
-        xStart,
-        drawStart,
-        stripePixelWidth,
-        drawEnd - drawStart,
-      );
+        // Integer stripe bounds prevent subpixel gaps when the column count does
+        // not divide the canvas width evenly.
+        const xStart = Math.floor(column * stripeWidth);
+        const xEnd = Math.floor((column + 1) * stripeWidth);
+        const stripePixelWidth = Math.max(0, xEnd - xStart);
+
+        context.fillStyle = applyWallFog(wallColor, hit.perpWallDist);
+        context.fillRect(
+          xStart,
+          drawStart,
+          stripePixelWidth,
+          drawEnd - drawStart,
+        );
+      }
     }
 
     // Render encoded enemy sprites into a single canvas snapshot and flush it
@@ -591,15 +617,23 @@ function buildAndPostFrame(): void {
       );
       const spriteContext = buildNoOpSpriteRenderContext();
       const spriteCamera = {
-        posX: cameraPositionX,
-        posY: cameraPositionY,
-        dirX: cameraDirectionX,
-        dirY: cameraDirectionY,
-        planeX: cameraPlaneX,
-        planeY: cameraPlaneY,
+        posX: spriteCameraX,
+        posY: spriteCameraY,
+        dirX: spriteDirectionX,
+        dirY: spriteDirectionY,
+        planeX: spritePlaneX,
+        planeY: spritePlaneY,
       };
 
-      for (const sprite of activeEnemySprites) {
+      const sortedSprites = [...activeEnemySprites].sort((a, b) => {
+        const distA =
+          (a.worldX - spriteCameraX) ** 2 + (a.worldY - spriteCameraY) ** 2;
+        const distB =
+          (b.worldX - spriteCameraX) ** 2 + (b.worldY - spriteCameraY) ** 2;
+        return distB - distA;
+      });
+
+      for (const sprite of sortedSprites) {
         const frame = resolveNeatensteinEnemyFrame(sprite, spriteCamera);
         if (!frame) {
           continue;
@@ -718,7 +752,11 @@ function buildAndPostFrame(): void {
 
       frame.wallDistances[column] = hit.perpWallDist;
       frame.wallSides[column] = hit.side;
-      frame.zBuffer[column] = hit.perpWallDist;
+      frame.zBuffer[column] =
+        !Number.isFinite(hit.perpWallDist) ||
+        hit.perpWallDist >= NEATENSTEIN_RENDER_DISTANCE_CAP
+          ? NEATENSTEIN_RENDER_DISTANCE_CAP
+          : hit.perpWallDist;
     }
 
     frame.gun = gameState.gun;
@@ -1001,7 +1039,7 @@ self.onmessage = (event: MessageEvent) => {
   if (data.type === 'simState') {
     latestState = data.state as NeatensteinRenderState;
 
-    if (!gameState || !collisionMap) {
+    if (!gameState || !collisionMap || !enemyControllerState) {
       buildAndPostFrame();
       return;
     }
@@ -1013,11 +1051,66 @@ self.onmessage = (event: MessageEvent) => {
       dash: false,
     };
 
+    // Advance the enemy controller BEFORE the game tick so movement, bolt, and
+    // contact damage subsystems see synced enemy positions/health/active states.
+    const controlled = updateEnemyController(
+      enemyControllerState,
+      gameState,
+      collisionMap,
+      NEATENSTEIN_FIXED_TIMESTEP_MS,
+    );
+    enemyControllerState = controlled;
+
+    gameState = {
+      ...gameState,
+      enemies: gameState.enemies.map((enemy, index) => {
+        const controlledEnemy = controlled.enemies[index];
+        if (!controlledEnemy) {
+          return enemy;
+        }
+        return {
+          ...enemy,
+          position: { ...controlledEnemy.position },
+          controllerPosition: { ...controlledEnemy.position },
+          health: controlledEnemy.health,
+          active: controlledEnemy.active,
+        };
+      }),
+    };
+
     gameState = gameTick(
       gameState,
       tickInput,
       collisionMap,
       NEATENSTEIN_FIXED_TIMESTEP_MS,
+    );
+
+    // Keep the worker authoritative. If an enemy was killed this tick, clear
+    // it from the controller roster so the next controller pass does not revive
+    // it and so newly spawned enemies replace dead slots immediately.
+    enemyControllerState = {
+      ...enemyControllerState,
+      enemies: enemyControllerState.enemies
+        .map((controlled, index) => {
+          if (!gameState) return { ...controlled, active: false, health: 0 };
+          const live = gameState.enemies[index];
+          if (!live || (live.health ?? 0) <= 0 || live.active === false) {
+            return { ...controlled, active: false, health: live?.health ?? 0 };
+          }
+          return controlled;
+        })
+        .filter((controlled) => controlled.active),
+    };
+
+    // Run a zero-timestep controller pass after the tick so newly spawned
+    // enemies and any health changes from combat are reflected in the
+    // controller state used for the next frame, without double-advancing enemy
+    // movement.
+    enemyControllerState = updateEnemyController(
+      enemyControllerState,
+      gameState,
+      collisionMap,
+      0,
     );
 
     pendingTickInput = null;
@@ -1045,3 +1138,33 @@ export const __testOnlySyncWorkerCanvasSize = syncWorkerCanvasSize;
 
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyResolveEnemyTeamColor = resolveEnemyTeamColor;
+
+/* istanbul ignore next -- test-only hook to place enemies near the player */
+export const __testOnlyInjectTestEnemies = (
+  positions: { x: number; y: number }[],
+): void => {
+  if (!gameState || !enemyControllerState) return;
+  gameState.enemies = positions.map((pos, i) => ({
+    position: { ...pos },
+    health: 100,
+    index: i,
+    active: true,
+    controllerPosition: { ...pos },
+  }));
+  enemyControllerState = {
+    ...enemyControllerState,
+    enemies: positions.map((pos, i) => ({
+      index: i,
+      position: { ...pos },
+      health: 100,
+      yawRad: 0,
+      animationState: 'idle' as const,
+      ammo: 10,
+      fireCooldownMs: 0,
+      deRezElapsedMs: 0,
+      active: true,
+      walkTick: 0,
+      shootBlinkTicks: 0,
+    })),
+  };
+};

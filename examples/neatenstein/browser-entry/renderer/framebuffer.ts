@@ -37,6 +37,16 @@ export const NEATENSTEIN_FRAMEBUFFER_CHANNELS = 4;
 export const NEATENSTEIN_MAX_VIEW_DIST = 140;
 
 /**
+ * Hard render-distance cap shared by the raycaster, sprite projector, and wall
+ * renderer.
+ *
+ * Rays and sprites beyond this distance are treated as empty/no-hit. This cap
+ * prevents the DDA from walking indefinitely on open sight lines and keeps
+ * distant geometry from being projected or drawn.
+ */
+export const NEATENSTEIN_RENDER_DISTANCE_CAP = 30;
+
+/**
  * Background RGB used by the distance-fog pass.
  *
  * This is the dark neon void color `#060b14` from the Phase 1 design
