@@ -7,6 +7,12 @@ import {
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
 } from '../constants';
 import { drawBolts, drawImpactSpots } from '../renderer/bolt-render';
+import { NEATENSTEIN_RENDER_DISTANCE_CAP } from '../renderer/framebuffer';
+import {
+  NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+  NEATENSTEIN_FLOOR_FOV_RADIANS,
+  NEATENSTEIN_FLOOR_HORIZON_RATIO,
+} from '../renderer/floor';
 import type {
   ControlledEnemy,
   EnemyControllerState,
@@ -531,6 +537,89 @@ describe('Neatenstein display worker', () => {
     );
   });
 
+  it('clears all controlled enemies when gameTick returns null gameState', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetEnemyControllerState?(): EnemyControllerState | null;
+    };
+
+    sendInitMessage('cpu');
+    // Build up some enemies first
+    for (let i = 0; i < 3; i += 1) {
+      sendSimStateMessage();
+    }
+    const beforeNull = workerModule.__testOnlyGetEnemyControllerState?.();
+    expect(beforeNull?.enemies.length).toBeGreaterThan(0);
+
+    // Mock gameTick to return null — triggers the !gameState guard at line 1098.
+    // Also mock updateEnemyController to prevent the subsequent call (line 1114)
+    // from crashing when it receives null gameState.
+    const tickModule = await import('../host/game/tick');
+    const enemyControllerModule =
+      await import('../../scripts/enemy-controller');
+    const gameTickSpy = jest
+      .spyOn(tickModule, 'gameTick')
+      .mockReturnValue(null as unknown as GameState);
+    const controllerSpy = jest
+      .spyOn(enemyControllerModule, 'updateEnemyController')
+      .mockImplementation((state: EnemyControllerState) => state);
+
+    workerSelf.postMessage.mockClear();
+    sendSimStateMessage();
+
+    const afterNull = workerModule.__testOnlyGetEnemyControllerState?.();
+    // All enemies should be cleared (active=false, then filtered out)
+    expect(afterNull?.enemies.length).toBe(0);
+    expect(gameTickSpy).toHaveBeenCalled();
+
+    gameTickSpy.mockRestore();
+    controllerSpy.mockRestore();
+  });
+
+  it('removes dead enemies from controller state after tick', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetEnemyControllerState?(): EnemyControllerState | null;
+    };
+
+    sendInitMessage('cpu');
+    // Build up enemies
+    for (let i = 0; i < 3; i += 1) {
+      sendSimStateMessage();
+    }
+    const before = workerModule.__testOnlyGetEnemyControllerState?.();
+    expect(before?.enemies.length).toBeGreaterThan(0);
+
+    // Mock gameTick to return a state where enemy[0] is dead (health=0,
+    // active=false). We avoid calling the real gameTick to ensure the mock
+    // is deterministic and does not depend on module binding internals.
+    const tickModule = await import('../host/game/tick');
+    const gameTickSpy = jest.spyOn(tickModule, 'gameTick').mockImplementation(
+      (state: GameState) =>
+        ({
+          ...state,
+          enemies: state.enemies.map((enemy, i) =>
+            i === 0 ? { ...enemy, health: 0, active: false } : enemy,
+          ),
+        }) as GameState,
+    );
+
+    sendSimStateMessage();
+
+    expect(gameTickSpy).toHaveBeenCalled();
+    const after = workerModule.__testOnlyGetEnemyControllerState?.();
+    // The dead enemy is filtered out and then re-added by updateEnemyController
+    // in the de-rez (death) state. Verify the dead-enemy filter ran by checking
+    // that at least one controller enemy is now in the death animation.
+    expect(after?.enemies.length).toBeGreaterThan(0);
+    const hasDeadEnemy = after?.enemies.some(
+      (enemy) => enemy.health <= 0 && enemy.animationState === 'death',
+    );
+    expect(hasDeadEnemy).toBe(true);
+
+    gameTickSpy.mockRestore();
+  });
+
   it('renders enemy sprites using a single canvas snapshot and flush per frame', async () => {
     jest.resetModules();
     const workerModule = (await loadModule('./display.worker.ts')) as {
@@ -550,10 +639,14 @@ describe('Neatenstein display worker', () => {
       sendSimStateMessage();
     }
 
-    // Override enemy positions to be within camera FOV for sprite rendering.
+    // Override enemy positions to be within camera FOV and within the 30-cell
+    // render distance cap so sprites are rendered (not culled). The display
+    // worker uses gameState.player.position (60.5, 60.5) for the camera, not
+    // the sim state's cameraX/cameraY. The cleared central arena spans cells
+    // 56-64, so positions near the player are guaranteed open.
     workerModule.__testOnlyInjectTestEnemies?.([
-      { x: 62, y: 60.5 },
-      { x: 58, y: 61 },
+      { x: 63.5, y: 60.5 },
+      { x: 62.5, y: 61.5 },
     ]);
 
     // Send one more tick to trigger rendering with the injected enemies.
@@ -1246,10 +1339,14 @@ describe('Neatenstein display worker', () => {
         sendSimStateMessage();
       }
 
-      // Override enemy positions to be within camera FOV for sprite rendering.
+      // Override enemy positions to be within camera FOV and within the
+      // 40-cell render distance cap so sprites are rendered (not culled).
+      // The display worker uses gameState.player.position (60.5, 60.5) for
+      // the camera. With step-function fog, fogFactor=0 below 40 cells means
+      // pixel colors match the original team colors exactly.
       workerModule.__testOnlyInjectTestEnemies?.([
-        { x: 62, y: 60.5 },
-        { x: 58, y: 61 },
+        { x: 63.5, y: 60.5 },
+        { x: 62.5, y: 61.5 },
       ]);
       sendSimStateMessage();
 
@@ -1406,6 +1503,11 @@ describe('sprite render pass', () => {
       active: true,
       walkTick: 0,
       shootBlinkTicks: 0,
+      flankStallTicks: 0,
+      bfsStallTicks: 0,
+      weights: undefined,
+      variantId: 0,
+      previousStepDistance: -1,
     };
   }
 
@@ -1548,7 +1650,7 @@ describe('sprite render pass', () => {
     expect(renderSpy).not.toHaveBeenCalled();
   });
 
-  it('skips worker-tier wall drawing when the ray exceeds the 30-cell cap', async () => {
+  it('draws fog wall stripes at the render distance cap when the ray exceeds 40 cells', async () => {
     jest.resetModules();
     await loadModule('./display.worker.ts');
 
@@ -1568,13 +1670,17 @@ describe('sprite render pass', () => {
 
     sendSimStateMessage(0);
 
-    const wallCalls = (context.fillRect as jest.Mock).mock.calls.filter(
+    // When the ray exceeds the 40-cell cap, the fog step function draws fog
+    // wall stripes (background color) at the render distance cap instead of
+    // skipping wall drawing entirely. Each column gets a fillRect with
+    // stripePixelWidth === 1 and an integer x start.
+    const fogWallCalls = (context.fillRect as jest.Mock).mock.calls.filter(
       (call) =>
         typeof call[0] === 'number' &&
         Number.isInteger(call[0]) &&
         call[2] === 1,
     );
-    expect(wallCalls.length).toBe(0);
+    expect(fogWallCalls.length).toBeGreaterThan(0);
   });
 
   it('sets packed-frame zBuffer to render-distance cap for capped columns', async () => {
@@ -1600,8 +1706,83 @@ describe('sprite render pass', () => {
 
     const zBuffer = frameCall?.frame?.zBuffer;
     expect(zBuffer).toBeDefined();
-    const NEATENSTEIN_RENDER_DISTANCE_CAP = 30;
     expect(zBuffer![zBuffer!.length / 2]).toBe(NEATENSTEIN_RENDER_DISTANCE_CAP);
+  });
+
+  it('skips rendering enemy sprites beyond the 40-cell render distance cap (AC-10.3c-002)', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+
+    const realEnemyController = await import('../../scripts/enemy-controller');
+    const realSprites = await import('../renderer/sprites');
+    const realRaycast = await import('../renderer/raycast');
+    const realGameState = await import('../host/game/state');
+
+    const referenceState = realGameState.createGameState({ seed: 42 });
+    const cameraX = referenceState.player.position.x;
+    const cameraY = referenceState.player.position.y;
+    const cameraYaw = referenceState.player.angleRad;
+    // Place enemy well beyond the 40-cell render distance cap.
+    const farDist = 50;
+    const enemyX = cameraX + Math.cos(cameraYaw) * farDist;
+    const enemyY = cameraY + Math.sin(cameraYaw) * farDist;
+
+    jest.spyOn(realEnemyController, 'updateEnemyController').mockReturnValue({
+      enemies: [makeEnemy(0, enemyX, enemyY)],
+      hitscanEvents: [],
+    });
+    const renderSpy = jest.spyOn(realSprites, 'renderNeatensteinSprite');
+    jest.spyOn(realRaycast, 'castRayDDAFromFlatMap').mockReturnValue({
+      perpWallDist: 1,
+      side: 0,
+      mapX: 0,
+      mapY: 0,
+    });
+
+    const { context } = createMockContext();
+    const canvas = createMockCanvas(context);
+    sendInitMessage('worker', canvas);
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    // The worker loop must skip (continue) sprites beyond the render cap
+    // before calling renderNeatensteinSprite, mirroring the no-frame skip.
+    expect(renderSpy).not.toHaveBeenCalled();
+  });
+
+  it('does not draw floor/ceiling strokes beyond the render distance cap (AC-10.3d-002)', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+
+    const { context } = createMockContext();
+    const canvas = createMockCanvas(context);
+    sendInitMessage('worker', canvas);
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    const moveToCalls = (context.moveTo as jest.Mock).mock.calls;
+    const lineToCalls = (context.lineTo as jest.Mock).mock.calls;
+    const allPoints = [...moveToCalls, ...lineToCalls].map(
+      (call: unknown[]) => ({ x: call[0] as number, y: call[1] as number }),
+    );
+
+    // Worker canvas is 640×360.
+    const horizonY = 360 * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+    const focalLength = 360 / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+
+    const beyondCap = allPoints.filter((p) => {
+      const dy = Math.abs(p.y - horizonY);
+      if (dy < 1e-9) {
+        return true;
+      }
+      const forwardDist =
+        (NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD * focalLength) / dy;
+      return forwardDist > NEATENSTEIN_RENDER_DISTANCE_CAP;
+    });
+
+    expect(beyondCap).toEqual([]);
   });
 });
 
@@ -1631,6 +1812,11 @@ describe('AC-10.2c: worker simState collision sync', () => {
           deRezElapsedMs: 0,
           walkTick: 0,
           shootBlinkTicks: 0,
+          flankStallTicks: 0,
+          bfsStallTicks: 0,
+          weights: undefined,
+          variantId: 0,
+          previousStepDistance: -1,
         };
         controllerState.enemies = [controlled];
         _state.enemies = [
@@ -1657,5 +1843,231 @@ describe('AC-10.2c: worker simState collision sync', () => {
 
     gameTickSpy.mockRestore();
     updateSpy.mockRestore();
+  });
+
+  it('returns the original enemy unchanged when controlled.enemies[index] is undefined (line 1072 fallback)', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+
+    const realTick = await import('../host/game/tick');
+    const realEnemyController = await import('../../scripts/enemy-controller');
+
+    const gameTickSpy = jest.spyOn(realTick, 'gameTick');
+
+    // The worker's initial gameState starts with zero enemies. We inject one
+    // enemy into the gameState via the mock's _state parameter (mirroring the
+    // existing sync test pattern) but return a controller with an EMPTY enemies
+    // array. This forces controlled.enemies[0] to be undefined and exercises the
+    // fallback at display.worker.ts:1071-1072.
+    const originalEnemyPosition = { x: 10.5, y: 20.5 };
+    const updateSpy = jest
+      .spyOn(realEnemyController, 'updateEnemyController')
+      .mockImplementation((controllerState, _state) => {
+        // Inject an enemy into the gameState so the map callback iterates.
+        _state.enemies = [
+          {
+            position: { ...originalEnemyPosition },
+            health: 50,
+            active: true,
+          },
+        ];
+        // Return controller with NO controlled enemies — index 0 is undefined.
+        controllerState.enemies = [];
+        return controllerState;
+      });
+
+    sendInitMessage('cpu');
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    expect(gameTickSpy).toHaveBeenCalledTimes(1);
+    const tickedState = gameTickSpy.mock.calls[0][0] as GameState;
+
+    // The fallback returned the original enemy unchanged — position preserved.
+    expect(tickedState.enemies).toHaveLength(1);
+    expect(tickedState.enemies[0].position).toEqual(originalEnemyPosition);
+
+    gameTickSpy.mockRestore();
+    updateSpy.mockRestore();
+  });
+});
+
+describe('AC-10.3 coverage iteration 2: uncovered branches', () => {
+  it('uses positive deltaMs from simState as timestepMs (line 1060 true branch)', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+
+    const realTick = await import('../host/game/tick');
+    // Spy without mocking — let the real gameTick run; we only need to
+    // capture the timestepMs argument (4th positional, index 3).
+    const gameTickSpy = jest.spyOn(realTick, 'gameTick');
+
+    sendInitMessage('cpu');
+    workerSelf.postMessage.mockClear();
+
+    // Send simState with a positive deltaMs to exercise the true branch of
+    // `deltaMs > 0 ? deltaMs : 16` at display.worker.ts:1060.  Using 32
+    // (not 16) distinguishes the true branch from the fallback.
+    sendRawMessage({
+      type: 'simState',
+      state: {
+        canvasWidth: 640,
+        canvasHeight: 360,
+        simTick: 1,
+        cameraX: 12.5,
+        cameraY: 12.5,
+        cameraYaw: 0.25,
+        mapSeed: 42,
+        deltaMs: 32,
+      },
+    });
+
+    expect(gameTickSpy).toHaveBeenCalledTimes(1);
+    // gameTick(gameState, tickInput, collisionMap, timestepMs)
+    const timestepMs = gameTickSpy.mock.calls[0][3];
+    expect(timestepMs).toBe(32);
+
+    gameTickSpy.mockRestore();
+  });
+
+  it('handles enemy with null health via nullish coalescing fallback (line 1100)', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetEnemyControllerState?(): EnemyControllerState | null;
+    };
+
+    sendInitMessage('cpu');
+    // Build up enemies so the controller has entries to filter.
+    for (let i = 0; i < 3; i += 1) {
+      sendSimStateMessage();
+    }
+    const before = workerModule.__testOnlyGetEnemyControllerState?.();
+    const beforeCount = before?.enemies.length ?? 0;
+    expect(beforeCount).toBeGreaterThan(0);
+
+    const tickModule = await import('../host/game/tick');
+    const enemyControllerModule =
+      await import('../../scripts/enemy-controller');
+
+    // Mock gameTick to return enemy[0] with health: null, exercising the
+    // `(live.health ?? 0)` nullish fallback at display.worker.ts:1100.
+    // Keep active: true so the `live.active === false` branch is NOT the
+    // trigger — only the nullish-coalescing path marks the enemy dead.
+    const gameTickSpy = jest.spyOn(tickModule, 'gameTick').mockImplementation(
+      (state: GameState) =>
+        ({
+          ...state,
+          enemies: state.enemies.map((enemy, i) =>
+            i === 0
+              ? {
+                  ...enemy,
+                  health: null as unknown as number,
+                  active: true,
+                }
+              : enemy,
+          ),
+        }) as GameState,
+    );
+
+    // Passthrough updateEnemyController to prevent the post-tick call
+    // (line 1112) from re-adding the dead enemy.
+    const controllerSpy = jest
+      .spyOn(enemyControllerModule, 'updateEnemyController')
+      .mockImplementation((state: EnemyControllerState) => state);
+
+    sendSimStateMessage();
+
+    expect(gameTickSpy).toHaveBeenCalled();
+    const after = workerModule.__testOnlyGetEnemyControllerState?.();
+    // The enemy with health: null was treated as dead via `(null ?? 0) <= 0`
+    // and filtered out by the `.filter((c) => c.active)` at line 1105.
+    expect(after?.enemies.length ?? 0).toBeLessThan(beforeCount);
+
+    gameTickSpy.mockRestore();
+    controllerSpy.mockRestore();
+  });
+});
+
+describe('AC-10.4 fix-coverage-gaps: fog factor and gradient feather branches', () => {
+  it('resolveWallFogFactor returns 1 when perpWallDist >= 40 (render distance cap)', async () => {
+    jest.resetModules();
+    const mod = (await loadModule('./display.worker.ts')) as {
+      __testOnlyResolveWallFogFactor: (d: number) => number;
+    };
+    // At and above the render distance cap, fog factor is 1 (full fog).
+    expect(
+      mod.__testOnlyResolveWallFogFactor(NEATENSTEIN_RENDER_DISTANCE_CAP),
+    ).toBe(1);
+    expect(mod.__testOnlyResolveWallFogFactor(100)).toBe(1);
+    // Below the cap, fog factor is 0 (no fog).
+    expect(
+      mod.__testOnlyResolveWallFogFactor(NEATENSTEIN_RENDER_DISTANCE_CAP - 0.1),
+    ).toBe(0);
+  });
+
+  it('exercises top gradient feather when isCapped column has drawStart > 0', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+
+    const realRaycast = await import('../renderer/raycast');
+    jest.spyOn(realRaycast, 'castRayDDAFromFlatMap').mockReturnValue({
+      perpWallDist: Number.POSITIVE_INFINITY,
+      side: 0,
+      mapX: 0,
+      mapY: 0,
+    });
+
+    const { context } = createMockContext();
+    const canvas = createMockCanvas(context);
+
+    sendInitMessage('worker', canvas);
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    // With canvasHeight=360 and lineHeight = wallFocalLength / 30
+    //   ≈ (360 / 2 / tan(π/6)) / 30 ≈ 10.39,
+    // drawStart = (360 - 10.39) / 2 ≈ 174.8 > 0, so the top gradient
+    // feather branch (line 630) is taken. Verify createLinearGradient
+    // was called with y-coordinates in the top half (< 180).
+    const gradientCalls = (context.createLinearGradient as jest.Mock).mock
+      .calls as number[][];
+    const topFeatherCalls = gradientCalls.filter(
+      (call) => call[1] < 180 && call[3] < 180,
+    );
+    expect(topFeatherCalls.length).toBeGreaterThan(0);
+  });
+
+  it('exercises bottom gradient feather when isCapped column has drawEnd < canvasHeight', async () => {
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+
+    const realRaycast = await import('../renderer/raycast');
+    jest.spyOn(realRaycast, 'castRayDDAFromFlatMap').mockReturnValue({
+      perpWallDist: Number.POSITIVE_INFINITY,
+      side: 0,
+      mapX: 0,
+      mapY: 0,
+    });
+
+    const { context } = createMockContext();
+    const canvas = createMockCanvas(context);
+
+    sendInitMessage('worker', canvas);
+    workerSelf.postMessage.mockClear();
+
+    sendSimStateMessage(0);
+
+    // With canvasHeight=360 and lineHeight ≈ 10.39,
+    // drawEnd = (360 + 10.39) / 2 ≈ 185.2 < 360, so the bottom gradient
+    // feather branch (line 656) is taken. Verify createLinearGradient
+    // was called with y-coordinates in the bottom half (> 180).
+    const gradientCalls = (context.createLinearGradient as jest.Mock).mock
+      .calls as number[][];
+    const bottomFeatherCalls = gradientCalls.filter(
+      (call) => call[1] > 180 && call[3] > 180,
+    );
+    expect(bottomFeatherCalls.length).toBeGreaterThan(0);
   });
 });

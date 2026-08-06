@@ -386,3 +386,46 @@ describe('allEnemiesCleared helper', () => {
     expect(allEnemiesCleared(enemies)).toBe(false);
   });
 });
+
+describe('AC-10.4-r-001: resolveEdgeSpawn returns open-cell positions only', () => {
+  /**
+   * Fixture: a collision map where the first two cells inward from the N edge
+   * at the spawn center X are solid, but the third cell is open.
+   *
+   * NEATENSTEIN_SPAWN_CENTER_X = Math.floor(120 / 2) + 0.5 = 60.5, so
+   * floor(centerX) = 60. Direction N (spawnCount=0) starts at (60.5, 0.5)
+   * and scans inward with dx=0, dy=1.
+   *
+   * The off-by-one bug in the scan loop checks `Math.floor(y + step * dy)`
+   * AFTER y has already been incremented `step` times, so at step=1 it
+   * checks cell (60, 2) while returning position (60.5, 1.5) — which is on
+   * solid cell (60, 1). After the fix, it should return (60.5, 2.5) on
+   * open cell (60, 2).
+   */
+  it('does not spawn an enemy on a solid cell when the edge cell is blocked (AC-10.4-r-001)', () => {
+    const flatMap = new Uint8Array(
+      NEATENSTEIN_MAP_SIZE * NEATENSTEIN_MAP_SIZE,
+    ).fill(0);
+    const setSolid = (x: number, y: number): void => {
+      flatMap[y * NEATENSTEIN_MAP_SIZE + x] = 1;
+    };
+    // Solid cells at (60, 0) and (60, 1); cell (60, 2) is open.
+    setSolid(60, 0);
+    setSolid(60, 1);
+    const collisionMap = createCollisionMap(flatMap, NEATENSTEIN_MAP_SIZE);
+
+    // spawnCount=0 → directionIndex=0 → direction N (dx=0, dy=1).
+    const before = createGameState({ seed: 1 });
+    const result = spawnWaveTick(
+      before,
+      NEATENSTEIN_FIXED_TIMESTEP_MS,
+      collisionMap,
+    );
+    const [enemy] = result.state.enemies;
+    const cellX = Math.floor(enemy.position.x);
+    const cellY = Math.floor(enemy.position.y);
+
+    // The spawned enemy must be on an open cell, not inside a wall.
+    expect(collisionMap.isSolid(cellX, cellY)).toBe(false);
+  });
+});

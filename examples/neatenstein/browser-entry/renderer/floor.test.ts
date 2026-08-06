@@ -1,6 +1,10 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { FLAPPY_NEON_PALETTE } from '../../../flappy_bird/constants/constants.palette';
 import {
+  NEATENSTEIN_BACKGROUND_RGB,
+  NEATENSTEIN_RENDER_DISTANCE_CAP,
+} from './framebuffer';
+import {
   NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
   NEATENSTEIN_FLOOR_DEFAULT_HEIGHT,
   NEATENSTEIN_FLOOR_DEFAULT_WIDTH,
@@ -10,6 +14,8 @@ import {
   NEATENSTEIN_FLOOR_MIN_ALPHA,
   drawNeatensteinCeiling,
   drawNeatensteinFloor,
+  projectNeatensteinCeilingPoint,
+  projectNeatensteinFloorPoint,
   renderNeatensteinCeiling,
   renderNeatensteinFloor,
   resolveNeatensteinFloorAlpha,
@@ -432,6 +438,143 @@ describe('Neatenstein floor renderer ray-cast grid', () => {
 
     expect(ctx.calls.restore.length).toBe(ctx.calls.save.length);
   });
+
+  it('does not draw floor grid points beyond NEATENSTEIN_RENDER_DISTANCE_CAP (AC-10.3d-001)', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const cam = camera(0, TEST_CAMERA_X, TEST_CAMERA_Y);
+    const ctx = createMockFloorContext(width, height);
+
+    drawNeatensteinFloor(ctx, width, height, cam);
+
+    const points = extractDrawnPoints(ctx);
+    expect(points.length).toBeGreaterThan(0);
+
+    const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+    const focalLength =
+      height / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+
+    // Camera-space forward distance from screen Y:
+    //   forwardDist = (cameraHeight * focalLength) / |screenY - horizonY|
+    // Points at the horizon (dy ≈ 0) are at infinite distance — beyond any cap.
+    const beyondCap = points.filter((p) => {
+      const dy = Math.abs(p.y - horizonY);
+      if (dy < 1e-9) {
+        return true;
+      }
+      const forwardDist =
+        (NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD * focalLength) / dy;
+      return forwardDist > NEATENSTEIN_RENDER_DISTANCE_CAP;
+    });
+
+    expect(beyondCap).toEqual([]);
+  });
+
+  it('skips the frame when projection constants become non-finite', () => {
+    const ctx = createMockFloorContext(TEST_CANVAS_WIDTH, TEST_CANVAS_HEIGHT);
+    // Math.tan returns 0 → focalLength = canvasHeight / 2 / 0 = Infinity
+    const tanSpy = jest.spyOn(Math, 'tan').mockReturnValue(0);
+    drawNeatensteinFloor(ctx, TEST_CANVAS_WIDTH, TEST_CANVAS_HEIGHT, camera(0));
+    tanSpy.mockRestore();
+
+    expect(ctx.calls.moveTo.length + ctx.calls.lineTo.length).toBe(0);
+  });
+
+  it('projects a world point to screen space via projectNeatensteinFloorPoint', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+    const focalLength =
+      height / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+    const halfWidth = width / 2;
+
+    const result = projectNeatensteinFloorPoint(
+      7,
+      6,
+      TEST_CAMERA_X,
+      TEST_CAMERA_Y,
+      1,
+      0,
+      focalLength,
+      halfWidth,
+      horizonY,
+      height,
+      NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.y).toBeGreaterThan(horizonY);
+    expect(result!.depthRatio).toBeGreaterThanOrEqual(0);
+    expect(result!.depthRatio).toBeLessThanOrEqual(1);
+  });
+
+  it('returns null when projected screen coordinates are non-finite', () => {
+    const result = projectNeatensteinFloorPoint(
+      7,
+      6,
+      5.5,
+      5.5,
+      1,
+      0,
+      Number.POSITIVE_INFINITY, // focalLength = Infinity → screenX = Infinity
+      160,
+      120,
+      240,
+      NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it('returns null when depthDenominator is zero for floor projection', () => {
+    const height = 240;
+    const horizonY = height; // depthDenominator = height - horizonY = 0
+
+    const result = projectNeatensteinFloorPoint(
+      7,
+      6,
+      5.5,
+      5.5,
+      1,
+      0,
+      200,
+      160,
+      horizonY,
+      height,
+      NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it('guards non-finite camera x and y without throwing', () => {
+    const ctx = createMockFloorContext();
+
+    expect(() =>
+      drawNeatensteinFloor(
+        ctx,
+        TEST_CANVAS_WIDTH,
+        TEST_CANVAS_HEIGHT,
+        camera(0, Number.NaN, Number.NaN),
+      ),
+    ).not.toThrow();
+  });
+
+  it('uses fallback dimensions when the render wrapper has no canvas', () => {
+    const ctx = createMockFloorContext();
+    // Remove the canvas property so resolveContextCanvasDimension uses fallbacks
+    (ctx as unknown as { canvas: undefined }).canvas = undefined;
+
+    expect(() => renderNeatensteinFloor(ctx, camera(0))).not.toThrow();
+    // The function should still draw using the default fallback dimensions
+    expect(ctx.calls.save.length).toBeGreaterThan(0);
+  });
+
+  it('clamps non-finite depthRatio to 0 in resolveNeatensteinFloorAlpha', () => {
+    const alpha = resolveNeatensteinFloorAlpha(Number.NaN);
+    // NaN depthRatio → fallback to 0 → clamped to 0 → min alpha
+    expect(alpha).toBe(NEATENSTEIN_FLOOR_MIN_ALPHA);
+  });
 });
 
 /** Deterministic seed used for all ceiling mirror fixtures. */
@@ -575,5 +718,140 @@ describe('Neatenstein ceiling mirror renderer', () => {
     );
 
     expect(usesGridColor).toBe(true);
+  });
+
+  it('does not draw ceiling grid points beyond NEATENSTEIN_RENDER_DISTANCE_CAP (AC-10.3d-001)', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const cam = camera(0, TEST_CAMERA_X, TEST_CAMERA_Y);
+    const ctx = createMockFloorContext(width, height);
+
+    drawNeatensteinCeiling(ctx, width, height, cam);
+
+    const points = extractDrawnPoints(ctx);
+    expect(points.length).toBeGreaterThan(0);
+
+    const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+    const focalLength =
+      height / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+
+    // Ceiling points are mirrored above the horizon, but the forward-distance
+    // formula is identical: |screenY - horizonY| maps to the same depth.
+    const beyondCap = points.filter((p) => {
+      const dy = Math.abs(p.y - horizonY);
+      if (dy < 1e-9) {
+        return true;
+      }
+      const forwardDist =
+        (NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD * focalLength) / dy;
+      return forwardDist > NEATENSTEIN_RENDER_DISTANCE_CAP;
+    });
+
+    expect(beyondCap).toEqual([]);
+  });
+
+  it('reads canvas dimensions through the ceiling render wrapper', () => {
+    const ctx = createMockFloorContext(
+      TEST_RENDER_CANVAS_WIDTH,
+      TEST_RENDER_CANVAS_HEIGHT,
+    );
+    renderNeatensteinCeiling(ctx, camera(0));
+
+    const horizonY =
+      TEST_RENDER_CANVAS_HEIGHT * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+    const allAbove = extractDrawnPoints(ctx).every(
+      (point) => point.y < horizonY + 0.5,
+    );
+
+    expect(extractDrawnPoints(ctx).length).toBeGreaterThan(0);
+    expect(allAbove).toBe(true);
+  });
+
+  it('projects a world point above the horizon via projectNeatensteinCeilingPoint', () => {
+    const width = TEST_CANVAS_WIDTH;
+    const height = TEST_CANVAS_HEIGHT;
+    const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+    const focalLength =
+      height / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+    const halfWidth = width / 2;
+
+    const result = projectNeatensteinCeilingPoint(
+      7,
+      6,
+      TEST_CAMERA_X,
+      TEST_CAMERA_Y,
+      1,
+      0,
+      focalLength,
+      halfWidth,
+      horizonY,
+      height,
+      NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.y).toBeLessThan(horizonY);
+    expect(result!.depthRatio).toBeGreaterThanOrEqual(0);
+    expect(result!.depthRatio).toBeLessThanOrEqual(1);
+  });
+
+  it('returns null when depthDenominator is zero for ceiling projection', () => {
+    const result = projectNeatensteinCeilingPoint(
+      7,
+      6,
+      5.5,
+      5.5,
+      1,
+      0,
+      200,
+      160,
+      0, // horizonY = 0 → depthDenominator = horizonY = 0
+      240,
+      NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+    );
+
+    expect(result).toBeNull();
+  });
+});
+
+describe('AC-10.4-r-003: floor/ceiling rendering uses original floor color within 30 cells', () => {
+  /**
+   * Fixture: draw the floor grid with a camera that produces visible grid
+   * lines spanning multiple depth bands. With the step-function fog fix,
+   * all bands within 30 cells use the original floor grid line color
+   * (FLAPPY_NEON_PALETTE.groundGridLine) and never blend toward
+   * NEATENSTEIN_BACKGROUND_RGB.
+   */
+  it('uses FLOOR_BASE_RGB floor color for all bands within 30 cells (AC-10.4-r-003)', () => {
+    const ctx = createMockFloorContext(
+      TEST_RENDER_CANVAS_WIDTH,
+      TEST_RENDER_CANVAS_HEIGHT,
+    );
+    drawNeatensteinFloor(
+      ctx,
+      TEST_RENDER_CANVAS_WIDTH,
+      TEST_RENDER_CANVAS_HEIGHT,
+      camera(0, TEST_CAMERA_X, TEST_CAMERA_Y),
+    );
+
+    // Parse the floor grid line color to get the expected RGB prefix.
+    const hex = FLAPPY_NEON_PALETTE.groundGridLine.replace('#', '');
+    const floorR = Number.parseInt(hex.slice(0, 2), 16);
+    const floorG = Number.parseInt(hex.slice(2, 4), 16);
+    const floorB = Number.parseInt(hex.slice(4, 6), 16);
+    const floorPrefix = `rgba(${floorR}, ${floorG}, ${floorB}`;
+
+    // All stroke styles should use the floor grid line color.
+    const hasFloorColor = ctx.calls.strokeStyle.some(
+      (style) => typeof style === 'string' && style.startsWith(floorPrefix),
+    );
+    expect(hasFloorColor).toBe(true);
+
+    // No stroke style should use the background fog color.
+    const fogPrefix = `rgba(${NEATENSTEIN_BACKGROUND_RGB.r}, ${NEATENSTEIN_BACKGROUND_RGB.g}, ${NEATENSTEIN_BACKGROUND_RGB.b}`;
+    const hasFogColor = ctx.calls.strokeStyle.some(
+      (style) => typeof style === 'string' && style.startsWith(fogPrefix),
+    );
+    expect(hasFogColor).toBe(false);
   });
 });

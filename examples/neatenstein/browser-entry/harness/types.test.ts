@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import type {
   BarrierState,
   CombatQualitySignal,
+  EnemyEpisodeTelemetry,
   EnemyPopulation,
   EnemyVariant,
   FitnessScore,
@@ -140,6 +141,23 @@ describe('Neatenstein harness types', () => {
     it('accepts a FitnessScore as a numeric value', () => {
       const score: FitnessScore = 42;
       expect(score).toBe(42);
+    });
+  });
+
+  describe('AC-10.5e-002: EnemyEpisodeTelemetry shape', () => {
+    it('accepts an EnemyEpisodeTelemetry with all required fields', () => {
+      const telemetry: EnemyEpisodeTelemetry = {
+        position: { x: 60, y: 60 },
+        bfsDistances: [20, 18, 16, 14],
+        damageDealt: 50,
+        enemiesSurvived: 1,
+        cellsVisited: 5,
+        stagnationTicks: 3,
+        finalDistance: 12,
+      };
+      expect(telemetry.position.x).toBe(60);
+      expect(telemetry.bfsDistances).toHaveLength(4);
+      expect(telemetry.damageDealt).toBe(50);
     });
   });
 

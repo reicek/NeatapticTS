@@ -11,8 +11,6 @@
  * @module
  */
 
-import seedrandom from 'seedrandom';
-
 import {
   NEATENSTEIN_MLP_REFRESH_INTERVAL_GENERATIONS,
   NEATENSTEIN_MLP_TOPOLOGY,
@@ -24,6 +22,7 @@ import type {
   MlpSnapshot,
   Snapshot,
 } from './types';
+import { warmStartTemplate, warmStartWeights } from './enemy-warmstart';
 
 /**
  * Options accepted by {@link createMlpEnemyPopulation}.
@@ -48,7 +47,7 @@ export interface CreateMlpEnemyPopulationOptions {
  * ```ts
  * const population = createMlpEnemyPopulation({ seed: 7 });
  * const variant = population.sample(0) as EnemyVariant;
- * console.log(variant.weights.length); // 102
+ * console.log(variant.weights.length); // 90
  * ```
  */
 export function createMlpEnemyPopulation(
@@ -98,7 +97,7 @@ export interface MlpEnemyPopulation extends EnemyPopulation {
 /**
  * Allowed weight-only mutation operator types for the MLP enemy backend.
  *
- * The MLP backend uses a fixed 8→6→4→4 topology, so structural operators such
+ * The MLP backend uses a fixed 6→6→4→4 topology, so structural operators such
  * as add-node or add-connection would corrupt the feed-forward shape. This
  * allowlist is the single source of truth for operator types that are safe to
  * apply to an MLP enemy.
@@ -146,8 +145,8 @@ export const NEATENSTEIN_MLP_OUTPUT_LABELS: readonly string[] = [
  *
  * The weight vector must include all connection weights followed by the
  * per-layer bias terms, in layer order. The default topology is
- * {@link NEATENSTEIN_MLP_TOPOLOGY} (8→6→4→4), which requires 102 values:
- * 88 connection weights plus 14 biases.
+ * {@link NEATENSTEIN_MLP_TOPOLOGY} (6→6→4→4), which requires 90 values:
+ * 76 connection weights plus 14 biases.
  *
  * @param weights - Flat weight vector (connections + biases).
  * @param inputs - Input vector matching the first layer size.
@@ -159,8 +158,8 @@ export const NEATENSTEIN_MLP_OUTPUT_LABELS: readonly string[] = [
  * @example
  * ```ts
  * const out = activateMlp(
- *   new Float32Array(102),
- *   new Float32Array(8),
+ *   new Float32Array(90),
+ *   new Float32Array(6),
  * );
  * console.log(out.length); // 4
  * ```
@@ -245,48 +244,24 @@ function createVariants(seed: number): EnemyVariant[] {
   for (let i = 0; i < NEATENSTEIN_MLP_VARIANT_COUNT; i++) {
     variants.push({
       id: i,
-      weights: createVariantWeights(seed, i),
+      weights: warmStartWeights(seed, i),
     });
   }
   return variants;
 }
 
 /**
- * Generate a fresh weight vector for one variant.
- *
- * Weights are sampled from a per-variant seeded PRNG so the same `seed` and
- * `variantId` always produce the same vector, while different ids are extremely
- * unlikely to collide.
- *
- * @param seed - Population seed.
- * @param variantId - Stable variant index.
- * @returns A new weight vector sized for the fixed MLP topology.
- */
-function createVariantWeights(seed: number, variantId: number): Float32Array {
-  const rng = seedrandom(`${seed}:variant:${variantId}`);
-  const weightCount = countParameters(NEATENSTEIN_MLP_TOPOLOGY);
-  const weights = new Float32Array(weightCount);
-  for (let i = 0; i < weightCount; i++) {
-    weights[i] = rng() * 2 - 1;
-  }
-  return weights;
-}
-
-/**
  * Generate the champion weight vector for a refresh generation.
+ *
+ * The champion is re-warm-started deterministically from a generation-unique
+ * seed so that every refresh produces a fresh trained template.
  *
  * @param seed - Population seed.
  * @param generation - Generation at which the snapshot refreshes.
  * @returns A new deterministic champion weight vector.
  */
 function createChampionWeights(seed: number, generation: number): Float32Array {
-  const rng = seedrandom(`${seed}:refresh:${generation}`);
-  const weightCount = countParameters(NEATENSTEIN_MLP_TOPOLOGY);
-  const weights = new Float32Array(weightCount);
-  for (let i = 0; i < weightCount; i++) {
-    weights[i] = rng() * 2 - 1;
-  }
-  return weights;
+  return warmStartTemplate(seed + generation * 7919);
 }
 
 /**
@@ -299,7 +274,7 @@ function createChampionWeights(seed: number, generation: number): Float32Array {
  * @param topology - Ordered layer sizes.
  * @returns Total parameter count (connection weights + biases).
  */
-function countParameters(topology: readonly number[]): number {
+export function countParameters(topology: readonly number[]): number {
   let total = 0;
   for (let i = 0; i < topology.length - 1; i++) {
     total += topology[i] * topology[i + 1] + topology[i + 1];

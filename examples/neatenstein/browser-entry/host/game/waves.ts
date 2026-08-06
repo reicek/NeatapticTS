@@ -101,10 +101,12 @@ function resolveEdgeSpawn(
 
   // Scan inward along the edge normal until an open cell is found. If the
   // whole edge is solid, fall back to the guaranteed-open spawn center.
+  // The cell under test must match the position that will be returned, so we
+  // check the current (x, y) before incrementing — not a step-offset copy.
   const limit = Math.floor(NEATENSTEIN_MAP_SIZE / 2);
   for (let step = 0; step <= limit; step += 1) {
-    const cx = Math.floor(x + step * edge.dx);
-    const cy = Math.floor(y + step * edge.dy);
+    const cx = Math.floor(x);
+    const cy = Math.floor(y);
 
     if (
       cx >= 0 &&

@@ -190,3 +190,38 @@ describe('Neatenstein ceiling pulse layer', () => {
     expect(next[0]?.worldY).toBeLessThan(beforeY);
   });
 });
+
+describe('Neatenstein ambient pulse branch coverage', () => {
+  it('returns null for a negative sim tick', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    expect(emitNeatensteinAmbientPulse(-1, 42)).toBeNull();
+  });
+
+  it('selects the x axis when the LCG float is below the threshold', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const pulse = emitNeatensteinAmbientPulse(0, 2);
+    expect(pulse).not.toBeNull();
+    expect(pulse!.axis).toBe('x');
+  });
+
+  it('selects the y axis when the LCG float is at or above the threshold', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const pulse = emitNeatensteinAmbientPulse(0, 4);
+    expect(pulse).not.toBeNull();
+    expect(pulse!.axis).toBe('y');
+  });
+
+  it('sets travel direction to +1 when the LCG float is below the threshold', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const pulse = emitNeatensteinAmbientPulse(0, 2);
+    expect(pulse).not.toBeNull();
+    expect(pulse!.travelDirection).toBe(1);
+  });
+
+  it('sets travel direction to -1 when the LCG float is at or above the threshold', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const pulse = emitNeatensteinAmbientPulse(0, 1);
+    expect(pulse).not.toBeNull();
+    expect(pulse!.travelDirection).toBe(-1);
+  });
+});

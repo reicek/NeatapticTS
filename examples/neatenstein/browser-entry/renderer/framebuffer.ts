@@ -44,7 +44,7 @@ export const NEATENSTEIN_MAX_VIEW_DIST = 140;
  * prevents the DDA from walking indefinitely on open sight lines and keeps
  * distant geometry from being projected or drawn.
  */
-export const NEATENSTEIN_RENDER_DISTANCE_CAP = 30;
+export const NEATENSTEIN_RENDER_DISTANCE_CAP = 40;
 
 /**
  * Background RGB used by the distance-fog pass.
@@ -163,6 +163,48 @@ function clampInt(value: number, min: number, max: number): number {
   }
 
   return truncated;
+}
+
+/**
+ * Resolve a distance-based fog factor shared by the floor, ceiling, and sprite
+ * renderers.
+ *
+ * Returns `0` (no fog) at distance `0` and `1` (fully fogged) at
+ * {@link NEATENSTEIN_RENDER_DISTANCE_CAP}. Non-finite distances are treated as
+ * fully fogged so malformed projections fade into the background instead of
+ * producing invalid color channels.
+ *
+ * @param distance - World-space distance from the camera.
+ * @returns Fog interpolation factor in `[0, 1]`.
+ */
+export function resolveNeatensteinFogFactor(distance: number): number {
+  if (!Number.isFinite(distance)) {
+    return 1;
+  }
+
+  return distance >= NEATENSTEIN_RENDER_DISTANCE_CAP ? 1 : 0;
+}
+
+/**
+ * Blend a base RGB color toward the background fog color.
+ *
+ * @param base - Base RGB color to interpolate from.
+ * @param fogFactor - Fog interpolation factor in `[0, 1]` where `0` is the base
+ *   color and `1` is fully fogged.
+ * @returns Fogged RGB color.
+ */
+export function resolveNeatensteinFoggedColor(
+  base: { r: number; g: number; b: number },
+  fogFactor: number,
+): { r: number; g: number; b: number } {
+  const { r: bgR, g: bgG, b: bgB } = NEATENSTEIN_BACKGROUND_RGB;
+  const invFog = 1 - fogFactor;
+
+  return {
+    r: Math.round(base.r * invFog + bgR * fogFactor),
+    g: Math.round(base.g * invFog + bgG * fogFactor),
+    b: Math.round(base.b * invFog + bgB * fogFactor),
+  };
 }
 
 export { clampInt };

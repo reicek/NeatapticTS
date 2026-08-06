@@ -87,6 +87,35 @@ export interface BoltState {
   hitEnemyIndex?: number;
 }
 
+/**
+ * One traveling enemy plasma projectile owned by the host simulation.
+ *
+ * Enemy bolts are spawned from {@link HitscanEvent} data produced by the
+ * enemy controller. Their origin and direction come directly from the
+ * enemy's computed hitscan ray — no additional RNG is used, keeping the
+ * simulation fully deterministic.
+ */
+export interface EnemyBoltState {
+  /** Current world-space position. */
+  position: Vector2;
+  /** Normalized travel direction (from enemy toward player at fire time). */
+  direction: Vector2;
+  /** Movement speed in world cells per second. */
+  speedCellsPerSecond: number;
+  /** `true` while the bolt is still moving; `false` after expiry or hit. */
+  active: boolean;
+  /** Simulation time at which the bolt was created, in milliseconds. */
+  createdAtMs: number;
+  /** Spawn origin (enemy position at fire time) for screen-space interpolation. */
+  origin?: Vector2;
+  /** Distance in cells the bolt should travel from origin before expiring. */
+  targetDistance?: number;
+  /** Damage applied to the player on hit (10 = 10% of 100 maxHealth). */
+  damage: number;
+  /** `true` when this bolt has already struck the player. */
+  hitPlayer?: boolean;
+}
+
 /** Persistent neon impact marker left on a wall by a plasma bolt hit. */
 export interface ImpactSpot {
   /** Raycast metadata that identifies the exact wall face that was hit. */
@@ -140,6 +169,8 @@ export interface GameState {
   gun?: GunState;
   /** Active traveling plasma bolts in the world. */
   bolts?: BoltState[];
+  /** Active traveling enemy plasma bolts in the world. */
+  enemyBolts?: EnemyBoltState[];
   /** Total confirmed kills for scoring and evolution pressure. */
   kills: number;
   /**

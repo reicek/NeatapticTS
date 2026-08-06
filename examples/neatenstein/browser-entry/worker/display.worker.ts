@@ -21,7 +21,6 @@
 import {
   NEATENSTEIN_CPU_COLUMN_COUNT,
   NEATENSTEIN_DEFAULT_SEED,
-  NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_GPU_COLUMN_COUNT,
   NEATENSTEIN_INPUT_MESSAGE_TYPE,
   NEATENSTEIN_MAP_SIZE,
@@ -67,14 +66,18 @@ import {
   gameTick,
   type GameTickInputSnapshot,
 } from '../host/game/tick';
+import { fireEnemyBolt } from '../host/game/combat';
 import type { GameState } from '../host/game/types';
 import {
   NEATENSTEIN_BACKGROUND_RGB,
-  NEATENSTEIN_MAX_VIEW_DIST,
   NEATENSTEIN_RENDER_DISTANCE_CAP,
 } from '../renderer/framebuffer';
 import { renderGunOverlay } from '../renderer/gun';
-import { drawBolts, drawImpactSpots } from '../renderer/bolt-render';
+import {
+  drawBolts,
+  drawEnemyBolts,
+  drawImpactSpots,
+} from '../renderer/bolt-render';
 import {
   createEnemyControllerState,
   updateEnemyController,
@@ -349,7 +352,7 @@ function resolveWorkerZBuffer(columnCount: number): Float32Array {
  * @returns Fog factor in `[0, 1]`.
  */
 function resolveWallFogFactor(perpWallDist: number): number {
-  return clamp(perpWallDist / NEATENSTEIN_MAX_VIEW_DIST, 0, 1);
+  return perpWallDist >= NEATENSTEIN_RENDER_DISTANCE_CAP ? 1 : 0;
 }
 
 /**
@@ -572,7 +575,12 @@ function buildAndPostFrame(): void {
           ? perpWallDist
           : NEATENSTEIN_RENDER_DISTANCE_CAP;
 
-      // Skip wall drawing and per-column effects for capped/far rays.
+      // Integer stripe bounds prevent subpixel gaps when the column count does
+      // not divide the canvas width evenly.
+      const xStart = Math.floor(column * stripeWidth);
+      const xEnd = Math.floor((column + 1) * stripeWidth);
+      const stripePixelWidth = Math.max(0, xEnd - xStart);
+
       if (!isCapped) {
         const lineHeight = wallFocalLength / hit.perpWallDist;
         const drawStart = clamp(
@@ -587,12 +595,6 @@ function buildAndPostFrame(): void {
             ? NEATENSTEIN_WALL_X_SIDE_RGB
             : NEATENSTEIN_WALL_Y_SIDE_RGB;
 
-        // Integer stripe bounds prevent subpixel gaps when the column count does
-        // not divide the canvas width evenly.
-        const xStart = Math.floor(column * stripeWidth);
-        const xEnd = Math.floor((column + 1) * stripeWidth);
-        const stripePixelWidth = Math.max(0, xEnd - xStart);
-
         context.fillStyle = applyWallFog(wallColor, hit.perpWallDist);
         context.fillRect(
           xStart,
@@ -600,6 +602,82 @@ function buildAndPostFrame(): void {
           stripePixelWidth,
           drawEnd - drawStart,
         );
+      } else {
+        // Render a fog wall at the render distance cap with the same
+        // proportional height as a real wall at 30 cells
+        // (wallFocalLength / NEATENSTEIN_RENDER_DISTANCE_CAP). A short
+        // vertical gradient feather at the top and bottom edges blends the
+        // fog wall smoothly with the floor/ceiling grid, avoiding a hard
+        // cut line where the fog wall meets the floor or ceiling.
+        const fogDist = NEATENSTEIN_RENDER_DISTANCE_CAP;
+        const lineHeight = wallFocalLength / fogDist;
+        const drawStart = clamp(
+          (canvasHeight - lineHeight) / 2,
+          0,
+          canvasHeight,
+        );
+        const drawEnd = clamp((canvasHeight + lineHeight) / 2, 0, canvasHeight);
+
+        const fogColor = formatRgb(NEATENSTEIN_BACKGROUND_RGB);
+        context.fillStyle = fogColor;
+        context.fillRect(
+          xStart,
+          drawStart,
+          stripePixelWidth,
+          drawEnd - drawStart,
+        );
+
+        // Feather the top edge: gradient from transparent (ceiling side)
+        // to opaque background (fog wall side) so the fog wall blends
+        // smoothly with the ceiling grid above it.
+        const fogFeatherPixels = 6;
+        const featherTopStart = Math.max(0, drawStart - fogFeatherPixels);
+        /* istanbul ignore else -- lineHeight = wallFocalLength/30 is always << canvasHeight, so drawStart is always > 0 */
+        if (drawStart > 0) {
+          const topGrad = context.createLinearGradient(
+            0,
+            featherTopStart,
+            0,
+            drawStart,
+          );
+          const { r, g, b } = NEATENSTEIN_BACKGROUND_RGB;
+          topGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
+          topGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 1)`);
+          context.fillStyle = topGrad;
+          context.fillRect(
+            xStart,
+            featherTopStart,
+            stripePixelWidth,
+            drawStart - featherTopStart,
+          );
+        }
+
+        // Feather the bottom edge: gradient from opaque background (fog
+        // wall side) to transparent (floor side) so the fog wall blends
+        // smoothly with the floor grid below it.
+        const featherBottomEnd = Math.min(
+          canvasHeight,
+          drawEnd + fogFeatherPixels,
+        );
+        /* istanbul ignore else -- lineHeight = wallFocalLength/30 is always << canvasHeight, so drawEnd is always < canvasHeight */
+        if (drawEnd < canvasHeight) {
+          const bottomGrad = context.createLinearGradient(
+            0,
+            drawEnd,
+            0,
+            featherBottomEnd,
+          );
+          const { r, g, b } = NEATENSTEIN_BACKGROUND_RGB;
+          bottomGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 1)`);
+          bottomGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+          context.fillStyle = bottomGrad;
+          context.fillRect(
+            xStart,
+            drawEnd,
+            stripePixelWidth,
+            featherBottomEnd - drawEnd,
+          );
+        }
       }
     }
 
@@ -645,6 +723,10 @@ function buildAndPostFrame(): void {
           canvasHeight,
           zBuffer,
         );
+        // Skip sprites culled by the render-distance cap (AC-10.3c-002).
+        if (!projection.visible) {
+          continue;
+        }
         renderNeatensteinSprite(
           spriteSnapshot.data,
           zBuffer,
@@ -717,6 +799,15 @@ function buildAndPostFrame(): void {
       gameState.simTimeMs,
     );
 
+    drawEnemyBolts(
+      context,
+      gameState.enemyBolts!,
+      { x: cameraPositionX, y: cameraPositionY, yaw: cameraYaw },
+      canvasWidth,
+      canvasHeight,
+      gameState.simTimeMs,
+    );
+
     renderGunOverlay(context, gameState.gun!, canvasWidth, canvasHeight);
 
     const commitableContext = context as OffscreenCanvasRenderingContext2D & {
@@ -725,6 +816,14 @@ function buildAndPostFrame(): void {
     if (typeof commitableContext.commit === 'function') {
       commitableContext.commit();
     }
+
+    // Post a frame acknowledgment so the host bridge can apply worker-busy
+    // backpressure. The worker tier renders directly to the OffscreenCanvas,
+    // so the frame payload only carries the request id for throttling.
+    self.postMessage({
+      type: 'frame',
+      frame: { requestId: latestState.simTick },
+    });
 
     return;
   } else {
@@ -1051,13 +1150,19 @@ self.onmessage = (event: MessageEvent) => {
       dash: false,
     };
 
+    // Derive the simulation timestep from the rAF delta-time field posted by
+    // the host. On the first frame (deltaMs === 0) fall back to a 16 ms
+    // reference so the simulation advances a single tick.
+    const deltaMs = data.state.deltaMs;
+    const timestepMs = deltaMs > 0 ? deltaMs : 16;
+
     // Advance the enemy controller BEFORE the game tick so movement, bolt, and
     // contact damage subsystems see synced enemy positions/health/active states.
     const controlled = updateEnemyController(
       enemyControllerState,
       gameState,
       collisionMap,
-      NEATENSTEIN_FIXED_TIMESTEP_MS,
+      timestepMs,
     );
     enemyControllerState = controlled;
 
@@ -1078,12 +1183,30 @@ self.onmessage = (event: MessageEvent) => {
       }),
     };
 
-    gameState = gameTick(
-      gameState,
-      tickInput,
-      collisionMap,
-      NEATENSTEIN_FIXED_TIMESTEP_MS,
-    );
+    gameState = gameTick(gameState, tickInput, collisionMap, timestepMs);
+
+    // Consume hitscan events produced by the enemy controller and spawn
+    // visible enemy bolts. Each bolt uses the HitscanEvent origin/direction
+    // directly — no Math.random(), fully deterministic. Bolts are appended
+    // after the tick so they start at the enemy position and are advanced on
+    // the following tick, matching the player bolt spawn pattern.
+    if (controlled.hitscanEvents.length > 0 && gameState) {
+      const simTimeMs = gameState.simTimeMs;
+      const newEnemyBolts = controlled.hitscanEvents.map((event) =>
+        fireEnemyBolt(
+          {
+            origin: event.origin,
+            direction: event.direction,
+            damage: event.damage,
+          },
+          simTimeMs,
+        ),
+      );
+      gameState = {
+        ...gameState,
+        enemyBolts: [...(gameState.enemyBolts ?? []), ...newEnemyBolts],
+      };
+    }
 
     // Keep the worker authoritative. If an enemy was killed this tick, clear
     // it from the controller roster so the next controller pass does not revive
@@ -1139,6 +1262,9 @@ export const __testOnlySyncWorkerCanvasSize = syncWorkerCanvasSize;
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyResolveEnemyTeamColor = resolveEnemyTeamColor;
 
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyResolveWallFogFactor = resolveWallFogFactor;
+
 /* istanbul ignore next -- test-only hook to place enemies near the player */
 export const __testOnlyInjectTestEnemies = (
   positions: { x: number; y: number }[],
@@ -1165,6 +1291,11 @@ export const __testOnlyInjectTestEnemies = (
       active: true,
       walkTick: 0,
       shootBlinkTicks: 0,
+      flankStallTicks: 0,
+      bfsStallTicks: 0,
+      weights: undefined,
+      variantId: 0,
+      previousStepDistance: -1,
     })),
   };
 };

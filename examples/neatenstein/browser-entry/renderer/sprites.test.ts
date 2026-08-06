@@ -5,6 +5,10 @@
 import { describe, expect, it } from '@jest/globals';
 import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
 import { NEATENSTEIN_FLOOR_FOV_RADIANS } from './floor';
+import {
+  NEATENSTEIN_BACKGROUND_RGB,
+  resolveNeatensteinFogFactor,
+} from './framebuffer';
 import type { NeatensteinSpriteProjection } from './sprites';
 import {
   resolveNeatensteinEnemyFrame,
@@ -415,9 +419,17 @@ describe('neatenstein sprites', () => {
       ctx,
     );
 
-    expect(Array.from(framebuffer.subarray(72, 76))).toEqual([
-      0, 191, 255, 255,
-    ]);
+    // Fog blends the sprite color toward the background at perpDist=2.
+    const fogT = resolveNeatensteinFogFactor(2);
+    const invFog = 1 - fogT;
+    const expectedPixel = [
+      Math.round(0 * invFog + NEATENSTEIN_BACKGROUND_RGB.r * fogT),
+      Math.round(191 * invFog + NEATENSTEIN_BACKGROUND_RGB.g * fogT),
+      Math.round(255 * invFog + NEATENSTEIN_BACKGROUND_RGB.b * fogT),
+      255,
+    ];
+
+    expect(Array.from(framebuffer.subarray(72, 76))).toEqual(expectedPixel);
   });
 
   it('returns an empty visible span when the sprite is behind the camera', async () => {
@@ -885,10 +897,25 @@ describe('neatenstein sprites', () => {
       // clipNeatensteinSpriteSpan excludes the right screen edge, so the
       // rightmost rendered column is FRAME_SIZE - 2.
       const rightColumnOffset = (FRAME_SIZE - 2) * 4;
+
+      // Fog blends the sprite color toward the background at the sprite's
+      // perpendicular distance.
+      const fogT = resolveNeatensteinFogFactor(SPRITE_DISTANCE);
+      const invFog = 1 - fogT;
+      const expectedR = Math.round(
+        0 * invFog + NEATENSTEIN_BACKGROUND_RGB.r * fogT,
+      );
+      const expectedG = Math.round(
+        0 * invFog + NEATENSTEIN_BACKGROUND_RGB.g * fogT,
+      );
+      const expectedB = Math.round(
+        255 * invFog + NEATENSTEIN_BACKGROUND_RGB.b * fogT,
+      );
+
       const rightColumnBlue =
-        framebuffer[rightColumnOffset] === 0 &&
-        framebuffer[rightColumnOffset + 1] === 0 &&
-        framebuffer[rightColumnOffset + 2] === 255 &&
+        framebuffer[rightColumnOffset] === expectedR &&
+        framebuffer[rightColumnOffset + 1] === expectedG &&
+        framebuffer[rightColumnOffset + 2] === expectedB &&
         framebuffer[rightColumnOffset + 3] === 255;
       expect(rightColumnBlue).toBe(true);
     });
@@ -1000,6 +1027,7 @@ describe('neatenstein sprites', () => {
         4,
         frame,
         0,
+        0,
       );
 
       expect(framebuffer.every((value) => value === 0)).toBe(true);
@@ -1024,6 +1052,7 @@ describe('neatenstein sprites', () => {
         0,
         4,
         frame,
+        0,
         0,
       );
 
@@ -1066,13 +1095,22 @@ describe('neatenstein sprites', () => {
       expect(calls.length).toBe(1);
 
       const white = robotSpriteData.ROBOT_SPRITE_PALETTE[4];
+      // Fog blends white toward the background at perpDist=1.
+      const fogT = resolveNeatensteinFogFactor(1);
+      const invFog = 1 - fogT;
+      const expectedWhite = [
+        Math.round(white[0] * invFog + NEATENSTEIN_BACKGROUND_RGB.r * fogT),
+        Math.round(white[1] * invFog + NEATENSTEIN_BACKGROUND_RGB.g * fogT),
+        Math.round(white[2] * invFog + NEATENSTEIN_BACKGROUND_RGB.b * fogT),
+        white[3],
+      ];
       let foundWhite = false;
       for (let i = 0; i < framebuffer.length; i += 4) {
         if (
-          framebuffer[i] === white[0] &&
-          framebuffer[i + 1] === white[1] &&
-          framebuffer[i + 2] === white[2] &&
-          framebuffer[i + 3] === white[3]
+          framebuffer[i] === expectedWhite[0] &&
+          framebuffer[i + 1] === expectedWhite[1] &&
+          framebuffer[i + 2] === expectedWhite[2] &&
+          framebuffer[i + 3] === expectedWhite[3]
         ) {
           foundWhite = true;
           break;
@@ -1409,13 +1447,25 @@ describe('neatenstein sprites', () => {
 
       expect(calls.length).toBe(1);
 
-      // Verify team color pixels are present in the framebuffer.
+      // Verify team color pixels are present in the framebuffer, fog-blended
+      // toward the background at perpDist=1.
+      const fogT = resolveNeatensteinFogFactor(1);
+      const invFog = 1 - fogT;
+      const expectedTeamR = Math.round(
+        100 * invFog + NEATENSTEIN_BACKGROUND_RGB.r * fogT,
+      );
+      const expectedTeamG = Math.round(
+        200 * invFog + NEATENSTEIN_BACKGROUND_RGB.g * fogT,
+      );
+      const expectedTeamB = Math.round(
+        50 * invFog + NEATENSTEIN_BACKGROUND_RGB.b * fogT,
+      );
       let foundTeamColor = false;
       for (let i = 0; i < framebuffer.length; i += 4) {
         if (
-          framebuffer[i] === 100 &&
-          framebuffer[i + 1] === 200 &&
-          framebuffer[i + 2] === 50 &&
+          framebuffer[i] === expectedTeamR &&
+          framebuffer[i + 1] === expectedTeamG &&
+          framebuffer[i + 2] === expectedTeamB &&
           framebuffer[i + 3] > 0
         ) {
           foundTeamColor = true;

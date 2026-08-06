@@ -92,9 +92,6 @@ export const NEATENSTEIN_IMPACT_SPOT_GLOW_COLOR = 'rgba(240,248,255,0.5)';
 /** Glow blur radius in pixels for wall-impact neon spots. */
 export const NEATENSTEIN_IMPACT_SPOT_GLOW_BLUR_PX = 2;
 
-/** Fixed simulation timestep used by the display worker and host tick loop. */
-export const NEATENSTEIN_FIXED_TIMESTEP_MS = 16;
-
 /** Ordered list of all procedural sound names used by the audio engine. */
 export const NEATENSTEIN_AUDIO_SOUND_NAMES = [
   'fire',

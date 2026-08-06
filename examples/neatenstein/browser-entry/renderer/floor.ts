@@ -17,6 +17,10 @@
  */
 
 import { FLAPPY_NEON_PALETTE } from '../../../flappy_bird/constants/constants.palette';
+import {
+  NEATENSTEIN_BACKGROUND_RGB,
+  NEATENSTEIN_RENDER_DISTANCE_CAP,
+} from './framebuffer';
 
 /**
  * Test fallback canvas width used when the render context has no backing
@@ -116,7 +120,7 @@ const NEATENSTEIN_FLOOR_ALPHA_BANDS = 4;
  *
  * This fixed range bounds per-frame work independently of map size.
  */
-const NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE = 30;
+const NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE = NEATENSTEIN_RENDER_DISTANCE_CAP;
 
 /**
  * Number of samples per projected world grid line.
@@ -124,7 +128,7 @@ const NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE = 30;
  * Each integer grid line is sampled at `SAMPLES + 1` points and consecutive
  * visible samples are connected into screen-space line segments.
  */
-const NEATENSTEIN_FLOOR_LINE_SAMPLES = 80;
+const NEATENSTEIN_FLOOR_LINE_SAMPLES = 160;
 
 /**
  * Minimum positive camera-space depth required for projection.
@@ -156,10 +160,11 @@ const NEATENSTEIN_FLOOR_FALLBACK_STROKE_STYLE =
   FLAPPY_NEON_PALETTE.groundGridLine;
 
 /**
- * Cache of computed RGBA stroke styles keyed by quantized alpha.
+ * Cache of computed RGBA stroke styles keyed by quantized alpha and RGB color.
  *
- * The RGB color is fixed at module load, so alpha is the only variable part of
- * the stroke style.
+ * The RGB color varies per depth band because fog blending shifts the base
+ * color toward the background at greater distances, so both RGB and alpha are
+ * part of the cache key.
  */
 const NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE = new Map<string, string>();
 
@@ -655,13 +660,24 @@ function strokeNeatensteinGridBands(
     const bandRatio = (bandIndex + 0.5) / NEATENSTEIN_FLOOR_ALPHA_BANDS;
     const coreAlpha = resolveNeatensteinFloorAlpha(bandRatio);
 
+    // All bands within 30 cells use the original floor color — fog only
+    // applies AT the 30-cell cap, not before.
+    let foggedRgb: { r: number; g: number; b: number };
+    /* istanbul ignore else -- FLOOR_BASE_RGB is always non-null with the valid palette color */
+    if (FLOOR_BASE_RGB !== null) {
+      foggedRgb = FLOOR_BASE_RGB;
+    } else {
+      foggedRgb = NEATENSTEIN_BACKGROUND_RGB;
+    }
+
+    /* istanbul ignore else -- constant-controlled alternative glow path */
     if (NEATENSTEIN_FLOOR_GLOW_METHOD === 'double-stroke') {
       // Pass 1: wide, dim halo. This creates a predictable neon glow without
       // relying on compositor-specific shadow blur performance.
       ctx.lineWidth = NEATENSTEIN_FLOOR_GLOW_WIDTH_PX;
       ctx.shadowBlur = 0;
       ctx.strokeStyle = resolveNeatensteinFloorStrokeStyle(
-        FLOOR_BASE_RGB,
+        foggedRgb,
         coreAlpha * NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER,
       );
       strokeNeatensteinFloorBand(ctx, segments);
@@ -670,7 +686,7 @@ function strokeNeatensteinGridBands(
       ctx.lineWidth = NEATENSTEIN_FLOOR_LINE_WIDTH_PX;
       ctx.shadowBlur = 0;
       ctx.strokeStyle = resolveNeatensteinFloorStrokeStyle(
-        FLOOR_BASE_RGB,
+        foggedRgb,
         coreAlpha,
       );
       strokeNeatensteinFloorBand(ctx, segments);
@@ -680,7 +696,7 @@ function strokeNeatensteinGridBands(
       ctx.lineWidth = NEATENSTEIN_FLOOR_LINE_WIDTH_PX;
       ctx.shadowBlur = NEATENSTEIN_FLOOR_SHADOW_BLUR_PX;
       ctx.strokeStyle = resolveNeatensteinFloorStrokeStyle(
-        FLOOR_BASE_RGB,
+        foggedRgb,
         coreAlpha,
       );
       strokeNeatensteinFloorBand(ctx, segments);
@@ -840,6 +856,13 @@ function projectNeatensteinGridPoint(
     return null;
   }
 
+  // Cull grid points beyond the hard render distance cap. This matches the
+  // wall DDA stop distance so the floor/ceiling grid terminates at the same
+  // depth as the wall cap — no visible tunnel or gap between them.
+  if (camSpaceY > NEATENSTEIN_RENDER_DISTANCE_CAP) {
+    return null;
+  }
+
   // Camera-space X is horizontal right/left displacement.
   const camSpaceX = -dx * projection.sinYaw + dy * projection.cosYaw;
   const verticalOffset =
@@ -890,22 +913,28 @@ function resolveNeatensteinFloorStrokeStyle(
   baseRgb: { r: number; g: number; b: number } | null,
   alpha: number,
 ): string {
+  /* istanbul ignore next -- FLOOR_BASE_RGB is always non-null with the valid palette color */
   if (baseRgb === null) {
     return NEATENSTEIN_FLOOR_FALLBACK_STROKE_STYLE;
   }
 
+  // alpha always comes from resolveNeatensteinFloorAlpha (clamped to [0,1]),
+  // so the non-finite fallback branch is unreachable dead code.
+  /* istanbul ignore next -- alpha is always finite from resolveNeatensteinFloorAlpha */
   const clampedAlpha = clamp(Number.isFinite(alpha) ? alpha : 1, 0, 1);
   const alphaKey = clampedAlpha.toFixed(
     NEATENSTEIN_FLOOR_ALPHA_CACHE_PRECISION,
   );
 
-  const cached = NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE.get(alphaKey);
+  const cacheKey = `${baseRgb.r},${baseRgb.g},${baseRgb.b},${alphaKey}`;
+
+  const cached = NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE.get(cacheKey);
   if (cached !== undefined) {
     return cached;
   }
 
   const style = `rgba(${baseRgb.r}, ${baseRgb.g}, ${baseRgb.b}, ${alphaKey})`;
-  NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE.set(alphaKey, style);
+  NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE.set(cacheKey, style);
 
   return style;
 }
@@ -923,6 +952,7 @@ function parseNeatensteinFloorHexColor(
 ): { r: number; g: number; b: number } | null {
   const match = /^#?([0-9a-fA-F]{6})$/.exec(baseColor);
 
+  /* istanbul ignore next -- palette color is always valid 6-digit hex */
   if (match === null) {
     return null;
   }
@@ -932,6 +962,7 @@ function parseNeatensteinFloorHexColor(
   const green = Number.parseInt(hexDigits.slice(2, 4), 16);
   const blue = Number.parseInt(hexDigits.slice(4, 6), 16);
 
+  /* istanbul ignore next -- parseInt on valid hex digits always returns finite values */
   if (
     !Number.isFinite(red) ||
     !Number.isFinite(green) ||

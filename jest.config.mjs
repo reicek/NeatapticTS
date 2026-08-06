@@ -101,6 +101,7 @@ const config = {
         'examples/neatenstein/browser-entry/constants.ts',
         'examples/neatenstein/browser-entry/harness/constants.ts',
         'examples/neatenstein/browser-entry/harness/enemy-mlp.ts',
+        'examples/neatenstein/browser-entry/harness/enemy-warmstart.ts',
         'examples/neatenstein/browser-entry/harness/fitness.ts',
         'examples/neatenstein/browser-entry/harness/barrier.ts',
         'examples/neatenstein/browser-entry/harness/enemy-runner.ts',

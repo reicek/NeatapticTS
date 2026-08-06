@@ -10,7 +10,6 @@
  */
 
 import {
-  NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_MAP_SIZE,
   NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS,
   NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS,
@@ -20,6 +19,7 @@ import {
   NEATENSTEIN_PULSE_WORLD_SPEED_MAX,
   NEATENSTEIN_PULSE_WORLD_SPEED_MIN,
 } from '../constants';
+import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../host/game/constants';
 
 /** Ambient pulse interval rounded to whole simulation ticks. */
 const NEATENSTEIN_PULSE_AMBIENT_INTERVAL_TICKS = Math.round(

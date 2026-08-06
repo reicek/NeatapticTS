@@ -70,16 +70,45 @@ export interface CombatQualitySignal {
 }
 
 /**
- * Optional tuning knobs for the team-level enemy fitness composite.
+ * Optional tuning knobs for the composite enemy fitness.
  *
  * Callers can override the default weights when comparing alternative
- * selection pressures (e.g., aggressive swarms vs. survival-focused swarms).
+ * selection pressures (e.g., navigation-focused vs. combat-focused swarms).
  */
 export interface EnemyTeamFitnessConfig {
+  /** Weight for the navigation (progress + exploration + anti-stall) component. */
+  navigationWeight?: number;
+  /** Weight for the combat (damage + survival) component. */
+  combatWeight?: number;
   /** Weight applied to collective damage dealt to the main agent. */
   damageWeight?: number;
   /** Weight applied to the number of enemies that survived the episode. */
   survivalWeight?: number;
+}
+
+/**
+ * Per-step telemetry for one enemy episode rollout (AC-10.5e-002).
+ *
+ * Carries the per-step BFS distance array and aggregate metrics needed by the
+ * composite navigation+combat fitness. The `bfsDistances` array records the
+ * BFS distance from the enemy cell to the player goal at the start of each
+ * tick, enabling the progress-reward computation (Σ prevDist − curDist).
+ */
+export interface EnemyEpisodeTelemetry {
+  /** Final enemy position in world cells. */
+  position: { x: number; y: number };
+  /** Per-step BFS distances from the enemy cell to the player goal. */
+  bfsDistances: number[];
+  /** Total damage dealt to the static player across all ticks. */
+  damageDealt: number;
+  /** Number of enemies that survived (always 1 in the simplified rollout). */
+  enemiesSurvived: number;
+  /** Number of unique map cells entered by the enemy. */
+  cellsVisited: number;
+  /** Number of ticks where the enemy could not move (blocked or no step). */
+  stagnationTicks: number;
+  /** Final BFS distance from the enemy's final cell to the player goal. */
+  finalDistance: number;
 }
 
 /**

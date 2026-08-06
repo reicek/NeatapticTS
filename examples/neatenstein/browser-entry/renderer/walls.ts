@@ -15,7 +15,7 @@
 import {
   clampInt,
   NEATENSTEIN_BACKGROUND_RGB,
-  NEATENSTEIN_MAX_VIEW_DIST,
+  NEATENSTEIN_RENDER_DISTANCE_CAP,
 } from './framebuffer';
 
 /** Number of RGBA channels per framebuffer pixel. */
@@ -119,7 +119,7 @@ function resolveWallFogFactor(perpWallDist: number): number {
     return 1;
   }
 
-  return Math.max(0, Math.min(1, perpWallDist / NEATENSTEIN_MAX_VIEW_DIST));
+  return perpWallDist >= NEATENSTEIN_RENDER_DISTANCE_CAP ? 1 : 0;
 }
 
 /**
@@ -149,8 +149,8 @@ function resolveFoggedWallColor(base: ParsedRgb, fogT: number): ParsedRgb {
  *
  * Distance fog linearly interpolates the wall color toward
  * {@link NEATENSTEIN_BACKGROUND_RGB} as `perpWallDist` approaches
- * {@link NEATENSTEIN_MAX_VIEW_DIST}. Non-finite distances are treated as fully
- * fogged.
+ * {@link NEATENSTEIN_RENDER_DISTANCE_CAP}. Non-finite distances are treated as
+ * fully fogged.
  *
  * @param framebuffer - Flat RGBA framebuffer.
  * @param framebufferWidth - Framebuffer width in pixels.

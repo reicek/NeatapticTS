@@ -24,11 +24,11 @@ export const NEATENSTEIN_SWARM_REFRESH_INTERVAL_GENERATIONS = 3;
 /**
  * Fixed layer topology for the MLP enemy backend.
  *
- * The MLP receives eight world inputs (similar to the main agent's raycast
- * buffer), compresses through two hidden layers, and produces four movement
+ * The MLP receives six world inputs (the vision vector from the BFS distance
+ * map), compresses through two hidden layers, and produces four movement
  * outputs: move, strafe, turn, and fire.
  */
-export const NEATENSTEIN_MLP_TOPOLOGY: readonly number[] = [8, 6, 4, 4];
+export const NEATENSTEIN_MLP_TOPOLOGY: readonly number[] = [6, 6, 4, 4];
 
 /**
  * Number of weight-only MLP enemy variants maintained by the population.
@@ -55,6 +55,16 @@ export const NEATENSTEIN_MAX_ACTIVE_ENEMIES = 8;
  * surface without making headless batch evaluation prohibitively expensive.
  */
 export const NEATENSTEIN_ENEMY_EVALUATION_DURATION_MS = 10_000;
+
+/**
+ * Maximum number of ticks (frames) in one enemy episode rollout.
+ *
+ * Each tick advances the simulation by one fixed timestep (~16 ms), so 240
+ * ticks correspond to roughly 3.84 seconds of simulated time. The bound keeps
+ * headless batch evaluation finite while giving the MLP enough steps to
+ * navigate toward the static player goal.
+ */
+export const NEATENSTEIN_MAX_EPISODE_TICKS = 240;
 
 /**
  * Maximum number of agents in the SWARM enemy backend.
@@ -117,3 +127,38 @@ export const NEATENSTEIN_ENEMY_TEAM_DAMAGE_WEIGHT = 1;
  * aggressive behavior is preferred over passive longevity.
  */
 export const NEATENSTEIN_ENEMY_TEAM_SURVIVAL_WEIGHT = 1;
+
+/**
+ * Default weight for the enemy navigation fitness component.
+ *
+ * Navigation fitness rewards progress toward the player goal, rewards
+ * exploration of unique cells, and penalizes stagnation above a threshold.
+ */
+export const NEATENSTEIN_ENEMY_NAV_WEIGHT = 1;
+
+/**
+ * Default weight for the enemy combat fitness component.
+ *
+ * Combat fitness rewards damage dealt and survival.
+ */
+export const NEATENSTEIN_ENEMY_COMBAT_WEIGHT = 1;
+
+/**
+ * Bonus per unique cell visited by the enemy.
+ *
+ * Encourages exploration of the maze rather than camping in one spot.
+ */
+export const NEATENSTEIN_ENEMY_EXPLORATION_BONUS = 0.5;
+
+/**
+ * Stagnation tick threshold above which the anti-stall penalty applies.
+ *
+ * For 240-tick episodes, ticks above this threshold incur a per-tick penalty
+ * to discourage the enemy from getting stuck against walls.
+ */
+export const NEATENSTEIN_ENEMY_STAGNATION_THRESHOLD = 80;
+
+/**
+ * Per-tick penalty for each stagnation tick above the threshold.
+ */
+export const NEATENSTEIN_ENEMY_STAGNATION_PENALTY = 1;

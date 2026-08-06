@@ -21,8 +21,10 @@ import {
 import {
   NEATENSTEIN_BOLT_MAX_RANGE_CELLS,
   NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
+  NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS,
+  NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS,
 } from '../host/game/constants';
-import type { BoltState, ImpactSpot } from '../host/game/types';
+import type { BoltState, EnemyBoltState, ImpactSpot } from '../host/game/types';
 import {
   NEATENSTEIN_FLOOR_FOV_RADIANS,
   NEATENSTEIN_FLOOR_HORIZON_RATIO,
@@ -265,10 +267,8 @@ export function drawBolts(
               bolt.position.y - bolt.origin.y,
             )
           : bolt.targetDistance;
-      const targetWorldX =
-        bolt.origin.x + bolt.direction.x * impactDistance;
-      const targetWorldY =
-        bolt.origin.y + bolt.direction.y * impactDistance;
+      const targetWorldX = bolt.origin.x + bolt.direction.x * impactDistance;
+      const targetWorldY = bolt.origin.y + bolt.direction.y * impactDistance;
       const projectedTarget = projectNeatensteinFloorPoint(
         targetWorldX,
         targetWorldY,
@@ -348,6 +348,201 @@ export function drawBolts(
     context.beginPath();
     context.arc(screenX, screenY, coreRadius, 0, Math.PI * 2);
     context.fill();
+  }
+
+  context.globalAlpha = 1;
+  context.shadowBlur = 0;
+  context.globalCompositeOperation = savedComposite;
+}
+
+/**
+ * CSS color for enemy bolt glow (red-orange, distinct from player teal).
+ */
+const NEATENSTEIN_ENEMY_BOLT_COLOR = '#ff4400';
+
+/**
+ * CSS color for the bright inner core of an enemy bolt.
+ */
+const NEATENSTEIN_ENEMY_BOLT_CORE_COLOR = '#ffaa00';
+
+/**
+ * Screen-space enemy bolt radius at the muzzle (enemy position).
+ */
+const NEATENSTEIN_ENEMY_BOLT_MUZZLE_SCREEN_RADIUS_PX = 7;
+
+/**
+ * Screen-space enemy bolt radius at maximum range.
+ */
+const NEATENSTEIN_ENEMY_BOLT_MIN_SCREEN_RADIUS_PX = 0.5;
+
+/**
+ * Maximum opacity of a freshly spawned enemy bolt.
+ */
+const NEATENSTEIN_ENEMY_BOLT_MAX_SCREEN_ALPHA = 0.9;
+
+/**
+ * Fraction of the outer enemy bolt radius occupied by the bright inner core.
+ */
+const NEATENSTEIN_ENEMY_BOLT_CORE_RADIUS_RATIO = 0.55;
+
+/**
+ * Draw active enemy plasma bolts as traveling glowing projectiles.
+ *
+ * Enemy bolts are rendered with a red/orange color palette to distinguish them
+ * visually from the player's teal plasma bolts. Each bolt is projected from
+ * its world-space position to screen space, interpolated from its origin
+ * toward its current position, and faded based on travel distance.
+ *
+ * @param context - Worker-tier 2D canvas context.
+ * @param bolts - Active enemy bolt list.
+ * @param camera - Camera position and yaw.
+ * @param canvasWidth - Canvas width.
+ * @param canvasHeight - Canvas height.
+ * @param simTimeMs - Current simulation time in milliseconds.
+ */
+export function drawEnemyBolts(
+  context: OffscreenCanvasRenderingContext2D,
+  bolts: readonly EnemyBoltState[],
+  camera: NeatensteinFloorCamera,
+  canvasWidth: number,
+  canvasHeight: number,
+  simTimeMs: number,
+): void {
+  if (bolts.length === 0) {
+    return;
+  }
+
+  const safeX = camera.x;
+  const safeY = camera.y;
+  const safeYaw = camera.yaw;
+
+  const horizonY = canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+  const halfWidth = canvasWidth / 2;
+  const focalLength =
+    canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const cosYaw = Math.cos(safeYaw);
+  const sinYaw = Math.sin(safeYaw);
+
+  const savedComposite = context.globalCompositeOperation;
+  context.globalCompositeOperation = 'lighter';
+
+  for (const bolt of bolts) {
+    const elapsedMs = simTimeMs - bolt.createdAtMs;
+    if (elapsedMs < 0 || elapsedMs > NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS) {
+      continue;
+    }
+
+    const projectedCurrent = projectNeatensteinFloorPoint(
+      bolt.position.x,
+      bolt.position.y,
+      safeX,
+      safeY,
+      cosYaw,
+      sinYaw,
+      focalLength,
+      halfWidth,
+      horizonY,
+      canvasHeight,
+      BOLT_PROJECTED_CAMERA_HEIGHT_WORLD,
+    );
+
+    if (projectedCurrent === null) {
+      continue;
+    }
+
+    let originX = projectedCurrent.x;
+    let originY = projectedCurrent.y;
+
+    if (bolt.origin) {
+      const projectedOrigin = projectNeatensteinFloorPoint(
+        bolt.origin.x,
+        bolt.origin.y,
+        safeX,
+        safeY,
+        cosYaw,
+        sinYaw,
+        focalLength,
+        halfWidth,
+        horizonY,
+        canvasHeight,
+        BOLT_PROJECTED_CAMERA_HEIGHT_WORLD,
+      );
+
+      if (projectedOrigin !== null) {
+        originX = projectedOrigin.x;
+        originY = projectedOrigin.y;
+      }
+    }
+
+    const lifetimeRatio = clamp(
+      elapsedMs / NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS,
+      0,
+      1,
+    );
+
+    const distanceTraveled =
+      bolt.origin &&
+      Number.isFinite(bolt.origin.x) &&
+      Number.isFinite(bolt.origin.y)
+        ? Math.hypot(
+            bolt.position.x - bolt.origin.x,
+            bolt.position.y - bolt.origin.y,
+          )
+        : 0;
+
+    const rangeRatio = clamp(
+      distanceTraveled / NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS,
+      0,
+      1,
+    );
+
+    const fadeRatio = Math.max(lifetimeRatio, rangeRatio);
+
+    if (fadeRatio >= 1) {
+      continue;
+    }
+
+    // Interpolate from the enemy origin toward the current bolt position.
+    const screenX = originX + (projectedCurrent.x - originX) * lifetimeRatio;
+    const screenY = originY + (projectedCurrent.y - originY) * lifetimeRatio;
+
+    const boltRadius =
+      NEATENSTEIN_ENEMY_BOLT_MUZZLE_SCREEN_RADIUS_PX * (1 - fadeRatio) +
+      NEATENSTEIN_ENEMY_BOLT_MIN_SCREEN_RADIUS_PX * fadeRatio;
+    const boltAlpha = NEATENSTEIN_ENEMY_BOLT_MAX_SCREEN_ALPHA * (1 - fadeRatio);
+    const coreRadius = Math.max(
+      0,
+      boltRadius * NEATENSTEIN_ENEMY_BOLT_CORE_RADIUS_RATIO,
+    );
+
+    // Outer glow — red-orange.
+    context.shadowColor = NEATENSTEIN_ENEMY_BOLT_COLOR;
+    context.shadowBlur = Math.max(2, boltRadius * 2);
+    context.fillStyle = NEATENSTEIN_ENEMY_BOLT_COLOR;
+    context.globalAlpha = boltAlpha;
+    context.beginPath();
+    context.arc(screenX, screenY, Math.max(0, boltRadius), 0, Math.PI * 2);
+    context.fill();
+
+    // Inner core — bright yellow-orange.
+    context.shadowBlur = 0;
+    context.fillStyle = NEATENSTEIN_ENEMY_BOLT_CORE_COLOR;
+    context.globalAlpha = boltAlpha;
+    context.beginPath();
+    context.arc(screenX, screenY, coreRadius, 0, Math.PI * 2);
+    context.fill();
+
+    // Explosion flash when the bolt has hit the player.
+    if (bolt.hitPlayer) {
+      const flashRadius = boltRadius * 2.5;
+      context.shadowColor = '#ff6600';
+      context.shadowBlur = Math.max(4, flashRadius * 2);
+      context.fillStyle = '#ff8800';
+      context.globalAlpha = boltAlpha * 0.6;
+      context.beginPath();
+      context.arc(screenX, screenY, flashRadius, 0, Math.PI * 2);
+      context.fill();
+    }
   }
 
   context.globalAlpha = 1;

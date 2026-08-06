@@ -770,5 +770,419 @@ describe('Neatenstein host renderer bridge', () => {
       }
       expect(bridge.requestId).toBe(0);
     });
+
+    it('defers simState when the worker is busy and posts it on the next frame ack', async () => {
+      const { instances } = installMockWorker();
+      const { canvas } = createMockCanvas();
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
+      const bridge = createNeatensteinRendererBridge({
+        canvas,
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
+        tier: 'cpu',
+        mapSeed: 42,
+      });
+      const worker = instances[0];
+      const state1: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 1,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+      const state2: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 2,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+
+      // Initialize the worker.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // First post goes through immediately and marks the worker as busy.
+      bridge.postSimState(state1);
+      expect(worker.postMessage.mock.calls.at(-1)?.[0]).toEqual({
+        type: 'simState',
+        state: state1,
+      });
+      const postCountAfterFirst = worker.postMessage.mock.calls.length;
+
+      // Second post is deferred because the worker is busy.
+      bridge.postSimState(state2);
+      expect(worker.postMessage.mock.calls.length).toBe(postCountAfterFirst);
+
+      // Frame ack clears busy and flushes the deferred state.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 1 } },
+        } as unknown as MessageEvent);
+      }
+      expect(worker.postMessage.mock.calls.at(-1)?.[0]).toEqual({
+        type: 'simState',
+        state: state2,
+      });
+    });
+
+    it('keeps only the latest deferred simState while the worker is busy', async () => {
+      const { instances } = installMockWorker();
+      const { canvas } = createMockCanvas();
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
+      const bridge = createNeatensteinRendererBridge({
+        canvas,
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
+        tier: 'cpu',
+        mapSeed: 42,
+      });
+      const worker = instances[0];
+      const stateA: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 10,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+      const stateB: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 20,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+      const stateC: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 30,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // First post goes through; worker is now busy.
+      bridge.postSimState(stateA);
+      const postCountAfterFirst = worker.postMessage.mock.calls.length;
+
+      // Two more posts are deferred; only the latest (stateC) should survive.
+      bridge.postSimState(stateB);
+      bridge.postSimState(stateC);
+      expect(worker.postMessage.mock.calls.length).toBe(postCountAfterFirst);
+
+      // Frame ack flushes only stateC.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 10 } },
+        } as unknown as MessageEvent);
+      }
+      expect(worker.postMessage.mock.calls.at(-1)?.[0]).toEqual({
+        type: 'simState',
+        state: stateC,
+      });
+    });
+
+    it('posts immediately after a frame ack with no pending state', async () => {
+      const { instances } = installMockWorker();
+      const { canvas } = createMockCanvas();
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
+      const bridge = createNeatensteinRendererBridge({
+        canvas,
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
+        tier: 'cpu',
+        mapSeed: 42,
+      });
+      const worker = instances[0];
+      const state1: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 1,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+      const state2: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 2,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // First post goes through; worker is busy.
+      bridge.postSimState(state1);
+
+      // Frame ack with no pending state clears busy.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 1 } },
+        } as unknown as MessageEvent);
+      }
+      const postCountAfterAck = worker.postMessage.mock.calls.length;
+
+      // Next post goes through immediately (not deferred).
+      bridge.postSimState(state2);
+      expect(worker.postMessage.mock.calls.length).toBe(postCountAfterAck + 1);
+      expect(worker.postMessage.mock.calls.at(-1)?.[0]).toEqual({
+        type: 'simState',
+        state: state2,
+      });
+    });
+
+    it('does not flush deferred state after destroy', async () => {
+      const { instances } = installMockWorker();
+      const { canvas } = createMockCanvas();
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
+      const bridge = createNeatensteinRendererBridge({
+        canvas,
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
+        tier: 'cpu',
+        mapSeed: 42,
+      });
+      const worker = instances[0];
+      const state1: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 1,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+      const state2: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 2,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // First post goes through; worker is busy.
+      bridge.postSimState(state1);
+      // Second post is deferred.
+      bridge.postSimState(state2);
+
+      // Destroy should clear the deferred state and busy flag.
+      bridge.destroy();
+      const postCountAfterDestroy = worker.postMessage.mock.calls.length;
+
+      // Frame ack after destroy should not flush anything.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 1 } },
+        } as unknown as MessageEvent);
+      }
+      expect(worker.postMessage.mock.calls.length).toBe(postCountAfterDestroy);
+    });
+
+    it('calls onFrameReady on a frame ack with no pending state', async () => {
+      const { instances } = installMockWorker();
+      const { canvas } = createMockCanvas();
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
+      const bridge = createNeatensteinRendererBridge({
+        canvas,
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
+        tier: 'cpu',
+        mapSeed: 42,
+      });
+      const worker = instances[0];
+      const onFrameReady = jest.fn();
+      (
+        bridge as unknown as Record<
+          string,
+          (callback: (() => void) | null) => void
+        >
+      ).setOnFrameReady(onFrameReady);
+
+      // Initialize the worker.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // Post a simState so the worker becomes busy.
+      const state: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 1,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+      bridge.postSimState(state);
+
+      // Frame ack with no pending state → onFrameReady should be called.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 1 } },
+        } as unknown as MessageEvent);
+      }
+      expect(onFrameReady).toHaveBeenCalledTimes(1);
+    });
+
+    it('does NOT call onFrameReady when a pending state is flushed on ack', async () => {
+      const { instances } = installMockWorker();
+      const { canvas } = createMockCanvas();
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
+      const bridge = createNeatensteinRendererBridge({
+        canvas,
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
+        tier: 'cpu',
+        mapSeed: 42,
+      });
+      const worker = instances[0];
+      const onFrameReady = jest.fn();
+      (
+        bridge as unknown as Record<
+          string,
+          (callback: (() => void) | null) => void
+        >
+      ).setOnFrameReady(onFrameReady);
+
+      // Initialize the worker.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      const state1: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 1,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+      const state2: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 2,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+
+      // First post goes through; worker is busy.
+      bridge.postSimState(state1);
+      // Second post is deferred (worker busy).
+      bridge.postSimState(state2);
+
+      // Frame ack flushes pending state2 → onFrameReady NOT called.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 1 } },
+        } as unknown as MessageEvent);
+      }
+      expect(onFrameReady).not.toHaveBeenCalled();
+
+      // Second frame ack (for the flushed state2) with no pending →
+      // onFrameReady IS called.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 2 } },
+        } as unknown as MessageEvent);
+      }
+      expect(onFrameReady).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears the onFrameReady callback on destroy', async () => {
+      const { instances } = installMockWorker();
+      const { canvas } = createMockCanvas();
+      const { createNeatensteinRendererBridge } = await loadModule<
+        typeof import('./renderer-bridge.ts')
+      >('./renderer-bridge.ts');
+      const bridge = createNeatensteinRendererBridge({
+        canvas,
+        workerUrl: `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`,
+        tier: 'cpu',
+        mapSeed: 42,
+      });
+      const worker = instances[0];
+      const onFrameReady = jest.fn();
+      (
+        bridge as unknown as Record<
+          string,
+          (callback: (() => void) | null) => void
+        >
+      ).setOnFrameReady(onFrameReady);
+
+      // Initialize and post a state.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+      const state: import('../renderer/frame').NeatensteinRenderState = {
+        canvasWidth: 640,
+        canvasHeight: 480,
+        simTick: 1,
+        cameraX: 1,
+        cameraY: 2,
+        cameraYaw: 0,
+        mapSeed: 42,
+      };
+      bridge.postSimState(state);
+
+      // Destroy the bridge.
+      bridge.destroy();
+
+      // Frame ack after destroy → onFrameReady should NOT be called.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 1 } },
+        } as unknown as MessageEvent);
+      }
+      expect(onFrameReady).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,7 +1,9 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { createMlpEnemyPopulation } from './enemy-mlp';
-import { runEnemyWaveRunner } from './enemy-runner';
+import { activateMlp, createMlpEnemyPopulation } from './enemy-mlp';
+import { runEnemyWaveRunner, simulateEnemyEpisode } from './enemy-runner';
+import { getEnemySnapshot, refreshEnemySnapshots } from './snapshot';
+import type { EnemyEpisodeTelemetry } from './types';
 
 const VARIANT_COUNT = 32;
 
@@ -45,7 +47,12 @@ describe('Neatenstein headless enemy wave runner', () => {
     it('selects the champion with deterministic lowest-id tie-breaking', () => {
       const population = createMlpEnemyPopulation({ seed: 3 });
       const result = runEnemyWaveRunner(population, 789, {
-        fitness: { damageWeight: 0, survivalWeight: 0 },
+        fitness: {
+          navigationWeight: 0,
+          combatWeight: 0,
+          damageWeight: 0,
+          survivalWeight: 0,
+        },
       });
 
       // With zero weights every score is zero, so the lowest id wins.
@@ -117,6 +124,112 @@ describe('Neatenstein headless enemy wave runner', () => {
       const resultB = runEnemyWaveRunner(populationB, 555);
 
       expect(resultA.seedPack.seeds).not.toEqual(resultB.seedPack.seeds);
+    });
+  });
+
+  describe('simulateEnemyEpisode(snapshot, episodeSeed)', () => {
+    it('exports simulateEnemyEpisode as a function', async () => {
+      const mod = (await import('./enemy-runner.ts')) as Record<
+        string,
+        unknown
+      >;
+      expect(typeof mod.simulateEnemyEpisode).toBe('function');
+    });
+
+    it('returns EnemyEpisodeTelemetry with all required fields', () => {
+      const snapshot = { kind: 'mlp' as const, weights: new Float32Array(90) };
+      const telemetry: EnemyEpisodeTelemetry = simulateEnemyEpisode(
+        snapshot,
+        42,
+      );
+
+      expect(telemetry).toHaveProperty('position');
+      expect(telemetry).toHaveProperty('bfsDistances');
+      expect(telemetry).toHaveProperty('damageDealt');
+      expect(telemetry).toHaveProperty('enemiesSurvived');
+      expect(telemetry).toHaveProperty('cellsVisited');
+      expect(telemetry).toHaveProperty('stagnationTicks');
+      expect(telemetry).toHaveProperty('finalDistance');
+      expect(typeof telemetry.position.x).toBe('number');
+      expect(typeof telemetry.position.y).toBe('number');
+      expect(Array.isArray(telemetry.bfsDistances)).toBe(true);
+      expect(typeof telemetry.damageDealt).toBe('number');
+      expect(typeof telemetry.enemiesSurvived).toBe('number');
+      expect(typeof telemetry.cellsVisited).toBe('number');
+      expect(typeof telemetry.stagnationTicks).toBe('number');
+      expect(typeof telemetry.finalDistance).toBe('number');
+    });
+
+    it('is deterministic for the same snapshot and seed', () => {
+      const snapshot = { kind: 'mlp' as const, weights: new Float32Array(90) };
+      const a = simulateEnemyEpisode(snapshot, 100);
+      const b = simulateEnemyEpisode(snapshot, 100);
+
+      expect(a).toEqual(b);
+    });
+
+    it('produces different telemetry for different weights', () => {
+      const population = createMlpEnemyPopulation({ seed: 10 });
+      refreshEnemySnapshots(population);
+      const snapshotA = getEnemySnapshot(0);
+
+      const zeroSnapshot = {
+        kind: 'mlp' as const,
+        weights: new Float32Array(90),
+      };
+
+      // Use seed=1: enemy spawns at offset (-1, +1) from player, 2 cells away.
+      // Zero weights → all MLP outputs 0 → no movement (cellsVisited = 1).
+      // Population weights → non-zero outputs → movement (cellsVisited > 1).
+      const telemetryA = simulateEnemyEpisode(snapshotA, 1);
+      const telemetryZero = simulateEnemyEpisode(zeroSnapshot, 1);
+
+      expect(telemetryA.cellsVisited).not.toBe(telemetryZero.cellsVisited);
+    });
+
+    it('bounds the rollout: cellsVisited ≤ max ticks and ≥ 1', () => {
+      const population = createMlpEnemyPopulation({ seed: 11 });
+      refreshEnemySnapshots(population);
+      const snapshot = getEnemySnapshot(0);
+      const telemetry = simulateEnemyEpisode(snapshot, 300);
+
+      expect(telemetry.cellsVisited).toBeGreaterThanOrEqual(1);
+      expect(telemetry.cellsVisited).toBeLessThanOrEqual(240);
+    });
+
+    it('reports per-step BFS distances in the telemetry', () => {
+      const population = createMlpEnemyPopulation({ seed: 12 });
+      refreshEnemySnapshots(population);
+      const snapshot = getEnemySnapshot(0);
+      const telemetry = simulateEnemyEpisode(snapshot, 400);
+
+      expect(telemetry.bfsDistances.length).toBeGreaterThan(0);
+      expect(telemetry.bfsDistances.every((d) => typeof d === 'number')).toBe(
+        true,
+      );
+    });
+
+    it('always reports enemiesSurvived = 1 (simplified single-enemy rollout)', () => {
+      const population = createMlpEnemyPopulation({ seed: 13 });
+      refreshEnemySnapshots(population);
+      const snapshot = getEnemySnapshot(0);
+      const telemetry = simulateEnemyEpisode(snapshot, 500);
+
+      expect(telemetry.enemiesSurvived).toBe(1);
+    });
+
+    it('uses snapshot weights directly with activateMlp (AC-10.5c-004)', () => {
+      const population = createMlpEnemyPopulation({ seed: 14 });
+      refreshEnemySnapshots(population);
+      const snapshot = getEnemySnapshot(0);
+
+      // Weights from getEnemySnapshot must work directly with activateMlp
+      // without any INetwork materialization.
+      const vision = new Float32Array(6);
+      const outputs = activateMlp(snapshot.weights, vision);
+
+      expect(outputs).toBeInstanceOf(Float32Array);
+      expect(outputs.length).toBe(4);
     });
   });
 });

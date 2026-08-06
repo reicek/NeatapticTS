@@ -23,10 +23,19 @@ import {
   NEATENSTEIN_BOLT_MAX_RANGE_CELLS,
   NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND,
   NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
+  NEATENSTEIN_ENEMY_BOLT_DAMAGE,
+  NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS,
+  NEATENSTEIN_ENEMY_BOLT_SPEED_CELLS_PER_SECOND,
   NEATENSTEIN_MUZZLE_OFFSET_CELLS,
 } from './constants';
 import { consumeAmmo } from './state';
-import type { BoltState, GameState, ImpactSpot, Vector2 } from './types';
+import type {
+  BoltState,
+  EnemyBoltState,
+  GameState,
+  ImpactSpot,
+  Vector2,
+} from './types';
 
 /** Re-export the muzzle offset so tests can assert bolt spawn position. */
 export { NEATENSTEIN_MUZZLE_OFFSET_CELLS } from './constants';
@@ -309,5 +318,49 @@ export function applyEnemyDamage(
     ...state,
     enemies: newEnemies,
     kills: killedByThisShot ? state.kills + 1 : state.kills,
+  };
+}
+
+/**
+ * Input shape for spawning an enemy bolt from a hitscan event.
+ *
+ * Mirrors the relevant fields of {@link HitscanEvent} without importing the
+ * controller module, keeping the combat module dependency-free.
+ */
+export interface FireEnemyBoltInput {
+  /** World-space origin of the enemy's hitscan ray. */
+  origin: Vector2;
+  /** Normalized direction toward the player at fire time. */
+  direction: Vector2;
+  /** Damage applied on hit. Defaults to {@link NEATENSTEIN_ENEMY_BOLT_DAMAGE}. */
+  damage?: number;
+}
+
+/**
+ * Spawn a traveling enemy plasma bolt from a pre-computed hitscan event.
+ *
+ * The bolt inherits the enemy's computed origin and direction directly — no
+ * additional RNG is used, keeping the simulation fully deterministic. The
+ * maximum travel distance is capped at {@link NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS}.
+ *
+ * @param input - Hitscan event data (origin, direction, optional damage).
+ * @param simTimeMs - Current simulation time in milliseconds.
+ * @returns A new active {@link EnemyBoltState} ready to be appended to the
+ *   game state's `enemyBolts` array.
+ */
+export function fireEnemyBolt(
+  input: FireEnemyBoltInput,
+  simTimeMs: number,
+): EnemyBoltState {
+  return {
+    position: { ...input.origin },
+    direction: { ...input.direction },
+    speedCellsPerSecond: NEATENSTEIN_ENEMY_BOLT_SPEED_CELLS_PER_SECOND,
+    active: true,
+    createdAtMs: simTimeMs,
+    origin: { ...input.origin },
+    targetDistance: NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS,
+    damage: input.damage ?? NEATENSTEIN_ENEMY_BOLT_DAMAGE,
+    hitPlayer: false,
   };
 }

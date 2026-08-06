@@ -20,7 +20,12 @@
  * @module
  */
 
-import { clampInt, NEATENSTEIN_RENDER_DISTANCE_CAP } from './framebuffer';
+import {
+  clampInt,
+  NEATENSTEIN_BACKGROUND_RGB,
+  NEATENSTEIN_RENDER_DISTANCE_CAP,
+  resolveNeatensteinFogFactor,
+} from './framebuffer';
 import {
   clipNeatensteinSpriteSpan,
   type NeatensteinSpriteClip,
@@ -881,6 +886,10 @@ function getPrecomputedVisibleColumns(
  * transparent frame pixels (alpha == 0) and clamps vertical writes to the
  * framebuffer bounds.
  *
+ * Distance fog linearly blends each pixel toward
+ * {@link NEATENSTEIN_BACKGROUND_RGB} as the sprite's perpendicular distance
+ * approaches {@link NEATENSTEIN_RENDER_DISTANCE_CAP}.
+ *
  * @param framebuffer - Flat RGBA framebuffer to write into.
  * @param width - Framebuffer width in pixels.
  * @param height - Framebuffer height in pixels.
@@ -889,6 +898,8 @@ function getPrecomputedVisibleColumns(
  * @param drawEnd - Bottom screen row of the projected sprite, exclusive.
  * @param frame - Pre-rendered voxel snapshot.
  * @param frameX - Column of the voxel frame to sample.
+ * @param fogFactor - Fog interpolation factor in `[0, 1]` where `0` is no fog
+ *   and `1` is fully blended into the background color.
  */
 function renderNeatensteinVoxelSpriteColumn(
   framebuffer: Uint8ClampedArray,
@@ -899,6 +910,7 @@ function renderNeatensteinVoxelSpriteColumn(
   drawEnd: number,
   frame: VoxelSnapshot,
   frameX: number,
+  fogFactor: number,
 ): void {
   const clampedStart = clampInt(drawStart, 0, height);
   const clampedEnd = clampInt(drawEnd, 0, height);
@@ -916,6 +928,9 @@ function renderNeatensteinVoxelSpriteColumn(
   const safeFrameX = clampInt(frameX, 0, frameWidth - 1);
   const spriteHeightPixels = clampedEnd - clampedStart;
 
+  const invFog = 1 - fogFactor;
+  const { r: bgR, g: bgG, b: bgB } = NEATENSTEIN_BACKGROUND_RGB;
+
   for (let rowOffset = 0; rowOffset < spriteHeightPixels; rowOffset += 1) {
     const screenY = clampedStart + rowOffset;
     const v = rowOffset / (drawEnd - drawStart);
@@ -931,9 +946,15 @@ function renderNeatensteinVoxelSpriteColumn(
 
     const screenOffset =
       (screenY * width + screenColumn) * NEATENSTEIN_RGBA_CHANNELS;
-    framebuffer[screenOffset] = frameData[frameOffset];
-    framebuffer[screenOffset + 1] = frameData[frameOffset + 1];
-    framebuffer[screenOffset + 2] = frameData[frameOffset + 2];
+    framebuffer[screenOffset] = Math.round(
+      frameData[frameOffset] * invFog + bgR * fogFactor,
+    );
+    framebuffer[screenOffset + 1] = Math.round(
+      frameData[frameOffset + 1] * invFog + bgG * fogFactor,
+    );
+    framebuffer[screenOffset + 2] = Math.round(
+      frameData[frameOffset + 2] * invFog + bgB * fogFactor,
+    );
     framebuffer[screenOffset + 3] = alpha;
   }
 }
@@ -1007,6 +1028,10 @@ export function renderNeatensteinSprite(
 
   const spanPixels = projection.right - projection.left;
 
+  // Compute distance fog factor so sprites fade into the background as they
+  // approach the 30-cell render distance cap.
+  const fogFactor = resolveNeatensteinFogFactor(projection.perpDist);
+
   // Center sprite vertically on the horizon/midline.
   const halfScale = projection.scale / 2;
   const centerY = height / 2;
@@ -1026,6 +1051,7 @@ export function renderNeatensteinSprite(
       drawEnd,
       frame,
       frameX,
+      fogFactor,
     );
   }
 

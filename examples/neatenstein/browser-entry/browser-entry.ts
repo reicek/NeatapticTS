@@ -27,16 +27,6 @@ import type { NeatensteinRendererBridge } from './host/renderer-bridge';
 import { NEATENSTEIN_BACKGROUND_RGB } from './renderer/framebuffer';
 
 /**
- * Minimum interval between host render-state posts to the worker.
- *
- * The host animation loop can run at the display refresh rate (e.g. 165 Hz).
- * Posting every frame creates an unbounded backlog in the worker message queue,
- * so posts are throttled to roughly 30 fps while input forwarding remains
- * unthrottled for responsiveness.
- */
-export const NEATENSTEIN_HOST_POST_INTERVAL_MS = 33;
-
-/**
  * Exported shape expected by the host shell on `window`.
  *
  * @param outputId - Host container element id (currently unused; reserved for future HUD).
@@ -309,10 +299,24 @@ function neatensteinStart(
 }
 
 /**
- * Run the host render loop for a worker-bound canvas.
+ * Start the worker-paced host render loop.
  *
- * Keeps a local simulation tick and forwards a render state snapshot to the
- * worker every animation frame.
+ * The loop posts a {@link NeatensteinRenderState} snapshot to the display
+ * worker on **every** animation frame. Instead of scheduling `requestAnimationFrame`
+ * continuously at display refresh rate, the next rAF is triggered by the
+ * bridge's `onFrameReady` callback, which fires when the worker finishes
+ * rendering a frame and has no pending state. This makes the loop purely
+ * worker-paced, eliminating wasted rAF ticks when the worker renders slower
+ * than the display refresh rate.
+ *
+ * The bridge applies worker-busy backpressure so only one snapshot is in
+ * flight at a time, naturally throttling to the worker's actual render
+ * capacity. Each snapshot carries a `deltaMs` field derived from consecutive
+ * `requestAnimationFrame` timestamps so the worker can drive simulation
+ * stepping with FPS-scaled timing instead of a fixed timestep.
+ *
+ * Input forwarding remains unthrottled so mouse/keyboard/touch look stays
+ * responsive.
  *
  * @param canvas - The visible canvas bound to the worker renderer.
  * @param bridge - Host/worker bridge that forwards simulation snapshots.
@@ -332,20 +336,59 @@ function startRenderLoop(
   let simTick = initialState.seed;
   let cameraYaw = initialState.player.angleRad;
   let animationFrameId: number | null = null;
-  let lastPostTimestamp = -NEATENSTEIN_HOST_POST_INTERVAL_MS;
+  let lastTimestamp: number | null = null;
 
   /**
-   * Render loop: ship an updated render state snapshot to the worker every
-   * animation frame, but throttle the expensive `postSimState` posts to the
-   * configured interval so the worker queue does not grow without bound.
+   * Reference timestep for FPS-scaled simulation stepping.
+   *
+   * The host no longer uses a fixed timestep constant — delta-time drives the
+   * clock. This local value is only used to scale `simTick` increments so a
+   * 60 Hz display yields ~1 tick/frame, 30 Hz yields ~2, etc.
+   */
+  const REFERENCE_TIMESTEP_MS = 16;
+
+  /**
+   * Upper bound for the rAF delta-time in milliseconds.
+   *
+   * When a tab is suspended/resumed or the main thread stalls for a few
+   * hundred milliseconds, the raw delta can be several seconds long. Clamping
+   * it prevents the next physics tick from tunnelling through walls (point-
+   * sample collision can step past thin wall segments when the single-step
+   * displacement exceeds the grid cell size).
+   */
+  const MAX_DELTA_MS = 4 * REFERENCE_TIMESTEP_MS; // 64 ms ≈ four reference frames
+
+  /**
+   * Render loop: ship an updated render state snapshot to the worker on each
+   * animation frame with a delta-time field derived from consecutive rAF
+   * timestamps.
+   *
+   * The next rAF is NOT scheduled at the end of tick — it is triggered by the
+   * `onFrameReady` callback registered on the bridge, which fires when the
+   * worker finishes rendering and is idle. This makes the loop purely
+   * worker-paced.
    *
    * Input forwarding stays unthrottled so mouse/keyboard/touch look remains
-   * responsive even when a render snapshot is not posted this frame.
+   * responsive.
    *
    * @param timestamp - High-resolution animation-frame timestamp in ms.
    */
   function tick(timestamp: number): void {
-    simTick += 1;
+    // Compute delta-time from consecutive rAF timestamps. On the first frame
+    // there is no previous timestamp, so deltaMs is 0. Clamp the delta to
+    // MAX_DELTA_MS so a suspended tab or long frame cannot produce a single
+    // physics step large enough to tunnel through walls.
+    const deltaMs = Math.min(
+      lastTimestamp === null ? 0 : timestamp - lastTimestamp,
+      MAX_DELTA_MS,
+    );
+    lastTimestamp = timestamp;
+
+    // FPS-scaled simulation stepping: increment simTick proportionally to the
+    // frame delta so simulation progress is consistent across varying refresh
+    // rates.
+    simTick += Math.max(1, Math.round(deltaMs / REFERENCE_TIMESTEP_MS));
+
     const snapshot = inputRouter.getSnapshot();
 
     // Forward look deltas first so the worker can apply them to the incoming
@@ -353,35 +396,49 @@ function startRenderLoop(
     forwardWorkerInput(bridge.worker, snapshot);
 
     const renderDimensions = getRenderDimensions();
-    const elapsedSincePost = timestamp - lastPostTimestamp;
 
-    if (elapsedSincePost >= NEATENSTEIN_HOST_POST_INTERVAL_MS) {
-      bridge.postSimState({
-        canvasWidth: renderDimensions.width,
-        canvasHeight: renderDimensions.height,
-        simTick,
-        cameraX: initialState.player.position.x,
-        cameraY: initialState.player.position.y,
-        cameraYaw,
-        mapSeed: initialState.seed,
-        movement: snapshot.movement,
-        enemies: [],
-      });
+    // Post simState on every animation frame. The bridge applies worker-busy
+    // backpressure so only one snapshot is in flight at a time; additional
+    // frames are deferred until the worker acknowledges. The deltaMs field
+    // lets the worker use FPS-scaled timing for its simulation stepping.
+    const renderState = {
+      canvasWidth: renderDimensions.width,
+      canvasHeight: renderDimensions.height,
+      simTick,
+      cameraX: initialState.player.position.x,
+      cameraY: initialState.player.position.y,
+      cameraYaw,
+      mapSeed: initialState.seed,
+      movement: snapshot.movement,
+      enemies: [],
+      deltaMs,
+    };
 
-      lastPostTimestamp = timestamp;
-    }
+    bridge.postSimState(renderState);
 
     // The authoritative camera yaw is accumulated on the host so it persists
     // across frames while the worker uses the per-frame delta for responsive
     // visual feedback.
     cameraYaw += snapshot.look.yawDelta;
 
-    animationFrameId = requestAnimationFrame(tick);
+    // The next rAF is scheduled by the onFrameReady callback (registered
+    // below) when the worker finishes rendering and is idle. This makes the
+    // loop purely worker-paced instead of running continuously at display
+    // refresh rate, eliminating wasted rAF ticks when the worker renders
+    // slower than the display.
   }
+
+  // Register the worker-paced rAF trigger: when the worker finishes a frame
+  // and has no pending state, schedule the next rAF. The flushed-state path
+  // does NOT call onFrameReady — the flushed state's own ack will trigger it.
+  bridge.setOnFrameReady(() => {
+    animationFrameId = requestAnimationFrame(tick);
+  });
 
   animationFrameId = requestAnimationFrame(tick);
 
   return () => {
+    bridge.setOnFrameReady(null);
     // Defensive guard for teardown being called before the first animation
     // frame is scheduled. This branch is not reachable through the public
     // start flow, so it is excluded from branch coverage.

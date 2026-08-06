@@ -79,26 +79,24 @@ describe('Neatenstein neon wall column renderer', () => {
     });
   });
 
-  it('darkens far wall columns toward the background color', async () => {
+  it('preserves original wall color below the cap and fully fogges at the cap (step function)', async () => {
     const { writeNeonWallColumn } = await loadModule('./walls.ts');
     const nearBuffer = new Uint8ClampedArray(8 * 8 * 4);
+    const midBuffer = new Uint8ClampedArray(8 * 8 * 4);
     const farBuffer = new Uint8ClampedArray(8 * 8 * 4);
     writeNeonWallColumn(nearBuffer, 8, 8, 0, 2, 5, '#00bfff', 1);
-    writeNeonWallColumn(farBuffer, 8, 8, 0, 2, 5, '#00bfff', MAX_VIEW_DIST);
+    writeNeonWallColumn(midBuffer, 8, 8, 0, 2, 5, '#00bfff', MAX_VIEW_DIST);
+    writeNeonWallColumn(farBuffer, 8, 8, 0, 2, 5, '#00bfff', 30);
 
     const nearPixel = sampleColumnPixel(nearBuffer, 0, 8);
+    const midPixel = sampleColumnPixel(midBuffer, 0, 8);
     const farPixel = sampleColumnPixel(farBuffer, 0, 8);
-    const nearDistance = rgbDistanceToBackground(
-      nearPixel.r,
-      nearPixel.g,
-      nearPixel.b,
-    );
-    const farDistance = rgbDistanceToBackground(
-      farPixel.r,
-      farPixel.g,
-      farPixel.b,
-    );
-    expect(farDistance).toBeLessThan(nearDistance);
+
+    // Below 30 cells: no fog, original color preserved (near and mid are the same).
+    expect(midPixel).toEqual(nearPixel);
+
+    // At 30 cells: fully fogged to background color.
+    expect(farPixel).toEqual(BACKGROUND_RGB);
   });
 
   it('does not mutate ctx.globalAlpha during rendering', async () => {
@@ -166,6 +164,51 @@ describe('writeNeonWallColumn edge cases', () => {
     const framebuffer = new Uint8ClampedArray(3);
     writeNeonWallColumn(framebuffer, 8, 8, 0, 0, 8, '#00bfff', 1);
     expect(framebuffer.every((value) => value === 0)).toBe(true);
+  });
+});
+
+describe('fog cap contract (slice 10.3-fog-cap-30)', () => {
+  it('fully fogges wall columns at the render distance cap', async () => {
+    const { writeNeonWallColumn } = await loadModule('./walls.ts');
+    const { NEATENSTEIN_RENDER_DISTANCE_CAP, NEATENSTEIN_BACKGROUND_RGB } =
+      await loadModule('./framebuffer.ts');
+    const buffer = new Uint8ClampedArray(8 * 8 * 4);
+
+    writeNeonWallColumn(
+      buffer,
+      8,
+      8,
+      0,
+      2,
+      5,
+      '#00bfff',
+      NEATENSTEIN_RENDER_DISTANCE_CAP,
+    );
+
+    const pixel = sampleColumnPixel(buffer, 0, 8);
+    expect(pixel).toEqual(NEATENSTEIN_BACKGROUND_RGB);
+  });
+
+  it('does not fully fog wall columns just below the render distance cap', async () => {
+    const { writeNeonWallColumn } = await loadModule('./walls.ts');
+    const { NEATENSTEIN_RENDER_DISTANCE_CAP } =
+      await loadModule('./framebuffer.ts');
+    const buffer = new Uint8ClampedArray(8 * 8 * 4);
+
+    writeNeonWallColumn(
+      buffer,
+      8,
+      8,
+      0,
+      2,
+      5,
+      '#00bfff',
+      NEATENSTEIN_RENDER_DISTANCE_CAP - 1,
+    );
+
+    const pixel = sampleColumnPixel(buffer, 0, 8);
+    const distance = rgbDistanceToBackground(pixel.r, pixel.g, pixel.b);
+    expect(distance).toBeGreaterThan(0);
   });
 });
 

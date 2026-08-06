@@ -3,11 +3,11 @@ import { describe, expect, it } from '@jest/globals';
 import type * as EnemyMlp from './enemy-mlp';
 
 /**
- * Red-phase contract tests for examples/neatenstein/browser-entry/harness/enemy-mlp.ts
+ * Red/green contract tests for examples/neatenstein/browser-entry/harness/enemy-mlp.ts
  * weight-only mutation guard (Phase 3 slice 05-red-mlp).
  *
  * Covers:
- * - AC-501.2: MLP enemies use a fixed 8→6→4→4 topology with per-layer bias,
+ * - AC-501.2: MLP enemies use a fixed 6→6→4→4 topology with per-layer bias,
  *   weight-only mutation, and a runtime guard that rejects structural mutation
  *   operators.
  */
@@ -17,14 +17,14 @@ interface EnemyMlpModule {
   guardMlpStructuralMutation: typeof EnemyMlp.guardMlpStructuralMutation;
 }
 
-/** Connection weight count for the fixed 8→6→4→4 topology. */
-const MLP_CONNECTION_COUNT = 8 * 6 + 6 * 4 + 4 * 4;
+/** Connection weight count for the fixed 6→6→4→4 topology. */
+const MLP_CONNECTION_COUNT = 6 * 6 + 6 * 4 + 4 * 4;
 
-/** Per-layer bias count for the fixed 8→6→4→4 topology (one bias per non-input neuron). */
+/** Per-layer bias count for the fixed 6→6→4→4 topology (one bias per non-input neuron). */
 const MLP_BIAS_COUNT = 6 + 4 + 4;
 
 describe('Neatenstein harness enemy-mlp weight-only', () => {
-  describe('AC-501.2: fixed 8→6→4→4 topology with bias', () => {
+  describe('AC-501.2: fixed 6→6→4→4 topology with bias', () => {
     it('produces weight vectors sized for the topology plus per-layer biases', async () => {
       const { createMlpEnemyPopulation } =
         (await import('./enemy-mlp.ts')) as EnemyMlpModule;

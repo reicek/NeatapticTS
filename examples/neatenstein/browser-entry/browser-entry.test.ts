@@ -11,12 +11,9 @@ import {
   afterEach,
 } from '@jest/globals';
 
-import {
-  NEATENSTEIN_HOST_POST_INTERVAL_MS,
-  type NeatensteinStart,
-  type NeatensteinStop,
-} from './browser-entry';
+import { type NeatensteinStart, type NeatensteinStop } from './browser-entry';
 import { NEATENSTEIN_INPUT_MESSAGE_TYPE } from './constants';
+import * as constantsNamespace from './constants';
 
 interface MockWorkerInstance {
   url: string | URL;
@@ -753,7 +750,7 @@ describe('Neatenstein browser entry', () => {
     }
   });
 
-  it('throttles simState posts to roughly 30 fps while still forwarding input every frame', async () => {
+  it('posts simState on every animation frame (per-frame delta-time posting)', async () => {
     setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
     installOffscreenCanvasSupport();
     const canvas = document.getElementById(
@@ -777,9 +774,16 @@ describe('Neatenstein browser entry', () => {
         } as unknown as MessageEvent);
       }
 
+      // Drive 7 animation frames. Send a frame ack after each tick so the
+      // bridge backpressure allows the next simState to post immediately.
       const timestamps = [0, 16, 33, 49, 66, 83, 99];
       for (let i = 0; i < timestamps.length; i += 1) {
         rafCallbacks[i](timestamps[i]);
+        if (typeof worker.onmessage === 'function') {
+          worker.onmessage({
+            data: { type: 'frame', frame: { requestId: i } },
+          } as unknown as MessageEvent);
+        }
       }
 
       const simStateCalls = worker?.postMessageCalls.filter((call) => {
@@ -800,25 +804,349 @@ describe('Neatenstein browser entry', () => {
         );
       });
 
-      // Model the throttle to verify the observed post count matches the
-      // configured interval rather than the raw frame count.
-      let expectedPostCount = 0;
-      let lastPostTimestamp = -NEATENSTEIN_HOST_POST_INTERVAL_MS;
-      for (const timestamp of timestamps) {
-        if (
-          timestamp - lastPostTimestamp >=
-          NEATENSTEIN_HOST_POST_INTERVAL_MS
-        ) {
-          expectedPostCount += 1;
-          lastPostTimestamp = timestamp;
-        }
-      }
-
-      expect(simStateCalls?.length).toBe(expectedPostCount);
+      // Per-frame posting: one simState per animation frame (with backpressure
+      // ack between frames).
+      expect(simStateCalls?.length).toBe(timestamps.length);
       // Input forwarding must remain unthrottled for responsive look.
       expect(inputCalls?.length).toBe(timestamps.length);
     } finally {
       globalThis.requestAnimationFrame = originalRaf;
     }
+  });
+
+  it('includes a delta-time derived from rAF timestamps in the posted simState', async () => {
+    setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
+    installOffscreenCanvasSupport();
+    const canvas = document.getElementById(
+      'neatenstein-canvas',
+    ) as HTMLCanvasElement;
+    setCanvasSize(canvas, 854, 480);
+    const rafCallbacks: FrameRequestCallback[] = [];
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+      rafCallbacks.push(callback);
+      return rafCallbacks.length;
+    };
+    try {
+      await loadModule('./browser-entry.ts');
+      getGlobalStart()('neatenstein-output', 'neatenstein-canvas');
+      const worker = workers[0];
+
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // Drive two frames 50ms apart; the second posted simState must carry
+      // deltaMs === 50 (derived from consecutive rAF timestamps). Send a
+      // frame ack after the first tick so backpressure allows the second
+      // simState to post.
+      rafCallbacks[0](0);
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 0 } },
+        } as unknown as MessageEvent);
+      }
+      rafCallbacks[1](50);
+
+      const simStateCalls = worker?.postMessageCalls.filter((call) => {
+        const first = call[0];
+        return (
+          first !== null &&
+          typeof first === 'object' &&
+          (first as Record<string, unknown>).type === 'simState'
+        );
+      });
+      expect(simStateCalls?.length).toBeGreaterThanOrEqual(2);
+
+      const secondState = simStateCalls?.[1]?.[0] as
+        Record<string, unknown> | undefined;
+      const state = secondState?.state as Record<string, unknown> | undefined;
+      expect(state?.deltaMs).toBe(50);
+    } finally {
+      globalThis.requestAnimationFrame = originalRaf;
+    }
+  });
+
+  it('advances simTick and cameraYaw across consecutive worker-paced ticks', async () => {
+    setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
+    installOffscreenCanvasSupport();
+    const canvas = document.getElementById(
+      'neatenstein-canvas',
+    ) as HTMLCanvasElement;
+    setCanvasSize(canvas, 854, 480);
+    const rafCallbacks: FrameRequestCallback[] = [];
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+      rafCallbacks.push(callback);
+      return rafCallbacks.length;
+    };
+
+    const yawDelta = 0.1;
+    const inputSnapshot = {
+      timestamp: 0,
+      movement: {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+      },
+      look: { yawDelta, pitchDelta: 0 },
+      touch: { active: false, yawDelta: 0, pitchDelta: 0 },
+      pointerLocked: false,
+      fire: false,
+    };
+    const router = {
+      attach: jest.fn(() => jest.fn()),
+      detach: jest.fn(),
+      getSnapshot: jest.fn(() => inputSnapshot),
+    };
+
+    let stop: NeatensteinStop | undefined;
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('./host/input', () => ({
+        createInputRouter: jest.fn(() => router),
+      }));
+      await import('./browser-entry.ts');
+      const start = (globalThis as unknown as Record<string, unknown>)
+        .neatensteinStart as NeatensteinStart;
+      stop = start('neatenstein-output', 'neatenstein-canvas');
+    });
+
+    try {
+      const worker = workers[0];
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // First tick → simState posted, worker busy.
+      rafCallbacks[0](0);
+
+      // Frame ack → onFrameReady → next rAF scheduled.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 0 } },
+        } as unknown as MessageEvent);
+      }
+
+      // Second tick → simState posted, worker busy.
+      rafCallbacks[1](16);
+
+      // Frame ack → onFrameReady → next rAF scheduled.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 1 } },
+        } as unknown as MessageEvent);
+      }
+
+      // Third tick → simState posted, worker busy.
+      rafCallbacks[2](33);
+
+      const simStateCalls = worker?.postMessageCalls.filter((call) => {
+        const first = call[0];
+        return (
+          first !== null &&
+          typeof first === 'object' &&
+          (first as Record<string, unknown>).type === 'simState'
+        );
+      });
+      expect(simStateCalls?.length).toBe(3);
+
+      // Each successive state must have a higher simTick and cameraYaw,
+      // proving the tick advanced across consecutive worker-paced frames.
+      const firstState = (
+        simStateCalls?.[0]?.[0] as {
+          state: { simTick: number; cameraYaw: number };
+        }
+      ).state;
+      const secondState = (
+        simStateCalls?.[1]?.[0] as {
+          state: { simTick: number; cameraYaw: number };
+        }
+      ).state;
+      const thirdState = (
+        simStateCalls?.[2]?.[0] as {
+          state: { simTick: number; cameraYaw: number };
+        }
+      ).state;
+      expect(secondState.simTick).toBeGreaterThan(firstState.simTick);
+      expect(thirdState.simTick).toBeGreaterThan(secondState.simTick);
+      expect(secondState.cameraYaw).toBeGreaterThan(firstState.cameraYaw);
+      expect(thirdState.cameraYaw).toBeGreaterThan(secondState.cameraYaw);
+    } finally {
+      stop?.();
+      globalThis.requestAnimationFrame = originalRaf;
+    }
+  });
+
+  it('tick does not schedule a new rAF — the loop is worker-paced', async () => {
+    setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
+    installOffscreenCanvasSupport();
+    const canvas = document.getElementById(
+      'neatenstein-canvas',
+    ) as HTMLCanvasElement;
+    setCanvasSize(canvas, 854, 480);
+    const rafCallbacks: FrameRequestCallback[] = [];
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+      rafCallbacks.push(callback);
+      return rafCallbacks.length;
+    };
+    try {
+      await loadModule('./browser-entry.ts');
+      getGlobalStart()('neatenstein-output', 'neatenstein-canvas');
+      const worker = workers[0];
+
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // The initial rAF schedules one callback.
+      const rafCountAfterStart = rafCallbacks.length;
+      expect(rafCountAfterStart).toBe(1);
+
+      // Run the tick. In the worker-paced loop, tick must NOT schedule
+      // a new rAF — that is now the responsibility of onFrameReady.
+      rafCallbacks[0](0);
+
+      expect(rafCallbacks.length).toBe(rafCountAfterStart);
+    } finally {
+      globalThis.requestAnimationFrame = originalRaf;
+    }
+  });
+
+  it('onFrameReady schedules the next rAF after a frame ack with no pending state', async () => {
+    setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
+    installOffscreenCanvasSupport();
+    const canvas = document.getElementById(
+      'neatenstein-canvas',
+    ) as HTMLCanvasElement;
+    setCanvasSize(canvas, 854, 480);
+    const rafCallbacks: FrameRequestCallback[] = [];
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+      rafCallbacks.push(callback);
+      return rafCallbacks.length;
+    };
+    try {
+      await loadModule('./browser-entry.ts');
+      getGlobalStart()('neatenstein-output', 'neatenstein-canvas');
+      const worker = workers[0];
+
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // Run the initial tick (posts simState, worker busy).
+      rafCallbacks[0](0);
+      const rafCountAfterTick = rafCallbacks.length;
+
+      // Send a frame ack → onFrameReady → next rAF scheduled.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 0 } },
+        } as unknown as MessageEvent);
+      }
+
+      expect(rafCallbacks.length).toBe(rafCountAfterTick + 1);
+    } finally {
+      globalThis.requestAnimationFrame = originalRaf;
+    }
+  });
+
+  it('full render cycle works end-to-end: tick → simState → ack → onFrameReady → rAF → tick', async () => {
+    setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
+    installOffscreenCanvasSupport();
+    const canvas = document.getElementById(
+      'neatenstein-canvas',
+    ) as HTMLCanvasElement;
+    setCanvasSize(canvas, 854, 480);
+    const rafCallbacks: FrameRequestCallback[] = [];
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+      rafCallbacks.push(callback);
+      return rafCallbacks.length;
+    };
+    try {
+      await loadModule('./browser-entry.ts');
+      getGlobalStart()('neatenstein-output', 'neatenstein-canvas');
+      const worker = workers[0];
+
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // Initial rAF → first tick → simState posted.
+      rafCallbacks[0](0);
+      const simStateCallsAfterFirstTick = worker?.postMessageCalls.filter(
+        (call) => {
+          const first = call[0];
+          return (
+            first !== null &&
+            typeof first === 'object' &&
+            (first as Record<string, unknown>).type === 'simState'
+          );
+        },
+      );
+      expect(simStateCallsAfterFirstTick?.length).toBe(1);
+
+      // Frame ack → onFrameReady → next rAF scheduled.
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 0 } },
+        } as unknown as MessageEvent);
+      }
+      expect(rafCallbacks.length).toBe(2);
+
+      // Second tick → second simState posted.
+      rafCallbacks[1](16);
+      const simStateCallsAfterSecondTick = worker?.postMessageCalls.filter(
+        (call) => {
+          const first = call[0];
+          return (
+            first !== null &&
+            typeof first === 'object' &&
+            (first as Record<string, unknown>).type === 'simState'
+          );
+        },
+      );
+      expect(simStateCallsAfterSecondTick?.length).toBe(2);
+    } finally {
+      globalThis.requestAnimationFrame = originalRaf;
+    }
+  });
+
+  it('no longer exports the removed fixed-timestep and throttle constants', async () => {
+    // Slice 10.3-raf-clock removes NEATENSTEIN_FIXED_TIMESTEP_MS from
+    // constants and NEATENSTEIN_HOST_POST_INTERVAL_MS from browser-entry.
+    // constants is checked via the static namespace import (already loaded
+    // at file evaluation time). browser-entry is checked via an isolated
+    // re-import so the runtime module shape is verified without conflicting
+    // with the module cache entries created by loadModule in prior tests.
+    expect(constantsNamespace).not.toHaveProperty(
+      'NEATENSTEIN_FIXED_TIMESTEP_MS',
+    );
+
+    let browserEntryModule: Record<string, unknown> | undefined;
+    await (
+      jest as unknown as Record<string, (...args: unknown[]) => unknown>
+    ).isolateModulesAsync(async () => {
+      browserEntryModule = (await import('./browser-entry.ts')) as Record<
+        string,
+        unknown
+      >;
+    });
+    expect(browserEntryModule).not.toHaveProperty(
+      'NEATENSTEIN_HOST_POST_INTERVAL_MS',
+    );
   });
 });

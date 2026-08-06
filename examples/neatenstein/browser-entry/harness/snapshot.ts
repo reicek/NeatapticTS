@@ -47,7 +47,7 @@ const enemySnapshotStore = new Map<number, MlpSnapshot>();
  * const population = createMlpEnemyPopulation({ seed: 1 });
  * refreshEnemySnapshots(population);
  * const snapshot = getEnemySnapshot(0);
- * console.log(snapshot.weights.length); // 102
+ * console.log(snapshot.weights.length); // 90
  * ```
  */
 export function refreshEnemySnapshots(population: EnemyPopulation): void {
@@ -76,6 +76,11 @@ export function refreshEnemySnapshots(population: EnemyPopulation): void {
  * @param variantId - Variant index within the enemy population.
  * @returns Frozen {@link MlpSnapshot} for the variant.
  * @throws Error when no snapshot has been refreshed for the variant.
+ *
+ * The returned `weights` are a flat `Float32Array` sized for the fixed MLP
+ * topology ({@link NEATENSTEIN_MLP_TOPOLOGY} = 90 params for [6,6,4,4]). They
+ * can be passed directly to {@link activateMlp} without materializing an
+ * `INetwork` — the rollout in `enemy-runner.ts` relies on this direct usage.
  *
  * @example
  * ```ts

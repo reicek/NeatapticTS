@@ -60,7 +60,9 @@ export interface NeatensteinRendererBridge {
   worker: Worker;
   /** Latest frame request id received from the worker. */
   requestId: number;
-  /** Forward a simulation state snapshot to the worker. */
+  /** Forward a simulation state snapshot to the worker. The bridge applies
+   * worker-busy backpressure so only one snapshot is in flight at a time;
+   * additional calls defer the latest state until the worker acknowledges. */
   postSimState(state: NeatensteinRenderState): void;
   /** Forward a host-resized CSS-box dimension to the worker. */
   resize(width: number, height: number): void;
@@ -79,6 +81,22 @@ export interface NeatensteinRendererBridge {
    * @param consumer - Function invoked with each incoming render frame.
    */
   setFrameConsumer(consumer: (frame: NeatensteinRenderFrame) => void): void;
+  /**
+   * Register a callback invoked when the worker finishes rendering a frame
+   * and has no pending state to flush. The host uses this to schedule the
+   * next `requestAnimationFrame`, making the render loop purely worker-paced
+   * instead of running continuously at display refresh rate.
+   *
+   * The callback is NOT called when a deferred `pendingState` is flushed on
+   * the frame ack — the flushed state's own ack will trigger it once the
+   * worker finishes that render.
+   *
+   * Pass `null` to clear the callback.
+   *
+   * @param callback - Function invoked when the worker is idle and ready for
+   *   the next frame, or `null` to clear.
+   */
+  setOnFrameReady(callback: (() => void) | null): void;
 }
 
 /**
@@ -151,6 +169,12 @@ function isMessageRecord(value: unknown): value is Record<string, unknown> {
  * the worker acknowledges initialization. This avoids losing early host-loop
  * messages during worker startup.
  *
+ * After initialization, the bridge applies worker-busy backpressure: only one
+ * simState message is in flight at a time. When the worker acknowledges a
+ * rendered frame, any deferred state (the latest snapshot received while the
+ * worker was busy) is flushed immediately. This naturally throttles posting to
+ * the worker's actual render capacity regardless of the display refresh rate.
+ *
  * @param options - Canvas, worker URL, and tier selection.
  * @returns A bridge object with lifecycle and messaging methods.
  *
@@ -193,6 +217,8 @@ export function createNeatensteinRendererBridge(
   let pendingState: NeatensteinRenderState | null = null;
   let pendingInput: InputSnapshot | null = null;
   let frameConsumer: ((frame: NeatensteinRenderFrame) => void) | null = null;
+  let onFrameReadyCallback: (() => void) | null = null;
+  let workerBusy = false;
 
   let offscreen: OffscreenCanvas | undefined;
   const transferList: Transferable[] = [];
@@ -257,6 +283,7 @@ export function createNeatensteinRendererBridge(
     if (pendingState !== null) {
       postSimStateNow(pendingState);
       pendingState = null;
+      workerBusy = true;
     }
   }
 
@@ -279,6 +306,15 @@ export function createNeatensteinRendererBridge(
         return;
       }
 
+      if (workerBusy) {
+        // Worker is still rendering the previous frame. Defer this state until
+        // the next frame acknowledgment to prevent message-queue flooding on
+        // high refresh-rate displays. Only the latest state is kept.
+        pendingState = state;
+        return;
+      }
+
+      workerBusy = true;
       postSimStateNow(state);
     },
 
@@ -313,11 +349,17 @@ export function createNeatensteinRendererBridge(
       pendingState = null;
       pendingInput = null;
       frameConsumer = null;
+      onFrameReadyCallback = null;
+      workerBusy = false;
       worker.terminate();
     },
 
     setFrameConsumer(consumer: (frame: NeatensteinRenderFrame) => void): void {
       frameConsumer = consumer;
+    },
+
+    setOnFrameReady(callback: (() => void) | null): void {
+      onFrameReadyCallback = callback;
     },
   };
 
@@ -343,6 +385,23 @@ export function createNeatensteinRendererBridge(
 
       if (frameConsumer !== null) {
         frameConsumer(data.frame as unknown as NeatensteinRenderFrame);
+      }
+
+      // Backpressure: the worker has finished rendering this frame. Clear the
+      // busy flag so the next postSimState can post immediately. If a deferred
+      // state is pending (arrived while the worker was busy), flush it now so
+      // the worker starts the next render without waiting for another rAF
+      // tick. When no state is pending, notify the host via onFrameReady so it
+      // can schedule the next requestAnimationFrame — making the loop purely
+      // worker-paced instead of running continuously at display refresh rate.
+      workerBusy = false;
+      if (pendingState !== null) {
+        const state = pendingState;
+        pendingState = null;
+        workerBusy = true;
+        postSimStateNow(state);
+      } else if (onFrameReadyCallback !== null) {
+        onFrameReadyCallback();
       }
     }
   };

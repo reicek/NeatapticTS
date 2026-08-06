@@ -992,6 +992,21 @@ least one slot for the orchestrator:
 If a parallel dispatch hits the concurrent limit, queue remaining slices and
 dispatch them as slots free up.
 
+### Background Agent Polling Interval
+
+When waiting for background agents, use `read_agent` with `timeout: 1800` (30
+minutes). Do NOT poll with short 3-minute timeouts — agents need 10–25+ minutes
+for complex slices, and frequent polling wastes orchestrator turns.
+
+The orchestrator is automatically notified when a background agent completes, so
+polling is only a safety net. If an agent hasn't completed after 30 minutes,
+check its `tool_calls_completed` count: if it's increasing, the agent is still
+making progress; if it's been static across multiple polls, the agent may be
+stuck and should be stopped.
+
+This interval compensates for slow server speeds and gives agents time to clear
+complex work without wasting orchestrator turns on frequent polling.
+
 ## Section 5.6 — Tier 3 Dispatch Capability
 
 Not all Tier 3 agents can dispatch to Tier 4. The `agents` frontmatter field

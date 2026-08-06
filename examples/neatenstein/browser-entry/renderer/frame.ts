@@ -27,7 +27,7 @@ export interface NeatensteinRenderState {
   canvasWidth: number;
   /** Canvas height in CSS pixels. */
   canvasHeight: number;
-  /** Current fixed-timestep simulation tick. */
+  /** Current FPS-scaled simulation tick. */
   simTick: number;
   /** Camera world X position in grid units. */
   cameraX: number;
@@ -50,6 +50,12 @@ export interface NeatensteinRenderState {
   };
   /** Optional enemy positions for the sprite pass. */
   enemies?: NeatensteinSprite[];
+  /**
+   * Delta-time in milliseconds derived from consecutive rAF timestamps and
+   * clamped to MAX_DELTA_MS on the host. Consumed by the worker to drive
+   * FPS-scaled simulation stepping; omitted/zero on the first frame.
+   */
+  deltaMs?: number;
 }
 
 /**
@@ -72,7 +78,7 @@ export interface NeatensteinRenderFrame {
   canvasHeight: number;
   /** Number of renderer columns in this frame. */
   columnCount: number;
-  /** Current fixed-timestep simulation tick at frame build time. */
+  /** Current FPS-scaled simulation tick at frame build time. */
   simTick: number;
   /** Perpendicular wall distance for each column. */
   wallDistances: Float32Array;

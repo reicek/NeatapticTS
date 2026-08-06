@@ -100,6 +100,7 @@ export function createGameState(
     impacts: [],
     gun: createInitialGunState(),
     bolts: [],
+    enemyBolts: [],
     kills: 0,
     spawnCount: 0,
     generation: 1,

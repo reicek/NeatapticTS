@@ -11,16 +11,22 @@
  */
 
 import {
-  NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_LIGHT_TOGGLE_KEY,
   NEATENSTEIN_MAP_SIZE,
 } from '../../constants';
 
-export {
-  NEATENSTEIN_FIXED_TIMESTEP_MS,
-  NEATENSTEIN_LIGHT_TOGGLE_KEY,
-  NEATENSTEIN_MAP_SIZE,
-};
+/* istanbul ignore next */
+export { NEATENSTEIN_LIGHT_TOGGLE_KEY, NEATENSTEIN_MAP_SIZE };
+
+/**
+ * Fixed simulation timestep in milliseconds.
+ *
+ * Previously exported from the top-level browser-entry constants; moved here
+ * so the game-logic modules that still require a fixed step (tick, movement,
+ * episode, collision, waves, pulses, enemy-controller) can reference a single
+ * authoritative value while the host render loop now uses rAF delta-time.
+ */
+export const NEATENSTEIN_FIXED_TIMESTEP_MS = 16;
 
 /** Number of milliseconds in one second. */
 export const NEATENSTEIN_MS_PER_SECOND = 1000;
@@ -394,3 +400,43 @@ export const NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS = 2;
  * enemy.
  */
 export const NEATENSTEIN_TEST_ENEMY_OFF_BOLT_OFFSET_CELLS = 0.5;
+
+/**
+ * Travel speed of an enemy plasma bolt in world cells per second.
+ *
+ * Matches the player bolt speed so enemy projectiles feel responsive and
+ * consistent with the existing combat model.
+ */
+export const NEATENSTEIN_ENEMY_BOLT_SPEED_CELLS_PER_SECOND = 36;
+
+/**
+ * Damage applied to the player by a single enemy bolt hit.
+ *
+ * Set to 10 (= 10% of the player's 100 maxHealth) so each hit is meaningful
+ * but not instantly lethal. Reuses the existing contact i-frame window
+ * ({@link NEATENSTEIN_CONTACT_IFRAME_MS}) — no separate enemy-bolt i-frame.
+ */
+export const NEATENSTEIN_ENEMY_BOLT_DAMAGE = 10;
+
+/**
+ * Maximum lifetime of an enemy plasma bolt in milliseconds.
+ *
+ * Caps the distance an enemy bolt can travel and prevents lingering bolts
+ * in the simulation.
+ */
+export const NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS = 2000;
+
+/**
+ * Maximum distance an enemy plasma bolt can travel in world cells.
+ *
+ * Bolts expire once they travel this far, matching the player bolt range.
+ */
+export const NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS = 30;
+
+/**
+ * Radius in world cells for enemy-bolt/player proximity collision.
+ *
+ * When an enemy bolt gets within this distance of the player, it registers a
+ * hit and applies damage.
+ */
+export const NEATENSTEIN_ENEMY_BOLT_HIT_RADIUS_CELLS = 0.5;

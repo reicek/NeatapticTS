@@ -15,6 +15,7 @@
 
 import type {
   CombatQualitySignal,
+  EnemyEpisodeTelemetry,
   EnemyTeamFitnessConfig,
   FitnessScore,
 } from './types';
@@ -28,6 +29,11 @@ import {
   NEATENSTEIN_WEIGHT_PARSIMONY_DENSITY_PENALTY,
   NEATENSTEIN_ENEMY_TEAM_DAMAGE_WEIGHT,
   NEATENSTEIN_ENEMY_TEAM_SURVIVAL_WEIGHT,
+  NEATENSTEIN_ENEMY_NAV_WEIGHT,
+  NEATENSTEIN_ENEMY_COMBAT_WEIGHT,
+  NEATENSTEIN_ENEMY_EXPLORATION_BONUS,
+  NEATENSTEIN_ENEMY_STAGNATION_THRESHOLD,
+  NEATENSTEIN_ENEMY_STAGNATION_PENALTY,
 } from './constants';
 
 /**
@@ -117,39 +123,103 @@ export function computeCombatQualitySignal(
 }
 
 /**
- * Compute a team-level enemy fitness scalar from collective damage and survival.
+ * Compute a navigation fitness scalar from enemy episode telemetry
+ * (AC-10.5e-001).
  *
- * The enemy population is evaluated as a team: one scalar represents how much
- * pressure the entire enemy swarm applied to the main agent. Higher values
- * mean a more threatening swarm.
+ * The navigation fitness rewards progress toward the player goal, rewards
+ * exploration of unique cells, and penalizes stagnation above a threshold:
  *
  * ```text
- * fitness = damageDealt * damageWeight + enemiesSurvived * survivalWeight
+ * progress    = Σ (prevDist − curDist) per step  (telescoping to initial − final)
+ * exploration = cellsVisited × EXPLORATION_BONUS
+ * antiStall   = max(0, stagnationTicks − THRESHOLD) × STAGNATION_PENALTY
+ * navFitness  = progress + exploration − antiStall
  * ```
  *
- * The default weights reward both damage dealt and survival equally, but
- * callers can override either weight through the optional `config` object to
- * experiment with different selection pressures.
+ * @param telemetry - Per-step enemy episode telemetry.
+ * @returns A scalar navigation fitness score; higher is better.
  *
- * @param damageDealt - Total damage the enemy team dealt to the main agent.
- * @param enemiesSurvived - Number of enemy variants still alive at episode end.
+ * @example
+ * ```ts
+ * const score = computeEnemyNavigationFitness({
+ *   position: { x: 60, y: 60 },
+ *   bfsDistances: [20, 18, 16, 14, 12],
+ *   damageDealt: 0,
+ *   enemiesSurvived: 1,
+ *   cellsVisited: 5,
+ *   stagnationTicks: 0,
+ *   finalDistance: 10,
+ * });
+ * ```
+ */
+export function computeEnemyNavigationFitness(
+  telemetry: EnemyEpisodeTelemetry,
+): FitnessScore {
+  // Progress reward: Σ(prevDist - curDist) per step.
+  const steps = telemetry.bfsDistances;
+  let progress = 0;
+  for (let i = 0; i < steps.length; i++) {
+    const prevDist = steps[i];
+    const curDist =
+      i + 1 < steps.length ? steps[i + 1] : telemetry.finalDistance;
+    progress += prevDist - curDist;
+  }
+
+  // Exploration bonus: +0.5 per unique cell visited.
+  const exploration =
+    telemetry.cellsVisited * NEATENSTEIN_ENEMY_EXPLORATION_BONUS;
+
+  // Anti-stall penalty: −1 per stagnation tick above threshold.
+  const excessStagnation = Math.max(
+    0,
+    telemetry.stagnationTicks - NEATENSTEIN_ENEMY_STAGNATION_THRESHOLD,
+  );
+  const antiStall = excessStagnation * NEATENSTEIN_ENEMY_STAGNATION_PENALTY;
+
+  return progress + exploration - antiStall;
+}
+
+/**
+ * Compute a composite team-level enemy fitness scalar from episode telemetry
+ * (AC-10.5e-003).
+ *
+ * The composite blends navigation fitness (progress, exploration, anti-stall)
+ * with combat fitness (damage dealt, survival):
+ *
+ * ```text
+ * navigationFitness = computeEnemyNavigationFitness(telemetry)
+ * combatFitness     = damageDealt * damageWeight + enemiesSurvived * survivalWeight
+ * fitness           = navigationFitness * navWeight + combatFitness * combatWeight
+ * ```
+ *
+ * The old `(damageDealt, enemiesSurvived, config?)` signature has been replaced
+ * with `(telemetry, config?)`; no backward-compatibility wrapper is provided.
+ *
+ * @param telemetry - Per-step enemy episode telemetry.
  * @param config - Optional weights overriding the defaults.
  * @returns A scalar fitness score; higher is better.
  *
  * @example
  * ```ts
- * const score = computeEnemyTeamFitness(120, 4, { damageWeight: 2 });
- * console.log(score); // 244 when using default survivalWeight of 1
+ * const score = computeEnemyTeamFitness(telemetry, { combatWeight: 2 });
  * ```
  */
 export function computeEnemyTeamFitness(
-  damageDealt: number,
-  enemiesSurvived: number,
+  telemetry: EnemyEpisodeTelemetry,
   config?: EnemyTeamFitnessConfig,
 ): FitnessScore {
+  const navigationWeight =
+    config?.navigationWeight ?? NEATENSTEIN_ENEMY_NAV_WEIGHT;
+  const combatWeight = config?.combatWeight ?? NEATENSTEIN_ENEMY_COMBAT_WEIGHT;
   const damageWeight =
     config?.damageWeight ?? NEATENSTEIN_ENEMY_TEAM_DAMAGE_WEIGHT;
   const survivalWeight =
     config?.survivalWeight ?? NEATENSTEIN_ENEMY_TEAM_SURVIVAL_WEIGHT;
-  return damageDealt * damageWeight + enemiesSurvived * survivalWeight;
+
+  const navigationFitness = computeEnemyNavigationFitness(telemetry);
+  const combatFitness =
+    telemetry.damageDealt * damageWeight +
+    telemetry.enemiesSurvived * survivalWeight;
+
+  return navigationFitness * navigationWeight + combatFitness * combatWeight;
 }
