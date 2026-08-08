@@ -2432,4 +2432,296 @@ describe('MLP re-ranking and BFS fallback (AC-10.5b-002/003/004)', () => {
     expect(controller.enemies[0].position.x).toBeGreaterThan(55.5);
     expect(controller.enemies[0].position.y).toBe(58.5);
   });
+
+  /**
+   * Coverage gap: exercises the prevStepDist >= 0 true branch at line 665.
+   *
+   * The existing MLP tests all run on the FIRST tick (previousStepDistance = -1
+   * from createEnemyControllerState), so `prevStepDist >= 0 ? prevStepDist :
+   * undefined` always evaluates the false branch (undefined).
+   *
+   * This test runs a first tick WITHOUT weights (to set previousStepDistance
+   * to a non-negative value), then sets weights and runs a SECOND tick so the
+   * MLP path enters with prevStepDist >= 0, covering the true branch.
+   */
+  it('AC-10.5b-002: MLP re-ranking with previousStepDistance >= 0 (second tick)', () => {
+    const base = createGameState({ seed: 1 });
+    const state = stateWithEnemyAt(base, { x: 55.5, y: 58.5 });
+    let controller = createEnemyControllerState(state);
+
+    // First tick WITHOUT weights → BFS moves enemy, sets previousStepDistance.
+    controller = updateEnemyController(
+      controller,
+      state,
+      createEmptyCollisionMap(),
+      1000,
+    );
+    expect(controller.enemies[0].previousStepDistance).toBeGreaterThanOrEqual(
+      0,
+    );
+
+    // Set weights for the second tick → MLP path entered with prevStepDist >= 0.
+    controller.enemies[0].weights = buildDeterministicWeights(1); // strafe=1
+    controller = updateEnemyController(
+      controller,
+      state,
+      createEmptyCollisionMap(),
+      1000,
+    );
+
+    // Enemy should have moved (MLP re-ranking applied with prevStepDist).
+    const moved =
+      controller.enemies[0].position.x !== 55.5 ||
+      controller.enemies[0].position.y !== 58.5;
+    expect(moved).toBe(true);
+    // Weights preserved.
+    expect(controller.enemies[0].weights).toBeDefined();
+  });
+});
+
+describe('AC-11b-003/004: hit-stun behavior in enemy controller', () => {
+  it('initializes stunTimerMs to 0 in createEnemyControllerState', () => {
+    const base = createGameState({ seed: 1 });
+    const state = stateWithEnemy(base, { x: -5, y: 0 });
+    const controller = createEnemyControllerState(state);
+    expect(controller.enemies[0].stunTimerMs).toBe(0);
+  });
+
+  it('sets animationState to damage while stunned', () => {
+    const base = createGameState({ seed: 1 });
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: {
+            x: base.player.position.x - 5,
+            y: base.player.position.y,
+          },
+          health: 80,
+          stunTimerMs: 200,
+        },
+      ],
+    };
+    const emptyMap = createEmptyCollisionMap();
+    const controller = createEnemyControllerState(state);
+    const updated = updateEnemyController(controller, state, emptyMap, 16);
+    expect(updated.enemies[0].animationState).toBe('damage');
+  });
+
+  it('skips movement while stunned', () => {
+    const base = createGameState({ seed: 1 });
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: {
+            x: base.player.position.x - 5,
+            y: base.player.position.y,
+          },
+          health: 80,
+          stunTimerMs: 200,
+        },
+      ],
+    };
+    const emptyMap = createEmptyCollisionMap();
+    const controller = createEnemyControllerState(state);
+    const startX = controller.enemies[0].position.x;
+    const updated = updateEnemyController(controller, state, emptyMap, 1000);
+    // Stunned enemy should not move.
+    expect(updated.enemies[0].position.x).toBeCloseTo(startX, 5);
+  });
+
+  it('does not fire while stunned', () => {
+    const base = createGameState({ seed: 1 });
+    // Place enemy within fire range so it would normally fire.
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: {
+            x: base.player.position.x - 3,
+            y: base.player.position.y,
+          },
+          health: 80,
+          stunTimerMs: 200,
+        },
+      ],
+    };
+    const emptyMap = createEmptyCollisionMap();
+    const controller = createEnemyControllerState(state);
+    const updated = updateEnemyController(controller, state, emptyMap, 1000);
+    expect(updated.hitscanEvents).toHaveLength(0);
+  });
+
+  it('decrements stunTimerMs per tick', () => {
+    const base = createGameState({ seed: 1 });
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: {
+            x: base.player.position.x - 5,
+            y: base.player.position.y,
+          },
+          health: 80,
+          stunTimerMs: 200,
+        },
+      ],
+    };
+    const emptyMap = createEmptyCollisionMap();
+    const controller = createEnemyControllerState(state);
+    const updated = updateEnemyController(controller, state, emptyMap, 16);
+    expect(updated.enemies[0].stunTimerMs).toBeLessThan(200);
+    expect(updated.enemies[0].stunTimerMs).toBeGreaterThan(0);
+  });
+
+  it('recovers from stun when stunTimerMs reaches 0', () => {
+    const base = createGameState({ seed: 1 });
+    // stunTimerMs = 10, dtMs = 16 → decrements to 0 (clamped).
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: {
+            x: base.player.position.x - 5,
+            y: base.player.position.y,
+          },
+          health: 80,
+          stunTimerMs: 10,
+        },
+      ],
+    };
+    const emptyMap = createEmptyCollisionMap();
+    const controller = createEnemyControllerState(state);
+    const updated = updateEnemyController(controller, state, emptyMap, 16);
+    // The stun expired this tick; the enemy should still be in 'damage' state
+    // (since enemyState.stunTimerMs was > 0 at the start of the tick).
+    expect(updated.enemies[0].animationState).toBe('damage');
+    expect(updated.enemies[0].stunTimerMs).toBe(0);
+
+    // On the next tick, the stun is gone — enemy should move normally.
+    const recoveredState: GameState = {
+      ...state,
+      enemies: state.enemies.map((e) => ({ ...e, stunTimerMs: 0 })),
+    };
+    const updated2 = updateEnemyController(
+      updated,
+      recoveredState,
+      emptyMap,
+      1000,
+    );
+    expect(updated2.enemies[0].animationState).not.toBe('damage');
+  });
+
+  it('adopts enemyState position while stunned (pushback sync)', () => {
+    const base = createGameState({ seed: 1 });
+    const pushbackPos = {
+      x: base.player.position.x - 10,
+      y: base.player.position.y,
+    };
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: pushbackPos,
+          health: 80,
+          stunTimerMs: 200,
+        },
+      ],
+    };
+    const emptyMap = createEmptyCollisionMap();
+    // Create controller with original position (before pushback).
+    const controller = createEnemyControllerState(state);
+    // Override the controller position to be different from enemyState.
+    controller.enemies[0].position = { x: 0, y: 0 };
+
+    const updated = updateEnemyController(controller, state, emptyMap, 16);
+    // The stunned enemy should adopt enemyState.position, not the stale
+    // ControlledEnemy position.
+    expect(updated.enemies[0].position.x).toBeCloseTo(pushbackPos.x, 5);
+    expect(updated.enemies[0].position.y).toBeCloseTo(pushbackPos.y, 5);
+  });
+});
+
+describe('AC-11b-004: separateEnemies skips stunned enemies', () => {
+  it('does not separate stunned enemies', () => {
+    const base = createGameState({ seed: 1 });
+    const posA = { x: base.player.position.x - 3, y: base.player.position.y };
+    const posB = { x: base.player.position.x - 3, y: base.player.position.y };
+    const state: GameState = {
+      ...base,
+      enemies: [
+        { position: { ...posA }, health: 80, stunTimerMs: 200 },
+        { position: { ...posB }, health: 80, stunTimerMs: 200 },
+      ],
+    };
+    const emptyMap = createEmptyCollisionMap();
+    const controller = createEnemyControllerState(state);
+    const updated = updateEnemyController(controller, state, emptyMap, 16);
+    // Both enemies are stunned, so separateEnemies should not move them.
+    // Their positions should match the enemyState positions (not pushed apart).
+    expect(updated.enemies[0].position.x).toBeCloseTo(posA.x, 5);
+    expect(updated.enemies[1].position.x).toBeCloseTo(posB.x, 5);
+  });
+});
+
+describe('AC-11b-006: stun timer determinism (fixed-timestep decrement)', () => {
+  it('decrements stunTimerMs by NEATENSTEIN_FIXED_TIMESTEP_MS regardless of dtMs', () => {
+    const base = createGameState({ seed: 1 });
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: {
+            x: base.player.position.x - 5,
+            y: base.player.position.y,
+          },
+          health: 80,
+          stunTimerMs: 200,
+        },
+      ],
+    };
+    const emptyMap = createEmptyCollisionMap();
+
+    // Run with dtMs = 16 (fixed timestep) � should decrement by 16.
+    const controller16 = createEnemyControllerState(state);
+    const updated16 = updateEnemyController(controller16, state, emptyMap, 16);
+    expect(updated16.enemies[0].stunTimerMs).toBe(
+      200 - NEATENSTEIN_FIXED_TIMESTEP_MS,
+    );
+
+    // Run with dtMs = 32 (variable frame rate) � should STILL decrement by 16.
+    const controller32 = createEnemyControllerState(state);
+    const updated32 = updateEnemyController(controller32, state, emptyMap, 32);
+    expect(updated32.enemies[0].stunTimerMs).toBe(
+      200 - NEATENSTEIN_FIXED_TIMESTEP_MS,
+    );
+
+    // Both should produce the same stunTimerMs regardless of dtMs.
+    expect(updated16.enemies[0].stunTimerMs).toBe(
+      updated32.enemies[0].stunTimerMs,
+    );
+  });
+
+  it('does not decrement stunTimerMs on zero-timestep sync pass (dtMs=0)', () => {
+    const base = createGameState({ seed: 1 });
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: {
+            x: base.player.position.x - 5,
+            y: base.player.position.y,
+          },
+          health: 80,
+          stunTimerMs: 100,
+        },
+      ],
+    };
+    const emptyMap = createEmptyCollisionMap();
+    const controller = createEnemyControllerState(state);
+    const updated = updateEnemyController(controller, state, emptyMap, 0);
+    // dtMs=0 is a zero-timestep sync pass � stunTimerMs should not change.
+    expect(updated.enemies[0].stunTimerMs).toBe(100);
+  });
 });

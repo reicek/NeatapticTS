@@ -102,8 +102,10 @@ export function createGameState(
     bolts: [],
     enemyBolts: [],
     kills: 0,
+    deaths: 0,
     spawnCount: 0,
     generation: 1,
+    ammoPickups: [],
   };
 }
 
@@ -173,6 +175,24 @@ export function consumeAmmo(state: GameState): GameState {
     player: {
       ...state.player,
       ammo: Math.max(0, state.player.ammo - 1),
+    },
+  };
+}
+
+/**
+ * Restore ammo by a given amount, clamped at maxAmmo.
+ *
+ * @param state - Snapshot before restoration.
+ * @param amount - Number of ammo units to add.
+ * @returns New snapshot with ammo incremented by `amount`, clamped at
+ *   `maxAmmo`.
+ */
+export function restoreAmmo(state: GameState, amount: number): GameState {
+  return {
+    ...state,
+    player: {
+      ...state.player,
+      ammo: Math.min(state.player.maxAmmo, state.player.ammo + amount),
     },
   };
 }

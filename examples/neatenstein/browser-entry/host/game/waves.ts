@@ -11,7 +11,7 @@
 
 import {
   NEATENSTEIN_ENEMY_MAX_CONCURRENT,
-  NEATENSTEIN_ENEMY_WAVE_COUNT,
+  NEATENSTEIN_ENEMY_MAX_HEALTH,
   NEATENSTEIN_MAP_SIZE,
   NEATENSTEIN_SPAWN_CENTER_X,
   NEATENSTEIN_SPAWN_CENTER_Y,
@@ -168,30 +168,35 @@ export function spawnWaveTick(
   // tick while a wave is filling.
   void _dtMs;
 
-  const maxSpawnCount =
-    NEATENSTEIN_ENEMY_MAX_CONCURRENT * NEATENSTEIN_ENEMY_WAVE_COUNT;
+  // Count alive enemies for the concurrent limit check. Do NOT filter dead
+  // enemies from the returned array — the display worker syncs enemy
+  // positions by array index, so removing dead entries would break index
+  // alignment and cause new enemies to inherit the positions of dead ones.
+  // The worker's de-rez system removes dead enemies from the display array
+  // after the de-rez animation completes (700ms).
+  const aliveCount = state.enemies.filter(
+    (enemy) => (enemy.health ?? 0) > 0 && enemy.active !== false,
+  ).length;
 
-  if (state.spawnCount >= maxSpawnCount) {
+  // A batch is complete when spawnCount is a multiple of the concurrent cap.
+  // Once a full batch has been spawned, wait for all enemies to die before
+  // starting the next batch.
+  const batchComplete =
+    state.spawnCount > 0 &&
+    state.spawnCount % NEATENSTEIN_ENEMY_MAX_CONCURRENT === 0;
+
+  if (batchComplete && !allEnemiesCleared(state.enemies)) {
     return {
       spawnedThisTick: 0,
-      state: { ...state, enemies: [...state.enemies] },
+      state: { ...state },
     };
   }
 
-  const currentBatchFull =
-    state.enemies.length >= NEATENSTEIN_ENEMY_MAX_CONCURRENT;
-
-  // Start a fresh batch by removing the previous batch's dead enemies.
-  const activeRoster = currentBatchFull
-    ? state.enemies.filter(
-        (enemy) => (enemy.health ?? 0) > 0 && enemy.active !== false,
-      )
-    : [...state.enemies];
-
-  if (currentBatchFull && !allEnemiesCleared(activeRoster)) {
+  // Do not exceed the concurrent alive enemy limit.
+  if (aliveCount >= NEATENSTEIN_ENEMY_MAX_CONCURRENT) {
     return {
       spawnedThisTick: 0,
-      state: { ...state, enemies: [...state.enemies] },
+      state: { ...state },
     };
   }
 
@@ -207,16 +212,18 @@ export function spawnWaveTick(
   const position = resolveEdgeSpawn(directionIndex, collisionMap);
   const enemy: EnemyState = {
     position: { ...position },
-    health: 1,
+    health: NEATENSTEIN_ENEMY_MAX_HEALTH,
+    maxHealth: NEATENSTEIN_ENEMY_MAX_HEALTH,
     active: true,
     controllerPosition: { ...position },
+    stunTimerMs: 0,
   };
 
   return {
     spawnedThisTick: 1,
     state: {
       ...state,
-      enemies: [...activeRoster, enemy],
+      enemies: [...state.enemies, enemy],
       spawnCount: state.spawnCount + 1,
     },
   };

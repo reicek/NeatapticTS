@@ -10,6 +10,7 @@
  */
 
 import {
+  NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS,
   NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS,
   NEATENSTEIN_MAP_SIZE,
 } from '../../constants';
@@ -26,12 +27,18 @@ import {
   NEATENSTEIN_ENEMY_BOLT_DAMAGE,
   NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS,
   NEATENSTEIN_ENEMY_BOLT_SPEED_CELLS_PER_SECOND,
+  NEATENSTEIN_ENEMY_IMPACT_MAX_CONCURRENT,
+  NEATENSTEIN_ENEMY_PUSHBACK_DISTANCE_CELLS,
+  NEATENSTEIN_ENEMY_STUN_DURATION_MS,
   NEATENSTEIN_MUZZLE_OFFSET_CELLS,
+  NEATENSTEIN_AMMO_PICKUP_AMOUNT,
 } from './constants';
 import { consumeAmmo } from './state';
 import type {
+  AmmoPickupState,
   BoltState,
   EnemyBoltState,
+  EnemyImpactSpot,
   GameState,
   ImpactSpot,
   Vector2,
@@ -112,7 +119,8 @@ function pointAlongRay(
  * 2. The shot ray is built from player position and yaw.
  * 3. The nearest wall along the ray is found.
  * 4. Living enemies are tested against the bolt path cylinder.
- * 5. The nearest valid enemy before the wall takes damage.
+ * 5. The nearest valid enemy before the wall takes damage; a non-lethal hit
+ *    also applies stun, pushback, and an {@link EnemyImpactSpot} mark.
  * 6. A traveling {@link BoltState} is appended.
  * 7. Wall-impact spots are emitted only when the ray terminates on a wall.
  *
@@ -240,6 +248,21 @@ export function fireBolt(state: GameState): FireBoltResult {
   }
 
   if (hitType === 'enemy' && hitEnemyIndex >= 0) {
+    const enemy = state.enemies[hitEnemyIndex];
+    const enemyImpact: EnemyImpactSpot = {
+      position: { ...enemy.position },
+      createdAtMs: state.simTimeMs,
+      lifetimeMs: NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS,
+      boltTravelTimeMs: NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
+    };
+
+    nextState = {
+      ...nextState,
+      enemyImpacts: [...(nextState.enemyImpacts ?? []), enemyImpact].slice(
+        -NEATENSTEIN_ENEMY_IMPACT_MAX_CONCURRENT,
+      ),
+    };
+
     nextState = applyEnemyDamage(nextState, hitEnemyIndex);
   }
 
@@ -296,28 +319,94 @@ function perpendicularDistance(
  * Apply bolt damage to the enemy at the given index.
  *
  * Health is clamped at zero and the kill counter increments only when an enemy
- * transitions from alive to dead in this shot.
+ * transitions from alive to dead in this shot. On a non-lethal hit the enemy
+ * receives a hit-stun (stunTimerMs set to
+ * {@link NEATENSTEIN_ENEMY_STUN_DURATION_MS}) and is pushed back away from the
+ * player by {@link NEATENSTEIN_ENEMY_PUSHBACK_DISTANCE_CELLS}, wall-checked.
+ * Lethal hits skip stun and pushback (the enemy enters the death/de-rez path).
+ *
+ * While already stunned (stunTimerMs > 0) damage is skipped entirely,
+ * preventing damage stacking during the stun window.
  *
  * @param state - Snapshot with the bolt already appended.
  * @param enemyIndex - Index into {@link GameState.enemies}.
- * @returns New snapshot with updated enemy health and kill count.
+ * @returns New snapshot with updated enemy health, stun timer, pushback
+ *   position, and kill count.
  */
 export function applyEnemyDamage(
   state: GameState,
   enemyIndex: number,
 ): GameState {
   const enemy = state.enemies[enemyIndex];
+
+  // Invincibility: skip damage entirely while stunned.
+  if ((enemy.stunTimerMs ?? 0) > 0) {
+    return state;
+  }
+
   const newHealth = Math.max(0, enemy.health - NEATENSTEIN_BOLT_DAMAGE);
   const killedByThisShot = newHealth === 0;
 
+  // On non-lethal hits: apply hit-stun and pushback.
+  let newPosition = { ...enemy.position };
+  let stunTimerMs = 0;
+
+  if (!killedByThisShot) {
+    stunTimerMs = NEATENSTEIN_ENEMY_STUN_DURATION_MS;
+
+    // Pushback: move enemy away from the player, wall-checked.
+    const dx = enemy.position.x - state.player.position.x;
+    const dy = enemy.position.y - state.player.position.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > 0) {
+      const pushX =
+        enemy.position.x +
+        (dx / dist) * NEATENSTEIN_ENEMY_PUSHBACK_DISTANCE_CELLS;
+      const pushY =
+        enemy.position.y +
+        (dy / dist) * NEATENSTEIN_ENEMY_PUSHBACK_DISTANCE_CELLS;
+
+      // Wall-check: only apply pushback if the target cell is not solid.
+      const flatMap = resolveCombatMap(state.seed);
+      const cellX = Math.floor(pushX);
+      const cellY = Math.floor(pushY);
+      if (
+        cellX >= 0 &&
+        cellX < NEATENSTEIN_MAP_SIZE &&
+        cellY >= 0 &&
+        cellY < NEATENSTEIN_MAP_SIZE &&
+        flatMap[cellY * NEATENSTEIN_MAP_SIZE + cellX] === 0
+      ) {
+        newPosition = { x: pushX, y: pushY };
+      }
+    }
+  }
+
   const newEnemies = state.enemies.map((existing, index) =>
-    index === enemyIndex ? { ...existing, health: newHealth } : existing,
+    index === enemyIndex
+      ? { ...existing, health: newHealth, position: newPosition, stunTimerMs }
+      : existing,
   );
+
+  // On kill: spawn an ammo pickup at the enemy's death position.
+  const newAmmoPickups = killedByThisShot
+    ? [
+        ...(state.ammoPickups ?? []),
+        {
+          position: { ...enemy.position },
+          amount: NEATENSTEIN_AMMO_PICKUP_AMOUNT,
+          active: true,
+          createdAtMs: state.simTimeMs,
+        } satisfies AmmoPickupState,
+      ]
+    : (state.ammoPickups ?? []);
 
   return {
     ...state,
     enemies: newEnemies,
     kills: killedByThisShot ? state.kills + 1 : state.kills,
+    ammoPickups: newAmmoPickups,
   };
 }
 

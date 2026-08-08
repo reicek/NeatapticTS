@@ -38,6 +38,8 @@ import {
 } from '../../robot-sprite-data.js';
 import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
 import { type EnemyAnimationState } from '../../../neatenstein/scripts/enemy-animator';
+import { shouldDissolvePixel } from './derez';
+import { NEATENSTEIN_ENEMY_DEATH_COLOR } from '../constants';
 
 /**
  * Number of RGBA channels per framebuffer pixel.
@@ -144,6 +146,28 @@ export interface NeatensteinSprite {
   shootBlinkTicks?: number;
   /** Optional team color [r, g, b] to swap palette indices 5/6/7 at runtime, preserving alpha. */
   teamColor?: readonly [number, number, number];
+  /** Elapsed milliseconds since the de-rez death animation began (death state only). */
+  deRezElapsedMs?: number;
+  /** Total de-rez animation duration in milliseconds (death state only). */
+  deRezDurationMs?: number;
+  /** Per-enemy deterministic seed for the scattered de-rez dissolution pattern. */
+  seed?: number;
+}
+
+/**
+ * De-rez death animation state passed through the sprite render pipeline.
+ *
+ * When provided, the column renderer dissolves pixels whose deterministic
+ * noise hash falls below the animation progress `t`, and tints surviving
+ * pixels toward {@link NEATENSTEIN_ENEMY_DEATH_COLOR}.
+ */
+export interface NeatensteinDerezState {
+  /** Elapsed milliseconds since the de-rez death animation began. */
+  elapsedMs: number;
+  /** Total de-rez animation duration in milliseconds. */
+  durationMs: number;
+  /** Per-enemy deterministic seed for the scattered dissolution pattern. */
+  seed: number;
 }
 
 /**
@@ -890,6 +914,12 @@ function getPrecomputedVisibleColumns(
  * {@link NEATENSTEIN_BACKGROUND_RGB} as the sprite's perpendicular distance
  * approaches {@link NEATENSTEIN_RENDER_DISTANCE_CAP}.
  *
+ * When `derezState` is provided, each opaque frame pixel is tested against
+ * the de-rez dissolution mask via {@link shouldDissolvePixel}. Dissolved
+ * pixels are skipped entirely; surviving pixels are tinted toward
+ * {@link NEATENSTEIN_ENEMY_DEATH_COLOR} by a factor of `t * 0.5` where
+ * `t` is the normalised animation progress.
+ *
  * @param framebuffer - Flat RGBA framebuffer to write into.
  * @param width - Framebuffer width in pixels.
  * @param height - Framebuffer height in pixels.
@@ -900,6 +930,8 @@ function getPrecomputedVisibleColumns(
  * @param frameX - Column of the voxel frame to sample.
  * @param fogFactor - Fog interpolation factor in `[0, 1]` where `0` is no fog
  *   and `1` is fully blended into the background color.
+ * @param derezState - Optional de-rez death animation state. When provided,
+ *   the column renderer dissolves pixels and tints survivors.
  */
 function renderNeatensteinVoxelSpriteColumn(
   framebuffer: Uint8ClampedArray,
@@ -911,6 +943,7 @@ function renderNeatensteinVoxelSpriteColumn(
   frame: VoxelSnapshot,
   frameX: number,
   fogFactor: number,
+  derezState?: NeatensteinDerezState,
 ): void {
   const clampedStart = clampInt(drawStart, 0, height);
   const clampedEnd = clampInt(drawEnd, 0, height);
@@ -931,6 +964,17 @@ function renderNeatensteinVoxelSpriteColumn(
   const invFog = 1 - fogFactor;
   const { r: bgR, g: bgG, b: bgB } = NEATENSTEIN_BACKGROUND_RGB;
 
+  // Precompute de-rez constants outside the per-pixel loop.
+  const derezActive = derezState !== undefined;
+  const derezT = derezActive
+    ? derezState!.elapsedMs / derezState!.durationMs
+    : 0;
+  const tintFactor = derezT * 0.5;
+  const invTint = 1 - tintFactor;
+  const deathR = NEATENSTEIN_ENEMY_DEATH_COLOR[0];
+  const deathG = NEATENSTEIN_ENEMY_DEATH_COLOR[1];
+  const deathB = NEATENSTEIN_ENEMY_DEATH_COLOR[2];
+
   for (let rowOffset = 0; rowOffset < spriteHeightPixels; rowOffset += 1) {
     const screenY = clampedStart + rowOffset;
     const v = rowOffset / (drawEnd - drawStart);
@@ -944,17 +988,37 @@ function renderNeatensteinVoxelSpriteColumn(
       continue;
     }
 
+    // De-rez dissolution: skip pixels whose noise hash falls below t.
+    if (
+      derezActive &&
+      shouldDissolvePixel(
+        safeFrameX,
+        safeFrameY,
+        derezState!.seed,
+        derezState!.elapsedMs,
+        derezState!.durationMs,
+      )
+    ) {
+      continue;
+    }
+
     const screenOffset =
       (screenY * width + screenColumn) * NEATENSTEIN_RGBA_CHANNELS;
-    framebuffer[screenOffset] = Math.round(
-      frameData[frameOffset] * invFog + bgR * fogFactor,
-    );
-    framebuffer[screenOffset + 1] = Math.round(
-      frameData[frameOffset + 1] * invFog + bgG * fogFactor,
-    );
-    framebuffer[screenOffset + 2] = Math.round(
-      frameData[frameOffset + 2] * invFog + bgB * fogFactor,
-    );
+
+    // Apply fog, then optionally tint surviving pixels toward death color.
+    const fogR = frameData[frameOffset] * invFog + bgR * fogFactor;
+    const fogG = frameData[frameOffset + 1] * invFog + bgG * fogFactor;
+    const fogB = frameData[frameOffset + 2] * invFog + bgB * fogFactor;
+
+    framebuffer[screenOffset] = derezActive
+      ? Math.round(fogR * invTint + deathR * tintFactor)
+      : Math.round(fogR);
+    framebuffer[screenOffset + 1] = derezActive
+      ? Math.round(fogG * invTint + deathG * tintFactor)
+      : Math.round(fogG);
+    framebuffer[screenOffset + 2] = derezActive
+      ? Math.round(fogB * invTint + deathB * tintFactor)
+      : Math.round(fogB);
     framebuffer[screenOffset + 3] = alpha;
   }
 }
@@ -978,6 +1042,9 @@ function renderNeatensteinVoxelSpriteColumn(
  * @param ctx - Canvas-like context with `putImageData`.
  * @param teamColor - Optional [r, g, b] team color to swap palette indices
  *   5/6/7 when decoding an encoded frame source. Ignored for VoxelSnapshot sources.
+ * @param derezState - Optional de-rez death animation state. When provided,
+ *   the column renderer dissolves pixels and tints survivors toward
+ *   {@link NEATENSTEIN_ENEMY_DEATH_COLOR}.
  */
 export function renderNeatensteinSprite(
   framebuffer: Uint8ClampedArray,
@@ -986,6 +1053,7 @@ export function renderNeatensteinSprite(
   source: NeatensteinSpriteSource,
   ctx: NeatensteinSpriteRenderContext,
   teamColor?: readonly [number, number, number],
+  derezState?: NeatensteinDerezState,
 ): void {
   if (!isDrawableSpriteProjection(projection) || zBuffer.length === 0) {
     return;
@@ -1052,15 +1120,27 @@ export function renderNeatensteinSprite(
       frame,
       frameX,
       fogFactor,
+      derezState,
     );
   }
 
   ctx.putImageData({ data: framebuffer, width, height }, 0, 0);
 }
 
+/**
+ * Test-only hook: expose the framebuffer-size resolver for direct testing.
+ *
+ * @internal
+ */
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyResolveFramebufferSize = resolveFramebufferSize;
 
+/**
+ * Test-only hook: expose the per-column voxel sprite renderer for direct
+ * pixel-level testing.
+ *
+ * @internal
+ */
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyRenderNeatensteinVoxelSpriteColumn =
   renderNeatensteinVoxelSpriteColumn;

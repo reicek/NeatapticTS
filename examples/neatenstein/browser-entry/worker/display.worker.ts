@@ -8,6 +8,11 @@
  * - builds a packed {@link NeatensteinRenderFrame} and posts it back to the
  *   host for the `cpu` and `gpu` tiers.
  *
+ * The worker also owns the deterministic simulation step: it runs
+ * {@link gameTick}, advances the NGE enemy population, drives enemy AI,
+ * consumes enemy hitscan events to spawn return-fire bolts, and renders death
+ * de-rez effects.
+ *
  * The worker renders at the host-provided backing-store dimensions. It only
  * guards against non-finite or non-positive dimensions and synchronizes the
  * transferred OffscreenCanvas to the incoming state size for the `worker` tier;
@@ -75,12 +80,15 @@ import {
 import { renderGunOverlay } from '../renderer/gun';
 import {
   drawBolts,
+  drawAmmoPickups,
   drawEnemyBolts,
+  drawEnemyImpactSpots,
   drawImpactSpots,
 } from '../renderer/bolt-render';
 import {
   createEnemyControllerState,
   updateEnemyController,
+  ENEMY_CONTROLLER_DE_REZ_DURATION_MS,
   type EnemyControllerState,
 } from '../../scripts/enemy-controller';
 import {
@@ -445,8 +453,8 @@ function castColumnRay(
  * Worker-tier painter order:
  *
  * clear → floor grid → ceiling grid → fogged wall stripes → sprite snapshot
- * → encoded enemy sprites → sprite flush → pulses → impact spots → bolts →
- * gun overlay
+ * → encoded enemy sprites → sprite flush → pulses → impact spots → enemy
+ * impact spots → bolts → gun overlay
  */
 function buildAndPostFrame(): void {
   if (!latestState || !currentTier || !wallMap || !gameState || !collisionMap) {
@@ -508,6 +516,9 @@ function buildAndPostFrame(): void {
       walkTick: enemy.walkTick,
       shootBlinkTicks: enemy.shootBlinkTicks,
       teamColor: resolveEnemyTeamColor(enemy.index),
+      deRezElapsedMs: enemy.deRezElapsedMs,
+      deRezDurationMs: ENEMY_CONTROLLER_DE_REZ_DURATION_MS,
+      seed: enemy.index,
     }));
 
   // Stash the active enemy sprites on the incoming render state so the next
@@ -727,6 +738,21 @@ function buildAndPostFrame(): void {
         if (!projection.visible) {
           continue;
         }
+
+        // Build the de-rez state for sprites in the death animation so the
+        // column renderer can dissolve pixels and tint survivors.
+        const derezState =
+          sprite.animationState === 'death' &&
+          sprite.deRezElapsedMs !== undefined &&
+          sprite.deRezDurationMs !== undefined &&
+          sprite.seed !== undefined
+            ? {
+                elapsedMs: sprite.deRezElapsedMs,
+                durationMs: sprite.deRezDurationMs,
+                seed: sprite.seed,
+              }
+            : undefined;
+
         renderNeatensteinSprite(
           spriteSnapshot.data,
           zBuffer,
@@ -734,6 +760,7 @@ function buildAndPostFrame(): void {
           frame,
           spriteContext,
           sprite.teamColor,
+          derezState,
         );
       }
 
@@ -790,6 +817,17 @@ function buildAndPostFrame(): void {
       gameState.simTimeMs,
     );
 
+    drawEnemyImpactSpots(
+      context,
+      /* istanbul ignore next -- nullish fallback only reachable in worker-tier rendering mode with mock OffscreenCanvas */
+      gameState.enemyImpacts ?? [],
+      zBuffer,
+      { x: cameraPositionX, y: cameraPositionY, yaw: cameraYaw },
+      canvasWidth,
+      canvasHeight,
+      gameState.simTimeMs,
+    );
+
     drawBolts(
       context,
       gameState.bolts!,
@@ -808,6 +846,16 @@ function buildAndPostFrame(): void {
       gameState.simTimeMs,
     );
 
+    drawAmmoPickups(
+      context,
+      gameState.ammoPickups ?? [],
+      zBuffer,
+      { x: cameraPositionX, y: cameraPositionY, yaw: cameraYaw },
+      canvasWidth,
+      canvasHeight,
+      gameState.simTimeMs,
+    );
+
     renderGunOverlay(context, gameState.gun!, canvasWidth, canvasHeight);
 
     const commitableContext = context as OffscreenCanvasRenderingContext2D & {
@@ -819,10 +867,20 @@ function buildAndPostFrame(): void {
 
     // Post a frame acknowledgment so the host bridge can apply worker-busy
     // backpressure. The worker tier renders directly to the OffscreenCanvas,
-    // so the frame payload only carries the request id for throttling.
+    // so the frame payload only carries the request id and scalar HUD fields
+    // for the status-bar overlay.
     self.postMessage({
       type: 'frame',
-      frame: { requestId: latestState.simTick },
+      frame: {
+        requestId: latestState.simTick,
+        playerHealth: gameState.player.health,
+        playerMaxHealth: gameState.player.maxHealth,
+        playerAmmo: gameState.player.ammo,
+        playerMaxAmmo: gameState.player.maxAmmo,
+        playerKills: gameState.kills,
+        playerDeaths: gameState.deaths ?? 0,
+        spawnCount: gameState.spawnCount,
+      },
     });
 
     return;
@@ -860,6 +918,14 @@ function buildAndPostFrame(): void {
 
     frame.gun = gameState.gun;
     frame.bolts = gameState.bolts;
+    frame.playerHealth = gameState.player.health;
+    frame.playerMaxHealth = gameState.player.maxHealth;
+    frame.playerAmmo = gameState.player.ammo;
+    frame.playerMaxAmmo = gameState.player.maxAmmo;
+    frame.playerKills = gameState.kills;
+    frame.playerDeaths = gameState.deaths ?? 0;
+    frame.spawnCount = gameState.spawnCount;
+    frame.ammoPickups = gameState.ammoPickups;
 
     self.postMessage(
       { type: 'frame', frame },
@@ -1179,6 +1245,7 @@ self.onmessage = (event: MessageEvent) => {
           controllerPosition: { ...controlledEnemy.position },
           health: controlledEnemy.health,
           active: controlledEnemy.active,
+          stunTimerMs: controlledEnemy.stunTimerMs,
         };
       }),
     };
@@ -1208,22 +1275,53 @@ self.onmessage = (event: MessageEvent) => {
       };
     }
 
-    // Keep the worker authoritative. If an enemy was killed this tick, clear
-    // it from the controller roster so the next controller pass does not revive
-    // it and so newly spawned enemies replace dead slots immediately.
+    // Keep the worker authoritative. If an enemy was killed this tick, keep it
+    // in the controller roster during the de-rez animation so
+    // updateEnemyController advances deRezElapsedMs instead of re-creating the
+    // enemy with a reset timer. Only prune once the de-rez duration elapses,
+    // and respawn the slot in gameState so the subsequent controller pass does
+    // not re-create a dead enemy with deRezElapsedMs reset to 0.
+    const completedDeRezIndices: number[] = [];
     enemyControllerState = {
       ...enemyControllerState,
       enemies: enemyControllerState.enemies
         .map((controlled, index) => {
           if (!gameState) return { ...controlled, active: false, health: 0 };
           const live = gameState.enemies[index];
-          if (!live || (live.health ?? 0) <= 0 || live.active === false) {
-            return { ...controlled, active: false, health: live?.health ?? 0 };
+          if (!live) return { ...controlled, active: false, health: 0 };
+          if ((live.health ?? 0) <= 0 || live.active === false) {
+            // Enemy is dead or inactive. Only prune once the de-rez animation
+            // has completed; otherwise keep the enemy so deRezElapsedMs
+            // advances on the next controller pass.
+            if (
+              controlled.deRezElapsedMs >= ENEMY_CONTROLLER_DE_REZ_DURATION_MS
+            ) {
+              completedDeRezIndices.push(index);
+              return {
+                ...controlled,
+                active: false,
+                health: live?.health ?? 0,
+              };
+            }
+            return { ...controlled, health: live?.health ?? 0 };
           }
           return controlled;
         })
         .filter((controlled) => controlled.active),
     };
+
+    // Respawn policy fix: dead enemies that completed de-rez are removed from
+    // gameState.enemies entirely so they do NOT respawn at the death location.
+    // The wave spawner (spawnWaveTick) handles creating new enemies at map edges
+    // on the next round, deferring respawn to a fresh spawn position.
+    if (gameState && completedDeRezIndices.length > 0) {
+      gameState = {
+        ...gameState,
+        enemies: gameState.enemies.filter(
+          (_, index) => !completedDeRezIndices.includes(index),
+        ),
+      };
+    }
 
     // Run a zero-timestep controller pass after the tick so newly spawned
     // enemies and any health changes from combat are reflected in the
@@ -1248,23 +1346,54 @@ self.onmessage = (event: MessageEvent) => {
   }
 };
 
+/**
+ * Test-only introspection hook: expose the current enemy controller state.
+ *
+ * @internal
+ */
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyGetEnemyControllerState =
   (): EnemyControllerState | null => enemyControllerState;
 
+/**
+ * Test-only introspection hook: expose the most recently rendered frame state.
+ *
+ * @internal
+ */
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyGetLatestState = (): NeatensteinRenderState | null =>
   latestState;
 
+/**
+ * Test-only hook: expose the worker canvas resize helper for direct testing.
+ *
+ * @internal
+ */
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlySyncWorkerCanvasSize = syncWorkerCanvasSize;
 
+/**
+ * Test-only hook: expose the enemy-team color resolver for direct testing.
+ *
+ * @internal
+ */
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyResolveEnemyTeamColor = resolveEnemyTeamColor;
 
+/**
+ * Test-only hook: expose the wall fog-factor resolver for direct testing.
+ *
+ * @internal
+ */
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyResolveWallFogFactor = resolveWallFogFactor;
 
+/**
+ * Test-only hook: place synthetic enemies near the player for deterministic
+ * combat and rendering tests.
+ *
+ * @internal
+ */
 /* istanbul ignore next -- test-only hook to place enemies near the player */
 export const __testOnlyInjectTestEnemies = (
   positions: { x: number; y: number }[],
@@ -1276,6 +1405,7 @@ export const __testOnlyInjectTestEnemies = (
     index: i,
     active: true,
     controllerPosition: { ...pos },
+    stunTimerMs: 0,
   }));
   enemyControllerState = {
     ...enemyControllerState,
@@ -1296,6 +1426,7 @@ export const __testOnlyInjectTestEnemies = (
       weights: undefined,
       variantId: 0,
       previousStepDistance: -1,
+      stunTimerMs: 0,
     })),
   };
 };

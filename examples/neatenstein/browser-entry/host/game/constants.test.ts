@@ -131,4 +131,38 @@ describe('Neatenstein game constants', () => {
       });
     });
   });
+
+  describe('AC-11-enemy-fire: enemy bolt constants', () => {
+    it('exports a positive enemy bolt speed in cells per second', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_ENEMY_BOLT_SPEED_CELLS_PER_SECOND as number).toBe(
+        36,
+      );
+    });
+
+    it('exports enemy bolt damage equal to 10', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_ENEMY_BOLT_DAMAGE as number).toBe(10);
+    });
+
+    it('exports enemy bolt lifetime equal to 2000 ms', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS as number).toBe(2000);
+    });
+
+    it('exports enemy bolt max range equal to 30 cells', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS as number).toBe(30);
+    });
+
+    it('exports enemy bolt hit radius equal to 0.5 cells', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_ENEMY_BOLT_HIT_RADIUS_CELLS as number).toBe(0.5);
+    });
+
+    it('exports contact i-frame duration equal to 500 ms', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_CONTACT_IFRAME_MS as number).toBe(500);
+    });
+  });
 });

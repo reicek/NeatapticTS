@@ -78,6 +78,8 @@ export function createInitialGunState(): GunState {
  * @param width - Viewport width in CSS pixels.
  * @param height - Viewport height in CSS pixels.
  *
+ * @returns Nothing; the function mutates the supplied 2D context as a side effect.
+ *
  * @example
  * ```ts
  * const gun = createInitialGunState();

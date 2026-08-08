@@ -92,6 +92,48 @@ export const NEATENSTEIN_IMPACT_SPOT_GLOW_COLOR = 'rgba(240,248,255,0.5)';
 /** Glow blur radius in pixels for wall-impact neon spots. */
 export const NEATENSTEIN_IMPACT_SPOT_GLOW_BLUR_PX = 2;
 
+/**
+ * Milliseconds an enemy-impact neon spot remains visible.
+ *
+ * Shorter than the wall-impact lifetime ({@link NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS})
+ * so hit markers on enemies feel snappier and do not clutter the scene.
+ */
+export const NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS = 1000;
+
+/** Screen-space radius of an enemy-impact neon spot, in pixels. */
+export const NEATENSTEIN_ENEMY_IMPACT_RADIUS_PX = 5;
+
+/**
+ * CSS color applied to enemy-impact neon spots.
+ *
+ * A red-orange that matches the enemy bolt palette so hits on enemies read as
+ * part of the same energy family.
+ */
+export const NEATENSTEIN_ENEMY_IMPACT_COLOR = '#ff4400';
+
+/**
+ * Glow color applied behind enemy-impact neon spots.
+ *
+ * A translucent red-orange halo that intensifies the hit marker.
+ */
+export const NEATENSTEIN_ENEMY_IMPACT_GLOW_COLOR = 'rgba(255,68,0,0.5)';
+
+/** Glow blur radius in pixels for enemy-impact neon spots. */
+export const NEATENSTEIN_ENEMY_IMPACT_GLOW_BLUR_PX = 4;
+
+/**
+ * Maximum screen-space radius of the expanding burst effect on enemy impact,
+ * in pixels.
+ *
+ * The burst expands from 0 to this radius over
+ * {@link NEATENSTEIN_ENEMY_IMPACT_BURST_DURATION_MS} and fades out, providing a
+ * brief explosion flash in addition to the persistent mark.
+ */
+export const NEATENSTEIN_ENEMY_IMPACT_BURST_RADIUS_PX = 20;
+
+/** Duration of the expanding burst effect on enemy impact, in milliseconds. */
+export const NEATENSTEIN_ENEMY_IMPACT_BURST_DURATION_MS = 200;
+
 /** Ordered list of all procedural sound names used by the audio engine. */
 export const NEATENSTEIN_AUDIO_SOUND_NAMES = [
   'fire',
@@ -176,6 +218,17 @@ export const NEATENSTEIN_GUN_ACCENT_COLOR = '#00f0ff';
 export const NEATENSTEIN_DYNAMIC_LIGHT_COLOR = '#00f0ff';
 
 /**
+ * RGB tint applied to surviving pixels during the Tron-style derez death
+ * animation.
+ *
+ * As the de-rez progress `t` increases, surviving pixels are lerped toward
+ * this cool gray so the crumbling silhouette shifts from the enemy's team
+ * color to an icy neutral before the final pixels scatter.
+ */
+// prettier-ignore
+export const NEATENSTEIN_ENEMY_DEATH_COLOR: readonly [number, number, number] = [180, 190, 210];
+
+/**
  * Keyboard `code` for toggling the dynamic light overlay.
  *
  * The router tracks this key in the input snapshot and the tick pipeline flips
@@ -194,3 +247,108 @@ export const NEATENSTEIN_LIGHT_TOGGLE_KEY = 'KeyL' as const;
  *   computation.
  */
 export type NeatensteinTier = 'worker' | 'cpu' | 'gpu';
+
+// ---------------------------------------------------------------------------
+// HIVE DENSITY HUD overlay design tokens
+// ---------------------------------------------------------------------------
+
+/** Fixed width of the HIVE DENSITY meter track, in CSS pixels. */
+export const NEATENSTEIN_HUD_METER_WIDTH_PX = 160;
+
+/** Fixed height of the HIVE DENSITY meter track, in CSS pixels. */
+export const NEATENSTEIN_HUD_METER_HEIGHT_PX = 8;
+
+/** Static label text shown on the HIVE DENSITY meter before the percentage. */
+export const NEATENSTEIN_HUD_LABEL_TEXT = 'HIVE DENSITY' as const;
+
+/**
+ * Density threshold separating the calm and low color bands.
+ *
+ * Values below this threshold use the calm color; values at or above use the
+ * low color.
+ */
+export const NEATENSTEIN_HIVE_DENSITY_THRESHOLD_LOW = 0.25;
+
+/**
+ * Density threshold separating the low and mid color bands.
+ *
+ * Values below this threshold use the low color; values at or above use the
+ * mid color.
+ */
+export const NEATENSTEIN_HIVE_DENSITY_THRESHOLD_MID = 0.5;
+
+/**
+ * Density threshold separating the mid and high color bands.
+ *
+ * Values below this threshold use the mid color; values at or above use the
+ * high color.
+ */
+export const NEATENSTEIN_HIVE_DENSITY_THRESHOLD_HIGH = 0.75;
+
+/** CSS color for hive densities below the low threshold (calm cyan). */
+export const NEATENSTEIN_HIVE_DENSITY_COLOR_CALM = 'rgb(0, 240, 255)' as const;
+
+/** CSS color for hive densities in the [low, mid) band (low green). */
+export const NEATENSTEIN_HIVE_DENSITY_COLOR_LOW = 'rgb(160, 240, 0)' as const;
+
+/** CSS color for hive densities in the [mid, high) band (mid amber). */
+export const NEATENSTEIN_HIVE_DENSITY_COLOR_MID = 'rgb(240, 160, 0)' as const;
+
+/** CSS color for hive densities at or above the high threshold (high magenta). */
+export const NEATENSTEIN_HIVE_DENSITY_COLOR_HIGH = 'rgb(255, 0, 85)' as const;
+
+// ---------------------------------------------------------------------------
+// Human-mode selector design tokens
+// ---------------------------------------------------------------------------
+
+/** Label text for the auto-play mode option in the human-mode selector. */
+export const NEATENSTEIN_HUMAN_MODE_LABEL_AUTO = 'auto' as const;
+
+/** Label text for the human-play mode option in the human-mode selector. */
+export const NEATENSTEIN_HUMAN_MODE_LABEL_HUMAN = 'human' as const;
+
+// ---------------------------------------------------------------------------
+// Health/ammo HUD overlay design tokens
+// ---------------------------------------------------------------------------
+
+/** Static label text shown before the ammo count in the ammo label. */
+export const NEATENSTEIN_HEALTH_AMMO_LABEL_AMMO = 'AMMO' as const;
+
+/** Static label text shown before the health percentage in the health label. */
+export const NEATENSTEIN_HEALTH_AMMO_LABEL_HEALTH = 'HEALTH' as const;
+
+/**
+ * Health fraction threshold separating the cyan and amber color bands.
+ *
+ * At or above this fraction → cyan. Below → amber or magenta.
+ */
+export const NEATENSTEIN_HEALTH_THRESHOLD_CYAN = 0.7;
+
+/**
+ * Health fraction threshold separating the amber and magenta color bands.
+ *
+ * At or above this fraction (but below cyan) → amber. Below → magenta.
+ */
+export const NEATENSTEIN_HEALTH_THRESHOLD_AMBER = 0.3;
+
+/** CSS color for health fractions at or above the cyan threshold. */
+export const NEATENSTEIN_HEALTH_COLOR_CYAN = 'rgb(0, 240, 255)' as const;
+
+/** CSS color for health fractions in the [amber, cyan) band. */
+export const NEATENSTEIN_HEALTH_COLOR_AMBER = 'rgb(240, 160, 0)' as const;
+
+/** CSS color for health fractions below the amber threshold. */
+export const NEATENSTEIN_HEALTH_COLOR_MAGENTA = 'rgb(255, 0, 85)' as const;
+
+/** CSS color for the ammo pickup white core. */
+export const NEATENSTEIN_AMMO_PICKUP_COLOR = '#ffffff' as const;
+
+/** CSS color for the ammo pickup cool-white halo glow. */
+export const NEATENSTEIN_AMMO_PICKUP_GLOW_COLOR =
+  'rgba(240, 248, 255, 0.5)' as const;
+
+/** Shadow blur in CSS pixels for the ammo pickup halo. */
+export const NEATENSTEIN_AMMO_PICKUP_GLOW_BLUR_PX = 8;
+
+/** Base radius in CSS pixels for the ammo pickup square at unit distance. */
+export const NEATENSTEIN_AMMO_PICKUP_RADIUS_PX = 6;

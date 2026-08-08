@@ -22,15 +22,17 @@ This example is organized around three reader questions:
 
 ## Choose Your Route
 
-| If you want to...                            | Start here                                                                                                                                                                                                                                                 |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Run the browser demo                         | Build with `node scripts/build-neatenstein.mjs`, then open `examples/neatenstein/index.html` in a browser.                                                                                                                                                 |
-| Read the renderer constants and tier presets | [browser-entry/constants.ts](browser-entry/constants.ts)                                                                                                                                                                                                   |
-| Explore the procedural enemy art pipeline    | [scripts/voxel-enemy.ts](scripts/voxel-enemy.ts), [scripts/snapshot-renderer.ts](scripts/snapshot-renderer.ts), [scripts/enemy-animator.ts](scripts/enemy-animator.ts), [scripts/generate-enemy-sprites.ts](scripts/generate-enemy-sprites.ts)             |
-| Wire enemies into the live renderer          | [scripts/enemy-controller.ts](scripts/enemy-controller.ts), [scripts/enemy-sprite.ts](scripts/enemy-sprite.ts), [browser-entry/host/waves.ts](browser-entry/host/waves.ts), [browser-entry/host/renderer-bridge.ts](browser-entry/host/renderer-bridge.ts) |
-| Understand the raycaster and frame protocol  | [browser-entry/renderer/](browser-entry/renderer/)                                                                                                                                                                                                         |
-| Explore the NGE enemy-population harness     | [browser-entry/harness/enemy-population.ts](browser-entry/harness/enemy-population.ts), [browser-entry/harness/enemy-mlp.ts](browser-entry/harness/enemy-mlp.ts), [browser-entry/harness/fitness.ts](browser-entry/harness/fitness.ts)                     |
-| Tune NGE lifecycle or enemy co-evolution     | [browser-entry/harness/](browser-entry/harness/) and the NGA core in `src/`                                                                                                                                                                                |
+| If you want to...                                   | Start here                                                                                                                                                                                                                                                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Run the browser demo                                | Build with `node scripts/build-neatenstein.mjs`, then open `examples/neatenstein/index.html` in a browser.                                                                                                                                                                                       |
+| Read the renderer constants and tier presets        | [browser-entry/constants.ts](browser-entry/constants.ts)                                                                                                                                                                                                                                         |
+| Explore the procedural enemy art pipeline           | [scripts/voxel-enemy.ts](scripts/voxel-enemy.ts), [scripts/snapshot-renderer.ts](scripts/snapshot-renderer.ts), [scripts/enemy-animator.ts](scripts/enemy-animator.ts), [scripts/generate-enemy-sprites.ts](scripts/generate-enemy-sprites.ts)                                                   |
+| Wire enemies into the live renderer                 | [scripts/enemy-controller.ts](scripts/enemy-controller.ts), [scripts/enemy-sprite.ts](scripts/enemy-sprite.ts), [browser-entry/host/waves.ts](browser-entry/host/waves.ts), [browser-entry/host/renderer-bridge.ts](browser-entry/host/renderer-bridge.ts)                                       |
+| Understand the raycaster and frame protocol         | [browser-entry/renderer/](browser-entry/renderer/)                                                                                                                                                                                                                                               |
+| Tune the plasma-cannon overlay and voxel projection | [browser-entry/renderer/gun.ts](browser-entry/renderer/gun.ts), [browser-entry/renderer/gun-sprite.ts](browser-entry/renderer/gun-sprite.ts)                                                                                                                                                     |
+| Explore the NGE enemy-population harness            | [browser-entry/harness/enemy-population.ts](browser-entry/harness/enemy-population.ts), [browser-entry/harness/enemy-mlp.ts](browser-entry/harness/enemy-mlp.ts), [browser-entry/harness/fitness.ts](browser-entry/harness/fitness.ts)                                                           |
+| Tune the combat, return-fire, and death-effect loop | [browser-entry/host/game/combat.ts](browser-entry/host/game/combat.ts), [browser-entry/host/game/tick.ts](browser-entry/host/game/tick.ts), [browser-entry/renderer/derez.ts](browser-entry/renderer/derez.ts), [browser-entry/worker/display.worker.ts](browser-entry/worker/display.worker.ts) |
+| Tune NGE lifecycle or enemy co-evolution            | [browser-entry/harness/](browser-entry/harness/) and the NGA core in `src/`                                                                                                                                                                                                                      |
 
 ## What Exists in This Folder
 
@@ -40,8 +42,9 @@ This example is organized around three reader questions:
 - `scripts/` — the procedural enemy art pipeline and runtime enemy behavior:
   voxel descriptor, orthographic snapshot renderer, deterministic frame animator,
   PNG sprite-sheet/reference-snapshot generator, enemy AI controller, and CPU
-  billboard sprite renderer. Generated assets are written to
-  `examples/neatenstein/generated/`.
+  billboard sprite renderer. The runtime uses the bundled
+  `examples/neatenstein/robot-sprite-data.js`; reference snapshots are written
+  to `examples/neatenstein/generated/` when you run the generator.
 - `index.html` — the demo page that loads the built host bundle.
 
 ## Run The Example
@@ -55,8 +58,24 @@ node scripts/build-neatenstein.mjs
 ```
 
 This produces `docs/assets/neatenstein.bundle.js` and
-`docs/assets/neatenstein.worker.esm.js`. Open `examples/neatenstein/index.html`
-in a browser to load the demo.
+`docs/assets/neatenstein.worker.js` (a classic IIFE worker bundle). Open
+`examples/neatenstein/index.html` in a browser to load the demo.
+
+## Gameplay
+
+The live demo is tuned around a short, readable combat loop:
+
+- Render distance is capped at 30 cells so enemies emerge from fog with just
+  enough warning time.
+- Enemies spawn with 100 HP; each player bolt deals 20 damage, so a clean kill
+  takes five hits.
+- A non-lethal hit stuns an enemy for 200 ms and briefly pushes it back by one
+  cell, giving the player breathing room.
+- Enemies fire back with 10-damage bolts; the player has a 500 ms invincibility
+  window after taking damage.
+- Enemy hits leave a short neon impact mark (`NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS`).
+- Dead enemies dissolve with a 700 ms Tron-style pixel-by-pixel de-rez animation
+  (`ENEMY_CONTROLLER_DE_REZ_DURATION_MS`).
 
 ## The Core Idea In One Glance
 
@@ -78,7 +97,7 @@ flowchart LR
         Snapshot["scripts/snapshot-renderer.ts"]
         Animator["scripts/enemy-animator.ts"]
         Generator["scripts/generate-enemy-sprites.ts"]
-        Atlas["enemy-sprite-atlas.png"]
+        Atlas["robot-sprite-data.js"]
     end
 
     Host --> Waves

@@ -128,7 +128,7 @@ const NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE = NEATENSTEIN_RENDER_DISTANCE_CAP;
  * Each integer grid line is sampled at `SAMPLES + 1` points and consecutive
  * visible samples are connected into screen-space line segments.
  */
-const NEATENSTEIN_FLOOR_LINE_SAMPLES = 160;
+const NEATENSTEIN_FLOOR_LINE_SAMPLES = 80;
 
 /**
  * Minimum positive camera-space depth required for projection.
@@ -973,3 +973,9 @@ function parseNeatensteinFloorHexColor(
 
   return { r: red, g: green, b: blue };
 }
+
+/**
+ * Test-only export of {@link strokeNeatensteinGridBands} for direct coverage
+ * of the empty-band `continue` branch.
+ */
+export const __testOnlyStrokeNeatensteinGridBands = strokeNeatensteinGridBands;

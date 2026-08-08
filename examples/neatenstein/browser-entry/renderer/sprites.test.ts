@@ -1060,6 +1060,156 @@ describe('neatenstein sprites', () => {
     });
   });
 
+  describe('renderNeatensteinVoxelSpriteColumn derez mask and tint', () => {
+    const RED_OPAQUE: [number, number, number, number] = [255, 100, 50, 255];
+
+    it('dissolves some pixels when derezState is provided at t=0.5', async () => {
+      const { __testOnlyRenderNeatensteinVoxelSpriteColumn } =
+        await import('./sprites');
+      const frame = createMockVoxelSnapshot(192, 192, RED_OPAQUE, RED_OPAQUE);
+      const fbNoDerez = new Uint8ClampedArray(192 * 192 * 4).fill(0);
+      const fbWithDerez = new Uint8ClampedArray(192 * 192 * 4).fill(0);
+
+      __testOnlyRenderNeatensteinVoxelSpriteColumn(
+        fbNoDerez,
+        192,
+        192,
+        0,
+        0,
+        192,
+        frame,
+        0,
+        0,
+      );
+
+      __testOnlyRenderNeatensteinVoxelSpriteColumn(
+        fbWithDerez,
+        192,
+        192,
+        0,
+        0,
+        192,
+        frame,
+        0,
+        0,
+        { elapsedMs: 350, durationMs: 700, seed: 42 },
+      );
+
+      let opaqueNoDerez = 0;
+      let opaqueWithDerez = 0;
+      for (let i = 3; i < fbNoDerez.length; i += 4) {
+        if (fbNoDerez[i] > 0) opaqueNoDerez += 1;
+      }
+      for (let i = 3; i < fbWithDerez.length; i += 4) {
+        if (fbWithDerez[i] > 0) opaqueWithDerez += 1;
+      }
+
+      expect(opaqueNoDerez).toBe(192);
+      expect(opaqueWithDerez).toBeLessThan(opaqueNoDerez);
+      expect(opaqueWithDerez).toBeGreaterThan(0);
+    });
+
+    it('dissolves all pixels at t=1', async () => {
+      const { __testOnlyRenderNeatensteinVoxelSpriteColumn } =
+        await import('./sprites');
+      const frame = createMockVoxelSnapshot(192, 192, RED_OPAQUE, RED_OPAQUE);
+      const framebuffer = new Uint8ClampedArray(192 * 192 * 4).fill(0);
+
+      __testOnlyRenderNeatensteinVoxelSpriteColumn(
+        framebuffer,
+        192,
+        192,
+        0,
+        0,
+        192,
+        frame,
+        0,
+        0,
+        { elapsedMs: 700, durationMs: 700, seed: 42 },
+      );
+
+      let opaqueCount = 0;
+      for (let i = 3; i < framebuffer.length; i += 4) {
+        if (framebuffer[i] > 0) opaqueCount += 1;
+      }
+      expect(opaqueCount).toBe(0);
+    });
+
+    it('tints surviving pixels toward NEATENSTEIN_ENEMY_DEATH_COLOR', async () => {
+      const { __testOnlyRenderNeatensteinVoxelSpriteColumn } =
+        await import('./sprites');
+      const { NEATENSTEIN_ENEMY_DEATH_COLOR } = await import('../constants');
+      const frame = createMockVoxelSnapshot(192, 192, RED_OPAQUE, RED_OPAQUE);
+      const fbNoDerez = new Uint8ClampedArray(192 * 192 * 4).fill(0);
+      const fbWithDerez = new Uint8ClampedArray(192 * 192 * 4).fill(0);
+
+      __testOnlyRenderNeatensteinVoxelSpriteColumn(
+        fbNoDerez,
+        192,
+        192,
+        0,
+        0,
+        192,
+        frame,
+        0,
+        0,
+      );
+
+      __testOnlyRenderNeatensteinVoxelSpriteColumn(
+        fbWithDerez,
+        192,
+        192,
+        0,
+        0,
+        192,
+        frame,
+        0,
+        0,
+        { elapsedMs: 350, durationMs: 700, seed: 42 },
+      );
+
+      const tintFactor = 0.5 * 0.5; // t * 0.5 = 0.25
+      let foundTinted = false;
+      for (let i = 0; i < fbWithDerez.length; i += 4) {
+        if (fbWithDerez[i + 3] > 0) {
+          const expectedR = Math.round(
+            RED_OPAQUE[0] * (1 - tintFactor) +
+              NEATENSTEIN_ENEMY_DEATH_COLOR[0] * tintFactor,
+          );
+          expect(fbWithDerez[i]).toBe(expectedR);
+          foundTinted = true;
+          break;
+        }
+      }
+      expect(foundTinted).toBe(true);
+    });
+
+    it('preserves all pixels when derezState is undefined', async () => {
+      const { __testOnlyRenderNeatensteinVoxelSpriteColumn } =
+        await import('./sprites');
+      const frame = createMockVoxelSnapshot(192, 192, RED_OPAQUE, RED_OPAQUE);
+      const framebuffer = new Uint8ClampedArray(192 * 192 * 4).fill(0);
+
+      __testOnlyRenderNeatensteinVoxelSpriteColumn(
+        framebuffer,
+        192,
+        192,
+        0,
+        0,
+        192,
+        frame,
+        0,
+        0,
+      );
+
+      let opaqueCount = 0;
+      for (let i = 3; i < framebuffer.length; i += 4) {
+        if (framebuffer[i] > 0) opaqueCount += 1;
+      }
+      expect(opaqueCount).toBe(192);
+    });
+  });
+
   describe('encoded robot sprite red contracts', () => {
     it('samples ROBOT_SPRITE_FRAMES pixel data instead of drawing a flat color bar', async () => {
       const { renderNeatensteinSprite } = await import('./sprites');

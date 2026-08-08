@@ -5,7 +5,7 @@
  * {@link GameState} snapshot. Each controlled enemy navigates toward the
  * player using a BFS distance map (recycled from asciiMaze patterns),
  * moves with wall-block-then-stay behavior, fires hitscan shots when the
- * player is in range and line-of-sight, and plays a 4-second de-rez death
+ * player is in range and line-of-sight, and plays a 700 ms de-rez death
  * animation when its health reaches zero or its hitscan ammunition is depleted.
  *
  * @module
@@ -57,7 +57,7 @@ export interface ControlledEnemy {
   /** Facing angle in radians; 0 = +X axis. */
   yawRad: number;
   /** Animation state consumed by the sprite renderer. */
-  animationState: 'idle' | 'move' | 'fire' | 'death';
+  animationState: 'idle' | 'move' | 'fire' | 'death' | 'damage';
   /** Remaining hitscan ammunition. Depletes to trigger de-rez. */
   ammo: number;
   /** Milliseconds until the enemy may fire again. */
@@ -87,6 +87,8 @@ export interface ControlledEnemy {
    * available (first tick or respawn).
    */
   previousStepDistance: number;
+  /** Remaining hit-stun time in milliseconds (0 when not stunned). */
+  stunTimerMs: number;
 }
 
 /**
@@ -184,8 +186,11 @@ export const ENEMY_CONTROLLER_STARTING_AMMO = 3;
 /**
  * Duration of the death de-rez animation in milliseconds, kept identical to
  * the sprite-side timing so visual and AI states stay synchronized.
+ *
+ * The 700 ms window delivers a fast Tron-style pixel scatter rather than the
+ * original 4-second fade, keeping combat feedback snappy.
  */
-export const ENEMY_CONTROLLER_DE_REZ_DURATION_MS = 4000;
+export const ENEMY_CONTROLLER_DE_REZ_DURATION_MS = 700;
 
 /** Line-of-sight sampling step in world cells. */
 const LINE_OF_SIGHT_STEP_CELLS = 0.5;
@@ -323,6 +328,7 @@ export function createEnemyControllerState(
       weights: undefined,
       variantId: 0,
       previousStepDistance: -1,
+      stunTimerMs: 0,
     })),
     hitscanEvents: [],
   };
@@ -373,6 +379,7 @@ function updateControlledEnemy(
       weights: undefined,
       variantId: 0,
       previousStepDistance: -1,
+      stunTimerMs: 0,
     } as ControlledEnemy);
 
   const ammo = isRespawn
@@ -416,6 +423,46 @@ function updateControlledEnemy(
       weights,
       variantId,
       previousStepDistance: -1,
+      stunTimerMs: 0,
+    };
+  }
+
+  // Hit-stun path: while stunTimerMs > 0 the enemy skips movement, MLP, and
+  // fire. The position is adopted from EnemyState (which may include the
+  // pushback offset applied by applyEnemyDamage). The animation state is set
+  // to 'damage' so the renderer shows the hit-flash overlay.
+  // Decrement by the FIXED simulation timestep (not the variable rAF dtMs)
+  // so stun duration is deterministic across different frame timings.
+  // On zero-timestep sync passes (dtMs === 0) the timer is not decremented.
+  const stunTimerMs = Math.max(
+    0,
+    (enemyState.stunTimerMs ?? 0) -
+      (dtMs > 0 ? NEATENSTEIN_FIXED_TIMESTEP_MS : 0),
+  );
+
+  if (stunTimerMs > 0 || (enemyState.stunTimerMs ?? 0) > 0) {
+    // Adopt the pushed-back position from EnemyState, not the stale
+    // ControlledEnemy position.
+    const stunPosition = { ...enemyState.position };
+
+    return {
+      index,
+      position: stunPosition,
+      health: enemyState.health,
+      yawRad,
+      animationState: 'damage',
+      ammo: Math.max(0, ammo),
+      fireCooldownMs,
+      deRezElapsedMs,
+      active: true,
+      walkTick: 0,
+      shootBlinkTicks: 0,
+      flankStallTicks: 0,
+      bfsStallTicks: 0,
+      weights,
+      variantId,
+      previousStepDistance: -1,
+      stunTimerMs,
     };
   }
 
@@ -608,6 +655,7 @@ function updateControlledEnemy(
         weights !== undefined
       ) {
         try {
+          /* istanbul ignore next -- dead code: isRespawn clears weights before MLP guard at line 655 */
           const prevStepDist = isRespawn
             ? -1
             : previousOrDefault.previousStepDistance;
@@ -962,6 +1010,7 @@ function updateControlledEnemy(
     weights,
     variantId,
     previousStepDistance: finalDist >= 0 ? finalDist : -1,
+    stunTimerMs: 0,
   };
 }
 
@@ -996,13 +1045,13 @@ function separateEnemies(
 
   for (let i = 0; i < enemies.length; i += 1) {
     const a = enemies[i];
-    if (!a.active) {
+    if (!a.active || a.stunTimerMs > 0) {
       continue;
     }
 
     for (let j = i + 1; j < enemies.length; j += 1) {
       const b = enemies[j];
-      if (!b.active) {
+      if (!b.active || b.stunTimerMs > 0) {
         continue;
       }
 
@@ -1032,7 +1081,7 @@ function separateEnemies(
   // the pre-separation position (already verified wall-free by the move).
   for (let i = 0; i < enemies.length; i += 1) {
     const e = enemies[i];
-    if (!e.active) {
+    if (!e.active || e.stunTimerMs > 0) {
       continue;
     }
     if (

@@ -19,6 +19,7 @@
 import {
   copyExampleDocs,
   copyExampleEntryPoint,
+  copyExampleExtraAssets,
   removeRetiredPublishedExamples,
 } from './copy-examples/copy-examples.copy.js';
 import { EXAMPLE_DEFINITIONS } from './copy-examples/copy-examples.definitions.js';
@@ -40,6 +41,10 @@ async function main(): Promise<void> {
     await Promise.all(
       EXAMPLE_DEFINITIONS.map(async (exampleDefinition) => {
         const publishedExample = await copyExampleEntryPoint(exampleDefinition);
+        // Extra assets (supplementary browser pages and their data
+        // dependencies) are copied verbatim into the published folder so they
+        // can be served from the same URL path as the generated index.html.
+        await copyExampleExtraAssets(exampleDefinition);
         // Static docs are copied regardless of whether the example has a browser
         // entrypoint, so educational markdown files under <example>/docs/ are
         // always published alongside the generated folder READMEs.

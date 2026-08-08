@@ -165,4 +165,60 @@ describe('Neatenstein render frame helpers', () => {
       simTick: state.simTick,
     });
   });
+
+  it('copies scalar HUD fields from the render state into the frame', async () => {
+    const { buildNeatensteinRenderFrame } =
+      await loadModule<typeof import('./frame.ts')>('./frame.ts');
+    const state = createMinimalRenderState();
+    (state as Record<string, unknown>).playerHealth = 75;
+    (state as Record<string, unknown>).playerMaxHealth = 100;
+    (state as Record<string, unknown>).playerAmmo = 30;
+    (state as Record<string, unknown>).playerMaxAmmo = 50;
+    (state as Record<string, unknown>).playerKills = 12;
+    (state as Record<string, unknown>).playerDeaths = 3;
+
+    const frame = buildNeatensteinRenderFrame(
+      state,
+      expectedColumnCount,
+    ) as unknown as Record<string, unknown>;
+
+    expect({
+      playerHealth: frame.playerHealth,
+      playerMaxHealth: frame.playerMaxHealth,
+      playerAmmo: frame.playerAmmo,
+      playerMaxAmmo: frame.playerMaxAmmo,
+      playerKills: frame.playerKills,
+      playerDeaths: frame.playerDeaths,
+    }).toEqual({
+      playerHealth: 75,
+      playerMaxHealth: 100,
+      playerAmmo: 30,
+      playerMaxAmmo: 50,
+      playerKills: 12,
+      playerDeaths: 3,
+    });
+  });
+
+  it('defaults playerKills and playerDeaths to 0 when omitted from state', async () => {
+    const { buildNeatensteinRenderFrame } =
+      await loadModule<typeof import('./frame.ts')>('./frame.ts');
+    const state = createMinimalRenderState();
+    (state as Record<string, unknown>).playerHealth = 100;
+    (state as Record<string, unknown>).playerMaxHealth = 100;
+    (state as Record<string, unknown>).playerAmmo = 50;
+    (state as Record<string, unknown>).playerMaxAmmo = 50;
+
+    const frame = buildNeatensteinRenderFrame(
+      state,
+      expectedColumnCount,
+    ) as unknown as Record<string, unknown>;
+
+    expect({
+      playerKills: frame.playerKills,
+      playerDeaths: frame.playerDeaths,
+    }).toEqual({
+      playerKills: 0,
+      playerDeaths: 0,
+    });
+  });
 });

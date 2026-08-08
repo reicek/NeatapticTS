@@ -19,30 +19,41 @@ import {
 } from '../../renderer/map';
 import { applyEnemyDamage, fireBolt } from './combat';
 import {
+  NEATENSTEIN_AMMO_PICKUP_COLLECTION_RADIUS_CELLS,
+  NEATENSTEIN_AMMO_PICKUP_LIFETIME_MS,
   NEATENSTEIN_BOLT_HIT_RADIUS_CELLS,
   NEATENSTEIN_BOLT_MAX_RANGE_CELLS,
+  NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND,
   NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
   NEATENSTEIN_CONTACT_IFRAME_MS,
   NEATENSTEIN_ENEMY_BOLT_HIT_RADIUS_CELLS,
   NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS,
   NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS,
+  NEATENSTEIN_ENEMY_BOLT_SPEED_CELLS_PER_SECOND,
+  NEATENSTEIN_ENEMY_IMPACT_MAX_CONCURRENT,
   NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_GUN_RECOIL_DECAY_PX_PER_SECOND,
   NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX,
   NEATENSTEIN_MAP_SIZE,
+  NEATENSTEIN_PLAYER_MAX_AMMO,
+  NEATENSTEIN_PLAYER_MAX_HEALTH,
+  NEATENSTEIN_SPAWN_CENTER_X,
+  NEATENSTEIN_SPAWN_CENTER_Y,
 } from './constants';
 import { updateEpisode } from './episode';
 import { updatePlayerMovement } from './movement';
-import { applyDamage, applyDash, createGameState } from './state';
+import { applyDamage, applyDash, createGameState, restoreAmmo } from './state';
 import type {
   BoltState,
   EnemyBoltState,
+  EnemyImpactSpot,
   EnemyState,
   GameState,
   GunState,
   ImpactSpot,
   Vector2,
 } from './types';
+import { NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS } from '../../constants';
 
 export { createGameState };
 export {
@@ -50,7 +61,7 @@ export {
   NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
   NEATENSTEIN_ENEMY_BOLT_SPEED_CELLS_PER_SECOND,
   NEATENSTEIN_FIXED_TIMESTEP_MS,
-} from './constants';
+};
 
 /**
  * Normalized input snapshot consumed by {@link gameTick}.
@@ -197,10 +208,12 @@ function normalizeGameTickInput(
  * 3. Apply player look.
  * 4. Apply dash if requested.
  * 5. Apply player movement against collision.
- * 6. Move active plasma bolts and remove any that hit a wall or leave the map.
- * 7. Age wall-impact spots.
- * 8. Decay gun recoil toward zero.
- * 9. Fire a traveling plasma bolt if requested.
+ * 6. Move active player plasma bolts and remove any that hit a wall or leave
+ *    the map.
+ * 7. Age wall-impact spots and enemy-impact spots.
+ * 8. Move active enemy bolts, check player proximity, and apply damage.
+ * 9. Decay gun recoil toward zero.
+ * 10. Fire a traveling plasma bolt if requested.
  *
  * Bolts move before firing so newly spawned bolts start at the muzzle and are
  * not advanced until the following tick.
@@ -268,13 +281,29 @@ export function gameTick(
       bolt.hitEnemyIndex !== undefined &&
       bolt.hitEnemyIndex >= 0
     ) {
-      next = applyEnemyDamage(next, bolt.hitEnemyIndex);
+      const enemy = next.enemies[bolt.hitEnemyIndex];
+      if (enemy) {
+        const enemyImpact: EnemyImpactSpot = {
+          position: { ...enemy.position },
+          createdAtMs: next.simTimeMs,
+          lifetimeMs: NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS,
+          boltTravelTimeMs: 0,
+        };
+        next = {
+          ...next,
+          enemyImpacts: [...(next.enemyImpacts ?? []), enemyImpact].slice(
+            -NEATENSTEIN_ENEMY_IMPACT_MAX_CONCURRENT,
+          ),
+        };
+        next = applyEnemyDamage(next, bolt.hitEnemyIndex);
+      }
     }
   }
   next = {
     ...next,
     bolts: updatedBolts.filter((bolt) => bolt.active),
     impacts: ageImpacts(next.impacts, resolvedDtMs),
+    enemyImpacts: ageEnemyImpacts(next.enemyImpacts ?? [], resolvedDtMs),
     gun: decayGunRecoil(next.gun ?? { recoilOffset: 0 }, resolvedDtMs),
   };
 
@@ -293,6 +322,33 @@ export function gameTick(
     enemyBolts: enemyBoltResult.bolts.filter((bolt) => bolt.active),
   };
 
+  // Step 5c: Respawn the hero at the map center if health has been depleted.
+  if (next.player.health <= 0) {
+    next = {
+      ...next,
+      player: {
+        ...next.player,
+        position: {
+          x: NEATENSTEIN_SPAWN_CENTER_X,
+          y: NEATENSTEIN_SPAWN_CENTER_Y,
+        },
+        previousPosition: {
+          x: NEATENSTEIN_SPAWN_CENTER_X,
+          y: NEATENSTEIN_SPAWN_CENTER_Y,
+        },
+        health: NEATENSTEIN_PLAYER_MAX_HEALTH,
+        ammo: NEATENSTEIN_PLAYER_MAX_AMMO,
+        dashTimeRemainingMs: 0,
+        dashCooldownMs: 0,
+        contactIFrameMs: 0,
+      },
+      deaths: (next.deaths ?? 0) + 1,
+    };
+  }
+
+  // Step 5d: Update ammo pickups — collect by proximity and expire by lifetime.
+  next = updateAmmoPickups(next, next.simTimeMs);
+
   // Step 6: Fire after updating bolts so newly spawned bolts start at the
   // muzzle and are advanced on the following tick.
   if (input.fire) {
@@ -308,6 +364,66 @@ export function gameTick(
         },
       };
     }
+  }
+
+  return next;
+}
+
+/**
+ * Update ammo pickups for one tick: collect by proximity and expire by lifetime.
+ *
+ * Active pickups within {@link NEATENSTEIN_AMMO_PICKUP_COLLECTION_RADIUS_CELLS}
+ * of the player are collected — the player's ammo is restored via
+ * {@link restoreAmmo} and the pickup is marked inactive. Pickups whose
+ * lifetime has elapsed are also marked inactive. Inactive pickups are filtered
+ * out of the returned state.
+ *
+ * @param state - Snapshot before the pickup update.
+ * @param simTimeMs - Current simulation time in milliseconds.
+ * @returns New snapshot with collected/expired pickups removed and ammo
+ *   restored for any collected pickups.
+ */
+export function updateAmmoPickups(
+  state: GameState,
+  simTimeMs: number,
+): GameState {
+  const pickups = state.ammoPickups ?? [];
+  if (pickups.length === 0) {
+    return state;
+  }
+
+  let ammoGain = 0;
+  const updatedPickups = pickups.map((pickup) => {
+    if (!pickup.active) {
+      return pickup;
+    }
+
+    const lifetimeMs = pickup.lifetimeMs ?? NEATENSTEIN_AMMO_PICKUP_LIFETIME_MS;
+    const expired = simTimeMs - pickup.createdAtMs >= lifetimeMs;
+    if (expired) {
+      return { ...pickup, active: false };
+    }
+
+    const dx = pickup.position.x - state.player.position.x;
+    const dy = pickup.position.y - state.player.position.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist <= NEATENSTEIN_AMMO_PICKUP_COLLECTION_RADIUS_CELLS) {
+      ammoGain += pickup.amount;
+      return { ...pickup, active: false };
+    }
+
+    return pickup;
+  });
+
+  const activePickups = updatedPickups.filter((pickup) => pickup.active);
+
+  let next: GameState = {
+    ...state,
+    ammoPickups: activePickups,
+  };
+
+  if (ammoGain > 0) {
+    next = restoreAmmo(next, ammoGain);
   }
 
   return next;
@@ -684,6 +800,32 @@ export function decayGunRecoil(gun: GunState, dtMs: number): GunState {
  * @returns New array of impact spots still visible after aging.
  */
 export function ageImpacts(impacts: ImpactSpot[], dtMs: number): ImpactSpot[] {
+  const resolvedDtMs = resolveTickDurationMs(dtMs);
+
+  return impacts
+    .map((impact) => ({
+      ...impact,
+      lifetimeMs: impact.lifetimeMs - resolvedDtMs,
+    }))
+    .filter((impact) => impact.lifetimeMs > 0);
+}
+
+/**
+ * Age active enemy-impact spots by one tick and remove any that have expired.
+ *
+ * Follows the same deterministic pattern as {@link ageImpacts}: each surviving
+ * spot gets its remaining lifetime reduced by the elapsed timestep (derived
+ * from `simTimeMs`, never `Date.now()`), and spots with lifetime ≤ 0 are
+ * removed.
+ *
+ * @param impacts - Active enemy-impact snapshots before this tick.
+ * @param dtMs - Elapsed time in milliseconds.
+ * @returns New array of enemy-impact spots still visible after aging.
+ */
+export function ageEnemyImpacts(
+  impacts: EnemyImpactSpot[],
+  dtMs: number,
+): EnemyImpactSpot[] {
   const resolvedDtMs = resolveTickDurationMs(dtMs);
 
   return impacts

@@ -21,7 +21,7 @@ import {
   NEATENSTEIN_MLP_REFRESH_INTERVAL_GENERATIONS,
   NEATENSTEIN_SWARM_REFRESH_INTERVAL_GENERATIONS,
 } from './constants.ts';
-import type { EnemyPopulation, MlpSnapshot } from './types.ts';
+import type { EnemyPopulation, MlpSnapshot, Snapshot } from './types.ts';
 
 /**
  * Rolling store of frozen enemy snapshots indexed by variant id.
@@ -29,8 +29,13 @@ import type { EnemyPopulation, MlpSnapshot } from './types.ts';
  * Snapshots are deep-copied from the live population when
  * {@link refreshEnemySnapshots} is called and are never mutated afterwards.
  * This keeps evaluation barriers isolated from in-place population evolution.
+ *
+ * The store is typed as {@link Snapshot} so it can hold either backend's
+ * snapshot, but only the MLP backend is currently populated here. Non-MLP
+ * populations leave the store empty, preserving the existing barrier
+ * contract until a later slice wires SWARM refresh into the rolling pool.
  */
-const enemySnapshotStore = new Map<number, MlpSnapshot>();
+const enemySnapshotStore = new Map<number, Snapshot>();
 
 /**
  * Refresh the rolling enemy snapshot store from a live population.
@@ -74,13 +79,8 @@ export function refreshEnemySnapshots(population: EnemyPopulation): void {
  * Return the frozen snapshot for a previously refreshed enemy variant.
  *
  * @param variantId - Variant index within the enemy population.
- * @returns Frozen {@link MlpSnapshot} for the variant.
+ * @returns Frozen {@link Snapshot} for the variant.
  * @throws Error when no snapshot has been refreshed for the variant.
- *
- * The returned `weights` are a flat `Float32Array` sized for the fixed MLP
- * topology ({@link NEATENSTEIN_MLP_TOPOLOGY} = 90 params for [6,6,4,4]). They
- * can be passed directly to {@link activateMlp} without materializing an
- * `INetwork` — the rollout in `enemy-runner.ts` relies on this direct usage.
  *
  * @example
  * ```ts
@@ -88,7 +88,7 @@ export function refreshEnemySnapshots(population: EnemyPopulation): void {
  * const snapshot = getEnemySnapshot(0);
  * ```
  */
-export function getEnemySnapshot(variantId: number): MlpSnapshot {
+export function getEnemySnapshot(variantId: number): Snapshot {
   const snapshot = enemySnapshotStore.get(variantId);
   if (!snapshot) {
     throw new Error(

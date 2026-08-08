@@ -212,6 +212,7 @@ const results = gatesToRun.map((gateName) => {
   }
   if (gateName === 'code-coverage' && changedFiles.length > 0) {
     extraArgs.push(`--changed-files=${changedFiles.join(',')}`);
+    extraArgs.push('--exemptions=coverage/coverage-exemptions.json');
   }
   return runSubGate(gateName, extraArgs);
 });

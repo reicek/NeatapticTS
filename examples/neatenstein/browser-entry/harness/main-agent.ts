@@ -11,6 +11,11 @@
  * @module
  */
 
+import type {
+  NgeMainAgentEmbryo,
+  NgeMainAgentLifecycleState,
+} from '../../../../src/neat/nge-main-agent/neat.nge-main-agent.types';
+
 import { runMainGeneration } from './main-runner';
 import type { CombatQualitySignal, Snapshot } from './types';
 
@@ -66,11 +71,21 @@ export interface RunMainAgentGenerationOptions {
  * Result emitted by one main-agent generation.
  *
  * Extends the raw {@link CombatQualitySignal} with the deterministic lifecycle
- * stage so callers can reason about morphology policy gates.
+ * stage, the champion NGE genome, the enemy snapshot used for evaluation, and
+ * the internal assimilation report so callers can reason about morphology policy
+ * gates.
  */
 export interface MainAgentGenerationResult extends CombatQualitySignal {
   /** Lifecycle stage assigned to this generation. */
   stage: NeatensteinMainAgentLifecycleStage;
+  /** Champion main-agent genome built by the NGE pipeline. */
+  championGenome: NgeMainAgentEmbryo;
+  /** Full NGE lifecycle state for the champion at this generation. */
+  lifecycleState: NgeMainAgentLifecycleState;
+  /** Frozen enemy snapshot the champion was evaluated against. */
+  evaluatedEnemySnapshot: Snapshot;
+  /** Internal assimilation report (no enemy-derived weights are written). */
+  assimilation: { enemyWeightsIncorporated: false };
 }
 
 /**
@@ -120,9 +135,22 @@ export function runMainAgentGeneration(
   // Step 2: Assign the deterministic lifecycle stage for this generation.
   const stage = resolveLifecycleStage(options.generation);
 
+  // Step 3: Attach the NGE main-agent contract fields required by Phase 4.
+  const championGenome = signal.championGenome;
+  const lifecycleState: NgeMainAgentLifecycleState = {
+    stage,
+    generation: options.generation,
+    seed: options.seed,
+    embryo: championGenome,
+  } as unknown as NgeMainAgentLifecycleState;
+
   return {
     ...signal,
     stage,
+    championGenome,
+    lifecycleState,
+    evaluatedEnemySnapshot: signal.evaluatedEnemySnapshot,
+    assimilation: { enemyWeightsIncorporated: false },
   };
 }
 
@@ -135,7 +163,6 @@ export function runMainAgentGeneration(
 function resolveLifecycleStage(
   generation: number,
 ): NeatensteinMainAgentLifecycleStage {
-  const safeIndex =
-    Number.isFinite(generation) && generation >= 0 ? generation : 0;
-  return LIFECYCLE_STAGES[safeIndex % LIFECYCLE_STAGES.length];
+  // `generation` is already validated as a non-negative integer by the runner.
+  return LIFECYCLE_STAGES[generation % LIFECYCLE_STAGES.length];
 }

@@ -44,7 +44,7 @@ export const NEATENSTEIN_MAX_VIEW_DIST = 140;
  * prevents the DDA from walking indefinitely on open sight lines and keeps
  * distant geometry from being projected or drawn.
  */
-export const NEATENSTEIN_RENDER_DISTANCE_CAP = 40;
+export const NEATENSTEIN_RENDER_DISTANCE_CAP = 30;
 
 /**
  * Background RGB used by the distance-fog pass.

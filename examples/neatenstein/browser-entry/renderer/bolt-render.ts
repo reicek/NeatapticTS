@@ -11,6 +11,17 @@
  */
 
 import {
+  NEATENSTEIN_AMMO_PICKUP_COLOR,
+  NEATENSTEIN_AMMO_PICKUP_GLOW_BLUR_PX,
+  NEATENSTEIN_AMMO_PICKUP_GLOW_COLOR,
+  NEATENSTEIN_AMMO_PICKUP_RADIUS_PX,
+  NEATENSTEIN_ENEMY_IMPACT_BURST_DURATION_MS,
+  NEATENSTEIN_ENEMY_IMPACT_BURST_RADIUS_PX,
+  NEATENSTEIN_ENEMY_IMPACT_COLOR,
+  NEATENSTEIN_ENEMY_IMPACT_GLOW_BLUR_PX,
+  NEATENSTEIN_ENEMY_IMPACT_GLOW_COLOR,
+  NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS,
+  NEATENSTEIN_ENEMY_IMPACT_RADIUS_PX,
   NEATENSTEIN_GUN_ACCENT_COLOR,
   NEATENSTEIN_IMPACT_SPOT_COLOR,
   NEATENSTEIN_IMPACT_SPOT_GLOW_BLUR_PX,
@@ -24,7 +35,13 @@ import {
   NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS,
   NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS,
 } from '../host/game/constants';
-import type { BoltState, EnemyBoltState, ImpactSpot } from '../host/game/types';
+import type {
+  AmmoPickupState,
+  BoltState,
+  EnemyBoltState,
+  EnemyImpactSpot,
+  ImpactSpot,
+} from '../host/game/types';
 import {
   NEATENSTEIN_FLOOR_FOV_RADIANS,
   NEATENSTEIN_FLOOR_HORIZON_RATIO,
@@ -172,6 +189,219 @@ export function drawImpactSpots(
     context.beginPath();
     context.arc(screenX, canvasHeight / 2, radius, 0, Math.PI * 2);
     context.fill();
+  }
+
+  context.globalAlpha = 1;
+  context.shadowBlur = 0;
+  context.globalCompositeOperation = savedComposite;
+}
+
+/**
+ * Draw active ammo pickups as shiny squares with additive blending.
+ *
+ * Each pickup is rendered as a white-core square with a cool-white halo,
+ * projected to screen space using the same floor-plane projection as
+ * {@link drawImpactSpots}. Only active pickups within the camera frustum
+ * and passing the z-buffer depth test are drawn.
+ *
+ * Paint order: after enemy impacts, before bolts.
+ *
+ * @param context - Worker-tier 2D canvas context.
+ * @param pickups - Active ammo pickup list.
+ * @param zBuffer - Per-column depth buffer.
+ * @param camera - Camera position and yaw.
+ * @param canvasWidth - Canvas width.
+ * @param canvasHeight - Canvas height.
+ * @param simTimeMs - Current simulation time in milliseconds.
+ */
+export function drawAmmoPickups(
+  context: OffscreenCanvasRenderingContext2D,
+  pickups: readonly AmmoPickupState[],
+  zBuffer: Float32Array,
+  camera: NeatensteinFloorCamera,
+  canvasWidth: number,
+  canvasHeight: number,
+  simTimeMs: number,
+): void {
+  void simTimeMs;
+  const activePickups = pickups.filter((pickup) => pickup.active);
+  if (activePickups.length === 0) {
+    return;
+  }
+
+  const savedComposite = context.globalCompositeOperation;
+  context.globalCompositeOperation = 'lighter';
+
+  const dirX = Math.cos(camera.yaw);
+  const dirY = Math.sin(camera.yaw);
+  const planeScale =
+    (canvasWidth / canvasHeight) * Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+
+  for (const pickup of activePickups) {
+    const relX = pickup.position.x - camera.x;
+    const relY = pickup.position.y - camera.y;
+    const perpDist = relX * dirX + relY * dirY;
+
+    if (!Number.isFinite(perpDist) || perpDist <= 0) {
+      continue;
+    }
+
+    const lateral = -relX * dirY + relY * dirX;
+    const screenX =
+      canvasWidth / 2 + (lateral / (perpDist * planeScale)) * (canvasWidth / 2);
+
+    if (!Number.isFinite(screenX)) {
+      continue;
+    }
+
+    const screenColumn = (screenX / canvasWidth) * zBuffer.length;
+
+    if (!depthTestPulse({ screenColumn, distance: perpDist }, zBuffer)) {
+      continue;
+    }
+
+    const radius = Math.max(1, NEATENSTEIN_AMMO_PICKUP_RADIUS_PX / perpDist);
+
+    // White core
+    context.shadowColor = NEATENSTEIN_AMMO_PICKUP_GLOW_COLOR;
+    context.shadowBlur = NEATENSTEIN_AMMO_PICKUP_GLOW_BLUR_PX;
+    context.fillStyle = NEATENSTEIN_AMMO_PICKUP_COLOR;
+    context.globalAlpha = 1;
+    context.beginPath();
+    context.arc(screenX, canvasHeight / 2, radius, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  context.globalAlpha = 1;
+  context.shadowBlur = 0;
+  context.globalCompositeOperation = savedComposite;
+}
+
+/**
+ * Draw active enemy-impact neon spots in the worker tier.
+ *
+ * Each spot is rendered only after the plasma bolt that created it has reached
+ * the enemy (`travelRatio >= 1`). The persistent mark uses additive-blend neon
+ * glow with distance-scaling, and a brief expanding burst effect plays during
+ * the first {@link NEATENSTEIN_ENEMY_IMPACT_BURST_DURATION_MS} after arrival.
+ *
+ * Paint order: after sprites, before bolts.
+ *
+ * @param context - Worker-tier 2D canvas context.
+ * @param impacts - Active enemy-impact list.
+ * @param zBuffer - Per-column depth buffer.
+ * @param camera - Camera position and yaw.
+ * @param canvasWidth - Canvas width.
+ * @param canvasHeight - Canvas height.
+ * @param simTimeMs - Current simulation time in milliseconds.
+ */
+export function drawEnemyImpactSpots(
+  context: OffscreenCanvasRenderingContext2D,
+  impacts: readonly EnemyImpactSpot[],
+  zBuffer: Float32Array,
+  camera: NeatensteinFloorCamera,
+  canvasWidth: number,
+  canvasHeight: number,
+  simTimeMs: number,
+): void {
+  if (impacts.length === 0) {
+    return;
+  }
+
+  const savedComposite = context.globalCompositeOperation;
+  context.globalCompositeOperation = 'lighter';
+
+  const horizonY = canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+  const halfWidth = canvasWidth / 2;
+  const focalLength =
+    canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+  const cosYaw = Math.cos(camera.yaw);
+  const sinYaw = Math.sin(camera.yaw);
+  const dirX = cosYaw;
+  const dirY = sinYaw;
+
+  for (const impact of impacts) {
+    const elapsedMs = simTimeMs - impact.createdAtMs;
+    const travelTimeMs = impact.boltTravelTimeMs;
+    const travelRatio =
+      travelTimeMs > 0 ? clamp(elapsedMs / travelTimeMs, 0, 1) : 1;
+
+    if (travelRatio < 1) {
+      continue;
+    }
+
+    const projected = projectNeatensteinFloorPoint(
+      impact.position.x,
+      impact.position.y,
+      camera.x,
+      camera.y,
+      cosYaw,
+      sinYaw,
+      focalLength,
+      halfWidth,
+      horizonY,
+      canvasHeight,
+      BOLT_PROJECTED_CAMERA_HEIGHT_WORLD,
+    );
+
+    if (projected === null) {
+      continue;
+    }
+
+    const relX = impact.position.x - camera.x;
+    const relY = impact.position.y - camera.y;
+    const perpDist = relX * dirX + relY * dirY;
+
+    /* istanbul ignore next -- defensive guard: projectNeatensteinFloorPoint returns null before perpDist is checked */
+    if (!Number.isFinite(perpDist) || perpDist <= 0) {
+      continue;
+    }
+
+    const screenColumn = (projected.x / canvasWidth) * zBuffer.length;
+
+    if (!depthTestPulse({ screenColumn, distance: perpDist }, zBuffer)) {
+      continue;
+    }
+
+    const visibleElapsedMs = Math.max(0, elapsedMs - travelTimeMs);
+    const alpha = clamp(
+      impact.lifetimeMs / NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS,
+      0,
+      1,
+    );
+
+    const radius = Math.max(1, NEATENSTEIN_ENEMY_IMPACT_RADIUS_PX / perpDist);
+
+    // Persistent mark with additive-blend neon glow.
+    context.shadowColor = NEATENSTEIN_ENEMY_IMPACT_GLOW_COLOR;
+    context.shadowBlur = NEATENSTEIN_ENEMY_IMPACT_GLOW_BLUR_PX;
+    context.fillStyle = NEATENSTEIN_ENEMY_IMPACT_COLOR;
+    context.globalAlpha = alpha;
+    context.beginPath();
+    context.arc(projected.x, projected.y, radius, 0, Math.PI * 2);
+    context.fill();
+
+    // Brief expanding burst effect (~200ms after arrival).
+    if (visibleElapsedMs < NEATENSTEIN_ENEMY_IMPACT_BURST_DURATION_MS) {
+      const burstRatio = clamp(
+        visibleElapsedMs / NEATENSTEIN_ENEMY_IMPACT_BURST_DURATION_MS,
+        0,
+        1,
+      );
+      const burstRadius = Math.max(
+        1,
+        (NEATENSTEIN_ENEMY_IMPACT_BURST_RADIUS_PX / perpDist) * burstRatio,
+      );
+      const burstAlpha = (1 - burstRatio) * 0.7;
+
+      context.shadowColor = NEATENSTEIN_ENEMY_IMPACT_GLOW_COLOR;
+      context.shadowBlur = Math.max(4, burstRadius * 2);
+      context.fillStyle = NEATENSTEIN_ENEMY_IMPACT_COLOR;
+      context.globalAlpha = burstAlpha;
+      context.beginPath();
+      context.arc(projected.x, projected.y, burstRadius, 0, Math.PI * 2);
+      context.fill();
+    }
   }
 
   context.globalAlpha = 1;

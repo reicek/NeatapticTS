@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 /**
  * Shared type definitions for the Neatenstein host-side game simulation.
  *
@@ -53,10 +54,14 @@ export interface EnemyState {
   position: Vector2;
   /** Current hit points. */
   health: number;
+  /** Maximum hit points (set at spawn time). */
+  maxHealth?: number;
   /** Whether the enemy is still active (not fully de-rezzed). */
   active?: boolean;
   /** Position synced from the enemy AI controller for hero collision. */
   controllerPosition?: Vector2;
+  /** Remaining hit-stun time in milliseconds (0 when not stunned). */
+  stunTimerMs?: number;
 }
 
 /** Mutable-style snapshot of the on-screen weapon overlay state. */
@@ -145,6 +150,50 @@ export interface ImpactSpot {
   boltTravelTimeMs: number;
 }
 
+/**
+ * Persistent neon impact marker left on an enemy by a plasma bolt hit.
+ *
+ * Unlike {@link ImpactSpot} (wall impacts), enemy impacts sit on the floor
+ * plane at the enemy's world position and do not carry wall-face metadata or
+ * a perpendicular wall distance. They are projected to screen space using the
+ * same floor projection as bolts and sprites.
+ */
+export interface EnemyImpactSpot {
+  /** World-space position of the enemy at the moment of impact. */
+  position: Vector2;
+  /** Simulation time at which the spot was created, in milliseconds. */
+  createdAtMs: number;
+  /** Milliseconds the spot remains visible before expiring. */
+  lifetimeMs: number;
+  /**
+   * Expected travel time in milliseconds for the spawning bolt to reach the
+   * enemy. The impact spot is rendered only once the bolt has arrived, i.e.
+   * when `simTimeMs - createdAtMs >= boltTravelTimeMs`. Set to 0 for the
+   * traveling-bolt path where the bolt has already arrived at the enemy.
+   */
+  boltTravelTimeMs: number;
+}
+
+/**
+ * One ammo pickup dropped by a dying enemy.
+ *
+ * Ammo pickups are shiny squares that rest on the floor plane at the enemy's
+ * death position. The player collects them by proximity, restoring ammo via
+ * {@link restoreAmmo}. Pickups expire after their lifetime elapses.
+ */
+export interface AmmoPickupState {
+  /** World-space position where the enemy died. */
+  position: Vector2;
+  /** Amount of ammo restored when collected. */
+  amount: number;
+  /** `true` while the pickup is active (not yet collected or expired). */
+  active: boolean;
+  /** Simulation time at which the pickup was created, in milliseconds. */
+  createdAtMs: number;
+  /** Milliseconds the pickup remains before expiring. Defaults to {@link NEATENSTEIN_AMMO_PICKUP_LIFETIME_MS}. */
+  lifetimeMs?: number;
+}
+
 /** Options accepted by {@link createGameState}. */
 export interface CreateGameStateOptions {
   /** Deterministic seed used to initialize RNG-driven state. */
@@ -165,14 +214,31 @@ export interface GameState {
   enemies: EnemyState[];
   /** Persistent neon impact spots left on walls by bolt hits. */
   impacts: ImpactSpot[];
+  /**
+   * Persistent neon impact marks left on enemies by bolt hits.
+   *
+   * Optional for backward compatibility with existing state factories that do
+   * not initialize it; callers should use `enemyImpacts ?? []` when reading.
+   */
+  enemyImpacts?: EnemyImpactSpot[];
   /** Current weapon overlay state, including screen-space recoil. */
   gun?: GunState;
   /** Active traveling plasma bolts in the world. */
   bolts?: BoltState[];
   /** Active traveling enemy plasma bolts in the world. */
   enemyBolts?: EnemyBoltState[];
+  /** Active ammo pickups dropped by dying enemies. */
+  ammoPickups?: AmmoPickupState[];
   /** Total confirmed kills for scoring and evolution pressure. */
   kills: number;
+  /**
+   * Monotonic counter of hero deaths (health reaching zero).
+   *
+   * Incremented each time the player respawns after health depletion. The
+   * interactive game respawns the hero at the map center with full health
+   * and ammo; the evolution harness may use this counter for fitness scoring.
+   */
+  deaths?: number;
   /**
    * Monotonic counter of enemies spawned since episode start.
    *

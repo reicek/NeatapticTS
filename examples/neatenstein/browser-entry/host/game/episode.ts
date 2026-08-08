@@ -12,8 +12,6 @@
  */
 
 import {
-  NEATENSTEIN_ENEMY_MAX_CONCURRENT,
-  NEATENSTEIN_ENEMY_WAVE_COUNT,
   NEATENSTEIN_EPISODE_DEFAULT_DURATION_MS,
   NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_MAP_SIZE,
@@ -266,30 +264,16 @@ export function updateEpisode(
 /**
  * Check whether the episode should end.
  *
- * An episode is complete when any of the following hold:
- *
- * - the player has died
- * - all spawned enemies have been killed
- *
- * Episodes are NOT time-bound — generations run until gameplay ends.
+ * The episode runs until the time-limit guard in {@link runEpisode} is
+ * reached. Player death triggers a respawn (not episode end) and the game
+ * features infinite waves, so there is no gameplay-based terminal condition.
  *
  * @param state - Current episode snapshot.
- * @returns `true` when the episode has reached a terminal condition.
+ * @returns Always `false`; the episode is terminated by the step guard.
  */
-export function isEpisodeComplete(state: GameState): boolean {
-  const playerHealth = isFiniteNumber(state.player.health)
-    ? state.player.health
-    : 0;
-
-  const playerDead = playerHealth <= 0;
-  const maxSpawnCount =
-    NEATENSTEIN_ENEMY_MAX_CONCURRENT * NEATENSTEIN_ENEMY_WAVE_COUNT;
-  const allEnemiesKilled =
-    state.enemies.length > 0 &&
-    state.enemies.every((enemy) => enemy.health <= 0) &&
-    state.spawnCount >= maxSpawnCount;
-
-  return playerDead || allEnemiesKilled;
+export function isEpisodeComplete(_state: GameState): boolean {
+  void _state;
+  return false;
 }
 
 /**

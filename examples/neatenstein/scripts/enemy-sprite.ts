@@ -11,7 +11,7 @@
  * - per-column z-buffer clipping
  * - directional diffuse light keyed to enemy yaw
  * - teal/orange bolt lighting for the 3-second spawn force-field and
- *   4-second death de-rez
+ *   700 ms death de-rez
  *
  * The module is intentionally environment-agnostic: it only operates on
  * typed arrays and simple math, so it can be unit-tested in Node and later
@@ -44,8 +44,11 @@ export const ENEMY_SPRITE_SPAWN_FORCE_FIELD_DURATION_MS = 3000;
 /**
  * Duration of the death de-rez animation in milliseconds, matching the
  * controller-side timing so the visual and AI states stay locked.
+ *
+ * The 700 ms window delivers a fast Tron-style pixel scatter rather than the
+ * original 4-second fade, keeping combat feedback snappy.
  */
-export const ENEMY_SPRITE_DEATH_DE_REZ_DURATION_MS = 4000;
+export const ENEMY_SPRITE_DEATH_DE_REZ_DURATION_MS = 700;
 
 /**
  * World-space size of a billboard sprite in grid cells, defining both width

@@ -154,8 +154,8 @@ describe('enemy-sprite timing constants (AC-704)', () => {
     expect(ENEMY_SPRITE_SPAWN_FORCE_FIELD_DURATION_MS).toBe(3000);
   });
 
-  it('exports a 4000 ms death de-rez duration', () => {
-    expect(ENEMY_SPRITE_DEATH_DE_REZ_DURATION_MS).toBe(4000);
+  it('exports a 700 ms death de-rez duration', () => {
+    expect(ENEMY_SPRITE_DEATH_DE_REZ_DURATION_MS).toBe(700);
   });
 
   it('buildEnemyBillboard clamps negative elapsed times to zero', () => {

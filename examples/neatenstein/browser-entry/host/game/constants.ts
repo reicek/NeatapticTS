@@ -296,10 +296,37 @@ export const NEATENSTEIN_TEST_ENEMY_DEAD_HEALTH = 0;
 /**
  * Hit points removed from an enemy by a single traveling plasma bolt hit.
  *
- * Chosen so a freshly spawned enemy with moderate health is destroyed by
- * one or two well-placed shots.
+ * Set to 20 so a freshly spawned enemy with 100 health requires five
+ * well-placed shots to kill, giving the player a sustained combat loop.
  */
-export const NEATENSTEIN_BOLT_DAMAGE = 50;
+export const NEATENSTEIN_BOLT_DAMAGE = 20;
+
+/**
+ * Maximum health of a freshly spawned enemy.
+ *
+ * Enemies spawn with this much health. With {@link NEATENSTEIN_BOLT_DAMAGE}
+ * at 20, five non-lethal hits reduce health 100→80→60→40→20→0 (kill on 5th).
+ */
+export const NEATENSTEIN_ENEMY_MAX_HEALTH = 100;
+
+/**
+ * Duration of the hit-stun effect applied on a non-leval bolt hit, in
+ * milliseconds.
+ *
+ * While stunTimerMs > 0 the enemy skips movement, MLP activation, and fire;
+ * the animation state is set to 'damage'. Set to 200 ms for a brief but
+ * noticeable stagger that prevents damage stacking.
+ */
+export const NEATENSTEIN_ENEMY_STUN_DURATION_MS = 200;
+
+/**
+ * Distance an enemy is pushed back when hit by a non-lethal bolt, in world
+ * cells.
+ *
+ * The pushback direction is the normalized vector from the player to the
+ * enemy, wall-checked so the enemy is not pushed inside a solid cell.
+ */
+export const NEATENSTEIN_ENEMY_PUSHBACK_DISTANCE_CELLS = 1.0;
 
 /**
  * Travel speed of a plasma bolt in world cells per second.
@@ -440,3 +467,34 @@ export const NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS = 30;
  * hit and applies damage.
  */
 export const NEATENSTEIN_ENEMY_BOLT_HIT_RADIUS_CELLS = 0.5;
+
+/**
+ * Maximum number of concurrent enemy-impact spots tracked by the simulation.
+ *
+ * When this cap is exceeded the oldest spot is dropped, following the same
+ * pattern as {@link NEATENSTEIN_PULSE_MAX_CONCURRENT}.
+ */
+export const NEATENSTEIN_ENEMY_IMPACT_MAX_CONCURRENT = 40;
+
+/**
+ * Amount of ammo restored by a single ammo pickup.
+ *
+ * Each pickup dropped by a dying enemy carries this many ammo units.
+ */
+export const NEATENSTEIN_AMMO_PICKUP_AMOUNT = 5;
+
+/**
+ * Lifetime of an ammo pickup in milliseconds before it expires.
+ *
+ * After this duration elapses the pickup is marked inactive and removed from
+ * the world.
+ */
+export const NEATENSTEIN_AMMO_PICKUP_LIFETIME_MS = 10_000;
+
+/**
+ * Collection radius in world cells for ammo pickup proximity collection.
+ *
+ * When the player moves within this distance of an active pickup, the pickup
+ * is collected and the player's ammo is restored.
+ */
+export const NEATENSTEIN_AMMO_PICKUP_COLLECTION_RADIUS_CELLS = 1.5;

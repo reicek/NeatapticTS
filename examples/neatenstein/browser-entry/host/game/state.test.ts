@@ -271,5 +271,58 @@ describe('Neatenstein game state', () => {
       const state = createGameState({ seed: 1 });
       expect(state.bolts).toEqual([]);
     });
+
+    it('initializes an empty enemyBolts array', async () => {
+      const { createGameState } =
+        (await import('./state.ts')) as typeof import('./state.ts');
+      const state = createGameState({ seed: 1 });
+      expect(state.enemyBolts).toEqual([]);
+    });
+  });
+
+  describe('AC-801-S05-001: ammo pickup state helpers', () => {
+    it('initializes an empty ammoPickups array', async () => {
+      const { createGameState } =
+        (await import('./state.ts')) as typeof import('./state.ts');
+      const state = createGameState({ seed: 1 });
+      expect((state as unknown as Record<string, unknown>).ammoPickups).toEqual(
+        [],
+      );
+    });
+
+    it('exports restoreAmmo', async () => {
+      const mod = (await import('./state.ts')) as Record<string, unknown>;
+      expect(typeof mod.restoreAmmo).toBe('function');
+    });
+
+    it('increments player ammo by the given amount', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- restoreAmmo not yet exported; red test
+      const mod = (await import('./state.ts')) as Record<string, any>;
+      const { createGameState } = mod as typeof import('./state.ts');
+      const state = createGameState({ seed: 42 });
+      const lowAmmoState = {
+        ...state,
+        player: { ...state.player, ammo: 10 },
+      };
+      const result = mod.restoreAmmo(lowAmmoState, 5) as {
+        player: { ammo: number };
+      };
+      expect(result.player.ammo).toBe(15);
+    });
+
+    it('clamps restored ammo at maxAmmo', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- restoreAmmo not yet exported; red test
+      const mod = (await import('./state.ts')) as Record<string, any>;
+      const { createGameState } = mod as typeof import('./state.ts');
+      const state = createGameState({ seed: 42 });
+      const nearMaxState = {
+        ...state,
+        player: { ...state.player, ammo: 48 },
+      };
+      const result = mod.restoreAmmo(nearMaxState, 10) as {
+        player: { ammo: number };
+      };
+      expect(result.player.ammo).toBe(state.player.maxAmmo);
+    });
   });
 });

@@ -179,6 +179,53 @@ describe('Coverage: edge cases', () => {
     expect(isEpisodeComplete(state)).toBe(false);
   });
 
+  it('reports the episode as not complete when all enemies are dead and player health is zero', () => {
+    const base = createGameState({ seed: 1 });
+    const deadEnemies: EnemyState[] = Array.from({ length: 8 }, () => ({
+      position: { x: 30, y: 30 },
+      health: 0,
+      active: false,
+    }));
+    const state: GameState = {
+      ...base,
+      enemies: deadEnemies,
+      spawnCount: 8,
+      player: {
+        ...base.player,
+        health: 0,
+      },
+    };
+    expect(isEpisodeComplete(state)).toBe(false);
+  });
+
+  it('does not crash when the bot fires with no targetable enemies', () => {
+    const base = createGameState({ seed: 1 });
+    // Enemies with NaN positions are alive (health > 0, active) so the
+    // batch gate blocks spawning (batchComplete=true, allEnemiesCleared=
+    // false) and the alive count blocks spawning (aliveCount=8). The bot
+    // fires and findNearestActiveEnemyIndex skips all NaN-positioned
+    // enemies, returning -1. This exercises the targetIndex < 0 branch
+    // in runEpisode's bot auto-fire loop.
+    const nanEnemies: EnemyState[] = Array.from(
+      { length: 8 },
+      () =>
+        ({
+          position: { x: Number.NaN, y: Number.NaN },
+          health: 100,
+          active: true,
+        }) as EnemyState,
+    );
+    const state: GameState = {
+      ...base,
+      enemies: nanEnemies,
+      spawnCount: 8,
+      episodeDurationMs: 500,
+    };
+    const episode = { state, durationMs: 500 };
+    const final = runEpisode(episode);
+    expect(final.episodeTimeMs).toBeGreaterThanOrEqual(500);
+  });
+
   it('preserves a previous player position in endEpisode', () => {
     const base = createGameState({ seed: 1 });
     const state: GameState = {
@@ -260,7 +307,7 @@ describe('Coverage: edge cases', () => {
       enemies: [],
       spawnCount: 0,
     };
-    expect(isEpisodeComplete(state)).toBe(true);
+    expect(isEpisodeComplete(state)).toBe(false);
   });
 
   it('endEpisode handles a missing previous position', () => {
@@ -300,10 +347,11 @@ describe('AC-10.2d-003: episode waves advance only after all enemies cleared', (
     expect(spawnedNew).toBe(true);
   });
 
-  it('ends by clearing all spawned enemies, not by time-out', () => {
+  it('runs until the time limit with infinite waves', () => {
     const final = runEpisode(createEpisode({ seed: 42 }));
-    expect(final.kills).toBe(final.spawnCount);
     expect(final.episodeDurationMs).toBeDefined();
-    expect(final.episodeTimeMs).toBeLessThan(final.episodeDurationMs as number);
+    expect(final.episodeTimeMs).toBeGreaterThanOrEqual(
+      final.episodeDurationMs as number,
+    );
   });
 });

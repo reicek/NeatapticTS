@@ -88,4 +88,100 @@ describe('Neatenstein harness main-agent', () => {
       expect(Array.isArray(mod.NeatensteinMainAgentMotifAllowlist)).toBe(true);
     });
   });
+
+  describe('AC-401-S02-001: real NGE main-agent genome contract', () => {
+    it('returns a champion genome built by the NGE pipeline', async () => {
+      const { runMainAgentGeneration } =
+        (await import('./main-agent.ts')) as MainAgentModule;
+      const result = runMainAgentGeneration({ seed: 42, generation: 0 });
+      expect(
+        (result as unknown as Record<string, unknown>).championGenome,
+      ).toBeDefined();
+    });
+
+    it('does not return a placeholder genome of null arrays', async () => {
+      const { runMainAgentGeneration } =
+        (await import('./main-agent.ts')) as MainAgentModule;
+      const result = runMainAgentGeneration({ seed: 42, generation: 0 });
+      const extendedResult = result as unknown as Record<string, unknown>;
+      const genome = extendedResult.championGenome as
+        { nodes?: unknown[]; archetypes?: unknown[] } | undefined;
+      expect(genome?.archetypes?.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('AC-401-S02-002: tier-capped topology and motif allowlist', () => {
+    it('caps the champion genome node count at the tier budget', async () => {
+      const { runMainAgentGeneration, NeatensteinMainAgentTierBudget } =
+        (await import('./main-agent.ts')) as MainAgentModule;
+      const result = runMainAgentGeneration({ seed: 42, generation: 0 });
+      const extendedResult = result as unknown as Record<string, unknown>;
+      const genome = extendedResult.championGenome as
+        { nodeCount?: number } | undefined;
+      expect(genome?.nodeCount ?? Infinity).toBeLessThanOrEqual(
+        NeatensteinMainAgentTierBudget.maxNodes,
+      );
+    });
+
+    it('caps the champion genome edge count at the tier budget', async () => {
+      const { runMainAgentGeneration, NeatensteinMainAgentTierBudget } =
+        (await import('./main-agent.ts')) as MainAgentModule;
+      const result = runMainAgentGeneration({ seed: 42, generation: 0 });
+      const extendedResult = result as unknown as Record<string, unknown>;
+      const genome = extendedResult.championGenome as
+        { edgeCount?: number } | undefined;
+      expect(genome?.edgeCount ?? Infinity).toBeLessThanOrEqual(
+        NeatensteinMainAgentTierBudget.maxEdges,
+      );
+    });
+
+    it('materializes exactly the three allowlisted motif archetypes', async () => {
+      const { runMainAgentGeneration, NeatensteinMainAgentMotifAllowlist } =
+        (await import('./main-agent.ts')) as MainAgentModule;
+      const result = runMainAgentGeneration({ seed: 42, generation: 0 });
+      const extendedResult = result as unknown as Record<string, unknown>;
+      const genome = extendedResult.championGenome as
+        { archetypes?: { computationType: string }[] } | undefined;
+      const allowlist = [...NeatensteinMainAgentMotifAllowlist].sort();
+      const archetypes = genome?.archetypes ?? [];
+      const motifKinds = archetypes
+        .map((archetype) => archetype.computationType)
+        .sort();
+      expect(motifKinds).toEqual(allowlist);
+    });
+  });
+
+  describe('AC-401-S02-003: deterministic lifecycle progression', () => {
+    it('carries a full NGE lifecycle state beyond the stage label', async () => {
+      const { runMainAgentGeneration } =
+        (await import('./main-agent.ts')) as MainAgentModule;
+      const result = runMainAgentGeneration({ seed: 42, generation: 0 });
+      expect(
+        (result as unknown as Record<string, unknown>).lifecycleState,
+      ).toBeDefined();
+    });
+
+    it('progresses through embryo, juvenile, adult, and reproducing over four generations', async () => {
+      const { runMainAgentGeneration } =
+        (await import('./main-agent.ts')) as MainAgentModule;
+      const stages = [0, 1, 2, 3].map((generation) => {
+        const result = runMainAgentGeneration({ seed: 42, generation });
+        const lifecycleState = (result as unknown as Record<string, unknown>)
+          .lifecycleState as { stage?: string } | undefined;
+        return lifecycleState?.stage;
+      });
+      expect(stages).toEqual(['embryo', 'juvenile', 'adult', 'reproducing']);
+    });
+  });
+
+  describe('AC-401-S02-005: assimilation writes only internal priors', () => {
+    it('reports no enemy-derived weights in the assimilation result', async () => {
+      const { runMainAgentGeneration } =
+        (await import('./main-agent.ts')) as MainAgentModule;
+      const result = runMainAgentGeneration({ seed: 42, generation: 2 });
+      const assimilation = (result as unknown as Record<string, unknown>)
+        .assimilation as { enemyWeightsIncorporated?: boolean } | undefined;
+      expect(assimilation?.enemyWeightsIncorporated).toBe(false);
+    });
+  });
 });

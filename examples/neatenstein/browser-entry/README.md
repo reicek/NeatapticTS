@@ -15,7 +15,7 @@ simulation that feeds the worker-side renderer.
 | [`host/waves.ts`](host/waves.ts)       | Wave transition: clear the arena, evolve the MLP enemy population one generation, and spawn the next wave. |
 | [`host/`](host/)                       | Host shell, input routing, audio, and the renderer bridge.                                                 |
 | [`harness/`](harness/)                 | NGE enemy-population harness: MLP topology, fitness, selection, barrier, and evolution runner.             |
-| [`renderer/`](renderer/)               | Grid DDA raycaster and frame protocol.                                                                     |
+| [`renderer/`](renderer/)               | Grid DDA raycaster, frame protocol, and the center-screen plasma-cannon overlay renderer.                  |
 | [`worker/`](worker/)                   | Display worker that owns simulation and rendering on offload tiers.                                        |
 
 ## Deterministic reset

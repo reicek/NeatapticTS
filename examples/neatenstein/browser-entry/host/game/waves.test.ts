@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import {
   NEATENSTEIN_CONTACT_RANGE_CELLS,
   NEATENSTEIN_ENEMY_MAX_CONCURRENT,
+  NEATENSTEIN_ENEMY_MAX_HEALTH,
   NEATENSTEIN_ENEMY_SPAWN_MIN_DISTANCE_CELLS,
   NEATENSTEIN_ENEMY_SPAWN_RADIUS,
   NEATENSTEIN_EPISODE_MAX_DURATION_MS,
@@ -58,13 +59,16 @@ describe('Neatenstein game waves', () => {
         state = spawnWaveTick(state, NEATENSTEIN_FIXED_TIMESTEP_MS).state;
       }
       const result = spawnWaveTick(state, NEATENSTEIN_FIXED_TIMESTEP_MS);
+      // The state object is always a new immutable snapshot, but the enemies
+      // array reference is preserved when no enemy spawns (dead enemies stay
+      // in the array for display-worker index alignment).
       expect({
         newReference: result.state !== state,
         newEnemiesArray: result.state.enemies !== state.enemies,
         spawnedThisTick: result.spawnedThisTick,
       }).toEqual({
         newReference: true,
-        newEnemiesArray: true,
+        newEnemiesArray: false,
         spawnedThisTick: 0,
       });
     });
@@ -202,6 +206,37 @@ describe('Neatenstein game waves', () => {
       expect(final.episodeTimeMs).toBeLessThanOrEqual(
         NEATENSTEIN_EPISODE_MAX_DURATION_MS,
       );
+    });
+  });
+
+  describe('AC-203: concurrent alive limit guard', () => {
+    it('blocks spawning via the concurrent alive limit when the batch gate does not apply', () => {
+      const base = createGameState({ seed: 42 });
+      // Create NEATENSTEIN_ENEMY_MAX_CONCURRENT alive enemies with
+      // spawnCount=1 so batchComplete is false (1 % 8 !== 0). The aliveCount
+      // guard should block spawning without the batch gate.
+      const aliveEnemies: EnemyState[] = Array.from(
+        { length: NEATENSTEIN_ENEMY_MAX_CONCURRENT },
+        () =>
+          ({
+            position: { x: 30, y: 30 },
+            health: NEATENSTEIN_ENEMY_MAX_HEALTH,
+            active: true,
+          }) as EnemyState,
+      );
+      const before: GameState = {
+        ...base,
+        enemies: aliveEnemies,
+        spawnCount: 1,
+      };
+      const result = spawnWaveTick(before, NEATENSTEIN_FIXED_TIMESTEP_MS);
+      expect({
+        spawnedThisTick: result.spawnedThisTick,
+        enemyCount: result.state.enemies.length,
+      }).toEqual({
+        spawnedThisTick: 0,
+        enemyCount: NEATENSTEIN_ENEMY_MAX_CONCURRENT,
+      });
     });
   });
 });
@@ -427,5 +462,31 @@ describe('AC-10.4-r-001: resolveEdgeSpawn returns open-cell positions only', () 
 
     // The spawned enemy must be on an open cell, not inside a wall.
     expect(collisionMap.isSolid(cellX, cellY)).toBe(false);
+  });
+});
+
+describe('AC-11b-001: enemies spawn with health 100 and stun fields', () => {
+  it('spawns an enemy with health = NEATENSTEIN_ENEMY_MAX_HEALTH', () => {
+    const before = createGameState({ seed: 1 });
+    const result = spawnWaveTick(before, NEATENSTEIN_FIXED_TIMESTEP_MS);
+    expect(result.state.enemies[0].health).toBe(NEATENSTEIN_ENEMY_MAX_HEALTH);
+  });
+
+  it('spawns an enemy with maxHealth = NEATENSTEIN_ENEMY_MAX_HEALTH', () => {
+    const before = createGameState({ seed: 1 });
+    const result = spawnWaveTick(before, NEATENSTEIN_FIXED_TIMESTEP_MS);
+    expect(result.state.enemies[0].maxHealth).toBe(
+      NEATENSTEIN_ENEMY_MAX_HEALTH,
+    );
+  });
+
+  it('spawns an enemy with stunTimerMs = 0', () => {
+    const before = createGameState({ seed: 1 });
+    const result = spawnWaveTick(before, NEATENSTEIN_FIXED_TIMESTEP_MS);
+    expect(result.state.enemies[0].stunTimerMs).toBe(0);
+  });
+
+  it('NEATENSTEIN_ENEMY_MAX_HEALTH is 100', () => {
+    expect(NEATENSTEIN_ENEMY_MAX_HEALTH).toBe(100);
   });
 });

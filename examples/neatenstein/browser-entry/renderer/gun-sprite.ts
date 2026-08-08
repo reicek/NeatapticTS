@@ -55,6 +55,19 @@ const VOXEL_TOP_SHADE = '#ffffff';
  * @param options.scale - Screen-space size of one voxel unit.
  *
  * @returns Array of projected voxel squares to draw on the 2D context.
+ *
+ * @example
+ * ```ts
+ * import { GUN_BARREL_VOXEL_GRID, projectGunSprite } from './gun-sprite';
+ *
+ * const voxels = projectGunSprite({
+ *   voxelGrid: GUN_BARREL_VOXEL_GRID,
+ *   screenX: 320,
+ *   screenY: 100,
+ *   scale: 8,
+ * });
+ * console.log(voxels.length);
+ * ```
  */
 export function projectGunSprite(options: {
   voxelGrid: number[][];

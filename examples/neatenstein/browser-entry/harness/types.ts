@@ -243,3 +243,78 @@ export interface GenerationResult {
   /** Aggregated quality signal for the champion's episode. */
   quality: CombatQualitySignal;
 }
+
+/**
+ * Death context captured at the moment the main agent dies in an episode.
+ *
+ * The context records the hero's final pose (position, angle, health), a
+ * snapshot of the enemy state at death time, the damage source that caused the
+ * death, and an optional simulation timestamp for temporal ordering.
+ */
+export interface DeathContext {
+  /** Hero pose at the moment of death. */
+  hero: {
+    /** Hero position in world coordinates. */
+    position: { x: number; y: number };
+    /** Hero facing angle in radians. */
+    angleRad: number;
+    /** Hero health at death (typically 0). */
+    health: number;
+  };
+  /** Snapshot of enemy state at death time. */
+  enemies: unknown[];
+  /** Identifier of the damage source that caused the death. */
+  damageSource: string;
+  /** Optional simulation tick when the death occurred. */
+  simTimeMs?: number;
+}
+
+/**
+ * One replay entry stored in the replay buffer.
+ *
+ * Pairs a {@link DeathContext} with the generation and seed it occurred in so
+ * downstream replay logic can reproduce or bias selection pressure from
+ * historical death states.
+ */
+export interface ReplayEntry {
+  /** Death context captured at death time. */
+  deathContext: DeathContext;
+  /** Generation number when the death occurred. */
+  generation: number;
+  /** Deterministic seed for the generation. */
+  seed: number;
+}
+
+/**
+ * Replay buffer interface for death-context recording.
+ *
+ * The buffer stores death contexts in a bounded FIFO queue and exposes `push`,
+ * `entries`, and `size` so both the harness replay logic and the arms-race
+ * human-mode selector can query buffer state.
+ */
+export interface ReplayBuffer {
+  /** Append a death context to the buffer, evicting the oldest entry when full. */
+  push: (ctx: DeathContext) => void;
+  /** Return all stored death contexts in insertion order. */
+  entries: () => DeathContext[];
+  /** Return the current number of stored death contexts. */
+  size: () => number;
+}
+
+/**
+ * Per-generation enemy behavior summary used by the death feedback loop.
+ *
+ * Captures three scalar dimensions of enemy behavior that the adaptation
+ * signal compares across consecutive generations:
+ * - `aggression` — how aggressively enemies press the main agent.
+ * - `movementPattern` — diversity/complexity of enemy movement.
+ * - `positioning` — spatial positioning quality relative to the main agent.
+ */
+export interface EnemyBehaviorMetrics {
+  /** Aggression level of the enemy population, expected in [0, 1]. */
+  aggression: number;
+  /** Movement pattern diversity, expected in [0, 1]. */
+  movementPattern: number;
+  /** Positioning quality, expected in [0, 1]. */
+  positioning: number;
+}

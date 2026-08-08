@@ -12,6 +12,7 @@ import {
   NEATENSTEIN_FLOOR_HORIZON_RATIO,
   NEATENSTEIN_FLOOR_MAX_ALPHA,
   NEATENSTEIN_FLOOR_MIN_ALPHA,
+  __testOnlyStrokeNeatensteinGridBands,
   drawNeatensteinCeiling,
   drawNeatensteinFloor,
   projectNeatensteinCeilingPoint,
@@ -43,7 +44,7 @@ const TEST_CAMERA_Y = 5.5;
 /**
  * Tolerance in pixels when comparing a projected screen coordinate.
  *
- * Grid lines are sampled every half world unit over a 40-unit span, so a
+ * Grid lines are sampled every half world unit over a 30-unit span, so a
  * projected world point may not coincide exactly with a rasterized sample.
  * Use a generous tolerance that covers the resulting screen-space gap rather
  * than the sub-pixel ideal.
@@ -853,5 +854,23 @@ describe('AC-10.4-r-003: floor/ceiling rendering uses original floor color withi
       (style) => typeof style === 'string' && style.startsWith(fogPrefix),
     );
     expect(hasFogColor).toBe(false);
+  });
+});
+
+describe('strokeNeatensteinGridBands empty-band continue branch', () => {
+  it('skips empty segment buffers without throwing', () => {
+    const ctx = createMockFloorContext(TEST_CANVAS_WIDTH, TEST_CANVAS_HEIGHT);
+
+    // 4 bands: band 1 is empty, the others each have one line segment.
+    const bands = [
+      [10, 20, 30, 40], // band 0 — non-empty
+      [], // band 1 — empty (exercises the `continue` branch)
+      [50, 60, 70, 80], // band 2 — non-empty
+      [90, 100, 110, 120], // band 3 — non-empty
+    ];
+
+    expect(() =>
+      __testOnlyStrokeNeatensteinGridBands(ctx, bands),
+    ).not.toThrow();
   });
 });

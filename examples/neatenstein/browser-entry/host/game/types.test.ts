@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import type {
   BoltState,
   CreateGameStateOptions,
+  EnemyBoltState,
   EnemyState,
   GameState,
   PlayerState,
@@ -80,5 +81,69 @@ describe('Neatenstein game types', () => {
       createdAtMs: 0,
     };
     expect(bolt.active).toBe(true);
+  });
+
+  it('accepts an EnemyBoltState shape', () => {
+    const enemyBolt: EnemyBoltState = {
+      position: { x: 1, y: 2 },
+      direction: { x: -1, y: 0 },
+      speedCellsPerSecond: 36,
+      active: true,
+      createdAtMs: 500,
+      origin: { x: 0, y: 2 },
+      damage: 10,
+      hitPlayer: false,
+    };
+    expect(enemyBolt.damage).toBe(10);
+    expect(enemyBolt.hitPlayer).toBe(false);
+  });
+
+  it('accepts an EnemyBoltState without optional fields', () => {
+    const enemyBolt: EnemyBoltState = {
+      position: { x: 5, y: 5 },
+      direction: { x: 1, y: 0 },
+      speedCellsPerSecond: 36,
+      active: true,
+      createdAtMs: 0,
+      damage: 10,
+    };
+    expect(enemyBolt.origin).toBeUndefined();
+    expect(enemyBolt.hitPlayer).toBeUndefined();
+  });
+
+  it('accepts a GameState shape with enemyBolts', () => {
+    const state: GameState = {
+      seed: 1,
+      simTimeMs: 0,
+      episodeTimeMs: 0,
+      player: {
+        position: { x: 0, y: 0 },
+        angleRad: 0,
+        health: 100,
+        maxHealth: 100,
+        ammo: 30,
+        maxAmmo: 30,
+        dashTimeRemainingMs: 0,
+        dashCooldownMs: 0,
+      },
+      enemies: [],
+      impacts: [],
+      bolts: [],
+      enemyBolts: [
+        {
+          position: { x: 1, y: 1 },
+          direction: { x: 0, y: 1 },
+          speedCellsPerSecond: 36,
+          active: true,
+          createdAtMs: 0,
+          damage: 10,
+        },
+      ],
+      kills: 0,
+      spawnCount: 0,
+      generation: 1,
+    };
+    expect(state.enemyBolts).toHaveLength(1);
+    expect(state.enemyBolts![0].damage).toBe(10);
   });
 });

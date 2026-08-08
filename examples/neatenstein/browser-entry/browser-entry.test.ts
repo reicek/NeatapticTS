@@ -1125,6 +1125,123 @@ describe('Neatenstein browser entry', () => {
     }
   });
 
+  it('death feedback shows weaker direction when hive density decreases between frames', async () => {
+    setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
+    installOffscreenCanvasSupport();
+    const canvas = document.getElementById(
+      'neatenstein-canvas',
+    ) as HTMLCanvasElement;
+    setCanvasSize(canvas, 854, 480);
+    const rafCallbacks: FrameRequestCallback[] = [];
+    const originalRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+      rafCallbacks.push(callback);
+      return rafCallbacks.length;
+    };
+
+    // Mock createGameState to return a state with 8 enemies so hiveDensity = 1.
+    // We keep a reference to the enemies array so we can mutate it between ticks.
+    const mockEnemies: Array<{
+      position: { x: number; y: number };
+      health: number;
+    }> = [];
+    for (let i = 0; i < 8; i += 1) {
+      mockEnemies.push({ position: { x: 0, y: 0 }, health: 1 });
+    }
+
+    const inputSnapshot = {
+      timestamp: 0,
+      movement: {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+      },
+      look: { yawDelta: 0, pitchDelta: 0 },
+      touch: { active: false, yawDelta: 0, pitchDelta: 0 },
+      pointerLocked: false,
+      fire: false,
+    };
+    const router = {
+      attach: jest.fn(() => jest.fn()),
+      detach: jest.fn(),
+      getSnapshot: jest.fn(() => inputSnapshot),
+    };
+
+    let stop: NeatensteinStop | undefined;
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('./host/input', () => ({
+        createInputRouter: jest.fn(() => router),
+      }));
+      jest.doMock('./host/game/state', () => ({
+        createGameState: jest.fn(() => ({
+          seed: 1,
+          simTimeMs: 0,
+          episodeTimeMs: 0,
+          player: {
+            position: { x: 0, y: 0 },
+            previousPosition: { x: 0, y: 0 },
+            angleRad: 0,
+            health: 100,
+            maxHealth: 100,
+            ammo: 100,
+            maxAmmo: 100,
+            dashTimeRemainingMs: 0,
+            dashCooldownMs: 0,
+            contactIFrameMs: 0,
+          },
+          enemies: mockEnemies,
+          impacts: [],
+          gun: { recoilOffset: 0 },
+          bolts: [],
+          enemyBolts: [],
+          kills: 0,
+          spawnCount: 0,
+          generation: 1,
+        })),
+      }));
+      await import('./browser-entry.ts');
+      const start = (globalThis as unknown as Record<string, unknown>)
+        .neatensteinStart as NeatensteinStart;
+      stop = start('neatenstein-output', 'neatenstein-canvas');
+    });
+
+    try {
+      const worker = workers[0];
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'initialized' },
+        } as unknown as MessageEvent);
+      }
+
+      // First tick: hiveDensity = 8/8 = 1, prevHiveDensity = 0 → delta = 1
+      // → direction 'stronger'. This sets prevHiveDensity to 1.
+      rafCallbacks[0](0);
+      if (typeof worker.onmessage === 'function') {
+        worker.onmessage({
+          data: { type: 'frame', frame: { requestId: 0 } },
+        } as unknown as MessageEvent);
+      }
+
+      // Clear enemies so hiveDensity drops to 0 on the next tick.
+      mockEnemies.length = 0;
+
+      // Second tick: hiveDensity = 0/8 = 0, prevHiveDensity = 1 → delta = -1
+      // → direction 'weaker'. The death feedback label should show 'WEAKER'.
+      rafCallbacks[1](16);
+
+      const deathFeedbackEl = document.querySelector(
+        '[data-role="death-feedback"]',
+      );
+      expect(deathFeedbackEl).not.toBeNull();
+      const label = deathFeedbackEl?.querySelector('div');
+      expect(label?.textContent).toBe('DEATH FEEDBACK: WEAKER');
+    } finally {
+      stop?.();
+      globalThis.requestAnimationFrame = originalRaf;
+    }
+  });
+
   it('no longer exports the removed fixed-timestep and throttle constants', async () => {
     // Slice 10.3-raf-clock removes NEATENSTEIN_FIXED_TIMESTEP_MS from
     // constants and NEATENSTEIN_HOST_POST_INTERVAL_MS from browser-entry.

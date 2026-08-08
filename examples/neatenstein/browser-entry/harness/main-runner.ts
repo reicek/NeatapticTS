@@ -16,10 +16,16 @@
 import seedrandom from 'seedrandom';
 
 import { createMlpEnemyPopulation } from './enemy-mlp';
+import { createSwarmEnemyPopulation } from './enemy-swarm';
 import { computeCombatQualitySignal } from './fitness';
 import { createSeedPack } from './seed-pack';
-import { shouldRefreshMlpSnapshot } from './snapshot';
 import { selectVariant } from './select';
+import type {
+  NgeMainAgentEmbryo,
+  NgeMainAgentLifecycleConfig,
+} from '../../../../src/neat/nge-main-agent/neat.nge-main-agent.types';
+import { buildMainAgentEmbryo } from '../../../../src/neat/nge-main-agent/neat.nge-main-agent.embryo';
+
 import type {
   CombatQualitySignal,
   FitnessScore,
@@ -64,8 +70,34 @@ export interface RunMainGenerationOptions {
   seed: number;
   /** Current co-evolution generation (non-negative integer). */
   generation: number;
-  /** Frozen enemy snapshot to evaluate against. */
+  /**
+   * Frozen enemy snapshot to evaluate against.
+   *
+   * Takes precedence over {@link enemy} when both are supplied.
+   */
   enemySnapshot?: Snapshot;
+  /**
+   * Enemy backend selector.
+   *
+   * When `enemySnapshot` is omitted, the runner resolves a fresh frozen
+   * snapshot from the requested enemy backend. Defaults to `'mlp'` to
+   * preserve the original harness behavior.
+   */
+  enemy?: { kind: 'swarm' | 'mlp' };
+}
+
+/**
+ * Result emitted by one main-agent generation.
+ *
+ * Extends the raw {@link CombatQualitySignal} with the champion genome produced
+ * by the NGE main-agent pipeline and the enemy snapshot the generation was
+ * evaluated against.
+ */
+export interface MainGenerationResult extends CombatQualitySignal {
+  /** Champion main-agent genome built by the NGE pipeline. */
+  championGenome: NgeMainAgentEmbryo;
+  /** Frozen enemy snapshot the champion was evaluated against. */
+  evaluatedEnemySnapshot: Snapshot;
 }
 
 /**
@@ -93,7 +125,7 @@ export interface RunMainGenerationOptions {
  */
 export function runMainGeneration(
   options: RunMainGenerationOptions,
-): CombatQualitySignal {
+): MainGenerationResult {
   // Step 1: Resolve the enemy snapshot for this generation.
   const enemySnapshot = resolveEnemySnapshot(options);
 
@@ -109,16 +141,23 @@ export function runMainGeneration(
   // Step 5: Select the fittest variant.
   const champion = selectVariant(evaluated) as EvaluatedMainVariant;
 
-  // Step 6: Return the champion's raw quality signal.
-  return champion.signal;
+  // Step 6: Return the champion's raw quality signal plus NGE harness contract fields.
+  return {
+    ...champion.signal,
+    championGenome: champion.variant.genome as unknown as NgeMainAgentEmbryo,
+    evaluatedEnemySnapshot: enemySnapshot,
+  };
 }
 
 /**
  * Resolve the enemy snapshot for the current generation.
  *
  * When the caller supplies a snapshot it is used directly. Otherwise a fresh
- * MLP enemy population is generated from the generation seed and advanced to
- * the current generation using the MLP refresh gate.
+ * enemy population is generated from the generation seed and advanced to the
+ * current generation. The `update` method on each backend internally gates
+ * refresh cadence, so the returned snapshot is always the correct one for the
+ * requested generation. Defaults to the MLP backend unless `enemy.kind` is
+ * `'swarm'`.
  *
  * @param options - Runner options.
  * @returns Enemy snapshot for the episode roster.
@@ -128,11 +167,16 @@ function resolveEnemySnapshot(options: RunMainGenerationOptions): Snapshot {
     return options.enemySnapshot;
   }
 
-  const population = createMlpEnemyPopulation({ seed: options.seed });
-  if (shouldRefreshMlpSnapshot(options.generation)) {
-    return population.update({ generation: options.generation });
+  const kind = options.enemy?.kind ?? 'mlp';
+  if (kind === 'swarm') {
+    return createSwarmEnemyPopulation({ seed: options.seed }).update({
+      generation: options.generation,
+    });
   }
-  return population.snapshot();
+
+  return createMlpEnemyPopulation({ seed: options.seed }).update({
+    generation: options.generation,
+  });
 }
 
 /**
@@ -158,31 +202,45 @@ function createMainVariants(seed: number, generation: number): MainVariant[] {
 }
 
 /**
- * Generate a deterministic placeholder genome for a main-agent variant.
+ * Tier-capped topology budget for the Neatenstein main agent.
  *
- * The genome is not wired to the library construction pipeline in this slice;
- * it provides a stable complexity count for the parsimony band and a stable
- * identity for the episode RNG. Future slices will replace this with real NEAT
- * genomes.
+ * Kept local to this module to avoid a circular dependency with the harness
+ * entry point while still honoring the same caps.
+ */
+const NEATENSTEIN_MAIN_AGENT_TIER_BUDGET = {
+  maxNodes: 64,
+  maxEdges: 256,
+} as const;
+
+/**
+ * Build a deterministic NGE main-agent embryo for a variant.
+ *
+ * The embryo is produced by the real NGE main-agent pipeline and carries the
+ * allowlisted motif archetypes (AttentionHead, GatedRecurrentCell, EpisodicSlot)
+ * within the configured tier budget. The same `(seed, generation, variantId)`
+ * tuple always produces the same embryo.
  *
  * @param seed - Generation seed.
  * @param generation - Generation number.
  * @param variantId - Stable variant index.
- * @returns A deterministic placeholder genome.
+ * @returns A real NGE main-agent embryo genome.
  */
 function createMainGenome(
   seed: number,
   generation: number,
   variantId: number,
 ): Genome {
-  const rng = seedrandom(`${seed}:main:${generation}:${variantId}`);
-  const nodeCount = Math.floor(rng() * 20) + 10;
-  const connectionCount = Math.floor(rng() * 30) + 10;
-
-  return {
-    nodes: new Array(nodeCount).fill(null),
-    connections: new Array(connectionCount).fill(null),
+  const config: NgeMainAgentLifecycleConfig = {
+    seed: seed + variantId,
+    maxNodes: NEATENSTEIN_MAIN_AGENT_TIER_BUDGET.maxNodes,
+    maxEdges: NEATENSTEIN_MAIN_AGENT_TIER_BUDGET.maxEdges,
   };
+
+  const embryo = buildMainAgentEmbryo(config);
+
+  // The harness {@link Genome} type is a shallow snapshot; the embryo is cast
+  // here because the runner now drives selection from the NGE topology fields.
+  return embryo as unknown as Genome;
 }
 
 /**
@@ -219,11 +277,20 @@ function evaluateVariants(
 /**
  * Count the structural complexity of a variant for the parsimony band.
  *
+ * The genome is always a real NGE main-agent embryo produced by
+ * {@link buildMainAgentEmbryo}, so complexity is read directly from the
+ * `nodeCount` and `edgeCount` fields.
+ *
  * @param variant - Main-agent variant.
  * @returns Neuron plus synapse count.
  */
 function countComplexity(variant: MainVariant): number {
-  return variant.genome.nodes.length + variant.genome.connections.length;
+  const genome = variant.genome as unknown as Pick<
+    NgeMainAgentEmbryo,
+    'nodeCount' | 'edgeCount'
+  >;
+
+  return genome.nodeCount + genome.edgeCount;
 }
 
 /**

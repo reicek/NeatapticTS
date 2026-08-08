@@ -19,8 +19,17 @@ import {
   NEATENSTEIN_WORKER_BUNDLE_FILENAME,
 } from './constants';
 import { forwardWorkerInput } from './host/game/controls';
+import { NEATENSTEIN_ENEMY_MAX_CONCURRENT } from './host/game/constants';
 import { createGameState } from './host/game/state';
 import type { GameState } from './host/game/types';
+import {
+  createNeonStatusBar,
+  type NeonStatusBarHud,
+  createHumanModeSelector,
+  createDeathFeedbackIndicator,
+  type DeathFeedbackIndicator,
+  createWaveAnnouncement,
+} from './host/hud';
 import { createInputRouter, type InputRouter } from './host/input';
 import { createNeatensteinRendererBridge } from './host/renderer-bridge';
 import type { NeatensteinRendererBridge } from './host/renderer-bridge';
@@ -29,7 +38,8 @@ import { NEATENSTEIN_BACKGROUND_RGB } from './renderer/framebuffer';
 /**
  * Exported shape expected by the host shell on `window`.
  *
- * @param outputId - Host container element id (currently unused; reserved for future HUD).
+ * @param outputId - Host container element id that owns the HIVE DENSITY HUD
+ *   overlay.
  * @param canvasId - Visible canvas element id to bind the renderer to.
  * @returns A teardown function that cancels the render loop, detaches input, and
  *   terminates the worker.
@@ -124,15 +134,13 @@ function drawCanvasStatus(canvas: HTMLCanvasElement, message: string): void {
  * Uses a CPU fallback when OffscreenCanvas is not available so the entry point
  * never crashes on load.
  *
- * @param _outputId - Host container element id, reserved for future HUD output.
+ * @param outputId - Host container element id that owns the HIVE DENSITY HUD
+ *   overlay.
  * @param canvasId - Visible canvas element id to bind the renderer to.
  * @returns A stop function that cancels rendering, detaches input, and destroys
  * the renderer bridge.
  */
-function neatensteinStart(
-  _outputId: string,
-  canvasId: string,
-): NeatensteinStop {
+function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
   const canvas = document.getElementById(canvasId);
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error(`Canvas element #${canvasId} not found`);
@@ -264,11 +272,72 @@ function neatensteinStart(
   // Seed a deterministic game state so the render loop has a simulation clock.
   const initialState = createGameState({ seed: 1 });
 
+  // Wire the neon status bar HUD overlay into the reserved host container.
+  const statusBar = createNeonStatusBar(outputId);
+
+  // Wire the death feedback indicator into the same host container. The
+  // indicator displays the adaptation direction (stronger/weaker/shifted)
+  // derived from arms-race generation results so the player gets a visual
+  // read on co-evolution pressure.
+  const deathFeedback = createDeathFeedbackIndicator(outputId);
+
+  // Wire the human-mode selector into the same host container. The selector
+  // exposes a mode flag ('auto' or 'human') that callers can pass into the
+  // arms-race configuration when invoking runArmsRaceGeneration.
+  const humanModeSelector = createHumanModeSelector(outputId);
+
+  // Wire the wave announcement overlay — shows "Wave N" centered on screen
+  // when a new wave of enemies spawns, using the same neon typography and
+  // cyan glow as the flappy_bird generation display.
+  const waveAnnouncement = createWaveAnnouncement(outputId);
+
   bridge = createNeatensteinRendererBridge({
     canvas,
     workerUrl: resolveWorkerUrl(),
     tier,
     mapSeed: initialState.seed,
+  });
+
+  // Wire the status bar to render frames posted by the worker so the health
+  // segments, ammo segments, and kill/death labels update on each frame.
+  let lastFrameHealth = 0;
+  let lastFrameMaxHealth = 100;
+  let lastFrameAmmo = 0;
+  let lastFrameMaxAmmo = 50;
+  let lastFrameKills = 0;
+  let lastFrameDeaths = 0;
+  let lastWaveNumber = 0;
+
+  bridge.setFrameConsumer((frame) => {
+    lastFrameHealth = frame.playerHealth ?? 0;
+    lastFrameMaxHealth = frame.playerMaxHealth ?? 100;
+    lastFrameAmmo = frame.playerAmmo ?? 0;
+    lastFrameMaxAmmo = frame.playerMaxAmmo ?? 50;
+    lastFrameKills = frame.playerKills ?? 0;
+    lastFrameDeaths = frame.playerDeaths ?? 0;
+    statusBar.update({
+      playerHealth: lastFrameHealth,
+      playerMaxHealth: lastFrameMaxHealth,
+      playerAmmo: lastFrameAmmo,
+      playerMaxAmmo: lastFrameMaxAmmo,
+      playerKills: lastFrameKills,
+      playerDeaths: lastFrameDeaths,
+    });
+
+    // Detect wave transitions and show the "Wave N" announcement overlay.
+    // Wave 1 = spawnCount 0-8 (first 8 enemies), Wave 2 = spawnCount 9-16,
+    // etc. Using (spawnCount - 1) ensures the wave number only advances when
+    // the first enemy of the new wave actually spawns, not when the 8th
+    // enemy of the current wave spawns.
+    const spawnCount = frame.spawnCount ?? 0;
+    const waveNumber =
+      Math.floor(
+        Math.max(0, spawnCount - 1) / NEATENSTEIN_ENEMY_MAX_CONCURRENT,
+      ) + 1;
+    if (waveNumber > lastWaveNumber) {
+      lastWaveNumber = waveNumber;
+      waveAnnouncement.show(waveNumber);
+    }
   });
 
   const inputRouter = createInputRouter();
@@ -280,6 +349,17 @@ function neatensteinStart(
     initialState,
     inputRouter,
     () => currentRenderDimensions,
+    statusBar,
+    deathFeedback,
+    () => humanModeSelector.mode,
+    () => ({
+      playerHealth: lastFrameHealth,
+      playerMaxHealth: lastFrameMaxHealth,
+      playerAmmo: lastFrameAmmo,
+      playerMaxAmmo: lastFrameMaxAmmo,
+      playerKills: lastFrameKills,
+      playerDeaths: lastFrameDeaths,
+    }),
   );
 
   const stop = () => {
@@ -324,6 +404,16 @@ function neatensteinStart(
  * @param inputRouter - Host input router used to build movement snapshots.
  * @param getRenderDimensions - Returns the current CSS-derived render
  *   dimensions. Mutable because resize updates it.
+ * @param statusBar - Neon status bar HUD overlay updated on each animation
+ *   frame with hive density and the latest frame vitals.
+ * @param deathFeedback - Death feedback indicator updated on each animation
+ *   frame with the adaptation signal derived from hive-density changes.
+ * @param getHumanMode - Returns the current human-mode selector value ('auto'
+ *   or 'human') so it can be forwarded in the render state to downstream
+ *   consumers including the arms-race configuration.
+ * @param getLatestFrameState - Returns the latest player vitals (health, ammo,
+ *   kills, deaths) received from the worker frame so the status bar can merge
+ *   them with the per-frame hive density.
  * @returns A function that cancels the queued animation frame.
  */
 function startRenderLoop(
@@ -332,11 +422,29 @@ function startRenderLoop(
   initialState: GameState,
   inputRouter: InputRouter,
   getRenderDimensions: () => { width: number; height: number },
+  statusBar: NeonStatusBarHud,
+  deathFeedback: DeathFeedbackIndicator,
+  getHumanMode: () => 'auto' | 'human',
+  getLatestFrameState: () => {
+    playerHealth: number;
+    playerMaxHealth: number;
+    playerAmmo: number;
+    playerMaxAmmo: number;
+    playerKills: number;
+    playerDeaths: number;
+  },
 ): () => void {
   let simTick = initialState.seed;
   let cameraYaw = initialState.player.angleRad;
   let animationFrameId: number | null = null;
   let lastTimestamp: number | null = null;
+
+  /**
+   * Previous-frame hive density used to derive the death feedback adaptation
+   * signal. The delta between consecutive frames drives the indicator's
+   * direction label (stronger/weaker/shifted).
+   */
+  let prevHiveDensity = 0;
 
   /**
    * Reference timestep for FPS-scaled simulation stepping.
@@ -397,6 +505,19 @@ function startRenderLoop(
 
     const renderDimensions = getRenderDimensions();
 
+    // HIVE DENSITY: enemy population density relative to the concurrency cap,
+    // clamped to [0, 1]. The host render state carries the initial enemy count;
+    // the worker maintains the live population. Forwarding this field keeps the
+    // HUD overlay synchronized with the render state snapshot posted to the
+    // worker on each animation frame.
+    const hiveDensity = Math.min(
+      1,
+      Math.max(
+        0,
+        initialState.enemies.length / NEATENSTEIN_ENEMY_MAX_CONCURRENT,
+      ),
+    );
+
     // Post simState on every animation frame. The bridge applies worker-busy
     // backpressure so only one snapshot is in flight at a time; additional
     // frames are deferred until the worker acknowledges. The deltaMs field
@@ -412,7 +533,34 @@ function startRenderLoop(
       movement: snapshot.movement,
       enemies: [],
       deltaMs,
+      hiveDensity,
+      humanMode: getHumanMode(),
     };
+
+    statusBar.update({
+      hiveDensity,
+      ...getLatestFrameState(),
+    });
+
+    // DEATH FEEDBACK: derive a simple adaptation signal from the hive-density
+    // delta between consecutive frames. The signal mirrors the
+    // AdaptationSignal shape produced by computeAdaptationSignal in the
+    // harness death-feedback module so the HUD indicator stays consistent with
+    // the arms-race result wiring.
+    const densityDelta = hiveDensity - prevHiveDensity;
+    prevHiveDensity = hiveDensity;
+    const direction =
+      densityDelta > 0.01
+        ? 'stronger'
+        : densityDelta < -0.01
+          ? 'weaker'
+          : 'shifted';
+    deathFeedback.update({
+      direction,
+      aggressionDelta: densityDelta,
+      movementDelta: 0,
+      positioningDelta: 0,
+    });
 
     bridge.postSimState(renderState);
 

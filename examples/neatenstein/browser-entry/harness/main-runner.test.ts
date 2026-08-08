@@ -100,4 +100,44 @@ describe('Neatenstein harness main-runner', () => {
       expect(first).toEqual(second);
     });
   });
+
+  describe('AC-401-S02-001: real NGE main-agent genomes', () => {
+    it('returns a champion genome instead of a placeholder genome', async () => {
+      const { runMainGeneration } =
+        (await import('./main-runner.ts')) as MainRunnerModule;
+      const result = runMainGeneration({ seed: 42, generation: 0 });
+      expect(
+        (result as unknown as Record<string, unknown>).championGenome,
+      ).toBeDefined();
+    });
+
+    it('materializes NGE archetypes in the champion genome', async () => {
+      const { runMainGeneration } =
+        (await import('./main-runner.ts')) as MainRunnerModule;
+      const result = runMainGeneration({ seed: 42, generation: 0 });
+      const extendedResult = result as unknown as Record<string, unknown>;
+      const genome = extendedResult.championGenome as
+        { archetypes?: unknown[] } | undefined;
+      expect(genome?.archetypes?.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('AC-401-S02-004: fitness against MLP snapshot, not live MLP', () => {
+    it('exposes the evaluated enemy snapshot in the generation result', async () => {
+      const { runMainGeneration } =
+        (await import('./main-runner.ts')) as MainRunnerModule;
+      const enemySnapshot = {
+        kind: 'mlp',
+        weights: new Float32Array(8),
+      } as const;
+      const result = runMainGeneration({
+        seed: 42,
+        generation: 1,
+        enemySnapshot,
+      });
+      expect(
+        (result as unknown as Record<string, unknown>).evaluatedEnemySnapshot,
+      ).toEqual(enemySnapshot);
+    });
+  });
 });
