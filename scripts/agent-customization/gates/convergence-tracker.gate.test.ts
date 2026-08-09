@@ -355,7 +355,7 @@ describe('convergence-tracker.gate.mjs', () => {
     it('reads an actual plan and reports iteration evidence', async () => {
       const { result } = await runMain([
         '--json',
-        '--plan=plans/orchestration-fixes.plans.md',
+        '--plan=plans/completed/orchestration-fixes.plans.md',
         '--slice-id=A6-impl',
       ]);
 
@@ -370,7 +370,7 @@ describe('convergence-tracker.gate.mjs', () => {
       const { result } = await runMain([
         '--json',
         '--plan',
-        'plans/orchestration-fixes.plans.md',
+        'plans/completed/orchestration-fixes.plans.md',
         '--slice-id',
         'A6-impl',
       ]);

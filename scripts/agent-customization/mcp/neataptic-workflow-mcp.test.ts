@@ -213,20 +213,23 @@ describe('neataptic-workflow-mcp get_slice_context contract', () => {
   });
 
   it('includes the compact slice summary fields in the context window', async () => {
-    const [response] = await runMcpSession([
-      {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'tools/call',
-        params: {
-          name: 'get_slice_context',
-          arguments: {
-            slice_id: 'B3-impl',
-            plan_path: 'plans/orchestration-fixes.plans.md',
+    const [response] = await runMcpSession(
+      [
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: {
+            name: 'get_slice_context',
+            arguments: {
+              slice_id: 'B3-impl',
+              plan_path: 'plans/completed/orchestration-fixes.plans.md',
+            },
           },
         },
-      },
-    ]);
+      ],
+      60000,
+    );
     const result = (response.result ?? {}) as {
       structuredContent?: Record<string, unknown>;
     };

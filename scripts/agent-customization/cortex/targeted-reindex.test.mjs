@@ -41,8 +41,11 @@ describe('isEligibleFile', () => {
     assert.strictEqual(isEligibleFile('src/neat/neat.ts'), true);
   });
 
-  it('accepts .md under .github/skills/', () => {
-    assert.strictEqual(isEligibleFile('.github/skills/execute/SKILL.md'), true);
+  it('rejects .md under .github/skills/ (excluded from index)', () => {
+    assert.strictEqual(
+      isEligibleFile('.github/skills/execute/SKILL.md'),
+      false,
+    );
   });
 
   it('accepts .mjs under scripts/agent-customization/', () => {
@@ -56,10 +59,10 @@ describe('isEligibleFile', () => {
     assert.strictEqual(isEligibleFile('examples/flappy/main.js'), true);
   });
 
-  it('accepts .md under .github/agents/', () => {
+  it('rejects .md under .github/agents/ (excluded from index)', () => {
     assert.strictEqual(
       isEligibleFile('.github/agents/01-planning.agent.md'),
-      true,
+      false,
     );
   });
 

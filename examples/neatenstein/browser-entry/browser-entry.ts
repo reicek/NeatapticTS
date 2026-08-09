@@ -30,6 +30,7 @@ import {
   type DeathFeedbackIndicator,
   createWaveAnnouncement,
 } from './host/hud';
+import { selectMugshotDirection } from './host/hud-mugshot';
 import { createInputRouter, type InputRouter } from './host/input';
 import { createNeatensteinRendererBridge } from './host/renderer-bridge';
 import type { NeatensteinRendererBridge } from './host/renderer-bridge';
@@ -308,6 +309,9 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
   let lastFrameDeaths = 0;
   let lastWaveNumber = 0;
 
+  /** Health ratio for the mugshot overlay, defaulting to full-health teal. */
+  let lastMugshotHealthRatio = 1.0;
+
   bridge.setFrameConsumer((frame) => {
     lastFrameHealth = frame.playerHealth ?? 0;
     lastFrameMaxHealth = frame.playerMaxHealth ?? 100;
@@ -315,6 +319,20 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
     lastFrameMaxAmmo = frame.playerMaxAmmo ?? 50;
     lastFrameKills = frame.playerKills ?? 0;
     lastFrameDeaths = frame.playerDeaths ?? 0;
+
+    // Compute the mugshot health ratio from the raw frame fields, defaulting
+    // to full-health (1.0) when either field is absent or maxHealth is zero.
+    const rawHealth = frame.playerHealth;
+    const rawMaxHealth = frame.playerMaxHealth;
+    if (rawHealth != null && rawMaxHealth != null && rawMaxHealth > 0) {
+      lastMugshotHealthRatio = Math.max(
+        0,
+        Math.min(1, rawHealth / rawMaxHealth),
+      );
+    } else {
+      lastMugshotHealthRatio = 1.0;
+    }
+
     statusBar.update({
       playerHealth: lastFrameHealth,
       playerMaxHealth: lastFrameMaxHealth,
@@ -360,6 +378,7 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
       playerKills: lastFrameKills,
       playerDeaths: lastFrameDeaths,
     }),
+    () => lastMugshotHealthRatio,
   );
 
   const stop = () => {
@@ -414,6 +433,9 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
  * @param getLatestFrameState - Returns the latest player vitals (health, ammo,
  *   kills, deaths) received from the worker frame so the status bar can merge
  *   them with the per-frame hive density.
+ * @param getMugshotHealthRatio - Returns the latest health ratio for the
+ *   mugshot overlay, defaulting to 1.0 (full-health teal) when the frame
+ *   fields are absent.
  * @returns A function that cancels the queued animation frame.
  */
 function startRenderLoop(
@@ -433,6 +455,7 @@ function startRenderLoop(
     playerKills: number;
     playerDeaths: number;
   },
+  getMugshotHealthRatio: () => number,
 ): () => void {
   let simTick = initialState.seed;
   let cameraYaw = initialState.player.angleRad;
@@ -541,6 +564,13 @@ function startRenderLoop(
       hiveDensity,
       ...getLatestFrameState(),
     });
+
+    // MUGSHOT OVERLAY: update the robot head crop each render frame with the
+    // current mouse-look direction and health-based eye-stripe tint.
+    statusBar.mugshot.update(
+      selectMugshotDirection({ yawDelta: snapshot.look.yawDelta }),
+      getMugshotHealthRatio(),
+    );
 
     // DEATH FEEDBACK: derive a simple adaptation signal from the hive-density
     // delta between consecutive frames. The signal mirrors the

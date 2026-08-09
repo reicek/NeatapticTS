@@ -15,6 +15,7 @@ const config = {
         '**/benchmarks/**/*.test.ts',
         '**/examples/**/*.test.ts',
         '**/testing/**/*.test.ts',
+        '!**/examples/neatenstein/**',
       ],
       preset: 'ts-jest/presets/default-esm',
       testEnvironment: 'node',

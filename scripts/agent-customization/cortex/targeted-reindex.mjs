@@ -10,9 +10,9 @@
  *   2. `rag-index/embed-index.mjs --files=<path> ...` — re-embed the changed
  *      chunks into the dense embedding index.
  *
- * Only `.md`, `.ts`, `.mjs`, `.js` files under `plans/`, `.github/skills/`,
- * `.github/agents/`, `src/`, `examples/`, `scripts/agent-customization/`,
- * `rag-index/`, and `scripts/mcp-semantic/` are eligible; everything else is
+ * Only `.md`, `.ts`, `.mjs`, `.js` files under `plans/`, `src/`, `examples/`,
+ * `scripts/agent-customization/`, `rag-index/`, and `scripts/mcp-semantic/` are
+ * eligible; everything else is
  * silently skipped. Paths are resolved relative to the repo root and
  * normalized to POSIX-style repo-relative form before being passed to the
  * underlying CLIs.
@@ -35,8 +35,6 @@ const repoRoot = path.resolve(__dirname, '..', '..', '..');
  */
 const ELIGIBLE_ROOTS = [
   'plans/',
-  '.github/skills/',
-  '.github/agents/',
   'src/',
   'examples/',
   'scripts/agent-customization/',

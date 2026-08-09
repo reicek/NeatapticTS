@@ -31,15 +31,16 @@ import {
   type NeatensteinSpriteClip,
 } from './zbuffer';
 import { NEATENSTEIN_FLOOR_FOV_RADIANS } from './floor';
-import {
-  ROBOT_SPRITE_FRAMES,
-  ROBOT_SPRITE_PALETTE,
-  ROBOT_SPRITE_SCALE,
-} from '../../robot-sprite-data.js';
+import { ROBOT_SPRITE_FRAMES } from '../../robot-sprite-data.js';
 import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
 import { type EnemyAnimationState } from '../../../neatenstein/scripts/enemy-animator';
 import { shouldDissolvePixel } from './derez';
 import { NEATENSTEIN_ENEMY_DEATH_COLOR } from '../constants';
+import {
+  type EncodedRobotSpriteFrame,
+  decodeRobotSpriteFrame,
+  buildTeamColorPalette,
+} from './robot-sprite-decode';
 
 /**
  * Number of RGBA channels per framebuffer pixel.
@@ -357,10 +358,10 @@ const NEATENSTEIN_VOXEL_ATLAS_YAW_STEP_RADIANS =
   NEATENSTEIN_FULL_ROTATION_RADIANS / NEATENSTEIN_VOXEL_ATLAS_YAW_STEPS;
 
 /**
- * Encoded robot sprite frame: rows of palette indices into
- * {@link ROBOT_SPRITE_PALETTE}.
+ * Re-export the encoded frame type for backward compatibility with
+ * consumers that import it from sprites.ts.
  */
-export type EncodedRobotSpriteFrame = readonly (readonly number[])[];
+export type { EncodedRobotSpriteFrame };
 
 /**
  * Renderable sprite source: a pre-rendered voxel snapshot, an encoded robot
@@ -421,51 +422,6 @@ const NEATENSTEIN_ENCODED_DIRECTIONS = [
 ] as const;
 
 /**
- * Decode an encoded robot sprite frame into a pre-rendered RGBA snapshot.
- *
- * Each palette index is mapped through {@link ROBOT_SPRITE_PALETTE}, preserving
- * semitransparent muzzle-blast colors (indices 7 and 8). The decoded frame is
- * scaled up by {@link ROBOT_SPRITE_SCALE} using nearest-neighbor sampling so
- * the renderer can sample it directly.
- *
- * @param frame - Encoded rows of palette indices.
- * @returns Decoded RGBA {@link VoxelSnapshot}.
- */
-function decodeRobotSpriteFrame(
-  frame: EncodedRobotSpriteFrame,
-  palette: readonly (readonly [
-    number,
-    number,
-    number,
-    number,
-  ])[] = ROBOT_SPRITE_PALETTE,
-): VoxelSnapshot {
-  const logicalHeight = frame.length;
-  const logicalWidth = (frame[0] as number[]).length;
-  const width = logicalWidth * ROBOT_SPRITE_SCALE;
-  const height = logicalHeight * ROBOT_SPRITE_SCALE;
-  const data = new Uint8ClampedArray(
-    width * height * NEATENSTEIN_RGBA_CHANNELS,
-  );
-
-  for (let y = 0; y < height; y += 1) {
-    const logicalY = Math.floor(y / ROBOT_SPRITE_SCALE);
-    const row = frame[logicalY] as number[];
-    for (let x = 0; x < width; x += 1) {
-      const logicalX = Math.floor(x / ROBOT_SPRITE_SCALE);
-      const color = palette[row[logicalX]] as [number, number, number, number];
-      const offset = (y * width + x) * NEATENSTEIN_RGBA_CHANNELS;
-      data[offset] = color[0];
-      data[offset + 1] = color[1];
-      data[offset + 2] = color[2];
-      data[offset + 3] = color[3];
-    }
-  }
-
-  return { width, height, data };
-}
-
-/**
  * Lazily decoded frame cache.
  *
  * Encoded frames are immutable, so reference identity is a stable cache key.
@@ -492,28 +448,6 @@ function resolveDecodedRobotSpriteFrame(
   const decoded = decodeRobotSpriteFrame(frame);
   decodedRobotSpriteCache.set(frame, decoded);
   return decoded;
-}
-
-/**
- * Build a modified palette with a team color applied to indices 5/6/7.
- *
- * The RGB channels of palette entries 5, 6, and 7 are replaced with the
- * team color while their original alpha values are preserved. All other
- * palette entries remain unchanged. When no team color is specified the
- * default {@link ROBOT_SPRITE_PALETTE} is used.
- *
- * @param teamColor - [r, g, b] team color to apply.
- * @returns Modified palette array.
- */
-function buildTeamColorPalette(
-  teamColor: readonly [number, number, number],
-): readonly (readonly [number, number, number, number])[] {
-  return ROBOT_SPRITE_PALETTE.map((color, i) => {
-    if (i === 5 || i === 6 || i === 7) {
-      return [teamColor[0], teamColor[1], teamColor[2], color[3]] as const;
-    }
-    return color;
-  });
 }
 
 /**

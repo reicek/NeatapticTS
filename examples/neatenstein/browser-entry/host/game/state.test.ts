@@ -262,7 +262,7 @@ describe('Neatenstein game state', () => {
       const { createGameState } =
         (await import('./state.ts')) as typeof import('./state.ts');
       const state = createGameState({ seed: 1 });
-      expect(state.gun).toEqual({ recoilOffset: 0 });
+      expect(state.gun).toEqual({ recoilOffset: 0, firing: false });
     });
 
     it('initializes an empty bolt array', async () => {

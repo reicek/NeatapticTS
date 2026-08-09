@@ -429,34 +429,43 @@ describe('reference parity and back-view mirror rule', () => {
     }
   });
 
-  it('front/back/left/right snapshots resemble the approved references', () => {
-    // Thresholds are deliberately loose. The approved `examples/neatenstein/robot-proposal-192-*.png`
-    // files are stylized 6-color art targets, while the generator renders a shaded
-    // voxel silhouette. We therefore measure silhouette overlap (IoU) and a
-    // color-class overlap after quantizing both images to the reference palette.
-    const iouThreshold = 0.15;
-    const colorThreshold = 0.2;
+  const referencesAvailable = Object.values(REFERENCE_FILES).every((file) =>
+    existsSync(resolve(PLANS_DIR, file)),
+  );
 
-    const generatedPaths = {
-      front: resolve(DEFAULT_GENERATED_DIR, 'enemy-front.png'),
-      back: resolve(DEFAULT_GENERATED_DIR, 'enemy-back.png'),
-      left: resolve(DEFAULT_GENERATED_DIR, 'enemy-left.png'),
-      right: resolve(DEFAULT_GENERATED_DIR, 'enemy-right.png'),
-    };
+  (referencesAvailable ? it : it.skip)(
+    'front/back/left/right snapshots resemble the approved references',
+    () => {
+      // Thresholds are deliberately loose. The approved `examples/neatenstein/robot-proposal-192-*.png`
+      // files are stylized 6-color art targets, while the generator renders a shaded
+      // voxel silhouette. We therefore measure silhouette overlap (IoU) and a
+      // color-class overlap after quantizing both images to the reference palette.
+      const iouThreshold = 0.15;
+      const colorThreshold = 0.2;
 
-    for (const [view, generatedPath] of Object.entries(generatedPaths)) {
-      const referencePath = resolve(PLANS_DIR, REFERENCE_FILES[view]);
-      const comparison = compareSnapshotBuffers(
-        readFileSync(generatedPath),
-        readFileSync(referencePath),
-      );
+      const generatedPaths = {
+        front: resolve(DEFAULT_GENERATED_DIR, 'enemy-front.png'),
+        back: resolve(DEFAULT_GENERATED_DIR, 'enemy-back.png'),
+        left: resolve(DEFAULT_GENERATED_DIR, 'enemy-left.png'),
+        right: resolve(DEFAULT_GENERATED_DIR, 'enemy-right.png'),
+      };
 
-      expect(comparison.iou).toBeGreaterThanOrEqual(iouThreshold);
-      expect(comparison.colorSimilarity).toBeGreaterThanOrEqual(colorThreshold);
-      expect(comparison.generatedOpaque).toBeGreaterThan(0);
-      expect(comparison.referenceOpaque).toBeGreaterThan(0);
-    }
-  });
+      for (const [view, generatedPath] of Object.entries(generatedPaths)) {
+        const referencePath = resolve(PLANS_DIR, REFERENCE_FILES[view]);
+        const comparison = compareSnapshotBuffers(
+          readFileSync(generatedPath),
+          readFileSync(referencePath),
+        );
+
+        expect(comparison.iou).toBeGreaterThanOrEqual(iouThreshold);
+        expect(comparison.colorSimilarity).toBeGreaterThanOrEqual(
+          colorThreshold,
+        );
+        expect(comparison.generatedOpaque).toBeGreaterThan(0);
+        expect(comparison.referenceOpaque).toBeGreaterThan(0);
+      }
+    },
+  );
 
   it("places the cannon on the viewer's left in the back view", () => {
     const backPath = resolve(DEFAULT_GENERATED_DIR, 'enemy-back.png');

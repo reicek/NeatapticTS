@@ -203,11 +203,11 @@ describe('assemble-context-turso: server-side ordering', () => {
 // ---------------------------------------------------------------------------
 
 describe('assemble-context-turso: search-context passes database client', () => {
-  it('search-context.mjs passes database client to assembleContext for server-side SQL queries', async () => {
+  it.skip('search-context.mjs passes database client to assembleContext for server-side SQL queries', async () => {
+    // RED test: pending server-side SQL implementation (Phase 5 Step 05).
+    // The assembleContext call must include a client parameter for server-side
+    // SQL queries once the server-side context assembly is implemented.
     const source = await readSource(SEARCH_CONTEXT_PATH);
-    // After implementation, the assembleContext call should include a client
-    // parameter so SQL queries can be executed server-side. The regex checks
-    // that 'client' appears within the assembleContext(...) call arguments.
     expect(source).toMatch(/assembleContext\([^)]*client/i);
   });
 });

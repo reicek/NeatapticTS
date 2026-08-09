@@ -1192,7 +1192,7 @@ describe('Neatenstein browser entry', () => {
           },
           enemies: mockEnemies,
           impacts: [],
-          gun: { recoilOffset: 0 },
+          gun: { recoilOffset: 0, firing: false },
           bolts: [],
           enemyBolts: [],
           kills: 0,
@@ -1240,6 +1240,45 @@ describe('Neatenstein browser entry', () => {
       stop?.();
       globalThis.requestAnimationFrame = originalRaf;
     }
+  });
+
+  it('computes the mugshot health ratio from frame playerHealth and playerMaxHealth', async () => {
+    setHostScript('http://localhost:8080/docs/assets/neatenstein.bundle.js');
+    const canvas = document.getElementById(
+      'neatenstein-canvas',
+    ) as HTMLCanvasElement;
+    setCanvasSize(canvas, 854, 480);
+    await loadModule('./browser-entry.ts');
+    getGlobalStart()('neatenstein-output', 'neatenstein-canvas');
+    const worker = workers[0];
+
+    if (typeof worker.onmessage === 'function') {
+      worker.onmessage({
+        data: { type: 'initialized' },
+      } as unknown as MessageEvent);
+    }
+
+    // Send a frame with playerHealth=50, playerMaxHealth=100 to exercise
+    // the mugshot health ratio computation branch (line 328) where both
+    // fields are non-null and maxHealth > 0.
+    if (typeof worker.onmessage === 'function') {
+      worker.onmessage({
+        data: {
+          type: 'frame',
+          frame: { requestId: 0, playerHealth: 50, playerMaxHealth: 100 },
+        },
+      } as unknown as MessageEvent);
+    }
+
+    // The status bar should reflect 50% health: 5 of 10 segments active
+    // with amber color (fraction 0.5 is >= 0.3 amber threshold but < 0.7
+    // cyan threshold).
+    const healthSegments = document.querySelectorAll('.health-segment');
+    expect(healthSegments.length).toBe(10);
+    const activeSegment = healthSegments[0] as HTMLElement;
+    const inactiveSegment = healthSegments[5] as HTMLElement;
+    expect(activeSegment.style.backgroundColor).toBe('rgb(240, 160, 0)');
+    expect(inactiveSegment.style.backgroundColor).toBe('rgba(0, 0, 0, 0.2)');
   });
 
   it('no longer exports the removed fixed-timestep and throttle constants', async () => {

@@ -1,6 +1,13 @@
 /** @jest-environment jsdom */
 
-import { describe, expect, it } from '@jest/globals';
+import {
+  describe,
+  expect,
+  it,
+  jest,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
 const loadModule = (path: string): Promise<any> => import(path);
@@ -106,6 +113,72 @@ describe('Neatenstein host HUD overlay', () => {
       hud.update({ hiveDensity: 0.75 });
 
       expect(hud.label.textContent).toContain('75%');
+    });
+  });
+
+  describe('AC-501-S05-004: Wave announcement overlay', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('throws when the reserved outputId container is missing', async () => {
+      document.body.innerHTML = '';
+      const { createWaveAnnouncement } = await loadModule('./hud.ts');
+
+      expect(() => createWaveAnnouncement(HUD_OUTPUT_ID)).toThrow(
+        /outputId|wave announcement/,
+      );
+    });
+
+    it('clears the pending hide timer when show is called twice', async () => {
+      createHudFixture();
+      const { createWaveAnnouncement } = await loadModule('./hud.ts');
+      const { overlay, show } = createWaveAnnouncement(HUD_OUTPUT_ID);
+
+      show(1);
+      expect(overlay.style.opacity).toBe('1');
+
+      // Spy on clearTimeout to verify the first timer is cancelled.
+      const clearTimeoutSpy = jest.spyOn(globalThis, 'clearTimeout');
+
+      // Second call should clear the first timer and schedule a new one.
+      show(2);
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+
+      // Advance past HOLD_MS (600ms) — the second timer fires, not the first.
+      jest.advanceTimersByTime(600);
+      expect(overlay.style.opacity).toBe('0');
+
+      // The glow layer text should reflect the second call.
+      const glowLayer = overlay.firstChild as HTMLElement;
+      expect(glowLayer.textContent).toBe('Wave 2');
+    });
+
+    it('completes the full fade-out cycle and clears the nested timer', async () => {
+      createHudFixture();
+      const { createWaveAnnouncement } = await loadModule('./hud.ts');
+      const { overlay, show } = createWaveAnnouncement(HUD_OUTPUT_ID);
+
+      show(1);
+      expect(overlay.style.opacity).toBe('1');
+
+      // Advance past HOLD_MS (600ms) — first setTimeout fires, starts fade.
+      jest.advanceTimersByTime(600);
+      expect(overlay.style.opacity).toBe('0');
+
+      // Advance past FADE_MS (500ms) — nested setTimeout fires, hideTimer
+      // is set to null.  We verify by calling show() again: it should NOT
+      // call clearTimeout because hideTimer is already null.
+      const clearTimeoutSpy = jest.spyOn(globalThis, 'clearTimeout');
+      jest.advanceTimersByTime(500);
+
+      show(2);
+      expect(clearTimeoutSpy).not.toHaveBeenCalled();
+      expect(overlay.style.opacity).toBe('1');
     });
   });
 });

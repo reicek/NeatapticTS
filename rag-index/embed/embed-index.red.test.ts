@@ -75,6 +75,10 @@ describe('embed-index.mjs', () => {
            embedding_model TEXT,
            chunk_sha256 TEXT,
            embedded_at INTEGER,
+           slice_id TEXT,
+           step_number INTEGER,
+           phase TEXT,
+           status TEXT,
            UNIQUE(doc_id, chunk_index)
           );
         \`);

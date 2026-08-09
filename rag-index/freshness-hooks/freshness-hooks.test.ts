@@ -85,6 +85,7 @@ async function seedDocument(
   await writeFile(fixture.absolutePath, content, 'utf8');
   runModuleEvaluation<{ indexed: number }>(`
     import { buildSemanticIndex } from './rag-index/build-index.mjs';
+    import { closeTursoClient } from './scripts/mcp-semantic/tools/cortex-db.mjs';
     const summary = await buildSemanticIndex({
       databasePath: ${JSON.stringify(databasePath)},
       corpusDocuments: [
@@ -92,6 +93,7 @@ async function seedDocument(
       ],
       force: true,
     });
+    await closeTursoClient(${JSON.stringify(databasePath)});
     console.log(JSON.stringify({ indexed: summary.indexed, chunks: summary.chunks }));
   `);
 }
@@ -153,8 +155,10 @@ describe('freshness-hooks.mjs', () => {
         const result = runModuleEvaluation<string[][]>(`
           import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
           const calls = [];
+          const mockClient = { execute: async () => ({ rows: [] }), close: async () => {} };
           const hook = createFreshnessHook({
             debounce_ms: 0,
+            client: mockClient,
             runIncrementalBuild: async (paths) => {
               calls.push(paths);
               return { updated: paths, failed: [] };
@@ -172,8 +176,10 @@ describe('freshness-hooks.mjs', () => {
         const result = runModuleEvaluation<string[][]>(`
           import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
           const calls = [];
+          const mockClient = { execute: async () => ({ rows: [] }), close: async () => {} };
           const hook = createFreshnessHook({
             debounce_ms: 0,
+            client: mockClient,
             runIncrementalBuild: async (paths) => {
               calls.push(paths);
               return { updated: paths, failed: [] };
@@ -191,8 +197,10 @@ describe('freshness-hooks.mjs', () => {
         const result = runModuleEvaluation<string[][]>(`
           import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
           const calls = [];
+          const mockClient = { execute: async () => ({ rows: [] }), close: async () => {} };
           const hook = createFreshnessHook({
             debounce_ms: 0,
+            client: mockClient,
             runIncrementalBuild: async (paths) => {
               calls.push(paths);
               return { updated: paths, failed: [] };
@@ -212,8 +220,10 @@ describe('freshness-hooks.mjs', () => {
         const result = runModuleEvaluation<string[][]>(`
           import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
           const calls = [];
+          const mockClient = { execute: async () => ({ rows: [] }), close: async () => {} };
           const hook = createFreshnessHook({
             debounce_ms: 50,
+            client: mockClient,
             runIncrementalBuild: async (paths) => {
               calls.push(paths);
               return { updated: paths, failed: [] };
@@ -250,6 +260,7 @@ describe('freshness-hooks.mjs', () => {
 
           runModuleEvaluation<{ flushed: true }>(`
             import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
+            import { closeTursoClient } from './scripts/mcp-semantic/tools/cortex-db.mjs';
             const hook = createFreshnessHook({
               databasePath: ${JSON.stringify(databasePath)},
               debounce_ms: 0,
@@ -257,6 +268,7 @@ describe('freshness-hooks.mjs', () => {
             });
             hook.notifyWrite(${JSON.stringify(fixture.filePath)});
             await hook.flush();
+            await closeTursoClient(${JSON.stringify(databasePath)});
             console.log(JSON.stringify({ flushed: true }));
           `);
 
@@ -264,12 +276,14 @@ describe('freshness-hooks.mjs', () => {
             results: Array<{ file_path: string; text: string }>;
           }>(`
             import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
+            import { closeTursoClient } from './scripts/mcp-semantic/tools/cortex-db.mjs';
             const result = await searchCorpus({
               query: ${JSON.stringify(uniqueToken)},
               databasePath: ${JSON.stringify(databasePath)},
               use_dense: false,
               limit: 10,
             });
+            await closeTursoClient(${JSON.stringify(databasePath)});
             console.log(JSON.stringify({ results: result.results.map(r => ({ file_path: r.file_path, text: r.text })) }));
           `);
 
@@ -307,6 +321,7 @@ describe('freshness-hooks.mjs', () => {
             flushed: true;
           }>(`
             import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
+            import { closeTursoClient } from './scripts/mcp-semantic/tools/cortex-db.mjs';
             const hook = createFreshnessHook({
               databasePath: ${JSON.stringify(databasePath)},
               debounce_ms: 0,
@@ -315,6 +330,7 @@ describe('freshness-hooks.mjs', () => {
             const start = Date.now();
             hook.notifyWrite(${JSON.stringify(fixture.filePath)});
             await hook.flush();
+            await closeTursoClient(${JSON.stringify(databasePath)});
             console.log(JSON.stringify({ elapsedMs: Date.now() - start, flushed: true }));
           `);
 
@@ -354,6 +370,7 @@ describe('freshness-hooks.mjs', () => {
 
           runModuleEvaluation<{ flushed: true }>(`
             import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
+            import { closeTursoClient } from './scripts/mcp-semantic/tools/cortex-db.mjs';
             const hook = createFreshnessHook({
               databasePath: ${JSON.stringify(databasePath)},
               debounce_ms: 0,
@@ -361,6 +378,7 @@ describe('freshness-hooks.mjs', () => {
             });
             hook.notifyWrite(${JSON.stringify(fixture.filePath)});
             await hook.flush();
+            await closeTursoClient(${JSON.stringify(databasePath)});
             console.log(JSON.stringify({ flushed: true }));
           `);
 
@@ -392,8 +410,10 @@ describe('freshness-hooks.mjs', () => {
         const result = runModuleEvaluation<string[]>(`
           import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
           const warnings = [];
+          const mockClient = { execute: async () => ({ rows: [] }), close: async () => {} };
           const hook = createFreshnessHook({
             debounce_ms: 0,
+            client: mockClient,
             runIncrementalBuild: async () => {
               throw new Error('simulated build failure');
             },
@@ -415,8 +435,10 @@ describe('freshness-hooks.mjs', () => {
         const result = runModuleEvaluation<{ elapsedMs: number }>(`
           import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
           const calls = [];
+          const mockClient = { execute: async () => ({ rows: [] }), close: async () => {} };
           const hook = createFreshnessHook({
             debounce_ms: 100,
+            client: mockClient,
             runIncrementalBuild: async (paths) => {
               calls.push(paths);
               return { updated: paths, failed: [] };
@@ -436,8 +458,10 @@ describe('freshness-hooks.mjs', () => {
         const result = runModuleEvaluation<string[][]>(`
           import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
           const calls = [];
+          const mockClient = { execute: async () => ({ rows: [] }), close: async () => {} };
           const hook = createFreshnessHook({
             debounce_ms: 0,
+            client: mockClient,
             changed_file_globs: ['src/**/*.ts'],
             runIncrementalBuild: async (paths) => {
               calls.push(paths);
@@ -457,8 +481,10 @@ describe('freshness-hooks.mjs', () => {
         const result = runModuleEvaluation<boolean[]>(`
           import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
           const flags = [];
+          const mockClient = { execute: async () => ({ rows: [] }), close: async () => {} };
           const hook = createFreshnessHook({
             debounce_ms: 0,
+            client: mockClient,
             skip_ann: true,
             runIncrementalBuild: async (paths, options) => {
               flags.push(Boolean(options?.skip_ann));
@@ -495,6 +521,7 @@ describe('freshness-hooks.mjs', () => {
 
           runModuleEvaluation<{ flushed: true }>(`
             import { createFreshnessHook } from './rag-index/freshness-hooks/freshness-hooks.mjs';
+            import { closeTursoClient } from './scripts/mcp-semantic/tools/cortex-db.mjs';
             const hook = createFreshnessHook({
               databasePath: ${JSON.stringify(databasePath)},
               debounce_ms: 0,
@@ -502,6 +529,7 @@ describe('freshness-hooks.mjs', () => {
             });
             hook.notifyWrite(${JSON.stringify(fixture.filePath)});
             await hook.flush();
+            await closeTursoClient(${JSON.stringify(databasePath)});
             console.log(JSON.stringify({ flushed: true }));
           `);
 
@@ -509,12 +537,14 @@ describe('freshness-hooks.mjs', () => {
             results: Array<{ text: string }>;
           }>(`
             import { searchCorpus } from './scripts/mcp-semantic/tools/search-corpus.mjs';
+            import { closeTursoClient } from './scripts/mcp-semantic/tools/cortex-db.mjs';
             const result = await searchCorpus({
               query: ${JSON.stringify(uniqueToken)},
               databasePath: ${JSON.stringify(databasePath)},
               use_dense: false,
               limit: 10,
             });
+            await closeTursoClient(${JSON.stringify(databasePath)});
             console.log(JSON.stringify({ results: result.results.map(r => ({ text: r.text })) }));
           `);
 

@@ -79,7 +79,7 @@ export function refreshEnemySnapshots(population: EnemyPopulation): void {
  * Return the frozen snapshot for a previously refreshed enemy variant.
  *
  * @param variantId - Variant index within the enemy population.
- * @returns Frozen {@link Snapshot} for the variant.
+ * @returns Frozen {@link MlpSnapshot} for the variant.
  * @throws Error when no snapshot has been refreshed for the variant.
  *
  * @example
@@ -88,14 +88,14 @@ export function refreshEnemySnapshots(population: EnemyPopulation): void {
  * const snapshot = getEnemySnapshot(0);
  * ```
  */
-export function getEnemySnapshot(variantId: number): Snapshot {
+export function getEnemySnapshot(variantId: number): MlpSnapshot {
   const snapshot = enemySnapshotStore.get(variantId);
   if (!snapshot) {
     throw new Error(
       `No enemy snapshot for variant ${variantId}; call refreshEnemySnapshots first.`,
     );
   }
-  return snapshot;
+  return snapshot as MlpSnapshot;
 }
 
 /**

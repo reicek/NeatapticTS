@@ -3,7 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 import { activateMlp, createMlpEnemyPopulation } from './enemy-mlp';
 import { runEnemyWaveRunner, simulateEnemyEpisode } from './enemy-runner';
 import { getEnemySnapshot, refreshEnemySnapshots } from './snapshot';
-import type { EnemyEpisodeTelemetry } from './types';
+import type { EnemyEpisodeTelemetry, MlpSnapshot } from './types';
 
 const VARIANT_COUNT = 32;
 
@@ -171,7 +171,7 @@ describe('Neatenstein headless enemy wave runner', () => {
     it('produces different telemetry for different weights', () => {
       const population = createMlpEnemyPopulation({ seed: 10 });
       refreshEnemySnapshots(population);
-      const snapshotA = getEnemySnapshot(0);
+      const snapshotA = getEnemySnapshot(0) as MlpSnapshot;
 
       const zeroSnapshot = {
         kind: 'mlp' as const,
@@ -190,7 +190,7 @@ describe('Neatenstein headless enemy wave runner', () => {
     it('bounds the rollout: cellsVisited ≤ max ticks and ≥ 1', () => {
       const population = createMlpEnemyPopulation({ seed: 11 });
       refreshEnemySnapshots(population);
-      const snapshot = getEnemySnapshot(0);
+      const snapshot = getEnemySnapshot(0) as MlpSnapshot;
       const telemetry = simulateEnemyEpisode(snapshot, 300);
 
       expect(telemetry.cellsVisited).toBeGreaterThanOrEqual(1);
@@ -200,7 +200,7 @@ describe('Neatenstein headless enemy wave runner', () => {
     it('reports per-step BFS distances in the telemetry', () => {
       const population = createMlpEnemyPopulation({ seed: 12 });
       refreshEnemySnapshots(population);
-      const snapshot = getEnemySnapshot(0);
+      const snapshot = getEnemySnapshot(0) as MlpSnapshot;
       const telemetry = simulateEnemyEpisode(snapshot, 400);
 
       expect(telemetry.bfsDistances.length).toBeGreaterThan(0);
@@ -212,7 +212,7 @@ describe('Neatenstein headless enemy wave runner', () => {
     it('always reports enemiesSurvived = 1 (simplified single-enemy rollout)', () => {
       const population = createMlpEnemyPopulation({ seed: 13 });
       refreshEnemySnapshots(population);
-      const snapshot = getEnemySnapshot(0);
+      const snapshot = getEnemySnapshot(0) as MlpSnapshot;
       const telemetry = simulateEnemyEpisode(snapshot, 500);
 
       expect(telemetry.enemiesSurvived).toBe(1);
@@ -221,7 +221,7 @@ describe('Neatenstein headless enemy wave runner', () => {
     it('uses snapshot weights directly with activateMlp (AC-10.5c-004)', () => {
       const population = createMlpEnemyPopulation({ seed: 14 });
       refreshEnemySnapshots(population);
-      const snapshot = getEnemySnapshot(0);
+      const snapshot = getEnemySnapshot(0) as MlpSnapshot;
 
       // Weights from getEnemySnapshot must work directly with activateMlp
       // without any INetwork materialization.

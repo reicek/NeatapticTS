@@ -292,7 +292,7 @@ describe('embed-index.mjs A1 schema migration', () => {
           import { getFreshnessProof } from './rag-index/freshness.mjs';
 
           const databasePath = ${JSON.stringify(databasePath)};
-          const planFilePath = 'plans/Cortex_Orchestration_Single_Source_of_Truth.plans.md';
+          const planFilePath = 'plans/completed/Cortex_Orchestration_Single_Source_of_Truth.plans.md';
           const absolutePlanPath = path.join(repoRoot, planFilePath);
           const proof = await getFreshnessProof(absolutePlanPath);
 

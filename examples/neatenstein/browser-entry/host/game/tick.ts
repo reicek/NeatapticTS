@@ -304,7 +304,10 @@ export function gameTick(
     bolts: updatedBolts.filter((bolt) => bolt.active),
     impacts: ageImpacts(next.impacts, resolvedDtMs),
     enemyImpacts: ageEnemyImpacts(next.enemyImpacts ?? [], resolvedDtMs),
-    gun: decayGunRecoil(next.gun ?? { recoilOffset: 0 }, resolvedDtMs),
+    gun: decayGunRecoil(
+      next.gun ?? { recoilOffset: 0, firing: false },
+      resolvedDtMs,
+    ),
   };
 
   // Step 5b: Move active enemy bolts, check player proximity, apply damage,
@@ -359,8 +362,9 @@ export function gameTick(
       next = {
         ...next,
         gun: {
-          ...next.gun,
+          ...(next.gun ?? { recoilOffset: 0, firing: false }),
           recoilOffset: NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX,
+          firing: true,
         },
       };
     }
@@ -786,6 +790,7 @@ export function decayGunRecoil(gun: GunState, dtMs: number): GunState {
   return {
     ...gun,
     recoilOffset: Math.min(nextOffset, NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX),
+    firing: false,
   };
 }
 

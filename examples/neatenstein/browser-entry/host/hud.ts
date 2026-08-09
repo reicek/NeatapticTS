@@ -30,6 +30,7 @@ import {
   NEATENSTEIN_HEALTH_THRESHOLD_AMBER,
   NEATENSTEIN_HEALTH_THRESHOLD_CYAN,
 } from '../constants';
+import { type MugshotOverlay, createMugshotOverlay } from './hud-mugshot';
 
 /**
  * Render-state snapshot accepted by {@link HiveDensityHud.update}.
@@ -555,6 +556,8 @@ export interface NeonStatusBarHud {
   killsLabel: HTMLElement;
   /** Label element showing the player death count. */
   deathsLabel: HTMLElement;
+  /** Mugshot canvas overlay rendering the robot head crop with damage tint. */
+  mugshot: MugshotOverlay;
   /** Refresh the status bar from a render-state snapshot. */
   update: (state: NeonStatusBarState) => void;
 }
@@ -607,6 +610,28 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
   bar.style.alignItems = 'stretch';
   bar.style.backgroundColor = 'rgba(6, 11, 20, 0.85)';
 
+  // Kill prefix + label — leftmost position for kills counter
+  const killsPrefix = document.createElement('span');
+  killsPrefix.textContent = 'K:';
+  killsPrefix.style.color = NEATENSTEIN_HEALTH_COLOR_CYAN;
+  killsPrefix.style.fontFamily = 'monospace';
+  killsPrefix.style.fontSize = '16px';
+  killsPrefix.style.padding = '0 2px';
+  killsPrefix.style.display = 'flex';
+  killsPrefix.style.alignItems = 'center';
+
+  const killsLabel = document.createElement('div');
+  killsLabel.textContent = '0';
+  killsLabel.style.color = NEATENSTEIN_HEALTH_COLOR_CYAN;
+  killsLabel.style.fontFamily = 'monospace';
+  killsLabel.style.fontSize = '16px';
+  killsLabel.style.padding = '0 4px';
+  killsLabel.style.display = 'flex';
+  killsLabel.style.alignItems = 'center';
+
+  bar.appendChild(killsPrefix);
+  bar.appendChild(killsLabel);
+
   // Segmented health track
   const healthSegments: HTMLElement[] = [];
   for (let i = 0; i < NEON_STATUS_BAR_SEGMENT_COUNT; i++) {
@@ -618,6 +643,15 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
     healthSegments.push(seg);
     bar.appendChild(seg);
   }
+
+  // Robot mugshot canvas overlay — absolutely centered on screen.
+  const mugshot = createMugshotOverlay();
+  mugshot.canvas.style.position = 'absolute';
+  mugshot.canvas.style.left = '50%';
+  mugshot.canvas.style.top = '0';
+  mugshot.canvas.style.transform = 'translateX(-50%)';
+  mugshot.canvas.style.zIndex = '1';
+  bar.appendChild(mugshot.canvas);
 
   // Segmented ammo track
   const ammoSegments: HTMLElement[] = [];
@@ -645,25 +679,7 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
   hiveTrack.appendChild(hiveFill);
   bar.appendChild(hiveTrack);
 
-  // Kill/death readout labels with prefix labels for visibility
-  const killsPrefix = document.createElement('span');
-  killsPrefix.textContent = 'K:';
-  killsPrefix.style.color = NEATENSTEIN_HEALTH_COLOR_CYAN;
-  killsPrefix.style.fontFamily = 'monospace';
-  killsPrefix.style.fontSize = '16px';
-  killsPrefix.style.padding = '0 2px';
-  killsPrefix.style.display = 'flex';
-  killsPrefix.style.alignItems = 'center';
-
-  const killsLabel = document.createElement('div');
-  killsLabel.textContent = '0';
-  killsLabel.style.color = NEATENSTEIN_HEALTH_COLOR_CYAN;
-  killsLabel.style.fontFamily = 'monospace';
-  killsLabel.style.fontSize = '16px';
-  killsLabel.style.padding = '0 4px';
-  killsLabel.style.display = 'flex';
-  killsLabel.style.alignItems = 'center';
-
+  // Death prefix + label — rightmost position for deaths counter
   const deathsPrefix = document.createElement('span');
   deathsPrefix.textContent = 'D:';
   deathsPrefix.style.color = NEATENSTEIN_HEALTH_COLOR_MAGENTA;
@@ -682,8 +698,6 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
   deathsLabel.style.display = 'flex';
   deathsLabel.style.alignItems = 'center';
 
-  bar.appendChild(killsPrefix);
-  bar.appendChild(killsLabel);
   bar.appendChild(deathsPrefix);
   bar.appendChild(deathsLabel);
 
@@ -746,6 +760,7 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
     hiveFill,
     killsLabel,
     deathsLabel,
+    mugshot,
     update,
   };
 }
@@ -816,9 +831,7 @@ const NEATENSTEIN_WAVE_HOLD_MS = 600 as const;
  * @param outputId - DOM id of the host container (e.g. `'neatenstein-output'`).
  * @returns HUD handle with a `show(waveNumber)` method.
  */
-export function createWaveAnnouncement(
-  outputId: string,
-): WaveAnnouncementHud {
+export function createWaveAnnouncement(outputId: string): WaveAnnouncementHud {
   const container = document.getElementById(outputId);
   if (!container) {
     throw new Error(

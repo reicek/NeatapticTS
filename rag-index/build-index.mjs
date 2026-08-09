@@ -45,6 +45,20 @@ import { chunkTypeScriptSourcesV2 } from './ts-chunker-v2.mjs';
 /** Maximum number of SQL statements per client.batch() call. */
 const BATCH_SIZE = 1000;
 
+const GLOBAL_IGNORE = [
+  '**/node_modules/**',
+  '**/dist/**',
+  '**/build/**',
+  '**/out/**',
+  '**/coverage/**',
+  '**/.cache/**',
+  '**/artifacts/**',
+  'rag-index/data/**',
+  'rag-index/models/**',
+  'rag-index/snapshots/**',
+  'rag-index/freshness-proofs/**',
+];
+
 const CORPUS_SOURCES = [
   { family: 'readme', patterns: ['src/**/README.md'] },
   {
@@ -52,8 +66,6 @@ const CORPUS_SOURCES = [
     patterns: ['src/**/*.ts'],
     ignore: ['src/**/*.d.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
   },
-  { family: 'skill', patterns: ['.github/skills/**/SKILL.md'] },
-  { family: 'agent', patterns: ['.github/agents/*.agent.md'] },
   {
     family: 'plan',
     patterns: ['plans/**/*.md'],
@@ -68,10 +80,6 @@ const CORPUS_SOURCES = [
   {
     family: 'root-doc',
     patterns: ['README.md', 'STYLEGUIDE.md', 'CONTRIBUTING.md'],
-  },
-  {
-    family: 'copilot-instructions',
-    patterns: ['.github/copilot-instructions.md'],
   },
 ];
 
@@ -395,7 +403,7 @@ async function collectCorpusDocuments() {
         absolute: false,
         onlyFiles: true,
         dot: true,
-        ignore: source.ignore ?? [],
+        ignore: [...GLOBAL_IGNORE, ...(source.ignore ?? [])],
       });
       return entries.toSorted().map((filePath) => ({
         filePath: toRepoRelative(path.join(repoRoot, filePath)),

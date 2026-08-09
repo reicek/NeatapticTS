@@ -1,10 +1,12 @@
 /**
  * Pure gun overlay renderer for the Neatenstein neon raycasting demo.
  *
- * The weapon is drawn as a center-screen DOOM-style plasma cannon: a wide
- * Neon White body with a teal energy strip, anchored at the bottom center of
- * the viewport and kicked upward by the current screen-space recoil offset.
- * All rendering is pure side effects on the supplied 2D context.
+ * The weapon is drawn as a center-screen DOOM-style plasma cannon using a
+ * palette-indexed 2D sprite decoded from {@link gun-sprite-data.js}. The
+ * decoded RGBA pixels are rendered as uniform {@link GUN_SPRITE_SCALE}-sized
+ * fillRect calls anchored at the bottom center of the viewport and kicked
+ * upward by the current screen-space recoil offset. All rendering is pure
+ * side effects on the supplied 2D context.
  *
  * @module
  */
@@ -14,7 +16,8 @@ import {
   NEATENSTEIN_GUN_BODY_COLOR as GUN_BODY_COLOR,
 } from '../constants';
 import type { GunState } from '../host/game/types';
-import { GUN_BARREL_VOXEL_GRID, projectGunSprite } from './gun-sprite';
+import { decodeGunSpriteFrame, RGBA_CHANNELS } from './gun-sprite-decode';
+import { GUN_SPRITE_FRAMES, GUN_SPRITE_SCALE } from '../../gun-sprite-data.js';
 
 /**
  * CSS color applied to the gun body overlay.
@@ -33,17 +36,13 @@ export const NEATENSTEIN_GUN_BODY_COLOR = GUN_BODY_COLOR;
 export const NEATENSTEIN_GUN_ACCENT_COLOR = GUN_ACCENT_COLOR;
 
 /**
- * Fraction of viewport height occupied by the gun body.
- */
-const GUN_BODY_HEIGHT_FRACTION = 0.22;
-
-/**
  * Gun body aspect ratio (width / height).
  *
- * Derived from the chunky DOOM plasma-cannon reference silhouette so the
- * weapon stays square and readable regardless of viewport width.
+ * Derived from the wide Wolfenstein-style chaingun reference silhouette so
+ * the weapon reads as a horizontally elongated rotary cannon regardless of
+ * viewport width.
  */
-export const GUN_BODY_ASPECT_RATIO = 0.75;
+export const GUN_BODY_ASPECT_RATIO = 1.6;
 
 /**
  * Create the canonical initial {@link GunState} for a fresh episode.
@@ -59,19 +58,22 @@ export const GUN_BODY_ASPECT_RATIO = 0.75;
  * ```
  */
 export function createInitialGunState(): GunState {
-  return { recoilOffset: 0 };
+  return { recoilOffset: 0, firing: false };
 }
 
 /**
  * Render the gun overlay on top of the raycast frame.
  *
- * The gun is anchored at the bottom center of the viewport. When
- * {@link GunState.recoilOffset} is non-zero, the entire overlay is translated
- * upward by that amount before drawing, producing a visible kick that settles
- * back to the idle position as the recoil decays.
+ * The gun is anchored at the bottom center of the viewport. The
+ * palette-indexed sprite is decoded via {@link decodeGunSpriteFrame} into RGBA
+ * pixels and drawn as uniform {@link GUN_SPRITE_SCALE}×{@link GUN_SPRITE_SCALE}
+ * fillRect calls — one per non-transparent pixel — producing a chunky
+ * DOOM-style plasma cannon with per-pixel palette colors and a semi-transparent
+ * muzzle flash on the firing frame.
  *
- * The sprite is drawn as a chunky DOOM-style plasma cannon: a tapered Neon
- * White body, a glowing central energy core, and teal accent bolts.
+ * When {@link GunState.recoilOffset} is non-zero, the entire overlay is
+ * translated upward by that amount before drawing, producing a visible kick
+ * that settles back to the idle position as the recoil decays.
  *
  * @param ctx - 2D canvas context to draw into.
  * @param gun - Current weapon overlay state.
@@ -92,167 +94,60 @@ export function renderGunOverlay(
   width: number,
   height: number,
 ): void {
-  const centerX = width / 2;
-  const gunBottomY = height;
-  const gunHeight = height * GUN_BODY_HEIGHT_FRACTION;
-  const gunWidth = gunHeight * GUN_BODY_ASPECT_RATIO;
-  const gunTop = gunBottomY - gunHeight;
+  const frame = gun.firing ? GUN_SPRITE_FRAMES.fire : GUN_SPRITE_FRAMES.idle;
+  const decoded = decodeGunSpriteFrame(frame);
+
+  const decodedWidth = decoded.width;
+  const decodedHeight = decoded.height;
+  const data = decoded.data;
+
+  // The decoded sprite is scaled by GUN_SPRITE_SCALE from the logical grid.
+  // Sample one pixel per GUN_SPRITE_SCALE×GUN_SPRITE_SCALE block (top-left
+  // corner) to get the palette color for each logical cell, then draw each as
+  // a GUN_SPRITE_SCALE×GUN_SPRITE_SCALE fillRect.
+  const logicalWidth = decodedWidth / GUN_SPRITE_SCALE;
+  const logicalHeight = decodedHeight / GUN_SPRITE_SCALE;
+
+  // Anchor the sprite flush to the bottom center of the viewport.
+  const spriteWidth = logicalWidth * GUN_SPRITE_SCALE;
+  const spriteHeight = logicalHeight * GUN_SPRITE_SCALE;
+  const spriteX = width / 2 - spriteWidth / 2;
+  const spriteY = height - spriteHeight;
 
   ctx.save();
   if (gun.recoilOffset !== 0) {
     ctx.translate(0, -gun.recoilOffset);
   }
 
-  // Tapered main chassis with a left-to-right plastic shading gradient.
-  const baseHalfWidth = gunWidth / 2;
-  const topHalfWidth = gunWidth * 0.33;
+  for (let row = 0; row < logicalHeight; row += 1) {
+    for (let col = 0; col < logicalWidth; col += 1) {
+      // Sample the top-left pixel of each GUN_SPRITE_SCALE block. Because the
+      // decoder uses nearest-neighbor scaling, every pixel in the block has
+      // the same color, so sampling the corner is sufficient.
+      const px = col * GUN_SPRITE_SCALE;
+      const py = row * GUN_SPRITE_SCALE;
+      const offset = (py * decodedWidth + px) * RGBA_CHANNELS;
+      const r = data[offset];
+      const g = data[offset + 1];
+      const b = data[offset + 2];
+      const a = data[offset + 3];
 
-  const chassisGradient = ctx.createLinearGradient(
-    centerX - baseHalfWidth,
-    gunTop,
-    centerX + baseHalfWidth,
-    gunTop,
-  );
-  chassisGradient.addColorStop(0, '#c8d4d8');
-  chassisGradient.addColorStop(0.25, '#eefcfd');
-  chassisGradient.addColorStop(0.5, '#ffffff');
-  chassisGradient.addColorStop(0.75, '#eefcfd');
-  chassisGradient.addColorStop(1, '#b8c4c8');
+      if (a === 0) {
+        continue;
+      }
 
-  ctx.fillStyle = chassisGradient;
-  ctx.beginPath();
-  ctx.moveTo(centerX - baseHalfWidth, gunBottomY);
-  ctx.lineTo(centerX - topHalfWidth, gunTop);
-  ctx.lineTo(centerX + topHalfWidth, gunTop);
-  ctx.lineTo(centerX + baseHalfWidth, gunBottomY);
-  ctx.closePath();
-  ctx.fill();
-
-  // Left and right 3D side planes so the cannon reads as an extruded voxel
-  // body rather than a flat gradient shape.
-  const sidePanelInset = baseHalfWidth * 0.55;
-  const topSideInset = topHalfWidth * 0.45;
-
-  // Darker left face.
-  ctx.fillStyle = '#8fa0a5';
-  ctx.beginPath();
-  ctx.moveTo(centerX - baseHalfWidth, gunBottomY);
-  ctx.lineTo(centerX - topHalfWidth, gunTop);
-  ctx.lineTo(centerX - topHalfWidth + topSideInset, gunTop);
-  ctx.lineTo(centerX - baseHalfWidth + sidePanelInset, gunBottomY);
-  ctx.closePath();
-  ctx.fill();
-
-  // Lighter right face.
-  ctx.fillStyle = '#d8eef2';
-  ctx.beginPath();
-  ctx.moveTo(centerX + baseHalfWidth, gunBottomY);
-  ctx.lineTo(centerX + topHalfWidth, gunTop);
-  ctx.lineTo(centerX + topHalfWidth - topSideInset, gunTop);
-  ctx.lineTo(centerX + baseHalfWidth - sidePanelInset, gunBottomY);
-  ctx.closePath();
-  ctx.fill();
-
-  // Accent outline around the chassis.
-  ctx.lineWidth = Math.max(1, width * 0.002);
-  ctx.strokeStyle = NEATENSTEIN_GUN_ACCENT_COLOR;
-  ctx.stroke();
-
-  // Central plasma core, tapered to match the gun body's perspective.
-  const coreWidthTop = gunWidth * 0.16;
-  const coreWidthBottom = gunWidth * 0.3;
-  const coreHeight = gunHeight * 0.72;
-  const coreTop = gunTop + gunHeight * 0.08;
-  const coreBottom = coreTop + coreHeight;
-  const coreLeftTop = centerX - coreWidthTop / 2;
-  const coreRightTop = centerX + coreWidthTop / 2;
-  const coreLeftBottom = centerX - coreWidthBottom / 2;
-  const coreRightBottom = centerX + coreWidthBottom / 2;
-  const coreGradient = ctx.createLinearGradient(
-    coreLeftBottom,
-    coreTop,
-    coreRightBottom,
-    coreTop,
-  );
-  coreGradient.addColorStop(0, '#008b9a');
-  coreGradient.addColorStop(0.4, NEATENSTEIN_GUN_ACCENT_COLOR);
-  coreGradient.addColorStop(0.6, '#80f8ff');
-  coreGradient.addColorStop(1, '#006b7a');
-
-  ctx.fillStyle = coreGradient;
-  ctx.beginPath();
-  ctx.moveTo(coreLeftBottom, coreBottom);
-  ctx.lineTo(coreLeftTop, coreTop);
-  ctx.lineTo(coreRightTop, coreTop);
-  ctx.lineTo(coreRightBottom, coreBottom);
-  ctx.closePath();
-  ctx.fill();
-
-  // Lower teal accent bolts on each side.
-  ctx.fillStyle = NEATENSTEIN_GUN_ACCENT_COLOR;
-  for (const side of [-1, 1] as const) {
-    for (const ridgeY of [gunTop + gunHeight * 0.55 + height * 0.015]) {
-      ctx.beginPath();
-      ctx.arc(
-        centerX + side * baseHalfWidth * 0.84,
-        ridgeY,
-        width * 0.004,
-        0,
-        Math.PI * 2,
+      if (a < 255) {
+        ctx.fillStyle = `rgba(${r},${g},${b},${a / 255})`;
+      } else {
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+      }
+      ctx.fillRect(
+        spriteX + col * GUN_SPRITE_SCALE,
+        spriteY + row * GUN_SPRITE_SCALE,
+        GUN_SPRITE_SCALE,
+        GUN_SPRITE_SCALE,
       );
-      ctx.fill();
     }
-  }
-
-  // Raised barrel band near the muzzle.
-  ctx.fillStyle = '#c8d4d8';
-  const bandY = gunTop + gunHeight * 0.18;
-  const bandHeight = gunHeight * 0.05;
-  const bandWidth = gunWidth * 0.92;
-  ctx.fillRect(centerX - bandWidth / 2, bandY, bandWidth, bandHeight);
-
-  // Dark side-vent slits on the lower chassis.
-  ctx.fillStyle = '#4a5a5e';
-  const ventWidth = gunWidth * 0.08;
-  const ventHeight = gunHeight * 0.08;
-  const ventY = gunTop + gunHeight * 0.62;
-  for (const side of [-1, 1] as const) {
-    ctx.fillRect(
-      centerX + side * baseHalfWidth * 0.72 - ventWidth / 2,
-      ventY,
-      ventWidth,
-      ventHeight,
-    );
-  }
-
-  // Teal top sight post above the muzzle.
-  ctx.fillStyle = NEATENSTEIN_GUN_ACCENT_COLOR;
-  const sightWidth = gunWidth * 0.14;
-  const sightHeight = gunHeight * 0.06;
-  ctx.fillRect(
-    centerX - sightWidth / 2,
-    gunTop - sightHeight * 0.7,
-    sightWidth,
-    sightHeight,
-  );
-
-  // Project a small 3D voxel barrel above the main chassis.
-  const barrelScale = gunHeight * 0.05;
-  const barrelBaseY = gunTop - gunHeight * 0.02;
-  const projectedVoxels = projectGunSprite({
-    voxelGrid: GUN_BARREL_VOXEL_GRID,
-    screenX: centerX,
-    screenY: barrelBaseY,
-    scale: barrelScale,
-  });
-  for (const voxel of projectedVoxels) {
-    ctx.fillStyle = voxel.color;
-    ctx.fillRect(
-      voxel.screenX - voxel.size / 2,
-      voxel.screenY - voxel.size / 2,
-      voxel.size,
-      voxel.size,
-    );
   }
 
   ctx.restore();

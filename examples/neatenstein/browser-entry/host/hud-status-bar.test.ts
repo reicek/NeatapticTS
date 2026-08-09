@@ -39,6 +39,7 @@ interface NeonStatusBarHud {
   hiveFill: HTMLElement;
   killsLabel: HTMLElement;
   deathsLabel: HTMLElement;
+  mugshot: { canvas: HTMLCanvasElement };
   update: (state: NeonStatusBarState) => void;
 }
 
@@ -371,5 +372,41 @@ describe('Neatenstein neon Wolfenstein-style HUD status bar', () => {
 
       expect(hud.deathsLabel.textContent).toBe('0');
     });
+  });
+});
+
+describe('AC-0908: kills counter on left, deaths counter on right', () => {
+  it('places the kills K: prefix as the first child of the bar', async () => {
+    createHudFixture();
+    const { createNeonStatusBar } =
+      (await import('./hud.ts')) as unknown as NeonStatusBarModule;
+    const hud = createNeonStatusBar(HUD_OUTPUT_ID);
+
+    const firstChild = hud.bar.firstChild as HTMLElement;
+    expect(firstChild).toBeDefined();
+    expect(firstChild.textContent).toBe('K:');
+  });
+
+  it('places the deaths label as the last child of the bar', async () => {
+    createHudFixture();
+    const { createNeonStatusBar } =
+      (await import('./hud.ts')) as unknown as NeonStatusBarModule;
+    const hud = createNeonStatusBar(HUD_OUTPUT_ID);
+
+    const lastChild = hud.bar.lastChild as HTMLElement;
+    expect(lastChild).toBeDefined();
+    expect(lastChild.textContent).toBe('0');
+    expect(lastChild.style.color).toBe(NEON_MAGENTA);
+  });
+
+  it('mugshot canvas is absolutely positioned and centered on screen', async () => {
+    createHudFixture();
+    const { createNeonStatusBar } =
+      (await import('./hud.ts')) as unknown as NeonStatusBarModule;
+    const hud = createNeonStatusBar(HUD_OUTPUT_ID);
+
+    expect(hud.mugshot.canvas.style.position).toBe('absolute');
+    expect(hud.mugshot.canvas.style.left).toBe('50%');
+    expect(hud.mugshot.canvas.style.transform).toContain('translateX');
   });
 });

@@ -68,6 +68,8 @@ export interface EnemyState {
 export interface GunState {
   /** Current vertical screen-space recoil offset applied to the gun overlay. */
   recoilOffset: number;
+  /** True while the gun is actively firing (drives muzzle-flash burst). */
+  firing: boolean;
 }
 
 /** One traveling plasma projectile owned by the host simulation. */

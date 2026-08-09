@@ -179,6 +179,7 @@ describe('Neatenstein game tick', () => {
       expect(next.bolts.length).toBeGreaterThan(0);
       expect(next.bolts.every((b: { active: boolean }) => b.active)).toBe(true);
       expect(next.gun.recoilOffset).toBe(NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX);
+      expect(next.gun.firing).toBe(true);
     });
 
     it('retains existing bolts that remain active through the tick', async () => {
@@ -232,6 +233,7 @@ describe('Neatenstein game tick', () => {
         16,
       );
       expect(next.gun.recoilOffset).toBe(0);
+      expect(next.gun.firing).toBe(false);
     });
 
     it('does not set gun recoil when firing with no ammo', async () => {
@@ -250,6 +252,7 @@ describe('Neatenstein game tick', () => {
       });
       expect(next.bolts.length).toBe(0);
       expect(next.gun.recoilOffset).toBe(0);
+      expect(next.gun.firing).toBe(false);
     });
   });
 
@@ -487,9 +490,19 @@ describe('Neatenstein game tick', () => {
       const { decayGunRecoil } =
         // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
         (await import('./tick.ts')) as Record<string, any>;
-      const gun = { recoilOffset: 10 };
+      const gun = { recoilOffset: 10, firing: false };
       const next = decayGunRecoil(gun, 16);
       expect(next.recoilOffset).toBeLessThan(gun.recoilOffset);
+      expect(next.firing).toBe(false);
+    });
+
+    it('resets firing to false even when the input gun was firing', async () => {
+      const { decayGunRecoil } =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        (await import('./tick.ts')) as Record<string, any>;
+      const gun = { recoilOffset: 10, firing: true };
+      const next = decayGunRecoil(gun, 16);
+      expect(next.firing).toBe(false);
     });
   });
 });

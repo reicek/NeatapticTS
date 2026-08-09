@@ -45,12 +45,25 @@
 
 ## 3. Voxel cannon
 
-- `examples/neatenstein/browser-entry/renderer/gun.ts` draws the gun body with vector gradients and side planes.
-- `examples/neatenstein/browser-entry/renderer/gun-sprite.ts` only projects a 5×5 barrel cap (`GUN_BARREL_VOXEL_GRID`).
-- **Finding: no full voxel player-weapon descriptor exists.** Only the small barrel cap is wired into `renderGunOverlay`.
-- Plan: create a new procedural weapon descriptor module (`examples/neatenstein/scripts/voxel-gun.ts`) that imports `Voxel`/`VoxelGrid` from `scripts/voxel-enemy.ts` and describes a chunky rotary receiver + barrel cluster in neon white/teal/dark vent colors, with an optional muzzle-flash burst on fire.
-- Wire into `renderGunOverlay` so the vector body can be optionally replaced/augmented by the voxel projection.
-- The `GunState` firing signal must be tick-derived: set true in the `tick.ts` fire block and reset false in `decayGunRecoil`; this keeps the muzzle-flash deterministic and avoids wall-clock animation state in `GameState`.
+- `examples/neatenstein/browser-entry/renderer/gun.ts` originally drew the gun body with vector gradients and side planes, then was rewritten in Step 04b to project a procedural voxel grid from `scripts/voxel-gun.ts`.
+- `examples/neatenstein/browser-entry/renderer/gun-sprite.ts` projects the sparse `VoxelGrid` into screen-space squares.
+- **User feedback (2026-08-09):** the Step 04b result looks like a blocky vertical voxel column, not a weapon. The user requested a palette-indexed grid array file (like `robot-sprite-data.js`) so they can manually fine-tune pixels, reuse the existing decode/tint/render pipeline, and keep the code consistent.
+- **Revised plan:** create a new source-of-truth sprite asset `examples/neatenstein/gun-sprite-data.js` exporting `GUN_SPRITE_SCALE`, `GUN_SPRITE_PALETTE`, and `GUN_SPRITE_FRAMES` (at least `idle` and `fire`). The format mirrors `robot-sprite-data.js`: numeric palette indices, rows of cells, nearest-neighbor decode, optional palette-swap tinting.
+- Add a shared decoder `examples/neatenstein/browser-entry/renderer/gun-sprite-decode.ts` (or extend `robot-sprite-decode.ts`) that decodes the palette-indexed grid into a scaled RGBA snapshot.
+- Update `renderGunOverlay` to draw the decoded 2D sprite at the bottom center of the viewport, applying `GunState.recoilOffset` before drawing. Remove the dependency on `scripts/voxel-gun.ts` and the `gun-sprite.ts` voxel projector.
+- The `GunState.firing` signal remains tick-derived: when true, render the `fire` frame (which includes a muzzle-flash burst above the barrel tip) instead of `idle`.
+- Palette design:
+  - `0` transparent
+  - `1` dark outline
+  - `2` dark receiver body
+  - `3` metallic dark / vents
+  - `4` neon white / metallic barrel
+  - `5` teal accent / energy strip
+  - `6` teal glow / muzzle ring
+  - `7` muzzle flash (semi-transparent warm yellow-white)
+  - `8` metallic gray / barrel shadow
+- The `idle` frame must be a wide, horizontally elongated Wolfenstein-style chaingun silhouette (width/height ~1.6) with a sharp angular profile: wide dark receiver at the bottom, a narrower metallic barrel cluster rising from the center, and a glowing teal muzzle ring at the tip.
+- The `fire` frame reuses the `idle` body but adds muzzle-flash pixels above the barrel tip.
 
 ## 4. Death / respawn / kill counter
 
