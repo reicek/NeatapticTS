@@ -345,6 +345,10 @@ export function createEnemyControllerState(
  * @param distanceMap - BFS distance map from the player position.
  * @param dtMs - Tick duration in milliseconds.
  * @param hitscanEvents - Array to append any fire event to.
+ * @param injectedWeights - Champion MLP weights from the current population
+ *   snapshot. When provided, overrides the per-enemy weights for this tick,
+ *   including respawns (which previously forced `undefined`). When omitted,
+ *   the previous-or-default weights are preserved (backward-compatible).
  * @returns New controlled enemy descriptor.
  */
 function updateControlledEnemy(
@@ -356,6 +360,7 @@ function updateControlledEnemy(
   distanceMap: DistanceMap,
   dtMs: number,
   hitscanEvents: HitscanEvent[],
+  injectedWeights?: Float32Array | undefined,
 ): ControlledEnemy {
   const isRespawn =
     previous !== undefined && !previous.active && enemyState.health > 0;
@@ -394,7 +399,8 @@ function updateControlledEnemy(
   let shootBlinkTicks = isRespawn ? 0 : previousOrDefault.shootBlinkTicks;
   let flankStallTicks = isRespawn ? 0 : previousOrDefault.flankStallTicks;
   let bfsStallTicks = isRespawn ? 0 : previousOrDefault.bfsStallTicks;
-  const weights = isRespawn ? undefined : previousOrDefault.weights;
+  const weights =
+    injectedWeights ?? (isRespawn ? undefined : previousOrDefault.weights);
   const variantId = isRespawn ? 0 : previousOrDefault.variantId;
   let position = isRespawn
     ? { ...enemyState.position }
@@ -655,7 +661,6 @@ function updateControlledEnemy(
         weights !== undefined
       ) {
         try {
-          /* istanbul ignore next -- dead code: isRespawn clears weights before MLP guard at line 655 */
           const prevStepDist = isRespawn
             ? -1
             : previousOrDefault.previousStepDistance;
@@ -1107,17 +1112,25 @@ function separateEnemies(
  * replaced at the same index while the previous one was fully de-rezzed, the
  * new enemy receives fresh controller state.
  *
+ * When `weights` is provided, the champion MLP weights are injected into every
+ * enemy (including respawns), activating the MLP re-ranking branch. When
+ * omitted, the previous-or-default weights are preserved (backward-compatible).
+ *
  * @param controller - Previous controller state.
- * @param state - Current game snapshot.
+ * @param state - Current game state.
  * @param collisionMap - Map queried for solid cells.
  * @param dtMs - Tick duration in milliseconds.
- * @returns New controller state and any hitscan events produced this tick.
+ * @param weights - Optional champion MLP weights from the current population
+ *   snapshot. Activates MLP re-ranking when provided.
+ * @returns New controller state with updated enemy descriptors and hitscan
+ *   events.
  */
 export function updateEnemyController(
   controller: EnemyControllerState,
   state: GameState,
   collisionMap: CollisionMap,
   dtMs: number,
+  weights?: Float32Array | undefined,
 ): EnemyControllerState {
   const resolvedDtMs = resolveTimestepMs(dtMs);
   const previousByIndex = new Map(
@@ -1149,6 +1162,7 @@ export function updateEnemyController(
         distanceMap,
         resolvedDtMs,
         hitscanEvents,
+        weights,
       ),
     );
   }

@@ -224,11 +224,9 @@ export function lerpNeatensteinState<T extends Record<string, number>>(
       continue;
     }
 
-    if (hasPreviousValue) {
-      // The field was removed in the current snapshot. Preserve the previous
-      // finite value so the result remains stable for this render frame.
-      result[key] = readFiniteSnapshotNumber('previous', key, previous[key]);
-    }
+    // The field was removed in the current snapshot. Preserve the previous
+    // finite value so the result remains stable for this render frame.
+    result[key] = readFiniteSnapshotNumber('previous', key, previous[key]);
   }
 
   return result as T;

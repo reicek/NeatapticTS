@@ -3,6 +3,7 @@
 ## Question
 
 Why is Neatenstein auto / NEAT mode not working? Specifically:
+
 - Why does selecting `humanMode: 'auto'` in the UI have no effect on gameplay?
 - Why does the NEAT progressive evolution (enemy population + main-agent champion) never progress?
 - Where is the gap between the intended NEAT progressive evolution and the current behavior?

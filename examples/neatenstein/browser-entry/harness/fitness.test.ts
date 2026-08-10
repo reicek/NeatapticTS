@@ -1,7 +1,9 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type * as Fitness from './fitness';
+import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../host/game/constants';
 import type { EnemyEpisodeTelemetry } from './types';
+import type { EpisodeTelemetry, GameState } from '../host/game/types';
 
 /**
  * Contract tests for examples/neatenstein/browser-entry/harness/fitness.ts.
@@ -15,6 +17,7 @@ interface FitnessModule {
   computeCombatQualitySignal: typeof Fitness.computeCombatQualitySignal;
   computeEnemyNavigationFitness: typeof Fitness.computeEnemyNavigationFitness;
   computeEnemyTeamFitness: typeof Fitness.computeEnemyTeamFitness;
+  extractCombatQualitySignal: typeof Fitness.extractCombatQualitySignal;
   NEATENSTEIN_PARSIMONY_LOWER_BOUND: typeof Fitness.NEATENSTEIN_PARSIMONY_LOWER_BOUND;
   NEATENSTEIN_PARSIMONY_UPPER_BOUND: typeof Fitness.NEATENSTEIN_PARSIMONY_UPPER_BOUND;
 }
@@ -172,6 +175,23 @@ describe('Neatenstein harness fitness', () => {
         parsimonyDensityPenalty: 0,
       });
       expect(good).toBeGreaterThan(bad);
+    });
+
+    it('treats missing gameState.deaths as zero when extracting combat signal', async () => {
+      const { extractCombatQualitySignal } =
+        (await import('./fitness.ts')) as FitnessModule;
+      const gameState = {
+        episodeTimeMs: NEATENSTEIN_FIXED_TIMESTEP_MS * 10,
+        player: { maxHealth: 100, health: 90 },
+        kills: 2,
+      } as GameState;
+      const telemetry = {
+        damageDealt: 5,
+        aimMissRate: 0.1,
+      } as EpisodeTelemetry;
+      const signal = extractCombatQualitySignal(gameState, telemetry);
+      expect(signal.damageTaken).toBe(10);
+      expect(signal.survivalTicks).toBe(10);
     });
   });
 

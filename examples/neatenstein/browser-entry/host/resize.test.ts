@@ -43,5 +43,50 @@ describe('Neatenstein host canvas resize', () => {
         zBufferLength: 320,
       });
     });
+
+    it('uses the canvas width as the worker tier column count', async () => {
+      const { handleNeatensteinResize } =
+        await loadModule<typeof import('./resize.ts')>('./resize.ts');
+      const state = createRenderState();
+      const result = handleNeatensteinResize(state, 'worker');
+      expect({
+        columnStride: result.columnStride,
+        frameColumnCount: result.frame.columnCount,
+      }).toEqual({
+        columnStride: 1,
+        frameColumnCount: 640,
+      });
+    });
+
+    it('throws when canvas dimensions are not finite', async () => {
+      const { handleNeatensteinResize } =
+        await loadModule<typeof import('./resize.ts')>('./resize.ts');
+      const state = createRenderState();
+      state.canvasWidth = NaN;
+      state.canvasHeight = Infinity;
+      expect(() => handleNeatensteinResize(state, 'cpu')).toThrow(
+        'Canvas dimensions must be finite numbers',
+      );
+    });
+
+    it('throws when canvas dimensions are not positive', async () => {
+      const { handleNeatensteinResize } =
+        await loadModule<typeof import('./resize.ts')>('./resize.ts');
+      const state = createRenderState();
+      state.canvasWidth = 0;
+      state.canvasHeight = -1;
+      expect(() => handleNeatensteinResize(state, 'cpu')).toThrow(
+        'Canvas dimensions must be positive',
+      );
+    });
+
+    it('throws when the render tier is unknown', async () => {
+      const { handleNeatensteinResize } =
+        await loadModule<typeof import('./resize.ts')>('./resize.ts');
+      const state = createRenderState();
+      expect(() =>
+        handleNeatensteinResize(state, 'unknown' as unknown as 'cpu'),
+      ).toThrow('Unknown render tier');
+    });
   });
 });

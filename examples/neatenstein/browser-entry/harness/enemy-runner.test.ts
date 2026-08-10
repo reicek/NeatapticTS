@@ -1,5 +1,6 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 
+import * as enemyNavigation from '../../scripts/enemy-navigation';
 import { activateMlp, createMlpEnemyPopulation } from './enemy-mlp';
 import { runEnemyWaveRunner, simulateEnemyEpisode } from './enemy-runner';
 import { getEnemySnapshot, refreshEnemySnapshots } from './snapshot';
@@ -207,6 +208,17 @@ describe('Neatenstein headless enemy wave runner', () => {
       expect(telemetry.bfsDistances.every((d) => typeof d === 'number')).toBe(
         true,
       );
+    });
+
+    it('reports finalDistance = -1 when the BFS distance is unreachable', () => {
+      const distanceSpy = jest
+        .spyOn(enemyNavigation, 'getDistance')
+        .mockReturnValue(-1);
+      const snapshot = { kind: 'mlp' as const, weights: new Float32Array(90) };
+      const telemetry = simulateEnemyEpisode(snapshot, 1);
+
+      expect(telemetry.finalDistance).toBe(-1);
+      distanceSpy.mockRestore();
     });
 
     it('always reports enemiesSurvived = 1 (simplified single-enemy rollout)', () => {

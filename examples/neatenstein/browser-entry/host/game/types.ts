@@ -202,6 +202,35 @@ export interface CreateGameStateOptions {
   seed?: number;
 }
 
+/**
+ * Per-episode combat telemetry accumulated during a Neatenstein fitness episode.
+ *
+ * The fitness harness reads these counters after the episode completes to
+ * derive combat-quality signals such as accuracy and damage efficiency. All
+ * counters start at zero and are incremented by the combat functions
+ * ({@link fireBolt} increments `shotsFired`; {@link applyEnemyDamage} increments
+ * `damageDealt` and `shotsHit`). The `aimMissRate` field is recomputed from
+ * the raw counters on every update.
+ *
+ * @property damageDealt - Cumulative damage applied to enemies.
+ * @property shotsFired - Total bolts the player fired during the episode.
+ * @property shotsHit - Total bolts that struck an enemy.
+ * @property aimMissRate - Fraction of shots that missed: `(shotsFired - shotsHit) / shotsFired`, or `0` when no shots were fired.
+ */
+export interface EpisodeTelemetry {
+  /** Cumulative damage applied to enemies during the episode. */
+  damageDealt: number;
+  /** Total number of bolts fired by the player. */
+  shotsFired: number;
+  /** Total number of bolts that struck an enemy. */
+  shotsHit: number;
+  /**
+   * Fraction of shots that missed: `(shotsFired - shotsHit) / shotsFired`.
+   * Returns `0` when no shots have been fired.
+   */
+  aimMissRate: number;
+}
+
 /** Complete deterministic snapshot of one Neatenstein game instance. */
 export interface GameState {
   /** Seed used to create this snapshot; replay uses the same seed. */
@@ -259,4 +288,14 @@ export interface GameState {
    * duration defined in the constants module.
    */
   episodeDurationMs?: number;
+  /**
+   * Per-episode combat telemetry accumulated by `fireBolt` and
+   * `applyEnemyDamage`.
+   *
+   * Optional for backward compatibility with existing state factories that do
+   * not initialize it; combat functions initialize it to zero-valued defaults
+   * when absent. The fitness harness reads these counters after the episode
+   * completes.
+   */
+  telemetry?: EpisodeTelemetry;
 }

@@ -52,4 +52,58 @@ describe('Neatenstein render-side state interpolation', () => {
       posY: 15,
     });
   });
+
+  it('throws when alpha is not finite', async () => {
+    const { lerpNeatensteinState } =
+      await loadModule<typeof import('./interpolate.ts')>('./interpolate.ts');
+    const prev = createStateFixture();
+    const curr = createStateFixture();
+    expect(() => lerpNeatensteinState(prev, curr, NaN)).toThrow(
+      'alpha must be a finite number',
+    );
+    expect(() => lerpNeatensteinState(prev, curr, Infinity)).toThrow(
+      'alpha must be a finite number',
+    );
+  });
+
+  it('clamps alpha outside [0, 1]', async () => {
+    const { lerpNeatensteinState } =
+      await loadModule<typeof import('./interpolate.ts')>('./interpolate.ts');
+    const prev = createStateFixture();
+    const curr = { ...prev, posX: 99 };
+    expect(lerpNeatensteinState(prev, curr, -0.5)).toEqual(prev);
+    expect(lerpNeatensteinState(prev, curr, 1.5)).toEqual(curr);
+  });
+
+  it('copies new fields from the current snapshot', async () => {
+    const { lerpNeatensteinState } =
+      await loadModule<typeof import('./interpolate.ts')>('./interpolate.ts');
+    const prev = { posX: 1 };
+    const curr = { posX: 3, posY: 5 };
+    expect(lerpNeatensteinState(prev, curr, 0.5)).toEqual({
+      posX: 2,
+      posY: 5,
+    });
+  });
+
+  it('carries over fields removed in the current snapshot', async () => {
+    const { lerpNeatensteinState } =
+      await loadModule<typeof import('./interpolate.ts')>('./interpolate.ts');
+    const prev = { posX: 1, posY: 2 };
+    const curr = { posX: 3 };
+    expect(lerpNeatensteinState(prev, curr, 0.5)).toEqual({
+      posX: 2,
+      posY: 2,
+    });
+  });
+
+  it('throws when a snapshot field is not finite', async () => {
+    const { lerpNeatensteinState } =
+      await loadModule<typeof import('./interpolate.ts')>('./interpolate.ts');
+    const prev = { posX: NaN };
+    const curr = { posX: 1 };
+    expect(() => lerpNeatensteinState(prev, curr, 0.5)).toThrow(
+      'previous.posX must be a finite number',
+    );
+  });
 });

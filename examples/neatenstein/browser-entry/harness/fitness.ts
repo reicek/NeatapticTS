@@ -19,6 +19,7 @@ import type {
   EnemyTeamFitnessConfig,
   FitnessScore,
 } from './types';
+import type { EpisodeTelemetry, GameState } from '../host/game/types';
 import {
   NEATENSTEIN_WEIGHT_SURVIVAL_TICKS,
   NEATENSTEIN_WEIGHT_DAMAGE_DEALT,
@@ -34,6 +35,7 @@ import {
   NEATENSTEIN_ENEMY_EXPLORATION_BONUS,
   NEATENSTEIN_ENEMY_STAGNATION_THRESHOLD,
   NEATENSTEIN_ENEMY_STAGNATION_PENALTY,
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
 } from './constants';
 
 /**
@@ -222,4 +224,55 @@ export function computeEnemyTeamFitness(
     telemetry.enemiesSurvived * survivalWeight;
 
   return navigationFitness * navigationWeight + combatFitness * combatWeight;
+}
+
+/**
+ * Extract a {@link CombatQualitySignal} from real game telemetry and final
+ * game state (AC-088).
+ *
+ * Maps the raw per-episode counters accumulated by the combat simulation
+ * (`EpisodeTelemetry`) and the final `GameState` snapshot into the structured
+ * combat-quality signal consumed by {@link computeCombatQualitySignal}.
+ *
+ * ```text
+ * survivalTicks = gameState.episodeTimeMs / NEATENSTEIN_FIXED_TIMESTEP_MS
+ * damageDealt   = telemetry.damageDealt
+ * kills         = gameState.kills
+ * damageTaken   = (deaths * maxHealth) + (maxHealth − player.health)
+ * aimMissRate   = telemetry.aimMissRate
+ * ```
+ *
+ * `complexityBonus` and `parsimonyDensityPenalty` default to 0; the selection
+ * step may enrich the signal afterwards.
+ *
+ * @param gameState - Final game state snapshot after the episode completes.
+ * @param telemetry - Per-episode combat telemetry accumulated during the run.
+ * @returns A {@link CombatQualitySignal} derived from real gameplay metrics.
+ *
+ * @example
+ * ```ts
+ * const signal = extractCombatQualitySignal(finalState, telemetry);
+ * const fitness = computeCombatQualitySignal(signal, complexity);
+ * ```
+ */
+export function extractCombatQualitySignal(
+  gameState: GameState,
+  telemetry: EpisodeTelemetry,
+): CombatQualitySignal {
+  const maxHealth = gameState.player.maxHealth;
+  const deaths = gameState.deaths ?? 0;
+  const damageTaken =
+    deaths * maxHealth + Math.max(0, maxHealth - gameState.player.health);
+
+  return {
+    survivalTicks: Math.round(
+      gameState.episodeTimeMs / NEATENSTEIN_FIXED_TIMESTEP_MS,
+    ),
+    damageDealt: telemetry.damageDealt,
+    kills: gameState.kills,
+    damageTaken,
+    aimMissRate: telemetry.aimMissRate,
+    complexityBonus: 0,
+    parsimonyDensityPenalty: 0,
+  };
 }

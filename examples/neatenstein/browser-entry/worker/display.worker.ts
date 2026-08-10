@@ -72,7 +72,12 @@ import {
   type GameTickInputSnapshot,
 } from '../host/game/tick';
 import { fireEnemyBolt } from '../host/game/combat';
+import {
+  NEATENSTEIN_ENEMY_MAX_CONCURRENT,
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+} from '../host/game/constants';
 import type { GameState } from '../host/game/types';
+import { advanceWave } from '../host/waves';
 import {
   NEATENSTEIN_BACKGROUND_RGB,
   NEATENSTEIN_RENDER_DISTANCE_CAP,
@@ -91,6 +96,13 @@ import {
   ENEMY_CONTROLLER_DE_REZ_DURATION_MS,
   type EnemyControllerState,
 } from '../../scripts/enemy-controller';
+import { extractSensors } from '../../scripts/enemy-navigation';
+import { createMlpEnemyPopulation } from '../harness/enemy-mlp';
+import type { MlpEnemyPopulation } from '../harness/enemy-mlp';
+import type { MlpSnapshot, Snapshot } from '../harness/types';
+import { runArmsRaceGeneration } from '../harness/arms-race';
+import { hashSeed } from '../harness/hash-seed';
+import type { Network } from 'neataptic';
 import {
   clipNeatensteinSprite,
   renderNeatensteinSprite,
@@ -145,12 +157,90 @@ let enemyControllerState: EnemyControllerState | null = null;
 let activeEnemySprites: NeatensteinSprite[] = [];
 
 /**
+ * Wave-clear detection flag set when the last enemy is cleared in the
+ * current wave.
+ *
+ * Tracks the `false → true` transition: the flag becomes `true` when the
+ * enemy roster transitions from non-empty to empty. It is consumed by
+ * `advanceWave` (P3S1) which increments `gameState.generation` and respawns
+ * the next wave. P2S1 only detects and stores the flag; it does NOT
+ * increment `generation`.
+ *
+ * @see AC-017
+ */
+let allEnemiesCleared = false;
+
+/**
+ * Previous-tick snapshot of {@link allEnemiesCleared} used to detect the
+ * `false → true` transition that triggers {@link advanceWave}.
+ *
+ * @see AC-037
+ */
+let prevAllEnemiesCleared = false;
+
+/**
+ * MLP enemy population maintained by the worker for champion weight injection.
+ *
+ * Created on init from the game seed and advanced on each tick so that
+ * refresh generations produce a new champion snapshot. The champion weights
+ * are injected into every enemy controller pass via the optional `weights`
+ * parameter of {@link updateEnemyController}.
+ *
+ * @see AC-024
+ */
+let enemyPopulation: MlpEnemyPopulation | null = null;
+
+/**
+ * Launch guard for the hoisted async Neat evaluation (P3S2).
+ *
+ * Stores the generation currently being evaluated, or `null` when no
+ * evaluation is in flight. Before starting a new `await neatPop.evaluate()/
+ * evolve()` cycle, the worker checks this guard and skips if already
+ * evaluating — concurrent wave-clears are dropped (not queued). On
+ * completion, `result.generation` must equal `pendingGeneration + 1` before
+ * the result is applied.
+ *
+ * @see AC-043a
+ */
+let pendingGeneration: number | null = null;
+
+/**
+ * Champion main-agent network from the most recent arms-race generation.
+ *
+ * Stored for Phase 4's player auto-mode controller, which activates this
+ * network to produce `GameTickInputSnapshot` from game-state sensors.
+ *
+ * @see AC-060a
+ */
+let championMainNetwork: Network | null = null;
+
+/**
  * Input snapshot captured from the most recent `input` message.
  *
  * Movement/look use the latest value, while one-shot actions such as fire and
  * dash are latched until the next simulation tick consumes them.
  */
 let pendingTickInput: GameTickInputSnapshot | null = null;
+
+/**
+ * Tracks the source of the most recent tick input for test introspection.
+ *
+ * `'auto'` — the champion NEAT network produced the tick input.
+ * `'human'` — the pending human input queue (or default zero) was used.
+ *
+ * @internal
+ */
+let lastTickInputSource: 'auto' | 'human' = 'human';
+
+/**
+ * Monotonic tick counter for the fallback auto-mode AI.
+ *
+ * Incremented on every fallback tick and used to gate firing via
+ * {@link NEATENSTEIN_FALLBACK_FIRE_INTERVAL}.  Reset to 0 on init.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+let fallbackTickCounter = 0;
 
 /** RGB of the neon wall color for X-axis-side hits. */
 const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 183, b: 255 } as const;
@@ -880,6 +970,7 @@ function buildAndPostFrame(): void {
         playerKills: gameState.kills,
         playerDeaths: gameState.deaths ?? 0,
         spawnCount: gameState.spawnCount,
+        generation: gameState.generation,
       },
     });
 
@@ -1127,6 +1218,312 @@ function inputMessageToTickInput(raw: unknown): GameTickInputSnapshot {
   };
 }
 
+/**
+ * Input size for the main-agent Neat population (sensor vector length).
+ *
+ * @see AC-039
+ */
+const NEATENSTEIN_MAIN_NEAT_INPUTS = 12;
+
+/**
+ * Output size for the main-agent Neat population (action vector length).
+ *
+ * @see AC-039
+ */
+const NEATENSTEIN_MAIN_NEAT_OUTPUTS = 5;
+
+/**
+ * Population size for the hoisted Neat evaluation.
+ *
+ * @see AC-039
+ */
+const NEATENSTEIN_MAIN_NEAT_POPSIZE = 4;
+
+/**
+ * Maximum look-delta per tick for auto-mode NEAT controller output.
+ *
+ * The NEAT network's third output is passed through `tanh` (range [-1, 1])
+ * and multiplied by this constant to produce the final `lookDelta` in radians.
+ * At 16 ms per tick, `π/4` ≈ 45° per tick gives a fast but controllable turn
+ * rate suitable for the neon raycasting arena.
+ *
+ * @see AC-066
+ */
+const NEATENSTEIN_MAIN_NEAT_MAX_TURN_RATE = Math.PI / 4;
+
+/**
+ * Turn rate (radians per tick) for the fallback auto-mode AI.
+ *
+ * At ≈15° per tick (60 ticks/s ≈ 900°/s), the fallback AI scans the arena
+ * fast enough to acquire enemies but not so fast that it overshoots.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+const NEATENSTEIN_FALLBACK_TURN_RATE = Math.PI / 12;
+
+/**
+ * Fire cooldown in ticks for the fallback auto-mode AI.
+ *
+ * At 16 ms per tick, 25 ticks ≈ 0.4 s between shots — enough to conserve the
+ * 50-round starting ammo while still maintaining suppressive fire.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+const NEATENSTEIN_FALLBACK_FIRE_INTERVAL = 25;
+
+/**
+ * Half-angle of the forward firing arc for the fallback auto-mode AI.
+ *
+ * The fallback AI only fires when an enemy's bearing is within ±30°
+ * (π/6 rad) of the player's facing direction, so shots are more likely
+ * to hit instead of wasting ammo into walls.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+const NEATENSTEIN_FALLBACK_FIRE_ARC = Math.PI / 6;
+
+/**
+ * Run the hoisted async Neat evaluation for one arms-race generation.
+ *
+ * The worker creates and owns the Neat population, evaluates it, evolves it,
+ * extracts the champion network, and calls the synchronous
+ * {@link runArmsRaceGeneration} with the champion. The result is applied to
+ * `gameState.generation` and the enemy snapshot.
+ *
+ * This function is non-blocking with respect to the render loop: Neat's
+ * `evaluate()` and `evolve()` are awaited, but the fitness function yields
+ * via `setTimeout(0)` micro-chunking so `onmessage` can fire between chunks.
+ *
+ * @param seed - Game seed.
+ * @param generation - Current generation (post-advanceWave).
+ * @param enemySnapshot - Frozen enemy snapshot from advanceWave.
+ * @param humanModeBool - Whether the game is in auto mode.
+ *
+ * @see AC-039, AC-040, AC-042, AC-043, AC-043a
+ */
+async function evaluateArmsRaceGeneration(
+  seed: number,
+  generation: number,
+  enemySnapshot: Snapshot,
+  humanModeBool: boolean,
+): Promise<void> {
+  // Create the Neat population with a deterministic seed from hashSeed.
+  const popSeed = hashSeed(seed, generation);
+
+  // Lazy-load Neat to avoid pulling the full neataptic entry point into the
+  // static import chain (which would trigger GPUDevice type errors in the
+  // test environment). The dynamic import is only resolved when the async
+  // evaluation actually runs.
+  const { Neat } = await import('neataptic');
+
+  // Minimal fitness function: activate the network with a zero input
+  // vector and return a deterministic score. The real episode-based
+  // fitness function is wired in Phase 5; this placeholder ensures the
+  // hoisted evaluation pipeline is exercised end-to-end.
+  const fitnessFn = (network: Network): number => {
+    const output = network.activate(
+      new Array(NEATENSTEIN_MAIN_NEAT_INPUTS).fill(0),
+    );
+    return output[0]!;
+  };
+
+  const neatPop = new Neat(
+    NEATENSTEIN_MAIN_NEAT_INPUTS,
+    NEATENSTEIN_MAIN_NEAT_OUTPUTS,
+    fitnessFn,
+    { popsize: NEATENSTEIN_MAIN_NEAT_POPSIZE, seed: popSeed },
+  );
+
+  // Evaluate and evolve the population (async, awaited as-is).
+  await neatPop.evaluate();
+  await neatPop.evolve();
+
+  // Extract the champion network (getFittest returns Network directly).
+  const championNetwork = neatPop.getFittest();
+
+  // Construct a minimal combat-quality signal from the champion's fitness
+  // score. The real episode telemetry is wired in Phase 5; this placeholder
+  // uses the champion's score as the survival-ticks proxy.
+  const championScore = championNetwork.score ?? 0;
+  const championQuality = {
+    survivalTicks: Math.max(0, Math.floor(championScore * 100)),
+    damageDealt: 0,
+    kills: 0,
+    damageTaken: 0,
+    aimMissRate: 0,
+    complexityBonus: 0,
+    parsimonyDensityPenalty: 0,
+  };
+
+  // Call the synchronous arms-race runner with the champion network.
+  const result = runArmsRaceGeneration({
+    seed,
+    generation,
+    enemySnapshot,
+    humanMode: humanModeBool,
+    championNetwork,
+    championQuality,
+  });
+
+  // Apply the result (generation always matches pendingGeneration + 1).
+  gameState = { ...gameState!, generation: result.generation };
+  // Store the champion main-agent network for Phase 4's player controller.
+  championMainNetwork = result.mainSnapshot.network!;
+
+  // Clear the launch guard.
+  pendingGeneration = null;
+}
+
+/**
+ * Map raw NEAT network outputs to a {@link GameTickInputSnapshot}.
+ *
+ * The mapping uses `tanh` for continuous outputs (move, look) to produce
+ * values in [-1, 1] regardless of the network's raw output range, and
+ * threshold comparisons for discrete outputs (fire, dash):
+ *
+ * - `move.x     = tanh(outputs[0])` — strafe
+ * - `move.y     = tanh(outputs[1])` — forward/back
+ * - `lookDelta  = tanh(outputs[2]) * NEATENSTEIN_MAIN_NEAT_MAX_TURN_RATE`
+ * - `fire       = outputs[3] > 0`
+ * - `dash       = outputs[4] > 0.5`
+ *
+ * @param outputs - Raw network activation outputs (length ≥ 5).
+ * @returns A game-tick input snapshot derived from the network output.
+ * @see AC-066
+ */
+function networkOutputToTickInput(outputs: number[]): GameTickInputSnapshot {
+  const out =
+    outputs.length >= 5
+      ? outputs
+      : [...outputs, ...new Array<number>(5 - outputs.length).fill(0)];
+
+  return {
+    move: {
+      x: Math.tanh(out[0]),
+      y: Math.tanh(out[1]),
+    },
+    lookDelta: Math.tanh(out[2]) * NEATENSTEIN_MAIN_NEAT_MAX_TURN_RATE,
+    fire: out[3] > 0,
+    dash: out[4] > 0.5,
+  };
+}
+
+/**
+ * Build a {@link GameTickInputSnapshot} from the champion NEAT network.
+ *
+ * Extracts real sensors from the current game state, activates the champion
+ * network, and maps the output vector to a tick input via
+ * {@link networkOutputToTickInput}.
+ *
+ * @param network - The champion main-agent network from the arms-race evaluation.
+ * @param state - Current deterministic game state (non-null).
+ * @param flatMap - Row-major wall map for raycast sensors.
+ * @param mapSize - Width and height of the square grid.
+ * @returns A game-tick input snapshot derived from the network output.
+ * @see AC-065, AC-066
+ */
+function buildAutoTickInput(
+  network: Network,
+  state: GameState,
+  flatMap: Uint8Array,
+  mapSize: number,
+): GameTickInputSnapshot {
+  const sensors = extractSensors(state, flatMap, mapSize);
+  const raw = network.activate(sensors);
+
+  return networkOutputToTickInput(raw);
+}
+
+/**
+ * Build a fallback auto-mode tick input when no champion network is available.
+ *
+ * **P6S2 — Chicken-and-egg deadlock resolution.**
+ *
+ * `championMainNetwork` starts as `null` and is only set after the first
+ * wave-clear via {@link evaluateArmsRaceGeneration}.  But clearing the first
+ * wave requires an active player, and the auto-mode player is paralyzed
+ * (zero input) without a champion network — a circular dependency.
+ *
+ * This fallback breaks the deadlock by providing a simple but effective
+ * exploration AI:
+ *
+ * - **Move forward** — keeps the player roaming the arena instead of standing
+ *   still, increasing the chance of encountering enemies.
+ * - **Turn toward the nearest active enemy** — uses the player's facing angle
+ *   and the enemy's world position to steer toward threats, capped by
+ *   {@link NEATENSTEIN_FALLBACK_TURN_RATE}.
+ * - **Fire with a cooldown** — only fires every
+ *   {@link NEATENSTEIN_FALLBACK_FIRE_INTERVAL} ticks AND only when an enemy
+ *   is within ±{@link NEATENSTEIN_FALLBACK_FIRE_ARC} of the facing direction,
+ *   conserving ammo and increasing hit probability.
+ * - **Scan turn** — when no enemy is visible, turns at the max fallback rate
+ *   to sweep the arena.
+ *
+ * Once the first wave is cleared and the arms-race evaluation runs, the
+ * evolved champion network replaces this fallback.
+ *
+ * @param state - Current deterministic game state (player + enemies).
+ * @returns A game-tick input snapshot with exploration + combat behavior.
+ * @see AC-060a
+ */
+function buildFallbackAutoTickInput(state: GameState): GameTickInputSnapshot {
+  fallbackTickCounter++;
+
+  // Default behavior: move forward, scan-turn, don't fire.
+  let lookDelta = NEATENSTEIN_FALLBACK_TURN_RATE;
+  let fire = false;
+
+  // Find the nearest active enemy and steer toward it.
+  const px = state.player.position.x;
+  const py = state.player.position.y;
+  const pa = state.player.angleRad;
+
+  let nearestDistSq = Infinity;
+  let nearestBearing = 0;
+  let foundEnemy = false;
+
+  for (const enemy of state.enemies) {
+    if (enemy.active === false) continue;
+    const dx = enemy.position.x - px;
+    const dy = enemy.position.y - py;
+    const distSq = dx * dx + dy * dy;
+    if (distSq < nearestDistSq) {
+      nearestDistSq = distSq;
+      nearestBearing = Math.atan2(dy, dx);
+      foundEnemy = true;
+    }
+  }
+
+  if (foundEnemy) {
+    // Normalize angle difference to [-π, π].
+    let angleDiff = nearestBearing - pa;
+    while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+    while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+    // Turn toward the enemy, capped by the fallback turn rate.
+    lookDelta = Math.max(
+      -NEATENSTEIN_FALLBACK_TURN_RATE,
+      Math.min(NEATENSTEIN_FALLBACK_TURN_RATE, angleDiff),
+    );
+
+    // Fire only when the enemy is within the forward arc AND the cooldown
+    // interval has elapsed — conserves ammo and increases hit probability.
+    if (
+      Math.abs(angleDiff) <= NEATENSTEIN_FALLBACK_FIRE_ARC &&
+      fallbackTickCounter % NEATENSTEIN_FALLBACK_FIRE_INTERVAL === 0
+    ) {
+      fire = true;
+    }
+  }
+
+  return {
+    move: { x: 0, y: 1 },
+    lookDelta,
+    fire,
+    dash: false,
+  };
+}
+
 self.onmessage = (event: MessageEvent) => {
   const data = event.data;
 
@@ -1152,6 +1549,13 @@ self.onmessage = (event: MessageEvent) => {
     workerZBuffer = null;
     workerContext = null;
     enemyControllerState = null;
+    allEnemiesCleared = false;
+    prevAllEnemiesCleared = false;
+    enemyPopulation = null;
+    pendingGeneration = null;
+    championMainNetwork = null;
+    lastTickInputSource = 'human';
+    fallbackTickCounter = 0;
 
     if (data.canvas) {
       workerCanvas = data.canvas as OffscreenCanvas;
@@ -1179,6 +1583,7 @@ self.onmessage = (event: MessageEvent) => {
     collisionMap = createCollisionMap(wallMap, NEATENSTEIN_MAP_SIZE);
     gameState = createGameState({ seed });
     enemyControllerState = createEnemyControllerState(gameState);
+    enemyPopulation = createMlpEnemyPopulation({ seed: gameState.seed });
 
     const version = data.version ?? NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION;
 
@@ -1204,31 +1609,73 @@ self.onmessage = (event: MessageEvent) => {
   if (data.type === 'simState') {
     latestState = data.state as NeatensteinRenderState;
 
-    if (!gameState || !collisionMap || !enemyControllerState) {
+    if (!gameState || !wallMap || !collisionMap || !enemyControllerState) {
       buildAndPostFrame();
       return;
     }
 
-    const tickInput = pendingTickInput ?? {
-      move: { x: 0, y: 0 },
-      lookDelta: 0,
-      fire: false,
-      dash: false,
-    };
+    // P4S1: Branch on humanMode to select the tick input source.
+    //   - 'auto'  → activate the champion NEAT network stored in worker scope
+    //               from P3S2's hoisted arms-race evaluation.
+    //   - 'human' (or undefined) → use the existing pendingTickInput path.
+    // @see AC-055, AC-056, AC-057, AC-059, AC-060
+    const humanMode = latestState?.humanMode;
+    let tickInput: GameTickInputSnapshot;
+    if (humanMode === 'auto' && championMainNetwork) {
+      try {
+        tickInput = buildAutoTickInput(
+          championMainNetwork,
+          gameState,
+          wallMap,
+          NEATENSTEIN_MAP_SIZE,
+        );
+        lastTickInputSource = 'auto';
+      } catch {
+        // If the network activation fails (e.g. corrupted network state),
+        // use the fallback auto AI to keep the simulation alive.
+        tickInput = buildFallbackAutoTickInput(gameState);
+        lastTickInputSource = 'auto';
+      }
+    } else if (humanMode === 'auto') {
+      // P6S2: No champion network yet — chicken-and-egg deadlock.
+      // The champion is only set after the first wave-clear, but clearing
+      // the first wave requires an active player.  Use the fallback AI
+      // (move forward, steer toward nearest enemy, fire with cooldown) so
+      // the auto-mode player can potentially clear the first wave and
+      // trigger the first arms-race evaluation.
+      // @see AC-060a
+      tickInput = buildFallbackAutoTickInput(gameState);
+      lastTickInputSource = 'auto';
+    } else {
+      tickInput = pendingTickInput ?? {
+        move: { x: 0, y: 0 },
+        lookDelta: 0,
+        fire: false,
+        dash: false,
+      };
+      lastTickInputSource = 'human';
+    }
 
-    // Derive the simulation timestep from the rAF delta-time field posted by
-    // the host. On the first frame (deltaMs === 0) fall back to a 16 ms
-    // reference so the simulation advances a single tick.
-    const deltaMs = data.state.deltaMs;
-    const timestepMs = deltaMs > 0 ? deltaMs : 16;
+    // Fixed-timestep determinism: always use the authoritative
+    // NEATENSTEIN_FIXED_TIMESTEP_MS regardless of the rAF delta-time posted by
+    // the host. The rAF cadence only gates *when* a tick runs, not *how much*
+    // simulation time advances. This is critical for replay determinism
+    // (Determinism Contract §2 — Level 2 ordered deterministic).
+    // @see AC-018
+    const timestepMs = NEATENSTEIN_FIXED_TIMESTEP_MS;
 
     // Advance the enemy controller BEFORE the game tick so movement, bolt, and
     // contact damage subsystems see synced enemy positions/health/active states.
+    // Inject champion MLP weights from the population snapshot so the MLP
+    // re-ranking branch is active. The snapshot refresh is gated by generation.
+    // @see AC-024, AC-025
+    let enemyWeights = resolveEnemyWeights(enemyPopulation, gameState);
     const controlled = updateEnemyController(
       enemyControllerState,
       gameState,
       collisionMap,
       timestepMs,
+      enemyWeights,
     );
     enemyControllerState = controlled;
 
@@ -1250,7 +1697,29 @@ self.onmessage = (event: MessageEvent) => {
       }),
     };
 
+    // Capture the enemy count BEFORE the tick so wave-clear detection can
+    // observe the false → true transition accurately.
+    const enemiesBeforeTick = gameState.enemies.length;
+
     gameState = gameTick(gameState, tickInput, collisionMap, timestepMs);
+
+    // Wave-clear detection (AC-017): track the false → true transition when all
+    // enemies are dead. Dead enemies stay in the array for index alignment (per
+    // waves.ts), so we check for *alive* enemies (health > 0 && active) rather
+    // than array length. When enemies existed before the tick and no alive
+    // enemies remain, set allEnemiesCleared so P3S1's advanceWave can consume
+    // it to increment generation and spawn the next wave.
+    // @see AC-017, AC-100
+    const hasAliveEnemiesAfterTick = (gameState?.enemies ?? []).some(
+      (e) => e.health > 0 && e.active !== false,
+    );
+    if (enemiesBeforeTick > 0 && !hasAliveEnemiesAfterTick) {
+      allEnemiesCleared = true;
+    }
+    if (hasAliveEnemiesAfterTick) {
+      // Reset the flag when a new wave starts so the next clear can re-trigger.
+      allEnemiesCleared = false;
+    }
 
     // Consume hitscan events produced by the enemy controller and spawn
     // visible enemy bolts. Each bolt uses the HitscanEvent origin/direction
@@ -1274,6 +1743,58 @@ self.onmessage = (event: MessageEvent) => {
         enemyBolts: [...(gameState.enemyBolts ?? []), ...newEnemyBolts],
       };
     }
+
+    // P3S1: On wave-clear transition (false → true), advance the wave using
+    // the MLP enemy population. advanceWave clears the arena, increments
+    // generation, evolves the population, and spawns the next wave. A fresh
+    // controller state is created to match the new enemy roster, and the
+    // evolved champion weights are injected for the next controller pass.
+    // In human-played mode the population still exists (created on init), so
+    // wave respawn works identically.
+    // @see AC-037, AC-038
+    if (
+      !prevAllEnemiesCleared &&
+      allEnemiesCleared &&
+      enemyPopulation &&
+      gameState
+    ) {
+      const advanceResult = advanceWave(gameState, {
+        population: enemyPopulation,
+        spawnCount: NEATENSTEIN_ENEMY_MAX_CONCURRENT,
+      });
+      gameState = advanceResult.state;
+      // Refresh the controller state for the new wave's enemy roster.
+      enemyControllerState = createEnemyControllerState(gameState);
+      // Inject the evolved champion weights into the next controller pass.
+      if (advanceResult.snapshot.kind === 'mlp') {
+        enemyWeights = (advanceResult.snapshot as MlpSnapshot).weights;
+      }
+
+      // P3S2: Kick off the hoisted async Neat evaluation for the arms-race
+      // generation. The worker creates a Neat population, evaluates and
+      // evolves it, extracts the champion network, and calls the synchronous
+      // runArmsRaceGeneration with the champion. Only one generation is in
+      // flight at a time; concurrent wave-clears are dropped (not queued).
+      // @see AC-039, AC-040, AC-042, AC-043, AC-043a
+      if (pendingGeneration === null && gameState) {
+        pendingGeneration = gameState.generation;
+        const armsRaceSeed = gameState.seed;
+        const armsRaceGeneration = gameState.generation;
+        const armsRaceSnapshot = advanceResult.snapshot;
+        const humanModeBool = latestState?.humanMode === 'auto';
+
+        // Fire-and-forget: the async evaluation runs concurrently with the
+        // render loop. The pendingGeneration guard prevents overlapping
+        // launches. Results are applied when the promise resolves.
+        void evaluateArmsRaceGeneration(
+          armsRaceSeed,
+          armsRaceGeneration,
+          armsRaceSnapshot,
+          humanModeBool,
+        );
+      }
+    }
+    prevAllEnemiesCleared = allEnemiesCleared;
 
     // Keep the worker authoritative. If an enemy was killed this tick, keep it
     // in the controller roster during the de-rez animation so
@@ -1332,6 +1853,7 @@ self.onmessage = (event: MessageEvent) => {
       gameState,
       collisionMap,
       0,
+      enemyWeights,
     );
 
     pendingTickInput = null;
@@ -1381,12 +1903,70 @@ export const __testOnlySyncWorkerCanvasSize = syncWorkerCanvasSize;
 export const __testOnlyResolveEnemyTeamColor = resolveEnemyTeamColor;
 
 /**
+ * Test-only introspection hook: expose the pending generation guard value.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetPendingGeneration = (): number | null =>
+  pendingGeneration;
+
+/**
+ * Test-only introspection hook: expose the champion main-agent network.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetChampionMainNetwork = (): Network | null =>
+  championMainNetwork;
+
+/**
+ * Test-only hook: inject a champion main-agent network for auto-mode testing.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only hook to inject champion network */
+export const __testOnlySetChampionMainNetwork = (
+  network: Network | null,
+): void => {
+  championMainNetwork = network;
+};
+
+/**
+ * Test-only introspection hook: expose the source of the most recent tick input.
+ *
+ * Returns `'auto'` when the champion NEAT network produced the last tick input,
+ * or `'human'` when the human input queue (or default zero) was used.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetLastTickInputSource = (): 'auto' | 'human' =>
+  lastTickInputSource;
+
+/**
  * Test-only hook: expose the wall fog-factor resolver for direct testing.
  *
  * @internal
  */
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyResolveWallFogFactor = resolveWallFogFactor;
+
+/**
+ * Test-only hook: expose the wave-clear detection flag for direct testing.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetAllEnemiesCleared = (): boolean => allEnemiesCleared;
+
+/**
+ * Test-only hook: expose the current game state for direct testing.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetGameState = (): GameState | null => gameState;
 
 /**
  * Test-only hook: place synthetic enemies near the player for deterministic
@@ -1430,3 +2010,38 @@ export const __testOnlyInjectTestEnemies = (
     })),
   };
 };
+
+/**
+ * Resolve the current champion MLP weights from the enemy population snapshot.
+ *
+ * Calls `update({ generation })` on the population to gate snapshot refresh,
+ * then narrows the snapshot to `MlpSnapshot` and returns its `weights` field.
+ * Returns `undefined` when the population is not initialized (e.g. before init
+ * or in human-played mode without a population), preserving backward-
+ * compatible BFS behavior.
+ *
+ * @param population - The MLP enemy population (or null).
+ * @param state - Current game state (used for the generation counter).
+ * @returns Champion weights, or `undefined` when no population is active.
+ * @see AC-024
+ */
+function resolveEnemyWeights(
+  population: MlpEnemyPopulation | null,
+  state: GameState,
+): Float32Array | undefined {
+  if (!population) return undefined;
+  const snapshot = population.update({ generation: state.generation });
+  if (snapshot.kind === 'mlp') {
+    return (snapshot as MlpSnapshot).weights;
+  }
+  return undefined;
+}
+
+/**
+ * Test-only introspection hook: expose the enemy population for direct testing.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetEnemyPopulation = (): MlpEnemyPopulation | null =>
+  enemyPopulation;

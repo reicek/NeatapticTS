@@ -13,18 +13,31 @@
  * @module
  */
 
-import seedrandom from 'seedrandom';
-
 import { createMlpEnemyPopulation } from './enemy-mlp';
 import { createSwarmEnemyPopulation } from './enemy-swarm';
 import { computeCombatQualitySignal } from './fitness';
 import { createSeedPack } from './seed-pack';
 import { selectVariant } from './select';
+import { hashSeed } from './hash-seed';
 import type {
   NgeMainAgentEmbryo,
   NgeMainAgentLifecycleConfig,
 } from '../../../../src/neat/nge-main-agent/neat.nge-main-agent.types';
 import { buildMainAgentEmbryo } from '../../../../src/neat/nge-main-agent/neat.nge-main-agent.embryo';
+import Network from '../../../../src/architecture/network/network';
+
+import { createEpisode, endEpisode } from '../host/game/episode';
+import { gameTick } from '../host/game/tick';
+import type { GameTickInputSnapshot } from '../host/game/tick';
+import {
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS,
+  NEATENSTEIN_MAIN_VARIANT_COUNT,
+} from './constants';
+import { extractCombatQualitySignal } from './fitness';
+import { buildNeatensteinMap, createCollisionMap } from '../renderer/map';
+import { NEATENSTEIN_MAP_SIZE } from '../constants';
+import { extractSensors } from '../../scripts/enemy-navigation';
 
 import type {
   CombatQualitySignal,
@@ -35,23 +48,6 @@ import type {
   SeedPack,
   Snapshot,
 } from './types';
-
-/**
- * Number of main-agent variants evaluated in a single generation.
- *
- * The main population is small because each variant must play a full episode;
- * selection pressure comes from deterministic replay rather than from a large
- * population.
- */
-const NEATENSTEIN_MAIN_VARIANT_COUNT = 8;
-
-/**
- * Maximum episode length in ticks (frames).
- *
- * Caps the deterministic simulation so a single generation finishes in
- * bounded time even when the agent survives indefinitely.
- */
-const NEATENSTEIN_MAX_EPISODE_TICKS = 240;
 
 /**
  * An evaluated main-agent variant, extending {@link Individual} with the raw
@@ -130,7 +126,10 @@ export function runMainGeneration(
   const enemySnapshot = resolveEnemySnapshot(options);
 
   // Step 2: Build the deterministic seed pack for the generation.
-  const seedPack = createSeedPack({ generation: options.generation });
+  const seedPack = createSeedPack({
+    generation: options.generation,
+    seed: options.seed,
+  });
 
   // Step 3: Materialise the main-agent variant population.
   const variants = createMainVariants(options.seed, options.generation);
@@ -294,83 +293,111 @@ function countComplexity(variant: MainVariant): number {
 }
 
 /**
- * Run one deterministic episode for a main-agent variant.
+ * Number of main-agent NEAT network inputs (sensor vector length).
  *
- * This is a lightweight headless stand-in for the full game episode. The
- * outcome depends on the variant id, the enemy snapshot, and the per-variant
- * episode seed so that fitness differences reflect the variant, not random
- * environmental noise.
+ * Mirrors the worker-side constant so the headless evaluation uses the same
+ * sensor layout as the live auto-mode controller.
+ */
+const NEATENSTEIN_MAIN_NEAT_INPUTS = 12;
+
+/**
+ * Number of main-agent NEAT network outputs (action vector length).
+ *
+ * Mirrors the worker-side constant so the headless evaluation produces the
+ * same tick-input mapping as the live auto-mode controller.
+ */
+const NEATENSTEIN_MAIN_NEAT_OUTPUTS = 5;
+
+/**
+ * Maximum look-delta per tick for headless evaluation NEAT controller output.
+ *
+ * @see AC-066
+ */
+const NEATENSTEIN_MAIN_NEAT_MAX_TURN_RATE = Math.PI / 4;
+
+/**
+ * Map a raw NEAT network output vector to a {@link GameTickInputSnapshot}.
+ *
+ * Mirrors the worker-side `networkOutputToTickInput` mapping so the headless
+ * evaluation and the live auto-mode controller produce identical tick inputs
+ * from the same network output.
+ *
+ * @param outputs - Raw activation output from the NEAT network.
+ * @returns A game-tick input snapshot for {@link gameTick}.
+ */
+function networkOutputToTickInput(outputs: number[]): GameTickInputSnapshot {
+  const out =
+    outputs.length >= NEATENSTEIN_MAIN_NEAT_OUTPUTS
+      ? outputs
+      : [
+          ...outputs,
+          ...new Array<number>(
+            NEATENSTEIN_MAIN_NEAT_OUTPUTS - outputs.length,
+          ).fill(0),
+        ];
+
+  return {
+    move: {
+      x: Math.tanh(out[0]),
+      y: Math.tanh(out[1]),
+    },
+    lookDelta: Math.tanh(out[2]) * NEATENSTEIN_MAIN_NEAT_MAX_TURN_RATE,
+    fire: out[3] > 0,
+    dash: out[4] > 0.5,
+  };
+}
+
+/**
+ * Run one deterministic headless episode for a main-agent variant.
+ *
+ * Creates a real game episode from the episode seed, constructs a deterministic
+ * NEAT network for the variant, and drives the player through the full game
+ * tick pipeline for {@link NEATENSTEIN_MAX_EPISODE_TICKS} ticks. The resulting
+ * {@link CombatQualitySignal} is extracted from the final game state.
  *
  * @param variant - Main-agent variant being evaluated.
- * @param enemySnapshot - Frozen enemy snapshot.
+ * @param enemySnapshot - Frozen enemy snapshot (reserved for future enemy AI
+ *   integration; not used in P5S1).
  * @param episodeSeed - Deterministic seed for this episode.
  * @returns Combat-quality signal summarising the episode.
  */
 function runEpisode(
   variant: MainVariant,
-  enemySnapshot: Snapshot,
+  _enemySnapshot: Snapshot,
   episodeSeed: number,
 ): CombatQualitySignal {
-  const rng = createEpisodeRng(variant, enemySnapshot, episodeSeed);
+  const episode = createEpisode({ seed: episodeSeed });
+  let state = episode.state;
+  const flatMap = buildNeatensteinMap(state.seed);
+  const collisionMap = createCollisionMap(flatMap, NEATENSTEIN_MAP_SIZE);
+  const network = new Network(
+    NEATENSTEIN_MAIN_NEAT_INPUTS,
+    NEATENSTEIN_MAIN_NEAT_OUTPUTS,
+    { seed: hashSeed(episodeSeed, variant.id) },
+  );
 
-  const survivalTicks = Math.floor(rng() * NEATENSTEIN_MAX_EPISODE_TICKS);
-  const damageDealt = Math.floor(rng() * 100);
-  const kills = Math.floor(rng() * 5);
-  const damageTaken = Math.floor(rng() * 50);
-  const aimMissRate = rng();
-  const complexityBonus = Math.floor(rng() * 10);
+  for (let tick = 0; tick < NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS; tick += 1) {
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    const raw = network.activate(sensors);
+    const out: number[] = Array.isArray(raw)
+      ? raw.map((v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0))
+      : new Array<number>(NEATENSTEIN_MAIN_NEAT_OUTPUTS).fill(0);
+    const tickInput = networkOutputToTickInput(out);
+    state = gameTick(
+      state,
+      tickInput,
+      collisionMap,
+      NEATENSTEIN_FIXED_TIMESTEP_MS,
+    );
+  }
 
-  return {
-    survivalTicks,
-    damageDealt,
-    kills,
-    damageTaken,
-    aimMissRate,
-    complexityBonus,
-    parsimonyDensityPenalty: 0,
+  const finalState = endEpisode(state);
+  const telemetry = finalState.telemetry ?? {
+    damageDealt: 0,
+    shotsFired: 0,
+    shotsHit: 0,
+    aimMissRate: 0,
   };
-}
 
-/**
- * Build a deterministic episode RNG from the variant, enemy, and seed.
- *
- * @param variant - Main-agent variant.
- * @param enemySnapshot - Frozen enemy snapshot.
- * @param episodeSeed - Per-variant episode seed.
- * @returns Seeded PRNG.
- */
-function createEpisodeRng(
-  variant: MainVariant,
-  enemySnapshot: Snapshot,
-  episodeSeed: number,
-): seedrandom.PRNG {
-  const enemyHash = hashEnemySnapshot(enemySnapshot);
-  return seedrandom(`${episodeSeed}:episode:${variant.id}:${enemyHash}`);
-}
-
-/**
- * Produce a short deterministic hash of an enemy snapshot.
- *
- * The hash is used to make episode outcomes depend on the enemy state without
- * needing the full game engine in this slice.
- *
- * @param enemySnapshot - Frozen enemy snapshot.
- * @returns Stable hash string.
- */
-function hashEnemySnapshot(enemySnapshot: Snapshot): string {
-  if (enemySnapshot.kind === 'mlp') {
-    let hash = 0;
-    for (let i = 0; i < enemySnapshot.weights.length; i++) {
-      hash =
-        ((hash * 31 + Math.round(enemySnapshot.weights[i] * 1_000)) | 0) >>> 0;
-    }
-    return `mlp:${hash}`;
-  }
-
-  let hash = 0;
-  for (const coordinate of enemySnapshot.coordinates) {
-    hash = ((hash * 31 + Math.round(coordinate.x * 1_000)) | 0) >>> 0;
-    hash = ((hash * 31 + Math.round(coordinate.y * 1_000)) | 0) >>> 0;
-  }
-  return `swarm:${hash}:${enemySnapshot.dna}`;
+  return extractCombatQualitySignal(finalState, telemetry);
 }

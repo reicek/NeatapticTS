@@ -16,13 +16,12 @@ import {
   NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_MAP_SIZE,
 } from './constants';
-import { applyEnemyDamage } from './combat';
 import { resolveContactDamage } from './collision';
 import { buildNeatensteinMap, createCollisionMap } from '../../renderer/map';
 import type { CollisionMap } from '../../renderer/map';
 import { createGameState } from './state';
 import { spawnWaveTick } from './waves';
-import type { EnemyState, GameState } from './types';
+import type { GameState } from './types';
 
 /**
  * Minimum valid episode duration in milliseconds.
@@ -314,58 +313,12 @@ export function endEpisode(state: GameState): GameState {
 }
 
 /**
- * Return the index of the nearest living enemy to the player.
- *
- * Ties are broken by lower index to keep the choice deterministic.
- *
- * @param enemies - Enemy roster to search.
- * @param playerPosition - Current player world position.
- * @returns Index of the nearest active enemy, or `-1` when none exist.
- */
-function findNearestActiveEnemyIndex(
-  enemies: EnemyState[],
-  playerPosition: { x: number; y: number },
-): number {
-  let bestIndex = -1;
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  for (let index = 0; index < enemies.length; index += 1) {
-    const enemy = enemies[index];
-
-    if (
-      (enemy.health ?? 0) <= 0 ||
-      enemy.active === false ||
-      !enemy.position ||
-      !Number.isFinite(enemy.position.x) ||
-      !Number.isFinite(enemy.position.y)
-    ) {
-      continue;
-    }
-
-    const distance = Math.hypot(
-      enemy.position.x - playerPosition.x,
-      enemy.position.y - playerPosition.y,
-    );
-
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestIndex = index;
-    }
-  }
-
-  return bestIndex;
-}
-
-/**
  * Run an episode from its initial state to completion using fixed timesteps.
  *
- * Controller inputs are intentionally ignored in this slice; the red-phase
- * contract only requires deterministic seed-based replay. A deterministic
- * damage bot throttles kills so the episode ends by clearing all spawned
- * enemies within the 15–25 second band.
- *
- * A step guard prevents infinite loops if malformed state or future completion
- * rules prevent natural termination.
+ * The episode loops {@link updateEpisode} until the step guard is reached.
+ * Player death triggers a respawn (not episode end) and the game features
+ * infinite waves, so there is no gameplay-based terminal condition — the
+ * step guard caps the loop at the configured episode duration.
  *
  * @param episode - Episode container returned by {@link createEpisode}.
  * @returns Final {@link GameState} after the episode ends.
@@ -374,30 +327,15 @@ export function runEpisode(episode: Episode): GameState {
   const durationMs = resolveEpisodeDurationMs(episode.durationMs);
   const timestepMs = resolveEpisodeTimestepMs(NEATENSTEIN_FIXED_TIMESTEP_MS);
   const maxSteps = resolveMaxEpisodeSteps(durationMs, timestepMs);
-  const botDamageCooldownMs = 250;
 
   let state = withEpisodeDuration(episode.state, durationMs);
-  const flatMap = buildNeatensteinMap(state.seed);
-  const collisionMap = createCollisionMap(flatMap, NEATENSTEIN_MAP_SIZE);
-  let botDamageCooldownRemainingMs = 0;
+  const collisionMap = createCollisionMap(
+    buildNeatensteinMap(state.seed),
+    NEATENSTEIN_MAP_SIZE,
+  );
 
-  for (let step = 0; step < maxSteps && !isEpisodeComplete(state); step += 1) {
+  for (let step = 0; step < maxSteps; step += 1) {
     state = updateEpisode(state, timestepMs, collisionMap);
-
-    botDamageCooldownRemainingMs -= timestepMs;
-
-    if (botDamageCooldownRemainingMs <= 0) {
-      const targetIndex = findNearestActiveEnemyIndex(
-        state.enemies,
-        state.player.position,
-      );
-
-      if (targetIndex >= 0) {
-        state = applyEnemyDamage(state, targetIndex);
-      }
-
-      botDamageCooldownRemainingMs = botDamageCooldownMs;
-    }
   }
 
   return endEpisode(state);

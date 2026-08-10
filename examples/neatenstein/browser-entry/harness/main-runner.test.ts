@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 
 import type * as MainRunner from './main-runner';
 import type { MlpSnapshot, SwarmSnapshot } from './types';
@@ -75,6 +75,17 @@ describe('Neatenstein harness main-runner', () => {
       expect(typeof result.survivalTicks).toBe('number');
     });
 
+    it('falls back to a generated swarm enemy snapshot when enemy.kind is swarm', async () => {
+      const { runMainGeneration } =
+        (await import('./main-runner.ts')) as MainRunnerModule;
+      const result = runMainGeneration({
+        seed: 3,
+        generation: 1,
+        enemy: { kind: 'swarm' },
+      });
+      expect(typeof result.survivalTicks).toBe('number');
+    });
+
     it('refreshes the fallback MLP enemy snapshot on refresh generations', async () => {
       const { runMainGeneration } =
         (await import('./main-runner.ts')) as MainRunnerModule;
@@ -138,6 +149,82 @@ describe('Neatenstein harness main-runner', () => {
       expect(
         (result as unknown as Record<string, unknown>).evaluatedEnemySnapshot,
       ).toEqual(enemySnapshot);
+    });
+  });
+
+  describe('P8S1-coverage-closure: main-runner edge branches', () => {
+    beforeEach(() => {
+      jest.resetModules();
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('pads network outputs shorter than the expected output count', async () => {
+      const networkModule =
+        (await import('../../../../src/architecture/network/network')) as unknown as {
+          default: { prototype: { activate: jest.Mock } };
+        };
+      const spy = jest
+        .spyOn(networkModule.default.prototype, 'activate')
+        .mockReturnValue([0.1, 0.2]);
+
+      const { runMainGeneration } =
+        (await import('./main-runner.ts')) as MainRunnerModule;
+      const result = runMainGeneration({ seed: 20, generation: 1 });
+      expect(typeof result.survivalTicks).toBe('number');
+      spy.mockRestore();
+    });
+
+    it('falls back to zero outputs when network activation returns a non-array', async () => {
+      const networkModule =
+        (await import('../../../../src/architecture/network/network')) as unknown as {
+          default: { prototype: { activate: jest.Mock } };
+        };
+      const spy = jest
+        .spyOn(networkModule.default.prototype, 'activate')
+        .mockReturnValue(undefined as unknown as number[]);
+
+      const { runMainGeneration } =
+        (await import('./main-runner.ts')) as MainRunnerModule;
+      const result = runMainGeneration({ seed: 21, generation: 1 });
+      expect(typeof result.survivalTicks).toBe('number');
+      spy.mockRestore();
+    });
+
+    it('sanitises non-finite network outputs to zero', async () => {
+      const networkModule =
+        (await import('../../../../src/architecture/network/network')) as unknown as {
+          default: { prototype: { activate: jest.Mock } };
+        };
+      const spy = jest
+        .spyOn(networkModule.default.prototype, 'activate')
+        .mockReturnValue([NaN, Infinity, -Infinity, 0.5, 0.5]);
+
+      const { runMainGeneration } =
+        (await import('./main-runner.ts')) as MainRunnerModule;
+      const result = runMainGeneration({ seed: 22, generation: 1 });
+      expect(typeof result.survivalTicks).toBe('number');
+      spy.mockRestore();
+    });
+
+    it('uses default telemetry when the episode ends without telemetry', async () => {
+      const episodeModule = await import('../host/game/episode');
+      const spy = jest.spyOn(episodeModule, 'endEpisode').mockImplementation(
+        (state) =>
+          ({
+            ...(state as unknown as Record<string, unknown>),
+            telemetry: undefined,
+          }) as ReturnType<typeof episodeModule.endEpisode>,
+      );
+
+      const { runMainGeneration } =
+        (await import('./main-runner.ts')) as MainRunnerModule;
+      const result = runMainGeneration({ seed: 23, generation: 1 });
+      expect(typeof result.survivalTicks).toBe('number');
+      expect(typeof result.damageDealt).toBe('number');
+      spy.mockRestore();
     });
   });
 });

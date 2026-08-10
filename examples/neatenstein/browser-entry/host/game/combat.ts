@@ -39,6 +39,7 @@ import type {
   BoltState,
   EnemyBoltState,
   EnemyImpactSpot,
+  EpisodeTelemetry,
   GameState,
   ImpactSpot,
   Vector2,
@@ -49,6 +50,30 @@ export { NEATENSTEIN_MUZZLE_OFFSET_CELLS } from './constants';
 
 /** Re-export the bolt damage constant for test contracts. */
 export { NEATENSTEIN_BOLT_DAMAGE } from './constants';
+
+/**
+ * Default zero-valued telemetry for a fresh episode.
+ *
+ * Used when a {@link GameState} does not yet carry a `telemetry` field, which
+ * happens for states created before any combat function has run.
+ *
+ * @returns A new `EpisodeTelemetry` with all counters at zero.
+ */
+function createDefaultTelemetry(): EpisodeTelemetry {
+  return { damageDealt: 0, shotsFired: 0, shotsHit: 0, aimMissRate: 0 };
+}
+
+/**
+ * Recompute `aimMissRate` from the raw shot counters.
+ *
+ * @param telemetry - Telemetry with updated raw counters.
+ * @returns Telemetry with `aimMissRate` synchronized to the current counters.
+ */
+function withAimMissRate(telemetry: EpisodeTelemetry): EpisodeTelemetry {
+  const { shotsFired, shotsHit } = telemetry;
+  const aimMissRate = shotsFired > 0 ? (shotsFired - shotsHit) / shotsFired : 0;
+  return { ...telemetry, aimMissRate };
+}
 
 /**
  * Result of attempting to fire the traveling plasma bolt.
@@ -217,6 +242,16 @@ export function fireBolt(state: GameState): FireBoltResult {
   nextState = {
     ...nextState,
     bolts: [...(nextState.bolts ?? []), bolt],
+  };
+
+  // Increment shotsFired telemetry for every successful shot.
+  const telemetryBeforeShot = nextState.telemetry ?? createDefaultTelemetry();
+  nextState = {
+    ...nextState,
+    telemetry: withAimMissRate({
+      ...telemetryBeforeShot,
+      shotsFired: telemetryBeforeShot.shotsFired + 1,
+    }),
   };
 
   // Only create a wall impact when the shot truly terminated on a wall within
@@ -389,6 +424,15 @@ export function applyEnemyDamage(
       : existing,
   );
 
+  // Increment damageDealt and shotsHit telemetry for this successful hit.
+  const damageThisShot = Math.min(NEATENSTEIN_BOLT_DAMAGE, enemy.health);
+  const telemetryBeforeHit = state.telemetry ?? createDefaultTelemetry();
+  const telemetryAfterHit = withAimMissRate({
+    ...telemetryBeforeHit,
+    damageDealt: telemetryBeforeHit.damageDealt + damageThisShot,
+    shotsHit: telemetryBeforeHit.shotsHit + 1,
+  });
+
   // On kill: spawn an ammo pickup at the enemy's death position.
   const newAmmoPickups = killedByThisShot
     ? [
@@ -407,6 +451,7 @@ export function applyEnemyDamage(
     enemies: newEnemies,
     kills: killedByThisShot ? state.kills + 1 : state.kills,
     ammoPickups: newAmmoPickups,
+    telemetry: telemetryAfterHit,
   };
 }
 

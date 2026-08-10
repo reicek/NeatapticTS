@@ -116,6 +116,54 @@ describe('Neatenstein host HUD overlay', () => {
     });
   });
 
+  describe('AC-501-S05-003b: Neon status bar rendering', () => {
+    it('exports createNeonStatusBar as a function', async () => {
+      const mod = (await loadModule('./hud.ts')) as Record<string, unknown>;
+      expect(typeof mod.createNeonStatusBar).toBe('function');
+    });
+
+    it('renders a default generation of 0 when generation is omitted', async () => {
+      createHudFixture();
+      const { createNeonStatusBar } = await loadModule('./hud.ts');
+      const hud = createNeonStatusBar(HUD_OUTPUT_ID);
+      hud.update({
+        playerHealth: 50,
+        playerMaxHealth: 100,
+        playerAmmo: 25,
+        playerMaxAmmo: 50,
+      });
+      expect(hud.generationLabel.textContent).toBe('0');
+    });
+
+    it('renders an explicit generation value', async () => {
+      createHudFixture();
+      const { createNeonStatusBar } = await loadModule('./hud.ts');
+      const hud = createNeonStatusBar(HUD_OUTPUT_ID);
+      hud.update({
+        playerHealth: 50,
+        playerMaxHealth: 100,
+        playerAmmo: 25,
+        playerMaxAmmo: 50,
+        generation: 7,
+      });
+      expect(hud.generationLabel.textContent).toBe('7');
+    });
+
+    it('falls back to 0 when generation is explicitly undefined', async () => {
+      createHudFixture();
+      const { createNeonStatusBar } = await loadModule('./hud.ts');
+      const hud = createNeonStatusBar(HUD_OUTPUT_ID);
+      hud.update({
+        playerHealth: 50,
+        playerMaxHealth: 100,
+        playerAmmo: 25,
+        playerMaxAmmo: 50,
+        generation: undefined,
+      });
+      expect(hud.generationLabel.textContent).toBe('0');
+    });
+  });
+
   describe('AC-501-S05-004: Wave announcement overlay', () => {
     beforeEach(() => {
       jest.useFakeTimers();

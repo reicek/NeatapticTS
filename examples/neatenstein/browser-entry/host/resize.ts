@@ -54,16 +54,6 @@ export interface NeatensteinResizeResult {
 }
 
 /**
- * Return whether a canvas dimension is finite and positive.
- *
- * @param value - Candidate canvas dimension.
- * @returns Whether the value is usable for resize calculations.
- */
-function isPositiveFiniteDimension(value: number): boolean {
-  return Number.isFinite(value) && value > 0;
-}
-
-/**
  * Validate the canvas dimensions carried by a render state.
  *
  * @param state - Render state to validate.
@@ -98,21 +88,13 @@ function assertValidCanvasDimensions(state: NeatensteinRenderState): void {
  * @param tier - Renderer tier to resolve.
  * @param canvasWidth - Active canvas backing-store width in pixels.
  * @returns Column count for the render path.
- * @throws {Error} When the tier is unknown or the canvas width is invalid.
+ * @throws {Error} When the tier is unknown.
  */
 function resolveColumnCount(
   tier: NeatensteinTier,
   canvasWidth: number,
 ): number {
   if (tier === 'worker') {
-    if (!isPositiveFiniteDimension(canvasWidth)) {
-      throw new Error(
-        `Worker canvas width must be a positive finite number, got ${String(
-          canvasWidth,
-        )}`,
-      );
-    }
-
     // Match the direct worker ray density to the backing-store width.
     return Math.max(1, Math.floor(canvasWidth));
   }

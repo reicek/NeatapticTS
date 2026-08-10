@@ -35,6 +35,15 @@ const workerOutfile = resolve(
 
 /**
  * Shared esbuild options used by both the host and worker bundles.
+ *
+ * The `alias` maps the bare `neataptic` specifier (used by the worker's
+ * dynamic `import('neataptic')` call) to the browser-safe entry point so
+ * esbuild bundles the browser-compatible version instead of trying to
+ * resolve the Node-oriented root entry. The `node:crypto` alias maps the
+ * Node.js crypto module to a browser-compatible pure-JS SHA-256 shim so the
+ * NGE DNA static import chain (worker → arms-race → main-runner → NGE DNA
+ * utils → node:crypto) bundles a synchronous shim instead of leaving a
+ * runtime `require("node:crypto")` that crashes in the browser.
  */
 const sharedBuildOptions = {
   bundle: true,
@@ -43,6 +52,13 @@ const sharedBuildOptions = {
   sourcemap: true,
   target: 'es2023',
   external: ['fs', 'child_process', 'path'],
+  alias: {
+    neataptic: resolve(repositoryRoot, 'src/browser-entry.ts'),
+    'node:crypto': resolve(
+      repositoryRoot,
+      'examples/neatenstein/browser-entry/node-crypto-shim.ts',
+    ),
+  },
   logLevel: 'info',
 };
 

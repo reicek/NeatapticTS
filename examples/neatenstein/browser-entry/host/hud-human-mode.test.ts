@@ -55,7 +55,7 @@ describe('Neatenstein host HUD human-mode selector', () => {
       }).toEqual({
         tag: 'SELECT',
         options: ['auto', 'human'],
-        initialMode: 'auto',
+        initialMode: 'human',
       });
     });
 
@@ -79,9 +79,9 @@ describe('Neatenstein host HUD human-mode selector', () => {
       const callback = jest.fn();
 
       hud.onToggle(callback);
-      hud.setMode('human');
+      hud.setMode('auto');
 
-      expect(callback).toHaveBeenCalledWith('human');
+      expect(callback).toHaveBeenCalledWith('auto');
     });
   });
 });

@@ -92,5 +92,27 @@ describe('Neatenstein harness arms-race', () => {
       }
       expect(result.enemySnapshot.weights).toEqual(frozen.weights);
     });
+
+    it('uses a default quality signal when championNetwork is provided without championQuality', async () => {
+      const { runArmsRaceGeneration } =
+        (await import('./arms-race.ts')) as ArmsRaceModule;
+      const championNetwork = {
+        activate: () => [],
+      } as unknown as import('neataptic').Network;
+      const result = runArmsRaceGeneration({
+        seed: 7,
+        generation: 1,
+        championNetwork,
+      });
+      expect(result.quality).toEqual({
+        survivalTicks: 0,
+        damageDealt: 0,
+        kills: 0,
+        damageTaken: 0,
+        aimMissRate: 0,
+        complexityBonus: 0,
+        parsimonyDensityPenalty: 0,
+      });
+    });
   });
 });

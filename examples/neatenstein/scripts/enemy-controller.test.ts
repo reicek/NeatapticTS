@@ -2479,6 +2479,158 @@ describe('MLP re-ranking and BFS fallback (AC-10.5b-002/003/004)', () => {
   });
 });
 
+describe('P2S2: MLP weight injection (AC-025, AC-026)', () => {
+  /**
+   * Build MLP weights that produce a deterministic output regardless of input.
+   * Reuses the same helper pattern as the MLP re-ranking block.
+   */
+  function buildDeterministicWeights(outputIndex: number): Float32Array {
+    const weights = new Float32Array(90);
+    weights[86 + outputIndex] = 10;
+    return weights;
+  }
+
+  /**
+   * AC-025: updateEnemyController accepts an optional 5th `weights`
+   * parameter and injects it into all enemies.
+   *
+   * When the weights param is provided, every enemy in the result should
+   * have those weights assigned (overriding any previously-set weights).
+   */
+  it('AC-025: injects weights via the 5th parameter into all enemies', () => {
+    const base = createGameState({ seed: 1 });
+    const state = stateWithEnemyAt(base, { x: 55.5, y: 58.5 });
+    let controller = createEnemyControllerState(state);
+    // Initially weights are undefined.
+    expect(controller.enemies[0].weights).toBeUndefined();
+
+    const injectedWeights = buildDeterministicWeights(1); // strafe=1
+    controller = updateEnemyController(
+      controller,
+      state,
+      createEmptyCollisionMap(),
+      1000,
+      injectedWeights,
+    );
+    // Weights should be the injected weights.
+    expect(controller.enemies[0].weights).toBe(injectedWeights);
+  });
+
+  /**
+   * AC-025: Backward compatibility — calling with 4 args (no weights param)
+   * preserves existing behavior (weights stay undefined, BFS fallback).
+   */
+  it('AC-025: backward-compatible 4-arg call preserves existing weights', () => {
+    const base = createGameState({ seed: 1 });
+    const state = stateWithEnemyAt(base, { x: 55.5, y: 58.5 });
+    let controller = createEnemyControllerState(state);
+    const customWeights = new Float32Array([0.1, 0.2, 0.3, 0.4]);
+    controller.enemies[0].weights = customWeights;
+    controller = updateEnemyController(
+      controller,
+      state,
+      createEmptyCollisionMap(),
+      1000,
+    );
+    // 4-arg call should preserve the previous weights (backward-compatible).
+    expect(controller.enemies[0].weights).toBe(customWeights);
+  });
+
+  /**
+   * AC-025: Injected weights activate the MLP re-ranking branch.
+   *
+   * Same scenario as AC-10.5b-002 but weights are passed via the 5th param
+   * instead of being pre-set on the controlled enemy.
+   */
+  it('AC-025: injected weights activate MLP re-ranking (strafe=1 → moves south)', () => {
+    const base = createGameState({ seed: 1 });
+    const state = stateWithEnemyAt(base, { x: 55.5, y: 58.5 });
+    let controller = createEnemyControllerState(state);
+    // No weights pre-set on the enemy.
+    expect(controller.enemies[0].weights).toBeUndefined();
+
+    const injectedWeights = buildDeterministicWeights(1); // strafe=1
+    controller = updateEnemyController(
+      controller,
+      state,
+      createEmptyCollisionMap(),
+      1000,
+      injectedWeights,
+    );
+    // MLP strafe=1 → enemy should move south (y increased), not east.
+    expect(controller.enemies[0].position.y).toBeGreaterThan(58.5);
+    expect(controller.enemies[0].position.x).toBe(55.5);
+  });
+
+  /**
+   * AC-026: Respawned enemies get fresh injected weights instead of
+   * undefined.
+   *
+   * Kill an enemy, fully de-rez it, then respawn with injected weights.
+   * The respawned enemy should have the injected weights, not undefined.
+   */
+  it('AC-026: respawned enemies get fresh weights when injected', () => {
+    const base = createGameState({ seed: 1 });
+    const state = stateWithEnemyAt(base, { x: 60.5, y: 55.5 });
+    let controller = createEnemyControllerState(state);
+    // Kill the enemy and tick until fully de-rezzed.
+    const deadState = stateWithEnemyAt(base, { x: 60.5, y: 55.5 }, 0);
+    for (let i = 0; i < 5; i += 1) {
+      controller = updateEnemyController(
+        controller,
+        deadState,
+        createEmptyCollisionMap(),
+        1000,
+      );
+    }
+    expect(controller.enemies[0].active).toBe(false);
+
+    // Respawn: give health back, with injected weights.
+    const injectedWeights = buildDeterministicWeights(0); // move=1
+    controller = updateEnemyController(
+      controller,
+      state,
+      createEmptyCollisionMap(),
+      1000,
+      injectedWeights,
+    );
+    expect(controller.enemies[0].active).toBe(true);
+    // AC-026: respawned enemy should have the injected weights, not undefined.
+    expect(controller.enemies[0].weights).toBe(injectedWeights);
+  });
+
+  /**
+   * AC-026: Respawned enemies get undefined when no weights are injected
+   * (backward-compatible with 4-arg calls).
+   */
+  it('AC-026: respawned enemies get undefined without injected weights (backward-compatible)', () => {
+    const base = createGameState({ seed: 1 });
+    const state = stateWithEnemyAt(base, { x: 60.5, y: 55.5 });
+    let controller = createEnemyControllerState(state);
+    const deadState = stateWithEnemyAt(base, { x: 60.5, y: 55.5 }, 0);
+    for (let i = 0; i < 5; i += 1) {
+      controller = updateEnemyController(
+        controller,
+        deadState,
+        createEmptyCollisionMap(),
+        1000,
+      );
+    }
+    expect(controller.enemies[0].active).toBe(false);
+
+    // Respawn without injected weights (4-arg call).
+    controller = updateEnemyController(
+      controller,
+      state,
+      createEmptyCollisionMap(),
+      1000,
+    );
+    expect(controller.enemies[0].active).toBe(true);
+    // Without injection, respawned enemy gets undefined (backward-compatible).
+    expect(controller.enemies[0].weights).toBeUndefined();
+  });
+});
+
 describe('AC-11b-003/004: hit-stun behavior in enemy controller', () => {
   it('initializes stunTimerMs to 0 in createEnemyControllerState', () => {
     const base = createGameState({ seed: 1 });

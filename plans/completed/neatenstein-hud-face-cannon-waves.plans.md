@@ -5,7 +5,7 @@
 **Created:** 2026-08-07
 **Closed:** 2026-08-10
 **Source of truth:** `plans/completed/neatenstein-hud-face-cannon-waves.plans.md`
-**Research artifact:** `plans/neatenstein-hud-face-cannon-waves.research.md`
+**Research artifact:** `plans/completed/neatenstein-hud-face-cannon-waves.research.md`
 **Compressed log:** `plans/completed/neatenstein-hud-face-cannon-waves.logs.md`
 
 ## Scope
@@ -52,6 +52,7 @@ All 10 phases completed and validated.
 ## Reopen conditions
 
 This plan is terminally closed. New HUD reorder work should go in a **separate new plan**, not this one. To reopen:
+
 1. Move the plan + log pair from `plans/completed/` back to `plans/`.
 2. Add a fresh `Handoff query` section.
 3. Do not reuse stale closure-era prompts.

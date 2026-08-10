@@ -255,6 +255,35 @@ describe('PNG encoder/decoder', () => {
     }
   });
 
+  it('decodes a Paeth row where the up-left pixel is the best predictor', () => {
+    // For row 1, pixel 1: left=30, up=10, upLeft=20. Paeth returns c (upLeft=20),
+    // exercising line 346 of the source paethPredictor.
+    const pixels = [
+      [
+        [20, 20, 20, 255],
+        [10, 10, 10, 255],
+      ],
+      [
+        [30, 30, 30, 255],
+        [25, 25, 25, 255],
+      ],
+    ];
+    const png = buildFilteredPng(2, 2, pixels, [4, 4]);
+    const decoded = decodePng(png);
+
+    expect(decoded.width).toBe(2);
+    expect(decoded.height).toBe(2);
+    for (let y = 0; y < 2; y++) {
+      for (let x = 0; x < 2; x++) {
+        const i = (y * 2 + x) * 4;
+        expect(decoded.data[i]).toBe(pixels[y][x][0]);
+        expect(decoded.data[i + 1]).toBe(pixels[y][x][1]);
+        expect(decoded.data[i + 2]).toBe(pixels[y][x][2]);
+        expect(decoded.data[i + 3]).toBe(pixels[y][x][3]);
+      }
+    }
+  });
+
   it('ignores ancillary chunks that appear before IEND', () => {
     const ihdr = Buffer.alloc(13);
     ihdr.writeUInt32BE(1, 0);
@@ -294,6 +323,59 @@ describe('compareSnapshotBuffers', () => {
     expect(result.colorSimilarity).toBe(0);
     expect(result.generatedOpaque).toBe(0);
     expect(result.referenceOpaque).toBe(0);
+  });
+
+  it('returns non-zero scores for fully opaque images', () => {
+    const generated = encodePng(
+      4,
+      4,
+      new Uint8Array(
+        Array.from({ length: 16 }, () => [120, 130, 140, 255]).flat(),
+      ),
+    );
+    const reference = encodePng(
+      4,
+      4,
+      new Uint8Array(
+        Array.from({ length: 16 }, () => [125, 135, 145, 255]).flat(),
+      ),
+    );
+    const result = compareSnapshotBuffers(generated, reference);
+
+    expect(result.generatedOpaque).toBeGreaterThan(0);
+    expect(result.referenceOpaque).toBeGreaterThan(0);
+    expect(result.iou).toBeGreaterThan(0);
+    expect(typeof result.colorSimilarity).toBe('number');
+    expect(Number.isFinite(result.colorSimilarity)).toBe(true);
+  });
+
+  it('handles multi-color images with transparent pixels', () => {
+    // A 2×2 reference containing three distinct opaque colors and one
+    // transparent pixel. This exercises the palette sort comparator and the
+    // transparent-pixel continue branch without asserting exact color values.
+    const width = 2;
+    const height = 2;
+    const rgba = new Uint8Array(width * height * 4);
+    const pixels = [
+      [255, 0, 0, 255],
+      [0, 0, 255, 255],
+      [0, 0, 0, 0],
+      [0, 255, 0, 255],
+    ];
+    for (let i = 0; i < pixels.length; i += 1) {
+      rgba.set(pixels[i], i * 4);
+    }
+
+    const generated = encodePng(width, height, rgba);
+    const reference = encodePng(width, height, rgba);
+    const result = compareSnapshotBuffers(generated, reference);
+
+    expect(result.generatedOpaque).toBe(3);
+    expect(result.referenceOpaque).toBe(3);
+    expect(result.iou).toBe(1);
+    expect(result.colorSimilarity).toBe(1);
+    expect(Number.isFinite(result.iou)).toBe(true);
+    expect(Number.isFinite(result.colorSimilarity)).toBe(true);
   });
 });
 

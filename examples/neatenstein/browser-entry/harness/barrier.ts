@@ -19,6 +19,10 @@ import { createSeedPack } from './seed-pack';
 import { selectVariant } from './select';
 import { getEnemySnapshot, refreshEnemySnapshots } from './snapshot';
 import { shouldRefreshMlpSnapshot } from './snapshot';
+import {
+  NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS,
+  NEATENSTEIN_MAIN_VARIANT_COUNT,
+} from './constants';
 import type {
   BarrierState,
   CombatQualitySignal,
@@ -77,22 +81,6 @@ export interface GenBarrierOptions {
   /** Current co-evolution generation (non-negative integer). */
   generation: number;
 }
-
-/**
- * Number of main-agent variants evaluated in a single generation.
- *
- * Mirrors the main runner population size so the barrier selects from the
- * same candidate pool.
- */
-const NEATENSTEIN_MAIN_VARIANT_COUNT = 8;
-
-/**
- * Maximum episode length in ticks (frames).
- *
- * Caps the deterministic stand-in episode so barrier construction finishes in
- * bounded time.
- */
-const NEATENSTEIN_MAX_EPISODE_TICKS = 240;
 
 /**
  * Build a deterministic generation barrier.
@@ -171,7 +159,10 @@ function selectMainChampion(
   options: GenBarrierOptions,
   enemySnapshot: Snapshot,
 ): MainVariant {
-  const seedPack = createSeedPack({ generation: options.generation });
+  const seedPack = createSeedPack({
+    generation: options.generation,
+    seed: options.seed,
+  });
   const variants = createMainVariants(options.seed, options.generation);
   const evaluated = evaluateMainVariants(variants, enemySnapshot, seedPack);
   const champion = selectVariant(evaluated) as EvaluatedMainVariant;
@@ -285,7 +276,9 @@ function runEpisode(
 ): CombatQualitySignal {
   const rng = createEpisodeRng(variant, enemySnapshot, episodeSeed);
 
-  const survivalTicks = Math.floor(rng() * NEATENSTEIN_MAX_EPISODE_TICKS);
+  const survivalTicks = Math.floor(
+    rng() * NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS,
+  );
   const damageDealt = Math.floor(rng() * 100);
   const kills = Math.floor(rng() * 5);
   const damageTaken = Math.floor(rng() * 50);

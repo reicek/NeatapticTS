@@ -13,6 +13,7 @@
 
 import type { SeedPack } from './types.ts';
 import { NEATENSTEIN_MLP_VARIANT_COUNT } from './constants.ts';
+import { hashSeed } from './hash-seed';
 
 /**
  * Configuration for {@link createSeedPack}.
@@ -22,6 +23,12 @@ export interface CreateSeedPackOptions {
   generation: number;
   /** Number of deterministic seeds to generate (defaults to the MLP variant count). */
   variantCount?: number;
+  /**
+   * Optional root seed. When provided, per-variant seeds are derived via
+   * {@link hashSeed} so the pack is tied to the caller's seed rather than the
+   * generation-only LCG. When omitted, the legacy generation-only LCG is used.
+   */
+  seed?: number;
 }
 
 /** LCG multiplier from the classic Park-Miller minimal standard. */
@@ -105,6 +112,7 @@ function generateDeterministicSeeds(
 export function createSeedPack({
   generation,
   variantCount = NEATENSTEIN_MLP_VARIANT_COUNT,
+  seed,
 }: CreateSeedPackOptions): SeedPack {
   if (
     !Number.isFinite(generation) ||
@@ -121,9 +129,16 @@ export function createSeedPack({
     throw new Error('variantCount must be a positive integer');
   }
 
+  const seeds =
+    seed !== undefined
+      ? Array.from({ length: variantCount }, (_, i) =>
+          hashSeed(seed, generation, i),
+        )
+      : generateDeterministicSeeds(generation, variantCount);
+
   return makeSeedPack({
     generation,
-    seeds: generateDeterministicSeeds(generation, variantCount),
+    seeds,
   });
 }
 

@@ -177,4 +177,12 @@ describe('Neatenstein audio engine', () => {
     await loadModule<typeof import('./audio.ts')>('./audio.ts');
     expect(instances.length).toBe(0);
   });
+
+  it('stops an active voice without throwing', async () => {
+    installMockAudioContext();
+    const audio = await loadModule<typeof import('./audio.ts')>('./audio.ts');
+    const engine = audio.createNeatensteinAudioEngine();
+    const voice = engine.playSound('fire');
+    expect(() => voice.stop()).not.toThrow();
+  });
 });

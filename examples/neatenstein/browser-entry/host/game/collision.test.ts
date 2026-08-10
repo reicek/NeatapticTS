@@ -1,4 +1,4 @@
-import { describe, expect, it } from '@jest/globals';
+import { describe, expect, it, jest } from '@jest/globals';
 import {
   NEATENSTEIN_CONTACT_DAMAGE,
   NEATENSTEIN_CONTACT_IFRAME_MS,
@@ -207,5 +207,37 @@ describe('Neatenstein game collision', () => {
       const after = resolveContactDamage(before, NaN);
       expect(after.player.contactIFrameMs).toBe(NEATENSTEIN_CONTACT_IFRAME_MS);
     });
+
+    /* eslint-disable @typescript-eslint/no-explicit-any -- dynamic import test helper */
+    it('treats a non-positive contact range as zero and deals no damage', () => {
+      jest.resetModules();
+      jest.doMock('./constants.ts', () => ({
+        ...(jest.requireActual('./constants.ts') as Record<string, unknown>),
+        NEATENSTEIN_CONTACT_RANGE_CELLS: 0,
+      }));
+      const stateMod = (require as any)('./state.ts') as Record<string, any>;
+      const collisionMod = (require as any)('./collision.ts') as Record<
+        string,
+        any
+      >;
+      const { createGameState } = stateMod;
+      const { resolveContactDamage: mockedResolveContactDamage } = collisionMod;
+      const before = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+      before.enemies.push({
+        position: {
+          x: before.player.position.x + 0.3,
+          y: before.player.position.y,
+        },
+        health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+      });
+      const after = mockedResolveContactDamage(
+        before,
+        NEATENSTEIN_FIXED_TIMESTEP_MS,
+      );
+      expect(after.player.health).toBe(before.player.health);
+      jest.dontMock('./constants.ts');
+      jest.resetModules();
+    });
+    /* eslint-enable @typescript-eslint/no-explicit-any */
   });
 });

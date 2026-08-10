@@ -305,10 +305,7 @@ describe('Neatenstein gun sprite decoder', () => {
       const scale = dataMod.GUN_SPRITE_SCALE as number;
       const idle = dataMod.GUN_SPRITE_FRAMES.idle as number[][];
       const palette = dataMod.GUN_SPRITE_PALETTE as number[][];
-      const decoded = decodeMod.decodeGunSpriteFrame(
-        idle,
-        palette,
-      );
+      const decoded = decodeMod.decodeGunSpriteFrame(idle, palette);
       // Find any non-transparent pixel in the grid and verify the decoder
       // maps it to the correct palette color. This tests the decoder's
       // correctness without coupling to specific sprite art.

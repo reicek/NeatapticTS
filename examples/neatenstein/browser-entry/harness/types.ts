@@ -9,6 +9,7 @@
  * @module
  */
 
+import type { Network } from 'neataptic';
 import type { Vector2 } from '../host/game/types';
 
 /**
@@ -132,6 +133,16 @@ export interface MainVariant {
   id: number;
   /** Genome snapshot that can be materialized into a Network. */
   genome: Genome;
+  /**
+   * Optional live champion network produced by the hoisted Neat evaluation.
+   *
+   * When present (P3S2+), the worker passes the evaluated-and-evolved champion
+   * network directly so downstream consumers (e.g. Phase 4's player
+   * controller) can activate it without re-materializing the genome. The
+   * `genome` field remains for backward compatibility with existing callers
+   * that do not participate in the hoisted evaluation path.
+   */
+  network?: Network;
 }
 
 /**

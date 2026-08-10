@@ -307,6 +307,7 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
   let lastFrameMaxAmmo = 50;
   let lastFrameKills = 0;
   let lastFrameDeaths = 0;
+  let lastFrameGeneration = 0;
   let lastWaveNumber = 0;
 
   /** Health ratio for the mugshot overlay, defaulting to full-health teal. */
@@ -319,6 +320,7 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
     lastFrameMaxAmmo = frame.playerMaxAmmo ?? 50;
     lastFrameKills = frame.playerKills ?? 0;
     lastFrameDeaths = frame.playerDeaths ?? 0;
+    lastFrameGeneration = frame.generation ?? 0;
 
     // Compute the mugshot health ratio from the raw frame fields, defaulting
     // to full-health (1.0) when either field is absent or maxHealth is zero.
@@ -340,6 +342,7 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
       playerMaxAmmo: lastFrameMaxAmmo,
       playerKills: lastFrameKills,
       playerDeaths: lastFrameDeaths,
+      generation: lastFrameGeneration,
     });
 
     // Detect wave transitions and show the "Wave N" announcement overlay.
@@ -377,6 +380,7 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
       playerMaxAmmo: lastFrameMaxAmmo,
       playerKills: lastFrameKills,
       playerDeaths: lastFrameDeaths,
+      generation: lastFrameGeneration,
     }),
     () => lastMugshotHealthRatio,
   );

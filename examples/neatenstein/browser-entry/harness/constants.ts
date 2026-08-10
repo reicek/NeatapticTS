@@ -8,6 +8,51 @@
  */
 
 /**
+ * Re-export the fixed simulation timestep so harness modules can import all
+ * cadence constants from a single location.
+ *
+ * The authoritative value lives in `host/game/constants.ts`; this re-export
+ * avoids redefining it and prevents drift between the game-simulation and
+ * harness evaluation paths.
+ */
+export { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../host/game/constants';
+
+/**
+ * Number of main-agent variants evaluated in a single generation.
+ *
+ * Reduced from the original 8 to 4 so each variant plays a full episode while
+ * keeping total generation time practical for headless batch evaluation.
+ */
+export const NEATENSTEIN_MAIN_VARIANT_COUNT = 4;
+
+/**
+ * Duration of one fitness evaluation episode in milliseconds of simulated
+ * time (5 seconds).
+ */
+export const NEATENSTEIN_FITNESS_EPISODE_DURATION_MS = 5000;
+
+/**
+ * Maximum number of ticks in one fitness evaluation episode.
+ *
+ * Derived as `Math.floor(NEATENSTEIN_FITNESS_EPISODE_DURATION_MS /
+ * NEATENSTEIN_FIXED_TIMESTEP_MS)` = 312. This is a NEW constant for the fitness
+ * evaluation path; the existing {@link NEATENSTEIN_MAX_EPISODE_TICKS} (240) is
+ * used by `enemy-runner.ts` and is NOT changed.
+ */
+export const NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS = Math.floor(
+  NEATENSTEIN_FITNESS_EPISODE_DURATION_MS / 16,
+); // 312
+
+/**
+ * Number of ticks per evaluation chunk for cooperative yielding in workers.
+ *
+ * The evaluation loop yields (via `setTimeout(0)`) after every chunk of this
+ * many ticks so `onmessage` can fire between chunks, preventing the worker
+ * from blocking.
+ */
+export const NEATENSTEIN_EVAL_CHUNK_TICKS = 32;
+
+/**
  * Number of generations between MLP enemy population refreshes.
  *
  * The MLP backend is slower-moving than the SWARM backend because its

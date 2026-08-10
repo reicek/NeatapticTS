@@ -11,6 +11,8 @@
  */
 
 import type { CollisionMap } from '../browser-entry/renderer/map';
+import { castRayDDAFromFlatMap } from '../browser-entry/renderer/raycast';
+import type { GameState } from '../browser-entry/host/game/types';
 
 /** Sentinel value stored in the distance buffer for wall cells. */
 const WALL_VALUE = -2;
@@ -79,31 +81,50 @@ export interface DistanceMap {
  * arrays, sentinel values, shared queue buffer pooling, and four-cardinal
  * neighbour expansion.
  *
+ * When `distances` is provided and has the correct length (`size * size`),
+ * the function fills it in-place instead of allocating a new buffer. This
+ * enables callers to pool a reusable `Int32Array` — worker-scoped for the
+ * live path or per-episode for the headless evaluation path — avoiding
+ * ~57 KB of allocation per tick. When `distances` is `undefined` or the
+ * wrong length, a fresh `Int32Array` is allocated (backward-compatible).
+ *
  * @param collisionMap - Map queried for solid cells.
  * @param goalX - Goal cell X (typically the player's grid X).
  * @param goalY - Goal cell Y (typically the player's grid Y).
  * @param size - Grid width and height.
- * @returns Distance map with distances, sentinels, and metadata.
+ * @param distances - Optional pre-allocated `Int32Array` of length
+ *   `size * size` to fill in-place. When omitted or incorrectly sized, a
+ *   fresh buffer is allocated.
+ * @returns Distance map with distances, sentinels, and metadata. The
+ *   `distances` field references the same buffer passed in when one was
+ *   provided and correctly sized; otherwise it references a newly allocated
+ *   buffer.
  */
 export function buildEnemyDistanceMap(
   collisionMap: CollisionMap,
   goalX: number,
   goalY: number,
   size: number,
+  distances?: Int32Array,
 ): DistanceMap {
   const cellCount = size * size;
-  const distances = new Int32Array(cellCount);
+  // Reuse the caller-provided buffer when it has the correct length;
+  // otherwise allocate a fresh one (backward-compatible).
+  const distancesBuffer =
+    distances !== undefined && distances.length === cellCount
+      ? distances
+      : new Int32Array(cellCount);
 
   // Initialize all cells to UNREACHABLE.
   for (let i = 0; i < cellCount; i++) {
-    distances[i] = UNREACHABLE_VALUE;
+    distancesBuffer[i] = UNREACHABLE_VALUE;
   }
 
   // Mark walls.
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       if (collisionMap.isSolid(x, y)) {
-        distances[y * size + x] = WALL_VALUE;
+        distancesBuffer[y * size + x] = WALL_VALUE;
       }
     }
   }
@@ -116,17 +137,17 @@ export function buildEnemyDistanceMap(
     !(goalX < size) ||
     !(goalY >= 0) ||
     !(goalY < size) ||
-    distances[goalIndex] === WALL_VALUE
+    distancesBuffer[goalIndex] === WALL_VALUE
   ) {
     return {
       size,
-      distances,
+      distances: distancesBuffer,
       wallValue: WALL_VALUE,
       unreachableValue: UNREACHABLE_VALUE,
     };
   }
 
-  distances[goalIndex] = 0;
+  distancesBuffer[goalIndex] = 0;
 
   // BFS from the goal outward.
   const queue = getQueueBuffer(cellCount);
@@ -136,7 +157,7 @@ export function buildEnemyDistanceMap(
 
   while (queueHead < queueTail) {
     const currentIndex = queue[queueHead++];
-    const currentDistance = distances[currentIndex];
+    const currentDistance = distancesBuffer[currentIndex];
 
     const currentY = (currentIndex / size) | 0;
     const currentX = currentIndex - currentY * size;
@@ -147,8 +168,8 @@ export function buildEnemyDistanceMap(
       if (nx < 0 || nx >= size || ny < 0 || ny >= size) continue;
 
       const ni = ny * size + nx;
-      if (distances[ni] === UNREACHABLE_VALUE) {
-        distances[ni] = currentDistance + 1;
+      if (distancesBuffer[ni] === UNREACHABLE_VALUE) {
+        distancesBuffer[ni] = currentDistance + 1;
         queue[queueTail++] = ni;
       }
     }
@@ -156,7 +177,7 @@ export function buildEnemyDistanceMap(
 
   return {
     size,
-    distances,
+    distances: distancesBuffer,
     wallValue: WALL_VALUE,
     unreachableValue: UNREACHABLE_VALUE,
   };
@@ -314,4 +335,98 @@ export function buildVisionVector(
   }
 
   return vision;
+}
+
+/**
+ * Extract a 12-element sensor observation vector from the current game state
+ * for NEAT network activation.
+ *
+ * Sensor layout (indices 0–11):
+ * - [0] player health ratio (`health / maxHealth`, clamped to [0, 1])
+ * - [1] player ammo
+ * - [2] player look angle in radians
+ * - [3] player position X (world units)
+ * - [4] player position Y (world units)
+ * - [5] nearest enemy relative bearing in radians, normalized to [-π, π]
+ * - [6] nearest enemy Euclidean distance (world units)
+ * - [7] nearest enemy health
+ * - [8] wall raycast distance — North
+ * - [9] wall raycast distance — East
+ * - [10] wall raycast distance — South
+ * - [11] wall raycast distance — West
+ *
+ * When no active enemies exist, sensors [5]–[7] are 0. Wall raycast distances
+ * use the existing {@link castRayDDAFromFlatMap} DDA primitive and may be
+ * `Infinity` when no wall is found within the render distance cap.
+ *
+ * Placing this helper in `scripts/enemy-navigation.ts` (not the worker) allows
+ * the evolution harness to reuse it for episode fitness evaluation in Phase 5
+ * without importing worker code.
+ *
+ * @param gameState - Current deterministic game-state snapshot.
+ * @param flatMap - Row-major wall map (`Uint8Array`, non-zero = wall).
+ * @param mapSize - Width and height of the square grid.
+ * @returns A 12-element observation vector for `Network.activate(sensors)`.
+ *
+ * @example
+ * ```ts
+ * const sensors = extractSensors(gameState, wallMap, NEATENSTEIN_MAP_SIZE);
+ * const outputs = network.activate(sensors);
+ * ```
+ *
+ * @see AC-065
+ */
+export function extractSensors(
+  gameState: GameState,
+  flatMap: Uint8Array,
+  mapSize: number,
+): number[] {
+  const sensors = new Array<number>(12).fill(0);
+  const p = gameState.player;
+
+  // Player sensors (5)
+  sensors[0] = p.maxHealth > 0 ? p.health / p.maxHealth : 0;
+  sensors[1] = p.ammo;
+  sensors[2] = p.angleRad;
+  sensors[3] = p.position.x;
+  sensors[4] = p.position.y;
+
+  // Nearest enemy sensors (3)
+  const enemies = gameState.enemies.filter((e) => e.active !== false);
+  if (enemies.length > 0) {
+    let nearestEnemy = enemies[0];
+    let nearestDist = Infinity;
+    for (const e of enemies) {
+      const dx = e.position.x - p.position.x;
+      const dy = e.position.y - p.position.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearestEnemy = e;
+      }
+    }
+    const ndx = nearestEnemy.position.x - p.position.x;
+    const ndy = nearestEnemy.position.y - p.position.y;
+    const bearing = Math.atan2(ndy, ndx) - p.angleRad;
+    // Normalize to [-π, π].
+    sensors[5] = Math.atan2(Math.sin(bearing), Math.cos(bearing));
+    sensors[6] = nearestDist;
+    sensors[7] = nearestEnemy.health;
+  }
+
+  // Wall raycasts (4) — N, E, S, W cardinal directions.
+  for (let i = 0; i < DIRECTIONS.length; i++) {
+    const [dirX, dirY] = DIRECTIONS[i];
+    const hit = castRayDDAFromFlatMap(
+      flatMap,
+      mapSize,
+      p.position.x,
+      p.position.y,
+      dirX,
+      dirY,
+    );
+    sensors[8 + i] = hit.perpWallDist;
+  }
+
+  return sensors;
 }

@@ -60,8 +60,8 @@ interface NeatensteinCueParams {
   type: OscillatorType;
   /** Base frequency in hertz. */
   frequencyHz: number;
-  /** Frequency sweep end in hertz (optional). */
-  frequencyEndHz?: number;
+  /** Frequency sweep end in hertz. */
+  frequencyEndHz: number;
   /** Gain envelope peak (0..1). */
   peakGain: number;
   /** Total voice duration in seconds. */
@@ -200,12 +200,10 @@ function buildVoice(
   const osc = ctx.createOscillator();
   osc.type = cue.type;
   osc.frequency.setValueAtTime(cue.frequencyHz, now);
-  if (cue.frequencyEndHz !== undefined) {
-    osc.frequency.exponentialRampToValueAtTime(
-      Math.max(20, cue.frequencyEndHz),
-      end,
-    );
-  }
+  osc.frequency.exponentialRampToValueAtTime(
+    Math.max(20, cue.frequencyEndHz),
+    end,
+  );
 
   let source: AudioNode = osc;
 

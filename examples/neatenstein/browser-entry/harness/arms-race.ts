@@ -16,6 +16,7 @@ import seedrandom from 'seedrandom';
 
 import { createSwarmEnemyPopulation } from './enemy-swarm';
 import { runMainGeneration } from './main-runner';
+import type { Network } from 'neataptic';
 import type {
   CombatQualitySignal,
   EnemyBehaviorMetrics,
@@ -40,6 +41,19 @@ export interface RunArmsRaceGenerationOptions {
   humanMode?: boolean;
   /** Optional replay buffer of death contexts used as replay-driven selection pressure. */
   replayBuffer?: ReplayBuffer;
+  /**
+   * Optional champion network produced by the hoisted async Neat evaluation
+   * (P3S2). When provided, the internal `runMainGeneration` call is skipped
+   * (the worker has already evaluated the population) and `championQuality`
+   * is used as the quality signal instead.
+   */
+  championNetwork?: Network;
+  /**
+   * Optional combat-quality signal for the champion network. When
+   * `championNetwork` is provided, this quality signal is used directly
+   * instead of running `runMainGeneration`.
+   */
+  championQuality?: CombatQualitySignal;
 }
 
 /**
@@ -98,15 +112,35 @@ export function runArmsRaceGeneration(
   // Step 1: Resolve the frozen enemy snapshot for this generation.
   const enemySnapshot = resolveEnemySnapshot(options);
 
-  // Step 2: Build the deterministic main-agent champion snapshot.
-  const mainSnapshot = createMainSnapshot(options.seed, options.generation);
+  // Step 2: Build the deterministic main-agent champion snapshot. When
+  // championNetwork is provided (P3S2 hoisted evaluation), use it instead of
+  // the placeholder genome.
+  const mainSnapshot = createMainSnapshot(
+    options.seed,
+    options.generation,
+    options.championNetwork,
+  );
 
-  // Step 3: Evaluate the champion against the frozen enemy snapshot.
-  const quality = runMainGeneration({
-    seed: options.seed,
-    generation: options.generation,
-    enemySnapshot,
-  });
+  // Step 3: Evaluate the champion against the frozen enemy snapshot. When
+  // championNetwork is provided, the worker has already evaluated the Neat
+  // population; skip runMainGeneration and use the supplied championQuality.
+  // When championNetwork is undefined (existing ~25 test callers),
+  // runMainGeneration runs as before (backward-compatible).
+  const quality: CombatQualitySignal = options.championNetwork
+    ? (options.championQuality ?? {
+        survivalTicks: 0,
+        damageDealt: 0,
+        kills: 0,
+        damageTaken: 0,
+        aimMissRate: 0,
+        complexityBonus: 0,
+        parsimonyDensityPenalty: 0,
+      })
+    : runMainGeneration({
+        seed: options.seed,
+        generation: options.generation,
+        enemySnapshot,
+      });
 
   // Step 4: Determine whether this generation is replay-driven. When human
   // mode is enabled and the replay buffer contains at least one death context,
@@ -173,15 +207,22 @@ function resolveEnemySnapshot(options: RunArmsRaceGenerationOptions): Snapshot {
 /**
  * Build the deterministic main-agent champion snapshot for a generation.
  *
- * The champion is a lightweight placeholder genome sized from the generation
- * seed. Future slices will replace this with real NEAT selection once the
- * main-agent lifecycle and topology constraints are wired into the harness.
+ * When `championNetwork` is provided (P3S2 hoisted evaluation), the live
+ * network is attached to the returned `MainVariant` so downstream consumers
+ * (Phase 4's player controller) can activate it without re-materializing the
+ * genome. When `championNetwork` is undefined (existing callers), the
+ * placeholder genome is generated as before.
  *
  * @param seed - Generation seed.
  * @param generation - Generation number.
+ * @param championNetwork - Optional champion network from hoisted Neat eval.
  * @returns Deterministic main-agent champion variant.
  */
-function createMainSnapshot(seed: number, generation: number): MainVariant {
+function createMainSnapshot(
+  seed: number,
+  generation: number,
+  championNetwork?: Network,
+): MainVariant {
   const rng = seedrandom(`${seed}:arms-race:main:${generation}`);
   const nodeCount = Math.floor(rng() * 20) + 10;
   const connectionCount = Math.floor(rng() * 30) + 10;
@@ -191,10 +232,16 @@ function createMainSnapshot(seed: number, generation: number): MainVariant {
     connections: new Array(connectionCount).fill(null),
   };
 
-  return {
+  const variant: MainVariant = {
     id: 0,
     genome,
   };
+
+  if (championNetwork) {
+    variant.network = championNetwork;
+  }
+
+  return variant;
 }
 
 /**

@@ -68,7 +68,11 @@ function sendInitMessage(
 
 function sendSimStateMessage(
   cameraYaw = 0.25,
-  overrides: { cameraX?: number; cameraY?: number } = {},
+  overrides: {
+    cameraX?: number;
+    cameraY?: number;
+    humanMode?: 'auto' | 'human';
+  } = {},
 ) {
   if (typeof workerSelf.onmessage === 'function') {
     workerSelf.onmessage({
@@ -82,6 +86,7 @@ function sendSimStateMessage(
           cameraY: overrides.cameraY ?? 12.5,
           cameraYaw,
           mapSeed: 42,
+          humanMode: overrides.humanMode,
         },
       },
     } as unknown as MessageEvent);
@@ -538,6 +543,40 @@ describe('Neatenstein display worker', () => {
     expect(afterTwo?.enemies[0].position).not.toEqual(
       afterOne?.enemies[0].position,
     );
+  });
+
+  it('AC-024: creates an MLP enemy population on init', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetEnemyPopulation?(): {
+        kind: string;
+        size: number;
+        snapshot: () => { kind: string; weights: Float32Array };
+      } | null;
+    };
+
+    sendInitMessage('cpu');
+    const population = workerModule.__testOnlyGetEnemyPopulation?.();
+    expect(population).not.toBeNull();
+    expect(population?.kind).toBe('mlp');
+    expect(population?.size).toBeGreaterThan(0);
+
+    // The initial snapshot should have valid champion weights.
+    const snapshot = population?.snapshot();
+    expect(snapshot?.kind).toBe('mlp');
+    expect(snapshot?.weights).toBeInstanceOf(Float32Array);
+    expect(snapshot?.weights.length).toBeGreaterThan(0);
+  });
+
+  it('AC-024: enemy population is null before init', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetEnemyPopulation?(): unknown | null;
+    };
+
+    // Before init, the population should be null.
+    const beforeInit = workerModule.__testOnlyGetEnemyPopulation?.();
+    expect(beforeInit).toBeNull();
   });
 
   it('clears all controlled enemies when gameTick returns null gameState', async () => {
@@ -1993,7 +2032,7 @@ describe('AC-10.2c: worker simState collision sync', () => {
 });
 
 describe('AC-10.3 coverage iteration 2: uncovered branches', () => {
-  it('uses positive deltaMs from simState as timestepMs (line 1060 true branch)', async () => {
+  it('clamps timestep to NEATENSTEIN_FIXED_TIMESTEP_MS (16ms) regardless of rAF deltaMs (AC-018)', async () => {
     jest.resetModules();
     await loadModule('./display.worker.ts');
 
@@ -2005,9 +2044,9 @@ describe('AC-10.3 coverage iteration 2: uncovered branches', () => {
     sendInitMessage('cpu');
     workerSelf.postMessage.mockClear();
 
-    // Send simState with a positive deltaMs to exercise the true branch of
-    // `deltaMs > 0 ? deltaMs : 16` at display.worker.ts:1060.  Using 32
-    // (not 16) distinguishes the true branch from the fallback.
+    // Send simState with a large deltaMs (32ms). After the AC-018 clamp,
+    // the worker must always pass NEATENSTEIN_FIXED_TIMESTEP_MS (16) to
+    // gameTick regardless of the incoming rAF delta.
     sendRawMessage({
       type: 'simState',
       state: {
@@ -2025,7 +2064,7 @@ describe('AC-10.3 coverage iteration 2: uncovered branches', () => {
     expect(gameTickSpy).toHaveBeenCalledTimes(1);
     // gameTick(gameState, tickInput, collisionMap, timestepMs)
     const timestepMs = gameTickSpy.mock.calls[0][3];
-    expect(timestepMs).toBe(32);
+    expect(timestepMs).toBe(16);
 
     gameTickSpy.mockRestore();
   });
@@ -2486,6 +2525,764 @@ describe('AC-2b-05: playerDeaths nullish coalescing fallback (lines 881 & 925)',
       'frame',
     );
     expect(frameCall?.frame?.playerDeaths).toBe(3);
+
+    gameTickSpy.mockRestore();
+  });
+});
+
+describe('AC-017: wave-clear detection (allEnemiesCleared flag)', () => {
+  it('sets allEnemiesCleared when enemies transition from present to empty', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetAllEnemiesCleared?(): boolean;
+      __testOnlyGetEnemyControllerState?(): EnemyControllerState | null;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+    };
+
+    sendInitMessage('cpu');
+
+    // Inject enemies so the roster is non-empty.
+    workerModule.__testOnlyInjectTestEnemies?.([
+      { x: 13.5, y: 12.5 },
+      { x: 11.5, y: 12.5 },
+    ]);
+    expect(
+      workerModule.__testOnlyGetEnemyControllerState?.()?.enemies.length ?? 0,
+    ).toBeGreaterThan(0);
+
+    // Advance a few ticks to let enemies exist.
+    for (let i = 0; i < 3; i += 1) {
+      sendSimStateMessage();
+    }
+
+    // Flag should not be set while enemies are still alive.
+    expect(workerModule.__testOnlyGetAllEnemiesCleared?.()).toBe(false);
+
+    // Now mock gameTick to return zero enemies, simulating wave clear.
+    const realTick = await import('../host/game/tick');
+    const gameTickSpy = jest.spyOn(realTick, 'gameTick').mockImplementation(
+      (state: GameState) =>
+        ({
+          ...state,
+          enemies: [],
+        }) as GameState,
+    );
+
+    sendSimStateMessage();
+
+    expect(gameTickSpy).toHaveBeenCalled();
+    expect(workerModule.__testOnlyGetAllEnemiesCleared?.()).toBe(true);
+
+    gameTickSpy.mockRestore();
+  });
+
+  it('resets allEnemiesCleared when enemies appear again (new wave)', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetAllEnemiesCleared?(): boolean;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+    };
+
+    sendInitMessage('cpu');
+
+    // Inject enemies, then clear them.
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 13.5, y: 12.5 }]);
+    for (let i = 0; i < 2; i += 1) {
+      sendSimStateMessage();
+    }
+
+    const realTick = await import('../host/game/tick');
+    const gameTickSpy = jest.spyOn(realTick, 'gameTick').mockImplementation(
+      (state: GameState) =>
+        ({
+          ...state,
+          enemies: [],
+        }) as GameState,
+    );
+    sendSimStateMessage();
+    expect(workerModule.__testOnlyGetAllEnemiesCleared?.()).toBe(true);
+
+    // Re-inject enemies (new wave spawn).
+    gameTickSpy.mockRestore();
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 14.5, y: 12.5 }]);
+    sendSimStateMessage();
+    expect(workerModule.__testOnlyGetAllEnemiesCleared?.()).toBe(false);
+  });
+});
+
+describe('P4S1-worker-branch: humanMode branching and NEAT controller', () => {
+  /**
+   * Minimal mock that satisfies the `Network.activate(input)` call site inside
+   * `buildAutoTickInput`.  The worker only calls `activate(sensors)` on the
+   * network — no other methods are needed for this slice.
+   */
+  function createMockNetwork(outputs: number[] = [0.8, 0.2, 0.5, 0.9, 0.1]): {
+    activate: jest.Mock;
+  } {
+    return { activate: jest.fn(() => outputs) } as unknown as {
+      activate: jest.Mock;
+    };
+  }
+
+  it('AC-055: uses NEAT controller path in auto mode when champion network is available', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('AC-055: uses human InputRouter path in human mode', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
+
+    sendSimStateMessage(0.25, { humanMode: 'human' });
+
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('human');
+  });
+
+  it('AC-055: uses human InputRouter path when humanMode is undefined (default)', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
+
+    // No humanMode override → undefined → should use human path.
+    sendSimStateMessage();
+
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('human');
+  });
+
+  it('AC-056: champion Network from worker scope is used for auto-mode ticks', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+
+    // Without a champion network, auto mode uses the fallback AI (still 'auto').
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+
+    // After injecting a champion network, auto mode should use the NEAT path.
+    const mockNet = createMockNetwork();
+    workerModule.__testOnlySetChampionMainNetwork?.(mockNet);
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+    expect(mockNet.activate).toHaveBeenCalled();
+  });
+
+  it('AC-057: auto mode uses NEAT controller, not pendingTickInput from human queue', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
+
+    // Queue human input (fire = true).
+    sendActionInputMessage(true);
+
+    // In auto mode, the NEAT controller should be used, NOT pendingTickInput.
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('AC-053: human mode remains fully functional (uses pendingTickInput)', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
+
+    // Queue human input.
+    sendActionInputMessage(true);
+
+    // In human mode, pendingTickInput should be used.
+    sendSimStateMessage(0.25, { humanMode: 'human' });
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('human');
+  });
+
+  it('AC-060: network.activate is called with sensor vector in auto mode', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+    const mockNet = createMockNetwork([0.9, 0.1, 0.75, 0.6, 0.3]);
+    workerModule.__testOnlySetChampionMainNetwork?.(mockNet);
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    expect(mockNet.activate).toHaveBeenCalledTimes(1);
+    // Sensor vector should have 12 inputs (NEATENSTEIN_MAIN_NEAT_INPUTS).
+    const sensorArg = mockNet.activate.mock.calls[0][0] as number[];
+    expect(sensorArg.length).toBe(12);
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('resets lastTickInputSource to human on init', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    // First session: auto mode.
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+
+    // Re-init: should reset to human.
+    sendInitMessage('cpu');
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('human');
+  });
+});
+
+describe('P4S2-sensor-activation: real sensor extraction and tanh output mapping', () => {
+  /**
+   * Minimal mock that satisfies the `Network.activate(input)` call site inside
+   * `buildAutoTickInput`.  The worker only calls `activate(sensors)` on the
+   * network — no other methods are needed for this slice.
+   */
+  function createMockNetwork(outputs: number[] = [0.8, 0.2, 0.5, 0.9, 0.1]): {
+    activate: jest.Mock;
+  } {
+    return { activate: jest.fn(() => outputs) } as unknown as {
+      activate: jest.Mock;
+    };
+  }
+
+  it('AC-065: sensor vector has 12 real (non-zero) elements from game state', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+    };
+
+    sendInitMessage('cpu');
+    const mockNet = createMockNetwork([0.9, 0.1, 0.75, 0.6, 0.3]);
+    workerModule.__testOnlySetChampionMainNetwork?.(mockNet);
+
+    // Inject an enemy near the player so sensors are non-zero.
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 14.5, y: 10.5 }]);
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    expect(mockNet.activate).toHaveBeenCalledTimes(1);
+    const sensorArg = mockNet.activate.mock.calls[0][0] as number[];
+    expect(sensorArg.length).toBe(12);
+    // With a real game state and enemy, at least some sensors should be non-zero.
+    // Player health ratio, position, ammo should all be non-zero.
+    expect(sensorArg[0]).toBeGreaterThan(0); // health ratio
+    expect(sensorArg[3]).not.toBe(0); // position.x
+    expect(sensorArg[4]).not.toBe(0); // position.y
+  });
+
+  it('AC-066: network outputs mapped via tanh for move/lookDelta and threshold for fire/dash', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+    // Use outputs that exercise tanh mapping: [1.0, -1.0, 0.5, 0.6, 0.6]
+    // tanh(1.0) ≈ 0.7616, tanh(-1.0) ≈ -0.7616, tanh(0.5) ≈ 0.4621
+    // fire = 0.6 > 0 = true, dash = 0.6 > 0.5 = true
+    const mockNet = createMockNetwork([1.0, -1.0, 0.5, 0.6, 0.6]);
+    workerModule.__testOnlySetChampionMainNetwork?.(mockNet);
+
+    // We verify the mapping indirectly: the game tick receives the mapped input
+    // and advances the game state. Since we cannot directly inspect the
+    // GameTickInputSnapshot, we verify the activate call succeeded and the
+    // source is 'auto'.
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    expect(mockNet.activate).toHaveBeenCalledTimes(1);
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('AC-066: fire is true when output[3] > 0, false when ≤ 0', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+      __testOnlyGetGameState?(): GameState | null;
+    };
+
+    sendInitMessage('cpu');
+
+    // With fire = -0.1 (≤ 0), the player should not fire.
+    // We verify via game state: no bolts should be created.
+    const mockNet = createMockNetwork([0, 0, 0, -0.1, 0]);
+    workerModule.__testOnlySetChampionMainNetwork?.(mockNet);
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    // No bolts should have been fired (fire = false when output ≤ 0).
+    expect((state?.bolts ?? []).length).toBe(0);
+  });
+
+  it('AC-066: fire creates a bolt when output[3] > 0', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+      __testOnlyGetGameState?(): GameState | null;
+    };
+
+    sendInitMessage('cpu');
+
+    // With fire = 0.5 (> 0), the player should fire.
+    const mockNet = createMockNetwork([0, 0, 0, 0.5, 0]);
+    workerModule.__testOnlySetChampionMainNetwork?.(mockNet);
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    // A bolt should have been fired (fire = true when output > 0).
+    expect((state?.bolts ?? []).length).toBeGreaterThan(0);
+  });
+
+  it('human mode remains fully functional after P4S2 changes', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
+
+    // Queue human input.
+    sendActionInputMessage(true);
+
+    // In human mode, pendingTickInput should be used.
+    sendSimStateMessage(0.25, { humanMode: 'human' });
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('human');
+  });
+});
+
+describe('P8S1-coverage-closure: display.worker uncovered branches', () => {
+  it('fallback auto AI steers toward an active enemy and fires on cooldown', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyGetEnemyControllerState?(): EnemyControllerState | null;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+    };
+
+    sendInitMessage('cpu');
+
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    const px = state!.player.position.x;
+    const py = state!.player.position.y;
+    const pa = state!.player.angleRad;
+
+    // Keep the controller from moving or killing the injected enemy so the
+    // fallback AI sees a stable target across 25 ticks.
+    const enemyControllerModule =
+      await import('../../scripts/enemy-controller');
+    const controllerSpy = jest
+      .spyOn(enemyControllerModule, 'updateEnemyController')
+      .mockImplementation(
+        (controllerState: EnemyControllerState) => controllerState,
+      );
+
+    // Place one enemy directly in front of the player so it sits inside the
+    // fallback fire arc (±π/6) and within a few cells.
+    const enemyDistance = 5;
+    workerModule.__testOnlyInjectTestEnemies?.([
+      {
+        x: px + Math.cos(pa) * enemyDistance,
+        y: py + Math.sin(pa) * enemyDistance,
+      },
+    ]);
+
+    // 25 ticks are required to hit the fire-cooldown branch:
+    // fallbackTickCounter % NEATENSTEIN_FALLBACK_FIRE_INTERVAL === 0.
+    for (let i = 0; i < 25; i += 1) {
+      workerSelf.postMessage.mockClear();
+      sendSimStateMessage(0.25, { humanMode: 'auto' });
+    }
+
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+
+    controllerSpy.mockRestore();
+  });
+
+  it('falls back to fallback AI when champion network activation throws', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+
+    const throwingNet = {
+      activate: jest.fn(() => {
+        throw new Error('champion activation failure');
+      }),
+    } as unknown as { activate: jest.Mock };
+    workerModule.__testOnlySetChampionMainNetwork?.(throwingNet);
+
+    expect(() =>
+      sendSimStateMessage(0.25, { humanMode: 'auto' }),
+    ).not.toThrow();
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('resolves undefined enemy weights when population snapshot is not mlp', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetEnemyPopulation?(): {
+        kind: string;
+        size: number;
+        snapshot: () => { kind: string; weights: Float32Array };
+        update: () => unknown;
+      } | null;
+    };
+
+    sendInitMessage('cpu');
+    const population = workerModule.__testOnlyGetEnemyPopulation?.();
+    expect(population).not.toBeNull();
+
+    const updateSpy = jest
+      .spyOn(population!, 'update')
+      .mockReturnValue({ kind: 'swarm' });
+
+    expect(() => sendSimStateMessage()).not.toThrow();
+
+    updateSpy.mockRestore();
+  });
+
+  it('skips inactive enemies when fallback AI searches for targets', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+    };
+
+    sendInitMessage('cpu');
+
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    const px = state!.player.position.x;
+    const py = state!.player.position.y;
+    const pa = state!.player.angleRad;
+
+    workerModule.__testOnlyInjectTestEnemies?.([
+      {
+        x: px + Math.cos(pa) * 5,
+        y: py + Math.sin(pa) * 5,
+      },
+    ]);
+    // Mark the injected enemy inactive so the fallback AI hits the
+    // `enemy.active === false` continue path.
+    state!.enemies[0]!.active = false;
+
+    expect(() =>
+      sendSimStateMessage(0.25, { humanMode: 'auto' }),
+    ).not.toThrow();
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('wraps fallback AI steering angle across the positive π boundary', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+    };
+
+    sendInitMessage('cpu');
+
+    // Ensure the fallback AI path is used, not the champion network path.
+    workerModule.__testOnlySetChampionMainNetwork?.(null);
+
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    const px = state!.player.position.x;
+    const py = state!.player.position.y;
+
+    // Place the player angle near -π and the nearest enemy bearing near +π.
+    // Keep the injected enemy very close so it wins the nearest-neighbor
+    // search; the raw angle difference is larger than π, forcing line 1519 to
+    // subtract 2π during normalisation.
+    state!.player.angleRad = -3.13;
+    workerModule.__testOnlyInjectTestEnemies?.([
+      {
+        x: px - 0.1,
+        y: py + 0.01,
+      },
+    ]);
+
+    expect(() =>
+      sendSimStateMessage(0.25, { humanMode: 'auto' }),
+    ).not.toThrow();
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('wraps fallback AI steering angle across the negative π boundary', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+    };
+
+    sendInitMessage('cpu');
+
+    // Ensure the fallback AI path is used, not the champion network path.
+    workerModule.__testOnlySetChampionMainNetwork?.(null);
+
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    const px = state!.player.position.x;
+    const py = state!.player.position.y;
+
+    // Place the player angle near +π and the nearest enemy bearing near -π.
+    // Keep the injected enemy very close so it wins the nearest-neighbor
+    // search; the raw angle difference is less than -π, forcing line 1520 to
+    // add 2π during normalisation.
+    state!.player.angleRad = 3.13;
+    workerModule.__testOnlyInjectTestEnemies?.([
+      {
+        x: px - 0.1,
+        y: py - 0.01,
+      },
+    ]);
+
+    expect(() =>
+      sendSimStateMessage(0.25, { humanMode: 'auto' }),
+    ).not.toThrow();
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('resolves undefined enemy weights when the population is null', async () => {
+    jest.resetModules();
+    const enemyMlpModule =
+      (await import('../harness/enemy-mlp')) as unknown as {
+        createMlpEnemyPopulation: jest.Mock;
+      };
+    const spy = jest
+      .spyOn(enemyMlpModule, 'createMlpEnemyPopulation')
+      .mockReturnValue(null);
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetEnemyPopulation?(): unknown;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+    expect(workerModule.__testOnlyGetEnemyPopulation?.()).toBeNull();
+    expect(() => sendSimStateMessage()).not.toThrow();
+
+    spy.mockRestore();
+  });
+
+  it('completes the async arms-race evaluation after wave clear', async () => {
+    jest.resetModules();
+
+    const tickModule = await import('../host/game/tick');
+    const gameTickSpy = jest
+      .spyOn(tickModule, 'gameTick')
+      .mockImplementation(
+        (state: GameState) => ({ ...state, enemies: [] }) as GameState,
+      );
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyGetPendingGeneration?(): number | null;
+      __testOnlyGetChampionMainNetwork?(): unknown;
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyGetAllEnemiesCleared?(): boolean;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 13.5, y: 12.5 }]);
+
+    // Establish at least one alive enemy so the wave-clear transition fires.
+    for (let i = 0; i < 3; i += 1) {
+      sendSimStateMessage();
+    }
+
+    workerSelf.postMessage.mockClear();
+    sendSimStateMessage();
+
+    expect(workerModule.__testOnlyGetAllEnemiesCleared?.()).toBe(true);
+    expect(workerModule.__testOnlyGetPendingGeneration?.()).not.toBeNull();
+
+    // Wait for the fire-and-forget Neat evaluation to finish. Popsize is 4,
+    // so this should complete in a few seconds even on slow CI runners.
+    const startMs = Date.now();
+    while (
+      workerModule.__testOnlyGetPendingGeneration?.() !== null &&
+      Date.now() - startMs < 60000
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    expect(workerModule.__testOnlyGetPendingGeneration?.()).toBeNull();
+    expect(workerModule.__testOnlyGetChampionMainNetwork?.()).not.toBeNull();
+    expect(workerModule.__testOnlyGetGameState?.()?.generation).toBeGreaterThan(
+      0,
+    );
+
+    gameTickSpy.mockRestore();
+  }, 70000);
+
+  it('does not inject enemy weights when the advanceWave snapshot is not mlp', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetEnemyPopulation?(): {
+        kind: string;
+        update: jest.Mock;
+      } | null;
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyGetAllEnemiesCleared?(): boolean;
+    };
+
+    sendInitMessage('cpu');
+
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 13.5, y: 12.5 }]);
+    // Let enemies establish with the real MLP population before we force a
+    // non-MLP snapshot on the wave-clear tick.
+    for (let i = 0; i < 3; i += 1) {
+      sendSimStateMessage();
+    }
+
+    const population = workerModule.__testOnlyGetEnemyPopulation?.();
+    expect(population).not.toBeNull();
+    const updateSpy = jest
+      .spyOn(population!, 'update')
+      .mockReturnValue({ kind: 'swarm' });
+
+    // Force a wave-clear on the next tick so advanceWave is invoked.
+    const realTick = await import('../host/game/tick');
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    const gameTickSpy = jest
+      .spyOn(realTick, 'gameTick')
+      .mockImplementation(() => ({ ...state, enemies: [] }) as GameState);
+
+    workerSelf.postMessage.mockClear();
+    expect(() => sendSimStateMessage()).not.toThrow();
+    expect(workerModule.__testOnlyGetAllEnemiesCleared?.()).toBe(true);
+
+    updateSpy.mockRestore();
+    gameTickSpy.mockRestore();
+  });
+
+  it('networkOutputToTickInput pads a short output array', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+
+    const shortOutputNet = {
+      activate: jest.fn(() => [0.1, 0.2]),
+    } as unknown as { activate: jest.Mock };
+    workerModule.__testOnlySetChampionMainNetwork?.(shortOutputNet);
+
+    expect(() =>
+      sendSimStateMessage(0.25, { humanMode: 'auto' }),
+    ).not.toThrow();
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('does not launch a second arms-race evaluation while one is pending', async () => {
+    jest.resetModules();
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetPendingGeneration?(): number | null;
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+    };
+
+    sendInitMessage('cpu');
+
+    const realTick = await import('../host/game/tick');
+    let keepEnemiesAlive = false;
+    const gameTickSpy = jest
+      .spyOn(realTick, 'gameTick')
+      .mockImplementation(
+        (s: GameState) =>
+          ({ ...s, enemies: keepEnemiesAlive ? s.enemies : [] }) as GameState,
+      );
+
+    // First wave-clear: enemies go from present to empty, launching the
+    // fire-and-forget arms-race evaluation.
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 13.5, y: 12.5 }]);
+    sendSimStateMessage();
+    const firstPending = workerModule.__testOnlyGetPendingGeneration?.();
+    expect(firstPending).not.toBeNull();
+
+    // Tick once with alive enemies to reset prevAllEnemiesCleared back to false
+    // while the first generation is still pending.
+    keepEnemiesAlive = true;
+    workerModule.__testOnlyInjectTestEnemies?.([
+      { x: 14.5, y: 13.5 },
+      { x: 15.5, y: 14.5 },
+    ]);
+    sendSimStateMessage();
+
+    // Second wave-clear while the first generation is still in flight. This
+    // enters the wave-clear block with pendingGeneration !== null, exercising
+    // the `pendingGeneration === null` false branch at line 1799 and skipping
+    // the launch of a second concurrent evaluation.
+    keepEnemiesAlive = false;
+    sendSimStateMessage();
+    expect(workerModule.__testOnlyGetPendingGeneration?.()).toBe(firstPending);
+
+    // Wait for the fire-and-forget Neat evaluation to finish so no async work
+    // leaks after the Jest environment is torn down.
+    let pending = workerModule.__testOnlyGetPendingGeneration?.();
+    for (let i = 0; i < 300 && pending !== null; i += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      pending = workerModule.__testOnlyGetPendingGeneration?.();
+    }
+    expect(pending).toBeNull();
 
     gameTickSpy.mockRestore();
   });

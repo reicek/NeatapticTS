@@ -157,6 +157,12 @@ export interface NeatensteinRenderFrame {
    * wave number for the centered "Wave N" announcement overlay.
    */
   spawnCount?: number;
+  /**
+   * Current evolutionary generation from the game state, forwarded to the
+   * HUD status bar for the "GEN:" counter display. Falls back to 0 when the
+   * worker does not include it in the frame payload.
+   */
+  generation?: number;
 }
 
 let nextRequestId = 0;

@@ -1,10 +1,13 @@
 import { describe, expect, it } from '@jest/globals';
 
+import { buildNeatensteinMap } from '../browser-entry/renderer/map';
 import type { CollisionMap } from '../browser-entry/renderer/map';
 import { NEATENSTEIN_MAP_SIZE } from '../browser-entry/constants';
+import type { GameState } from '../browser-entry/host/game/types';
 import {
   buildEnemyDistanceMap,
   buildVisionVector,
+  extractSensors,
   findBestNavigationStep,
   getDistance,
 } from './enemy-navigation';
@@ -137,6 +140,67 @@ describe('buildEnemyDistanceMap', () => {
     const map = buildEnemyDistanceMap(createEmptyCollisionMap(), 0, 0, size);
     expect(map.distances.length).toBe(size * size);
     expect(map.size).toBe(size);
+  });
+
+  it('fills a caller-provided distances buffer in-place', () => {
+    const size = 32;
+    const distances = new Int32Array(size * size);
+    const map = buildEnemyDistanceMap(
+      createEmptyCollisionMap(),
+      5,
+      5,
+      size,
+      distances,
+    );
+    // The returned map should reference the same buffer.
+    expect(map.distances).toBe(distances);
+    // Distance values should be computed correctly.
+    expect(getDistance(map, 5, 5)).toBe(0);
+    expect(getDistance(map, 6, 5)).toBe(1);
+    expect(getDistance(map, 5, 6)).toBe(1);
+  });
+
+  it('reuses the same buffer across multiple calls', () => {
+    const size = 16;
+    const distances = new Int32Array(size * size);
+    // First call with goal at (0, 0).
+    const map1 = buildEnemyDistanceMap(
+      createEmptyCollisionMap(),
+      0,
+      0,
+      size,
+      distances,
+    );
+    expect(map1.distances).toBe(distances);
+    expect(getDistance(map1, 0, 0)).toBe(0);
+
+    // Second call with goal at (8, 8) — should overwrite the same buffer.
+    const map2 = buildEnemyDistanceMap(
+      createEmptyCollisionMap(),
+      8,
+      8,
+      size,
+      distances,
+    );
+    expect(map2.distances).toBe(distances);
+    expect(getDistance(map2, 8, 8)).toBe(0);
+    // Old goal (0,0) should now have a non-zero distance.
+    expect(getDistance(map2, 0, 0)).toBe(16);
+  });
+
+  it('allocates a fresh buffer when distances is the wrong length', () => {
+    const size = 32;
+    const wrongBuffer = new Int32Array(10);
+    const map = buildEnemyDistanceMap(
+      createEmptyCollisionMap(),
+      0,
+      0,
+      size,
+      wrongBuffer,
+    );
+    // Should NOT reuse the wrong-length buffer.
+    expect(map.distances).not.toBe(wrongBuffer);
+    expect(map.distances.length).toBe(size * size);
   });
 });
 
@@ -600,5 +664,189 @@ describe('buildVisionVector', () => {
     const vision = buildVisionVector(map, 10, 12, 1);
     // delta = 1 - 2 = -1, clipped = -1, progress = 0.5 + (-1)/4 = 0.25
     expect(vision[5]).toBe(0.25);
+  });
+});
+
+/** Build a minimal GameState for sensor extraction tests. */
+function createTestGameState(overrides?: Partial<GameState>): GameState {
+  return {
+    seed: 42,
+    simTimeMs: 0,
+    episodeTimeMs: 0,
+    player: {
+      position: { x: 10.5, y: 10.5 },
+      angleRad: 0,
+      health: 80,
+      maxHealth: 100,
+      ammo: 15,
+      maxAmmo: 30,
+      dashTimeRemainingMs: 0,
+      dashCooldownMs: 0,
+    },
+    enemies: [],
+    impacts: [],
+    kills: 0,
+    spawnCount: 0,
+    generation: 1,
+    ...overrides,
+  } as GameState;
+}
+
+describe('extractSensors', () => {
+  // Use the real Neatenstein map so wall raycasts hit the perimeter.
+  const flatMap = buildNeatensteinMap(42);
+
+  it('AC-065: returns a 12-element sensor vector', () => {
+    const state = createTestGameState();
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    expect(sensors.length).toBe(12);
+  });
+
+  it('AC-065: includes player health ratio, ammo, angle, x, y in first 5 sensors', () => {
+    const state = createTestGameState();
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    expect(sensors[0]).toBeCloseTo(0.8, 5); // health / maxHealth = 80/100
+    expect(sensors[1]).toBe(15); // ammo
+    expect(sensors[2]).toBe(0); // angleRad
+    expect(sensors[3]).toBe(10.5); // position.x
+    expect(sensors[4]).toBe(10.5); // position.y
+  });
+
+  it('AC-065: health ratio is clamped to 0 when maxHealth is 0', () => {
+    const state = createTestGameState({
+      player: {
+        position: { x: 10.5, y: 10.5 },
+        angleRad: 0,
+        health: 50,
+        maxHealth: 0,
+        ammo: 10,
+        maxAmmo: 30,
+        dashTimeRemainingMs: 0,
+        dashCooldownMs: 0,
+      },
+    });
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    expect(sensors[0]).toBe(0);
+  });
+
+  it('AC-065: sets enemy sensors to 0 when no active enemies exist', () => {
+    const state = createTestGameState();
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    expect(sensors[5]).toBe(0); // bearing
+    expect(sensors[6]).toBe(0); // distance
+    expect(sensors[7]).toBe(0); // health
+  });
+
+  it('AC-065: includes nearest enemy bearing, distance, and health', () => {
+    const state = createTestGameState({
+      enemies: [
+        {
+          position: { x: 14.5, y: 10.5 },
+          health: 60,
+          active: true,
+        },
+      ],
+    });
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    // Player at (10.5, 10.5), enemy at (14.5, 10.5), player angle = 0
+    // dx = 4, dy = 0, bearing = atan2(0, 4) - 0 = 0
+    expect(sensors[5]).toBeCloseTo(0, 5); // bearing
+    expect(sensors[6]).toBeCloseTo(4, 5); // distance
+    expect(sensors[7]).toBe(60); // health
+  });
+
+  it('AC-065: computes relative bearing normalized to [-π, π]', () => {
+    // Player facing east (angle 0), enemy directly south at (10.5, 14.5).
+    // dx = 0, dy = 4, bearing = atan2(4, 0) - 0 = π/2
+    const state = createTestGameState({
+      enemies: [
+        {
+          position: { x: 10.5, y: 14.5 },
+          health: 50,
+          active: true,
+        },
+      ],
+    });
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    expect(sensors[5]).toBeCloseTo(Math.PI / 2, 4);
+  });
+
+  it('AC-065: normalizes bearing that would exceed π', () => {
+    // Player facing west (angle π), enemy to the east at (14.5, 10.5).
+    // dx = 4, dy = 0, bearing = atan2(0, 4) - π = -π → normalized to π
+    // (or -π, both are equivalent on the circle)
+    const state = createTestGameState({
+      player: {
+        position: { x: 10.5, y: 10.5 },
+        angleRad: Math.PI,
+        health: 100,
+        maxHealth: 100,
+        ammo: 20,
+        maxAmmo: 30,
+        dashTimeRemainingMs: 0,
+        dashCooldownMs: 0,
+      },
+      enemies: [
+        {
+          position: { x: 14.5, y: 10.5 },
+          health: 40,
+          active: true,
+        },
+      ],
+    });
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    // atan2(sin(-π), cos(-π)) = atan2(0, -1) = π
+    expect(Math.abs(sensors[5])).toBeCloseTo(Math.PI, 4);
+  });
+
+  it('AC-065: selects the nearest of multiple active enemies', () => {
+    const state = createTestGameState({
+      enemies: [
+        {
+          position: { x: 20.5, y: 20.5 },
+          health: 100,
+          active: true,
+        },
+        {
+          position: { x: 12.5, y: 10.5 },
+          health: 30,
+          active: true,
+        },
+      ],
+    });
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    // Nearest enemy is at (12.5, 10.5), distance = 2
+    expect(sensors[6]).toBeCloseTo(2, 5);
+    expect(sensors[7]).toBe(30);
+  });
+
+  it('AC-065: ignores inactive enemies', () => {
+    const state = createTestGameState({
+      enemies: [
+        {
+          position: { x: 12.5, y: 10.5 },
+          health: 30,
+          active: false,
+        },
+        {
+          position: { x: 20.5, y: 20.5 },
+          health: 100,
+          active: true,
+        },
+      ],
+    });
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    // The inactive enemy at distance 2 should be ignored; active enemy at far distance
+    expect(sensors[6]).toBeCloseTo(Math.hypot(10, 10), 3);
+  });
+
+  it('AC-065: includes 4 wall raycast distances in sensors[8..11]', () => {
+    const state = createTestGameState();
+    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    // All 4 raycasts should be finite (the Neatenstein map has a closed perimeter).
+    expect(Number.isFinite(sensors[8])).toBe(true); // N
+    expect(Number.isFinite(sensors[9])).toBe(true); // E
+    expect(Number.isFinite(sensors[10])).toBe(true); // S
+    expect(Number.isFinite(sensors[11])).toBe(true); // W
   });
 });

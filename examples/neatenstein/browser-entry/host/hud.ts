@@ -283,7 +283,7 @@ export function createDeathFeedbackIndicator(
  *
  * The function resolves the existing host container whose `id === outputId`,
  * throws if it is missing, and appends a `<select>` element with two options:
- * `'auto'` (initial) and `'human'`. The returned object exposes `mode`,
+ * `'auto'` and `'human'` (initial). The returned object exposes `mode`,
  * `setMode`, and `onToggle` so the host can wire the selector to the arms-race
  * configuration.
  *
@@ -330,11 +330,11 @@ export function createHumanModeSelector(outputId: string): HumanModeSelector {
   humanOption.textContent = NEATENSTEIN_HUMAN_MODE_LABEL_HUMAN;
   select.appendChild(humanOption);
 
-  select.value = NEATENSTEIN_HUMAN_MODE_LABEL_AUTO;
+  select.value = NEATENSTEIN_HUMAN_MODE_LABEL_HUMAN;
 
   container.appendChild(select);
 
-  let mode: HumanMode = 'auto';
+  let mode: HumanMode = 'human';
   const callbacks: Array<(mode: HumanMode) => void> = [];
 
   const notify = (): void => {
@@ -531,6 +531,8 @@ export interface NeonStatusBarState {
   playerKills?: number;
   /** Current player death count (fallback 0). */
   playerDeaths?: number;
+  /** Current evolutionary generation (fallback 0). */
+  generation?: number;
 }
 
 /**
@@ -556,6 +558,8 @@ export interface NeonStatusBarHud {
   killsLabel: HTMLElement;
   /** Label element showing the player death count. */
   deathsLabel: HTMLElement;
+  /** Label element showing the evolutionary generation. */
+  generationLabel: HTMLElement;
   /** Mugshot canvas overlay rendering the robot head crop with damage tint. */
   mugshot: MugshotOverlay;
   /** Refresh the status bar from a render-state snapshot. */
@@ -690,6 +694,28 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
   bar.appendChild(deathsPrefix);
   bar.appendChild(deathsLabel);
 
+  // Generation prefix + label — right of the deaths label
+  const generationPrefix = document.createElement('span');
+  generationPrefix.textContent = 'GEN:';
+  generationPrefix.style.color = NEATENSTEIN_HEALTH_COLOR_CYAN;
+  generationPrefix.style.fontFamily = 'monospace';
+  generationPrefix.style.fontSize = '16px';
+  generationPrefix.style.padding = '0 2px';
+  generationPrefix.style.display = 'flex';
+  generationPrefix.style.alignItems = 'center';
+
+  const generationLabel = document.createElement('div');
+  generationLabel.textContent = '0';
+  generationLabel.style.color = NEATENSTEIN_HEALTH_COLOR_CYAN;
+  generationLabel.style.fontFamily = 'monospace';
+  generationLabel.style.fontSize = '16px';
+  generationLabel.style.padding = '0 4px';
+  generationLabel.style.display = 'flex';
+  generationLabel.style.alignItems = 'center';
+
+  bar.appendChild(generationPrefix);
+  bar.appendChild(generationLabel);
+
   // Segmented ammo track (shoots bar) — rightmost bar on the status bar edge
   const ammoSegments: HTMLElement[] = [];
   for (let i = 0; i < NEON_STATUS_BAR_SEGMENT_COUNT; i++) {
@@ -712,6 +738,7 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
     playerMaxAmmo: 50,
     playerKills: 0,
     playerDeaths: 0,
+    generation: 0,
   };
 
   const update = (state: NeonStatusBarState): void => {
@@ -751,6 +778,8 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
     // Kill/death readouts
     killsLabel.textContent = `${internalState.playerKills ?? 0}`;
     deathsLabel.textContent = `${internalState.playerDeaths ?? 0}`;
+    // Generation readout
+    generationLabel.textContent = `${internalState.generation ?? 0}`;
   };
 
   return {
@@ -761,6 +790,7 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
     hiveFill,
     killsLabel,
     deathsLabel,
+    generationLabel,
     mugshot,
     update,
   };

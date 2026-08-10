@@ -963,3 +963,189 @@ describe('AC-801-S05-002: ammo pickup spawn on enemy kill', () => {
     expect(typeof pickups![0].amount).toBe('number');
   });
 });
+
+describe('AC-087: EpisodeTelemetry tracks damageDealt, shotsFired, shotsHit', () => {
+  it('creates telemetry with all three counters on a shot that hits a wall', () => {
+    const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const result = fireBolt(state);
+    expect(result.state.telemetry).toBeDefined();
+    expect(result.state.telemetry!.damageDealt).toBe(0);
+    expect(result.state.telemetry!.shotsFired).toBe(1);
+    expect(result.state.telemetry!.shotsHit).toBe(0);
+  });
+
+  it('creates telemetry with all three counters on a shot that hits an enemy', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              base.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y: base.player.position.y,
+          },
+          health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+        },
+      ],
+    };
+    const result = fireBolt(state);
+    expect(result.state.telemetry).toBeDefined();
+    expect(result.state.telemetry!.shotsFired).toBe(1);
+    expect(result.state.telemetry!.shotsHit).toBe(1);
+    expect(result.state.telemetry!.damageDealt).toBe(NEATENSTEIN_BOLT_DAMAGE);
+  });
+
+  it('accumulates telemetry across multiple shots', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    let state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              base.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y: base.player.position.y,
+          },
+          health: NEATENSTEIN_ENEMY_MAX_HEALTH,
+          maxHealth: NEATENSTEIN_ENEMY_MAX_HEALTH,
+          stunTimerMs: 0,
+        },
+      ],
+    };
+
+    // Shot 1: hit enemy (non-lethal)
+    state = fireBolt(state).state;
+    expect(state.telemetry!.shotsFired).toBe(1);
+    expect(state.telemetry!.shotsHit).toBe(1);
+    expect(state.telemetry!.damageDealt).toBe(NEATENSTEIN_BOLT_DAMAGE);
+
+    // Shot 2: clear stun, hit enemy again
+    state = {
+      ...state,
+      enemies: state.enemies.map((e) => ({ ...e, stunTimerMs: 0 })),
+    };
+    state = fireBolt(state).state;
+    expect(state.telemetry!.shotsFired).toBe(2);
+    expect(state.telemetry!.shotsHit).toBe(2);
+    expect(state.telemetry!.damageDealt).toBe(NEATENSTEIN_BOLT_DAMAGE * 2);
+  });
+
+  it('initializes telemetry to zero when state has no telemetry field', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const { telemetry: _stripped, ...stateWithoutTelemetry } = base;
+    void _stripped;
+    const state = stateWithoutTelemetry as GameState;
+    const result = fireBolt(state);
+    expect(result.state.telemetry).toBeDefined();
+    expect(result.state.telemetry!.damageDealt).toBe(0);
+    expect(result.state.telemetry!.shotsFired).toBe(1);
+    expect(result.state.telemetry!.shotsHit).toBe(0);
+  });
+});
+
+describe('AC-087a: fireBolt increments shotsFired; applyEnemyDamage increments damageDealt and shotsHit', () => {
+  it('fireBolt increments shotsFired by 1 on each successful shot', () => {
+    const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const result = fireBolt(state);
+    expect(result.state.telemetry!.shotsFired).toBe(1);
+  });
+
+  it('fireBolt does not increment shotsFired when ammo is zero', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = { ...base, player: { ...base.player, ammo: 0 } };
+    const result = fireBolt(state);
+    expect(result.state.telemetry ?? { shotsFired: 0 }).toMatchObject({
+      shotsFired: 0,
+    });
+  });
+
+  it('applyEnemyDamage increments shotsHit by 1', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: { x: 5, y: 5 },
+          health: 100,
+          stunTimerMs: 0,
+        },
+      ],
+    };
+    const result = applyEnemyDamage(state, 0);
+    expect(result.telemetry!.shotsHit).toBe(1);
+  });
+
+  it('applyEnemyDamage increments damageDealt by the bolt damage', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: { x: 5, y: 5 },
+          health: 100,
+          stunTimerMs: 0,
+        },
+      ],
+    };
+    const result = applyEnemyDamage(state, 0);
+    expect(result.telemetry!.damageDealt).toBe(NEATENSTEIN_BOLT_DAMAGE);
+  });
+
+  it('applyEnemyDamage caps damageDealt at enemy remaining health on a kill', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: { x: 5, y: 5 },
+          health: 5, // Less than bolt damage (20)
+          stunTimerMs: 0,
+        },
+      ],
+    };
+    const result = applyEnemyDamage(state, 0);
+    // damageDealt should be min(20, 5) = 5, not the full bolt damage
+    expect(result.telemetry!.damageDealt).toBe(5);
+  });
+
+  it('applyEnemyDamage does not increment telemetry when stun blocks damage', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      telemetry: {
+        damageDealt: 10,
+        shotsFired: 5,
+        shotsHit: 3,
+        aimMissRate: 0.4,
+      },
+      enemies: [
+        {
+          position: { x: 5, y: 5 },
+          health: 100,
+          stunTimerMs: 250,
+        },
+      ],
+    };
+    const result = applyEnemyDamage(state, 0);
+    // Stun invincibility: telemetry unchanged
+    expect(result.telemetry).toEqual(state.telemetry);
+  });
+
+  it('computes aimMissRate as (shotsFired - shotsHit) / shotsFired after a miss', () => {
+    const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    // No enemies → bolt hits wall → shotsFired=1, shotsHit=0 → aimMissRate=1
+    const result = fireBolt(state);
+    expect(result.state.telemetry!.aimMissRate).toBe(1);
+  });
+
+  it('computes aimMissRate as 0 when shotsFired is 0', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    // Telemetry initialized with aimMissRate 0 before any shot
+    expect(base.telemetry?.aimMissRate ?? 0).toBe(0);
+  });
+});

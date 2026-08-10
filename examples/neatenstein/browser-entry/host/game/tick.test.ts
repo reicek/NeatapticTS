@@ -6,6 +6,7 @@ import { fireBolt } from './combat';
 import {
   NEATENSTEIN_BOLT_DAMAGE,
   NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX,
   NEATENSTEIN_MAP_SIZE,
   NEATENSTEIN_TEST_ENEMY_HEALTH,
   NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
@@ -253,6 +254,35 @@ describe('Neatenstein game tick', () => {
       expect(next.bolts.length).toBe(0);
       expect(next.gun.recoilOffset).toBe(0);
       expect(next.gun.firing).toBe(false);
+    });
+
+    it('falls back to a default gun state when fireBolt returns a state without gun', async () => {
+      await jest.isolateModulesAsync(async () => {
+        jest.doMock('./combat.ts', () => {
+          const actual = jest.requireActual('./combat.ts') as Record<
+            string,
+            unknown
+          >;
+          return {
+            ...actual,
+            fireBolt: jest.fn(() => ({
+              state: {},
+              fired: true,
+              bolt: null,
+            })),
+          };
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
+        const mod = (await import('./tick.ts')) as Record<string, any>;
+        const { createGameState, gameTick } = mod;
+        const state = createGameState({ seed: 1 });
+        const next = gameTick(state, { fire: true });
+        expect(next.gun.recoilOffset).toBe(
+          NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX,
+        );
+        expect(next.gun.firing).toBe(true);
+        jest.dontMock('./combat.ts');
+      });
     });
   });
 
