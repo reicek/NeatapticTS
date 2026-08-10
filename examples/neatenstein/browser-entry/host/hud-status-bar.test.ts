@@ -375,8 +375,8 @@ describe('Neatenstein neon Wolfenstein-style HUD status bar', () => {
   });
 });
 
-describe('AC-0908: kills counter on left, deaths counter on right', () => {
-  it('places the kills K: prefix as the first child of the bar', async () => {
+describe('AC-1006: HUD status bar element order — health, K:, portrait, D:, ammo', () => {
+  it('places health segments as the first children of the bar', async () => {
     createHudFixture();
     const { createNeonStatusBar } =
       (await import('./hud.ts')) as unknown as NeonStatusBarModule;
@@ -384,10 +384,57 @@ describe('AC-0908: kills counter on left, deaths counter on right', () => {
 
     const firstChild = hud.bar.firstChild as HTMLElement;
     expect(firstChild).toBeDefined();
-    expect(firstChild.textContent).toBe('K:');
+    expect(firstChild.className).toBe('health-segment');
   });
 
-  it('places the deaths label as the last child of the bar', async () => {
+  it('places the K: prefix before the HIVE density track', async () => {
+    createHudFixture();
+    const { createNeonStatusBar } =
+      (await import('./hud.ts')) as unknown as NeonStatusBarModule;
+    const hud = createNeonStatusBar(HUD_OUTPUT_ID);
+
+    const children = Array.from(hud.bar.children) as HTMLElement[];
+    const killsPrefixIndex = children.findIndex(
+      (el) => el.textContent === 'K:',
+    );
+    const hiveTrackIndex = children.findIndex(
+      (el) => el.className === 'hive-density-track',
+    );
+    expect(killsPrefixIndex).toBeGreaterThanOrEqual(0);
+    expect(hiveTrackIndex).toBeGreaterThan(killsPrefixIndex);
+  });
+
+  it('places the K: prefix before the mugshot canvas', async () => {
+    createHudFixture();
+    const { createNeonStatusBar } =
+      (await import('./hud.ts')) as unknown as NeonStatusBarModule;
+    const hud = createNeonStatusBar(HUD_OUTPUT_ID);
+
+    const children = Array.from(hud.bar.children) as HTMLElement[];
+    const killsPrefixIndex = children.findIndex(
+      (el) => el.textContent === 'K:',
+    );
+    const mugshotIndex = children.findIndex((el) => el.tagName === 'CANVAS');
+    expect(killsPrefixIndex).toBeGreaterThanOrEqual(0);
+    expect(mugshotIndex).toBeGreaterThan(killsPrefixIndex);
+  });
+
+  it('places the D: prefix and deaths label after the mugshot canvas', async () => {
+    createHudFixture();
+    const { createNeonStatusBar } =
+      (await import('./hud.ts')) as unknown as NeonStatusBarModule;
+    const hud = createNeonStatusBar(HUD_OUTPUT_ID);
+
+    const children = Array.from(hud.bar.children) as HTMLElement[];
+    const mugshotIndex = children.findIndex((el) => el.tagName === 'CANVAS');
+    const deathsPrefixIndex = children.findIndex(
+      (el) => el.textContent === 'D:',
+    );
+    expect(deathsPrefixIndex).toBeGreaterThan(mugshotIndex);
+    expect(hud.deathsLabel.style.color).toBe(NEON_MAGENTA);
+  });
+
+  it('places ammo segments as the last children of the bar', async () => {
     createHudFixture();
     const { createNeonStatusBar } =
       (await import('./hud.ts')) as unknown as NeonStatusBarModule;
@@ -395,8 +442,7 @@ describe('AC-0908: kills counter on left, deaths counter on right', () => {
 
     const lastChild = hud.bar.lastChild as HTMLElement;
     expect(lastChild).toBeDefined();
-    expect(lastChild.textContent).toBe('0');
-    expect(lastChild.style.color).toBe(NEON_MAGENTA);
+    expect(lastChild.className).toBe('ammo-segment');
   });
 
   it('mugshot canvas is absolutely positioned and centered on screen', async () => {

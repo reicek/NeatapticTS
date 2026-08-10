@@ -16,7 +16,7 @@ export const GUN_SPRITE_SCALE = 4;
 
 export const GUN_SPRITE_PALETTE = [
   [0, 0, 0, 0], // 0  transparent
-  [10, 10, 12, 255], // 1  dark outline / shadow
+  [10, 10, 12, 100], // 1  dark outline / shadow
   [18, 20, 24, 255], // 2  dark receiver body
   [30, 33, 40, 255], // 3  metallic dark / vents
   [255, 255, 255, 255], // 4  neon white / metallic barrel

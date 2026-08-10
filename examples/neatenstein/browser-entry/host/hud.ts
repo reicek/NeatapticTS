@@ -610,7 +610,19 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
   bar.style.alignItems = 'stretch';
   bar.style.backgroundColor = 'rgba(6, 11, 20, 0.85)';
 
-  // Kill prefix + label — leftmost position for kills counter
+  // Segmented heat bar — leftmost bar on the status bar edge
+  const healthSegments: HTMLElement[] = [];
+  for (let i = 0; i < NEON_STATUS_BAR_SEGMENT_COUNT; i++) {
+    const seg = document.createElement('div');
+    seg.className = 'health-segment';
+    seg.style.flex = '1';
+    seg.style.height = '100%';
+    seg.style.backgroundColor = NEON_STATUS_BAR_INACTIVE_COLOR;
+    healthSegments.push(seg);
+    bar.appendChild(seg);
+  }
+
+  // Kill prefix + label — left of the centered portrait
   const killsPrefix = document.createElement('span');
   killsPrefix.textContent = 'K:';
   killsPrefix.style.color = NEATENSTEIN_HEALTH_COLOR_CYAN;
@@ -632,18 +644,6 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
   bar.appendChild(killsPrefix);
   bar.appendChild(killsLabel);
 
-  // Segmented health track
-  const healthSegments: HTMLElement[] = [];
-  for (let i = 0; i < NEON_STATUS_BAR_SEGMENT_COUNT; i++) {
-    const seg = document.createElement('div');
-    seg.className = 'health-segment';
-    seg.style.flex = '1';
-    seg.style.height = '100%';
-    seg.style.backgroundColor = NEON_STATUS_BAR_INACTIVE_COLOR;
-    healthSegments.push(seg);
-    bar.appendChild(seg);
-  }
-
   // Robot mugshot canvas overlay — absolutely centered on screen.
   const mugshot = createMugshotOverlay();
   mugshot.canvas.style.position = 'absolute';
@@ -653,22 +653,11 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
   mugshot.canvas.style.zIndex = '1';
   bar.appendChild(mugshot.canvas);
 
-  // Segmented ammo track
-  const ammoSegments: HTMLElement[] = [];
-  for (let i = 0; i < NEON_STATUS_BAR_SEGMENT_COUNT; i++) {
-    const seg = document.createElement('div');
-    seg.className = 'ammo-segment';
-    seg.style.flex = '1';
-    seg.style.height = '100%';
-    seg.style.backgroundColor = NEON_STATUS_BAR_INACTIVE_COLOR;
-    ammoSegments.push(seg);
-    bar.appendChild(seg);
-  }
-
-  // HIVE density fill bar
+  // HIVE density fill bar (not user-visible; kept in DOM for state tracking).
+  // Acts as a flex spacer between K: and D: so the centered portrait has room.
   const hiveTrack = document.createElement('div');
   hiveTrack.className = 'hive-density-track';
-  hiveTrack.style.flex = '1';
+  hiveTrack.style.flex = '2';
   hiveTrack.style.height = '100%';
   hiveTrack.style.position = 'relative';
   hiveTrack.style.backgroundColor = NEON_STATUS_BAR_INACTIVE_COLOR;
@@ -679,7 +668,7 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
   hiveTrack.appendChild(hiveFill);
   bar.appendChild(hiveTrack);
 
-  // Death prefix + label — rightmost position for deaths counter
+  // Death prefix + label — right of the centered portrait
   const deathsPrefix = document.createElement('span');
   deathsPrefix.textContent = 'D:';
   deathsPrefix.style.color = NEATENSTEIN_HEALTH_COLOR_MAGENTA;
@@ -700,6 +689,18 @@ export function createNeonStatusBar(outputId: string): NeonStatusBarHud {
 
   bar.appendChild(deathsPrefix);
   bar.appendChild(deathsLabel);
+
+  // Segmented ammo track (shoots bar) — rightmost bar on the status bar edge
+  const ammoSegments: HTMLElement[] = [];
+  for (let i = 0; i < NEON_STATUS_BAR_SEGMENT_COUNT; i++) {
+    const seg = document.createElement('div');
+    seg.className = 'ammo-segment';
+    seg.style.flex = '1';
+    seg.style.height = '100%';
+    seg.style.backgroundColor = NEON_STATUS_BAR_INACTIVE_COLOR;
+    ammoSegments.push(seg);
+    bar.appendChild(seg);
+  }
 
   container.appendChild(bar);
 

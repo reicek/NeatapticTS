@@ -2356,3 +2356,76 @@ slice-advancement gate: 7/7 sub-gates PASS. plan-sync PASS, step-packet PASS, pl
 ### Next resume point
 
 - All phases [DONE]. Plan ready for archive. Phase 9 validation complete - 66/66 tests PASS, 100% coverage, browser smoke confirms mugshot centered (centerDiff=0), K: on left, D: on right.
+
+---
+
+## Plan closure compression (2026-08-10)
+
+All 10 phases marked [DONE]. Step/slice YAML blocks and validation evidence moved from the plan file to this log. The plan file is trimmed to a closed tracker with compact [DONE] markers and a reference to this log. The plan + log pair is archived to `plans/completed/`.
+
+### Phase 1 — Plan lock and acceptance criteria [DONE]
+
+[DONE] Phase 1: Plan authored, registered in README and Roadmap, acceptance criteria locked, slice-advancement gate passed. Step 01 [DONE].
+
+### Phase 2 — Neon Wolfenstein-style HUD indicators [DONE]
+
+[DONE] Phase 2: Neon bottom status-bar overlay built, old flex-based HUD factories removed, render frame extended with scalar HUD fields (playerHealth, playerMaxHealth, playerAmmo, playerMaxAmmo, playerKills, playerDeaths), worker ack forwarded. 4 slices (02-red, 02-protocol, 02-impl, 02-green) all [DONE], 100% coverage, browser smoke PASS.
+
+Key files: `browser-entry/host/hud.ts`, `browser-entry/host/hud-status-bar.test.ts`, `browser-entry/renderer/frame.ts`, `browser-entry/worker/display.worker.ts`, `browser-entry/browser-entry.ts`.
+
+### Phase 3 — Robot mugshot overlay [DONE]
+
+[DONE] Phase 3: Head-only robot mugshot canvas overlay derived from `robot-sprite-data.json`, selects frontLeft/frontRight by strafe with left-precedence and anti-flicker cooldown, tints teal-to-gray by damage. Shared decode module extracted from `sprites.ts`. 4 slices (03-red, 03-decode, 03-overlay, 03-green) all [DONE], 100% coverage, browser smoke PASS.
+
+Key files: `browser-entry/host/hud-mugshot.ts`, `browser-entry/renderer/robot-sprite-decode.ts`, `browser-entry/renderer/sprites.ts`, `browser-entry/host/hud.ts`, `browser-entry/browser-entry.ts`.
+
+### Phase 4 — Voxel cannon [DONE]
+
+[DONE] Phase 4: Cannon rebuilt through 3 iterations (04: procedural voxel, 04b: Doom-style neon redesign, 04c: Wolfenstein-style palette-indexed chaingun). Final state: `gun-sprite-data.js` palette-indexed grid asset + `gun-sprite-decode.ts` decoder + `gun.ts` renderer. GUN_BODY_ASPECT_RATIO 1.6, metallic/neon-white barrel, dark receiver, teal accents, muzzle ring. Old `voxel-gun.ts` and `gun-sprite.ts` voxel projector removed (no deferred cleanup). 40/40 tests pass, 100% coverage, browser smoke PASS. See detailed archive above (Phase 4 section and Step 04c done-state archive).
+
+Key files: `examples/neatenstein/gun-sprite-data.js`, `browser-entry/renderer/gun-sprite-decode.ts`, `browser-entry/renderer/gun.ts`.
+
+### Phase 5 — Death / respawn / kill counter [DONE]
+
+[DONE] Phase 5: Superseded — scope (respawn, deaths counter, playerDead terminal removal) implemented by Phase 8 bug fix 2b-02. Marked [DONE] without separate implementation. No `respawn.ts` module was created; respawn logic lives inline in `tick.ts` (lines 328–348). `deaths` field added to `GameState` in `types.ts`. `isInvulnerable()` in `state.ts` checks `respawnInvulnMs`.
+
+### Phase 6 — Infinite enemy waves [DONE]
+
+[DONE] Phase 6: Superseded — scope (remove maxSpawnCount cap, remove allEnemiesKilled terminal, infinite wave respawning) implemented by Phase 8 bug fix 2b-04. Marked [DONE] without separate implementation. `maxSpawnCount` removed from `waves.ts`, `allEnemiesKilled` removed from `episode.ts`, episodes end only by `episodeTimeMs >= episodeDurationMs`.
+
+### Phase 7 — Integration and final review [DONE]
+
+[DONE] Phase 7: Superseded — AC-701 (full test suite green) covered by Phase 8 validation (342 tests, 100% coverage, browser smoke PASS). AC-702 (docs update) verified post-Phase-9. Marked [DONE] without separate implementation.
+
+### Phase 8 — Game-logic bug fixes [DONE]
+
+[DONE] Phase 8: Four game-logic bugs fixed. (1) Stale enemy index crash: moved `applyEnemyDamage` inside `if (enemy)` guard in `tick.ts`. (2) Hero respawn: added `deaths` counter, respawn at center with full health/ammo and invulnerability, `playerDead` terminal replaced by time-based guard. (3) Spawn-at-corners: dead enemies always filtered from roster regardless of `currentBatchFull`. (4) Infinite waves: new wave waits for all 8 to die, `maxSpawnCount` cap removed, `allEnemiesKilled` terminal removed. 5 slices (2b-01 through 2b-05-green) all [DONE], 342 tests pass, 100% coverage, browser smoke PASS.
+
+Key files: `browser-entry/host/game/tick.ts`, `browser-entry/host/game/types.ts`, `browser-entry/host/game/waves.ts`, `browser-entry/host/game/episode.ts`.
+
+### Phase 9 — HUD layout and mugshot input tweaks [DONE]
+
+[DONE] Phase 9: (1) Kills "K:" counter moved to left side of HUD, Deaths "D:" stays on right, mugshot portrait centered on screen (centerDiff=0). (2) Mugshot left/right heading follows mouse look (yawDelta) instead of keyboard strafe. `MugshotMovement` replaced by `MugshotLook` interface. 3 slices (09-impl-kills-left, 09-impl-mugshot-mouse, 09-green) all [DONE], 66/66 tests pass, 100% coverage, browser smoke PASS.
+
+Key files: `browser-entry/host/hud.ts`, `browser-entry/host/hud-mugshot.ts`, `browser-entry/browser-entry.ts`.
+
+### Phase 10 — HUD status bar element reorder [DONE]
+
+[DONE] Phase 10: HUD status bar DOM children reordered to: health segments → HIVE density track (invisible) → K: prefix + killsLabel → mugshot canvas (absolute, centered) → D: prefix + deathsLabel → ammo segments. Bars on outside, counters flanking centered portrait. 2 slices (10-impl-hud-reorder, 10-green) all [DONE], 69/69 tests pass, ESLint clean, tsc clean.
+
+Key files: `browser-entry/host/hud.ts`, `browser-entry/host/hud-status-bar.test.ts`.
+
+### Final validation evidence (plan closure)
+
+- Phases 1-10 all [DONE].
+- Phase 4: 40/40 tests, 100% coverage, browser smoke PASS.
+- Phase 8: 342 tests, 100% coverage, browser smoke PASS.
+- Phase 9: 66/66 tests, 100% coverage, browser smoke PASS (mugshot centered, K: left, D: right).
+- Phase 10: 69/69 tests, ESLint clean, tsc clean.
+- slice-advancement gate: PASS for all executed slices.
+- No open steps, no stale WIP markers.
+- Pre-existing residual: GPU type errors in `src/architecture/network/gpu/` (unrelated), 28 ESLint warnings in non-touched files.
+
+### Reopen conditions
+
+New HUD reorder work should go in a separate new plan, not this one. This plan is terminally closed and archived to `plans/completed/`.
