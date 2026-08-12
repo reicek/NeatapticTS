@@ -22,6 +22,10 @@ import {
   NEATENSTEIN_KITING_APPROACH_DISTANCE_CELLS,
   NEATENSTEIN_KITING_BACKPEDAL_DISTANCE_CELLS,
 } from '../host/game/constants';
+import {
+  NEATENSTEIN_MOVE_ACCEL_PER_TICK,
+  NEATENSTEIN_MOVE_DECEL_PER_TICK,
+} from '../harness/neat-io-config';
 import type {
   ControlledEnemy,
   EnemyControllerState,
@@ -2752,9 +2756,9 @@ describe('P4S1-worker-branch: humanMode branching and NEAT controller', () => {
     sendSimStateMessage(0.25, { humanMode: 'auto' });
 
     expect(mockNet.activate).toHaveBeenCalledTimes(1);
-    // Sensor vector should have 15 inputs (NEATENSTEIN_MAIN_NEAT_INPUTS).
+    // Sensor vector should have 22 inputs (NEATENSTEIN_MAIN_NEAT_INPUTS).
     const sensorArg = mockNet.activate.mock.calls[0][0] as number[];
-    expect(sensorArg.length).toBe(15);
+    expect(sensorArg.length).toBe(22);
     expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
   });
 
@@ -2791,7 +2795,7 @@ describe('P4S2-sensor-activation: real sensor extraction and tanh output mapping
     };
   }
 
-  it('AC-065: sensor vector has 15 real (non-zero) elements from game state', async () => {
+  it('AC-065: sensor vector has 22 real (non-zero) elements from game state', async () => {
     jest.resetModules();
     const workerModule = (await loadModule('./display.worker.ts')) as {
       __testOnlySetChampionMainNetwork?(network: unknown): void;
@@ -2810,7 +2814,7 @@ describe('P4S2-sensor-activation: real sensor extraction and tanh output mapping
 
     expect(mockNet.activate).toHaveBeenCalledTimes(1);
     const sensorArg = mockNet.activate.mock.calls[0][0] as number[];
-    expect(sensorArg.length).toBe(15);
+    expect(sensorArg.length).toBe(22);
     // With a real game state and enemy, at least some sensors should be non-zero.
     // Player health ratio, position, ammo should all be non-zero.
     expect(sensorArg[0]).toBeGreaterThan(0); // health ratio
@@ -3379,7 +3383,7 @@ describe('AC-P3S1c-002: champion extinction on input count change', () => {
     };
   }
 
-  it('clears championMainNetwork when input count changes from 12 to 15', async () => {
+  it('clears championMainNetwork when input count changes from 12 to 22', async () => {
     jest.resetModules();
     const workerModule = (await loadModule('./display.worker.ts')) as {
       __testOnlySetChampionMainNetwork?(network: unknown): void;
@@ -3391,7 +3395,7 @@ describe('AC-P3S1c-002: champion extinction on input count change', () => {
 
     sendInitMessage('cpu');
 
-    // Inject a champion network (sets lastChampionInputCount = 15).
+    // Inject a champion network (sets lastChampionInputCount = 22).
     workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
     expect(workerModule.__testOnlyGetChampionMainNetwork?.()).not.toBeNull();
 
@@ -3419,7 +3423,7 @@ describe('AC-P3S1c-002: champion extinction on input count change', () => {
 
     sendInitMessage('cpu');
 
-    // Inject a champion network (sets lastChampionInputCount = 15).
+    // Inject a champion network (sets lastChampionInputCount = 22).
     workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
 
     // Send a simState in auto mode — input count matches, no extinction.
@@ -3439,7 +3443,7 @@ describe('AC-P3S1c-002: champion extinction on input count change', () => {
 
     sendInitMessage('cpu');
     workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
-    expect(workerModule.__testOnlyGetChampionInputCount?.()).toBe(15);
+    expect(workerModule.__testOnlyGetChampionInputCount?.()).toBe(22);
 
     // Re-init should clear the input count.
     sendInitMessage('cpu');
@@ -3744,7 +3748,7 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
     jest.dontMock('../../scripts/enemy-navigation');
   });
 
-  it('defaults to forward exploration when wallMap is null', async () => {
+  it('defaults to forward exploration when wallMap is null and ramps move on first tick', async () => {
     jest.resetModules();
 
     const workerModule = (await loadModule('./display.worker.ts')) as {
@@ -3762,7 +3766,7 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
 
     const input = workerModule.__testOnlyBuildFallbackAutoTickInput?.(state);
     expect(input).not.toBeNull();
-    expect(input!.move.y).toBe(1);
+    expect(input!.move.y).toBe(NEATENSTEIN_MOVE_ACCEL_PER_TICK);
     expect(input!.lookDelta).toBe(0);
     expect(input!.fire).toBe(false);
   });
@@ -3787,7 +3791,7 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
     }));
   }
 
-  it('moves forward and persists direction when no enemy and no wall is ahead', async () => {
+  it('moves forward and ramps move on first tick when no enemy and no wall is ahead', async () => {
     jest.resetModules();
     const raycastMock = createOpenRaycastMock();
     installRaycastMock(raycastMock);
@@ -3818,14 +3822,14 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
 
     const input = workerModule.__testOnlyGetLastFallbackInput?.();
     expect(input).not.toBeNull();
-    expect(input!.move.y).toBe(1);
+    expect(input!.move.y).toBe(NEATENSTEIN_MOVE_ACCEL_PER_TICK);
     expect(input!.lookDelta).toBe(0);
     expect(input!.fire).toBe(false);
     expect(raycastMock).toHaveBeenCalled();
     expect(findNearestVisibleEnemyMock).toHaveBeenCalled();
   });
 
-  it('fallback exploration overrides a champion network spin output when no enemies exist', async () => {
+  it('fallback exploration overrides a champion network spin output when no enemies exist and ramps move', async () => {
     jest.resetModules();
 
     /**
@@ -3859,11 +3863,11 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
 
     const input = workerModule.__testOnlyGetLastFallbackInput?.();
     expect(input).not.toBeNull();
-    expect(input!.move.y).toBe(1);
+    expect(input!.move.y).toBe(NEATENSTEIN_MOVE_ACCEL_PER_TICK);
     expect(input!.lookDelta).toBe(0);
   });
 
-  it('falls back to exploration AI when champion network activation throws', async () => {
+  it('falls back to exploration AI when champion network activation throws and ramps move', async () => {
     jest.resetModules();
 
     function createThrowingMockNetwork(): {
@@ -3896,7 +3900,7 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
 
     const input = workerModule.__testOnlyGetLastFallbackInput?.();
     expect(input).not.toBeNull();
-    expect(input!.move.y).toBe(1);
+    expect(input!.move.y).toBe(NEATENSTEIN_MOVE_ACCEL_PER_TICK);
     expect(input!.lookDelta).toBe(0);
     expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
   });
@@ -3974,10 +3978,10 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
 
     const input = workerModule.__testOnlyGetLastFallbackInput?.();
     expect(input).not.toBeNull();
-    expect(input!.move.y).toBe(1);
-    // The +bounce direction is the most open, so the hunter turns right at
-    // the capped fallback turn rate.
-    expect(input!.lookDelta).toBeCloseTo(Math.PI / 12, 10);
+    expect(input!.move.y).toBe(NEATENSTEIN_MOVE_ACCEL_PER_TICK);
+    // The +bounce direction is the most open, so the hunter turns right, but
+    // the first tick is limited by the smoothing accel rate.
+    expect(input!.lookDelta).toBeCloseTo(NEATENSTEIN_MOVE_ACCEL_PER_TICK, 10);
   });
 
   it('turns left when the -bounce direction is the most open', async () => {
@@ -4053,11 +4057,13 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
 
     const input = workerModule.__testOnlyGetLastFallbackInput?.();
     expect(input).not.toBeNull();
-    expect(input!.move.y).toBe(1);
-    expect(input!.lookDelta).toBeCloseTo(-Math.PI / 12, 10);
+    expect(input!.move.y).toBe(NEATENSTEIN_MOVE_ACCEL_PER_TICK);
+    // The -bounce direction is the most open, so the hunter turns left, but
+    // the first tick is limited by the smoothing decel rate.
+    expect(input!.lookDelta).toBeCloseTo(-NEATENSTEIN_MOVE_DECEL_PER_TICK, 10);
   });
 
-  it('backpedals when a visible enemy is inside the backpedal distance', async () => {
+  it('backpedals when a visible enemy is inside the backpedal distance and ramps move', async () => {
     jest.resetModules();
     installRaycastMock(createOpenRaycastMock());
 
@@ -4101,7 +4107,7 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
 
     const input = workerModule.__testOnlyGetLastFallbackInput?.();
     expect(input).not.toBeNull();
-    expect(input!.move.y).toBe(-1);
+    expect(input!.move.y).toBe(-NEATENSTEIN_MOVE_DECEL_PER_TICK);
     expect(input!.lookDelta).toBe(0);
   });
 
@@ -4157,7 +4163,7 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
     expect(input!.lookDelta).toBe(0);
   });
 
-  it('approaches when a visible enemy is beyond the kiting band', async () => {
+  it('approaches when a visible enemy is beyond the kiting band and ramps move', async () => {
     jest.resetModules();
     installRaycastMock(createOpenRaycastMock());
 
@@ -4201,8 +4207,38 @@ describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
 
     const input = workerModule.__testOnlyGetLastFallbackInput?.();
     expect(input).not.toBeNull();
-    expect(input!.move.y).toBe(1);
+    expect(input!.move.y).toBe(NEATENSTEIN_MOVE_ACCEL_PER_TICK);
     expect(input!.lookDelta).toBe(0);
+  });
+
+  it('ramps move.y to full forward over multiple fallback ticks', async () => {
+    jest.resetModules();
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyBuildFallbackAutoTickInput?(
+        state: GameState,
+      ): GameTickInputSnapshot;
+      __testOnlyResetSmoothingState?(): void;
+    };
+
+    const state = {
+      player: {
+        position: { x: 12.5, y: 12.5 },
+        angleRad: 0,
+      },
+    } as unknown as GameState;
+
+    workerModule.__testOnlyResetSmoothingState?.();
+    let input = workerModule.__testOnlyBuildFallbackAutoTickInput?.(state);
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(NEATENSTEIN_MOVE_ACCEL_PER_TICK);
+
+    // 0.2 → 0.4 → 0.6 → 0.8 → 1.0
+    for (let i = 0; i < 4; i++) {
+      input = workerModule.__testOnlyBuildFallbackAutoTickInput?.(state);
+    }
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(1);
   });
 });
 

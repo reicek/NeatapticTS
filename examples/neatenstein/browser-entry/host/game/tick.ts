@@ -432,6 +432,15 @@ export function updateAmmoPickups(
 
   if (ammoGain > 0) {
     next = restoreAmmo(next, ammoGain);
+    if (next.telemetry) {
+      next = {
+        ...next,
+        telemetry: {
+          ...next.telemetry,
+          ammoPickupsCollected: (next.telemetry.ammoPickupsCollected ?? 0) + 1,
+        },
+      };
+    }
   }
 
   return next;

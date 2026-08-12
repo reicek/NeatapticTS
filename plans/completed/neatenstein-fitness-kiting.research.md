@@ -3,6 +3,7 @@
 ## Question
 
 Does `computeCombatQualitySignal` in `examples/neatenstein/browser-entry/harness/fitness.ts` currently reward:
+
 1. **Exploration / productive movement** when no enemy is visible?
 2. **Distance maintenance (kiting)** around a 15–20 cell band when an enemy is visible?
 
@@ -15,7 +16,10 @@ If not, what is the smallest, source-grounded reward-shaping design that adds th
 `examples/neatenstein/browser-entry/harness/fitness.ts:111-161`
 
 ```ts
-export function computeCombatQualitySignal(signal: CombatQualitySignal, complexity?: number): FitnessScore {
+export function computeCombatQualitySignal(
+  signal: CombatQualitySignal,
+  complexity?: number,
+): FitnessScore {
   const baseScore =
     signal.survivalTicks * NEATENSTEIN_WEIGHT_SURVIVAL_TICKS +
     signal.damageDealt * NEATENSTEIN_WEIGHT_DAMAGE_DEALT +
@@ -29,7 +33,8 @@ export function computeCombatQualitySignal(signal: CombatQualitySignal, complexi
     (signal.shotsBlindFire ?? 0) * NEATENSTEIN_WEIGHT_BLIND_FIRE_PENALTY -
     (signal.shotsWallHit ?? 0) * NEATENSTEIN_WEIGHT_WALL_HIT_PENALTY +
     signal.complexityBonus * NEATENSTEIN_WEIGHT_COMPLEXITY_BONUS -
-    signal.parsimonyDensityPenalty * NEATENSTEIN_WEIGHT_PARSIMONY_DENSITY_PENALTY;
+    signal.parsimonyDensityPenalty *
+      NEATENSTEIN_WEIGHT_PARSIMONY_DENSITY_PENALTY;
   // ... parsimony band only
 }
 ```
@@ -60,12 +65,13 @@ const VISION_RANGE_CELLS = 15;
 ```
 
 `findNearestVisibleEnemy` (`enemy-navigation.ts:382-407`) only returns an enemy when:
+
 1. Euclidean distance `<= 15`, and
 2. There is clear line-of-sight.
 
 Therefore a 15–20 cell band is **at or beyond the current vision edge**. If kiting reward is computed from the visible-enemy sensor only, the agent would be rewarded right at the moment the enemy disappears (sensor = 1.0) or not at all. Supporting the requested band requires either:
 
-- **Option A**: compute distance to the nearest *active* enemy in the runner directly from `state.enemies`, regardless of visibility/LOS.
+- **Option A**: compute distance to the nearest _active_ enemy in the runner directly from `state.enemies`, regardless of visibility/LOS.
 - **Option B**: raise `VISION_RANGE_CELLS` to at least 20 and normalize sensor[6] accordingly; this also changes the fire-gate and sensor semantics.
 
 ### Existing combat controls already reduce blind firing
@@ -90,6 +96,7 @@ Add two small, additive reward-shaping terms to the combat-quality composite, pl
 In `main-runner.ts:runEpisode`, count ticks where `sensors[12] < 0.5` (or use the same `enemyVisible` value passed to the fire gate). Reward each such tick with a small positive weight so standing still during search is strictly worse than moving, without the agent needing to farm kills.
 
 Recommended initial values (to be tuned empirically):
+
 - `NEATENSTEIN_WEIGHT_EXPLORATION = 0.05` per tick with no visible enemy.
 - Optional, higher-fidelity variant: track **unique grid cells visited** while no enemy is visible (a `Set<string>` of `x|y` grid keys), using the asciiMaze `recordMazeMovementVisitAndPenalties` pattern (`examples/asciiMaze/mazeMovement/runtime/mazeMovement.runtime.ts`). This rewards covering new ground rather than just moving in circles.
 
@@ -99,17 +106,21 @@ Compute the raw Euclidean distance from `state.player.position` to the nearest a
 
 ```ts
 function computeKitingQuality(distanceCells: number): number {
-  if (distanceCells < NEATENSTEIN_CONTACT_RANGE_CELLS) return -1;          // too close
-  if (distanceCells >= NEATENSTEIN_KITING_MIN_CELLS &&
-      distanceCells <= NEATENSTEIN_KITING_MAX_CELLS) return +1;          // sweet spot
-  if (distanceCells > NEATENSTEIN_BOLT_MAX_RANGE_CELLS) return -0.5;       // too far to engage
-  return 0;                                                              // acceptable but not rewarded
+  if (distanceCells < NEATENSTEIN_CONTACT_RANGE_CELLS) return -1; // too close
+  if (
+    distanceCells >= NEATENSTEIN_KITING_MIN_CELLS &&
+    distanceCells <= NEATENSTEIN_KITING_MAX_CELLS
+  )
+    return +1; // sweet spot
+  if (distanceCells > NEATENSTEIN_BOLT_MAX_RANGE_CELLS) return -0.5; // too far to engage
+  return 0; // acceptable but not rewarded
 }
 ```
 
 Add a running sum `kitingScore` over the episode.
 
 Recommended initial constants:
+
 - `NEATENSTEIN_KITING_MIN_CELLS = 15`
 - `NEATENSTEIN_KITING_MAX_CELLS = 20`
 - `NEATENSTEIN_WEIGHT_KITING = 0.5` per tick in the band.
@@ -135,8 +146,8 @@ Add terms in `computeCombatQualitySignal`:
 ```ts
 const baseScore =
   // ... existing terms ...
-  + (signal.explorationTicks ?? 0) * NEATENSTEIN_WEIGHT_EXPLORATION
-  + (signal.kitingScore ?? 0) * NEATENSTEIN_WEIGHT_KITING;
+  +(signal.explorationTicks ?? 0) * NEATENSTEIN_WEIGHT_EXPLORATION +
+  (signal.kitingScore ?? 0) * NEATENSTEIN_WEIGHT_KITING;
 ```
 
 Add the new weights to `harness/constants.ts`.
@@ -156,17 +167,17 @@ If a richer “unique cells visited” exploration reward is desired, also recor
 
 1. **Vision-range mismatch** — the requested 15–20 cell band sits at/above the current `VISION_RANGE_CELLS = 15` cap. Using only the visible-enemy sensor for kiting would create a perverse reward right at the vision boundary or none at all. Compute raw enemy distance in the runner (Option A) to avoid changing sensor/fire-gate semantics.
 2. **Over-rewarding passive circling** — if `NEATENSTEIN_WEIGHT_KITING` is too high, agents may learn to maintain distance indefinitely rather than dealing damage. Keep kiting weight smaller than `NEATENSTEIN_WEIGHT_DAMAGE_DEALT` (2) and `NEATENSTEIN_WEIGHT_KILLS` (5), and tune with champion replays.
-3. **Exploration vs. combat trade-off** — a strong exploration bonus could pull the agent away from fights. Weight should be small (≪ survival tick weight) and ideally tied to *new* cells visited, not just movement.
+3. **Exploration vs. combat trade-off** — a strong exploration bonus could pull the agent away from fights. Weight should be small (≪ survival tick weight) and ideally tied to _new_ cells visited, not just movement.
 4. **Determinism** — any per-tick accumulator (Set, running sums) must be local to `runEpisode` and derived only from deterministic state; no shared mutable state.
 5. **Cortex RAG index was stale** during this research; direct file reads were used as fallback. Rebuild the index (`node rag-index/build-index.mjs`) before relying on semantic search for the implementation slice.
 
 ## Provenance
 
-| Finding | Confidence | Source |
-|---------|-----------|--------|
-| Fitness formula lacks exploration/distance terms | 0.98 | static code `fitness.ts:111-161` |
-| Sensor vector carries enemyVisible[12] and enemyDistance[6] | 0.98 | static code `neat-io-config.ts:54`, `enemy-navigation.ts:475` |
-| Runner discards per-tick distance/visibility after fire gate | 0.95 | static code `main-runner.ts:352-360` |
-| VISION_RANGE_CELLS = 15, limiting visible distance to ≤15 | 0.98 | static code `enemy-navigation.ts:36` |
-| Bolt max range = 30, contact range = 0.5 | 0.98 | static code `host/game/constants.ts:132,370` |
-| Prior art for visit-based exploration exists in asciiMaze | 0.90 | static code `examples/asciiMaze/mazeMovement/runtime/mazeMovement.runtime.ts` |
+| Finding                                                      | Confidence | Source                                                                        |
+| ------------------------------------------------------------ | ---------- | ----------------------------------------------------------------------------- |
+| Fitness formula lacks exploration/distance terms             | 0.98       | static code `fitness.ts:111-161`                                              |
+| Sensor vector carries enemyVisible[12] and enemyDistance[6]  | 0.98       | static code `neat-io-config.ts:54`, `enemy-navigation.ts:475`                 |
+| Runner discards per-tick distance/visibility after fire gate | 0.95       | static code `main-runner.ts:352-360`                                          |
+| VISION_RANGE_CELLS = 15, limiting visible distance to ≤15    | 0.98       | static code `enemy-navigation.ts:36`                                          |
+| Bolt max range = 30, contact range = 0.5                     | 0.98       | static code `host/game/constants.ts:132,370`                                  |
+| Prior art for visit-based exploration exists in asciiMaze    | 0.90       | static code `examples/asciiMaze/mazeMovement/runtime/mazeMovement.runtime.ts` |

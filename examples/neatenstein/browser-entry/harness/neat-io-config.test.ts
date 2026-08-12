@@ -3,22 +3,47 @@ import {
   NEATENSTEIN_MAIN_NEAT_INPUTS,
   NEATENSTEIN_MAIN_NEAT_OUTPUTS,
   NEATENSTEIN_FALLBACK_TURN_RATE,
+  NEATENSTEIN_MOVE_ACCEL_PER_TICK,
+  NEATENSTEIN_MOVE_DECEL_PER_TICK,
   MAX_TURN_RATE,
   ENEMY_VISIBLE_SENSOR_INDEX,
   FIRE_GATE_HYSTERESIS_LOW,
   FIRE_GATE_HYSTERESIS_HIGH,
+  NEATENSTEIN_LOW_AMMO_RATIO,
+  NEATENSTEIN_AMMO_PICKUP_SENSOR_COUNT,
+  NEATENSTEIN_AMMO_PICKUP_START_INDEX,
   createFireGateState,
   applyFireGate,
   networkOutputToTickInput,
+  smoothCommand,
 } from './neat-io-config';
 
 describe('neat-io-config: constants and configuration', () => {
-  it('NEATENSTEIN_MAIN_NEAT_INPUTS is 15', () => {
-    expect(NEATENSTEIN_MAIN_NEAT_INPUTS).toBe(15);
+  it('NEATENSTEIN_MAIN_NEAT_INPUTS is 22', () => {
+    expect(NEATENSTEIN_MAIN_NEAT_INPUTS).toBe(22);
   });
 
   it('NEATENSTEIN_MAIN_NEAT_OUTPUTS is 5', () => {
     expect(NEATENSTEIN_MAIN_NEAT_OUTPUTS).toBe(5);
+  });
+
+  it('AC-P2S1-001: NEATENSTEIN_LOW_AMMO_RATIO is 0.25', () => {
+    expect(NEATENSTEIN_LOW_AMMO_RATIO).toBe(0.25);
+  });
+
+  it('AC-P2S1-001: NEATENSTEIN_AMMO_PICKUP_SENSOR_COUNT is 7', () => {
+    expect(NEATENSTEIN_AMMO_PICKUP_SENSOR_COUNT).toBe(7);
+  });
+
+  it('AC-P2S1-001: NEATENSTEIN_AMMO_PICKUP_START_INDEX is 15', () => {
+    expect(NEATENSTEIN_AMMO_PICKUP_START_INDEX).toBe(15);
+  });
+
+  it('AC-P2S1-001: ammo pickup block ends at the main input count', () => {
+    expect(
+      NEATENSTEIN_AMMO_PICKUP_START_INDEX +
+        NEATENSTEIN_AMMO_PICKUP_SENSOR_COUNT,
+    ).toBe(NEATENSTEIN_MAIN_NEAT_INPUTS);
   });
 
   it('MAX_TURN_RATE is π/4', () => {
@@ -245,5 +270,38 @@ describe('P5S1-fire-gate: networkOutputToTickInput with fire gate', () => {
     expect(result.dash).toBe(false); // out[4] = 0, not > 0.5
     expect(result.move.x).toBeCloseTo(Math.tanh(0.5));
     expect(result.move.y).toBeCloseTo(Math.tanh(0.5));
+  });
+});
+
+describe('P1S1-smoothing: movement smoothing constants and helper', () => {
+  it('AC-002: NEATENSTEIN_MOVE_ACCEL_PER_TICK is exported and positive', () => {
+    expect(NEATENSTEIN_MOVE_ACCEL_PER_TICK).toBe(0.2);
+  });
+
+  it('AC-002: NEATENSTEIN_MOVE_DECEL_PER_TICK is exported and positive', () => {
+    expect(NEATENSTEIN_MOVE_DECEL_PER_TICK).toBe(0.25);
+  });
+
+  it('AC-003: smoothCommand ramps from 0 toward the target by the accel limit', () => {
+    expect(smoothCommand(0, 1)).toBe(NEATENSTEIN_MOVE_ACCEL_PER_TICK);
+  });
+
+  it('AC-003: smoothCommand reaches the target once the delta is within the limit', () => {
+    const current = 0.85;
+    const target = 1;
+    expect(smoothCommand(current, target)).toBe(target);
+  });
+
+  it('AC-003: smoothCommand ramps down from 0 toward a negative target by the decel limit', () => {
+    expect(smoothCommand(0, -1)).toBe(-NEATENSTEIN_MOVE_DECEL_PER_TICK);
+  });
+
+  it('AC-004: smoothCommand can override defaults with custom accel/decel limits', () => {
+    expect(smoothCommand(0, 1, 0.5, 0.5)).toBe(0.5);
+    expect(smoothCommand(0, -1, 0.5, 0.5)).toBe(-0.5);
+  });
+
+  it('AC-004: smoothCommand leaves the value unchanged when current equals target', () => {
+    expect(smoothCommand(0.5, 0.5)).toBe(0.5);
   });
 });

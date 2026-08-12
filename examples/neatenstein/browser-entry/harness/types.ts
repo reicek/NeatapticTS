@@ -78,6 +78,12 @@ export interface CombatQualitySignal {
   shotsWallHit?: number;
   /** Total ticks elapsed in the episode (P4S1). Used for fire-rate computation. */
   ticksElapsed?: number;
+  /**
+   * Number of ammo pickups collected during the episode (P2S1).
+   *
+   * Used for a small fitness bonus; enemy combat metrics remain dominant.
+   */
+  ammoPickupsCollected?: number;
 }
 
 /**

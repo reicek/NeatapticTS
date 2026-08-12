@@ -180,3 +180,18 @@ export const NEATENSTEIN_WEIGHT_KILL_RATE = 5;
  * to fitness to encourage active engagement.
  */
 export const NEATENSTEIN_WEIGHT_FIRE_RATE = 1;
+
+// ---------------------------------------------------------------------------
+// P2S1 — Ammo pickup fitness bonus
+// ---------------------------------------------------------------------------
+
+/**
+ * Small bonus per ammo pickup collected (P2S1).
+ *
+ * Intentionally modest so enemy combat (survival, damage, kills) remains
+ * the dominant fitness signal. Pickups are opportunistic, not a primary
+ * objective.
+ *
+ * @see AC-P2S1-001
+ */
+export const NEATENSTEIN_WEIGHT_AMMO_PICKUP_BONUS = 1;

@@ -10,13 +10,26 @@
  * @module
  */
 
-import type { CollisionMap } from '../browser-entry/renderer/map';
+import {
+  createCollisionMap,
+  type CollisionMap,
+} from '../browser-entry/renderer/map';
 import {
   castRayDDAFromFlatMap,
   hasLineOfSight,
 } from '../browser-entry/renderer/raycast';
 import { NEATENSTEIN_RENDER_DISTANCE_CAP } from '../browser-entry/renderer/framebuffer';
-import type { GameState, EnemyState } from '../browser-entry/host/game/types';
+import type {
+  AmmoPickupState,
+  GameState,
+  EnemyState,
+} from '../browser-entry/host/game/types';
+import {
+  NEATENSTEIN_MAIN_NEAT_INPUTS,
+  NEATENSTEIN_LOW_AMMO_RATIO,
+  NEATENSTEIN_AMMO_PICKUP_START_INDEX,
+  NEATENSTEIN_AMMO_PICKUP_SENSOR_COUNT,
+} from '../browser-entry/harness/neat-io-config';
 
 /** Sentinel value stored in the distance buffer for wall cells. */
 const WALL_VALUE = -2;
@@ -362,6 +375,96 @@ export function buildVisionVector(
 }
 
 /**
+ * Find the nearest active ammo pickups by path distance from the player.
+ *
+ * Builds a BFS distance map from the player's current grid cell and looks
+ * up the path distance to every active pickup. Pickups with a negative
+ * distance (unreachable or inside a wall cell) fall back to Euclidean
+ * distance so the NEAT sensors still receive a useful ranking signal even
+ * when walls temporarily block the computed path.
+ *
+ * The result is capped at {@link maxPickups} (default 3) and sorted by
+ * distance ascending. Missing active pickups simply produce a shorter
+ * array; callers zero-fill the corresponding sensor slots.
+ *
+ * Tie-break rule: when two pickups have the same computed distance, the
+ * stable `Array.prototype.toSorted` preserves the order of
+ * `gameState.ammoPickups` (insertion / kill order), which is deterministic
+ * for a given replay seed.
+ *
+ * @param gameState - Current deterministic game-state snapshot.
+ * @param flatMap - Row-major wall map (`Uint8Array`, non-zero = wall).
+ * @param mapSize - Width and height of the square grid.
+ * @param collisionMap - Map queried for solid cells by the BFS builder.
+ *   Defaults to a collision map derived from `flatMap` when omitted, so callers
+ *   that only have the wall map can still obtain path-ranked pickups.
+ * @param maxPickups - Maximum number of pickups to return (default 3).
+ * @returns A readonly array of the nearest active ammo pickups in ascending
+ *   distance order.
+ *
+ * @see AC-P2S1-001
+ */
+/**
+ * Rank active ammo pickups by a pre-built BFS distance map.
+ *
+ * Internal helper shared by {@link findNearestAmmoPickups} and
+ * {@link extractSensors} so the BFS distance map is built only once per
+ * sensor extraction. Pickups inside an unreachable cell fall back to
+ * Euclidean distance from the player.
+ *
+ * @param gameState - Current deterministic game-state snapshot.
+ * @param distanceMap - BFS distance map built from the player's cell.
+ * @param maxPickups - Maximum number of pickups to return (default 3).
+ * @returns A readonly array of the nearest active ammo pickups in ascending
+ *   distance order.
+ */
+function findNearestAmmoPickupsWithMap(
+  gameState: GameState,
+  distanceMap: DistanceMap,
+  maxPickups = 3,
+): readonly AmmoPickupState[] {
+  const p = gameState.player;
+  const pickups = gameState.ammoPickups ?? [];
+  const ranked = pickups
+    .filter((pickup) => pickup.active === true)
+    .map((pickup) => {
+      const cellX = Math.floor(pickup.position.x);
+      const cellY = Math.floor(pickup.position.y);
+      const pathDistance = getDistance(distanceMap, cellX, cellY);
+      const dx = pickup.position.x - p.position.x;
+      const dy = pickup.position.y - p.position.y;
+      const distance = pathDistance >= 0 ? pathDistance : Math.hypot(dx, dy);
+      return { pickup, distance };
+    })
+    .toSorted((a, b) => a.distance - b.distance)
+    .slice(0, maxPickups)
+    .map(({ pickup }) => pickup);
+
+  return ranked;
+}
+
+export function findNearestAmmoPickups(
+  gameState: GameState,
+  flatMap: Uint8Array,
+  mapSize: number,
+  collisionMap: CollisionMap = createCollisionMap(flatMap, mapSize),
+  maxPickups = 3,
+): readonly AmmoPickupState[] {
+  const p = gameState.player;
+  const playerCellX = Math.floor(p.position.x);
+  const playerCellY = Math.floor(p.position.y);
+
+  const distanceMap = buildEnemyDistanceMap(
+    collisionMap,
+    playerCellX,
+    playerCellY,
+    mapSize,
+  );
+
+  return findNearestAmmoPickupsWithMap(gameState, distanceMap, maxPickups);
+}
+
+/**
  * Find the nearest active enemy that is within vision range and has a clear
  * line of sight from the player's position.
  *
@@ -407,10 +510,10 @@ export function findNearestVisibleEnemy(
 }
 
 /**
- * Extract a 15-element sensor observation vector from the current game state
+ * Extract a 22-element sensor observation vector from the current game state
  * for NEAT network activation.
  *
- * Sensor layout (indices 0–14), all values normalized to [0, 1]:
+ * Sensor layout (indices 0–21), all values normalized to [0, 1]:
  * - [0] player health ratio (`health / maxHealth`, clamped to [0, 1])
  * - [1] player ammo ratio (`ammo / maxAmmo`, clamped to [0, 1])
  * - [2] player look angle (`angleRad / (2π)` mapped to [0, 1])
@@ -426,31 +529,44 @@ export function findNearestVisibleEnemy(
  * - [12] enemyVisible — binary (1 if a visible enemy exists, 0 otherwise)
  * - [13] enemyInFiringArc — binary (1 if visible enemy bearing ≤ 30°, 0 otherwise)
  * - [14] lastShotHit — binary (1 if the previous shot hit an enemy, 0 otherwise)
+ * - [15] ammo pickup 1 bearing (`(bearing + π) / (2π)`, [0, 1])
+ * - [16] ammo pickup 1 distance (`dist / mapSize`, capped at 1)
+ * - [17] ammo pickup 2 bearing (`(bearing + π) / (2π)`, [0, 1])
+ * - [18] ammo pickup 2 distance (`dist / mapSize`, capped at 1)
+ * - [19] ammo pickup 3 bearing (`(bearing + π) / (2π)`, [0, 1])
+ * - [20] ammo pickup 3 distance (`dist / mapSize`, capped at 1)
+ * - [21] lowAmmoGate — binary (1 if `ammo / maxAmmo < NEATENSTEIN_LOW_AMMO_RATIO`)
  *
  * Enemy sensors [5]–[7] are zeroed when no enemy is within
- * {@link VISION_RANGE_CELLS} or when a wall blocks line-of-sight. Wall
- * raycast distances use {@link castRayDDAFromFlatMap} and are normalized
+ * {@link VISION_RANGE_CELLS} or when a wall blocks line-of-sight. Ammo-pickup
+ * sensors [15]–[20] are zeroed when fewer than three active pickups exist;
+ * distances use path distance when available and Euclidean fallback otherwise.
+ * Wall raycast distances use {@link castRayDDAFromFlatMap} and are normalized
  * by {@link NEATENSTEIN_RENDER_DISTANCE_CAP}.
  *
  * @param gameState - Current deterministic game-state snapshot.
  * @param flatMap - Row-major wall map (`Uint8Array`, non-zero = wall).
  * @param mapSize - Width and height of the square grid.
- * @returns A 15-element observation vector for `Network.activate(sensors)`.
+ * @param collisionMap - Map queried for solid cells by the BFS builder; used
+ *   to compute path distances to ammo pickups. Defaults to a collision map
+ *   derived from `flatMap` when omitted.
+ * @returns A 22-element observation vector for `Network.activate(sensors)`.
  *
  * @example
  * ```ts
- * const sensors = extractSensors(gameState, wallMap, NEATENSTEIN_MAP_SIZE);
+ * const sensors = extractSensors(gameState, wallMap, NEATENSTEIN_MAP_SIZE, collisionMap);
  * const outputs = network.activate(sensors);
  * ```
  *
- * @see AC-P3S1b-001, AC-P3S1b-002, AC-P3S1b-003
+ * @see AC-P3S1b-001, AC-P3S1b-002, AC-P3S1b-003, AC-P2S1-001
  */
 export function extractSensors(
   gameState: GameState,
   flatMap: Uint8Array,
   mapSize: number,
+  collisionMap: CollisionMap = createCollisionMap(flatMap, mapSize),
 ): number[] {
-  const sensors = new Array<number>(15).fill(0);
+  const sensors = new Array<number>(NEATENSTEIN_MAIN_NEAT_INPUTS).fill(0);
   const p = gameState.player;
   const twoPi = 2 * Math.PI;
 
@@ -506,6 +622,53 @@ export function extractSensors(
   const lastShotHit = (gameState as GameState & { lastShotHit?: boolean })
     .lastShotHit;
   sensors[14] = lastShotHit === true ? 1 : 0;
+
+  // P2S1 — Ammo-pickup awareness sensors (7), zeroed when pickups are absent.
+  // Build one BFS distance map from the player and use it for both ranking
+  // the three nearest active pickups and computing their path-distance sensors.
+  const playerCellX = Math.floor(p.position.x);
+  const playerCellY = Math.floor(p.position.y);
+  const pickupDistanceMap = buildEnemyDistanceMap(
+    collisionMap,
+    playerCellX,
+    playerCellY,
+    mapSize,
+  );
+  const maxPickupPairs = Math.floor(
+    (NEATENSTEIN_AMMO_PICKUP_SENSOR_COUNT - 1) / 2,
+  );
+  const nearestPickups = findNearestAmmoPickupsWithMap(
+    gameState,
+    pickupDistanceMap,
+    maxPickupPairs,
+  );
+  for (let i = 0; i < nearestPickups.length; i++) {
+    const pickup = nearestPickups[i];
+    const dx = pickup.position.x - p.position.x;
+    const dy = pickup.position.y - p.position.y;
+    const euclidean = Math.hypot(dx, dy);
+    const pickupCellX = Math.floor(pickup.position.x);
+    const pickupCellY = Math.floor(pickup.position.y);
+    const pathDistance = getDistance(
+      pickupDistanceMap,
+      pickupCellX,
+      pickupCellY,
+    );
+    const dist = pathDistance >= 0 ? pathDistance : euclidean;
+    const bearing = Math.atan2(dy, dx) - p.angleRad;
+    const normalizedBearing = Math.atan2(Math.sin(bearing), Math.cos(bearing));
+
+    sensors[NEATENSTEIN_AMMO_PICKUP_START_INDEX + i * 2] =
+      (normalizedBearing + Math.PI) / twoPi;
+    sensors[NEATENSTEIN_AMMO_PICKUP_START_INDEX + 1 + i * 2] = Math.min(
+      1,
+      dist / mapSize,
+    );
+  }
+
+  // Low-ammo gate — binary urgency signal.
+  sensors[21] =
+    p.maxAmmo > 0 && p.ammo / p.maxAmmo < NEATENSTEIN_LOW_AMMO_RATIO ? 1 : 0;
 
   return sensors;
 }

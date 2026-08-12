@@ -11,17 +11,17 @@ All 5 phases, 5 steps, 10 slices complete. Final green validation passed.
 **Agent:** 05-green-testing @ 2026-08-10T18:00:00Z
 **Scope:** Final green validation across all 10 slices (P1S1 through P5S1)
 
-| Check | Status | Evidence |
-|-------|--------|----------|
-| `npm run build` | PASS | tsc exit 0, webpack compiled 3 warnings, 0 errors |
-| `npm run lint` | PASS | eslint exit 0, 0 issues across src/ testing/ benchmarks/ examples/ |
-| `npx jest --testPathPatterns=neatenstein` | PASS | 75 suites, 1581 passed, 1 skipped, 0 failed (125.279s) |
-| Coverage (8/10 files) | PASS | constants.ts, fitness.ts, main-runner.ts, neat-io-config.ts, combat.ts, tick.ts, raycast.ts, enemy-navigation.ts — all 100% stmts/branches/funcs/lines |
-| Coverage (display.worker.ts) | 97.59% stmts | Uncovered: lines 1330-1332, 1352-1361, 1376 — browser-only infrastructure paths (resolveEvalWorkerUrl, getOrCreateEvalWorker, handleEvalComplete guard) |
-| Coverage (eval.worker.ts) | 0% | Web Worker file — cannot be instantiated in Node Jest. Delegation verified via display.worker.ts mock tests. |
-| code-coverage gate | PASS | `pass: true` — no coverage-relevant source files changed (files under examples/, not src/) |
-| plan-sync gate | PASS | `pass: true` — all plans registered in README.md and Roadmap.md |
-| slice-advancement gate | TOOLING ERROR | ETIMEDOUT (shared-validation sub-gate spawnSync timeout). Infrastructure issue per Section 5.8.3, not content failure. |
+| Check                                     | Status        | Evidence                                                                                                                                                |
+| ----------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run build`                           | PASS          | tsc exit 0, webpack compiled 3 warnings, 0 errors                                                                                                       |
+| `npm run lint`                            | PASS          | eslint exit 0, 0 issues across src/ testing/ benchmarks/ examples/                                                                                      |
+| `npx jest --testPathPatterns=neatenstein` | PASS          | 75 suites, 1581 passed, 1 skipped, 0 failed (125.279s)                                                                                                  |
+| Coverage (8/10 files)                     | PASS          | constants.ts, fitness.ts, main-runner.ts, neat-io-config.ts, combat.ts, tick.ts, raycast.ts, enemy-navigation.ts — all 100% stmts/branches/funcs/lines  |
+| Coverage (display.worker.ts)              | 97.59% stmts  | Uncovered: lines 1330-1332, 1352-1361, 1376 — browser-only infrastructure paths (resolveEvalWorkerUrl, getOrCreateEvalWorker, handleEvalComplete guard) |
+| Coverage (eval.worker.ts)                 | 0%            | Web Worker file — cannot be instantiated in Node Jest. Delegation verified via display.worker.ts mock tests.                                            |
+| code-coverage gate                        | PASS          | `pass: true` — no coverage-relevant source files changed (files under examples/, not src/)                                                              |
+| plan-sync gate                            | PASS          | `pass: true` — all plans registered in README.md and Roadmap.md                                                                                         |
+| slice-advancement gate                    | TOOLING ERROR | ETIMEDOUT (shared-validation sub-gate spawnSync timeout). Infrastructure issue per Section 5.8.3, not content failure.                                  |
 
 **Verdict: GREEN: OK** — 1581 tests pass, build succeeds, lint clean, 8/10 files 100% coverage, 2/10 files have infrastructure-limitation gaps.
 
@@ -138,12 +138,12 @@ All 5 phases, 5 steps, 10 slices complete. Final green validation passed.
 
 ## Gate Evidence Summary
 
-| Gate | Result | Notes |
-|------|--------|-------|
-| code-coverage | PASS | No coverage-relevant source files changed (examples/, not src/) |
-| plan-sync | PASS | All plans registered in README.md and Roadmap.md |
+| Gate              | Result        | Notes                                                                                                                  |
+| ----------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| code-coverage     | PASS          | No coverage-relevant source files changed (examples/, not src/)                                                        |
+| plan-sync         | PASS          | All plans registered in README.md and Roadmap.md                                                                       |
 | slice-advancement | TOOLING ERROR | ETIMEDOUT — shared-validation sub-gate spawnSync timeout. Infrastructure issue, not content failure per Section 5.8.3. |
-| specialist-review | PASS | All slices classified TRIVIAL (additive config/utility/telemetry changes, no security/perf/API risk) |
+| specialist-review | PASS          | All slices classified TRIVIAL (additive config/utility/telemetry changes, no security/perf/API risk)                   |
 
 ## Known Coverage Gaps (infrastructure limitations)
 

@@ -349,7 +349,12 @@ export function runEpisode(
   const fireGateState = createFireGateState();
 
   for (let tick = 0; tick < NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS; tick += 1) {
-    const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
+    const sensors = extractSensors(
+      state,
+      flatMap,
+      NEATENSTEIN_MAP_SIZE,
+      collisionMap,
+    );
     const raw = network.activate(sensors);
     const out: number[] = Array.isArray(raw)
       ? raw.map((v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0))

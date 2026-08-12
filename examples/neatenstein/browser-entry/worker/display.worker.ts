@@ -110,9 +110,12 @@ import type { MlpSnapshot } from '../harness/types';
 import {
   NEATENSTEIN_MAIN_NEAT_INPUTS,
   NEATENSTEIN_FALLBACK_TURN_RATE,
+  NEATENSTEIN_MOVE_ACCEL_PER_TICK,
+  NEATENSTEIN_MOVE_DECEL_PER_TICK,
   networkOutputToTickInput,
   applyFireGate,
   createFireGateState,
+  smoothCommand,
   ENEMY_VISIBLE_SENSOR_INDEX,
   type FireGateState,
 } from '../harness/neat-io-config';
@@ -304,6 +307,20 @@ let lastFallbackInputForTest: GameTickInputSnapshot | null = null;
  * @see AC-P5S1a-003
  */
 let fireGateState: FireGateState = createFireGateState();
+
+/**
+ * P1S1 — Smoothed move/look state for auto-mode inputs.
+ *
+ * Persisted between ticks so the AI ramps move and look commands instead
+ * of snapping from 0 to max instantly.  Reset on init.
+ *
+ * @see buildAutoTickInput
+ * @see buildFallbackAutoTickInput
+ * @see AC-003, AC-004
+ */
+let smoothedMoveX = 0;
+let smoothedMoveY = 0;
+let smoothedLookDelta = 0;
 
 /** RGB of the neon wall color for X-axis-side hits. */
 const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 183, b: 255 } as const;
@@ -1450,16 +1467,19 @@ function delegateEvaluation(
  * @param state - Current deterministic game state (non-null).
  * @param flatMap - Row-major wall map for raycast sensors.
  * @param mapSize - Width and height of the square grid.
+ * @param collisionMap - Map queried for solid cells; used for ammo-pickup
+ *   path-distance sensors (P2S1).
  * @returns A game-tick input snapshot derived from the network output.
- * @see AC-065, AC-066
+ * @see AC-065, AC-066, AC-P2S1-001
  */
 function buildAutoTickInput(
   network: Network,
   state: GameState,
   flatMap: Uint8Array,
   mapSize: number,
+  collisionMap: CollisionMap,
 ): GameTickInputSnapshot {
-  const sensors = extractSensors(state, flatMap, mapSize);
+  const sensors = extractSensors(state, flatMap, mapSize, collisionMap);
   const raw = network.activate(sensors);
 
   // P5S1: Apply soft fire gate with hysteresis on enemyVisible sensor.
@@ -1471,10 +1491,28 @@ function buildAutoTickInput(
   // is always populated by the extractSensors vector above.
   const enemyVisible = sensors[ENEMY_VISIBLE_SENSOR_INDEX] ?? 0;
 
-  return networkOutputToTickInput(raw, {
+  const tick = networkOutputToTickInput(raw, {
     state: fireGateState,
     enemyVisible,
   });
+
+  // P1S1: Apply per-tick accel/decel smoothing to move/look so the AI
+  // does not snap from 0 to max in a single tick.
+  smoothedMoveX = smoothCommand(smoothedMoveX, tick.move.x);
+  smoothedMoveY = smoothCommand(smoothedMoveY, tick.move.y);
+  smoothedLookDelta = smoothCommand(
+    smoothedLookDelta,
+    tick.lookDelta,
+    NEATENSTEIN_MOVE_ACCEL_PER_TICK,
+    NEATENSTEIN_MOVE_DECEL_PER_TICK,
+  );
+
+  return {
+    move: { x: smoothedMoveX, y: smoothedMoveY },
+    lookDelta: smoothedLookDelta,
+    fire: tick.fire,
+    dash: tick.dash,
+  };
 }
 
 /**
@@ -1635,12 +1673,23 @@ function buildFallbackAutoTickInput(state: GameState): GameTickInputSnapshot {
     }
   }
 
+  // P1S1: Apply per-tick accel/decel smoothing to move/look so the AI
+  // does not snap from 0 to max in a single tick.
+  smoothedMoveX = smoothCommand(smoothedMoveX, 0);
+  smoothedMoveY = smoothCommand(smoothedMoveY, moveY);
+  smoothedLookDelta = smoothCommand(
+    smoothedLookDelta,
+    lookDelta,
+    NEATENSTEIN_MOVE_ACCEL_PER_TICK,
+    NEATENSTEIN_MOVE_DECEL_PER_TICK,
+  );
+
   // Apply the same hysteresis fire gate used by buildAutoTickInput.
   const fire = applyFireGate(fireGateState, enemyVisible, rawFire);
 
   const result: GameTickInputSnapshot = {
-    move: { x: 0, y: moveY },
-    lookDelta,
+    move: { x: smoothedMoveX, y: smoothedMoveY },
+    lookDelta: smoothedLookDelta,
     fire,
     dash: false,
   };
@@ -1685,6 +1734,9 @@ self.onmessage = (event: MessageEvent) => {
     fallbackTickCounter = 0;
     lastFallbackInputForTest = null;
     fireGateState = createFireGateState();
+    smoothedMoveX = 0;
+    smoothedMoveY = 0;
+    smoothedLookDelta = 0;
 
     if (data.canvas) {
       workerCanvas = data.canvas as OffscreenCanvas;
@@ -1777,6 +1829,7 @@ self.onmessage = (event: MessageEvent) => {
           gameState,
           wallMap,
           NEATENSTEIN_MAP_SIZE,
+          collisionMap,
         );
         lastTickInputSource = 'auto';
       } catch {
@@ -2192,6 +2245,21 @@ export const __testOnlyResetFireGateState = (): void => {
  */
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyGetFireGateState = (): FireGateState => fireGateState;
+
+/**
+ * Test-only hook: reset the P1S1 move/look smoothing state.
+ *
+ * Allows tests to start from a standstill without re-initialising the
+ * entire worker.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyResetSmoothingState = (): void => {
+  smoothedMoveX = 0;
+  smoothedMoveY = 0;
+  smoothedLookDelta = 0;
+};
 
 /**
  * Test-only hook: expose the wall fog-factor resolver for direct testing.

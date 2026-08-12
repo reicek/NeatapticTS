@@ -269,6 +269,14 @@ export interface EpisodeTelemetry {
    * was aiming at an enemy but missed.
    */
   shotsNearMiss: number;
+  /**
+   * Number of ammo pickups collected during the episode (P2S1).
+   *
+   * Counts discrete pickup collection events, not total ammo units restored.
+   * Used by the fitness composite to apply a small opportunistic bonus
+   * without letting ammo collection dominate combat rewards.
+   */
+  ammoPickupsCollected?: number;
 }
 
 /** Complete deterministic snapshot of one Neatenstein game instance. */

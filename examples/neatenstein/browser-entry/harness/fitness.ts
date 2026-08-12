@@ -36,6 +36,7 @@ import {
   NEATENSTEIN_WEIGHT_HIT_RATE,
   NEATENSTEIN_WEIGHT_KILL_RATE,
   NEATENSTEIN_WEIGHT_FIRE_RATE,
+  NEATENSTEIN_WEIGHT_AMMO_PICKUP_BONUS,
   NEATENSTEIN_FIXED_TIMESTEP_MS,
 } from './constants';
 
@@ -140,7 +141,8 @@ export function computeCombatQualitySignal(
     (signal.shotsWallHit ?? 0) * NEATENSTEIN_WEIGHT_WALL_HIT_PENALTY +
     signal.complexityBonus * NEATENSTEIN_WEIGHT_COMPLEXITY_BONUS -
     signal.parsimonyDensityPenalty *
-      NEATENSTEIN_WEIGHT_PARSIMONY_DENSITY_PENALTY;
+      NEATENSTEIN_WEIGHT_PARSIMONY_DENSITY_PENALTY +
+    (signal.ammoPickupsCollected ?? 0) * NEATENSTEIN_WEIGHT_AMMO_PICKUP_BONUS;
 
   // Step 2: Apply an optional parsimony band penalty if complexity is known.
   if (complexity === undefined) {
@@ -221,6 +223,8 @@ export function extractCombatQualitySignal(
     shotsBlindFire: telemetry.shotsBlindFire,
     shotsWallHit: telemetry.shotsWallHit,
     ticksElapsed: survivalTicks,
+    // P2S1: Small opportunistic bonus for collecting ammo pickups.
+    ammoPickupsCollected: telemetry.ammoPickupsCollected ?? 0,
   };
 
   return signal;

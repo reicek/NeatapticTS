@@ -1189,6 +1189,7 @@ Research note (sensor support for exploration and kiting, 2026-08-11): The 15-in
 ---
 
 ## Phase 9 — Hunter behavior: fallback AI fixes (exploration + kiting) [DONE]
+
 > Detailed step/slice/VALIDATION_EVIDENCE blocks compressed to plans/neatenstein-auto-neat-mode.logs.md.
 > Steps: 01 (plan exploration + kiting behavior) [DONE], 02 (implement exploration + kiting, slice P9S2-fallback-hunter) [DONE], 03 (validate fallback AI hunter behavior + browser smoke) [DONE].
 > 134/134 targeted tests pass; touched files `display.worker.ts` and `host/game/constants.ts` at 100/100/100/100 coverage; browser smoke PASS.

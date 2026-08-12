@@ -123,7 +123,7 @@ at `examples/neatenstein/browser-entry/renderer/raycast.ts:252`.
 
 - No consumer was found that depends on "target exactly at wall face is visible", but changing the boundary semantics could affect other callers of `hasLineOfSight` if any exist.
 - The integration-level `display.worker.test.ts` tests mock `findNearestVisibleEnemy`, so a real end-to-end LOS test is missing. Adding one may require a deterministic wall seed or a test-only hook to set `wallMap` directly.
-- If the user's observed symptom involves enemies clearly *behind* a wall (not exactly on the face), there may be an additional reproduction not yet captured; the boundary tie is the only concrete false-positive identified under current code and tests.
+- If the user's observed symptom involves enemies clearly _behind_ a wall (not exactly on the face), there may be an additional reproduction not yet captured; the boundary tie is the only concrete false-positive identified under current code and tests.
 
 ## 03-los wall-vision — `extractSensors` sensor source audit
 
@@ -312,3 +312,62 @@ Is `castRayDDAFromFlatMap` in `examples/neatenstein/browser-entry/renderer/rayca
 - **Boundary-tie fix could mask a different bug:** If the observed "through walls" symptom happens for enemies clearly behind a wall (not exactly on the face), the `>` change alone will not fix it and a new reproduction will be required.
 - **Tie-break semantics:** Changing `<` to `<=` or vice-versa in the DDA would alter which wall face is reported at corners. This is not required for the wall-vision slice, but any future change should be regression-tested.
 - **Test gaps:** Existing raycast tests do not cover diagonal thin-wall configurations, exact grid-boundary origins, or maps without perimeter walls. These gaps are acceptable for the current slice but should be closed if the primitive is promoted to a shared utility.
+
+---
+
+## Ammo pickup, pathfinding, and AI hero target selection
+
+### Question
+
+How do ammo items spawn in the Neatenstein demo, how does the player pick them up, is pathfinding (A*/BFS) available, and how does the AI hero decide movement targets?
+
+### Evidence
+
+1. **Ammo item spawn**
+   - Constants: `examples/neatenstein/browser-entry/host/game/constants.ts:487-503` define `NEATENSTEIN_PLAYER_MAX_AMMO = 50`, `NEATENSTEIN_AMMO_PICKUP_AMOUNT = 5`, `NEATENSTEIN_AMMO_PICKUP_LIFETIME_MS = 10_000`, and `NEATENSTEIN_AMMO_PICKUP_COLLECTION_RADIUS_CELLS = 1.5`.
+   - Type: `examples/neatenstein/browser-entry/host/game/types.ts:186-197` defines `AmmoPickupState { position, amount, active, createdAtMs, lifetimeMs? }`.
+   - Spawn: `examples/neatenstein/browser-entry/host/game/combat.ts:499-510` (`applyEnemyDamage`) appends an `AmmoPickupState` at the enemy's death position when `killedByThisShot` is true.
+   - Rendering: `examples/neatenstein/browser-entry/renderer/bolt-render.ts` provides `drawAmmoPickups`.
+
+2. **Player ammo pickup collection**
+   - `examples/neatenstein/browser-entry/host/game/tick.ts:394-438` (`updateAmmoPickups`) iterates `state.ammoPickups`, expires pickups whose lifetime elapsed, sums `pickup.amount` for active pickups within `NEATENSTEIN_AMMO_PICKUP_COLLECTION_RADIUS_CELLS`, marks them inactive, then calls `restoreAmmo(state, ammoGain)`.
+   - `examples/neatenstein/browser-entry/host/game/state.ts:190-198` (`restoreAmmo`) clamps ammo to `maxAmmo`.
+   - Tick integration: `examples/neatenstein/browser-entry/host/game/tick.ts:356-357` calls `updateAmmoPickups` inside `gameTick`.
+   - Tests: `combat.test.ts:857-895` verify spawn on lethal/non-lethal shots; `tick.test.ts:1390-1470` verify collection radius, expiry, and inactive handling.
+
+3. _*Pathfinding availability — BFS exists; A* not used_*
+   - `examples/neatenstein/scripts/enemy-navigation.ts:127-208` (`buildEnemyDistanceMap`) builds a four-cardinal BFS distance map from a goal cell over the flat wall map, using an `Int32Array` with wall/unreachable sentinels.
+   - `examples/neatenstein/scripts/enemy-navigation.ts:250-270` (`findBestNavigationStep`) picks the lowest-distance cardinal neighbor, tie-breaking N/E/S/W order.
+   - Distance lookup: `examples/neatenstein/scripts/enemy-navigation.ts:219-225` (`getDistance`).
+   - Vision vector: `examples/neatenstein/scripts/enemy-navigation.ts:308-362` (`buildVisionVector`) produces a 6-element NN input; `extractSensors` (`:448-511`) produces the full 15-element champion-network input.
+
+4. **Enemy movement target selection**
+   - `examples/neatenstein/scripts/enemy-controller.ts:1128-1176` builds one BFS distance map from the player cell per tick and passes it to each enemy.
+   - Flanking slots: `examples/neatenstein/scripts/enemy-controller.ts:484-565` assign each active enemy an angle around the player (`(index * 2π) / numEnemies`) and switch between BFS approach and flanking based on distance (stop 1.5 cells, flanking radius 3.5 cells).
+   - Direction ranking: `examples/neatenstein/scripts/enemy-controller.ts:644-716` sorts the four cardinal directions by BFS distance, flanking distance to the slot, or by MLP score when weights are provided.
+   - Wall collision / centering: `examples/neatenstein/scripts/enemy-controller.ts:718-880`; stall recovery: `:883-931`; enemy separation: `:1039-1104`; firing: `:960-974` when within 8 cells and line-of-sight.
+
+5. **AI hero movement target selection**
+   - Champion-network path: `examples/neatenstein/browser-entry/worker/display.worker.ts:1750-1806` gates on `humanMode === 'auto'` and a compatible champion network; `buildAutoTickInput` (`:1456-1478`) extracts sensors and activates the network; `examples/neatenstein/browser-entry/harness/neat-io-config.ts:183-210` maps the 5 network outputs to `move.x/y`, `lookDelta`, `fire`, and `dash`.
+   - Fallback AI: `examples/neatenstein/browser-entry/worker/display.worker.ts:1521-1650` (`buildFallbackAutoTickInput`) chooses deterministic hunter behavior: wall-bounce exploration when no visible enemy, or enemy-aware kiting in a 15–20 cell band when an enemy is visible.
+   - Fallback constants: `examples/neatenstein/browser-entry/host/game/constants.ts:506-536` and `NEATENSTEIN_FALLBACK_TURN_RATE` in `harness/neat-io-config.ts`.
+
+6. **Documentation drift**
+   - `examples/neatenstein/README.md` does not mention ammo pickups, `updateAmmoPickups`, BFS pathfinding, `buildEnemyDistanceMap`, or the fallback AI hero controller despite all being implemented (docs-scout, HIGH confidence).
+   - JSDoc on the pathfinding surface is strong; public ammo functions and the fallback AI hook lack `@example` blocks or public documentation.
+
+### Decision
+
+- Ammo pickups spawn on enemy kill in `combat.ts:applyEnemyDamage`, are collected by proximity in `tick.ts:updateAmmoPickups`, and restore ammo through `state.ts:restoreAmmo` (clamped to max).
+- Pathfinding is implemented as grid BFS in `scripts/enemy-navigation.ts`; no A* variant was found.
+- Enemy movement targets are chosen by BFS gradient descent from the player, augmented by flanking slots and optional MLP re-ranking in `scripts/enemy-controller.ts`.
+- The AI hero uses a champion NEAT network when available; otherwise it falls back to deterministic exploration/kiting in `display.worker.ts:buildFallbackAutoTickInput`.
+- These surfaces are implemented but under-documented.
+
+### Risks
+
+- **README drift:** A player or maintainer reading `examples/neatenstein/README.md` will not learn that ammo pickups, BFS pathfinding, or fallback AI exist. If these are public features, the README should be updated.
+- **Fallback AI is private:** The fallback hero algorithm is not a public export; the only documented hook is a thinly-documented `__testOnlyBuildFallbackAutoTickInput` export. If it should stay private, the README should still describe the behavior at a high level.
+- _*A* not available:_* Only BFS is implemented. If future AI needs weighted/search costs, a new algorithm must be added.
+- **BFS tie-break:** `findBestNavigationStep` ties by N/E/S/W order; this is deterministic but may produce predictable enemy approach lines.
+- **Index freshness note:** Cortex index was stale at investigation time and did not surface these Neatenstein files well; evidence was gathered through direct file reads and scout verification after a manual index rebuild.

@@ -146,43 +146,43 @@ What old/dead shooter code still exists in `examples/neatenstein` after the firi
 
 ### Evidence
 
-| Category | File | Lines | Finding | Confidence |
-|---|---|---|---|---|
-| **Duplicate / misplaced sensor extraction** | `scripts/enemy-navigation.ts` | 448–511 | `extractSensors` builds the 15-element player sensor vector but lives inside the enemy BFS/navigation module. | **HIGH** |
-| **Duplicate / misplaced sensor extraction** | `scripts/enemy-navigation.ts` | 513–637 | `computePBRSPotential` / `computePBRSShaping` operate on the 15-element sensor vector; no production caller (only unit tests). | **HIGH** |
-| **Duplicate / misplaced sensor extraction** | `browser-entry/harness/fitness.ts` | 94–104 | A second `computePBRSPotential` with the same name operates on `CombatQualitySignal`; this is the live version used by fitness. | **HIGH** |
-| **Duplicate / misplaced sensor extraction** | `browser-entry/host/game/types.ts` | 280–290 | `SensorSnapshot` doc comment references the dead sensor-based `computePBRSPotential` in `enemy-navigation.ts`. | **MEDIUM** |
-| **Duplicate / misplaced sensor extraction** | `browser-entry/host/game/tick.ts` | 405–418 | `sensorHistory` is appended every tick for PBRS potential differences, but no consumer reads it. | **MEDIUM** |
-| **Old 12-input constants / hooks** | `browser-entry/harness/neat-io-config.ts` | 19, 54 | `NEATENSTEIN_MAIN_NEAT_INPUTS = 15`; only literal "12" is `ENEMY_VISIBLE_SENSOR_INDEX = 12`, which is valid in the 15-input layout. | **PARTIAL** |
-| **Old 12-input constants / hooks** | `browser-entry/worker/display.worker.ts` | 1657–1669 | Extinction guard compares genome input count to current count; still references old input-count mismatch. | **MEDIUM** |
-| **Old 12-input constants / hooks** | `browser-entry/worker/display.worker.ts` | 2022–2024 | `__testOnlySetChampionInputCount` backward-compat test hook simulates a 12-input champion. | **MEDIUM** |
-| **Old 12-input constants / hooks** | `browser-entry/worker/display.worker.test.ts` | 3367–3395 | Test simulates old 12-input champion extinction guard. | **MEDIUM** |
-| **Old 12-input constants / hooks** | `plans/neatenstein-auto-neat-mode.plans.md` | 40 | Plan still documents "~12 inputs" while implementation uses 15. | **HIGH** |
-| **Omniscient enemy detection** | `scripts/enemy-controller.ts` | 476–482 | Enemy computes `dxToPlayer`/`dyToPlayer` directly from `gameState.player.position` and sets yaw every tick. | **HIGH** |
-| **Omniscient enemy detection** | `scripts/enemy-controller.ts` | 495–500, 528–532 | Flanking slot targets derived from `player.position` without line-of-sight gating. | **HIGH** |
-| **Omniscient enemy detection** | `scripts/enemy-controller.ts` | 1128–1148 | `updateEnemyController` rebuilds the BFS distance map from the player cell every tick, giving enemies perfect path knowledge. | **HIGH** |
-| **Omniscient enemy detection** | `scripts/enemy-controller.ts` | 960–974 | Fire decision uses `hasLineOfSight` to the exact player position, but targeting/aiming is fully omniscient. | **HIGH** |
-| **Placeholder fitness** | `browser-entry/harness/barrier.ts` | 272–297 | Synthetic RNG-based `runEpisode` returns randomized `CombatQualitySignal`. | **HIGH** |
-| **Placeholder fitness** | `browser-entry/harness/arms-race.ts` | 129–138 | Zero-quality placeholder fallback when `championNetwork` is supplied without `championQuality`. | **HIGH** |
-| **Placeholder fitness** | `browser-entry/harness/fitness.ts` | 354–387 | `extractCombatQualitySignal` defaults `complexityBonus` and `parsimonyDensityPenalty` to 0; comment says selection step may enrich them, but it does not. | **HIGH** |
-| **Placeholder fitness** | `browser-entry/harness/main-runner.ts` | 257–297, 334 | `evaluateVariants` passes `complexity` directly into `computeCombatQualitySignal`; the signal’s `complexityBonus`/`parsimonyDensityPenalty` fields remain zero. | **HIGH** |
-| **Placeholder fitness** | `browser-entry/host/game/tick.ts` | 405–418 | `sensorHistory` collection is effectively a placeholder because the tick-by-tick PBRS consumer is missing. | **MEDIUM** |
-| **Fire-without-vision logic** | `browser-entry/harness/main-runner.ts` | 334 | `networkOutputToTickInput(out)` called **without** the optional `fireGate`, bypassing the hysteresis gate. | **HIGH** |
-| **Fire-without-vision logic** | `browser-entry/worker/eval.worker.ts` | 81 | `networkOutputToTickInput(out)` called without fire gate in the dedicated NEAT evaluation worker. | **HIGH** |
-| **Fire-without-vision logic** | `browser-entry/harness/enemy-runner.ts` | 321–332 | Enemy fires when `fire > 0` and BFS distance ≤ `ROLLOUT_FIRE_RANGE_CELLS`; no LOS or visibility check. | **HIGH** |
-| **Fire-without-vision logic** | `browser-entry/worker/display.worker.ts` | 1459 | **Live path is correctly wired**: `networkOutputToTickInput(raw, { state: fireGateState, enemyVisible: sensors[ENEMY_VISIBLE_SENSOR_INDEX] ?? 0 })`. | **HIGH (live)** |
-| **Dead standalone orchestration modules** | `browser-entry/harness/enemy-runner.ts` | whole module | `runEnemyWaveRunner` / `simulateEnemyEpisode` exported only for tests; no production caller. | **HIGH** |
-| **Dead standalone orchestration modules** | `browser-entry/harness/main-agent.ts` | whole module | `runMainAgentGeneration` exported only for tests; no production caller. | **HIGH** |
-| **Dead fitness helpers** | `browser-entry/harness/fitness.ts` | 247 | `computeEnemyNavigationFitness` — no production caller. | **HIGH** |
-| **Dead fitness helpers** | `browser-entry/harness/fitness.ts` | 299 | `computeEnemyTeamFitness` — no production caller. | **HIGH** |
-| **Dead interfaces / exports** | `browser-entry/host/game/combat.ts` | 100 | `FireBoltResult` — no production consumer. | **MEDIUM** |
-| **Dead interfaces / exports** | `browser-entry/host/game/combat.ts` | 527 | `FireEnemyBoltInput` — no production consumer. | **MEDIUM** |
-| **Dead interfaces / exports** | `browser-entry/harness/neat-io-config.ts` | 139 | `FireGateConfig` — no production consumer. | **MEDIUM** |
-| **Dead interfaces / exports** | `browser-entry/harness/enemy-mlp.ts` | 277 | `countParameters` — no production consumer. | **MEDIUM** |
-| **Dead enemy-evaluation constants** | `browser-entry/harness/constants.ts` | 32 | `NEATENSTEIN_FITNESS_EPISODE_DURATION_MS` — no external consumer. | **MEDIUM** |
-| **Dead enemy-evaluation constants** | `browser-entry/harness/constants.ts` | 53 | `NEATENSTEIN_EVAL_CHUNK_TICKS` — no external consumer. | **MEDIUM** |
-| **Dead enemy-evaluation constants** | `browser-entry/harness/constants.ts` | 89–102 | Enemy population/evaluation constants only used by dead fitness helpers. | **MEDIUM** |
-| **Dead enemy-evaluation constants** | `browser-entry/harness/constants.ts` | 169–212 | Enemy-team weight/exploration/stagnation constants only used by dead fitness helpers. | **MEDIUM** |
+| Category                                    | File                                          | Lines            | Finding                                                                                                                                                         | Confidence      |
+| ------------------------------------------- | --------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| **Duplicate / misplaced sensor extraction** | `scripts/enemy-navigation.ts`                 | 448–511          | `extractSensors` builds the 15-element player sensor vector but lives inside the enemy BFS/navigation module.                                                   | **HIGH**        |
+| **Duplicate / misplaced sensor extraction** | `scripts/enemy-navigation.ts`                 | 513–637          | `computePBRSPotential` / `computePBRSShaping` operate on the 15-element sensor vector; no production caller (only unit tests).                                  | **HIGH**        |
+| **Duplicate / misplaced sensor extraction** | `browser-entry/harness/fitness.ts`            | 94–104           | A second `computePBRSPotential` with the same name operates on `CombatQualitySignal`; this is the live version used by fitness.                                 | **HIGH**        |
+| **Duplicate / misplaced sensor extraction** | `browser-entry/host/game/types.ts`            | 280–290          | `SensorSnapshot` doc comment references the dead sensor-based `computePBRSPotential` in `enemy-navigation.ts`.                                                  | **MEDIUM**      |
+| **Duplicate / misplaced sensor extraction** | `browser-entry/host/game/tick.ts`             | 405–418          | `sensorHistory` is appended every tick for PBRS potential differences, but no consumer reads it.                                                                | **MEDIUM**      |
+| **Old 12-input constants / hooks**          | `browser-entry/harness/neat-io-config.ts`     | 19, 54           | `NEATENSTEIN_MAIN_NEAT_INPUTS = 15`; only literal "12" is `ENEMY_VISIBLE_SENSOR_INDEX = 12`, which is valid in the 15-input layout.                             | **PARTIAL**     |
+| **Old 12-input constants / hooks**          | `browser-entry/worker/display.worker.ts`      | 1657–1669        | Extinction guard compares genome input count to current count; still references old input-count mismatch.                                                       | **MEDIUM**      |
+| **Old 12-input constants / hooks**          | `browser-entry/worker/display.worker.ts`      | 2022–2024        | `__testOnlySetChampionInputCount` backward-compat test hook simulates a 12-input champion.                                                                      | **MEDIUM**      |
+| **Old 12-input constants / hooks**          | `browser-entry/worker/display.worker.test.ts` | 3367–3395        | Test simulates old 12-input champion extinction guard.                                                                                                          | **MEDIUM**      |
+| **Old 12-input constants / hooks**          | `plans/neatenstein-auto-neat-mode.plans.md`   | 40               | Plan still documents "~12 inputs" while implementation uses 15.                                                                                                 | **HIGH**        |
+| **Omniscient enemy detection**              | `scripts/enemy-controller.ts`                 | 476–482          | Enemy computes `dxToPlayer`/`dyToPlayer` directly from `gameState.player.position` and sets yaw every tick.                                                     | **HIGH**        |
+| **Omniscient enemy detection**              | `scripts/enemy-controller.ts`                 | 495–500, 528–532 | Flanking slot targets derived from `player.position` without line-of-sight gating.                                                                              | **HIGH**        |
+| **Omniscient enemy detection**              | `scripts/enemy-controller.ts`                 | 1128–1148        | `updateEnemyController` rebuilds the BFS distance map from the player cell every tick, giving enemies perfect path knowledge.                                   | **HIGH**        |
+| **Omniscient enemy detection**              | `scripts/enemy-controller.ts`                 | 960–974          | Fire decision uses `hasLineOfSight` to the exact player position, but targeting/aiming is fully omniscient.                                                     | **HIGH**        |
+| **Placeholder fitness**                     | `browser-entry/harness/barrier.ts`            | 272–297          | Synthetic RNG-based `runEpisode` returns randomized `CombatQualitySignal`.                                                                                      | **HIGH**        |
+| **Placeholder fitness**                     | `browser-entry/harness/arms-race.ts`          | 129–138          | Zero-quality placeholder fallback when `championNetwork` is supplied without `championQuality`.                                                                 | **HIGH**        |
+| **Placeholder fitness**                     | `browser-entry/harness/fitness.ts`            | 354–387          | `extractCombatQualitySignal` defaults `complexityBonus` and `parsimonyDensityPenalty` to 0; comment says selection step may enrich them, but it does not.       | **HIGH**        |
+| **Placeholder fitness**                     | `browser-entry/harness/main-runner.ts`        | 257–297, 334     | `evaluateVariants` passes `complexity` directly into `computeCombatQualitySignal`; the signal’s `complexityBonus`/`parsimonyDensityPenalty` fields remain zero. | **HIGH**        |
+| **Placeholder fitness**                     | `browser-entry/host/game/tick.ts`             | 405–418          | `sensorHistory` collection is effectively a placeholder because the tick-by-tick PBRS consumer is missing.                                                      | **MEDIUM**      |
+| **Fire-without-vision logic**               | `browser-entry/harness/main-runner.ts`        | 334              | `networkOutputToTickInput(out)` called **without** the optional `fireGate`, bypassing the hysteresis gate.                                                      | **HIGH**        |
+| **Fire-without-vision logic**               | `browser-entry/worker/eval.worker.ts`         | 81               | `networkOutputToTickInput(out)` called without fire gate in the dedicated NEAT evaluation worker.                                                               | **HIGH**        |
+| **Fire-without-vision logic**               | `browser-entry/harness/enemy-runner.ts`       | 321–332          | Enemy fires when `fire > 0` and BFS distance ≤ `ROLLOUT_FIRE_RANGE_CELLS`; no LOS or visibility check.                                                          | **HIGH**        |
+| **Fire-without-vision logic**               | `browser-entry/worker/display.worker.ts`      | 1459             | **Live path is correctly wired**: `networkOutputToTickInput(raw, { state: fireGateState, enemyVisible: sensors[ENEMY_VISIBLE_SENSOR_INDEX] ?? 0 })`.            | **HIGH (live)** |
+| **Dead standalone orchestration modules**   | `browser-entry/harness/enemy-runner.ts`       | whole module     | `runEnemyWaveRunner` / `simulateEnemyEpisode` exported only for tests; no production caller.                                                                    | **HIGH**        |
+| **Dead standalone orchestration modules**   | `browser-entry/harness/main-agent.ts`         | whole module     | `runMainAgentGeneration` exported only for tests; no production caller.                                                                                         | **HIGH**        |
+| **Dead fitness helpers**                    | `browser-entry/harness/fitness.ts`            | 247              | `computeEnemyNavigationFitness` — no production caller.                                                                                                         | **HIGH**        |
+| **Dead fitness helpers**                    | `browser-entry/harness/fitness.ts`            | 299              | `computeEnemyTeamFitness` — no production caller.                                                                                                               | **HIGH**        |
+| **Dead interfaces / exports**               | `browser-entry/host/game/combat.ts`           | 100              | `FireBoltResult` — no production consumer.                                                                                                                      | **MEDIUM**      |
+| **Dead interfaces / exports**               | `browser-entry/host/game/combat.ts`           | 527              | `FireEnemyBoltInput` — no production consumer.                                                                                                                  | **MEDIUM**      |
+| **Dead interfaces / exports**               | `browser-entry/harness/neat-io-config.ts`     | 139              | `FireGateConfig` — no production consumer.                                                                                                                      | **MEDIUM**      |
+| **Dead interfaces / exports**               | `browser-entry/harness/enemy-mlp.ts`          | 277              | `countParameters` — no production consumer.                                                                                                                     | **MEDIUM**      |
+| **Dead enemy-evaluation constants**         | `browser-entry/harness/constants.ts`          | 32               | `NEATENSTEIN_FITNESS_EPISODE_DURATION_MS` — no external consumer.                                                                                               | **MEDIUM**      |
+| **Dead enemy-evaluation constants**         | `browser-entry/harness/constants.ts`          | 53               | `NEATENSTEIN_EVAL_CHUNK_TICKS` — no external consumer.                                                                                                          | **MEDIUM**      |
+| **Dead enemy-evaluation constants**         | `browser-entry/harness/constants.ts`          | 89–102           | Enemy population/evaluation constants only used by dead fitness helpers.                                                                                        | **MEDIUM**      |
+| **Dead enemy-evaluation constants**         | `browser-entry/harness/constants.ts`          | 169–212          | Enemy-team weight/exploration/stagnation constants only used by dead fitness helpers.                                                                           | **MEDIUM**      |
 
 ### Decision
 
@@ -231,13 +231,13 @@ Why isn't the `extractSensors` 15-input expansion being used during live auto-mo
   - nearest visible enemy: bearing, distance, health (3) plus `enemyVisible` (index 12) and `inFiringArc` (index 13) (2);
   - wall raycasts: N/E/S/W (4);
   - `lastShotHit` (1).
-  Total = 15.
+    Total = 15.
 - **The live bypass is `buildFallbackAutoTickInput`.** In `display.worker.ts:1497-1553`, when `humanMode === 'auto'` but `championMainNetwork` is `null` (before the first champion is evolved), the worker builds the tick input with an exploration AI that:
   - iterates `state.enemies` directly;
   - selects the nearest active enemy by raw Euclidean distance;
   - ignores `VISION_RANGE_CELLS` (15 cells) and wall line-of-sight;
   - fires whenever the chosen enemy is within `NEATENSTEIN_FALLBACK_FIRE_ARC` of the facing direction and a cooldown interval has elapsed.
-  This matches the historical omniscient 12-input enemy-detection behavior described in `plans/neatenstein-firing-sensor-system.research.md`.
+    This matches the historical omniscient 12-input enemy-detection behavior described in `plans/neatenstein-firing-sensor-system.research.md`.
 - **No remaining production 12-input champion path.** The genome-extinction guard at `display.worker.ts:1656-1669` clears `championMainNetwork` whenever `lastChampionInputCount !== NEATENSTEIN_MAIN_NEAT_INPUTS` (15). The only remaining literal "12" references are:
   - `ENEMY_VISIBLE_SENSOR_INDEX = 12` in `harness/neat-io-config.ts:54` — a valid index inside the 15-input layout;
   - `__testOnlySetChampionInputCount` in `display.worker.ts:2022-2024` and its test in `display.worker.test.ts:3367-3395` — backward-compat extinction-guard test hooks;
@@ -355,13 +355,13 @@ but the **unconditional forward movement** returned by the fallback.
 
 ### Key ranges
 
-| Constant | Value | Implication |
-|---|---|---|
-| `VISION_RANGE_CELLS` | 15 | Current max LOS acquisition distance |
-| `NEATENSTEIN_BOLT_MAX_RANGE_CELLS` | 30 | Player bolts can hit farther than current vision |
-| `ENEMY_CONTROLLER_FIRE_RANGE_CELLS` | 8 | Enemies cannot fire back at 15–20 cells |
-| `NEATENSTEIN_CONTACT_RANGE_CELLS` | 0.5 | Contact damage only at melee range |
-| `NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND` | 6 | Player outruns enemies (2.5 cells/s) |
+| Constant                                    | Value | Implication                                      |
+| ------------------------------------------- | ----- | ------------------------------------------------ |
+| `VISION_RANGE_CELLS`                        | 15    | Current max LOS acquisition distance             |
+| `NEATENSTEIN_BOLT_MAX_RANGE_CELLS`          | 30    | Player bolts can hit farther than current vision |
+| `ENEMY_CONTROLLER_FIRE_RANGE_CELLS`         | 8     | Enemies cannot fire back at 15–20 cells          |
+| `NEATENSTEIN_CONTACT_RANGE_CELLS`           | 0.5   | Contact damage only at melee range               |
+| `NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND` | 6     | Player outruns enemies (2.5 cells/s)             |
 
 A 15–20 cell standoff is tactically sound: it is out of enemy bolt range,
 well inside player bolt range, and only reachable while the enemy is visible.
@@ -371,8 +371,8 @@ well inside player bolt range, and only reachable while the enemy is visible.
 Add distance-aware movement to `buildFallbackAutoTickInput()`:
 
 ```ts
-const KITE_MIN_RANGE_CELLS = 15;   // backpedal if closer
-const KITE_MAX_RANGE_CELLS = 20;   // approach if farther
+const KITE_MIN_RANGE_CELLS = 15; // backpedal if closer
+const KITE_MAX_RANGE_CELLS = 20; // approach if farther
 const KITE_ACQUIRE_RANGE_CELLS = NEATENSTEIN_BOLT_MAX_RANGE_CELLS; // 30
 ```
 
@@ -460,19 +460,19 @@ cells/s while yawing at a fixed rate of
 `NEATENSTEIN_FALLBACK_TURN_RATE = π/12` radians per
 `NEATENSTEIN_FIXED_TIMESTEP_MS = 16` ms tick.
 
-| Derived quantity | Value | Formula |
-|---|---|---|
-| Angular velocity ω | ≈ 16.36 rad/s | (π/12) / 0.016 |
-| Linear velocity v | 6 cells/s | `NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND` |
-| Circular radius r | ≈ 0.37 cells | v / ω |
-| Full-rotation time | ≈ 0.384 s (24 ticks) | 2π / ω |
+| Derived quantity   | Value                | Formula                                     |
+| ------------------ | -------------------- | ------------------------------------------- |
+| Angular velocity ω | ≈ 16.36 rad/s        | (π/12) / 0.016                              |
+| Linear velocity v  | 6 cells/s            | `NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND` |
+| Circular radius r  | ≈ 0.37 cells         | v / ω                                       |
+| Full-rotation time | ≈ 0.384 s (24 ticks) | 2π / ω                                      |
 
 The resulting circle is barely larger than the player's collision radius
 (`NEATENSTEIN_PLAYER_RADIUS_CELLS = 0.25`), so the fallback AI spins almost
 in place instead of covering the map. This matches the observed "spins in
 circles" symptom.
 
-**Current code path when an enemy *is* visible.**
+**Current code path when an enemy _is_ visible.**
 
 The same function already turns toward the nearest visible enemy and fires
 within `NEATENSTEIN_FALLBACK_FIRE_ARC` (±π/6) on a 25-tick cooldown. The
@@ -521,10 +521,10 @@ Add module-level fallback-exploration state in `display.worker.ts` (or a
 small helper module):
 
 ```ts
-const EXPLORATION_WALL_DISTANCE_CELLS = 2.0;   // react to wall this far ahead
-const EXPLORATION_SCAN_RATE = 0;                // no idle scan while moving
-const EXPLORATION_TURN_ON_BOUNCE = Math.PI / 2;   // 90° when blocked
-const EXPLORATION_CORNER_TOLERANCE = 0.25;        // deadband around ray hit
+const EXPLORATION_WALL_DISTANCE_CELLS = 2.0; // react to wall this far ahead
+const EXPLORATION_SCAN_RATE = 0; // no idle scan while moving
+const EXPLORATION_TURN_ON_BOUNCE = Math.PI / 2; // 90° when blocked
+const EXPLORATION_CORNER_TOLERANCE = 0.25; // deadband around ray hit
 ```
 
 1. When no enemy is visible, set `move: { x: 0, y: 1 }` and `lookDelta = 0`
@@ -551,8 +551,8 @@ fallback picks a new target yaw every `LEVY_STRAIGHT_TICKS` ticks and moves
 straight between picks.
 
 ```ts
-const LEVY_STRAIGHT_TICKS_MIN = 30;   // ~0.5 s
-const LEVY_STRAIGHT_TICKS_MAX = 90;   // ~1.4 s
+const LEVY_STRAIGHT_TICKS_MIN = 30; // ~0.5 s
+const LEVY_STRAIGHT_TICKS_MAX = 90; // ~1.4 s
 const LEVY_BOUNCE_DISTANCE_CELLS = 1.5;
 ```
 
@@ -586,7 +586,7 @@ longer-term enhancement only after the fallback is otherwise stable.
 
 ### Interaction with the kiting addendum
 
-The kiting addendum above proposes distance-aware movement when an enemy *is*
+The kiting addendum above proposes distance-aware movement when an enemy _is_
 visible. These two changes compose cleanly:
 
 - Enemy visible → use kiting (Option A in the kiting addendum).

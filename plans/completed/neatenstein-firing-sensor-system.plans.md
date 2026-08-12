@@ -22,38 +22,37 @@ Fix the Neatenstein NEAT-controlled player's firing behavior through five phases
 
 The research artifact (`plans/neatenstein-firing-sensor-system.research.md`) identifies 5 solutions, 10 NEAT architecture findings (N1-N10), 6 reward deep-dive findings (R1-R6), and performance analysis. Key findings:
 
-| ID | Finding | Severity |
-|----|---------|----------|
-| N2 | `NEATENSTEIN_MAIN_NEAT_INPUTS`/`OUTPUTS` duplicated independently in `main-runner.ts` and `display.worker.ts` | BLOCKING |
-| N8 | Worker `new Neat()` not passed `maxNodes: 64, maxConns: 256` | HIGH |
-| N3 | `MAX_TURN_RATE` hardcoded as magic number in tick/turn logic — should be extracted as a named constant | MEDIUM |
-| N9 | Sensors not normalized (position, ammo, wall dist, bearing use raw values) | MEDIUM |
-| N10 | Placeholder fitness returns `output[0]` — sensor changes are inert without real fitness | CRITICAL |
-| Sol 1 | Soft fire gate: suppress fire only when NO enemy visible | — |
-| Sol 2 | Vision range `VISION_RANGE_CELLS = 15`; zero out enemy sensors [5]-[7] beyond range | — |
-| Sol 3 | Line-of-sight via `castRayDDAFromFlatMap`; add `hasLineOfSight` to `raycast.ts` | — |
-| Sol 4 | Add `shotsWasted` telemetry, `ammoEfficiency`→`killEfficiency`, scale `aimMissRate` weight 1→~20 | — |
-| Sol 5 | Sensors [12]-[14]: `enemyVisible`, `enemyInFiringArc`, `lastShotHit`; total 15 inputs | — |
-| Rec 5 | Dedicated evaluation worker is P0 — without it, render loop stalls 500-2000ms per generation | — |
-| R1 | Survival reward (200-312) overwhelms accuracy penalties (~17.4) | — |
-| R2 | Replace `ammoEfficiency` with `killEfficiency` multiplier on kills | — |
-| R5 | Per-shot outcome taxonomy: wallHit, blindFire, nearMiss, rangeExpired | — |
+| ID    | Finding                                                                                                       | Severity |
+| ----- | ------------------------------------------------------------------------------------------------------------- | -------- |
+| N2    | `NEATENSTEIN_MAIN_NEAT_INPUTS`/`OUTPUTS` duplicated independently in `main-runner.ts` and `display.worker.ts` | BLOCKING |
+| N8    | Worker `new Neat()` not passed `maxNodes: 64, maxConns: 256`                                                  | HIGH     |
+| N3    | `MAX_TURN_RATE` hardcoded as magic number in tick/turn logic — should be extracted as a named constant        | MEDIUM   |
+| N9    | Sensors not normalized (position, ammo, wall dist, bearing use raw values)                                    | MEDIUM   |
+| N10   | Placeholder fitness returns `output[0]` — sensor changes are inert without real fitness                       | CRITICAL |
+| Sol 1 | Soft fire gate: suppress fire only when NO enemy visible                                                      | —        |
+| Sol 2 | Vision range `VISION_RANGE_CELLS = 15`; zero out enemy sensors [5]-[7] beyond range                           | —        |
+| Sol 3 | Line-of-sight via `castRayDDAFromFlatMap`; add `hasLineOfSight` to `raycast.ts`                               | —        |
+| Sol 4 | Add `shotsWasted` telemetry, `ammoEfficiency`→`killEfficiency`, scale `aimMissRate` weight 1→~20              | —        |
+| Sol 5 | Sensors [12]-[14]: `enemyVisible`, `enemyInFiringArc`, `lastShotHit`; total 15 inputs                         | —        |
+| Rec 5 | Dedicated evaluation worker is P0 — without it, render loop stalls 500-2000ms per generation                  | —        |
+| R1    | Survival reward (200-312) overwhelms accuracy penalties (~17.4)                                               | —        |
+| R2    | Replace `ammoEfficiency` with `killEfficiency` multiplier on kills                                            | —        |
+| R5    | Per-shot outcome taxonomy: wallHit, blindFire, nearMiss, rangeExpired                                         | —        |
 
 **Recommended sequencing (research):** N10 → N2+N8 → N9+sensor expansion → fitness weight tuning → fire gating
 **User-specified phase ordering:** Foundation → Fitness+Eval → Sensors → Reward → Fire gating (compatible with research — foundation doesn't depend on fitness, and fitness replacement is Phase 2, still early).
 
 ## File Impact Map
 
-| Phase | Touches | Key Files |
-|-------|--------|-----------|
-| 1 | Shared constants + maxNodes + aimMissRate | `harness/neat-io-config.ts` (NEW), `harness/main-runner.ts`, `worker/display.worker.ts`, `host/game/combat.ts`, `host/game/tick.ts` |
-| 2 | Fitness replacement + eval worker | `worker/display.worker.ts`, `harness/fitness.ts`, `worker/eval.worker.ts` (NEW) |
-| 3 | Sensor expansion 12→15 + LOS + normalization | `renderer/raycast.ts`, `scripts/enemy-navigation.ts`, `harness/neat-io-config.ts`, `host/game/tick.ts`, `worker/display.worker.ts` |
-| 4 | Reward redesign + telemetry | `host/game/types.ts`, `host/game/combat.ts`, `harness/fitness.ts`, `harness/constants.ts`, `host/game/tick.ts`, `scripts/enemy-navigation.ts` |
-| 5 | Fire gating | `host/game/tick.ts`, `harness/neat-io-config.ts` |
+| Phase | Touches                                      | Key Files                                                                                                                                     |
+| ----- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | Shared constants + maxNodes + aimMissRate    | `harness/neat-io-config.ts` (NEW), `harness/main-runner.ts`, `worker/display.worker.ts`, `host/game/combat.ts`, `host/game/tick.ts`           |
+| 2     | Fitness replacement + eval worker            | `worker/display.worker.ts`, `harness/fitness.ts`, `worker/eval.worker.ts` (NEW)                                                               |
+| 3     | Sensor expansion 12→15 + LOS + normalization | `renderer/raycast.ts`, `scripts/enemy-navigation.ts`, `harness/neat-io-config.ts`, `host/game/tick.ts`, `worker/display.worker.ts`            |
+| 4     | Reward redesign + telemetry                  | `host/game/types.ts`, `host/game/combat.ts`, `harness/fitness.ts`, `harness/constants.ts`, `host/game/tick.ts`, `scripts/enemy-navigation.ts` |
+| 5     | Fire gating                                  | `host/game/tick.ts`, `harness/neat-io-config.ts`                                                                                              |
 
 All paths relative to `examples/neatenstein/browser-entry/` unless prefixed with `scripts/` (relative to `examples/neatenstein/`).
-
 
 ---
 
@@ -98,4 +97,3 @@ All paths relative to `examples/neatenstein/browser-entry/` unless prefixed with
 - code-coverage gate: PASS | plan-sync gate: PASS | slice-advancement gate: TOOLING ERROR (ETIMEDOUT -- infrastructure issue per Section 5.8.3)
 
 All 10 slices confirmed GREEN. Plan complete. Detailed evidence in `plans/neatenstein-firing-sensor-system.logs.md`.
-

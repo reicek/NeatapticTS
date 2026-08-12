@@ -2,6 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import type * as Fitness from './fitness';
 import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../host/game/constants';
+import { NEATENSTEIN_WEIGHT_AMMO_PICKUP_BONUS } from './constants';
 import type { EpisodeTelemetry, GameState } from '../host/game/types';
 
 /**
@@ -235,5 +236,28 @@ describe('Neatenstein harness fitness', () => {
       );
       expect(above).toBeLessThan(inside);
     });
+  });
+
+  it('AC-P2S1-001: returns higher fitness when ammoPickupsCollected increases', async () => {
+    const { computeCombatQualitySignal } =
+      (await import('./fitness.ts')) as FitnessModule;
+    const base = {
+      survivalTicks: 0,
+      damageDealt: 0,
+      kills: 0,
+      damageTaken: 0,
+      aimMissRate: 0,
+      complexityBonus: 0,
+      parsimonyDensityPenalty: 0,
+    };
+    const low = computeCombatQualitySignal({
+      ...base,
+      ammoPickupsCollected: 0,
+    });
+    const high = computeCombatQualitySignal({
+      ...base,
+      ammoPickupsCollected: 3,
+    });
+    expect(high).toBe(low + 3 * NEATENSTEIN_WEIGHT_AMMO_PICKUP_BONUS);
   });
 });

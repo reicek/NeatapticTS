@@ -14,9 +14,15 @@ import type { GameTickInputSnapshot } from '../host/game/tick';
 /**
  * Number of main-agent NEAT network inputs (sensor vector length).
  *
- * @see AC-039
+ * The main-agent sensor vector grew from 15 to 22 in P2S1 to expose the
+ * three nearest active ammo pickups by path distance (bearing + distance
+ * per pickup, plus a low-ammo gate). Consumers must use this constant
+ * rather than hard-coding the vector length so the genome-extinction guard
+ * stays synchronized with the sensor layout.
+ *
+ * @see AC-039, AC-P2S1-001
  */
-export const NEATENSTEIN_MAIN_NEAT_INPUTS = 15;
+export const NEATENSTEIN_MAIN_NEAT_INPUTS = 22;
 
 /**
  * Number of main-agent NEAT network outputs (action vector length).
@@ -24,6 +30,46 @@ export const NEATENSTEIN_MAIN_NEAT_INPUTS = 15;
  * @see AC-039
  */
 export const NEATENSTEIN_MAIN_NEAT_OUTPUTS = 5;
+
+// ---------------------------------------------------------------------------
+// P2S1 — Ammo-pickup awareness sensors
+// ---------------------------------------------------------------------------
+
+/**
+ * Fraction of max ammo below which the low-ammo gate sensor activates.
+ *
+ * Sensor [21] emits `1` when `player.ammo / player.maxAmmo` is strictly
+ * below this threshold, and `0` otherwise. The 0.25 value keeps the gate
+ * off until the hero is genuinely low, avoiding noisy activation near full
+ * ammo.
+ *
+ * @see AC-P2S1-001
+ */
+export const NEATENSTEIN_LOW_AMMO_RATIO = 0.25;
+
+/**
+ * Number of consecutive ammo-pickup sensors appended to the main sensor
+ * vector in P2S1.
+ *
+ * Each of the three nearest active pickups contributes a bearing and a
+ * distance (6 sensors), and a single low-ammo gate adds one more, for a
+ * total of 7 extra inputs on top of the original 15.
+ *
+ * @see AC-P2S1-001
+ */
+export const NEATENSTEIN_AMMO_PICKUP_SENSOR_COUNT = 7;
+
+/**
+ * Starting index of the ammo-pickup sensor block in the 22-element vector.
+ *
+ * Sensors [15]–[20] hold the three nearest pickups (bearing/distance pairs),
+ * and sensor [21] is the low-ammo gate. Keeping this index in shared config
+ * lets sensor consumers and tests refer to the ammo block without magic
+ * numbers.
+ *
+ * @see AC-P2S1-001
+ */
+export const NEATENSTEIN_AMMO_PICKUP_START_INDEX = 15;
 
 /**
  * Maximum look-delta per tick, in radians.
@@ -53,11 +99,57 @@ export const MAX_TURN_RATE = Math.PI / 4;
 export const NEATENSTEIN_FALLBACK_TURN_RATE = Math.PI / 12;
 
 // ---------------------------------------------------------------------------
+// P1S1 — Scroll/turn rate cap + accel/decel movement smoothing
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum per-tick increase in the main-agent move/look command.
+ *
+ * Damps 0 → max transitions so the AI does not snap instantly from
+ * standstill to full forward/strafe/turn.
+ *
+ * @see AC-002, AC-003
+ */
+export const NEATENSTEIN_MOVE_ACCEL_PER_TICK = 0.2;
+
+/**
+ * Maximum per-tick decrease in the main-agent move/look command.
+ *
+ * Damps max → 0 transitions so the AI decelerates smoothly when it
+ * stops or reverses.
+ *
+ * @see AC-002, AC-003
+ */
+export const NEATENSTEIN_MOVE_DECEL_PER_TICK = 0.25;
+
+/**
+ * Smooth a scalar command toward its target using per-tick accel/decel limits.
+ *
+ * @param current - Current smoothed value.
+ * @param target - Desired raw value.
+ * @param accel - Maximum increase per tick (defaults to {@link NEATENSTEIN_MOVE_ACCEL_PER_TICK}).
+ * @param decel - Maximum decrease per tick (defaults to {@link NEATENSTEIN_MOVE_DECEL_PER_TICK}).
+ * @returns Updated smoothed value.
+ * @see AC-003, AC-004
+ */
+export function smoothCommand(
+  current: number,
+  target: number,
+  accel = NEATENSTEIN_MOVE_ACCEL_PER_TICK,
+  decel = NEATENSTEIN_MOVE_DECEL_PER_TICK,
+): number {
+  const delta = target - current;
+  if (delta === 0) return current;
+  const limit = delta > 0 ? accel : decel;
+  return Math.abs(delta) <= limit ? target : current + Math.sign(delta) * limit;
+}
+
+// ---------------------------------------------------------------------------
 // P5S1 — Soft fire gate with hysteresis on enemyVisible sensor
 // ---------------------------------------------------------------------------
 
 /**
- * Sensor index for `enemyVisible` in the 15-element observation vector.
+ * Sensor index for `enemyVisible` in the 22-element observation vector.
  *
  * Binary: 1 if a visible enemy exists within vision range, 0 otherwise.
  *

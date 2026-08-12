@@ -1,130 +1,126 @@
-# Neatenstein HUD / Face / Cannon / Waves — Research Synthesis
+# Neatenstein HUD / Face Cannon / Waves — Vision Filtering Live Gameplay Investigation
 
-**Plan:** `neatenstein-hud-face-cannon-waves`  
-**Research date:** 2026-08-07  
-**Sources inspected:** `examples/neatenstein/` host, renderer, game-logic, worker, and asset files.
+> Research artifact for active plan `neatenstein-hud-face-cannon-waves.plans.md`.
+> Related plans/research:
+>
+> - `plans/neatenstein-auto-neat-mode.plans.md` (Auto / NEAT mode wiring, Phases 1–8 [DONE])
+> - `plans/neatenstein-firing-sensor-system.research.md` (sensor/LOS/fire-gating redesign, Phases 1–5 [DONE])
 
-## 1. HUD redesign
+## Question
 
-- Current HUD factories live in `examples/neatenstein/browser-entry/host/hud.ts`:
-  - `createHiveDensityHud`
-  - `createHealthAmmoHud`
-  - `createDeathFeedbackIndicator`
-  - `createHumanModeSelector`
-- They append bare `<div>` elements to `#neatenstein-output` **below** the canvas.
-- Existing color tokens (locked) are in `examples/neatenstein/browser-entry/constants.ts`:
-  - `NEATENSTEIN_GUN_BODY_COLOR = '#FBFFFF'` (neon white)
-  - `NEATENSTEIN_GUN_ACCENT_COLOR = '#00f0ff'` (neon teal)
-  - `NEATENSTEIN_HEALTH_COLOR_CYAN = 'rgb(0, 240, 255)'`
-  - `NEATENSTEIN_HEALTH_COLOR_AMBER = 'rgb(240, 160, 0)'`
-  - `NEATENSTEIN_HEALTH_COLOR_MAGENTA = 'rgb(255, 0, 85)'`
-  - HIVE density thresholds/colors already defined.
-- Test pattern: `createHudFixture` mounts `#neatenstein-hud-output` in jsdom, dynamically imports `hud.ts`, and asserts `style.backgroundColor` / `textContent`.
-- Direction: convert the HUD into a single bottom status-bar overlay with neon borders, monospace/CRT labels, segmented vitals bars, and a left/right split for the robot mugshot / kill-death counters.
+1. Why do `findNearestVisibleEnemy` and vision-range filtering appear to fail in live Neatenstein gameplay?
+2. Is `extractSensors` in `scripts/enemy-navigation.ts` actually called by the real game loop, or only by tests?
+3. Where does old omniscient enemy-detection code still run?
 
-## 2. Robot mugshot / face
+## Evidence
 
-- Robot sprite source-of-truth: `examples/neatenstein/robot-sprite-data.json`.
-  - Atlas frames: `front`, `frontRight`, `right`, `backRight`, `back`, `backLeft`, `left`, `frontLeft`.
-  - Each frame contains `stand`, `walk1`, `walk2`, `shoot` (48×48 palette-indexed grids).
-  - Palette indices of interest for the head region: `1` outline, `2` helmet shell, `5` eye-stripe/accent.
-- Head-only crop: logical rows roughly `0–14`, x approximately `19–29` of the 48×48 grid. Apply the same crop to `front`, `frontLeft`, and `frontRight` frames so the mugshot is consistently head-only in every direction.
-- Mugshot frame selection:
-  - `front.stand` when idle (neither or both strafe keys held).
-  - `frontLeft.stand` when strafing left (`InputSnapshot.movement.left` true and right false).
-  - `frontRight.stand` when strafing right (`InputSnapshot.movement.right` true and left false).
-  - Left takes precedence when both keys are held simultaneously; no state strobe if both/neither.
-  - Maintain a short anti-flicker cooldown (≈100 ms) per direction; reset cooldown when the active frame changes, not on every key press.
-- Damage tint:
-  - Healthy eye-stripe/accent (`palette index 5`) → neon teal `rgb(0,240,255)`.
-  - At death → neon gray `rgb(180,190,210)` (same neutral used by `NEATENSTEIN_ENEMY_DEATH_COLOR`).
-  - Interpolate by `playerHealth / playerMaxHealth` for the eye-stripe only; outline/helmet shell stay unchanged.
-- Implementation location: host DOM `<canvas>` overlay (not worker) so it can be driven cheaply from host input state.
-- Existing decode/tint helpers (`decodeRobotSpriteFrame`, `buildTeamColorPalette`) in `examples/neatenstein/browser-entry/renderer/sprites.ts` are not exported and live inside the worker sprite renderer. Plan a new pure shared module `examples/neatenstein/browser-entry/renderer/robot-sprite-decode.ts` that exports the helpers and constants; both `sprites.ts` and the host mugshot import from it.
-- The mugshot tint targets **only** palette index `5` (eye-stripe/accent); indices `6`/`7` are inert in the head region but are swapped by `buildTeamColorPalette`, so the helper must accept a per-index tint map.
+### `extractSensors` is called by real runtime paths, not just tests
 
-## 3. Voxel cannon
+| Consumer                   | File                                                          | Line | Context                                                                        |
+| -------------------------- | ------------------------------------------------------------- | ---- | ------------------------------------------------------------------------------ |
+| Live champion auto-AI      | `examples/neatenstein/browser-entry/worker/display.worker.ts` | 1451 | `buildAutoTickInput` when `humanMode === 'auto' && championMainNetwork` is set |
+| Fitness evaluation worker  | `examples/neatenstein/browser-entry/worker/eval.worker.ts`    | 76   | `runFitnessEpisode` evaluates every network during evolution                   |
+| Headless main-agent runner | `examples/neatenstein/browser-entry/harness/main-runner.ts`   | 329  | `runEpisode` headless fitness episode                                          |
+| Tests                      | `examples/neatenstein/scripts/enemy-navigation.test.ts`       | many | `extractSensors` + `findNearestVisibleEnemy` coverage                          |
 
-- `examples/neatenstein/browser-entry/renderer/gun.ts` originally drew the gun body with vector gradients and side planes, then was rewritten in Step 04b to project a procedural voxel grid from `scripts/voxel-gun.ts`.
-- `examples/neatenstein/browser-entry/renderer/gun-sprite.ts` projects the sparse `VoxelGrid` into screen-space squares.
-- **User feedback (2026-08-09):** the Step 04b result looks like a blocky vertical voxel column, not a weapon. The user requested a palette-indexed grid array file (like `robot-sprite-data.js`) so they can manually fine-tune pixels, reuse the existing decode/tint/render pipeline, and keep the code consistent.
-- **Revised plan:** create a new source-of-truth sprite asset `examples/neatenstein/gun-sprite-data.js` exporting `GUN_SPRITE_SCALE`, `GUN_SPRITE_PALETTE`, and `GUN_SPRITE_FRAMES` (at least `idle` and `fire`). The format mirrors `robot-sprite-data.js`: numeric palette indices, rows of cells, nearest-neighbor decode, optional palette-swap tinting.
-- Add a shared decoder `examples/neatenstein/browser-entry/renderer/gun-sprite-decode.ts` (or extend `robot-sprite-decode.ts`) that decodes the palette-indexed grid into a scaled RGBA snapshot.
-- Update `renderGunOverlay` to draw the decoded 2D sprite at the bottom center of the viewport, applying `GunState.recoilOffset` before drawing. Remove the dependency on `scripts/voxel-gun.ts` and the `gun-sprite.ts` voxel projector.
-- The `GunState.firing` signal remains tick-derived: when true, render the `fire` frame (which includes a muzzle-flash burst above the barrel tip) instead of `idle`.
-- Palette design:
-  - `0` transparent
-  - `1` dark outline
-  - `2` dark receiver body
-  - `3` metallic dark / vents
-  - `4` neon white / metallic barrel
-  - `5` teal accent / energy strip
-  - `6` teal glow / muzzle ring
-  - `7` muzzle flash (semi-transparent warm yellow-white)
-  - `8` metallic gray / barrel shadow
-- The `idle` frame must be a wide, horizontally elongated Wolfenstein-style chaingun silhouette (width/height ~1.6) with a sharp angular profile: wide dark receiver at the bottom, a narrower metallic barrel cluster rising from the center, and a glowing teal muzzle ring at the tip.
-- The `fire` frame reuses the `idle` body but adds muzzle-flash pixels above the barrel tip.
+**Confidence: 0.96** | Provenance: static-code
 
-## 4. Death / respawn / kill counter
+### `findNearestVisibleEnemy` is implemented correctly and unit tests pass
 
-- `GameState` (`examples/neatenstein/browser-entry/host/game/types.ts`) already has `kills: number` and `spawnCount: number`.
-- Add `deaths: number` to `GameState`, initialized to `0` in `createGameState`.
-- Death occurs when `state.player.health <= 0`.
-- `examples/neatenstein/browser-entry/host/game/episode.ts#isEpisodeComplete` currently terminates on player death OR after `NEATENSTEIN_ENEMY_MAX_CONCURRENT * NEATENSTEIN_ENEMY_WAVE_COUNT` kills.
-- For infinite waves, the player-death condition must be replaced by a respawn hook and `deaths++`; the `allEnemiesKilled` wave-count terminal condition must be removed.
-- Respawn behavior:
-  - Detect `playerDead` at the **end** of `gameTick`, then increment `deaths`, reset player position to `(NEATENSTEIN_SPAWN_CENTER_X, NEATENSTEIN_SPAWN_CENTER_Y)`, restore `health`/`ammo` to max, clear residual `contactIFrameMs`, and grant a short post-respawn invulnerability window (e.g. `NEATENSTEIN_RESPAWN_INVULN_MS`) so enemies adjacent to the center do not immediately kill the player again.
-  - Update `state.ts#isInvulnerable()` to return true while `respawnInvulnMs > 0`.
-  - Clear `bolts`, `enemyBolts`, `ammoPickups`, `impacts`, `enemyImpacts`; preserve the live `enemies` array (it is not reset on respawn).
-  - Preserve `seed`, `kills`, `deaths`, `spawnCount`, `generation` across respawn. `spawnCount` must remain monotonic and unbounded for infinite-wave determinism.
-- Episode completion: replace the `playerDead` terminal condition with a time-based guard (`episodeTimeMs >= episodeDurationMs`). The episode is considered active while the timer has not expired; respawns happen within the same episode. Update existing `episode.test.ts` expectations accordingly.
-- The kill counter is already incremented in `examples/neatenstein/browser-entry/host/game/combat.ts#applyEnemyDamage`.
-- Forward `kills` and `deaths` in `NeatensteinRenderFrame` so the HUD can display them.
+`examples/neatenstein/scripts/enemy-navigation.ts:382` defines `findNearestVisibleEnemy` with:
 
-## 5. Infinite enemy waves
+- Skip `active === false` enemies.
+- Euclidean distance `<= VISION_RANGE_CELLS` (15 cells).
+- `hasLineOfSight` from `examples/neatenstein/browser-entry/renderer/raycast.ts:226`.
 
-- `examples/neatenstein/browser-entry/host/game/waves.ts#spawnWaveTick` spawns one enemy per tick until `maxSpawnCount = NEATENSTEIN_ENEMY_MAX_CONCURRENT * NEATENSTEIN_ENEMY_WAVE_COUNT`.
-- It also pauses a full batch until all 8 enemies are dead, then starts a new batch — behavior we can reuse.
-- For infinite waves: remove the `maxSpawnCount` cap so `spawnCount` can grow without bound.
-- Keep the existing 8-enemy batch semantics; when the roster is cleared, the next tick begins respawning the next 8 on their initial edge spots.
-- Because `spawnCount` is used as a monotonic RNG seed offset (`state.seed + state.spawnCount`), removing the cap preserves determinism as long as the seed arithmetic stays unchanged.
+Validation command:
 
-## 6. Worker / host boundary
+```bash
+npx jest --testPathPatterns="enemy-navigation.test.ts" --testNamePattern="findNearestVisibleEnemy|extractSensors" --no-coverage
+```
 
-- Worker: `examples/neatenstein/browser-entry/worker/display.worker.ts` owns simulation and packs `NeatensteinRenderFrame`.
-- Host: `examples/neatenstein/browser-entry/browser-entry.ts` consumes frames via `bridge.setFrameConsumer`.
-- `NeatensteinRenderState` already forwards `movement.left/right` to the worker.
-- For the mugshot, the host can read `InputSnapshot.movement.left/right` directly; no worker round-trip is required for frame selection.
-- The CPU/GPU fallback path already populates scalar HUD fields (`playerHealth`, `playerAmmo`, etc.). The primary worker-tier OffscreenCanvas path currently posts back only a minimal `{ type: 'frame', frame: { requestId } }` ack; it must be extended to forward scalar HUD fields (`playerHealth`, `playerMaxHealth`, `playerAmmo`, `playerMaxAmmo`, `playerKills`, `playerDeaths`) so the host HUD can read them.
-- New frame fields needed: `playerKills`, `playerDeaths` (numeric). Optional: `mugshotFrame` if the worker is chosen to author the frame, but consensus is host-side.
+Result:
 
-## 7. Frame protocol
+```text
+Tests:       55 skipped, 25 passed, 80 total
+Test Suites: 1 passed, 1 total
+```
 
-- `examples/neatenstein/browser-entry/renderer/frame.ts` defines `NeatensteinRenderFrame`.
-- Add optional numeric fields: `playerKills`, `playerDeaths`.
-- Update `buildNeatensteinRenderFrame` and `resolveNeatensteinRenderFrameTransferList` only if new typed arrays are added; plain number fields do not require transfer entries.
+All vision-range, line-of-sight, inactive-enemy, and nearest-selection cases pass.
 
-## 8. Test patterns
+**Confidence: 0.94** | Provenance: static-code + runtime validation
 
-- HUD host tests: `examples/neatenstein/browser-entry/host/hud-health-ammo.test.ts`, `hud-death-feedback.test.ts`, `hud-human-mode.test.ts`.
-- Game-logic tests: co-located `*.test.ts` files using `createGameState`, `gameTick`, etc.
-- Renderer canvas tests: mock 2D context with `jest.fn()` stubs and assert `fillRect` / `fillStyle` calls.
+### The omniscient fallback auto-AI bypasses all vision filtering
 
-## 9. Open assumptions
+`examples/neatenstein/browser-entry/worker/display.worker.ts:1497` defines `buildFallbackAutoTickInput`. Target selection uses raw Euclidean distance only:
 
-- The attached Doom-style chaingun reference image is not readable by agents; planning is based on the textual description and repo evidence.
-- Wave respawn timing: existing trickle is one enemy per tick after batch clear. A simultaneous 8-enemy burst is not currently implemented and is called out as an implementation decision in the plan.
-- Mugshot placement and status-bar pixel sizes will be finalized during red-phase host tests, not in this research file.
+```typescript
+for (const enemy of state.enemies) {
+  if (enemy.active === false) continue;
+  const dx = enemy.position.x - px;
+  const dy = enemy.position.y - py;
+  const distSq = dx * dx + dy * dy;
+  if (distSq < nearestDistSq) { ... }
+}
+```
 
-## 10. Plan revisions from review cycle
+There is **no `VISION_RANGE_CELLS` check** and **no `hasLineOfSight` check**. The fallback can detect enemies through walls and across the entire map.
 
-- **Phase 2 HUD protocol slice (02-protocol)** added because the worker-tier OffscreenCanvas path only posts `requestId`; scalar HUD fields must be forwarded on the worker path before the mugshot/HUD can consume them.
-- **New `host/game/respawn.ts` module** extracted so both live and headless paths can call a single `respawnPlayer(state)` implementation, instead of duplicating reset logic in `tick.ts` and episode tests.
-- **`constants.ts` expanded** with `NEATENSTEIN_RESPAWN_INVULN_MS` and center-spawn constants, rather than hard-coding values inside the tick loop.
-- **Episode terminal-condition ownership split:**
-  - Phase 5 removes `playerDead` from `isEpisodeComplete` (episode now ends on time only).
-  - Phase 6 removes `allEnemiesKilled` and the wave-count cap from `waves.ts`.
-- **Voxel cannon cleanup and firing signal:** Phase 4 splits into asset, renderer-wiring, and simulation-wiring slices. The old 5×5 monochrome `GUN_BARREL_VOXEL_GRID` dense height grid, monochrome projector, and obsolete `gun-sprite.test.ts` are deleted in the same renderer-wiring slice that rewires `gun.ts`. A tick-derived `firing` boolean is added to `GunState` in a separate simulation slice (`types.ts`, `tick.ts`).
-- **Voxel type ownership:** `scripts/voxel-gun.ts` imports `Voxel`/`VoxelGrid` from `scripts/voxel-enemy.ts` rather than redefining them.
-- **Mugshot implementation helper split:** Phase 3 now creates `renderer/robot-sprite-decode.ts` first, then `host/hud-mugshot.ts` consumes it; both are covered by red tests and the cleanup of duplicate private helpers happens in the same step.
-- **Respawn helper extraction:** Phase 5 now has a dedicated `05-respawn-module` slice for `host/game/respawn.ts` plus a `05-respawn-wiring` slice for `tick.ts` and `episode.ts`, keeping each slice at ≤3 files.
+The fallback runs whenever `humanMode === 'auto'` and `championMainNetwork === null`:
+
+```typescript
+if (humanMode === 'auto' && championMainNetwork) {
+  tickInput = buildAutoTickInput(...);              // vision-filtered champion path
+} else if (humanMode === 'auto') {
+  tickInput = buildFallbackAutoTickInput(gameState); // omniscient fallback
+}
+```
+
+`championMainNetwork` starts as `null` and is only populated after `handleEvalComplete` receives a champion from the eval worker (`display.worker.ts:1384-1390`). The eval worker is delegated only after `advanceWave` is triggered by wave-clear. Prior logs (`plans/neatenstein-auto-neat-mode.logs.md:808`) identified that the worker's wave-clear detection uses `enemies.length` instead of `allEnemiesCleared()`, so the champion may never be produced, leaving the omniscient fallback active indefinitely.
+
+**Confidence: 0.97** | Provenance: static-code
+
+### Enemy→player detection is separate and already range/LOS-gated
+
+`examples/neatenstein/scripts/enemy-controller.ts:960-974` gates enemy firing with:
+
+- `distToPlayer <= ENEMY_CONTROLLER_FIRE_RANGE_CELLS`
+- `hasLineOfSight(position, gameState.player.position, collisionMap)`
+
+This is enemy AI shooting at the player and is not the source of the reported player-vision bug.
+
+**Confidence: 0.95** | Provenance: static-code
+
+## Decision
+
+The reported symptom is **not caused by a bug in `findNearestVisibleEnemy` or `extractSensors`**. Both are implemented correctly and are used by the champion path, the eval worker, and the headless runner.
+
+The actual cause is the **fallback auto-AI path** (`buildFallbackAutoTickInput`), which:
+
+1. Runs whenever there is no champion network (the default initial state, and can persist indefinitely due to the wave-clear detection bug).
+2. Selects the nearest active enemy using raw Euclidean distance with no vision-range or line-of-sight check.
+3. Therefore appears omniscient in live gameplay.
+
+## Recommended Fix
+
+Wire `buildFallbackAutoTickInput` to the same visibility primitive as the champion path:
+
+- Use `findNearestVisibleEnemy(state, wallMap, NEATENSTEIN_MAP_SIZE, VISION_RANGE_CELLS)` to pick the fallback target.
+- Only steer toward and fire at enemies that pass range + LOS.
+- This removes the "enemy detected through walls" behavior and aligns the fallback with the NEAT controller's vision model.
+
+A smaller alternative is to add a manual range/LOS check inside `buildFallbackAutoTickInput`, but reusing `findNearestVisibleEnemy` avoids duplicating the visibility logic.
+
+## Risks
+
+- The fallback AI currently relies on knowing enemy positions through walls to steer. Capping it to vision range may make the fallback less effective at clearing the first wave, which could delay or prevent the first champion from being produced.
+- If the wave-clear detection bug (`enemies.length` vs `allEnemiesCleared()`) is not fixed separately, the champion may never arrive regardless of fallback changes.
+- Changing fallback target selection does not affect the sensor-vector size or network input count, so it is safe for existing champion networks.
+
+## Confidence
+
+Overall root-cause confidence: **0.95**.
+
+## Active Plan Mismatch
+
+The workflow MCP reports the active plan as `plans/neatenstein-hud-face-cannon-waves.plans.md`, but that file does not exist in `plans/`. `plans/README.md` does not list it either. The most relevant existing plan is `plans/neatenstein-auto-neat-mode.plans.md` (Phases 1–8 [DONE]). This research artifact is materialized alongside the reported active plan name; the matching `.plans.md` tracker must be created or the active plan reference must be corrected by `01-planning` before handoff to implementation.

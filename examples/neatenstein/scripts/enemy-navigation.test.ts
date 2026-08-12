@@ -9,9 +9,11 @@ import {
   buildVisionVector,
   extractSensors,
   findBestNavigationStep,
+  findNearestAmmoPickups,
   findNearestVisibleEnemy,
   getDistance,
 } from './enemy-navigation';
+import { NEATENSTEIN_AMMO_PICKUP_START_INDEX } from '../browser-entry/harness/neat-io-config';
 
 /**
  * Contract tests for examples/neatenstein/scripts/enemy-navigation.ts.
@@ -712,10 +714,10 @@ describe('extractSensors', () => {
   // Real Neatenstein map for wall raycast tests.
   const realMap = buildNeatensteinMap(42);
 
-  it('AC-P3S1b-001: returns a 15-element sensor vector', () => {
+  it('AC-P3S1b-001: returns a 22-element sensor vector', () => {
     const state = createTestGameState();
     const sensors = extractSensors(state, openMap, NEATENSTEIN_MAP_SIZE);
-    expect(sensors.length).toBe(15);
+    expect(sensors.length).toBe(22);
   });
 
   it('AC-P3S1b-002: includes normalized player health ratio, ammo, angle, x, y in first 5 sensors', () => {
@@ -886,7 +888,7 @@ describe('extractSensors', () => {
     expect(sensors[11]).toBeLessThanOrEqual(1);
   });
 
-  it('AC-P3S1b-002: all 15 sensor values are in [0, 1] range', () => {
+  it('AC-P3S1b-002: all 22 sensor values are in [0, 1] range', () => {
     const state = createTestGameState({
       enemies: [
         {
@@ -897,8 +899,8 @@ describe('extractSensors', () => {
       ],
     });
     const sensors = extractSensors(state, realMap, NEATENSTEIN_MAP_SIZE);
-    expect(sensors.length).toBe(15);
-    for (let i = 0; i < 15; i++) {
+    expect(sensors.length).toBe(22);
+    for (let i = 0; i < 22; i++) {
       expect(sensors[i]).toBeGreaterThanOrEqual(0);
       expect(sensors[i]).toBeLessThanOrEqual(1);
     }
@@ -1016,6 +1018,153 @@ describe('extractSensors', () => {
     });
     const sensors = extractSensors(state, openMap, NEATENSTEIN_MAP_SIZE);
     expect(sensors[7]).toBe(0);
+  });
+
+  describe('AC-P2S1-001: ammo-pickup sensors', () => {
+    it('bearing and distance sensors are populated for the nearest active pickup', () => {
+      const state = createTestGameState({
+        ammoPickups: [
+          {
+            position: { x: 14.5, y: 10.5 },
+            active: true,
+            createdAtMs: 0,
+            amount: 10,
+          },
+        ],
+      });
+      const sensors = extractSensors(state, openMap, NEATENSTEIN_MAP_SIZE);
+      // Player at (10.5, 10.5), pickup east, angle 0 → bearing = 0 → normalized 0.5
+      expect(sensors[NEATENSTEIN_AMMO_PICKUP_START_INDEX]).toBeCloseTo(0.5, 5);
+      // Distance 4 / mapSize
+      expect(sensors[NEATENSTEIN_AMMO_PICKUP_START_INDEX + 1]).toBeCloseTo(
+        4 / NEATENSTEIN_MAP_SIZE,
+        5,
+      );
+    });
+
+    it('missing pickup slots remain zero', () => {
+      const state = createTestGameState();
+      const sensors = extractSensors(state, openMap, NEATENSTEIN_MAP_SIZE);
+      for (let i = 0; i < 6; i++) {
+        expect(sensors[NEATENSTEIN_AMMO_PICKUP_START_INDEX + i]).toBe(0);
+      }
+    });
+
+    it('low-ammo gate is 1 when ammo/maxAmmo < NEATENSTEIN_LOW_AMMO_RATIO', () => {
+      const state = createTestGameState({
+        player: {
+          position: { x: 10.5, y: 10.5 },
+          angleRad: 0,
+          health: 80,
+          maxHealth: 100,
+          ammo: 5,
+          maxAmmo: 30,
+          dashTimeRemainingMs: 0,
+          dashCooldownMs: 0,
+        },
+      });
+      const sensors = extractSensors(state, openMap, NEATENSTEIN_MAP_SIZE);
+      expect(sensors[NEATENSTEIN_AMMO_PICKUP_START_INDEX + 6]).toBe(1);
+    });
+
+    it('low-ammo gate is 0 when ammo is above the ratio', () => {
+      const state = createTestGameState({
+        player: {
+          position: { x: 10.5, y: 10.5 },
+          angleRad: 0,
+          health: 80,
+          maxHealth: 100,
+          ammo: 10,
+          maxAmmo: 30,
+          dashTimeRemainingMs: 0,
+          dashCooldownMs: 0,
+        },
+      });
+      const sensors = extractSensors(state, openMap, NEATENSTEIN_MAP_SIZE);
+      expect(sensors[NEATENSTEIN_AMMO_PICKUP_START_INDEX + 6]).toBe(0);
+    });
+  });
+});
+
+describe('findNearestAmmoPickups', () => {
+  const openMap = createOpenFlatMap();
+
+  it('AC-P2S1-002: returns active pickups sorted by BFS path distance', () => {
+    const state = createTestGameState({
+      ammoPickups: [
+        {
+          position: { x: 20.5, y: 10.5 },
+          active: true,
+          createdAtMs: 0,
+          amount: 10,
+        },
+        {
+          position: { x: 12.5, y: 10.5 },
+          active: true,
+          createdAtMs: 0,
+          amount: 10,
+        },
+      ],
+    });
+    const result = findNearestAmmoPickups(state, openMap, NEATENSTEIN_MAP_SIZE);
+    expect(result.length).toBe(2);
+    expect(result[0].position.x).toBeCloseTo(12.5, 5);
+    expect(result[1].position.x).toBeCloseTo(20.5, 5);
+  });
+
+  it('AC-P2S1-002: falls back to Euclidean distance for unreachable/wall pickups', () => {
+    const s = NEATENSTEIN_MAP_SIZE;
+    const wallMap = createOpenFlatMap();
+    // Place a wall cell at (12, 12) and put a pickup inside it.
+    wallMap[12 * s + 12] = 1;
+    // Place a reachable pickup farther away along the open floor.
+    const state = createTestGameState({
+      ammoPickups: [
+        {
+          position: { x: 12.5, y: 12.5 },
+          active: true,
+          createdAtMs: 0,
+          amount: 10,
+        },
+        {
+          position: { x: 20.5, y: 10.5 },
+          active: true,
+          createdAtMs: 0,
+          amount: 10,
+        },
+      ],
+    });
+    const result = findNearestAmmoPickups(state, wallMap, NEATENSTEIN_MAP_SIZE);
+    // The wall pickup is unreachable (path distance < 0), so it falls back to
+    // Euclidean distance ~2.83, which is closer than the reachable pickup's
+    // path distance of 10. The fallback distance is therefore used for ranking.
+    expect(result.length).toBe(2);
+    expect(result[0].position.x).toBeCloseTo(12.5, 5);
+    expect(result[1].position.x).toBeCloseTo(20.5, 5);
+  });
+
+  it('AC-P2S1-002: stable tie-break preserves ammoPickups insertion order', () => {
+    // Two pickups at equal distance from the player (symmetric east/west).
+    const state = createTestGameState({
+      ammoPickups: [
+        {
+          position: { x: 12.5, y: 10.5 },
+          active: true,
+          createdAtMs: 0,
+          amount: 10,
+        },
+        {
+          position: { x: 8.5, y: 10.5 },
+          active: true,
+          createdAtMs: 0,
+          amount: 10,
+        },
+      ],
+    });
+    const result = findNearestAmmoPickups(state, openMap, NEATENSTEIN_MAP_SIZE);
+    // Both are distance 2; toSorted preserves original insertion order.
+    expect(result[0].position.x).toBeCloseTo(12.5, 5);
+    expect(result[1].position.x).toBeCloseTo(8.5, 5);
   });
 });
 
