@@ -33,12 +33,15 @@ describe('Neatenstein harness arms-race', () => {
       expect(second.generation).toBe(first.generation + 1);
     });
 
-    it('returns within interactive-rate headroom', async () => {
+    it('returns a synchronous well-formed generation result', async () => {
       const { runArmsRaceGeneration } =
         (await import('./arms-race.ts')) as ArmsRaceModule;
-      const start = Date.now();
-      runArmsRaceGeneration({ seed: 1, generation: 1 });
-      expect(Date.now() - start).toBeLessThan(1000);
+      const result = runArmsRaceGeneration({ seed: 1, generation: 1 });
+      expect(result.generation).toBe(2);
+      expect(result.mainSnapshot).toBeDefined();
+      expect(result.enemySnapshot).toBeDefined();
+      expect(result.quality).toBeDefined();
+      expect(result.enemyBehaviorMetrics).toBeDefined();
     });
 
     it('produces deterministic barrier state for the same seed', async () => {

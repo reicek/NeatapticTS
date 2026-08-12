@@ -77,7 +77,12 @@
         if (statusElement) {
           statusElement.textContent = 'Loading Neatenstein...';
         }
-        const bundleSrc = '/docs/assets/neatenstein.bundle.js?v=20260802-15';
+        const isRepositoryExamplePath = /\/examples\//.test(
+          window.location.pathname,
+        );
+        const bundleSrc = isRepositoryExamplePath
+          ? '../../docs/assets/neatenstein.bundle.js?v=20260802-15'
+          : '../../assets/neatenstein.bundle.js?v=20260802-15';
         const scriptElement = document.createElement('script');
 
         scriptElement.src = bundleSrc;
