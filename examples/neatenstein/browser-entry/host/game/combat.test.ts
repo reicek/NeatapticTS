@@ -996,6 +996,8 @@ describe('AC-087: EpisodeTelemetry tracks damageDealt, shotsFired, shotsHit', ()
     expect(result.state.telemetry!.shotsFired).toBe(1);
     expect(result.state.telemetry!.shotsHit).toBe(1);
     expect(result.state.telemetry!.damageDealt).toBe(NEATENSTEIN_BOLT_DAMAGE);
+    // AC-P1S1b-001: aimMissRate must be 0 when all shots hit
+    expect(result.state.telemetry!.aimMissRate).toBe(0);
   });
 
   it('accumulates telemetry across multiple shots', () => {
@@ -1023,6 +1025,8 @@ describe('AC-087: EpisodeTelemetry tracks damageDealt, shotsFired, shotsHit', ()
     expect(state.telemetry!.shotsFired).toBe(1);
     expect(state.telemetry!.shotsHit).toBe(1);
     expect(state.telemetry!.damageDealt).toBe(NEATENSTEIN_BOLT_DAMAGE);
+    // AC-P1S1b-001: aimMissRate must be 0 when all shots hit
+    expect(state.telemetry!.aimMissRate).toBe(0);
 
     // Shot 2: clear stun, hit enemy again
     state = {
@@ -1033,6 +1037,8 @@ describe('AC-087: EpisodeTelemetry tracks damageDealt, shotsFired, shotsHit', ()
     expect(state.telemetry!.shotsFired).toBe(2);
     expect(state.telemetry!.shotsHit).toBe(2);
     expect(state.telemetry!.damageDealt).toBe(NEATENSTEIN_BOLT_DAMAGE * 2);
+    // AC-P1S1b-001: aimMissRate still 0 after 2 hits
+    expect(state.telemetry!.aimMissRate).toBe(0);
   });
 
   it('initializes telemetry to zero when state has no telemetry field', () => {
@@ -1122,6 +1128,10 @@ describe('AC-087a: fireBolt increments shotsFired; applyEnemyDamage increments d
         shotsFired: 5,
         shotsHit: 3,
         aimMissRate: 0.4,
+        shotsWallHit: 0,
+        shotsRangeExpired: 0,
+        shotsBlindFire: 0,
+        shotsNearMiss: 0,
       },
       enemies: [
         {
@@ -1147,5 +1157,336 @@ describe('AC-087a: fireBolt increments shotsFired; applyEnemyDamage increments d
     const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
     // Telemetry initialized with aimMissRate 0 before any shot
     expect(base.telemetry?.aimMissRate ?? 0).toBe(0);
+  });
+});
+
+describe('AC-P1S1b: aimMissRate telemetry sync (no stale or desynced values)', () => {
+  it('aimMissRate is 0 after a single enemy hit (shotsFired=1, shotsHit=1)', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              base.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y: base.player.position.y,
+          },
+          health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+        },
+      ],
+    };
+    const result = fireBolt(state);
+    expect(result.state.telemetry!.shotsFired).toBe(1);
+    expect(result.state.telemetry!.shotsHit).toBe(1);
+    expect(result.state.telemetry!.aimMissRate).toBe(0);
+  });
+
+  it('aimMissRate is 0.5 after 1 hit and 1 miss (shotsFired=2, shotsHit=1)', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    let state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              base.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y: base.player.position.y,
+          },
+          health: NEATENSTEIN_ENEMY_MAX_HEALTH,
+          maxHealth: NEATENSTEIN_ENEMY_MAX_HEALTH,
+          stunTimerMs: 0,
+        },
+      ],
+    };
+
+    // Shot 1: hit enemy
+    state = fireBolt(state).state;
+    expect(state.telemetry!.aimMissRate).toBe(0);
+
+    // Shot 2: clear stun, then fire AWAY from enemy (miss)
+    state = {
+      ...state,
+      enemies: state.enemies.map((e) => ({ ...e, stunTimerMs: 0 })),
+      player: { ...state.player, angleRad: Math.PI / 2 },
+    };
+    state = fireBolt(state).state;
+    expect(state.telemetry!.shotsFired).toBe(2);
+    expect(state.telemetry!.shotsHit).toBe(1);
+    // (2 - 1) / 2 = 0.5
+    expect(state.telemetry!.aimMissRate).toBe(0.5);
+  });
+
+  it('aimMissRate is synced after applyEnemyDamage increments shotsHit', () => {
+    // Simulate a traveling-bolt hit: fireBolt already counted shotsFired,
+    // applyEnemyDamage now increments shotsHit and must recompute aimMissRate.
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      telemetry: {
+        damageDealt: 0,
+        shotsFired: 3,
+        shotsHit: 1,
+        aimMissRate: 2 / 3, // (3-1)/3 = 0.666... — stale before this hit
+        shotsWallHit: 0,
+        shotsRangeExpired: 0,
+        shotsBlindFire: 0,
+        shotsNearMiss: 0,
+      },
+      enemies: [
+        {
+          position: { x: 5, y: 5 },
+          health: 100,
+          stunTimerMs: 0,
+        },
+      ],
+    };
+    const result = applyEnemyDamage(state, 0);
+    expect(result.telemetry!.shotsHit).toBe(2);
+    expect(result.telemetry!.shotsFired).toBe(3);
+    // (3 - 2) / 3 = 1/3 — aimMissRate must reflect the new shotsHit
+    expect(result.telemetry!.aimMissRate).toBeCloseTo(1 / 3, 10);
+  });
+
+  it('aimMissRate is 1 after all misses (shotsFired=3, shotsHit=0)', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    let state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+    };
+
+    for (let i = 0; i < 3; i += 1) {
+      state = fireBolt(state).state;
+    }
+    expect(state.telemetry!.shotsFired).toBe(3);
+    expect(state.telemetry!.shotsHit).toBe(0);
+    expect(state.telemetry!.aimMissRate).toBe(1);
+  });
+
+  it('applyEnemyDamage recomputes aimMissRate even with pre-existing telemetry', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      telemetry: {
+        damageDealt: 40,
+        shotsFired: 5,
+        shotsHit: 2,
+        aimMissRate: 0.6, // (5-2)/5 = 0.6 — correct before, must update after
+        shotsWallHit: 0,
+        shotsRangeExpired: 0,
+        shotsBlindFire: 0,
+        shotsNearMiss: 0,
+      },
+      enemies: [
+        {
+          position: { x: 5, y: 5 },
+          health: 100,
+          stunTimerMs: 0,
+        },
+      ],
+    };
+    const result = applyEnemyDamage(state, 0);
+    expect(result.telemetry!.shotsHit).toBe(3);
+    expect(result.telemetry!.shotsFired).toBe(5);
+    // (5 - 3) / 5 = 0.4 — must be recomputed, not stale 0.6
+    expect(result.telemetry!.aimMissRate).toBe(0.4);
+  });
+
+  it('fireBolt+applyEnemyDamage path keeps aimMissRate consistent for immediate hit', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              base.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y: base.player.position.y,
+          },
+          health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+        },
+      ],
+    };
+    // Start with 1 prior miss
+    const priorState: GameState = {
+      ...state,
+      telemetry: {
+        damageDealt: 0,
+        shotsFired: 1,
+        shotsHit: 0,
+        aimMissRate: 1,
+        shotsWallHit: 0,
+        shotsRangeExpired: 0,
+        shotsBlindFire: 0,
+        shotsNearMiss: 0,
+      },
+    };
+    const result = fireBolt(priorState);
+    expect(result.state.telemetry!.shotsFired).toBe(2);
+    expect(result.state.telemetry!.shotsHit).toBe(1);
+    // (2 - 1) / 2 = 0.5 — the prior miss plus this hit
+    expect(result.state.telemetry!.aimMissRate).toBe(0.5);
+  });
+});
+
+// AC-P4S1a-002: combat.ts populates shot outcome taxonomy during bolt resolution
+describe('AC-P4S1a-002: shot outcome taxonomy tracking in fireBolt', () => {
+  it('classifies a shot with no active enemies as blindFire', () => {
+    const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    // Default state has no enemies
+    const result = fireBolt(state);
+    expect(result.state.telemetry!.shotsBlindFire).toBe(1);
+    expect(result.state.telemetry!.shotsWallHit).toBe(0);
+    expect(result.state.telemetry!.shotsRangeExpired).toBe(0);
+    expect(result.state.telemetry!.shotsNearMiss).toBe(0);
+  });
+
+  it('classifies a wall hit with active enemies but none near the bolt path as wallHit', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    // Place an active enemy far off the bolt path (perpendicular offset > near-miss threshold)
+    // near-miss threshold = 3 * NEATENSTEIN_BOLT_HIT_RADIUS_CELLS ≈ 1.143
+    // Place enemy at perpendicular offset of 5 cells (well beyond near-miss threshold)
+    const state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x: base.player.position.x + 2,
+            y: base.player.position.y + 5,
+          },
+          health: 100,
+        },
+      ],
+    };
+    const result = fireBolt(state);
+    // Bolt hits wall, enemy is active but not near the bolt path
+    expect(result.state.telemetry!.shotsWallHit).toBe(1);
+    expect(result.state.telemetry!.shotsBlindFire).toBe(0);
+    expect(result.state.telemetry!.shotsNearMiss).toBe(0);
+    expect(result.state.telemetry!.shotsRangeExpired).toBe(0);
+  });
+
+  it('classifies a shot that passes near an enemy but misses as nearMiss', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    // Place an enemy just off the bolt path — within near-miss threshold
+    // NEATENSTEIN_TEST_ENEMY_OFF_BOLT_OFFSET_CELLS = 0.5, which is > hit radius
+    // (0.381) but < near-miss threshold (1.143)
+    const state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              base.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y:
+              base.player.position.y +
+              NEATENSTEIN_TEST_ENEMY_OFF_BOLT_OFFSET_CELLS,
+          },
+          health: 100,
+        },
+      ],
+    };
+    const result = fireBolt(state);
+    // Enemy is near the bolt path but not hit → nearMiss
+    expect(result.state.telemetry!.shotsNearMiss).toBe(1);
+    expect(result.state.telemetry!.shotsHit).toBe(0);
+    expect(result.state.telemetry!.shotsWallHit).toBe(0);
+    expect(result.state.telemetry!.shotsBlindFire).toBe(0);
+  });
+
+  it('does not increment any taxonomy counter when the shot hits an enemy', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              base.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y: base.player.position.y,
+          },
+          health: NEATENSTEIN_TEST_ENEMY_HEALTH,
+        },
+      ],
+    };
+    const result = fireBolt(state);
+    // Shot hit the enemy — no taxonomy counter should be incremented
+    expect(result.state.telemetry!.shotsHit).toBe(1);
+    expect(result.state.telemetry!.shotsWallHit).toBe(0);
+    expect(result.state.telemetry!.shotsRangeExpired).toBe(0);
+    expect(result.state.telemetry!.shotsBlindFire).toBe(0);
+    expect(result.state.telemetry!.shotsNearMiss).toBe(0);
+  });
+
+  it('classifies a shot at a dead enemy as blindFire (no active enemy)', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+      enemies: [
+        {
+          position: {
+            x:
+              base.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y: base.player.position.y,
+          },
+          health: 0, // dead enemy
+          active: false,
+        },
+      ],
+    };
+    const result = fireBolt(state);
+    // No active enemy → blindFire
+    expect(result.state.telemetry!.shotsBlindFire).toBe(1);
+    expect(result.state.telemetry!.shotsNearMiss).toBe(0);
+  });
+
+  it('accumulates taxonomy counters across multiple shots', () => {
+    const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    let state: GameState = {
+      ...base,
+      player: { ...base.player, angleRad: 0, ammo: base.player.maxAmmo },
+    };
+    // Shot 1: no enemies → blindFire
+    state = fireBolt(state).state;
+    expect(state.telemetry!.shotsBlindFire).toBe(1);
+
+    // Shot 2: still no enemies → blindFire again
+    state = fireBolt(state).state;
+    expect(state.telemetry!.shotsBlindFire).toBe(2);
+
+    // Shot 3: add an enemy near the bolt path → nearMiss
+    state = {
+      ...state,
+      enemies: [
+        {
+          position: {
+            x:
+              state.player.position.x +
+              NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS,
+            y:
+              state.player.position.y +
+              NEATENSTEIN_TEST_ENEMY_OFF_BOLT_OFFSET_CELLS,
+          },
+          health: 100,
+        },
+      ],
+    };
+    state = fireBolt(state).state;
+    expect(state.telemetry!.shotsNearMiss).toBe(1);
+    expect(state.telemetry!.shotsBlindFire).toBe(2);
+    expect(state.telemetry!.shotsFired).toBe(3);
   });
 });

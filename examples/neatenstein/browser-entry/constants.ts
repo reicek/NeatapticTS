@@ -165,6 +165,19 @@ export const NEATENSTEIN_WORKER_BUNDLE_FILENAME =
   'neatenstein.worker.js' as const;
 
 /**
+ * Published filename of the dedicated evaluation worker bundle.
+ *
+ * The eval worker offloads NEAT population evaluation from the display
+ * worker's render loop, preventing multi-second render stalls during
+ * generation evaluation. It is published alongside the display worker bundle
+ * in `docs/assets/`.
+ *
+ * @see AC-P2S1b-001
+ */
+export const NEATENSTEIN_EVAL_WORKER_BUNDLE_FILENAME =
+  'neatenstein.eval-worker.js' as const;
+
+/**
  * Fallback canvas width in CSS pixels when neither the client dimensions nor
  * the computed style provide a usable value.
  */

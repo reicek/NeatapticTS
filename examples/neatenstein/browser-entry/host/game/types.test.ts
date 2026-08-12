@@ -4,6 +4,7 @@ import type {
   CreateGameStateOptions,
   EnemyBoltState,
   EnemyState,
+  EpisodeTelemetry,
   GameState,
   PlayerState,
   Vector2,
@@ -145,5 +146,74 @@ describe('Neatenstein game types', () => {
     };
     expect(state.enemyBolts).toHaveLength(1);
     expect(state.enemyBolts![0].damage).toBe(10);
+  });
+
+  it('accepts a GameState shape with lastShotHit flag (AC-P3S1c-003)', () => {
+    const state: GameState = {
+      seed: 1,
+      simTimeMs: 0,
+      episodeTimeMs: 0,
+      player: {
+        position: { x: 0, y: 0 },
+        angleRad: 0,
+        health: 100,
+        maxHealth: 100,
+        ammo: 30,
+        maxAmmo: 30,
+        dashTimeRemainingMs: 0,
+        dashCooldownMs: 0,
+      },
+      enemies: [],
+      impacts: [],
+      bolts: [],
+      kills: 0,
+      spawnCount: 0,
+      generation: 1,
+      lastShotHit: true,
+    };
+    expect(state.lastShotHit).toBe(true);
+  });
+
+  it('accepts a GameState shape without lastShotHit (optional field)', () => {
+    const state: GameState = {
+      seed: 1,
+      simTimeMs: 0,
+      episodeTimeMs: 0,
+      player: {
+        position: { x: 0, y: 0 },
+        angleRad: 0,
+        health: 100,
+        maxHealth: 100,
+        ammo: 30,
+        maxAmmo: 30,
+        dashTimeRemainingMs: 0,
+        dashCooldownMs: 0,
+      },
+      enemies: [],
+      impacts: [],
+      bolts: [],
+      kills: 0,
+      spawnCount: 0,
+      generation: 1,
+    };
+    expect(state.lastShotHit).toBeUndefined();
+  });
+
+  // AC-P4S1a-001: EpisodeTelemetry includes shot outcome taxonomy fields
+  it('accepts an EpisodeTelemetry shape with shot outcome taxonomy fields', () => {
+    const telemetry: EpisodeTelemetry = {
+      damageDealt: 100,
+      shotsFired: 20,
+      shotsHit: 10,
+      aimMissRate: 0.5,
+      shotsWallHit: 3,
+      shotsRangeExpired: 2,
+      shotsBlindFire: 4,
+      shotsNearMiss: 1,
+    };
+    expect(telemetry.shotsWallHit).toBe(3);
+    expect(telemetry.shotsRangeExpired).toBe(2);
+    expect(telemetry.shotsBlindFire).toBe(4);
+    expect(telemetry.shotsNearMiss).toBe(1);
   });
 });

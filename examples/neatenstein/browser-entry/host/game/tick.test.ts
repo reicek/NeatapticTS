@@ -1,6 +1,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
 import { NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS } from '../../constants';
 import { NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS } from '../../constants';
+import { MAX_TURN_RATE } from '../../harness/neat-io-config';
 import { buildNeatensteinMap, createCollisionMap } from '../../renderer/map';
 import { fireBolt } from './combat';
 import {
@@ -15,8 +16,10 @@ import {
 import { createGameState } from './state';
 import type {
   BoltState,
+  EnemyBoltState,
   EnemyImpactSpot,
   EnemyState,
+  GameState,
   ImpactSpot,
 } from './types';
 
@@ -62,8 +65,7 @@ describe('Neatenstein game tick', () => {
 
     it('advances simTime by exactly the fixed timestep', async () => {
       const { createGameState, gameTick, NEATENSTEIN_FIXED_TIMESTEP_MS } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const state = createGameState({ seed: 1 });
       const snapshot = {
         move: { x: 0, y: 0 },
@@ -79,8 +81,7 @@ describe('Neatenstein game tick', () => {
 
     it('produces identical state for identical seed and input snapshot', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const snapshot = {
         move: { x: 0, y: 0 },
         lookDelta: 0,
@@ -96,8 +97,7 @@ describe('Neatenstein game tick', () => {
 
     it('applies a dash when the input requests one', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const state = createGameState({ seed: 1 });
       const next = gameTick(state, { dash: true });
       expect(next.player.dashTimeRemainingMs).toBeGreaterThan(
@@ -107,8 +107,7 @@ describe('Neatenstein game tick', () => {
 
     it('falls back to the fixed timestep for invalid dt values', async () => {
       const { createGameState, gameTick, NEATENSTEIN_FIXED_TIMESTEP_MS } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const state = createGameState({ seed: 1 });
       const next = gameTick(state, {}, undefined, Number.NaN);
       expect(next.simTimeMs).toBe(
@@ -118,8 +117,7 @@ describe('Neatenstein game tick', () => {
 
     it('uses an explicit collision map when provided', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
       const flatMap = buildNeatensteinMap(state.seed);
       const collisionMap = createCollisionMap(flatMap, NEATENSTEIN_MAP_SIZE);
@@ -131,8 +129,7 @@ describe('Neatenstein game tick', () => {
 
     it('rotates the player by a non-zero look delta', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const state = createGameState({ seed: 1 });
       const lookDelta = 0.1;
       const next = gameTick(state, { lookDelta });
@@ -142,10 +139,33 @@ describe('Neatenstein game tick', () => {
       );
     });
 
+    it('clamps a negative look delta exceeding -MAX_TURN_RATE', async () => {
+      const { createGameState, gameTick } =
+        (await import('./tick.ts')) as typeof import('./tick.ts');
+      const state = createGameState({ seed: 1 });
+      // -Math.PI is well below -MAX_TURN_RATE (-π/4), so the clamp must engage.
+      const next = gameTick(state, { lookDelta: -Math.PI });
+      expect(next.player.angleRad).toBeCloseTo(
+        state.player.angleRad - MAX_TURN_RATE,
+        6,
+      );
+    });
+
+    it('clamps a positive look delta exceeding MAX_TURN_RATE', async () => {
+      const { createGameState, gameTick } =
+        (await import('./tick.ts')) as typeof import('./tick.ts');
+      const state = createGameState({ seed: 1 });
+      // Math.PI is well above MAX_TURN_RATE (π/4), so the clamp must engage.
+      const next = gameTick(state, { lookDelta: Math.PI });
+      expect(next.player.angleRad).toBeCloseTo(
+        state.player.angleRad + MAX_TURN_RATE,
+        6,
+      );
+    });
+
     it('filters bolts that expire during the tick from next state', async () => {
       const { createGameState, gameTick, NEATENSTEIN_BOLT_TRAVEL_DURATION_MS } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const state = createGameState({ seed: 1 });
       const bolt = {
         position: { x: 0, y: 0 },
@@ -161,32 +181,31 @@ describe('Neatenstein game tick', () => {
         undefined,
         NEATENSTEIN_BOLT_TRAVEL_DURATION_MS,
       );
-      expect(next.bolts.length).toBe(0);
+      expect(next.bolts!.length).toBe(0);
     });
 
     it('keeps a freshly fired bolt active in next state', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const { NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./constants.ts')) as Record<string, any>;
+        (await import('./constants.ts')) as typeof import('./constants.ts');
       const state = createGameState({ seed: 1 });
       const next = gameTick(state, {
         move: { x: 0, y: 0 },
         lookDelta: 0,
         fire: true,
       });
-      expect(next.bolts.length).toBeGreaterThan(0);
-      expect(next.bolts.every((b: { active: boolean }) => b.active)).toBe(true);
-      expect(next.gun.recoilOffset).toBe(NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX);
-      expect(next.gun.firing).toBe(true);
+      expect(next.bolts!.length).toBeGreaterThan(0);
+      expect(next.bolts!.every((b: { active: boolean }) => b.active)).toBe(
+        true,
+      );
+      expect(next.gun!.recoilOffset).toBe(NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX);
+      expect(next.gun!.firing).toBe(true);
     });
 
     it('retains existing bolts that remain active through the tick', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const state = createGameState({ seed: 1 });
       const bolt = {
         position: { x: 0, y: 0 },
@@ -202,14 +221,13 @@ describe('Neatenstein game tick', () => {
         undefined,
         16,
       );
-      expect(next.bolts.length).toBe(1);
-      expect(next.bolts[0].active).toBe(true);
+      expect(next.bolts!.length).toBe(1);
+      expect(next.bolts![0].active).toBe(true);
     });
 
     it('tolerates a missing bolts array during the tick', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const state = createGameState({ seed: 1 });
       const stateWithoutBolts = { ...state, bolts: undefined };
       const next = gameTick(
@@ -223,8 +241,7 @@ describe('Neatenstein game tick', () => {
 
     it('tolerates a missing gun state during the tick', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const state = createGameState({ seed: 1 });
       const stateWithoutGun = { ...state, gun: undefined };
       const next = gameTick(
@@ -233,14 +250,13 @@ describe('Neatenstein game tick', () => {
         undefined,
         16,
       );
-      expect(next.gun.recoilOffset).toBe(0);
-      expect(next.gun.firing).toBe(false);
+      expect(next.gun!.recoilOffset).toBe(0);
+      expect(next.gun!.firing).toBe(false);
     });
 
     it('does not set gun recoil when firing with no ammo', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const state = createGameState({ seed: 1 });
       const emptyAmmoState = {
         ...state,
@@ -251,9 +267,9 @@ describe('Neatenstein game tick', () => {
         lookDelta: 0,
         fire: true,
       });
-      expect(next.bolts.length).toBe(0);
-      expect(next.gun.recoilOffset).toBe(0);
-      expect(next.gun.firing).toBe(false);
+      expect(next.bolts!.length).toBe(0);
+      expect(next.gun!.recoilOffset).toBe(0);
+      expect(next.gun!.firing).toBe(false);
     });
 
     it('falls back to a default gun state when fireBolt returns a state without gun', async () => {
@@ -272,15 +288,14 @@ describe('Neatenstein game tick', () => {
             })),
           };
         });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        const mod = (await import('./tick.ts')) as Record<string, any>;
+        const mod = (await import('./tick.ts')) as typeof import('./tick.ts');
         const { createGameState, gameTick } = mod;
         const state = createGameState({ seed: 1 });
         const next = gameTick(state, { fire: true });
-        expect(next.gun.recoilOffset).toBe(
+        expect(next.gun!.recoilOffset).toBe(
           NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX,
         );
-        expect(next.gun.firing).toBe(true);
+        expect(next.gun!.firing).toBe(true);
         jest.dontMock('./combat.ts');
       });
     });
@@ -288,8 +303,8 @@ describe('Neatenstein game tick', () => {
 
   describe('ageImpacts helper', () => {
     it('removes impact spots whose lifetime has expired', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-      const { ageImpacts } = (await import('./tick.ts')) as Record<string, any>;
+      const { ageImpacts } =
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const impacts = [
         makeImpact(NEATENSTEIN_FIXED_TIMESTEP_MS),
         makeImpact(NEATENSTEIN_IMPACT_SPOT_LIFETIME_MS),
@@ -321,8 +336,7 @@ describe('Neatenstein game tick', () => {
 
     it('removes enemy impact spots whose lifetime has expired', async () => {
       const { ageEnemyImpacts } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const impacts = [
         makeEnemyImpact(NEATENSTEIN_FIXED_TIMESTEP_MS),
         makeEnemyImpact(NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS),
@@ -335,8 +349,7 @@ describe('Neatenstein game tick', () => {
 
     it('decrements lifetime by dtMs for surviving impacts', async () => {
       const { ageEnemyImpacts } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const impacts = [makeEnemyImpact(NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS)];
       const aged = ageEnemyImpacts(impacts, NEATENSTEIN_FIXED_TIMESTEP_MS);
       expect(aged.length).toBe(1);
@@ -347,16 +360,14 @@ describe('Neatenstein game tick', () => {
 
     it('returns an empty array when there are no impacts', async () => {
       const { ageEnemyImpacts } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const aged = ageEnemyImpacts([], NEATENSTEIN_FIXED_TIMESTEP_MS);
       expect(aged).toEqual([]);
     });
 
     it('removes an impact exactly when lifetime reaches zero', async () => {
       const { ageEnemyImpacts } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const impacts = [makeEnemyImpact(NEATENSTEIN_FIXED_TIMESTEP_MS)];
       const aged = ageEnemyImpacts(impacts, NEATENSTEIN_FIXED_TIMESTEP_MS);
       expect(aged).toEqual([]);
@@ -366,15 +377,13 @@ describe('Neatenstein game tick', () => {
   describe('AC-107: bolt movement and expiry', () => {
     it('exports updateBolts', async () => {
       const { updateBolts } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       expect(typeof updateBolts).toBe('function');
     });
 
     it('advances a bolt by speed multiplied by dt', async () => {
       const { updateBolts, NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const bolts = [
         {
           position: { x: 0, y: 0 },
@@ -393,8 +402,7 @@ describe('Neatenstein game tick', () => {
 
     it('stops movement but keeps a bolt active when it leaves the world bounds', async () => {
       const { updateBolts, NEATENSTEIN_BOLT_TRAVEL_DURATION_MS } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const bolts = [
         {
           position: { x: -1, y: 0 },
@@ -415,8 +423,7 @@ describe('Neatenstein game tick', () => {
 
     it('removes inactive bolts from the returned array', async () => {
       const { updateBolts } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const bolts = [
         {
           position: { x: 0, y: 0 },
@@ -432,11 +439,9 @@ describe('Neatenstein game tick', () => {
 
     it('stops movement but keeps a bolt active when it exceeds the max travel range', async () => {
       const { updateBolts, NEATENSTEIN_BOLT_TRAVEL_DURATION_MS } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const { NEATENSTEIN_BOLT_MAX_RANGE_CELLS } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./constants.ts')) as Record<string, any>;
+        (await import('./constants.ts')) as typeof import('./constants.ts');
       const bolts = [
         {
           position: { x: NEATENSTEIN_BOLT_MAX_RANGE_CELLS, y: 0 },
@@ -461,11 +466,9 @@ describe('Neatenstein game tick', () => {
 
     it('keeps a bolt active just before its screen travel duration expires', async () => {
       const { updateBolts, NEATENSTEIN_BOLT_TRAVEL_DURATION_MS } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const { NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./constants.ts')) as Record<string, any>;
+        (await import('./constants.ts')) as typeof import('./constants.ts');
       const bolts = [
         {
           position: { x: 0, y: 0 },
@@ -485,11 +488,9 @@ describe('Neatenstein game tick', () => {
 
     it('deactivates a bolt once its screen travel duration expires', async () => {
       const { updateBolts, NEATENSTEIN_BOLT_TRAVEL_DURATION_MS } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const { NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./constants.ts')) as Record<string, any>;
+        (await import('./constants.ts')) as typeof import('./constants.ts');
       const bolts = [
         {
           position: { x: 0, y: 0 },
@@ -511,15 +512,13 @@ describe('Neatenstein game tick', () => {
   describe('AC-107: gun recoil decay', () => {
     it('exports decayGunRecoil', async () => {
       const { decayGunRecoil } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       expect(typeof decayGunRecoil).toBe('function');
     });
 
     it('reduces recoil offset toward zero over time', async () => {
       const { decayGunRecoil } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const gun = { recoilOffset: 10, firing: false };
       const next = decayGunRecoil(gun, 16);
       expect(next.recoilOffset).toBeLessThan(gun.recoilOffset);
@@ -528,8 +527,7 @@ describe('Neatenstein game tick', () => {
 
     it('resets firing to false even when the input gun was firing', async () => {
       const { decayGunRecoil } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const gun = { recoilOffset: 10, firing: true };
       const next = decayGunRecoil(gun, 16);
       expect(next.firing).toBe(false);
@@ -754,8 +752,7 @@ describe('AC-10.2d-001: traveling bolt collides with enemy and stops at impact p
 
   it('applies enemy damage through gameTick when a bolt hits an active enemy', async () => {
     const { gameTick } =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-      (await import('./tick.ts')) as Record<string, any>;
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const collisionMap = createEmptyCollisionMap();
     const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
     // Suppress wave spawning so the pre-placed enemy index stays at 0.
@@ -793,8 +790,7 @@ describe('AC-10.2d-001: traveling bolt collides with enemy and stops at impact p
 
   it('creates an EnemyImpactSpot in the traveling bolt path (AC-11c-001)', async () => {
     const { gameTick } =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-      (await import('./tick.ts')) as Record<string, any>;
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const collisionMap = createEmptyCollisionMap();
     const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
     const stateWithBoltAndEnemy = {
@@ -885,7 +881,7 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       damage: number;
       hitPlayer: boolean;
     }>,
-  ): Record<string, unknown> {
+  ): EnemyBoltState {
     return {
       position: { x: 0, y: 0 },
       direction: { x: 1, y: 0 },
@@ -898,9 +894,7 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     };
   }
 
-  function makeState(
-    overrides?: Record<string, unknown>,
-  ): Record<string, unknown> {
+  function makeState(overrides?: Partial<GameState>): GameState {
     const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
     return {
       ...base,
@@ -920,10 +914,8 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
   });
 
   it('moves an active bolt along its direction by speed * dt', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState();
     const bolt = makeEnemyBolt({
       position: { x: 50, y: 50 },
@@ -931,7 +923,7 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       origin: { x: 50, y: 50 },
     });
     const result = updateEnemyBolts([bolt], 1000, 1000, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
+    const updated = result.bolts[0];
     // 36 cells/sec * 1 second = 36 cells, but maxRange is 30 so it stops at origin.
     // distanceTraveled = 36 >= 30, so beyondMaxRange = true, movementStopped, position stays.
     // Actually position = bolt.position since movementStopped.
@@ -939,10 +931,8 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
   });
 
   it('advances bolt position when within range', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState();
     const bolt = makeEnemyBolt({
       position: { x: 50, y: 50 },
@@ -952,17 +942,15 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     });
     // dt=100ms → 3.6 cells traveled, well within 30-cell max range, 2000ms lifetime
     const result = updateEnemyBolts([bolt], 100, 1100, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
-    const pos = updated.position as { x: number; y: number };
+    const updated = result.bolts[0];
+    const pos = updated.position;
     expect(pos.x).toBeCloseTo(53.6, 1);
     expect(updated.active).toBe(true);
   });
 
   it('deactivates a bolt when it hits a wall', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const collisionMap = createSolidCollisionMap();
     const state = makeState();
     const bolt = makeEnemyBolt({
@@ -972,18 +960,16 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       createdAtMs: 1000,
     });
     const result = updateEnemyBolts([bolt], 100, 1100, collisionMap, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
+    const updated = result.bolts[0];
     // Wall hit → movementStopped, position stays at bolt.position
     expect(updated.active).toBe(true);
-    const pos = updated.position as { x: number; y: number };
+    const pos = updated.position;
     expect(pos).toEqual({ x: 50, y: 50 });
   });
 
   it('deactivates a bolt that goes out of bounds', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState();
     // Place bolt near the edge of the map (MAP_SIZE=120)
     const bolt = makeEnemyBolt({
@@ -994,17 +980,15 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     });
     // dt=1000ms → 36 cells, but out of bounds (119+36=155 >= 120), so movementStopped
     const result = updateEnemyBolts([bolt], 1000, 2000, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
-    const pos = updated.position as { x: number; y: number };
+    const updated = result.bolts[0];
+    const pos = updated.position;
     // Out of bounds → movementStopped → position stays at original
     expect(pos).toEqual({ x: 119, y: 60 });
   });
 
   it('keeps bolt active when max range not exceeded', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState();
     const bolt = makeEnemyBolt({
       position: { x: 50, y: 50 },
@@ -1014,15 +998,13 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     });
     // dt=100ms → 3.6 cells < 30 max range, lifetime = 100ms < 2000ms
     const result = updateEnemyBolts([bolt], 100, 1100, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
+    const updated = result.bolts[0];
     expect(updated.active).toBe(true);
   });
 
   it('deactivates a bolt when it exceeds max range (30 cells)', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState();
     const bolt = makeEnemyBolt({
       position: { x: 0, y: 50 },
@@ -1032,18 +1014,16 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     });
     // dt=1000ms → 36 cells > 30 max range → beyondMaxRange → movementStopped
     const result = updateEnemyBolts([bolt], 1000, 2000, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
+    const updated = result.bolts[0];
     // beyondMaxRange → active stays true (lifetime not expired), but movementStopped
     expect(updated.active).toBe(true);
-    const pos = updated.position as { x: number; y: number };
+    const pos = updated.position;
     expect(pos).toEqual({ x: 0, y: 50 }); // position stays since movementStopped
   });
 
   it('deactivates a bolt when its lifetime expires', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState();
     const bolt = makeEnemyBolt({
       position: { x: 50, y: 50 },
@@ -1053,18 +1033,16 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     });
     // currentTimeMs = 2001 → elapsedMs = 2001 >= 2000 → lifetimeExpired
     const result = updateEnemyBolts([bolt], 16, 2001, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
+    const updated = result.bolts[0];
     expect(updated.active).toBe(false);
   });
 
   it('detects player hit when bolt is within hit radius', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState({
       player: {
-        ...(makeState().player as Record<string, unknown>),
+        ...makeState().player,
         position: { x: 50.3, y: 50 },
         contactIFrameMs: undefined,
         dashTimeRemainingMs: 0,
@@ -1080,18 +1058,16 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     // dt=16ms → 0.576 cells, nextPosition.x = 50.576, player at 50.3
     // playerDist = |50.576 - 50.3| = 0.276 <= 0.5 → hitPlayer!
     const result = updateEnemyBolts([bolt], 16, 1016, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
+    const updated = result.bolts[0];
     expect(updated.active).toBe(false);
     expect(updated.hitPlayer).toBe(true);
   });
 
   it('applies exactly 10 damage when a bolt hits the player', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const baseState = makeState();
-    const playerBefore = baseState.player as Record<string, unknown>;
+    const playerBefore = baseState.player;
     const state = {
       ...baseState,
       player: {
@@ -1109,18 +1085,16 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       damage: 10,
     });
     const result = updateEnemyBolts([bolt], 16, 1016, undefined, state);
-    const resultState = (result as { state: Record<string, unknown> }).state;
-    const resultPlayer = resultState.player as Record<string, unknown>;
-    expect(resultPlayer.health).toBe((playerBefore.health as number) - 10);
+    const resultState = result.state;
+    const resultPlayer = resultState.player;
+    expect(resultPlayer.health).toBe(playerBefore.health - 10);
   });
 
   it('grants 500ms contact i-frames when a bolt hits the player', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const baseState = makeState();
-    const playerBefore = baseState.player as Record<string, unknown>;
+    const playerBefore = baseState.player;
     const state = {
       ...baseState,
       player: {
@@ -1138,19 +1112,17 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       damage: 10,
     });
     const result = updateEnemyBolts([bolt], 16, 1016, undefined, state);
-    const resultState = (result as { state: Record<string, unknown> }).state;
-    const resultPlayer = resultState.player as Record<string, unknown>;
+    const resultState = result.state;
+    const resultPlayer = resultState.player;
     expect(resultPlayer.contactIFrameMs).toBe(500);
   });
 
   it('does not re-apply damage when bolt.hitPlayer is already true', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const baseState = makeState();
-    const playerBefore = baseState.player as Record<string, unknown>;
-    const healthBefore = playerBefore.health as number;
+    const playerBefore = baseState.player;
+    const healthBefore = playerBefore.health;
     const state = {
       ...baseState,
       player: {
@@ -1169,17 +1141,15 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       hitPlayer: true,
     });
     const result = updateEnemyBolts([bolt], 16, 1016, undefined, state);
-    const resultState = (result as { state: Record<string, unknown> }).state;
-    const resultPlayer = resultState.player as Record<string, unknown>;
+    const resultState = result.state;
+    const resultPlayer = resultState.player;
     // Already hit → no damage applied
     expect(resultPlayer.health).toBe(healthBefore);
   });
 
   it('filters out inactive bolts', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState();
     const activeBolt = makeEnemyBolt({
       position: { x: 50, y: 50 },
@@ -1201,15 +1171,13 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       undefined,
       state,
     );
-    const bolts = (result as { bolts: unknown[] }).bolts;
+    const bolts = result.bolts;
     expect(bolts).toHaveLength(1);
   });
 
   it('handles bolt without origin (distanceTraveled = 0)', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState();
     const bolt = makeEnemyBolt({
       position: { x: 50, y: 50 },
@@ -1219,15 +1187,13 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     // No origin → distanceTraveled = 0 → beyondMaxRange = false
     // Lifetime not expired (1100-1000=100 < 2000)
     const result = updateEnemyBolts([bolt], 100, 1100, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
+    const updated = result.bolts[0];
     expect(updated.active).toBe(true);
   });
 
   it('returns hitWall=false when collisionMap is undefined', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState();
     const bolt = makeEnemyBolt({
       position: { x: 50, y: 50 },
@@ -1237,21 +1203,19 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     });
     // No collisionMap → hitWall = false, bolt should move freely
     const result = updateEnemyBolts([bolt], 100, 1100, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
-    const pos = updated.position as { x: number; y: number };
+    const updated = result.bolts[0];
+    const pos = updated.position;
     expect(pos.x).toBeCloseTo(53.6, 1);
     expect(updated.active).toBe(true);
   });
 
   it('does not hit the player when the bolt hits a wall', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const collisionMap = createSolidCollisionMap();
     const state = makeState({
       player: {
-        ...(makeState().player as Record<string, unknown>),
+        ...makeState().player,
         position: { x: 50.3, y: 50 },
         contactIFrameMs: undefined,
         dashTimeRemainingMs: 0,
@@ -1265,22 +1229,20 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       damage: 10,
     });
     const result = updateEnemyBolts([bolt], 16, 1016, collisionMap, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
+    const updated = result.bolts[0];
     // hitWall = true → hitPlayer = false (guarded by !hitWall)
     expect(updated.hitPlayer).toBeFalsy();
-    const resultState = (result as { state: Record<string, unknown> }).state;
-    const resultPlayer = resultState.player as Record<string, unknown>;
+    const resultState = result.state;
+    const resultPlayer = resultState.player;
     expect(resultPlayer.contactIFrameMs).toBeUndefined();
   });
 
   it('does not hit the player when bolt is out of bounds', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState({
       player: {
-        ...(makeState().player as Record<string, unknown>),
+        ...makeState().player,
         position: { x: 119.3, y: 60 },
         contactIFrameMs: undefined,
         dashTimeRemainingMs: 0,
@@ -1294,15 +1256,14 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       damage: 10,
     });
     const result = updateEnemyBolts([bolt], 1000, 2000, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
+    const updated = result.bolts[0];
     // outOfBounds = true → hitPlayer = false
     expect(updated.hitPlayer).toBeFalsy();
   });
 
   it('filters inactive enemy bolts through gameTick (line 293 branch)', async () => {
     const { gameTick } =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-      (await import('./tick.ts')) as Record<string, any>;
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const collisionMap = { isSolid: () => false as const };
     const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
     const stateWithEnemyBolts = {
@@ -1346,8 +1307,7 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
 
   it('covers if(enemy) false branch when hitEnemyIndex is out of bounds (line 275)', async () => {
     const tickModule =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-      (await import('./tick.ts')) as Record<string, any>;
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const combatModule = await import('./combat');
 
     // Mock applyEnemyDamage to avoid crash when enemy index is out of bounds.
@@ -1391,8 +1351,7 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
 
   it('covers next.enemyBolts ?? [] fallback when enemyBolts is undefined (line 303)', async () => {
     const { gameTick } =
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-      (await import('./tick.ts')) as Record<string, any>;
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const collisionMap = { isSolid: () => false as const };
     const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
     const stateWithoutEnemyBolts = {
@@ -1412,11 +1371,8 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
   });
 
   it('handles bolt with null origin in updateEnemyBolts (line 619 false branch)', async () => {
-    const { updateEnemyBolts } = (await import('./tick.ts')) as Record<
-      string,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-      any
-    >;
+    const { updateEnemyBolts } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
     const state = makeState();
     const bolt = makeEnemyBolt({
       position: { x: 50, y: 50 },
@@ -1426,7 +1382,7 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     });
     // origin is null → bolt.origin && ... is false → distanceTraveled = 0
     const result = updateEnemyBolts([bolt], 100, 1100, undefined, state);
-    const updated = (result as { bolts: Record<string, unknown>[] }).bolts[0];
+    const updated = result.bolts[0];
     // distanceTraveled = 0 → beyondMaxRange = false, lifetime not expired
     expect(updated.active).toBe(true);
   });
@@ -1438,17 +1394,13 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     });
 
     it('collects ammo pickups within the collection radius of the player', async () => {
-      const { updateAmmoPickups } = (await import('./tick.ts')) as Record<
-        string,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        any
-      >;
+      const { updateAmmoPickups } =
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
       // Place a pickup right at the player position (distance = 0, within collection radius)
       const state = {
         ...base,
         player: { ...base.player, ammo: 10 },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ammoPickups not yet in GameState; red test
         ammoPickups: [
           {
             position: { ...base.player.position },
@@ -1457,31 +1409,23 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
             createdAtMs: 0,
           },
         ],
-      } as any;
-      const result = updateAmmoPickups(state, 0) as {
-        player: { ammo: number };
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ammoPickups: Array<Record<string, unknown>>;
-      };
+      } as GameState;
+      const result = updateAmmoPickups(state, 0);
       // Player ammo should increase by the pickup amount (10 + 5 = 15)
       expect(result.player.ammo).toBe(15);
       // Collected pickup should be marked inactive or removed
-      expect(result.ammoPickups.every((p) => p.active === false)).toBe(true);
+      expect(result.ammoPickups!.every((p) => p.active === false)).toBe(true);
     });
 
     it('marks expired ammo pickups as inactive', async () => {
-      const { updateAmmoPickups } = (await import('./tick.ts')) as Record<
-        string,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        any
-      >;
+      const { updateAmmoPickups } =
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
       const lifetimeMs = 10000;
       const expiredTime = lifetimeMs + 1000;
       // Place a pickup far from the player so it won't be collected, but past its lifetime
       const state = {
         ...base,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ammoPickups not yet in GameState; red test
         ammoPickups: [
           {
             position: { x: 100, y: 100 },
@@ -1491,25 +1435,18 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
             lifetimeMs,
           },
         ],
-      } as any;
-      const result = updateAmmoPickups(state, expiredTime) as {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ammoPickups: Array<Record<string, unknown>>;
-      };
-      expect(result.ammoPickups.every((p) => p.active === false)).toBe(true);
+      } as GameState;
+      const result = updateAmmoPickups(state, expiredTime);
+      expect(result.ammoPickups!.every((p) => p.active === false)).toBe(true);
     });
 
     it('returns inactive pickups unchanged without collecting or expiring them', async () => {
-      const { updateAmmoPickups } = (await import('./tick.ts')) as Record<
-        string,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        any
-      >;
+      const { updateAmmoPickups } =
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
       const state = {
         ...base,
         player: { ...base.player, ammo: 10 },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ammoPickups not yet in GameState; red test
         ammoPickups: [
           {
             position: { ...base.player.position },
@@ -1518,28 +1455,20 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
             createdAtMs: 0,
           },
         ],
-      } as any;
-      const result = updateAmmoPickups(state, 0) as {
-        player: { ammo: number };
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ammoPickups: Array<Record<string, unknown>>;
-      };
+      } as GameState;
+      const result = updateAmmoPickups(state, 0);
       // Inactive pickup is returned unchanged — ammo should NOT increase
       expect(result.player.ammo).toBe(10);
-      expect(result.ammoPickups.every((p) => p.active === false)).toBe(true);
+      expect(result.ammoPickups!.every((p) => p.active === false)).toBe(true);
     });
 
     it('returns active pickups unchanged when not expired and not within collection radius', async () => {
-      const { updateAmmoPickups } = (await import('./tick.ts')) as Record<
-        string,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        any
-      >;
+      const { updateAmmoPickups } =
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
       const state = {
         ...base,
         player: { ...base.player, ammo: 10 },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ammoPickups not yet in GameState; red test
         ammoPickups: [
           {
             position: { x: 100, y: 100 },
@@ -1548,26 +1477,19 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
             createdAtMs: 0,
           },
         ],
-      } as any;
+      } as GameState;
       // simTimeMs=1000 is well within lifetime and the pickup is far from
       // the player, so neither the expired branch nor the collection branch
       // fires — the unchanged `return pickup;` at line 387 is covered.
-      const result = updateAmmoPickups(state, 1000) as {
-        player: { ammo: number };
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ammoPickups: Array<Record<string, unknown>>;
-      };
+      const result = updateAmmoPickups(state, 1000);
       expect(result.player.ammo).toBe(10);
-      expect(result.ammoPickups.length).toBeGreaterThan(0);
-      expect(result.ammoPickups.every((p) => p.active === true)).toBe(true);
+      expect(result.ammoPickups!.length).toBeGreaterThan(0);
+      expect(result.ammoPickups!.every((p) => p.active === true)).toBe(true);
     });
 
     it('uses ?? [] fallback when ammoPickups is undefined', async () => {
-      const { updateAmmoPickups } = (await import('./tick.ts')) as Record<
-        string,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        any
-      >;
+      const { updateAmmoPickups } =
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
       // Strip ammoPickups so the property is entirely absent from the state,
       // exercising the `state.ammoPickups ?? []` nullish branch at line 362.
@@ -1575,11 +1497,8 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       void _stripped;
       const state = {
         ...stateWithoutPickups,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ammoPickups stripped; red test
-      } as any;
-      const result = updateAmmoPickups(state, 0) as {
-        player: { ammo: number };
-      };
+      } as GameState;
+      const result = updateAmmoPickups(state, 0);
       // When ammoPickups is undefined, the ?? [] fallback yields an empty
       // array, so pickups.length === 0 triggers the early return at line
       // 363-364 and the state is returned unchanged.
@@ -1591,16 +1510,13 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
   describe('AC-203: hero respawn on death', () => {
     it('respawns the hero at the map center with full health and ammo when health reaches zero', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
       const {
         NEATENSTEIN_PLAYER_MAX_AMMO,
         NEATENSTEIN_PLAYER_MAX_HEALTH,
         NEATENSTEIN_SPAWN_CENTER_X,
         NEATENSTEIN_SPAWN_CENTER_Y,
-      } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./constants.ts')) as Record<string, any>;
+      } = (await import('./constants.ts')) as typeof import('./constants.ts');
 
       const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
       const before = {
@@ -1630,8 +1546,8 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
         deaths: next.deaths,
         positionX: next.player.position.x,
         positionY: next.player.position.y,
-        prevPositionX: next.player.previousPosition.x,
-        prevPositionY: next.player.previousPosition.y,
+        prevPositionX: next.player.previousPosition!.x,
+        prevPositionY: next.player.previousPosition!.y,
         dashTime: next.player.dashTimeRemainingMs,
         dashCooldown: next.player.dashCooldownMs,
         iFrames: next.player.contactIFrameMs,
@@ -1651,11 +1567,10 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
 
     it('increments deaths counter cumulatively across multiple respawns', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
 
       const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
-      let state = {
+      let state: GameState = {
         ...base,
         player: { ...base.player, health: 0 },
         deaths: 2,
@@ -1683,8 +1598,7 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
 
     it('defaults deaths to 0 via ?? when deaths is undefined on respawn', async () => {
       const { createGameState, gameTick } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./tick.ts')) as Record<string, any>;
+        (await import('./tick.ts')) as typeof import('./tick.ts');
 
       const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
       // Strip deaths entirely so the ?? fallback branch at line 345 is
@@ -1703,5 +1617,115 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
       });
       expect(next.deaths).toBe(1);
     });
+  });
+});
+
+describe('AC-P3S1c-001: lastShotHit flag in gameTick', () => {
+  function createEmptyCollisionMap(): { isSolid: () => false } {
+    return { isSolid: () => false };
+  }
+
+  it('sets lastShotHit=true when a bolt hits an active enemy', async () => {
+    const { gameTick } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
+    const collisionMap = createEmptyCollisionMap();
+    const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const stateWithBoltAndEnemy: GameState = {
+      ...state,
+      spawnCount: 999,
+      bolts: [
+        {
+          position: { x: 5, y: 5 },
+          direction: { x: 1, y: 0 },
+          speedCellsPerSecond: 36,
+          active: true,
+          createdAtMs: 0,
+          origin: { x: 5, y: 5 },
+        },
+      ],
+      enemies: [
+        {
+          position: { x: 5.3, y: 5 },
+          health: 100,
+          active: true,
+        },
+      ],
+    };
+    const next = gameTick(
+      stateWithBoltAndEnemy,
+      { move: { x: 0, y: 0 }, lookDelta: 0, fire: false, dash: false },
+      collisionMap,
+    );
+    expect(next.lastShotHit).toBe(true);
+  });
+
+  it('sets lastShotHit=false when no bolt hits an enemy', async () => {
+    const { gameTick } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
+    const collisionMap = createEmptyCollisionMap();
+    const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+    const stateWithNoBolts: GameState = {
+      ...state,
+      spawnCount: 999,
+      bolts: [],
+      enemies: [
+        {
+          position: { x: 5.3, y: 5 },
+          health: 100,
+          active: true,
+        },
+      ],
+      lastShotHit: true, // carry-over from previous tick
+    };
+    const next = gameTick(
+      stateWithNoBolts,
+      { move: { x: 0, y: 0 }, lookDelta: 0, fire: false, dash: false },
+      collisionMap,
+    );
+    expect(next.lastShotHit).toBe(false);
+  });
+
+  it('resets lastShotHit from true to false on the next tick without a hit', async () => {
+    const { gameTick } =
+      (await import('./tick.ts')) as typeof import('./tick.ts');
+    const collisionMap = createEmptyCollisionMap();
+    const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
+
+    // Tick 1: bolt hits enemy → lastShotHit = true
+    const stateWithHit: GameState = {
+      ...state,
+      spawnCount: 999,
+      bolts: [
+        {
+          position: { x: 5, y: 5 },
+          direction: { x: 1, y: 0 },
+          speedCellsPerSecond: 36,
+          active: true,
+          createdAtMs: 0,
+          origin: { x: 5, y: 5 },
+        },
+      ],
+      enemies: [
+        {
+          position: { x: 5.3, y: 5 },
+          health: 100,
+          active: true,
+        },
+      ],
+    };
+    const afterHit = gameTick(
+      stateWithHit,
+      { move: { x: 0, y: 0 }, lookDelta: 0, fire: false, dash: false },
+      collisionMap,
+    );
+    expect(afterHit.lastShotHit).toBe(true);
+
+    // Tick 2: no bolts → lastShotHit should reset to false
+    const afterNoHit = gameTick(
+      afterHit,
+      { move: { x: 0, y: 0 }, lookDelta: 0, fire: false, dash: false },
+      collisionMap,
+    );
+    expect(afterNoHit.lastShotHit).toBe(false);
   });
 });

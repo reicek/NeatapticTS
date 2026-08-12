@@ -1,16 +1,11 @@
 import { describe, expect, it } from '@jest/globals';
 import type {
-  BarrierState,
   CombatQualitySignal,
-  EnemyEpisodeTelemetry,
   EnemyPopulation,
   EnemyVariant,
   FitnessScore,
-  GenerationResult,
-  HarnessConfig,
   Individual,
   MainVariant,
-  PopulationConfig,
   SeedPack,
   Snapshot,
 } from './types';
@@ -27,7 +22,6 @@ import type {
  * - AC-304 (SeedPack) is exercised by the seed-pack shape test.
  * - AC-306 (EnemyPopulation interface) is exercised by the population shape test.
  * - AC-307 (main-agent inputs/outputs) is exercised by the variant shapes.
- * - AC-301/AC-302 (BarrierState + rolling Snapshot) is exercised by the barrier shapes.
  * - AC-308 is a lint-hygiene criterion; it is not validated by runtime tests.
  */
 
@@ -84,17 +78,7 @@ describe('Neatenstein harness types', () => {
     });
   });
 
-  describe('AC-301 / AC-302: BarrierState and Snapshot shapes', () => {
-    it('accepts a BarrierState with mainSnapshot and enemySnapshot', () => {
-      const barrier: BarrierState = {
-        generation: 1,
-        mainSnapshot: { id: 0, genome: { nodes: [], connections: [] } },
-        enemySnapshot: { kind: 'mlp', weights: new Float32Array(8) },
-        seed: 42,
-      };
-      expect(barrier.seed).toBe(42);
-    });
-
+  describe('AC-301 / AC-302: Snapshot shapes', () => {
     it('accepts a Snapshot union for MLP and SWARM backends', () => {
       const mlpSnapshot: Snapshot = {
         kind: 'mlp',
@@ -141,59 +125,6 @@ describe('Neatenstein harness types', () => {
     it('accepts a FitnessScore as a numeric value', () => {
       const score: FitnessScore = 42;
       expect(score).toBe(42);
-    });
-  });
-
-  describe('AC-10.5e-002: EnemyEpisodeTelemetry shape', () => {
-    it('accepts an EnemyEpisodeTelemetry with all required fields', () => {
-      const telemetry: EnemyEpisodeTelemetry = {
-        position: { x: 60, y: 60 },
-        bfsDistances: [20, 18, 16, 14],
-        damageDealt: 50,
-        enemiesSurvived: 1,
-        cellsVisited: 5,
-        stagnationTicks: 3,
-        finalDistance: 12,
-      };
-      expect(telemetry.position.x).toBe(60);
-      expect(telemetry.bfsDistances).toHaveLength(4);
-      expect(telemetry.damageDealt).toBe(50);
-    });
-  });
-
-  describe('AC-306: PopulationConfig shape', () => {
-    it('accepts a PopulationConfig with size and kind', () => {
-      const config: PopulationConfig = { size: 32, kind: 'mlp' };
-      expect(config.kind).toBe('mlp');
-    });
-  });
-
-  describe('AC-301: HarnessConfig shape', () => {
-    it('accepts a HarnessConfig with maxGenerations and enemy config', () => {
-      const config: HarnessConfig = {
-        maxGenerations: 100,
-        enemy: { size: 8, kind: 'swarm' },
-      };
-      expect(config.maxGenerations).toBe(100);
-    });
-  });
-
-  describe('AC-301: GenerationResult shape', () => {
-    it('accepts a GenerationResult with generation, champion, and quality', () => {
-      const result: GenerationResult = {
-        generation: 5,
-        champion: { id: 0, genome: { nodes: [], connections: [] } },
-        quality: {
-          survivalTicks: 120,
-          damageDealt: 45,
-          kills: 2,
-          damageTaken: 10,
-          aimMissRate: 0.1,
-          complexityBonus: 5,
-          parsimonyDensityPenalty: 1,
-        },
-      };
-      expect(result.generation).toBe(5);
     });
   });
 });

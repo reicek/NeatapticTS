@@ -68,12 +68,4 @@ describe('Neatenstein harness enemy-mlp weight-only', () => {
       expect(guardMlpStructuralMutation({ type: 'remove-node' })).toBe(false);
     });
   });
-
-  describe('AC-501.2: main-agent integration', () => {
-    it('wires the main-agent runner to MLP enemies', async () => {
-      const { runMainAgentGeneration } =
-        (await import('./main-agent.ts')) as Record<string, unknown>;
-      expect(typeof runMainAgentGeneration).toBe('function');
-    });
-  });
 });

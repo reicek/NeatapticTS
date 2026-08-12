@@ -19,6 +19,13 @@ import { computeCombatQualitySignal } from './fitness';
 import { createSeedPack } from './seed-pack';
 import { selectVariant } from './select';
 import { hashSeed } from './hash-seed';
+import {
+  createFireGateState,
+  ENEMY_VISIBLE_SENSOR_INDEX,
+  NEATENSTEIN_MAIN_NEAT_INPUTS,
+  NEATENSTEIN_MAIN_NEAT_OUTPUTS,
+  networkOutputToTickInput,
+} from './neat-io-config';
 import type {
   NgeMainAgentEmbryo,
   NgeMainAgentLifecycleConfig,
@@ -28,7 +35,6 @@ import Network from '../../../../src/architecture/network/network';
 
 import { createEpisode, endEpisode } from '../host/game/episode';
 import { gameTick } from '../host/game/tick';
-import type { GameTickInputSnapshot } from '../host/game/tick';
 import {
   NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS,
@@ -293,66 +299,11 @@ function countComplexity(variant: MainVariant): number {
 }
 
 /**
- * Number of main-agent NEAT network inputs (sensor vector length).
- *
- * Mirrors the worker-side constant so the headless evaluation uses the same
- * sensor layout as the live auto-mode controller.
- */
-const NEATENSTEIN_MAIN_NEAT_INPUTS = 12;
-
-/**
- * Number of main-agent NEAT network outputs (action vector length).
- *
- * Mirrors the worker-side constant so the headless evaluation produces the
- * same tick-input mapping as the live auto-mode controller.
- */
-const NEATENSTEIN_MAIN_NEAT_OUTPUTS = 5;
-
-/**
- * Maximum look-delta per tick for headless evaluation NEAT controller output.
- *
- * @see AC-066
- */
-const NEATENSTEIN_MAIN_NEAT_MAX_TURN_RATE = Math.PI / 4;
-
-/**
- * Map a raw NEAT network output vector to a {@link GameTickInputSnapshot}.
- *
- * Mirrors the worker-side `networkOutputToTickInput` mapping so the headless
- * evaluation and the live auto-mode controller produce identical tick inputs
- * from the same network output.
- *
- * @param outputs - Raw activation output from the NEAT network.
- * @returns A game-tick input snapshot for {@link gameTick}.
- */
-function networkOutputToTickInput(outputs: number[]): GameTickInputSnapshot {
-  const out =
-    outputs.length >= NEATENSTEIN_MAIN_NEAT_OUTPUTS
-      ? outputs
-      : [
-          ...outputs,
-          ...new Array<number>(
-            NEATENSTEIN_MAIN_NEAT_OUTPUTS - outputs.length,
-          ).fill(0),
-        ];
-
-  return {
-    move: {
-      x: Math.tanh(out[0]),
-      y: Math.tanh(out[1]),
-    },
-    lookDelta: Math.tanh(out[2]) * NEATENSTEIN_MAIN_NEAT_MAX_TURN_RATE,
-    fire: out[3] > 0,
-    dash: out[4] > 0.5,
-  };
-}
-
-/**
  * Run one deterministic headless episode for a main-agent variant.
  *
  * Creates a real game episode from the episode seed, constructs a deterministic
  * NEAT network for the variant, and drives the player through the full game
- * tick pipeline for {@link NEATENSTEIN_MAX_EPISODE_TICKS} ticks. The resulting
+ * tick pipeline for {@link NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS} ticks. The resulting
  * {@link CombatQualitySignal} is extracted from the final game state.
  *
  * @param variant - Main-agent variant being evaluated.
@@ -361,7 +312,24 @@ function networkOutputToTickInput(outputs: number[]): GameTickInputSnapshot {
  * @param episodeSeed - Deterministic seed for this episode.
  * @returns Combat-quality signal summarising the episode.
  */
-function runEpisode(
+/**
+ * Run one deterministic headless episode for a main-agent variant.
+ *
+ * Creates a real game episode from the episode seed, constructs a deterministic
+ * NEAT network for the variant, and drives the player through the full game
+ * tick pipeline for {@link NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS} ticks. The resulting
+ * {@link CombatQualitySignal} is extracted from the final game state.
+ *
+ * Exported for testability of the fire-gate wiring; not part of the public
+ * harness API.
+ *
+ * @param variant - Main-agent variant being evaluated.
+ * @param _enemySnapshot - Frozen enemy snapshot (reserved for future enemy AI
+ *   integration; not used in P5S1).
+ * @param episodeSeed - Deterministic seed for this episode.
+ * @returns Combat-quality signal summarising the episode.
+ */
+export function runEpisode(
   variant: MainVariant,
   _enemySnapshot: Snapshot,
   episodeSeed: number,
@@ -376,13 +344,20 @@ function runEpisode(
     { seed: hashSeed(episodeSeed, variant.id) },
   );
 
+  // P5S1: Soft fire-gate state is episode-local so hysteresis persists across
+  // ticks within a single fitness episode, matching the display worker.
+  const fireGateState = createFireGateState();
+
   for (let tick = 0; tick < NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS; tick += 1) {
     const sensors = extractSensors(state, flatMap, NEATENSTEIN_MAP_SIZE);
     const raw = network.activate(sensors);
     const out: number[] = Array.isArray(raw)
       ? raw.map((v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0))
       : new Array<number>(NEATENSTEIN_MAIN_NEAT_OUTPUTS).fill(0);
-    const tickInput = networkOutputToTickInput(out);
+    const tickInput = networkOutputToTickInput(out, {
+      state: fireGateState,
+      enemyVisible: sensors[ENEMY_VISIBLE_SENSOR_INDEX] ?? 0,
+    });
     state = gameTick(
       state,
       tickInput,
@@ -397,6 +372,10 @@ function runEpisode(
     shotsFired: 0,
     shotsHit: 0,
     aimMissRate: 0,
+    shotsWallHit: 0,
+    shotsRangeExpired: 0,
+    shotsBlindFire: 0,
+    shotsNearMiss: 0,
   };
 
   return extractCombatQualitySignal(finalState, telemetry);

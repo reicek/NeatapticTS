@@ -69,9 +69,9 @@ describe('Neatenstein harness constants', () => {
       expect(mod.NEATENSTEIN_WEIGHT_DAMAGE_TAKEN as number).toBe(1);
     });
 
-    it('exports penalty weight for aimMissRate equal to 1', async () => {
+    it('exports penalty weight for aimMissRate equal to 20 (scaled in P4S1)', async () => {
       const mod = (await import('./constants.ts')) as Record<string, unknown>;
-      expect(mod.NEATENSTEIN_WEIGHT_AIM_MISS_RATE as number).toBe(1);
+      expect(mod.NEATENSTEIN_WEIGHT_AIM_MISS_RATE as number).toBe(20);
     });
 
     it('exports complexity bonus weight equal to 0.1', async () => {
@@ -84,26 +84,6 @@ describe('Neatenstein harness constants', () => {
       expect(mod.NEATENSTEIN_WEIGHT_PARSIMONY_DENSITY_PENALTY as number).toBe(
         0.01,
       );
-    });
-  });
-
-  describe('AC-503: enemy team concurrency and duration constants', () => {
-    it('exports enemy population size equal to 32', async () => {
-      const mod = (await import('./constants.ts')) as Record<string, unknown>;
-      expect(mod.NEATENSTEIN_ENEMY_POPULATION_SIZE as number).toBe(32);
-    });
-
-    it('exports max active enemies equal to 8', async () => {
-      const mod = (await import('./constants.ts')) as Record<string, unknown>;
-      expect(mod.NEATENSTEIN_MAX_ACTIVE_ENEMIES as number).toBe(8);
-    });
-
-    it('exports a positive enemy evaluation duration in milliseconds', async () => {
-      const mod = (await import('./constants.ts')) as Record<string, unknown>;
-      const duration = mod.NEATENSTEIN_ENEMY_EVALUATION_DURATION_MS as number;
-      expect(typeof duration).toBe('number');
-      expect(Number.isFinite(duration)).toBe(true);
-      expect(duration).toBeGreaterThan(0);
     });
   });
 });

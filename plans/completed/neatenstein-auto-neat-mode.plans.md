@@ -1,8 +1,17 @@
-﻿**Status:** [WIP]
+﻿**Status:** [DONE]
 **Plan ID:** NEATENSTEIN_AUTO_NEAT_MODE
 **Created:** 2026-08-09
 **Source of truth:** `plans/neatenstein-auto-neat-mode.plans.md`
 **Research artifact:** `plans/neatenstein-auto-neat-mode.research.md`
+
+**Latest research update (2026-08-14):** Fallback AI no-enemy exploration
+behavior analyzed. The current `buildFallbackAutoTickInput()` spins almost in
+place (radius ≈ 0.37 cells) because it combines constant forward movement
+with a fixed `NEATENSTEIN_FALLBACK_TURN_RATE`. The recommended replacement
+is direction-persistence with wall-bounce, optionally followed by a
+deterministic seeded Levy walk. See the research artifact addendum
+"Fallback AI no-enemy exploration behavior" for full evidence, options,
+and risks.
 
 - `model: glm-5.2:cloud` for all dispatches under this plan. Every dispatch under this plan overrides the frontmatter `model` with `glm-5.2:cloud`. Do NOT use kimi-k2.7-code:cloud or any other model.
 - Pragmatic mode: broad slices (one per gap area), bypass legacy ceremony (skip plan-verification green-light cycle, skip per-AC gate calls, skip fix-packet YAML ceremony). Ship working software.
@@ -1091,7 +1100,7 @@ next_slice: null
 
 ## Latest validation evidence
 
-Claim: 04-implementing @ 2026-08-10T08:27:26Z
+Claim: 04-implementing @ 2026-08-11T13:27:00Z — P9S2-fallback-hunter (implemented, coverage green, awaiting 05-green-testing)
 
 ```yaml
 PlanUpdate:
@@ -1116,3 +1125,72 @@ PlanUpdate:
   next: 'Run 05-green-testing for hud-human-mode boundary'
 ```
 ````
+
+```yaml
+PlanUpdate:
+  slice_id: P9S2-fallback-hunter
+  changed_files:
+    - examples/neatenstein/browser-entry/host/game/constants.ts
+    - examples/neatenstein/browser-entry/worker/display.worker.ts
+    - examples/neatenstein/browser-entry/worker/display.worker.test.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --check examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    - 'npx jest --config=jest.config.mjs --selectProjects neatenstein --testPathPatterns=display.worker.test.ts --no-cache'
+  preflight_results:
+    - 'tsc: OK'
+    - 'lint: 0 issues'
+    - 'prettier: OK'
+    - 'jest: 124/124 pass (display.worker.test.ts)'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --selectProjects neatenstein --no-cache --coverage --testPathPatterns=display.worker.test.ts'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  next: 'Run 05-green-testing and attach coverage-guard evidence for the three changed files'
+```
+
+```yaml
+PlanUpdate:
+  slice_id: P9S2-fallback-hunter
+  changed_files:
+    - examples/neatenstein/browser-entry/host/game/constants.ts
+    - examples/neatenstein/browser-entry/worker/display.worker.ts
+    - examples/neatenstein/browser-entry/worker/display.worker.test.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run lint'
+    - 'npx prettier --check examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+    - 'npx jest --config=jest.config.mjs --selectProjects neatenstein --testPathPatterns=display.worker.test.ts --no-cache --coverage'
+    - 'node scripts/agent-customization/gates/merge-coverage-summaries.mjs'
+  preflight_results:
+    - 'tsc: OK'
+    - 'lint: 0 issues'
+    - 'prettier: OK'
+    - 'jest: 132/132 pass (display.worker.test.ts)'
+    - 'coverage: display.worker.ts 100/100/100/100; host/game/constants.ts 100/100/100/100'
+    - 'merge-coverage-summaries: OK'
+    - 'slice-advancement: PASS (shared-validation errored/spawnSync ETIMEDOUT and was skipped)'
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --selectProjects neatenstein --no-cache --coverage --testPathPatterns=display.worker.test.ts'
+  rollback:
+    - 'git checkout -- examples/neatenstein/browser-entry/host/game/constants.ts examples/neatenstein/browser-entry/worker/display.worker.ts examples/neatenstein/browser-entry/worker/display.worker.test.ts'
+  next: 'Run 05-green-testing and attach coverage-guard evidence for the three changed files'
+```
+
+Research note (fire gate, 2026-08-10): `buildAutoTickInput` in `display.worker.ts` correctly passes sensors and `fireGateState` to `networkOutputToTickInput`; the fire gate is NOT bypassed in live auto-mode. It IS bypassed in the two fitness-evaluation paths (`harness/main-runner.ts:334` and `worker/eval.worker.ts:81`), which call `networkOutputToTickInput(out)` without the gate config. See `plans/neatenstein-auto-neat-mode.research.md` addendum for full evidence. If the gate is meant to be part of the learned policy, the next slice should thread the gate through those fitness functions; otherwise the train/runtime mismatch will persist.
+
+Research note (old shooter dead-code audit, 2026-08-10): A four-scout read-only audit of `examples/neatenstein` found the requested old/dead shooter code categories. Key results: (1) `extractSensors` is not duplicated but is misplaced in `scripts/enemy-navigation.ts` and used by three live consumers; two sensor-based PBRS helpers there are dead, and `sensorHistory` in `host/game/tick.ts` is collected but not consumed. (2) No legacy `NEATENSTEIN_MAIN_NEAT_INPUTS = 12` constant remains; the only literal "12" is `ENEMY_VISIBLE_SENSOR_INDEX = 12`, valid in the 15-input layout. Backward-compat test hooks in `display.worker.ts`/`display.worker.test.ts` and the active plan prose still refer to "12 inputs". (3) Enemies in `scripts/enemy-controller.ts` remain omniscient: yaw/flanking/BFS distance map are derived directly from `gameState.player.position`. (4) Placeholder fitness persists in `barrier.ts` (RNG episode), `arms-race.ts` (zero-quality fallback), `fitness.ts` (zero `complexityBonus`/`parsimonyDensityPenalty`), and `tick.ts` (unread `sensorHistory`). (5) Fire-without-vision is present in headless fitness paths (`main-runner.ts:334`, `eval.worker.ts:81`) and the dead `enemy-runner.ts`, while the live display-worker path is correctly gated. Two standalone orchestration modules (`enemy-runner.ts`, `main-agent.ts`) and several dead helper/interface/constant exports were also identified. Full file/line inventory and risks are in `plans/neatenstein-auto-neat-mode.research.md` Addendum 2.
+
+Research note (15-input vision bypass, 2026-08-10): The 15-input `extractSensors` vector **is** used in live auto-mode whenever a champion network exists (`display.worker.ts:1671-1678` → `buildAutoTickInput` → `extractSensors` → `network.activate` → `networkOutputToTickInput` with fire gate). The call-path direction is producer/consumer: `buildAutoTickInput` produces the `GameTickInputSnapshot` that `gameTick` consumes; there is no downstream edge from `gameTick` to `buildAutoTickInput`. The only live bypass is `buildFallbackAutoTickInput` (`display.worker.ts:1497-1553`), used when `humanMode === 'auto'` but `championMainNetwork` is still `null`. That fallback uses raw Euclidean distance to the nearest active enemy, ignores `VISION_RANGE_CELLS` and wall line-of-sight, and fires by bearing/cooldown — i.e., the old omniscient 12-input-style behavior. No production 12-input champion path remains thanks to the genome-extinction guard (`display.worker.ts:1656-1669`). The remaining "12" references are `ENEMY_VISIBLE_SENSOR_INDEX = 12` (valid 15-input index), backward-compat test hooks, and the stale "~12 inputs" prose in this plan. Full evidence is in `plans/neatenstein-auto-neat-mode.research.md` Addendum 3.
+
+Research note (sensor support for exploration and kiting, 2026-08-11): The 15-input `extractSensors` layout supports basic reactive kiting (distance `[6]`, relative bearing `[5]`, fire-arc `[13]`) and rudimentary wall-following exploration when no enemy is visible (`enemyVisible = 0`, cardinal wall rays `[8-11]`). It is missing predictive kiting signals (enemy velocity, dash readiness, player-relative forward obstacle distance) and exploration memory (time-since-enemy-seen, last-known-bearing decay, scan-state timer). Highest-value additions would be `sin/cos` bearing encoding, a `dashReady`/`dashCooldown` sensor, and a `forwardWallDistance` raycast. If the input budget must remain 15, candidates for displacement are `lastShotHit` `[14]` and one absolute position sensor `[3]`/`[4]`. Full evidence and alternatives are in `plans/neatenstein-auto-neat-mode.research.md` Addendum 4.
+
+---
+
+## Phase 9 — Hunter behavior: fallback AI fixes (exploration + kiting) [DONE]
+> Detailed step/slice/VALIDATION_EVIDENCE blocks compressed to plans/neatenstein-auto-neat-mode.logs.md.
+> Steps: 01 (plan exploration + kiting behavior) [DONE], 02 (implement exploration + kiting, slice P9S2-fallback-hunter) [DONE], 03 (validate fallback AI hunter behavior + browser smoke) [DONE].
+> 134/134 targeted tests pass; touched files `display.worker.ts` and `host/game/constants.ts` at 100/100/100/100 coverage; browser smoke PASS.
+
+---

@@ -68,48 +68,16 @@ export interface CombatQualitySignal {
   complexityBonus: number;
   /** Penalty for excessive wiring density (parsimony pressure). */
   parsimonyDensityPenalty: number;
-}
-
-/**
- * Optional tuning knobs for the composite enemy fitness.
- *
- * Callers can override the default weights when comparing alternative
- * selection pressures (e.g., navigation-focused vs. combat-focused swarms).
- */
-export interface EnemyTeamFitnessConfig {
-  /** Weight for the navigation (progress + exploration + anti-stall) component. */
-  navigationWeight?: number;
-  /** Weight for the combat (damage + survival) component. */
-  combatWeight?: number;
-  /** Weight applied to collective damage dealt to the main agent. */
-  damageWeight?: number;
-  /** Weight applied to the number of enemies that survived the episode. */
-  survivalWeight?: number;
-}
-
-/**
- * Per-step telemetry for one enemy episode rollout (AC-10.5e-002).
- *
- * Carries the per-step BFS distance array and aggregate metrics needed by the
- * composite navigation+combat fitness. The `bfsDistances` array records the
- * BFS distance from the enemy cell to the player goal at the start of each
- * tick, enabling the progress-reward computation (Σ prevDist − curDist).
- */
-export interface EnemyEpisodeTelemetry {
-  /** Final enemy position in world cells. */
-  position: { x: number; y: number };
-  /** Per-step BFS distances from the enemy cell to the player goal. */
-  bfsDistances: number[];
-  /** Total damage dealt to the static player across all ticks. */
-  damageDealt: number;
-  /** Number of enemies that survived (always 1 in the simplified rollout). */
-  enemiesSurvived: number;
-  /** Number of unique map cells entered by the enemy. */
-  cellsVisited: number;
-  /** Number of ticks where the enemy could not move (blocked or no step). */
-  stagnationTicks: number;
-  /** Final BFS distance from the enemy's final cell to the player goal. */
-  finalDistance: number;
+  /** Total shots fired during the episode (P4S1). Used for rate metrics. */
+  shotsFired?: number;
+  /** Total shots that struck an enemy (P4S1). Used for hit-rate computation. */
+  shotsHit?: number;
+  /** Shots fired with no active enemy in the world (P4S1). Penalized as blind fire. */
+  shotsBlindFire?: number;
+  /** Shots that hit a wall with no enemy nearby (P4S1). Penalized as poor aim. */
+  shotsWallHit?: number;
+  /** Total ticks elapsed in the episode (P4S1). Used for fire-rate computation. */
+  ticksElapsed?: number;
 }
 
 /**
@@ -203,56 +171,6 @@ export interface EnemyPopulation {
   sample: (index: number) => unknown;
   /** Return a serializable snapshot of the current population champion. */
   snapshot: () => Snapshot;
-}
-
-/**
- * Frozen evaluation barrier.
- *
- * A barrier pairs one main-agent variant with one frozen enemy snapshot and a
- * deterministic seed so the same episode can be replayed exactly for fitness
- * evaluation.
- */
-export interface BarrierState {
-  /** Generation the barrier belongs to. */
-  generation: number;
-  /** Main-agent variant being evaluated. */
-  mainSnapshot: MainVariant;
-  /** Frozen enemy snapshot the main agent is evaluated against. */
-  enemySnapshot: Snapshot;
-  /** Deterministic seed used to run the episode. */
-  seed: number;
-}
-
-/**
- * Configuration for one co-evolution population.
- */
-export interface PopulationConfig {
-  /** Number of variants to maintain. */
-  size: number;
-  /** Backend discriminator ('mlp' or 'swarm'). */
-  kind: 'mlp' | 'swarm';
-}
-
-/**
- * Top-level harness configuration.
- */
-export interface HarnessConfig {
-  /** Maximum number of generations to run. */
-  maxGenerations: number;
-  /** Configuration for the enemy population. */
-  enemy: PopulationConfig;
-}
-
-/**
- * Result emitted at the end of one generation.
- */
-export interface GenerationResult {
-  /** Generation number. */
-  generation: number;
-  /** Selected main-agent champion for this generation. */
-  champion: MainVariant;
-  /** Aggregated quality signal for the champion's episode. */
-  quality: CombatQualitySignal;
 }
 
 /**

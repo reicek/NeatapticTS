@@ -1354,3 +1354,30 @@ slices:
 
 **Owner:** 04-implementing (3 dispatches) + 04-implementing (fix-loop iteration 1)
 **Reviewer:** 05-green-testing (P8S1-green)
+
+## Phase 9 — Hunter behavior: fallback AI fixes (exploration + kiting) [DONE]
+
+**Phase objective:** Replace the fallback AI's no-enemy spin-in-place behavior with deterministic wall-bounce exploration, and add distance-aware kiting when an enemy is visible, so the hunter survives until the champion NEAT network takes over.
+
+### Session Notes
+
+- Files changed:
+  - `examples/neatenstein/browser-entry/host/game/constants.ts` — added kiting/exploration constants
+  - `examples/neatenstein/browser-entry/worker/display.worker.ts` — implemented wall-bounce exploration, distance-aware kiting, alive-enemy helper, and test-only hooks
+  - `examples/neatenstein/browser-entry/worker/display.worker.test.ts` — added P9S2 fallback, eval-worker, and wave-clear guard tests
+- Validations run:
+  - `npx jest --config=jest.config.mjs --no-cache --testPathPatterns=neatenstein.*display.worker` → 134/134 pass
+  - `npx jest --config=jest.config.mjs --no-cache --coverage --testPathPatterns=neatenstein.*display.worker` → 134/134 pass; `display.worker.ts` 100/100/100/100; `host/game/constants.ts` 100/100/100/100
+  - `node scripts/agent-customization/gates/shared-validation.gate.mjs --json --changed-files=examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/worker/display.worker.test.ts,examples/neatenstein/browser-entry/host/game/constants.ts` → pass (153/153 tests, build OK, lint OK)
+  - `node scripts/agent-customization/gates/slice-advancement.gate.mjs --json --slice-id=P9S2-fallback-hunter --changed-files=examples/neatenstein/browser-entry/worker/display.worker.ts,examples/neatenstein/browser-entry/worker/display.worker.test.ts,examples/neatenstein/browser-entry/host/game/constants.ts` → pass (all content sub-gates green; `shared-validation` errored/spawnSync ETIMEDOUT tooling timeout and was skipped)
+  - Browser smoke via `browser-harness-specialist` → PASS
+- Learning events:
+  - `gate-run` — shared-validation gate tooling timeout inside slice-advancement consolidated gate; direct invocation passes. Recorded in `.github/ai-learning/learning-log.jsonl`.
+- Decisions:
+  - Implemented exploration Option A (direction persistence with wall-bounce) to eliminate spin-in-place bug
+  - Implemented reactive distance-band kiting using `findNearestVisibleEnemy` distance
+  - Preserved existing fire gate and bearing-limited steering toward visible enemy
+- Risks / residual gaps:
+  - Consolidated `slice-advancement` gate intermittently times out on `shared-validation` sub-gate; direct run is reliable
+  - Fire gate is bypassed in headless fitness paths (`main-runner.ts`, `eval.worker.ts`) — noted in research but not part of this slice
+- Next resume point: Archive plan pair to `plans/completed/` and update `plans/README.md` / `plans/Roadmap.md`

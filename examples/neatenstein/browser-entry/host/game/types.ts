@@ -212,10 +212,21 @@ export interface CreateGameStateOptions {
  * `damageDealt` and `shotsHit`). The `aimMissRate` field is recomputed from
  * the raw counters on every update.
  *
+ * The shot outcome taxonomy fields (`shotsWallHit`, `shotsRangeExpired`,
+ * `shotsBlindFire`, `shotsNearMiss`) classify every non-hitting shot into
+ * exactly one category, enabling the fitness function to penalize wasteful
+ * shooting patterns differently. A shot that hits an enemy increments only
+ * `shotsHit` (via {@link applyEnemyDamage}) and does not increment any
+ * taxonomy counter.
+ *
  * @property damageDealt - Cumulative damage applied to enemies.
  * @property shotsFired - Total bolts the player fired during the episode.
  * @property shotsHit - Total bolts that struck an enemy.
  * @property aimMissRate - Fraction of shots that missed: `(shotsFired - shotsHit) / shotsFired`, or `0` when no shots were fired.
+ * @property shotsWallHit - Shots that terminated on a wall with no enemy near the bolt path.
+ * @property shotsRangeExpired - Shots that expired at max range with no enemy near the bolt path.
+ * @property shotsBlindFire - Shots fired when no active enemy exists in the world.
+ * @property shotsNearMiss - Shots that passed near an enemy but did not hit it.
  */
 export interface EpisodeTelemetry {
   /** Cumulative damage applied to enemies during the episode. */
@@ -229,6 +240,35 @@ export interface EpisodeTelemetry {
    * Returns `0` when no shots have been fired.
    */
   aimMissRate: number;
+  /**
+   * Shots that terminated on a wall with no enemy near the bolt path.
+   *
+   * Incremented when the bolt hits a wall and no active enemy was within the
+   * near-miss threshold of the bolt's travel path.
+   */
+  shotsWallHit: number;
+  /**
+   * Shots that expired at maximum range with no enemy near the bolt path.
+   *
+   * Incremented when the bolt reaches its max travel distance without hitting
+   * a wall or enemy, and no active enemy was within the near-miss threshold.
+   */
+  shotsRangeExpired: number;
+  /**
+   * Shots fired when no active enemy exists in the world.
+   *
+   * Incremented when the player fires but there are no living enemies to
+   * shoot at, indicating completely blind fire.
+   */
+  shotsBlindFire: number;
+  /**
+   * Shots that passed near an enemy but did not hit it.
+   *
+   * Incremented when an active enemy was within the near-miss threshold of
+   * the bolt's travel path but outside the hit radius, indicating the player
+   * was aiming at an enemy but missed.
+   */
+  shotsNearMiss: number;
 }
 
 /** Complete deterministic snapshot of one Neatenstein game instance. */
@@ -298,4 +338,15 @@ export interface GameState {
    * completes.
    */
   telemetry?: EpisodeTelemetry;
+  /**
+   * Per-tick flag indicating whether the most recent shot hit an enemy.
+   *
+   * Reset to `false` at the start of each game tick and set to `true` when
+   * a plasma bolt strikes an active enemy during the bolt-enemy collision
+   * pass. The sensor system reads this as input [14] for the main-agent
+   * NEAT network.
+   *
+   * Optional for backward compatibility with existing state factories.
+   */
+  lastShotHit?: boolean;
 }

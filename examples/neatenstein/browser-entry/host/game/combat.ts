@@ -52,6 +52,16 @@ export { NEATENSTEIN_MUZZLE_OFFSET_CELLS } from './constants';
 export { NEATENSTEIN_BOLT_DAMAGE } from './constants';
 
 /**
+ * Multiplier applied to the bolt hit radius to define the near-miss threshold.
+ *
+ * An enemy within this threshold of the bolt path but outside the hit radius
+ * counts as a near miss. Set to 3× the hit radius so shots that pass
+ * reasonably close to an enemy are classified as near misses rather than
+ * blind wall hits or range expirations.
+ */
+const NEAR_MISS_RADIUS_MULTIPLIER = 3;
+
+/**
  * Default zero-valued telemetry for a fresh episode.
  *
  * Used when a {@link GameState} does not yet carry a `telemetry` field, which
@@ -60,7 +70,16 @@ export { NEATENSTEIN_BOLT_DAMAGE } from './constants';
  * @returns A new `EpisodeTelemetry` with all counters at zero.
  */
 function createDefaultTelemetry(): EpisodeTelemetry {
-  return { damageDealt: 0, shotsFired: 0, shotsHit: 0, aimMissRate: 0 };
+  return {
+    damageDealt: 0,
+    shotsFired: 0,
+    shotsHit: 0,
+    aimMissRate: 0,
+    shotsWallHit: 0,
+    shotsRangeExpired: 0,
+    shotsBlindFire: 0,
+    shotsNearMiss: 0,
+  };
 }
 
 /**
@@ -194,6 +213,13 @@ export function fireBolt(state: GameState): FireBoltResult {
   let hitDistance = Math.min(rawWallDistance, NEATENSTEIN_BOLT_MAX_RANGE_CELLS);
   let hitEnemyIndex = -1;
 
+  // Track whether any active enemy exists and whether any enemy was near the
+  // bolt path (for shot outcome taxonomy classification).
+  let hasActiveEnemy = false;
+  let nearMissFound = false;
+  const nearMissThreshold =
+    NEATENSTEIN_BOLT_HIT_RADIUS_CELLS * NEAR_MISS_RADIUS_MULTIPLIER;
+
   // Test every living enemy against the bolt path and keep the nearest valid
   // hit before the wall.
   for (let index = 0; index < state.enemies.length; index += 1) {
@@ -202,6 +228,8 @@ export function fireBolt(state: GameState): FireBoltResult {
     if (enemy.health <= 0 || enemy.active === false) {
       continue;
     }
+
+    hasActiveEnemy = true;
 
     const distanceAlongBolt = projectOntoRay(origin, direction, enemy.position);
 
@@ -220,6 +248,8 @@ export function fireBolt(state: GameState): FireBoltResult {
       hitType = 'enemy';
       hitDistance = distanceAlongBolt;
       hitEnemyIndex = index;
+    } else if (missDistance <= nearMissThreshold) {
+      nearMissFound = true;
     }
   }
 
@@ -246,12 +276,45 @@ export function fireBolt(state: GameState): FireBoltResult {
 
   // Increment shotsFired telemetry for every successful shot.
   const telemetryBeforeShot = nextState.telemetry ?? createDefaultTelemetry();
+  const telemetryAfterShot = withAimMissRate({
+    ...telemetryBeforeShot,
+    shotsFired: telemetryBeforeShot.shotsFired + 1,
+  });
+
+  // Classify the shot outcome for non-hitting shots (AC-P4S1a-002).
+  // Each missed shot is classified into exactly one taxonomy category:
+  //   blindFire  — no active enemy exists in the world
+  //   nearMiss   — an enemy was near the bolt path but not hit
+  //   wallHit    — bolt hit a wall with no enemy near the path
+  //   rangeExpired — bolt expired at max range with no enemy near the path
+  let telemetryWithTaxonomy = telemetryAfterShot;
+  if (hitType !== 'enemy') {
+    if (!hasActiveEnemy) {
+      telemetryWithTaxonomy = {
+        ...telemetryWithTaxonomy,
+        shotsBlindFire: telemetryWithTaxonomy.shotsBlindFire + 1,
+      };
+    } else if (nearMissFound) {
+      telemetryWithTaxonomy = {
+        ...telemetryWithTaxonomy,
+        shotsNearMiss: telemetryWithTaxonomy.shotsNearMiss + 1,
+      };
+    } else if (hitType === 'wall') {
+      telemetryWithTaxonomy = {
+        ...telemetryWithTaxonomy,
+        shotsWallHit: telemetryWithTaxonomy.shotsWallHit + 1,
+      };
+    } else {
+      telemetryWithTaxonomy = {
+        ...telemetryWithTaxonomy,
+        shotsRangeExpired: telemetryWithTaxonomy.shotsRangeExpired + 1,
+      };
+    }
+  }
+
   nextState = {
     ...nextState,
-    telemetry: withAimMissRate({
-      ...telemetryBeforeShot,
-      shotsFired: telemetryBeforeShot.shotsFired + 1,
-    }),
+    telemetry: telemetryWithTaxonomy,
   };
 
   // Only create a wall impact when the shot truly terminated on a wall within

@@ -75,8 +75,12 @@ import { fireEnemyBolt } from '../host/game/combat';
 import {
   NEATENSTEIN_ENEMY_MAX_CONCURRENT,
   NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_KITING_APPROACH_DISTANCE_CELLS,
+  NEATENSTEIN_KITING_BACKPEDAL_DISTANCE_CELLS,
+  NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD,
+  NEATENSTEIN_EXPLORATION_WALL_BOUNCE_LOOKAHEAD_CELLS,
 } from '../host/game/constants';
-import type { GameState } from '../host/game/types';
+import type { EnemyState, GameState } from '../host/game/types';
 import { advanceWave } from '../host/waves';
 import {
   NEATENSTEIN_BACKGROUND_RGB,
@@ -96,12 +100,22 @@ import {
   ENEMY_CONTROLLER_DE_REZ_DURATION_MS,
   type EnemyControllerState,
 } from '../../scripts/enemy-controller';
-import { extractSensors } from '../../scripts/enemy-navigation';
+import {
+  extractSensors,
+  findNearestVisibleEnemy,
+} from '../../scripts/enemy-navigation';
 import { createMlpEnemyPopulation } from '../harness/enemy-mlp';
 import type { MlpEnemyPopulation } from '../harness/enemy-mlp';
-import type { MlpSnapshot, Snapshot } from '../harness/types';
-import { runArmsRaceGeneration } from '../harness/arms-race';
-import { hashSeed } from '../harness/hash-seed';
+import type { MlpSnapshot } from '../harness/types';
+import {
+  NEATENSTEIN_MAIN_NEAT_INPUTS,
+  NEATENSTEIN_FALLBACK_TURN_RATE,
+  networkOutputToTickInput,
+  applyFireGate,
+  createFireGateState,
+  ENEMY_VISIBLE_SENSOR_INDEX,
+  type FireGateState,
+} from '../harness/neat-io-config';
 import type { Network } from 'neataptic';
 import {
   clipNeatensteinSprite,
@@ -157,14 +171,16 @@ let enemyControllerState: EnemyControllerState | null = null;
 let activeEnemySprites: NeatensteinSprite[] = [];
 
 /**
- * Wave-clear detection flag set when the last enemy is cleared in the
+ * Wave-clear detection flag set when the last alive enemy is cleared in the
  * current wave.
  *
  * Tracks the `false → true` transition: the flag becomes `true` when the
- * enemy roster transitions from non-empty to empty. It is consumed by
- * `advanceWave` (P3S1) which increments `gameState.generation` and respawns
- * the next wave. P2S1 only detects and stores the flag; it does NOT
- * increment `generation`.
+ * enemy roster transitions from at least one alive enemy to none alive.
+ * Dead/inactive enemies are kept in the array for index alignment and are
+ * intentionally ignored. The flag is consumed by `advanceWave` (P3S1)
+ * which increments `gameState.generation` and respawns the next wave.
+ * P2S1 only detects and stores the flag; it does NOT increment
+ * `generation`.
  *
  * @see AC-017
  */
@@ -194,11 +210,11 @@ let enemyPopulation: MlpEnemyPopulation | null = null;
  * Launch guard for the hoisted async Neat evaluation (P3S2).
  *
  * Stores the generation currently being evaluated, or `null` when no
- * evaluation is in flight. Before starting a new `await neatPop.evaluate()/
- * evolve()` cycle, the worker checks this guard and skips if already
+ * evaluation is in flight. Before posting a new evaluation request to the
+ * eval worker, the display worker checks this guard and skips if already
  * evaluating — concurrent wave-clears are dropped (not queued). On
- * completion, `result.generation` must equal `pendingGeneration + 1` before
- * the result is applied.
+ * completion, the eval worker posts back `result.generation` which must
+ * equal `pendingGeneration + 1` before the result is applied.
  *
  * @see AC-043a
  */
@@ -213,6 +229,32 @@ let pendingGeneration: number | null = null;
  * @see AC-060a
  */
 let championMainNetwork: Network | null = null;
+
+/**
+ * Input count the current champion network was evolved with.
+ *
+ * When the champion is stored (via {@link handleEvalComplete} or
+ * {@link __testOnlySetChampionMainNetwork}), this is set to the current
+ * {@link NEATENSTEIN_MAIN_NEAT_INPUTS} value. Before the champion is used
+ * for auto-mode ticks, a guard compares this to the live constant; a
+ * mismatch triggers a genome-extinction event that clears the champion.
+ *
+ * @see AC-P3S1c-002
+ */
+let lastChampionInputCount: number | null = null;
+
+/**
+ * Dedicated eval worker that handles NEAT population evaluation off the
+ * render loop.
+ *
+ * Created lazily on the first wave-clear that triggers an arms-race
+ * evaluation. In the browser, the worker URL is derived from the display
+ * worker's own location. In tests, a mock worker is injected via
+ * {@link __testOnlySetEvalWorker}.
+ *
+ * @see AC-P2S1b-001, AC-P2S1b-002
+ */
+let evalWorker: Worker | null = null;
 
 /**
  * Input snapshot captured from the most recent `input` message.
@@ -241,6 +283,27 @@ let lastTickInputSource: 'auto' | 'human' = 'human';
  * @see buildFallbackAutoTickInput
  */
 let fallbackTickCounter = 0;
+
+/**
+ * Test-only capture of the last fallback input snapshot.
+ *
+ * Used by red/green tests to assert exact move and lookDelta values without
+ * depending on physics simulation side effects.
+ *
+ * @internal
+ */
+let lastFallbackInputForTest: GameTickInputSnapshot | null = null;
+
+/**
+ * P5S1 — Hysteresis state for the soft fire gate.
+ *
+ * Maintained between ticks to prevent rapid on/off oscillation at the
+ * vision boundary.  Reset on init.
+ *
+ * @see buildAutoTickInput
+ * @see AC-P5S1a-003
+ */
+let fireGateState: FireGateState = createFireGateState();
 
 /** RGB of the neon wall color for X-axis-side hits. */
 const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 183, b: 255 } as const;
@@ -1219,49 +1282,6 @@ function inputMessageToTickInput(raw: unknown): GameTickInputSnapshot {
 }
 
 /**
- * Input size for the main-agent Neat population (sensor vector length).
- *
- * @see AC-039
- */
-const NEATENSTEIN_MAIN_NEAT_INPUTS = 12;
-
-/**
- * Output size for the main-agent Neat population (action vector length).
- *
- * @see AC-039
- */
-const NEATENSTEIN_MAIN_NEAT_OUTPUTS = 5;
-
-/**
- * Population size for the hoisted Neat evaluation.
- *
- * @see AC-039
- */
-const NEATENSTEIN_MAIN_NEAT_POPSIZE = 4;
-
-/**
- * Maximum look-delta per tick for auto-mode NEAT controller output.
- *
- * The NEAT network's third output is passed through `tanh` (range [-1, 1])
- * and multiplied by this constant to produce the final `lookDelta` in radians.
- * At 16 ms per tick, `π/4` ≈ 45° per tick gives a fast but controllable turn
- * rate suitable for the neon raycasting arena.
- *
- * @see AC-066
- */
-const NEATENSTEIN_MAIN_NEAT_MAX_TURN_RATE = Math.PI / 4;
-
-/**
- * Turn rate (radians per tick) for the fallback auto-mode AI.
- *
- * At ≈15° per tick (60 ticks/s ≈ 900°/s), the fallback AI scans the arena
- * fast enough to acquire enemies but not so fast that it overshoots.
- *
- * @see buildFallbackAutoTickInput
- */
-const NEATENSTEIN_FALLBACK_TURN_RATE = Math.PI / 12;
-
-/**
  * Fire cooldown in ticks for the fallback auto-mode AI.
  *
  * At 16 ms per tick, 25 ticks ≈ 0.4 s between shots — enough to conserve the
@@ -1283,129 +1303,140 @@ const NEATENSTEIN_FALLBACK_FIRE_INTERVAL = 25;
 const NEATENSTEIN_FALLBACK_FIRE_ARC = Math.PI / 6;
 
 /**
- * Run the hoisted async Neat evaluation for one arms-race generation.
- *
- * The worker creates and owns the Neat population, evaluates it, evolves it,
- * extracts the champion network, and calls the synchronous
- * {@link runArmsRaceGeneration} with the champion. The result is applied to
- * `gameState.generation` and the enemy snapshot.
- *
- * This function is non-blocking with respect to the render loop: Neat's
- * `evaluate()` and `evolve()` are awaited, but the fitness function yields
- * via `setTimeout(0)` micro-chunking so `onmessage` can fire between chunks.
- *
- * @param seed - Game seed.
- * @param generation - Current generation (post-advanceWave).
- * @param enemySnapshot - Frozen enemy snapshot from advanceWave.
- * @param humanModeBool - Whether the game is in auto mode.
- *
- * @see AC-039, AC-040, AC-042, AC-043, AC-043a
+ * Outbound evaluation request payload sent to the eval worker.
  */
-async function evaluateArmsRaceGeneration(
-  seed: number,
-  generation: number,
-  enemySnapshot: Snapshot,
-  humanModeBool: boolean,
-): Promise<void> {
-  // Create the Neat population with a deterministic seed from hashSeed.
-  const popSeed = hashSeed(seed, generation);
+interface EvalRequestPayload {
+  type: 'evaluate';
+  seed: number;
+  generation: number;
+  enemySnapshot: MlpSnapshot;
+  humanMode: boolean;
+}
 
-  // Lazy-load Neat to avoid pulling the full neataptic entry point into the
-  // static import chain (which would trigger GPUDevice type errors in the
-  // test environment). The dynamic import is only resolved when the async
-  // evaluation actually runs.
-  const { Neat } = await import('neataptic');
+/**
+ * Inbound evaluation result payload received from the eval worker.
+ */
+interface EvalCompletePayload {
+  type: 'evalComplete';
+  generation: number;
+  championNetworkJSON: Record<string, unknown>;
+}
 
-  // Minimal fitness function: activate the network with a zero input
-  // vector and return a deterministic score. The real episode-based
-  // fitness function is wired in Phase 5; this placeholder ensures the
-  // hoisted evaluation pipeline is exercised end-to-end.
-  const fitnessFn = (network: Network): number => {
-    const output = network.activate(
-      new Array(NEATENSTEIN_MAIN_NEAT_INPUTS).fill(0),
-    );
-    return output[0]!;
-  };
+/**
+ * Resolve the eval worker URL from the display worker's own location.
+ *
+ * The display worker bundle is published as
+ * `docs/assets/neatenstein.worker.js`; the eval worker bundle is published
+ * alongside it as `docs/assets/neatenstein.eval-worker.js`. This helper
+ * derives the eval worker URL by replacing the filename in the display
+ * worker's `self.location.href`.
+ *
+ * @returns Absolute URL to the eval worker bundle, or `null` when the
+ *   location cannot be resolved (e.g. in test environments).
+ */
+function resolveEvalWorkerUrl(): string | null {
+  try {
+    const href = self.location?.href;
+    if (typeof href !== 'string' || !href) return null;
+    return href.replace('neatenstein.worker.js', 'neatenstein.eval-worker.js');
+  } catch {
+    return null;
+  }
+}
 
-  const neatPop = new Neat(
-    NEATENSTEIN_MAIN_NEAT_INPUTS,
-    NEATENSTEIN_MAIN_NEAT_OUTPUTS,
-    fitnessFn,
-    { popsize: NEATENSTEIN_MAIN_NEAT_POPSIZE, seed: popSeed },
-  );
+/**
+ * Get or create the dedicated eval worker.
+ *
+ * The worker is created lazily on the first call. In the browser, the URL
+ * is derived from the display worker's location. In tests, a mock worker
+ * is injected via {@link __testOnlySetEvalWorker}.
+ *
+ * @returns The eval worker instance, or `null` when no worker can be
+ *   created (e.g. the `Worker` constructor is unavailable).
+ */
+function getOrCreateEvalWorker(): Worker | null {
+  if (evalWorker) return evalWorker;
 
-  // Evaluate and evolve the population (async, awaited as-is).
-  await neatPop.evaluate();
-  await neatPop.evolve();
+  const url = resolveEvalWorkerUrl();
+  if (!url) return null;
 
-  // Extract the champion network (getFittest returns Network directly).
-  const championNetwork = neatPop.getFittest();
+  try {
+    const workerCtor = (globalThis as { Worker?: typeof Worker }).Worker;
+    if (!workerCtor) return null;
+    evalWorker = new workerCtor(url);
+    evalWorker.onmessage = handleEvalComplete;
+  } catch {
+    evalWorker = null;
+  }
 
-  // Construct a minimal combat-quality signal from the champion's fitness
-  // score. The real episode telemetry is wired in Phase 5; this placeholder
-  // uses the champion's score as the survival-ticks proxy.
-  const championScore = championNetwork.score ?? 0;
-  const championQuality = {
-    survivalTicks: Math.max(0, Math.floor(championScore * 100)),
-    damageDealt: 0,
-    kills: 0,
-    damageTaken: 0,
-    aimMissRate: 0,
-    complexityBonus: 0,
-    parsimonyDensityPenalty: 0,
-  };
+  return evalWorker;
+}
 
-  // Call the synchronous arms-race runner with the champion network.
-  const result = runArmsRaceGeneration({
-    seed,
-    generation,
-    enemySnapshot,
-    humanMode: humanModeBool,
-    championNetwork,
-    championQuality,
-  });
+/**
+ * Handle the `evalComplete` message from the eval worker.
+ *
+ * Deserializes the champion network via `Network.fromJSON()`, applies the
+ * advanced generation to `gameState`, stores the champion network, and
+ * clears the launch guard.
+ *
+ * @param event - Message event from the eval worker.
+ */
+async function handleEvalComplete(event: MessageEvent): Promise<void> {
+  const data = event.data as EvalCompletePayload | null;
+  if (!data || typeof data !== 'object' || data.type !== 'evalComplete') {
+    return;
+  }
+
+  // Lazy-load Network for deserialization (avoids pulling neataptic into
+  // the static import chain, which triggers GPUDevice type errors in the
+  // test environment).
+  const { Network } = await import('neataptic');
+
+  const championNetwork = Network.fromJSON(data.championNetworkJSON);
 
   // Apply the result (generation always matches pendingGeneration + 1).
-  gameState = { ...gameState!, generation: result.generation };
+  gameState = { ...gameState!, generation: data.generation };
   // Store the champion main-agent network for Phase 4's player controller.
-  championMainNetwork = result.mainSnapshot.network!;
+  championMainNetwork = championNetwork;
+  lastChampionInputCount = NEATENSTEIN_MAIN_NEAT_INPUTS;
 
   // Clear the launch guard.
   pendingGeneration = null;
 }
 
 /**
- * Map raw NEAT network outputs to a {@link GameTickInputSnapshot}.
+ * Delegate the arms-race generation evaluation to the eval worker.
  *
- * The mapping uses `tanh` for continuous outputs (move, look) to produce
- * values in [-1, 1] regardless of the network's raw output range, and
- * threshold comparisons for discrete outputs (fire, dash):
+ * Posts an evaluate request to the eval worker via `postMessage`. The
+ * evaluation runs entirely in the eval worker, off the display worker's
+ * render loop — no blocking `await` on the main thread. When the eval
+ * worker completes, it posts back an `evalComplete` message which is
+ * handled by {@link handleEvalComplete}.
  *
- * - `move.x     = tanh(outputs[0])` — strafe
- * - `move.y     = tanh(outputs[1])` — forward/back
- * - `lookDelta  = tanh(outputs[2]) * NEATENSTEIN_MAIN_NEAT_MAX_TURN_RATE`
- * - `fire       = outputs[3] > 0`
- * - `dash       = outputs[4] > 0.5`
+ * @param seed - Game seed.
+ * @param generation - Current generation (post-advanceWave).
+ * @param enemySnapshot - Frozen enemy snapshot from advanceWave.
+ * @param humanModeBool - Whether the game is in auto mode.
  *
- * @param outputs - Raw network activation outputs (length ≥ 5).
- * @returns A game-tick input snapshot derived from the network output.
- * @see AC-066
+ * @see AC-P2S1b-001, AC-P2S1b-002
  */
-function networkOutputToTickInput(outputs: number[]): GameTickInputSnapshot {
-  const out =
-    outputs.length >= 5
-      ? outputs
-      : [...outputs, ...new Array<number>(5 - outputs.length).fill(0)];
+function delegateEvaluation(
+  seed: number,
+  generation: number,
+  enemySnapshot: MlpSnapshot,
+  humanModeBool: boolean,
+): void {
+  const worker = getOrCreateEvalWorker();
+  if (!worker) return;
 
-  return {
-    move: {
-      x: Math.tanh(out[0]),
-      y: Math.tanh(out[1]),
-    },
-    lookDelta: Math.tanh(out[2]) * NEATENSTEIN_MAIN_NEAT_MAX_TURN_RATE,
-    fire: out[3] > 0,
-    dash: out[4] > 0.5,
+  const payload: EvalRequestPayload = {
+    type: 'evaluate',
+    seed,
+    generation,
+    enemySnapshot,
+    humanMode: humanModeBool,
   };
+  worker.postMessage(payload);
 }
 
 /**
@@ -1431,7 +1462,19 @@ function buildAutoTickInput(
   const sensors = extractSensors(state, flatMap, mapSize);
   const raw = network.activate(sensors);
 
-  return networkOutputToTickInput(raw);
+  // P5S1: Apply soft fire gate with hysteresis on enemyVisible sensor.
+  // When no enemy is visible (sensor below 0.15 floor), fire is suppressed
+  // regardless of network output.  Hysteresis (0.15/0.18) prevents rapid
+  // on/off oscillation at the vision boundary.
+  // @see AC-P5S1a-001, AC-P5S1a-002, AC-P5S1a-003
+  // istanbul ignore next -- defensive fallback; ENEMY_VISIBLE_SENSOR_INDEX
+  // is always populated by the extractSensors vector above.
+  const enemyVisible = sensors[ENEMY_VISIBLE_SENSOR_INDEX] ?? 0;
+
+  return networkOutputToTickInput(raw, {
+    state: fireGateState,
+    enemyVisible,
+  });
 }
 
 /**
@@ -1440,63 +1483,68 @@ function buildAutoTickInput(
  * **P6S2 — Chicken-and-egg deadlock resolution.**
  *
  * `championMainNetwork` starts as `null` and is only set after the first
- * wave-clear via {@link evaluateArmsRaceGeneration}.  But clearing the first
+ * wave-clear via the eval worker delegation.  But clearing the first
  * wave requires an active player, and the auto-mode player is paralyzed
  * (zero input) without a champion network — a circular dependency.
  *
- * This fallback breaks the deadlock by providing a simple but effective
- * exploration AI:
+ * This fallback breaks the deadlock by providing a deterministic hunter AI:
  *
- * - **Move forward** — keeps the player roaming the arena instead of standing
- *   still, increasing the chance of encountering enemies.
- * - **Turn toward the nearest active enemy** — uses the player's facing angle
- *   and the enemy's world position to steer toward threats, capped by
- *   {@link NEATENSTEIN_FALLBACK_TURN_RATE}.
- * - **Fire with a cooldown** — only fires every
- *   {@link NEATENSTEIN_FALLBACK_FIRE_INTERVAL} ticks AND only when an enemy
- *   is within ±{@link NEATENSTEIN_FALLBACK_FIRE_ARC} of the facing direction,
- *   conserving ammo and increasing hit probability.
- * - **Scan turn** — when no enemy is visible, turns at the max fallback rate
- *   to sweep the arena.
+ * - **Wall-bounce exploration** — when no enemy is visible, move forward in
+ *   the current direction and only turn when a wall is detected within
+ *   {@link NEATENSTEIN_EXPLORATION_WALL_BOUNCE_LOOKAHEAD_CELLS}.  The hunter
+ *   casts angled rays at ±{@link NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD},
+ *   picks the most open direction, and turns toward it at the capped rate.
+ * - **Distance-aware kiting** — when an enemy is visible, turn toward its
+ *   bearing and choose movement based on the 15–20 cell band defined by
+ *   {@link NEATENSTEIN_KITING_BACKPEDAL_DISTANCE_CELLS} and
+ *   {@link NEATENSTEIN_KITING_APPROACH_DISTANCE_CELLS}.
+ * - **Fire through the shared soft fire gate** — computes a raw fire intent
+ *   when the visible enemy is within ±{@link NEATENSTEIN_FALLBACK_FIRE_ARC} and
+ *   the cooldown interval has elapsed, then passes it through
+ *   {@link applyFireGate} with the module-level {@link fireGateState} so the
+ *   fallback respects the same hysteresis gate as the champion-network path.
  *
  * Once the first wave is cleared and the arms-race evaluation runs, the
  * evolved champion network replaces this fallback.
  *
  * @param state - Current deterministic game state (player + enemies).
- * @returns A game-tick input snapshot with exploration + combat behavior.
- * @see AC-060a
+ * @returns A game-tick input snapshot with exploration + kiting behavior.
+ * @see AC-060a, AC-P5S1a-001, AC-P5S1a-002, AC-P5S1a-003, AC-P9S2-001
  */
+function hasAliveEnemies(enemies: EnemyState[] | undefined | null): boolean {
+  const list =
+    enemies ??
+    /* istanbul ignore next -- defensive fallback for malformed gameState.enemies */ [];
+  return list.some((e) => e.health > 0 && e.active !== false);
+}
+
 function buildFallbackAutoTickInput(state: GameState): GameTickInputSnapshot {
   fallbackTickCounter++;
 
-  // Default behavior: move forward, scan-turn, don't fire.
-  let lookDelta = NEATENSTEIN_FALLBACK_TURN_RATE;
-  let fire = false;
+  let lookDelta = 0;
+  let rawFire = 0;
+  let moveY = 1;
 
-  // Find the nearest active enemy and steer toward it.
+  // Use the same vision query as the network path: nearest active enemy within
+  // VISION_RANGE_CELLS and with a clear line of sight.
+  const visibleEnemy =
+    wallMap !== null
+      ? findNearestVisibleEnemy(state, wallMap, NEATENSTEIN_MAP_SIZE)
+      : null;
+  const enemyVisible = visibleEnemy !== null ? 1 : 0;
+
   const px = state.player.position.x;
   const py = state.player.position.y;
   const pa = state.player.angleRad;
 
-  let nearestDistSq = Infinity;
-  let nearestBearing = 0;
-  let foundEnemy = false;
+  if (visibleEnemy !== null) {
+    const dx = visibleEnemy.position.x - px;
+    const dy = visibleEnemy.position.y - py;
+    const bearing = Math.atan2(dy, dx);
+    const distanceCells = Math.hypot(dx, dy);
 
-  for (const enemy of state.enemies) {
-    if (enemy.active === false) continue;
-    const dx = enemy.position.x - px;
-    const dy = enemy.position.y - py;
-    const distSq = dx * dx + dy * dy;
-    if (distSq < nearestDistSq) {
-      nearestDistSq = distSq;
-      nearestBearing = Math.atan2(dy, dx);
-      foundEnemy = true;
-    }
-  }
-
-  if (foundEnemy) {
     // Normalize angle difference to [-π, π].
-    let angleDiff = nearestBearing - pa;
+    let angleDiff = bearing - pa;
     while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
     while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
 
@@ -1506,22 +1554,99 @@ function buildFallbackAutoTickInput(state: GameState): GameTickInputSnapshot {
       Math.min(NEATENSTEIN_FALLBACK_TURN_RATE, angleDiff),
     );
 
-    // Fire only when the enemy is within the forward arc AND the cooldown
-    // interval has elapsed — conserves ammo and increases hit probability.
+    // Kiting: backpedal if too close, hold in the 15–20 cell band, approach
+    // if the enemy is beyond the preferred band.
+    if (distanceCells < NEATENSTEIN_KITING_BACKPEDAL_DISTANCE_CELLS) {
+      moveY = -1;
+    } else if (distanceCells < NEATENSTEIN_KITING_APPROACH_DISTANCE_CELLS) {
+      moveY = 0;
+    } else {
+      moveY = 1;
+    }
+
+    // Raw fire intent: only when the visible enemy is within the forward arc
+    // AND the cooldown interval has elapsed.
     if (
       Math.abs(angleDiff) <= NEATENSTEIN_FALLBACK_FIRE_ARC &&
       fallbackTickCounter % NEATENSTEIN_FALLBACK_FIRE_INTERVAL === 0
     ) {
-      fire = true;
+      rawFire = 1;
+    }
+  } else if (wallMap !== null) {
+    // Wall-bounce exploration: move forward, but if a wall is imminent, turn
+    // toward the more open of the two angled lookahead directions.
+    const forwardHit = castRayDDAFromFlatMap(
+      wallMap,
+      NEATENSTEIN_MAP_SIZE,
+      px,
+      py,
+      Math.cos(pa),
+      Math.sin(pa),
+    );
+
+    const lookahead = NEATENSTEIN_EXPLORATION_WALL_BOUNCE_LOOKAHEAD_CELLS;
+    if (
+      Number.isFinite(forwardHit.perpWallDist) &&
+      forwardHit.perpWallDist <= lookahead
+    ) {
+      const bounce = NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD;
+      const candidates = [
+        {
+          offset: bounce,
+          hit: castRayDDAFromFlatMap(
+            wallMap,
+            NEATENSTEIN_MAP_SIZE,
+            px,
+            py,
+            Math.cos(pa + bounce),
+            Math.sin(pa + bounce),
+          ),
+        },
+        {
+          offset: -bounce,
+          hit: castRayDDAFromFlatMap(
+            wallMap,
+            NEATENSTEIN_MAP_SIZE,
+            px,
+            py,
+            Math.cos(pa - bounce),
+            Math.sin(pa - bounce),
+          ),
+        },
+      ];
+
+      const best = candidates.reduce((chosen, current) =>
+        current.hit.perpWallDist > chosen.hit.perpWallDist ? current : chosen,
+      );
+
+      let angleDiff = best.offset;
+      /* istanbul ignore next -- defensive angle-normalisation loop; bounce
+       * offsets are bounded by NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD, so
+       * this wrap is unreachable with current constants but kept for robustness
+       * if offset sources change in the future. */
+      while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+      /* istanbul ignore next -- defensive angle-normalisation loop (see above). */
+      while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+      lookDelta = Math.max(
+        -NEATENSTEIN_FALLBACK_TURN_RATE,
+        Math.min(NEATENSTEIN_FALLBACK_TURN_RATE, angleDiff),
+      );
     }
   }
 
-  return {
-    move: { x: 0, y: 1 },
+  // Apply the same hysteresis fire gate used by buildAutoTickInput.
+  const fire = applyFireGate(fireGateState, enemyVisible, rawFire);
+
+  const result: GameTickInputSnapshot = {
+    move: { x: 0, y: moveY },
     lookDelta,
     fire,
     dash: false,
   };
+
+  lastFallbackInputForTest = result;
+  return result;
 }
 
 self.onmessage = (event: MessageEvent) => {
@@ -1554,8 +1679,12 @@ self.onmessage = (event: MessageEvent) => {
     enemyPopulation = null;
     pendingGeneration = null;
     championMainNetwork = null;
+    lastChampionInputCount = null;
+    evalWorker = null;
     lastTickInputSource = 'human';
     fallbackTickCounter = 0;
+    lastFallbackInputForTest = null;
+    fireGateState = createFireGateState();
 
     if (data.canvas) {
       workerCanvas = data.canvas as OffscreenCanvas;
@@ -1621,7 +1750,27 @@ self.onmessage = (event: MessageEvent) => {
     // @see AC-055, AC-056, AC-057, AC-059, AC-060
     const humanMode = latestState?.humanMode;
     let tickInput: GameTickInputSnapshot;
-    if (humanMode === 'auto' && championMainNetwork) {
+
+    // P3S1c: Genome-extinction guard. If the champion was evolved with a
+    // different input count than the current NEATENSTEIN_MAIN_NEAT_INPUTS,
+    // the network topology is incompatible — clear it so the fallback AI
+    // takes over until a new champion is evolved with the correct sensor
+    // vector length.
+    // @see AC-P3S1c-002
+    if (
+      championMainNetwork &&
+      lastChampionInputCount !== null &&
+      lastChampionInputCount !== NEATENSTEIN_MAIN_NEAT_INPUTS
+    ) {
+      championMainNetwork = null;
+      lastChampionInputCount = null;
+    }
+
+    if (
+      humanMode === 'auto' &&
+      championMainNetwork &&
+      hasAliveEnemies(gameState.enemies)
+    ) {
       try {
         tickInput = buildAutoTickInput(
           championMainNetwork,
@@ -1697,23 +1846,23 @@ self.onmessage = (event: MessageEvent) => {
       }),
     };
 
-    // Capture the enemy count BEFORE the tick so wave-clear detection can
-    // observe the false → true transition accurately.
-    const enemiesBeforeTick = gameState.enemies.length;
+    // Capture whether any enemies are alive BEFORE the tick so wave-clear
+    // detection only observes a true false → true transition when alive enemies
+    // actually drop to zero (not when the roster already contained only dead/
+    // inactive enemies for index alignment).
+    const hasAliveEnemiesBeforeTick = hasAliveEnemies(gameState?.enemies);
 
     gameState = gameTick(gameState, tickInput, collisionMap, timestepMs);
 
     // Wave-clear detection (AC-017): track the false → true transition when all
     // enemies are dead. Dead enemies stay in the array for index alignment (per
     // waves.ts), so we check for *alive* enemies (health > 0 && active) rather
-    // than array length. When enemies existed before the tick and no alive
+    // than array length. When alive enemies existed before the tick and no alive
     // enemies remain, set allEnemiesCleared so P3S1's advanceWave can consume
     // it to increment generation and spawn the next wave.
     // @see AC-017, AC-100
-    const hasAliveEnemiesAfterTick = (gameState?.enemies ?? []).some(
-      (e) => e.health > 0 && e.active !== false,
-    );
-    if (enemiesBeforeTick > 0 && !hasAliveEnemiesAfterTick) {
+    const hasAliveEnemiesAfterTick = hasAliveEnemies(gameState?.enemies);
+    if (hasAliveEnemiesBeforeTick && !hasAliveEnemiesAfterTick) {
       allEnemiesCleared = true;
     }
     if (hasAliveEnemiesAfterTick) {
@@ -1770,12 +1919,12 @@ self.onmessage = (event: MessageEvent) => {
         enemyWeights = (advanceResult.snapshot as MlpSnapshot).weights;
       }
 
-      // P3S2: Kick off the hoisted async Neat evaluation for the arms-race
-      // generation. The worker creates a Neat population, evaluates and
-      // evolves it, extracts the champion network, and calls the synchronous
-      // runArmsRaceGeneration with the champion. Only one generation is in
-      // flight at a time; concurrent wave-clears are dropped (not queued).
-      // @see AC-039, AC-040, AC-042, AC-043, AC-043a
+      // P2S1: Delegate the arms-race generation evaluation to the dedicated
+      // eval worker via postMessage. The eval worker runs the NEAT population
+      // evaluation asynchronously, off the display worker's render loop — no
+      // blocking await on the main thread. Only one generation is in flight
+      // at a time; concurrent wave-clears are dropped (not queued).
+      // @see AC-P2S1b-001, AC-P2S1b-002, AC-039, AC-043a
       if (pendingGeneration === null && gameState) {
         pendingGeneration = gameState.generation;
         const armsRaceSeed = gameState.seed;
@@ -1783,15 +1932,17 @@ self.onmessage = (event: MessageEvent) => {
         const armsRaceSnapshot = advanceResult.snapshot;
         const humanModeBool = latestState?.humanMode === 'auto';
 
-        // Fire-and-forget: the async evaluation runs concurrently with the
-        // render loop. The pendingGeneration guard prevents overlapping
-        // launches. Results are applied when the promise resolves.
-        void evaluateArmsRaceGeneration(
-          armsRaceSeed,
-          armsRaceGeneration,
-          armsRaceSnapshot,
-          humanModeBool,
-        );
+        // Delegate to eval worker: posts an evaluate request and returns
+        // immediately. The evalComplete handler applies the result when the
+        // eval worker finishes.
+        if (armsRaceSnapshot.kind === 'mlp') {
+          delegateEvaluation(
+            armsRaceSeed,
+            armsRaceGeneration,
+            armsRaceSnapshot as MlpSnapshot,
+            humanModeBool,
+          );
+        }
       }
     }
     prevAllEnemiesCleared = allEnemiesCleared;
@@ -1921,6 +2072,33 @@ export const __testOnlyGetChampionMainNetwork = (): Network | null =>
   championMainNetwork;
 
 /**
+ * Test-only hook: inject a mock eval worker for testing the delegation.
+ *
+ * When set, the display worker uses this worker instead of creating a real
+ * one. The mock worker should have `postMessage` (jest.fn) and a settable
+ * `onmessage` property so tests can simulate eval worker responses.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only hook to inject mock eval worker */
+export const __testOnlySetEvalWorker = (
+  worker: { postMessage: (msg: unknown) => void; onmessage: unknown } | null,
+): void => {
+  evalWorker = worker as Worker | null;
+  if (evalWorker) {
+    evalWorker.onmessage = handleEvalComplete;
+  }
+};
+
+/**
+ * Test-only hook: expose the eval worker for test introspection.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetEvalWorker = (): unknown => evalWorker;
+
+/**
  * Test-only hook: inject a champion main-agent network for auto-mode testing.
  *
  * @internal
@@ -1930,7 +2108,31 @@ export const __testOnlySetChampionMainNetwork = (
   network: Network | null,
 ): void => {
   championMainNetwork = network;
+  lastChampionInputCount =
+    network !== null ? NEATENSTEIN_MAIN_NEAT_INPUTS : null;
 };
+
+/**
+ * Test-only hook: override the champion input count for extinction testing.
+ *
+ * Simulates a champion evolved with a different input count (e.g. 12) so
+ * the genome-extinction guard can be verified when the constant changes.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only hook for extinction testing */
+export const __testOnlySetChampionInputCount = (count: number | null): void => {
+  lastChampionInputCount = count;
+};
+
+/**
+ * Test-only introspection hook: expose the champion input count.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetChampionInputCount = (): number | null =>
+  lastChampionInputCount;
 
 /**
  * Test-only introspection hook: expose the source of the most recent tick input.
@@ -1943,6 +2145,53 @@ export const __testOnlySetChampionMainNetwork = (
 /* istanbul ignore next -- test-only introspection hook */
 export const __testOnlyGetLastTickInputSource = (): 'auto' | 'human' =>
   lastTickInputSource;
+
+/**
+ * Test-only hook: get the last fallback AI input snapshot.
+ *
+ * @returns The raw {@link GameTickInputSnapshot} produced by the most recent
+ *   call to {@link buildFallbackAutoTickInput}, or `null` before any fallback
+ *   tick has run.
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetLastFallbackInput =
+  (): GameTickInputSnapshot | null => lastFallbackInputForTest;
+
+/**
+ * Test-only hook: build a fallback tick input directly for a given state.
+ *
+ * This bypasses the simState handler so tests can inspect fallback behavior
+ * with controlled wallMap/gameState combinations (e.g. wallMap === null).
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only hook to drive buildFallbackAutoTickInput directly */
+export const __testOnlyBuildFallbackAutoTickInput = (
+  state: GameState,
+): GameTickInputSnapshot => buildFallbackAutoTickInput(state);
+
+/**
+ * Test-only hook: reset the fire-gate hysteresis state.
+ *
+ * Allows tests to start from a known gate state (closed) without
+ * re-initialising the entire worker.
+ *
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyResetFireGateState = (): void => {
+  fireGateState = createFireGateState();
+};
+
+/**
+ * Test-only hook: get the current fire-gate hysteresis state.
+ *
+ * @returns A snapshot of the current `fireActive` flag.
+ * @internal
+ */
+/* istanbul ignore next -- test-only introspection hook */
+export const __testOnlyGetFireGateState = (): FireGateState => fireGateState;
 
 /**
  * Test-only hook: expose the wall fog-factor resolver for direct testing.

@@ -77,8 +77,10 @@ function resolveSpawnCount(requested: number | undefined, cap: number): number {
  * 2. **Run the evolution harness** — advances the enemy population by one
  *    generation and returns its champion snapshot.
  * 3. **Spawn the wave** — calls the deterministic trickle spawner repeatedly
- *    until the requested number of enemies have entered the arena, without
- *    exceeding {@link NEATENSTEIN_ENEMY_MAX_CONCURRENT}.
+ *    until the requested number of enemies have entered the arena. The
+ *    spawner caps new enemies by the number currently alive, so
+ *    `spawnCount` is intentionally not reset; this preserves deterministic
+ *    RNG seeding across wave transitions.
  *
  * @param state - Snapshot before the wave transition.
  * @param options - Population and optional spawn count.

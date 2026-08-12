@@ -11,12 +11,15 @@
  */
 
 import {
-  NEATENSTEIN_LIGHT_TOGGLE_KEY,
-  NEATENSTEIN_MAP_SIZE,
+  NEATENSTEIN_LIGHT_TOGGLE_KEY as _NEATENSTEIN_LIGHT_TOGGLE_KEY,
+  NEATENSTEIN_MAP_SIZE as _NEATENSTEIN_MAP_SIZE,
 } from '../../constants';
 
-/* istanbul ignore next */
-export { NEATENSTEIN_LIGHT_TOGGLE_KEY, NEATENSTEIN_MAP_SIZE };
+/** Re-export of the light-toggle key from the browser-entry constants. */
+export const NEATENSTEIN_LIGHT_TOGGLE_KEY = _NEATENSTEIN_LIGHT_TOGGLE_KEY;
+
+/** Re-export of the square map size from the browser-entry constants. */
+export const NEATENSTEIN_MAP_SIZE = _NEATENSTEIN_MAP_SIZE;
 
 /**
  * Fixed simulation timestep in milliseconds.
@@ -498,3 +501,49 @@ export const NEATENSTEIN_AMMO_PICKUP_LIFETIME_MS = 10_000;
  * is collected and the player's ammo is restored.
  */
 export const NEATENSTEIN_AMMO_PICKUP_COLLECTION_RADIUS_CELLS = 1.5;
+
+/**
+ * Maximum distance in cells at which the fallback hunter backpedals from a
+ * visible enemy.
+ *
+ * Enemies closer than this threshold are inside the preferred kiting band,
+ * so the hunter reverses movement to open the gap again.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+export const NEATENSTEIN_KITING_BACKPEDAL_DISTANCE_CELLS = 15;
+
+/**
+ * Minimum distance in cells at which the fallback hunter stops moving and
+ * holds its ground against a visible enemy.
+ *
+ * The 15–20 cell band sits just outside the enemy's line-of-sight vision
+ * cap and gives the hunter room to fire without retreating indefinitely.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+export const NEATENSTEIN_KITING_APPROACH_DISTANCE_CELLS = 20;
+
+/**
+ * Forward raycast distance in cells used by the fallback hunter to detect
+ * an approaching wall during exploration.
+ *
+ * When the path ahead is blocked within this distance, the hunter samples
+ * angled rays and turns toward the most open direction.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+export const NEATENSTEIN_EXPLORATION_WALL_BOUNCE_LOOKAHEAD_CELLS = 3;
+
+/**
+ * Angle offset in radians used when the fallback hunter searches for an
+ * open direction after detecting a wall ahead.
+ *
+ * Rays are cast at `playerAngle ± NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD`
+ * in addition to the straight-ahead ray.  The direction with the longest
+ * clear run is chosen and the hunter turns toward it at the capped turn
+ * rate.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+export const NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD = Math.PI / 4;

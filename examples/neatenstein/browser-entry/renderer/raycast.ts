@@ -15,6 +15,7 @@
 
 import { buildNeatensteinMap } from './map';
 import { NEATENSTEIN_RENDER_DISTANCE_CAP } from './framebuffer';
+import type { Vector2 } from '../host/game/types';
 
 export { buildNeatensteinMap };
 
@@ -203,4 +204,50 @@ export function castRayDDAFromFlatMap(
       };
     }
   }
+}
+
+/**
+ * Check whether there is a clear line of sight between two grid-space points.
+ *
+ * Casts a DDA ray from `from` toward `to` and returns `true` when no wall cell
+ * is intersected before reaching `to`. The direction vector is normalized so
+ * that the perpendicular wall distance returned by
+ * {@link castRayDDAFromFlatMap} is the Euclidean distance along the ray to the
+ * first wall. When that wall distance is greater than or equal to the Euclidean
+ * distance from `from` to `to`, the destination is visible.
+ *
+ * @param flatMap - Row-major wall grid where any non-zero value is a wall.
+ * @param mapSize - Width and height of the square grid.
+ * @param from - Origin point in grid units.
+ * @param to - Destination point in grid units.
+ * @returns `true` when no wall occludes the straight-line path from `from` to
+ *   `to`; `false` when a wall cell is intersected first.
+ */
+export function hasLineOfSight(
+  flatMap: Uint8Array,
+  mapSize: number,
+  from: Vector2,
+  to: Vector2,
+): boolean {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist === 0) return true; // same position — trivially visible
+
+  const dirX = dx / dist;
+  const dirY = dy / dist;
+
+  const hit = castRayDDAFromFlatMap(
+    flatMap,
+    mapSize,
+    from.x,
+    from.y,
+    dirX,
+    dirY,
+  );
+  const wallDist = Number.isFinite(hit.perpWallDist)
+    ? hit.perpWallDist
+    : Infinity;
+
+  return wallDist > dist;
 }

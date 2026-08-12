@@ -54,6 +54,7 @@ import type {
   Vector2,
 } from './types';
 import { NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS } from '../../constants';
+import { MAX_TURN_RATE } from '../../harness/neat-io-config';
 
 export { createGameState };
 export {
@@ -268,6 +269,7 @@ export function gameTick(
 
   // Step 5: Move active plasma bolts, apply enemy damage on hit, and cull
   // inactive ones.
+  let boltHitEnemy = false;
   const updatedBolts = updateBolts(
     next.bolts ?? [],
     resolvedDtMs,
@@ -283,6 +285,7 @@ export function gameTick(
     ) {
       const enemy = next.enemies[bolt.hitEnemyIndex];
       if (enemy) {
+        boltHitEnemy = true;
         const enemyImpact: EnemyImpactSpot = {
           position: { ...enemy.position },
           createdAtMs: next.simTimeMs,
@@ -308,6 +311,7 @@ export function gameTick(
       next.gun ?? { recoilOffset: 0, firing: false },
       resolvedDtMs,
     ),
+    lastShotHit: boltHitEnemy,
   };
 
   // Step 5b: Move active enemy bolts, check player proximity, apply damage,
@@ -436,7 +440,10 @@ export function updateAmmoPickups(
 /**
  * Rotate the player by a yaw delta for one tick.
  *
- * Non-finite or zero deltas leave the state unchanged.
+ * Non-finite or zero deltas leave the state unchanged. The `lookDelta` is
+ * clamped to {@link MAX_TURN_RATE} so no caller can exceed the canonical
+ * turn-rate cap, regardless of whether the input originated from the NEAT
+ * network mapping or a direct call.
  *
  * @param state - Game state before look input.
  * @param lookDelta - Horizontal yaw delta in radians.
@@ -447,11 +454,18 @@ function applyLook(state: GameState, lookDelta: number): GameState {
     return state;
   }
 
+  const clampedDelta =
+    lookDelta > MAX_TURN_RATE
+      ? MAX_TURN_RATE
+      : lookDelta < -MAX_TURN_RATE
+        ? -MAX_TURN_RATE
+        : lookDelta;
+
   return {
     ...state,
     player: {
       ...state.player,
-      angleRad: state.player.angleRad + lookDelta,
+      angleRad: state.player.angleRad + clampedDelta,
     },
   };
 }

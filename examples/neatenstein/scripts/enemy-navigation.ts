@@ -11,14 +11,38 @@
  */
 
 import type { CollisionMap } from '../browser-entry/renderer/map';
-import { castRayDDAFromFlatMap } from '../browser-entry/renderer/raycast';
-import type { GameState } from '../browser-entry/host/game/types';
+import {
+  castRayDDAFromFlatMap,
+  hasLineOfSight,
+} from '../browser-entry/renderer/raycast';
+import { NEATENSTEIN_RENDER_DISTANCE_CAP } from '../browser-entry/renderer/framebuffer';
+import type { GameState, EnemyState } from '../browser-entry/host/game/types';
 
 /** Sentinel value stored in the distance buffer for wall cells. */
 const WALL_VALUE = -2;
 
 /** Sentinel value stored in the distance buffer for unreachable cells. */
 const UNREACHABLE_VALUE = -1;
+
+/**
+ * Maximum vision range in grid cells for enemy detection.
+ *
+ * Enemies beyond this Euclidean distance from the player are invisible —
+ * their sensor values are zeroed. Set to 15 (half the bolt max range of 30)
+ * to force active exploration without making the hero omniscient.
+ *
+ * @see AC-P3S1b-003
+ */
+const VISION_RANGE_CELLS = 15;
+
+/**
+ * Half-angle of the firing arc in radians (30°).
+ *
+ * An enemy is considered "in the firing arc" when the absolute relative
+ * bearing is within this angle of the player's facing direction. Matches
+ * the fallback AI's `NEATENSTEIN_FALLBACK_FIRE_ARC`.
+ */
+const FIRING_ARC_HALF_ANGLE = Math.PI / 6;
 
 /**
  * Four cardinal directions in N, E, S, W order (matches asciiMaze).
@@ -338,35 +362,80 @@ export function buildVisionVector(
 }
 
 /**
- * Extract a 12-element sensor observation vector from the current game state
- * for NEAT network activation.
+ * Find the nearest active enemy that is within vision range and has a clear
+ * line of sight from the player's position.
  *
- * Sensor layout (indices 0–11):
- * - [0] player health ratio (`health / maxHealth`, clamped to [0, 1])
- * - [1] player ammo
- * - [2] player look angle in radians
- * - [3] player position X (world units)
- * - [4] player position Y (world units)
- * - [5] nearest enemy relative bearing in radians, normalized to [-π, π]
- * - [6] nearest enemy Euclidean distance (world units)
- * - [7] nearest enemy health
- * - [8] wall raycast distance — North
- * - [9] wall raycast distance — East
- * - [10] wall raycast distance — South
- * - [11] wall raycast distance — West
+ * Filters active enemies by:
+ * 1. Euclidean distance ≤ {@link VISION_RANGE_CELLS}
+ * 2. Line-of-sight via {@link hasLineOfSight} (no wall between player and enemy)
  *
- * When no active enemies exist, sensors [5]–[7] are 0. Wall raycast distances
- * use the existing {@link castRayDDAFromFlatMap} DDA primitive and may be
- * `Infinity` when no wall is found within the render distance cap.
- *
- * Placing this helper in `scripts/enemy-navigation.ts` (not the worker) allows
- * the evolution harness to reuse it for episode fitness evaluation in Phase 5
- * without importing worker code.
+ * Returns the nearest enemy that satisfies both conditions, or `null` when
+ * no enemy is visible.
  *
  * @param gameState - Current deterministic game-state snapshot.
  * @param flatMap - Row-major wall map (`Uint8Array`, non-zero = wall).
  * @param mapSize - Width and height of the square grid.
- * @returns A 12-element observation vector for `Network.activate(sensors)`.
+ * @returns The nearest visible enemy, or `null`.
+ *
+ * @see AC-P3S1b-005
+ */
+export function findNearestVisibleEnemy(
+  gameState: GameState,
+  flatMap: Uint8Array,
+  mapSize: number,
+): EnemyState | null {
+  const p = gameState.player;
+
+  let nearest: EnemyState | null = null;
+  let nearestDist = Infinity;
+
+  for (const e of gameState.enemies) {
+    if (e.active === false) continue;
+    const dx = e.position.x - p.position.x;
+    const dy = e.position.y - p.position.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > VISION_RANGE_CELLS) continue;
+    if (dist >= nearestDist) continue;
+    if (!hasLineOfSight(flatMap, mapSize, p.position, e.position)) continue;
+
+    nearest = e;
+    nearestDist = dist;
+  }
+
+  return nearest;
+}
+
+/**
+ * Extract a 15-element sensor observation vector from the current game state
+ * for NEAT network activation.
+ *
+ * Sensor layout (indices 0–14), all values normalized to [0, 1]:
+ * - [0] player health ratio (`health / maxHealth`, clamped to [0, 1])
+ * - [1] player ammo ratio (`ammo / maxAmmo`, clamped to [0, 1])
+ * - [2] player look angle (`angleRad / (2π)` mapped to [0, 1])
+ * - [3] player position X (`position.x / mapSize`, clamped to [0, 1])
+ * - [4] player position Y (`position.y / mapSize`, clamped to [0, 1])
+ * - [5] nearest visible enemy bearing (`(bearing + π) / (2π)`, [0, 1])
+ * - [6] nearest visible enemy distance (`dist / VISION_RANGE_CELLS`, [0, 1])
+ * - [7] nearest visible enemy health ratio (`health / maxHealth`, [0, 1])
+ * - [8] wall raycast distance North (`dist / renderCap`, [0, 1])
+ * - [9] wall raycast distance East (`dist / renderCap`, [0, 1])
+ * - [10] wall raycast distance South (`dist / renderCap`, [0, 1])
+ * - [11] wall raycast distance West (`dist / renderCap`, [0, 1])
+ * - [12] enemyVisible — binary (1 if a visible enemy exists, 0 otherwise)
+ * - [13] enemyInFiringArc — binary (1 if visible enemy bearing ≤ 30°, 0 otherwise)
+ * - [14] lastShotHit — binary (1 if the previous shot hit an enemy, 0 otherwise)
+ *
+ * Enemy sensors [5]–[7] are zeroed when no enemy is within
+ * {@link VISION_RANGE_CELLS} or when a wall blocks line-of-sight. Wall
+ * raycast distances use {@link castRayDDAFromFlatMap} and are normalized
+ * by {@link NEATENSTEIN_RENDER_DISTANCE_CAP}.
+ *
+ * @param gameState - Current deterministic game-state snapshot.
+ * @param flatMap - Row-major wall map (`Uint8Array`, non-zero = wall).
+ * @param mapSize - Width and height of the square grid.
+ * @returns A 15-element observation vector for `Network.activate(sensors)`.
  *
  * @example
  * ```ts
@@ -374,47 +443,47 @@ export function buildVisionVector(
  * const outputs = network.activate(sensors);
  * ```
  *
- * @see AC-065
+ * @see AC-P3S1b-001, AC-P3S1b-002, AC-P3S1b-003
  */
 export function extractSensors(
   gameState: GameState,
   flatMap: Uint8Array,
   mapSize: number,
 ): number[] {
-  const sensors = new Array<number>(12).fill(0);
+  const sensors = new Array<number>(15).fill(0);
   const p = gameState.player;
+  const twoPi = 2 * Math.PI;
 
-  // Player sensors (5)
-  sensors[0] = p.maxHealth > 0 ? p.health / p.maxHealth : 0;
-  sensors[1] = p.ammo;
-  sensors[2] = p.angleRad;
-  sensors[3] = p.position.x;
-  sensors[4] = p.position.y;
+  // Player sensors (5) — normalized to [0, 1].
+  sensors[0] =
+    p.maxHealth > 0 ? Math.min(1, Math.max(0, p.health / p.maxHealth)) : 0;
+  sensors[1] = p.maxAmmo > 0 ? Math.min(1, Math.max(0, p.ammo / p.maxAmmo)) : 0;
+  sensors[2] = (((p.angleRad % twoPi) + twoPi) % twoPi) / twoPi;
+  sensors[3] = Math.min(1, Math.max(0, p.position.x / mapSize));
+  sensors[4] = Math.min(1, Math.max(0, p.position.y / mapSize));
 
-  // Nearest enemy sensors (3)
-  const enemies = gameState.enemies.filter((e) => e.active !== false);
-  if (enemies.length > 0) {
-    let nearestEnemy = enemies[0];
-    let nearestDist = Infinity;
-    for (const e of enemies) {
-      const dx = e.position.x - p.position.x;
-      const dy = e.position.y - p.position.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearestEnemy = e;
-      }
-    }
-    const ndx = nearestEnemy.position.x - p.position.x;
-    const ndy = nearestEnemy.position.y - p.position.y;
+  // Nearest visible enemy sensors (3) — zeroed if no visible enemy.
+  const visibleEnemy = findNearestVisibleEnemy(gameState, flatMap, mapSize);
+  if (visibleEnemy !== null) {
+    const ndx = visibleEnemy.position.x - p.position.x;
+    const ndy = visibleEnemy.position.y - p.position.y;
+    const dist = Math.hypot(ndx, ndy);
     const bearing = Math.atan2(ndy, ndx) - p.angleRad;
-    // Normalize to [-π, π].
-    sensors[5] = Math.atan2(Math.sin(bearing), Math.cos(bearing));
-    sensors[6] = nearestDist;
-    sensors[7] = nearestEnemy.health;
+    const normalizedBearing = Math.atan2(Math.sin(bearing), Math.cos(bearing));
+
+    sensors[5] = (normalizedBearing + Math.PI) / twoPi;
+    sensors[6] = Math.min(1, dist / VISION_RANGE_CELLS);
+    const enemyMax = visibleEnemy.maxHealth ?? 100;
+    sensors[7] =
+      enemyMax > 0
+        ? Math.min(1, Math.max(0, visibleEnemy.health / enemyMax))
+        : 0;
+
+    sensors[12] = 1;
+    sensors[13] = Math.abs(normalizedBearing) <= FIRING_ARC_HALF_ANGLE ? 1 : 0;
   }
 
-  // Wall raycasts (4) — N, E, S, W cardinal directions.
+  // Wall raycasts (4) — N, E, S, W cardinal directions, normalized to [0, 1].
   for (let i = 0; i < DIRECTIONS.length; i++) {
     const [dirX, dirY] = DIRECTIONS[i];
     const hit = castRayDDAFromFlatMap(
@@ -425,8 +494,18 @@ export function extractSensors(
       dirX,
       dirY,
     );
-    sensors[8 + i] = hit.perpWallDist;
+    sensors[8 + i] = Number.isFinite(hit.perpWallDist)
+      ? Math.min(
+          1,
+          Math.max(0, hit.perpWallDist / NEATENSTEIN_RENDER_DISTANCE_CAP),
+        )
+      : 1;
   }
+
+  // lastShotHit — read from gameState (field added in P3S1-clear-champions).
+  const lastShotHit = (gameState as GameState & { lastShotHit?: boolean })
+    .lastShotHit;
+  sensors[14] = lastShotHit === true ? 1 : 0;
 
   return sensors;
 }

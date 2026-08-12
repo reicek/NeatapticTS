@@ -152,6 +152,100 @@ describe('Neatenstein harness main-runner', () => {
     });
   });
 
+  describe('P5S1: fire gate wired through fitness evaluation', () => {
+    beforeEach(() => {
+      jest.resetModules();
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('suppresses fire when no enemy is visible', async () => {
+      const networkModule =
+        (await import('../../../../src/architecture/network/network')) as unknown as {
+          default: { prototype: { activate: jest.Mock } };
+        };
+      jest
+        .spyOn(networkModule.default.prototype, 'activate')
+        .mockReturnValue([0, 0, 0, 1, 0]);
+
+      const enemyNavModule =
+        (await import('../../scripts/enemy-navigation')) as unknown as {
+          extractSensors: jest.Mock;
+        };
+      jest
+        .spyOn(enemyNavModule, 'extractSensors')
+        .mockReturnValue(new Array(15).fill(0));
+
+      const { runEpisode } = (await import('./main-runner.ts')) as {
+        runEpisode: typeof MainRunner.runEpisode;
+      };
+      const signal = runEpisode(
+        { id: 0, genome: { nodes: [], connections: [] } },
+        { kind: 'mlp', weights: new Float32Array(8) },
+        99,
+      );
+      expect(signal.shotsFired).toBe(0);
+    });
+
+    it('allows fire when an enemy is visible', async () => {
+      const networkModule =
+        (await import('../../../../src/architecture/network/network')) as unknown as {
+          default: { prototype: { activate: jest.Mock } };
+        };
+      jest
+        .spyOn(networkModule.default.prototype, 'activate')
+        .mockReturnValue([0, 0, 0, 1, 0]);
+
+      const enemyNavModule =
+        (await import('../../scripts/enemy-navigation')) as unknown as {
+          extractSensors: jest.Mock;
+        };
+      const sensors = new Array(15).fill(0);
+      sensors[12] = 1;
+      jest.spyOn(enemyNavModule, 'extractSensors').mockReturnValue(sensors);
+
+      const { runEpisode } = (await import('./main-runner.ts')) as {
+        runEpisode: typeof MainRunner.runEpisode;
+      };
+      const signal = runEpisode(
+        { id: 0, genome: { nodes: [], connections: [] } },
+        { kind: 'mlp', weights: new Float32Array(8) },
+        99,
+      );
+      expect(signal.shotsFired ?? 0).toBeGreaterThan(0);
+    });
+
+    it('falls back to zero when the enemy-visible sensor is undefined', async () => {
+      const networkModule =
+        (await import('../../../../src/architecture/network/network')) as unknown as {
+          default: { prototype: { activate: jest.Mock } };
+        };
+      jest
+        .spyOn(networkModule.default.prototype, 'activate')
+        .mockReturnValue([0, 0, 0, 1, 0]);
+
+      const enemyNavModule =
+        (await import('../../scripts/enemy-navigation')) as unknown as {
+          extractSensors: jest.Mock;
+        };
+      const sensors = new Array(15).fill(0);
+      sensors[12] = undefined;
+      jest.spyOn(enemyNavModule, 'extractSensors').mockReturnValue(sensors);
+
+      const { runEpisode } = (await import('./main-runner.ts')) as {
+        runEpisode: typeof MainRunner.runEpisode;
+      };
+      const signal = runEpisode(
+        { id: 0, genome: { nodes: [], connections: [] } },
+        { kind: 'mlp', weights: new Float32Array(8) },
+        99,
+      );
+      expect(signal.shotsFired).toBe(0);
+    });
+  });
+
   describe('P8S1-coverage-closure: main-runner edge branches', () => {
     beforeEach(() => {
       jest.resetModules();

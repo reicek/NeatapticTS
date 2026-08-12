@@ -112,6 +112,7 @@ const config = {
         'examples/neatenstein/browser-entry/harness/arms-race.ts',
         'examples/neatenstein/browser-entry/harness/hive-density.ts',
         'examples/neatenstein/browser-entry/harness/main-runner.ts',
+        'examples/neatenstein/browser-entry/worker/eval.worker.ts',
         'examples/neatenstein/browser-entry/harness/snapshot.ts',
         'examples/neatenstein/browser-entry/host/hud.ts',
         'examples/neatenstein/browser-entry/host/resize.ts',

@@ -136,12 +136,15 @@ export function allEnemiesCleared(enemies: EnemyState[]): boolean {
 /**
  * Advance enemy spawning by one fixed tick.
  *
- * Waves spawn one enemy per tick at the current map edge, cycling through the
- * eight cardinal/intercardinal edges. A new wave/batch only begins once all
- * enemies from the previous batch have been killed or deactivated. If every
- * edge cell is solid, the spawn falls back to the guaranteed-open map center.
- * The returned state is always a new immutable snapshot, even when no enemy is
- * spawned, so callers can replay history without accidental mutation.
+ * Enemies spawn as a continuous trickle: at most one new enemy per tick, and
+ * never more than {@link NEATENSTEIN_ENEMY_MAX_CONCURRENT} alive at once. The
+ * spawner cycles through the eight cardinal/intercardinal map edges so each
+ * new enemy arrives from a different direction. Dead or inactive enemies stay
+ * in the returned array — the display worker syncs enemy positions by array
+ * index, so removing them would break index alignment and cause new enemies
+ * to inherit the positions of dead ones. The worker's de-rez system removes
+ * dead enemies from the display array after the de-rez animation completes
+ * (700ms).
  *
  * @param state - Snapshot before the spawn tick.
  * @param _dtMs - Elapsed simulation time in milliseconds (reserved for future
@@ -165,7 +168,7 @@ export function spawnWaveTick(
 ): SpawnWaveTickResult {
   // Reserved for future spawn-rate modulation; the public contract accepts
   // the elapsed tick time even though the current policy is one enemy per
-  // tick while a wave is filling.
+  // tick while the arena is below the alive-enemy cap.
   void _dtMs;
 
   // Count alive enemies for the concurrent limit check. Do NOT filter dead
@@ -177,20 +180,6 @@ export function spawnWaveTick(
   const aliveCount = state.enemies.filter(
     (enemy) => (enemy.health ?? 0) > 0 && enemy.active !== false,
   ).length;
-
-  // A batch is complete when spawnCount is a multiple of the concurrent cap.
-  // Once a full batch has been spawned, wait for all enemies to die before
-  // starting the next batch.
-  const batchComplete =
-    state.spawnCount > 0 &&
-    state.spawnCount % NEATENSTEIN_ENEMY_MAX_CONCURRENT === 0;
-
-  if (batchComplete && !allEnemiesCleared(state.enemies)) {
-    return {
-      spawnedThisTick: 0,
-      state: { ...state },
-    };
-  }
 
   // Do not exceed the concurrent alive enemy limit.
   if (aliveCount >= NEATENSTEIN_ENEMY_MAX_CONCURRENT) {

@@ -16,12 +16,19 @@ import {
   NEATENSTEIN_FLOOR_FOV_RADIANS,
   NEATENSTEIN_FLOOR_HORIZON_RATIO,
 } from '../renderer/floor';
+import { castRayDDAFromFlatMap } from '../renderer/raycast';
+import {
+  NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD,
+  NEATENSTEIN_KITING_APPROACH_DISTANCE_CELLS,
+  NEATENSTEIN_KITING_BACKPEDAL_DISTANCE_CELLS,
+} from '../host/game/constants';
 import type {
   ControlledEnemy,
   EnemyControllerState,
 } from '../../scripts/enemy-controller';
 import * as robotSpriteData from '../../robot-sprite-data.js';
-import type { GameState } from '../host/game/types';
+import type { GameTickInputSnapshot } from '../host/game/tick';
+import type { EnemyState, GameState } from '../host/game/types';
 
 const loadModule = (path: string): Promise<unknown> => import(path);
 
@@ -2732,18 +2739,22 @@ describe('P4S1-worker-branch: humanMode branching and NEAT controller', () => {
     const workerModule = (await loadModule('./display.worker.ts')) as {
       __testOnlySetChampionMainNetwork?(network: unknown): void;
       __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
     };
 
     sendInitMessage('cpu');
     const mockNet = createMockNetwork([0.9, 0.1, 0.75, 0.6, 0.3]);
     workerModule.__testOnlySetChampionMainNetwork?.(mockNet);
 
+    // The champion network path is only active when enemies exist.
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 14.5, y: 10.5 }]);
+
     sendSimStateMessage(0.25, { humanMode: 'auto' });
 
     expect(mockNet.activate).toHaveBeenCalledTimes(1);
-    // Sensor vector should have 12 inputs (NEATENSTEIN_MAIN_NEAT_INPUTS).
+    // Sensor vector should have 15 inputs (NEATENSTEIN_MAIN_NEAT_INPUTS).
     const sensorArg = mockNet.activate.mock.calls[0][0] as number[];
-    expect(sensorArg.length).toBe(12);
+    expect(sensorArg.length).toBe(15);
     expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
   });
 
@@ -2780,7 +2791,7 @@ describe('P4S2-sensor-activation: real sensor extraction and tanh output mapping
     };
   }
 
-  it('AC-065: sensor vector has 12 real (non-zero) elements from game state', async () => {
+  it('AC-065: sensor vector has 15 real (non-zero) elements from game state', async () => {
     jest.resetModules();
     const workerModule = (await loadModule('./display.worker.ts')) as {
       __testOnlySetChampionMainNetwork?(network: unknown): void;
@@ -2799,7 +2810,7 @@ describe('P4S2-sensor-activation: real sensor extraction and tanh output mapping
 
     expect(mockNet.activate).toHaveBeenCalledTimes(1);
     const sensorArg = mockNet.activate.mock.calls[0][0] as number[];
-    expect(sensorArg.length).toBe(12);
+    expect(sensorArg.length).toBe(15);
     // With a real game state and enemy, at least some sensors should be non-zero.
     // Player health ratio, position, ammo should all be non-zero.
     expect(sensorArg[0]).toBeGreaterThan(0); // health ratio
@@ -2812,6 +2823,7 @@ describe('P4S2-sensor-activation: real sensor extraction and tanh output mapping
     const workerModule = (await loadModule('./display.worker.ts')) as {
       __testOnlySetChampionMainNetwork?(network: unknown): void;
       __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
     };
 
     sendInitMessage('cpu');
@@ -2820,6 +2832,9 @@ describe('P4S2-sensor-activation: real sensor extraction and tanh output mapping
     // fire = 0.6 > 0 = true, dash = 0.6 > 0.5 = true
     const mockNet = createMockNetwork([1.0, -1.0, 0.5, 0.6, 0.6]);
     workerModule.__testOnlySetChampionMainNetwork?.(mockNet);
+
+    // Champion network path requires an alive enemy to be selected.
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 14.5, y: 10.5 }]);
 
     // We verify the mapping indirectly: the game tick receives the mapped input
     // and advances the game state. Since we cannot directly inspect the
@@ -2859,9 +2874,16 @@ describe('P4S2-sensor-activation: real sensor extraction and tanh output mapping
       __testOnlySetChampionMainNetwork?(network: unknown): void;
       __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
       __testOnlyGetGameState?(): GameState | null;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyResetFireGateState?(): void;
     };
 
     sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+
+    // Inject an enemy near the player spawn (60.5, 60.5) so enemyVisible = 1
+    // and the P5S1 fire gate allows fire to pass through.
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 62.5, y: 60.5 }]);
 
     // With fire = 0.5 (> 0), the player should fire.
     const mockNet = createMockNetwork([0, 0, 0, 0.5, 0]);
@@ -3117,8 +3139,18 @@ describe('P8S1-coverage-closure: display.worker uncovered branches', () => {
     spy.mockRestore();
   });
 
-  it('completes the async arms-race evaluation after wave clear', async () => {
+  it('delegates the arms-race evaluation to the eval worker after wave clear', async () => {
     jest.resetModules();
+
+    // Mock neataptic so Network.fromJSON returns a lightweight stand-in
+    // instead of deserializing a real network in the test environment.
+    jest.doMock('neataptic', () => ({
+      Network: {
+        fromJSON: jest.fn(() => ({
+          activate: jest.fn(() => [0.5, 0.5, 0.5, 0.5]),
+        })),
+      },
+    }));
 
     const tickModule = await import('../host/game/tick');
     const gameTickSpy = jest
@@ -3127,15 +3159,29 @@ describe('P8S1-coverage-closure: display.worker uncovered branches', () => {
         (state: GameState) => ({ ...state, enemies: [] }) as GameState,
       );
 
+    // Create a mock eval worker to intercept the delegation (AC-P2S1b-002).
+    const mockEvalWorker = {
+      postMessage: jest.fn(),
+      onmessage: null as ((event: MessageEvent) => void) | null,
+    };
+
     const workerModule = (await loadModule('./display.worker.ts')) as {
       __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
       __testOnlyGetPendingGeneration?(): number | null;
       __testOnlyGetChampionMainNetwork?(): unknown;
       __testOnlyGetGameState?(): GameState | null;
       __testOnlyGetAllEnemiesCleared?(): boolean;
+      __testOnlySetEvalWorker?(
+        worker: {
+          postMessage: (msg: unknown) => void;
+          onmessage: unknown;
+        } | null,
+      ): void;
     };
 
     sendInitMessage('cpu');
+    // Inject the mock eval worker after init (init resets evalWorker).
+    workerModule.__testOnlySetEvalWorker?.(mockEvalWorker);
     workerModule.__testOnlyInjectTestEnemies?.([{ x: 13.5, y: 12.5 }]);
 
     // Establish at least one alive enemy so the wave-clear transition fires.
@@ -3147,14 +3193,39 @@ describe('P8S1-coverage-closure: display.worker uncovered branches', () => {
     sendSimStateMessage();
 
     expect(workerModule.__testOnlyGetAllEnemiesCleared?.()).toBe(true);
+    // AC-P2S1b-001: eval worker handles evaluation asynchronously.
     expect(workerModule.__testOnlyGetPendingGeneration?.()).not.toBeNull();
 
-    // Wait for the fire-and-forget Neat evaluation to finish. Popsize is 4,
-    // so this should complete in a few seconds even on slow CI runners.
+    // AC-P2S1b-002: display.worker delegates via postMessage, no blocking await.
+    const evalPost = mockEvalWorker.postMessage.mock.calls[0]?.[0] as {
+      type: string;
+      seed: number;
+      generation: number;
+      enemySnapshot: unknown;
+      humanMode: boolean;
+    };
+    expect(evalPost).toBeDefined();
+    expect(evalPost.type).toBe('evaluate');
+
+    // Simulate the eval worker completing: post evalComplete back.
+    mockEvalWorker.onmessage?.({
+      data: {
+        type: 'evalComplete',
+        generation: 1,
+        championNetworkJSON: {
+          input: 2,
+          output: 2,
+          nodes: [],
+          connections: [],
+        },
+      },
+    } as unknown as MessageEvent);
+
+    // Wait for the async handleEvalComplete to finish.
     const startMs = Date.now();
     while (
       workerModule.__testOnlyGetPendingGeneration?.() !== null &&
-      Date.now() - startMs < 60000
+      Date.now() - startMs < 5000
     ) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
@@ -3166,7 +3237,7 @@ describe('P8S1-coverage-closure: display.worker uncovered branches', () => {
     );
 
     gameTickSpy.mockRestore();
-  }, 70000);
+  }, 10000);
 
   it('does not inject enemy weights when the advanceWave snapshot is not mlp', async () => {
     jest.resetModules();
@@ -3234,13 +3305,28 @@ describe('P8S1-coverage-closure: display.worker uncovered branches', () => {
   it('does not launch a second arms-race evaluation while one is pending', async () => {
     jest.resetModules();
 
+    // Inject a mock eval worker that captures but never responds, so
+    // pendingGeneration stays non-null throughout the test.
+    const mockEvalWorker = {
+      postMessage: jest.fn(),
+      onmessage: null as ((event: MessageEvent) => void) | null,
+    };
+
     const workerModule = (await loadModule('./display.worker.ts')) as {
       __testOnlyGetPendingGeneration?(): number | null;
       __testOnlyGetGameState?(): GameState | null;
       __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlySetEvalWorker?(
+        worker: {
+          postMessage: (msg: unknown) => void;
+          onmessage: unknown;
+        } | null,
+      ): void;
     };
 
     sendInitMessage('cpu');
+    // Inject the mock eval worker after init (init resets evalWorker).
+    workerModule.__testOnlySetEvalWorker?.(mockEvalWorker);
 
     const realTick = await import('../host/game/tick');
     let keepEnemiesAlive = false;
@@ -3257,6 +3343,8 @@ describe('P8S1-coverage-closure: display.worker uncovered branches', () => {
     sendSimStateMessage();
     const firstPending = workerModule.__testOnlyGetPendingGeneration?.();
     expect(firstPending).not.toBeNull();
+    // AC-P2S1b-002: delegation happened via postMessage.
+    expect(mockEvalWorker.postMessage).toHaveBeenCalledTimes(1);
 
     // Tick once with alive enemies to reset prevAllEnemiesCleared back to false
     // while the first generation is still pending.
@@ -3275,15 +3363,1145 @@ describe('P8S1-coverage-closure: display.worker uncovered branches', () => {
     sendSimStateMessage();
     expect(workerModule.__testOnlyGetPendingGeneration?.()).toBe(firstPending);
 
-    // Wait for the fire-and-forget Neat evaluation to finish so no async work
-    // leaks after the Jest environment is torn down.
-    let pending = workerModule.__testOnlyGetPendingGeneration?.();
-    for (let i = 0; i < 300 && pending !== null; i += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      pending = workerModule.__testOnlyGetPendingGeneration?.();
-    }
-    expect(pending).toBeNull();
+    // No second delegation: postMessage should still have been called only once.
+    expect(mockEvalWorker.postMessage).toHaveBeenCalledTimes(1);
 
+    gameTickSpy.mockRestore();
+  });
+});
+
+describe('AC-P3S1c-002: champion extinction on input count change', () => {
+  function createMockNetwork(outputs: number[] = [0.8, 0.2, 0.5, 0.9, 0.1]): {
+    activate: jest.Mock;
+  } {
+    return { activate: jest.fn(() => outputs) } as unknown as {
+      activate: jest.Mock;
+    };
+  }
+
+  it('clears championMainNetwork when input count changes from 12 to 15', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlySetChampionInputCount?(count: number | null): void;
+      __testOnlyGetChampionMainNetwork?(): unknown;
+      __testOnlyGetChampionInputCount?(): number | null;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+
+    // Inject a champion network (sets lastChampionInputCount = 15).
+    workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
+    expect(workerModule.__testOnlyGetChampionMainNetwork?.()).not.toBeNull();
+
+    // Simulate the champion being evolved with 12 inputs (the old count).
+    workerModule.__testOnlySetChampionInputCount?.(12);
+
+    // Send a simState in auto mode — the extinction guard should fire.
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    // Champion should be cleared because input count mismatched.
+    expect(workerModule.__testOnlyGetChampionMainNetwork?.()).toBeNull();
+    expect(workerModule.__testOnlyGetChampionInputCount?.()).toBeNull();
+
+    // Fallback AI should have been used (still 'auto' source).
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('does not clear championMainNetwork when input count matches', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetChampionMainNetwork?(): unknown;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+
+    // Inject a champion network (sets lastChampionInputCount = 15).
+    workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
+
+    // Send a simState in auto mode — input count matches, no extinction.
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    // Champion should still be present.
+    expect(workerModule.__testOnlyGetChampionMainNetwork?.()).not.toBeNull();
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('clears lastChampionInputCount on re-init', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetChampionInputCount?(): number | null;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetChampionMainNetwork?.(createMockNetwork());
+    expect(workerModule.__testOnlyGetChampionInputCount?.()).toBe(15);
+
+    // Re-init should clear the input count.
+    sendInitMessage('cpu');
+    expect(workerModule.__testOnlyGetChampionInputCount?.()).toBeNull();
+  });
+});
+
+describe('P5S1-fire-gate: soft fire gate in buildAutoTickInput', () => {
+  /**
+   * Minimal mock that satisfies the `Network.activate(input)` call site inside
+   * `buildAutoTickInput`.  The worker only calls `activate(sensors)` on the
+   * network — no other methods are needed for this slice.
+   */
+  function createMockNetwork(outputs: number[] = [0.8, 0.2, 0.5, 0.9, 0.1]): {
+    activate: jest.Mock;
+  } {
+    return { activate: jest.fn(() => outputs) } as unknown as {
+      activate: jest.Mock;
+    };
+  }
+
+  it('AC-P5S1a-001: suppresses fire when no enemy is visible (no enemies on map)', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+      __testOnlyResetFireGateState?(): void;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+
+    // Network wants to fire (output[3] = 0.9 > 0)
+    workerModule.__testOnlySetChampionMainNetwork?.(
+      createMockNetwork([0, 0, 0, 0.9, 0]),
+    );
+
+    // No enemies injected → enemyVisible sensor = 0 → fire should be suppressed
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+
+    // Verify no bolts were fired (fire was suppressed by the gate)
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    expect((state?.bolts ?? []).length).toBe(0);
+  });
+
+  it('AC-P5S1a-002: allows fire when an enemy is visible', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyResetFireGateState?(): void;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+
+    // Network wants to fire (output[3] = 0.5 > 0)
+    workerModule.__testOnlySetChampionMainNetwork?.(
+      createMockNetwork([0, 0, 0, 0.5, 0]),
+    );
+
+    // Inject an enemy near the player spawn (60.5, 60.5) so enemyVisible = 1
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 62.5, y: 60.5 }]);
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    // Fire should NOT be suppressed — a bolt should be created
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    expect((state?.bolts ?? []).length).toBeGreaterThan(0);
+  });
+
+  it('AC-P5S1a-003: hysteresis state maintained between ticks', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetFireGateState?(): { fireActive: boolean };
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyResetFireGateState?(): void;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+
+    // Initially gate should be closed
+    expect(workerModule.__testOnlyGetFireGateState?.().fireActive).toBe(false);
+
+    // Inject enemy near the player spawn (60.5, 60.5) so enemyVisible = 1
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 62.5, y: 60.5 }]);
+    workerModule.__testOnlySetChampionMainNetwork?.(
+      createMockNetwork([0, 0, 0, 0.5, 0]),
+    );
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    // Gate should now be open
+    expect(workerModule.__testOnlyGetFireGateState?.().fireActive).toBe(true);
+  });
+
+  it('AC-P5S1a-001: fire gate resets on re-init', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetFireGateState?(): { fireActive: boolean };
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyResetFireGateState?(): void;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+
+    // Open the gate by having an enemy visible near the player spawn
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 62.5, y: 60.5 }]);
+    workerModule.__testOnlySetChampionMainNetwork?.(
+      createMockNetwork([0, 0, 0, 0.5, 0]),
+    );
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+    expect(workerModule.__testOnlyGetFireGateState?.().fireActive).toBe(true);
+
+    // Re-init should reset the gate to closed
+    sendInitMessage('cpu');
+    expect(workerModule.__testOnlyGetFireGateState?.().fireActive).toBe(false);
+  });
+
+  it('AC-P5S1a-002: fire not suppressed when enemy visible but outside firing arc', async () => {
+    jest.resetModules();
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyResetFireGateState?(): void;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+
+    // Network wants to fire
+    workerModule.__testOnlySetChampionMainNetwork?.(
+      createMockNetwork([0, 0, 0, 0.5, 0]),
+    );
+
+    // Inject enemy near the player spawn — even if outside firing arc,
+    // enemyVisible = 1 (visibility only checks vision range + line of sight)
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 62.5, y: 60.5 }]);
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    // Fire should not be suppressed (enemy is visible)
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    expect((state?.bolts ?? []).length).toBeGreaterThan(0);
+  });
+});
+
+describe('02-vision-fallback: vision-aware fallback AI', () => {
+  afterEach(() => {
+    jest.dontMock('../../scripts/enemy-navigation');
+  });
+
+  it('selects target via findNearestVisibleEnemy and steers toward it', async () => {
+    jest.resetModules();
+    const findNearestVisibleEnemyMock = jest.fn<
+      (
+        state: GameState,
+        flatMap: Uint8Array,
+        mapSize: number,
+      ) => EnemyState | null
+    >(() => null);
+    jest.doMock('../../scripts/enemy-navigation', () => ({
+      ...(jest.requireActual('../../scripts/enemy-navigation') as Record<
+        string,
+        unknown
+      >),
+      findNearestVisibleEnemy: findNearestVisibleEnemyMock,
+    }));
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    state!.player.angleRad = 0;
+    const px = state!.player.position.x;
+    const py = state!.player.position.y;
+
+    // Return a visible enemy directly south-east of the player (bearing +π/4).
+    findNearestVisibleEnemyMock.mockReturnValue({
+      position: { x: px + 5, y: py + 5 },
+      health: 100,
+      active: true,
+    } as unknown as EnemyState);
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+    const after = workerModule.__testOnlyGetGameState?.();
+    expect(after).not.toBeNull();
+    expect(after!.player.angleRad).toBeGreaterThan(0);
+    expect(findNearestVisibleEnemyMock).toHaveBeenCalled();
+  });
+
+  it('does not fire when no enemy is visible', async () => {
+    jest.resetModules();
+    const findNearestVisibleEnemyMock = jest.fn<
+      (
+        state: GameState,
+        flatMap: Uint8Array,
+        mapSize: number,
+      ) => EnemyState | null
+    >(() => null);
+    jest.doMock('../../scripts/enemy-navigation', () => ({
+      ...(jest.requireActual('../../scripts/enemy-navigation') as Record<
+        string,
+        unknown
+      >),
+      findNearestVisibleEnemy: findNearestVisibleEnemyMock,
+    }));
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyResetFireGateState?(): void;
+      __testOnlyGetFireGateState?(): { fireActive: boolean };
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    expect((state?.bolts ?? []).length).toBe(0);
+    expect(workerModule.__testOnlyGetFireGateState?.().fireActive).toBe(false);
+    expect(findNearestVisibleEnemyMock).toHaveBeenCalled();
+  });
+
+  it('fires through the shared fire gate when a visible enemy is in arc', async () => {
+    jest.resetModules();
+    const findNearestVisibleEnemyMock = jest.fn<
+      (
+        state: GameState,
+        flatMap: Uint8Array,
+        mapSize: number,
+      ) => EnemyState | null
+    >(() => null);
+    jest.doMock('../../scripts/enemy-navigation', () => ({
+      ...(jest.requireActual('../../scripts/enemy-navigation') as Record<
+        string,
+        unknown
+      >),
+      findNearestVisibleEnemy: findNearestVisibleEnemyMock,
+    }));
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyResetFireGateState?(): void;
+      __testOnlyGetFireGateState?(): { fireActive: boolean };
+    };
+
+    findNearestVisibleEnemyMock.mockImplementation(
+      (gameStateArg: GameState) => {
+        const p = gameStateArg.player;
+        return {
+          position: {
+            x: p.position.x + Math.cos(p.angleRad) * 3,
+            y: p.position.y + Math.sin(p.angleRad) * 3,
+          },
+          health: 100,
+          active: true,
+        } as unknown as EnemyState;
+      },
+    );
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+    expect(workerModule.__testOnlyGetFireGateState?.().fireActive).toBe(false);
+
+    // Run enough ticks to hit the fallback cooldown interval.
+    for (let i = 0; i < 25; i += 1) {
+      sendSimStateMessage(0.25, { humanMode: 'auto' });
+    }
+
+    const after = workerModule.__testOnlyGetGameState?.();
+    expect(after).not.toBeNull();
+    expect((after?.bolts ?? []).length).toBeGreaterThan(0);
+    expect(workerModule.__testOnlyGetFireGateState?.().fireActive).toBe(true);
+    expect(findNearestVisibleEnemyMock).toHaveBeenCalled();
+  });
+});
+
+describe('P9S2-fallback-hunter: wall-bounce exploration and kiting', () => {
+  afterEach(() => {
+    jest.dontMock('../renderer/raycast');
+    jest.dontMock('../../scripts/enemy-navigation');
+  });
+
+  it('defaults to forward exploration when wallMap is null', async () => {
+    jest.resetModules();
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyBuildFallbackAutoTickInput?(
+        state: GameState,
+      ): GameTickInputSnapshot;
+    };
+
+    const state = {
+      player: {
+        position: { x: 12.5, y: 12.5 },
+        angleRad: 0,
+      },
+    } as unknown as GameState;
+
+    const input = workerModule.__testOnlyBuildFallbackAutoTickInput?.(state);
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(1);
+    expect(input!.lookDelta).toBe(0);
+    expect(input!.fire).toBe(false);
+  });
+
+  function createOpenRaycastMock(): jest.MockedFunction<
+    typeof castRayDDAFromFlatMap
+  > {
+    return jest.fn(() => ({
+      perpWallDist: Number.POSITIVE_INFINITY,
+      side: 0 as const,
+      mapX: 0,
+      mapY: 0,
+    }));
+  }
+
+  function installRaycastMock(
+    mock: jest.MockedFunction<typeof castRayDDAFromFlatMap>,
+  ): void {
+    jest.doMock('../renderer/raycast', () => ({
+      ...(jest.requireActual('../renderer/raycast') as Record<string, unknown>),
+      castRayDDAFromFlatMap: mock,
+    }));
+  }
+
+  it('moves forward and persists direction when no enemy and no wall is ahead', async () => {
+    jest.resetModules();
+    const raycastMock = createOpenRaycastMock();
+    installRaycastMock(raycastMock);
+
+    const findNearestVisibleEnemyMock = jest.fn<
+      (
+        state: GameState,
+        flatMap: Uint8Array,
+        mapSize: number,
+      ) => EnemyState | null
+    >(() => null);
+    jest.doMock('../../scripts/enemy-navigation', () => ({
+      ...(jest.requireActual('../../scripts/enemy-navigation') as Record<
+        string,
+        unknown
+      >),
+      findNearestVisibleEnemy: findNearestVisibleEnemyMock,
+    }));
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetLastFallbackInput?(): GameTickInputSnapshot | null;
+      __testOnlyResetFireGateState?(): void;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const input = workerModule.__testOnlyGetLastFallbackInput?.();
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(1);
+    expect(input!.lookDelta).toBe(0);
+    expect(input!.fire).toBe(false);
+    expect(raycastMock).toHaveBeenCalled();
+    expect(findNearestVisibleEnemyMock).toHaveBeenCalled();
+  });
+
+  it('fallback exploration overrides a champion network spin output when no enemies exist', async () => {
+    jest.resetModules();
+
+    /**
+     * Minimal mock that satisfies the `Network.activate(input)` call site
+     * inside `buildAutoTickInput`. Output index 2 carries a non-zero yaw delta,
+     * which would make the hero spin if the champion path were selected.
+     */
+    function createSpinningMockNetwork(): {
+      activate: jest.Mock;
+    } {
+      return {
+        activate: jest.fn(() => [0, 0, 1.0, 0, 0]),
+      } as unknown as {
+        activate: jest.Mock;
+      };
+    }
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyGetLastFallbackInput?(): GameTickInputSnapshot | null;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetChampionMainNetwork?.(
+      createSpinningMockNetwork(),
+    );
+    workerModule.__testOnlyInjectTestEnemies?.([]);
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const input = workerModule.__testOnlyGetLastFallbackInput?.();
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(1);
+    expect(input!.lookDelta).toBe(0);
+  });
+
+  it('falls back to exploration AI when champion network activation throws', async () => {
+    jest.resetModules();
+
+    function createThrowingMockNetwork(): {
+      activate: jest.Mock;
+    } {
+      return {
+        activate: jest.fn(() => {
+          throw new Error('simulated network failure');
+        }),
+      } as unknown as {
+        activate: jest.Mock;
+      };
+    }
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetChampionMainNetwork?(network: unknown): void;
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyGetLastFallbackInput?(): GameTickInputSnapshot | null;
+      __testOnlyGetLastTickInputSource?(): 'auto' | 'human';
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetChampionMainNetwork?.(
+      createThrowingMockNetwork(),
+    );
+    // Force the champion path to be selected by providing an alive enemy.
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 14.5, y: 10.5 }]);
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const input = workerModule.__testOnlyGetLastFallbackInput?.();
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(1);
+    expect(input!.lookDelta).toBe(0);
+    expect(workerModule.__testOnlyGetLastTickInputSource?.()).toBe('auto');
+  });
+
+  it('turns toward the more open angle when a wall is directly ahead', async () => {
+    jest.resetModules();
+
+    const bounce = NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD;
+    const forwardDir = { x: Math.cos(0), y: Math.sin(0) };
+    const bouncePlusDir = { x: Math.cos(bounce), y: Math.sin(bounce) };
+
+    const raycastMock = jest.fn<typeof castRayDDAFromFlatMap>(
+      (
+        _flatMap: Uint8Array,
+        _side: number,
+        _posX: number,
+        _posY: number,
+        dirX: number,
+        dirY: number,
+      ) => {
+        const dotForward = dirX * forwardDir.x + dirY * forwardDir.y;
+        const dotPlus = dirX * bouncePlusDir.x + dirY * bouncePlusDir.y;
+        if (dotForward > 0.99) {
+          return {
+            perpWallDist: 1,
+            side: 0 as const,
+            mapX: 0,
+            mapY: 0,
+          };
+        }
+        if (dotPlus > 0.99) {
+          return {
+            perpWallDist: Number.POSITIVE_INFINITY,
+            side: 0 as const,
+            mapX: 0,
+            mapY: 0,
+          };
+        }
+        return {
+          perpWallDist: 2,
+          side: 1 as const,
+          mapX: 0,
+          mapY: 0,
+        };
+      },
+    );
+    installRaycastMock(raycastMock);
+
+    const findNearestVisibleEnemyMock = jest.fn<
+      (
+        state: GameState,
+        flatMap: Uint8Array,
+        mapSize: number,
+      ) => EnemyState | null
+    >(() => null);
+    jest.doMock('../../scripts/enemy-navigation', () => ({
+      ...(jest.requireActual('../../scripts/enemy-navigation') as Record<
+        string,
+        unknown
+      >),
+      findNearestVisibleEnemy: findNearestVisibleEnemyMock,
+    }));
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetLastFallbackInput?(): GameTickInputSnapshot | null;
+      __testOnlyGetGameState?(): GameState | null;
+    };
+
+    sendInitMessage('cpu');
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    state!.player.angleRad = 0;
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const input = workerModule.__testOnlyGetLastFallbackInput?.();
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(1);
+    // The +bounce direction is the most open, so the hunter turns right at
+    // the capped fallback turn rate.
+    expect(input!.lookDelta).toBeCloseTo(Math.PI / 12, 10);
+  });
+
+  it('turns left when the -bounce direction is the most open', async () => {
+    jest.resetModules();
+
+    const bounce = NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD;
+    const forwardDir = { x: Math.cos(0), y: Math.sin(0) };
+    const bounceMinusDir = { x: Math.cos(-bounce), y: Math.sin(-bounce) };
+
+    const raycastMock = jest.fn<typeof castRayDDAFromFlatMap>(
+      (
+        _flatMap: Uint8Array,
+        _side: number,
+        _posX: number,
+        _posY: number,
+        dirX: number,
+        dirY: number,
+      ) => {
+        const dotForward = dirX * forwardDir.x + dirY * forwardDir.y;
+        const dotMinus = dirX * bounceMinusDir.x + dirY * bounceMinusDir.y;
+        if (dotForward > 0.99) {
+          return {
+            perpWallDist: 1,
+            side: 0 as const,
+            mapX: 0,
+            mapY: 0,
+          };
+        }
+        if (dotMinus > 0.99) {
+          return {
+            perpWallDist: Number.POSITIVE_INFINITY,
+            side: 0 as const,
+            mapX: 0,
+            mapY: 0,
+          };
+        }
+        return {
+          perpWallDist: 2,
+          side: 1 as const,
+          mapX: 0,
+          mapY: 0,
+        };
+      },
+    );
+    installRaycastMock(raycastMock);
+
+    const findNearestVisibleEnemyMock = jest.fn<
+      (
+        state: GameState,
+        flatMap: Uint8Array,
+        mapSize: number,
+      ) => EnemyState | null
+    >(() => null);
+    jest.doMock('../../scripts/enemy-navigation', () => ({
+      ...(jest.requireActual('../../scripts/enemy-navigation') as Record<
+        string,
+        unknown
+      >),
+      findNearestVisibleEnemy: findNearestVisibleEnemyMock,
+    }));
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetLastFallbackInput?(): GameTickInputSnapshot | null;
+      __testOnlyGetGameState?(): GameState | null;
+    };
+
+    sendInitMessage('cpu');
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    state!.player.angleRad = 0;
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const input = workerModule.__testOnlyGetLastFallbackInput?.();
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(1);
+    expect(input!.lookDelta).toBeCloseTo(-Math.PI / 12, 10);
+  });
+
+  it('backpedals when a visible enemy is inside the backpedal distance', async () => {
+    jest.resetModules();
+    installRaycastMock(createOpenRaycastMock());
+
+    const findNearestVisibleEnemyMock = jest.fn<
+      (
+        state: GameState,
+        flatMap: Uint8Array,
+        mapSize: number,
+      ) => EnemyState | null
+    >(() => null);
+    jest.doMock('../../scripts/enemy-navigation', () => ({
+      ...(jest.requireActual('../../scripts/enemy-navigation') as Record<
+        string,
+        unknown
+      >),
+      findNearestVisibleEnemy: findNearestVisibleEnemyMock,
+    }));
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetLastFallbackInput?(): GameTickInputSnapshot | null;
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyResetFireGateState?(): void;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    const px = state!.player.position.x;
+    const py = state!.player.position.y;
+    state!.player.angleRad = 0;
+
+    const distance = NEATENSTEIN_KITING_BACKPEDAL_DISTANCE_CELLS - 5;
+    findNearestVisibleEnemyMock.mockReturnValue({
+      position: { x: px + distance, y: py },
+      health: 100,
+      active: true,
+    } as unknown as EnemyState);
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const input = workerModule.__testOnlyGetLastFallbackInput?.();
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(-1);
+    expect(input!.lookDelta).toBe(0);
+  });
+
+  it('holds position when a visible enemy is in the 15–20 cell kiting band', async () => {
+    jest.resetModules();
+    installRaycastMock(createOpenRaycastMock());
+
+    const findNearestVisibleEnemyMock = jest.fn<
+      (
+        state: GameState,
+        flatMap: Uint8Array,
+        mapSize: number,
+      ) => EnemyState | null
+    >(() => null);
+    jest.doMock('../../scripts/enemy-navigation', () => ({
+      ...(jest.requireActual('../../scripts/enemy-navigation') as Record<
+        string,
+        unknown
+      >),
+      findNearestVisibleEnemy: findNearestVisibleEnemyMock,
+    }));
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetLastFallbackInput?(): GameTickInputSnapshot | null;
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyResetFireGateState?(): void;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    const px = state!.player.position.x;
+    const py = state!.player.position.y;
+    state!.player.angleRad = 0;
+
+    const distance =
+      NEATENSTEIN_KITING_BACKPEDAL_DISTANCE_CELLS +
+      (NEATENSTEIN_KITING_APPROACH_DISTANCE_CELLS -
+        NEATENSTEIN_KITING_BACKPEDAL_DISTANCE_CELLS) /
+        2;
+    findNearestVisibleEnemyMock.mockReturnValue({
+      position: { x: px + distance, y: py },
+      health: 100,
+      active: true,
+    } as unknown as EnemyState);
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const input = workerModule.__testOnlyGetLastFallbackInput?.();
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(0);
+    expect(input!.lookDelta).toBe(0);
+  });
+
+  it('approaches when a visible enemy is beyond the kiting band', async () => {
+    jest.resetModules();
+    installRaycastMock(createOpenRaycastMock());
+
+    const findNearestVisibleEnemyMock = jest.fn<
+      (
+        state: GameState,
+        flatMap: Uint8Array,
+        mapSize: number,
+      ) => EnemyState | null
+    >(() => null);
+    jest.doMock('../../scripts/enemy-navigation', () => ({
+      ...(jest.requireActual('../../scripts/enemy-navigation') as Record<
+        string,
+        unknown
+      >),
+      findNearestVisibleEnemy: findNearestVisibleEnemyMock,
+    }));
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyGetLastFallbackInput?(): GameTickInputSnapshot | null;
+      __testOnlyGetGameState?(): GameState | null;
+      __testOnlyResetFireGateState?(): void;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyResetFireGateState?.();
+    const state = workerModule.__testOnlyGetGameState?.();
+    expect(state).not.toBeNull();
+    const px = state!.player.position.x;
+    const py = state!.player.position.y;
+    state!.player.angleRad = 0;
+
+    const distance = NEATENSTEIN_KITING_APPROACH_DISTANCE_CELLS + 5;
+    findNearestVisibleEnemyMock.mockReturnValue({
+      position: { x: px + distance, y: py },
+      health: 100,
+      active: true,
+    } as unknown as EnemyState);
+
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    const input = workerModule.__testOnlyGetLastFallbackInput?.();
+    expect(input).not.toBeNull();
+    expect(input!.move.y).toBe(1);
+    expect(input!.lookDelta).toBe(0);
+  });
+});
+
+describe('eval worker helpers coverage', () => {
+  let originalWorkerCtor: typeof Worker | undefined;
+  const g = globalThis as unknown as Record<string, unknown>;
+  const s = self as unknown as Record<string, unknown>;
+
+  beforeEach(() => {
+    originalWorkerCtor = g.Worker as typeof Worker | undefined;
+  });
+
+  afterEach(() => {
+    if (originalWorkerCtor === undefined) {
+      delete g.Worker;
+    } else {
+      g.Worker = originalWorkerCtor;
+    }
+    delete s.location;
+  });
+
+  it('derives the eval worker URL from self.location and instantiates Worker', async () => {
+    jest.resetModules();
+
+    s.location = {
+      href: 'http://example/assets/neatenstein.worker.js',
+    };
+
+    const created: {
+      url: string;
+      onmessage: unknown;
+      postMessage: jest.Mock;
+    }[] = [];
+    g.Worker = class MockWorker {
+      url: string;
+
+      onmessage: unknown = null;
+
+      postMessage = jest.fn();
+
+      constructor(url: string) {
+        this.url = url;
+        created.push(this);
+      }
+    } as unknown as typeof Worker;
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyGetEvalWorker?(): unknown;
+      __testOnlySetEvalWorker?(
+        worker: {
+          postMessage: (msg: unknown) => void;
+          onmessage: unknown;
+        } | null,
+      ): void;
+    };
+
+    const realTick = await import('../host/game/tick');
+    const gameTickSpy = jest
+      .spyOn(realTick, 'gameTick')
+      .mockImplementation(
+        (state: GameState) => ({ ...state, enemies: [] }) as GameState,
+      );
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 13.5, y: 12.5 }]);
+    sendSimStateMessage(0.25, { humanMode: 'auto' });
+
+    expect(created.length).toBe(1);
+    expect(created[0].url).toBe(
+      'http://example/assets/neatenstein.eval-worker.js',
+    );
+    expect(workerModule.__testOnlyGetEvalWorker?.()).toBe(created[0]);
+
+    workerModule.__testOnlySetEvalWorker?.(null);
+    gameTickSpy.mockRestore();
+  });
+
+  it('returns null when self.location access throws', async () => {
+    jest.resetModules();
+
+    Object.defineProperty(self, 'location', {
+      configurable: true,
+      get: () => {
+        throw new Error('bad location');
+      },
+    });
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyGetEvalWorker?(): unknown;
+      __testOnlySetEvalWorker?(
+        worker: {
+          postMessage: (msg: unknown) => void;
+          onmessage: unknown;
+        } | null,
+      ): void;
+    };
+
+    const realTick = await import('../host/game/tick');
+    const gameTickSpy = jest
+      .spyOn(realTick, 'gameTick')
+      .mockImplementation(
+        (state: GameState) => ({ ...state, enemies: [] }) as GameState,
+      );
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 13.5, y: 12.5 }]);
+    expect(() =>
+      sendSimStateMessage(0.25, { humanMode: 'auto' }),
+    ).not.toThrow();
+    expect(workerModule.__testOnlyGetEvalWorker?.()).toBeNull();
+
+    workerModule.__testOnlySetEvalWorker?.(null);
+    gameTickSpy.mockRestore();
+  });
+
+  it('falls back to null when the Worker constructor throws', async () => {
+    jest.resetModules();
+
+    s.location = {
+      href: 'http://example/assets/neatenstein.worker.js',
+    };
+
+    g.Worker = class BadWorker {
+      constructor() {
+        throw new Error('no worker support');
+      }
+    } as unknown as typeof Worker;
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyGetEvalWorker?(): unknown;
+      __testOnlySetEvalWorker?(
+        worker: {
+          postMessage: (msg: unknown) => void;
+          onmessage: unknown;
+        } | null,
+      ): void;
+    };
+
+    const realTick = await import('../host/game/tick');
+    const gameTickSpy = jest
+      .spyOn(realTick, 'gameTick')
+      .mockImplementation(
+        (state: GameState) => ({ ...state, enemies: [] }) as GameState,
+      );
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 13.5, y: 12.5 }]);
+    expect(() =>
+      sendSimStateMessage(0.25, { humanMode: 'auto' }),
+    ).not.toThrow();
+    expect(workerModule.__testOnlyGetEvalWorker?.()).toBeNull();
+
+    workerModule.__testOnlySetEvalWorker?.(null);
+    gameTickSpy.mockRestore();
+  });
+
+  it('returns null when the Worker constructor is unavailable', async () => {
+    jest.resetModules();
+
+    s.location = {
+      href: 'http://example/assets/neatenstein.worker.js',
+    };
+
+    delete g.Worker;
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyGetEvalWorker?(): unknown;
+      __testOnlySetEvalWorker?(
+        worker: {
+          postMessage: (msg: unknown) => void;
+          onmessage: unknown;
+        } | null,
+      ): void;
+    };
+
+    const realTick = await import('../host/game/tick');
+    const gameTickSpy = jest
+      .spyOn(realTick, 'gameTick')
+      .mockImplementation(
+        (state: GameState) => ({ ...state, enemies: [] }) as GameState,
+      );
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 13.5, y: 12.5 }]);
+    expect(() =>
+      sendSimStateMessage(0.25, { humanMode: 'auto' }),
+    ).not.toThrow();
+    expect(workerModule.__testOnlyGetEvalWorker?.()).toBeNull();
+
+    workerModule.__testOnlySetEvalWorker?.(null);
+    gameTickSpy.mockRestore();
+  });
+
+  it('ignores evalComplete messages with invalid payloads', async () => {
+    jest.resetModules();
+
+    const mockEvalWorker = {
+      postMessage: jest.fn(),
+      onmessage: null as ((event: MessageEvent) => void) | null,
+    };
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlySetEvalWorker?(
+        worker: {
+          postMessage: (msg: unknown) => void;
+          onmessage: unknown;
+        } | null,
+      ): void;
+    };
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlySetEvalWorker?.(mockEvalWorker);
+
+    expect(mockEvalWorker.onmessage).not.toBeNull();
+    const handler = mockEvalWorker.onmessage as (event: MessageEvent) => void;
+
+    expect(() => handler({ data: null } as MessageEvent)).not.toThrow();
+    expect(() => handler({ data: 123 } as MessageEvent)).not.toThrow();
+    expect(() =>
+      handler({ data: { type: 'notEvalComplete' } } as MessageEvent),
+    ).not.toThrow();
+  });
+});
+
+describe('wave-clear guard coverage', () => {
+  it('covers the alive-enemy predicate branches for mixed enemy states', async () => {
+    jest.resetModules();
+
+    const workerModule = (await loadModule('./display.worker.ts')) as {
+      __testOnlyInjectTestEnemies?(positions: { x: number; y: number }[]): void;
+      __testOnlyGetGameState?(): GameState | null;
+    };
+
+    const makeControlledEnemy = (
+      index: number,
+      health: number,
+      active: boolean,
+    ) => ({
+      index,
+      position: { x: 13.5 + index, y: 12.5 },
+      health,
+      yawRad: 0,
+      animationState: 'idle' as const,
+      ammo: 10,
+      fireCooldownMs: 0,
+      deRezElapsedMs: 0,
+      active,
+      walkTick: 0,
+      shootBlinkTicks: 0,
+      flankStallTicks: 0,
+      goal: { x: 13.5 + index, y: 12.5 },
+      isRecovering: false,
+      lastFireMs: -Infinity,
+      path: [],
+      pathIndex: 0,
+      pathRepathTimerMs: 0,
+      recalcTimerMs: 0,
+      state: 'idle' as const,
+      hitscanEvents: [],
+    });
+
+    const realEnemyController = await import('../../scripts/enemy-controller');
+    const controllerSpy = jest
+      .spyOn(realEnemyController, 'updateEnemyController')
+      .mockReturnValue({
+        enemies: [
+          // Both predicate branches true (alive).
+          makeControlledEnemy(0, 100, true),
+          // health > 0 but inactive.
+          makeControlledEnemy(1, 100, false),
+          // inactive and zero health.
+          makeControlledEnemy(2, 0, false),
+        ],
+        hitscanEvents: [],
+      } as unknown as ReturnType<
+        typeof realEnemyController.updateEnemyController
+      >);
+
+    const realTick = await import('../host/game/tick');
+    const gameTickSpy = jest
+      .spyOn(realTick, 'gameTick')
+      .mockImplementation((state: GameState) => state);
+
+    sendInitMessage('cpu');
+    workerModule.__testOnlyInjectTestEnemies?.([{ x: 13.5, y: 12.5 }]);
+
+    expect(() =>
+      sendSimStateMessage(0.25, { humanMode: 'auto' }),
+    ).not.toThrow();
+
+    expect(controllerSpy).toHaveBeenCalled();
+    const afterState = workerModule.__testOnlyGetGameState?.();
+    expect(afterState?.enemies.length).toBeGreaterThan(0);
+
+    controllerSpy.mockRestore();
     gameTickSpy.mockRestore();
   });
 });

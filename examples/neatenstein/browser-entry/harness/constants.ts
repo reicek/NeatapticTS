@@ -35,9 +35,7 @@ export const NEATENSTEIN_FITNESS_EPISODE_DURATION_MS = 5000;
  * Maximum number of ticks in one fitness evaluation episode.
  *
  * Derived as `Math.floor(NEATENSTEIN_FITNESS_EPISODE_DURATION_MS /
- * NEATENSTEIN_FIXED_TIMESTEP_MS)` = 312. This is a NEW constant for the fitness
- * evaluation path; the existing {@link NEATENSTEIN_MAX_EPISODE_TICKS} (240) is
- * used by `enemy-runner.ts` and is NOT changed.
+ * NEATENSTEIN_FIXED_TIMESTEP_MS)` = 312.
  */
 export const NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS = Math.floor(
   NEATENSTEIN_FITNESS_EPISODE_DURATION_MS / 16,
@@ -81,37 +79,6 @@ export const NEATENSTEIN_MLP_TOPOLOGY: readonly number[] = [6, 6, 4, 4];
 export const NEATENSTEIN_MLP_VARIANT_COUNT = 32;
 
 /**
- * Total number of enemy variants maintained across the enemy population.
- *
- * This is the full MLP population size; each generation selects up to
- * {@link NEATENSTEIN_MAX_ACTIVE_ENEMIES} to spawn on screen at once.
- */
-export const NEATENSTEIN_ENEMY_POPULATION_SIZE = 32;
-
-/**
- * Maximum number of enemies that may be active on screen at the same time.
- */
-export const NEATENSTEIN_MAX_ACTIVE_ENEMIES = 8;
-
-/**
- * Deterministic episode duration used for one enemy evaluation, in milliseconds.
- *
- * A 10-second episode is long enough for movement and combat differences to
- * surface without making headless batch evaluation prohibitively expensive.
- */
-export const NEATENSTEIN_ENEMY_EVALUATION_DURATION_MS = 10_000;
-
-/**
- * Maximum number of ticks (frames) in one enemy episode rollout.
- *
- * Each tick advances the simulation by one fixed timestep (~16 ms), so 240
- * ticks correspond to roughly 3.84 seconds of simulated time. The bound keeps
- * headless batch evaluation finite while giving the MLP enough steps to
- * navigate toward the static player goal.
- */
-export const NEATENSTEIN_MAX_EPISODE_TICKS = 240;
-
-/**
  * Maximum number of agents in the SWARM enemy backend.
  */
 export const NEATENSTEIN_SWARM_MAX_SIZE = 8;
@@ -143,9 +110,12 @@ export const NEATENSTEIN_WEIGHT_DAMAGE_TAKEN = 1;
 /**
  * Default penalty weight for aim miss rate.
  *
+ * Scaled from 1 to 20 (AC-P4S1b-002) so that poor accuracy is strongly
+ * penalized relative to the other combat-quality components.
+ *
  * The fitness composite subtracts `aimMissRate * weight`.
  */
-export const NEATENSTEIN_WEIGHT_AIM_MISS_RATE = 1;
+export const NEATENSTEIN_WEIGHT_AIM_MISS_RATE = 20;
 
 /**
  * Default bonus weight for network complexity that improved performance.
@@ -157,53 +127,56 @@ export const NEATENSTEIN_WEIGHT_COMPLEXITY_BONUS = 0.1;
  */
 export const NEATENSTEIN_WEIGHT_PARSIMONY_DENSITY_PENALTY = 0.01;
 
-/**
- * Default weight for collective damage dealt by the enemy team.
- *
- * Damage dealt is the primary reward signal for the enemy population because
- * it directly measures pressure applied to the main agent.
- */
-export const NEATENSTEIN_ENEMY_TEAM_DAMAGE_WEIGHT = 1;
+// ---------------------------------------------------------------------------
+// P4S1-fitness-weights: kill efficiency, shot-quality penalties, and rate
+// metrics (AC-P4S1b-001, AC-P4S1b-003, AC-P4S1b-005, AC-P4S1b-006).
+// ---------------------------------------------------------------------------
 
 /**
- * Default weight for enemy survival count.
+ * Reward weight for the kill-efficiency multiplier (AC-P4S1b-001).
  *
- * Surviving enemies receive a smaller reward than damage dealt so that
- * aggressive behavior is preferred over passive longevity.
+ * `killEfficiency = kills / max(shotsFired, 1)`. This rewards agents that
+ * convert shots into kills efficiently, replacing the old ammoEfficiency
+ * concept.
  */
-export const NEATENSTEIN_ENEMY_TEAM_SURVIVAL_WEIGHT = 1;
+export const NEATENSTEIN_WEIGHT_KILL_EFFICIENCY = 10;
 
 /**
- * Default weight for the enemy navigation fitness component.
+ * Penalty weight per blind-fire shot (AC-P4S1b-003).
  *
- * Navigation fitness rewards progress toward the player goal, rewards
- * exploration of unique cells, and penalizes stagnation above a threshold.
+ * Blind-fire shots are fired when no active enemy exists in the world.
+ * Each such shot incurs this penalty to discourage wasting ammo.
  */
-export const NEATENSTEIN_ENEMY_NAV_WEIGHT = 1;
+export const NEATENSTEIN_WEIGHT_BLIND_FIRE_PENALTY = 3;
 
 /**
- * Default weight for the enemy combat fitness component.
+ * Penalty weight per wall-hit shot (AC-P4S1b-003).
  *
- * Combat fitness rewards damage dealt and survival.
+ * Wall-hit shots terminate on a wall with no enemy near the bolt path,
+ * indicating poor aim. Each such shot incurs this penalty.
  */
-export const NEATENSTEIN_ENEMY_COMBAT_WEIGHT = 1;
+export const NEATENSTEIN_WEIGHT_WALL_HIT_PENALTY = 2;
 
 /**
- * Bonus per unique cell visited by the enemy.
+ * Reward weight for the hit-rate metric (AC-P4S1b-005).
  *
- * Encourages exploration of the maze rather than camping in one spot.
+ * `hitRate = shotsHit / max(shotsFired, 1)`. Contributes positively to
+ * fitness to reward accuracy.
  */
-export const NEATENSTEIN_ENEMY_EXPLORATION_BONUS = 0.5;
+export const NEATENSTEIN_WEIGHT_HIT_RATE = 5;
 
 /**
- * Stagnation tick threshold above which the anti-stall penalty applies.
+ * Reward weight for the kill-rate metric (AC-P4S1b-005).
  *
- * For 240-tick episodes, ticks above this threshold incur a per-tick penalty
- * to discourage the enemy from getting stuck against walls.
+ * `killRate = kills / max(shotsFired, 1)`. Contributes positively to
+ * fitness to reward lethality per shot.
  */
-export const NEATENSTEIN_ENEMY_STAGNATION_THRESHOLD = 80;
+export const NEATENSTEIN_WEIGHT_KILL_RATE = 5;
 
 /**
- * Per-tick penalty for each stagnation tick above the threshold.
+ * Reward weight for the fire-rate metric (AC-P4S1b-005).
+ *
+ * `fireRate = shotsFired / max(ticksElapsed, 1)`. Contributes positively
+ * to fitness to encourage active engagement.
  */
-export const NEATENSTEIN_ENEMY_STAGNATION_PENALTY = 1;
+export const NEATENSTEIN_WEIGHT_FIRE_RATE = 1;

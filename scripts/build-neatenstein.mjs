@@ -5,9 +5,10 @@
  * bundle. The worker bundle carries the shared raycaster so the Worker tier can
  * render via OffscreenCanvas, while the CPU/GPU tiers render on the main thread.
  *
- * Produces two published assets in `docs/assets/`:
- *   - `neatenstein.bundle.js`   (IIFE host bundle)
- *   - `neatenstein.worker.js`   (classic IIFE worker bundle)
+ * Produces three published assets in `docs/assets/`:
+ *   - `neatenstein.bundle.js`         (IIFE host bundle)
+ *   - `neatenstein.worker.js`         (classic IIFE display worker bundle)
+ *   - `neatenstein.eval-worker.js`    (classic IIFE eval worker bundle)
  */
 import { build } from 'esbuild';
 import { dirname, resolve } from 'node:path';
@@ -23,6 +24,10 @@ const workerEntry = resolve(
   repositoryRoot,
   'examples/neatenstein/browser-entry/worker/neatenstein.worker.ts',
 );
+const evalWorkerEntry = resolve(
+  repositoryRoot,
+  'examples/neatenstein/browser-entry/worker/neatenstein.eval-worker.ts',
+);
 
 const hostOutfile = resolve(
   repositoryRoot,
@@ -31,6 +36,10 @@ const hostOutfile = resolve(
 const workerOutfile = resolve(
   repositoryRoot,
   'docs/assets/neatenstein.worker.js',
+);
+const evalWorkerOutfile = resolve(
+  repositoryRoot,
+  'docs/assets/neatenstein.eval-worker.js',
 );
 
 /**
@@ -75,5 +84,14 @@ await build({
   ...sharedBuildOptions,
   entryPoints: [workerEntry],
   outfile: workerOutfile,
+  format: 'iife',
+});
+
+// Eval worker bundle: classic IIFE loaded as a standard (non-module) Worker.
+// Offloads NEAT population evaluation from the display worker's render loop.
+await build({
+  ...sharedBuildOptions,
+  entryPoints: [evalWorkerEntry],
+  outfile: evalWorkerOutfile,
   format: 'iife',
 });
