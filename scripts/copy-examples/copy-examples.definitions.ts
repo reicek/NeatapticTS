@@ -94,5 +94,6 @@ export const EXAMPLE_DEFINITIONS: readonly ExampleDefinition[] = [
     label: 'neatenstein',
     title: 'Neatenstein NGE Demo (NeatapticTS)',
     sourceDir: path.resolve('examples', 'neatenstein'),
+    extraAssets: ['robot-sprite-preview.html', 'robot-sprite-data.js'],
   },
 ];

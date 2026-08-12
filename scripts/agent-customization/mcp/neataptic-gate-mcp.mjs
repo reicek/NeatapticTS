@@ -40,7 +40,7 @@ import {
   createTierGraphTool,
 } from './cortex-tier-tool.mjs';
 
-const SERVER_NAME = 'neataptic-gate-mcp';
+const SERVER_NAME = 'neataptic_gate_mcp';
 const SERVER_VERSION = '0.1.0';
 
 const TIER_1_GATES = [
@@ -61,6 +61,12 @@ const TIER_1_GATES = [
     owner: 'plan-slice-quality.gate.mjs',
     description:
       'Checks that every WIP plan slice has estimate_hours <= 4. Oversized slices must be broken down before verification can pass.',
+  },
+  {
+    id: 'plan-command-lint',
+    owner: 'plan-command-lint.gate.mjs',
+    description:
+      'Validates shell commands referenced in plan Markdown files against actual CLI help output to catch flag drift.',
   },
   {
     id: 'agent-graph',
@@ -132,7 +138,13 @@ const TIER_1_GATES = [
     id: 'specialist-review',
     owner: 'specialist-review.gate.mjs',
     description:
-      'Checks that [WIP] plans contain specialist review evidence in VALIDATION_EVIDENCE before 05-green-testing is dispatched. Requires 3+ Tier-3 specialists from different relevant viewpoints to review each 04-implementing slice.',
+      'Checks that [WIP] plans contain specialist review evidence in VALIDATION_EVIDENCE before 05-green-testing is dispatched. TRIVIAL slices are exempt; FULL slices require 1 Tier-3 specialist review.',
+  },
+  {
+    id: 'slice-advancement',
+    owner: 'slice-advancement.gate.mjs',
+    description:
+      'Master consolidated gate that runs all applicable per-slice gates in one call. Classifies slice as TRIVIAL or FULL and routes accordingly. TRIVIAL: plan-sync + step-packet + plan-slice-quality + plan-command-lint. FULL: also adds shared-validation + code-coverage + specialist-review. Pass --slice-id and --changed-files via run_gate_check args.',
   },
 ];
 
@@ -171,7 +183,13 @@ export function createGateTools() {
             type: 'string',
             enum: TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
             description:
-              'Gate ID to run (plan-sync, step-packet, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, cortex-first-search, devtools-coverage, delegate-skill-coverage, code-coverage, or specialist-review).',
+              'Gate ID to run (plan-sync, step-packet, plan-slice-quality, plan-command-lint, agent-graph, agent-quality, tier-enforcement, routing-table-freshness, learning-event, stale-wip-plans, cortex-index, cortex-first-search, devtools-coverage, delegate-skill-coverage, code-coverage, specialist-review, or slice-advancement).',
+          },
+          args: {
+            type: 'object',
+            description:
+              'Optional extra CLI arguments for the gate script (e.g., { "slice-id": "C3-impl", "changed-files": "src/foo.ts" } for slice-advancement).',
+            additionalProperties: true,
           },
         },
         required: ['gate'],
@@ -181,11 +199,22 @@ export function createGateTools() {
         const gateId = requireString(argumentsObject.gate, 'gate');
         const scriptPath = path.join(GATES_DIR, `${gateId}.gate.mjs`);
 
-        const spawned = spawnSync('node', [scriptPath, '--json'], {
-          encoding: 'utf8',
-          timeout: 15_000,
-          cwd: MCP_REPO_ROOT,
-        });
+        const extraArgs = [];
+        if (argumentsObject.args && typeof argumentsObject.args === 'object') {
+          for (const [key, value] of Object.entries(argumentsObject.args)) {
+            extraArgs.push(`--${key}=${value}`);
+          }
+        }
+
+        const spawned = spawnSync(
+          'node',
+          [scriptPath, '--json', ...extraArgs],
+          {
+            encoding: 'utf8',
+            timeout: 15_000,
+            cwd: MCP_REPO_ROOT,
+          },
+        );
 
         try {
           return JSON.parse(spawned.stdout);

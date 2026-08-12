@@ -1,214 +1,189 @@
 /**
- * World-fixed floor grid for the Neatenstein neon raycasting demo.
+ * World-fixed floor and ceiling grids for the Neatenstein neon raycasting demo.
  *
- * This module renders the floor by projecting world-space grid lines into
- * screen space. For each integer X and Y grid line near the camera, a set of
- * sample points along the line is transformed from world coordinates into
- * camera-space coordinates using the camera yaw, then perspective-projected
- * onto the canvas. The resulting screen points are connected into one
- * batched path and stroked once per depth band. A subtle neon glow is added
- * with a second low-alpha, wide-line halo pass followed by the normal core
- * line. This produces continuous perspective lines and avoids the heavy
- * per-row, per-pixel work of the previous row-casting approach.
+ * This module renders procedural neon grid lines by projecting integer
+ * world-space X/Y grid lines into screen space. Each world grid line is sampled
+ * at fixed intervals, transformed into camera space, perspective-projected,
+ * grouped into depth-based alpha bands, and stroked in batches.
+ *
+ * The implementation intentionally avoids per-pixel floor casting. Instead, it
+ * draws continuous projected line segments, which is much cheaper for the 2D
+ * Canvas renderer while still producing a convincing perspective grid.
+ *
+ * The floor and ceiling share the same world-space geometry. The ceiling is
+ * rendered as a vertical mirror of the floor across the horizon line.
  *
  * @module
  */
 
 import { FLAPPY_NEON_PALETTE } from '../../../flappy_bird/constants/constants.palette';
+import {
+  NEATENSTEIN_BACKGROUND_RGB,
+  NEATENSTEIN_RENDER_DISTANCE_CAP,
+} from './framebuffer';
 
 /**
  * Test fallback canvas width used when the render context has no backing
- * `canvas` (e.g., lightweight mock contexts in unit tests).
+ * `canvas`, such as lightweight mock contexts in unit tests.
  *
- * This is **not** a production default; real rendering should pass explicit
- * dimensions to {@link drawNeatensteinFloor} or read `ctx.canvas` via the
- * {@link renderNeatensteinFloor} wrapper.
+ * Production callers should normally render through a real canvas context or
+ * pass explicit dimensions to {@link drawNeatensteinFloor} /
+ * {@link drawNeatensteinCeiling}.
  */
 export const NEATENSTEIN_FLOOR_DEFAULT_WIDTH = 320;
 
 /**
  * Test fallback canvas height used when the render context has no backing
- * `canvas` (e.g., lightweight mock contexts in unit tests).
+ * `canvas`, such as lightweight mock contexts in unit tests.
  *
- * This is **not** a production default; real rendering should pass explicit
- * dimensions to {@link drawNeatensteinFloor} or read `ctx.canvas` via the
- * {@link renderNeatensteinFloor} wrapper.
+ * Production callers should normally render through a real canvas context or
+ * pass explicit dimensions to {@link drawNeatensteinFloor} /
+ * {@link drawNeatensteinCeiling}.
  */
 export const NEATENSTEIN_FLOOR_DEFAULT_HEIGHT = 240;
 
 /**
  * Fraction of canvas height where the horizon line sits.
  *
- * The camera always looks horizontally, so the horizon is a horizontal line
- * at this fraction of the canvas height. Everything below it is floor.
+ * The current renderer assumes a level camera, so the horizon is horizontal.
+ * Everything below the horizon is floor; everything above it is ceiling.
  */
 export const NEATENSTEIN_FLOOR_HORIZON_RATIO = 0.5;
 
 /**
- * Horizontal field of view in radians.
+ * Vertical field of view in radians.
  *
- * Shared with the wall raycaster so the floor projection matches the wall
- * column projection.
+ * The renderer treats this as the vertical FOV and derives focal length from
+ * canvas height (fixed at 480 px). The camera plane is scaled by the viewport
+ * aspect ratio so horizontal FOV widens on wider screens, matching the
+ * wall raycaster's aspect-correct projection.
  */
 export const NEATENSTEIN_FLOOR_FOV_RADIANS = Math.PI / 3;
 
 /**
  * Camera height above the floor in world units.
  *
- * The floor caster uses this directly as the world-space eye height when
- * projecting world points to screen space. This is intentionally separate
- * from the screen-space ratio used by pulse/tracer helpers.
+ * This value controls how strongly floor and ceiling grid points project away
+ * from the horizon.
  */
 export const NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD = 0.5;
 
 /**
- * Ratio of canvas height used as the camera height for screen-space
- * forced-perspective helpers (floor pulses, tracers).
+ * Ratio of canvas height used as the camera height for separate screen-space
+ * forced-perspective helpers, such as pulses or tracers.
  *
- * This is intentionally separate from
- * {@link NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD} because those helpers work in
- * pixel-space, not world-space.
+ * This module's world-space projection uses
+ * {@link NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD}; this exported ratio is kept
+ * for companion effects that work directly in screen space.
  */
 export const NEATENSTEIN_FLOOR_CAMERA_HEIGHT_SCREEN_RATIO = 0.5;
 
-/**
- * Minimum line opacity, applied near the horizon (far depth rows).
- */
-export const NEATENSTEIN_FLOOR_MIN_ALPHA = 0.12;
+/** Minimum line opacity near the horizon. */
+export const NEATENSTEIN_FLOOR_MIN_ALPHA = 0.05;
 
-/**
- * Maximum line opacity, applied near the camera (near depth rows).
- */
+/** Maximum line opacity near the camera. */
 export const NEATENSTEIN_FLOOR_MAX_ALPHA = 0.58;
 
 /**
- * Glow method used for the floor grid lines.
+ * Glow strategy used for the floor and ceiling grid lines.
  *
- * - `'double-stroke'`: draws a wide, low-alpha halo followed by the core line.
- *   This avoids the variable GPU cost of `shadowBlur` and keeps the glow cost
- *   deterministic (two simple strokes per band).
- * - `'shadow-blur'`: uses a single batched stroke with a small `shadowBlur`.
- *   This can look softer but its GPU cost depends on the browser compositor.
+ * - `'double-stroke'` draws a wide low-alpha halo followed by a narrow core.
+ * - `'shadow-blur'` uses Canvas shadow blur for a softer but less predictable
+ *   compositor-dependent glow cost.
  */
 const NEATENSTEIN_FLOOR_GLOW_METHOD: 'double-stroke' | 'shadow-blur' =
   'double-stroke';
 
-/**
- * Width in pixels of the projected grid lines.
- */
+/** Width in pixels of the bright core grid line. */
 const NEATENSTEIN_FLOOR_LINE_WIDTH_PX = 1;
 
-/**
- * Width in pixels of the glow halo pass for the double-stroke method.
- */
+/** Width in pixels of the halo stroke used by the double-stroke glow mode. */
 const NEATENSTEIN_FLOOR_GLOW_WIDTH_PX = 3;
 
-/**
- * Alpha multiplier applied to the glow halo pass relative to the band alpha.
- */
+/** Alpha multiplier applied to the halo pass in double-stroke glow mode. */
 const NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER = 0.35;
 
-/**
- * Shadow blur radius in pixels for the shadow-blur glow method.
- */
+/** Shadow blur radius used by the shadow-blur glow mode. */
 const NEATENSTEIN_FLOOR_SHADOW_BLUR_PX = 4;
 
 /**
- * Number of depth bands used for batched alpha-aware floor strokes.
+ * Number of alpha bands used to batch floor/ceiling strokes.
  *
- * Segments are grouped into this many bands so that farther lines fade while
- * near lines remain bright. Each band is stroked as its own batched path,
- * preserving batching within a band.
+ * More bands produce smoother depth fading but require more canvas stroke
+ * calls. This value keeps the effect visually graded while preserving batching.
  */
 const NEATENSTEIN_FLOOR_ALPHA_BANDS = 4;
 
 /**
- * Number of world cells in each direction around the camera that are
- * considered for the visible floor grid.
+ * Number of world cells in each direction around the camera considered for
+ * projected grid lines.
  *
- * A fixed range keeps the per-frame workload bounded. The camera is very
- * close to the floor (0.5 world units), so the visible ground is only a few
- * world units away; a range of 20 comfortably covers the field of view.
+ * This fixed range bounds per-frame work independently of map size.
  */
-const NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE = 20;
+const NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE = NEATENSTEIN_RENDER_DISTANCE_CAP;
 
 /**
- * Number of line segments each grid line is broken into before projection.
+ * Number of samples per projected world grid line.
  *
- * Each grid line is sampled at `SAMPLES + 1` evenly spaced world points and
- * the visible samples are connected with canvas line segments. A count of 80
- * over a 40 world-unit span gives roughly half-unit sampling, which is dense
- * enough to produce smooth perspective curves while staying far cheaper than
- * per-pixel sampling.
+ * Each integer grid line is sampled at `SAMPLES + 1` points and consecutive
+ * visible samples are connected into screen-space line segments.
  */
 const NEATENSTEIN_FLOOR_LINE_SAMPLES = 80;
 
 /**
- * Minimum camera-space depth a sample point must have to be drawn.
+ * Minimum positive camera-space depth required for projection.
  *
- * Points at or behind the camera plane (`camSpaceY <= 0`) are culled; a small
- * epsilon avoids extreme screen-space coordinates for points that graze the
- * camera plane.
+ * Points at or behind the camera plane are culled. The epsilon also avoids
+ * extreme projected coordinates for samples that are nearly on the camera
+ * plane.
  */
 const NEATENSTEIN_FLOOR_NEAR_PLANE_EPSILON = 0.001;
 
 /**
- * Parsed RGB components of the shared floor grid line color.
+ * Number of fractional digits retained for cached alpha stroke styles.
  *
- * Parsing once at module load avoids repeating `replace`/`parseInt` work in
- * the per-frame hot path.
+ * The renderer uses banded alpha values, so this quantization preserves visual
+ * stability while preventing unbounded cache growth from tiny float differences.
  */
+const NEATENSTEIN_FLOOR_ALPHA_CACHE_PRECISION = 4;
+
+/** Parsed RGB components of the shared neon floor line color. */
 const FLOOR_BASE_RGB = parseNeatensteinFloorHexColor(
   FLAPPY_NEON_PALETTE.groundGridLine,
 );
 
-/**
- * Precomputed shadow color used for the single floor grid stroke.
- *
- * The value is a constant palette string, captured once at module load to avoid
- * repeated property lookups in the per-frame hot path. The shadow blur itself
- * is disabled for performance because the batched path is stroked once.
- */
+/** Shared neon glow color from the palette. */
 const NEATENSTEIN_FLOOR_SHADOW_COLOR = FLAPPY_NEON_PALETTE.groundGridGlow;
 
-/**
- * Precomputed fallback stroke style used when the base color cannot be parsed.
- */
+/** Fallback stroke style used when the palette color cannot be parsed as hex. */
 const NEATENSTEIN_FLOOR_FALLBACK_STROKE_STYLE =
   FLAPPY_NEON_PALETTE.groundGridLine;
 
 /**
- * Cache of computed RGBA stroke styles keyed by alpha.
+ * Cache of computed RGBA stroke styles keyed by quantized alpha and RGB color.
  *
- * Reusing the same rgba string for repeated alpha values avoids per-frame
- * string allocation churn while still allowing arbitrary depth-aware alpha
- * values.
+ * The RGB color varies per depth band because fog blending shifts the base
+ * color toward the background at greater distances, so both RGB and alpha are
+ * part of the cache key.
  */
-const NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE = new Map<number, string>();
+const NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE = new Map<string, string>();
 
 /**
- * One depth-banded floor line segment, expressed as two screen-space points.
- */
-type NeatensteinFloorSegment = readonly [number, number, number, number];
-
-/**
- * Maps a normalized depth ratio to the index of the alpha band it belongs to.
+ * Flat screen-space segment buffer.
  *
- * @param depthRatio - 0 (far, horizon) to 1 (near, bottom of screen).
- * @returns Band index in the range 0..`NEATENSTEIN_FLOOR_ALPHA_BANDS - 1`.
+ * Values are stored in groups of four:
+ *
+ * ```ts
+ * [x1, y1, x2, y2, x1, y1, x2, y2, ...]
+ * ```
+ *
+ * This avoids allocating one tuple/object per projected line segment.
  */
-function bandIndexForDepthRatio(depthRatio: number): number {
-  return Math.min(
-    NEATENSTEIN_FLOOR_ALPHA_BANDS - 1,
-    Math.max(0, Math.floor(depthRatio * NEATENSTEIN_FLOOR_ALPHA_BANDS)),
-  );
-}
+type NeatensteinFloorSegmentBuffer = number[];
 
-/**
- * Camera state consumed by the floor renderer.
- */
+/** Camera state consumed by the floor and ceiling renderer. */
 export interface NeatensteinFloorCamera {
-  /** Camera yaw in radians. 0 looks down the world +X axis. */
+  /** Camera yaw in radians. `0` looks down the world +X axis. */
   yaw: number;
   /** Camera world X position. */
   x: number;
@@ -217,10 +192,10 @@ export interface NeatensteinFloorCamera {
 }
 
 /**
- * Minimal canvas-like rendering context consumed by the floor renderer.
+ * Minimal canvas-like rendering context consumed by the grid renderer.
  *
- * The interface is intentionally narrow so lightweight mocks can be used in
- * unit tests without implementing the full CanvasRenderingContext2D API.
+ * The interface is intentionally narrow so tests can provide small mocks
+ * instead of implementing the full `CanvasRenderingContext2D` API.
  */
 export interface NeatensteinFloorRenderContext {
   /** Start a new path. */
@@ -248,14 +223,140 @@ export interface NeatensteinFloorRenderContext {
 }
 
 /**
- * Resolves neon alpha for one row based on its normalized depth.
+ * Sanitized camera values used by the projection hot path.
+ */
+interface SafeNeatensteinFloorCamera {
+  /** Finite camera yaw in radians. */
+  yaw: number;
+  /** Finite camera world X coordinate. */
+  x: number;
+  /** Finite camera world Y coordinate. */
+  y: number;
+}
+
+/**
+ * Shared projection constants for a single grid draw call.
+ */
+interface NeatensteinGridProjectionContext {
+  /** Canvas width in backing-store pixels. */
+  width: number;
+  /** Canvas height in backing-store pixels. */
+  height: number;
+  /** Camera world X coordinate. */
+  cameraX: number;
+  /** Camera world Y coordinate. */
+  cameraY: number;
+  /** Cosine of camera yaw. */
+  cosYaw: number;
+  /** Sine of camera yaw. */
+  sinYaw: number;
+  /** Perspective focal length in pixels. */
+  focalLength: number;
+  /** Half canvas width in pixels. */
+  halfWidth: number;
+  /** Horizon Y coordinate in pixels. */
+  horizonY: number;
+  /** Camera height above the floor in world units. */
+  cameraHeight: number;
+}
+
+/**
+ * Projected screen-space point used while building line segments.
+ */
+interface ProjectedNeatensteinGridPoint {
+  /** Screen-space X coordinate. */
+  x: number;
+  /** Screen-space Y coordinate. */
+  y: number;
+  /** Normalized depth ratio, where `0` is far and `1` is near. */
+  depthRatio: number;
+  /** Positive camera-space forward distance. */
+  distance: number;
+}
+
+/**
+ * Clamp a number into the inclusive range `[min, max]`.
  *
- * @param depthRatio - Normalized 0..1 depth where 0 is far (at the horizon)
- *   and 1 is near (at the bottom edge).
- * @returns Opacity for the rendered row.
+ * @param value - Value to clamp.
+ * @param min - Lower bound.
+ * @param max - Upper bound.
+ * @returns Clamped value.
+ */
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * Return whether a render dimension is finite and drawable.
+ *
+ * @param value - Candidate width or height.
+ * @returns Whether the value is a positive finite number.
+ */
+function isPositiveFiniteDimension(value: number): boolean {
+  return Number.isFinite(value) && value > 0;
+}
+
+/**
+ * Sanitize camera values for renderer use.
+ *
+ * Non-finite camera values are treated as `0` so a malformed frame cannot
+ * poison the canvas path with `NaN` coordinates.
+ *
+ * @param camera - Raw camera state.
+ * @returns Finite camera state.
+ */
+function sanitizeNeatensteinFloorCamera(
+  camera: NeatensteinFloorCamera,
+): SafeNeatensteinFloorCamera {
+  return {
+    x: Number.isFinite(camera.x) ? camera.x : 0,
+    y: Number.isFinite(camera.y) ? camera.y : 0,
+    yaw: Number.isFinite(camera.yaw) ? camera.yaw : 0,
+  };
+}
+
+/**
+ * Resolve a canvas dimension from a context, using a test fallback if missing.
+ *
+ * @param value - Optional canvas dimension.
+ * @param fallback - Fallback dimension for mock contexts.
+ * @returns Positive finite dimension.
+ */
+function resolveContextCanvasDimension(
+  value: number | undefined,
+  fallback: number,
+): number {
+  return isPositiveFiniteDimension(value ?? Number.NaN) ? value! : fallback;
+}
+
+/**
+ * Map a normalized depth ratio to an alpha-band index.
+ *
+ * @param depthRatio - Normalized depth ratio where `0` is far and `1` is near.
+ * @returns Band index in the range `0..NEATENSTEIN_FLOOR_ALPHA_BANDS - 1`.
+ */
+function bandIndexForDepthRatio(depthRatio: number): number {
+  const clampedRatio = clamp(depthRatio, 0, 1);
+
+  return Math.min(
+    NEATENSTEIN_FLOOR_ALPHA_BANDS - 1,
+    Math.floor(clampedRatio * NEATENSTEIN_FLOOR_ALPHA_BANDS),
+  );
+}
+
+/**
+ * Resolve neon alpha for one depth band.
+ *
+ * @param depthRatio - Normalized depth where `0` is far and `1` is near.
+ * @returns Opacity for the rendered grid band.
  */
 export function resolveNeatensteinFloorAlpha(depthRatio: number): number {
-  const clampedRatio = Math.max(0, Math.min(1, depthRatio));
+  const clampedRatio = clamp(
+    Number.isFinite(depthRatio) ? depthRatio : 0,
+    0,
+    1,
+  );
+
   return (
     NEATENSTEIN_FLOOR_MIN_ALPHA +
     (NEATENSTEIN_FLOOR_MAX_ALPHA - NEATENSTEIN_FLOOR_MIN_ALPHA) * clampedRatio
@@ -265,23 +366,19 @@ export function resolveNeatensteinFloorAlpha(depthRatio: number): number {
 /**
  * Draw the world-fixed neon floor grid below the horizon.
  *
- * The grid is a procedural texture with thin lines at every integer world X
- * and Y. Instead of sampling every screen pixel, the renderer projects
- * world-space grid lines into screen space: for each integer line within a
- * bounded range around the camera, sample points are transformed into camera
- * space, perspective-projected, and connected into a single batched path per
- * depth band. A low-alpha, wide-line halo pass is drawn first to create a
- * subtle neon glow, followed by the normal core line pass. Both passes reuse
- * the same batched segment list so the glow cost stays predictable.
+ * The grid is a procedural texture made from projected world-space integer X/Y
+ * lines. The renderer samples nearby world lines, projects visible samples,
+ * batches the resulting screen-space segments by depth, and draws each band
+ * with a glow pass plus a core pass.
  *
  * @param ctx - Canvas-like context with path, stroke, and state methods.
- * @param canvasWidth - Canvas width in CSS pixels.
- * @param canvasHeight - Canvas height in CSS pixels.
- * @param camera - Current camera look state.
+ * @param canvasWidth - Canvas width in backing-store pixels.
+ * @param canvasHeight - Canvas height in backing-store pixels.
+ * @param camera - Current camera state.
  *
  * @example
  * ```ts
- * drawNeatensteinFloor(ctx, 640, 360, { yaw: 0, x: 12.5, y: 12.5 });
+ * drawNeatensteinFloor(ctx, 640, 480, { yaw: 0, x: 12.5, y: 12.5 });
  * ```
  */
 export function drawNeatensteinFloor(
@@ -290,144 +387,43 @@ export function drawNeatensteinFloor(
   canvasHeight: number,
   camera: NeatensteinFloorCamera,
 ): void {
-  if (canvasWidth <= 0 || canvasHeight <= 0) {
-    return;
-  }
-
-  const width = canvasWidth;
-  const height = canvasHeight;
-  const safeX = Number.isFinite(camera.x) ? camera.x : 0;
-  const safeY = Number.isFinite(camera.y) ? camera.y : 0;
-  const safeYaw = Number.isFinite(camera.yaw) ? camera.yaw : 0;
-
-  const horizonY = height * NEATENSTEIN_FLOOR_HORIZON_RATIO;
-  const halfWidth = width / 2;
-  const focalLength = halfWidth / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
-
-  const cosYaw = Math.cos(safeYaw);
-  const sinYaw = Math.sin(safeYaw);
-
-  const cameraHeightWorld = NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD;
-
-  const range = NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE;
-  const minX = Math.floor(safeX - range);
-  const maxX = Math.ceil(safeX + range);
-  const minY = Math.floor(safeY - range);
-  const maxY = Math.ceil(safeY + range);
-
-  const bands: NeatensteinFloorSegment[][] = Array.from(
-    { length: NEATENSTEIN_FLOOR_ALPHA_BANDS },
-    () => [],
-  );
-
-  for (let x = minX; x <= maxX; x += 1) {
-    appendNeatensteinFloorLine(
-      bands,
-      x,
-      true,
-      minY,
-      maxY,
-      safeX,
-      safeY,
-      cosYaw,
-      sinYaw,
-      focalLength,
-      halfWidth,
-      horizonY,
-      height,
-      cameraHeightWorld,
-    );
-  }
-
-  for (let y = minY; y <= maxY; y += 1) {
-    appendNeatensteinFloorLine(
-      bands,
-      y,
-      false,
-      minX,
-      maxX,
-      safeX,
-      safeY,
-      cosYaw,
-      sinYaw,
-      focalLength,
-      halfWidth,
-      horizonY,
-      height,
-      cameraHeightWorld,
-    );
-  }
-
-  ctx.save();
-  ctx.shadowColor = NEATENSTEIN_FLOOR_SHADOW_COLOR;
-
-  for (let bandIndex = 0; bandIndex < bands.length; bandIndex += 1) {
-    const segments = bands[bandIndex];
-    if (segments.length === 0) {
-      continue;
-    }
-
-    const bandRatio = (bandIndex + 0.5) / NEATENSTEIN_FLOOR_ALPHA_BANDS;
-    const coreAlpha = resolveNeatensteinFloorAlpha(bandRatio);
-
-    if (NEATENSTEIN_FLOOR_GLOW_METHOD === 'double-stroke') {
-      // Pass 1: wide, low-alpha halo for the neon glow.
-      ctx.lineWidth = NEATENSTEIN_FLOOR_GLOW_WIDTH_PX;
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = resolveNeatensteinFloorStrokeStyle(
-        FLOOR_BASE_RGB,
-        coreAlpha * NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER,
-      );
-      strokeNeatensteinFloorBand(ctx, segments);
-
-      // Pass 2: narrow, full-alpha core line.
-      ctx.lineWidth = NEATENSTEIN_FLOOR_LINE_WIDTH_PX;
-      ctx.strokeStyle = resolveNeatensteinFloorStrokeStyle(
-        FLOOR_BASE_RGB,
-        coreAlpha,
-      );
-      strokeNeatensteinFloorBand(ctx, segments);
-    } else {
-      // Single shadow-blur pass for a softer glow.
-      ctx.lineWidth = NEATENSTEIN_FLOOR_LINE_WIDTH_PX;
-      ctx.shadowBlur = NEATENSTEIN_FLOOR_SHADOW_BLUR_PX;
-      ctx.strokeStyle = resolveNeatensteinFloorStrokeStyle(
-        FLOOR_BASE_RGB,
-        coreAlpha,
-      );
-      strokeNeatensteinFloorBand(ctx, segments);
-    }
-  }
-
-  ctx.restore();
+  drawNeatensteinGrid(ctx, canvasWidth, canvasHeight, camera, false);
 }
 
 /**
- * Stroke one batched band of floor segments.
+ * Draw the world-fixed neon ceiling grid above the horizon.
  *
- * Reusing the same segment list for the glow halo and core line passes keeps
- * the path geometry identical so the glow sits directly behind the core line.
+ * The ceiling is a vertical mirror of the floor projection across the horizon.
+ * It uses the same world-space grid, color palette, batching, and depth-band
+ * alpha falloff.
  *
- * @param ctx - Canvas-like context.
- * @param segments - Screen-space line segments for this band.
+ * @param ctx - Canvas-like context with path, stroke, and state methods.
+ * @param canvasWidth - Canvas width in backing-store pixels.
+ * @param canvasHeight - Canvas height in backing-store pixels.
+ * @param camera - Current camera state.
+ *
+ * @example
+ * ```ts
+ * drawNeatensteinCeiling(ctx, 640, 480, { yaw: 0, x: 12.5, y: 12.5 });
+ * ```
  */
-function strokeNeatensteinFloorBand(
+export function drawNeatensteinCeiling(
   ctx: NeatensteinFloorRenderContext,
-  segments: NeatensteinFloorSegment[],
+  canvasWidth: number,
+  canvasHeight: number,
+  camera: NeatensteinFloorCamera,
 ): void {
-  ctx.beginPath();
-  for (const [x1, y1, x2, y2] of segments) {
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-  }
-  ctx.stroke();
+  drawNeatensteinGrid(ctx, canvasWidth, canvasHeight, camera, true);
 }
 
 /**
  * Backwards-compatible wrapper that reads canvas dimensions from `ctx.canvas`.
  *
- * @param ctx - Canvas-like context with an optional backing `canvas`.
- * @param camera - Current camera look state.
+ * If no backing canvas is present, test fallback dimensions are used so
+ * lightweight mock contexts can still exercise the rendering path.
+ *
+ * @param ctx - Canvas-like context with an optional backing canvas.
+ * @param camera - Current camera state.
  *
  * @example
  * ```ts
@@ -438,74 +434,189 @@ export function renderNeatensteinFloor(
   ctx: NeatensteinFloorRenderContext,
   camera: NeatensteinFloorCamera,
 ): void {
-  const rawWidth = ctx.canvas?.width ?? 0;
-  const rawHeight = ctx.canvas?.height ?? 0;
-  drawNeatensteinFloor(ctx, rawWidth, rawHeight, camera);
+  const width = resolveContextCanvasDimension(
+    ctx.canvas?.width,
+    NEATENSTEIN_FLOOR_DEFAULT_WIDTH,
+  );
+  const height = resolveContextCanvasDimension(
+    ctx.canvas?.height,
+    NEATENSTEIN_FLOOR_DEFAULT_HEIGHT,
+  );
+
+  drawNeatensteinFloor(ctx, width, height, camera);
 }
 
 /**
- * Append one world-space grid line to the depth-banded floor path.
+ * Backwards-compatible wrapper that reads canvas dimensions from `ctx.canvas`.
  *
- * The line is sampled at evenly spaced points along its fixed coordinate.
- * Each sample is projected to screen space; consecutive visible samples are
- * connected into a segment and placed in the alpha band matching their
- * average depth. Invisible or behind-camera samples break the run so the next
- * visible sample starts a new segment.
+ * If no backing canvas is present, test fallback dimensions are used so
+ * lightweight mock contexts can still exercise the rendering path.
  *
- * @param bands - Depth-banded segment buffers receiving the projected line
- *   segments.
- * @param fixedCoord - The integer world coordinate that defines this line
- *   (X for X-lines, Y for Y-lines).
- * @param isXLine - `true` for lines of constant X (vary Y), `false` for lines
- *   of constant Y (vary X).
- * @param startCoord - Start of the varying coordinate range.
- * @param endCoord - End of the varying coordinate range.
- * @param cameraX - Safe camera world X.
- * @param cameraY - Safe camera world Y.
- * @param cosYaw - Cosine of the safe camera yaw.
- * @param sinYaw - Sine of the safe camera yaw.
- * @param focalLength - Perspective focal length in pixels.
- * @param halfWidth - Half the canvas width in pixels.
- * @param horizonY - Horizon line Y coordinate in pixels.
- * @param height - Canvas height in pixels.
- * @param cameraHeight - Camera height above the floor in world units.
+ * @param ctx - Canvas-like context with an optional backing canvas.
+ * @param camera - Current camera state.
+ *
+ * @example
+ * ```ts
+ * renderNeatensteinCeiling(ctx, { yaw: 0, x: 12.5, y: 12.5 });
+ * ```
  */
-function appendNeatensteinFloorLine(
-  bands: NeatensteinFloorSegment[][],
+export function renderNeatensteinCeiling(
+  ctx: NeatensteinFloorRenderContext,
+  camera: NeatensteinFloorCamera,
+): void {
+  const width = resolveContextCanvasDimension(
+    ctx.canvas?.width,
+    NEATENSTEIN_FLOOR_DEFAULT_WIDTH,
+  );
+  const height = resolveContextCanvasDimension(
+    ctx.canvas?.height,
+    NEATENSTEIN_FLOOR_DEFAULT_HEIGHT,
+  );
+
+  drawNeatensteinCeiling(ctx, width, height, camera);
+}
+
+/**
+ * Shared implementation for drawing either the floor or the ceiling grid.
+ *
+ * @param ctx - Canvas-like context.
+ * @param canvasWidth - Canvas width in backing-store pixels.
+ * @param canvasHeight - Canvas height in backing-store pixels.
+ * @param camera - Raw camera state.
+ * @param forCeiling - Whether to mirror projection above the horizon.
+ */
+function drawNeatensteinGrid(
+  ctx: NeatensteinFloorRenderContext,
+  canvasWidth: number,
+  canvasHeight: number,
+  camera: NeatensteinFloorCamera,
+  forCeiling: boolean,
+): void {
+  // Explicit draw calls with invalid dimensions are ignored. Wrappers provide
+  // fallbacks before reaching this function.
+  if (
+    !isPositiveFiniteDimension(canvasWidth) ||
+    !isPositiveFiniteDimension(canvasHeight)
+  ) {
+    return;
+  }
+
+  const safeCamera = sanitizeNeatensteinFloorCamera(camera);
+  const horizonY = canvasHeight * NEATENSTEIN_FLOOR_HORIZON_RATIO;
+  const halfWidth = canvasWidth / 2;
+  const focalLength =
+    canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+
+  // If any projection constant somehow becomes invalid, skip the frame rather
+  // than writing invalid coordinates into the canvas path.
+  if (
+    !Number.isFinite(horizonY) ||
+    !Number.isFinite(focalLength) ||
+    focalLength <= 0
+  ) {
+    return;
+  }
+
+  const projection: NeatensteinGridProjectionContext = {
+    width: canvasWidth,
+    height: canvasHeight,
+    cameraX: safeCamera.x,
+    cameraY: safeCamera.y,
+    cosYaw: Math.cos(safeCamera.yaw),
+    sinYaw: Math.sin(safeCamera.yaw),
+    focalLength,
+    halfWidth,
+    horizonY,
+    cameraHeight: NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+  };
+
+  const bands = createNeatensteinFloorSegmentBands();
+  const range = NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE;
+  const minX = Math.floor(safeCamera.x - range);
+  const maxX = Math.ceil(safeCamera.x + range);
+  const minY = Math.floor(safeCamera.y - range);
+  const maxY = Math.ceil(safeCamera.y + range);
+
+  // Project constant-X world grid lines.
+  for (let x = minX; x <= maxX; x += 1) {
+    appendNeatensteinGridLine(
+      bands,
+      projection,
+      x,
+      true,
+      minY,
+      maxY,
+      forCeiling,
+    );
+  }
+
+  // Project constant-Y world grid lines.
+  for (let y = minY; y <= maxY; y += 1) {
+    appendNeatensteinGridLine(
+      bands,
+      projection,
+      y,
+      false,
+      minX,
+      maxX,
+      forCeiling,
+    );
+  }
+
+  strokeNeatensteinGridBands(ctx, bands);
+}
+
+/**
+ * Create one flat segment buffer per alpha band.
+ *
+ * @returns Empty depth-banded segment buffers.
+ */
+function createNeatensteinFloorSegmentBands(): NeatensteinFloorSegmentBuffer[] {
+  return Array.from(
+    { length: NEATENSTEIN_FLOOR_ALPHA_BANDS },
+    () => [] as NeatensteinFloorSegmentBuffer,
+  );
+}
+
+/**
+ * Append one sampled world-space grid line to the depth-banded segment buffers.
+ *
+ * The line is sampled at evenly spaced points. Consecutive visible projected
+ * samples become one screen-space segment. If a sample is behind the camera,
+ * the visible run is broken so the next valid sample starts a new segment.
+ *
+ * @param bands - Depth-banded flat segment buffers.
+ * @param projection - Shared projection constants for this frame.
+ * @param fixedCoord - Integer world coordinate for the fixed axis.
+ * @param isXLine - `true` for constant-X lines, `false` for constant-Y lines.
+ * @param startCoord - Start value for the varying axis.
+ * @param endCoord - End value for the varying axis.
+ * @param forCeiling - Whether to mirror the projection above the horizon.
+ */
+function appendNeatensteinGridLine(
+  bands: NeatensteinFloorSegmentBuffer[],
+  projection: NeatensteinGridProjectionContext,
   fixedCoord: number,
   isXLine: boolean,
   startCoord: number,
   endCoord: number,
-  cameraX: number,
-  cameraY: number,
-  cosYaw: number,
-  sinYaw: number,
-  focalLength: number,
-  halfWidth: number,
-  horizonY: number,
-  height: number,
-  cameraHeight: number,
+  forCeiling: boolean,
 ): void {
-  let previous: { x: number; y: number; depthRatio: number } | null = null;
+  let previous: ProjectedNeatensteinGridPoint | null = null;
 
   for (let i = 0; i <= NEATENSTEIN_FLOOR_LINE_SAMPLES; i += 1) {
     const t = i / NEATENSTEIN_FLOOR_LINE_SAMPLES;
     const coord = startCoord + (endCoord - startCoord) * t;
+
+    // Constant-X lines vary Y; constant-Y lines vary X.
     const worldX = isXLine ? fixedCoord : coord;
     const worldY = isXLine ? coord : fixedCoord;
 
-    const projected = projectNeatensteinFloorPoint(
+    const projected = projectNeatensteinGridPoint(
       worldX,
       worldY,
-      cameraX,
-      cameraY,
-      cosYaw,
-      sinYaw,
-      focalLength,
-      halfWidth,
-      horizonY,
-      height,
-      cameraHeight,
+      projection,
+      forCeiling,
     );
 
     if (projected === null) {
@@ -514,9 +625,12 @@ function appendNeatensteinFloorLine(
     }
 
     if (previous !== null) {
-      const avgRatio = (previous.depthRatio + projected.depthRatio) / 2;
-      const band = bandIndexForDepthRatio(avgRatio);
-      bands[band].push([previous.x, previous.y, projected.x, projected.y]);
+      const averageDepthRatio =
+        (previous.depthRatio + projected.depthRatio) / 2;
+      const band = bandIndexForDepthRatio(averageDepthRatio);
+
+      // Store as a flat tuple to avoid allocating one array/object per segment.
+      bands[band].push(previous.x, previous.y, projected.x, projected.y);
     }
 
     previous = projected;
@@ -524,12 +638,102 @@ function appendNeatensteinFloorLine(
 }
 
 /**
+ * Stroke every non-empty depth band using the configured glow method.
+ *
+ * @param ctx - Canvas-like rendering context.
+ * @param bands - Depth-banded flat segment buffers.
+ */
+function strokeNeatensteinGridBands(
+  ctx: NeatensteinFloorRenderContext,
+  bands: NeatensteinFloorSegmentBuffer[],
+): void {
+  ctx.save();
+  ctx.shadowColor = NEATENSTEIN_FLOOR_SHADOW_COLOR;
+
+  for (let bandIndex = 0; bandIndex < bands.length; bandIndex += 1) {
+    const segments = bands[bandIndex];
+
+    if (segments.length === 0) {
+      continue;
+    }
+
+    const bandRatio = (bandIndex + 0.5) / NEATENSTEIN_FLOOR_ALPHA_BANDS;
+    const coreAlpha = resolveNeatensteinFloorAlpha(bandRatio);
+
+    // All bands within 30 cells use the original floor color — fog only
+    // applies AT the 30-cell cap, not before.
+    let foggedRgb: { r: number; g: number; b: number };
+    /* istanbul ignore else -- FLOOR_BASE_RGB is always non-null with the valid palette color */
+    if (FLOOR_BASE_RGB !== null) {
+      foggedRgb = FLOOR_BASE_RGB;
+    } else {
+      foggedRgb = NEATENSTEIN_BACKGROUND_RGB;
+    }
+
+    /* istanbul ignore else -- constant-controlled alternative glow path */
+    if (NEATENSTEIN_FLOOR_GLOW_METHOD === 'double-stroke') {
+      // Pass 1: wide, dim halo. This creates a predictable neon glow without
+      // relying on compositor-specific shadow blur performance.
+      ctx.lineWidth = NEATENSTEIN_FLOOR_GLOW_WIDTH_PX;
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = resolveNeatensteinFloorStrokeStyle(
+        foggedRgb,
+        coreAlpha * NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER,
+      );
+      strokeNeatensteinFloorBand(ctx, segments);
+
+      // Pass 2: narrow, bright core line.
+      ctx.lineWidth = NEATENSTEIN_FLOOR_LINE_WIDTH_PX;
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = resolveNeatensteinFloorStrokeStyle(
+        foggedRgb,
+        coreAlpha,
+      );
+      strokeNeatensteinFloorBand(ctx, segments);
+    } else {
+      // Alternative softer glow path. Kept behind a constant so experiments can
+      // switch glow style without changing projection or batching logic.
+      ctx.lineWidth = NEATENSTEIN_FLOOR_LINE_WIDTH_PX;
+      ctx.shadowBlur = NEATENSTEIN_FLOOR_SHADOW_BLUR_PX;
+      ctx.strokeStyle = resolveNeatensteinFloorStrokeStyle(
+        foggedRgb,
+        coreAlpha,
+      );
+      strokeNeatensteinFloorBand(ctx, segments);
+    }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Stroke one flat segment buffer.
+ *
+ * Values are read in groups of four: `x1, y1, x2, y2`.
+ *
+ * @param ctx - Canvas-like rendering context.
+ * @param segments - Flat screen-space segment buffer.
+ */
+function strokeNeatensteinFloorBand(
+  ctx: NeatensteinFloorRenderContext,
+  segments: NeatensteinFloorSegmentBuffer,
+): void {
+  ctx.beginPath();
+
+  for (let i = 0; i < segments.length; i += 4) {
+    ctx.moveTo(segments[i], segments[i + 1]);
+    ctx.lineTo(segments[i + 2], segments[i + 3]);
+  }
+
+  ctx.stroke();
+}
+
+/**
  * Project a world-space floor point to screen space.
  *
- * The point is first translated by the camera position and rotated into
- * camera space using the camera yaw. The camera-space X axis points to the
- * right of the view and the Y axis points forward. Points at or behind the
- * camera (`camSpaceY <= 0`) are rejected.
+ * The point is translated into camera-relative coordinates, rotated into
+ * camera space, and projected using the shared vertical FOV. Points behind
+ * or too close to the camera plane are rejected.
  *
  * @param worldX - World X coordinate.
  * @param worldY - World Y coordinate.
@@ -542,8 +746,7 @@ function appendNeatensteinFloorLine(
  * @param horizonY - Horizon Y coordinate in pixels.
  * @param height - Canvas height in pixels.
  * @param cameraHeight - Camera height above floor in world units.
- * @returns Screen coordinates, normalized depth ratio, and perpendicular
- *   camera-space depth, or `null` if the point is behind the camera.
+ * @returns Projected screen point, or `null` if the point is not drawable.
  */
 export function projectNeatensteinFloorPoint(
   worldX: number,
@@ -558,60 +761,188 @@ export function projectNeatensteinFloorPoint(
   height: number,
   cameraHeight: number,
 ): { x: number; y: number; depthRatio: number; distance: number } | null {
-  const dx = worldX - cameraX;
-  const dy = worldY - cameraY;
+  return projectNeatensteinGridPoint(
+    worldX,
+    worldY,
+    {
+      width: halfWidth * 2,
+      height,
+      cameraX,
+      cameraY,
+      cosYaw,
+      sinYaw,
+      focalLength,
+      halfWidth,
+      horizonY,
+      cameraHeight,
+    },
+    false,
+  );
+}
 
-  const camSpaceY = dx * cosYaw + dy * sinYaw;
+/**
+ * Project a world-space ceiling point to screen space.
+ *
+ * The ceiling uses the same camera-space transform as the floor, but its
+ * vertical projection is mirrored above the horizon.
+ *
+ * @param worldX - World X coordinate.
+ * @param worldY - World Y coordinate.
+ * @param cameraX - Camera world X.
+ * @param cameraY - Camera world Y.
+ * @param cosYaw - Cosine of camera yaw.
+ * @param sinYaw - Sine of camera yaw.
+ * @param focalLength - Perspective focal length in pixels.
+ * @param halfWidth - Half canvas width in pixels.
+ * @param horizonY - Horizon Y coordinate in pixels.
+ * @param height - Canvas height in pixels.
+ * @param cameraHeight - Camera height above floor in world units.
+ * @returns Projected screen point, or `null` if the point is not drawable.
+ */
+export function projectNeatensteinCeilingPoint(
+  worldX: number,
+  worldY: number,
+  cameraX: number,
+  cameraY: number,
+  cosYaw: number,
+  sinYaw: number,
+  focalLength: number,
+  halfWidth: number,
+  horizonY: number,
+  height: number,
+  cameraHeight: number,
+): { x: number; y: number; depthRatio: number; distance: number } | null {
+  return projectNeatensteinGridPoint(
+    worldX,
+    worldY,
+    {
+      width: halfWidth * 2,
+      height,
+      cameraX,
+      cameraY,
+      cosYaw,
+      sinYaw,
+      focalLength,
+      halfWidth,
+      horizonY,
+      cameraHeight,
+    },
+    true,
+  );
+}
+
+/**
+ * Shared floor/ceiling world-to-screen projection.
+ *
+ * @param worldX - World X coordinate.
+ * @param worldY - World Y coordinate.
+ * @param projection - Shared projection constants.
+ * @param forCeiling - Whether to mirror vertically above the horizon.
+ * @returns Projected point, or `null` if culled.
+ */
+function projectNeatensteinGridPoint(
+  worldX: number,
+  worldY: number,
+  projection: NeatensteinGridProjectionContext,
+  forCeiling: boolean,
+): ProjectedNeatensteinGridPoint | null {
+  const dx = worldX - projection.cameraX;
+  const dy = worldY - projection.cameraY;
+
+  // Camera-space Y is forward depth. Camera yaw of 0 looks down world +X.
+  const camSpaceY = dx * projection.cosYaw + dy * projection.sinYaw;
+
   if (camSpaceY <= NEATENSTEIN_FLOOR_NEAR_PLANE_EPSILON) {
     return null;
   }
 
-  const camSpaceX = -dx * sinYaw + dy * cosYaw;
-  const screenY = horizonY + (cameraHeight / camSpaceY) * focalLength;
-  const depthRatio = Math.max(
-    0,
-    Math.min(1, (screenY - horizonY) / (height - horizonY)),
-  );
+  // Cull grid points beyond the hard render distance cap. This matches the
+  // wall DDA stop distance so the floor/ceiling grid terminates at the same
+  // depth as the wall cap — no visible tunnel or gap between them.
+  if (camSpaceY > NEATENSTEIN_RENDER_DISTANCE_CAP) {
+    return null;
+  }
+
+  // Camera-space X is horizontal right/left displacement.
+  const camSpaceX = -dx * projection.sinYaw + dy * projection.cosYaw;
+  const verticalOffset =
+    (projection.cameraHeight / camSpaceY) * projection.focalLength;
+
+  const screenX =
+    projection.halfWidth + (camSpaceX / camSpaceY) * projection.focalLength;
+
+  const screenY = forCeiling
+    ? projection.horizonY - verticalOffset
+    : projection.horizonY + verticalOffset;
+
+  if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) {
+    return null;
+  }
+
+  const depthDenominator = forCeiling
+    ? projection.horizonY
+    : projection.height - projection.horizonY;
+
+  if (!Number.isFinite(depthDenominator) || depthDenominator <= 0) {
+    return null;
+  }
+
+  const rawDepthRatio = forCeiling
+    ? (projection.horizonY - screenY) / depthDenominator
+    : (screenY - projection.horizonY) / depthDenominator;
 
   return {
-    x: halfWidth + (camSpaceX / camSpaceY) * focalLength,
+    x: screenX,
     y: screenY,
-    depthRatio,
+    depthRatio: clamp(rawDepthRatio, 0, 1),
     distance: camSpaceY,
   };
 }
 
 /**
- * Mix a base neon color with a depth-aware alpha.
+ * Resolve an alpha-aware RGBA stroke style for the neon grid.
  *
- * The base color is assumed to be a 6-digit hex string (e.g., `#0a8ea0`) as
- * supplied by the shared Flappy palette. If parsing fails, the original color
- * is returned unchanged.
+ * If the configured palette color cannot be parsed as RGB, this falls back to
+ * the raw palette stroke color.
  *
  * @param baseRgb - Parsed RGB tuple from the shared palette, or `null`.
- * @param alpha - Opacity in the range 0..1.
- * @returns RGBA color string ready for `ctx.strokeStyle`.
+ * @param alpha - Desired opacity.
+ * @returns Canvas stroke style string.
  */
 function resolveNeatensteinFloorStrokeStyle(
   baseRgb: { r: number; g: number; b: number } | null,
   alpha: number,
 ): string {
+  /* istanbul ignore next -- FLOOR_BASE_RGB is always non-null with the valid palette color */
   if (baseRgb === null) {
     return NEATENSTEIN_FLOOR_FALLBACK_STROKE_STYLE;
   }
 
-  const cached = NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE.get(alpha);
+  // alpha always comes from resolveNeatensteinFloorAlpha (clamped to [0,1]),
+  // so the non-finite fallback branch is unreachable dead code.
+  /* istanbul ignore next -- alpha is always finite from resolveNeatensteinFloorAlpha */
+  const clampedAlpha = clamp(Number.isFinite(alpha) ? alpha : 1, 0, 1);
+  const alphaKey = clampedAlpha.toFixed(
+    NEATENSTEIN_FLOOR_ALPHA_CACHE_PRECISION,
+  );
+
+  const cacheKey = `${baseRgb.r},${baseRgb.g},${baseRgb.b},${alphaKey}`;
+
+  const cached = NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE.get(cacheKey);
   if (cached !== undefined) {
     return cached;
   }
 
-  const style = `rgba(${baseRgb.r}, ${baseRgb.g}, ${baseRgb.b}, ${alpha})`;
-  NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE.set(alpha, style);
+  const style = `rgba(${baseRgb.r}, ${baseRgb.g}, ${baseRgb.b}, ${alphaKey})`;
+  NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE.set(cacheKey, style);
+
   return style;
 }
 
 /**
- * Parse a 6-digit hex color into RGB components.
+ * Parse a six-digit hex color into RGB components.
+ *
+ * Accepts both `#rrggbb` and `rrggbb`.
  *
  * @param baseColor - Hex color string.
  * @returns Parsed RGB tuple, or `null` if parsing fails.
@@ -619,18 +950,32 @@ function resolveNeatensteinFloorStrokeStyle(
 function parseNeatensteinFloorHexColor(
   baseColor: string,
 ): { r: number; g: number; b: number } | null {
-  const hexDigits = baseColor.replace('#', '');
-  if (hexDigits.length !== 6) {
+  const match = /^#?([0-9a-fA-F]{6})$/.exec(baseColor);
+
+  /* istanbul ignore next -- palette color is always valid 6-digit hex */
+  if (match === null) {
     return null;
   }
 
-  const red = parseInt(hexDigits.slice(0, 2), 16);
-  const green = parseInt(hexDigits.slice(2, 4), 16);
-  const blue = parseInt(hexDigits.slice(4, 6), 16);
+  const hexDigits = match[1];
+  const red = Number.parseInt(hexDigits.slice(0, 2), 16);
+  const green = Number.parseInt(hexDigits.slice(2, 4), 16);
+  const blue = Number.parseInt(hexDigits.slice(4, 6), 16);
 
-  if (!Number.isFinite(red + green + blue)) {
+  /* istanbul ignore next -- parseInt on valid hex digits always returns finite values */
+  if (
+    !Number.isFinite(red) ||
+    !Number.isFinite(green) ||
+    !Number.isFinite(blue)
+  ) {
     return null;
   }
 
   return { r: red, g: green, b: blue };
 }
+
+/**
+ * Test-only export of {@link strokeNeatensteinGridBands} for direct coverage
+ * of the empty-band `continue` branch.
+ */
+export const __testOnlyStrokeNeatensteinGridBands = strokeNeatensteinGridBands;

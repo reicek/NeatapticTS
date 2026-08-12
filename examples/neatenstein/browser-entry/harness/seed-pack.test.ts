@@ -3,73 +3,78 @@ import { describe, expect, it } from '@jest/globals';
 /**
  * Red-phase contract tests for examples/neatenstein/browser-entry/harness/seed-pack.ts.
  *
- * Covers AC-304: all variants evaluated in a single generation see an
- * identical frozen seed pack.
+ * Covers createSeedPack(options): returns a fixed, frozen set of seeds for one
+ * generation so every variant evaluated in that generation sees the same
+ * deterministic environment.
  */
 
-describe('Neatenstein harness seed-pack', () => {
-  describe('AC-304: seed-pack fairness', () => {
-    it('exports createSeedPack as a function', async () => {
-      const mod = (await import('./seed-pack.ts')) as Record<string, unknown>;
-      expect(typeof mod.createSeedPack).toBe('function');
+interface SeedPackModule {
+  createSeedPack: (options: {
+    generation: number;
+    variantCount?: number;
+    seed?: number;
+  }) => {
+    generation: number;
+    seeds: number[];
+  };
+}
+
+const VARIANT_COUNT = 32;
+
+describe('Neatenstein enemy seed-pack', () => {
+  describe('createSeedPack(options)', () => {
+    it('returns a frozen seed pack for a generation', async () => {
+      const { createSeedPack } =
+        (await import('./seed-pack.ts')) as unknown as SeedPackModule;
+      const pack = createSeedPack({ generation: 5 });
+
+      expect(pack.generation).toBe(5);
+      expect(pack.seeds).toHaveLength(VARIANT_COUNT);
+      expect(Object.isFrozen(pack)).toBe(true);
+      expect(Object.isFrozen(pack.seeds)).toBe(true);
     });
 
-    it('returns identical frozen seeds for the same generation', async () => {
-      const { createSeedPack } = (await import('./seed-pack.ts')) as Record<
-        string,
-        any
-      >;
-      const first = createSeedPack({ generation: 5, variantCount: 32 });
-      const second = createSeedPack({ generation: 5, variantCount: 32 });
-      expect(first.seeds).toEqual(second.seeds);
-    });
+    it('throws when generation is negative or non-integer', async () => {
+      const { createSeedPack } =
+        (await import('./seed-pack.ts')) as unknown as SeedPackModule;
 
-    it('returns different frozen seeds for different generations', async () => {
-      const { createSeedPack } = (await import('./seed-pack.ts')) as Record<
-        string,
-        any
-      >;
-      const gen5 = createSeedPack({ generation: 5, variantCount: 32 });
-      const gen6 = createSeedPack({ generation: 6, variantCount: 32 });
-      expect(gen5.seeds).not.toEqual(gen6.seeds);
-    });
-
-    it('returns one seed per variant', async () => {
-      const { createSeedPack } = (await import('./seed-pack.ts')) as Record<
-        string,
-        any
-      >;
-      const pack = createSeedPack({ generation: 1, variantCount: 2048 });
-      expect(pack.seeds.length).toBe(2048);
-    });
-
-    it('exposes the requested generation on the pack', async () => {
-      const { createSeedPack } = (await import('./seed-pack.ts')) as Record<
-        string,
-        any
-      >;
-      const pack = createSeedPack({ generation: 9, variantCount: 32 });
-      expect(pack.generation).toBe(9);
-    });
-
-    it('rejects a negative generation', async () => {
-      const { createSeedPack } = (await import('./seed-pack.ts')) as Record<
-        string,
-        any
-      >;
       expect(() => createSeedPack({ generation: -1 })).toThrow(
+        'generation must be a non-negative integer',
+      );
+      expect(() => createSeedPack({ generation: 1.5 })).toThrow(
+        'generation must be a non-negative integer',
+      );
+      expect(() => createSeedPack({ generation: Number.NaN })).toThrow(
         'generation must be a non-negative integer',
       );
     });
 
-    it('rejects a non-positive variant count', async () => {
-      const { createSeedPack } = (await import('./seed-pack.ts')) as Record<
-        string,
-        any
-      >;
-      expect(() => createSeedPack({ generation: 1, variantCount: 0 })).toThrow(
+    it('returns a deterministic pack when a fixed root seed is provided', async () => {
+      const { createSeedPack } =
+        (await import('./seed-pack.ts')) as unknown as SeedPackModule;
+
+      const packA = createSeedPack({ generation: 5, seed: 42 });
+      const packB = createSeedPack({ generation: 5, seed: 42 });
+
+      expect(packA.generation).toBe(5);
+      expect(packA.seeds).toHaveLength(VARIANT_COUNT);
+      expect(packA.seeds).toEqual(packB.seeds);
+      expect(packA.seeds).not.toEqual(createSeedPack({ generation: 5 }).seeds);
+    });
+
+    it('throws when variantCount is not a positive integer', async () => {
+      const { createSeedPack } =
+        (await import('./seed-pack.ts')) as unknown as SeedPackModule;
+
+      expect(() => createSeedPack({ generation: 0, variantCount: 0 })).toThrow(
         'variantCount must be a positive integer',
       );
+      expect(() => createSeedPack({ generation: 0, variantCount: -1 })).toThrow(
+        'variantCount must be a positive integer',
+      );
+      expect(() =>
+        createSeedPack({ generation: 0, variantCount: 1.5 }),
+      ).toThrow('variantCount must be a positive integer');
     });
   });
 });

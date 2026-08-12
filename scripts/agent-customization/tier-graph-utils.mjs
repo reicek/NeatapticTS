@@ -57,29 +57,17 @@ export const TIER_1_AGENT_NAMES = new Set([
  * Must set `user-invocable: false` and may only delegate to Tiers 3 or 4.
  */
 export const TIER_2_AGENT_NAMES = new Set([
-  'planning-context-coordinator',
-  'planning-risk-coordinator',
-  'planning-test-strategy-coordinator',
   'research-codebase-coordinator',
-  'implementation-pattern-coordinator',
   'implementation-executor',
-  'green-test-failure-triage-coordinator',
-  'helping-gap-resolution-coordinator',
-  'helping-agent-maintenance-coordinator',
   'solid-split',
-  'flappy-architecture-polish',
+  'agent-maintenance-coordinator',
 ]);
 
 /**
  * Canonical names of auxiliary / one-shot helper agents (Tier 4).
  * Must set `user-invocable: false` and may not delegate to any other agent.
  */
-export const TIER_4_AGENT_NAMES = new Set([
-  'acceptance-criteria-writer',
-  'docs-example-writer',
-  'learning-event-capturer',
-  'file-change-summarizer',
-]);
+export const TIER_4_AGENT_NAMES = new Set(['learning-event-capturer']);
 
 /**
  * Collects the full tier inventory from `.agent.md` files and validates every

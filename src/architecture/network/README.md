@@ -120,6 +120,41 @@ const output = network.activate([0, 1]);
 
 ### default
 
+#### _invalidateActivationBackend
+
+```ts
+_invalidateActivationBackend(): void
+```
+
+Invalidates any cached activation backend so the next forward pass reselects
+the appropriate CPU or GPU path from scratch. Structural edits can change
+GPU eligibility (gates, self-connections, unsupported activations), so the
+cached backend must not survive them.
+
+#### _resolveActivationBackend
+
+```ts
+_resolveActivationBackend(
+  options: NetworkActivationOptions,
+): ActivationBackend
+```
+
+Resolves the requested backend, applying legacy `useGPU` deprecation rules.
+
+Parameters:
+- `options` - Activation options supplied by the caller.
+
+Returns: Requested backend label. `'auto'` is resolved to the concrete
+`'cpu'` or `'gpu'` path by the caller.
+
+#### _warnUseGPUDeprecated
+
+```ts
+_warnUseGPUDeprecated(): void
+```
+
+Emits a one-time deprecation warning for the legacy `useGPU` option.
+
 #### activate
 
 ```ts
@@ -133,7 +168,7 @@ activate(
 Implementation signature used by the overloads above.
 
 Existing callers passing a boolean `training` flag are unchanged. The GPU
-path is used only when an options bag with `useGPU: true` is supplied,
+path is used only when `backend: 'gpu'` or `backend: 'auto'` is supplied,
 `gpuDevice` is set, and `isGPUEligible` returns true. In every other case
 the standard CPU `network.activate()` implementation runs.
 
@@ -593,6 +628,16 @@ Adds the connection to the network's `gates` list.
 
 Network gates collection.
 
+#### getAccelerationStatus
+
+```ts
+getAccelerationStatus(): AccelerationStatus
+```
+
+Returns a snapshot of the network's acceleration state.
+
+Returns: Status describing the last used backend, GPU readiness, and worker support.
+
 #### getActivationSchedulingDiagnostics
 
 ```ts
@@ -626,6 +671,16 @@ getCurrentSparsity(): number
 Compute the current connection sparsity ratio.
 
 Returns: Current sparsity in $[0,1]$.
+
+#### getGPUEligibility
+
+```ts
+getGPUEligibility(): GPUEligibilityResult
+```
+
+Probes whether this network can use its current GPU device for activation.
+
+Returns: Eligibility verdict and a human-readable reason.
 
 #### getLastGradClipGroupCount
 
@@ -751,6 +806,20 @@ Returns a cloned array so callers can inspect role metadata without
 mutating runtime state.
 
 Returns: Ordered input node gene ids.
+
+#### isGPUReady
+
+```ts
+isGPUReady(): boolean
+```
+
+Whether a WebGPU device has been assigned and is currently ready for use.
+
+Returns: True when  {@link gpuDevice} is set and not lost.
+
+#### lastActivationBackend
+
+Backend used during the most recent activation.
 
 #### lastSkippedLayers
 
@@ -2571,9 +2640,17 @@ const payload: NetworkJSON = {
 };
 ```
 
+### AccelerationStatus
+
+Snapshot returned by {@link Network.getAccelerationStatus}.
+
 ### ActivateNetworkInternals
 
 Internal network surface projected by activation helpers to access scheduling, slab, and traversal state without depending on the full Network class.
+
+### ActivationBackend
+
+Activation backend selector for {@link Network.activate}.
 
 ### ActivationFunction
 
@@ -2602,6 +2679,10 @@ const dy = activation(x, true);
 ### ActivationMode
 
 Execution mode used by the activation scheduler. `'acyclic'` uses a deterministic Kahn wave schedule; `'recurrent'` permits cycles and uses fixed-iteration SCC unrolling.
+
+### ActivationObserver
+
+Observer callbacks for activation backend transitions and fallback events.
 
 ### ActivationSchedule
 
@@ -3154,6 +3235,10 @@ Runtime network shape intersecting Network with genetic properties for crossover
 
 Traversal context for one connection gene during crossover offspring gene-aligned materialization.
 
+### GPUEligibilityResult
+
+Result of a GPU eligibility probe via {@link Network.getGPUEligibility}.
+
 ### GradientClipConfig
 
 Gradient clipping configuration.
@@ -3298,6 +3383,10 @@ Object-only form of the mutation method descriptor excluding string-shorthand al
 ### NeatRuntime
 
 Minimal runtime contract consumed from the NEAT controller within evolve orchestration utilities.
+
+### NetworkActivationOptions
+
+Public options accepted by {@link Network.activate} beyond the legacy boolean training flag.
 
 ### NetworkActivationRuntime
 

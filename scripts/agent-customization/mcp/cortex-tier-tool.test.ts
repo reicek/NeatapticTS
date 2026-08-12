@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+﻿import { spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -77,6 +77,9 @@ interface ToolListPayload {
 interface CortexTierToolModule {
   createSliceContextTool?: () => McpToolDescriptor;
   createTierGraphTool?: () => McpToolDescriptor;
+  rebuildIndex?: (options?: {
+    databasePath?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
 }
 
 /**
@@ -442,6 +445,40 @@ describe('cortex-tier-tool query_tier_graph coverage', () => {
       });
     });
   });
+
+  it('falls back to empty violations when validation issues are missing', async () => {
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('../validate-agent-graph.mjs', () => ({
+        collectTierInventory: jest.fn().mockResolvedValue(fakeInventory),
+        runValidateAgentGraph: jest
+          .fn()
+          .mockResolvedValue({ ok: true, issues: undefined }),
+      }));
+
+      const mod = (await import(
+        TIER_TOOL_PATH
+      )) as unknown as CortexTierToolModule;
+      const factory = mod.createTierGraphTool;
+      if (!factory) {
+        throw new Error('createTierGraphTool is not exported');
+      }
+
+      const tool = factory();
+      const result = (await tool.handler({
+        includeViolations: true,
+      })) as TierGraphResult;
+
+      expect({
+        agents: result.agents,
+        violations: result.violations,
+        issueCount: result.validation.issueCount,
+      }).toEqual({
+        agents: fakeInventory.agents,
+        violations: [],
+        issueCount: 0,
+      });
+    });
+  });
 });
 
 describe('cortex-tier-tool createSliceContextTool guard', () => {
@@ -462,6 +499,78 @@ describe('cortex-tier-tool createSliceContextTool guard', () => {
       expect(factory).toThrow(
         'get_slice_context tool descriptor missing from neataptic-workflow-mcp tool set.',
       );
+    });
+  });
+});
+
+describe('cortex-tier-tool rebuildIndex coverage', () => {
+  it('returns success true when buildSemanticIndex resolves', async () => {
+    await jest.isolateModulesAsync(async () => {
+      const buildSemanticIndex = jest.fn().mockResolvedValue(undefined);
+      jest.doMock('../../../rag-index/build-index.mjs', () => ({
+        buildSemanticIndex,
+      }));
+
+      const mod = (await import(
+        TIER_TOOL_PATH
+      )) as unknown as CortexTierToolModule;
+      if (!mod.rebuildIndex) {
+        throw new Error('rebuildIndex is not exported');
+      }
+
+      const result = await mod.rebuildIndex({
+        databasePath: './tmp/rebuild-test.db',
+      });
+
+      expect(buildSemanticIndex).toHaveBeenCalledWith({
+        databasePath: './tmp/rebuild-test.db',
+      });
+      expect(result.success).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+  });
+
+  it('returns success false with the error message when buildSemanticIndex throws', async () => {
+    await jest.isolateModulesAsync(async () => {
+      const buildSemanticIndex = jest
+        .fn()
+        .mockRejectedValue(new Error('index build failed'));
+      jest.doMock('../../../rag-index/build-index.mjs', () => ({
+        buildSemanticIndex,
+      }));
+
+      const mod = (await import(
+        TIER_TOOL_PATH
+      )) as unknown as CortexTierToolModule;
+      if (!mod.rebuildIndex) {
+        throw new Error('rebuildIndex is not exported');
+      }
+
+      const result = await mod.rebuildIndex();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('index build failed');
+    });
+  });
+
+  it('stringifies non-error rejects into the error field', async () => {
+    await jest.isolateModulesAsync(async () => {
+      const buildSemanticIndex = jest.fn().mockRejectedValue('string failure');
+      jest.doMock('../../../rag-index/build-index.mjs', () => ({
+        buildSemanticIndex,
+      }));
+
+      const mod = (await import(
+        TIER_TOOL_PATH
+      )) as unknown as CortexTierToolModule;
+      if (!mod.rebuildIndex) {
+        throw new Error('rebuildIndex is not exported');
+      }
+
+      const result = await mod.rebuildIndex();
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('string failure');
     });
   });
 });

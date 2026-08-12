@@ -73,8 +73,10 @@ Validate with: npx jest --config=jest.config.mjs --no-cache --testPathPattern=ne
 4. Use nested `describe` blocks to mirror the module structure: outer describe
    names the module, inner describe names the function or scenario, `it` names
    the specific contract.
-5. Write exactly one top-level `expect(...)` per test. Multiple independent
-   assertions belong in separate `it` blocks.
+5. Prefer one top-level `expect(...)` per test for independent contracts. When
+   multiple assertions all verify the _same behavior state_, up to three related
+   `expect(...)` calls are allowed in one `it` block. Unrelated assertions must
+   still be split into separate `it` blocks.
 6. Prefer deterministic fixtures over broad integration runs during the red
    phase. Use seeded values, small static networks, or mocked dependencies
    rather than pulling in large live datasets.
@@ -146,6 +148,27 @@ it('throws RangeError when node count is zero', () => {
 });
 ```
 
+**Before (strict single-expect — same state split across two tests):**
+
+```ts
+it('is active before expiry', () => {
+  expect(isActive(token, now - 1)).toBe(true);
+});
+
+it('is inactive at expiry', () => {
+  expect(isActive(token, now)).toBe(false);
+});
+```
+
+**After (relaxed rule — both assertions belong to the same behavior state):**
+
+```ts
+it('transitions from active to inactive at expiry', () => {
+  expect(isActive(token, now - 1)).toBe(true);
+  expect(isActive(token, now)).toBe(false);
+});
+```
+
 ## Guardrails
 
 - Do not write a test that is trivially impossible to fail; the test must
@@ -153,8 +176,9 @@ it('throws RangeError when node count is zero', () => {
 - Do not write a test that passes immediately because it tests the existing
   (incorrect) behavior; the red phase requires a test that expresses the
   desired future behavior.
-- Do not add multiple top-level `expect(...)` calls in one `it`; each
-  independent contract needs its own `it` block.
+- Do not add multiple top-level `expect(...)` calls in one `it` unless they all
+  verify the same behavior state. Unrelated contracts still need separate `it`
+  blocks.
 - Do not reach for broad integration runs when a focused owner-local test can
   express the same contract.
 - Do not skip the focused run confirmation; a test that does not actually fail

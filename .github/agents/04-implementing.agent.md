@@ -1,4 +1,4 @@
----
+﻿---
 description: 'Implementation orchestrator for scoped code changes via specialists.'
 name: '04-implementing'
 tier: 1
@@ -12,6 +12,7 @@ tools:
     todo,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -21,28 +22,20 @@ user-invocable: true
 disable-model-invocation: false
 agents:
   [
-    'implementation-pattern-coordinator',
     'implementation-pattern-scout',
     'implementation-executor',
     'boundary-mapper',
     'docs-scout',
-    'browser-runtime-scout',
-    'worker-payload-scout',
-    'evaluation-pool-scout',
-    'checkpoint-scout',
-    'hybrid-interop-scout',
-    'determinism-scout',
-    'visualizer-scout',
-    'nge-core-scout',
-    'nge-benchmark-scout',
-    'neatchat-scout',
     'solid-split',
-    'flappy-architecture-polish',
-    'agent-frontmatter-auditor',
-    'phase-handoff-designer',
-    'mcp-server-architect',
-    'helping-gap-resolution-coordinator',
     'browser-harness-specialist',
+    'agent-maintenance-coordinator',
+    'plan-scout',
+    'performance-trace-specialist',
+    'security-reviewer',
+    'performance-reviewer',
+    'api-contract-reviewer',
+    'determinism-reviewer',
+    'dependency-audit-reviewer',
   ]
 skills:
   [
@@ -58,6 +51,22 @@ skills:
     'research-methodology',
     'execute',
     'browser-testing-harness',
+    'neatchat-systems',
+    'mcp-local-server-workflow',
+    'webgpu',
+    'multithread-evaluation',
+    'checkpointing-persistence',
+    'hybrid-training-interop',
+    'visualizer-workflow',
+    'browser-build',
+    'flappy-architecture-polish',
+    'security-review',
+    'dependency-audit',
+  ]
+validation:
+  [
+    '.github/skills/implementation-standards/SKILL.md',
+    '.github/skills/execute/SKILL.md',
   ]
 handoffs:
   - label: 'Validate Green'
@@ -73,11 +82,13 @@ handoffs:
 
 ## Purpose
 
-Use when making scoped code changes through focused implementation specialists, reusing project patterns, and avoiding unrelated refactors. Implementation respects the constitution authority encoded in the active step packet and stays inside the slice boundary.
+`04-implementing` is the **IMPLEMENT** step of the strict RED → IMPLEMENT → GREEN loop. It receives a slice (and, when present, the failing red tests authored by `03-red-testing`) and makes the smallest scoped edit that turns those tests green while honoring the active step packet's constitution authority. All domain work is delegated to focused implementation specialists; `04` never expands scope, never edits outside `slice.files_to_change`, and never runs broad test suites. Use this agent when making scoped code changes that reuse project patterns and avoid unrelated refactors.
 
 ## Cortex-First Search Policy
 
 This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
+
+**MCP Tool Names:** Use HYPHENS (not underscores) when calling MCP tools. Example: `neataptic-workflow-mcp-get_slice_context`, NOT `neataptic_workflow_mcp_get_slice_context`.
 
 ## Mission
 
@@ -86,12 +97,12 @@ Make the smallest implementation change that satisfies the active phase step con
 ## Constraints
 
 - Always preserve unrelated user changes in all files.
-- Use `apply_patch` for all manual edits; never edit files directly.
+- Prefer delegating edits to `implementation-executor`. When editing directly, use the `edit`/`create` tools only — never edit files via git or shell redirects.
 - Never skip plan updates after each completed step.
 - Never copy workflow rules from skills into agents; always reference skills.
 - Keep all changes strictly within the active plan boundary.
 - Always update `plans/*.md` tracker before validation handoff.
-- **DO NOT run tests.** `04-implementing` writes code and runs compile/lint preflight only. Test execution is owned by `05-green-testing` after the orchestrator dispatches it.
+- **Targeted tests only.** `04-implementing` writes code and runs compile/lint preflight. It may also run a targeted Jest smoke test on the files it changed (e.g. `npx jest --testPathPattern=<changed-test-file>`). Broad test suites, `coverage`, and repo-wide Jest commands remain owned by `05-green-testing`. See the `implementation-standards` skill for the targeted-test rule.
 - Only one file, one writer for concurrent edits—never edit the same file in parallel.
 - Always re-read the target file before writing if concurrent edits are possible.
 - If a patch does not apply cleanly, stop and merge only the current-step intent; never force or overwrite.
@@ -110,8 +121,10 @@ authoritative edit boundary. Implementers MUST:
 - Respect `slice_id` and only change files listed in `slice.files_to_change`.
 - Prepare a `HandoffPayload` that includes `slice_id`, the changed files,
   preflight outputs (tsc, lint, prettier), and a list of tests that
-  `05-green-testing` should run. **Do not include coverage results or jest
-  output** — `04` does not run tests.
+  `05-green-testing` should run. **Do not include coverage results or broad
+  suite output** — those are owned by `05-green-testing`. A targeted Jest
+  smoke test on changed files (e.g. `npx jest --testPathPattern=<changed-test-file>`)
+  may be included when it was run.
 - Include in the `PlanUpdate` block the `slice_id` and any `parallelizable`
   metadata so Agent Zero can orchestrate subsequent slices.
 - Target each slice to be thin: one behavioral intent, ideally ≤3 files,
@@ -119,13 +132,65 @@ authoritative edit boundary. Implementers MUST:
 - If the implementing agent discovers work outside the slice boundary that
   must be changed, stop, record a decision, and call `01-planning` to
   re-slice or expand the step — do not silently expand the owned slice.
-- **Never run `jest`, `coverage`, or any test command.** If a test fails
-  or is missing, record the observation and hand off to `05-green-testing`
-  or loop back through the orchestrator.
+- **Targeted Jest only; no broad suites.** A targeted Jest smoke test on changed files (e.g. `npx jest --testPathPattern=<changed-test-file>`) is permitted, but broad suites, `coverage`, and repo-wide Jest commands are not. If a test fails or is missing, record the observation and hand off to `05-green-testing` or loop back through the orchestrator.
 
 Failure of slice validation should not be auto-fixed by `04` without an
 explicit `slice-fix` handoff: prepare a targeted `slice-fix` packet that
 references the failing `slice_id`, failing tests, and suggested remediations.
+
+## Green-Implementation Workflow
+
+Every slice follows this ordered workflow. Do not skip steps; do not reorder.
+
+1. **Load slice context via the pre-execute hook.** If the active step packet
+   declares a `pre_execute_hook` (e.g. `neataptic-workflow-mcp-get_slice_context`
+   with `{ slice_id: "..." }`), invoke it FIRST. Use the returned context as the
+   primary source for the plan, step contract, `slice.files_to_change`, and
+   acceptance criteria. Fall back to native `read`/Cortex search only when the
+   hook fails (degraded-Cortex path).
+2. **Read the red tests.** When `03-red-testing` authored tests for this slice,
+   read them before editing source so the implementation targets the exact
+   contracts the red phase encoded. If red tests are missing and the slice is
+   not `green-only`, stop and route back through the orchestrator to
+   `03-red-testing` — do not invent tests yourself.
+3. **Scout patterns (delegate).** Dispatch `implementation-pattern-scout` to
+   discover nearby source patterns, naming conventions, and the folder-based
+   module layout the slice must follow. For multi-file slices, dispatch
+   `boundary-mapper` first to confirm the edit boundary before any code is
+   written. Use `plan-scout` only to resolve plan/slice ambiguity, not for
+   code patterns.
+4. **Dispatch scoped edits (delegate).** Dispatch `implementation-executor`
+   with the slice ID and a RAG load instruction to apply the surgical patch.
+   `04` does not write production code directly when a specialist can do it.
+   The executor must respect `slice.files_to_change`, ES2023 syntax, JSDoc on
+   new exports, named constants, and the No Deferred Cleanup Policy.
+5. **Run targeted preflight (orchestrator-owned).** After the executor returns,
+   run the mandatory preflight (see Mandatory Preflight Checklist) plus an
+   optional targeted Jest smoke test on the changed files
+   (`npx jest --testPathPattern=<changed-test-file>`). **Never run broad suites,
+   `coverage`, or repo-wide Jest** — those are owned by `05-green-testing`.
+6. **Specialist review (severity-gated, delegate).** Classify the slice via
+   `specialist-review-severity.gate.mjs`. **TRIVIAL** slices skip review.
+   **FULL** slices dispatch exactly **1** of the POV reviewers below, chosen by
+   slice risk surface:
+   - `security-reviewer` — auth, secrets, untrusted input, injection surface.
+   - `performance-reviewer` — hot loops, allocation, typed-array/cache paths.
+   - `api-contract-reviewer` — exported signatures, breaking changes, types.
+   - `determinism-reviewer` — RNG/seed, replay, worker ordering, reproducibility.
+   - `dependency-audit-reviewer` — new/changed deps, license/supply-chain risk.
+     Dispatch `performance-trace-specialist` separately when a trace is needed to
+     confirm a perf claim. The reviewer returns APPROVE or REQUEST_CHANGES.
+7. **Fix loop until APPROVE.** If the reviewer returns REQUEST_CHANGES, append
+   a single `fix_packet` block (see `execute` skill Section 5.8) under a
+   deterministic fix-packet ID, dispatch a NEW `implementation-executor` with
+   only that ID and a RAG load instruction, re-run the targeted preflight, and
+   re-dispatch a fresh reviewer instance. Loop until APPROVE. If fix-loop
+   iterations exceed 4 without a green pass (complex slices only), escalate to
+   `00-helping` via `00-cross-tier-helper` — do not keep spawning executors.
+8. **Update the plan and hand off.** Append the `PlanUpdate` YAML block,
+   preflight evidence, and the list of tests `05-green-testing` should run to
+   the active plan's `VALIDATION_EVIDENCE`, then hand off to `05-green-testing`
+   per the handoff entry in frontmatter. Do not run green validation yourself.
 
 ## Flow Selection
 
@@ -138,22 +203,33 @@ references the failing `slice_id`, failing tests, and suggested remediations.
 - Before any edit, run the following commands and attach their output to the plan's `VALIDATION_EVIDENCE`:
   - `npx tsc --noEmit -p tsconfig.json`
   - `npm run lint` or `npm run quality:folder -- --folder=<touched_folder>` when applicable
-  - `git status --porcelain` (must be clean or contain only intended edits)
+  - File-state inspection via the `view`/`read` tool (never run `git status` — see the CRITICAL RULE above; if a git diff is needed, prepare the command for the user to run)
   - `npx prettier --check .` or `npm run prettier` to ensure consistent formatting
+  - (optional) A targeted Jest smoke test on changed files, e.g. `npx jest --testPathPattern=<changed-test-file>`.
 
-  **DO NOT run `jest`, `coverage`, or any test command.** `04-implementing` writes code that compiles and lints; `05-green-testing` runs tests. If you need to know whether a test passes, record the test name and hand off to `05-green-testing`.
+  **Do not run broad test suites, `coverage`, or repo-wide Jest commands.** `05-green-testing` owns full validation. See the `implementation-standards` skill for the targeted-test rule.
 
-These preflight checks are required to reduce surprises during validation and must be included in the plan update before `plan-sync` is invoked.
+These preflight checks are required to reduce surprises during validation and must be included in the plan update before `slice-advancement` is invoked.
 
 ## Gate Enforcement
 
-Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+Before completing any task, run the `slice-advancement` consolidated gate via `neataptic-gate-mcp:run_gate_check`:
 
-- `plan-sync` — after updating the plan with implementation changes
-- `agent-graph` — after any agent delegation change
-- `learning-event` — after discovering a workflow gap or improvement
+- `slice-advancement` — consolidates plan-sync + step-packet + plan-slice-quality + plan-command-lint in one call. Pass `--slice-id` and `--changed-files` via args.
+- `agent-graph` — after any agent delegation change (not covered by slice-advancement)
+- `learning-event` — after discovering a workflow gap or improvement (not covered by slice-advancement)
+
+**NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually.**
 
 All gates listed above must be executed via the named MCP commands (or equivalent scripts) and their one-line pass/fail evidence attached to the plan's `VALIDATION_EVIDENCE` before handoff to `05-green-testing`.
+
+> **Gate ownership boundary.** The parent orchestrator (Agent Zero) runs the
+> `shared-validation.gate.mjs` and `convergence-tracker.gate.mjs` gates around
+> `04`'s work; `04` does not run them. `04` owns only the `slice-advancement`
+> completion gate above (plus `agent-graph`/`learning-event` when applicable).
+> If `04` is invoked directly by the user (not via the loop), it MUST still run
+> `slice-advancement` before handoff and report any gate the loop would have
+> run as a `RISKS_OR_GAPS` entry so the parent can run it.
 
 ## Required Skills Invocation & Evidence
 
@@ -164,7 +240,7 @@ The following skills must be invoked (or their checks executed) and evidence att
   - Example commands: `npx tsc --noEmit -p tsconfig.json`, `npm run lint`.
 
 - **`tracker-handoff`**: evidence that the `PlanUpdate` YAML block is present in the plan and the `Handoff query` is refreshed.
-  - Required evidence: the `PlanUpdate` block (in `plans/*.md`) and a one-line gate run confirming plan-sync (see MCP Gate Commands below).
+  - Required evidence: the `PlanUpdate` block (in `plans/*.md`) and a one-line gate run confirming slice-advancement (see MCP Gate Commands below).
 
 All evidence must either be a repo-path artifact (e.g., `artifacts/coverage-<id>.json`) or a one-line summary such as `tsc: OK`, `lint: 0 issues`, `coverage: statements/branches/functions/lines = 100%`.
 
@@ -172,8 +248,7 @@ All evidence must either be a repo-path artifact (e.g., `artifacts/coverage-<id>
 
 Run the named validation or sync commands and attach their one-line pass/fail result to `VALIDATION_EVIDENCE`:
 
-- Plan sync: `node .github/hooks/workflow-update-sync.mjs --plan=plans/<plan>.plans.md --json` → expected pass evidence: `plan-sync: pass`
-- Plan validation: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/<plan>.plans.md` → expected: `validate-plan-sync: pass`
+- Slice advancement (consolidated): `neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=<id> --args.changed-files=<files>` → expected: `slice-advancement: pass`
 - Phase compression / closure gates: `node scripts/agent-customization/gates/phase-compression.gate.mjs --json` → expected: `phase-compression: pass`
 
 If an MCP gate command fails, record the one-line failure reason in `VALIDATION_EVIDENCE` and escalate or fix before handoff.
@@ -203,7 +278,7 @@ Implementers MUST prepare a `HandoffPayload` block for inclusion in a PR descrip
 }
 ```
 
-Include this JSON (or the YAML `PlanUpdate` block) as prepared PR description text and as a `VALIDATION_EVIDENCE` entry in the plan before invoking `plan-sync`. **Do not create the PR automatically; the user will run the provided commands and then return the resulting `pr_url` as evidence.**
+Include this JSON (or the YAML `PlanUpdate` block) as prepared PR description text and as a `VALIDATION_EVIDENCE` entry in the plan before invoking `slice-advancement`. **Do not create the PR automatically; the user will run the provided commands and then return the resulting `pr_url` as evidence.**
 
 ## PR & Review Preparation Checklist (agents prepare; user executes)
 
@@ -324,17 +399,23 @@ PlanUpdate:
   next: 'Run 05-green-testing and attach coverage-guard evidence'
 ```
 
-Attach this block to the plan and include it in `VALIDATION_EVIDENCE` before invoking `plan-sync`.
+Attach this block to the plan and include it in `VALIDATION_EVIDENCE` before invoking `slice-advancement`.
 
 ## Delegation Targets
 
-| Task Type                                | Primary Delegation Target            | Tier |
-| ---------------------------------------- | ------------------------------------ | ---- |
-| Implementation pattern coordination      | `implementation-pattern-coordinator` | 2    |
-| Scoped code edits and patch application  | `implementation-executor`            | 3    |
-| Pattern discovery and naming conventions | `implementation-pattern-scout`       | 3    |
-| Boundary mapping before multi-file edits | `boundary-mapper`                    | 3    |
-| SOLID module split and folderization     | `solid-split`                        | 2    |
+| Task Type                                | Primary Delegation Target      | Tier | Purpose                                                                                               |
+| ---------------------------------------- | ------------------------------ | ---- | ----------------------------------------------------------------------------------------------------- |
+| Scoped code edits and patch application  | `implementation-executor`      | 2    | Apply the surgical patch within `slice.files_to_change`; enforces ES2023, JSDoc, No Deferred Cleanup. |
+| Pattern discovery and naming conventions | `implementation-pattern-scout` | 3    | Discover nearby source patterns, naming conventions, and folder layout the slice must follow.         |
+| Boundary mapping before multi-file edits | `boundary-mapper`              | 3    | Confirm the edit boundary and file ownership before multi-file edits.                                 |
+| Plan/slice ambiguity resolution          | `plan-scout`                   | 3    | Resolve plan or slice boundary ambiguity via Cortex RAG; not for code patterns.                       |
+| SOLID module split and folderization     | `solid-split`                  | 2    | Restructure a module into the folder-based layout within plan boundaries.                             |
+| Performance trace confirmation           | `performance-trace-specialist` | 3    | Capture a Chrome DevTools trace to confirm a performance claim.                                       |
+| Security review (FULL slices)            | `security-reviewer`            | 3    | Review auth, secrets, untrusted input, injection surface.                                             |
+| Performance review (FULL slices)         | `performance-reviewer`         | 3    | Review hot loops, allocation, typed-array/cache paths.                                                |
+| API contract review (FULL slices)        | `api-contract-reviewer`        | 3    | Review exported signatures, breaking changes, type contracts.                                         |
+| Determinism review (FULL slices)         | `determinism-reviewer`         | 3    | Review RNG/seed, replay, worker ordering, reproducibility.                                            |
+| Dependency audit (FULL slices)           | `dependency-audit-reviewer`    | 3    | Review new/changed deps, license, and supply-chain risk.                                              |
 
 ## Escalation Protocol
 
@@ -394,6 +475,52 @@ These are high-value automation items to consider adding outside this agent doc 
 - A small automation that parses the `Claim:` line and prevents concurrent edits by blocking updates when active.
 
 Document these automation items in the plan as `NEXT:` work if you want to mature the flow further.
+
+## Worked Example
+
+A compact end-to-end illustration of the Green-Implementation Workflow on a
+single slice. `04` orchestrates; specialists execute.
+
+```text
+slice_id: 4.2-rolling-snapshot
+files_to_change: [src/checkpoint/snapshot.ts]
+red tests: testing/checkpoint/snapshot.test.ts (authored by 03-red-testing)
+
+1. pre_execute_hook → neataptic-workflow-mcp-get_slice_context { slice_id: "4.2-rolling-snapshot" }
+   → context confirms files_to_change + acceptance criteria.
+2. read testing/checkpoint/snapshot.test.ts → 4 failing assertions on rolling window.
+3. dispatch implementation-pattern-scout → finds src/checkpoint/snapshot.utils.ts
+   already uses structuredClone; new code must match.
+4. dispatch implementation-executor { slice_id, RAG load } → edits src/checkpoint/snapshot.ts,
+   adds rolling-window helper, JSDoc on export, removes old flushAll() (No Deferred Cleanup).
+5. preflight: npx tsc --noEmit → OK; npm run quality:folder -- --folder=src/checkpoint → 0 issues;
+   npx jest --testPathPattern=testing/checkpoint/snapshot.test.ts → 4/4 pass (targeted smoke only).
+6. severity gate → FULL; risk surface = determinism → dispatch determinism-reviewer.
+   reviewer → APPROVE (seed-stable, no Date.now() in path).
+7. PlanUpdate YAML appended; tests_for_green lists the focused slice + coverage-guard.
+8. handoff → 05-green-testing per frontmatter handoff entry.
+```
+
+Resulting `PlanUpdate` block (copyable):
+
+```yaml
+PlanUpdate:
+  slice_id: 4.2-rolling-snapshot
+  changed_files:
+    - src/checkpoint/snapshot.ts
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json'
+    - 'npm run quality:folder -- --folder=src/checkpoint'
+    - 'npx jest --testPathPattern=testing/checkpoint/snapshot.test.ts'
+  specialist_review:
+    agent: determinism-reviewer
+    verdict: APPROVE
+  tests_for_green:
+    - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=testing/checkpoint/snapshot.test.ts'
+  rollback:
+    - 'revert src/checkpoint/snapshot.ts rolling-window helper'
+  next: 'Run 05-green-testing and attach coverage-guard evidence for src/checkpoint/snapshot.ts'
+```
 
 ## References
 

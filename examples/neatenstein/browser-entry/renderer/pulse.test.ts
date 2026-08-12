@@ -17,6 +17,25 @@ function createPulseFixture(seed: number): NeatensteinPulse {
     travelSpeed: 0.05,
     screenColumn: 80,
     distance: 5,
+    layer: 'floor',
+  };
+}
+
+function createCeilingPulseFixture(
+  seed: number,
+): NeatensteinPulse & { layer: 'ceiling' } {
+  return {
+    worldX: 5,
+    worldY: 7,
+    seed,
+    active: true,
+    lifetimeTicks: 100,
+    axis: 'x',
+    travelDirection: 1,
+    travelSpeed: 0.05,
+    screenColumn: 80,
+    distance: 5,
+    layer: 'ceiling',
   };
 }
 
@@ -111,7 +130,7 @@ describe('Neatenstein floor pulse system', () => {
   it('hides a pulse behind a closer wall in the z-buffer', async () => {
     const { depthTestPulse } = await loadModule('./pulse.ts');
     const pulse = { screenColumn: 12, distance: 5 };
-    const zBuffer = new Float32Array(160);
+    const zBuffer = new Float32Array(320);
     zBuffer[12] = 2;
     expect(depthTestPulse(pulse, zBuffer)).toBe(false);
   });
@@ -125,5 +144,84 @@ describe('Neatenstein floor pulse system', () => {
     const pulseScheduled = emitNeatensteinGenerationUpPulse(simTick);
     const soundScheduled = scheduleNeatensteinGenerationUpSound(simTick);
     expect(pulseScheduled && soundScheduled).toBe(true);
+  });
+});
+
+describe('Neatenstein ceiling pulse layer', () => {
+  it('exports floor and ceiling pulse layer constants', async () => {
+    const { NEATENSTEIN_PULSE_LAYER_FLOOR, NEATENSTEIN_PULSE_LAYER_CEILING } =
+      await loadModule('./pulse.ts');
+    expect({
+      floor: NEATENSTEIN_PULSE_LAYER_FLOOR,
+      ceiling: NEATENSTEIN_PULSE_LAYER_CEILING,
+    }).toEqual({
+      floor: 'floor',
+      ceiling: 'ceiling',
+    });
+  });
+
+  it('tags ambient pulses as floor by default', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const pulse = emitNeatensteinAmbientPulse(0, 42) as unknown as {
+      layer: string;
+    };
+    expect(pulse.layer).toBe('floor');
+  });
+
+  it('emits a ceiling ambient pulse when asked for the ceiling layer', async () => {
+    const { emitNeatensteinAmbientPulse, NEATENSTEIN_PULSE_LAYER_CEILING } =
+      await loadModule('./pulse.ts');
+    const pulse = emitNeatensteinAmbientPulse(
+      0,
+      42,
+      NEATENSTEIN_PULSE_LAYER_CEILING,
+    ) as unknown as { layer: string };
+    expect(pulse.layer).toBe('ceiling');
+  });
+
+  it('moves a ceiling pulse upward along its x-axis grid line', async () => {
+    const { updateNeatensteinPulses } = await loadModule('./pulse.ts');
+    const pulse = createCeilingPulseFixture(42);
+    const beforeY = pulse.worldY;
+    const next = updateNeatensteinPulses([pulse], 0) as unknown as Array<{
+      worldY: number;
+      layer: string;
+    }>;
+    expect(next[0]?.worldY).toBeLessThan(beforeY);
+  });
+});
+
+describe('Neatenstein ambient pulse branch coverage', () => {
+  it('returns null for a negative sim tick', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    expect(emitNeatensteinAmbientPulse(-1, 42)).toBeNull();
+  });
+
+  it('selects the x axis when the LCG float is below the threshold', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const pulse = emitNeatensteinAmbientPulse(0, 2);
+    expect(pulse).not.toBeNull();
+    expect(pulse!.axis).toBe('x');
+  });
+
+  it('selects the y axis when the LCG float is at or above the threshold', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const pulse = emitNeatensteinAmbientPulse(0, 4);
+    expect(pulse).not.toBeNull();
+    expect(pulse!.axis).toBe('y');
+  });
+
+  it('sets travel direction to +1 when the LCG float is below the threshold', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const pulse = emitNeatensteinAmbientPulse(0, 2);
+    expect(pulse).not.toBeNull();
+    expect(pulse!.travelDirection).toBe(1);
+  });
+
+  it('sets travel direction to -1 when the LCG float is at or above the threshold', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const pulse = emitNeatensteinAmbientPulse(0, 1);
+    expect(pulse).not.toBeNull();
+    expect(pulse!.travelDirection).toBe(-1);
   });
 });

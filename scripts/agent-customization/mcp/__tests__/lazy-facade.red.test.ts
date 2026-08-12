@@ -1043,14 +1043,17 @@ describe('lazy-facade-core internals', () => {
       params: { name: 'local_echo', arguments: { message: 'hi' } },
     })) as JsonRpcResponse;
     const result = (response.result ?? {}) as Record<string, unknown>;
-    const text = (result.content as Array<{ text: string }>)?.[0]?.text ?? '';
     expect({
       isError: result.isError,
-      text,
+      structuredValue: (result.structuredContent as Record<string, unknown>)
+        ?.value,
+      summaryText: (result.content as Array<{ text: string }>)?.[0]?.text,
       spawnCalls: (spawn as jest.Mock).mock.calls.length,
     }).toEqual({
       isError: false,
-      text: JSON.stringify({ value: 'echo:hi' }, null, 2),
+      structuredValue: 'echo:hi',
+      summaryText:
+        'Compact workflow context. See structuredContent for full payload.',
       spawnCalls: 0,
     });
     await facade.close();

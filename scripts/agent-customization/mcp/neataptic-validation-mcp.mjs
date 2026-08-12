@@ -1,6 +1,6 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
- * @module neataptic-validation-mcp
+ * @module neataptic_validation_mcp
  * @description Validation MCP server — exposes the active-step allow-listed commands as MCP tools.
  *
  * Reads the active `[WIP]` step from the plan file and restricts runnable
@@ -45,7 +45,7 @@ import {
   loadActivePlanContext,
 } from './mcp-plan-utils.mjs';
 
-const SERVER_NAME = 'neataptic-validation-mcp';
+const SERVER_NAME = 'neataptic_validation_mcp';
 const SERVER_VERSION = '0.1.0';
 const SELF_CHECK_COMMAND_PATTERN =
   /neataptic-(workflow|validation)-mcp\.mjs|--self-check/iu;
@@ -325,7 +325,7 @@ async function runValidationSelfCheck({ server, planPath }) {
     );
   }
 
-  return createSelfCheckReport('neataptic-validation-mcp self-check', issues, {
+  return createSelfCheckReport('neataptic_validation_mcp self-check', issues, {
     server: { name: SERVER_NAME, version: SERVER_VERSION },
     plan: effectivePlanPath,
     toolNames: server.tools.map((tool) => tool.name),

@@ -4115,6 +4115,33 @@ bits4+ reserved.
 
 Global index counter for assigning unique indices to nodes.
 
+#### _invalidateActivationBackend
+
+```ts
+_invalidateActivationBackend(): void
+```
+
+Invalidates any cached activation backend so the next forward pass reselects
+the appropriate CPU or GPU path from scratch. Structural edits can change
+GPU eligibility (gates, self-connections, unsupported activations), so the
+cached backend must not survive them.
+
+#### _resolveActivationBackend
+
+```ts
+_resolveActivationBackend(
+  options: NetworkActivationOptions,
+): ActivationBackend
+```
+
+Resolves the requested backend, applying legacy `useGPU` deprecation rules.
+
+Parameters:
+- `options` - Activation options supplied by the caller.
+
+Returns: Requested backend label. `'auto'` is resolved to the concrete
+`'cpu'` or `'gpu'` path by the caller.
+
 #### _safeUpdateBias
 
 ```ts
@@ -4135,6 +4162,14 @@ _safeUpdateWeight(
 ```
 
 Internal helper to safely update a connection weight with clipping and NaN checks.
+
+#### _warnUseGPUDeprecated
+
+```ts
+_warnUseGPUDeprecated(): void
+```
+
+Emits a one-time deprecation warning for the legacy `useGPU` option.
 
 #### acquire
 
@@ -4169,7 +4204,7 @@ activate(
 Implementation signature used by the overloads above.
 
 Existing callers passing a boolean `training` flag are unchanged. The GPU
-path is used only when an options bag with `useGPU: true` is supplied,
+path is used only when `backend: 'gpu'` or `backend: 'auto'` is supplied,
 `gpuDevice` is set, and `isGPUEligible` returns true. In every other case
 the standard CPU `network.activate()` implementation runs.
 
@@ -5156,6 +5191,16 @@ Network gates collection.
 
 Stable per-node gene identifier for NEAT innovation reuse.
 
+#### getAccelerationStatus
+
+```ts
+getAccelerationStatus(): AccelerationStatus
+```
+
+Returns a snapshot of the network's acceleration state.
+
+Returns: Status describing the last used backend, GPU readiness, and worker support.
+
 #### getActivationSchedulingDiagnostics
 
 ```ts
@@ -5189,6 +5234,16 @@ getCurrentSparsity(): number
 Compute the current connection sparsity ratio.
 
 Returns: Current sparsity in $[0,1]$.
+
+#### getGPUEligibility
+
+```ts
+getGPUEligibility(): GPUEligibilityResult
+```
+
+Probes whether this network can use its current GPU device for activation.
+
+Returns: Eligibility verdict and a human-readable reason.
 
 #### getLastGradClipGroupCount
 
@@ -5493,6 +5548,16 @@ Parameters:
 
 Returns: True if connected, otherwise false.
 
+#### isGPUReady
+
+```ts
+isGPUReady(): boolean
+```
+
+Whether a WebGPU device has been assigned and is currently ready for use.
+
+Returns: True when  {@link gpuDevice} is set and not lost.
+
 #### isProjectedBy
 
 ```ts
@@ -5528,6 +5593,10 @@ Returns: True if this node projects to the target node, false otherwise.
 #### label
 
 Optional human-readable descriptor label for architecture tooling.
+
+#### lastActivationBackend
+
+Backend used during the most recent activation.
 
 #### lastSkippedLayers
 
@@ -8206,6 +8275,33 @@ bits4+ reserved.
 
 Global index counter for assigning unique indices to nodes.
 
+#### _invalidateActivationBackend
+
+```ts
+_invalidateActivationBackend(): void
+```
+
+Invalidates any cached activation backend so the next forward pass reselects
+the appropriate CPU or GPU path from scratch. Structural edits can change
+GPU eligibility (gates, self-connections, unsupported activations), so the
+cached backend must not survive them.
+
+#### _resolveActivationBackend
+
+```ts
+_resolveActivationBackend(
+  options: NetworkActivationOptions,
+): ActivationBackend
+```
+
+Resolves the requested backend, applying legacy `useGPU` deprecation rules.
+
+Parameters:
+- `options` - Activation options supplied by the caller.
+
+Returns: Requested backend label. `'auto'` is resolved to the concrete
+`'cpu'` or `'gpu'` path by the caller.
+
 #### _safeUpdateBias
 
 ```ts
@@ -8226,6 +8322,14 @@ _safeUpdateWeight(
 ```
 
 Internal helper to safely update a connection weight with clipping and NaN checks.
+
+#### _warnUseGPUDeprecated
+
+```ts
+_warnUseGPUDeprecated(): void
+```
+
+Emits a one-time deprecation warning for the legacy `useGPU` option.
 
 #### acquire
 
@@ -8260,7 +8364,7 @@ activate(
 Implementation signature used by the overloads above.
 
 Existing callers passing a boolean `training` flag are unchanged. The GPU
-path is used only when an options bag with `useGPU: true` is supplied,
+path is used only when `backend: 'gpu'` or `backend: 'auto'` is supplied,
 `gpuDevice` is set, and `isGPUEligible` returns true. In every other case
 the standard CPU `network.activate()` implementation runs.
 
@@ -9247,6 +9351,16 @@ Network gates collection.
 
 Stable per-node gene identifier for NEAT innovation reuse.
 
+#### getAccelerationStatus
+
+```ts
+getAccelerationStatus(): AccelerationStatus
+```
+
+Returns a snapshot of the network's acceleration state.
+
+Returns: Status describing the last used backend, GPU readiness, and worker support.
+
 #### getActivationSchedulingDiagnostics
 
 ```ts
@@ -9280,6 +9394,16 @@ getCurrentSparsity(): number
 Compute the current connection sparsity ratio.
 
 Returns: Current sparsity in $[0,1]$.
+
+#### getGPUEligibility
+
+```ts
+getGPUEligibility(): GPUEligibilityResult
+```
+
+Probes whether this network can use its current GPU device for activation.
+
+Returns: Eligibility verdict and a human-readable reason.
 
 #### getLastGradClipGroupCount
 
@@ -9584,6 +9708,16 @@ Parameters:
 
 Returns: True if connected, otherwise false.
 
+#### isGPUReady
+
+```ts
+isGPUReady(): boolean
+```
+
+Whether a WebGPU device has been assigned and is currently ready for use.
+
+Returns: True when  {@link gpuDevice} is set and not lost.
+
 #### isProjectedBy
 
 ```ts
@@ -9619,6 +9753,10 @@ Returns: True if this node projects to the target node, false otherwise.
 #### label
 
 Optional human-readable descriptor label for architecture tooling.
+
+#### lastActivationBackend
+
+Backend used during the most recent activation.
 
 #### lastSkippedLayers
 

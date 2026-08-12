@@ -38,7 +38,7 @@
 import {
   TIER6_TOTAL_INPUT_SIZE,
   TOTAL_TIER4_INPUT_SIZE,
-} from '../../controller/observation.assembler.js';
+} from '../../controller/observation.assembler';
 
 /** Number of observation inputs consumed by the Tier 1 racing network. */
 export const RACING_INPUT_SIZE = 70;

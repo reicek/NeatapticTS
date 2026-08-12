@@ -266,6 +266,59 @@ export interface NetworkConstructorOptions {
   returnTypedActivations?: boolean;
 }
 
+/** Activation backend selector for {@link Network.activate}. */
+export type ActivationBackend = 'cpu' | 'gpu' | 'auto';
+
+/** Observer callbacks for activation backend transitions and fallback events. */
+export interface ActivationObserver {
+  /** Called when the chosen backend differs from the previous activation. */
+  onBackendChange?(event: {
+    /** Backend selected for this activation. */
+    backend: ActivationBackend;
+    /** Backend used for the previous activation, if any. */
+    previous?: ActivationBackend;
+  }): void;
+  /** Called when a GPU or auto request falls back to CPU. */
+  onFallback?(event: {
+    /** CPU backend selected as the fallback. */
+    backend: 'cpu';
+    /** Backend originally requested by the caller. */
+    requested: 'gpu' | 'auto';
+    /** Human-readable reason for the fallback. */
+    reason: string;
+  }): void;
+}
+
+/** Public options accepted by {@link Network.activate} beyond the legacy boolean training flag. */
+export interface NetworkActivationOptions {
+  /** When true, keep eligibility traces for backpropagation. */
+  training?: boolean;
+  /** Preferred activation backend. Defaults to `'cpu'`. */
+  backend?: ActivationBackend;
+  /** Deprecated boolean GPU opt-in; prefer `backend: 'gpu'` or `backend: 'auto'`. */
+  useGPU?: boolean;
+  /** Optional observer for backend transitions and fallback events. */
+  observer?: ActivationObserver;
+}
+
+/** Snapshot returned by {@link Network.getAccelerationStatus}. */
+export interface AccelerationStatus {
+  /** Most recently used backend, or `'cpu'` before any activation. */
+  mode: ActivationBackend;
+  /** GPU readiness summary. */
+  gpu: { available: boolean };
+  /** Worker availability summary. */
+  worker: { available: boolean };
+}
+
+/** Result of a GPU eligibility probe via {@link Network.getGPUEligibility}. */
+export interface GPUEligibilityResult {
+  /** Whether the current network and device can use the GPU path. */
+  eligible: boolean;
+  /** Human-readable reason for the eligibility verdict. */
+  reason: string;
+}
+
 /** One emitted chunk from bounded sequence activation through the windowed forward-pass API. */
 export interface NetworkForwardWindowChunk {
   /** True when this chunk closes the requested sequence window, signalling that no further chunks will be emitted. */

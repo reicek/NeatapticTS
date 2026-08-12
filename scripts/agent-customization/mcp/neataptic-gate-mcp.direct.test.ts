@@ -1,4 +1,4 @@
-import path from 'node:path';
+﻿import path from 'node:path';
 /**
  * @module neataptic-gate-mcp.direct.test
  * @description Direct-import coverage tests for neataptic-gate-mcp.mjs.

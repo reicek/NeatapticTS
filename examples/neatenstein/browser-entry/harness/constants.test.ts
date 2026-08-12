@@ -32,9 +32,9 @@ describe('Neatenstein harness constants', () => {
   });
 
   describe('AC-306: MLP topology and variant constants', () => {
-    it('exports MLP topology as 8, 6, 4, 2', async () => {
+    it('exports MLP topology as 6, 6, 4, 4', async () => {
       const mod = (await import('./constants.ts')) as Record<string, unknown>;
-      expect(mod.NEATENSTEIN_MLP_TOPOLOGY as number[]).toEqual([8, 6, 4, 2]);
+      expect(mod.NEATENSTEIN_MLP_TOPOLOGY as number[]).toEqual([6, 6, 4, 4]);
     });
 
     it('exports MLP variant count equal to 32', async () => {
@@ -69,9 +69,9 @@ describe('Neatenstein harness constants', () => {
       expect(mod.NEATENSTEIN_WEIGHT_DAMAGE_TAKEN as number).toBe(1);
     });
 
-    it('exports penalty weight for aimMissRate equal to 1', async () => {
+    it('exports penalty weight for aimMissRate equal to 20 (scaled in P4S1)', async () => {
       const mod = (await import('./constants.ts')) as Record<string, unknown>;
-      expect(mod.NEATENSTEIN_WEIGHT_AIM_MISS_RATE as number).toBe(1);
+      expect(mod.NEATENSTEIN_WEIGHT_AIM_MISS_RATE as number).toBe(20);
     });
 
     it('exports complexity bonus weight equal to 0.1', async () => {

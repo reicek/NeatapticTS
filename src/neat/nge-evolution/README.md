@@ -1085,6 +1085,87 @@ const result = applyNgeEvolutionEpigeneticPrior({
 });
 ```
 
+## neat/nge-evolution/neat.nge-evolution.combat-pressure.ts
+
+Combat-pressure to reproduction-mode mapping for the NGE
+(Neuro-evolutionary Genesis Engine) extension.
+
+Raw combat metrics are folded into a single deterministic
+{@link ReproductionModePressureSignal}. The signal tells downstream evolution
+operators whether the current generation is dominating, struggling, or in a
+stalemate, which in turn influences how aggressively the population should
+explore or exploit.
+
+### CombatMetrics
+
+Raw combat performance numbers captured for one generation or evaluation window.
+
+### evaluateCombatPressure
+
+```ts
+evaluateCombatPressure(
+  metrics: CombatMetrics,
+): ReproductionModePressureSignal
+```
+
+Map raw combat metrics to a deterministic reproduction-mode pressure signal.
+
+Exactly one of `isDominating`, `isStruggling`, or `isStalemate` is true on the
+returned signal. The input `generation` is preserved unchanged so callers can
+correlate the signal with the population generation it describes.
+
+Parameters:
+- `metrics` - Raw combat performance numbers.
+
+Returns: A pressure signal with a single active flag and the same generation number.
+
+## neat/nge-evolution/neat.nge-evolution.mlp-enemy-policy.ts
+
+MLP enemy selection-pressure policy for the NGE (Neuro-evolutionary Genesis
+Engine) extension.
+
+The MLP enemy is intentionally a fixed-topology, weight-and-bias-only pressure
+source. It never adds or removes neurons/connections, and it never assimilates
+structural or topological mutations from other genomes. Keeping the enemy
+topology frozen makes its behavior easier to reproduce and benchmark, while
+weight-only drift still supplies meaningful selection pressure to the player
+swarm.
+
+### createMlpEnemySelectionPolicy
+
+```ts
+createMlpEnemySelectionPolicy(): MlpEnemySelectionPolicy
+```
+
+Create the default MLP enemy selection-pressure policy.
+
+The returned policy disables structural and topological mutation and limits
+the enemy to weight and bias mutations only.
+
+Returns: A fixed-topology, weight-and-bias-only selection-pressure policy.
+
+### guardMlpEnemySelectionPolicy
+
+```ts
+guardMlpEnemySelectionPolicy(
+  policy: MlpEnemySelectionPolicy,
+): void
+```
+
+Validate that a candidate policy satisfies the MLP enemy fixed-topology
+contract.
+
+Parameters:
+- `policy` - Candidate policy to validate.
+
+### MlpEnemyMutationKind
+
+Mutation kinds permitted under the fixed-topology MLP enemy policy.
+
+### MlpEnemySelectionPolicy
+
+Fixed-topology selection-pressure policy used for the MLP enemy.
+
 ## neat/nge-evolution/neat.nge-evolution.reproduction-mode.ts
 
 Combat-pressure → reproduction-mode hysteresis policy.

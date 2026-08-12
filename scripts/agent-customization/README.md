@@ -1,4 +1,4 @@
-# scripts/agent-customization
+﻿# scripts/agent-customization
 
 Operator and agent reference for the NeatapticTS agent customization scripts.
 These scripts validate, inventory, and report on the `.github/agents/*.agent.md`
@@ -78,9 +78,14 @@ Three consecutive gate failures in a session trigger automatic escalation to `00
 
 ## Runtime enforcement
 
-See `.github/runtime-enforcement-contract.md` for the canonical strict runtime
-enforcement contract, including the repo-owned context carrier, pre/post hook
-events, and escalation behavior.
+The repo-owned runtime proof carrier lives in
+`scripts/agent-customization/enforcement/runtime-enforcement-context.mjs`
+(documented in the inventory table above). It is exercised by the
+`refresh-cortex-after-write.mjs` manual hook for post-action validation. The
+legacy pretool `runtime-enforcement-contract.md` contract and the orphaned
+`pretool-workflow-cortex-preflight.mjs` hook were removed in the RAG
+Orchestration Improvements plan (Phase 5) — Cortex refresh is now driven by the
+wired `pre-dispatch-freshness-hook` and `post-write-reindex-hook`.
 
 ## MCP server scripts (`mcp/`)
 

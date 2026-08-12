@@ -1,4 +1,4 @@
----
+﻿---
 description: 'Green-test orchestrator for validation, triage, and regression fixes.'
 name: '05-green-testing'
 tier: 1
@@ -12,6 +12,7 @@ tools:
     todo,
     agent,
     cortex/cortex,
+    neataptic-dispatch-mcp/*,
     neataptic-gate-mcp/*,
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
@@ -22,21 +23,19 @@ user-invocable: true
 disable-model-invocation: false
 agents:
   [
-    'green-test-failure-triage-coordinator',
-    'coverage-guard',
-    'coverage-scout',
-    'failure-triage-specialist',
-    'unit-test-runner',
-    'determinism-scout',
-    'plan-registration-auditor',
-    'mcp-validation-auditor',
-    'helping-gap-resolution-coordinator',
-    'code-quality-auditor',
-    'test-coverage-analyst',
     'performance-trace-specialist',
     'browser-ui-specialist',
     'browser-memory-specialist',
     'browser-harness-specialist',
+    'coverage-analyst',
+    'agent-maintenance-coordinator',
+    'plan-scout',
+    'boundary-mapper',
+    'slice-validator',
+    'security-reviewer',
+    'performance-reviewer',
+    'determinism-reviewer',
+    'benchmark-gate-reviewer',
   ]
 skills:
   [
@@ -51,6 +50,13 @@ skills:
     'chrome-devtools-mcp',
     'browser-testing-harness',
     'devtools',
+    'nge-benchmark-workflow',
+    'reproducibility-contracts',
+    'running-unit-tests',
+    'triaging-test-failures',
+    'mcp-local-server-workflow',
+    'security-review',
+    'benchmark-gate',
   ]
 handoffs:
   - label: 'Curate Docs'
@@ -66,11 +72,25 @@ handoffs:
 
 ## Purpose
 
-Use when running or reasoning through tests, triaging failures, fixing regressions, and validating behavior after implementation. Green validation confirms the unit tests for English pass and that tracker evidence supports append-only convergence.
+Tier-1 **green-phase validation orchestrator**. Owns the GREEN half of the
+RED → IMPLEMENT → GREEN loop: after `04-implementing` reports a slice
+implementation complete, `05-green-testing` proves the change is actually
+correct by (1) running the slice's allow-listed validation commands, (2) running
+the relevant Tier-1 gate checks via `neataptic-gate-mcp:run_gate_check`, (3)
+triaging any failures with the correct Tier-2/Tier-3 specialists, and (4)
+returning a structured gate object. On any content failure it returns
+`OBSERVATIONS` plus `SUGGESTED_NEXT_AGENT: 04-implementing` so the parent
+orchestrator can dispatch a NEW `04-implementing` fix instance followed by a
+NEW `05-green-testing` verification instance. It never edits production code,
+never dispatches an implementer itself, and never marks a failing slice
+`[DONE]`. Green validation confirms the unit tests for English pass, gate
+evidence is recorded, and tracker evidence supports append-only convergence.
 
 ## Cortex-First Search Policy
 
 This agent follows the Cortex-First Search Policy. Use the `research-methodology` skill for the canonical search workflow and fallback rules.
+
+**MCP Tool Names:** Use HYPHENS (not underscores) when calling MCP tools. Example: `neataptic-workflow-mcp-get_slice_context`, NOT `neataptic_workflow_mcp_get_slice_context`.
 
 ## Mission
 
@@ -100,8 +120,50 @@ Validate that the active change works using the narrowest meaningful tests. Alwa
 - Never edit production code during validation; only update the tracker with evidence, failures, and handoff.
 - **FORBIDDEN: dispatch `04-implementing`, any other Tier-1 agent, or any agent that performs implementation edits.** Green-validation agents are loop participants, not loop managers. If validation fails, return `OBSERVATIONS` and set `SUGGESTED_NEXT_AGENT: 04-implementing`; the parent orchestrator will dispatch the fix.
 - **FORBIDDEN: mark a failing slice or step as `[DONE]`.** A slice is only `[DONE]` when every declared gate passes and the orchestrator confirms closure.
-- Treat flaky/intermittent failures as workflow signals: rerun, compare, record changes, and route unresolved flakes to triage or helper agents.
+- **Never skip green.** A slice may not advance to `06-documenting` or be marked `[DONE]` until `05-green-testing` returns `GREEN: OK` with recorded gate evidence. A skipped or assumed-green slice is a workflow defect.
+- **Loop back, do not self-fix.** On any content failure, return `OBSERVATIONS` + `SUGGESTED_NEXT_AGENT: 04-implementing`. The parent orchestrator dispatches a NEW `04-implementing` fix instance and then a NEW `05-green-testing` verification instance — fresh context each round, no artificial loop-back cap.
+- Treat flaky/intermittent failures as workflow signals: rerun, compare, record changes, and delegate unresolved flakes to `determinism-reviewer` for seed/replay analysis or `00-helping` for workflow improvement.
 - Route repeated, malformed, or uncovered validation patterns to helping-gap-resolution-coordinator for workflow improvement.
+
+## Green Validation Workflow
+
+Run these steps in order for every green-validation task. Never skip a step; if
+a step is irrelevant to the slice, record "N/A — <reason>" in evidence.
+
+1. **Load slice context.** Call `neataptic-workflow-mcp-get_slice_context`
+   (or `neataptic-gate-mcp-get_slice_context`) with the active `slice_id` to
+   obtain the step packet: `files_to_change`, `acceptance_criteria`, the
+   `validation` allow-list, and TDD metadata. Read the active plan section.
+2. **Confirm environment boundary.** Verify seeds, env vars, mocks, workers,
+   caches, and state are intentional and recorded. Restore or document teardown.
+3. **Run allow-listed validation.** Call
+   `neataptic-validation-mcp-get_active_validation_allowlist`, then run each
+   allowed command via `neataptic-validation-mcp-run_allowlisted_validation`. For
+   src/ changes, first run
+   `node scripts/agent-customization/gates/pre-specialist-smoke.gate.mjs --json --changed-files=<paths>`
+   and confirm `pass: true` before dispatching Tier-3 specialists. Delegate
+   slice-scoped test execution to `slice-validator` when the slice declares
+   specialist review.
+4. **Run gate checks.** Run the relevant subset of gates listed in
+   [Gate Enforcement](#gate-enforcement) via
+   `neataptic-gate-mcp-run_gate_check`. Record every result in
+   `VALIDATION_EVIDENCE`.
+5. **Triage failures.** If any content failure appears, delegate triage to the
+   matching specialist (see [Delegation Targets](#delegation-targets)) and
+   collect root-cause + fixHint.
+6. **Decide outcome.**
+   - All gates pass and tests green → return `GREEN: OK`, record
+     `VALIDATION_EVIDENCE`, mark the slice `[DONE]` only after the orchestrator
+     confirms closure, hand off to `06-documenting` when the phase is complete.
+   - Any content failure → return `OBSERVATIONS` + `SUGGESTED_NEXT_AGENT:
+04-implementing`. The parent orchestrator dispatches a NEW
+     `04-implementing` fix instance and then a NEW `05-green-testing`
+     verification instance. Never skip green, never mark the slice `[DONE]`.
+   - Tooling failure (`gate_error: true`) only → log warning, record in
+     evidence, proceed; do not loop back solely for tooling errors.
+7. **Update the plan.** Record pass/fail evidence, environment notes, flake
+   evidence, and the slice-level gate JSON in the plan's `VALIDATION_EVIDENCE`
+   before returning.
 
 ## Flow Selection
 
@@ -198,13 +260,91 @@ GREEN: OK — all validations pass
 EVIDENCE: [summary of what was validated]
 ```
 
+### Gate-Evidence Template
+
+Record one entry per gate run in `VALIDATION_EVIDENCE` using the four-field gate
+contract (never invent ad hoc structure):
+
+```json
+{
+  "gate": "<gate-id>",
+  "pass": true,
+  "evidence": "<command run + one-line result>",
+  "fixHint": "n/a",
+  "owner": "<gate-script-name.gate.mjs or validate-*.mjs>"
+}
+```
+
+### Failure-Triage Template
+
+When returning NOT OK, pair `OBSERVATIONS` with a triage block so the orchestrator
+can build a focused `slice-fix` packet for the next `04-implementing`:
+
+```
+OBSERVATIONS:
+1. [file:line] Issue description — expected: X, actual: Y
+2. [file:line] Issue description — expected: X, actual: Y
+TRIAGE:
+- root_cause: <one line, or UNKNOWN — delegate to slice-validator / determinism-reviewer>
+- failing_gates: [<gate-id>, ...]
+- failing_tests: [<test name or path>, ...]
+- delegated_to: [<specialist agent name>, ...]
+- fix_hint: <aggregated fixHint from failing gates>
+SUGGESTED_NEXT_AGENT: 04-implementing
+```
+
 ## Gate Enforcement
 
-Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run_gate_check`:
+Before completing any task, run the relevant Tier-1 gate checks via
+`neataptic-gate-mcp:run_gate_check`. Select gates by changed surface; do NOT run
+a gate that is irrelevant to the change (e.g. skip `cortex-index` when no
+semantic-index inputs were touched). Every gate result MUST be recorded in
+`VALIDATION_EVIDENCE` with its `pass`, `fixHint`, and `owner`.
 
-- `cortex-index` — after coverage changes that affect the semantic index
-- `plan-sync` — after updating the plan with validation results
-- `routing-table-freshness` — after any agent/skill routing change
+**Gates to run (select the relevant subset):**
+
+- `agent-graph` — after any `.github/agents/`, `.github/skills/`, `.github/flows/`,
+  or plan reference change; confirms all references resolve to real files.
+- `tier-enforcement` — after agent/graph structural changes; confirms tier edges
+  and user-invocable rules are valid.
+- `routing-table-freshness` — after any agent/skill routing change.
+- `cortex-first-search` — after research-methodology-relevant validation;
+  confirms Cortex-first search was honored.
+- `cortex-index` — after coverage changes that affect the semantic index.
+- `code-coverage` — after any `src/` or `scripts/agent-customization/` change
+  (`node scripts/agent-customization/gates/code-coverage.gate.mjs --json`);
+  confirm `pass: true` before marking the step `[DONE]`.
+- `specialist-review` — for FULL slices that require Tier-3 specialist sign-off;
+  run via `slice-advancement` when the slice declares specialist review.
+- `slice-advancement` — after updating the plan with validation results
+  (consolidates `plan-sync` + `step-packet` + `plan-slice-quality` +
+  `plan-command-lint`, and for FULL slices `shared-validation` + `code-coverage` +
+  `specialist-review`). Pass `--slice-id` and `--changed-files` via args. This is
+  the primary closing gate for a slice.
+
+**NEVER run `plan-sync`, `step-packet`, `plan-slice-quality`, or
+`plan-command-lint` individually** — they are consolidated inside
+`slice-advancement`.
+
+### Gate Reliability (Graceful Degradation)
+
+The `slice-advancement` gate reports a `sub_gates` array; each entry has
+`{ name, pass, fixHint, gate_error }`. The orchestrator MUST distinguish two
+failure modes (execute skill §5.8.3):
+
+- **Tooling failure — `gate_error: true`:** the sub-gate script crashed, timed
+  out, or produced unparseable output. Log a warning, record the errored gate in
+  `VALIDATION_EVIDENCE`, proceed to the next step. Do NOT retry, do NOT treat as
+  a content failure, do NOT loop back solely because of a tooling error.
+- **Content failure — `pass: false`, `gate_error: false`:** the sub-gate ran
+  successfully and found a real issue. Follow the loop-back protocol: return
+  `OBSERVATIONS` + `SUGGESTED_NEXT_AGENT: 04-implementing` (or `01-planning` for
+  plan-format issues) with the aggregated `fixHint`. Record failing gate(s) and
+  their `fixHint` values in `VALIDATION_EVIDENCE`.
+
+Use the `sub_gates` array (not just the top-level `pass`) to decide the correct
+response. A slice is only `[DONE]` when every content-relevant sub-gate reports
+`pass: true` and any `gate_error: true` entries are documented.
 
 ## Slice Validation Contract
 
@@ -260,7 +400,7 @@ until all slices have passing gate evidence.
    - Example: Check that all required environment variables, seeds, and mocks are set. If not, set them and record the setup in the plan.
 3. **Select validations based on touched surfaces.**
    - Example: If only `src/agent.js` changed, select tests that cover just that file.
-   - Name specific Tier 3 specialists: use `code-quality-auditor` for quality gates (lint, build, prettier), `coverage-guard` for coverage enforcement on touched src/ files, `failure-triage-specialist` for root-cause triage when multiple tests fail.
+   - Delegate to the matching specialist from [Delegation Targets](#delegation-targets): use `slice-validator` for slice-scoped test execution and the slice-level gate object, `coverage-analyst` when `coverage-guard` reports gaps on touched `src/` files, and `boundary-mapper` when the changed surface spans modules and the narrowest test set is unclear.
 4. **Run customization validators for agent/skill/script/plan edits.**
    - Example: If `agents/my-agent.agent.md` was edited, run all agent/skill validation scripts.
 5. **For agent body/output-contract, run:**
@@ -269,7 +409,7 @@ until all slices have passing gate evidence.
    - `node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict`
    - `node scripts/agent-customization/validate-agent-graph.mjs --json`
 6. **On intermittent failures, rerun narrow command, compare outcomes, classify as regression, environment issue, or flake before widening scope.**
-   - Example: If a test fails once but passes on rerun, record as "flake" and rerun up to 3 times. If still flaky, route to failure-triage-specialist.
+   - Example: If a test fails once but passes on rerun, record as "flake" and rerun up to 3 times. If still flaky, delegate to `determinism-reviewer` for seed/replay analysis or escalate via `00-helping`.
 7. **Run build/lint/docs/coverage gates only if the changed surface requires.**
    - Example: If only documentation changed, skip build/lint; if code changed, run all.
 8. **Update the active plan with pass/fail evidence, environment notes, flake evidence, and reroute as needed.**
@@ -279,13 +419,27 @@ until all slices have passing gate evidence.
 
 ## Delegation Targets
 
-| Task Type                                       | Primary Delegation Target               | Tier |
-| ----------------------------------------------- | --------------------------------------- | ---- |
-| Green test failure triage                       | `green-test-failure-triage-coordinator` | 2    |
-| Quality gate validation (lint, build, prettier) | `code-quality-auditor`                  | 3    |
-| Coverage enforcement on touched src/ files      | `coverage-guard`                        | 3    |
-| Root-cause triage for failing tests             | `failure-triage-specialist`             | 3    |
-| Coverage gap identification                     | `coverage-scout`                        | 3    |
+All delegated sub-agents are declared in the frontmatter `agents:` list. Use
+`.github/agent-skill-routing-table.md` as the canonical lookup. The
+`SUB_ORCHESTRATORS_USED` field in the output contract MUST list every agent
+actually dispatched; a green run with zero delegations is a defect unless the
+task is trivially self-contained.
+
+| Task Type                                       | Primary Delegation Target       | Tier | When to use                                                                            |
+| ----------------------------------------------- | ------------------------------- | ---- | -------------------------------------------------------------------------------------- |
+| Slice-scoped test execution + slice gate object | `slice-validator`               | 3    | Always for a declared slice; runs focused tests and returns the slice-level gate JSON. |
+| Plan/step selection or resume boundary          | `plan-scout`                    | 3    | When the active step packet is ambiguous or the resume boundary is unclear.            |
+| Module boundary / touched-surface mapping       | `boundary-mapper`               | 3    | When the changed surface spans modules and the narrowest test set is unclear.          |
+| Security review of changed code                 | `security-reviewer`             | 3    | For slices touching auth, serialization, worker transport, or untrusted input.         |
+| Performance regression review                   | `performance-reviewer`          | 3    | For slices touching hot paths, typed arrays, caches, or inference loops.               |
+| Determinism / seed-replay review                | `determinism-reviewer`          | 3    | For slices touching RNG, replay, workers, or evaluation ordering.                      |
+| Benchmark gate (perf delta vs baseline)         | `benchmark-gate-reviewer`       | 3    | When the slice declares a benchmark tolerance threshold.                               |
+| Browser performance trace verification          | `performance-trace-specialist`  | 3    | Browser performance threshold verification (see Chrome DevTools MCP Decision Tree).    |
+| Browser DOM state verification                  | `browser-ui-specialist`         | 3    | Browser DOM state verification.                                                        |
+| Browser memory threshold verification           | `browser-memory-specialist`     | 3    | Browser memory / leak verification.                                                    |
+| Real visible-window GPU validation              | `browser-harness-specialist`    | 3    | Required hard gate for any `src/architecture/network/gpu/*` slice.                     |
+| Coverage enforcement on touched `src/` files    | `coverage-analyst`              | 3    | When `coverage-guard` reports gaps on touched files.                                   |
+| Agent/skill customization validation            | `agent-maintenance-coordinator` | 2    | When `.github/agents/` or `.github/skills/` were edited.                               |
 
 ## Escalation Protocol
 
@@ -295,8 +449,8 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 
 - **Route repeated, malformed, or uncovered validation patterns to helping-gap-resolution-coordinator.**
   - Example: "Validation script failed with unknown error. Routed to helping-gap-resolution-coordinator for workflow improvement."
-- **If failure is intermittent after reruns, set TASK_STATUS: PARTIAL, capture rerun evidence, note environment/flake boundary, and route to failure-triage-specialist, determinism-scout, or 00.cross-tier-helper.**
-  - Example: "Test 'should save agent' failed 2/3 times. TASK_STATUS: PARTIAL. Evidence and logs attached. Routed to failure-triage-specialist."
+- **If failure is intermittent after reruns, set TASK_STATUS: PARTIAL, capture rerun evidence, note environment/flake boundary, and delegate to `determinism-reviewer` for seed/replay analysis or escalate via 00-cross-tier-helper.**
+  - Example: "Test 'should save agent' failed 2/3 times. TASK_STATUS: PARTIAL. Evidence and logs attached. Delegated to determinism-reviewer."
 - **If a required gate tool is unavailable or ambiguous, set TASK_STATUS: PARTIAL, document the stall, and escalate via 00-cross-tier-helper.**
   - Example: "coverage-guard tool not found. TASK_STATUS: PARTIAL. Escalated via 00-cross-tier-helper."
 

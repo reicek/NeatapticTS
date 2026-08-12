@@ -33,7 +33,6 @@ import { parseCliArgs, writeJsonOrText } from '../cli-utils.mjs';
 export const DEFAULT_CHANGED_FILE_GLOBS = Object.freeze([
   'src/**/*.ts',
   'scripts/**/*.mjs',
-  '.github/**/*.md',
   'plans/**/*.md',
 ]);
 
@@ -52,8 +51,6 @@ const FAMILY_RULES = Object.freeze([
     patterns: ['src/**/*.ts'],
     ignore: ['src/**/*.d.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
   },
-  { family: 'skill', patterns: ['.github/skills/**/SKILL.md'] },
-  { family: 'agent', patterns: ['.github/agents/*.agent.md'] },
   {
     family: 'plan',
     patterns: ['plans/**/*.md'],
@@ -68,10 +65,6 @@ const FAMILY_RULES = Object.freeze([
   {
     family: 'root-doc',
     patterns: ['README.md', 'STYLEGUIDE.md', 'CONTRIBUTING.md'],
-  },
-  {
-    family: 'copilot-instructions',
-    patterns: ['.github/copilot-instructions.md'],
   },
 ]);
 

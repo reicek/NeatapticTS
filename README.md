@@ -191,6 +191,10 @@ flowchart TD
 
 [examples/asciiMaze](./examples/asciiMaze) is the companion example for studying curriculum progression, compact observations, reward shaping for sparse goals, and browser plus terminal visualization.
 
+### Neatenstein
+
+[examples/neatenstein](./examples/neatenstein/README.md) is a browser-based first-person arcade demo that showcases **SWARM Mode** — coevolving enemy populations via parallel workers — and a real-time **HIVE DENSITY** HUD overlay. It is a good starting point if you want to see NeatapticTS driving interactive NE behavior with deterministic stepping and offscreen evaluation.
+
 ---
 
 ## Install

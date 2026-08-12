@@ -9,6 +9,7 @@
  * @module
  */
 
+import type { Network } from 'neataptic';
 import type { Vector2 } from '../host/game/types';
 
 /**
@@ -67,6 +68,22 @@ export interface CombatQualitySignal {
   complexityBonus: number;
   /** Penalty for excessive wiring density (parsimony pressure). */
   parsimonyDensityPenalty: number;
+  /** Total shots fired during the episode (P4S1). Used for rate metrics. */
+  shotsFired?: number;
+  /** Total shots that struck an enemy (P4S1). Used for hit-rate computation. */
+  shotsHit?: number;
+  /** Shots fired with no active enemy in the world (P4S1). Penalized as blind fire. */
+  shotsBlindFire?: number;
+  /** Shots that hit a wall with no enemy nearby (P4S1). Penalized as poor aim. */
+  shotsWallHit?: number;
+  /** Total ticks elapsed in the episode (P4S1). Used for fire-rate computation. */
+  ticksElapsed?: number;
+  /**
+   * Number of ammo pickups collected during the episode (P2S1).
+   *
+   * Used for a small fitness bonus; enemy combat metrics remain dominant.
+   */
+  ammoPickupsCollected?: number;
 }
 
 /**
@@ -90,6 +107,16 @@ export interface MainVariant {
   id: number;
   /** Genome snapshot that can be materialized into a Network. */
   genome: Genome;
+  /**
+   * Optional live champion network produced by the hoisted Neat evaluation.
+   *
+   * When present (P3S2+), the worker passes the evaluated-and-evolved champion
+   * network directly so downstream consumers (e.g. Phase 4's player
+   * controller) can activate it without re-materializing the genome. The
+   * `genome` field remains for backward compatibility with existing callers
+   * that do not participate in the hoisted evaluation path.
+   */
+  network?: Network;
 }
 
 /**
@@ -153,51 +180,76 @@ export interface EnemyPopulation {
 }
 
 /**
- * Frozen evaluation barrier.
+ * Death context captured at the moment the main agent dies in an episode.
  *
- * A barrier pairs one main-agent variant with one frozen enemy snapshot and a
- * deterministic seed so the same episode can be replayed exactly for fitness
- * evaluation.
+ * The context records the hero's final pose (position, angle, health), a
+ * snapshot of the enemy state at death time, the damage source that caused the
+ * death, and an optional simulation timestamp for temporal ordering.
  */
-export interface BarrierState {
-  /** Generation the barrier belongs to. */
+export interface DeathContext {
+  /** Hero pose at the moment of death. */
+  hero: {
+    /** Hero position in world coordinates. */
+    position: { x: number; y: number };
+    /** Hero facing angle in radians. */
+    angleRad: number;
+    /** Hero health at death (typically 0). */
+    health: number;
+  };
+  /** Snapshot of enemy state at death time. */
+  enemies: unknown[];
+  /** Identifier of the damage source that caused the death. */
+  damageSource: string;
+  /** Optional simulation tick when the death occurred. */
+  simTimeMs?: number;
+}
+
+/**
+ * One replay entry stored in the replay buffer.
+ *
+ * Pairs a {@link DeathContext} with the generation and seed it occurred in so
+ * downstream replay logic can reproduce or bias selection pressure from
+ * historical death states.
+ */
+export interface ReplayEntry {
+  /** Death context captured at death time. */
+  deathContext: DeathContext;
+  /** Generation number when the death occurred. */
   generation: number;
-  /** Main-agent variant being evaluated. */
-  mainSnapshot: MainVariant;
-  /** Frozen enemy snapshot the main agent is evaluated against. */
-  enemySnapshot: Snapshot;
-  /** Deterministic seed used to run the episode. */
+  /** Deterministic seed for the generation. */
   seed: number;
 }
 
 /**
- * Configuration for one co-evolution population.
+ * Replay buffer interface for death-context recording.
+ *
+ * The buffer stores death contexts in a bounded FIFO queue and exposes `push`,
+ * `entries`, and `size` so both the harness replay logic and the arms-race
+ * human-mode selector can query buffer state.
  */
-export interface PopulationConfig {
-  /** Number of variants to maintain. */
-  size: number;
-  /** Backend discriminator ('mlp' or 'swarm'). */
-  kind: 'mlp' | 'swarm';
+export interface ReplayBuffer {
+  /** Append a death context to the buffer, evicting the oldest entry when full. */
+  push: (ctx: DeathContext) => void;
+  /** Return all stored death contexts in insertion order. */
+  entries: () => DeathContext[];
+  /** Return the current number of stored death contexts. */
+  size: () => number;
 }
 
 /**
- * Top-level harness configuration.
+ * Per-generation enemy behavior summary used by the death feedback loop.
+ *
+ * Captures three scalar dimensions of enemy behavior that the adaptation
+ * signal compares across consecutive generations:
+ * - `aggression` — how aggressively enemies press the main agent.
+ * - `movementPattern` — diversity/complexity of enemy movement.
+ * - `positioning` — spatial positioning quality relative to the main agent.
  */
-export interface HarnessConfig {
-  /** Maximum number of generations to run. */
-  maxGenerations: number;
-  /** Configuration for the enemy population. */
-  enemy: PopulationConfig;
-}
-
-/**
- * Result emitted at the end of one generation.
- */
-export interface GenerationResult {
-  /** Generation number. */
-  generation: number;
-  /** Selected main-agent champion for this generation. */
-  champion: MainVariant;
-  /** Aggregated quality signal for the champion's episode. */
-  quality: CombatQualitySignal;
+export interface EnemyBehaviorMetrics {
+  /** Aggression level of the enemy population, expected in [0, 1]. */
+  aggression: number;
+  /** Movement pattern diversity, expected in [0, 1]. */
+  movementPattern: number;
+  /** Positioning quality, expected in [0, 1]. */
+  positioning: number;
 }

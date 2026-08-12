@@ -90,6 +90,41 @@ independently validate the plan. The verification agent checks slice sizes
 
 > Full policies below. Canonical skill homes: `execute` (delegation/routing/loop), `research-methodology` (search/certainty), `implementation-standards` (code), `educational-docs` (docs), `plan-alignment` (plans), `tracker-handoff` (trackers).
 
+## Pragmatic Mode & Plan Update at End
+
+The strict RED → IMPLEMENT → GREEN loop and per-slice gate ceremony are the
+**default**. An active plan MAY declare pragmatic mandates (broad slices,
+bypass legacy ceremony, single-model mandate, remove legacy noise) in a
+`## Mandates` section. When a plan declares such mandates, agents and
+orchestrators executing that plan MUST follow the mandate over the default
+ceremony — broad slices mean one dispatch per phase, follow-ups go to the
+same idle agent via `write_agent`, and the plan-verification green-light cycle
+may be bypassed when the plan authorizes it. Pragmatic mode is plan-scoped,
+not global. Full policy in the `execute` skill Section 2.4.
+
+When a slice, step, phase, or whole plan completes, the orchestrator MUST
+update the active plan file with the latest details before advancing or
+handing off: status transitions, what changed, evidence (passing
+validation commands), removals, and the next boundary to resume from. A stale
+plan poisons every subsequent RAG dispatch. Full policy in the `execute` skill
+Section 5.9. Under pragmatic mode the update is simplified but not skipped.
+
+## Background Agent Polling Interval
+
+When waiting for background agents, use `read_agent` with `timeout: 1800` (30
+minutes). Do NOT poll with short 3-minute timeouts — agents need 10–25+ minutes
+for complex slices, and frequent polling wastes orchestrator turns.
+
+The orchestrator is automatically notified when a background agent completes, so
+polling is only a safety net. If an agent hasn't completed after 30 minutes,
+check its `tool_calls_completed` count: if it's increasing, the agent is still
+making progress; if it's been static across multiple polls, the agent may be
+stuck and should be stopped.
+
+This interval compensates for slow server speeds and gives agents time to clear
+complex work without wasting orchestrator turns on frequent polling. Full
+policy in the `execute` skill Section 5.5.
+
 ---
 
 ## Policy References — Canonical Skill Homes
@@ -154,3 +189,11 @@ Use the tone model for educational docs; generated READMEs are produced by `npm 
 ### §10 Cortex-First Search Policy (Summary)
 
 Prefer Cortex RAG tools (`search_corpus`, `search_context`, `search_advanced`, `load_document`, `load_chunk`, `traverse_graph`, `expand_query`) before native tools. If Cortex cannot answer, report the gap and fall back temporarily. Full search order and gap escalation live in the `research-methodology` skill.
+
+<!-- mermaid-ai-skills:start -->
+
+## Mermaid Diagrams
+
+When the user asks to create, edit, or visualize a diagram, follow the
+instructions in `.github/instructions/mermaid.instructions.md`.
+<!-- mermaid-ai-skills:end -->

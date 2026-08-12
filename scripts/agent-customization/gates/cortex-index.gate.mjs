@@ -1,62 +1,54 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import {
-  closeTursoClient,
-  getTursoClient,
-} from '../../mcp-semantic/tools/cortex-db.mjs';
-import {
-  defaultDatabasePath,
-  repoRoot,
-} from '../../../rag-index/init-schema.mjs';
-import { validateDatabase } from '../../../rag-index/validate-index.mjs';
-import { resolveStalePlanFixHint } from '../../../rag-index/auto-reindex.mjs';
-import { runCortexMcpSmoke } from './cortex-mcp-smoke.mjs';
+import { parseArgs } from '../customization-utils.mjs';
+import { getDefaultDeps } from './cortex-index.gate.runtime.mjs';
 
 const OWNER = '00-helping';
 const DEFAULT_SNAPSHOT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_TIMEOUT_MS = 60_000;
-const DEFAULT_SNAPSHOT_PATH = path.join(
-  repoRoot,
-  'rag-index',
-  'snapshots',
-  'semantic-snapshot.json',
-);
-const DEFAULT_WORKFLOW_PLAN_PATH = 'plans/mcp-active-binding.plans.md';
-const WORKFLOW_MCP_PATH = path.join(
-  repoRoot,
-  'scripts',
-  'agent-customization',
-  'mcp',
-  'neataptic-workflow-mcp.mjs',
-);
-const WORKFLOW_MCP_CONFIG_PATH = path.join(repoRoot, '.vscode', 'mcp.json');
 
-export async function runCortexIndexGate(options = {}) {
-  const databasePath = path.resolve(
-    options.databasePath ?? defaultDatabasePath,
-  );
-  const snapshotPath = path.resolve(
-    options.snapshotPath ?? DEFAULT_SNAPSHOT_PATH,
-  );
+export async function runCortexIndexGate(options = {}, deps = null) {
+  const d = deps ?? (await getDefaultDeps(options));
+  const databasePath = path.resolve(options.databasePath ?? d.databasePath);
+  const snapshotPath = path.resolve(options.snapshotPath ?? d.snapshotPath);
   const snapshotMaxAgeMs = Number(
-    options.snapshotMaxAgeMs ?? DEFAULT_SNAPSHOT_MAX_AGE_MS,
+    options.snapshotMaxAgeMs ?? d.snapshotMaxAgeMs,
   );
-  const timeoutMs = Number(options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
-  const workflowPlanPath =
-    options.workflowPlanPath ?? (await resolveWorkflowPlanPath());
+  const timeoutMs = Number(options.timeoutMs ?? d.timeoutMs);
+  const workflowPlanPath = options.workflowPlanPath ?? d.workflowPlanPath;
+  const autoRebuild = Boolean(options.autoRebuild);
 
-  const indexReport = await validateDatabase({ databasePath });
-  const corpusMcpReport = await runCortexMcpSmoke({ databasePath });
-  const workflowMcpReport = runWorkflowMcpSelfCheck({
+  const indexValidator = options.indexValidator ?? d.indexValidator;
+  const mcpSmoke = options.mcpSmoke ?? d.mcpSmoke;
+  const workflowMcpCheck = options.workflowMcpCheck ?? d.workflowMcpCheck;
+  const snapshotCurrencyFn = options.snapshotCurrency ?? d.snapshotCurrency;
+  const rebuildIndex = options.rebuildIndex ?? d.rebuildIndex;
+  const resolveFixHint = options.resolveFixHint ?? d.resolveFixHint;
+
+  let indexReport = await indexValidator({ databasePath });
+
+  let autoRebuildAttempted = false;
+  let autoRebuildSuccess = false;
+  let autoRebuildError = null;
+
+  if (autoRebuild && !indexReport.pass) {
+    autoRebuildAttempted = true;
+    const rebuildResult = await rebuildIndex({ databasePath });
+    autoRebuildSuccess = Boolean(rebuildResult?.success);
+    autoRebuildError = rebuildResult?.error ?? null;
+    if (autoRebuildSuccess) {
+      indexReport = await indexValidator({ databasePath });
+    }
+  }
+
+  const corpusMcpReport = await mcpSmoke({ databasePath });
+  const workflowMcpReport = await workflowMcpCheck({
     timeoutMs,
     workflowPlanPath,
   });
-  const snapshotCurrency = await readSnapshotCurrency({
+  const snapshotCurrency = await snapshotCurrencyFn({
     databasePath,
     snapshotPath,
     snapshotMaxAgeMs,
@@ -71,6 +63,9 @@ export async function runCortexIndexGate(options = {}) {
     workflow_mcp_alive: Boolean(workflowMcpReport.pass),
     snapshot_age_seconds: Number(snapshotCurrency.snapshotAgeSeconds ?? 0),
     snapshot_indexed_at: snapshotCurrency.snapshotIndexedAt,
+    auto_rebuild_attempted: autoRebuildAttempted,
+    auto_rebuild_success: autoRebuildSuccess,
+    auto_rebuild_error: autoRebuildError,
   };
   const pass =
     evidence.index_fresh &&
@@ -78,26 +73,58 @@ export async function runCortexIndexGate(options = {}) {
     evidence.workflow_mcp_alive &&
     snapshotCurrency.pass;
 
+  let fixHint = pass
+    ? null
+    : resolveFixHint({
+        indexReport,
+        snapshotCurrency,
+        corpusMcpReport,
+        workflowMcpReport,
+      });
+
+  if (!pass && autoRebuildError) {
+    fixHint = `Auto-rebuild failed: ${autoRebuildError}${fixHint ? `. ${fixHint}` : ''}`;
+  }
+
   return {
     schema_version: 1,
     pass,
     evidence,
-    fixHint: pass
-      ? null
-      : resolveFixHint({
-          indexReport,
-          snapshotCurrency,
-          corpusMcpReport,
-          workflowMcpReport,
-        }),
+    fixHint,
     owner: OWNER,
   };
 }
 
-function parseArgs(argv) {
-  return {
-    help: argv.includes('--help') || argv.includes('-h'),
-    json: argv.includes('--json'),
+function printUsage() {
+  console.log(
+    [
+      'Cortex lifecycle gate',
+      '',
+      'Usage:',
+      '  node scripts/agent-customization/gates/cortex-index.gate.mjs [--json] [--auto-rebuild] [--plan=<path>] [--databasePath=<path>]',
+      '  node scripts/agent-customization/gates/cortex-index.gate.mjs --help',
+      '',
+      'Options:',
+      '  --json                     Emit machine-readable gate JSON.',
+      '  --auto-rebuild             Rebuild a stale semantic index and re-validate before reporting.',
+      '  --plan=<path>              Optional workflow MCP self-check plan path.',
+      '  --databasePath=<path>      Override the semantic index database path.',
+      '  --snapshot-max-age-ms=<n>  Override the snapshot freshness threshold (default: 86400000).',
+    ].join('\n'),
+  );
+}
+
+export async function main(argv = process.argv.slice(2), deps = null) {
+  const parsed = parseArgs(argv);
+  if (parsed.help) {
+    printUsage();
+    process.exitCode = 0;
+    return;
+  }
+
+  const options = {
+    json: parsed.json,
+    autoRebuild: argv.includes('--auto-rebuild'),
     databasePath: argv
       .find((argument) => argument.startsWith('--databasePath='))
       ?.slice('--databasePath='.length),
@@ -108,187 +135,8 @@ function parseArgs(argv) {
       .find((argument) => argument.startsWith('--snapshot-max-age-ms='))
       ?.slice('--snapshot-max-age-ms='.length),
   };
-}
 
-function printUsage() {
-  console.log(
-    [
-      'Cortex lifecycle gate',
-      '',
-      'Usage:',
-      '  node scripts/agent-customization/gates/cortex-index.gate.mjs [--json] [--plan=<path>] [--databasePath=<path>]',
-      '  node scripts/agent-customization/gates/cortex-index.gate.mjs --help',
-      '',
-      'Options:',
-      '  --json                     Emit machine-readable gate JSON.',
-      '  --plan=<path>              Optional workflow MCP self-check plan path.',
-      '  --databasePath=<path>      Override the semantic index database path.',
-      '  --snapshot-max-age-ms=<n>  Override the snapshot freshness threshold (default: 86400000).',
-    ].join('\n'),
-  );
-}
-
-async function readSnapshotCurrency({
-  databasePath,
-  snapshotPath,
-  snapshotMaxAgeMs,
-}) {
-  const fallbackResult = {
-    pass: false,
-    indexDocuments: 0,
-    snapshotAgeSeconds: 0,
-    snapshotIndexedAt: null,
-  };
-
-  if (!existsSync(snapshotPath)) {
-    return fallbackResult;
-  }
-
-  let snapshotGeneratedAtMs;
-
-  try {
-    const snapshotPayload = JSON.parse(await readFile(snapshotPath, 'utf8'));
-    snapshotGeneratedAtMs = Date.parse(snapshotPayload.generated_at);
-  } catch {
-    return fallbackResult;
-  }
-
-  if (!Number.isFinite(snapshotGeneratedAtMs)) {
-    return fallbackResult;
-  }
-
-  const client = await getTursoClient(databasePath);
-
-  try {
-    const snapshotResult = await client.execute({
-      sql: 'SELECT COUNT(*) AS documents, MAX(indexed_at) AS indexed_at FROM documents',
-      args: [],
-    });
-    const snapshotRow = snapshotResult.rows[0] ?? {};
-    const indexedAtMs = Number(snapshotRow.indexed_at ?? 0);
-    const snapshotAgeMs = Math.max(0, indexedAtMs - snapshotGeneratedAtMs);
-
-    return {
-      pass: indexedAtMs > 0 && snapshotAgeMs <= snapshotMaxAgeMs,
-      indexDocuments: Number(snapshotRow.documents ?? 0),
-      snapshotAgeSeconds: Math.trunc(snapshotAgeMs / 1000),
-      snapshotIndexedAt:
-        indexedAtMs > 0 ? new Date(indexedAtMs).toISOString() : null,
-    };
-  } finally {
-    await closeTursoClient(databasePath);
-  }
-}
-
-function runWorkflowMcpSelfCheck({ timeoutMs, workflowPlanPath }) {
-  const spawned = spawnSync(
-    process.execPath,
-    [WORKFLOW_MCP_PATH, `--plan=${workflowPlanPath}`, '--self-check', '--json'],
-    {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      timeout: timeoutMs,
-    },
-  );
-
-  if (spawned.error) {
-    return {
-      pass: false,
-      report: null,
-    };
-  }
-
-  const report = parseJson(spawned.stdout);
-  return {
-    pass: spawned.status === 0 && report?.ok === true,
-    report,
-  };
-}
-
-async function resolveWorkflowPlanPath() {
-  try {
-    const configPayload = JSON.parse(
-      await readFile(WORKFLOW_MCP_CONFIG_PATH, 'utf8'),
-    );
-    const workflowArgs =
-      configPayload?.servers?.['neataptic-workflow-mcp']?.args;
-    const planArgument = Array.isArray(workflowArgs)
-      ? workflowArgs.find(
-          (argument) =>
-            typeof argument === 'string' && argument.startsWith('--plan='),
-        )
-      : null;
-
-    return typeof planArgument === 'string'
-      ? planArgument.slice('--plan='.length)
-      : DEFAULT_WORKFLOW_PLAN_PATH;
-  } catch {
-    return DEFAULT_WORKFLOW_PLAN_PATH;
-  }
-}
-
-function resolveFixHint({
-  indexReport,
-  snapshotCurrency,
-  corpusMcpReport,
-  workflowMcpReport,
-}) {
-  if (!indexReport.pass) {
-    const stalePaths = indexReport.stale_paths ?? [];
-    const missingPaths = indexReport.missing_paths ?? [];
-    const overAgePaths = indexReport.over_age_paths ?? [];
-
-    if (
-      stalePaths.length > 0 &&
-      missingPaths.length === 0 &&
-      overAgePaths.length === 0 &&
-      stalePaths.every(isPlanPath)
-    ) {
-      return resolveStalePlanFixHint(stalePaths);
-    }
-
-    return 'Run: node rag-index/build-index.mjs to rebuild stale index';
-  }
-
-  if (!snapshotCurrency.pass) {
-    return 'Run: npm run index:build-snapshot to regenerate snapshot';
-  }
-
-  if (!corpusMcpReport.pass) {
-    return 'Check cortex server in .vscode/mcp.json; run cortex-mcp-smoke.mjs for details';
-  }
-
-  if (!workflowMcpReport.pass) {
-    return 'Restart neataptic-workflow-mcp server to bind to active plan path';
-  }
-
-  return null;
-}
-
-function isPlanPath(filePath) {
-  return typeof filePath === 'string' && filePath.endsWith('.plans.md');
-}
-
-function parseJson(value) {
-  if (typeof value !== 'string' || !value.trim()) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
-}
-
-async function main() {
-  const options = parseArgs(process.argv.slice(2));
-  if (options.help) {
-    printUsage();
-    return;
-  }
-
-  const report = await runCortexIndexGate(options);
+  const report = await runCortexIndexGate(options, deps);
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
@@ -299,11 +147,12 @@ async function main() {
   }
 
   process.exitCode = report.pass ? 0 : 1;
+  return report;
 }
 
-if (
-  process.argv[1] &&
-  import.meta.url === pathToFileURL(process.argv[1]).href
-) {
-  await main();
+/* istanbul ignore next */
+const isMain = import.meta.url === pathToFileURL(process.argv[1] ?? '').href;
+/* istanbul ignore next */
+if (isMain) {
+  main();
 }

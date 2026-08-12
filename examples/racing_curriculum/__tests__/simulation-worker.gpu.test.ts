@@ -88,12 +88,20 @@ describe('legacy NGE acceleration adapter files', () => {
 });
 
 describe('racing demo exercises the generic acceleration status API', () => {
-  it('Network.getAccelerationStatus returns a stable mode string', () => {
+  it('Network.getAccelerationStatus returns a status object', () => {
     const network = Network.createMLP(2, [3], 1);
-    const status = network.getAccelerationStatus();
+    expect(network.getAccelerationStatus()).toHaveProperty('mode');
+  });
 
-    expect(status).toHaveProperty('mode');
-    expect(typeof status.mode).toBe('string');
-    expect(['cpu', 'gpu', 'worker', 'auto']).toContain(status.mode);
+  it('Network.getAccelerationStatus.mode is a string', () => {
+    const network = Network.createMLP(2, [3], 1);
+    expect(typeof network.getAccelerationStatus().mode).toBe('string');
+  });
+
+  it('Network.getAccelerationStatus.mode is a known mode', () => {
+    const network = Network.createMLP(2, [3], 1);
+    expect(['cpu', 'gpu', 'worker', 'auto']).toContain(
+      network.getAccelerationStatus().mode,
+    );
   });
 });

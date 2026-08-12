@@ -95,6 +95,14 @@ Return: <exact output fields>
 Flowchart summary: "Multiple sub-tasks" → "Independent?"; "Independent?" → "Parallel: launch all at once" (Yes), "Sequential: wait for each" (No); "Parallel: launch all at once" → "Collect results in order"; "Sequential: wait for each" → "Pass result to next agent"; "Collect results in order" → "Merge"; "Pass result to next agent" → "Merge"; "Merge".
 ```
 
+### Concurrency note
+
+Nested delegation (e.g. Tier 1 → Tier 2 → Tier 3 → Tier 4) is supported under
+the real GitHub-plan-tiered concurrent agent limit of **10**. Use flat
+sequential dispatch only as a fallback when the environment is constrained to
+a limit of **2** (typical for BYOK users without a GitHub plan tier), where
+nested delegation beyond depth 2 is not possible.
+
 ## Before / After Examples
 
 **Before:**

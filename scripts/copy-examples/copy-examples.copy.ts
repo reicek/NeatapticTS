@@ -104,6 +104,62 @@ export async function copyExampleEntryPoint(
 }
 
 /**
+ * Copies supplementary asset files declared on an example definition into the
+ * published `docs/examples/<name>/` folder.
+ *
+ * Unlike the primary entrypoint, extra assets are copied verbatim with no
+ * path rewriting or generated-file comment stamping. This is the intended
+ * behavior for supplementary browser pages (such as a sprite preview) and
+ * their data dependencies that must be served from the same folder as the
+ * generated `index.html` but are authored directly in the source tree.
+ *
+ * Files listed in `exampleDefinition.extraAssets` that do not exist in the
+ * source directory are skipped with a warning so that the pipeline does not
+ * fail when an optional asset is absent.
+ *
+ * @param exampleDefinition - Example publishing definition with optional `extraAssets`.
+ * @returns Promise resolved when all declared extra assets have been copied or skipped.
+ */
+export async function copyExampleExtraAssets(
+  exampleDefinition: ExampleDefinition,
+): Promise<void> {
+  if (
+    !exampleDefinition.extraAssets ||
+    exampleDefinition.extraAssets.length === 0
+  ) {
+    return;
+  }
+
+  const destinationDirectoryPath = path.join(
+    DOCS_EXAMPLES_DIR,
+    exampleDefinition.dirName,
+  );
+
+  for (const assetFileName of exampleDefinition.extraAssets) {
+    const sourceAssetPath = path.join(
+      exampleDefinition.sourceDir,
+      assetFileName,
+    );
+    if (!(await pathExists(sourceAssetPath))) {
+      console.warn(
+        `${DOCS_EXAMPLES_LOG_PREFIX} ${exampleDefinition.dirName} extra asset not found, skipping: ${assetFileName}`,
+      );
+      continue;
+    }
+
+    const destinationAssetPath = path.join(
+      destinationDirectoryPath,
+      assetFileName,
+    );
+    await copy(sourceAssetPath, destinationAssetPath, { overwrite: true });
+
+    console.log(
+      `${DOCS_EXAMPLES_LOG_PREFIX} Copied ${exampleDefinition.dirName} extra asset: ${assetFileName}`,
+    );
+  }
+}
+
+/**
  * Copies static documentation files from an example's `docs/` folder into the
  * published docs tree.
  *

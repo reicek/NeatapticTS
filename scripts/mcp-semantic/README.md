@@ -1,4 +1,4 @@
-# Repo Cortex MCP Server
+﻿# Repo Cortex MCP Server
 
 `cortex` exposes the Repo Cortex semantic index as read-only MCP tools.
 It is an async Turso/libSQL-backed semantic corpus MCP server, so agents can search,

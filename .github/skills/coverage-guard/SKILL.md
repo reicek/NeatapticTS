@@ -111,7 +111,9 @@ If any category is below 100%, classify the uncovered path before acting:
 - Add the **smallest** owner-local test that exercises it.
 - Add it to the nearest existing test file for that boundary.
 - Never create a new test file when an owner-local file already exists.
-- One `it()` block, one top-level `expect(...)` (single-expect rule).
+- Prefer one top-level `expect(...)` per `it()` for independent contracts. Up
+  to three related `expect(...)` calls are allowed when they verify the same
+  behavior state.
 - Re-run the focused slice to confirm 100%.
 
 **Dead code** — no legal input can reach it:
@@ -205,8 +207,10 @@ When a gap is unreachable:
 
 ## Single-Expect Rule
 
-Every new `it()` block must contain **exactly one top-level `expect(...)`**.
-Group by scenario, not by assertion count.
+Prefer one top-level `expect(...)` per `it()` for independent contracts. When
+multiple assertions all verify the same behavior state, up to three related
+`expect(...)` calls are allowed in one `it()` block. Unrelated assertions must
+still be split into separate `it()` blocks.
 
 ## Before / After Examples
 

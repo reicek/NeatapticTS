@@ -67,7 +67,7 @@ import { getTursoClient } from './tools/cortex-db.mjs';
 import { runParallelQueries } from '../../rag-index/parallel-search.mjs';
 
 const SERVER_VERSION = '0.1.0';
-const ENTRYPOINT = 'scripts/mcp-semantic/repo-cortex-mcp.mjs';
+const ENTRYPOINT = 'scripts/mcp-semantic/repo_cortex_mcp.mjs';
 
 /**
  * Create the Repo Cortex MCP server instance.
@@ -1456,7 +1456,7 @@ export async function runSelfCheck(options = {}) {
     if (!ok) {
       issues.push(
         selfCheckError(
-          'scripts/mcp-semantic/repo-cortex-mcp.mjs',
+          'scripts/mcp-semantic/repo_cortex_mcp.mjs',
           `Tool "${tool.name}" is not callable (missing or invalid handler).`,
         ),
       );

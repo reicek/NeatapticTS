@@ -1,4 +1,4 @@
-id: '02.mcp-snapshot-first'
+﻿id: '02.mcp-snapshot-first'
 name: 'MCP Workflow Snapshot Pull'
 agent: '02-researching'
 description: >

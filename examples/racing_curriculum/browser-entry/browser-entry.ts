@@ -98,7 +98,6 @@ import {
 } from '../controller/runtime.adaptation';
 import {
   derivePerCarObservationState,
-  TIER6_TOTAL_INPUT_SIZE,
   TOTAL_TIER4_INPUT_SIZE,
 } from '../controller/observation.assembler';
 import type {
@@ -151,8 +150,7 @@ const RACING_RUNTIME_SCORE_HISTORY_WINDOW = 60;
  * count so the grow-stabilize cycle can exercise the NGE variant evaluator.
  */
 const DEMO_ACCELERATION_CONFIG = resolveAccelerationConfig({
-  parallelVariantCount: 1024,
-  stageVariantCounts: { baby: 1024, juvenile: 1024, adult: 1024 },
+  parallelVariantCount: 256,
 });
 
 /** Track determinism key: seed 42, layout v1. */
@@ -557,19 +555,12 @@ export async function start(
     DEMO_ACCELERATION_CONFIG.parallelVariantCount!,
   );
   hostHandle.networkHud.titleValue.textContent = accelerationDisplayLabel;
-  if (stageCardNodes.accelerationValueElement) {
-    stageCardNodes.accelerationValueElement.textContent =
+  if (stageCardNodes.accelerationStatusElement) {
+    stageCardNodes.accelerationStatusElement.textContent =
       accelerationDisplayLabel;
   }
   if (stageCardNodes.accelerationChipElement) {
-    stageCardNodes.accelerationChipElement.classList.remove(
-      'racing-status-chip--gpu',
-      'racing-status-chip--worker',
-      'racing-status-chip--cpu',
-    );
-    stageCardNodes.accelerationChipElement.classList.add(
-      resolveAccelerationChipClass(accelerationStatus.mode),
-    );
+    stageCardNodes.accelerationChipElement.className = `racing-status-chip ${resolveAccelerationChipClass(accelerationStatus.mode)}`;
   }
 
   let tierSignalEvidenceAccumulator =
@@ -1562,7 +1553,7 @@ function setupCanvasStage(
   accelerationStatus?: AccelerationStatus,
 ): {
   accelerationChipElement: HTMLDivElement | undefined;
-  accelerationValueElement: HTMLSpanElement | undefined;
+  accelerationStatusElement: HTMLSpanElement | undefined;
 } {
   region.replaceChildren();
   const stageNarrative = resolveStageNarrativeForTier(tier);
@@ -1592,20 +1583,18 @@ function setupCanvasStage(
     initialAccelerationLabel,
   );
   if (accelerationStatus) {
-    accelerationChipElement.classList.add(
-      resolveAccelerationChipClass(accelerationStatus.mode),
-    );
+    accelerationChipElement.className = `racing-status-chip ${resolveAccelerationChipClass(accelerationStatus.mode)}`;
   }
   metaElement.append(
     createStatusChip(
       'Controller',
-      `Live NGE controller • ${DEMO_ACCELERATION_CONFIG.parallelVariantCount} variants`,
+      `Live NGE controller • ${DEMO_ACCELERATION_CONFIG.parallelVariantCount}x`,
     ),
     createStatusChip('Track', 'Spline-smoothed visual'),
     createStatusChip('Seed', '42 • v1 • medium'),
     accelerationChipElement,
   );
-  const accelerationValueElement =
+  const accelerationStatusElement =
     accelerationChipElement.querySelector<HTMLSpanElement>(
       '.racing-status-chip__value',
     );
@@ -1629,7 +1618,7 @@ function setupCanvasStage(
 
   return {
     accelerationChipElement,
-    accelerationValueElement: accelerationValueElement ?? undefined,
+    accelerationStatusElement: accelerationStatusElement ?? undefined,
   };
 }
 
@@ -1956,14 +1945,37 @@ function buildPanelRowWithLiveNode(
 /**
  * Creates a small deterministic public network that drives the solo browser harness.
  *
+ * The network shape depends on the observation tier so the input dimension matches
+ * the assembled per-car observation vector and the output dimension matches the
+ * tier's control contract.
+ *
+ * @param observationTier - Supported observation tier (1–6) that selects the
+ *   controller input/output shape. Defaults to tier 1.
  * @returns Deterministically parameterized controller network.
+ * @throws {Error} When `observationTier` is outside the supported 1–6 range.
+ *
+ * @example
+ * ```ts
+ * const controller = createDeterministicRacingControllerNetwork(4);
+ * console.log(controller.input, controller.output); // 103, 2
+ * ```
  */
 export function createDeterministicRacingControllerNetwork(
   observationTier: SupportedObservationTier = 1,
 ): Network {
+  if (
+    !Number.isInteger(observationTier) ||
+    observationTier < 1 ||
+    observationTier > 6
+  ) {
+    throw new Error(
+      `Unsupported observation tier ${observationTier}. Supported tiers: 1–6.`,
+    );
+  }
+
   const resolvedInputCount =
     resolveControllerInputCountForObservationTier(observationTier);
-  const resolvedOutputCount = observationTier >= 2 ? 9 : 2;
+  const resolvedOutputCount = observationTier === 2 ? 9 : 2;
   const controllerNetwork = Network.createMLP(
     resolvedInputCount,
     [...CONTROLLER_HIDDEN_LAYER_SIZES],
@@ -2538,7 +2550,7 @@ function formatAccelerationStatus(
   const suffix = fallbackReason
     ? ` · ${status.mode} blocked: ${fallbackReason}`
     : '';
-  return `${modeLabel}${suffix} (${parallelVariantCount} variants)`;
+  return `${modeLabel}${suffix} • ${parallelVariantCount}x`;
 }
 
 /**
@@ -3571,32 +3583,30 @@ function resolveGuidanceAlphaForCurriculumTier(tier: CurriculumTier): number {
 }
 
 /**
- * Clamps one floating-point value into the closed `[0, 1]` interval.
+ * Resolves the controller input dimension for a supported observation tier.
  *
- * @param value - Incoming floating-point value.
- * @returns Clamped unit-interval value.
+ * The browser harness remaps every tier to a stable channel count that stays
+ * byte-for-byte compatible with the coevolution service's controller input
+ * dimension. Tier 6 is explicitly assigned the literal value `124` so the
+ * source remains greppable and stable under refactor.
+ *
+ * @param observationTier - Active observation tier (1–6).
+ * @returns Number of input channels required by the tier controller.
  * @internal
  */
 function resolveControllerInputCountForObservationTier(
   observationTier: SupportedObservationTier,
 ): number {
-  if (observationTier === 1) {
-    return 70;
-  }
+  const INPUT_COUNTS_BY_TIER: Record<SupportedObservationTier, number> = {
+    1: 70,
+    2: 77,
+    3: 91,
+    4: TOTAL_TIER4_INPUT_SIZE,
+    5: TOTAL_TIER4_INPUT_SIZE,
+    6: 124,
+  };
 
-  if (observationTier === 2) {
-    return 77;
-  }
-
-  if (observationTier === 3) {
-    return 91;
-  }
-
-  if (observationTier === 6) {
-    return TIER6_TOTAL_INPUT_SIZE;
-  }
-
-  return TOTAL_TIER4_INPUT_SIZE;
+  return INPUT_COUNTS_BY_TIER[observationTier];
 }
 
 /**

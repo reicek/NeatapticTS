@@ -2,9 +2,11 @@
  * Deterministic episode lifecycle for the Neatenstein host-side simulation.
  *
  * An episode is a single deterministic play-through from a fixed seed to a
- * terminal condition (time limit, player death, or all enemies killed). The
- * functions in this module are pure: they return immutable state snapshots so
- * the same seed always produces the same final state.
+ * terminal condition: player death or all spawned enemies killed. Episodes
+ * are NOT time-bound — generations run until gameplay ends.
+ *
+ * The functions in this module return immutable state snapshots so the same
+ * seed and input/update sequence produce the same final state.
  *
  * @module
  */
@@ -12,17 +14,39 @@
 import {
   NEATENSTEIN_EPISODE_DEFAULT_DURATION_MS,
   NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_MAP_SIZE,
 } from './constants';
 import { resolveContactDamage } from './collision';
+import { buildNeatensteinMap, createCollisionMap } from '../../renderer/map';
+import type { CollisionMap } from '../../renderer/map';
 import { createGameState } from './state';
 import { spawnWaveTick } from './waves';
 import type { GameState } from './types';
+
+/**
+ * Minimum valid episode duration in milliseconds.
+ */
+const MIN_EPISODE_DURATION_MS = 1;
+
+/**
+ * Minimum valid fixed timestep in milliseconds.
+ */
+const MIN_TIMESTEP_MS = 1;
+
+/**
+ * Safety margin applied to the computed maximum episode step count.
+ *
+ * This prevents `runEpisode` from looping forever if future completion rules
+ * change or malformed state slips through.
+ */
+const EPISODE_STEP_GUARD_MARGIN = 2;
 
 /** Options accepted by {@link createEpisode}. */
 export interface CreateEpisodeOptions {
   /** Deterministic seed used to initialize the episode. */
   seed?: number;
-  /** Target episode duration in milliseconds; defaults to 20_000. */
+
+  /** Target episode duration in milliseconds. */
   durationMs?: number;
 }
 
@@ -30,14 +54,136 @@ export interface CreateEpisodeOptions {
 export interface Episode {
   /** Mutable snapshot of the running episode state. */
   state: GameState;
+
   /** Target duration in milliseconds used to decide episode completion. */
   durationMs: number;
 }
 
 /**
+ * Return whether a value is a finite number.
+ *
+ * @param value - Candidate number.
+ * @returns Whether the value is finite.
+ */
+function isFiniteNumber(value: number): boolean {
+  return Number.isFinite(value);
+}
+
+/**
+ * Resolve a deterministic episode seed.
+ *
+ * Non-finite seeds fall back to the canonical default seed.
+ *
+ * @param seed - Optional caller-provided seed.
+ * @returns Finite episode seed.
+ */
+function resolveEpisodeSeed(seed: number | undefined): number {
+  return typeof seed === 'number' && isFiniteNumber(seed) ? seed : 1;
+}
+
+/**
+ * Resolve a valid positive episode duration.
+ *
+ * Invalid, zero, or negative durations fall back to the configured default.
+ *
+ * @param durationMs - Optional caller-provided duration.
+ * @returns Positive finite episode duration in milliseconds.
+ */
+function resolveEpisodeDurationMs(durationMs: number | undefined): number {
+  return typeof durationMs === 'number' &&
+    isFiniteNumber(durationMs) &&
+    durationMs >= MIN_EPISODE_DURATION_MS
+    ? durationMs
+    : NEATENSTEIN_EPISODE_DEFAULT_DURATION_MS;
+}
+
+/**
+ * Resolve a valid positive timestep.
+ *
+ * Invalid, zero, or negative timesteps fall back to the configured fixed
+ * timestep.
+ *
+ * @param dtMs - Candidate timestep.
+ * @returns Positive finite timestep in milliseconds.
+ */
+function resolveEpisodeTimestepMs(dtMs: number): number {
+  return isFiniteNumber(dtMs) && dtMs >= MIN_TIMESTEP_MS
+    ? dtMs
+    : NEATENSTEIN_FIXED_TIMESTEP_MS;
+}
+
+/**
+ * Decrease a timer by the elapsed timestep and clamp it at zero.
+ *
+ * Invalid existing timers are treated as already expired.
+ *
+ * @param currentMs - Current timer value in milliseconds.
+ * @param dtMs - Elapsed timestep in milliseconds.
+ * @returns Updated non-negative timer value.
+ */
+function tickTimerMs(currentMs: number, dtMs: number): number {
+  const current = isFiniteNumber(currentMs) && currentMs > 0 ? currentMs : 0;
+
+  return Math.max(0, current - dtMs);
+}
+
+/**
+ * Attach an episode duration to a freshly created game state.
+ *
+ * @param state - Source game state.
+ * @param durationMs - Positive finite episode duration.
+ * @returns State with `episodeDurationMs` configured.
+ */
+function withEpisodeDuration(state: GameState, durationMs: number): GameState {
+  return {
+    ...state,
+    episodeDurationMs: durationMs,
+  };
+}
+
+/**
+ * Advance global episode timers and player dash timers.
+ *
+ * @param state - Snapshot before timer advancement.
+ * @param dtMs - Positive finite timestep.
+ * @returns State with advanced timers.
+ */
+function advanceEpisodeTimers(state: GameState, dtMs: number): GameState {
+  const simTimeMs = isFiniteNumber(state.simTimeMs) ? state.simTimeMs : 0;
+  const episodeTimeMs = isFiniteNumber(state.episodeTimeMs)
+    ? state.episodeTimeMs
+    : 0;
+
+  return {
+    ...state,
+    simTimeMs: simTimeMs + dtMs,
+    episodeTimeMs: episodeTimeMs + dtMs,
+    player: {
+      ...state.player,
+      dashTimeRemainingMs: tickTimerMs(state.player.dashTimeRemainingMs, dtMs),
+      dashCooldownMs: tickTimerMs(state.player.dashCooldownMs, dtMs),
+    },
+  };
+}
+
+/**
+ * Compute a safe upper bound on update steps for an episode.
+ *
+ * @param durationMs - Episode duration in milliseconds.
+ * @param timestepMs - Fixed timestep in milliseconds.
+ * @returns Maximum update iterations before the run is forcibly finalized.
+ */
+function resolveMaxEpisodeSteps(
+  durationMs: number,
+  timestepMs: number,
+): number {
+  return Math.ceil(durationMs / timestepMs) + EPISODE_STEP_GUARD_MARGIN;
+}
+
+/**
  * Create a fresh episode container for the requested seed and duration.
  *
- * The returned episode captures the initial {@link GameState} and the target
+ * The returned episode captures the initial {@link GameState} and target
  * duration. Call {@link runEpisode} to advance the episode to completion, or
  * manually step it with {@link updateEpisode}.
  *
@@ -52,12 +198,12 @@ export interface Episode {
  * ```
  */
 export function createEpisode(options: CreateEpisodeOptions = {}): Episode {
-  const seed = options.seed ?? 1;
-  const durationMs =
-    options.durationMs ?? NEATENSTEIN_EPISODE_DEFAULT_DURATION_MS;
-  const state = createGameState({ seed });
+  const seed = resolveEpisodeSeed(options.seed);
+  const durationMs = resolveEpisodeDurationMs(options.durationMs);
+  const state = withEpisodeDuration(createGameState({ seed }), durationMs);
+
   return {
-    state: { ...state, episodeDurationMs: durationMs },
+    state,
     durationMs,
   };
 }
@@ -65,14 +211,20 @@ export function createEpisode(options: CreateEpisodeOptions = {}): Episode {
 /**
  * Build the canonical initial {@link GameState} for an episode seed.
  *
- * This is a thin wrapper around {@link createGameState} that makes the
- * episode lifecycle naming explicit.
+ * This wrapper mirrors {@link createEpisode} by attaching the default episode
+ * duration to the returned state.
  *
  * @param seed - Deterministic seed for the episode.
  * @returns Fresh episode state with default duration configured.
  */
 export function startEpisode(seed: number): GameState {
-  return createGameState({ seed });
+  const resolvedSeed = resolveEpisodeSeed(seed);
+  const durationMs = resolveEpisodeDurationMs(undefined);
+
+  return withEpisodeDuration(
+    createGameState({ seed: resolvedSeed }),
+    durationMs,
+  );
 }
 
 /**
@@ -84,23 +236,26 @@ export function startEpisode(seed: number): GameState {
  *
  * @param state - Snapshot before the update.
  * @param dtMs - Elapsed time in milliseconds for this step.
+ * @param collisionMap - Optional collision map passed to the spawner so edge
+ *   cells can be validated.
  * @returns New snapshot after the update.
  */
-export function updateEpisode(state: GameState, dtMs: number): GameState {
-  let next: GameState = {
-    ...state,
-    simTimeMs: state.simTimeMs + dtMs,
-    episodeTimeMs: state.episodeTimeMs + dtMs,
-    player: {
-      ...state.player,
-      dashTimeRemainingMs: Math.max(0, state.player.dashTimeRemainingMs - dtMs),
-      dashCooldownMs: Math.max(0, state.player.dashCooldownMs - dtMs),
-    },
-  };
+export function updateEpisode(
+  state: GameState,
+  dtMs: number,
+  collisionMap?: CollisionMap,
+): GameState {
+  const resolvedDtMs = resolveEpisodeTimestepMs(dtMs);
 
-  const spawnResult = spawnWaveTick(next, dtMs);
+  // Step 1: Advance deterministic timers before subsystems use the new time.
+  let next = advanceEpisodeTimers(state, resolvedDtMs);
+
+  // Step 2: Spawn enemies according to the wave schedule.
+  const spawnResult = spawnWaveTick(next, resolvedDtMs, collisionMap);
   next = spawnResult.state;
-  next = resolveContactDamage(next, dtMs);
+
+  // Step 3: Apply player/enemy contact damage after spawning and timer updates.
+  next = resolveContactDamage(next, resolvedDtMs);
 
   return next;
 }
@@ -108,53 +263,80 @@ export function updateEpisode(state: GameState, dtMs: number): GameState {
 /**
  * Check whether the episode should end.
  *
- * An episode is complete when any of the following hold:
- *   - the episode time reaches the configured duration limit,
- *   - the player has died, or
- *   - all spawned enemies have been killed.
+ * The episode runs until the time-limit guard in {@link runEpisode} is
+ * reached. Player death triggers a respawn (not episode end) and the game
+ * features infinite waves, so there is no gameplay-based terminal condition.
  *
  * @param state - Current episode snapshot.
- * @returns `true` when the episode has reached a terminal condition.
+ * @returns Always `false`; the episode is terminated by the step guard.
  */
-export function isEpisodeComplete(state: GameState): boolean {
-  const durationMs =
-    state.episodeDurationMs ?? NEATENSTEIN_EPISODE_DEFAULT_DURATION_MS;
-  const outOfTime = state.episodeTimeMs >= durationMs;
-  const playerDead = state.player.health <= 0;
-  const allEnemiesKilled =
-    state.enemies.length > 0 &&
-    state.enemies.every((enemy) => enemy.health <= 0);
-  return outOfTime || playerDead || allEnemiesKilled;
+export function isEpisodeComplete(_state: GameState): boolean {
+  void _state;
+  return false;
 }
 
 /**
  * Finalize a completed episode state.
  *
- * Currently returns a fresh immutable copy of the terminal state. Future
- * slices may attach a fitness or score summary here once the evolution
- * harness defines its objective function.
+ * Currently returns a fresh snapshot of the terminal state. Future slices may
+ * attach a fitness or score summary here once the evolution harness defines its
+ * objective function.
  *
  * @param state - Terminal episode snapshot.
  * @returns Finalized episode snapshot.
  */
 export function endEpisode(state: GameState): GameState {
-  return { ...state };
+  return {
+    ...state,
+    player: {
+      ...state.player,
+      position: { ...state.player.position },
+      previousPosition: state.player.previousPosition
+        ? { ...state.player.previousPosition }
+        : undefined,
+    },
+    enemies: state.enemies.map((enemy) => ({
+      ...enemy,
+      position: { ...enemy.position },
+    })),
+    bolts: (state.bolts ?? []).map((bolt) => ({
+      ...bolt,
+      position: { ...bolt.position },
+      direction: { ...bolt.direction },
+    })),
+    impacts: state.impacts.map((impact) => ({
+      ...impact,
+      position: { ...impact.position },
+      wallHit: { ...impact.wallHit },
+    })),
+  };
 }
 
 /**
  * Run an episode from its initial state to completion using fixed timesteps.
  *
- * Controller inputs are intentionally ignored in this slice; the red-phase
- * contract only requires deterministic seed-based replay. Future slices may
- * introduce an input stream once the evolution harness wires controllers in.
+ * The episode loops {@link updateEpisode} until the step guard is reached.
+ * Player death triggers a respawn (not episode end) and the game features
+ * infinite waves, so there is no gameplay-based terminal condition — the
+ * step guard caps the loop at the configured episode duration.
  *
  * @param episode - Episode container returned by {@link createEpisode}.
  * @returns Final {@link GameState} after the episode ends.
  */
 export function runEpisode(episode: Episode): GameState {
-  let state = episode.state;
-  while (!isEpisodeComplete(state)) {
-    state = updateEpisode(state, NEATENSTEIN_FIXED_TIMESTEP_MS);
+  const durationMs = resolveEpisodeDurationMs(episode.durationMs);
+  const timestepMs = resolveEpisodeTimestepMs(NEATENSTEIN_FIXED_TIMESTEP_MS);
+  const maxSteps = resolveMaxEpisodeSteps(durationMs, timestepMs);
+
+  let state = withEpisodeDuration(episode.state, durationMs);
+  const collisionMap = createCollisionMap(
+    buildNeatensteinMap(state.seed),
+    NEATENSTEIN_MAP_SIZE,
+  );
+
+  for (let step = 0; step < maxSteps; step += 1) {
+    state = updateEpisode(state, timestepMs, collisionMap);
   }
+
   return endEpisode(state);
 }

@@ -1,11 +1,17 @@
 import { describe, expect, it } from '@jest/globals';
 
+import {
+  NEATENSTEIN_FIXED_TIMESTEP_MS,
+  NEATENSTEIN_LIGHT_TOGGLE_KEY,
+  NEATENSTEIN_MAP_SIZE,
+} from './constants.ts';
+
 /**
- * Red-phase contract tests for examples/neatenstein/browser-entry/host/game/constants.ts.
+ * Contract tests for examples/neatenstein/browser-entry/host/game/constants.ts.
  *
- * These tests define the numeric constants that the rest of the game logic
- * depends on. The source module does not exist yet, so every test fails with
- * a module-not-found error until the 02-game-scaffold slice provides them.
+ * These tests lock the numeric constants that the rest of the game logic
+ * depends on. The source module is implemented; updates here must stay in sync
+ * with the exported values in the source file.
  */
 
 describe('Neatenstein game constants', () => {
@@ -74,6 +80,89 @@ describe('Neatenstein game constants', () => {
       expect((mod.NEATENSTEIN_MIN_GENERATIONS_PER_MINUTE as number) >= 2).toBe(
         true,
       );
+    });
+
+    it('re-exports the shared light toggle key', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(typeof mod.NEATENSTEIN_LIGHT_TOGGLE_KEY).toBe('string');
+    });
+
+    it('re-exports the shared map size constant', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(typeof mod.NEATENSTEIN_MAP_SIZE).toBe('number');
+      expect((mod.NEATENSTEIN_MAP_SIZE as number) > 0).toBe(true);
+    });
+  });
+
+  it('re-exports the fixed timestep and shared constants via named imports', () => {
+    expect(typeof NEATENSTEIN_FIXED_TIMESTEP_MS).toBe('number');
+    expect(typeof NEATENSTEIN_LIGHT_TOGGLE_KEY).toBe('string');
+    expect(NEATENSTEIN_MAP_SIZE).toBeGreaterThan(0);
+  });
+
+  it('re-exports the shared constants through the namespace object', async () => {
+    const mod = await import('./constants.ts');
+    expect(typeof mod.NEATENSTEIN_FIXED_TIMESTEP_MS).toBe('number');
+    expect(typeof mod.NEATENSTEIN_LIGHT_TOGGLE_KEY).toBe('string');
+    expect(mod.NEATENSTEIN_MAP_SIZE).toBeGreaterThan(0);
+  });
+
+  describe('AC-216 / 03-red: 120x120 map gameplay constants', () => {
+    it('exports a positive bolt speed in cells per second', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(
+        mod.NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND as number,
+      ).toBeGreaterThan(0);
+    });
+
+    it('exports a bolt max range of 30 cells', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_BOLT_MAX_RANGE_CELLS as number).toBe(30);
+    });
+
+    it('exports player spawn coordinates at the center of a 120x120 map', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect({
+        x: mod.NEATENSTEIN_SPAWN_CENTER_X as number,
+        y: mod.NEATENSTEIN_SPAWN_CENTER_Y as number,
+      }).toEqual({
+        x: 60.5,
+        y: 60.5,
+      });
+    });
+  });
+
+  describe('AC-11-enemy-fire: enemy bolt constants', () => {
+    it('exports a positive enemy bolt speed in cells per second', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_ENEMY_BOLT_SPEED_CELLS_PER_SECOND as number).toBe(
+        36,
+      );
+    });
+
+    it('exports enemy bolt damage equal to 10', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_ENEMY_BOLT_DAMAGE as number).toBe(10);
+    });
+
+    it('exports enemy bolt lifetime equal to 2000 ms', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS as number).toBe(2000);
+    });
+
+    it('exports enemy bolt max range equal to 30 cells', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS as number).toBe(30);
+    });
+
+    it('exports enemy bolt hit radius equal to 0.5 cells', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_ENEMY_BOLT_HIT_RADIUS_CELLS as number).toBe(0.5);
+    });
+
+    it('exports contact i-frame duration equal to 500 ms', async () => {
+      const mod = (await import('./constants.ts')) as Record<string, unknown>;
+      expect(mod.NEATENSTEIN_CONTACT_IFRAME_MS as number).toBe(500);
     });
   });
 });

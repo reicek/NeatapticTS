@@ -1,4 +1,4 @@
----
+﻿---
 name: execute
 description: 'Use when: enforcing delegation discipline, tier graph, and RED→IMPLEMENT→GREEN loop.'
 argument-hint: 'Describe the delegation decision or routing question.'
@@ -197,6 +197,7 @@ Common failure reasons:
 - `caller_tier must be 0, 1, 2, 3, or 4` — the caller tier is out of range.
 - `Tier <caller> may not delegate to Tier <target> (target tier must be greater than caller tier)` — the requested delegation is upward or same-tier.
 - `userInvocable is only valid for Tier 1 agents; '<name>' is Tier <tier>` — the target has `userInvocable: true` but is not Tier 1.
+- `Prompt length <n> exceeds the maximum allowed length of <max> characters` — the prompt exceeds the prompt-length guard (default 200). Use RAG-based dispatch: state only the slice ID and a one-line instruction.
 
 If `build_dispatch_packet` returns `dispatch_allowed: false`, stop and escalate via
 `00.cross-tier-helper` instead of delegating.
@@ -215,6 +216,8 @@ If `build_dispatch_packet` returns `dispatch_allowed: false`, stop and escalate 
     { "from": 3, "to": 4 }
   ],
   "user_invocable_rule": "Only Tier 1 agents may be userInvocable",
+  "prompt_length_rule": "Prompts exceeding the maximum length are rejected to enforce RAG-based dispatch.",
+  "prompt_length_max": 200,
   "notes": [
     "This server returns a dispatch packet only; it does not spawn subagents.",
     "Tier 0 (orchestrator) may only call Tier 1 agents."
@@ -228,6 +231,7 @@ If `build_dispatch_packet` returns `dispatch_allowed: false`, stop and escalate 
 2. **Caller tier must be valid** — only `0`–`4` are accepted.
 3. **Delegation must be downward** — `target.tier` must be strictly greater than `caller_tier`.
 4. **User-invocable flag is Tier-1 only** — `userInvocable: true` is rejected for any target that is not Tier 1.
+5. **Prompt length guard** — prompts exceeding `PROMPT_LENGTH_MAX` (200) characters are rejected. This enforces RAG-based dispatch by preventing inline design context from being embedded in the dispatch prompt.
 
 ### Example `build_dispatch_packet` calls for each Tier-1 agent
 
@@ -295,6 +299,41 @@ task tool
 
 The second form bypasses the agent's `.agent.md` definition, its allowed
 skills, tools, model, and subagent allow-list, and must not be used.
+
+## Section 2.1.1 — MCP Tool Name Format (mandatory)
+
+MCP tools are exposed using HYPHENS as separators between the server key
+and the tool name. The format is: `<server-key>-<tool-name>`.
+
+For example, the `neataptic-workflow-mcp` server exposes tools as:
+
+- `neataptic-workflow-mcp-get_slice_context`
+- `neataptic-workflow-mcp-get_active_workflow_snapshot`
+- `neataptic-workflow-mcp-get_customization_inventory`
+
+The `neataptic-gate-mcp` server exposes:
+
+- `neataptic-gate-mcp-run_gate_check`
+- `neataptic-gate-mcp-query_tier_graph`
+- `neataptic-gate-mcp-query_customization_routing_table`
+- `neataptic-gate-mcp-list_gates`
+- `neataptic-gate-mcp-get_slice_context`
+
+The `neataptic-validation-mcp` server exposes:
+
+- `neataptic-validation-mcp-get_active_validation_allowlist`
+- `neataptic-validation-mcp-run_allowlisted_validation`
+
+The `neataptic-dispatch-mcp` server exposes:
+
+- `neataptic-dispatch-mcp-build_dispatch_packet`
+- `neataptic-dispatch-mcp-list_dispatchable_agents`
+- `neataptic-dispatch-mcp-get_dispatch_policy`
+
+**NEVER use underscores in MCP tool names.** The separator between server
+key and tool name is always a HYPHEN. Calling `neataptic_workflow_mcp_get_slice_context`
+(all underscores) will fail — the correct name is
+`neataptic-workflow-mcp-get_slice_context` (hyphens).
 
 ## Section 2.2 — RAG-Based Dispatch Policy (mandatory)
 
@@ -433,6 +472,38 @@ When ALL steps in a phase are `[DONE]`, the orchestrator MUST dispatch
 `07-logging` to compress the completed phase. See Section 5 for the full
 phase compression policy.
 
+## Section 2.4 — Plan-Mandated Pragmatic Mode (mandatory)
+
+The strict RED → IMPLEMENT → GREEN loop and per-slice gate ceremony are the
+**default**. An active plan MAY declare pragmatic mandates that override the
+default for the duration of that plan. When a plan's `## Mandates` section
+declares any of the following, agents and orchestrators executing that plan
+MUST follow the mandate over the default ceremony:
+
+1. **Broad slices.** When a plan declares broad slices (e.g., one slice per
+   phase), the orchestrator dispatches **one agent per phase/slice** and does
+   not subdivide into micro-slices or spawn redundant red/green/doc
+   sub-slices. A phase that needs a second pass is handled by sending a
+   follow-up to the **same** (still idle) agent via `write_agent`, not by
+   spawning a fresh instance.
+2. **Bypass legacy ceremony.** When a plan authorizes bypassing procedure,
+   agents MAY skip the plan-verification green-light cycle, per-AC gate calls,
+   fix-packet YAML ceremony, and the strict three-phase loop when doing so
+   accelerates delivery without introducing risk. Ship working software; do
+   not author documentation about changes instead of making the changes.
+3. **Model mandate.** When a plan mandates a single model for all agents
+   (e.g., `glm-5.2:cloud`), every dispatch under that plan MUST override the
+   agent's frontmatter `model` with the mandated model. No agent may opt out.
+4. **Remove legacy noise.** When a plan declares noise removal as a
+   deliverable, agents MUST delete obsolete/deprecated/redundant files and
+   flows they encounter (orphan hook scripts, superseded contracts, dead
+   agents/skills) rather than leaving them for a later cleanup.
+
+Pragmatic mode is **plan-scoped**, not global. The mandates apply only to the
+plan that declares them; other plans retain the default strict ceremony. When
+uncertain whether a mandate applies, the orchestrator checks the active plan's
+`## Mandates` section before dispatching.
+
 ## Section 3 — Goal-to-Agent Mapping Table
 
 When an orchestrator receives a task packet with a `goal` field, it maps
@@ -509,7 +580,8 @@ dispatches, receives results, and decides whether to loop or advance.
    **NEW** `01-planning` instance (fresh context) in verification mode.
 2. The verification agent checks completeness, slice quality (≤ 4 hours per
    slice), risk coverage, acceptance criteria, and dependencies. It runs the
-   `plan-slice-quality` and `step-packet` gates.
+   `slice-advancement` consolidated gate (which includes plan-sync,
+   step-packet, plan-slice-quality, and plan-command-lint in a single call).
 3. If verification returns **GREEN** (`green-light: true`), the orchestrator
    proceeds to RED/IMPLEMENT/GREEN.
 4. If verification returns **BLOCKERS**, the orchestrator dispatches a **NEW**
@@ -529,10 +601,17 @@ receives a slice, implements it, and returns evidence.
 ### The RED → IMPLEMENT → GREEN Loop
 
 ```text
-Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green light" → "1. Red Testing 03-red-testing creates failing tests"; "1. Red Testing 03-red-testing creates failing tests" → "2. Implementation 04-implementing makes tests pass"; "2. Implementation 04-implementing makes tests pass" → "2a. Specialist Review 3+ Tier-3 specialists from different relevant viewpoints review implementation BEFORE green testing"; "2a. Specialist Review 3+ Tier-3 specialists from different relevant viewpoints review implementation BEFORE green testing" → "2b. All specialists approve?" (Yes), "2b. All specialists approve?" → "2. Implementation 04-implementing makes tests pass" (No — REQUEST_CHANGES → NEW 04 instance with fix packet); "2b. All specialists approve?" (Yes) → "3. Green Testing 05-green-testing validates implementation"; "3. Green Testing 05-green-testing validates implementation" → "4. Loop-back orchestrator passes observations to a NEW 04 instance" (observations (not OK)), "5. Advance move to next step/slice" (OK); "4. Loop-back orchestrator passes observations to a NEW 04 instance" → "2. Implementation 04-implementing makes tests pass"; "5. Advance move to next step/slice".
+Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green light" → "1. Red Testing 03-red-testing creates failing tests"; "1. Red Testing 03-red-testing creates failing tests" → "2. Implementation 04-implementing makes tests pass"; "2. Implementation 04-implementing makes tests pass" → "2a. Shared Validation Gate run shared-validation.gate.mjs on changed files"; "2a. Shared Validation Gate run shared-validation.gate.mjs on changed files" → "2a. Shared validation passes?" (Yes), "2a. Shared validation passes?" → "2. Implementation 04-implementing makes tests pass" (No — loop back); "2a. Shared validation passes?" → "2b. Classify severity TRIVIAL or FULL" (Yes); "2b. Classify severity TRIVIAL or FULL" → "TRIVIAL?"; "TRIVIAL?" → "Skip specialist review proceed to green testing" (Yes), "Dispatch 1 specialist review" (No); "Skip specialist review proceed to green testing" → "3. Green Testing 05-green-testing validates implementation"; "Dispatch 1 specialist review" → "2c. Specialist approves?" (Yes), "2c. Specialist approves?" → "2. Implementation 04-implementing makes tests pass" (No — REQUEST_CHANGES → fix packet → NEW 04); "2c. Specialist approves?" (Yes) → "3. Green Testing 05-green-testing validates implementation"; "3. Green Testing 05-green-testing validates implementation" → "4. Loop-back orchestrator passes observations to a NEW 04 instance" (observations (not OK)), "5. Advance move to next step/slice" (OK); "4. Loop-back orchestrator passes observations to a NEW 04 instance" → "4a. Convergence Tracker gate count failed fix-loop iterations"; "4a. Convergence Tracker gate count failed fix-loop iterations" → "4a. Iterations > 4?" (Yes); "4a. Iterations > 4?" → "ESCALATE dispatch 00-helping" (Yes); "4a. Iterations > 4?" → "2. Implementation 04-implementing makes tests pass" (No); "5. Advance move to next step/slice".
 ```
 
 ### Loop Steps
+
+> **Complexity-tier applicability.** The steps below run for every slice unless
+> annotated. The tier gating is: step 1 (Red Testing) is **complex-only** (and
+> `green-only` steps skip it regardless); step 2b specialist review and step 2c
+> fix loop are **moderate/complex** (trivial skips both); step 4a convergence
+> tracker is **complex-only** (trivial/moderate slices do not invoke it). Steps
+> 0, 2, 2a, 3, and 5 apply to **all tiers**.
 
 0. **Plan Verification Gate.** A fresh `01-planning` agent reads the active
    plan, checks completeness, risk coverage, acceptance criteria, and
@@ -541,37 +620,68 @@ Flowchart summary: "0. Plan Verification Gate fresh 01-planning records green li
    dispatched until this gate passes.
 1. **Red Testing** (`03-red-testing`) creates failing tests that define
    expected behavior. The tests must fail for the right reason (missing
-   implementation, not a syntax error or bad fixture).
+   implementation, not a syntax error or bad fixture). _(complex tier only;
+   trivial and moderate slices skip the RED phase unless `tdd_sequence`
+   requires it)_
 2. **Implementation** (`04-implementing`) implements the code to make the
    tests pass. The implementer works within the slice boundary and does
    not expand scope.
-   2a. **Specialist Review** (MANDATORY). After `04-implementing` returns
-   and BEFORE dispatching `05-green-testing`, the orchestrator MUST
-   dispatch 3+ Tier-3 specialist agents from **different relevant
-   viewpoints** (e.g., `implementation-pattern-scout`, `nge-core-scout`,
-   `performance-trace-specialist`) to review the implementation in
-   parallel. Each specialist reads the changed files, verifies
-   correctness, code quality, domain compliance, and checks for gaps
-   that tests alone cannot catch. Specialists return either APPROVE
-   or REQUEST_CHANGES with specific observations. See **Section 5.7
+   2a. **Shared Validation Gate** (MANDATORY). Immediately after
+   `04-implementing` returns and BEFORE dispatching any Tier-3
+   specialists, the orchestrator MUST run the
+   `scripts/agent-customization/gates/shared-validation.gate.mjs` gate
+   with the slice's changed files. The gate runs the narrowest Jest
+   selection against the test files implied by the changed source files,
+   then runs `npm run build` and `npm run lint`. If the gate fails, the
+   orchestrator loops back to `04-implementing` with the captured
+   stdout/stderr and the JSON artifact as observations; it MUST NOT
+   dispatch specialists for review while shared validation is failing.
+   2b. **Specialist Review** (severity-gated). After the shared
+   validation gate passes, classify the slice severity via
+   `specialist-review-severity.gate.mjs`. **TRIVIAL** slices skip
+   specialist review entirely and proceed directly to green testing.
+   **FULL** slices dispatch exactly **1 Tier-3 specialist** (e.g.,
+   `implementation-pattern-scout` or the domain-aligned scout) to review
+   the implementation BEFORE dispatching `05-green-testing`. The
+   specialist reads the changed files, verifies correctness, code
+   quality, domain compliance, and checks for gaps that tests alone
+   cannot catch. The specialist returns either APPROVE or
+   REQUEST_CHANGES with specific observations. See **Section 5.7
    — Pre-Green Specialist Review Policy** for the full protocol.
-   2b. **Fix Loop**. If any specialist returns REQUEST_CHANGES, the
-   orchestrator compiles all observations into a fix packet, dispatches
-   a NEW `04-implementing` instance with the fix packet, and then
-   re-dispatches the same specialists (fresh instances) to re-review.
-   This loop repeats until ALL specialists return APPROVE.
+   _(moderate/complex only; trivial slices skip 2b and 2c)_
+   2c. **Fix Loop**. If the specialist returns REQUEST_CHANGES, the
+   orchestrator appends a single `fix_packet` block (see Section 5.8)
+   to the active plan under a deterministic fix-packet ID, dispatches
+   a NEW `04-implementing` instance with only that ID and a RAG load
+   instruction, and then re-dispatches a fresh specialist instance to
+   re-review. This loop repeats until the specialist returns APPROVE.
 3. **Green Testing** (`05-green-testing`) validates the implementation
    against the red tests and the slice acceptance criteria. Green testing
-   is ONLY dispatched after all specialist reviews return APPROVE.
+   is ONLY dispatched after the shared validation gate passes AND (for
+   FULL slices) the specialist review returns APPROVE. TRIVIAL slices
+   skip specialist review and go directly to green testing.
 4. **Loop-back**: If green gives observations (not OK), the orchestrator
-   passes the observations to a **NEW** `04-implementing` instance (fresh
-   context), which produces a fix, then a **NEW** `05-green-testing`
-   instance verifies. The loop repeats until green returns OK. A
-   `05-green-testing` agent that finds failures MUST return observations to
-   the orchestrator; it is forbidden from dispatching `04-implementing` or
-   editing source code itself.
+   appends a single `fix_packet` block (see Section 5.8) to the active
+   plan under a deterministic fix-packet ID, dispatches a **NEW**
+   `04-implementing` instance with only that ID and a RAG load instruction,
+   and then a **NEW** `05-green-testing` instance verifies. The loop repeats
+   until green returns OK. A `05-green-testing` agent that finds failures
+   MUST return observations to the orchestrator; it is forbidden from
+   dispatching `04-implementing` or editing source code itself.
+   4a. **Convergence Tracker Gate** (MANDATORY). Before each loop-back to
+   `04-implementing`, the orchestrator MUST run the
+   `convergence-tracker.gate.mjs` gate with the slice's `slice_id`. The
+   gate scans `## Latest validation evidence` for
+   `fix-loop: <slice-id> iteration <n> status=<failed|passed>` markers,
+   counts iterations for the slice, and resets to 0 if any marker has
+   `status=passed`. If the count exceeds 4 without a green pass, the gate
+   fails and the orchestrator MUST escalate to `00-helping` instead of
+   spawning another `04-implementing` instance. _(complex tier only;
+   trivial and moderate slices do not invoke the convergence tracker)_
 5. **Advance**: When green gives OK, the orchestrator records
-   `VALIDATION_EVIDENCE` and moves to the next step or slice.
+   `VALIDATION_EVIDENCE`, updates the active plan with the latest details
+   (status, what changed, evidence — see Section 5.9), and moves to the next
+   step or slice.
 6. **Phase Compression**: When all steps in a phase are marked `[DONE]` and
    green validation has passed, the orchestrator MUST dispatch `07-logging`
    to compress the completed phase before advancing to the next phase. This
@@ -596,59 +706,126 @@ Each slice is a bounded unit of work with these fields:
 
 ### Orchestration Loop Steps
 
+> **Complexity-tier applicability.** Steps 1, 2, 3, 6, 8, 9, and 10 apply to all
+> tiers. Steps 4 (specialist severity gate) and 5 (specialist fix loop) are
+> **moderate/complex** — trivial slices skip straight from the shared-validation
+> gate (step 3) to green testing (step 6). Step 7's convergence-tracker
+> invocation is **complex-only**; trivial and moderate slices loop back without
+> it. The RED phase (step 1 of the Loop Steps above) is dispatched before step 2
+> here and is **complex-only** (unless `tdd_sequence` requires it).
+
 1. Read the active step packet and expand placeholder slice titles into
    full slice objects.
 2. Assign the next uncompleted non-parallelizable slice, or all ready
    parallelizable slices, to `04-implementing`.
-3. Wait for implementation evidence, then dispatch 3+ Tier-3
-   specialists from different relevant viewpoints to review the
-   implementation BEFORE green testing (see Section 5.7).
-4. If any specialist returns REQUEST_CHANGES, compile observations into
-   a fix packet, dispatch a NEW `04-implementing`, then re-review with
-   fresh specialist instances. Loop until all specialists APPROVE.
-5. After all specialists approve, invoke `05-green-testing` to validate.
-6. If `05` returns failure, spawn a new `04-implementing` with a focused
-   `slice-fix` packet, re-review with specialists, then re-run `05` until
-   the slice passes.
-7. When a slice passes, record `VALIDATION_EVIDENCE` and move to the next
+3. Wait for implementation evidence, then run
+   `scripts/agent-customization/gates/shared-validation.gate.mjs`
+   with the slice's changed files. If it fails, route the failure back
+   to `04-implementing`; do NOT dispatch specialists while shared
+   validation is failing.
+4. Only after the shared validation gate passes, classify the slice
+   severity via `specialist-review-severity.gate.mjs`. If TRIVIAL, skip
+   specialist review and proceed to step 6. If FULL, dispatch exactly
+   1 Tier-3 specialist (see Section 5.7) to review the implementation
+   BEFORE green testing.
+5. If the specialist returns REQUEST_CHANGES, run the
+   `convergence-tracker.gate.mjs` gate for the slice. If it reports more
+   than 4 failed fix-loop iterations without a green pass, escalate to
+   `00-helping`. Otherwise, append a single `fix_packet` block (see
+   Section 5.8) to the active plan under a deterministic fix-packet ID,
+   dispatch a NEW `04-implementing` with only that ID and a RAG load
+   instruction, then re-run the shared-validation gate and re-review with
+   a fresh specialist instance. Loop until the shared-validation gate
+   passes AND the specialist APPROVEs.
+6. After the shared-validation gate passes and (for FULL slices) the
+   specialist approves, invoke `05-green-testing` to validate.
+7. If `05` returns failure, run the `convergence-tracker.gate.mjs` gate
+   for the slice. If it reports more than 4 failed fix-loop iterations
+   without a green pass, escalate to `00-helping`. Otherwise, append a
+   single `fix_packet` block (see Section 5.8) to the active plan under a
+   deterministic fix-packet ID and spawn a NEW `04-implementing` with only
+   that ID and a RAG load instruction. Then run the shared-validation gate,
+   re-review with a fresh specialist (if FULL), and re-run `05` until the
+   slice passes.
+8. When a slice passes, record `VALIDATION_EVIDENCE` and move to the next
    slice.
-8. After all slices pass, call `06-documenting` to run docs-quality checks
+9. After all slices pass, call `06-documenting` to run docs-quality checks
    and close the step.
-9. After all steps in a phase are `[DONE]` and green validation has passed,
-   dispatch `07-logging` to compress the completed phase to logs before
-   advancing to the next phase. See **Phase Compression Policy** below.
+10. After all steps in a phase are `[DONE]` and green validation has passed,
+    dispatch `07-logging` to compress the completed phase to logs before
+    advancing to the next phase. See **Phase Compression Policy** below.
 
 ### Critical Rules
 
-- **MANDATORY PLAN VERIFICATION GATE — before RED/IMPLEMENT, run plan-readiness
-  and plan-slice-quality gates and confirm green light.** No `03-red-testing`,
-  `04-implementing`, or execution-phase agent may be dispatched until a fresh
-  `01-planning` verification pass has recorded `green-light: true` (or
+> **Complexity gating of critical rules.** Most critical rules below apply to
+> **all tiers**. The following are **complexity-gated**: the
+> SEVERITY-GATED PRE-GREEN SPECIALIST REVIEW rule and the MANDATORY CONVERGENCE
+> TRACKER GATE rule are skipped for **trivial** slices (specialist review is
+> skipped whenever the severity gate classifies TRIVIAL; the convergence tracker
+> is not invoked for trivial slices). The RED → IMPLEMENT → GREEN loop's RED
+> phase is **complex-only** (and `green-only` steps skip it regardless). All
+> other rules — MANDATORY PLAN VERIFICATION GATE, MANDATORY DISPATCH
+> CONSULTATION, MANDATORY PRE-SPECIALIST SHARED-VALIDATION GATE, RAG-BASED
+> DISPATCH, No Deferred Cleanup, GPU/BROWSER visible-window validation, and
+> targeted-tests-only — apply to **every tier**.
+
+- **MANDATORY PLAN VERIFICATION GATE — before RED/IMPLEMENT, run the
+  `plan-readiness` gate and the `slice-advancement` consolidated gate and
+  confirm green light.** No `03-red-testing`, `04-implementing`, or
+  execution-phase agent may be dispatched until a fresh `01-planning`
+  verification pass has recorded `green-light: true` (or
   `status: green-light`) in the plan's `## Latest validation evidence` section
-  AND the `plan-slice-quality` gate confirms no slice exceeds 4 hours.
+  AND the `slice-advancement` gate confirms no slice exceeds 4 hours.
+  The `slice-advancement` gate consolidates plan-sync, step-packet,
+  plan-slice-quality, and plan-command-lint into a single call — agents
+  MUST NOT run these sub-gates individually.
 - **MANDATORY DISPATCH CONSULTATION.** Before each `task` dispatch, the
   orchestrator MUST call `neataptic-dispatch-mcp / build_dispatch_packet`
   and use the returned `dispatch_packet`. Direct `task` use without a prior
   dispatch packet is a workflow violation.
-- **MANDATORY PRE-GREEN SPECIALIST REVIEW.** Before dispatching
-  `05-green-testing`, the orchestrator MUST dispatch 3+ Tier-3
-  specialists from **different relevant viewpoints** to review each
-  `04-implementing` slice. Specialists check correctness, domain
-  compliance, code quality, and gaps that tests alone cannot catch. If
-  any specialist returns REQUEST_CHANGES, the orchestrator dispatches a
-  NEW `04-implementing` with a fix packet and re-reviews with fresh
-  specialist instances until ALL return APPROVE.
-  See **Section 5.7 — Pre-Green Specialist Review Policy** for details.
+- **SEVERITY-GATED PRE-GREEN SPECIALIST REVIEW.** Before dispatching
+  `05-green-testing`, classify the slice via
+  `specialist-review-severity.gate.mjs`. **TRIVIAL** slices (documentation,
+  comments, formatting, plan-only, bundle rebuilds) skip specialist
+  review entirely. **FULL** slices dispatch exactly **1 Tier-3
+  specialist** to review the `04-implementing` slice. If the specialist
+  returns REQUEST_CHANGES, append a fix packet (Section 5.8) and dispatch
+  a NEW `04-implementing`, then re-review with a fresh specialist
+  instance until APPROVE. The specialist receives the shared-validation
+  artifact and does not re-run tests, build, or lint. See **Section 5.7
+  — Pre-Green Specialist Review Policy** for details.
+- **MANDATORY PRE-SPECIALIST SHARED-VALIDATION GATE.** After `04-implementing`
+  returns and BEFORE dispatching any Tier-3 specialists, the orchestrator
+  MUST run `scripts/agent-customization/gates/shared-validation.gate.mjs`
+  with the slice's changed files. The gate runs the narrowest Jest selection
+  implied by those files, then `npm run build` and `npm run lint`. If the
+  gate fails, the orchestrator loops back to `04-implementing` with the gate's
+  `evidence` as the fix packet; it MUST NOT dispatch specialists while shared
+  validation is failing.
+- **MANDATORY CONVERGENCE TRACKER GATE.** Before each loop-back to
+  `04-implementing` after a failed green run or specialist REQUEST_CHANGES,
+  the orchestrator MUST run
+  `scripts/agent-customization/gates/convergence-tracker.gate.mjs` with the
+  slice's `slice_id`. The gate counts `fix-loop: <slice-id> iteration <n>
+status=<failed|passed>` markers in `## Latest validation evidence` and
+  resets to 0 when a `passed` marker is present. If the count exceeds 4
+  without a green pass, the orchestrator MUST escalate to `00-helping`
+  instead of dispatching another `04-implementing` iteration.
 - **The ORCHESTRATOR manages the loop, NOT the implementer.** The
   implementer receives a slice and returns evidence; it does not decide
   when to loop back or advance.
-- **`04-implementing` MUST NOT RUN TESTS.** The implementation agent's job
-  is to write code that compiles and passes lint. It may run `tsc`, `lint`,
-  and `prettier` as preflight checks, but it must **never** run `jest`,
-  `coverage`, or any test command. Validation is the exclusive responsibility
-  of `05-green-testing`, dispatched by the orchestrator after `04` returns.
-  If `04` discovers a failing test during code exploration, it records the
-  observation and hands off; it does not fix-and-test in the same turn.
+- **`04-implementing` may run TARGETED tests only.** The implementation
+  agent's primary job is to write code that compiles and passes lint, but
+  it may also run a focused Jest slice (`npx jest --testPathPattern=...` or
+  equivalent) on files it changed as a preflight smoke check. It must
+  **never** run the full test suite (`npm run test:silent`, `npm test`,
+  `npm run jest:*` matrices), `coverage`, or any broad regression command.
+  Validation of the slice acceptance criteria remains the exclusive
+  responsibility of `05-green-testing`, dispatched by the orchestrator
+  after `04` returns. If `04` discovers a failing test during code
+  exploration or a targeted preflight run, it records the observation and
+  hands off; it does not attempt to bypass the RED/IMPLEMENT/GREEN loop by
+  fix-and-test in the same turn.
 - **SLICES MUST BE THIN.** A single `04-implementing` slice should change
   one behavioral intent, ideally across no more than three files. If a slice
   requires touching many files or systems, the planner (`01-planning`) must
@@ -668,11 +845,14 @@ Each slice is a bounded unit of work with these fields:
   context contamination. A implementer that failed once must not carry its
   failed context into the retry. Each new instance must be dispatched via
   a fresh `build_dispatch_packet` call.
-- **No loop-back threshold.** Continue loop-backs until the issue is
-  fully resolved or a true technical limit is reached. Slow progress is
-  still progress — no concessions. The orchestrator must keep dispatching
-  fresh `04-implementing` / `05-green-testing` iterations without an
-  artificial attempt limit.
+- **Mandatory convergence tracker gate before each loop-back.** Before
+  dispatching another `04-implementing` iteration after a failed green run or
+  specialist `REQUEST_CHANGES`, the orchestrator MUST run
+  `convergence-tracker.gate.mjs` for the slice. If the slice has failed more
+  than 4 fix-loop iterations without a green pass (`status=passed`), the
+  gate fails and the orchestrator MUST escalate to `00-helping` instead of
+  continuing the loop. Slow progress is still progress, but unbounded
+  oscillation is a planning/orchestration failure, not a virtue.
 - **The orchestrator MUST NOT perform code edits itself.** The
   orchestrator's job is to classify, dispatch, wait, and advance — never
   to implement.
@@ -742,9 +922,11 @@ not advance to the next phase until compression is complete.
 
 ## Section 5.5 — Concurrency Awareness and Dispatch Resilience
 
-The Copilot CLI enforces a hard concurrent agent limit. When the limit is
-reached, new dispatches are blocked with a "Maximum concurrent agent limit
-of N reached" warning. Orchestrators MUST handle this gracefully.
+The Copilot CLI enforces a hard concurrent agent limit. For GitHub-plan-tiered
+users the real default limit is **10 concurrent sub-agents**, and nested
+delegation (T1→T2→T3→T4) is fully supported when the limit is ≥ 4. Orchestrators
+MUST handle the much rarer low-limit case gracefully without assuming it is the
+norm.
 
 ### Environment Variables
 
@@ -753,9 +935,10 @@ of N reached" warning. Orchestrators MUST handle this gracefully.
 | `COPILOT_SUBAGENT_MAX_CONCURRENT` | Plan-tier-based (2–32) | Maximum concurrent sub-agents  |
 | `COPILOT_SUBAGENT_MAX_DEPTH`      | 6                      | Maximum delegation chain depth |
 
-BYOK (Ollama, custom providers) users without a GitHub plan tier default to
-the lowest limit (2 concurrent agents). To override, set these as environment
-variables in the terminal before launching the CLI:
+GitHub-plan-tiered users normally see a default limit of **10**. BYOK (Ollama,
+custom providers) users without a GitHub plan tier default to the lowest limit
+(2 concurrent agents). To override, set these as environment variables in the
+terminal before launching the CLI:
 
 ```bash
 # Windows PowerShell (User-level, persists across restarts)
@@ -763,6 +946,22 @@ variables in the terminal before launching the CLI:
 [Environment]::SetEnvironmentVariable("COPILOT_SUBAGENT_MAX_DEPTH", "6", "User")
 # Then CLOSE the terminal completely and reopen it.
 ```
+
+### Nested vs Flat Dispatch
+
+| Pattern                               | Concurrency Usage   | Chain Depth | When to Use               |
+| ------------------------------------- | ------------------- | ----------- | ------------------------- |
+| Nested (T1→T2→T3→T4)                  | N+1 slots (N=depth) | Up to 4     | When concurrent limit ≥ 4 |
+| Flat sequential (T1→T2, T1→T3, T1→T4) | 2 slots             | 1           | When concurrent limit = 2 |
+
+Under the real limit of **10**, nested delegation is supported: a Tier 1
+orchestrator can dispatch a Tier 2 coordinator, which can dispatch a Tier 3
+specialist, which can dispatch a Tier 4 auxiliary, because each additional tier
+uses one of the available slots. Only when the concurrent limit is reduced to **2**
+does nested delegation beyond depth 2 become impossible — the orchestrator
+occupies slot 1, the first dispatched agent occupies slot 2, and no slot remains
+for a sub-dispatch. In that low-limit fallback case, use flat sequential dispatch
+instead.
 
 ### Dispatch Failure Recovery Protocol
 
@@ -774,22 +973,10 @@ When a dispatch is blocked by the concurrent limit:
    nested delegation to flat sequential dispatch. The orchestrator dispatches
    each tier directly (T1→T2, then T1→T3, then T1→T4) rather than nesting
    (T1→T2→T3→T4). This keeps the concurrent count at 2 (orchestrator + one
-   dispatched agent).
+   dispatched agent) and is the preferred pattern when the limit is 2.
 3. **Escalate**: If both nested and flat dispatch fail, escalate to
    `00-helping` via `00.cross-tier-helper` with a note about the concurrency
    limit.
-
-### Nested vs Flat Dispatch
-
-| Pattern                               | Concurrency Usage   | Chain Depth | When to Use               |
-| ------------------------------------- | ------------------- | ----------- | ------------------------- |
-| Nested (T1→T2→T3→T4)                  | N+1 slots (N=depth) | Up to 4     | When concurrent limit ≥ 4 |
-| Flat sequential (T1→T2, T1→T3, T1→T4) | 2 slots             | 1           | When concurrent limit = 2 |
-
-**With a concurrent limit of 2, nested delegation beyond depth 2 is
-impossible** — the orchestrator occupies slot 1, the first dispatched agent
-occupies slot 2, and no slot remains for a sub-dispatch. Use flat sequential
-dispatch instead.
 
 ### Parallelizable Slice Execution
 
@@ -804,6 +991,21 @@ least one slot for the orchestrator:
 
 If a parallel dispatch hits the concurrent limit, queue remaining slices and
 dispatch them as slots free up.
+
+### Background Agent Polling Interval
+
+When waiting for background agents, use `read_agent` with `timeout: 1800` (30
+minutes). Do NOT poll with short 3-minute timeouts — agents need 10–25+ minutes
+for complex slices, and frequent polling wastes orchestrator turns.
+
+The orchestrator is automatically notified when a background agent completes, so
+polling is only a safety net. If an agent hasn't completed after 30 minutes,
+check its `tool_calls_completed` count: if it's increasing, the agent is still
+making progress; if it's been static across multiple polls, the agent may be
+stuck and should be stopped.
+
+This interval compensates for slow server speeds and gives agents time to clear
+complex work without wasting orchestrator turns on frequent polling.
 
 ## Section 5.6 — Tier 3 Dispatch Capability
 
@@ -830,13 +1032,19 @@ When a scout needs a T4 auxiliary, it should return its findings to the
 parent orchestrator (Tier 1 or Tier 2), which dispatches the T4 agent
 directly. This flat dispatch pattern works within any concurrent limit.
 
-## Section 5.7 — Pre-Green Specialist Review Policy (Mandatory)
+## Section 5.7 — Pre-Green Specialist Review Policy (Severity-Gated)
 
 Before dispatching `05-green-testing` for any `04-implementing` slice, the
-orchestrator MUST dispatch 3+ Tier-3 specialist agents from **different
-relevant viewpoints** to review the implementation. This is a **mandatory
-gate** — green testing MUST NOT be dispatched until all dispatched
-specialists return APPROVE.
+orchestrator MUST classify the slice severity via
+`specialist-review-severity.gate.mjs` and follow the corresponding path:
+
+- **TRIVIAL** → Skip specialist review entirely. Proceed directly to
+  `05-green-testing`.
+- **FULL** → Dispatch exactly **1 Tier-3 specialist** to review the
+  implementation. Green testing MUST NOT be dispatched until the specialist
+  returns APPROVE.
+
+This is a **severity-gated policy** — the ceremony scales to the risk.
 
 ### Why Specialist Review Before Green Testing?
 
@@ -856,69 +1064,100 @@ Specialists catch these because they read the **actual code**, compare it
 to the design intent, and check cross-references — things tests alone
 cannot do.
 
-### Specialist Count
+### Severity Classification
 
-| Slice Complexity                                | Specialist Count | Recommended Specialists (different viewpoints)                                                                          |
-| ----------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Simple (1 file, < 50 lines changed)             | 3                | `implementation-pattern-scout` + domain scout + one more relevant viewpoint                                             |
-| Moderate (2-3 files, 50-200 lines)              | 3                | `implementation-pattern-scout` + domain-specific scout + one more relevant viewpoint                                    |
-| Complex (3+ files, 200+ lines, or cross-module) | 3+               | `implementation-pattern-scout` + domain scout + `performance-trace-specialist` or `coverage-scout` (add more as needed) |
+The `specialist-review-severity.gate.mjs` gate classifies each slice as
+TRIVIAL or FULL based on the files it changes:
 
-> **The 3 specialists must represent DIFFERENT relevant viewpoints.** At minimum,
-> the set should cover: **pattern/quality** (e.g., `implementation-pattern-scout`),
-> **domain** (the scout aligned with the slice's subject area), and a **third
-> distinct angle** such as performance, coverage, security, browser/runtime, or
-> another domain-specific concern. Dispatching two scouts from the same viewpoint
-> does not satisfy this requirement.
+| Classification | Trigger                                                                                            | Specialist Count |
+| -------------- | -------------------------------------------------------------------------------------------------- | ---------------- |
+| TRIVIAL        | Markdown, skill files, comments, formatting, plan-only, bundle rebuilds, lock files, test fixtures | 0 (skip)         |
+| FULL           | Source code logic changes (`src/**`, `examples/**`, `benchmarks/**`, gate scripts, MCP servers)    | 1                |
+
+> **One specialist is sufficient.** The previous 3+ specialist requirement
+> created disproportionate ceremony for small slices. A single
+> well-chosen specialist covers pattern/quality and domain correctness.
+> For genuinely complex cross-module slices, the orchestrator MAY dispatch
+> a second specialist, but this is the exception, not the default.
 
 ### Specialist Selection
 
-The orchestrator selects specialists based on the slice's domain:
+The orchestrator selects the single specialist based on the slice's domain:
 
 - **NGE/NEAT domain** → `nge-core-scout`
 - **Racing/benchmark domain** → `nge-benchmark-scout`
 - **Browser/UI domain** → `browser-runtime-scout` or `visualizer-scout`
 - **Performance-critical** → `performance-trace-specialist`
 - **Coverage-critical** → `coverage-scout`
-- **Always include** → `implementation-pattern-scout` (code quality and
-  pattern compliance)
+- **Default / pattern-focused** → `implementation-pattern-scout`
 
-### Review Protocol
+### Review Protocol (FULL slices only)
 
-1. **Dispatch all specialists in parallel** (background mode) — they are
-   independent reviewers.
-2. **Each specialist receives**: the slice description, the files changed,
-   the design intent, and instructions to report APPROVE or
-   REQUEST_CHANGES with specific observations.
-3. **Wait for all specialists** to complete.
-4. **If ALL return APPROVE**: proceed to `05-green-testing`.
-5. **If ANY return REQUEST_CHANGES**: compile ALL observations from ALL
-   specialists into a single fix packet, dispatch a NEW `04-implementing`
-   instance with the fix packet, then re-dispatch the same specialists
-   (fresh instances) to re-review. Loop until all return APPROVE.
-6. **Record evidence**: the orchestrator records specialist review results
-   in the plan's `VALIDATION_EVIDENCE` section, including which specialists
-   reviewed, their verdicts, and any fix cycles.
+1. **Run shared validation once.** Before dispatching the specialist, run:
+   ```bash
+   node scripts/agent-customization/gates/shared-validation.gate.mjs --json --changed-files=path1,path2,...
+   ```
+   The gate writes a JSON artifact (default `artifacts/shared-validation.json`)
+   containing the focused test result, build result, and lint result. If the
+   gate fails, return the output to `04-implementing` and do not dispatch
+   the specialist.
+2. **Dispatch the specialist** (background mode).
+3. **The specialist receives**: the slice description, the files changed,
+   the design intent, the shared-validation artifact path, and instructions
+   to report APPROVE or REQUEST_CHANGES with specific observations.
+4. **The specialist does not re-run tests, build, or lint.** It uses the
+   shared artifact as the validation baseline and applies its
+   perspective-specific judgment to the changed code.
+5. **Wait for the specialist** to complete.
+6. **If APPROVE**: proceed to `05-green-testing`.
+7. **If REQUEST_CHANGES**: append a single `fix_packet` block
+   (see Section 5.8) to the active plan under a deterministic fix-packet
+   ID, compile ALL observations into that block, dispatch a NEW
+   `04-implementing` instance with only that ID and a RAG load instruction,
+   re-run the shared-validation gate on the new changed-file set, then
+   re-dispatch a fresh specialist instance to re-review. Loop until APPROVE.
+8. **Record evidence**: the orchestrator records the shared-validation
+   artifact path, specialist review result, and any fix-packet IDs in the
+   plan's `VALIDATION_EVIDENCE` section before dispatching `05-green-testing`.
+
+### Lightweight Path (TRIVIAL slices)
+
+For TRIVIAL slices (documentation, policy, skill files, comments,
+formatting, plan-only changes, bundle rebuilds), the orchestrator:
+
+1. Runs the shared-validation gate (build + lint + focused tests).
+2. Skips specialist review entirely.
+3. Dispatches `05-green-testing` directly.
+
+This eliminates the ceremony-to-work overhead for documentation-dominated
+phases while keeping the validation safety net.
 
 ### Gate Enforcement
 
 The `specialist-review` gate checks that the plan's `VALIDATION_EVIDENCE`
-section contains evidence of specialist review before green testing. The
-orchestrator MUST run this gate (or confirm evidence exists) before
-dispatching `05-green-testing`.
+section contains evidence of specialist review before green testing — but
+ONLY for FULL slices. TRIVIAL slices are exempt. The orchestrator MUST run
+this gate (or confirm evidence exists / confirm TRIVIAL classification)
+before dispatching `05-green-testing`.
 
 ### When to Skip Specialist Review
 
-Specialist review may be skipped ONLY for:
+Specialist review is skipped for ALL of the following:
 
-- **Trivial slices** that change comments, formatting, or documentation
-  only (zero behavioral changes).
+- **TRIVIAL slices** (per `specialist-review-severity.gate.mjs`):
+  - Markdown files (`.md`)
+  - Skill files (`.github/skills/**/*.md`)
+  - Agent definition files (`.github/agents/*.agent.md`)
+  - Plan files (`plans/**/*.md`)
+  - Comments, formatting, whitespace-only changes
+  - Bundle rebuild slices (`npm run build:*`)
+  - Lock files, config files that don't affect runtime behavior
+  - Test fixtures and test helpers (not test logic)
 - **Plan-only changes** (no source code modified).
-- **Bundle rebuild slices** (`npm run build:*`) that only recompile
-  existing source.
+- **Bundle rebuild slices** that only recompile existing source.
 
-For any slice that modifies source code logic, specialist review is
-MANDATORY.
+For any slice that modifies runtime source code logic, specialist review
+is MANDATORY (1 specialist).
 
 The canonical agent routing table lives at
 `.github/agent-skill-routing-table.md`. It is generated by
@@ -942,6 +1181,389 @@ the table rather than editing this skill to match a stale inventory.
 | -------------------------------- | ----------------------------------- |
 | Refresh the routing table        | `npm run agents:routing-table`      |
 | Validate routing table freshness | `npm run agents:routing-table:gate` |
+
+## Section 5.8 — RAG-based Fix-Packet Convention
+
+All fix-loop observations must be appended to the active `.plans.md` file
+under a deterministic fix-packet ID, then loaded by the next agent via
+Cortex RAG. The orchestrator MUST NOT embed observations inline in a dispatch
+prompt.
+
+### When to create a fix packet
+
+Create a `fix_packet` block whenever one of these triggers occurs:
+
+- The shared-validation gate fails (status `FAILED`, goal `repair-shared-validation`).
+- Any pre-green specialist returns `REQUEST_CHANGES` (status `REQUEST_CHANGES`,
+  goal `address-requested-changes`).
+- `05-green-testing` reports coverage gaps, test failures, or other
+  observations (status `OBSERVATIONS` or `FAILED`, goal e.g.
+  `close-coverage-gaps`).
+
+### Deterministic fix-packet ID
+
+Each fix packet is identified by:
+
+```text
+fix-packet-<slice_id>-iteration-<n>
+```
+
+- `slice_id` — the slice that produced the failure or observations.
+- `n` — the loop iteration, starting at 1 for the first fix attempt and
+  incremented each time the same slice loops back without a green pass.
+
+The ID is surfaced as an HTML comment anchor directly above the YAML block
+so it is stable for Cortex retrieval:
+
+```html
+<!-- fix-packet-C2-impl-iteration-1 -->
+```
+
+### Required YAML schema
+
+```yaml
+fix_packet:
+  slice_id: '<slice_id>'
+  iteration: <n>
+  status: FAILED | REQUEST_CHANGES | OBSERVATIONS
+  goal: '<short goal slug>'
+  trigger: shared-validation-gate | specialist-review | green-testing
+  shared_validation_artifact: '<path/to/artifact.json>' # optional
+  observations:
+    - source: '<agent or gate name>'
+      type: '<classification>'
+      detail: '<concise, actionable observation>'
+  requested_changes: # only when status is REQUEST_CHANGES
+    - '<specific requested change>'
+```
+
+### Where to place the block
+
+Insert the block in the plan's `## Latest validation evidence` section, after
+the `fix-loop: <slice-id> iteration <n> status=<failed|passed>` marker that
+records the iteration. If the plan uses a dedicated `## Fix packets` section,
+place the block there and reference the ID from `## Latest validation evidence`.
+
+### Dispatch contract for fix packets
+
+When dispatching a NEW `04-implementing` instance for a fix packet, use only:
+
+```text
+Execute fix-packet-<slice_id>-iteration-<n>. Load context via Cortex MCP / search_context with query 'fix-packet-<slice_id>-iteration-<n>'.
+```
+
+The receiving agent MUST:
+
+1. Load the fix-packet block via Cortex MCP (`search_context`, `load_document`,
+   or `load_chunk`) using the deterministic ID as the primary key.
+2. Make only the changes needed to resolve the listed observations.
+3. Update the same fix-packet block with a follow-up note if further loop-back
+   is required, rather than creating duplicate packets for the same iteration.
+
+### Rationale
+
+A fix packet in the plan is durable, versioned, and searchable. It lets a
+fresh-context agent load the exact observations without depending on the
+dispatch prompt, eliminates context drift from paraphrased failure output, and
+keeps the convergence tracker and `fix-loop` markers aligned.
+
+### Relationship to Section 2.2 (RAG-Based Dispatch Policy)
+
+Storing fix-loop observations in the active `.plans.md` file and dispatching
+only the deterministic fix-packet ID is a **controlled deviation** from the
+Section 2.2 rule that "the orchestrator MUST NOT embed observations inline in
+a dispatch prompt." This deviation is permitted **only** when all of the
+following are true:
+
+- The observations are stored in the plan under a deterministic fix-packet ID
+  (`fix-packet-<slice_id>-iteration-<n>`), where `slice_id` identifies the
+  failing slice and the block follows the required YAML schema.
+- The receiving agent loads those observations via Cortex RAG (`search_context`,
+  `load_document`, or `load_chunk`) using the deterministic ID as the primary
+  key, not via inline prompt text.
+- The dispatch prompt contains only the fix-packet ID and a minimal instruction
+  to load context via RAG.
+
+If the observations cannot be stored in the plan or cannot be retrieved by RAG,
+the orchestrator MUST fall back to the standard Section 2.2 rule and MUST NOT
+embed the observations inline in the dispatch prompt.
+
+## Section 5.8.1 — Complexity Triage
+
+The dispatch packet builder (`scripts/agent-customization/dispatch/build-dispatch-packet.mjs`)
+classifies every slice into one of three complexity levels. The complexity hint
+controls the prompt-length budget (Section 5.8.2) and the fix-packet fast-path
+eligibility (Section 5.8.2 "Reuse Idle Agent"). Callers MAY pass a `complexity`
+field to `build_dispatch_packet`; when omitted it defaults to `moderate` for
+backward compatibility.
+
+### Heuristics
+
+- **Trivial** — One-line fixes, config changes, bundle rebuilds, comment and
+  formatting edits, dependency bumps with no API change, single-constant
+  updates. The fix fits in a short follow-up message without new design
+  context. Trivial slices get the stricter 200-character prompt limit.
+- **Moderate** — Multi-file feature slices, new modules, new tests, a single
+  new behavior that touches a bounded set of files. Most implementation slices
+  are moderate. Moderate slices get the 500-character prompt limit.
+- **Complex** — Cross-module refactors, architecture changes, GPU/browser-critical
+  slices, migrations that touch shared contracts, anything with high
+  blast-radius or context-contamination risk. Complex slices get the
+  1000-character prompt limit and MUST NOT use the reuse-idle-agent fast-path.
+
+When the orchestrator is unsure, default to `moderate`. Over-classifying as
+trivial (to get the fast-path) when the work is moderate or complex is a
+triage defect: the stricter prompt budget and the fast-path assumptions will
+both break.
+
+### Where the classification is stored
+
+The complexity is echoed in the dispatch packet as `dispatch_packet.complexity`
+and in the top-level `complexity` field of the `build_dispatch_packet` result.
+The orchestrator SHOULD record the chosen complexity next to the slice in the
+plan's validation evidence so the handoff query and downstream agents can see it.
+
+### Complexity Triage Flowchart
+
+The flowchart below maps each complexity tier to the ceremony level it requires.
+Trivial slices collapse to `implement → shared-validation → green` with no
+specialist review, no convergence tracker, and no fix-packet ceremony. Moderate
+slices add the slice/severity gate and a specialist only when the slice is FULL.
+Complex slices run the full RED → IMPLEMENT → GREEN loop with all gates and a
+mandatory specialist review. See the **Complexity Tier Ceremony Matrix** in the
+active plan for the authoritative tier → ceremony mapping.
+
+```mermaid
+flowchart TD
+    Start(["New slice / request"]) --> Classify["Classify complexity<br/>trivial | moderate | complex"]
+    Classify --> Trivial["Trivial"]
+    Classify --> Moderate["Moderate"]
+    Classify --> Complex["Complex"]
+    Trivial --> TImpl["04-implementing<br/>no specialist, no convergence tracker,<br/>no fix-packet ceremony"]
+    TImpl --> TShared["shared-validation gate"]
+    TShared --> TGreen["05-green-testing"]
+    Moderate --> MImpl["04-implementing"]
+    MImpl --> MShared["shared-validation gate"]
+    MShared --> MGate["specialist-review-severity gate"]
+    MGate --> MSpecialist{"FULL?"}
+    MSpecialist -->|No| MGreen["05-green-testing"]
+    MSpecialist -->|Yes| MReview["1 Tier-3 specialist review"]
+    MReview --> MGreen
+    Complex --> CRed["03-red-testing RED phase"]
+    CRed --> CImpl["04-implementing"]
+    CImpl --> CShared["shared-validation gate"]
+    CShared --> CReview["1 Tier-3 specialist review<br/>all gates"]
+    CReview --> CGreen["05-green-testing"]
+    CGreen --> CConv["convergence-tracker gate"]
+    CConv --> CLoop{"green OK?"}
+    CLoop -->|No| CImpl
+    CLoop -->|Yes| Advance["Advance to next slice"]
+    TGreen --> Advance
+    MGreen --> Advance
+```
+
+## Section 5.8.2 — Reuse Idle Agent (Fix-Packet Fast-Path)
+
+For **trivial** slices, when a specialist returns `REQUEST_CHANGES` with a small
+fix, the orchestrator MAY send the fix directly to the idle implementation
+agent via `write_agent` instead of spawning a fresh `04-implementing` instance.
+This is the "fix-packet fast-path" and is only available for trivial slices.
+
+### Criteria (all must hold)
+
+- The slice was classified **trivial** by the dispatch packet builder.
+- The fix targets the **same slice** that the idle implementation agent already
+  worked on (the agent's context already contains the slice boundary).
+- A specialist returned `REQUEST_CHANGES` and the requested change is **small**:
+  a one-line or few-line correction, a config tweak, a bundle rebuild, a
+  comment/formatting fix — no new design context is required.
+- No plan updates are required to apply the fix (the slice boundary and
+  validation contract are unchanged).
+
+### Counter-criteria (any one disqualifies the fast-path)
+
+- The slice is **moderate** or **complex** — spawn a fresh `04-implementing`
+  instance with a standard fix packet instead.
+- **Context contamination risk** — the idle agent's context has drifted (it has
+  processed unrelated work since the slice, or the requested change requires
+  loading new files that were not part of the original slice).
+- The fix **requires plan updates** (slice boundary change, new validation
+  commands, scope expansion) — this MUST go through `01-planning`, not an inline
+  fix.
+- The requested change is not small (multi-file, new behavior, architectural) —
+  spawn a fresh instance.
+
+### Recording inline fixes
+
+When the orchestrator uses the fast-path, it MUST record the inline fix in the
+plan's validation evidence using the deterministic marker:
+
+```text
+fix-inline: <slice-id> iteration <n>
+```
+
+The marker MUST appear in the `## Latest validation evidence` section next to
+the slice, alongside (not instead of) the standard `fix-loop: <slice-id>
+iteration <n> status=<passed|failed>` marker. This keeps the convergence
+tracker honest: an inline fix is still a fix-loop iteration and is counted as
+one. If the inline fix does not produce a green pass, the orchestrator MUST
+fall back to the standard fix-packet flow (Section 5.8) and spawn a fresh
+`04-implementing` instance for the next iteration.
+
+## Section 5.8.3 — Gate Reliability (Consolidated Gate Graceful Degradation)
+
+The consolidated `slice-advancement` gate (Section 5) calls multiple sub-gates
+(plan-sync, step-packet, plan-slice-quality, plan-command-lint, and for FULL
+slices shared-validation, code-coverage, specialist-review) in a single
+invocation. Each sub-gate result is reported in the `sub_gates` array with
+`{ name, pass, fixHint, gate_error }`.
+
+There are two distinct failure modes, and the orchestrator MUST treat them
+differently:
+
+### Tooling failure — `gate_error: true`
+
+A `gate_error: true` entry means the sub-gate script itself failed to run:
+it crashed, timed out, threw an unhandled exception, or produced unparseable
+output. This is an infrastructure/tooling problem, NOT a content problem.
+
+When any sub-gate reports `gate_error: true`:
+
+- **Log a warning** and proceed to the next orchestration step.
+- **Do NOT retry** the gate or block dispatch.
+- **Do NOT treat it as a content failure.** The consolidated gate's top-level
+  `pass` boolean is computed only from sub-gates with `gate_error: false`.
+- Record the errored gate name(s) in `VALIDATION_EVIDENCE` for awareness, but
+  do not loop back or escalate solely because of a tooling error.
+
+### Content failure — `pass: false`, `gate_error: false`
+
+A `pass: false` entry with `gate_error: false` means the sub-gate ran
+successfully but found a real issue: a test failure, a lint error, a coverage
+gap, or a plan-format violation. This is a content problem that the
+implementer or planner must fix.
+
+When any sub-gate reports `pass: false` (and `gate_error: false`):
+
+- **Follow the existing loop-back protocol.** The consolidated gate returns
+  `pass: false` and the orchestrator routes the failure back to
+  `04-implementing` (or `01-planning` for plan-format issues) with the
+  aggregated `fixHint`.
+- Record the failing gate(s) and their `fixHint` values in
+  `VALIDATION_EVIDENCE`.
+
+### Consolidated gate output shape
+
+```json
+{
+  "pass": true,
+  "sub_gates": [
+    {
+      "name": "plan-sync",
+      "pass": true,
+      "fixHint": "...",
+      "gate_error": false
+    },
+    {
+      "name": "step-packet",
+      "pass": false,
+      "fixHint": "Fix ...",
+      "gate_error": false
+    },
+    {
+      "name": "plan-slice-quality",
+      "pass": true,
+      "fixHint": "...",
+      "gate_error": false
+    }
+  ],
+  "fixHint": "Failed gates: step-packet. Fix the issues and re-run. ...",
+  "evidence": {
+    "failedGates": ["step-packet"],
+    "erroredGates": []
+  }
+}
+```
+
+The orchestrator MUST use the `sub_gates` array (not just the top-level
+`pass`) to determine the correct response: `gate_error: true` entries are
+infrastructure warnings, while `pass: false` entries are actionable content
+failures.
+
+## Section 5.8.4 — Cortex Freshness and File-Lock Awareness
+
+Phase 3 introduced two automated Cortex hooks and a file-lock tracker that
+change how agents interact with the search index and parallel slices.
+
+### Auto-Reindex (Post-Write Hook)
+
+Agents do **NOT** need to manually trigger a Cortex reindex after writes. The
+post-write reindex hook (`post-write-reindex-hook.mjs`, registered as a
+PostToolUse hook in `.github/hooks/cortex-refresh.json`) fires after every
+`edit`/`create`/`apply_patch` call, extracts the written file path, and spawns
+a fire-and-forget background process that calls
+`targeted-reindex.mjs → reindexFiles([filePath])`.
+
+- Only eligible file types (`.md`, `.ts`, `.mjs`, `.js` under `plans/`,
+  `.github/skills/`, `.github/agents/`, `src/`, `examples/`,
+  `scripts/agent-customization/`, `rag-index/`, `scripts/mcp-semantic/`) are
+  reindexed.
+- The hook never blocks the host tool and never throws into the host.
+- Reindex errors are logged to `artifacts/post-write-reindex.log`.
+
+### Pre-Dispatch Freshness Hook
+
+Before each dispatch (and at SessionStart), the pre-dispatch freshness hook
+(`pre-dispatch-freshness-hook.mjs`) checks the index age against a
+configurable grace window (default 300s, `CORTEX_GRACE_WINDOW_S`) and
+staleness threshold (default 300s, `CORTEX_STALENESS_THRESHOLD_S`). If the
+index is stale beyond grace + threshold, a background full reindex is
+triggered. The hook **never blocks dispatch**; tooling errors degrade
+gracefully. For complex slices, the orchestrator MAY set
+`wait_for_reindex: true` to make the hook wait for the reindex to complete.
+
+### File-Lock Tracker
+
+The file-lock tracker (`file-lock-tracker.mjs`) provides `acquire(files)`,
+`release(lockId)`, and `isConflict(files)` for serializing parallel slices
+with overlapping file sets while parallelizing disjoint slices. Slices that
+touch disjoint files run concurrently; slices with overlapping files
+serialize via the lock tracker. The tracker is process-scoped (in-memory).
+
+## Section 5.9 — Plan Update at End (Mandatory)
+
+When a slice, step, or phase completes — and again when the entire plan
+finishes — the orchestrator MUST update the active plan file with the latest
+details before advancing or handing off. A stale plan is a planning defect:
+dispatched agents load context from the plan via RAG, so an un-updated plan
+poisons every subsequent dispatch.
+
+### What to record
+
+1. **Status transitions.** Flip the slice/step/phase marker from `[WIP]` to
+   `[DONE]` (or `[BLOCKED]` with a reason).
+2. **What changed.** A one- or two-line summary of the files touched and the
+   capability delivered — not a full diff.
+3. **Evidence.** The validation command(s) that passed (test names, gate
+   names, build/lint results) under a `## Latest validation evidence`
+   heading or inline next to the slice.
+4. **Removals.** Any legacy/noise files deleted under the M4 mandate, listed
+   by path so the handoff knows what is gone.
+5. **Next boundary.** The current phase/slice the next session should resume
+   from, so the handoff query stays accurate.
+
+### When to update
+
+- After every slice passes green (or is bypassed under pragmatic mode).
+- After every phase compresses.
+- At the end of the whole plan, so a fresh CLI session can resume cleanly.
+
+### Under pragmatic mode
+
+When the active plan declares pragmatic mandates (Section 2.4), the
+plan-update obligation is **not** skipped — it is simplified. Record the
+outcome compactly (status + evidence + next boundary) without the full
+fix-packet YAML ceremony. Keep the plan current; keep it lean.
 
 ## Section 7 — Cortex-First Search Policy (Mandatory)
 

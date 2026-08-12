@@ -40,6 +40,10 @@ export async function runFullDocsWorkflow(): Promise<void> {
       label: 'Racing Curriculum bundle',
       scriptName: 'build:racing-curriculum',
     },
+    {
+      label: 'Neatenstein bundles',
+      scriptName: 'build:neatenstein',
+    },
     { label: 'Semantic snapshot', scriptName: 'index:build-snapshot' },
   ]);
 

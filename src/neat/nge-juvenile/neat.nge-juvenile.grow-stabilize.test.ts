@@ -35,6 +35,7 @@ import {
 } from './neat.nge-juvenile.grow-stabilize';
 import type {
   NgeGrowStabilizeInput,
+  NgeGrowStabilizeResult,
   NgeHysteresisState,
 } from './neat.nge-juvenile.types';
 import {
@@ -214,7 +215,9 @@ describe('NGE grow-stabilize cycle', () => {
         target: [1.0, 0.0],
         baselineScore: 1_000,
       } as unknown as NgeGrowStabilizeInput);
-      expect((result as any).consecutiveWeightExhaustion).toBe(1);
+      expect(
+        (result as NgeGrowStabilizeResult).consecutiveWeightExhaustion,
+      ).toBe(1);
     });
 
     it('resets consecutiveWeightExhaustion to 0 when a variant improvement commits', async () => {
@@ -234,7 +237,9 @@ describe('NGE grow-stabilize cycle', () => {
         target: [1.0, 0.0],
         baselineScore: -1_000,
       } as unknown as NgeGrowStabilizeInput);
-      expect((result as any).consecutiveWeightExhaustion).toBe(0);
+      expect(
+        (result as NgeGrowStabilizeResult).consecutiveWeightExhaustion,
+      ).toBe(0);
     });
 
     it('forces growth when consecutiveWeightExhaustion reaches the threshold', async () => {
@@ -248,7 +253,7 @@ describe('NGE grow-stabilize cycle', () => {
           lastMorphKind: 'none',
           cooldownWindowsRemaining: 0,
         },
-      } as any);
+      } as ReturnType<NonNullable<NgeGrowStabilizeInput['lifecycleRunner']>>);
       const result = await runNgeGrowStabilizeCycle({
         network,
         scoreHistory: [1, 2, 3, 4],
@@ -279,7 +284,7 @@ describe('NGE grow-stabilize cycle', () => {
           lastMorphKind: 'none',
           cooldownWindowsRemaining: 0,
         },
-      } as any);
+      } as ReturnType<NonNullable<NgeGrowStabilizeInput['lifecycleRunner']>>);
       const result = await runNgeGrowStabilizeCycle({
         network,
         scoreHistory: [1, 2, 3, 4],
@@ -296,7 +301,9 @@ describe('NGE grow-stabilize cycle', () => {
         consecutiveWeightExhaustion: 3,
         lifecycleRunner: runner,
       } as unknown as NgeGrowStabilizeInput);
-      expect((result as any).consecutiveWeightExhaustion).toBe(0);
+      expect(
+        (result as NgeGrowStabilizeResult).consecutiveWeightExhaustion,
+      ).toBe(0);
     });
 
     it('top-of-cycle exhaustion override fires before the stabilization branch is evaluated', async () => {
@@ -311,7 +318,7 @@ describe('NGE grow-stabilize cycle', () => {
           lastMorphKind: 'none',
           cooldownWindowsRemaining: 0,
         },
-      } as any);
+      } as ReturnType<NonNullable<NgeGrowStabilizeInput['lifecycleRunner']>>);
       const result = await runNgeGrowStabilizeCycle({
         network,
         scoreHistory: [1, 2, 3, 4],
@@ -966,10 +973,7 @@ describe('NGE grow-stabilize cycle', () => {
   describe('parallel variant edge branches', () => {
     it('does not commit a weight variant when the evaluator reports no winner', async () => {
       jest.resetModules();
-      // `doMock` is a Jest CommonJS mocking API used here to temporarily swap
-      // an ESM module import inside this test; @types/jest does not declare it.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (jest as any).doMock('./neat.nge-juvenile.variants', () => ({
+      jest.doMock('./neat.nge-juvenile.variants', () => ({
         __esModule: true,
         ...jest.requireActual('./neat.nge-juvenile.variants'),
         evaluateNgeWeightVariants: jest.fn().mockResolvedValue({
@@ -1044,10 +1048,7 @@ describe('NGE grow-stabilize cycle', () => {
 
     it('falls back to effective variant count when evaluator metadata omits variantCount', async () => {
       jest.resetModules();
-      // `doMock` is a Jest CommonJS mocking API used here to temporarily swap
-      // an ESM module import inside this test; @types/jest does not declare it.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (jest as any).doMock('./neat.nge-juvenile.variants', () => ({
+      jest.doMock('./neat.nge-juvenile.variants', () => ({
         __esModule: true,
         ...jest.requireActual('./neat.nge-juvenile.variants'),
         evaluateNgeWeightVariants: jest.fn().mockResolvedValue({
@@ -1368,92 +1369,118 @@ describe('NGE grow-stabilize cycle', () => {
     it('no longer exports NGE_GROW_STABILIZE_IMPROVEMENT_THRESHOLD', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
       expect(
-        (constants as any).NGE_GROW_STABILIZE_IMPROVEMENT_THRESHOLD,
+        (constants as Record<string, unknown>)
+          .NGE_GROW_STABILIZE_IMPROVEMENT_THRESHOLD,
       ).toBeUndefined();
     });
 
     it('no longer exports WEIGHT_VARIANT_DELTA from grow-stabilize', async () => {
       const gs = await import('./neat.nge-juvenile.grow-stabilize');
-      expect((gs as any).WEIGHT_VARIANT_DELTA).toBeUndefined();
+      expect(
+        (gs as Record<string, unknown>).WEIGHT_VARIANT_DELTA,
+      ).toBeUndefined();
     });
 
     it('exports NGE_EXHAUSTION_SCORE_EPSILON equal to 1e-6', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
-      expect((constants as any).NGE_EXHAUSTION_SCORE_EPSILON).toBe(1e-6);
+      expect(
+        (constants as Record<string, unknown>).NGE_EXHAUSTION_SCORE_EPSILON,
+      ).toBe(1e-6);
     });
 
     it('exports NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY equal to 0.003', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
-      expect((constants as any).NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY).toBe(
-        0.003,
-      );
+      expect(
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY,
+      ).toBe(0.003);
     });
 
     it('exports NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE equal to 0.002', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
       expect(
-        (constants as any).NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE,
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE,
       ).toBe(0.002);
     });
 
     it('exports NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT equal to 0.001', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
-      expect((constants as any).NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT).toBe(
-        0.001,
-      );
+      expect(
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT,
+      ).toBe(0.001);
     });
 
     it('exports NGE_EXHAUSTION_STAGE_FRACTION_BABY equal to 0.02', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
-      expect((constants as any).NGE_EXHAUSTION_STAGE_FRACTION_BABY).toBe(0.02);
+      expect(
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_STAGE_FRACTION_BABY,
+      ).toBe(0.02);
     });
 
     it('exports NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE equal to 0.01', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
-      expect((constants as any).NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE).toBe(
-        0.01,
-      );
+      expect(
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE,
+      ).toBe(0.01);
     });
 
     it('exports NGE_EXHAUSTION_STAGE_FRACTION_ADULT equal to 0.006', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
-      expect((constants as any).NGE_EXHAUSTION_STAGE_FRACTION_ADULT).toBe(
-        0.006,
-      );
+      expect(
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_STAGE_FRACTION_ADULT,
+      ).toBe(0.006);
     });
 
     it('exports NGE_EXHAUSTION_TICK_BUDGET equal to 48', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
-      expect((constants as any).NGE_EXHAUSTION_TICK_BUDGET).toBe(48);
+      expect(
+        (constants as Record<string, unknown>).NGE_EXHAUSTION_TICK_BUDGET,
+      ).toBe(48);
     });
 
     it('exports NGE_EXHAUSTION_MIN_CONSECUTIVE_TICKS equal to 1', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
-      expect((constants as any).NGE_EXHAUSTION_MIN_CONSECUTIVE_TICKS).toBe(1);
+      expect(
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_MIN_CONSECUTIVE_TICKS,
+      ).toBe(1);
     });
 
     it('exports NGE_EXHAUSTION_MAX_CONSECUTIVE_TICKS equal to 8', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
-      expect((constants as any).NGE_EXHAUSTION_MAX_CONSECUTIVE_TICKS).toBe(8);
+      expect(
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_MAX_CONSECUTIVE_TICKS,
+      ).toBe(8);
     });
 
     it('exports NGE_EXHAUSTION_POST_GROWTH_MAX_CONSECUTIVE_TICKS equal to 16', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
       expect(
-        (constants as any).NGE_EXHAUSTION_POST_GROWTH_MAX_CONSECUTIVE_TICKS,
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_POST_GROWTH_MAX_CONSECUTIVE_TICKS,
       ).toBe(16);
     });
 
     it('exports NGE_EXHAUSTION_POST_GROWTH_EXHAUSTION_BOOST equal to 2.0', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
       expect(
-        (constants as any).NGE_EXHAUSTION_POST_GROWTH_EXHAUSTION_BOOST,
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_POST_GROWTH_EXHAUSTION_BOOST,
       ).toBe(2.0);
     });
 
     it('exports NGE_EXHAUSTION_NEURON_BUDGET_FACTOR equal to 0.5', async () => {
       const constants = await import('./neat.nge-juvenile.constants');
-      expect((constants as any).NGE_EXHAUSTION_NEURON_BUDGET_FACTOR).toBe(0.5);
+      expect(
+        (constants as Record<string, unknown>)
+          .NGE_EXHAUSTION_NEURON_BUDGET_FACTOR,
+      ).toBe(0.5);
     });
   });
 

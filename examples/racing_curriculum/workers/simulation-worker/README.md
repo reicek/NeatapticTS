@@ -1524,10 +1524,10 @@ pass the `useGPU` hint to {@link Network.activate}. It mirrors the Phase 2
 crossover threshold findings: in the racing-browser demo the GPU dispatch
 overhead only pays off once the batch is large enough.
 
-The module does not import the WebGPU API directly; it relies on the
-existing GPU seam in `src/architecture/network/gpu/` and on the
-`Network.activate` opt-in flag. This keeps the worker boundary thin and
-avoids duplicating device-management logic.
+The module does not import the WebGPU API directly; it delegates the
+threshold decision to the generic acceleration layer via
+{@link shouldAutoEnableGpu}. This keeps the worker boundary thin and
+avoids duplicating device-management or eligibility logic.
 
 ### createGPUAwareRaceController
 
@@ -1559,34 +1559,6 @@ Returns: A controller handle that internally decides whether to pass
 Synchronous controller handle returned by
 {@link createGPUAwareRaceController}.
 
-### isNetworkStructurallyGPUEligible
-
-```ts
-isNetworkStructurallyGPUEligible(
-  network: default,
-): boolean
-```
-
-Check structural GPU eligibility without requiring a live WebGPU device.
-
-Mirrors the device-independent portion of the eligibility checks used by
-the batched GPU seam so worker-side batch planning can decide before a
-device is bound.
-
-Parameters:
-- `network` - Network to inspect.
-
-Returns: True when the network has no gating, self-connections, or
-unsupported activations.
-
-### RACING_BROWSER_GPU_THRESHOLD
-
-Phase 2 crossover threshold for the racing-browser worker.
-
-Below this agent count the per-car CPU path is cheaper because the fixed
-WebGPU dispatch and readback overhead dominates. At or above the threshold
-the parallel GPU path begins to amortize that overhead.
-
 ### shouldUseGPUForBatch
 
 ```ts
@@ -1598,18 +1570,18 @@ shouldUseGPUForBatch(
 
 Decide whether a racing generation batch should opt into the GPU path.
 
-The decision uses the Phase 2 racing-browser crossover threshold and a
-lightweight structural eligibility check on the representative network.
-Device readiness is intentionally checked at activation time by
-{@link Network.activate} so this predicate can be used in worker planning
-without requiring a live WebGPU device.
+The decision is delegated to the generic acceleration layer's
+{@link shouldAutoEnableGpu} helper, which compares the network size and
+batch parallelism against the library-wide GPU node and batch thresholds.
+Any structural incompatibilities are handled by {@link Network.activate}'s
+internal fallback at activation time.
 
 Parameters:
 - `agentCount` - Number of cars / networks in the batch.
 - `network` - Representative network from the batch.
 
-Returns: True when the batch is large enough and the network is
-structurally GPU-compatible.
+Returns: True when the generic acceleration policy recommends GPU for this
+network and batch size.
 
 ## workers/simulation-worker/simulation-worker.role-divergence.service.ts
 

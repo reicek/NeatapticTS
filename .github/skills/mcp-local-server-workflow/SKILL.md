@@ -1,4 +1,4 @@
----
+﻿---
 name: mcp-local-server-workflow
 description: 'Use when: designing or validating local MCP runtime-visibility surfaces.'
 argument-hint: 'Name the runtime facts, current and target classification, planned component, evidence source and freshness, blocker or validation failure, required self-checks or gates, and how the limitation or promotion should be communicated.'

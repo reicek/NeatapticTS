@@ -109,7 +109,22 @@ createDeterministicRacingControllerNetwork(
 
 Creates a small deterministic public network that drives the solo browser harness.
 
+The network shape depends on the observation tier so the input dimension matches
+the assembled per-car observation vector and the output dimension matches the
+tier's control contract.
+
+Parameters:
+- `observationTier` - Supported observation tier (1–6) that selects the
+controller input/output shape. Defaults to tier 1.
+
 Returns: Deterministically parameterized controller network.
+
+Example:
+
+```ts
+const controller = createDeterministicRacingControllerNetwork(4);
+console.log(controller.input, controller.output); // 103, 2
+```
 
 ### CurriculumTeamIndex
 

@@ -1,4 +1,4 @@
-# Spec Kit Assimilation Report for NeatapticTS
+﻿# Spec Kit Assimilation Report for NeatapticTS
 
 > **Scope:** Compare the public GitHub [`github/spec-kit`](https://github.com/github/spec-kit) repository with the current NeatapticTS agent/skill/MCP/gate/routing/ISO-42001 implementation, and produce actionable cherry-pick recommendations.
 > **Inputs:** 31 verbatim spec-kit source files cached under `spec-kit/verbatim/`.

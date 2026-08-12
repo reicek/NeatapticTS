@@ -8,13 +8,13 @@ The point of this folder is not just to prove that NeatapticTS can evolve agents
 
 ## Recommended learning path
 
-| Step | Start here                                                                                           | What it teaches                                 | Why it comes now                                                                                        |
-| ---- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 1    | [helloNetwork](./helloNetwork)                                                                       | One tiny forward pass through the public API    | It gives you a concrete output immediately, without evolution or browser setup.                         |
-| 2    | [evolveXor](./evolveXor)                                                                             | The smallest useful NEAT loop                   | It adds selection, mutation, and generations without the extra complexity of a large environment.       |
-| 3    | [sequenceReset](./sequenceReset)                                                                     | Recurrent state and `network.clear()` semantics | It shows the first stateful behavior boundary before you move to bigger runtime systems.                |
-| 4    | [Starter browser pages](../docs/examples/index.html)                                                 | Lightweight browser-hosted walkthroughs         | It lets you stay on the same starter concepts while seeing the docs-published browser path.             |
-| 5    | [flappy_bird](./flappy_bird), [asciiMaze](./asciiMaze), and [racing_curriculum](./racing_curriculum) | Full-system neuroevolution demos                | They are best read after the starter path, once the controller and runtime basics are already familiar. |
+| Step | Start here                                                                                                                         | What it teaches                                 | Why it comes now                                                                                        |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 1    | [helloNetwork](./helloNetwork)                                                                                                     | One tiny forward pass through the public API    | It gives you a concrete output immediately, without evolution or browser setup.                         |
+| 2    | [evolveXor](./evolveXor)                                                                                                           | The smallest useful NEAT loop                   | It adds selection, mutation, and generations without the extra complexity of a large environment.       |
+| 3    | [sequenceReset](./sequenceReset)                                                                                                   | Recurrent state and `network.clear()` semantics | It shows the first stateful behavior boundary before you move to bigger runtime systems.                |
+| 4    | [Starter browser pages](../docs/examples/index.html)                                                                               | Lightweight browser-hosted walkthroughs         | It lets you stay on the same starter concepts while seeing the docs-published browser path.             |
+| 5    | [flappy_bird](./flappy_bird), [asciiMaze](./asciiMaze), [racing_curriculum](./racing_curriculum), and [neatenstein](./neatenstein) | Full-system neuroevolution demos                | They are best read after the starter path, once the controller and runtime basics are already familiar. |
 
 If you want the shortest useful route through the folder, follow that order exactly: inference first, minimal evolution second, sequence state third, browser quickstart fourth, then the flagship systems.
 
@@ -111,23 +111,38 @@ Best starting points:
 - [racing_curriculum/browser-entry/browser-entry.ts](./racing_curriculum/browser-entry/browser-entry.ts)
 - [racing_curriculum/index.html](./racing_curriculum/index.html)
 
+### Neatenstein
+
+[neatenstein](./neatenstein) is the best next step if you want to see how a procedural art pipeline feeds a browser-hosted NGE demo.
+
+It generates a compact voxel enemy from a palette grid, renders orthographic snapshots for each compass direction, and packages them into a deterministic sprite sheet that the live demo can load. The scripts under `scripts/` are the public art pipeline; the browser entry wires the result into a raycasting renderer. The lesson is how to keep deterministic generation, reference snapshots, and runtime rendering aligned in one example.
+
+Best starting points:
+
+- [neatenstein/README.md](./neatenstein/README.md)
+- [neatenstein/scripts/generate-enemy-sprites.ts](./neatenstein/scripts/generate-enemy-sprites.ts)
+- [neatenstein/scripts/snapshot-renderer.ts](./neatenstein/scripts/snapshot-renderer.ts)
+- [neatenstein/browser-entry/README.md](./neatenstein/browser-entry/README.md)
+- [neatenstein/index.html](./neatenstein/index.html)
+
 ## How the flagship demos differ
 
-| Dimension         | Flappy Bird                                                                     | ASCII Maze                                                                              | Racing Curriculum                                                                    |
-| ----------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Core challenge    | Reflex control under changing geometry                                          | Deliberate navigation toward a goal                                                     | Competitive coevolution across two teams                                             |
-| Observation style | Broad temporal observation                                                      | Tight handcrafted state summary                                                         | Continuous sensor vector from track state                                            |
-| Policy outputs    | 2 action scores                                                                 | 4 directional scores                                                                    | Car-control vector (steer, throttle, brake)                                          |
-| Teaching emphasis | Evaluation fairness, feed-forward local memory, worker playback, inspectable UI | Reward shaping, curriculum transfer, telemetry-rich evolution, explicit search overlays | Host/worker authority, frozen-snapshot coevolution, zero-copy transfer, protocol FSM |
-| Runtime flavor    | Browser-heavy and replay-oriented                                               | Console-browser hybrid and experiment-oriented                                          | Worker-authoritative simulation with host rendering                                  |
+| Dimension         | Flappy Bird                                                                     | ASCII Maze                                                                              | Racing Curriculum                                                                    | Neatenstein                                                                              |
+| ----------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Core challenge    | Reflex control under changing geometry                                          | Deliberate navigation toward a goal                                                     | Competitive coevolution across two teams                                             | Procedural voxel art feeding a live renderer                                             |
+| Observation style | Broad temporal observation                                                      | Tight handcrafted state summary                                                         | Continuous sensor vector from track state                                            | Voxel grid snapshots rendered from 8 compass directions                                  |
+| Policy outputs    | 2 action scores                                                                 | 4 directional scores                                                                    | Car-control vector (steer, throttle, brake)                                          | Not defined in this slice; the current example focuses on the procedural sprite pipeline |
+| Teaching emphasis | Evaluation fairness, feed-forward local memory, worker playback, inspectable UI | Reward shaping, curriculum transfer, telemetry-rich evolution, explicit search overlays | Host/worker authority, frozen-snapshot coevolution, zero-copy transfer, protocol FSM | Deterministic procedural generation, reference snapshots, and sprite-sheet packaging     |
+| Runtime flavor    | Browser-heavy and replay-oriented                                               | Console-browser hybrid and experiment-oriented                                          | Worker-authoritative simulation with host rendering                                  | Browser-hosted raycasting with a deterministic art pipeline                              |
 
 The quickest mental shortcut is simple:
 
 - Flappy Bird is a fast control-systems lesson.
 - ASCII Maze is a compact decision-making lesson.
 - Racing Curriculum is a coevolution and runtime-authority lesson.
+- Neatenstein is a procedural-art-to-runtime lesson.
 
-Together they show that a good neuroevolution example is not one fixed template. Observation design, scoring design, runtime ownership, and visualization strategy all change with the problem.
+Together they show that a good neuroevolution example is not one fixed template. Observation design, scoring design, runtime ownership, visualization strategy, and even where the assets come from all change with the problem.
 
 ## Advanced follow-up
 

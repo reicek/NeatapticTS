@@ -14,6 +14,7 @@ import {
   convertCoreToRacePackSnapshot,
   extractPitLapDistribution,
   type RaceAdaptationContext,
+  type RaceControllerNetwork,
 } from './simulation-worker.race-pack.service';
 import type { Network } from '../../../../src/browser-entry.ts';
 import type { RuntimeAdaptationEngine } from '../../controller/runtime.adaptation';
@@ -487,18 +488,16 @@ function makeCoreOpponentSnapshot(overrides: {
   } as CoreOpponentSnapshot;
 }
 
-function makeThrottleNetworks(
-  count: number,
-): Array<{ activate(inputs: number[]): number[] }> {
+function makeThrottleNetworks(count: number): RaceControllerNetwork[] {
   return Array.from({ length: count }, () => ({
+    input: 2,
     activate: () => [0.5, 0],
   }));
 }
 
-function makeNetworksWithOutputs(
-  outputs: number[][],
-): Array<{ activate(inputs: number[]): number[] }> {
+function makeNetworksWithOutputs(outputs: number[][]): RaceControllerNetwork[] {
   return outputs.map((output) => ({
+    input: 2,
     activate: () => output,
   }));
 }

@@ -1,4 +1,4 @@
----
+﻿---
 name: webgpu
 description: 'Use when: designing, implementing, debugging, or validating WebGPU compute acceleration for neural-network inference in NeatapticTS.'
 argument-hint: 'Specify the WebGPU topic (lifecycle, WGSL kernel, buffer layout, pipeline, error handling, testing, CPU parity), the target files, the network/demos in scope, and the acceptance criteria (fallback behavior, f32 tolerance, browser support).'

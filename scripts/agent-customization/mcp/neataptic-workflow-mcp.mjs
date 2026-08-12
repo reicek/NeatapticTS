@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * @module neataptic-workflow-mcp
+ * @module neataptic_workflow_mcp
  * @description Workflow MCP server — exposes repo-static workflow facts as MCP tools.
  *
  * Reads the active `[WIP]` phase and step from the plan file specified at
@@ -30,7 +30,10 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { parsePlanYamlBlock } from '../customization-utils.mjs';
+import {
+  normalizeTestContracts,
+  parsePlanYamlBlock,
+} from '../customization-utils.mjs';
 import {
   createMcpServer,
   createSelfCheckReport,
@@ -53,10 +56,11 @@ import {
   loadActivePlanContext,
   resolveEffectivePlanPath,
 } from './mcp-plan-utils.mjs';
+import { findArchivedSliceDescriptor } from './slice-context-archive.mjs';
 
 /* global Buffer */
 
-const SERVER_NAME = 'neataptic-workflow-mcp';
+const SERVER_NAME = 'neataptic_workflow_mcp';
 const SERVER_VERSION = '0.1.0';
 const INVENTORY_COMMAND =
   'node scripts/agent-customization/inventory-customizations.mjs --json';
@@ -209,7 +213,7 @@ export function createWorkflowTools({
     createTool({
       name: 'get_slice_context',
       description:
-        'Return a deterministic, self-contained context window for a slice_id from the active plan step plus Cortex RAG context. The response contains the full dispatch packet an agent needs in one call: slice boundary fields, step-level skills/validation/tdd metadata, a synthesized `instructions` directive string, and a bounded `context` block with the most relevant corpus chunks pulled via search_context. Total payload is capped at ~16 KB so an agent can read it directly without loading additional files. To retrieve the full plan document, use neataptic-cortex-mcp:load_document instead.',
+        'Return a deterministic, self-contained context window for a slice_id from the active plan step plus Cortex RAG context. The response contains the full dispatch packet an agent needs in one call: slice boundary fields, step-level skills/validation/tdd metadata, a synthesized `instructions` directive string, and a bounded `context` block with the most relevant corpus chunks pulled via search_context. Total payload is capped at ~16 KB so an agent can read it directly without loading additional files. To retrieve the full plan document, use cortex:load_document instead.',
       annotations: { readOnlyHint: true },
       inputSchema: {
         type: 'object',
@@ -380,7 +384,7 @@ export async function runWorkflowSelfCheck({ server, planPath }) {
     );
   }
 
-  return createSelfCheckReport('neataptic-workflow-mcp self-check', issues, {
+  return createSelfCheckReport('neataptic_workflow_mcp self-check', issues, {
     server: { name: SERVER_NAME, version: SERVER_VERSION },
     plan: effectivePlanPath,
     toolNames: server.tools.map((tool) => tool.name),
@@ -435,7 +439,7 @@ async function loadCustomizationInventory(commandRunner = runShellFreeCommand) {
  * containing the full dispatch packet (boundary fields, step-level metadata,
  * synthesized `instructions`, and a `context` block) so an agent can act on a
  * single call without loading additional files. Use
- * neataptic-cortex-mcp:load_document to retrieve the full plan document.
+ * cortex:load_document to retrieve the full plan document.
  *
  * @param {Record<string, unknown>} argumentsObject - Tool call arguments.
  * @param {string | undefined} startupPlanPath - Startup plan path fallback.
@@ -460,9 +464,13 @@ async function buildSliceContextWindow(
     activePlanContext = null;
   }
 
-  const descriptor = activePlanContext
+  let descriptor = activePlanContext
     ? await findSliceDescriptor(activePlanContext, effectivePlanPath, sliceId)
     : null;
+
+  if (!descriptor) {
+    descriptor = await findArchivedSliceDescriptor(effectivePlanPath, sliceId);
+  }
 
   if (!descriptor) {
     return {
@@ -470,7 +478,7 @@ async function buildSliceContextWindow(
       notFound: true,
       slice_id: sliceId,
       plan: effectivePlanPath,
-      message: `No step packet found for slice_id '${sliceId}' in ${effectivePlanPath}. Use neataptic-cortex-mcp:load_document to retrieve the full plan context.`,
+      message: `No step packet found for slice_id '${sliceId}' in ${effectivePlanPath} or its companion .logs.md archive. Use cortex:load_document to retrieve the full plan context.`,
     };
   }
 
@@ -481,12 +489,18 @@ async function buildSliceContextWindow(
     effectivePlanPath,
   );
 
-  return buildCompactSliceResponse(
+  const response = buildCompactSliceResponse(
     descriptor,
     sliceId,
     effectivePlanPath,
     ragContext,
   );
+
+  if (descriptor.archived === true) {
+    response.archived = true;
+  }
+
+  return response;
 }
 
 /**
@@ -594,7 +608,7 @@ function buildCompactSliceResponse(descriptor, sliceId, planPath, ragContext) {
       ...trimmedInstructions.payload,
       truncated: true,
       fallback_message:
-        'Slice context exceeded the 16 KB limit; context.text and instructions were truncated. Use neataptic-cortex-mcp:load_document for the full plan or load_chunk for complete chunks.',
+        'Slice context exceeded the 16 KB limit; context.text and instructions were truncated. Use cortex:load_document for the full plan or load_chunk for complete chunks.',
     };
   }
 
@@ -602,7 +616,7 @@ function buildCompactSliceResponse(descriptor, sliceId, planPath, ragContext) {
     compact: true,
     truncated: true,
     fallback_message:
-      'Slice context exceeded the 16 KB limit and could not be trimmed in place. Use neataptic-cortex-mcp:load_document to retrieve the full plan context.',
+      'Slice context exceeded the 16 KB limit and could not be trimmed in place. Use cortex:load_document to retrieve the full plan context.',
     slice_id: sliceId,
     plan: planPath,
     step_number: descriptor.stepNumber,
@@ -1828,32 +1842,6 @@ function buildDescriptorFromStep(
     },
     testContracts: normalizeTestContracts(metadata.acceptance_criteria),
   };
-}
-
-/**
- * Normalize an acceptance_criteria list into test-contract objects.
- *
- * @param {unknown} criteria - Raw acceptance criteria from plan metadata.
- * @returns {Array<{ id: string, text: string, validation?: string }>} Test contracts.
- */
-function normalizeTestContracts(criteria) {
-  if (!Array.isArray(criteria)) {
-    return [];
-  }
-
-  return criteria.map((criterion) => {
-    const text = String(criterion.text ?? '');
-    const explicitId = String(criterion.id ?? '').trim();
-    const extractedId = explicitId || (text.match(/AC-\d+/)?.[0] ?? '');
-    return {
-      id: extractedId,
-      text,
-      validation:
-        typeof criterion.validation === 'string'
-          ? criterion.validation
-          : undefined,
-    };
-  });
 }
 
 /**

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
  * NeatapticTS Dispatch MCP Server
  *
@@ -31,27 +31,18 @@ import {
   selfCheckError,
 } from './mcp-utils.mjs';
 
-const SERVER_NAME = 'neataptic-dispatch-mcp';
+import {
+  ALLOWED_CALLER_TIERS,
+  ALLOWED_EDGES,
+  buildDispatchPacket,
+  DEFAULT_COMPLEXITY,
+  PROMPT_LENGTH_MAX,
+  PROMPT_LENGTH_MAX_TRIVIAL,
+  TIER_LABELS,
+} from '../dispatch/build-dispatch-packet.mjs';
+
+const SERVER_NAME = 'neataptic_dispatch_mcp';
 const SERVER_VERSION = '0.1.0';
-
-const ALLOWED_CALLER_TIERS = [0, 1, 2, 3, 4];
-
-const TIER_LABELS = {
-  1: 'User-invocable phase orchestrators',
-  2: 'Tier 2 coordinators',
-  3: 'Hidden scouts and specialists',
-  4: 'Cross-tier helpers and execution specialists',
-};
-
-const ALLOWED_EDGES = [
-  { from: 0, to: 1 },
-  { from: 1, to: 2 },
-  { from: 1, to: 3 },
-  { from: 1, to: 4 },
-  { from: 2, to: 3 },
-  { from: 2, to: 4 },
-  { from: 3, to: 4 },
-];
 
 const DISPATCH_TOOLS = createDispatchTools();
 
@@ -129,8 +120,8 @@ function createDispatchTools() {
       description:
         'Validate a requested delegation and, if allowed, return a structured dispatch packet ' +
         'for the target agent. Returns ok=false with a reason when the target is unknown, ' +
-        'the caller tier is invalid, the delegation direction is illegal, or the target ' +
-        'violates the user-invocable rule.',
+        'the caller tier is invalid, the delegation direction is illegal, the target ' +
+        'violates the user-invocable rule, or the prompt exceeds the maximum allowed length.',
       annotations: { readOnlyHint: true },
       inputSchema: {
         type: 'object',
@@ -159,91 +150,42 @@ function createDispatchTools() {
             description:
               'Context tier for the dispatched agent; default is "default".',
           },
+          complexity: {
+            type: 'string',
+            enum: ['trivial', 'moderate', 'complex'],
+            description:
+              'Complexity hint for the slice (trivial|moderate|complex). Controls the ' +
+              'prompt-length budget: trivial slices get a 200-character limit; moderate ' +
+              'and complex slices get 500. Defaults to "moderate" when omitted for backward ' +
+              'compatibility with existing callers.',
+          },
         },
         required: ['target_agent', 'caller_tier'],
         additionalProperties: false,
       },
       handler: async (argumentsObject) => {
+        // requireString throws on a missing/non-string target_agent, preserving
+        // the historical 400-style behavior for that argument. The rest of the
+        // validation is delegated to the pure buildDispatchPacket builder so
+        // the MCP server and unit tests share one implementation.
         const targetName = requireString(
           argumentsObject.target_agent,
           'target_agent',
         );
-        const callerTier = Number(argumentsObject.caller_tier);
-        const prompt =
-          typeof argumentsObject.prompt === 'string'
-            ? argumentsObject.prompt
-            : '';
-        const contextTier =
-          argumentsObject.context_tier === 'long_context'
-            ? 'long_context'
-            : 'default';
 
         const report = await runCustomizationInventory();
         const agents = report.agents ?? [];
-        const target = agents.find((agent) => agent.name === targetName);
 
-        if (!target) {
-          return {
-            ok: false,
-            dispatch_allowed: false,
-            reason: `Unknown agent '${targetName}'`,
-          };
-        }
-
-        const targetTier = Number(target.tier);
-
-        if (
-          !Number.isInteger(callerTier) ||
-          !ALLOWED_CALLER_TIERS.includes(callerTier)
-        ) {
-          return {
-            ok: false,
-            dispatch_allowed: false,
-            reason: 'caller_tier must be 0, 1, 2, 3, or 4',
-          };
-        }
-
-        if (targetTier <= callerTier) {
-          return {
-            ok: false,
-            dispatch_allowed: false,
-            reason: `Delegation from Tier ${callerTier} to Tier ${targetTier} is not allowed because delegation must be downward; the target tier must be greater than the caller tier.`,
-          };
-        }
-
-        if (target.userInvocable === true && targetTier !== 1) {
-          return {
-            ok: false,
-            dispatch_allowed: false,
-            reason: `userInvocable is only valid for Tier 1 agents; '${targetName}' is Tier ${targetTier}`,
-          };
-        }
-
-        return {
-          ok: true,
-          dispatch_allowed: true,
-          reason: `Tier ${callerTier} may delegate to Tier ${targetTier}`,
-          agent: {
-            name: target.name,
-            tier: targetTier,
-            tier_label: TIER_LABELS[targetTier] ?? `Tier ${targetTier}`,
-            model: target.model ?? null,
-            skills: target.skills,
-            agents: target.agents,
-            tools: target.tools,
-            userInvocable: target.userInvocable,
-            file: target.path,
+        return buildDispatchPacket(
+          {
+            target_agent: targetName,
+            caller_tier: argumentsObject.caller_tier,
+            prompt: argumentsObject.prompt,
+            context_tier: argumentsObject.context_tier,
+            complexity: argumentsObject.complexity,
           },
-          dispatch_packet: {
-            agent_type: target.name,
-            name: target.name,
-            description: target.description,
-            model: target.model ?? null,
-            prompt,
-            context_tier: contextTier,
-            skills: target.skills,
-          },
-        };
+          agents,
+        );
       },
     }),
     createTool({
@@ -254,9 +196,16 @@ function createDispatchTools() {
       handler: async () => ({
         allowed_edges: ALLOWED_EDGES,
         user_invocable_rule: 'Only Tier 1 agents may be userInvocable',
+        prompt_length_rule:
+          'Prompts exceeding the maximum length are rejected to enforce RAG-based dispatch. The limit is tiered by complexity.',
+        prompt_length_max: PROMPT_LENGTH_MAX,
+        prompt_length_max_trivial: PROMPT_LENGTH_MAX_TRIVIAL,
+        default_complexity: DEFAULT_COMPLEXITY,
+        complexity_levels: ['trivial', 'moderate', 'complex'],
         notes: [
           'This server returns a dispatch packet only; it does not spawn subagents.',
           'Tier 0 (orchestrator) may only call Tier 1 agents.',
+          'Trivial slices get a 200-character prompt limit; moderate/complex get 500.',
         ],
       }),
     }),
@@ -483,6 +432,47 @@ async function runDispatchSelfCheck({ server }) {
       selfCheckError(
         'dispatch-mcp',
         'get_dispatch_policy did not return the expected user-invocable rule.',
+      ),
+    );
+  }
+
+  if (
+    typeof policyPayload.prompt_length_rule !== 'string' ||
+    typeof policyPayload.prompt_length_max !== 'number'
+  ) {
+    issues.push(
+      selfCheckError(
+        'dispatch-mcp',
+        'get_dispatch_policy did not return prompt_length_rule and prompt_length_max.',
+      ),
+    );
+  }
+
+  // Verify that an overlong prompt is rejected.
+  const longPromptResult = await invokeServerRequest(server, {
+    method: 'tools/call',
+    params: {
+      name: 'build_dispatch_packet',
+      arguments: {
+        target_agent: 'plan-scout',
+        caller_tier: 1,
+        prompt: 'x'.repeat(PROMPT_LENGTH_MAX + 1),
+        context_tier: 'default',
+      },
+    },
+  });
+
+  const longPromptPayload = longPromptResult.structuredContent ?? {};
+  if (
+    longPromptPayload.ok !== false ||
+    longPromptPayload.dispatch_allowed !== false ||
+    typeof longPromptPayload.prompt_length !== 'number' ||
+    typeof longPromptPayload.prompt_length_max !== 'number'
+  ) {
+    issues.push(
+      selfCheckError(
+        'dispatch-mcp',
+        'build_dispatch_packet did not reject an overlong prompt with prompt_length fields.',
       ),
     );
   }

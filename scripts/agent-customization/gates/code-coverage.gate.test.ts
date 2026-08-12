@@ -801,4 +801,155 @@ describe('code-coverage gate contract', () => {
       expect(result.pass).toBe(true);
     });
   });
+
+  it('type-only exemption removes a file from target files', async () => {
+    const { runCodeCoverageGate } = await loadGate();
+    const summaryPath = makeSummary(tempDir, {
+      'src/architecture/executable.ts': {
+        lines: { pct: 100 },
+        statements: { pct: 100 },
+        functions: { pct: 100 },
+        branches: { pct: 100 },
+      },
+    });
+
+    const result = await runCodeCoverageGate({
+      coverageSummaryPath: path.relative(REPO_ROOT, summaryPath),
+      changedFiles: [
+        'src/architecture/executable.ts',
+        'src/architecture/types.ts',
+      ],
+      exemptions: {
+        'src/architecture/types.ts': 'type-only',
+      },
+    });
+
+    expect(result.pass).toBe(true);
+    expect(result.evidence.targetFiles).toEqual([
+      'src/architecture/executable.ts',
+    ]);
+    expect(result.evidence.exemptFiles).toEqual([
+      { file: 'src/architecture/types.ts', kind: 'type-only' },
+    ]);
+  });
+
+  it('legacy-dominant exemption accepts current coverage when no baseline exists', async () => {
+    const { runCodeCoverageGate } = await loadGate();
+    const summaryPath = makeSummary(tempDir, {
+      'src/architecture/legacy.ts': {
+        lines: { pct: 57.21 },
+        statements: { pct: 56.66 },
+        functions: { pct: 22.1 },
+        branches: { pct: 64.51 },
+      },
+    });
+
+    const result = await runCodeCoverageGate({
+      coverageSummaryPath: path.relative(REPO_ROOT, summaryPath),
+      changedFiles: ['src/architecture/legacy.ts'],
+      exemptions: {
+        'src/architecture/legacy.ts': 'legacy-dominant',
+      },
+    });
+
+    expect(result.pass).toBe(true);
+    expect(result.evidence.fileReports[0].thresholds.lines).toEqual(
+      result.evidence.fileReports[0].metrics.lines,
+    );
+    expect(result.evidence.fileReports[0].exempt).toBe('legacy-dominant');
+  });
+
+  it('legacy-dominant exemption still uses baseline threshold when baseline exists', async () => {
+    const { runCodeCoverageGate } = await loadGate();
+    const summaryPath = makeSummary(tempDir, {
+      'src/architecture/legacy.ts': {
+        lines: { pct: 90 },
+        statements: { pct: 90 },
+        functions: { pct: 90 },
+        branches: { pct: 90 },
+      },
+    });
+    const baselinePath = makeSummary(
+      tempDir,
+      {
+        'src/architecture/legacy.ts': {
+          lines: { pct: 80 },
+          statements: { pct: 80 },
+          functions: { pct: 80 },
+          branches: { pct: 80 },
+        },
+      },
+      'coverage-baseline.json',
+    );
+
+    const result = await runCodeCoverageGate({
+      coverageSummaryPath: path.relative(REPO_ROOT, summaryPath),
+      coverageBaselinePath: path.relative(REPO_ROOT, baselinePath),
+      changedFiles: ['src/architecture/legacy.ts'],
+      exemptions: {
+        'src/architecture/legacy.ts': 'legacy-dominant',
+      },
+    });
+
+    expect(result.pass).toBe(true);
+    expect(result.evidence.fileReports[0].thresholds.lines).toBe(80);
+  });
+
+  it('CLI --exemptions reads exemptions from a JSON file', () => {
+    const summaryPath = makeSummary(tempDir, {
+      'src/exempt/legacy.ts': {
+        lines: { pct: 57.21 },
+        statements: { pct: 56.66 },
+        functions: { pct: 22.1 },
+        branches: { pct: 64.51 },
+      },
+      'src/exempt/fallback.ts': {
+        lines: { pct: 100 },
+        statements: { pct: 100 },
+        functions: { pct: 100 },
+        branches: { pct: 100 },
+      },
+    });
+    const exemptionsPath = path.join(tempDir, 'exemptions.json');
+    writeFileSync(
+      exemptionsPath,
+      JSON.stringify({
+        'src/exempt/legacy.ts': 'legacy-dominant',
+        'src/exempt/types.ts': 'type-only',
+      }),
+    );
+
+    const output = execFileSync(
+      process.execPath,
+      [
+        path.resolve(
+          REPO_ROOT,
+          'scripts/agent-customization/gates/code-coverage.gate.mjs',
+        ),
+        '--json',
+        `--coverage-summary-path=${path.relative(REPO_ROOT, summaryPath)}`,
+        '--changed-files',
+        'src/exempt/legacy.ts,src/exempt/types.ts,src/exempt/fallback.ts',
+        `--exemptions=${path.relative(REPO_ROOT, exemptionsPath)}`,
+      ],
+      {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+      },
+    );
+
+    const parsed = JSON.parse(output);
+    expect(parsed.pass).toBe(true);
+    expect(parsed.evidence.targetFiles).toEqual([
+      'src/exempt/legacy.ts',
+      'src/exempt/fallback.ts',
+    ]);
+    expect(
+      parsed.evidence.exemptFiles.some(
+        (exempt: { file: string; kind: string }) =>
+          exempt.file === 'src/exempt/legacy.ts' &&
+          exempt.kind === 'legacy-dominant',
+      ),
+    ).toBe(true);
+  });
 });

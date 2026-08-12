@@ -53,8 +53,6 @@ const DOC_ENTITY_SOURCES = [
     ignore: ['plans/completed/**'],
   },
   { family: 'completed-plan', patterns: ['plans/completed/**/*.md'] },
-  { family: 'skill', patterns: ['.github/skills/**/SKILL.md'] },
-  { family: 'agent', patterns: ['.github/agents/*.agent.md'] },
   { family: 'demo', patterns: ['examples/**/README.md', 'examples/**/*.ts'] },
   {
     family: 'benchmark',

@@ -129,8 +129,10 @@ When a test exposes a branch that no combination of legal inputs can reach:
 
 ## Single-Expect Rule
 
-Each new `it()` block must have **exactly one top-level `expect(...)`**.
-Group by scenario, not by assertion: one `it()` per observable behavior.
+Prefer one top-level `expect(...)` per `it()` for independent contracts. When
+multiple assertions all verify the same behavior state, up to three related
+`expect(...)` calls are allowed in one `it()` block. Unrelated assertions must
+still be split into separate `it()` blocks.
 
 ## Validation Rules
 

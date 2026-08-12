@@ -1,4 +1,4 @@
-# NGE Acceleration Layer Compliance Review
+﻿# NGE Acceleration Layer Compliance Review
 
 ## Question
 

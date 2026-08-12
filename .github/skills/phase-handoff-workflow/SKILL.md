@@ -1,4 +1,4 @@
----
+﻿---
 name: phase-handoff-workflow
 description: 'Use when: designing phase gates, handoffs, or slice boundaries.'
 argument-hint: 'Name the source phase, target phase, current plan state, and whether the handoff should be user-reviewed or auto-sent.'
@@ -93,13 +93,7 @@ This marks the current step `[DONE]` in the plan header AND the YAML
 next step can start, the hook may be skipped and the step left `[WIP]` until
 the user replies. Record the hold reason in the plan.
 If the hook returns `"actionTaken": "blocked"`, verify that the next step
-exists and has `[PLANNED]` status before escalating. 11. Before any strict write/execute action inside the current step, prepare the
-repo-owned runtime proof carrier with
-`node scripts/agent-customization/enforcement/runtime-enforcement-context.mjs --prepare ...`
-so pretool and posttool enforcement can validate the flow, delegator chain,
-required skills, required specialists, and action class. Use
-`.github/runtime-enforcement-contract.md` as the canonical contract for that
-payload. 12. **Phase Compression (mandatory).** When all steps in a phase are marked
+exists and has `[PLANNED]` status before escalating. 11. **Phase Compression (mandatory).** When all steps in a phase are marked
 `[DONE]` and green validation has passed, the orchestrator MUST dispatch
 `07-logging` to compress the completed phase before advancing to the next
 phase or performing the phase-to-phase handoff. **Step-level compression**

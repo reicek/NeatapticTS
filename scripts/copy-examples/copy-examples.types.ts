@@ -36,6 +36,15 @@ export interface ExampleDefinition {
   title: string;
   /** Absolute filesystem path to the source example folder. */
   sourceDir: string;
+  /**
+   * Optional list of extra asset filenames (relative to `sourceDir`) that
+   * should be copied verbatim into the published `docs/examples/<dirName>/`
+   * folder alongside the generated `index.html`.
+   *
+   * Use this for supplementary browser pages or their data dependencies that
+   * must be served from the same folder but are not the primary landing page.
+   */
+  extraAssets?: readonly string[];
 }
 
 /**

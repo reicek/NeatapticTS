@@ -20,13 +20,6 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const SCRIPTS_DIR = path.join(REPO_ROOT, 'scripts', 'agent-customization');
 const TEMP_DIR = path.join(REPO_ROOT, 'plans', '_test-temp');
 const TEMP_PREFIX = 'plan-workflow-test-';
-const ACTIVE_PLAN =
-  'plans/completed/NEAT_Genesis_EvoDevo_Core_Readiness.plans.md';
-const DOWNSTREAM_TRACKER_PLANS = [
-  'plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md',
-  'plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md',
-  'plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md',
-];
 const WORKFLOW_HOOK_SCRIPT = '../../.github/hooks/workflow-update-sync.mjs';
 
 interface MigrationReport {
@@ -539,53 +532,62 @@ describe('validate-plan-phase-packets.mjs', () => {
 });
 
 describe('downstream synchronization contract', () => {
-  describe('validate-plan-sync.mjs', () => {
-    it('reports downstream benchmark trackers in the JSON output', () => {
-      const report = runPlanSync(ACTIVE_PLAN);
-      expect(report.downstreamTrackers).toEqual(
-        expect.arrayContaining(DOWNSTREAM_TRACKER_PLANS),
-      );
-    });
-  });
+  const TRACKER_IDS = ['tracker-alpha', 'tracker-beta', 'tracker-gamma'];
+  let tempTrackerPaths: string[];
+  let tempActivePlanPath: string;
 
-  describe('workflow-update-sync.mjs', () => {
-    it('includes downstream tracker plans in the sync event JSON output', () => {
-      const report = runWorkflowHook([
-        '--json',
-        '--dry-run',
-        `--plan=${ACTIVE_PLAN}`,
-      ]);
-      expect(report.syncEvent.downstreamTrackers).toEqual(
-        expect.arrayContaining(DOWNSTREAM_TRACKER_PLANS),
-      );
-    });
+  async function createTrackerPlan(id: string): Promise<string> {
+    return createTempPlanFile(
+      {
+        phase: 1,
+        step: 1,
+        title: `${id} tracker`,
+        status: '[PLANNED]',
+        goal: 'planning',
+        expansion: 'none',
+        auto_expand: false,
+        mode: 'fresh-session',
+        source_of_truth: 'plans/_test-temp/placeholder.plans.md',
+        copy_paste: true,
+        next_step: 'null',
+        skills: ['plan-alignment'],
+        validation: ['echo ok'],
+        acceptance_criteria: ['OK'],
+      },
+      `downstream-${id}`,
+      { inPlansRoot: true },
+    );
+  }
 
-    it('passes when a phase is [WIP] but no step is [WIP]', async () => {
-      const fileName = `${TEMP_PREFIX}no-step-wip.plans.md`;
-      const filePath = path.join(REPO_ROOT, 'plans', fileName);
-      const relativePath = `plans/${fileName}`;
-      const content = `# Test plan — no step WIP
+  async function createActivePlan(
+    testId: string,
+    stepStatuses: { step1: string; step2: string },
+    phaseStatus: string = '[WIP]',
+  ): Promise<string> {
+    const trackerList = tempTrackerPaths.map((p) => `- ${p}`).join('\n');
+    const fileName = `${TEMP_PREFIX}${testId}.plans.md`;
+    const filePath = path.join(REPO_ROOT, 'plans', fileName);
+    const relativePath = `plans/${fileName}`;
+    const content = `# Test plan — ${testId}
 
 **Status:** [WIP]
 
 ## Scope
 
 This plan is downstream of:
-- plans/NEAT_Genesis_EvoDevo_Racing_Curriculum.plans.md
-- plans/NEAT_Genesis_EvoDevo_AntHive_Demo.md
-- plans/NEAT_Genesis_EvoDevo_PredatorPrey_Demo.md
+${trackerList}
 
 ## Implementation phases
 
-### Phase 1 — Active phase [WIP]
+### Phase 1 — Active phase ${phaseStatus}
 
-#### Step 01 — Completed step [DONE]
+#### Step 01 — First step ${stepStatuses.step1}
 
 \`\`\`yaml
 phase: 1
 step: 1
-title: 'Completed step'
-status: '[DONE]'
+title: 'First step'
+status: '${stepStatuses.step1}'
 goal: planning
 expansion: none
 auto_expand: false
@@ -601,13 +603,13 @@ acceptance_criteria:
   - 'OK'
 \`\`\`
 
-#### Step 02 — Planned step [PLANNED]
+#### Step 02 — Second step ${stepStatuses.step2}
 
 \`\`\`yaml
 phase: 1
 step: 2
-title: 'Planned step'
-status: '[PLANNED]'
+title: 'Second step'
+status: '${stepStatuses.step2}'
 goal: planning
 expansion: none
 auto_expand: false
@@ -623,7 +625,51 @@ acceptance_criteria:
   - 'OK'
 \`\`\`
 `;
-      await writeFile(filePath, content, 'utf8');
+    await writeFile(filePath, content, 'utf8');
+    return relativePath;
+  }
+
+  beforeAll(async () => {
+    tempTrackerPaths = await Promise.all(TRACKER_IDS.map(createTrackerPlan));
+    tempActivePlanPath = await createActivePlan('downstream-active', {
+      step1: '[WIP]',
+      step2: '[PLANNED]',
+    });
+  });
+
+  afterAll(async () => {
+    for (const p of tempTrackerPaths) {
+      await removeTempPlanFile(p);
+    }
+    await removeTempPlanFile(tempActivePlanPath);
+  });
+
+  describe('validate-plan-sync.mjs', () => {
+    it('reports downstream benchmark trackers in the JSON output', () => {
+      const report = runPlanSync(tempActivePlanPath);
+      expect(report.downstreamTrackers).toEqual(
+        expect.arrayContaining(tempTrackerPaths),
+      );
+    });
+  });
+
+  describe('workflow-update-sync.mjs', () => {
+    it('includes downstream tracker plans in the sync event JSON output', () => {
+      const report = runWorkflowHook([
+        '--json',
+        '--dry-run',
+        `--plan=${tempActivePlanPath}`,
+      ]);
+      expect(report.syncEvent.downstreamTrackers).toEqual(
+        expect.arrayContaining(tempTrackerPaths),
+      );
+    });
+
+    it('passes when a phase is [WIP] but no step is [WIP]', async () => {
+      const relativePath = await createActivePlan('downstream-no-step-wip', {
+        step1: '[DONE]',
+        step2: '[PLANNED]',
+      });
       try {
         const report = runWorkflowHook(['--json', `--plan=${relativePath}`]);
         expect(report).toMatchObject({
@@ -631,13 +677,11 @@ acceptance_criteria:
           pass: true,
           syncEvent: {
             actionTaken: 'between-steps',
-            downstreamTrackers: expect.arrayContaining(
-              DOWNSTREAM_TRACKER_PLANS,
-            ),
+            downstreamTrackers: expect.arrayContaining(tempTrackerPaths),
           },
         });
       } finally {
-        await unlink(filePath).catch(() => undefined);
+        await removeTempPlanFile(relativePath);
       }
     });
   });

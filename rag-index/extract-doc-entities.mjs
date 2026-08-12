@@ -379,8 +379,6 @@ async function main() {
         ignore: ['plans/completed/**'],
       },
       { family: 'completed-plan', patterns: ['plans/completed/**/*.md'] },
-      { family: 'skill', patterns: ['.github/skills/**/SKILL.md'] },
-      { family: 'agent', patterns: ['.github/agents/*.agent.md'] },
       { family: 'demo', patterns: ['examples/**/README.md'] },
       { family: 'benchmark', patterns: ['benchmarks/README.md'] },
     ];

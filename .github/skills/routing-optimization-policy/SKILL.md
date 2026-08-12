@@ -1,4 +1,4 @@
----
+﻿---
 name: routing-optimization-policy
 description: 'Use when: enforcing routing discipline, tier boundaries, or routing-table freshness.'
 argument-hint: 'Describe the routing decision, tier boundary, or gate protocol to validate. Include target agent/skill, suspected violation, and validation command.'

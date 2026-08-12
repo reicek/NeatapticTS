@@ -11,11 +11,25 @@
  */
 
 import {
-  NEATENSTEIN_FIXED_TIMESTEP_MS,
-  NEATENSTEIN_MAP_SIZE,
+  NEATENSTEIN_LIGHT_TOGGLE_KEY as _NEATENSTEIN_LIGHT_TOGGLE_KEY,
+  NEATENSTEIN_MAP_SIZE as _NEATENSTEIN_MAP_SIZE,
 } from '../../constants';
 
-export { NEATENSTEIN_FIXED_TIMESTEP_MS };
+/** Re-export of the light-toggle key from the browser-entry constants. */
+export const NEATENSTEIN_LIGHT_TOGGLE_KEY = _NEATENSTEIN_LIGHT_TOGGLE_KEY;
+
+/** Re-export of the square map size from the browser-entry constants. */
+export const NEATENSTEIN_MAP_SIZE = _NEATENSTEIN_MAP_SIZE;
+
+/**
+ * Fixed simulation timestep in milliseconds.
+ *
+ * Previously exported from the top-level browser-entry constants; moved here
+ * so the game-logic modules that still require a fixed step (tick, movement,
+ * episode, collision, waves, pulses, enemy-controller) can reference a single
+ * authoritative value while the host render loop now uses rAF delta-time.
+ */
+export const NEATENSTEIN_FIXED_TIMESTEP_MS = 16;
 
 /** Number of milliseconds in one second. */
 export const NEATENSTEIN_MS_PER_SECOND = 1000;
@@ -24,18 +38,35 @@ export const NEATENSTEIN_MS_PER_SECOND = 1000;
 export const NEATENSTEIN_PLAYER_MAX_HEALTH = 100;
 
 /** Maximum ammo the player can carry at the start of an episode. */
-export const NEATENSTEIN_PLAYER_MAX_AMMO = 30;
+export const NEATENSTEIN_PLAYER_MAX_AMMO = 50;
 
 /** Maximum number of enemies that can be active at the same time. */
 export const NEATENSTEIN_ENEMY_MAX_CONCURRENT = 8;
 
+/** Total number of enemy waves an episode spawns before ending. */
+export const NEATENSTEIN_ENEMY_WAVE_COUNT = 9;
+
 /**
- * Radius in world cells around the map origin where enemies may spawn.
+ * Radius in world cells around the map center where enemies may spawn.
  *
- * Enemies are placed at a random angle and a random distance up to this value,
- * so the effective spawn region is a circle centered on the origin.
+ * Enemies are placed at a random angle and a random distance between
+ * {@link NEATENSTEIN_ENEMY_SPAWN_MIN_DISTANCE_CELLS} and this value, so the
+ * effective spawn region is an annulus centered on
+ * {@link NEATENSTEIN_SPAWN_CENTER_X} / {@link NEATENSTEIN_SPAWN_CENTER_Y}.
  */
-export const NEATENSTEIN_ENEMY_SPAWN_RADIUS = 8;
+export const NEATENSTEIN_ENEMY_SPAWN_RADIUS = 85;
+
+/**
+ * Minimum distance in world cells between an enemy spawn and the player spawn
+ * center.
+ *
+ * Keeps enemies from appearing inside {@link NEATENSTEIN_CONTACT_RANGE_CELLS},
+ * which would deal immediate contact damage and end the episode far earlier
+ * than the intended 15–25 second duration band. The value is chosen to be
+ * larger than the contact range so the player has a brief reaction window
+ * even before movement begins.
+ */
+export const NEATENSTEIN_ENEMY_SPAWN_MIN_DISTANCE_CELLS = 1;
 
 /** Milliseconds of invulnerability granted by a single dash. */
 export const NEATENSTEIN_DASH_INVULNERABILITY_MS = 200;
@@ -88,6 +119,14 @@ export const NEATENSTEIN_PLAYER_SPEED_CELLS_PER_SECOND = 6;
 export const NEATENSTEIN_PLAYER_RADIUS_CELLS = 0.25;
 
 /**
+ * Enemy collision radius in world cells.
+ *
+ * Enemies are authored on a 192×192 block footprint. With a floor cell size of
+ * 252 blocks, the enemy radius is half the footprint: 96 blocks, or 96/252 cells.
+ */
+export const NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS = 96 / 252;
+
+/**
  * Cell distance within which an enemy triggers contact damage.
  *
  * Measured from the player center to the enemy center; chosen to feel fair
@@ -98,7 +137,7 @@ export const NEATENSTEIN_CONTACT_RANGE_CELLS = 0.5;
 /**
  * Hit points removed from the player on each contact-damage tick.
  *
- * Smaller than the beam damage so melee pressure is threatening but not
+ * Smaller than the bolt damage so melee pressure is threatening but not
  * instantly lethal.
  */
 export const NEATENSTEIN_CONTACT_DAMAGE = 10;
@@ -192,52 +231,13 @@ export const NEATENSTEIN_DASH_KEY = 'Space' as const;
 export const NEATENSTEIN_FIRE_KEY = 'KeyF' as const;
 
 /**
- * Maximum cell distance a neon beam can travel before it is forced to end.
+ * Distance in cells to offset the bolt origin forward from the player center.
  *
- * Set generously larger than the map diagonal so the beam always reaches
- * the far wall from any valid player position.
- */
-export const NEATENSTEIN_BEAM_MAX_RANGE_CELLS = 48;
-
-/**
- * Hit points removed from an enemy by a single neon beam hit.
- *
- * Chosen so a freshly spawned enemy with moderate health is destroyed by
- * one or two well-placed shots.
- */
-export const NEATENSTEIN_BEAM_DAMAGE = 50;
-
-/**
- * Milliseconds a fired tracer remains visible in the world.
- *
- * Short enough to read as a transient laser flash rather than a lingering
- * beam, but long enough to be clearly visible at 60 FPS.
- */
-export const NEATENSTEIN_TRACER_DURATION_MS = 80;
-
-/**
- * Distance in cells to offset the beam origin forward from the player center.
- *
- * Keeps the tracer origin in front of the camera near-plane so the renderer's
- * depth projection accepts it instead of rejecting it as depth less than or
- * equal to the near-clip epsilon.
+ * Keeps the projectile origin in front of the camera near-plane so the
+ * renderer's depth projection accepts it instead of rejecting it as depth
+ * less than or equal to the near-clip epsilon.
  */
 export const NEATENSTEIN_MUZZLE_OFFSET_CELLS = 0.2;
-
-/**
- * CSS color applied to all neon beam tracers.
- *
- * A bright cyan/blue that reads as "neon" against the dark cell-shaded walls.
- */
-export const NEATENSTEIN_BEAM_COLOR = '#00bfff';
-
-/**
- * Perpendicular distance within which an enemy center is considered hit by
- * the beam.
- *
- * Tuned to feel generous without making thin grazing shots count as hits.
- */
-export const NEATENSTEIN_ENEMY_HIT_RADIUS_CELLS = 0.4;
 
 /**
  * Minimum touch drag distance in CSS pixels before a touch-move is treated
@@ -282,8 +282,8 @@ export const NEATENSTEIN_TEST_SEED = 1;
 /**
  * Default enemy health used in combat tests.
  *
- * Chosen so that a single {@link NEATENSTEIN_BEAM_DAMAGE} hit reduces health
- * to a non-zero value, while a second hit (or health equal to the beam damage)
+ * Chosen so that a single {@link NEATENSTEIN_BOLT_DAMAGE} hit reduces health
+ * to a non-zero value, while a second hit (or health equal to the bolt damage)
  * produces a confirmed kill.
  */
 export const NEATENSTEIN_TEST_ENEMY_HEALTH = 100;
@@ -297,6 +297,115 @@ export const NEATENSTEIN_TEST_ENEMY_HEALTH = 100;
 export const NEATENSTEIN_TEST_ENEMY_DEAD_HEALTH = 0;
 
 /**
+ * Hit points removed from an enemy by a single traveling plasma bolt hit.
+ *
+ * Set to 20 so a freshly spawned enemy with 100 health requires five
+ * well-placed shots to kill, giving the player a sustained combat loop.
+ */
+export const NEATENSTEIN_BOLT_DAMAGE = 20;
+
+/**
+ * Maximum health of a freshly spawned enemy.
+ *
+ * Enemies spawn with this much health. With {@link NEATENSTEIN_BOLT_DAMAGE}
+ * at 20, five non-lethal hits reduce health 100→80→60→40→20→0 (kill on 5th).
+ */
+export const NEATENSTEIN_ENEMY_MAX_HEALTH = 100;
+
+/**
+ * Duration of the hit-stun effect applied on a non-leval bolt hit, in
+ * milliseconds.
+ *
+ * While stunTimerMs > 0 the enemy skips movement, MLP activation, and fire;
+ * the animation state is set to 'damage'. Set to 200 ms for a brief but
+ * noticeable stagger that prevents damage stacking.
+ */
+export const NEATENSTEIN_ENEMY_STUN_DURATION_MS = 200;
+
+/**
+ * Distance an enemy is pushed back when hit by a non-lethal bolt, in world
+ * cells.
+ *
+ * The pushback direction is the normalized vector from the player to the
+ * enemy, wall-checked so the enemy is not pushed inside a solid cell.
+ */
+export const NEATENSTEIN_ENEMY_PUSHBACK_DISTANCE_CELLS = 1.0;
+
+/**
+ * Travel speed of a plasma bolt in world cells per second.
+ *
+ * Tuned so a bolt reaches the arena edge quickly, giving it a snappy
+ * projectile feel while remaining fast enough to compete with the original
+ * hitscan weapon.
+ */
+export const NEATENSTEIN_BOLT_SPEED_CELLS_PER_SECOND = 36;
+
+/**
+ * Fixed visual travel duration of a plasma bolt in milliseconds.
+ *
+ * Using a constant duration instead of distance/speed makes every bolt travel
+ * at the same screen-space rate regardless of target distance.
+ */
+export const NEATENSTEIN_BOLT_TRAVEL_DURATION_MS = 300;
+
+/**
+ * Maximum lifetime of a plasma bolt in milliseconds.
+ *
+ * Caps the distance a bolt can travel and prevents deactivated bolts from
+ * lingering in the simulation.
+ */
+export const NEATENSTEIN_BOLT_LIFETIME_MS = 2000;
+
+/**
+ * Radius in world cells used for bolt/enemy collision.
+ *
+ * Tuned to feel generous without making thin grazing shots count as hits.
+ */
+export const NEATENSTEIN_BOLT_HIT_RADIUS_CELLS =
+  NEATENSTEIN_ENEMY_COLLISION_RADIUS_CELLS;
+
+/**
+ * Maximum distance a plasma bolt can travel in world cells.
+ *
+ * Bolts are deleted once they travel this far. They stop existing, cannot hit
+ * anything, and fade out visually over the same range.
+ */
+export const NEATENSTEIN_BOLT_MAX_RANGE_CELLS = 30;
+
+/**
+ * Maximum screen-space recoil offset applied to the gun overlay after firing.
+ *
+ * Expressed in pixels relative to the bottom-center HUD coordinate. A larger
+ * value makes each shot feel punchier; a smaller value keeps the overlay stable.
+ */
+export const NEATENSTEIN_GUN_RECOIL_MAX_OFFSET_PX = 8;
+
+/**
+ * Recoil decay rate in pixels per second.
+ *
+ * Determines how quickly the gun overlay returns to its rest position after a
+ * shot. The value is chosen so the recoil settles within roughly one tick at
+ * 60 FPS while still producing a visible kick.
+ */
+export const NEATENSTEIN_GUN_RECOIL_DECAY_PX_PER_SECOND = 480;
+
+/**
+ * CSS color applied to the dynamic light overlay.
+ *
+ * A bright teal that matches the gun accent color and reads as a neon muzzle
+ * flash or carried light source.
+ */
+export const NEATENSTEIN_DYNAMIC_LIGHT_COLOR = '#00f0ff';
+
+/**
+ * World-cell radius of the dynamic light overlay.
+ *
+ * Defines how far the teal light illuminates nearby floor/wall geometry from
+ * the player position when enabled.
+ */
+export const NEATENSTEIN_DYNAMIC_LIGHT_RADIUS_CELLS = 6;
+
+/**
  * Distance in cells just beyond {@link NEATENSTEIN_CONTACT_RANGE_CELLS} used
  * to place an enemy outside contact-damage range for out-of-range testing.
  */
@@ -305,44 +414,136 @@ export const NEATENSTEIN_TEST_ENEMY_BEYOND_CONTACT_RANGE_CELLS =
 
 /**
  * Distance in cells from the player to a test enemy placed directly on the
- * beam path.
+ * bolt path.
  *
  * Small enough to sit before the nearest wall from the central spawn point
- * when firing along the +X axis, so the beam reliably hits the enemy first.
+ * when firing along the +X axis, so the bolt reliably hits the enemy first.
  */
 export const NEATENSTEIN_TEST_ENEMY_NEAR_DISTANCE_CELLS = 2;
 
 /**
- * Distance in cells from the player to a second test enemy placed farther out
- * on the same beam path.
- *
- * Used to verify that the nearest enemy is chosen when multiple enemies share
- * the beam.
- */
-export const NEATENSTEIN_TEST_ENEMY_FAR_DISTANCE_CELLS = 4;
-
-/**
- * Distance in cells from the player to a test enemy placed behind the outer
- * wall from the central spawn point.
- *
- * The outer wall along the +X axis is roughly 11 cells away from the central
- * spawn, so this value is chosen to be well beyond the wall so the beam always
- * terminates on the wall before reaching the enemy.
- */
-export const NEATENSTEIN_TEST_ENEMY_BEHIND_WALL_DISTANCE_CELLS = 15;
-
-/**
- * Small offset in cells placed beyond {@link NEATENSTEIN_BEAM_MAX_RANGE_CELLS}
- * so a test enemy is guaranteed to sit outside the beam's reachable distance.
- */
-export const NEATENSTEIN_TEST_ENEMY_BEYOND_RANGE_OFFSET_CELLS = 2;
-
-/**
  * Perpendicular offset in cells used to place a test enemy just outside the
- * beam hit radius.
+ * bolt hit radius.
  *
- * The value is larger than {@link NEATENSTEIN_ENEMY_HIT_RADIUS_CELLS} so the
+ * The value is larger than {@link NEATENSTEIN_BOLT_HIT_RADIUS_CELLS} so the
  * enemy is missed even though it shares the same forward distance as a hit
  * enemy.
  */
-export const NEATENSTEIN_TEST_ENEMY_OFF_BEAM_OFFSET_CELLS = 0.5;
+export const NEATENSTEIN_TEST_ENEMY_OFF_BOLT_OFFSET_CELLS = 0.5;
+
+/**
+ * Travel speed of an enemy plasma bolt in world cells per second.
+ *
+ * Matches the player bolt speed so enemy projectiles feel responsive and
+ * consistent with the existing combat model.
+ */
+export const NEATENSTEIN_ENEMY_BOLT_SPEED_CELLS_PER_SECOND = 36;
+
+/**
+ * Damage applied to the player by a single enemy bolt hit.
+ *
+ * Set to 10 (= 10% of the player's 100 maxHealth) so each hit is meaningful
+ * but not instantly lethal. Reuses the existing contact i-frame window
+ * ({@link NEATENSTEIN_CONTACT_IFRAME_MS}) — no separate enemy-bolt i-frame.
+ */
+export const NEATENSTEIN_ENEMY_BOLT_DAMAGE = 10;
+
+/**
+ * Maximum lifetime of an enemy plasma bolt in milliseconds.
+ *
+ * Caps the distance an enemy bolt can travel and prevents lingering bolts
+ * in the simulation.
+ */
+export const NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS = 2000;
+
+/**
+ * Maximum distance an enemy plasma bolt can travel in world cells.
+ *
+ * Bolts expire once they travel this far, matching the player bolt range.
+ */
+export const NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS = 30;
+
+/**
+ * Radius in world cells for enemy-bolt/player proximity collision.
+ *
+ * When an enemy bolt gets within this distance of the player, it registers a
+ * hit and applies damage.
+ */
+export const NEATENSTEIN_ENEMY_BOLT_HIT_RADIUS_CELLS = 0.5;
+
+/**
+ * Maximum number of concurrent enemy-impact spots tracked by the simulation.
+ *
+ * When this cap is exceeded the oldest spot is dropped, following the same
+ * pattern as {@link NEATENSTEIN_PULSE_MAX_CONCURRENT}.
+ */
+export const NEATENSTEIN_ENEMY_IMPACT_MAX_CONCURRENT = 40;
+
+/**
+ * Amount of ammo restored by a single ammo pickup.
+ *
+ * Each pickup dropped by a dying enemy carries this many ammo units.
+ */
+export const NEATENSTEIN_AMMO_PICKUP_AMOUNT = 5;
+
+/**
+ * Lifetime of an ammo pickup in milliseconds before it expires.
+ *
+ * After this duration elapses the pickup is marked inactive and removed from
+ * the world.
+ */
+export const NEATENSTEIN_AMMO_PICKUP_LIFETIME_MS = 10_000;
+
+/**
+ * Collection radius in world cells for ammo pickup proximity collection.
+ *
+ * When the player moves within this distance of an active pickup, the pickup
+ * is collected and the player's ammo is restored.
+ */
+export const NEATENSTEIN_AMMO_PICKUP_COLLECTION_RADIUS_CELLS = 1.5;
+
+/**
+ * Maximum distance in cells at which the fallback hunter backpedals from a
+ * visible enemy.
+ *
+ * Enemies closer than this threshold are inside the preferred kiting band,
+ * so the hunter reverses movement to open the gap again.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+export const NEATENSTEIN_KITING_BACKPEDAL_DISTANCE_CELLS = 15;
+
+/**
+ * Minimum distance in cells at which the fallback hunter stops moving and
+ * holds its ground against a visible enemy.
+ *
+ * The 15–20 cell band sits just outside the enemy's line-of-sight vision
+ * cap and gives the hunter room to fire without retreating indefinitely.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+export const NEATENSTEIN_KITING_APPROACH_DISTANCE_CELLS = 20;
+
+/**
+ * Forward raycast distance in cells used by the fallback hunter to detect
+ * an approaching wall during exploration.
+ *
+ * When the path ahead is blocked within this distance, the hunter samples
+ * angled rays and turns toward the most open direction.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+export const NEATENSTEIN_EXPLORATION_WALL_BOUNCE_LOOKAHEAD_CELLS = 3;
+
+/**
+ * Angle offset in radians used when the fallback hunter searches for an
+ * open direction after detecting a wall ahead.
+ *
+ * Rays are cast at `playerAngle ± NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD`
+ * in addition to the straight-ahead ray.  The direction with the longest
+ * clear run is chosen and the hunter turns toward it at the capped turn
+ * rate.
+ *
+ * @see buildFallbackAutoTickInput
+ */
+export const NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD = Math.PI / 4;

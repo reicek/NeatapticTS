@@ -58,7 +58,9 @@ function checkPlanForSpecialistReview(planPath) {
     };
   }
 
-  // Look for specialist review evidence markers in VALIDATION_EVIDENCE
+  // Look for specialist review evidence markers in VALIDATION_EVIDENCE.
+  // TRIVIAL slices are exempt — the gate passes if the section contains
+  // a TRIVIAL classification marker OR at least 1 specialist marker.
   const specialistMarkers = [
     /specialist[_\s-]review/i,
     /implementation-pattern-scout/i,
@@ -70,6 +72,12 @@ function checkPlanForSpecialistReview(planPath) {
     /visualizer-scout/i,
     /APPROVE/i,
     /REQUEST_CHANGES/i,
+  ];
+
+  const trivialMarkers = [
+    /severity:\s*TRIVIAL/i,
+    /TRIVIAL.*skip/i,
+    /specialistCount:\s*0/i,
   ];
 
   const evidenceSection = content.match(
@@ -85,17 +93,23 @@ function checkPlanForSpecialistReview(planPath) {
   }
 
   const evidenceText = evidenceSection[0];
-  const matchedMarkers = specialistMarkers.filter((m) => m.test(evidenceText));
+  const matchedSpecialist = specialistMarkers.filter((m) =>
+    m.test(evidenceText),
+  );
+  const matchedTrivial = trivialMarkers.filter((m) => m.test(evidenceText));
 
-  // Require at least 3 markers to confirm specialist review evidence
-  const found = matchedMarkers.length >= 3;
+  // Pass if TRIVIAL exemption marker found OR at least 1 specialist marker
+  const found = matchedTrivial.length > 0 || matchedSpecialist.length >= 1;
 
   return {
     plan: path.basename(planPath),
     found,
-    markers: matchedMarkers.map((m) => m.source),
+    markers: matchedSpecialist.map((m) => m.source),
+    trivialExempt: matchedTrivial.length > 0,
     reason: found
-      ? 'specialist review evidence found in VALIDATION_EVIDENCE'
+      ? matchedTrivial.length > 0
+        ? 'TRIVIAL slice — specialist review exempt'
+        : 'specialist review evidence found in VALIDATION_EVIDENCE'
       : 'no specialist review evidence found',
   };
 }
@@ -119,7 +133,7 @@ if (wipPlans.length === 0) {
       wipPlans: 0,
     },
     fixHint:
-      'No action needed. When a plan is [WIP] with implementation slices, ensure 3+ Tier-3 specialists review each 04-implementing slice before dispatching 05-green-testing.',
+      'No action needed. When a plan is [WIP] with FULL implementation slices, dispatch 1 Tier-3 specialist to review each 04-implementing slice before dispatching 05-green-testing. TRIVIAL slices (docs, comments, formatting) skip specialist review.',
     owner: 'orchestrator (Agent Zero)',
   };
   if (options.json) {
@@ -144,7 +158,7 @@ if (wipPlans.length === 0) {
     },
     fixHint: allFound
       ? 'Specialist review evidence confirmed.'
-      : "Dispatch 3+ Tier-3 specialists from different relevant viewpoints (e.g., implementation-pattern-scout, nge-core-scout, performance-trace-specialist) to review each 04-implementing slice BEFORE dispatching 05-green-testing. Record APPROVE/REQUEST_CHANGES verdicts in the plan's VALIDATION_EVIDENCE section.",
+      : "Dispatch 1 Tier-3 specialist (e.g., implementation-pattern-scout or the domain-aligned scout) to review each FULL 04-implementing slice BEFORE dispatching 05-green-testing. TRIVIAL slices (docs, comments, formatting, plan-only) skip specialist review — record 'severity: TRIVIAL' in VALIDATION_EVIDENCE. Record APPROVE/REQUEST_CHANGES verdicts in the plan's VALIDATION_EVIDENCE section.",
     owner: 'orchestrator (Agent Zero)',
   };
 

@@ -31,7 +31,11 @@ module.exports = {
     }
 
     const fileUrl = pathToFileURL(sourcePath).href;
-    const normalized = sourceText.replace(
+    // Strip a leading UTF-8 BOM so Sucrase receives clean source. Some
+    // Node.js .mjs entry points (e.g. shebang modules) are saved with a BOM,
+    // which would otherwise produce an opaque "Unexpected character" parse error.
+    const sourceWithoutBom = sourceText.replace(/^\uFEFF/u, '');
+    const normalized = sourceWithoutBom.replace(
       /import\.meta\.url/g,
       JSON.stringify(fileUrl),
     );

@@ -1,0 +1,103 @@
+// Source-of-truth palette-indexed sprite asset for the Neatenstein on-screen cannon.
+// Format mirrors examples/neatenstein/robot-sprite-data.js so the renderer can
+// reuse the same decode/tint/render pipeline.
+//
+// Logical grid: 40x24. Render at GUN_SPRITE_SCALE for final output.
+// Palette indices are numeric so the renderer can remap colors at runtime.
+//
+// Design notes:
+// - Wide, horizontally-elongated Wolfenstein-style chaingun silhouette.
+// - Dark suit/black receiver body at the bottom.
+// - Metallic neon-white barrel cluster rising from the center.
+// - Glowing teal accents and muzzle ring.
+// - `fire` frame adds a semi-transparent muzzle-flash burst above the barrel tip.
+
+export const GUN_SPRITE_SCALE = 4;
+
+export const GUN_SPRITE_PALETTE = [
+  [0, 0, 0, 0], // 0  transparent
+  [10, 10, 12, 100], // 1  dark outline / shadow
+  [18, 20, 24, 255], // 2  dark receiver body
+  [30, 33, 40, 255], // 3  metallic dark / vents
+  [255, 255, 255, 255], // 4  neon white / metallic barrel
+  [0, 240, 255, 220], // 5  teal accent / energy strip
+  [0, 200, 220, 220], // 6  teal glow / muzzle ring
+  [255, 230, 120, 150], // 7  muzzle flash (warm yellow-white, semi-transparent)
+  [180, 190, 210, 255], // 8  metallic gray / barrel shading
+];
+
+// Helper to build a row of 40 cells from a compact run-length encoded string.
+// Each character is a hex digit (0-9, a-f) representing a palette index.
+// This keeps the grid readable and easy to hand-tune.
+const ROW = (s) => s.split('').map((c) => parseInt(c, 16));
+
+const IDLE_GRID = [
+  // 0: muzzle ring / barrel tip (top of sprite)
+  ROW('0000000000000000000000000000000000000000'),
+  ROW('0000000000000000000000000000000000000000'),
+  ROW('0000000000000000000000000000000000000000'),
+  ROW('0000000000000016666666666100000000000000'),
+  // 3-6: upper barrel (metallic neon-white with teal energy core)
+  ROW('0000000000000184446666444810000000000000'),
+  ROW('0000000000001844343663434481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  // 9-11: barrel base (same angular profile as idle)
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  // 12-15: receiver upper body
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  // 16-19: receiver mid body
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  // 20-23: receiver bottom
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+  ROW('0000000000001842343663432481000000000000'),
+];
+
+const FIRE_GRID = [
+  // 0-3: muzzle flash burst around barrel tip (adds non-transparent pixels)
+  ROW('0000000000000007777777777700000000000000'),
+  ROW('0000000000000077754444457770000000000000'),
+  ROW('0000000000000775555555555770000000000000'),
+  ROW('0000000000007716666666666177000000000000'),
+  // 4-8: upper barrel (same as idle)
+  ROW('0000000000007184445555444817000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  // 9-11: barrel base (same angular profile as idle)
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  // 12-15: receiver upper body
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  // 16-19: receiver mid body
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  // 20-23: receiver bottom
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+  ROW('0000000000001842343553432481000000000000'),
+];
+
+export const GUN_SPRITE_FRAMES = {
+  idle: IDLE_GRID,
+  fire: FIRE_GRID,
+};
