@@ -1,0 +1,1483 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>architecture/network/onnx/export/layers – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../../../assets/theme.css"><script defer src="../../../../../assets/theme-tooltips.js"></script></head><body class="">
+<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="../../../../../index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="../../../../../index.html">Home</a><a href="../../../../../index.html" class="active">Docs</a><a href="../../../../../examples/index.html">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar docs-panel docs-panel-left"><ul class="sidebar-sections"><li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links"><ul class="pipe-nav-list pipe-nav-list-priority"><li class="pipe-nav-item nav-priority-link"><a href="../../../../../examples/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Examples overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><ul class="pipe-nav-list pipe-nav-list-compact"><li class="pipe-nav-item"><a href="../../../../../examples/flappy_bird/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Flappy Bird</span></a></li><li class="pipe-nav-item"><a href="../../../../../examples/asciiMaze/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ASCII Maze</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></div></li><ul class="pipe-nav-list pipe-nav-list-root"><li class="pipe-nav-item"><a href="../../../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><li class="group"><div class="g-head">Architecture</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../activationArrayPool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ActivationArrayPool</span></a></li><li class="pipe-nav-item"><a href="../../../../architect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Architect</span></a></li><li class="pipe-nav-item"><a href="../../../../connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../../group/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Group</span></a></li><li class="pipe-nav-item"><a href="../../../../layer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Layer</span></a></li><li class="pipe-nav-item"><a href="../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network</span></a></li><li class="pipe-nav-item"><a href="../../../activate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Activate</span></a></li><li class="pipe-nav-item"><a href="../../../bootstrap/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Bootstrap</span></a></li><li class="pipe-nav-item"><a href="../../../connect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Connect</span></a></li><li class="pipe-nav-item"><a href="../../../construct/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Construct</span></a></li><li class="pipe-nav-item"><a href="../../../deterministic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Deterministic</span></a></li><li class="pipe-nav-item"><a href="../../../evaluation-pack/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evaluation Pack</span></a></li><li class="pipe-nav-item"><a href="../../../evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gating</span></a></li><li class="pipe-nav-item"><a href="../../../genetic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Genetic</span></a></li><li class="pipe-nav-item"><a href="../../../gpu/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gpu</span></a></li><li class="pipe-nav-item"><a href="../../../gpu/__mocks__/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gpu / Mocks</span></a></li><li class="pipe-nav-item"><a href="../../../mutate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Mutate</span></a></li><li class="pipe-nav-item"><a href="../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Onnx</span></a></li><li class="pipe-nav-item"><a href="../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Export</span></a></li><li class="pipe-nav-item current"><a href="./index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export / Layers</span></a></li><li class="pipe-nav-item"><a href="../../import/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Import</span></a></li><li class="pipe-nav-item"><a href="../../parity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Parity</span></a></li><li class="pipe-nav-item"><a href="../../schema/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Schema</span></a></li><li class="pipe-nav-item"><a href="../../validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Validate</span></a></li><li class="pipe-nav-item"><a href="../../../prune/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Prune</span></a></li><li class="pipe-nav-item"><a href="../../../remove/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Remove</span></a></li><li class="pipe-nav-item"><a href="../../../runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../serialize/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Serialize</span></a></li><li class="pipe-nav-item"><a href="../../../slab/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Slab</span></a></li><li class="pipe-nav-item"><a href="../../../standalone/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Standalone</span></a></li><li class="pipe-nav-item"><a href="../../../stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../topology/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Topology</span></a></li><li class="pipe-nav-item"><a href="../../../training/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Training</span></a></li><li class="pipe-nav-item"><a href="../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Visualization</span></a></li><li class="pipe-nav-item"><a href="../../../window/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Window</span></a></li><li class="pipe-nav-item"><a href="../../../worker-payload/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Worker Payload</span></a></li><li class="pipe-nav-item"><a href="../../../../node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-item"><a href="../../../../nodePool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">NodePool</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Methods</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../methods/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../../methods/activation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Activation</span></a></li><li class="pipe-nav-item"><a href="../../../../../methods/connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../../../methods/cost/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cost</span></a></li><li class="pipe-nav-item"><a href="../../../../../methods/crossover/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Crossover</span></a></li><li class="pipe-nav-item"><a href="../../../../../methods/gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gating</span></a></li><li class="pipe-nav-item"><a href="../../../../../methods/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../../../methods/rate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rate</span></a></li><li class="pipe-nav-item"><a href="../../../../../methods/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Neat</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../neat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/adaptive/acceptance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Acceptance</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/adaptive/complexity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Complexity</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/adaptive/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/adaptive/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/adaptive/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/cache/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/cache/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/compat/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/diversity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/diversity/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evaluate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evaluate/auto-distance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Auto Distance</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evaluate/entropy-compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Compat</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evaluate/entropy-sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evaluate/fitness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Fitness</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evaluate/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evaluate/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evaluate/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evaluate/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evolve/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evolve/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evolve/offspring/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Offspring</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evolve/population/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Population</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evolve/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evolve/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evolve/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/evolve/warnings/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Warnings</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/genome/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/genome/heredity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome / Heredity</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/harness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Harness</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/helpers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Helpers</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/hybrid/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Hybrid</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/init/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Init</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/innovation-tracker/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Innovation Tracker</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/lineage/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/maintenance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/maintenance/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/multiobjective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/multiobjective/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/multiobjective/category/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Category</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/multiobjective/crowding/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Crowding</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/multiobjective/dominance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Dominance</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/multiobjective/fronts/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Fronts</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/multiobjective/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/multiobjective/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/multiobjective/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/mutation/add-conn/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Conn</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/mutation/add-node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Node</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/mutation/flow/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Flow</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/mutation/repair/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Repair</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/mutation/select/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Select</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/mutation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/nge-adult/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Adult</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/nge-assimilation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Assimilation</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/nge-collective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Collective</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/nge-dna/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Dna</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/nge-evolution/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Evolution</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/nge-juvenile/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Juvenile</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/nge-main-agent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Main Agent</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/objectives/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/pruning/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/pruning/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/pruning/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/rng/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/rng/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/rng/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/selection/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/selection/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/speciation/assignment/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Assignment</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/speciation/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / History</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/speciation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/speciation/sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/speciation/threshold/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Threshold</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/species/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/species/core/augmentation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Augmentation</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/species/core/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/species/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / History</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/species/history/context/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Context</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/species/history/read/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Read</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/species/stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/accessors/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Accessors</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/exports/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Exports</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/facade/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/facade/buffer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Buffer</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/facade/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/facade/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/facade/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/facade/operator-stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Operator Stats</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/facade/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/facade/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Species</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/recorder/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Recorder</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/telemetry/types/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Types</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/topology-intent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Topology Intent</span></a></li><li class="pipe-nav-item"><a href="../../../../../neat/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Validate</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Multithreading</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../multithreading/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../../multithreading/workers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers</span></a></li><li class="pipe-nav-item"><a href="../../../../../multithreading/workers/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Browser</span></a></li><li class="pipe-nav-item"><a href="../../../../../multithreading/workers/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-footer"></span><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Acceleration</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../acceleration/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Browser Tests</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../browser-tests/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Env</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../env/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../../env/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Browser</span></a></li><li class="pipe-nav-item"><a href="../../../../../env/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Memory</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../memory/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Performance</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../performance/nge/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Research</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../research/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Src</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../src/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Utils</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../utils/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Visualization</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../../visualization/network-view/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network View</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li></ul></aside><main class="content docs-panel docs-panel-center"><h1 id="architecture-network-onnx-export-layers">architecture/network/onnx/export/layers</h1><p>Decision router for ONNX layer emission.</p>
+<p>This boundary does not build tensors directly. Its job is to inspect one
+export layer and choose the smallest valid emission strategy:
+Conv when an explicit mapping is present, recurrent single-step when the
+layer owns self-connections, compact dense export when activations are
+homogeneous, or per-neuron decomposition when activations differ.</p>
+<pre class="mermaid mermaid-diagram">flowchart TD
+  Start[Layer inputs] --&gt; Conv{Conv mapping for layer?}
+  Conv --&gt;|Yes| ConvEmit[Emit Conv path]
+  Conv --&gt;|No| Recurrent{Self-recurrent hidden layer?}
+  Recurrent --&gt;|Yes| RecEmit[Emit recurrent single-step path]
+  Recurrent --&gt;|No| Mixed{Mixed activations?}
+  Mixed --&gt;|No| DenseEmit[Emit dense Gemm + activation]
+  Mixed --&gt;|Yes| PerNeuron[Emit per-neuron Gemm + activation + Concat]</pre><h2 id="architecture-network-onnx-export-layers-network-onnx-export-conv-utils-ts">architecture/network/onnx/export/layers/network.onnx.export-conv.utils.ts</h2><h3 id="appendconvbiasinitializer">appendConvBiasInitializer</h3><pre><code class="language-ts">appendConvBiasInitializer(
+  context: OnnxConvEmissionContext,
+  convTensorNames: OnnxConvTensorNames,
+  biasValues: number[],
+): void
+</code></pre>
+<p>Append Conv bias initializer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>convTensorNames</code> - Conv tensor names.</li>
+<li><code>biasValues</code> - Conv bias values.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="appendconvexportmetadata">appendConvExportMetadata</h3><pre><code class="language-ts">appendConvExportMetadata(
+  context: OnnxConvEmissionContext,
+): void
+</code></pre>
+<p>Append Conv export metadata entries.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="appendconvweightinitializer">appendConvWeightInitializer</h3><pre><code class="language-ts">appendConvWeightInitializer(
+  context: OnnxConvEmissionContext,
+  convTensorNames: OnnxConvTensorNames,
+  weightValues: number[],
+): void
+</code></pre>
+<p>Append Conv weight initializer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>convTensorNames</code> - Conv tensor names.</li>
+<li><code>weightValues</code> - Conv weight values.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="buildkernelcoordinatesforinputchannel">buildKernelCoordinatesForInputChannel</h3><pre><code class="language-ts">buildKernelCoordinatesForInputChannel(
+  convSpec: Conv2DMapping,
+  inputChannelIndex: number,
+): OnnxConvKernelCoordinate[]
+</code></pre>
+<p>Build kernel coordinates for one input channel.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+<li><code>inputChannelIndex</code> - Input channel index.</li>
+</ul>
+<p>Returns: Kernel coordinates for the input channel.</p>
+<h3 id="calculatespatialoutputsize">calculateSpatialOutputSize</h3><pre><code class="language-ts">calculateSpatialOutputSize(
+  inputSize: number,
+  kernelSize: number,
+  strideSize: number,
+  leadingPadding: number,
+  trailingPadding: number,
+): number
+</code></pre>
+<p>Calculate one spatial output size from kernel, stride, and padding metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>inputSize</code> - Pre-op spatial size.</li>
+<li><code>kernelSize</code> - Kernel size.</li>
+<li><code>strideSize</code> - Stride size.</li>
+<li><code>leadingPadding</code> - Leading padding value.</li>
+<li><code>trailingPadding</code> - Trailing padding value.</li>
+</ul>
+<p>Returns: Derived spatial output size.</p>
+<h3 id="collectconvbiasvalues">collectConvBiasValues</h3><pre><code class="language-ts">collectConvBiasValues(
+  representativeNeuronInternals: NodeInternals[],
+): number[]
+</code></pre>
+<p>Collect Conv bias values from representative neurons.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>representativeNeuronInternals</code> - Representative internals.</li>
+</ul>
+<p>Returns: Bias values.</p>
+<h3 id="collectconvparameters">collectConvParameters</h3><pre><code class="language-ts">collectConvParameters(
+  context: OnnxConvEmissionContext,
+): OnnxConvParameters
+</code></pre>
+<p>Collect flattened Conv weights and biases.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Conv initializer parameters.</p>
+<h3 id="collectconvweightvalues">collectConvWeightValues</h3><pre><code class="language-ts">collectConvWeightValues(
+  context: OnnxConvEmissionContext,
+  representativeNeuronInternals: NodeInternals[],
+): number[]
+</code></pre>
+<p>Collect flattened Conv weight values.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>representativeNeuronInternals</code> - Representative internals.</li>
+</ul>
+<p>Returns: Flattened Conv weights.</p>
+<h3 id="collectrepresentativeneuroninternals">collectRepresentativeNeuronInternals</h3><pre><code class="language-ts">collectRepresentativeNeuronInternals(
+  context: OnnxConvEmissionContext,
+  outputChannelIndices: number[],
+): NodeInternals[]
+</code></pre>
+<p>Collect representative neuron internals for each output channel.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>outputChannelIndices</code> - Output channel indices.</li>
+</ul>
+<p>Returns: Representative internals.</p>
+<h3 id="createconvpaddingvalues">createConvPaddingValues</h3><pre><code class="language-ts">createConvPaddingValues(
+  convSpec: Conv2DMapping,
+): number[]
+</code></pre>
+<p>Create ONNX pads values for Conv node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+</ul>
+<p>Returns: Padding values in ONNX order.</p>
+<h3 id="createconvtensornames">createConvTensorNames</h3><pre><code class="language-ts">createConvTensorNames(
+  layerIndex: number,
+): OnnxConvTensorNames
+</code></pre>
+<p>Create deterministic Conv parameter tensor names.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerIndex</code> - Layer index.</li>
+</ul>
+<p>Returns: Conv tensor names.</p>
+<h3 id="createkernelcoordinates">createKernelCoordinates</h3><pre><code class="language-ts">createKernelCoordinates(
+  convSpec: Conv2DMapping,
+): OnnxConvKernelCoordinate[]
+</code></pre>
+<p>Create all Conv kernel coordinates across input channels.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+</ul>
+<p>Returns: Kernel coordinates.</p>
+<h3 id="createoutputchannelindices">createOutputChannelIndices</h3><pre><code class="language-ts">createOutputChannelIndices(
+  convSpec: Conv2DMapping,
+): number[]
+</code></pre>
+<p>Create output channel index list.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+</ul>
+<p>Returns: Output channel indices.</p>
+<h3 id="derivepooledtensorwidth">derivePooledTensorWidth</h3><pre><code class="language-ts">derivePooledTensorWidth(
+  derivedPooledInputShape: { inputChannels: number; inputHeight: number; inputWidth: number; },
+): number
+</code></pre>
+<p>Fold one derived pooled input shape to its flattened width.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>derivedPooledInputShape</code> - Derived pooled geometry.</li>
+</ul>
+<p>Returns: Flattened pooled tensor width.</p>
+<h3 id="emitactivationnode">emitActivationNode</h3><pre><code class="language-ts">emitActivationNode(
+  context: OnnxConvEmissionContext,
+  convOutputName: string,
+  activationOutputName: string,
+): void
+</code></pre>
+<p>Emit activation node for Conv output.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>convOutputName</code> - Conv output tensor name.</li>
+<li><code>activationOutputName</code> - Activation output tensor name.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="emitconvandactivationgraph">emitConvAndActivationGraph</h3><pre><code class="language-ts">emitConvAndActivationGraph(
+  context: OnnxConvEmissionContext,
+  convTensorNames: OnnxConvTensorNames,
+): string
+</code></pre>
+<p>Emit Conv and activation nodes and return activation output name.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>convTensorNames</code> - Conv tensor names.</li>
+</ul>
+<p>Returns: Activation output name.</p>
+<h3 id="emitconvnode">emitConvNode</h3><pre><code class="language-ts">emitConvNode(
+  context: OnnxConvEmissionContext,
+  convTensorNames: OnnxConvTensorNames,
+  convOutputName: string,
+  convInputName: string,
+): void
+</code></pre>
+<p>Emit ONNX Conv node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>convTensorNames</code> - Conv tensor names.</li>
+<li><code>convOutputName</code> - Conv output tensor name.</li>
+<li><code>convInputName</code> - Conv input tensor name.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="emitconvparameterinitializers">emitConvParameterInitializers</h3><pre><code class="language-ts">emitConvParameterInitializers(
+  context: OnnxConvEmissionContext,
+  convParameters: OnnxConvParameters,
+): OnnxConvTensorNames
+</code></pre>
+<p>Emit Conv parameter initializers and return tensor names.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>convParameters</code> - Conv parameters.</li>
+</ul>
+<p>Returns: Conv tensor names.</p>
+<h3 id="emitflattenreshapebridge">emitFlattenReshapeBridge</h3><pre><code class="language-ts">emitFlattenReshapeBridge(
+  context: OnnxConvEmissionContext,
+  flattenedPoolingShape: { inputChannels: number; inputHeight: number; inputWidth: number; },
+): string
+</code></pre>
+<p>Emit a reshape bridge that restores <code>[N,C,H,W]</code> input rank after flatten.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>flattenedPoolingShape</code> - Supported flattened pooled shape.</li>
+</ul>
+<p>Returns: Reshape output tensor name.</p>
+<h3 id="emitoptionalpoolingandflattenforconv">emitOptionalPoolingAndFlattenForConv</h3><pre><code class="language-ts">emitOptionalPoolingAndFlattenForConv(
+  context: OnnxConvEmissionContext,
+  activationOutputName: string,
+): string
+</code></pre>
+<p>Emit optional pooling and flatten nodes for Conv output.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>activationOutputName</code> - Activation output name.</li>
+</ul>
+<p>Returns: Final output tensor name.</p>
+<h3 id="getactualprevioustensorwidth">getActualPreviousTensorWidth</h3><pre><code class="language-ts">getActualPreviousTensorWidth(
+  context: OnnxConvEmissionContext,
+): number
+</code></pre>
+<p>Resolve the actual graph-input width seen by this Conv layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Previous tensor width after optional pooling.</p>
+<h3 id="getexpectedcurrentwidth">getExpectedCurrentWidth</h3><pre><code class="language-ts">getExpectedCurrentWidth(
+  convSpec: Conv2DMapping,
+): number
+</code></pre>
+<p>Get expected current-layer width for Conv mapping.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+</ul>
+<p>Returns: Expected current-layer width.</p>
+<h3 id="getexpectedpreviouswidth">getExpectedPreviousWidth</h3><pre><code class="language-ts">getExpectedPreviousWidth(
+  convSpec: Conv2DMapping,
+): number
+</code></pre>
+<p>Get expected previous-layer width for Conv mapping.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+</ul>
+<p>Returns: Expected previous-layer width.</p>
+<h3 id="isconvshapecompatible">isConvShapeCompatible</h3><pre><code class="language-ts">isConvShapeCompatible(
+  context: OnnxConvEmissionContext,
+): boolean
+</code></pre>
+<p>Determine whether declared Conv dimensions match layer widths.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Whether Conv dimensions match the network layers.</p>
+<h3 id="logconvshapemismatch">logConvShapeMismatch</h3><pre><code class="language-ts">logConvShapeMismatch(
+  context: OnnxConvEmissionContext,
+): void
+</code></pre>
+<p>Log Conv mapping shape mismatch warning.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolveactivationpayload">resolveActivationPayload</h3><pre><code class="language-ts">resolveActivationPayload(
+  context: OnnxConvEmissionContext,
+): { operation: string; attributes?: { name: string; type?: string | undefined; f?: number | undefined; i?: number | undefined; s?: string | undefined; }[] | undefined; }
+</code></pre>
+<p>Resolve activation operator for Conv output.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Activation operator name.</p>
+<h3 id="resolveconvinputname">resolveConvInputName</h3><pre><code class="language-ts">resolveConvInputName(
+  context: OnnxConvEmissionContext,
+): string
+</code></pre>
+<p>Resolve the tensor name that should feed the Conv node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Previous output name, or a reshape bridge output for the narrow flatten subset.</p>
+<h3 id="resolveconvsourcelayout">resolveConvSourceLayout</h3><pre><code class="language-ts">resolveConvSourceLayout(
+  context: OnnxConvEmissionContext,
+  convSpec: Conv2DMapping,
+): { channelStride: number; sourceHeight: number; sourceWidth: number; }
+</code></pre>
+<p>Resolve the source layout used when this Conv layer consumes a pooled predecessor.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+</ul>
+<p>Returns: Source layout dimensions used for dense-node indexing.</p>
+<h3 id="resolveconvsourcenode">resolveConvSourceNode</h3><pre><code class="language-ts">resolveConvSourceNode(
+  context: OnnxConvEmissionContext,
+  kernelCoordinate: OnnxConvKernelCoordinate,
+): default
+</code></pre>
+<p>Resolve source node referenced by one kernel coordinate.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>kernelCoordinate</code> - Kernel coordinate.</li>
+</ul>
+<p>Returns: Source node.</p>
+<h3 id="resolvederivedpooledinputshape">resolveDerivedPooledInputShape</h3><pre><code class="language-ts">resolveDerivedPooledInputShape(
+  context: OnnxConvEmissionContext,
+): { inputChannels: number; inputHeight: number; inputWidth: number; } | undefined
+</code></pre>
+<p>Resolve pooled input geometry from the immediately previous Conv + Pool metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Derived pooled shape, or undefined when the metadata is unusable.</p>
+<h3 id="resolveinboundweightorzero">resolveInboundWeightOrZero</h3><pre><code class="language-ts">resolveInboundWeightOrZero(
+  representativeNeuronInternal: NodeInternals,
+  sourceNode: default,
+): number
+</code></pre>
+<p>Resolve inbound weight or zero when missing.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>representativeNeuronInternal</code> - Representative neuron internals.</li>
+<li><code>sourceNode</code> - Source node.</li>
+</ul>
+<p>Returns: Inbound weight value.</p>
+<h3 id="resolveinputfeatureindex">resolveInputFeatureIndex</h3><pre><code class="language-ts">resolveInputFeatureIndex(
+  context: OnnxConvEmissionContext,
+  convSpec: Conv2DMapping,
+  kernelCoordinate: OnnxConvKernelCoordinate,
+): number
+</code></pre>
+<p>Resolve flattened input feature index for one kernel coordinate.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+<li><code>kernelCoordinate</code> - Kernel coordinate.</li>
+</ul>
+<p>Returns: Flattened input feature index.</p>
+<h3 id="resolvepoolingspec">resolvePoolingSpec</h3><pre><code class="language-ts">resolvePoolingSpec(
+  context: OnnxConvEmissionContext,
+): Pool2DMapping | undefined
+</code></pre>
+<p>Resolve pooling spec for current layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Pool mapping spec, if configured.</p>
+<h3 id="resolverepresentativeneuronindex">resolveRepresentativeNeuronIndex</h3><pre><code class="language-ts">resolveRepresentativeNeuronIndex(
+  convSpec: Conv2DMapping,
+  outputChannelIndex: number,
+): number
+</code></pre>
+<p>Resolve representative neuron index for one output channel.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+<li><code>outputChannelIndex</code> - Output channel index.</li>
+</ul>
+<p>Returns: Representative neuron index.</p>
+<h3 id="resolverepresentativeneuroninternal">resolveRepresentativeNeuronInternal</h3><pre><code class="language-ts">resolveRepresentativeNeuronInternal(
+  context: OnnxConvEmissionContext,
+  outputChannelIndex: number,
+): NodeInternals
+</code></pre>
+<p>Resolve representative neuron internals for one output channel.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>outputChannelIndex</code> - Output channel index.</li>
+</ul>
+<p>Returns: Representative neuron internals.</p>
+<h3 id="resolvesupportedflattenedpoolingshape">resolveSupportedFlattenedPoolingShape</h3><pre><code class="language-ts">resolveSupportedFlattenedPoolingShape(
+  context: OnnxConvEmissionContext,
+): { inputChannels: number; inputHeight: number; inputWidth: number; } | undefined
+</code></pre>
+<p>Resolve the narrow supported flatten-after-pool bridge shape, when present.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Supported flattened pooled shape for the later Conv bridge.</p>
+<h3 id="resolveupstreampoolingspec">resolveUpstreamPoolingSpec</h3><pre><code class="language-ts">resolveUpstreamPoolingSpec(
+  options: OnnxExportOptions,
+  layerIndex: number,
+): Pool2DMapping | undefined
+</code></pre>
+<p>Resolve pooling configured immediately after the previous layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>options</code> - Export options.</li>
+<li><code>layerIndex</code> - Current Conv layer index.</li>
+</ul>
+<p>Returns: Upstream pooling spec when present.</p>
+<h3 id="resolveweightforcoordinate">resolveWeightForCoordinate</h3><pre><code class="language-ts">resolveWeightForCoordinate(
+  context: OnnxConvEmissionContext,
+  representativeNeuronInternal: NodeInternals,
+  kernelCoordinate: OnnxConvKernelCoordinate,
+): number
+</code></pre>
+<p>Resolve weight for one kernel coordinate.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+<li><code>representativeNeuronInternal</code> - Representative neuron internals.</li>
+<li><code>kernelCoordinate</code> - Kernel coordinate.</li>
+</ul>
+<p>Returns: Weight value or zero when connection is missing.</p>
+<h3 id="tryemitconvlayer">tryEmitConvLayer</h3><pre><code class="language-ts">tryEmitConvLayer(
+  params: OnnxConvEmissionParams,
+): string | undefined
+</code></pre>
+<p>Try to emit one layer as a Conv-shaped ONNX segment when the caller supplied
+an explicit Conv mapping for that export layer.</p>
+<p>This path reconstructs kernels from a fully connected layer by assuming the
+declared Conv geometry really matches the flattened previous and current layer
+widths. When that contract does not hold, the exporter logs the mismatch and
+returns <code>undefined</code> so the broader layer router can fall back or fail with a
+more appropriate message.</p>
+<p>In addition to the Conv and activation nodes, this helper also owns optional
+pooling, flatten-after-pooling, and the metadata hints required for import to
+rebuild the same semantic interpretation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Conv emission parameters.</li>
+</ul>
+<p>Returns: New output tensor name when handled, otherwise undefined.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const outputName = tryEmitConvLayer({
+  model,
+  options: {
+    conv2dMappings: [{ layerIndex: 1, inHeight: 28, inWidth: 28, inChannels: 1, outChannels: 8, kernelSize: 3 }],
+  },
+  layerIndex: 1,
+  previousOutputName: &#39;input&#39;,
+  previousLayerNodes,
+  currentLayerNodes,
+});
+</code></pre>
+<h3 id="validateconvshapeorwarn">validateConvShapeOrWarn</h3><pre><code class="language-ts">validateConvShapeOrWarn(
+  context: OnnxConvEmissionContext,
+): boolean
+</code></pre>
+<p>Validate Conv dimensions and log mismatch details when invalid.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Conv emission context.</li>
+</ul>
+<p>Returns: Whether Conv shape is compatible.</p>
+<h2 id="architecture-network-onnx-export-layers-network-onnx-export-dense-utils-ts">architecture/network/onnx/export/layers/network.onnx.export-dense.utils.ts</h2><h3 id="appenddensebiasinitializer">appendDenseBiasInitializer</h3><pre><code class="language-ts">appendDenseBiasInitializer(
+  layerContext: DenseLayerContext,
+  biasTensorName: string,
+  biasVector: number[],
+): void
+</code></pre>
+<p>Append dense bias initializer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerContext</code> - Dense layer context.</li>
+<li><code>biasTensorName</code> - Bias tensor name.</li>
+<li><code>biasVector</code> - Bias vector values.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="appenddensenodes">appendDenseNodes</h3><pre><code class="language-ts">appendDenseNodes(
+  model: OnnxModel,
+  orderedNodes: DenseOrderedNodePayload[],
+): void
+</code></pre>
+<p>Append ordered dense nodes to the model graph.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>model</code> - Target model.</li>
+<li><code>orderedNodes</code> - Ordered dense nodes.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="appenddenseweightinitializer">appendDenseWeightInitializer</h3><pre><code class="language-ts">appendDenseWeightInitializer(
+  layerContext: DenseLayerContext,
+  weightTensorName: string,
+  weightMatrixValues: number[],
+): void
+</code></pre>
+<p>Append dense weight initializer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerContext</code> - Dense layer context.</li>
+<li><code>weightTensorName</code> - Weight tensor name.</li>
+<li><code>weightMatrixValues</code> - Weight values.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="buildsingleneuronweightrow">buildSingleNeuronWeightRow</h3><pre><code class="language-ts">buildSingleNeuronWeightRow(
+  targetNodeInternal: NodeInternals,
+  previousLayerNodes: default[],
+): number[]
+</code></pre>
+<p>Build one neuron&#39;s incoming weight row against previous layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>targetNodeInternal</code> - Target node internals.</li>
+<li><code>previousLayerNodes</code> - Previous layer nodes.</li>
+</ul>
+<p>Returns: Weight row values.</p>
+<h3 id="collectdenseinitializervalues">collectDenseInitializerValues</h3><pre><code class="language-ts">collectDenseInitializerValues(
+  layerContext: DenseLayerContext,
+): DenseInitializerValues
+</code></pre>
+<p>Collect dense weight matrix and bias vector values.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerContext</code> - Dense layer context.</li>
+</ul>
+<p>Returns: Dense initializer values.</p>
+<h3 id="createactivationnode">createActivationNode</h3><pre><code class="language-ts">createActivationNode(
+  denseActivationContext: DenseActivationContext,
+): DenseActivationNodePayload
+</code></pre>
+<p>Create dense activation node definition.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>denseActivationContext</code> - Dense activation context.</li>
+</ul>
+<p>Returns: ONNX activation node payload.</p>
+<h3 id="createdefaultgemmattributes">createDefaultGemmAttributes</h3><pre><code class="language-ts">createDefaultGemmAttributes(): { name: string; type: string; f?: number | undefined; i?: number | undefined; }[]
+</code></pre>
+<p>Build default Gemm attributes for ONNX export.</p>
+<p>Returns: Default Gemm attribute list.</p>
+<h3 id="createdensetensornames">createDenseTensorNames</h3><pre><code class="language-ts">createDenseTensorNames(
+  layerIndex: number,
+): DenseTensorNames
+</code></pre>
+<p>Build dense tensor names for initializer emission.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerIndex</code> - Layer index.</li>
+</ul>
+<p>Returns: Dense tensor names.</p>
+<h3 id="creategemmnode">createGemmNode</h3><pre><code class="language-ts">createGemmNode(
+  denseActivationContext: DenseActivationContext,
+): DenseGemmNodePayload
+</code></pre>
+<p>Create dense Gemm node definition.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>denseActivationContext</code> - Dense activation context.</li>
+</ul>
+<p>Returns: ONNX Gemm node payload.</p>
+<h3 id="createsharedactivationnodepayload">createSharedActivationNodePayload</h3><pre><code class="language-ts">createSharedActivationNodePayload(
+  params: SharedActivationNodeBuildParams,
+): DenseActivationNodePayload
+</code></pre>
+<p>Build a shared activation node payload.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Shared activation build parameters.</li>
+</ul>
+<p>Returns: Activation node payload.</p>
+<h3 id="createsharedgemmnodepayload">createSharedGemmNodePayload</h3><pre><code class="language-ts">createSharedGemmNodePayload(
+  params: SharedGemmNodeBuildParams,
+): DenseGemmNodePayload
+</code></pre>
+<p>Build a shared Gemm node payload.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Shared Gemm build parameters.</li>
+</ul>
+<p>Returns: Gemm node payload.</p>
+<h3 id="emitdenseactivationsubgraph">emitDenseActivationSubgraph</h3><pre><code class="language-ts">emitDenseActivationSubgraph(
+  model: OnnxModel,
+  denseActivationContext: DenseActivationContext,
+): void
+</code></pre>
+<p>Emit Gemm and activation nodes using requested ordering.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>model</code> - Target ONNX model.</li>
+<li><code>denseActivationContext</code> - Dense activation context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="emitdenseinitializers">emitDenseInitializers</h3><pre><code class="language-ts">emitDenseInitializers(
+  layerContext: DenseLayerContext,
+): DenseTensorNames
+</code></pre>
+<p>Emit dense initializers and return tensor names.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerContext</code> - Dense layer context.</li>
+</ul>
+<p>Returns: Tensor names.</p>
+<h3 id="emitdenselayer">emitDenseLayer</h3><pre><code class="language-ts">emitDenseLayer(
+  params: DenseLayerParams,
+): string
+</code></pre>
+<p>Emit the compact dense export path for a layer whose neurons all share the
+same activation.</p>
+<p>This is the cheapest ONNX shape the exporter can produce for a standard MLP
+layer: one Gemm node for the affine transform and one activation node for the
+whole layer. The same helper also preserves the library&#39;s legacy node-ordering
+compatibility mode when older snapshots need deterministic graph ordering.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Dense emission parameters.</li>
+</ul>
+<p>Returns: Output tensor name.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const outputName = emitDenseLayer({
+  model,
+  layerIndex: 2,
+  previousOutputName: &#39;Layer_1&#39;,
+  previousLayerNodes,
+  currentLayerNodes,
+  options: {},
+  legacyNodeOrdering: false,
+});
+</code></pre>
+<h3 id="emitoptionallayeroutput">emitOptionalLayerOutput</h3><pre><code class="language-ts">emitOptionalLayerOutput(
+  params: OptionalLayerOutputParams,
+): string
+</code></pre>
+<p>Emit optional pooling and flatten output fold.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Optional output parameters.</li>
+</ul>
+<p>Returns: Output tensor name.</p>
+<h3 id="emitperneuronlayer">emitPerNeuronLayer</h3><pre><code class="language-ts">emitPerNeuronLayer(
+  params: PerNeuronLayerParams,
+): string
+</code></pre>
+<p>Emit the fallback dense-family representation for a layer whose target
+neurons use different activations.</p>
+<p>Instead of pretending the layer is homogeneous, this path exports one tiny
+Gemm-plus-activation subgraph per neuron and then concatenates the results.
+The graph is larger, but it preserves mixed activation behavior that a single
+layer-wide activation node cannot express.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Per-neuron emission parameters.</li>
+</ul>
+<p>Returns: Output tensor name.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const outputName = emitPerNeuronLayer({
+  model,
+  layerIndex: 2,
+  previousOutputName: &#39;Layer_1&#39;,
+  previousLayerNodes,
+  currentLayerNodes,
+  options: { allowMixedActivations: true },
+});
+</code></pre>
+<h3 id="emitperneuronsubgraph">emitPerNeuronSubgraph</h3><pre><code class="language-ts">emitPerNeuronSubgraph(
+  perNeuronSubgraphContext: PerNeuronSubgraphContext,
+): string
+</code></pre>
+<p>Emit per-neuron Gemm + activation subgraph.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>perNeuronSubgraphContext</code> - Per-neuron subgraph context.</li>
+</ul>
+<p>Returns: Per-neuron activation output name.</p>
+<h3 id="emitresidualaddlayer">emitResidualAddLayer</h3><pre><code class="language-ts">emitResidualAddLayer(
+  params: ResidualAddLayerParams,
+): string
+</code></pre>
+<p>Emit a one-hop residual-add dense layer.</p>
+<p>This subset preserves one skipped source layer by splitting the target layer
+into two affine branches: the ordinary adjacent-layer Gemm keeps the original
+bias term, and the skipped source layer emits a bias-free branch whose output
+is summed before the layer activation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Residual-add emission parameters.</li>
+</ul>
+<p>Returns: Output tensor name.</p>
+<h3 id="resolvedensenodeorder">resolveDenseNodeOrder</h3><pre><code class="language-ts">resolveDenseNodeOrder(
+  gemmNode: DenseGemmNodePayload,
+  activationNode: DenseActivationNodePayload,
+  legacyNodeOrdering: boolean,
+): DenseOrderedNodePayload[]
+</code></pre>
+<p>Resolve dense node order for legacy and current exports.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>gemmNode</code> - Gemm node.</li>
+<li><code>activationNode</code> - Activation node.</li>
+<li><code>legacyNodeOrdering</code> - Whether legacy ordering is required.</li>
+</ul>
+<p>Returns: Ordered node list.</p>
+<h3 id="resolvesingleneuroninboundweight">resolveSingleNeuronInboundWeight</h3><pre><code class="language-ts">resolveSingleNeuronInboundWeight(
+  targetNodeInternal: NodeInternals,
+  sourceNode: default,
+): number
+</code></pre>
+<p>Resolve one inbound connection weight for a source node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>targetNodeInternal</code> - Target node internals.</li>
+<li><code>sourceNode</code> - Source node.</li>
+</ul>
+<p>Returns: Inbound weight or zero when missing.</p>
+<h2 id="architecture-network-onnx-export-layers-network-onnx-export-recurrent-utils-ts">architecture/network/onnx/export/layers/network.onnx.export-recurrent.utils.ts</h2><h3 id="builddefaultgemmattributes">buildDefaultGemmAttributes</h3><pre><code class="language-ts">buildDefaultGemmAttributes(): { name: string; type: string; f?: number | undefined; i?: number | undefined; }[]
+</code></pre>
+<p>Build the shared attribute list for ONNX Gemm node payloads.</p>
+<p>Returns: Gemm attribute payload list.</p>
+<h3 id="buildinputbranchgemmemissioncontext">buildInputBranchGemmEmissionContext</h3><pre><code class="language-ts">buildInputBranchGemmEmissionContext(
+  context: RecurrentLayerEmissionContext,
+  initializerNames: RecurrentInitializerNames,
+  graphNames: RecurrentGraphNames,
+): RecurrentGemmEmissionContext
+</code></pre>
+<p>Build Gemm emission context for the feed-forward branch.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Recurrent layer execution context.</li>
+<li><code>initializerNames</code> - Recurrent initializer names.</li>
+<li><code>graphNames</code> - Recurrent graph names.</li>
+</ul>
+<p>Returns: Gemm emission context.</p>
+<h3 id="buildrecurrentbranchgemmemissioncontext">buildRecurrentBranchGemmEmissionContext</h3><pre><code class="language-ts">buildRecurrentBranchGemmEmissionContext(
+  context: RecurrentLayerEmissionContext,
+  initializerNames: RecurrentInitializerNames,
+  graphNames: RecurrentGraphNames,
+): RecurrentGemmEmissionContext
+</code></pre>
+<p>Build Gemm emission context for the recurrent hidden-state branch.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Recurrent layer execution context.</li>
+<li><code>initializerNames</code> - Recurrent initializer names.</li>
+<li><code>graphNames</code> - Recurrent graph names.</li>
+</ul>
+<p>Returns: Gemm emission context.</p>
+<h3 id="buildrecurrentgraphnames">buildRecurrentGraphNames</h3><pre><code class="language-ts">buildRecurrentGraphNames(
+  context: RecurrentLayerEmissionContext,
+): RecurrentGraphNames
+</code></pre>
+<p>Build deterministic graph names for recurrent-node emission.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Recurrent layer execution context.</li>
+</ul>
+<p>Returns: Graph-name group for branch and activation nodes.</p>
+<h3 id="buildrecurrentinitializernames">buildRecurrentInitializerNames</h3><pre><code class="language-ts">buildRecurrentInitializerNames(
+  context: RecurrentLayerEmissionContext,
+): RecurrentInitializerNames
+</code></pre>
+<p>Build deterministic tensor names for recurrent initializer emission.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Recurrent layer execution context.</li>
+</ul>
+<p>Returns: Tensor-name group for initializer emission.</p>
+<h3 id="buildrecurrentlayeremissioncontext">buildRecurrentLayerEmissionContext</h3><pre><code class="language-ts">buildRecurrentLayerEmissionContext(
+  params: RecurrentLayerEmissionParams,
+): RecurrentLayerEmissionContext
+</code></pre>
+<p>Build derived recurrent-layer context from input params.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - User-provided recurrent layer params.</li>
+</ul>
+<p>Returns: Derived context with cached dimensions and layer slot.</p>
+<h3 id="collectrecurrentinitializervalues">collectRecurrentInitializerValues</h3><pre><code class="language-ts">collectRecurrentInitializerValues(
+  context: RecurrentLayerEmissionContext,
+): RecurrentInitializerValues
+</code></pre>
+<p>Collect recurrent initializer vectors for one layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Recurrent layer execution context.</li>
+</ul>
+<p>Returns: Dense and recurrent initializer vectors.</p>
+<h3 id="emitrecurrentactivationnode">emitRecurrentActivationNode</h3><pre><code class="language-ts">emitRecurrentActivationNode(
+  context: RecurrentActivationEmissionContext,
+): void
+</code></pre>
+<p>Emit activation node for recurrent branch sum output.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Activation emission context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="emitrecurrentaddnode">emitRecurrentAddNode</h3><pre><code class="language-ts">emitRecurrentAddNode(
+  model: OnnxModel,
+  graphNames: RecurrentGraphNames,
+): void
+</code></pre>
+<p>Emit Add node that fuses feed-forward and recurrent branch outputs.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>model</code> - Target ONNX model.</li>
+<li><code>graphNames</code> - Deterministic graph names for this layer.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="emitrecurrentgemmnode">emitRecurrentGemmNode</h3><pre><code class="language-ts">emitRecurrentGemmNode(
+  context: RecurrentGemmEmissionContext,
+): void
+</code></pre>
+<p>Emit one recurrent Gemm node with shared ONNX attributes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Gemm emission context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="emitrecurrentinitializers">emitRecurrentInitializers</h3><pre><code class="language-ts">emitRecurrentInitializers(
+  context: RecurrentInitializerEmissionContext,
+): void
+</code></pre>
+<p>Emit dense and recurrent initializer tensors.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Initializer emission context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="emitrecurrentlayer">emitRecurrentLayer</h3><pre><code class="language-ts">emitRecurrentLayer(
+  params: RecurrentLayerEmissionParams,
+): string
+</code></pre>
+<p>Emit the constrained recurrent single-step export path for one hidden layer.</p>
+<p>This boundary models recurrence with two parallel Gemm branches:
+one for the feed-forward input and one for the previous hidden state. The
+recurrent branch uses a diagonal matrix derived from self-connections only,
+which keeps the exported shape simple and matches the importer&#39;s current
+reconstruction contract.</p>
+<p>Hidden-state inputs are named <code>hidden_prev</code> for the first recurrent layer and
+<code>hidden_prev_l{n}</code> for later recurrent layers. Mixed activations are not
+supported on this path because the single activation node is applied after
+the input and recurrent branches are summed.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Recurrent emission parameters.</li>
+</ul>
+<p>Returns: Output tensor name.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const outputName = emitRecurrentLayer({
+  model,
+  layerIndex: 1,
+  previousOutputName: &#39;input&#39;,
+  previousLayerNodes,
+  currentLayerNodes,
+});
+</code></pre>
+<h3 id="readnodeinternals">readNodeInternals</h3><pre><code class="language-ts">readNodeInternals(
+  node: default,
+): NodeInternals
+</code></pre>
+<p>Normalize runtime node shape to recurrent-export internals contract.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Runtime node instance.</li>
+</ul>
+<p>Returns: Node internals used by ONNX emission helpers.</p>
+<h3 id="resolveprevioushiddeninputname">resolvePreviousHiddenInputName</h3><pre><code class="language-ts">resolvePreviousHiddenInputName(
+  layerIndex: number,
+): string
+</code></pre>
+<p>Resolve recurrent branch hidden-state input for one layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerIndex</code> - Current recurrent layer index.</li>
+</ul>
+<p>Returns: Hidden-state tensor input name.</p>
+<h2 id="architecture-network-onnx-export-layers-network-onnx-export-layer-graph-utils-ts">architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.ts</h2><h3 id="collectactivationnames">collectActivationNames</h3><pre><code class="language-ts">collectActivationNames(
+  currentLayerNodes: default[],
+): Set&lt;string | undefined&gt;
+</code></pre>
+<p>Collect activation names for current-layer nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentLayerNodes</code> - Current layer nodes.</li>
+</ul>
+<p>Returns: Activation name set.</p>
+<h3 id="createlayeractivationcontext">createLayerActivationContext</h3><pre><code class="language-ts">createLayerActivationContext(
+  traversalContext: LayerTraversalContext,
+): LayerActivationContext
+</code></pre>
+<p>Build activation analysis context for non-convolution branches.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Layer traversal context.</li>
+</ul>
+<p>Returns: Activation analysis context.</p>
+<h3 id="createlayertraversalcontext">createLayerTraversalContext</h3><pre><code class="language-ts">createLayerTraversalContext(
+  input: LayerBuildContext,
+): LayerTraversalContext
+</code></pre>
+<p>Build a compact traversal context with adjacent layers.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>input</code> - Base layer build context.</li>
+</ul>
+<p>Returns: Traversal context.</p>
+<h3 id="createrecurrentdecisioncontext">createRecurrentDecisionContext</h3><pre><code class="language-ts">createRecurrentDecisionContext(
+  traversalContext: LayerTraversalContext,
+): LayerRecurrentDecisionContext
+</code></pre>
+<p>Build recurrent decision context with no extra parameters.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Layer traversal context.</li>
+</ul>
+<p>Returns: Recurrent decision context.</p>
+<h3 id="detectmixedactivations">detectMixedActivations</h3><pre><code class="language-ts">detectMixedActivations(
+  currentLayerNodes: default[],
+  options: OnnxExportOptions,
+): boolean
+</code></pre>
+<p>Determine whether a layer has mixed activation functions.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentLayerNodes</code> - Current layer nodes.</li>
+<li><code>options</code> - Export options.</li>
+</ul>
+<p>Returns: Whether mixed activations are present and enabled.</p>
+<h3 id="emitdensebranch">emitDenseBranch</h3><pre><code class="language-ts">emitDenseBranch(
+  traversalContext: LayerTraversalContext,
+): string
+</code></pre>
+<p>Emit standard dense layer branch.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Layer traversal context.</li>
+</ul>
+<p>Returns: Dense output tensor name.</p>
+<h3 id="emitdensefamilybranch">emitDenseFamilyBranch</h3><pre><code class="language-ts">emitDenseFamilyBranch(
+  traversalContext: LayerTraversalContext,
+  activationContext: LayerActivationContext,
+): string
+</code></pre>
+<p>Emit dense or per-neuron layer branch from activation analysis.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Layer traversal context.</li>
+<li><code>activationContext</code> - Activation analysis context.</li>
+</ul>
+<p>Returns: Output tensor name.</p>
+<h3 id="emitlayergraph">emitLayerGraph</h3><pre><code class="language-ts">emitLayerGraph(
+  context: LayerBuildContext,
+): string
+</code></pre>
+<p>Emit one export layer graph segment by routing the layer through the correct
+ONNX emission strategy.</p>
+<p>Dispatch order matters:</p>
+<ul>
+<li>explicit Conv mappings win first,</li>
+<li>recurrent single-step export is considered only for hidden layers with
+self-connections,</li>
+<li>non-recurrent layers fall back to compact dense emission or mixed-activation
+per-neuron decomposition.</li>
+</ul>
+<p>Important invariants:</p>
+<ul>
+<li>recurrent mixed activations are rejected elsewhere rather than silently
+decomposed here,</li>
+<li><code>allowMixedActivations</code> only affects the dense-family fallback path,</li>
+<li>the returned tensor name is the canonical input for the next layer.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Layer build context.</li>
+</ul>
+<p>Returns: Output tensor name produced by this layer.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const outputName = emitLayerGraph({
+  model,
+  layers,
+  layerIndex: 2,
+  previousOutputName: &#39;Layer_1&#39;,
+  options: { allowMixedActivations: true },
+  recurrentLayerIndices: [],
+  batchDimension: false,
+  legacyNodeOrdering: false,
+});
+</code></pre>
+<h3 id="emitnonconvolutionbranch">emitNonConvolutionBranch</h3><pre><code class="language-ts">emitNonConvolutionBranch(
+  traversalContext: LayerTraversalContext,
+  activationContext: LayerActivationContext,
+): string
+</code></pre>
+<p>Emit recurrent or dense/per-neuron branch output.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Layer traversal context.</li>
+<li><code>activationContext</code> - Activation analysis context.</li>
+</ul>
+<p>Returns: Output tensor name.</p>
+<h3 id="emitperneuronbranch">emitPerNeuronBranch</h3><pre><code class="language-ts">emitPerNeuronBranch(
+  traversalContext: LayerTraversalContext,
+): string
+</code></pre>
+<p>Emit per-neuron decomposition branch for mixed activations.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Layer traversal context.</li>
+</ul>
+<p>Returns: Per-neuron output tensor name.</p>
+<h3 id="emitrecurrentbranch">emitRecurrentBranch</h3><pre><code class="language-ts">emitRecurrentBranch(
+  traversalContext: LayerTraversalContext,
+  activationContext: LayerActivationContext,
+): string
+</code></pre>
+<p>Emit recurrent layer branch with mixed-activation validation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Layer traversal context.</li>
+<li><code>activationContext</code> - Activation analysis context.</li>
+</ul>
+<p>Returns: Recurrent output tensor name.</p>
+<h3 id="ensurerecurrentsupportsactivations">ensureRecurrentSupportsActivations</h3><pre><code class="language-ts">ensureRecurrentSupportsActivations(
+  layerIndex: number,
+  activationContext: LayerActivationContext,
+): void
+</code></pre>
+<p>Ensure recurrent layers do not use unsupported mixed activations.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerIndex</code> - Layer index.</li>
+<li><code>activationContext</code> - Activation analysis context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolveactivationname">resolveActivationName</h3><pre><code class="language-ts">resolveActivationName(
+  node: default,
+): string | undefined
+</code></pre>
+<p>Resolve the activation name for one node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Current layer node.</li>
+</ul>
+<p>Returns: Activation name when present.</p>
+<h3 id="shouldemitrecurrentbranch">shouldEmitRecurrentBranch</h3><pre><code class="language-ts">shouldEmitRecurrentBranch(
+  decisionContext: LayerRecurrentDecisionContext,
+): boolean
+</code></pre>
+<p>Determine whether recurrent single-step emission applies.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>decisionContext</code> - Recurrent branch decision context.</li>
+</ul>
+<p>Returns: Whether recurrent branch should be emitted.</p>
+<h3 id="tryemitconvolutionbranch">tryEmitConvolutionBranch</h3><pre><code class="language-ts">tryEmitConvolutionBranch(
+  traversalContext: LayerTraversalContext,
+): string | undefined
+</code></pre>
+<p>Attempt convolution emission and return produced output when mapped.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Layer traversal context.</li>
+</ul>
+<p>Returns: Convolution output name when emitted; otherwise null.</p>
+<h3 id="tryemitexplicitconcatmergebranch">tryEmitExplicitConcatMergeBranch</h3><pre><code class="language-ts">tryEmitExplicitConcatMergeBranch(
+  traversalContext: LayerTraversalContext,
+): string | undefined
+</code></pre>
+<p>Attempt the narrow explicit concat subset before residual fallback.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Layer traversal context.</li>
+</ul>
+<p>Returns: Concat-merge output tensor name when emitted; otherwise undefined.</p>
+<h3 id="tryemitresidualaddbranch">tryEmitResidualAddBranch</h3><pre><code class="language-ts">tryEmitResidualAddBranch(
+  traversalContext: LayerTraversalContext,
+): string | undefined
+</code></pre>
+<p>Attempt the narrow one-hop residual-add subset before falling back.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Layer traversal context.</li>
+</ul>
+<p>Returns: Residual-add output tensor name when emitted; otherwise null.</p>
+<h2 id="architecture-network-onnx-export-layers-network-onnx-export-layer-common-utils-ts">architecture/network/onnx/export/layers/network.onnx.export-layer-common.utils.ts</h2><h3 id="appendindexedmetadata">appendIndexedMetadata</h3><pre><code class="language-ts">appendIndexedMetadata(
+  model: OnnxModel,
+  key: string,
+  layerIndex: number,
+): void
+</code></pre>
+<p>Append a layer index to a JSON-array metadata field on the ONNX model.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>model</code> - Target model.</li>
+<li><code>key</code> - Metadata key.</li>
+<li><code>layerIndex</code> - Layer index to append.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="appendmetadataspec">appendMetadataSpec</h3><pre><code class="language-ts">appendMetadataSpec(
+  model: OnnxModel,
+  key: string,
+  spec: Conv2DMapping | Pool2DMapping,
+): void
+</code></pre>
+<p>Append a structured metadata object to a JSON-array metadata field safely.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>model</code> - Target model.</li>
+<li><code>key</code> - Metadata key.</li>
+<li><code>spec</code> - Metadata object.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="appendpoolingmetadata">appendPoolingMetadata</h3><pre><code class="language-ts">appendPoolingMetadata(
+  context: PoolingEmissionContext,
+): void
+</code></pre>
+<p>Append pooling-layer metadata after a pooling node is emitted.</p>
+<p>Stores both the layer index list and the serialized pooling specification.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Pooling emission context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="asnodeinternals">asNodeInternals</h3><pre><code class="language-ts">asNodeInternals(
+  node: default,
+): NodeInternals
+</code></pre>
+<p>Normalize a public node instance to the internal shape used by ONNX export helpers.</p>
+<p>This cast is intentionally localized so collection helpers stay strongly
+typed without repeating assertions at each call site.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Source node.</li>
+</ul>
+<p>Returns: Internal runtime-facing node representation.</p>
+<h3 id="builddenseweightsandbiases">buildDenseWeightsAndBiases</h3><pre><code class="language-ts">buildDenseWeightsAndBiases(
+  previousLayerNodes: default[],
+  currentLayerNodes: default[],
+): DenseWeightBuildResult
+</code></pre>
+<p>Build the shared dense initializer payload used by both compact dense export
+and recurrent single-step export.</p>
+<p>The returned weight matrix is flattened in row-major order by destination
+neuron. Missing edges are encoded as zeroes so partially connected layers can
+still be represented in a deterministic rectangular tensor layout.
+Biases are collected in the same destination-neuron order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>previousLayerNodes</code> - Source layer nodes.</li>
+<li><code>currentLayerNodes</code> - Destination layer nodes.</li>
+</ul>
+<p>Returns: Flattened row-major weight matrix and bias vector.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const { weightMatrixValues, biasVector } = buildDenseWeightsAndBiases(
+  previousLayerNodes,
+  currentLayerNodes,
+);
+</code></pre>
+<h3 id="builddiagonalrecurrentweights">buildDiagonalRecurrentWeights</h3><pre><code class="language-ts">buildDiagonalRecurrentWeights(
+  currentLayerNodes: default[],
+): number[]
+</code></pre>
+<p>Build a diagonal recurrent weight matrix from per-node self-connections.</p>
+<p>Only diagonal entries are populated because this helper encodes recurrent
+carry as one-step self-feedback for each destination neuron. Off-diagonal
+entries are emitted as zero to keep the matrix rectangular and deterministic.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentLayerNodes</code> - Layer nodes.</li>
+</ul>
+<p>Returns: Flattened row-major recurrent matrix.</p>
+<h3 id="buildindexedmetadataproperty">buildIndexedMetadataProperty</h3><pre><code class="language-ts">buildIndexedMetadataProperty(
+  key: string,
+  layerIndex: number,
+): OnnxMetadataProperty
+</code></pre>
+<p>Build a metadata property whose value is a JSON array of layer indexes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>key</code> - Metadata key.</li>
+<li><code>layerIndex</code> - Layer index.</li>
+</ul>
+<p>Returns: Metadata property.</p>
+<h3 id="buildspecmetadataproperty">buildSpecMetadataProperty</h3><pre><code class="language-ts">buildSpecMetadataProperty(
+  key: string,
+  spec: Conv2DMapping | Pool2DMapping,
+): OnnxMetadataProperty
+</code></pre>
+<p>Build a metadata property whose value is a JSON array of mapping specs.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>key</code> - Metadata key.</li>
+<li><code>spec</code> - Mapping spec.</li>
+</ul>
+<p>Returns: Metadata property.</p>
+<h3 id="collectdenserows">collectDenseRows</h3><pre><code class="language-ts">collectDenseRows(
+  context: DenseWeightBuildContext,
+): DenseWeightRow[]
+</code></pre>
+<p>Collect dense rows for each target node in current layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Dense row collection context.</li>
+</ul>
+<p>Returns: Dense rows containing per-target weights and bias.</p>
+<h3 id="collectdenserowweights">collectDenseRowWeights</h3><pre><code class="language-ts">collectDenseRowWeights(
+  context: DenseWeightRowCollectionContext,
+): number[]
+</code></pre>
+<p>Collect one destination neuron&#39;s inbound weights in source-node order.</p>
+<p>Missing inbound edges are encoded as zeros to preserve a full rectangular
+matrix even for sparse connectivity.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Dense row collection context.</li>
+</ul>
+<p>Returns: Row weights in source-node order.</p>
+<h3 id="collectpoolingattributes">collectPoolingAttributes</h3><pre><code class="language-ts">collectPoolingAttributes(
+  poolSpec: Pool2DMapping,
+): PoolingAttributes
+</code></pre>
+<p>Collect ONNX pooling attribute arrays from one pooling spec.</p>
+<p>Optional pad fields default to zero so exported nodes always carry explicit
+2D padding metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>poolSpec</code> - Pooling spec.</li>
+</ul>
+<p>Returns: Pooling attributes for ONNX node payload.</p>
+<h3 id="collectrecurrentrow">collectRecurrentRow</h3><pre><code class="language-ts">collectRecurrentRow(
+  context: RecurrentRowCollectionContext,
+): number[]
+</code></pre>
+<p>Collect one recurrent matrix row for a destination neuron.</p>
+<p>Diagonal entries read the neuron&#39;s self-connection weight; all other
+coordinates remain zero.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Row collection context.</li>
+</ul>
+<p>Returns: Recurrent row values.</p>
+<h3 id="collectrecurrentrows">collectRecurrentRows</h3><pre><code class="language-ts">collectRecurrentRows(
+  context: DiagonalRecurrentBuildContext,
+): number[][]
+</code></pre>
+<p>Collect all recurrent matrix rows for the current layer.</p>
+<p>Each row corresponds to one destination neuron and is assembled with
+diagonal-only recurrent semantics.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Recurrent matrix build context.</li>
+</ul>
+<p>Returns: Recurrent row collection.</p>
+<h3 id="emitoptionalflattenafterpooling">emitOptionalFlattenAfterPooling</h3><pre><code class="language-ts">emitOptionalFlattenAfterPooling(
+  context: FlattenAfterPoolingContext,
+): string
+</code></pre>
+<p>Conditionally emit a <code>Flatten</code> node after pooling.</p>
+<p>When disabled, the pooled tensor name is returned unchanged.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Flatten emission context.</li>
+</ul>
+<p>Returns: Output tensor name after optional flatten.</p>
+<h3 id="emitoptionalpoolingandflatten">emitOptionalPoolingAndFlatten</h3><pre><code class="language-ts">emitOptionalPoolingAndFlatten(
+  params: OptionalPoolingAndFlattenParams,
+): string
+</code></pre>
+<p>Emit optional pooling and flatten nodes after a layer output.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Pooling parameters.</li>
+</ul>
+<p>Returns: Final output tensor name after optional pooling/flatten.</p>
+<h3 id="emitpoolingnode">emitPoolingNode</h3><pre><code class="language-ts">emitPoolingNode(
+  context: PoolingEmissionContext,
+): string
+</code></pre>
+<p>Emit one pooling node and return its output tensor name.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Pooling emission context.</li>
+</ul>
+<p>Returns: Pooling output tensor name.</p>
+<h3 id="ensuremetadataregistry">ensureMetadataRegistry</h3><pre><code class="language-ts">ensureMetadataRegistry(
+  model: OnnxModel,
+): OnnxMetadataProperty[]
+</code></pre>
+<p>Ensure the ONNX model metadata registry exists and return it.</p>
+<p>The returned array is mutable and shared with <code>model.metadata_props</code>.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>model</code> - Target model.</li>
+</ul>
+<p>Returns: Mutable metadata registry.</p>
+<h3 id="findmetadataproperty">findMetadataProperty</h3><pre><code class="language-ts">findMetadataProperty(
+  metadataRegistry: OnnxMetadataProperty[],
+  key: string,
+): OnnxMetadataProperty | undefined
+</code></pre>
+<p>Find a metadata property by key.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadataRegistry</code> - Metadata registry.</li>
+<li><code>key</code> - Metadata key.</li>
+</ul>
+<p>Returns: Matching metadata property if present.</p>
+<h3 id="folddenserowstoinitializers">foldDenseRowsToInitializers</h3><pre><code class="language-ts">foldDenseRowsToInitializers(
+  denseRows: DenseWeightRow[],
+): DenseWeightBuildResult
+</code></pre>
+<p>Fold per-target dense rows into ONNX initializer buffers.</p>
+<p>The fold preserves row-major order by destination neuron so downstream
+tensor shapes remain stable across exports of the same topology.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>denseRows</code> - Dense rows.</li>
+</ul>
+<p>Returns: Flattened dense initializer result.</p>
+<h3 id="parsemetadataarray">parseMetadataArray</h3><pre><code class="language-ts">parseMetadataArray(
+  metadataValue: string,
+): ItemType[] | undefined
+</code></pre>
+<p>Parse a metadata JSON array value safely.</p>
+<p>Returns <code>undefined</code> when parsing fails or when the payload is not an array.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadataValue</code> - Metadata JSON string.</li>
+</ul>
+<p>Returns: Parsed array when valid, otherwise undefined.</p>
+<h3 id="resolvediagonalrecurrentweight">resolveDiagonalRecurrentWeight</h3><pre><code class="language-ts">resolveDiagonalRecurrentWeight(
+  context: RecurrentRowCollectionContext,
+  columnIndex: number,
+): number
+</code></pre>
+<p>Resolve recurrent weight value for one matrix coordinate.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Row collection context.</li>
+<li><code>columnIndex</code> - Column index in row.</li>
+</ul>
+<p>Returns: Recurrent weight for diagonal entries, otherwise zero.</p>
+<h3 id="resolveinboundweight">resolveInboundWeight</h3><pre><code class="language-ts">resolveInboundWeight(
+  targetNodeInternal: NodeInternals,
+  sourceNode: default,
+): number
+</code></pre>
+<p>Resolve source-to-target inbound connection weight.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>targetNodeInternal</code> - Target node internals.</li>
+<li><code>sourceNode</code> - Source node.</li>
+</ul>
+<p>Returns: Inbound weight or zero for disconnected edges.</p>
+<h3 id="serializeindexedmetadatavalue">serializeIndexedMetadataValue</h3><pre><code class="language-ts">serializeIndexedMetadataValue(
+  currentValue: string,
+  layerIndex: number,
+): string
+</code></pre>
+<p>Serialize index metadata after appending one unique index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentValue</code> - Existing JSON value.</li>
+<li><code>layerIndex</code> - Layer index.</li>
+</ul>
+<p>Returns: Serialized JSON value.</p>
+<h3 id="serializespecmetadatavalue">serializeSpecMetadataValue</h3><pre><code class="language-ts">serializeSpecMetadataValue(
+  currentValue: string,
+  spec: Conv2DMapping | Pool2DMapping,
+): string
+</code></pre>
+<p>Serialize spec metadata after appending one spec object.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentValue</code> - Existing JSON value.</li>
+<li><code>spec</code> - Mapping spec.</li>
+</ul>
+<p>Returns: Serialized JSON value.</p>
+<h3 id="topoolingemissioncontext">toPoolingEmissionContext</h3><pre><code class="language-ts">toPoolingEmissionContext(
+  params: OptionalPoolingAndFlattenParams,
+): PoolingEmissionContext
+</code></pre>
+<p>Resolve a normalized pooling emission context from optional export parameters.</p>
+<p>This helper centralizes optional-to-required conversion before node emission.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Optional pooling and flatten parameters.</li>
+</ul>
+<p>Returns: Pooling emission context.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-onnx-export-layers-network-onnx-export-conv-utils-ts">architecture/network/onnx/export/layers/network.onnx.export-conv.utils.ts</a><ul><li><a href="#appendconvbiasinitializer">appendConvBiasInitializer</a></li><li><a href="#appendconvexportmetadata">appendConvExportMetadata</a></li><li><a href="#appendconvweightinitializer">appendConvWeightInitializer</a></li><li><a href="#buildkernelcoordinatesforinputchannel">buildKernelCoordinatesForInputChannel</a></li><li><a href="#calculatespatialoutputsize">calculateSpatialOutputSize</a></li><li><a href="#collectconvbiasvalues">collectConvBiasValues</a></li><li><a href="#collectconvparameters">collectConvParameters</a></li><li><a href="#collectconvweightvalues">collectConvWeightValues</a></li><li><a href="#collectrepresentativeneuroninternals">collectRepresentativeNeuronInternals</a></li><li><a href="#createconvpaddingvalues">createConvPaddingValues</a></li><li><a href="#createconvtensornames">createConvTensorNames</a></li><li><a href="#createkernelcoordinates">createKernelCoordinates</a></li><li><a href="#createoutputchannelindices">createOutputChannelIndices</a></li><li><a href="#derivepooledtensorwidth">derivePooledTensorWidth</a></li><li><a href="#emitactivationnode">emitActivationNode</a></li><li><a href="#emitconvandactivationgraph">emitConvAndActivationGraph</a></li><li><a href="#emitconvnode">emitConvNode</a></li><li><a href="#emitconvparameterinitializers">emitConvParameterInitializers</a></li><li><a href="#emitflattenreshapebridge">emitFlattenReshapeBridge</a></li><li><a href="#emitoptionalpoolingandflattenforconv">emitOptionalPoolingAndFlattenForConv</a></li><li><a href="#getactualprevioustensorwidth">getActualPreviousTensorWidth</a></li><li><a href="#getexpectedcurrentwidth">getExpectedCurrentWidth</a></li><li><a href="#getexpectedpreviouswidth">getExpectedPreviousWidth</a></li><li><a href="#isconvshapecompatible">isConvShapeCompatible</a></li><li><a href="#logconvshapemismatch">logConvShapeMismatch</a></li><li><a href="#resolveactivationpayload">resolveActivationPayload</a></li><li><a href="#resolveconvinputname">resolveConvInputName</a></li><li><a href="#resolveconvsourcelayout">resolveConvSourceLayout</a></li><li><a href="#resolveconvsourcenode">resolveConvSourceNode</a></li><li><a href="#resolvederivedpooledinputshape">resolveDerivedPooledInputShape</a></li><li><a href="#resolveinboundweightorzero">resolveInboundWeightOrZero</a></li><li><a href="#resolveinputfeatureindex">resolveInputFeatureIndex</a></li><li><a href="#resolvepoolingspec">resolvePoolingSpec</a></li><li><a href="#resolverepresentativeneuronindex">resolveRepresentativeNeuronIndex</a></li><li><a href="#resolverepresentativeneuroninternal">resolveRepresentativeNeuronInternal</a></li><li><a href="#resolvesupportedflattenedpoolingshape">resolveSupportedFlattenedPoolingShape</a></li><li><a href="#resolveupstreampoolingspec">resolveUpstreamPoolingSpec</a></li><li><a href="#resolveweightforcoordinate">resolveWeightForCoordinate</a></li><li><a href="#tryemitconvlayer">tryEmitConvLayer</a></li><li><a href="#validateconvshapeorwarn">validateConvShapeOrWarn</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-export-layers-network-onnx-export-dense-utils-ts">architecture/network/onnx/export/layers/network.onnx.export-dense.utils.ts</a><ul><li><a href="#appenddensebiasinitializer">appendDenseBiasInitializer</a></li><li><a href="#appenddensenodes">appendDenseNodes</a></li><li><a href="#appenddenseweightinitializer">appendDenseWeightInitializer</a></li><li><a href="#buildsingleneuronweightrow">buildSingleNeuronWeightRow</a></li><li><a href="#collectdenseinitializervalues">collectDenseInitializerValues</a></li><li><a href="#createactivationnode">createActivationNode</a></li><li><a href="#createdefaultgemmattributes">createDefaultGemmAttributes</a></li><li><a href="#createdensetensornames">createDenseTensorNames</a></li><li><a href="#creategemmnode">createGemmNode</a></li><li><a href="#createsharedactivationnodepayload">createSharedActivationNodePayload</a></li><li><a href="#createsharedgemmnodepayload">createSharedGemmNodePayload</a></li><li><a href="#emitdenseactivationsubgraph">emitDenseActivationSubgraph</a></li><li><a href="#emitdenseinitializers">emitDenseInitializers</a></li><li><a href="#emitdenselayer">emitDenseLayer</a></li><li><a href="#emitoptionallayeroutput">emitOptionalLayerOutput</a></li><li><a href="#emitperneuronlayer">emitPerNeuronLayer</a></li><li><a href="#emitperneuronsubgraph">emitPerNeuronSubgraph</a></li><li><a href="#emitresidualaddlayer">emitResidualAddLayer</a></li><li><a href="#resolvedensenodeorder">resolveDenseNodeOrder</a></li><li><a href="#resolvesingleneuroninboundweight">resolveSingleNeuronInboundWeight</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-export-layers-network-onnx-export-recurrent-utils-ts">architecture/network/onnx/export/layers/network.onnx.export-recurrent.utils.ts</a><ul><li><a href="#builddefaultgemmattributes">buildDefaultGemmAttributes</a></li><li><a href="#buildinputbranchgemmemissioncontext">buildInputBranchGemmEmissionContext</a></li><li><a href="#buildrecurrentbranchgemmemissioncontext">buildRecurrentBranchGemmEmissionContext</a></li><li><a href="#buildrecurrentgraphnames">buildRecurrentGraphNames</a></li><li><a href="#buildrecurrentinitializernames">buildRecurrentInitializerNames</a></li><li><a href="#buildrecurrentlayeremissioncontext">buildRecurrentLayerEmissionContext</a></li><li><a href="#collectrecurrentinitializervalues">collectRecurrentInitializerValues</a></li><li><a href="#emitrecurrentactivationnode">emitRecurrentActivationNode</a></li><li><a href="#emitrecurrentaddnode">emitRecurrentAddNode</a></li><li><a href="#emitrecurrentgemmnode">emitRecurrentGemmNode</a></li><li><a href="#emitrecurrentinitializers">emitRecurrentInitializers</a></li><li><a href="#emitrecurrentlayer">emitRecurrentLayer</a></li><li><a href="#readnodeinternals">readNodeInternals</a></li><li><a href="#resolveprevioushiddeninputname">resolvePreviousHiddenInputName</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-export-layers-network-onnx-export-layer-graph-utils-ts">architecture/network/onnx/export/layers/network.onnx.export-layer-graph.utils.ts</a><ul><li><a href="#collectactivationnames">collectActivationNames</a></li><li><a href="#createlayeractivationcontext">createLayerActivationContext</a></li><li><a href="#createlayertraversalcontext">createLayerTraversalContext</a></li><li><a href="#createrecurrentdecisioncontext">createRecurrentDecisionContext</a></li><li><a href="#detectmixedactivations">detectMixedActivations</a></li><li><a href="#emitdensebranch">emitDenseBranch</a></li><li><a href="#emitdensefamilybranch">emitDenseFamilyBranch</a></li><li><a href="#emitlayergraph">emitLayerGraph</a></li><li><a href="#emitnonconvolutionbranch">emitNonConvolutionBranch</a></li><li><a href="#emitperneuronbranch">emitPerNeuronBranch</a></li><li><a href="#emitrecurrentbranch">emitRecurrentBranch</a></li><li><a href="#ensurerecurrentsupportsactivations">ensureRecurrentSupportsActivations</a></li><li><a href="#resolveactivationname">resolveActivationName</a></li><li><a href="#shouldemitrecurrentbranch">shouldEmitRecurrentBranch</a></li><li><a href="#tryemitconvolutionbranch">tryEmitConvolutionBranch</a></li><li><a href="#tryemitexplicitconcatmergebranch">tryEmitExplicitConcatMergeBranch</a></li><li><a href="#tryemitresidualaddbranch">tryEmitResidualAddBranch</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-export-layers-network-onnx-export-layer-common-utils-ts">architecture/network/onnx/export/layers/network.onnx.export-layer-common.utils.ts</a><ul><li><a href="#appendindexedmetadata">appendIndexedMetadata</a></li><li><a href="#appendmetadataspec">appendMetadataSpec</a></li><li><a href="#appendpoolingmetadata">appendPoolingMetadata</a></li><li><a href="#asnodeinternals">asNodeInternals</a></li><li><a href="#builddenseweightsandbiases">buildDenseWeightsAndBiases</a></li><li><a href="#builddiagonalrecurrentweights">buildDiagonalRecurrentWeights</a></li><li><a href="#buildindexedmetadataproperty">buildIndexedMetadataProperty</a></li><li><a href="#buildspecmetadataproperty">buildSpecMetadataProperty</a></li><li><a href="#collectdenserows">collectDenseRows</a></li><li><a href="#collectdenserowweights">collectDenseRowWeights</a></li><li><a href="#collectpoolingattributes">collectPoolingAttributes</a></li><li><a href="#collectrecurrentrow">collectRecurrentRow</a></li><li><a href="#collectrecurrentrows">collectRecurrentRows</a></li><li><a href="#emitoptionalflattenafterpooling">emitOptionalFlattenAfterPooling</a></li><li><a href="#emitoptionalpoolingandflatten">emitOptionalPoolingAndFlatten</a></li><li><a href="#emitpoolingnode">emitPoolingNode</a></li><li><a href="#ensuremetadataregistry">ensureMetadataRegistry</a></li><li><a href="#findmetadataproperty">findMetadataProperty</a></li><li><a href="#folddenserowstoinitializers">foldDenseRowsToInitializers</a></li><li><a href="#parsemetadataarray">parseMetadataArray</a></li><li><a href="#resolvediagonalrecurrentweight">resolveDiagonalRecurrentWeight</a></li><li><a href="#resolveinboundweight">resolveInboundWeight</a></li><li><a href="#serializeindexedmetadatavalue">serializeIndexedMetadataValue</a></li><li><a href="#serializespecmetadatavalue">serializeSpecMetadataValue</a></li><li><a href="#topoolingemissioncontext">toPoolingEmissionContext</a></li></ul></div></div></aside></div><script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script><script type="module">
+import mermaid from "../../../../../assets/vendor/mermaid.esm.min.mjs";
+
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'loose',
+  theme: 'base',
+  themeVariables: {
+    darkMode: true,
+    background: '#121a24',
+    primaryColor: '#102131',
+    primaryTextColor: '#d7e4f3',
+    primaryBorderColor: '#5ec8ff',
+    secondaryColor: '#0f1722',
+    secondaryTextColor: '#d7e4f3',
+    secondaryBorderColor: '#5ec8ff',
+    tertiaryColor: '#16283a',
+    tertiaryTextColor: '#d7e4f3',
+    tertiaryBorderColor: '#ffbf69',
+    mainBkg: '#0f1722',
+    nodeBorder: '#5ec8ff',
+    clusterBkg: '#102131',
+    clusterBorder: '#5ec8ff',
+    lineColor: '#5ec8ff',
+    edgeLabelBackground: '#0f1722',
+    textColor: '#d7e4f3',
+    fontFamily: 'Open Sans, sans-serif'
+  }
+});
+
+try {
+  await mermaid.run({ querySelector: '.mermaid-diagram' });
+} catch (error) {
+  console.error('[docs] Mermaid render failed.', error);
+}
+</script></body></html>

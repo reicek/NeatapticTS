@@ -12,6 +12,21 @@
  */
 
 import {
+  DOM_EVENT_BLUR,
+  DOM_EVENT_KEYDOWN,
+  DOM_EVENT_KEYUP,
+  DOM_EVENT_VISIBILITYCHANGE,
+} from './dom-events.constants';
+import { VISIBILITY_VISIBLE } from './hud.constants';
+import type {
+  BindingDetach,
+  InputRouter,
+  InputRouterDetach,
+  InputSnapshot,
+  LookDelta,
+  TouchActiveCallback,
+} from './types';
+import {
   NEATENSTEIN_DASH_KEY,
   NEATENSTEIN_FIRE_KEY,
   NEATENSTEIN_KEY_MAP_MOVEMENT,
@@ -23,120 +38,16 @@ import {
   bindMouseLook,
   bindPointerLock,
   bindTouchLook,
-  type BindingDetach,
-  type LookDelta,
-  type TouchActiveCallback,
 } from './game/controls';
+
+// Re-export consolidated types so existing imports from this module remain valid.
+export type { InputRouter, InputRouterDetach, InputSnapshot } from './types';
 
 /** Convenience type alias for a keyboard handler reference. */
 type KeyboardEventHandler = (event: KeyboardEvent) => void;
 
 /** Convenience type alias for no-argument DOM event handlers. */
 type VoidDomEventHandler = () => void;
-
-/**
- * Snapshot of raw player input at a single point in time.
- *
- * The snapshot is intentionally clone-safe so it can be passed across the
- * worker boundary via `postMessage` without losing information.
- */
-export interface InputSnapshot {
-  /** Milliseconds since epoch when the snapshot was captured. */
-  timestamp: number;
-
-  /** Directional movement intent from movement keys. */
-  movement: {
-    /** True while the forward key is held. */
-    forward: boolean;
-    /** True while the backward key is held. */
-    backward: boolean;
-    /** True while the strafe-left key is held. */
-    left: boolean;
-    /** True while the strafe-right key is held. */
-    right: boolean;
-  };
-
-  /**
-   * Accumulated orientation change since the last snapshot, in radians.
-   *
-   * Mouse, touch, and keyboard look deltas are consumed when the snapshot is
-   * read so the same physical movement is never applied twice.
-   */
-  look: {
-    /** Horizontal rotation delta. */
-    yawDelta: number;
-    /** Vertical rotation delta. */
-    pitchDelta: number;
-  };
-
-  /** Current touch drag-to-look state for mobile fallback. */
-  touch: {
-    /** True while at least one active touch is being tracked. */
-    active: boolean;
-    /** Horizontal yaw delta from the active touch drag. */
-    yawDelta: number;
-    /** Vertical pitch delta from the active touch drag. */
-    pitchDelta: number;
-  };
-
-  /** Whether the pointer is currently locked to the attached target. */
-  pointerLocked: boolean;
-
-  /**
-   * Primary fire input for the current snapshot.
-   *
-   * Mouse clicks and keyboard fire presses are latched until consumed so quick
-   * taps between render frames are not lost.
-   */
-  fire: boolean;
-
-  /**
-   * Dash input for the current snapshot.
-   *
-   * Dash presses are latched until consumed so quick taps between render frames
-   * are not lost.
-   */
-  dash: boolean;
-
-  /**
-   * Dynamic light toggle input for the current snapshot.
-   *
-   * Toggle presses are latched until consumed so quick taps between render
-   * frames are not lost.
-   */
-  lightToggle: boolean;
-}
-
-/** Detaches all event listeners installed by the router. */
-export type InputRouterDetach = () => void;
-
-/**
- * Public surface of a host input router.
- */
-export interface InputRouter {
-  /**
-   * Attach input listeners to a DOM target.
-   *
-   * @param target - Element that owns pointer lock and receives mouse/touch
-   *   events. Keyboard events are read from `window`.
-   * @returns A detach function for this attachment.
-   * @throws {Error} If the router is already attached.
-   */
-  attach(target: HTMLElement): InputRouterDetach;
-
-  /** Remove all installed listeners and reset transient input state. */
-  detach(): void;
-
-  /**
-   * Capture and reset the current input snapshot.
-   *
-   * Calling this consumes pending mouse, touch, keyboard-look, fire, and dash
-   * deltas/actions.
-   *
-   * @returns A clone-safe input snapshot.
-   */
-  getSnapshot(): InputSnapshot;
-}
 
 /**
  * Create a host-side input router.
@@ -292,15 +203,15 @@ export function createInputRouter(): InputRouter {
     keyUpHandler = (event) => updateKeyState(event, false);
     windowBlurHandler = () => resetKeyState();
     visibilityChangeHandler = () => {
-      if (document.visibilityState !== 'visible') {
+      if (document.visibilityState !== VISIBILITY_VISIBLE) {
         resetKeyState();
       }
     };
 
-    window.addEventListener('keydown', keyDownHandler);
-    window.addEventListener('keyup', keyUpHandler);
-    window.addEventListener('blur', windowBlurHandler);
-    document.addEventListener('visibilitychange', visibilityChangeHandler);
+    window.addEventListener(DOM_EVENT_KEYDOWN, keyDownHandler);
+    window.addEventListener(DOM_EVENT_KEYUP, keyUpHandler);
+    window.addEventListener(DOM_EVENT_BLUR, windowBlurHandler);
+    document.addEventListener(DOM_EVENT_VISIBILITYCHANGE, visibilityChangeHandler);
   }
 
   /**
@@ -318,11 +229,11 @@ export function createInputRouter(): InputRouter {
    * Remove keyboard and lifecycle listeners.
    */
   function removeMovementListeners(): void {
-    window.removeEventListener('keydown', keyDownHandler as EventListener);
-    window.removeEventListener('keyup', keyUpHandler as EventListener);
-    window.removeEventListener('blur', windowBlurHandler as EventListener);
+    window.removeEventListener(DOM_EVENT_KEYDOWN, keyDownHandler as EventListener);
+    window.removeEventListener(DOM_EVENT_KEYUP, keyUpHandler as EventListener);
+    window.removeEventListener(DOM_EVENT_BLUR, windowBlurHandler as EventListener);
     document.removeEventListener(
-      'visibilitychange',
+      DOM_EVENT_VISIBILITYCHANGE,
       visibilityChangeHandler as EventListener,
     );
 

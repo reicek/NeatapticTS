@@ -46,6 +46,7 @@ type TrainingStatsSnapshot = {
  * @param this Target network instance.
  * @param probability DropConnect probability.
  * @returns Nothing.
+ * @throws {NetworkRuntimeDropConnectProbabilityRangeError} When probability is outside [0, 1).
  */
 export function enableDropConnect(this: Network, probability: number): void {
   const runtimeNetwork = this as unknown as NetworkRuntimeDiagnosticsInternals;

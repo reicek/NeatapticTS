@@ -103,6 +103,21 @@ Parameters:
 
 Returns: void.
 
+### collectObjectiveKeys
+
+```ts
+collectObjectiveKeys(
+  internal: NeatControllerForEvolution,
+): string[]
+```
+
+Collect the keys of all currently resolved objectives.
+
+Parameters:
+- `internal` - NEAT controller instance.
+
+Returns: Array of objective key strings.
+
 ### createEntropyAccessor
 
 ```ts
@@ -155,6 +170,24 @@ Parameters:
 
 Returns: void.
 
+### isFitnessSuppressionEligible
+
+```ts
+isFitnessSuppressionEligible(
+  multiObjective: MultiObjectiveOptions | undefined,
+): boolean
+```
+
+Check whether multi-objective configuration allows fitness suppression.
+
+Suppression is only eligible when multi-objective mode is enabled and
+prune-inactive is explicitly turned off.
+
+Parameters:
+- `multiObjective` - Multi-objective configuration option.
+
+Returns: Whether fitness suppression may proceed.
+
 ### resetObjectivesCache
 
 ```ts
@@ -175,6 +208,26 @@ Parameters:
 - `internal` - NEAT controller instance.
 
 Returns: void.
+
+### shouldSuppressFitness
+
+```ts
+shouldSuppressFitness(
+  internal: NeatControllerForEvolution,
+  keys: string[],
+): boolean
+```
+
+Decide whether the fitness objective should be suppressed now.
+
+Suppression fires once when fitness is present alongside at least one other
+objective and the controller has not already suppressed it.
+
+Parameters:
+- `internal` - NEAT controller instance.
+- `keys` - Currently resolved objective keys.
+
+Returns: Whether fitness suppression should be applied.
 
 ### updateObjectiveScheduleAndAges
 

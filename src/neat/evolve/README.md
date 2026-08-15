@@ -221,6 +221,9 @@ console.log('generation:', neat.generation);
 console.log('output nodes:', bestNetwork.output);
 ```
 
+Parameters:
+- `this` - NEAT controller instance containing population, options, and RNG.
+
 Returns: a deep-cloned network snapshot representing the best genome from the
 previous generation, ready for inspection or external evaluation
 

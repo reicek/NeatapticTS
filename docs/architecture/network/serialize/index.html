@@ -1,0 +1,2029 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>architecture/network/serialize – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/theme.css"><script defer src="../../../assets/theme-tooltips.js"></script></head><body class="">
+<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="../../../index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="../../../index.html">Home</a><a href="../../../index.html" class="active">Docs</a><a href="../../../examples/index.html">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar docs-panel docs-panel-left"><ul class="sidebar-sections"><li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links"><ul class="pipe-nav-list pipe-nav-list-priority"><li class="pipe-nav-item nav-priority-link"><a href="../../../examples/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Examples overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><ul class="pipe-nav-list pipe-nav-list-compact"><li class="pipe-nav-item"><a href="../../../examples/flappy_bird/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Flappy Bird</span></a></li><li class="pipe-nav-item"><a href="../../../examples/asciiMaze/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ASCII Maze</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></div></li><ul class="pipe-nav-list pipe-nav-list-root"><li class="pipe-nav-item"><a href="../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><li class="group"><div class="g-head">Architecture</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../activationArrayPool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ActivationArrayPool</span></a></li><li class="pipe-nav-item"><a href="../../architect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Architect</span></a></li><li class="pipe-nav-item"><a href="../../connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../group/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Group</span></a></li><li class="pipe-nav-item"><a href="../../layer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Layer</span></a></li><li class="pipe-nav-item"><a href="../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network</span></a></li><li class="pipe-nav-item"><a href="../activate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Activate</span></a></li><li class="pipe-nav-item"><a href="../bootstrap/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Bootstrap</span></a></li><li class="pipe-nav-item"><a href="../connect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Connect</span></a></li><li class="pipe-nav-item"><a href="../construct/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Construct</span></a></li><li class="pipe-nav-item"><a href="../deterministic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Deterministic</span></a></li><li class="pipe-nav-item"><a href="../evaluation-pack/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evaluation Pack</span></a></li><li class="pipe-nav-item"><a href="../evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evolve</span></a></li><li class="pipe-nav-item"><a href="../gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gating</span></a></li><li class="pipe-nav-item"><a href="../genetic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Genetic</span></a></li><li class="pipe-nav-item"><a href="../gpu/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gpu</span></a></li><li class="pipe-nav-item"><a href="../gpu/__mocks__/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gpu / Mocks</span></a></li><li class="pipe-nav-item"><a href="../mutate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Mutate</span></a></li><li class="pipe-nav-item"><a href="../onnx/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Onnx</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Export</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/layers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export / Layers</span></a></li><li class="pipe-nav-item"><a href="../onnx/import/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Import</span></a></li><li class="pipe-nav-item"><a href="../onnx/parity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Parity</span></a></li><li class="pipe-nav-item"><a href="../onnx/schema/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Schema</span></a></li><li class="pipe-nav-item"><a href="../onnx/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Validate</span></a></li><li class="pipe-nav-item"><a href="../prune/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Prune</span></a></li><li class="pipe-nav-item"><a href="../remove/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Remove</span></a></li><li class="pipe-nav-item"><a href="../runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Runtime</span></a></li><li class="pipe-nav-item current"><a href="./index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Serialize</span></a></li><li class="pipe-nav-item"><a href="../slab/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Slab</span></a></li><li class="pipe-nav-item"><a href="../standalone/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Standalone</span></a></li><li class="pipe-nav-item"><a href="../stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Stats</span></a></li><li class="pipe-nav-item"><a href="../topology/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Topology</span></a></li><li class="pipe-nav-item"><a href="../training/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Training</span></a></li><li class="pipe-nav-item"><a href="../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Visualization</span></a></li><li class="pipe-nav-item"><a href="../window/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Window</span></a></li><li class="pipe-nav-item"><a href="../worker-payload/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Worker Payload</span></a></li><li class="pipe-nav-item"><a href="../../node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-item"><a href="../../nodePool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">NodePool</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Methods</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../methods/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../methods/activation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Activation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../methods/cost/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cost</span></a></li><li class="pipe-nav-item"><a href="../../../methods/crossover/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Crossover</span></a></li><li class="pipe-nav-item"><a href="../../../methods/gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gating</span></a></li><li class="pipe-nav-item"><a href="../../../methods/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/rate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rate</span></a></li><li class="pipe-nav-item"><a href="../../../methods/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Neat</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../neat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/acceptance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Acceptance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/complexity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Complexity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/auto-distance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Auto Distance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/fitness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Fitness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/offspring/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Offspring</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/population/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Population</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/warnings/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Warnings</span></a></li><li class="pipe-nav-item"><a href="../../../neat/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/heredity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome / Heredity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/harness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Harness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/helpers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Helpers</span></a></li><li class="pipe-nav-item"><a href="../../../neat/hybrid/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Hybrid</span></a></li><li class="pipe-nav-item"><a href="../../../neat/init/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Init</span></a></li><li class="pipe-nav-item"><a href="../../../neat/innovation-tracker/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Innovation Tracker</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/category/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Category</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/crowding/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Crowding</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/dominance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Dominance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/fronts/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Fronts</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-conn/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Conn</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Node</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/flow/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Flow</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/repair/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Repair</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/select/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Select</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-adult/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Adult</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-assimilation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Assimilation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-collective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Collective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-dna/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Dna</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-evolution/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Evolution</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-juvenile/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Juvenile</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-main-agent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Main Agent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/assignment/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Assignment</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/threshold/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Threshold</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/augmentation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Augmentation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/context/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Context</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/read/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Read</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/accessors/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Accessors</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/exports/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Exports</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/buffer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Buffer</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/operator-stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Operator Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/recorder/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Recorder</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/types/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Types</span></a></li><li class="pipe-nav-item"><a href="../../../neat/topology-intent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Topology Intent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Validate</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Multithreading</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../multithreading/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Browser</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-footer"></span><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Acceleration</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../acceleration/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Browser Tests</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../browser-tests/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Env</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../env/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../env/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Browser</span></a></li><li class="pipe-nav-item"><a href="../../../env/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Memory</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../memory/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Performance</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../performance/nge/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Research</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../research/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Src</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../src/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Utils</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../utils/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Visualization</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../visualization/network-view/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network View</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li></ul></aside><main class="content docs-panel docs-panel-center"><h1 id="architecture-network-serialize">architecture/network/serialize</h1><p>Raised when network JSON serialization helpers receive an invalid root payload.</p>
+<h2 id="architecture-network-serialize-network-serialize-errors-ts">architecture/network/serialize/network.serialize.errors.ts</h2><h3 id="networkserializeinvalidjsonerror">NetworkSerializeInvalidJsonError</h3><p>Raised when network JSON serialization helpers receive an invalid root payload.</p>
+<h2 id="architecture-network-serialize-network-serialize-utils-types-ts">architecture/network/serialize/network.serialize.utils.types.ts</h2><h3 id="compactconnectionrebuildcontext">CompactConnectionRebuildContext</h3><p>Context for compact-connection reconstruction.</p>
+<p>Connection rows are processed independently so malformed entries can be skipped without aborting import.</p>
+<h3 id="compactnoderebuildcontext">CompactNodeRebuildContext</h3><p>Context for compact-node reconstruction.</p>
+<p>Arrays are expected to be index-aligned so each node can be hydrated deterministically.</p>
+<p>This is a serialization/hydration constraint only: the compact format stores node fields
+(activation, state, squash, and optional gene id) as parallel arrays.</p>
+<p>Do not read this as guidance for genetic alignment. In NEAT-style crossover and speciation,
+homologous structure is matched by historical markings (innovation ids), not by array indices.</p>
+<h3 id="compactpayloadcontext">CompactPayloadContext</h3><p>Context carrying compact payload fields.</p>
+<p>This named-object form replaces tuple index access in internal orchestration code.</p>
+<h3 id="compactserializednetworktuple">CompactSerializedNetworkTuple</h3><p>Compact tuple payload used by <code>serialize</code> output.</p>
+<p>Tuple slots are intentionally positional to reduce payload size:
+0) activations, 1) states, 2) squash keys, 3) connections, 4) input size,
+5) output size, 6) optional node gene ids, 7) optional topology intent.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const compactTuple: CompactSerializedNetworkTuple = [
+  [0.1, 0.2],
+  [0, 0],
+  [&#39;identity&#39;, &#39;tanh&#39;],
+  [{ from: 0, to: 1, weight: 0.5, gater: null }],
+  1,
+  1,
+];
+</code></pre>
+<h3 id="compressedserializedconnectionblock">CompressedSerializedConnectionBlock</h3><p>Array-oriented compressed connection payload for compact serialization.</p>
+<p>This keeps the compact serializer lossless while removing per-connection key
+repetition and object allocation overhead from the transport payload.</p>
+<h3 id="compressedserializedconnectionweights">CompressedSerializedConnectionWeights</h3><p>Lossless weight-word payload for compressed compact serialization.</p>
+<p>The encoding stores each non-zero float64 weight as four signed 16-bit words
+and then delta-encodes those words across the non-zero connection sequence.
+Exact positive-zero spans are represented separately as run metadata.</p>
+<h3 id="compressedserializedindexrun">CompressedSerializedIndexRun</h3><p>Index-aligned run metadata used by compressed connection payloads.</p>
+<p>A run starts at <code>startIndex</code> and covers <code>length</code> contiguous connection rows.</p>
+<h3 id="compressedserializednetwork">CompressedSerializedNetwork</h3><p>Compressed compact serialization payload.</p>
+<p>This format is additive to the legacy compact tuple API: it keeps the same
+runtime reconstruction semantics while using array-oriented connection data
+to reduce UTF-8 payload size for storage or transport.</p>
+<h3 id="compressedserializednetworkarchive">CompressedSerializedNetworkArchive</h3><p>Node-side archive wrapper around a compressed compact serialization payload.</p>
+<p>The wrapped <code>payload</code> string stores the UTF-8 JSON form of
+<code>CompressedSerializedNetwork</code> after gzip or zstd compression, encoded as
+base64 for portable storage.</p>
+<h3 id="compressedserializednetworkarchivecompression">CompressedSerializedNetworkArchiveCompression</h3><p>Supported Node-side compression codecs for writing compressed serialized network archive payloads.</p>
+<h3 id="compressedserializednetworkarchiveoptions">CompressedSerializedNetworkArchiveOptions</h3><p>Optional codec settings for archiving one compressed network payload in binary form.</p>
+<h3 id="connectioninternalswithenabled">ConnectionInternalsWithEnabled</h3><p>Connection view with optional enabled flag.</p>
+<p>Some serialized formats preserve per-edge enablement, while others treat missing values
+as implicitly enabled.</p>
+<h3 id="default-numeric-value">DEFAULT_NUMERIC_VALUE</h3><p>Neutral numeric fallback applied whenever optional scalar fields are absent in serialized payloads during rebuild normalization.
+Using a single constant keeps rebuild defaults predictable across compact and verbose import paths.</p>
+<h3 id="error-invalid-network-json">ERROR_INVALID_NETWORK_JSON</h3><p>Stable error text thrown when verbose JSON root validation fails before any field-level reconstruction logic executes.
+Keeping this message deterministic helps tests and diagnostics tooling match invalid-payload failures.</p>
+<h3 id="fallback-activation-key">FALLBACK_ACTIVATION_KEY</h3><p>Activation key used when a serialized squash name cannot be resolved to any registered runtime activation function safely.
+Identity preserves import continuity while warning paths surface the unknown key to diagnostics.</p>
+<h3 id="first-connection-index">FIRST_CONNECTION_INDEX</h3><p>Index of the first created connection returned by <code>connect()</code>.</p>
+<p>The runtime API returns an array, and serializer logic consistently reads index <code>0</code>.</p>
+<h3 id="jsonconnectionrebuildcontext">JsonConnectionRebuildContext</h3><p>Context for JSON-connection reconstruction.</p>
+<p>Connection rows may include optional gater and enabled metadata.</p>
+<h3 id="jsonnoderebuildcontext">JsonNodeRebuildContext</h3><p>Context for JSON-node reconstruction.</p>
+<p>Node entries are rebuilt in order and pushed into mutable runtime internals.</p>
+<h3 id="network-json-format-version">NETWORK_JSON_FORMAT_VERSION</h3><p>Current verbose <code>NetworkJSON</code> schema version used by serializer and deserializer boundaries to coordinate compatibility checks and migration warnings.
+Readers should treat mismatches as migration signals rather than silently assuming field parity.</p>
+<h3 id="networkinternalswithdropout">NetworkInternalsWithDropout</h3><p>Serialize internals with optional dropout field.</p>
+<p>Verbose JSON snapshots normalize this value so readers can treat dropout as numeric data.</p>
+<h3 id="networkjson">NetworkJSON</h3><p>Canonical verbose network JSON contract used across serializer and deserializer entry points in persistence, migration, and diagnostics workflows.
+This local alias keeps payload-shape ownership discoverable from the serialize boundary without requiring deep type imports.</p>
+<h3 id="networkjsonconnection">NetworkJSONConnection</h3><p>Verbose JSON connection representation.</p>
+<p>Includes optional gater and explicit enabled state for portability.</p>
+<h3 id="networkjsonnode">NetworkJSONNode</h3><p>Verbose JSON node representation.</p>
+<p>Node entries are self-describing and intended for readable, versioned snapshots.</p>
+<h3 id="node-type-hidden">NODE_TYPE_HIDDEN</h3><p>Node type literal for hidden layer nodes used during JSON serialization and deserialization rebuilds.</p>
+<h3 id="node-type-input">NODE_TYPE_INPUT</h3><p>Node type literal for input layer nodes used during JSON serialization and deserialization rebuilds.</p>
+<h3 id="node-type-output">NODE_TYPE_OUTPUT</h3><p>Node type literal for output layer nodes used during JSON serialization and deserialization rebuilds.</p>
+<h3 id="parameterlayoutentry">ParameterLayoutEntry</h3><p>One ordered descriptor inside parameter-layout version <code>1</code>.</p>
+<p>Bias entries use the stable node gene id in <code>nodeId</code>.
+Weight entries prefer the live connection <code>innovation</code> when it exists and
+otherwise fall back to the stable endpoint gene ids in <code>from</code> and <code>to</code>.
+Duplicate innovation ids or duplicate fallback endpoint pairs are rejected
+as ambiguous instead of inheriting incidental container order.</p>
+<h3 id="parameterlayoutv1">ParameterLayoutV1</h3><p>Deterministic parameter-layout descriptor owned by the network serialize boundary.</p>
+<p>Version <code>1</code> keeps one stable fold order: all bias entries first, then all
+weight entries. For a fixed topology with stable historical ids, this gives
+ordered determinism on the same runtime.</p>
+<h3 id="parametervector">ParameterVector</h3><p>Versioned parameter payload for same-runtime vector roundtrips.</p>
+<p>Layout metadata and scalar values travel together so imports can reject
+incompatible payloads before mutating a live network.</p>
+<h3 id="resolvednetworksizecontext">ResolvedNetworkSizeContext</h3><p>Resolved input/output sizes for rebuild.</p>
+<p>Values reflect override-first resolution semantics used during deserialization.</p>
+<h3 id="serializedconnection">SerializedConnection</h3><p>Serialized connection representation used by compact and JSON formats.</p>
+<p>Endpoints stay index-based for deterministic reconstruction, while the optional
+historical fields preserve NEAT identity across clone, export, and restore flows.</p>
+<h3 id="serializenetworkinternals">SerializeNetworkInternals</h3><p>Runtime interface for accessing network internals during serialization.</p>
+<p>This is an internal bridge type used by serializer helpers to read and rebuild
+topology without exposing private implementation details in public APIs.</p>
+<h3 id="serializenodeinternals">SerializeNodeInternals</h3><p>Runtime node internals needed for serialization workflows.</p>
+<p>These fields are the minimal node state required to round-trip compact and JSON payloads.</p>
+<h3 id="warning-invalid-connection-during-deserialize">WARNING_INVALID_CONNECTION_DURING_DESERIALIZE</h3><p>Warning emitted when compact deserialize encounters invalid edge endpoints and skips the connection reconstruction silently.</p>
+<h3 id="warning-invalid-connection-during-from-json">WARNING_INVALID_CONNECTION_DURING_FROM_JSON</h3><p>Warning emitted when JSON verbose deserialize encounters invalid edge endpoints and skips the connection reconstruction silently.</p>
+<h3 id="warning-invalid-gater-during-deserialize">WARNING_INVALID_GATER_DURING_DESERIALIZE</h3><p>Warning emitted when compact deserialize encounters an invalid gater index and skips the gater assignment silently.</p>
+<h3 id="warning-invalid-gater-during-from-json">WARNING_INVALID_GATER_DURING_FROM_JSON</h3><p>Warning emitted when JSON verbose deserialize encounters an invalid gater index and skips the gater assignment silently.</p>
+<h3 id="warning-unknown-format-version">WARNING_UNKNOWN_FORMAT_VERSION</h3><p>Warning emitted for unknown verbose format versions encountered during JSON import boundaries with best-effort fallback semantics.
+Keep this message stable so diagnostics tooling can classify unknown-format imports consistently.</p>
+<h3 id="warning-unknown-squash-prefix">WARNING_UNKNOWN_SQUASH_PREFIX</h3><p>Prefix used when emitting a warning about an unknown activation squash key encountered during deserialization.</p>
+<h3 id="warning-unknown-squash-suffix">WARNING_UNKNOWN_SQUASH_SUFFIX</h3><p>Suffix appended when emitting a warning about an unknown activation squash key encountered during deserialization.</p>
+<h2 id="architecture-network-serialize-network-serialize-utils-ts">architecture/network/serialize/network.serialize.utils.ts</h2><h3 id="network-serialize-utils">network.serialize.utils</h3><h1 id="connection-synapse-edge">Connection (Synapse / Edge)</h1><p>Directed weighted link between two nodes. The connection keeps the everyday
+graph fields (<code>from</code>, <code>to</code>, <code>weight</code>, <code>innovation</code>) directly on the instance,
+then pushes rarer capabilities behind symbol-backed accessors so large
+populations do not pay object-shape costs for features they are not using.</p>
+<p>This makes the boundary useful in three different modes:</p>
+<ul>
+<li>ordinary feed-forward links that only need endpoints and weight,</li>
+<li>gated or plastic links that gradually opt into extra runtime state,</li>
+<li>optimizer-heavy training paths that need moment buffers without turning
+every connection into a bloated record.</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-ts">const source = new Node(&#39;input&#39;);
+const target = new Node(&#39;output&#39;);
+const edge = new Connection(source, target, 0.42);
+
+edge.gain = 1.5;
+edge.enabled = true;
+</code></pre>
+<h3 id="applyhydratedarchitecturedescriptor">applyHydratedArchitectureDescriptor</h3><pre><code class="language-ts">applyHydratedArchitectureDescriptor(
+  network: default,
+  architectureDescriptor: NetworkArchitectureDescriptor | undefined,
+): void
+</code></pre>
+<p>Applies hydrated architecture metadata to runtime network when shape is valid.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Rebuilt network instance.</li>
+<li><code>architectureDescriptor</code> - Optional serialized descriptor.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyhydratedextensionbag">applyHydratedExtensionBag</h3><pre><code class="language-ts">applyHydratedExtensionBag(
+  runtimeNetwork: RuntimeNetworkWithSerializedExtensions,
+  extensions: NetworkJSONExtensions | undefined,
+): void
+</code></pre>
+<p>Hydrates the generic extension bag onto the runtime network when shape is valid.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Runtime network receiving the extension bag.</li>
+<li><code>extensions</code> - Optional serialized extension bag.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyserializedextensionbag">applySerializedExtensionBag</h3><pre><code class="language-ts">applySerializedExtensionBag(
+  runtimeNetwork: RuntimeNetworkWithSerializedExtensions,
+  networkJson: NetworkJSON,
+): void
+</code></pre>
+<p>Re-emits the hydrated generic extension bag on verbose JSON snapshots.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Runtime network that may carry hydrated extensions.</li>
+<li><code>networkJson</code> - Target JSON payload.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyserializedruntimestate">applySerializedRuntimeState</h3><pre><code class="language-ts">applySerializedRuntimeState(
+  rebuiltNetwork: default,
+  activations: number[],
+  states: number[],
+): void
+</code></pre>
+<p>Restore live activation and recurrent-state scalars after structural import.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rebuiltNetwork</code> - Reconstructed runtime network.</li>
+<li><code>activations</code> - Activation values aligned to node order.</li>
+<li><code>states</code> - Recurrent state values aligned to node order.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="clonenetworkjsonextensions">cloneNetworkJsonExtensions</h3><pre><code class="language-ts">cloneNetworkJsonExtensions(
+  extensions: NetworkJSONExtensions | undefined,
+): NetworkJSONExtensions | undefined
+</code></pre>
+<p>Clones one generic network extension bag when the top-level shape is valid.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>extensions</code> - Optional serialized extension bag.</li>
+</ul>
+<p>Returns: Cloned extension bag or <code>undefined</code> when shape is invalid.</p>
+<h3 id="createparameterlayoutv1">createParameterLayoutV1</h3><pre><code class="language-ts">createParameterLayoutV1(
+  network: default,
+): ParameterLayoutV1
+</code></pre>
+<p>Build the deterministic descriptor order for parameter-layout version <code>1</code>.</p>
+<p>Version <code>1</code> folds all bias entries before all weight entries. Biases are
+ordered by stable node gene id. Weights prefer connection innovation when it
+exists and fall back to stable endpoint gene ids when it does not.
+Ambiguous or missing ordering identity fails explicitly instead of inheriting
+incidental runtime array order. For a fixed topology with stable historical
+identities, the result is ordered deterministic on the same runtime.
+This helper describes layout order only; it is not a cross-runtime exact
+replay promise.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Live network instance to inspect.</li>
+</ul>
+<p>Returns: Versioned ordered layout descriptors for the current topology.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const layout = createParameterLayoutV1(network);
+console.log(layout.entries[0]);
+</code></pre>
+<h3 id="deserialize">deserialize</h3><pre><code class="language-ts">deserialize(
+  data: CompactSerializedNetworkTuple,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): default
+</code></pre>
+<p>Rebuilds a network instance from compact tuple form.</p>
+<p>Use this importer for compact payloads produced by <code>serialize</code>.
+Optional <code>inputSize</code> and <code>outputSize</code> let callers enforce shape overrides at import time.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>data</code> - Compact tuple payload.</li>
+<li><code>inputSize</code> - Optional input-size override that takes precedence over serialized input.</li>
+<li><code>outputSize</code> - Optional output-size override that takes precedence over serialized output.</li>
+</ul>
+<p>Returns: Reconstructed network instance.</p>
+<p>Example:</p>
+<pre><code class="language-ts">import { deserialize } from &#39;./network.serialize.utils&#39;;
+
+const rebuiltNetwork = deserialize(compactTuple, 2, 1);
+</code></pre>
+<h3 id="deserializecompressed">deserializeCompressed</h3><pre><code class="language-ts">deserializeCompressed(
+  data: CompressedSerializedNetwork,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): default
+</code></pre>
+<p>Rebuild a network instance from the compressed compact payload and restore runtime activation/state vectors after structure import.
+The function validates payload format first so incompatible compressed data fails before partial reconstruction occurs.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>data</code> - Compressed compact payload.</li>
+<li><code>inputSize</code> - Optional input-size override.</li>
+<li><code>outputSize</code> - Optional output-size override.</li>
+</ul>
+<p>Returns: Reconstructed network instance.</p>
+<h3 id="deserializecompressedarchive">deserializeCompressedArchive</h3><pre><code class="language-ts">deserializeCompressedArchive(
+  data: CompressedSerializedNetworkArchive,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): default
+</code></pre>
+<p>Rebuild a network instance from the compressed archive wrapper by inflating archive bytes and delegating to compressed deserialization.
+This keeps archive-specific decode concerns separate from structural reconstruction and runtime-state restoration.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>data</code> - Archived compressed payload.</li>
+<li><code>inputSize</code> - Optional input-size override.</li>
+<li><code>outputSize</code> - Optional output-size override.</li>
+</ul>
+<p>Returns: Reconstructed network instance.</p>
+<h3 id="deserializecompressedarchiveasync">deserializeCompressedArchiveAsync</h3><pre><code class="language-ts">deserializeCompressedArchiveAsync(
+  data: CompressedSerializedNetworkArchive,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+  options: CompressedArchiveDecodeOptions,
+): Promise&lt;default&gt;
+</code></pre>
+<p>Rebuilds a network instance from the compressed archive wrapper with async runtime codecs.</p>
+<p>Browser runtimes prefer the archive stream path so payload hydration can stay
+off the synchronous main-thread lane, while Node falls back to the existing
+archive owner when browser streams are unavailable.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>data</code> - Archived compressed payload.</li>
+<li><code>inputSize</code> - Optional input-size override.</li>
+<li><code>outputSize</code> - Optional output-size override.</li>
+<li><code>options</code> - Optional incremental decode callbacks.</li>
+</ul>
+<p>Returns: Reconstructed network instance.</p>
+<h3 id="deserializecompressedarchiveasyncwithmetrics">deserializeCompressedArchiveAsyncWithMetrics</h3><pre><code class="language-ts">deserializeCompressedArchiveAsyncWithMetrics(
+  data: CompressedSerializedNetworkArchive,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+  options: CompressedArchiveDecodeOptions,
+): Promise&lt;CompressedArchiveDecodeResult&lt;default&gt;&gt;
+</code></pre>
+<p>Rebuild a network archive with async codecs and report size plus decode-time metrics for streaming or browser import paths.
+This helper preserves deterministic reconstruction while exposing decode telemetry for responsiveness tuning.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>data</code> - Archived compressed payload.</li>
+<li><code>inputSize</code> - Optional input-size override.</li>
+<li><code>outputSize</code> - Optional output-size override.</li>
+<li><code>options</code> - Optional incremental decode callbacks.</li>
+</ul>
+<p>Returns: Rebuilt network plus decode metrics.</p>
+<h3 id="deserializecompressedarchivewithmetrics">deserializeCompressedArchiveWithMetrics</h3><pre><code class="language-ts">deserializeCompressedArchiveWithMetrics(
+  data: CompressedSerializedNetworkArchive,
+  inputSize: number | undefined,
+  outputSize: number | undefined,
+): CompressedArchiveDecodeResult&lt;default&gt;
+</code></pre>
+<p>Rebuild a network archive and report size plus decode-time metrics for import performance and payload diagnostics.
+The returned metrics quantify archive inflation and reconstruction overhead alongside the rebuilt runtime.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>data</code> - Archived compressed payload.</li>
+<li><code>inputSize</code> - Optional input-size override.</li>
+<li><code>outputSize</code> - Optional output-size override.</li>
+</ul>
+<p>Returns: Rebuilt network plus decode metrics.</p>
+<h3 id="fromjsonimpl">fromJSONImpl</h3><pre><code class="language-ts">fromJSONImpl(
+  json: NetworkJSON,
+): default
+</code></pre>
+<p>Reconstructs a network instance from the verbose JSON payload.</p>
+<p>This importer validates payload shape, restores dropout and topology, and then rebuilds
+connections, gating relationships, and optional enabled flags.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>json</code> - Verbose JSON payload.</li>
+</ul>
+<p>Returns: Reconstructed network instance.</p>
+<p>Example:</p>
+<pre><code class="language-ts">import { fromJSONImpl } from &#39;./network.serialize.utils&#39;;
+
+const rebuiltNetwork = fromJSONImpl(snapshotJson);
+</code></pre>
+<h3 id="fromparametervector">fromParameterVector</h3><pre><code class="language-ts">fromParameterVector(
+  network: default,
+  parameterVector: ParameterVector,
+): void
+</code></pre>
+<p>Import one versioned parameter vector into a compatible live network runtime.</p>
+<p>The target layout is rebuilt fresh and validated against the incoming vector
+before any bias or weight mutation occurs. Version <code>1</code> applies only live
+node biases and live forward-connection or self-connection weights, so
+disabled connections still consume slots whenever they still exist in the
+target runtime graph. Ordered descriptor compatibility stays innovation-first
+and falls back to stable endpoint gene ids when an innovation id is absent,
+which keeps same-runtime imports aligned with the export layout contract.
+Import rejects non-neutral <code>node.response</code> and <code>connection.gain</code> explicitly
+and also rejects version, entry-count, values-length, or descriptor mismatch
+before mutation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Live target network instance.</li>
+<li><code>parameterVector</code> - Versioned payload to apply.</li>
+</ul>
+<p>Returns: Nothing. The target runtime mutates only after compatibility checks pass.</p>
+<h3 id="isarchitecturedescriptorshapevalid">isArchitectureDescriptorShapeValid</h3><pre><code class="language-ts">isArchitectureDescriptorShapeValid(
+  architectureDescriptor: NetworkArchitectureDescriptor | undefined,
+): boolean
+</code></pre>
+<p>Parameters:</p>
+<ul>
+<li><code>architectureDescriptor</code> - Optional descriptor candidate.</li>
+</ul>
+<p>Returns: True when minimal descriptor shape is valid.</p>
+<h3 id="parameterlayoutentry">ParameterLayoutEntry</h3><p>One ordered descriptor inside parameter-layout version <code>1</code>.</p>
+<p>Bias entries use the stable node gene id in <code>nodeId</code>.
+Weight entries prefer the live connection <code>innovation</code> when it exists and
+otherwise fall back to the stable endpoint gene ids in <code>from</code> and <code>to</code>.
+Duplicate innovation ids or duplicate fallback endpoint pairs are rejected
+as ambiguous instead of inheriting incidental container order.</p>
+<h3 id="parameterlayoutv1">ParameterLayoutV1</h3><p>Deterministic parameter-layout descriptor owned by the network serialize boundary.</p>
+<p>Version <code>1</code> keeps one stable fold order: all bias entries first, then all
+weight entries. For a fixed topology with stable historical ids, this gives
+ordered determinism on the same runtime.</p>
+<h3 id="parametervector">ParameterVector</h3><p>Versioned parameter payload for same-runtime vector roundtrips.</p>
+<p>Layout metadata and scalar values travel together so imports can reject
+incompatible payloads before mutating a live network.</p>
+<h3 id="serialize">serialize</h3><pre><code class="language-ts">serialize(): CompactSerializedNetworkTuple
+</code></pre>
+<p>Serializes a network instance into the compact tuple format.</p>
+<p>Use this format when payload size and serialization speed matter more than readability.
+The tuple layout is positional and optimized for transport/storage efficiency.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+</ul>
+<p>Returns: Compact tuple payload containing activations, states, squash keys, connections, and input/output sizes.</p>
+<p>Example:</p>
+<pre><code class="language-ts">import Network from &#39;../../network&#39;;
+import { deserialize, serialize } from &#39;./network.serialize.utils&#39;;
+
+const sourceNetwork = new Network(2, 1);
+const compactTuple = serialize.call(sourceNetwork);
+const rebuiltNetwork = deserialize(compactTuple);
+</code></pre>
+<h3 id="serializecompressed">serializeCompressed</h3><pre><code class="language-ts">serializeCompressed(): CompressedSerializedNetwork
+</code></pre>
+<p>Serializes a network instance into the compressed compact format.</p>
+<p>This path keeps round-trip semantics identical to <code>serialize()</code> while
+replacing the object-per-connection payload with one array-oriented block.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+</ul>
+<p>Returns: Compressed compact payload.</p>
+<h3 id="serializecompressedarchive">serializeCompressedArchive</h3><pre><code class="language-ts">serializeCompressedArchive(
+  options: CompressedSerializedNetworkArchiveOptions | undefined,
+): CompressedSerializedNetworkArchive
+</code></pre>
+<p>Serializes a network instance into the compressed archive wrapper.</p>
+<p>This is the Node-side storage path for <code>serializeCompressed()</code>: it first
+builds the exact compressed JSON payload, then applies gzip or zstd above
+that payload without changing replay semantics.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+<li><code>options</code> - Optional archive compression settings.</li>
+</ul>
+<p>Returns: Archived compressed payload.</p>
+<h3 id="serializecompressedarchiveasync">serializeCompressedArchiveAsync</h3><pre><code class="language-ts">serializeCompressedArchiveAsync(
+  options: CompressedSerializedNetworkArchiveOptions | undefined,
+): Promise&lt;CompressedSerializedNetworkArchive&gt;
+</code></pre>
+<p>Serializes a network instance into the compressed archive wrapper with async runtime codecs.</p>
+<p>Browser runtimes prefer the archive stream path so payload compression can stay
+off the synchronous main-thread lane, while Node falls back to the existing
+archive owner when browser streams are unavailable.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+<li><code>options</code> - Optional archive compression settings.</li>
+</ul>
+<p>Returns: Archived compressed payload.</p>
+<h3 id="serializecompressedarchiveasyncwithmetrics">serializeCompressedArchiveAsyncWithMetrics</h3><pre><code class="language-ts">serializeCompressedArchiveAsyncWithMetrics(
+  options: CompressedSerializedNetworkArchiveOptions | undefined,
+): Promise&lt;CompressedArchiveEncodeResult&lt;CompressedSerializedNetworkArchive&gt;&gt;
+</code></pre>
+<p>Serialize a network archive with async codecs and report size plus encode-time metrics for responsive environments.
+This variant keeps the same archive semantics while allowing non-blocking compression paths in browser runtimes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+<li><code>options</code> - Optional archive compression settings.</li>
+</ul>
+<p>Returns: Archived payload plus encode metrics.</p>
+<h3 id="serializecompressedarchivewithmetrics">serializeCompressedArchiveWithMetrics</h3><pre><code class="language-ts">serializeCompressedArchiveWithMetrics(
+  options: CompressedSerializedNetworkArchiveOptions | undefined,
+): CompressedArchiveEncodeResult&lt;CompressedSerializedNetworkArchive&gt;
+</code></pre>
+<p>Serialize a network archive and report size plus encode-time metrics for deterministic storage and transport audits.
+The metrics payload helps compare archive codecs without changing the underlying compressed network contract.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+<li><code>options</code> - Optional archive compression settings.</li>
+</ul>
+<p>Returns: Archived payload plus encode metrics.</p>
+<h3 id="serializedconnection">SerializedConnection</h3><p>Serialized connection representation used by compact and JSON formats.</p>
+<p>Endpoints stay index-based for deterministic reconstruction, while the optional
+historical fields preserve NEAT identity across clone, export, and restore flows.</p>
+<h3 id="tojsonimpl">toJSONImpl</h3><pre><code class="language-ts">toJSONImpl(): NetworkJSON
+</code></pre>
+<p>Serializes a network instance into the verbose JSON format.</p>
+<p>Use this format when you need human-readable snapshots, explicit schema versioning,
+and better forward/backward compatibility handling.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+</ul>
+<p>Returns: Versioned JSON payload with shape metadata, nodes, and connections.</p>
+<p>Example:</p>
+<pre><code class="language-ts">import Network from &#39;../../network&#39;;
+import { fromJSONImpl, toJSONImpl } from &#39;./network.serialize.utils&#39;;
+
+const sourceNetwork = new Network(3, 1);
+const snapshotJson = toJSONImpl.call(sourceNetwork);
+const rebuiltNetwork = fromJSONImpl(snapshotJson);
+</code></pre>
+<h3 id="toparametervector">toParameterVector</h3><pre><code class="language-ts">toParameterVector(
+  network: default,
+): ParameterVector
+</code></pre>
+<p>Export one versioned parameter vector from a live network runtime.</p>
+<p>Version <code>1</code> keeps ordered <code>ParameterLayoutV1</code> metadata and the aligned bias
+and weight scalars together so same-runtime imports can verify compatibility
+before mutating another network. The payload includes every live node bias
+and every live forward-connection or self-connection weight in layout order,
+including disabled connections when they still exist in the runtime graph.
+Weight slots still prefer innovation-backed descriptors and fall back to
+stable endpoint gene ids when a live connection has no innovation id.
+Export rejects non-neutral <code>node.response</code> and <code>connection.gain</code> explicitly
+instead of flattening those deferred families into the weights-and-biases v1
+payload.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Live network instance to export.</li>
+</ul>
+<p>Returns: Ordered layout metadata plus aligned scalar values for same-runtime deterministic roundtrips.</p>
+<h3 id="default">default</h3><h4 id="flags">_flags</h4><p>Packed state flags (private for future-proofing hidden class):
+bit0 =&gt; enabled gene expression (1 = active)
+bit1 =&gt; DropConnect active mask (1 = not dropped this forward pass)
+bit2 =&gt; hasGater (1 = symbol field present)
+bit3 =&gt; plastic (plasticityRate &gt; 0)
+bits4+ reserved.</p>
+<h4 id="acquire">acquire</h4><pre><code class="language-ts">acquire(
+  from: default,
+  to: default,
+  weight: number | undefined,
+): default
+</code></pre>
+<p>Acquire a connection from the internal pool, or construct a fresh one when the pool is empty.
+This is the low-allocation path used by topology mutation and other edge-churn heavy flows.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>from</code> - Source node.</li>
+<li><code>to</code> - Target node.</li>
+<li><code>weight</code> - Optional initial weight.</li>
+</ul>
+<p>Returns: Reinitialized connection instance.</p>
+<h4 id="dcmask">dcMask</h4><p>DropConnect active mask: <code>1</code> means active for this stochastic pass, <code>0</code> means dropped.</p>
+<h4 id="dropconnectactivemask">dropConnectActiveMask</h4><p>Convenience alias for DropConnect mask with clearer naming.</p>
+<h4 id="eligibility">eligibility</h4><p>Standard eligibility trace (e.g., for RTRL / policy gradient credit assignment).</p>
+<h4 id="enabled">enabled</h4><p>Whether the gene is currently expressed and participates in the forward pass.</p>
+<h4 id="firstmoment">firstMoment</h4><p>First moment estimate used by Adam-family optimizers.</p>
+<h4 id="from">from</h4><p>The source (pre-synaptic) node supplying activation.</p>
+<h4 id="gain">gain</h4><p>Multiplicative modulation applied after weight. Neutral gain <code>1</code> is omitted from storage.</p>
+<h4 id="gater">gater</h4><p>Optional gating node whose activation modulates effective weight.</p>
+<h4 id="gradientaccumulator">gradientAccumulator</h4><p>Generic gradient accumulator used by RMSProp and AdaGrad.</p>
+<h4 id="hasgater">hasGater</h4><p>Whether a gater node is assigned to modulate this connection&#39;s effective weight.</p>
+<h4 id="infinitynorm">infinityNorm</h4><p>Adamax infinity norm accumulator.</p>
+<h4 id="innovation">innovation</h4><p>Unique historical marking (auto-increment) for evolutionary alignment.</p>
+<h4 id="innovationid">innovationID</h4><pre><code class="language-ts">innovationID(
+  sourceNodeId: number,
+  targetNodeId: number,
+): number
+</code></pre>
+<p>Deterministic Cantor pairing function for a <code>(sourceNodeId, targetNodeId)</code> pair.
+Use it when you need a stable edge identifier without relying on the mutable
+auto-increment counter.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sourceNodeId</code> - Source node integer id or index.</li>
+<li><code>targetNodeId</code> - Target node integer id or index.</li>
+</ul>
+<p>Returns: Unique non-negative integer derived from the ordered pair.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const id = Connection.innovationID(2, 5);
+</code></pre>
+<h4 id="lookaheadshadowweight">lookaheadShadowWeight</h4><p>Lookahead slow-weight snapshot.</p>
+<h4 id="maxsecondmoment">maxSecondMoment</h4><p>AMSGrad maximum of past second-moment estimates.</p>
+<h4 id="nextinnovation">nextInnovation</h4><p>Read the current next-innovation cursor without advancing it.</p>
+<p>Use this to seed an external innovation tracker so its counter never
+overlaps with innovation IDs already assigned by the Connection constructor.</p>
+<p>Returns: Current value of the monotonic connection innovation counter.</p>
+<h4 id="plastic">plastic</h4><p>Whether this connection participates in plastic adaptation.</p>
+<h4 id="plasticityrate">plasticityRate</h4><p>Per-connection plasticity rate. <code>0</code> means the connection is not plastic.</p>
+<h4 id="previousdeltaweight">previousDeltaWeight</h4><p>Last applied delta weight (used by classic momentum).</p>
+<h4 id="release">release</h4><pre><code class="language-ts">release(
+  conn: default,
+): void
+</code></pre>
+<p>Return a connection instance to the internal pool for later reuse.
+Treat the instance as surrendered after calling this method.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>conn</code> - The connection instance to recycle.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h4 id="resetinnovationcounter">resetInnovationCounter</h4><pre><code class="language-ts">resetInnovationCounter(
+  value: number,
+): void
+</code></pre>
+<p>Reset the monotonic innovation counter used for newly constructed or pooled connections.
+You usually call this at the start of an experiment or before rebuilding a whole population.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>value</code> - New starting value.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h4 id="secondmoment">secondMoment</h4><p>Second raw moment estimate used by Adam-family optimizers.</p>
+<h4 id="secondmomentum">secondMomentum</h4><p>Secondary momentum buffer used by Lion-style updates.</p>
+<h4 id="syncinnovationcounter">syncInnovationCounter</h4><pre><code class="language-ts">syncInnovationCounter(
+  maxObservedInnovation: number,
+): void
+</code></pre>
+<p>Advances the innovation cursor past a restored maximum.</p>
+<p>This keeps import and clone paths monotonic: once a payload brings in a high
+innovation id, newly created edges continue from above that value.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxObservedInnovation</code> - Highest restored innovation id currently in memory.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h4 id="to">to</h4><p>The target (post-synaptic) node receiving activation.</p>
+<h4 id="tojson">toJSON</h4><pre><code class="language-ts">toJSON(): { from: number | undefined; to: number | undefined; weight: number; gain: number; innovation: number; enabled: boolean; gater?: number | undefined; }
+</code></pre>
+<p>Serialize to a minimal JSON-friendly shape used by genome and network save flows.
+Undefined node indices are preserved so callers can resolve or remap them later.</p>
+<p>Returns: Object with node indices, weight, gain, innovation id, enabled flag, and gater index when one exists.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const json = connection.toJSON();
+// =&gt; { from: 0, to: 3, weight: 0.12, gain: 1, innovation: 57, enabled: true }
+</code></pre>
+<h4 id="totaldeltaweight">totalDeltaWeight</h4><p>Accumulated (batched) delta weight awaiting an apply step.</p>
+<h4 id="weight">weight</h4><p>Scalar multiplier applied to the source activation (prior to gain modulation).</p>
+<h4 id="xtrace">xtrace</h4><p>Extended trace structure for modulatory / eligibility propagation algorithms. Parallel arrays for cache-friendly iteration.</p>
+<h2 id="architecture-network-serialize-network-serialize-json-utils-ts">architecture/network/serialize/network.serialize.json.utils.ts</h2><h3 id="appendjsonforwardconnections">appendJsonForwardConnections</h3><pre><code class="language-ts">appendJsonForwardConnections(
+  networkInternals: SerializeNetworkInternals,
+  networkJson: NetworkJSON,
+): void
+</code></pre>
+<p>Append JSON entries for forward connections after validating that each endpoint still maps to canonical node indices.
+Invalid or stale endpoints are skipped to prevent malformed rows from contaminating serialized payloads.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>networkJson</code> - JSON accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="appendjsonnodesandselfconnections">appendJsonNodesAndSelfConnections</h3><pre><code class="language-ts">appendJsonNodesAndSelfConnections(
+  networkInternals: SerializeNetworkInternals,
+  networkJson: NetworkJSON,
+): void
+</code></pre>
+<p>Appends JSON node entries and optional self-connections.</p>
+<p>Node indices are refreshed during this step so connection records can reference
+stable numeric endpoints.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>networkJson</code> - Target JSON accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="appendjsonselfconnectionwhenpresent">appendJsonSelfConnectionWhenPresent</h3><pre><code class="language-ts">appendJsonSelfConnectionWhenPresent(
+  nodeInternals: SerializeNodeInternals,
+  nodeIndex: number,
+  networkJson: NetworkJSON,
+): void
+</code></pre>
+<p>Appends JSON self-connection when node has one.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeInternals</code> - Node internals.</li>
+<li><code>nodeIndex</code> - Node index.</li>
+<li><code>networkJson</code> - JSON accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignjsonenabledflagwhenprovided">assignJsonEnabledFlagWhenProvided</h3><pre><code class="language-ts">assignJsonEnabledFlagWhenProvided(
+  createdConnection: default | undefined,
+  enabled: boolean,
+): void
+</code></pre>
+<p>Assigns enabled flag when value is provided.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>createdConnection</code> - Created connection.</li>
+<li><code>enabled</code> - Optional enabled value.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignjsongainwhenprovided">assignJsonGainWhenProvided</h3><pre><code class="language-ts">assignJsonGainWhenProvided(
+  createdConnection: default | undefined,
+  gain: number | undefined,
+): void
+</code></pre>
+<p>Assigns a restored connection gain when one was serialized explicitly.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>createdConnection</code> - Created connection.</li>
+<li><code>gain</code> - Optional serialized gain.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignjsongaterwhenvalid">assignJsonGaterWhenValid</h3><pre><code class="language-ts">assignJsonGaterWhenValid(
+  networkInternals: SerializeNetworkInternals,
+  gaterIndex: number | null,
+  createdConnection: default | undefined,
+): void
+</code></pre>
+<p>Assigns JSON gater when connection and gater index are valid.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>gaterIndex</code> - Optional gater index.</li>
+<li><code>createdConnection</code> - Created connection.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="createconnection">createConnection</h3><pre><code class="language-ts">createConnection(
+  networkInternals: SerializeNetworkInternals,
+  sourceNode: default,
+  targetNode: default,
+  weight: number,
+): default | undefined
+</code></pre>
+<p>Creates one connection and returns first created instance.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>sourceNode</code> - Source node.</li>
+<li><code>targetNode</code> - Target node.</li>
+<li><code>weight</code> - Connection weight.</li>
+</ul>
+<p>Returns: Created connection or undefined.</p>
+<h3 id="createemptynetworkjson">createEmptyNetworkJson</h3><pre><code class="language-ts">createEmptyNetworkJson(
+  networkInternals: NetworkInternalsWithDropout,
+): NetworkJSON
+</code></pre>
+<p>Creates an empty verbose JSON shell from runtime internals.</p>
+<p>The shell includes format and shape metadata and is filled in by subsequent
+node and connection append steps.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals with optional dropout.</li>
+</ul>
+<p>Returns: Empty JSON shell with <code>formatVersion</code> and scalar metadata initialized.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const networkJson = createEmptyNetworkJson(networkInternals);
+</code></pre>
+<h3 id="createjsonconnection">createJsonConnection</h3><pre><code class="language-ts">createJsonConnection(
+  connectionInstance: default,
+  from: number,
+  to: number,
+): NetworkJSONConnection
+</code></pre>
+<p>Creates one JSON connection entry.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connectionInstance</code> - Runtime connection carrying the historical identity to persist.</li>
+<li><code>from</code> - Source index.</li>
+<li><code>to</code> - Target index.</li>
+</ul>
+<p>Returns: JSON connection entry.</p>
+<h3 id="createjsonnode">createJsonNode</h3><pre><code class="language-ts">createJsonNode(
+  node: default,
+  nodeInternals: SerializeNodeInternals,
+  nodeIndex: number,
+): NetworkJSONNode
+</code></pre>
+<p>Creates one JSON node entry.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Runtime node.</li>
+<li><code>nodeInternals</code> - Node internals.</li>
+<li><code>nodeIndex</code> - Canonical index.</li>
+</ul>
+<p>Returns: JSON node entry.</p>
+<h3 id="createnodewithtype">createNodeWithType</h3><pre><code class="language-ts">createNodeWithType(
+  nodeType: string,
+): default
+</code></pre>
+<p>Creates one node with provided type.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeType</code> - Node type.</li>
+</ul>
+<p>Returns: New node.</p>
+<h3 id="hydratenodefromjsonentry">hydrateNodeFromJsonEntry</h3><pre><code class="language-ts">hydrateNodeFromJsonEntry(
+  rebuiltNode: default,
+  nodeJsonEntry: NetworkJSONNode,
+  nodeIndex: number,
+): void
+</code></pre>
+<p>Hydrates one node from JSON node entry.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rebuiltNode</code> - Node to hydrate.</li>
+<li><code>nodeJsonEntry</code> - JSON node entry.</li>
+<li><code>nodeIndex</code> - Canonical node index.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="isconnectionenabled">isConnectionEnabled</h3><pre><code class="language-ts">isConnectionEnabled(
+  connectionInstance: default,
+): boolean
+</code></pre>
+<p>Resolves enabled status from optional connection flag.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connectionInstance</code> - Connection instance.</li>
+</ul>
+<p>Returns: True when connection is enabled.</p>
+<h3 id="iscurrentjsonendpoint">isCurrentJsonEndpoint</h3><pre><code class="language-ts">isCurrentJsonEndpoint(
+  nodes: default[],
+  endpointNode: default,
+  endpointIndex: number,
+): boolean
+</code></pre>
+<p>Validates that one serialized endpoint still points at the canonical node table.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Canonical node table being serialized.</li>
+<li><code>endpointNode</code> - Connection endpoint node reference.</li>
+<li><code>endpointIndex</code> - Endpoint index stored on the node internals.</li>
+</ul>
+<p>Returns: True when the endpoint still belongs to the canonical node table.</p>
+<h3 id="isjsonconnectioninnodebounds">isJsonConnectionInNodeBounds</h3><pre><code class="language-ts">isJsonConnectionInNodeBounds(
+  nodes: default[],
+  connectionJsonEntry: NetworkJSONConnection,
+): boolean
+</code></pre>
+<p>Checks JSON connection indices against node list bounds.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Node list.</li>
+<li><code>connectionJsonEntry</code> - JSON connection entry.</li>
+</ul>
+<p>Returns: True when both indices are valid.</p>
+<h3 id="isjsonconnectionshapevalid">isJsonConnectionShapeValid</h3><pre><code class="language-ts">isJsonConnectionShapeValid(
+  connectionJsonEntry: NetworkJSONConnection,
+): boolean
+</code></pre>
+<p>Checks that JSON connection has numeric endpoint fields.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connectionJsonEntry</code> - JSON connection entry.</li>
+</ul>
+<p>Returns: True when endpoint fields are numbers.</p>
+<h3 id="rebuildconnectionsfromjsonpayload">rebuildConnectionsFromJsonPayload</h3><pre><code class="language-ts">rebuildConnectionsFromJsonPayload(
+  jsonConnectionContext: JsonConnectionRebuildContext,
+): void
+</code></pre>
+<p>Rebuild runtime connections from verbose JSON entries while preserving best-effort import behavior for mixed-quality payloads.
+Invalid rows are skipped with warnings so valid edge records still reconstruct successfully.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>jsonConnectionContext</code> - JSON connection rebuild context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<p>Example:</p>
+<pre><code class="language-ts">rebuildConnectionsFromJsonPayload({
+  networkInternals,
+  connectionJsonEntries,
+});
+</code></pre>
+<h3 id="rebuildnodesfromjsonpayload">rebuildNodesFromJsonPayload</h3><pre><code class="language-ts">rebuildNodesFromJsonPayload(
+  jsonNodeContext: JsonNodeRebuildContext,
+): void
+</code></pre>
+<p>Rebuild runtime nodes from verbose JSON entries while restoring scalar fields and optional historical identifiers.
+Unknown squash names are normalized through activation fallback logic to keep import paths resilient.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>jsonNodeContext</code> - JSON node rebuild context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<p>Example:</p>
+<pre><code class="language-ts">rebuildNodesFromJsonPayload({ networkInternals, nodeJsonEntries });
+</code></pre>
+<h3 id="rebuildonejsonconnection">rebuildOneJsonConnection</h3><pre><code class="language-ts">rebuildOneJsonConnection(
+  networkInternals: SerializeNetworkInternals,
+  connectionJsonEntry: NetworkJSONConnection,
+): void
+</code></pre>
+<p>Rebuilds one verbose JSON connection entry.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>connectionJsonEntry</code> - JSON connection entry.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolvedropout">resolveDropout</h3><pre><code class="language-ts">resolveDropout(
+  dropout: number | undefined,
+): number
+</code></pre>
+<p>Resolve dropout with a numeric fallback when the serialized value is absent or undefined.
+Normalizing this value at one boundary keeps verbose JSON payloads stable for downstream consumers.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>dropout</code> - Optional dropout value.</li>
+</ul>
+<p>Returns: Effective dropout.</p>
+<h3 id="resolvegaterindex">resolveGaterIndex</h3><pre><code class="language-ts">resolveGaterIndex(
+  gaterNode: default | null,
+): number | null
+</code></pre>
+<p>Resolves gater node index from gater reference.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>gaterNode</code> - Optional gater node.</li>
+</ul>
+<p>Returns: Gater index or null.</p>
+<h3 id="validatenetworkjsonorthrow">validateNetworkJsonOrThrow</h3><pre><code class="language-ts">validateNetworkJsonOrThrow(
+  json: NetworkJSON,
+): void
+</code></pre>
+<p>Validate the verbose JSON payload root shape before node and connection rebuild routines process individual fields.
+This early guard prevents non-object payloads from entering best-effort rebuild paths.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>json</code> - Payload candidate.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="warnwhenjsonformatversionisunknown">warnWhenJsonFormatVersionIsUnknown</h3><pre><code class="language-ts">warnWhenJsonFormatVersionIsUnknown(
+  formatVersion: number,
+): void
+</code></pre>
+<p>Warn when incoming verbose format version differs from the expected serializer schema version.
+The warning-only policy allows controlled migration attempts without forcing immediate import failure.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>formatVersion</code> - Incoming format version.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-serialize-network-serialize-genome-utils-ts">architecture/network/serialize/network.serialize.genome.utils.ts</h2><h3 id="compressed-genome-archive-format">COMPRESSED_GENOME_ARCHIVE_FORMAT</h3><p>Stable archive wrapper format tag used for identifying strict-genome archives.</p>
+<h3 id="compressed-genome-format">COMPRESSED_GENOME_FORMAT</h3><p>Stable payload format tag used for reliably identifying strict-genome archives.</p>
+<h3 id="compressedserializedgenomearchive">CompressedSerializedGenomeArchive</h3><p>JSON-safe archive wrapper for one strict genome serialization checkpoint contract.</p>
+<h3 id="compressedserializedgenomearchiveoptions">CompressedSerializedGenomeArchiveOptions</h3><p>Archive options for strict-genome compression that combine binary codec choices with capture-time genome field toggles.
+These options let callers tune payload size and fidelity without introducing phenotype-only runtime state.</p>
+<h3 id="deserializecompressedgenomearchive">deserializeCompressedGenomeArchive</h3><pre><code class="language-ts">deserializeCompressedGenomeArchive(
+  compressedArchive: CompressedSerializedGenomeArchive,
+  runtimeHints: GenomeMaterializationRuntimeHints,
+): default
+</code></pre>
+<p>Materialize one runnable phenotype from a compressed strict-genome archive using validated contract data.
+Runtime hints are applied only after strict-genome restoration so deterministic genotype state stays authoritative.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedArchive</code> - Base64-wrapped strict-genome archive payload.</li>
+<li><code>runtimeHints</code> - Optional phenotype-only metadata to restore.</li>
+</ul>
+<p>Returns: Rebuilt executable runtime phenotype.</p>
+<h3 id="deserializecompressedgenomearchiveasync">deserializeCompressedGenomeArchiveAsync</h3><pre><code class="language-ts">deserializeCompressedGenomeArchiveAsync(
+  compressedArchive: CompressedSerializedGenomeArchive,
+  runtimeHints: GenomeMaterializationRuntimeHints,
+  options: CompressedArchiveDecodeOptions,
+): Promise&lt;default&gt;
+</code></pre>
+<p>Materialize one runnable phenotype from a compressed strict-genome archive with async decode progress callbacks.
+This path is suited for browser or streaming contexts where large payload inflation should stay responsive.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedArchive</code> - Base64-wrapped strict-genome archive payload.</li>
+<li><code>runtimeHints</code> - Optional phenotype-only metadata to restore.</li>
+<li><code>options</code> - Optional incremental decode callbacks.</li>
+</ul>
+<p>Returns: Rebuilt executable runtime phenotype.</p>
+<h3 id="deserializecompressedgenomearchiveasyncwithmetrics">deserializeCompressedGenomeArchiveAsyncWithMetrics</h3><pre><code class="language-ts">deserializeCompressedGenomeArchiveAsyncWithMetrics(
+  compressedArchive: CompressedSerializedGenomeArchive,
+  runtimeHints: GenomeMaterializationRuntimeHints,
+  options: CompressedArchiveDecodeOptions,
+): Promise&lt;CompressedArchiveDecodeResult&lt;default&gt;&gt;
+</code></pre>
+<p>Materialize one runnable phenotype from a compressed strict-genome archive with async decode metrics and progress support.
+The returned telemetry helps compare streaming decode strategies while preserving the same strict reconstruction contract.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedArchive</code> - Base64-wrapped strict-genome archive payload.</li>
+<li><code>runtimeHints</code> - Optional phenotype-only metadata to restore.</li>
+<li><code>options</code> - Optional incremental decode callbacks.</li>
+</ul>
+<p>Returns: Rebuilt network plus decode metrics.</p>
+<h3 id="deserializecompressedgenomearchivewithmetrics">deserializeCompressedGenomeArchiveWithMetrics</h3><pre><code class="language-ts">deserializeCompressedGenomeArchiveWithMetrics(
+  compressedArchive: CompressedSerializedGenomeArchive,
+  runtimeHints: GenomeMaterializationRuntimeHints,
+): CompressedArchiveDecodeResult&lt;default&gt;
+</code></pre>
+<p>Materialize one runnable phenotype from a compressed strict-genome archive and report decode metrics for runtime analysis.
+This variant keeps decode telemetry alongside the rebuilt network for reproducibility and performance audits.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedArchive</code> - Base64-wrapped strict-genome archive payload.</li>
+<li><code>runtimeHints</code> - Optional phenotype-only metadata to restore.</li>
+</ul>
+<p>Returns: Rebuilt network plus decode metrics.</p>
+<h3 id="parsecompressedgenomearchive">parseCompressedGenomeArchive</h3><pre><code class="language-ts">parseCompressedGenomeArchive(
+  compressedArchive: CompressedSerializedGenomeArchive,
+): NeatGenome
+</code></pre>
+<p>Parse one archived strict genome contract back into validated JSON state before any runtime materialization begins.
+This boundary enforces archive tags and schema validity so malformed payloads fail with clear diagnostics.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedArchive</code> - Base64-wrapped strict-genome archive payload.</li>
+</ul>
+<p>Returns: Restored strict genome contract.</p>
+<h3 id="parsecompressedgenomearchiveasync">parseCompressedGenomeArchiveAsync</h3><pre><code class="language-ts">parseCompressedGenomeArchiveAsync(
+  compressedArchive: CompressedSerializedGenomeArchive,
+  options: CompressedArchiveDecodeOptions,
+): Promise&lt;NeatGenome&gt;
+</code></pre>
+<p>Parse one archived strict genome contract with async runtime codecs and progress callbacks.</p>
+<p>Browser runtimes prefer the streaming decode path so large archives can emit
+incremental progress while <code>DecompressionStream</code> inflates the wrapped UTF-8
+JSON bytes. Node falls back to one completed snapshot.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedArchive</code> - Base64-wrapped strict-genome archive payload.</li>
+<li><code>options</code> - Optional incremental decode callbacks.</li>
+</ul>
+<p>Returns: Restored strict genome contract.</p>
+<h3 id="serializecompressedgenomearchive">serializeCompressedGenomeArchive</h3><pre><code class="language-ts">serializeCompressedGenomeArchive(
+  options: CompressedSerializedGenomeArchiveOptions,
+): CompressedSerializedGenomeArchive
+</code></pre>
+<p>Archive one runtime phenotype through the strict <code>NeatGenome</code> contract.</p>
+<p>This keeps the payload structural and replay-safe: runtime activation traces,
+slab allocations, and other phenotype-only state remain outside the archive.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance to archive.</li>
+<li><code>options</code> - Optional archive codec and genome-capture settings.</li>
+</ul>
+<p>Returns: Base64-wrapped compressed strict-genome archive.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const archive = serializeCompressedGenomeArchive.call(network);
+const rebuiltNetwork = deserializeCompressedGenomeArchive(archive);
+</code></pre>
+<h3 id="serializecompressedgenomearchivewithmetrics">serializeCompressedGenomeArchiveWithMetrics</h3><pre><code class="language-ts">serializeCompressedGenomeArchiveWithMetrics(
+  options: CompressedSerializedGenomeArchiveOptions,
+): CompressedArchiveEncodeResult&lt;CompressedSerializedGenomeArchive&gt;
+</code></pre>
+<p>Archive one runtime phenotype through the strict genome contract and report deterministic encode metrics for observability.
+The metrics payload helps compare codec and capture-option tradeoffs without changing archive semantics.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance to archive.</li>
+<li><code>options</code> - Optional archive codec and genome-capture settings.</li>
+</ul>
+<p>Returns: Archived strict-genome payload plus encode metrics.</p>
+<h2 id="architecture-network-serialize-network-serialize-public-utils-ts">architecture/network/serialize/network.serialize.public.utils.ts</h2><p>Public serialization-facing helpers that stay above the lower-level payload builders.</p>
+<p>This file owns small convenience methods that callers expect on <code>Network</code>
+itself, while delegating the real persistence work to the serialize chapter.</p>
+<h3 id="cloneimpl">cloneImpl</h3><pre><code class="language-ts">cloneImpl(): default
+</code></pre>
+<p>Create a deep copy of one network through the verbose JSON round-trip.</p>
+<p>This keeps cloning behavior aligned with the same versioned payload contract
+used by <code>toJSON()</code> and <code>fromJSON()</code>, so clone semantics stay stable as the
+serialization chapter evolves.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Target network instance.</li>
+</ul>
+<p>Returns: Deep-cloned network instance.</p>
+<h2 id="architecture-network-serialize-network-serialize-compact-utils-ts">architecture/network/serialize/network.serialize.compact.utils.ts</h2><h3 id="assigncompactgatergeneidwhenprovided">assignCompactGaterGeneIdWhenProvided</h3><pre><code class="language-ts">assignCompactGaterGeneIdWhenProvided(
+  networkInternals: SerializeNetworkInternals,
+  gaterIndex: number | null,
+  gaterGeneId: number | null | undefined,
+): void
+</code></pre>
+<p>Restores a gater node&#39;s historical gene id when compact metadata provides it.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>gaterIndex</code> - Optional compact gater index.</li>
+<li><code>gaterGeneId</code> - Optional persisted gater gene id.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assigncompactgaterwhenvalid">assignCompactGaterWhenValid</h3><pre><code class="language-ts">assignCompactGaterWhenValid(
+  networkInternals: SerializeNetworkInternals,
+  gaterIndex: number | null,
+  createdConnection: default | undefined,
+): void
+</code></pre>
+<p>Assigns compact gater when both connection and gater index are valid.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>gaterIndex</code> - Optional gater index.</li>
+<li><code>createdConnection</code> - Created connection.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="collectallconnections">collectAllConnections</h3><pre><code class="language-ts">collectAllConnections(
+  networkInternals: SerializeNetworkInternals,
+): default[]
+</code></pre>
+<p>Collects all runtime connections into a single list.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+</ul>
+<p>Returns: Combined connections.</p>
+<h3 id="collectnodeactivations">collectNodeActivations</h3><pre><code class="language-ts">collectNodeActivations(
+  nodes: default[],
+): number[]
+</code></pre>
+<p>Collect node activation values in positional order so compact payload slot alignment stays deterministic across export and import paths.
+The returned vector is index-stable relative to the current node list order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Node list.</li>
+</ul>
+<p>Returns: Activation list aligned to node indices.</p>
+<h3 id="collectnodegeneids">collectNodeGeneIds</h3><pre><code class="language-ts">collectNodeGeneIds(
+  nodes: default[],
+): (number | null)[]
+</code></pre>
+<p>Collects stable node gene ids aligned to compact node order.</p>
+<p>This optional compact payload slot closes the identity gap that previously forced
+restored nodes to receive fresh constructor-time ids.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Node list in compact export order.</li>
+</ul>
+<p>Returns: Gene-id list aligned to node indices.</p>
+<h3 id="collectnodesquashkeys">collectNodeSquashKeys</h3><pre><code class="language-ts">collectNodeSquashKeys(
+  nodes: default[],
+): string[]
+</code></pre>
+<p>Collect node activation keys in positional order by normalizing function references to stable string identifiers.
+This keeps compact payloads portable across runtimes where function identity values cannot be serialized directly.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Node list.</li>
+</ul>
+<p>Returns: Squash-key list aligned to node indices.</p>
+<h3 id="collectnodestates">collectNodeStates</h3><pre><code class="language-ts">collectNodeStates(
+  nodes: default[],
+): number[]
+</code></pre>
+<p>Collect node state values in positional order so recurrent runtime state can be restored exactly after compact deserialization.
+This preserves alignment with activation and squash-key arrays in the compact tuple.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Node list.</li>
+</ul>
+<p>Returns: State list aligned to node indices.</p>
+<h3 id="collectserializedconnections">collectSerializedConnections</h3><pre><code class="language-ts">collectSerializedConnections(
+  networkInternals: SerializeNetworkInternals,
+): SerializedConnection[]
+</code></pre>
+<p>Collect compact connection records from forward and self-connection groups while preserving historical identity metadata.
+Callers should refresh node indices first so endpoint references remain canonical.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+</ul>
+<p>Returns: Serialized connection list.</p>
+<h3 id="createconnection">createConnection</h3><pre><code class="language-ts">createConnection(
+  networkInternals: SerializeNetworkInternals,
+  sourceNode: default,
+  targetNode: default,
+  weight: number,
+): default | undefined
+</code></pre>
+<p>Creates one connection and returns first created instance.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>sourceNode</code> - Source node.</li>
+<li><code>targetNode</code> - Target node.</li>
+<li><code>weight</code> - Connection weight.</li>
+</ul>
+<p>Returns: Created connection or undefined.</p>
+<h3 id="createnodewithtype">createNodeWithType</h3><pre><code class="language-ts">createNodeWithType(
+  nodeType: string,
+): default
+</code></pre>
+<p>Creates one node with provided type.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeType</code> - Node type.</li>
+</ul>
+<p>Returns: New node.</p>
+<h3 id="hydratenodestatefromcompactpayload">hydrateNodeStateFromCompactPayload</h3><pre><code class="language-ts">hydrateNodeStateFromCompactPayload(
+  rebuiltNode: default,
+  activation: number,
+  state: number,
+  squashName: string | undefined,
+  nodeIndex: number,
+): void
+</code></pre>
+<p>Hydrates node runtime state from compact tuple values.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rebuiltNode</code> - Node to hydrate.</li>
+<li><code>activation</code> - Activation value.</li>
+<li><code>state</code> - State value.</li>
+<li><code>squashName</code> - Activation key.</li>
+<li><code>nodeIndex</code> - Canonical node index.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="isserializedconnectioninnodebounds">isSerializedConnectionInNodeBounds</h3><pre><code class="language-ts">isSerializedConnectionInNodeBounds(
+  networkInternals: SerializeNetworkInternals,
+  serializedConnection: SerializedConnection,
+): boolean
+</code></pre>
+<p>Checks compact connection bounds against current node list.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>serializedConnection</code> - Serialized connection record.</li>
+</ul>
+<p>Returns: True when endpoints are valid.</p>
+<h3 id="rebuildconnectionsfromcompactpayload">rebuildConnectionsFromCompactPayload</h3><pre><code class="language-ts">rebuildConnectionsFromCompactPayload(
+  compactConnectionContext: CompactConnectionRebuildContext,
+): void
+</code></pre>
+<p>Rebuilds runtime connections from compact connection records.</p>
+<p>Invalid endpoint or gater indices are skipped with warnings to preserve import flow.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compactConnectionContext</code> - Compact connection rebuild context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<p>Example:</p>
+<pre><code class="language-ts">import { rebuildConnectionsFromCompactPayload } from &#39;./network.serialize.compact.utils&#39;;
+
+rebuildConnectionsFromCompactPayload({
+  networkInternals,
+  serializedConnections,
+});
+</code></pre>
+<h3 id="rebuildnodesfromcompactpayload">rebuildNodesFromCompactPayload</h3><pre><code class="language-ts">rebuildNodesFromCompactPayload(
+  networkInternals: SerializeNetworkInternals,
+  compactNodeContext: CompactNodeRebuildContext,
+): void
+</code></pre>
+<p>Rebuild runtime nodes from compact payload arrays by restoring type, scalar state, activation key, and optional gene identifiers.
+Node type is inferred from positional input/output boundaries to keep payload shape compact.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>compactNodeContext</code> - Compact node rebuild context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<p>Example:</p>
+<pre><code class="language-ts">import { rebuildNodesFromCompactPayload } from &#39;./network.serialize.compact.utils&#39;;
+
+rebuildNodesFromCompactPayload(networkInternals, compactNodeContext);
+</code></pre>
+<h3 id="rebuildonecompactconnection">rebuildOneCompactConnection</h3><pre><code class="language-ts">rebuildOneCompactConnection(
+  networkInternals: SerializeNetworkInternals,
+  serializedConnection: SerializedConnection,
+): void
+</code></pre>
+<p>Rebuilds one compact serialized connection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+<li><code>serializedConnection</code> - Serialized connection record.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="refreshnodeindices">refreshNodeIndices</h3><pre><code class="language-ts">refreshNodeIndices(
+  nodes: default[],
+): void
+</code></pre>
+<p>Refreshes <code>node.index</code> for each node in list order.</p>
+<p>Canonical indices are required so compact connection records can store endpoints
+and gaters as stable numeric positions.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Node list.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolvenodetypefromcompactindex">resolveNodeTypeFromCompactIndex</h3><pre><code class="language-ts">resolveNodeTypeFromCompactIndex(
+  nodeIndex: number,
+  totalNodeCount: number,
+  input: number,
+  output: number,
+): string
+</code></pre>
+<p>Resolves node type from compact tuple position.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeIndex</code> - Node index.</li>
+<li><code>totalNodeCount</code> - Total node count.</li>
+<li><code>input</code> - Input size.</li>
+<li><code>output</code> - Output size.</li>
+</ul>
+<p>Returns: Node type string.</p>
+<h3 id="serializeoneconnection">serializeOneConnection</h3><pre><code class="language-ts">serializeOneConnection(
+  connectionInstance: default,
+): SerializedConnection
+</code></pre>
+<p>Serializes one connection into compact indexed form.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connectionInstance</code> - Runtime connection.</li>
+</ul>
+<p>Returns: Serialized connection record.</p>
+<h2 id="architecture-network-serialize-network-serialize-runtime-utils-ts">architecture/network/serialize/network.serialize.runtime.utils.ts</h2><h3 id="applyrestoredconnectionidentity">applyRestoredConnectionIdentity</h3><pre><code class="language-ts">applyRestoredConnectionIdentity(
+  createdConnection: default | undefined,
+  identity: { innovation?: number | undefined; enabled?: boolean | undefined; },
+): void
+</code></pre>
+<p>Restores persisted connection identity onto a freshly created runtime connection.</p>
+<p>Import paths still build edges through <code>connect()</code> so graph bookkeeping stays
+centralized. This helper then reapplies the persisted innovation and enabled state.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>createdConnection</code> - Newly created runtime connection.</li>
+<li><code>identity</code> - Persisted identity metadata.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="asnetworkinternals">asNetworkInternals</h3><pre><code class="language-ts">asNetworkInternals(
+  network: default,
+): SerializeNetworkInternals
+</code></pre>
+<p>Cast a public network instance to the internal serializer runtime shape so low-level deserialization helpers can access mutable fields without duplicating bridge-cast logic.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance.</li>
+</ul>
+<p>Returns: Runtime internals.</p>
+<h3 id="asnetworkinternalswithdropout">asNetworkInternalsWithDropout</h3><pre><code class="language-ts">asNetworkInternalsWithDropout(
+  network: default,
+): NetworkInternalsWithDropout
+</code></pre>
+<p>Cast a public network instance to serializer internals that include optional dropout metadata so verbose restore and export paths can read dropout fields consistently.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance.</li>
+</ul>
+<p>Returns: Runtime internals with optional dropout.</p>
+<h3 id="asnodeinternals">asNodeInternals</h3><pre><code class="language-ts">asNodeInternals(
+  node: default,
+): SerializeNodeInternals
+</code></pre>
+<p>Cast a node instance to its internal runtime representation so serializer helpers can read and write persisted node metadata through one shared bridge.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Node instance.</li>
+</ul>
+<p>Returns: Node internals.</p>
+<h3 id="createcompactpayloadcontext">createCompactPayloadContext</h3><pre><code class="language-ts">createCompactPayloadContext(
+  data: CompactSerializedNetworkTuple,
+): CompactPayloadContext
+</code></pre>
+<p>Normalizes a compact tuple payload into a named object context.</p>
+<p>This improves readability in orchestration code by replacing positional tuple access
+with semantically named fields.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>data</code> - Compact tuple payload.</li>
+</ul>
+<p>Returns: Normalized payload context.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const compactPayload = createCompactPayloadContext(compactTuple);
+</code></pre>
+<h3 id="createnetworkinstance">createNetworkInstance</h3><pre><code class="language-ts">createNetworkInstance(
+  input: number,
+  output: number,
+): default
+</code></pre>
+<p>Create a fresh network instance for deserialize workflows so restoration code can hydrate graph state onto a clean runtime object.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>input</code> - Input size.</li>
+<li><code>output</code> - Output size.</li>
+</ul>
+<p>Returns: New network instance.</p>
+<h3 id="hydratenodegeneidwhenprovided">hydrateNodeGeneIdWhenProvided</h3><pre><code class="language-ts">hydrateNodeGeneIdWhenProvided(
+  node: default,
+  geneId: number | null | undefined,
+): void
+</code></pre>
+<p>Writes a restored node gene id when serialized identity data is available.</p>
+<p>Compact restore paths construct fresh runtime nodes first, then overwrite the
+temporary constructor-assigned ids with persisted historical ids.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Restored runtime node.</li>
+<li><code>geneId</code> - Persisted stable gene id.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="isfiniteindex">isFiniteIndex</h3><pre><code class="language-ts">isFiniteIndex(
+  index: number,
+): boolean
+</code></pre>
+<p>Check whether a candidate index value is finite so endpoint validation can reject NaN and infinite references before bounds checks execute.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>index</code> - Candidate index value.</li>
+</ul>
+<p>Returns: True when finite number.</p>
+<h3 id="isnodeindexinbounds">isNodeIndexInBounds</h3><pre><code class="language-ts">isNodeIndexInBounds(
+  nodes: default[],
+  index: number,
+): boolean
+</code></pre>
+<p>Check whether a candidate node index falls inside the valid array bounds so restore logic can reject malformed serialized endpoint references.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Node list.</li>
+<li><code>index</code> - Candidate index.</li>
+</ul>
+<p>Returns: True when index is valid.</p>
+<h3 id="resetmutableruntimecollections">resetMutableRuntimeCollections</h3><pre><code class="language-ts">resetMutableRuntimeCollections(
+  networkInternals: SerializeNetworkInternals,
+): void
+</code></pre>
+<p>Clear mutable runtime collections before reconstruction so node, connection, self-connection, and gate arrays are reset to a predictable empty baseline.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Runtime internals.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolvenetworksize">resolveNetworkSize</h3><pre><code class="language-ts">resolveNetworkSize(
+  compactPayload: CompactPayloadContext,
+  inputSizeOverride: number | undefined,
+  outputSizeOverride: number | undefined,
+): ResolvedNetworkSizeContext
+</code></pre>
+<p>Resolve effective input and output dimensions using optional explicit overrides so compact payload restore paths can apply caller-provided sizes deterministically.</p>
+<p>When an override is provided, it takes precedence over serialized values.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compactPayload</code> - Compact payload context.</li>
+<li><code>inputSizeOverride</code> - Optional input override.</li>
+<li><code>outputSizeOverride</code> - Optional output override.</li>
+</ul>
+<p>Returns: Resolved network size context.</p>
+<h3 id="resolvesizeoverride">resolveSizeOverride</h3><pre><code class="language-ts">resolveSizeOverride(
+  overrideValue: number | undefined,
+  serializedValue: number,
+): number
+</code></pre>
+<p>Resolve one size value with override-first semantics so deserialization can prioritize explicit caller intent while preserving serialized fallbacks when overrides are absent.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>overrideValue</code> - Optional explicit override.</li>
+<li><code>serializedValue</code> - Serialized fallback value.</li>
+</ul>
+<p>Returns: Effective size.</p>
+<h3 id="syncrestoredhistoricalcounters">syncRestoredHistoricalCounters</h3><pre><code class="language-ts">syncRestoredHistoricalCounters(
+  networkInternals: SerializeNetworkInternals,
+): void
+</code></pre>
+<p>Advances static node and connection counters past all restored historical ids.</p>
+<p>Without this step, a fresh process could deserialize a high-id genome and then
+allocate colliding <code>geneId</code> or <code>innovation</code> values on the next mutation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInternals</code> - Restored mutable network internals.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-serialize-network-serialize-activation-utils-ts">architecture/network/serialize/network.serialize.activation.utils.ts</h2><h3 id="findactivationbyfunctionname">findActivationByFunctionName</h3><pre><code class="language-ts">findActivationByFunctionName(
+  squashName: string | undefined,
+): ActivationFunction | undefined
+</code></pre>
+<p>Resolves activation by matching function.name.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>squashName</code> - Activation function name.</li>
+</ul>
+<p>Returns: Activation function or undefined.</p>
+<h3 id="findactivationbykey">findActivationByKey</h3><pre><code class="language-ts">findActivationByKey(
+  squashName: string | undefined,
+): ActivationFunction | undefined
+</code></pre>
+<p>Resolves activation by direct key lookup.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>squashName</code> - Activation key.</li>
+</ul>
+<p>Returns: Activation function or undefined.</p>
+<h3 id="findactivationentrybyreference">findActivationEntryByReference</h3><pre><code class="language-ts">findActivationEntryByReference(
+  squashFunction: ActivationFunction,
+): [string, ActivationFunction] | undefined
+</code></pre>
+<p>Finds activation entry by function reference.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>squashFunction</code> - Activation function instance.</li>
+</ul>
+<p>Returns: Activation entry or undefined.</p>
+<h3 id="resolveactivationfunction">resolveActivationFunction</h3><pre><code class="language-ts">resolveActivationFunction(
+  squashName: string | undefined,
+): ActivationFunction
+</code></pre>
+<p>Resolves an activation function from a stored key or function name.</p>
+<p>Unknown values produce a warning and return the identity activation to keep
+deserialization deterministic and non-throwing.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>squashName</code> - Activation key or function name.</li>
+</ul>
+<p>Returns: Activation function.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const squashFunction = resolveActivationFunction(&#39;relu&#39;);
+</code></pre>
+<h3 id="resolveactivationkey">resolveActivationKey</h3><pre><code class="language-ts">resolveActivationKey(
+  squashFunction: ActivationFunction,
+): string
+</code></pre>
+<p>Resolves a canonical activation key from a runtime activation function reference.</p>
+<p>Resolution order is: attached stable key, direct registry reference match,
+then the function name, then a stable identity fallback key.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>squashFunction</code> - Activation function instance.</li>
+</ul>
+<p>Returns: Activation key.</p>
+<p>Example:</p>
+<pre><code class="language-ts">import * as methods from &#39;../../../methods/methods&#39;;
+
+const key = resolveActivationKey(methods.Activation.tanh);
+</code></pre>
+<h3 id="resolveattachedactivationkey">resolveAttachedActivationKey</h3><pre><code class="language-ts">resolveAttachedActivationKey(
+  squashFunction: ActivationFunction,
+): string | undefined
+</code></pre>
+<p>Resolves a stable activation key attached directly to the function object.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>squashFunction</code> - Activation function instance.</li>
+</ul>
+<p>Returns: Attached activation key or undefined.</p>
+<h3 id="resolvenamedactivationfromfunction">resolveNamedActivationFromFunction</h3><pre><code class="language-ts">resolveNamedActivationFromFunction(
+  squashFunction: ActivationFunction,
+): string | undefined
+</code></pre>
+<p>Resolves activation name from function.name when non-empty.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>squashFunction</code> - Activation function instance.</li>
+</ul>
+<p>Returns: Activation name or undefined.</p>
+<h3 id="warnunknownsquashname">warnUnknownSquashName</h3><pre><code class="language-ts">warnUnknownSquashName(
+  squashName: string | undefined,
+): void
+</code></pre>
+<p>Warns about unknown activation and fallback to identity.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>squashName</code> - Unknown activation name.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-serialize-network-serialize-compression-utils-ts">architecture/network/serialize/network.serialize.compression.utils.ts</h2><p>Archive one compressed network payload with the best available async runtime codec.</p>
+<p>Browser runtimes prefer <code>CompressionStream</code> with gzip so large payload work can
+stay off the synchronous main-thread path. Node falls back to the existing zlib
+owner when browser streams are unavailable.</p>
+<h3 id="builddecompressedconnectionrow">buildDecompressedConnectionRow</h3><pre><code class="language-ts">buildDecompressedConnectionRow(
+  compressedConnections: CompressedSerializedConnectionBlock,
+  decodedWeights: number[],
+  disabledMask: boolean[] | undefined,
+  connectionIndex: number,
+): NetworkJSONConnection
+</code></pre>
+<p>Rebuild one compact serialized connection row from compressed vectors at the given index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedConnections</code> - Compressed connection block to read from.</li>
+<li><code>decodedWeights</code> - Decoded float64 weight sequence.</li>
+<li><code>disabledMask</code> - Optional disabled-run mask expanded over all connections.</li>
+<li><code>connectionIndex</code> - Zero-based index of the connection to rebuild.</li>
+</ul>
+<p>Returns: One reconstructed serialized connection row.</p>
+<h3 id="collectdecodedarchivepayloadbytes">collectDecodedArchivePayloadBytes</h3><pre><code class="language-ts">collectDecodedArchivePayloadBytes(
+  decodedStream: ReadableStream&lt;Uint8Array&lt;ArrayBufferLike&gt;&gt;,
+  encodedByteLength: number,
+  options: CompressedArchiveDecodeOptions,
+): Promise&lt;Uint8Array&lt;ArrayBufferLike&gt;&gt;
+</code></pre>
+<p>Collect one decoded archive stream into bytes while surfacing chunk progress.</p>
+<p>The implementation buffers one chunk ahead so the final emitted snapshot can
+mark <code>done: true</code> on the last real decoded chunk rather than on a synthetic
+zero-byte completion event.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>decodedStream</code> - Stream of decoded UTF-8 payload chunks.</li>
+<li><code>encodedByteLength</code> - Total compressed archive byte length.</li>
+<li><code>options</code> - Optional incremental progress callbacks.</li>
+</ul>
+<p>Returns: Concatenated decoded payload bytes.</p>
+<h3 id="compressarchivepayloadbytes">compressArchivePayloadBytes</h3><pre><code class="language-ts">compressArchivePayloadBytes(
+  payloadBytes: Uint8Array&lt;ArrayBufferLike&gt;,
+  compression: CompressedSerializedNetworkArchiveCompression,
+): Uint8Array&lt;ArrayBufferLike&gt;
+</code></pre>
+<p>Compress UTF-8 payload bytes with one supported Node-side archive codec so binary wrappers stay compact while preserving exact JSON payload semantics.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloadBytes</code> - UTF-8 payload bytes.</li>
+<li><code>compression</code> - Archive compression codec.</li>
+</ul>
+<p>Returns: Compressed payload bytes.</p>
+<h3 id="compressarchivepayloadbytesasync">compressArchivePayloadBytesAsync</h3><pre><code class="language-ts">compressArchivePayloadBytesAsync(
+  payloadBytes: Uint8Array&lt;ArrayBufferLike&gt;,
+  compression: CompressedSerializedNetworkArchiveCompression,
+): Promise&lt;Uint8Array&lt;ArrayBufferLike&gt;&gt;
+</code></pre>
+<p>Compress UTF-8 payload bytes with the best available async archive codec.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloadBytes</code> - UTF-8 payload bytes.</li>
+<li><code>compression</code> - Archive compression codec.</li>
+</ul>
+<p>Returns: Compressed payload bytes.</p>
+<h3 id="compressed-network-archive-encoding">COMPRESSED_NETWORK_ARCHIVE_ENCODING</h3><p>Base64 string encoding applied to archived compressed bytes for safe JSON transport and storage of binary payloads.</p>
+<h3 id="compressed-network-archive-format">COMPRESSED_NETWORK_ARCHIVE_FORMAT</h3><p>Stable format tag identifying the compressed archive wrapper payload version used by archive encode and decode utilities.</p>
+<h3 id="compressed-network-format">COMPRESSED_NETWORK_FORMAT</h3><p>Stable format tag identifying the compressed compact serialization payload version consumed by decompression utilities.</p>
+<h3 id="compressed-weight-encoding">COMPRESSED_WEIGHT_ENCODING</h3><p>Stable format tag identifying the IEEE-754 float64 signed-int16 delta encoding used for compact weight storage.</p>
+<h3 id="compressedarchivedecodemetrics">CompressedArchiveDecodeMetrics</h3><p>Decode metrics extending the shared archive metrics with elapsed decode time in milliseconds.</p>
+<h3 id="compressedarchivedecodeoptions">CompressedArchiveDecodeOptions</h3><p>Optional progress and lifecycle callbacks supplied by the caller while an archive payload is being decoded.</p>
+<h3 id="compressedarchivedecodeprogress">CompressedArchiveDecodeProgress</h3><p>Progress snapshot emitted incrementally while an archive payload is being decoded so callers can surface decode progress.</p>
+<h3 id="compressedarchivedecoderesult">CompressedArchiveDecodeResult</h3><p>Typed result wrapper pairing the decoded value with byte-size and timing metrics from the decode operation.</p>
+<h3 id="compressedarchiveencodemetrics">CompressedArchiveEncodeMetrics</h3><p>Encode metrics extending the shared archive metrics with elapsed encode time in milliseconds.</p>
+<h3 id="compressedarchiveencoderesult">CompressedArchiveEncodeResult</h3><p>Typed result wrapper pairing the encoded archive payload with its byte-size and timing metrics.</p>
+<h3 id="compressedarchivemetrics">CompressedArchiveMetrics</h3><p>Shared byte-size and compression-ratio metrics recorded for a single archive encode or decode operation.</p>
+<h3 id="compressmatchingruns">compressMatchingRuns</h3><pre><code class="language-ts">compressMatchingRuns(
+  values: Value[],
+  shouldCompressValue: (value: Value) =&gt; boolean,
+): CompressedSerializedIndexRun[] | undefined
+</code></pre>
+<p>Collapse contiguous matching entries into run-length metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>values</code> - Ordered values to scan.</li>
+<li><code>shouldCompressValue</code> - Predicate deciding whether one value belongs to a run.</li>
+</ul>
+<p>Returns: Run metadata or <code>undefined</code> when no matching span exists.</p>
+<h3 id="compressoptionalnumericseries">compressOptionalNumericSeries</h3><pre><code class="language-ts">compressOptionalNumericSeries(
+  values: (number | null | undefined)[],
+): (number | null)[] | undefined
+</code></pre>
+<p>Collapse optional numeric fields to <code>undefined</code> when no entries are present.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>values</code> - Optional numeric series.</li>
+</ul>
+<p>Returns: Normalized nullable series or <code>undefined</code> when empty of numeric content.</p>
+<h3 id="compressserializedconnections">compressSerializedConnections</h3><pre><code class="language-ts">compressSerializedConnections(
+  serializedConnections: NetworkJSONConnection[],
+): CompressedSerializedConnectionBlock
+</code></pre>
+<p>Exported contract for compressSerializedConnections.</p>
+<h3 id="concatenatearchivebytechunks">concatenateArchiveByteChunks</h3><pre><code class="language-ts">concatenateArchiveByteChunks(
+  byteChunks: Uint8Array&lt;ArrayBufferLike&gt;[],
+): Uint8Array&lt;ArrayBufferLike&gt;
+</code></pre>
+<p>Concatenate one ordered set of archive byte chunks into a single buffer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>byteChunks</code> - Ordered archive byte chunks.</li>
+</ul>
+<p>Returns: One contiguous byte buffer.</p>
+<h3 id="countrunentries">countRunEntries</h3><pre><code class="language-ts">countRunEntries(
+  runs: CompressedSerializedIndexRun[] | undefined,
+): number
+</code></pre>
+<p>Count how many connection rows are covered by one run list.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runs</code> - Optional run metadata.</li>
+</ul>
+<p>Returns: Total covered row count.</p>
+<h3 id="createcompressedarchivedecodemetrics">createCompressedArchiveDecodeMetrics</h3><pre><code class="language-ts">createCompressedArchiveDecodeMetrics(
+  uncompressedByteLength: number,
+  compressedByteLength: number,
+  decodeTimeMs: number,
+): CompressedArchiveDecodeMetrics
+</code></pre>
+<p>Create one metrics snapshot for an archive decode operation so callers can inspect decompression efficiency and elapsed decoding cost consistently.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>uncompressedByteLength</code> - UTF-8 byte length after archive inflation.</li>
+<li><code>compressedByteLength</code> - Binary byte length before archive inflation.</li>
+<li><code>decodeTimeMs</code> - Elapsed decode time in milliseconds.</li>
+</ul>
+<p>Returns: Archive decode metrics.</p>
+<h3 id="createcompressedarchiveencodemetrics">createCompressedArchiveEncodeMetrics</h3><pre><code class="language-ts">createCompressedArchiveEncodeMetrics(
+  uncompressedByteLength: number,
+  compressedByteLength: number,
+  encodeTimeMs: number,
+): CompressedArchiveEncodeMetrics
+</code></pre>
+<p>Create one metrics snapshot for an archive encode operation so callers can log compression efficiency and elapsed encoding cost consistently.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>uncompressedByteLength</code> - UTF-8 byte length before archive compression.</li>
+<li><code>compressedByteLength</code> - Binary byte length after archive compression.</li>
+<li><code>encodeTimeMs</code> - Elapsed encode time in milliseconds.</li>
+</ul>
+<p>Returns: Archive encode metrics.</p>
+<h3 id="createcompressednetworkarchive">createCompressedNetworkArchive</h3><pre><code class="language-ts">createCompressedNetworkArchive(
+  compressedPayload: CompressedSerializedNetwork,
+  options: CompressedSerializedNetworkArchiveOptions,
+): CompressedSerializedNetworkArchive
+</code></pre>
+<p>Archive one compressed network payload with a Node-side binary codec.</p>
+<p>This is intentionally additive: the wrapped payload stays the exact JSON form
+returned by <code>serializeCompressed</code>, then gzip or zstd is applied above it.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedPayload</code> - Existing compressed network payload.</li>
+<li><code>options</code> - Optional archive compression settings.</li>
+</ul>
+<p>Returns: Base64-wrapped compressed archive payload.</p>
+<h3 id="createcompressednetworkarchiveasync">createCompressedNetworkArchiveAsync</h3><pre><code class="language-ts">createCompressedNetworkArchiveAsync(
+  compressedPayload: CompressedSerializedNetwork,
+  options: CompressedSerializedNetworkArchiveOptions,
+): Promise&lt;CompressedSerializedNetworkArchive&gt;
+</code></pre>
+<p>Exported contract for createCompressedNetworkArchiveAsync.</p>
+<h3 id="decodearchivepayloadbase64">decodeArchivePayloadBase64</h3><pre><code class="language-ts">decodeArchivePayloadBase64(
+  payload: string,
+): Uint8Array&lt;ArrayBufferLike&gt;
+</code></pre>
+<p>Decode archive payload bytes from base64 without assuming a specific runtime so compressed archives can hydrate reliably in browser and Node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Base64-encoded payload text.</li>
+</ul>
+<p>Returns: Binary archive payload bytes.</p>
+<h3 id="decodeexactconnectionweights">decodeExactConnectionWeights</h3><pre><code class="language-ts">decodeExactConnectionWeights(
+  weightWords: CompressedSerializedConnectionWeights,
+  connectionCount: number,
+): number[]
+</code></pre>
+<p>Decode one exact signed-16-bit delta stream back to float64 weights.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>weightWords</code> - Encoded weight-word payload.</li>
+<li><code>connectionCount</code> - Expected number of weights.</li>
+</ul>
+<p>Returns: Exact reconstructed weights.</p>
+<h3 id="decodesignedint16wordstofloat64">decodeSignedInt16WordsToFloat64</h3><pre><code class="language-ts">decodeSignedInt16WordsToFloat64(
+  words: number[],
+): number
+</code></pre>
+<p>Decode four signed 16-bit words back into one float64 number.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>words</code> - Signed 16-bit little-endian words.</li>
+</ul>
+<p>Returns: Decoded numeric value.</p>
+<h3 id="decompressarchivepayloadbytes">decompressArchivePayloadBytes</h3><pre><code class="language-ts">decompressArchivePayloadBytes(
+  payloadBytes: Uint8Array&lt;ArrayBufferLike&gt;,
+  compression: CompressedSerializedNetworkArchiveCompression,
+): Uint8Array&lt;ArrayBufferLike&gt;
+</code></pre>
+<p>Decompress archive payload bytes with one supported Node-side codec so compressed archive wrappers recover deterministic UTF-8 serialization payload bytes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloadBytes</code> - Compressed archive payload bytes.</li>
+<li><code>compression</code> - Archive compression codec.</li>
+</ul>
+<p>Returns: Inflated UTF-8 payload bytes.</p>
+<h3 id="decompressarchivepayloadbytesasync">decompressArchivePayloadBytesAsync</h3><pre><code class="language-ts">decompressArchivePayloadBytesAsync(
+  payloadBytes: Uint8Array&lt;ArrayBufferLike&gt;,
+  compression: CompressedSerializedNetworkArchiveCompression,
+  options: CompressedArchiveDecodeOptions,
+): Promise&lt;Uint8Array&lt;ArrayBufferLike&gt;&gt;
+</code></pre>
+<p>Decompress archive payload bytes with the best available async archive codec so browser and Node runtimes can share one non-blocking restore flow.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloadBytes</code> - Compressed archive payload bytes.</li>
+<li><code>compression</code> - Archive compression codec.</li>
+<li><code>options</code> - Optional incremental decode progress callbacks.</li>
+</ul>
+<p>Returns: Inflated UTF-8 payload bytes.</p>
+<h3 id="decompressarchivepayloadbyteswithbrowserstream">decompressArchivePayloadBytesWithBrowserStream</h3><pre><code class="language-ts">decompressArchivePayloadBytesWithBrowserStream(
+  payloadBytes: Uint8Array&lt;ArrayBufferLike&gt;,
+  streamConstructor: BrowserDecompressionStreamConstructor,
+  options: CompressedArchiveDecodeOptions,
+): Promise&lt;Uint8Array&lt;ArrayBufferLike&gt;&gt;
+</code></pre>
+<p>Decompress archive payload bytes through one browser stream while reporting progress.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloadBytes</code> - Compressed archive payload bytes.</li>
+<li><code>streamConstructor</code> - Browser decompression stream constructor.</li>
+<li><code>options</code> - Optional incremental progress callbacks.</li>
+</ul>
+<p>Returns: Inflated UTF-8 payload bytes.</p>
+<h3 id="decompressserializedconnections">decompressSerializedConnections</h3><pre><code class="language-ts">decompressSerializedConnections(
+  compressedConnections: CompressedSerializedConnectionBlock,
+): NetworkJSONConnection[]
+</code></pre>
+<p>Decompress one array-oriented connection block back into compact rows so archived connection payloads regain legacy-friendly per-edge field records.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedConnections</code> - Compressed connection block.</li>
+</ul>
+<p>Returns: Reconstructed serialized connection rows.</p>
+<h3 id="emitarchivedecodeprogress">emitArchiveDecodeProgress</h3><pre><code class="language-ts">emitArchiveDecodeProgress(
+  options: CompressedArchiveDecodeOptions,
+  progress: CompressedArchiveDecodeProgress,
+): Promise&lt;void&gt;
+</code></pre>
+<p>Notify callers that one decoded archive chunk has been observed.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>options</code> - Optional incremental progress callbacks.</li>
+<li><code>progress</code> - Progress payload for the decoded chunk.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="encodearchivepayloadbase64">encodeArchivePayloadBase64</h3><pre><code class="language-ts">encodeArchivePayloadBase64(
+  payloadBytes: Uint8Array&lt;ArrayBufferLike&gt;,
+): string
+</code></pre>
+<p>Encode archive payload bytes to base64 without assuming a specific runtime so archive wrappers remain portable across browser and Node environments.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloadBytes</code> - Binary archive payload bytes.</li>
+</ul>
+<p>Returns: Base64-encoded payload text.</p>
+<h3 id="encodeexactconnectionweights">encodeExactConnectionWeights</h3><pre><code class="language-ts">encodeExactConnectionWeights(
+  weights: number[],
+): CompressedSerializedConnectionWeights
+</code></pre>
+<p>Encode float64 weights into one exact signed-16-bit delta stream.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>weights</code> - Connection weights.</li>
+</ul>
+<p>Returns: Exact weight-word delta payload.</p>
+<h3 id="encodefloat64tosignedint16words">encodeFloat64ToSignedInt16Words</h3><pre><code class="language-ts">encodeFloat64ToSignedInt16Words(
+  value: number,
+): number[]
+</code></pre>
+<p>Encode one float64 number into four signed 16-bit words.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>value</code> - Numeric value to encode.</li>
+</ul>
+<p>Returns: Signed 16-bit little-endian words.</p>
+<h3 id="estimateserializedbytelength">estimateSerializedByteLength</h3><pre><code class="language-ts">estimateSerializedByteLength(
+  payload: unknown,
+): number
+</code></pre>
+<p>Estimate the UTF-8 byte length of one serialization payload so archive ratio metrics can compare compressed and uncompressed storage cost.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Payload to measure.</li>
+</ul>
+<p>Returns: UTF-8 byte length of the JSON string form.</p>
+<h3 id="expanddecodednonzeroweights">expandDecodedNonZeroWeights</h3><pre><code class="language-ts">expandDecodedNonZeroWeights(
+  decodedNonZeroWeights: number[],
+  zeroWeightMask: boolean[] | undefined,
+  connectionCount: number,
+): number[]
+</code></pre>
+<p>Expand the decoded non-zero weight sequence back across zero-weight spans.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>decodedNonZeroWeights</code> - Exact non-zero weights in encoded order.</li>
+<li><code>zeroWeightMask</code> - Optional zero-run membership mask.</li>
+<li><code>connectionCount</code> - Total number of serialized connections.</li>
+</ul>
+<p>Returns: Connection-aligned exact weight values.</p>
+<h3 id="expandrunstomask">expandRunsToMask</h3><pre><code class="language-ts">expandRunsToMask(
+  runs: CompressedSerializedIndexRun[] | undefined,
+  entryCount: number,
+): boolean[] | undefined
+</code></pre>
+<p>Expand run-length metadata into one boolean mask aligned to connection order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runs</code> - Optional run metadata.</li>
+<li><code>entryCount</code> - Total number of connection rows.</li>
+</ul>
+<p>Returns: Boolean run-membership mask or <code>undefined</code> when no runs exist.</p>
+<h3 id="hasnodecompressionruntime">hasNodeCompressionRuntime</h3><pre><code class="language-ts">hasNodeCompressionRuntime(): boolean
+</code></pre>
+<p>Determine whether the current runtime can resolve the Node compression owner.</p>
+<p>Returns: Whether Node zlib support is available.</p>
+<h3 id="ispositivezeroweightwords">isPositiveZeroWeightWords</h3><pre><code class="language-ts">isPositiveZeroWeightWords(
+  encodedWeightWords: number[],
+): boolean
+</code></pre>
+<p>Determine whether one encoded float64 word sequence represents exact positive zero.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>encodedWeightWords</code> - Signed 16-bit float64 words.</li>
+</ul>
+<p>Returns: Whether the encoded value is exact positive zero.</p>
+<h3 id="normalizesignedint16">normalizeSignedInt16</h3><pre><code class="language-ts">normalizeSignedInt16(
+  value: number,
+): number
+</code></pre>
+<p>Normalize one integer through wrapped signed-16-bit arithmetic.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>value</code> - Integer value to normalize.</li>
+</ul>
+<p>Returns: Wrapped signed 16-bit integer.</p>
+<h3 id="parsecompressednetworkarchive">parseCompressedNetworkArchive</h3><pre><code class="language-ts">parseCompressedNetworkArchive(
+  compressedArchive: CompressedSerializedNetworkArchive,
+): CompressedSerializedNetwork
+</code></pre>
+<p>Rebuild one compressed network payload from its Node-side archive wrapper so persisted archives can be restored into deterministic compact serialization objects.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedArchive</code> - Base64-wrapped compressed archive payload.</li>
+</ul>
+<p>Returns: Restored compressed network payload.</p>
+<h3 id="parsecompressednetworkarchiveasync">parseCompressedNetworkArchiveAsync</h3><pre><code class="language-ts">parseCompressedNetworkArchiveAsync(
+  compressedArchive: CompressedSerializedNetworkArchive,
+  options: CompressedArchiveDecodeOptions,
+): Promise&lt;CompressedSerializedNetwork&gt;
+</code></pre>
+<p>Rebuild one compressed network payload from its archive wrapper with async runtime codecs.</p>
+<p>Browser runtimes prefer <code>DecompressionStream</code> with gzip so archive hydration can
+stay off the synchronous main-thread path. Node falls back to the existing zlib
+owner when browser streams are unavailable.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedArchive</code> - Base64-wrapped compressed archive payload.</li>
+<li><code>options</code> - Optional incremental decode progress callbacks.</li>
+</ul>
+<p>Returns: Restored compressed network payload.</p>
+<h3 id="resolvebrowsercompressionstreamconstructor">resolveBrowserCompressionStreamConstructor</h3><pre><code class="language-ts">resolveBrowserCompressionStreamConstructor(): BrowserCompressionStreamConstructor | undefined
+</code></pre>
+<p>Resolve the browser compression-stream constructor when one is available.</p>
+<p>Returns: Browser compression-stream constructor.</p>
+<h3 id="resolvebrowserdecompressionstreamconstructor">resolveBrowserDecompressionStreamConstructor</h3><pre><code class="language-ts">resolveBrowserDecompressionStreamConstructor(): BrowserDecompressionStreamConstructor | undefined
+</code></pre>
+<p>Resolve the browser decompression-stream constructor when one is available.</p>
+<p>Returns: Browser decompression-stream constructor.</p>
+<h3 id="resolveenabledstate">resolveEnabledState</h3><pre><code class="language-ts">resolveEnabledState(
+  isDisabled: boolean,
+  enabledStates: boolean[] | undefined,
+  index: number,
+): boolean
+</code></pre>
+<p>Resolve the enabled state for a decompressed connection, honoring the disabled mask first.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>isDisabled</code> - Whether the disabled run mask marks this connection as disabled.</li>
+<li><code>enabledStates</code> - Optional compressed enabled-states vector.</li>
+<li><code>index</code> - Zero-based index to retrieve.</li>
+</ul>
+<p>Returns: <code>false</code> when disabled, otherwise the stored state or <code>true</code> as default.</p>
+<h3 id="resolvegaterindex">resolveGaterIndex</h3><pre><code class="language-ts">resolveGaterIndex(
+  encodedGaterIndex: number | undefined,
+): number | null
+</code></pre>
+<p>Resolve the gater index for a decompressed connection, mapping the sentinel to <code>null</code>.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>encodedGaterIndex</code> - Raw gater index from the compressed block (may be the null sentinel).</li>
+</ul>
+<p>Returns: The gater index, or <code>null</code> when the sentinel or absent.</p>
+<h3 id="resolvenodecompressionmodule">resolveNodeCompressionModule</h3><pre><code class="language-ts">resolveNodeCompressionModule(): NodeCompressionModule
+</code></pre>
+<p>Resolve the Node builtin zlib module without introducing a static browser import.</p>
+<p>Returns: Node compression module.</p>
+<h3 id="resolvenodecompressionmoduleorundefined">resolveNodeCompressionModuleOrUndefined</h3><pre><code class="language-ts">resolveNodeCompressionModuleOrUndefined(): NodeCompressionModule | undefined
+</code></pre>
+<p>Resolve the Node builtin zlib module when the runtime exposes it.</p>
+<p>Returns: Node compression module when available.</p>
+<h3 id="resolveoptionalvectorvalue">resolveOptionalVectorValue</h3><pre><code class="language-ts">resolveOptionalVectorValue(
+  values: T[] | undefined,
+  index: number,
+): NonNullable&lt;T&gt; | undefined
+</code></pre>
+<p>Resolve an optional compressed vector element, returning <code>undefined</code> when the vector or element is absent.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>values</code> - Optional array of values to index into.</li>
+<li><code>index</code> - Zero-based index to retrieve.</li>
+</ul>
+<p>Returns: The element at <code>index</code>, or <code>undefined</code> when unavailable.</p>
+<h3 id="transformarchivepayloadbyteswithstream">transformArchivePayloadBytesWithStream</h3><pre><code class="language-ts">transformArchivePayloadBytesWithStream(
+  payloadBytes: Uint8Array&lt;ArrayBufferLike&gt;,
+  streamConstructor: BrowserDecompressionStreamConstructor | BrowserCompressionStreamConstructor,
+): Promise&lt;Uint8Array&lt;ArrayBufferLike&gt;&gt;
+</code></pre>
+<p>Transform archive payload bytes through one browser compression stream.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloadBytes</code> - Source payload bytes.</li>
+<li><code>streamConstructor</code> - Browser stream constructor.</li>
+</ul>
+<p>Returns: Transformed payload bytes.</p>
+<h3 id="validatecompressedconnectionvectors">validateCompressedConnectionVectors</h3><pre><code class="language-ts">validateCompressedConnectionVectors(
+  compressedConnections: CompressedSerializedConnectionBlock,
+  connectionCount: number,
+): void
+</code></pre>
+<p>Validate every compressed vector width in a connection block before reconstruction.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>compressedConnections</code> - Compressed connection block to validate.</li>
+<li><code>connectionCount</code> - Expected number of connections.</li>
+</ul>
+<h3 id="validatecompressedoptionalvectorlength">validateCompressedOptionalVectorLength</h3><pre><code class="language-ts">validateCompressedOptionalVectorLength(
+  fieldName: string,
+  values: unknown[] | undefined,
+  expectedLength: number,
+): void
+</code></pre>
+<p>Validate one optional vector width when the vector is present.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>fieldName</code> - Logical field name.</li>
+<li><code>values</code> - Optional vector.</li>
+<li><code>expectedLength</code> - Required vector length.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="validatecompressedruns">validateCompressedRuns</h3><pre><code class="language-ts">validateCompressedRuns(
+  fieldName: string,
+  runs: CompressedSerializedIndexRun[] | undefined,
+  entryCount: number,
+): void
+</code></pre>
+<p>Validate run metadata for bounds, ordering, and overlap.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>fieldName</code> - Logical field name.</li>
+<li><code>runs</code> - Optional run metadata.</li>
+<li><code>entryCount</code> - Total number of connection rows.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="validatecompressedvectorlength">validateCompressedVectorLength</h3><pre><code class="language-ts">validateCompressedVectorLength(
+  fieldName: string,
+  values: unknown[],
+  expectedLength: number,
+): void
+</code></pre>
+<p>Validate one required vector width inside the compressed connection block.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>fieldName</code> - Logical field name.</li>
+<li><code>values</code> - Vector to validate.</li>
+<li><code>expectedLength</code> - Required vector length.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-serialize-network-serialize-errors-ts">architecture/network/serialize/network.serialize.errors.ts</a><ul><li><a href="#networkserializeinvalidjsonerror">NetworkSerializeInvalidJsonError</a></li></ul></div><div class="toc-file"><a href="#architecture-network-serialize-network-serialize-utils-types-ts">architecture/network/serialize/network.serialize.utils.types.ts</a><ul><li><a href="#compactconnectionrebuildcontext">CompactConnectionRebuildContext</a></li><li><a href="#compactnoderebuildcontext">CompactNodeRebuildContext</a></li><li><a href="#compactpayloadcontext">CompactPayloadContext</a></li><li><a href="#compactserializednetworktuple">CompactSerializedNetworkTuple</a></li><li><a href="#compressedserializedconnectionblock">CompressedSerializedConnectionBlock</a></li><li><a href="#compressedserializedconnectionweights">CompressedSerializedConnectionWeights</a></li><li><a href="#compressedserializedindexrun">CompressedSerializedIndexRun</a></li><li><a href="#compressedserializednetwork">CompressedSerializedNetwork</a></li><li><a href="#compressedserializednetworkarchive">CompressedSerializedNetworkArchive</a></li><li><a href="#compressedserializednetworkarchivecompression">CompressedSerializedNetworkArchiveCompression</a></li><li><a href="#compressedserializednetworkarchiveoptions">CompressedSerializedNetworkArchiveOptions</a></li><li><a href="#connectioninternalswithenabled">ConnectionInternalsWithEnabled</a></li><li><a href="#default-numeric-value">DEFAULT_NUMERIC_VALUE</a></li><li><a href="#error-invalid-network-json">ERROR_INVALID_NETWORK_JSON</a></li><li><a href="#fallback-activation-key">FALLBACK_ACTIVATION_KEY</a></li><li><a href="#first-connection-index">FIRST_CONNECTION_INDEX</a></li><li><a href="#jsonconnectionrebuildcontext">JsonConnectionRebuildContext</a></li><li><a href="#jsonnoderebuildcontext">JsonNodeRebuildContext</a></li><li><a href="#network-json-format-version">NETWORK_JSON_FORMAT_VERSION</a></li><li><a href="#networkinternalswithdropout">NetworkInternalsWithDropout</a></li><li><a href="#networkjson">NetworkJSON</a></li><li><a href="#networkjsonconnection">NetworkJSONConnection</a></li><li><a href="#networkjsonnode">NetworkJSONNode</a></li><li><a href="#node-type-hidden">NODE_TYPE_HIDDEN</a></li><li><a href="#node-type-input">NODE_TYPE_INPUT</a></li><li><a href="#node-type-output">NODE_TYPE_OUTPUT</a></li><li><a href="#parameterlayoutentry">ParameterLayoutEntry</a></li><li><a href="#parameterlayoutv1">ParameterLayoutV1</a></li><li><a href="#parametervector">ParameterVector</a></li><li><a href="#resolvednetworksizecontext">ResolvedNetworkSizeContext</a></li><li><a href="#serializedconnection">SerializedConnection</a></li><li><a href="#serializenetworkinternals">SerializeNetworkInternals</a></li><li><a href="#serializenodeinternals">SerializeNodeInternals</a></li><li><a href="#warning-invalid-connection-during-deserialize">WARNING_INVALID_CONNECTION_DURING_DESERIALIZE</a></li><li><a href="#warning-invalid-connection-during-from-json">WARNING_INVALID_CONNECTION_DURING_FROM_JSON</a></li><li><a href="#warning-invalid-gater-during-deserialize">WARNING_INVALID_GATER_DURING_DESERIALIZE</a></li><li><a href="#warning-invalid-gater-during-from-json">WARNING_INVALID_GATER_DURING_FROM_JSON</a></li><li><a href="#warning-unknown-format-version">WARNING_UNKNOWN_FORMAT_VERSION</a></li><li><a href="#warning-unknown-squash-prefix">WARNING_UNKNOWN_SQUASH_PREFIX</a></li><li><a href="#warning-unknown-squash-suffix">WARNING_UNKNOWN_SQUASH_SUFFIX</a></li></ul></div><div class="toc-file"><a href="#architecture-network-serialize-network-serialize-utils-ts">architecture/network/serialize/network.serialize.utils.ts</a><ul><li><a href="#network-serialize-utils">network.serialize.utils</a></li><li><a href="#applyhydratedarchitecturedescriptor">applyHydratedArchitectureDescriptor</a></li><li><a href="#applyhydratedextensionbag">applyHydratedExtensionBag</a></li><li><a href="#applyserializedextensionbag">applySerializedExtensionBag</a></li><li><a href="#applyserializedruntimestate">applySerializedRuntimeState</a></li><li><a href="#clonenetworkjsonextensions">cloneNetworkJsonExtensions</a></li><li><a href="#createparameterlayoutv1">createParameterLayoutV1</a></li><li><a href="#deserialize">deserialize</a></li><li><a href="#deserializecompressed">deserializeCompressed</a></li><li><a href="#deserializecompressedarchive">deserializeCompressedArchive</a></li><li><a href="#deserializecompressedarchiveasync">deserializeCompressedArchiveAsync</a></li><li><a href="#deserializecompressedarchiveasyncwithmetrics">deserializeCompressedArchiveAsyncWithMetrics</a></li><li><a href="#deserializecompressedarchivewithmetrics">deserializeCompressedArchiveWithMetrics</a></li><li><a href="#fromjsonimpl">fromJSONImpl</a></li><li><a href="#fromparametervector">fromParameterVector</a></li><li><a href="#isarchitecturedescriptorshapevalid">isArchitectureDescriptorShapeValid</a></li><li><a href="#parameterlayoutentry">ParameterLayoutEntry</a></li><li><a href="#parameterlayoutv1">ParameterLayoutV1</a></li><li><a href="#parametervector">ParameterVector</a></li><li><a href="#serialize">serialize</a></li><li><a href="#serializecompressed">serializeCompressed</a></li><li><a href="#serializecompressedarchive">serializeCompressedArchive</a></li><li><a href="#serializecompressedarchiveasync">serializeCompressedArchiveAsync</a></li><li><a href="#serializecompressedarchiveasyncwithmetrics">serializeCompressedArchiveAsyncWithMetrics</a></li><li><a href="#serializecompressedarchivewithmetrics">serializeCompressedArchiveWithMetrics</a></li><li><a href="#serializedconnection">SerializedConnection</a></li><li><a href="#tojsonimpl">toJSONImpl</a></li><li><a href="#toparametervector">toParameterVector</a></li><li><a href="#default">default</a></li></ul></div><div class="toc-file"><a href="#architecture-network-serialize-network-serialize-json-utils-ts">architecture/network/serialize/network.serialize.json.utils.ts</a><ul><li><a href="#appendjsonforwardconnections">appendJsonForwardConnections</a></li><li><a href="#appendjsonnodesandselfconnections">appendJsonNodesAndSelfConnections</a></li><li><a href="#appendjsonselfconnectionwhenpresent">appendJsonSelfConnectionWhenPresent</a></li><li><a href="#assignjsonenabledflagwhenprovided">assignJsonEnabledFlagWhenProvided</a></li><li><a href="#assignjsongainwhenprovided">assignJsonGainWhenProvided</a></li><li><a href="#assignjsongaterwhenvalid">assignJsonGaterWhenValid</a></li><li><a href="#createconnection">createConnection</a></li><li><a href="#createemptynetworkjson">createEmptyNetworkJson</a></li><li><a href="#createjsonconnection">createJsonConnection</a></li><li><a href="#createjsonnode">createJsonNode</a></li><li><a href="#createnodewithtype">createNodeWithType</a></li><li><a href="#hydratenodefromjsonentry">hydrateNodeFromJsonEntry</a></li><li><a href="#isconnectionenabled">isConnectionEnabled</a></li><li><a href="#iscurrentjsonendpoint">isCurrentJsonEndpoint</a></li><li><a href="#isjsonconnectioninnodebounds">isJsonConnectionInNodeBounds</a></li><li><a href="#isjsonconnectionshapevalid">isJsonConnectionShapeValid</a></li><li><a href="#rebuildconnectionsfromjsonpayload">rebuildConnectionsFromJsonPayload</a></li><li><a href="#rebuildnodesfromjsonpayload">rebuildNodesFromJsonPayload</a></li><li><a href="#rebuildonejsonconnection">rebuildOneJsonConnection</a></li><li><a href="#resolvedropout">resolveDropout</a></li><li><a href="#resolvegaterindex">resolveGaterIndex</a></li><li><a href="#validatenetworkjsonorthrow">validateNetworkJsonOrThrow</a></li><li><a href="#warnwhenjsonformatversionisunknown">warnWhenJsonFormatVersionIsUnknown</a></li></ul></div><div class="toc-file"><a href="#architecture-network-serialize-network-serialize-genome-utils-ts">architecture/network/serialize/network.serialize.genome.utils.ts</a><ul><li><a href="#compressed-genome-archive-format">COMPRESSED_GENOME_ARCHIVE_FORMAT</a></li><li><a href="#compressed-genome-format">COMPRESSED_GENOME_FORMAT</a></li><li><a href="#compressedserializedgenomearchive">CompressedSerializedGenomeArchive</a></li><li><a href="#compressedserializedgenomearchiveoptions">CompressedSerializedGenomeArchiveOptions</a></li><li><a href="#deserializecompressedgenomearchive">deserializeCompressedGenomeArchive</a></li><li><a href="#deserializecompressedgenomearchiveasync">deserializeCompressedGenomeArchiveAsync</a></li><li><a href="#deserializecompressedgenomearchiveasyncwithmetrics">deserializeCompressedGenomeArchiveAsyncWithMetrics</a></li><li><a href="#deserializecompressedgenomearchivewithmetrics">deserializeCompressedGenomeArchiveWithMetrics</a></li><li><a href="#parsecompressedgenomearchive">parseCompressedGenomeArchive</a></li><li><a href="#parsecompressedgenomearchiveasync">parseCompressedGenomeArchiveAsync</a></li><li><a href="#serializecompressedgenomearchive">serializeCompressedGenomeArchive</a></li><li><a href="#serializecompressedgenomearchivewithmetrics">serializeCompressedGenomeArchiveWithMetrics</a></li></ul></div><div class="toc-file"><a href="#architecture-network-serialize-network-serialize-public-utils-ts">architecture/network/serialize/network.serialize.public.utils.ts</a><ul><li><a href="#cloneimpl">cloneImpl</a></li></ul></div><div class="toc-file"><a href="#architecture-network-serialize-network-serialize-compact-utils-ts">architecture/network/serialize/network.serialize.compact.utils.ts</a><ul><li><a href="#assigncompactgatergeneidwhenprovided">assignCompactGaterGeneIdWhenProvided</a></li><li><a href="#assigncompactgaterwhenvalid">assignCompactGaterWhenValid</a></li><li><a href="#collectallconnections">collectAllConnections</a></li><li><a href="#collectnodeactivations">collectNodeActivations</a></li><li><a href="#collectnodegeneids">collectNodeGeneIds</a></li><li><a href="#collectnodesquashkeys">collectNodeSquashKeys</a></li><li><a href="#collectnodestates">collectNodeStates</a></li><li><a href="#collectserializedconnections">collectSerializedConnections</a></li><li><a href="#createconnection">createConnection</a></li><li><a href="#createnodewithtype">createNodeWithType</a></li><li><a href="#hydratenodestatefromcompactpayload">hydrateNodeStateFromCompactPayload</a></li><li><a href="#isserializedconnectioninnodebounds">isSerializedConnectionInNodeBounds</a></li><li><a href="#rebuildconnectionsfromcompactpayload">rebuildConnectionsFromCompactPayload</a></li><li><a href="#rebuildnodesfromcompactpayload">rebuildNodesFromCompactPayload</a></li><li><a href="#rebuildonecompactconnection">rebuildOneCompactConnection</a></li><li><a href="#refreshnodeindices">refreshNodeIndices</a></li><li><a href="#resolvenodetypefromcompactindex">resolveNodeTypeFromCompactIndex</a></li><li><a href="#serializeoneconnection">serializeOneConnection</a></li></ul></div><div class="toc-file"><a href="#architecture-network-serialize-network-serialize-runtime-utils-ts">architecture/network/serialize/network.serialize.runtime.utils.ts</a><ul><li><a href="#applyrestoredconnectionidentity">applyRestoredConnectionIdentity</a></li><li><a href="#asnetworkinternals">asNetworkInternals</a></li><li><a href="#asnetworkinternalswithdropout">asNetworkInternalsWithDropout</a></li><li><a href="#asnodeinternals">asNodeInternals</a></li><li><a href="#createcompactpayloadcontext">createCompactPayloadContext</a></li><li><a href="#createnetworkinstance">createNetworkInstance</a></li><li><a href="#hydratenodegeneidwhenprovided">hydrateNodeGeneIdWhenProvided</a></li><li><a href="#isfiniteindex">isFiniteIndex</a></li><li><a href="#isnodeindexinbounds">isNodeIndexInBounds</a></li><li><a href="#resetmutableruntimecollections">resetMutableRuntimeCollections</a></li><li><a href="#resolvenetworksize">resolveNetworkSize</a></li><li><a href="#resolvesizeoverride">resolveSizeOverride</a></li><li><a href="#syncrestoredhistoricalcounters">syncRestoredHistoricalCounters</a></li></ul></div><div class="toc-file"><a href="#architecture-network-serialize-network-serialize-activation-utils-ts">architecture/network/serialize/network.serialize.activation.utils.ts</a><ul><li><a href="#findactivationbyfunctionname">findActivationByFunctionName</a></li><li><a href="#findactivationbykey">findActivationByKey</a></li><li><a href="#findactivationentrybyreference">findActivationEntryByReference</a></li><li><a href="#resolveactivationfunction">resolveActivationFunction</a></li><li><a href="#resolveactivationkey">resolveActivationKey</a></li><li><a href="#resolveattachedactivationkey">resolveAttachedActivationKey</a></li><li><a href="#resolvenamedactivationfromfunction">resolveNamedActivationFromFunction</a></li><li><a href="#warnunknownsquashname">warnUnknownSquashName</a></li></ul></div><div class="toc-file"><a href="#architecture-network-serialize-network-serialize-compression-utils-ts">architecture/network/serialize/network.serialize.compression.utils.ts</a><ul><li><a href="#builddecompressedconnectionrow">buildDecompressedConnectionRow</a></li><li><a href="#collectdecodedarchivepayloadbytes">collectDecodedArchivePayloadBytes</a></li><li><a href="#compressarchivepayloadbytes">compressArchivePayloadBytes</a></li><li><a href="#compressarchivepayloadbytesasync">compressArchivePayloadBytesAsync</a></li><li><a href="#compressed-network-archive-encoding">COMPRESSED_NETWORK_ARCHIVE_ENCODING</a></li><li><a href="#compressed-network-archive-format">COMPRESSED_NETWORK_ARCHIVE_FORMAT</a></li><li><a href="#compressed-network-format">COMPRESSED_NETWORK_FORMAT</a></li><li><a href="#compressed-weight-encoding">COMPRESSED_WEIGHT_ENCODING</a></li><li><a href="#compressedarchivedecodemetrics">CompressedArchiveDecodeMetrics</a></li><li><a href="#compressedarchivedecodeoptions">CompressedArchiveDecodeOptions</a></li><li><a href="#compressedarchivedecodeprogress">CompressedArchiveDecodeProgress</a></li><li><a href="#compressedarchivedecoderesult">CompressedArchiveDecodeResult</a></li><li><a href="#compressedarchiveencodemetrics">CompressedArchiveEncodeMetrics</a></li><li><a href="#compressedarchiveencoderesult">CompressedArchiveEncodeResult</a></li><li><a href="#compressedarchivemetrics">CompressedArchiveMetrics</a></li><li><a href="#compressmatchingruns">compressMatchingRuns</a></li><li><a href="#compressoptionalnumericseries">compressOptionalNumericSeries</a></li><li><a href="#compressserializedconnections">compressSerializedConnections</a></li><li><a href="#concatenatearchivebytechunks">concatenateArchiveByteChunks</a></li><li><a href="#countrunentries">countRunEntries</a></li><li><a href="#createcompressedarchivedecodemetrics">createCompressedArchiveDecodeMetrics</a></li><li><a href="#createcompressedarchiveencodemetrics">createCompressedArchiveEncodeMetrics</a></li><li><a href="#createcompressednetworkarchive">createCompressedNetworkArchive</a></li><li><a href="#createcompressednetworkarchiveasync">createCompressedNetworkArchiveAsync</a></li><li><a href="#decodearchivepayloadbase64">decodeArchivePayloadBase64</a></li><li><a href="#decodeexactconnectionweights">decodeExactConnectionWeights</a></li><li><a href="#decodesignedint16wordstofloat64">decodeSignedInt16WordsToFloat64</a></li><li><a href="#decompressarchivepayloadbytes">decompressArchivePayloadBytes</a></li><li><a href="#decompressarchivepayloadbytesasync">decompressArchivePayloadBytesAsync</a></li><li><a href="#decompressarchivepayloadbyteswithbrowserstream">decompressArchivePayloadBytesWithBrowserStream</a></li><li><a href="#decompressserializedconnections">decompressSerializedConnections</a></li><li><a href="#emitarchivedecodeprogress">emitArchiveDecodeProgress</a></li><li><a href="#encodearchivepayloadbase64">encodeArchivePayloadBase64</a></li><li><a href="#encodeexactconnectionweights">encodeExactConnectionWeights</a></li><li><a href="#encodefloat64tosignedint16words">encodeFloat64ToSignedInt16Words</a></li><li><a href="#estimateserializedbytelength">estimateSerializedByteLength</a></li><li><a href="#expanddecodednonzeroweights">expandDecodedNonZeroWeights</a></li><li><a href="#expandrunstomask">expandRunsToMask</a></li><li><a href="#hasnodecompressionruntime">hasNodeCompressionRuntime</a></li><li><a href="#ispositivezeroweightwords">isPositiveZeroWeightWords</a></li><li><a href="#normalizesignedint16">normalizeSignedInt16</a></li><li><a href="#parsecompressednetworkarchive">parseCompressedNetworkArchive</a></li><li><a href="#parsecompressednetworkarchiveasync">parseCompressedNetworkArchiveAsync</a></li><li><a href="#resolvebrowsercompressionstreamconstructor">resolveBrowserCompressionStreamConstructor</a></li><li><a href="#resolvebrowserdecompressionstreamconstructor">resolveBrowserDecompressionStreamConstructor</a></li><li><a href="#resolveenabledstate">resolveEnabledState</a></li><li><a href="#resolvegaterindex">resolveGaterIndex</a></li><li><a href="#resolvenodecompressionmodule">resolveNodeCompressionModule</a></li><li><a href="#resolvenodecompressionmoduleorundefined">resolveNodeCompressionModuleOrUndefined</a></li><li><a href="#resolveoptionalvectorvalue">resolveOptionalVectorValue</a></li><li><a href="#transformarchivepayloadbyteswithstream">transformArchivePayloadBytesWithStream</a></li><li><a href="#validatecompressedconnectionvectors">validateCompressedConnectionVectors</a></li><li><a href="#validatecompressedoptionalvectorlength">validateCompressedOptionalVectorLength</a></li><li><a href="#validatecompressedruns">validateCompressedRuns</a></li><li><a href="#validatecompressedvectorlength">validateCompressedVectorLength</a></li></ul></div></div></aside></div><script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script></body></html>

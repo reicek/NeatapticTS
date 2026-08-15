@@ -20,6 +20,7 @@ import type {
  *
  * @param partial - Partial config whose omitted fields should resolve conservatively.
  * @returns A fully resolved probe scheduler config packet.
+ * @throws {NgeJuvenile_ProbeError} When the probe kinds list is empty.
  */
 export function resolveProbeSchedulerConfig(
   partial: Partial<NgeProbeSchedulerConfig>,
@@ -208,6 +209,7 @@ export function serializeLedger(ledger: NgeProbeLedgerEntry[]): string {
  *
  * @param json - JSON string previously produced by `serializeLedger`.
  * @returns Parsed probe ledger entries when the payload is a valid JSON array.
+ * @throws {NgeJuvenile_ProbeError} When the payload cannot be parsed or is not a JSON array.
  */
 export function deserializeLedger(json: string): NgeProbeLedgerEntry[] {
   try {

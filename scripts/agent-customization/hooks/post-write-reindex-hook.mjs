@@ -9,7 +9,7 @@
  * spawns a detached background process that runs `targeted-reindex.mjs` for
  * that single file. The hook never blocks the host tool and never throws into
  * the host: every failure path is swallowed and logged to
- * `artifacts/post-write-reindex.log`.
+ * `scripts/agent-customization/hooks/post-write-reindex.log`.
  *
  * Eligibility (`.md`/`.ts`/`.mjs`/`.js` under corpus roots) is enforced inside
  * `targeted-reindex.mjs`, so the hook simply forwards the file path. The
@@ -30,7 +30,13 @@ const reindexScriptPath = path.join(
   'cortex',
   'targeted-reindex.mjs',
 );
-const logPath = path.join(repoRoot, 'artifacts', 'post-write-reindex.log');
+const logPath = path.join(
+  repoRoot,
+  'scripts',
+  'agent-customization',
+  'hooks',
+  'post-write-reindex.log',
+);
 
 /**
  * Tool names that produce file writes and should trigger a reindex.
@@ -38,18 +44,13 @@ const logPath = path.join(repoRoot, 'artifacts', 'post-write-reindex.log');
 const WRITE_TOOL_PATTERN =
   /^(edit|create|create_file|createFile|writeFile|apply_patch|editFiles|replace_string_in_file|vscode_renameSymbol)$/i;
 
-main().catch((error) => {
-  // Never throw into the host — log and exit cleanly.
-  safeLog(`[post-write-reindex] fatal: ${error?.message ?? error}`);
-  writeHookOutput({ continue: true });
-});
-
 /**
  * Hook entry point. Reads stdin, extracts the file path, spawns a background
  * reindex process, and immediately returns control to the host.
+ *
+ * @param {Record<string, unknown>} hookInput - Parsed hook input JSON.
  */
-async function main() {
-  const hookInput = readHookInput();
+export function main(hookInput) {
   const toolName = String(hookInput.tool_name ?? hookInput.toolName ?? '');
   if (!WRITE_TOOL_PATTERN.test(toolName)) {
     writeHookOutput({ continue: true });
@@ -71,6 +72,8 @@ async function main() {
     },
   });
 }
+
+main(readHookInput());
 
 /**
  * Extract the file path from the hook input. The hook receives the tool call
@@ -157,7 +160,7 @@ export function safeLog(message) {
  *
  * @returns {Record<string, unknown>} Parsed hook input (or empty object).
  */
-function readHookInput() {
+export function readHookInput() {
   try {
     const rawInput = readFileSync(0, 'utf8').trim();
     if (!rawInput) return {};

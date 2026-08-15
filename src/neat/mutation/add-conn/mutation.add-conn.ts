@@ -375,6 +375,7 @@ export function shouldAbortForCycle(
  *
  * @param genomeToEdit - genome to edit
  * @param pairNodes - resolved pair nodes
+ * @param internal - neat controller context providing RNG and connect helper.
  * @returns created connection or undefined
  */
 export function connectChosenPair(

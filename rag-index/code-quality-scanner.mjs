@@ -30,7 +30,23 @@ import {
 
 const DEFAULT_COMPLEXITY_THRESHOLD = 10;
 const DEFAULT_MIN_JSDOC_WORDS = 10;
+const DEFAULT_SCANNER_IGNORE = [
+  'src/**/*.d.ts',
+  'src/**/*.test.ts',
+  'src/**/*.spec.ts',
+  'src/**/__mocks__/*.ts',
+];
 const DOCUMENTATION_OWNER = '06-documenting';
+
+/**
+ * Issue dimensions emitted by this scanner.
+ */
+const ISSUE_DIMENSIONS = [
+  'missing JSDoc',
+  'weak JSDoc',
+  'incomplete JSDoc tags',
+  'high complexity',
+];
 
 export async function scanCodeQuality(options = {}) {
   const complexityThreshold = Number(
@@ -39,8 +55,13 @@ export async function scanCodeQuality(options = {}) {
   const minJsdocWords = Number(
     options.minJsdocWords ?? DEFAULT_MIN_JSDOC_WORDS,
   );
-  const exportedDeclarations =
-    await loadExportedTypeScriptDeclarations(options);
+  const ignore = Array.isArray(options.ignore)
+    ? options.ignore
+    : DEFAULT_SCANNER_IGNORE;
+  const exportedDeclarations = await loadExportedTypeScriptDeclarations({
+    ...options,
+    ignore,
+  });
   const evidence = [];
 
   for (const exportedDeclaration of exportedDeclarations) {
@@ -58,6 +79,7 @@ export async function scanCodeQuality(options = {}) {
   return {
     pass: evidence.length === 0,
     evidence,
+    issueDimensions: ISSUE_DIMENSIONS,
     fixHint:
       evidence.length === 0
         ? null
@@ -91,6 +113,23 @@ function collectDocumentationIssues(exportedDeclaration, minJsdocWords) {
         words: jsdocWordCount,
       },
     ];
+  }
+
+  const functionLikeNode = resolveFunctionLikeNode(
+    exportedDeclaration.declaration,
+  );
+  if (functionLikeNode) {
+    const missingTags = collectMissingJsdocTags(functionLikeNode);
+    if (missingTags.length > 0) {
+      return [
+        {
+          file: exportedDeclaration.file_path,
+          issue: 'incomplete JSDoc tags',
+          symbol: exportedDeclaration.symbol_name,
+          tags: missingTags,
+        },
+      ];
+    }
   }
 
   return [];
@@ -149,22 +188,45 @@ function calculateCyclomaticComplexity(node) {
   for (const descendant of node.forEachDescendantAsArray()) {
     switch (descendant.getKind()) {
       case SyntaxKind.IfStatement:
+      case SyntaxKind.SwitchStatement:
       case SyntaxKind.ForStatement:
       case SyntaxKind.ForOfStatement:
       case SyntaxKind.ForInStatement:
       case SyntaxKind.WhileStatement:
       case SyntaxKind.DoStatement:
       case SyntaxKind.CaseClause:
+      case SyntaxKind.DefaultClause:
       case SyntaxKind.CatchClause:
       case SyntaxKind.ConditionalExpression:
         complexity += 1;
         break;
+      case SyntaxKind.TryStatement:
+        if (descendant.getFinallyBlock?.()) {
+          complexity += 1;
+        }
+        break;
+      case SyntaxKind.PropertyAccessExpression:
+      case SyntaxKind.CallExpression:
+      case SyntaxKind.ElementAccessExpression: {
+        if (
+          Node.isQuestionDotTokenable(descendant) &&
+          descendant.hasQuestionDotToken() &&
+          !hasOptionalChainInLeftExpression(descendant)
+        ) {
+          complexity += 1;
+        }
+        break;
+      }
       case SyntaxKind.BinaryExpression: {
-        const operatorKind = descendant.getOperatorToken?.().getKind?.();
+        const operatorToken = descendant.getOperatorToken();
+        const operatorKind = operatorToken?.getKind?.();
         if (
           operatorKind === SyntaxKind.AmpersandAmpersandToken ||
           operatorKind === SyntaxKind.BarBarToken ||
-          operatorKind === SyntaxKind.QuestionQuestionToken
+          operatorKind === SyntaxKind.QuestionQuestionToken ||
+          operatorKind === SyntaxKind.AmpersandAmpersandEqualsToken ||
+          operatorKind === SyntaxKind.BarBarEqualsToken ||
+          operatorKind === SyntaxKind.QuestionQuestionEqualsToken
         ) {
           complexity += 1;
         }
@@ -176,6 +238,153 @@ function calculateCyclomaticComplexity(node) {
   }
 
   return complexity;
+}
+
+function resolveFunctionLikeNode(declaration) {
+  if (
+    Node.isFunctionDeclaration(declaration) ||
+    Node.isMethodDeclaration(declaration) ||
+    Node.isArrowFunction(declaration) ||
+    Node.isFunctionExpression(declaration)
+  ) {
+    return declaration;
+  }
+
+  if (Node.isVariableDeclaration(declaration)) {
+    const initializer = declaration.getInitializer();
+    if (
+      initializer &&
+      (Node.isArrowFunction(initializer) ||
+        Node.isFunctionExpression(initializer))
+    ) {
+      return initializer;
+    }
+  }
+
+  return null;
+}
+
+function collectMissingJsdocTags(functionLikeNode) {
+  const jsDocs = resolveJsdocNodes(functionLikeNode);
+  const presentTagNames = new Set(
+    jsDocs.flatMap((jsDoc) => jsDoc.getTags().map((tag) => tag.getTagName())),
+  );
+  const missingTags = [];
+
+  const parameters = functionLikeNode.getParameters();
+  const paramTags = jsDocs
+    .flatMap((jsDoc) => jsDoc.getTags())
+    .filter((tag) => tag.getTagName() === 'param');
+  const documentedParamNames = new Set(
+    paramTags
+      .map((tag) => (typeof tag.getName === 'function' ? tag.getName() : null))
+      .filter(Boolean),
+  );
+
+  for (const parameter of parameters) {
+    const parameterName = parameter.getName();
+    if (!documentedParamNames.has(parameterName)) {
+      missingTags.push(`@param ${parameterName}`);
+    }
+  }
+
+  if (
+    hasMeaningfulReturnType(functionLikeNode) &&
+    !presentTagNames.has('returns')
+  ) {
+    missingTags.push('@returns');
+  }
+
+  if (
+    containsThrowStatement(functionLikeNode) &&
+    !presentTagNames.has('throws')
+  ) {
+    missingTags.push('@throws');
+  }
+
+  return missingTags;
+}
+
+function resolveJsdocNodes(node) {
+  if (typeof node?.getJsDocs === 'function') {
+    const directJsDocs = node.getJsDocs();
+    if (directJsDocs.length > 0) return directJsDocs;
+  }
+
+  if (Node.isVariableDeclaration(node)) {
+    const variableStatement = node.getVariableStatement?.();
+    if (
+      variableStatement &&
+      typeof variableStatement.getJsDocs === 'function'
+    ) {
+      const statementJsDocs = variableStatement.getJsDocs();
+      if (statementJsDocs.length > 0) return statementJsDocs;
+    }
+  }
+
+  // ArrowFunction and FunctionExpression initializers of VariableDeclarations
+  // carry their JSDoc on the enclosing VariableStatement, not on the function
+  // node itself. Walk up to the parent VariableDeclaration to recover it.
+  if (Node.isArrowFunction(node) || Node.isFunctionExpression(node)) {
+    const parent = node.getParent?.();
+    if (parent && Node.isVariableDeclaration(parent)) {
+      const variableStatement = parent.getVariableStatement?.();
+      if (
+        variableStatement &&
+        typeof variableStatement.getJsDocs === 'function'
+      ) {
+        const statementJsDocs = variableStatement.getJsDocs();
+        if (statementJsDocs.length > 0) return statementJsDocs;
+      }
+    }
+  }
+
+  return [];
+}
+
+function containsThrowStatement(functionLikeNode) {
+  return (
+    functionLikeNode.getDescendantsOfKind?.(SyntaxKind.ThrowStatement).length >
+    0
+  );
+}
+
+function hasMeaningfulReturnType(functionLikeNode) {
+  const returnTypeNode = functionLikeNode.getReturnTypeNode?.();
+  if (returnTypeNode) {
+    const returnTypeText = returnTypeNode.getText().trim();
+    if (returnTypeText === 'void' || returnTypeText === 'undefined') {
+      return false;
+    }
+  }
+
+  return functionLikeNode
+    .getDescendantsOfKind?.(SyntaxKind.ReturnStatement)
+    .some(
+      (returnStatement) =>
+        returnStatement.getExpression?.() !== undefined &&
+        returnStatement.getExpression?.() !== null,
+    );
+}
+
+function hasOptionalChainInLeftExpression(optionalNode) {
+  const leftExpression = optionalNode.getExpression?.();
+  if (!leftExpression) return false;
+
+  if (
+    Node.isQuestionDotTokenable(leftExpression) &&
+    leftExpression.hasQuestionDotToken()
+  ) {
+    return true;
+  }
+
+  return leftExpression
+    .forEachDescendantAsArray()
+    .some(
+      (descendant) =>
+        Node.isQuestionDotTokenable(descendant) &&
+        descendant.hasQuestionDotToken(),
+    );
 }
 
 async function main() {

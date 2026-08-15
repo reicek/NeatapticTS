@@ -71,6 +71,21 @@ Parameters:
 - `context` - Canvas 2D context.
 - `frame` - Resolved frame.
 
+### drawNetworkFrame
+
+```ts
+drawNetworkFrame(
+  canvas: HTMLCanvasElement,
+  frame: NetworkVisualizationResolvedFrame,
+): void
+```
+
+Draw the resolved frame onto the canvas if a 2D context is available.
+
+Parameters:
+- `canvas` - Canvas element to render onto.
+- `frame` - Resolved visualization frame.
+
 ### drawNetworkVisualization
 
 ```ts
@@ -166,6 +181,36 @@ This keeps acyclic and mostly-feed-forward graphs from collapsing all hidden
 nodes into a single visual column, while still tolerating recurrent edges by
 ignoring non-forward links for depth propagation.
 
+### resolveRenderOptions
+
+```ts
+resolveRenderOptions(
+  options: RenderNetworkViewOptions | undefined,
+): { nodeDimensions: NetworkNodeDimensions; panelPadding: EdgePadding; colorScales: NetworkVisualizationColorScales; }
+```
+
+Resolve render options with defaults applied.
+
+Parameters:
+- `options` - Optional render settings (dimensions, padding, colors).
+
+Returns: Resolved node dimensions, panel padding, and color scales.
+
+### resolveTopologyMode
+
+```ts
+resolveTopologyMode(
+  graph: VisualizationGraphV1,
+): "recurrent" | "acyclic"
+```
+
+Resolve the topology mode from graph metadata.
+
+Parameters:
+- `graph` - Visualization graph.
+
+Returns: `'acyclic'` when the graph declares an acyclic mode, otherwise `'recurrent'`.
+
 ## visualization/network-view/network-view.layout.utils.ts
 
 Generic layout helpers for browser network visualization.
@@ -191,6 +236,7 @@ are balanced around the center of available space.
 Parameters:
 - `positionedNodes` - Positioned nodes.
 - `drawableWidthPx` - Drawable width.
+- `drawableLeftPx` - Left pixel offset of the drawable area (defaults to 0).
 
 Returns: Centered positioned nodes.
 

@@ -74,9 +74,7 @@ export function compareDocsQualityRuns(payload) {
 function extractComparableDimensions(manifest) {
   const thresholdConfig = isPlainObject(manifest.thresholdConfig)
     ? manifest.thresholdConfig
-    : isPlainObject(manifest.threshold)
-      ? manifest.threshold
-      : {};
+    : {};
   const scopeConfig = isPlainObject(manifest.scopeConfig)
     ? manifest.scopeConfig
     : {};
@@ -88,13 +86,8 @@ function extractComparableDimensions(manifest) {
       minJsdocWords: Number(thresholdConfig.minJsdocWords ?? 0),
       complexityThreshold: Number(thresholdConfig.complexityThreshold ?? 0),
     },
-    scopeType: String(scopeConfig.scopeType ?? manifest.scopeType ?? ''),
-    scopeDigest: String(
-      manifest.scopeDigest ??
-        scopeConfig.scopeDigest ??
-        manifest.sourcePathsDigest ??
-        '',
-    ),
+    scopeType: String(scopeConfig.scopeType ?? ''),
+    scopeDigest: String(scopeConfig.scopeDigest ?? ''),
   };
 }
 

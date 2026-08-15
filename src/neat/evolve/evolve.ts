@@ -280,6 +280,7 @@ export const EVOLVE_SPECIES_HISTORY_MAX = 200;
  * console.log('output nodes:', bestNetwork.output);
  * ```
  *
+ * @param this - NEAT controller instance containing population, options, and RNG.
  * @this {NeatControllerForEvolution} the NEAT instance (contains population, options, RNG, etc.)
  * @returns {Promise<Network>} a deep-cloned network snapshot representing the best genome from the
  * previous generation, ready for inspection or external evaluation

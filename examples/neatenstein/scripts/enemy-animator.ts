@@ -8,23 +8,18 @@
  * the correct frame for a given enemy animation state and elapsed time.
  */
 
-/**
- * Valid animation states used by the Neatenstein enemy sprite animator.
- *
- * The four primary states drive the enemy sprite sheet. The optional
- * `damage` state is a two-frame overlay used for hit-flash feedback.
- */
-export type EnemyAnimationState = 'idle' | 'move' | 'fire' | 'death' | 'damage';
+// Re-export extracted types and constants so existing imports stay valid.
+export type {
+  EnemyAnimationState,
+  EnemyAnimationFrame,
+} from './enemy-animator.types';
+export { MS_PER_FRAME } from './enemy-animator.constants';
 
-/**
- * Frame index and total frame count returned by the enemy animator.
- */
-export interface EnemyAnimationFrame {
-  /** Zero-based frame index for the current state. */
-  frameIndex: number;
-  /** Total number of frames available for the current state. */
-  frameCount: number;
-}
+import type {
+  EnemyAnimationState,
+  EnemyAnimationFrame,
+} from './enemy-animator.types';
+import { MS_PER_FRAME } from './enemy-animator.constants';
 
 /**
  * Approved per-state frame counts used by the deterministic enemy animator.
@@ -44,9 +39,6 @@ export const ENEMY_ANIMATION_FRAME_COUNTS: Record<EnemyAnimationState, number> =
     death: 12,
     damage: 2,
   };
-
-/** Default milliseconds per animation frame. */
-const MS_PER_FRAME = 100;
 
 /**
  * Clamp negative elapsed time to zero so frame math stays well-defined.

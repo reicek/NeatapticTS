@@ -107,6 +107,74 @@ const imported = Network.fromJSON(saved);
 neat.addGenome(imported, [parentA._id, parentB._id]);
 ```
 
+### applyMutationPasses
+
+```ts
+applyMutationPasses(
+  internal: NeatControllerForHelpers,
+  clone: GenomeWithMetadata,
+  mutateCount: number,
+): Promise<void>
+```
+
+Apply the requested number of mutation passes to a cloned offspring,
+silently ignoring individual mutation failures to keep evolution moving.
+
+Parameters:
+- `internal` - NEAT controller internals providing mutation selection and RNG.
+- `clone` - The genome to mutate.
+- `mutateCount` - Number of sequential mutation passes to attempt.
+
+### applyStructuralInvariants
+
+```ts
+applyStructuralInvariants(
+  internal: NeatControllerForHelpers,
+  clone: GenomeWithMetadata,
+): void
+```
+
+Enforce structural invariants (minimum hidden nodes, no dead ends) on a
+cloned offspring before mutation passes begin.
+
+Parameters:
+- `internal` - NEAT controller internals exposing repair hooks.
+- `clone` - The cloned genome to repair.
+
+### assignChildMetadata
+
+```ts
+assignChildMetadata(
+  clone: GenomeWithMetadata,
+  internal: NeatControllerForHelpers,
+  parentGenome: GenomeWithMetadata,
+): void
+```
+
+Reset evaluation state and assign controller-owned identity metadata to a
+freshly cloned offspring.
+
+Parameters:
+- `clone` - The cloned genome to normalize.
+- `internal` - NEAT controller internals providing identity and options.
+- `parentGenome` - The parent genome for lineage depth tracking.
+
+### cloneParentGenome
+
+```ts
+cloneParentGenome(
+  parentGenome: GenomeWithMetadata,
+): Promise<GenomeWithMetadata>
+```
+
+Deep-clone a parent genome, preferring a direct `clone()` call and falling
+back to a JSON round-trip when no `clone()` method is available.
+
+Parameters:
+- `parentGenome` - Parent genome to clone.
+
+Returns: A deep copy of the parent genome.
+
 ### createPool
 
 ```ts
@@ -160,6 +228,22 @@ const seed = new Network(neat.input, neat.output, { minHidden: 4 });
 neat.createPool(seed);
 ```
 
+### executeMutation
+
+```ts
+executeMutation(
+  clone: GenomeWithMetadata,
+  selectedMutationMethod: MutationMethod | undefined,
+): void
+```
+
+Execute a single mutation operator on a clone when the operator carries a
+valid name (convention).
+
+Parameters:
+- `clone` - The genome to mutate.
+- `selectedMutationMethod` - The mutation operator to apply (if valid).
+
 ### GenomeWithMetadata
 
 Minimal genome contract required by the population-entry helpers.
@@ -201,6 +285,24 @@ In practice this seam protects two invariants:
 - every entry path applies the same best-effort cleanup before later chapters
   read the genome.
 
+### selectSingleMutationMethod
+
+```ts
+selectSingleMutationMethod(
+  internal: NeatControllerForHelpers,
+  clone: GenomeWithMetadata,
+): Promise<MutationMethod | undefined>
+```
+
+Select a single mutation method for a cloned offspring, resolving array
+candidates to one via the controller's RNG.
+
+Parameters:
+- `internal` - NEAT controller internals providing mutation selection and RNG.
+- `clone` - The genome being mutated.
+
+Returns: A single mutation method, or `undefined` when none is available.
+
 ### spawnFromParent
 
 ```ts
@@ -210,43 +312,14 @@ spawnFromParent(
 ): Promise<GenomeWithMetadata>
 ```
 
-Spawn (clone & mutate) a child genome from an existing parent genome.
-
-Read this helper as the provisional provenance path. It produces a candidate
-offspring whose lineage is already meaningful, but whose membership in the
-active population is still undecided. That split is important when a caller
-wants to preview, filter, score, or compare several children before allowing
-one of them to join the population through {@link addGenome}.
-
-Evolutionary rationale:
-- Cloning preserves the full topology and weights of the parent.
-- A configurable number of mutation passes are applied sequentially; each
-  pass may alter structure (add/remove nodes or connections) or weights.
-- Lineage annotations (`_parents`, `_depth`) enable later analytics such as
-  diversity statistics, genealogy visualization, and pruning heuristics.
-- Cache invalidation happens before the child is returned so later admission
-  or evaluation logic never observes stale derived state from the clone.
-
-Robustness philosophy: individual mutation failures are silently ignored so a
-single stochastic edge case does not derail evolutionary progress.
+Spawn a child genome from a parent by deep-cloning the parent, assigning
+fresh metadata and lineage, applying structural invariants, and running
+the configured number of mutation passes. Individual mutation failures
+are silently ignored to keep the evolutionary process moving.
 
 Parameters:
-- `this` - Bound NEAT instance (inferred when used as a method).
-- `parentGenome` - Parent genome/network to clone. Must implement either
-`clone()` OR a pair of `toJSON()` / static `fromJSON()` for deep copying.
-- `mutateCount` - Number of sequential mutation operations to attempt; each
-iteration chooses a mutation method using the instance's selection
-logic. Defaults to 1 for conservative structural drift.
+- `this` - Neat-like controller with internal mutation and innovation state.
+- `parentGenome` - The parent genome to clone and mutate.
+- `mutateCount` - Number of mutation passes to apply (default 1).
 
-Returns: A new genome whose score and derived caches are reset, whose lineage
-metadata references the parent, and whose final admission into the
-live population is left to the caller.
-
-Example:
-
-```ts
-// Assume `neat` is an instance implementing NeatLike and `parent` is a genome in neat.population
-const child = neat.spawnFromParent(parent, 3); // apply 3 mutation passes
-// Optionally inspect / filter the child before adding
-neat.addGenome(child, [parent._id]);
-```
+Returns: A promise resolving to the spawned child genome.

@@ -29,7 +29,7 @@ import type {
   AccelerationObserver,
 } from './acceleration.observer';
 
-/** Options that influence mode resolution. */
+/** Options that influence the resolved acceleration mode selection from detected status. */
 export interface ResolveAccelerationModeOptions {
   /** Explicit backend preference; defaults to auto-selection. */
   backend?: BackendMode;

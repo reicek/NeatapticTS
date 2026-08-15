@@ -13,7 +13,7 @@
 /** Mutation kinds permitted under the fixed-topology MLP enemy policy. */
 export type MlpEnemyMutationKind = 'weight' | 'bias';
 
-/** Fixed-topology selection-pressure policy used for the MLP enemy. */
+/** Fixed-topology selection-pressure policy used for the MLP enemy in evolution. */
 export interface MlpEnemySelectionPolicy {
   /** Whether the policy permits structural (add/remove node) mutations. Always false for the MLP enemy. */
   readonly allowsStructuralMutation: boolean;

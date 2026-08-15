@@ -65,6 +65,9 @@ mutation chapter. Rather than choosing one operator itself, it adjusts each
 genome's readiness for later mutation so the next structural-edit pass can be
 more exploratory or more conservative depending on recent success.
 
+Parameters:
+- `this` - NeatEngine instance whose per-genome mutation rates are tuned.
+
 Returns: Updates per-genome mutation-rate state in place when the current generation satisfies the adaptation cadence.
 
 Example:

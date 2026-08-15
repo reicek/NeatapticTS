@@ -132,9 +132,6 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - benchmark: <name>, baseline: <n>, measured: <n>, delta: <+/-><n> (<+/-><p>%), tolerance: <+/-><n>, classification: <pass|regression|flake>
-VERDICT: APPROVE | REQUEST_CHANGES
-OBSERVATIONS:
-- classification: <pass|regression|flake>, confidence: <0-1>, detail: <concise finding with measured delta vs tolerance>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

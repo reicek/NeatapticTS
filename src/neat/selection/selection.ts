@@ -159,7 +159,7 @@ export {
  * It does not evaluate genomes, mutate them, or change the active parent
  * selection strategy.
  *
- * @this NeatLike NEAT instance whose population should be sorted.
+ * @param this NeatLike NEAT instance whose population should be sorted.
  * @returns Nothing. The population array is reordered in place.
  *
  * @example
@@ -191,7 +191,7 @@ export function sort(this: NeatLike): void {
  * genome in the current population so the controller still has a deterministic
  * parent candidate instead of failing deep inside crossover logic.
  *
- * @this NeatLike NEAT instance containing population, selection options, and RNG access.
+ * @param this NeatLike NEAT instance containing population, selection options, and RNG access.
  * @returns Genome chosen according to the active selection strategy.
  *
  * @example
@@ -219,7 +219,7 @@ export function getParent(this: NeatLike): GenomeWithScore {
  * That behavior keeps call sites simple: callers do not need to remember
  * whether evaluation or sorting has already happened earlier in the generation.
  *
- * @this NeatLike NEAT instance containing population and evaluation support.
+ * @param this NeatLike NEAT instance containing population and evaluation support.
  * @returns Genome with the highest current score.
  *
  * @example
@@ -255,7 +255,7 @@ export function getFittest(this: NeatLike): GenomeWithScore {
  * {@link getFittest} when you want both "best genome" and "overall generation"
  * signals side by side.
  *
- * @this NeatLike NEAT instance containing population and evaluation support.
+ * @param this NeatLike NEAT instance containing population and evaluation support.
  * @returns Mean fitness across the current population.
  *
  * @example

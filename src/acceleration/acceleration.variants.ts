@@ -23,6 +23,7 @@ import type {
   AccelerationConfig,
   AccelerationMode,
   AccelerationStatus,
+  BackendMode,
   VariantEvaluationNetwork,
   VariantScorer,
   WeightVariant,
@@ -159,125 +160,46 @@ export async function evaluateWeightVariantsAsync(
   observer?: AccelerationObserver,
 ): Promise<WeightVariantResult> {
   const scorer = scoreFn ?? DEFAULT_VARIANT_SCORER;
-  const scorerName = scoreFn === undefined ? 'default' : 'custom';
+  const scorerName = resolveScorerName(scoreFn);
   const resolvedConfig = resolveAccelerationConfig(config);
   // `resolveAccelerationConfig` always defaults `backend` to 'auto', so the
   // value is guaranteed to be defined here. Avoid `?? 'auto'` because it
   // creates an unreachable branch that shows up as uncovered code.
   const requestedBackend = resolvedConfig.backend!;
 
-  let status: AccelerationStatus;
-  if (requestedBackend === 'cpu') {
-    status = {
-      mode: 'cpu',
-      gpu: { available: false, reason: 'CPU requested' },
-      worker: { available: false, count: 0, reason: 'CPU requested' },
-      cpu: { available: true },
-    };
-    console.log(
-      '[NeatapticTS Acceleration] Explicit CPU backend requested, skipping GPU/worker',
-    );
-    if (observer?.onBackendChange) {
-      observer.onBackendChange({
-        previous: null,
-        current: 'cpu',
-        reason: 'Acceleration backend selected: cpu',
-        timestamp: Date.now(),
-      });
-    }
-  } else {
-    status = await autoEnableAcceleration({
-      nodeCount: network.nodes.length,
-      batchParallelCount: variants.length,
-      config,
-    });
-  }
-
+  const status = await resolveBackendStatus(
+    network,
+    variants,
+    config,
+    observer,
+    requestedBackend,
+  );
   const backend: AccelerationMode = status.mode;
   console.log(
     `[NeatapticTS Acceleration] Variant evaluator selected backend: ${backend}`,
   );
 
-  if (observer?.onBackendChange) {
-    observer.onBackendChange({
-      previous: null,
-      current: backend,
-      reason: `Acceleration backend selected: ${backend}`,
-      timestamp: Date.now(),
-    });
-  }
-
-  if (
-    observer?.onFallback &&
-    requestedBackend !== 'auto' &&
-    requestedBackend !== backend
-  ) {
-    observer.onFallback({
-      requested: requestedBackend,
-      chosen: backend,
-      reason: `Requested ${requestedBackend} backend unavailable; falling back to ${backend}`,
-      timestamp: Date.now(),
-    });
-  }
+  emitBackendChangeEvent(observer, backend);
+  emitFallbackEvent(observer, requestedBackend, backend);
 
   const scaleDivisor = resolveScaleDivisor(variants);
   const parallelVariantCount = resolvedConfig.parallelVariantCount!;
-  const gpuDevice =
-    backend === 'gpu' &&
-    network.nodes.length >= DEFAULT_ACCELERATION_GPU_NODE_THRESHOLD
-      ? (status.gpu.device ?? undefined)
-      : undefined;
-  const useGpu = gpuDevice !== undefined;
+  const gpuDevice = resolveGpuDevice(status, backend, network);
 
-  const scores: number[] = [];
-  if (parallelVariantCount > 1) {
-    for (
-      let index = 0;
-      index < variants.length;
-      index += parallelVariantCount
-    ) {
-      const batch = variants.slice(index, index + parallelVariantCount);
-      const batchScores = useGpu
-        ? await evaluateWeightVariantsOnGpu(
-            network,
-            batch,
-            inputs,
-            target,
-            scorer,
-            gpuDevice,
-          )
-        : await Promise.all(
-            batch.map((variant) =>
-              evaluateVariant(network, variant, inputs, target, scorer),
-            ),
-          );
-      scores.push(...batchScores);
-    }
-  } else {
-    for (const variant of variants) {
-      const batchScores = useGpu
-        ? await evaluateWeightVariantsOnGpu(
-            network,
-            [variant],
-            inputs,
-            target,
-            scorer,
-            gpuDevice,
-          )
-        : [await evaluateVariant(network, variant, inputs, target, scorer)];
-      scores.push(...batchScores);
-    }
-  }
+  const scores = await evaluateVariantBatches(
+    network,
+    variants,
+    inputs,
+    target,
+    scorer,
+    parallelVariantCount,
+    gpuDevice,
+  );
 
   const bestIndex = findBestIndex(scores);
-  const bestScore = scores.length > 0 ? scores[bestIndex]! : 0;
+  const bestScore = computeBestScore(scores, bestIndex);
 
-  if (observer?.onTelemetry) {
-    observer.onTelemetry({
-      backend,
-      inferenceMs: 0,
-    });
-  }
+  emitTelemetry(observer, backend);
 
   return {
     bestIndex,
@@ -295,6 +217,301 @@ export async function evaluateWeightVariantsAsync(
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve the scorer label for telemetry metadata.
+ *
+ * @param scoreFn - The scorer passed by the caller, if any.
+ * @returns `'default'` when no custom scorer was supplied, `'custom'` otherwise.
+ * @internal
+ */
+function resolveScorerName(scoreFn: VariantScorer | undefined): string {
+  return scoreFn === undefined ? 'default' : 'custom';
+}
+
+/**
+ * Resolve the acceleration backend status for the variant evaluator.
+ *
+ * When an explicit CPU backend is requested, a static CPU status is returned
+ * and the observer (if any) receives a backend-change event. Otherwise the
+ * existing acceleration orchestrator is consulted (GPU → worker → CPU).
+ *
+ * @param network - Network surface to evaluate.
+ * @param variants - Candidate weight perturbations.
+ * @param config - Optional acceleration configuration.
+ * @param observer - Optional acceleration observer.
+ * @param requestedBackend - The resolved backend preference.
+ * @returns The resolved {@link AccelerationStatus}.
+ * @internal
+ */
+async function resolveBackendStatus(
+  network: VariantEvaluationNetwork,
+  variants: readonly WeightVariant[],
+  config: AccelerationConfig | undefined,
+  observer: AccelerationObserver | undefined,
+  requestedBackend: BackendMode,
+): Promise<AccelerationStatus> {
+  if (requestedBackend === 'cpu') {
+    const cpuStatus: AccelerationStatus = {
+      mode: 'cpu',
+      gpu: { available: false, reason: 'CPU requested' },
+      worker: { available: false, count: 0, reason: 'CPU requested' },
+      cpu: { available: true },
+    };
+    console.log(
+      '[NeatapticTS Acceleration] Explicit CPU backend requested, skipping GPU/worker',
+    );
+    if (observer?.onBackendChange) {
+      observer.onBackendChange({
+        previous: null,
+        current: 'cpu',
+        reason: 'Acceleration backend selected: cpu',
+        timestamp: Date.now(),
+      });
+    }
+    return cpuStatus;
+  }
+
+  return autoEnableAcceleration({
+    nodeCount: network.nodes.length,
+    batchParallelCount: variants.length,
+    config,
+  });
+}
+
+/**
+ * Emit a backend-change observer event for the selected backend.
+ *
+ * @param observer - Optional acceleration observer.
+ * @param backend - The backend that was selected.
+ * @internal
+ */
+function emitBackendChangeEvent(
+  observer: AccelerationObserver | undefined,
+  backend: AccelerationMode,
+): void {
+  if (observer?.onBackendChange) {
+    observer.onBackendChange({
+      previous: null,
+      current: backend,
+      reason: `Acceleration backend selected: ${backend}`,
+      timestamp: Date.now(),
+    });
+  }
+}
+
+/**
+ * Emit a fallback observer event when the requested backend was not selected.
+ *
+ * @param observer - Optional acceleration observer.
+ * @param requestedBackend - The backend originally requested.
+ * @param backend - The backend that was selected.
+ * @internal
+ */
+function emitFallbackEvent(
+  observer: AccelerationObserver | undefined,
+  requestedBackend: BackendMode,
+  backend: AccelerationMode,
+): void {
+  if (
+    observer?.onFallback &&
+    requestedBackend !== 'auto' &&
+    requestedBackend !== backend
+  ) {
+    observer.onFallback({
+      requested: requestedBackend,
+      chosen: backend,
+      reason: `Requested ${requestedBackend} backend unavailable; falling back to ${backend}`,
+      timestamp: Date.now(),
+    });
+  }
+}
+
+/**
+ * Resolve the GPU device id to use for GPU evaluation, if any.
+ *
+ * Returns `undefined` when the backend is not GPU or the network is below the
+ * GPU node threshold.
+ *
+ * @param status - The resolved acceleration status.
+ * @param backend - The selected backend.
+ * @param network - Network surface to evaluate.
+ * @returns The GPU device, or `undefined` when GPU is unavailable.
+ * @internal
+ */
+function resolveGpuDevice(
+  status: AccelerationStatus,
+  backend: AccelerationMode,
+  network: VariantEvaluationNetwork,
+): GPUDevice | undefined {
+  if (
+    backend !== 'gpu' ||
+    network.nodes.length < DEFAULT_ACCELERATION_GPU_NODE_THRESHOLD
+  ) {
+    return undefined;
+  }
+  return status.gpu.device ?? undefined;
+}
+
+/**
+ * Evaluate all variants, dispatching in parallel batches or sequentially.
+ *
+ * @param network - Network surface to evaluate.
+ * @param variants - Candidate weight perturbations.
+ * @param inputs - Input batch.
+ * @param target - Target output vector.
+ * @param scorer - Scoring function.
+ * @param parallelVariantCount - Batch size for parallel evaluation.
+ * @param gpuDevice - GPU device, or `undefined` to use the CPU path.
+ * @returns Array of per-variant scores.
+ * @internal
+ */
+async function evaluateVariantBatches(
+  network: VariantEvaluationNetwork,
+  variants: readonly WeightVariant[],
+  inputs: WeightVariantInputs,
+  target: WeightVariantTarget,
+  scorer: VariantScorer,
+  parallelVariantCount: number,
+  gpuDevice: GPUDevice | undefined,
+): Promise<number[]> {
+  const scores: number[] = [];
+  if (parallelVariantCount > 1) {
+    for (
+      let index = 0;
+      index < variants.length;
+      index += parallelVariantCount
+    ) {
+      const batch = variants.slice(index, index + parallelVariantCount);
+      const batchScores = await evaluateBatch(
+        network,
+        batch,
+        inputs,
+        target,
+        scorer,
+        gpuDevice,
+      );
+      scores.push(...batchScores);
+    }
+  } else {
+    for (const variant of variants) {
+      const batchScores = await evaluateSingleVariant(
+        network,
+        variant,
+        inputs,
+        target,
+        scorer,
+        gpuDevice,
+      );
+      scores.push(...batchScores);
+    }
+  }
+  return scores;
+}
+
+/**
+ * Evaluate a single batch of variants, on GPU or CPU.
+ *
+ * @param network - Network surface to evaluate.
+ * @param batch - Slice of variants forming the batch.
+ * @param inputs - Input batch.
+ * @param target - Target output vector.
+ * @param scorer - Scoring function.
+ * @param gpuDevice - GPU device, or `undefined` to use the CPU path.
+ * @returns Scores for the batch.
+ * @internal
+ */
+async function evaluateBatch(
+  network: VariantEvaluationNetwork,
+  batch: WeightVariant[],
+  inputs: WeightVariantInputs,
+  target: WeightVariantTarget,
+  scorer: VariantScorer,
+  gpuDevice: GPUDevice | undefined,
+): Promise<number[]> {
+  if (gpuDevice !== undefined) {
+    return evaluateWeightVariantsOnGpu(
+      network,
+      batch,
+      inputs,
+      target,
+      scorer,
+      gpuDevice,
+    );
+  }
+  return Promise.all(
+    batch.map((variant) =>
+      evaluateVariant(network, variant, inputs, target, scorer),
+    ),
+  );
+}
+
+/**
+ * Evaluate a single variant, on GPU or CPU.
+ *
+ * @param network - Network surface to evaluate.
+ * @param variant - Weight perturbation to apply.
+ * @param inputs - Input batch.
+ * @param target - Target output vector.
+ * @param scorer - Scoring function.
+ * @param gpuDevice - GPU device, or `undefined` to use the CPU path.
+ * @returns Scores for the single variant.
+ * @internal
+ */
+async function evaluateSingleVariant(
+  network: VariantEvaluationNetwork,
+  variant: WeightVariant,
+  inputs: WeightVariantInputs,
+  target: WeightVariantTarget,
+  scorer: VariantScorer,
+  gpuDevice: GPUDevice | undefined,
+): Promise<number[]> {
+  if (gpuDevice !== undefined) {
+    return evaluateWeightVariantsOnGpu(
+      network,
+      [variant],
+      inputs,
+      target,
+      scorer,
+      gpuDevice,
+    );
+  }
+  return [await evaluateVariant(network, variant, inputs, target, scorer)];
+}
+
+/**
+ * Compute the best score from the scores array.
+ *
+ * @param scores - Per-variant scores.
+ * @param bestIndex - Index of the best variant.
+ * @returns The best score, or `0` when the array is empty.
+ * @internal
+ */
+function computeBestScore(
+  scores: readonly number[],
+  bestIndex: number,
+): number {
+  return scores.length > 0 ? scores[bestIndex]! : 0;
+}
+
+/**
+ * Emit a telemetry observer event for the selected backend.
+ *
+ * @param observer - Optional acceleration observer.
+ * @param backend - The backend that was selected.
+ * @internal
+ */
+function emitTelemetry(
+  observer: AccelerationObserver | undefined,
+  backend: AccelerationMode,
+): void {
+  if (observer?.onTelemetry) {
+    observer.onTelemetry({
+      backend,
+      inferenceMs: 0,
+    });
+  }
+}
 
 /**
  * Resolve the scale divisor used for telemetry and normalization.

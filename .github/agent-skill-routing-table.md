@@ -1,6 +1,6 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: c2c6ff50a361d9f2ff4a00b2489a4dde0c9f299563410c7060ace6062515003c -->
-<!-- source-file-count: 99 -->
+<!-- source-hash: 8a2339af820f08402b0ecb4285680c9865070bb32182a5d09f220bec54e823d6 -->
+<!-- source-file-count: 98 -->
 # Canonical Agent and Skill Routing Table
 
 > Generated file. Do not edit manually.
@@ -12,10 +12,10 @@
 | Name | Tier | Complexity | Model | Agents | Skills |
 | --- | --- | --- | --- | --- | --- |
 | 00-helping | 1 | moderate | kimi-k2.7-code:cloud | agent-maintenance-coordinator<br>coverage-analyst<br>learning-event-capturer | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>customize-cloud-agent<br>subagent-delegation-patterns<br>capturing-learning-event<br>routing-optimization-policy<br>phase-handoff-workflow<br>tracker-handoff<br>execute<br>skill-frontmatter-standards<br>mcp-local-server-workflow<br>skill-description-evals<br>skill-output-evals |
-| 01-planning | 1 | moderate | kimi-k2.7-code:cloud | plan-scout<br>agent-maintenance-coordinator | plan-alignment<br>tracker-handoff<br>phase-handoff-workflow<br>agent-frontmatter-standards<br>model-routing-and-budget<br>license-attribution-audit<br>planning-acceptance-criteria<br>plan-sync-validation<br>spec-checklist<br>research-methodology<br>execute<br>red-test-contracts |
-| 02-researching | 1 | moderate | kimi-k2.7-code:cloud | research-codebase-coordinator<br>plan-scout<br>docs-scout<br>boundary-mapper<br>agent-maintenance-coordinator<br>license-reviewer<br>dependency-audit-reviewer<br>benchmark-gate-reviewer | subagent-delegation-patterns<br>research-methodology<br>repo-cortex-workflow<br>execute<br>repo-cortex-embeddings |
+| 01-planning | 1 | moderate | kimi-k2.7-code:cloud | plan-scout<br>agent-maintenance-coordinator | plan-alignment<br>tracker-handoff<br>phase-handoff-workflow<br>agent-frontmatter-standards<br>model-routing-and-budget<br>license-attribution-audit<br>planning-acceptance-criteria<br>plan-sync-validation<br>spec-checklist<br>research-methodology<br>execute<br>red-test-contracts<br>solid-split |
+| 02-researching | 1 | moderate | kimi-k2.7-code:cloud | research-codebase-coordinator<br>plan-scout<br>docs-scout<br>boundary-mapper<br>agent-maintenance-coordinator<br>license-reviewer<br>dependency-audit-reviewer<br>benchmark-gate-reviewer | subagent-delegation-patterns<br>research-methodology<br>repo-cortex-workflow<br>execute<br>repo-cortex-embeddings<br>solid-split |
 | 03-red-testing | 1 | moderate | kimi-k2.7-code:cloud | unit-test-writer<br>plan-scout<br>performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist<br>browser-harness-specialist<br>coverage-analyst<br>agent-maintenance-coordinator<br>slice-validator<br>property-based-test-writer<br>boundary-mapper | red-test-contracts<br>nge-core-algorithm<br>reproducibility-contracts<br>creating-unit-tests<br>test-fix-workflow<br>coverage-tranche<br>research-methodology<br>execute<br>chrome-devtools-mcp<br>browser-testing-harness<br>devtools<br>planning-acceptance-criteria<br>property-based-testing |
-| 04-implementing | 1 | moderate | kimi-k2.7-code:cloud | implementation-pattern-scout<br>implementation-executor<br>boundary-mapper<br>docs-scout<br>solid-split<br>browser-harness-specialist<br>agent-maintenance-coordinator<br>plan-scout<br>performance-trace-specialist<br>security-reviewer<br>performance-reviewer<br>api-contract-reviewer<br>determinism-reviewer<br>dependency-audit-reviewer | implementation-standards<br>nge-core-algorithm<br>reproducibility-contracts<br>tracker-handoff<br>architecture-builder<br>onnx-work<br>performance-optimization<br>trace-analyzer-extension<br>worker-inference-transport<br>research-methodology<br>execute<br>browser-testing-harness<br>neatchat-systems<br>mcp-local-server-workflow<br>webgpu<br>multithread-evaluation<br>checkpointing-persistence<br>hybrid-training-interop<br>visualizer-workflow<br>browser-build<br>flappy-architecture-polish<br>security-review<br>dependency-audit |
+| 04-implementing | 1 | moderate | kimi-k2.7-code:cloud | implementation-pattern-scout<br>implementation-executor<br>boundary-mapper<br>docs-scout<br>browser-harness-specialist<br>agent-maintenance-coordinator<br>plan-scout<br>performance-trace-specialist<br>security-reviewer<br>performance-reviewer<br>api-contract-reviewer<br>determinism-reviewer<br>dependency-audit-reviewer | implementation-standards<br>solid-split<br>nge-core-algorithm<br>reproducibility-contracts<br>tracker-handoff<br>architecture-builder<br>onnx-work<br>performance-optimization<br>trace-analyzer-extension<br>worker-inference-transport<br>research-methodology<br>execute<br>browser-testing-harness<br>neatchat-systems<br>mcp-local-server-workflow<br>webgpu<br>multithread-evaluation<br>checkpointing-persistence<br>hybrid-training-interop<br>visualizer-workflow<br>browser-build<br>flappy-architecture-polish<br>security-review<br>dependency-audit |
 | 05-green-testing | 1 | moderate | kimi-k2.7-code:cloud | performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist<br>browser-harness-specialist<br>coverage-analyst<br>agent-maintenance-coordinator<br>plan-scout<br>boundary-mapper<br>slice-validator<br>security-reviewer<br>performance-reviewer<br>determinism-reviewer<br>benchmark-gate-reviewer | green-validation-gates<br>coverage-guard<br>test-fix-workflow<br>plan-sync-validation<br>spec-checklist<br>trace-audit-reporting<br>research-methodology<br>execute<br>chrome-devtools-mcp<br>browser-testing-harness<br>devtools<br>nge-benchmark-workflow<br>reproducibility-contracts<br>running-unit-tests<br>triaging-test-failures<br>mcp-local-server-workflow<br>security-review<br>benchmark-gate |
 | 06-documenting | 1 | moderate | kimi-k2.7-code:cloud | docs-scout<br>plan-scout<br>browser-harness-specialist<br>agent-maintenance-coordinator<br>api-contract-reviewer<br>license-reviewer<br>browser-ui-specialist<br>browser-memory-specialist | educational-docs<br>nge-core-algorithm<br>docs-academic-citation-audit<br>license-attribution-audit<br>auditing-js-docs<br>updating-js-docs<br>research-methodology<br>execute<br>browser-testing-harness<br>dependency-audit |
 | 07-logging | 1 | moderate | kimi-k2.7-code:cloud | plan-scout<br>learning-event-capturer<br>agent-maintenance-coordinator | tracker-handoff<br>summarizing-session-log<br>plan-sync-validation<br>capturing-learning-event<br>research-methodology<br>execute<br>phase-handoff-workflow |
@@ -41,13 +41,13 @@
 | research-codebase-coordinator | 2 | moderate | kimi-k2.7-code:cloud | plan-scout<br>docs-scout<br>boundary-mapper<br>implementation-pattern-scout | subagent-delegation-patterns<br>repo-cortex-workflow<br>research-methodology<br>execute |
 | security-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | security-review<br>implementation-standards |
 | slice-validator | 3 | moderate | kimi-k2.7-code:cloud | - | phase-handoff-workflow<br>plan-sync-validation |
-| solid-split | 2 | moderate | kimi-k2.7-code:cloud | boundary-mapper<br>plan-scout<br>docs-scout | solid-split<br>implementation-standards<br>execute |
 | unit-test-writer | 3 | moderate | kimi-k2.7-code:cloud | - | creating-unit-tests<br>red-test-contracts |
 
 ## Skills
 
 | Name | Tier | Model | Agents | Skills |
 | --- | --- | --- | --- | --- |
+|  | skill | - | - | self |
 | agent-frontmatter-standards | skill | - | 00-helping<br>01-planning<br>agent-maintenance-coordinator | self |
 | agent-inventory-audit | skill | - | 00-helping<br>agent-maintenance-coordinator | self |
 | agent-json-body-to-md | skill | - | agent-maintenance-coordinator | self |
@@ -69,11 +69,10 @@
 | devtools | skill | - | 03-red-testing<br>05-green-testing | self |
 | docs-academic-citation-audit | skill | - | 06-documenting | self |
 | educational-docs | skill | - | 06-documenting<br>docs-scout | self |
-| execute | skill | - | 00-helping<br>01-planning<br>02-researching<br>03-red-testing<br>04-implementing<br>05-green-testing<br>06-documenting<br>07-logging<br>agent-maintenance-coordinator<br>implementation-executor<br>research-codebase-coordinator<br>solid-split | self |
 | flappy-architecture-polish | skill | - | 04-implementing | self |
 | green-validation-gates | skill | - | 05-green-testing | self |
 | hybrid-training-interop | skill | - | 04-implementing | self |
-| implementation-standards | skill | - | 04-implementing<br>api-contract-reviewer<br>boundary-mapper<br>implementation-executor<br>implementation-pattern-scout<br>performance-reviewer<br>security-reviewer<br>solid-split | self |
+| implementation-standards | skill | - | 04-implementing<br>api-contract-reviewer<br>boundary-mapper<br>implementation-executor<br>implementation-pattern-scout<br>performance-reviewer<br>security-reviewer | self |
 | license-attribution-audit | skill | - | 01-planning<br>06-documenting<br>license-reviewer | self |
 | mcp-local-server-workflow | skill | - | 00-helping<br>04-implementing<br>05-green-testing | self |
 | model-routing-and-budget | skill | - | 00-helping<br>01-planning<br>agent-maintenance-coordinator | self |
@@ -99,7 +98,7 @@
 | skill-description-evals | skill | - | 00-helping | self |
 | skill-frontmatter-standards | skill | - | 00-helping | self |
 | skill-output-evals | skill | - | 00-helping | self |
-| solid-split | skill | - | boundary-mapper<br>solid-split | self |
+| solid-split | skill | - | 01-planning<br>02-researching<br>04-implementing<br>boundary-mapper | self |
 | spec-checklist | skill | - | 01-planning<br>05-green-testing | self |
 | splitting-monolithic-agent | skill | - | agent-maintenance-coordinator | self |
 | subagent-delegation-patterns | skill | - | 00-helping<br>02-researching<br>agent-maintenance-coordinator<br>research-codebase-coordinator | self |

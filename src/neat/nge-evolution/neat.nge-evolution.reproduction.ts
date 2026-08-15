@@ -147,6 +147,7 @@ const DEFAULT_SEXUAL_RANDOM_SAMPLE = 0.75;
  * @param input - Operator context containing the source parent DNA and mode flags.
  * @param mutateOffspring - Optional mutation callback applied only when the configured rate is non-zero.
  * @returns Canonical offspring DNA plus parent-contribution metadata.
+ * @throws {NgeEvolution_ModeError} When NGE is disabled in the operator input.
  */
 export function reproduceParthenogenesis(
   input: NgeParthenogenesisInput,
@@ -230,6 +231,7 @@ export function reproduceParthenogenesis(
  *
  * @param input - Operator context containing the queen DNA, drone donors, and policy overrides.
  * @returns Canonical offspring DNA plus the resolved region-assignment report.
+ * @throws {NgeEvolution_ModeError} When NGE is disabled in the operator input.
  *
  * @example
  * ```ts

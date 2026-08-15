@@ -81,6 +81,9 @@ mutation chapter. Rather than choosing one operator itself, it adjusts each
 genome's readiness for later mutation so the next structural-edit pass can be
 more exploratory or more conservative depending on recent success.
 
+Parameters:
+- `this` - NeatEngine instance whose per-genome mutation rates are tuned.
+
 Returns: Updates per-genome mutation-rate state in place when the current generation satisfies the adaptation cadence.
 
 Example:
@@ -113,6 +116,9 @@ Typical usage: keep population lineage diversity within a healthy
 band. Low ancestor uniqueness means too many genomes share ancestors
 (risking premature convergence); high uniqueness might indicate
 excessive divergence.
+
+Parameters:
+- `this` - NeatEngine instance whose lineage diversity options may be adjusted.
 
 Returns: May update lineage-related controller options and record the most recent adjustment generation.
 
@@ -154,6 +160,9 @@ The important distinction is that this helper does not mutate genomes
 directly. It mutates controller policy, so its effect is feed-forward into
 later structural decisions rather than an immediate topology rewrite.
 
+Parameters:
+- `this` - NeatEngine instance whose complexity budget options are adjusted.
+
 Returns: Updates `this.options.maxNodes` and possibly
 `this.options.maxConns` in-place; no value is returned.
 
@@ -191,6 +200,9 @@ Behavior summary:
   that fall below the final threshold — effectively rejecting them from
   selection.
 
+Parameters:
+- `this` - NeatEngine instance whose minimal-criterion threshold is adapted.
+
 Returns: Updates `_mcThreshold` over time and may zero out scores for currently rejected genomes.
 
 Example:
@@ -221,6 +233,9 @@ The `_operatorStats` map on `this` is expected to contain values of
 the shape `{ success: number, attempts: number }` keyed by operator
 id/name.
 
+Parameters:
+- `this` - NeatEngine instance whose operator adaptation statistics are decayed.
+
 Returns: Decays `_operatorStats` in place so later mutation-method selection reflects more recent operator performance.
 
 Example:
@@ -246,6 +261,9 @@ the controller into a new structural mood and records when that phase began.
 The current phase and its start generation are stored on `this` as
 `_phase` and `_phaseStartGeneration` so the state persists across
 generations.
+
+Parameters:
+- `this` - NeatEngine instance whose phased complexity state is toggled.
 
 Returns: Mutates `this._phase` and `this._phaseStartGeneration` so later mutation-selection code knows whether to favor growth or simplification.
 

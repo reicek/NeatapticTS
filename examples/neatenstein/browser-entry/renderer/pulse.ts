@@ -10,89 +10,41 @@
  */
 
 import {
-  NEATENSTEIN_MAP_SIZE,
-  NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS,
-  NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS,
   NEATENSTEIN_PULSE_AXIS_X_THRESHOLD,
   NEATENSTEIN_PULSE_DIRECTION_NEGATIVE_THRESHOLD,
   NEATENSTEIN_PULSE_MAX_CONCURRENT,
   NEATENSTEIN_PULSE_WORLD_SPEED_MAX,
   NEATENSTEIN_PULSE_WORLD_SPEED_MIN,
 } from '../constants';
-import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../host/game/constants';
+import {
+  NEATENSTEIN_PULSE_AMBIENT_INTERVAL_TICKS,
+  NEATENSTEIN_PULSE_AMBIENT_LIFETIME_TICKS,
+  NEATENSTEIN_PULSE_GRID_SPAN,
+  NEATENSTEIN_PULSE_LAYER_CEILING,
+  NEATENSTEIN_PULSE_LAYER_FLOOR,
+  NEATENSTEIN_PULSE_MAP_EDGE_MARGIN,
+} from './renderer.pulse.constants';
+import {
+  PARK_MILLER_MODULUS,
+  PARK_MILLER_MULTIPLIER,
+} from './renderer.rng.constants';
+import type {
+  NeatensteinDepthTestPulse,
+  NeatensteinPulse,
+  NeatensteinPulseAxis,
+} from './renderer.pulse.types';
 
-/** Ambient pulse interval rounded to whole simulation ticks. */
-const NEATENSTEIN_PULSE_AMBIENT_INTERVAL_TICKS = Math.round(
-  NEATENSTEIN_PULSE_AMBIENT_INTERVAL_MS / NEATENSTEIN_FIXED_TIMESTEP_MS,
-);
-
-/** Ambient pulse lifetime rounded to whole simulation ticks. */
-export const NEATENSTEIN_PULSE_AMBIENT_LIFETIME_TICKS = Math.ceil(
-  NEATENSTEIN_PULSE_AMBIENT_LIFETIME_MS / NEATENSTEIN_FIXED_TIMESTEP_MS,
-);
-
-/** Number of cells reserved at each map edge so pulses stay on visible grid lines. */
-const NEATENSTEIN_PULSE_MAP_EDGE_MARGIN = 1;
-
-/** Effective span of integer grid lines available for pulse travel. */
-const NEATENSTEIN_PULSE_GRID_SPAN =
-  NEATENSTEIN_MAP_SIZE - NEATENSTEIN_PULSE_MAP_EDGE_MARGIN * 2;
-
-/** Ambient pulse layer identifier for the floor grid. */
-export const NEATENSTEIN_PULSE_LAYER_FLOOR = 'floor' as const;
-
-/** Ambient pulse layer identifier for the ceiling grid. */
-export const NEATENSTEIN_PULSE_LAYER_CEILING = 'ceiling' as const;
-
-/** Modulus for the Park-Miller-style deterministic LCG. */
-const PARK_MILLER_MODULUS = 2_147_483_647;
-
-/** Multiplier for the Park-Miller-style deterministic LCG. */
-const PARK_MILLER_MULTIPLIER = 16_807;
-
-/**
- * Axis a pulse travels along.
- *
- * - `x` means the pulse moves along a line of constant world X (varying Y).
- * - `y` means the pulse moves along a line of constant world Y (varying X).
- */
-export type NeatensteinPulseAxis = 'x' | 'y';
-
-/**
- * Minimal pulse shape needed for z-buffer depth testing.
- */
-export interface NeatensteinDepthTestPulse {
-  /** Screen column index the projected pulse occupies. */
-  screenColumn: number;
-  /** Perpendicular distance from the camera plane to the pulse. */
-  distance: number;
-}
-
-/**
- * A single rendered pulse.
- */
-export interface NeatensteinPulse extends NeatensteinDepthTestPulse {
-  /** World X coordinate of the pulse. */
-  worldX: number;
-  /** World Y coordinate of the pulse. */
-  worldY: number;
-  /** Seed that produced the pulse. */
-  seed: number;
-  /** Whether the pulse is still active. */
-  active: boolean;
-  /** Remaining lifetime in simulation ticks. */
-  lifetimeTicks: number;
-  /** Grid axis this pulse travels along. */
-  axis: NeatensteinPulseAxis;
-  /** Direction of travel along the axis (+1 or -1). */
-  travelDirection: 1 | -1;
-  /** Speed of travel in world units per tick. */
-  travelSpeed: number;
-  /** Render layer: floor or ceiling mirror. */
-  layer:
-    | typeof NEATENSTEIN_PULSE_LAYER_FLOOR
-    | typeof NEATENSTEIN_PULSE_LAYER_CEILING;
-}
+// Re-export constants and types for external consumers.
+export {
+  NEATENSTEIN_PULSE_AMBIENT_LIFETIME_TICKS,
+  NEATENSTEIN_PULSE_LAYER_CEILING,
+  NEATENSTEIN_PULSE_LAYER_FLOOR,
+} from './renderer.pulse.constants';
+export type {
+  NeatensteinDepthTestPulse,
+  NeatensteinPulse,
+  NeatensteinPulseAxis,
+} from './renderer.pulse.types';
 
 /**
  * Determine whether an ambient pulse should be emitted on this simulation tick.

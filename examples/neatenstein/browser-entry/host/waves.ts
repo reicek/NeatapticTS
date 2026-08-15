@@ -17,38 +17,10 @@ import {
 } from './game/constants';
 import { spawnWaveTick } from './game/waves';
 import type { GameState } from './game/types';
-import type { MlpEnemyPopulation } from '../harness/enemy-mlp';
-import type { Snapshot } from '../harness/types';
+import type { AdvanceWaveOptions, AdvanceWaveResult } from './types';
 
-/**
- * Options accepted by {@link advanceWave}, pairing the live enemy population
- * with an optional cap on how many enemies the next wave should spawn.
- */
-export interface AdvanceWaveOptions {
-  /** Live enemy population whose champion snapshot is advanced one generation. */
-  population: MlpEnemyPopulation;
-  /**
-   * Number of enemies to spawn for the new wave.
-   *
-   * Defaults to {@link NEATENSTEIN_ENEMY_MAX_CONCURRENT}. Values below zero are
-   * treated as zero; non-finite values fall back to the default cap; values
-   * above the concurrency cap are clamped to the cap.
-   */
-  spawnCount?: number;
-}
-
-/**
- * Result returned by {@link advanceWave}, exposing the cleared arena state,
- * the advanced champion snapshot, and the actual number of spawned enemies.
- */
-export interface AdvanceWaveResult {
-  /** New game snapshot with a cleared arena and freshly spawned enemies. */
-  state: GameState;
-  /** Champion snapshot produced by advancing the enemy population. */
-  snapshot: Snapshot;
-  /** Number of enemies actually spawned (always in [0, cap]). */
-  spawnedCount: number;
-}
+// Re-export consolidated types so existing imports from this module remain valid.
+export type { AdvanceWaveOptions, AdvanceWaveResult } from './types';
 
 /**
  * Clamp a requested wave spawn count to a valid integer in [0, cap].

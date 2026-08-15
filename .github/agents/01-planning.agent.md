@@ -35,6 +35,7 @@ skills:
     'research-methodology',
     'execute',
     'red-test-contracts',
+    'solid-split',
   ]
 handoffs:
   - label: 'Start Research'

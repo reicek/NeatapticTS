@@ -316,12 +316,15 @@ export async function applyMutationOperator(
   const mutationName = mutationMethod?.name;
 
   // Step 1: handle structural operators that require innovation reuse.
-  if (mutationName === mutationMethods.ADD_NODE?.name) {
-    await applyAddNodeMutation(genome, internal, methods);
-    return;
-  }
-  if (mutationName === mutationMethods.ADD_CONN?.name) {
-    applyAddConnMutation(genome, internal, methods);
+  if (
+    await tryStructuralMutationOperator(
+      genome,
+      mutationName,
+      mutationMethods,
+      internal,
+      methods,
+    )
+  ) {
     return;
   }
 
@@ -329,6 +332,57 @@ export async function applyMutationOperator(
   // static Connection innovation counter above any innovations already in this
   // genome so that Connection.acquire() (used inside genome.mutate) never
   // assigns an innovation ID that is already occupied by an existing edge.
+  syncInnovationCounterForGenome(genome);
+  genome.mutate?.(mutationMethod);
+
+  // Step 3: invalidate caches for likely structural changes.
+  if (shouldInvalidateCaches(mutationMethod, methods)) {
+    internal._invalidateGenomeCaches(genome);
+  }
+}
+
+/**
+ * Dispatch structural mutation operators that require innovation reuse.
+ *
+ * Returns `true` when the operator was a structural `ADD_NODE` or `ADD_CONN`
+ * mutation that has already been applied, signaling the caller that no further
+ * processing is needed.
+ *
+ * @param genome Genome to mutate.
+ * @param mutationName Name of the resolved mutation method.
+ * @param mutationMethods Record of available mutation methods.
+ * @param internal NEAT controller context.
+ * @param methods Mutation methods module.
+ * @returns Promise resolving to `true` when a structural operator was applied.
+ */
+async function tryStructuralMutationOperator(
+  genome: GenomeWithMetadata,
+  mutationName: string | undefined,
+  mutationMethods: Record<string, MutationMethod>,
+  internal: NeatControllerForMutation,
+  methods: { mutation: unknown },
+): Promise<boolean> {
+  if (mutationName === mutationMethods.ADD_NODE?.name) {
+    await applyAddNodeMutation(genome, internal, methods);
+    return true;
+  }
+  if (mutationName === mutationMethods.ADD_CONN?.name) {
+    applyAddConnMutation(genome, internal, methods);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Sync the Connection innovation counter above any innovations in the genome.
+ *
+ * Collects all connection innovation IDs (including self-connections) and
+ * raises the static counter so that `Connection.acquire()` never reuses an ID
+ * already occupied by an existing edge.
+ *
+ * @param genome Genome whose connections are inspected.
+ */
+function syncInnovationCounterForGenome(genome: GenomeWithMetadata): void {
   const allGenomeConnections = [
     ...genome.connections,
     ...((
@@ -348,12 +402,6 @@ export async function applyMutationOperator(
     0,
   );
   Connection.syncInnovationCounter(maxExistingInnovation);
-  genome.mutate?.(mutationMethod);
-
-  // Step 3: invalidate caches for likely structural changes.
-  if (shouldInvalidateCaches(mutationMethod, methods)) {
-    internal._invalidateGenomeCaches(genome);
-  }
 }
 
 /**

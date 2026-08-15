@@ -170,24 +170,17 @@ OUTPUT_CONTRACT: structured-v1
 TASK_STATUS: SUCCESS | PARTIAL | FAILED
 TIER: 3
 ROLE: coverage-analyst
-MODE: recon | regression
 TASK_RECEIVED: <brief restatement>
 FILES_READ:
 - <path or NONE>
 FILES_CHANGED:
 - <path or NONE>
-COVERAGE_SNAPSHOT:
-- file: <path>, statements: <pct>, branches: <pct>, functions: <pct>, lines: <pct>
 KEY_FINDINGS:
-- <gap classification and test target, or NONE>
+- <finding or NONE>
 ACTIONS_TAKEN:
-- <focused coverage command run, or NONE>
+- <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
-VERDICT: GAP_REPORT | REGRESSION_DETECTED | NO_GAP
-OBSERVATIONS:
-- file: <path>, category: <statements|branches|functions|lines>, location: <line/region>, classification: <reachable-live-path|dead-code>, confidence: <0-1>, action: <add-test|remove-branch>, test_target: <nearest test file>::<it() name>
-NEXT_TRANCHE_TARGET: <next src/ file or NONE>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

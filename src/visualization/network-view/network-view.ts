@@ -88,16 +88,12 @@ export function renderNetworkView(
   options?: RenderNetworkViewOptions,
 ): NetworkVisualizationResolvedFrame {
   // Step 1: Resolve options with defaults.
-  const nodeDimensions = options?.nodeDimensions ?? DEFAULT_NODE_DIMENSIONS;
-  const panelPadding = options?.panelPaddingPx ?? DEFAULT_PANEL_PADDING;
-  const colorScales = options?.colorScales ?? DEFAULT_COLOR_SCALES;
+  const { nodeDimensions, panelPadding, colorScales } =
+    resolveRenderOptions(options);
 
   // Step 2: Infer topology and layers from the graph.
   const networkLayers = mapGraphToNetworkLayers(graph);
-  const topologyMode =
-    (graph.metadata?.mode ?? 'recurrent') === 'acyclic'
-      ? ('acyclic' as const)
-      : ('recurrent' as const);
+  const topologyMode = resolveTopologyMode(graph);
 
   // Step 3: Calculate drawable area.
   const canvasWidthPx = canvas.width;
@@ -146,12 +142,64 @@ export function renderNetworkView(
   };
 
   // Step 8: Draw the frame.
+  drawNetworkFrame(canvas, frame);
+
+  return frame;
+}
+
+/**
+ * Resolve render options with defaults applied.
+ *
+ * @param options - Optional render settings (dimensions, padding, colors).
+ * @returns Resolved node dimensions, panel padding, and color scales.
+ */
+function resolveRenderOptions(options?: RenderNetworkViewOptions): {
+  nodeDimensions: NetworkNodeDimensions;
+  panelPadding: EdgePadding;
+  colorScales: NetworkVisualizationColorScales;
+} {
+  if (!options) {
+    return {
+      nodeDimensions: DEFAULT_NODE_DIMENSIONS,
+      panelPadding: DEFAULT_PANEL_PADDING,
+      colorScales: DEFAULT_COLOR_SCALES,
+    };
+  }
+  return {
+    nodeDimensions: options.nodeDimensions ?? DEFAULT_NODE_DIMENSIONS,
+    panelPadding: options.panelPaddingPx ?? DEFAULT_PANEL_PADDING,
+    colorScales: options.colorScales ?? DEFAULT_COLOR_SCALES,
+  };
+}
+
+/**
+ * Resolve the topology mode from graph metadata.
+ *
+ * @param graph - Visualization graph.
+ * @returns `'acyclic'` when the graph declares an acyclic mode, otherwise `'recurrent'`.
+ */
+function resolveTopologyMode(
+  graph: VisualizationGraphV1,
+): 'acyclic' | 'recurrent' {
+  return (graph.metadata?.mode ?? 'recurrent') === 'acyclic'
+    ? 'acyclic'
+    : 'recurrent';
+}
+
+/**
+ * Draw the resolved frame onto the canvas if a 2D context is available.
+ *
+ * @param canvas - Canvas element to render onto.
+ * @param frame - Resolved visualization frame.
+ */
+function drawNetworkFrame(
+  canvas: HTMLCanvasElement,
+  frame: NetworkVisualizationResolvedFrame,
+): void {
   const context = canvas.getContext('2d');
   if (context) {
     drawNetworkVisualization(context, frame);
   }
-
-  return frame;
 }
 
 /**

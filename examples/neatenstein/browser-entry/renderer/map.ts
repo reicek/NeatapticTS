@@ -17,63 +17,21 @@
  */
 
 import { NEATENSTEIN_MAP_SIZE } from '../constants';
+import {
+  PARK_MILLER_MODULUS,
+  PARK_MILLER_MULTIPLIER,
+} from './renderer.rng.constants';
+import {
+  CENTRAL_ARENA_CLEARANCE_CELLS,
+  FLOOR_CELL,
+  INTERIOR_WALL_DENSITY,
+  LCG_MIN_NONZERO_STATE,
+  WALL_CELL,
+} from './renderer.map.constants';
+import type { CollisionMap } from './renderer.map.types';
 
-/**
- * Read-only interface used by movement, AI, and collision systems to test
- * whether a grid cell blocks movement.
- *
- * The interface deliberately hides the underlying storage format so callers do
- * not depend on row-major indexing or typed-array details.
- */
-export interface CollisionMap {
-  /**
-   * Return whether the cell at integer grid coordinate `(x, y)` is solid.
-   *
-   * Coordinates outside the map are treated as solid by the default
-   * implementation, preventing entities from leaving the arena.
-   *
-   * @param x - Integer grid X coordinate.
-   * @param y - Integer grid Y coordinate.
-   * @returns Whether the requested cell blocks movement.
-   */
-  isSolid(x: number, y: number): boolean;
-}
-
-/**
- * Linear congruential generator modulus.
- *
- * This is the largest Mersenne prime that fits in a signed 32-bit integer and
- * is used by the Park-Miller minimal standard generator.
- */
-const LCG_MODULUS = 2_147_483_647;
-
-/** Linear congruential generator multiplier from the Park-Miller LCG. */
-const LCG_MULTIPLIER = 16_807;
-
-/** Minimum non-zero PRNG state so a seed of `0` does not freeze generation. */
-const LCG_MIN_NONZERO_STATE = 1;
-
-/**
- * Fraction of interior cells converted to walls by the seeded scatter pass.
- *
- * This value is intentionally local to map generation so gameplay systems only
- * depend on the resulting collision data, not generation policy.
- */
-const INTERIOR_WALL_DENSITY = 0.12;
-
-/**
- * Half-size, in cells, of the open central spawn arena.
- *
- * The generated map clears a square around the center so the player and other
- * entities always have a safe starting area.
- */
-const CENTRAL_ARENA_CLEARANCE_CELLS = 4;
-
-/** Open floor cell value in the flat map. */
-const FLOOR_CELL = 0;
-
-/** Solid wall cell value in the flat map. */
-const WALL_CELL = 1;
+// Re-export constants and types for external consumers.
+export type { CollisionMap } from './renderer.map.types';
 
 /**
  * Normalize a caller-provided seed into a positive PRNG state in the valid LCG
@@ -91,7 +49,7 @@ function normalizeLcgSeed(seed: number): number {
 
   // Keep negative and oversized seeds deterministic by wrapping them into the
   // valid modulus range.
-  state = ((state % LCG_MODULUS) + LCG_MODULUS) % LCG_MODULUS;
+  state = ((state % PARK_MILLER_MODULUS) + PARK_MILLER_MODULUS) % PARK_MILLER_MODULUS;
 
   return state === 0 ? LCG_MIN_NONZERO_STATE : state;
 }
@@ -103,7 +61,7 @@ function normalizeLcgSeed(seed: number): number {
  * @returns The next positive LCG state.
  */
 function nextLcgState(state: number): number {
-  return (state * LCG_MULTIPLIER) % LCG_MODULUS;
+  return (state * PARK_MILLER_MULTIPLIER) % PARK_MILLER_MODULUS;
 }
 
 /**
@@ -114,7 +72,7 @@ function nextLcgState(state: number): number {
  * @returns Pseudo-random unit value.
  */
 function lcgStateToUnit(state: number): number {
-  return state / LCG_MODULUS;
+  return state / PARK_MILLER_MODULUS;
 }
 
 /**

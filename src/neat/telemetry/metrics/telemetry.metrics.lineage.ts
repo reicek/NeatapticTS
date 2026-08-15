@@ -128,7 +128,7 @@ export function applyLineageStatsMultiObjective(
  * Apply lineage stats for mono-objective mode using sampled ancestors so single-score runs still report ancestry diversity pressure transparently across long experiments.
  *
  * @param telemetryContext - Neat-like context with lineage settings.
- * @param population - Population snapshot.
+ * @param populationSnapshot - Snapshot of the current population used for lineage stats.
  * @param entry - Telemetry entry to update.
  */
 export function applyLineageStatsMonoObjective(

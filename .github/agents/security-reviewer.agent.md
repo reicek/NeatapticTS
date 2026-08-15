@@ -121,9 +121,6 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
-VERDICT: APPROVE | REQUEST_CHANGES
-OBSERVATIONS:
-- class: <injection|xss|prototype-pollution|eval-dynamic-code|unsafe-deserialization|secret-leakage|path-traversal|insecure-random>, severity: <high|medium|low>, confidence: <0-1>, detail: <concise finding with source→sink path>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

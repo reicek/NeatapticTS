@@ -38,7 +38,9 @@ export async function resolveTypeScriptSourcePaths(options = {}) {
   if (Array.isArray(sourcePaths) && sourcePaths.length > 0) {
     return sourcePaths
       .map((sourcePath) => path.resolve(sourcePath))
-      .toSorted((leftPath, rightPath) => leftPath.localeCompare(rightPath));
+      .toSorted((leftPath, rightPath) =>
+        leftPath.localeCompare(rightPath, 'en'),
+      );
   }
 
   const patterns = options.patterns ?? DEFAULT_TS_PATTERNS;
@@ -51,7 +53,7 @@ export async function resolveTypeScriptSourcePaths(options = {}) {
     ignore,
   });
   return entries.toSorted((leftPath, rightPath) =>
-    leftPath.localeCompare(rightPath),
+    leftPath.localeCompare(rightPath, 'en'),
   );
 }
 
@@ -101,11 +103,25 @@ export async function loadExportedTypeScriptDeclarations(options = {}) {
     );
   });
 
-  return exportedSymbols.toSorted((leftSymbol, rightSymbol) => {
-    const pathOrder = leftSymbol.file_path.localeCompare(rightSymbol.file_path);
+  const seenDeclarationIds = new Set();
+  const dedupedSymbols = exportedSymbols.filter((entry) => {
+    const declarationFile = toRepoRelative(
+      entry.declaration.getSourceFile().getFilePath(),
+    );
+    const declarationId = `${declarationFile}:${entry.declaration.getStart()}`;
+    if (seenDeclarationIds.has(declarationId)) return false;
+    seenDeclarationIds.add(declarationId);
+    return true;
+  });
+
+  return dedupedSymbols.toSorted((leftSymbol, rightSymbol) => {
+    const pathOrder = leftSymbol.file_path.localeCompare(
+      rightSymbol.file_path,
+      'en',
+    );
     return pathOrder !== 0
       ? pathOrder
-      : leftSymbol.symbol_name.localeCompare(rightSymbol.symbol_name);
+      : leftSymbol.symbol_name.localeCompare(rightSymbol.symbol_name, 'en');
   });
 }
 

@@ -593,10 +593,14 @@ describe('code-coverage gate native-ESM coverage', () => {
     assert.equal(result.pass, false);
   });
 
-  it('main() returns a failure contract when no summary path is provided', async () => {
+  it('main() returns a contract using the default summary path when none is provided', async () => {
     const { main } = await loadGate();
     const result = await main(['--json']);
-    assert.equal(result.pass, false);
+    assert.equal(
+      result.evidence.coverageSummaryPath,
+      'coverage/coverage-summary.json',
+    );
+    assert.equal(typeof result.pass, 'boolean');
   });
 
   it('main() prints human-readable output when --json is omitted', async () => {
@@ -959,5 +963,68 @@ describe('code-coverage gate native-ESM coverage', () => {
           exempt.kind === 'legacy-dominant',
       ),
     );
+  });
+
+  it('ignores explicit changed files outside coverage-relevant directories', async () => {
+    const { runCodeCoverageGate } = await loadGate();
+    const summaryPath = makeSummary(tempDir, {});
+
+    const result = await runCodeCoverageGate({
+      coverageSummaryPath: path.relative(REPO_ROOT, summaryPath),
+      changedFiles: [
+        'rag-index/docs-quality/docs-quality.metrics.mjs',
+        'plans/docs-quality-metrics-gap.plans.md',
+      ],
+    });
+
+    assert.equal(result.pass, true);
+    assert.deepEqual(result.evidence.targetFiles, []);
+  });
+
+  it('parses --exemptions via main()', async () => {
+    const { main } = await loadGate();
+    const summaryPath = makeSummary(tempDir, {
+      'src/exempt/legacy.ts': {
+        lines: { pct: 57.21 },
+        statements: { pct: 56.66 },
+        functions: { pct: 22.1 },
+        branches: { pct: 64.51 },
+      },
+    });
+    const exemptionsPath = path.join(tempDir, 'exemptions.json');
+    writeFileSync(
+      exemptionsPath,
+      JSON.stringify({ 'src/exempt/legacy.ts': 'legacy-dominant' }),
+    );
+
+    const result = await main([
+      '--json',
+      `--coverage-summary-path=${path.relative(REPO_ROOT, summaryPath)}`,
+      `--exemptions=${path.relative(REPO_ROOT, exemptionsPath)}`,
+      '--changed-files',
+      'src/exempt/legacy.ts',
+    ]);
+
+    assert.equal(result.pass, true);
+  });
+
+  it('marks a missing legacy-dominant file as exempt but still fails for 0% coverage', async () => {
+    const { runCodeCoverageGate } = await loadGate();
+    const summaryPath = makeSummary(tempDir, {});
+
+    const result = await runCodeCoverageGate({
+      coverageSummaryPath: path.relative(REPO_ROOT, summaryPath),
+      changedFiles: ['src/exempt/missing-legacy.ts'],
+      exemptions: { 'src/exempt/missing-legacy.ts': 'legacy-dominant' },
+    });
+
+    assert.equal(result.pass, false);
+    assert.ok(
+      result.evidence.missingFiles.includes('src/exempt/missing-legacy.ts'),
+    );
+    const report = result.evidence.fileReports.find(
+      (r) => r.file === 'src/exempt/missing-legacy.ts',
+    );
+    assert.equal(report.exempt, 'legacy-dominant');
   });
 });

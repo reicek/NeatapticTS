@@ -83,7 +83,7 @@ import {
  * // Compatible genomes prune themselves using the schedule-derived sparsity.
  * ```
  *
- * @this NeatLikeForPruning NEAT host exposing pruning options, generation state, and population.
+ * @param this - NEAT host exposing pruning options, generation state, and population.
  * @returns Nothing. Compatible genomes may be pruned in place when the schedule is active, but no adaptive controller fields are updated.
  */
 export function applyEvolutionPruning(this: NeatLikeForPruning): void {
@@ -139,7 +139,7 @@ export function applyEvolutionPruning(this: NeatLikeForPruning): void {
  * // and prune compatible genomes if the metric drift is large enough.
  * ```
  *
- * @this NeatLikeForPruning NEAT host exposing adaptive pruning options, state, and population.
+ * @param this - NEAT host exposing adaptive pruning options, state, and population.
  * @returns Nothing. The baseline and shared prune level may be created or updated, and compatible genomes may then be pruned in place.
  */
 export function applyAdaptivePruning(this: NeatLikeForPruning): void {

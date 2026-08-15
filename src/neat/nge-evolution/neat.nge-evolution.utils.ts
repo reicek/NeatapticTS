@@ -45,7 +45,7 @@ export const ngeEvolutionReproductionUtils = {
 };
 
 /**
- * Default NGE constants grouped under one stable owner-local namespace.
+ * Default NGE constants grouped under one stable owner-local namespace object bundle.
  */
 export const ngeEvolutionConstants = {
   NGE_EVOLUTION_DEFAULT_ALPHA_TOPOLOGY,

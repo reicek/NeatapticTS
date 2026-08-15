@@ -90,6 +90,7 @@ are balanced around the center of available space.
 Parameters:
 - `positionedNodes` - Positioned nodes.
 - `drawableWidthPx` - Drawable width.
+- `drawableLeftPx` - Left pixel offset of the drawable area (defaults to 0).
 
 Returns: Centered positioned nodes.
 

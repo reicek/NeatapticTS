@@ -253,3 +253,231 @@ export interface EnemyBehaviorMetrics {
   /** Positioning quality, expected in [0, 1]. */
   positioning: number;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 5 — Consolidated types (moved from individual harness modules)
+// ---------------------------------------------------------------------------
+
+/**
+ * Options accepted by {@link createMlpEnemyPopulation}.
+ */
+export interface CreateMlpEnemyPopulationOptions {
+  /** Deterministic seed used to generate the initial variant weights. */
+  seed?: number;
+}
+
+/**
+ * MLP enemy population returned by {@link createMlpEnemyPopulation}.
+ */
+export interface MlpEnemyPopulation extends EnemyPopulation {
+  /**
+   * Advance the population snapshot on refresh generations.
+   *
+   * @param context - Current generation context.
+   * @returns The population snapshot. The same reference is returned when no
+   *   refresh happens; a new reference is returned on refresh generations.
+   */
+  update: (context: { generation: number }) => Snapshot;
+}
+
+/**
+ * Options accepted by {@link createSwarmEnemyPopulation}.
+ */
+export interface CreateSwarmEnemyPopulationOptions {
+  /** Deterministic seed used to generate the shared DNA and per-enemy coordinates. */
+  seed?: number;
+  /** Maximum cohort size. */
+  size?: number;
+}
+
+/**
+ * One member of the weight-shared cohort.
+ */
+export interface SwarmVariant {
+  /** Stable enemy index within the cohort. */
+  id: number;
+  /** Shared DNA string that deterministically regenerates the swarm genotype. */
+  dna: string;
+  /** Shared weight vector for the cohort. */
+  weights: Float32Array;
+  /** Distinct stigmergic coordinates injected for this enemy member. */
+  coordinates: Vector2[];
+}
+
+/**
+ * Swarm enemy population returned by {@link createSwarmEnemyPopulation}.
+ */
+export interface SwarmEnemyPopulation extends EnemyPopulation {
+  /**
+   * Advance the cohort snapshot on refresh generations.
+   *
+   * @param context - Current generation context.
+   * @returns The population snapshot. The same reference is returned when no
+   *   refresh happens; a new reference is returned on refresh generations.
+   */
+  update: (context: { generation: number }) => Snapshot;
+}
+
+/**
+ * Configuration accepted by {@link runArmsRaceGeneration}.
+ */
+export interface RunArmsRaceGenerationOptions {
+  /** Deterministic seed for the generation. */
+  seed: number;
+  /** Current co-evolution generation (non-negative integer). */
+  generation: number;
+  /** Optional frozen enemy snapshot; when omitted the SWARM backend supplies one. */
+  enemySnapshot?: Snapshot;
+  /** When true, human-mode replay pressure is applied to generation selection. */
+  humanMode?: boolean;
+  /** Optional replay buffer of death contexts used as replay-driven selection pressure. */
+  replayBuffer?: ReplayBuffer;
+  /**
+   * Optional champion network produced by the hoisted async Neat evaluation
+   * (P3S2). When provided, the internal `runMainGeneration` call is skipped
+   * (the worker has already evaluated the population) and `championQuality`
+   * is used as the quality signal instead.
+   */
+  championNetwork?: Network;
+  /**
+   * Optional combat-quality signal for the champion network. When
+   * `championNetwork` is provided, this quality signal is used directly
+   * instead of running `runMainGeneration`.
+   */
+  championQuality?: CombatQualitySignal;
+}
+
+/**
+ * Result emitted by one arms-race generation.
+ */
+export interface ArmsRaceGenerationResult {
+  /** Generation number advanced by one step. */
+  generation: number;
+  /** Deterministic main-agent champion selected for this generation. */
+  mainSnapshot: MainVariant;
+  /** Frozen enemy snapshot the main agent was evaluated against. */
+  enemySnapshot: Snapshot;
+  /** Combat-quality signal for the champion's episode. */
+  quality: CombatQualitySignal;
+  /** Whether this generation was driven by replay-buffer selection pressure. */
+  replayDriven: boolean;
+  /** Replay-buffer selection pressure applied to this generation (0 when no replay). */
+  replayPressure: number;
+  /** Enemy behavior metrics summarising the generation's enemy population. */
+  enemyBehaviorMetrics: EnemyBehaviorMetrics;
+}
+
+/**
+ * One generation snapshot accepted by {@link computeAdaptationSignal}.
+ *
+ * Pairs a generation number with the enemy behavior metrics observed during
+ * that generation so the adaptation signal can diff consecutive generations.
+ */
+export interface GenerationSnapshot {
+  /** Generation number. */
+  generation: number;
+  /** Enemy behavior metrics observed during this generation. */
+  enemyBehaviorMetrics: EnemyBehaviorMetrics;
+}
+
+/**
+ * Adaptation signal emitted by {@link computeAdaptationSignal}.
+ *
+ * Summarises the behavioral delta between two consecutive generations into a
+ * coarse `direction` label plus the raw numeric deltas for each behavior axis.
+ */
+export interface AdaptationSignal {
+  /** Coarse direction label: `'stronger'`, `'weaker'`, or `'shifted'`. */
+  direction: 'stronger' | 'weaker' | 'shifted';
+  /** Change in enemy aggression between the two generations. */
+  aggressionDelta: number;
+  /** Change in enemy movement pattern between the two generations. */
+  movementDelta: number;
+  /** Change in enemy positioning between the two generations. */
+  positioningDelta: number;
+}
+
+/**
+ * An evaluated main-agent variant, extending {@link Individual} with the raw
+ * combat-quality signal produced by its episode.
+ */
+export interface EvaluatedMainVariant extends Individual<MainVariant> {
+  /** Raw combat-quality signal for the variant's episode. */
+  signal: CombatQualitySignal;
+}
+
+/**
+ * Configuration accepted by {@link runMainGeneration}.
+ */
+export interface RunMainGenerationOptions {
+  /** Deterministic seed for the generation. */
+  seed: number;
+  /** Current co-evolution generation (non-negative integer). */
+  generation: number;
+  /**
+   * Frozen enemy snapshot to evaluate against.
+   *
+   * Takes precedence over {@link enemy} when both are supplied.
+   */
+  enemySnapshot?: Snapshot;
+  /**
+   * Enemy backend selector.
+   *
+   * When `enemySnapshot` is omitted, the runner resolves a fresh frozen
+   * snapshot from the requested enemy backend. Defaults to `'mlp'` to
+   * preserve the original harness behavior.
+   */
+  enemy?: { kind: 'swarm' | 'mlp' };
+}
+
+/**
+ * Result emitted by one main-agent generation.
+ *
+ * Extends the raw {@link CombatQualitySignal} with the champion genome produced
+ * by the NGE main-agent pipeline and the enemy snapshot the generation was
+ * evaluated against.
+ */
+export interface MainGenerationResult extends CombatQualitySignal {
+  /** Champion main-agent genome built by the NGE pipeline. */
+  championGenome: unknown;
+  /** Frozen enemy snapshot the champion was evaluated against. */
+  evaluatedEnemySnapshot: Snapshot;
+}
+
+/**
+ * Mutable hysteresis state for the soft fire gate.
+ *
+ * Maintained between ticks to prevent rapid on/off oscillation at the
+ * vision boundary. The `fireActive` flag tracks whether the gate is
+ * currently open (enemy was recently visible).
+ */
+export interface FireGateState {
+  /** Whether the fire gate is currently open. */
+  fireActive: boolean;
+}
+
+/**
+ * Optional fire-gate configuration passed to {@link networkOutputToTickInput}.
+ */
+export interface FireGateConfig {
+  /** Mutable hysteresis state, persisted between ticks by the caller. */
+  state: FireGateState;
+  /** Current enemyVisible sensor value (sensor[12]). */
+  enemyVisible: number;
+}
+
+/**
+ * Configuration for {@link createSeedPack}.
+ */
+export interface CreateSeedPackOptions {
+  /** Generation the seed pack belongs to (non-negative integer). */
+  generation: number;
+  /** Number of deterministic seeds to generate (defaults to the MLP variant count). */
+  variantCount?: number;
+  /**
+   * Optional root seed. When provided, per-variant seeds are derived via
+   * {@link hashSeed} so the pack is tied to the caller's seed rather than the
+   * generation-only LCG. When omitted, the legacy generation-only LCG is used.
+   */
+  seed?: number;
+}

@@ -8,6 +8,8 @@
  * `agent-customization-scripts` ts-jest transform.
  */
 import { jest } from '@jest/globals';
+import os from 'node:os';
+import path from 'node:path';
 import {
   createSliceContextTool,
   createTierGraphTool,
@@ -203,10 +205,12 @@ describe('cortex-tier-tool.mjs direct import coverage', () => {
       jest.resetModules();
 
       const { rebuildIndex: rebuild } = await import('./cortex-tier-tool.mjs');
-      const result = await rebuild({ databasePath: './tmp/rebuild-test.db' });
+      const result = await rebuild({
+        databasePath: path.join(os.tmpdir(), 'neatapicts-rebuild-test.db'),
+      });
 
       expect(buildSemanticIndex).toHaveBeenCalledWith({
-        databasePath: './tmp/rebuild-test.db',
+        databasePath: path.join(os.tmpdir(), 'neatapicts-rebuild-test.db'),
       });
       expect(result.success).toBe(true);
     });
@@ -229,15 +233,11 @@ describe('cortex-tier-tool.mjs direct import coverage', () => {
     it('uses an injected buildModule for success', async () => {
       const buildSemanticIndex = jest.fn().mockResolvedValue(undefined);
       const buildModule = { buildSemanticIndex };
+      const databasePath = path.join(os.tmpdir(), 'neatapicts-injected.db');
 
-      const result = await rebuildIndex(
-        { databasePath: './tmp/injected.db' },
-        buildModule,
-      );
+      const result = await rebuildIndex({ databasePath }, buildModule);
 
-      expect(buildSemanticIndex).toHaveBeenCalledWith({
-        databasePath: './tmp/injected.db',
-      });
+      expect(buildSemanticIndex).toHaveBeenCalledWith({ databasePath });
       expect(result.success).toBe(true);
     });
 
@@ -246,11 +246,9 @@ describe('cortex-tier-tool.mjs direct import coverage', () => {
         .fn()
         .mockRejectedValue(new Error('injected error'));
       const buildModule = { buildSemanticIndex };
+      const databasePath = path.join(os.tmpdir(), 'neatapicts-injected.db');
 
-      const result = await rebuildIndex(
-        { databasePath: './tmp/injected.db' },
-        buildModule,
-      );
+      const result = await rebuildIndex({ databasePath }, buildModule);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('injected error');
@@ -261,11 +259,9 @@ describe('cortex-tier-tool.mjs direct import coverage', () => {
         throw 'string rejection';
       });
       const buildModule = { buildSemanticIndex };
+      const databasePath = path.join(os.tmpdir(), 'neatapicts-injected.db');
 
-      const result = await rebuildIndex(
-        { databasePath: './tmp/injected.db' },
-        buildModule,
-      );
+      const result = await rebuildIndex({ databasePath }, buildModule);
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('string rejection');

@@ -21,7 +21,7 @@ import type {
 } from './acceleration.types';
 
 /**
- * Parameters accepted by {@link autoEnableAcceleration}.
+ * Parameters accepted by the {@link autoEnableAcceleration} unified backend selection helper.
  */
 export interface AutoEnableAccelerationOptions {
   /** Current network node count for a single evaluation. */

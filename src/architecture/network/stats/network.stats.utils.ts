@@ -32,6 +32,7 @@ import type { StatsNetworkProps as NetworkStatsProps } from '../network.types';
  * internal `_lastStats` object maintained by the training loop (e.g., during pruning, dropout, or
  * noise scheduling updates).
  *
+ * @param this - Network instance bound by method call.
  * @returns A deep-cloned stats object or null if no stats have been recorded yet.
  */
 export function getRegularizationStats(this: Network) {

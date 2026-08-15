@@ -173,7 +173,6 @@ VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
 SPECIALISTS_USED:
 - <scout name or NONE>
-SYNTHESIS_CONFIDENCE: <NN% or NONE>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

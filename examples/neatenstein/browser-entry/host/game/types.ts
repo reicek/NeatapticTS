@@ -62,6 +62,8 @@ export interface EnemyState {
   controllerPosition?: Vector2;
   /** Remaining hit-stun time in milliseconds (0 when not stunned). */
   stunTimerMs?: number;
+  /** Initial spawn position at the map edge. Enemies always respawn here. */
+  initialPosition?: Vector2;
 }
 
 /** Mutable-style snapshot of the on-screen weapon overlay state. */

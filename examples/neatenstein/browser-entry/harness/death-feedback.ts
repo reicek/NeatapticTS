@@ -9,37 +9,31 @@
  * @module
  */
 
-import type { EnemyBehaviorMetrics } from './types';
+import type {
+  GenerationSnapshot,
+  AdaptationSignal,
+} from './types';
+import {
+  ADAPTATION_STRONGER,
+  ADAPTATION_WEAKER,
+  ADAPTATION_SHIFTED,
+} from '../constants';
 
 /**
  * One generation snapshot accepted by {@link computeAdaptationSignal}.
  *
- * Pairs a generation number with the enemy behavior metrics observed during
- * that generation so the adaptation signal can diff consecutive generations.
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface GenerationSnapshot {
-  /** Generation number. */
-  generation: number;
-  /** Enemy behavior metrics observed during this generation. */
-  enemyBehaviorMetrics: EnemyBehaviorMetrics;
-}
+export type { GenerationSnapshot } from './types';
 
 /**
  * Adaptation signal emitted by {@link computeAdaptationSignal}.
  *
- * Summarises the behavioral delta between two consecutive generations into a
- * coarse `direction` label plus the raw numeric deltas for each behavior axis.
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface AdaptationSignal {
-  /** Coarse direction label: `'stronger'`, `'weaker'`, or `'shifted'`. */
-  direction: 'stronger' | 'weaker' | 'shifted';
-  /** Change in enemy aggression between the two generations. */
-  aggressionDelta: number;
-  /** Change in enemy movement pattern between the two generations. */
-  movementDelta: number;
-  /** Change in enemy positioning between the two generations. */
-  positioningDelta: number;
-}
+export type { AdaptationSignal } from './types';
 
 /**
  * Magnitude threshold above which an aggression delta is classified as
@@ -91,11 +85,11 @@ export function computeAdaptationSignal(
 
   let direction: 'stronger' | 'weaker' | 'shifted';
   if (aggressionDelta > AGGRESSION_DELTA_THRESHOLD) {
-    direction = 'stronger';
+    direction = ADAPTATION_STRONGER;
   } else if (aggressionDelta < -AGGRESSION_DELTA_THRESHOLD) {
-    direction = 'weaker';
+    direction = ADAPTATION_WEAKER;
   } else {
-    direction = 'shifted';
+    direction = ADAPTATION_SHIFTED;
   }
 
   return { direction, aggressionDelta, movementDelta, positioningDelta };

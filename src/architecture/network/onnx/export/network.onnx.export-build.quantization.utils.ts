@@ -29,6 +29,12 @@ type DynamicDenseGuidancePlan = {
 
 /**
  * Appends calibrated static INT8 scale and zero-point initializers to the model graph for each supported layer target.
+ *
+ * @param model - ONNX model to mutate with quantization parameter initializers.
+ * @param sourceOptions - Raw export options carrying the declared quantization targets.
+ * @param resolvedQuantization - Resolved quantization options with calibration data.
+ * @param recurrentLayerIndices - Layer indices that are recurrent and should be excluded.
+ * @returns Nothing; the model graph is mutated in place.
  */
 export function applyStaticQuantizationCalibrationPostProcessing(
   model: OnnxModel,
@@ -62,6 +68,12 @@ export function applyStaticQuantizationCalibrationPostProcessing(
 
 /**
  * Rewrites dense GEMM graph nodes to QLinearMatMul sequences and appends quantized weight initializers for static INT8 lowering.
+ *
+ * @param model - ONNX model to mutate with quantized dense nodes and initializers.
+ * @param sourceOptions - Raw export options carrying the declared quantization targets.
+ * @param resolvedQuantization - Resolved quantization options with calibration data.
+ * @param recurrentLayerIndices - Layer indices that are recurrent and should be excluded.
+ * @returns Nothing; the model graph is mutated in place.
  */
 export function applyStaticDenseQuantizationPostProcessing(
   model: OnnxModel,
@@ -116,6 +128,12 @@ export function applyStaticDenseQuantizationPostProcessing(
 
 /**
  * Rewrites Conv graph nodes to QLinearConv sequences and appends quantized weight and bias initializers for static INT8 lowering.
+ *
+ * @param model - ONNX model to mutate with quantized conv nodes and initializers.
+ * @param sourceOptions - Raw export options carrying the declared quantization targets.
+ * @param resolvedQuantization - Resolved quantization options with calibration data.
+ * @param recurrentLayerIndices - Layer indices that are recurrent and should be excluded.
+ * @returns Nothing; the model graph is mutated in place.
  */
 export function applyStaticConvQuantizationPostProcessing(
   model: OnnxModel,
@@ -175,6 +193,12 @@ export function applyStaticConvQuantizationPostProcessing(
 
 /**
  * Wraps each dense GEMM node with DynamicQuantizeLinear/DequantizeLinear guidance nodes for dynamic UINT8 quantization.
+ *
+ * @param model - ONNX model to mutate with dynamic quantization guidance nodes.
+ * @param sourceOptions - Raw export options carrying the declared quantization mode.
+ * @param resolvedQuantization - Resolved quantization options with target and representation info.
+ * @param recurrentLayerIndices - Layer indices that are recurrent and should be excluded.
+ * @returns Nothing; the model graph is mutated in place.
  */
 export function applyDynamicDenseQuantizationGuidancePostProcessing(
   model: OnnxModel,

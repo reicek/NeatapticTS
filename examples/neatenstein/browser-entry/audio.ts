@@ -15,62 +15,63 @@
  */
 
 import { NEATENSTEIN_AUDIO_SOUND_NAMES } from './constants';
+import {
+  OSC_TYPE_SAWTOOTH,
+  OSC_TYPE_SQUARE,
+  OSC_TYPE_SINE,
+  FILTER_TYPE_LOWPASS,
+  FILTER_TYPE_HIGHPASS,
+  FIRE_FREQ_HZ,
+  FIRE_FREQ_END_HZ,
+  FIRE_PEAK_GAIN,
+  FIRE_DURATION_SEC,
+  FIRE_FILTER_FREQ_HZ,
+  ENEMY_HIT_FREQ_HZ,
+  ENEMY_HIT_FREQ_END_HZ,
+  ENEMY_HIT_PEAK_GAIN,
+  ENEMY_HIT_DURATION_SEC,
+  ENEMY_HIT_FILTER_FREQ_HZ,
+  PLAYER_DAMAGE_FREQ_HZ,
+  PLAYER_DAMAGE_FREQ_END_HZ,
+  PLAYER_DAMAGE_PEAK_GAIN,
+  PLAYER_DAMAGE_DURATION_SEC,
+  PLAYER_DAMAGE_FILTER_FREQ_HZ,
+  DASH_FREQ_HZ,
+  DASH_FREQ_END_HZ,
+  DASH_PEAK_GAIN,
+  DASH_DURATION_SEC,
+  KILL_FREQ_HZ,
+  KILL_FREQ_END_HZ,
+  KILL_PEAK_GAIN,
+  KILL_DURATION_SEC,
+  KILL_FILTER_FREQ_HZ,
+  GENERATION_UP_FREQ_HZ,
+  GENERATION_UP_FREQ_END_HZ,
+  GENERATION_UP_PEAK_GAIN,
+  GENERATION_UP_DURATION_SEC,
+  MIN_OSC_FREQ,
+  GAIN_RAMP_FLOOR,
+  VOICE_STOP_DELAY_SEC,
+  DEFAULT_PAN,
+  DEFAULT_GAIN,
+  DISTANCE_ATTENUATION_PER_UNIT,
+} from './audio.constants';
+import type {
+  NeatensteinSoundName,
+  NeatensteinPlaySoundOptions,
+  NeatensteinAudioVoice,
+  NeatensteinAudioEngine,
+  NeatensteinCueParams,
+} from './audio.types';
 
 export { NEATENSTEIN_AUDIO_SOUND_NAMES };
-
-/** Names of all sounds the engine knows how to synthesize. */
-export type NeatensteinSoundName =
-  (typeof NEATENSTEIN_AUDIO_SOUND_NAMES)[number];
-
-/** Options for spatializing a played sound. */
-export interface NeatensteinPlaySoundOptions {
-  /** Angle of the sound source relative to the listener, in radians. */
-  angleRad: number;
-  /** Distance from the listener to the sound source. */
-  distance: number;
-}
-
-/** One-shot WebAudio voice used by a single cue. */
-export interface NeatensteinAudioVoice {
-  /** Stop the voice and clean up its graph nodes. */
-  stop(): void;
-}
-
-/** Public surface of the Neatenstein audio engine. */
-export interface NeatensteinAudioEngine {
-  /** Resume the underlying audio context (usually after a user gesture). */
-  resume(): Promise<void>;
-  /**
-   * Play a named procedural sound.
-   *
-   * @param name - One of the supported sound names.
-   * @param options - Optional spatialization parameters.
-   * @returns A voice handle that can be stopped early.
-   * @throws Error when `name` is not a supported sound.
-   */
-  playSound(
-    name: NeatensteinSoundName,
-    options?: NeatensteinPlaySoundOptions,
-  ): NeatensteinAudioVoice;
-}
-
-/** Cue-specific synthesis parameters. */
-interface NeatensteinCueParams {
-  /** Oscillator type for the attack body. */
-  type: OscillatorType;
-  /** Base frequency in hertz. */
-  frequencyHz: number;
-  /** Frequency sweep end in hertz. */
-  frequencyEndHz: number;
-  /** Gain envelope peak (0..1). */
-  peakGain: number;
-  /** Total voice duration in seconds. */
-  durationSec: number;
-  /** Optional biquad filter type. */
-  filterType?: BiquadFilterType;
-  /** Optional biquad filter frequency in hertz. */
-  filterFrequencyHz?: number;
-}
+export type {
+  NeatensteinSoundName,
+  NeatensteinPlaySoundOptions,
+  NeatensteinAudioVoice,
+  NeatensteinAudioEngine,
+  NeatensteinCueParams,
+} from './audio.types';
 
 /** Mapping from each supported sound name to its synthesis recipe. */
 const NEATENSTEIN_CUE_PARAMS: Record<
@@ -78,65 +79,65 @@ const NEATENSTEIN_CUE_PARAMS: Record<
   NeatensteinCueParams
 > = {
   fire: {
-    type: 'sawtooth',
-    frequencyHz: 880,
-    frequencyEndHz: 220,
-    peakGain: 0.25,
-    durationSec: 0.08,
-    filterType: 'lowpass',
-    filterFrequencyHz: 1_200,
+    type: OSC_TYPE_SAWTOOTH,
+    frequencyHz: FIRE_FREQ_HZ,
+    frequencyEndHz: FIRE_FREQ_END_HZ,
+    peakGain: FIRE_PEAK_GAIN,
+    durationSec: FIRE_DURATION_SEC,
+    filterType: FILTER_TYPE_LOWPASS,
+    filterFrequencyHz: FIRE_FILTER_FREQ_HZ,
   },
   'enemy-hit': {
-    type: 'square',
-    frequencyHz: 330,
-    frequencyEndHz: 110,
-    peakGain: 0.35,
-    durationSec: 0.12,
-    filterType: 'lowpass',
-    filterFrequencyHz: 800,
+    type: OSC_TYPE_SQUARE,
+    frequencyHz: ENEMY_HIT_FREQ_HZ,
+    frequencyEndHz: ENEMY_HIT_FREQ_END_HZ,
+    peakGain: ENEMY_HIT_PEAK_GAIN,
+    durationSec: ENEMY_HIT_DURATION_SEC,
+    filterType: FILTER_TYPE_LOWPASS,
+    filterFrequencyHz: ENEMY_HIT_FILTER_FREQ_HZ,
   },
   'player-damage': {
-    type: 'sawtooth',
-    frequencyHz: 180,
-    frequencyEndHz: 90,
-    peakGain: 0.4,
-    durationSec: 0.18,
-    filterType: 'lowpass',
-    filterFrequencyHz: 600,
+    type: OSC_TYPE_SAWTOOTH,
+    frequencyHz: PLAYER_DAMAGE_FREQ_HZ,
+    frequencyEndHz: PLAYER_DAMAGE_FREQ_END_HZ,
+    peakGain: PLAYER_DAMAGE_PEAK_GAIN,
+    durationSec: PLAYER_DAMAGE_DURATION_SEC,
+    filterType: FILTER_TYPE_LOWPASS,
+    filterFrequencyHz: PLAYER_DAMAGE_FILTER_FREQ_HZ,
   },
   dash: {
-    type: 'sine',
-    frequencyHz: 440,
-    frequencyEndHz: 880,
-    peakGain: 0.3,
-    durationSec: 0.1,
+    type: OSC_TYPE_SINE,
+    frequencyHz: DASH_FREQ_HZ,
+    frequencyEndHz: DASH_FREQ_END_HZ,
+    peakGain: DASH_PEAK_GAIN,
+    durationSec: DASH_DURATION_SEC,
   },
   kill: {
-    type: 'square',
-    frequencyHz: 660,
-    frequencyEndHz: 1320,
-    peakGain: 0.35,
-    durationSec: 0.14,
-    filterType: 'highpass',
-    filterFrequencyHz: 400,
+    type: OSC_TYPE_SQUARE,
+    frequencyHz: KILL_FREQ_HZ,
+    frequencyEndHz: KILL_FREQ_END_HZ,
+    peakGain: KILL_PEAK_GAIN,
+    durationSec: KILL_DURATION_SEC,
+    filterType: FILTER_TYPE_HIGHPASS,
+    filterFrequencyHz: KILL_FILTER_FREQ_HZ,
   },
   'generation-up': {
-    type: 'sine',
-    frequencyHz: 523.25,
-    frequencyEndHz: 1_046.5,
-    peakGain: 0.45,
-    durationSec: 0.35,
+    type: OSC_TYPE_SINE,
+    frequencyHz: GENERATION_UP_FREQ_HZ,
+    frequencyEndHz: GENERATION_UP_FREQ_END_HZ,
+    peakGain: GENERATION_UP_PEAK_GAIN,
+    durationSec: GENERATION_UP_DURATION_SEC,
   },
 };
 
 /** Default pan value for a non-positional cue. */
-const DEFAULT_PAN = 0;
+const DEFAULT_PAN_CUE = DEFAULT_PAN;
 
 /** Default gain value for a non-positional cue. */
-const DEFAULT_GAIN = 1;
+const DEFAULT_GAIN_CUE = DEFAULT_GAIN;
 
 /** Attenuation factor applied per unit distance. */
-const DISTANCE_ATTENUATION_PER_UNIT = 0.1;
+const DISTANCE_ATTENUATION = DISTANCE_ATTENUATION_PER_UNIT;
 
 /**
  * Clamp a number to the inclusive range [min, max].
@@ -160,7 +161,7 @@ function clamp(value: number, min: number, max: number): number {
  * @returns Pan value in the range [-1, 1].
  */
 function resolvePan(options?: NeatensteinPlaySoundOptions): number {
-  if (options === undefined) return DEFAULT_PAN;
+  if (options === undefined)   return DEFAULT_PAN_CUE;
   return clamp(Math.sin(options.angleRad), -1, 1);
 }
 
@@ -174,8 +175,8 @@ function resolvePan(options?: NeatensteinPlaySoundOptions): number {
  * @returns Attenuated gain in the range (0, 1].
  */
 function resolveGain(options?: NeatensteinPlaySoundOptions): number {
-  if (options === undefined) return DEFAULT_GAIN;
-  return 1 / (1 + options.distance * DISTANCE_ATTENUATION_PER_UNIT);
+  if (options === undefined)   return DEFAULT_GAIN_CUE;
+  return 1 / (1 + options.distance * DISTANCE_ATTENUATION);
 }
 
 /**
@@ -201,7 +202,7 @@ function buildVoice(
   osc.type = cue.type;
   osc.frequency.setValueAtTime(cue.frequencyHz, now);
   osc.frequency.exponentialRampToValueAtTime(
-    Math.max(20, cue.frequencyEndHz),
+    Math.max(MIN_OSC_FREQ, cue.frequencyEndHz),
     end,
   );
 
@@ -221,7 +222,7 @@ function buildVoice(
   const gain = ctx.createGain();
   gain.gain.value = resolveGain(options) * cue.peakGain;
   gain.gain.setValueAtTime(gain.gain.value, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, end);
+  gain.gain.exponentialRampToValueAtTime(GAIN_RAMP_FLOOR, end);
 
   source.connect(panner);
   panner.connect(gain);
@@ -232,11 +233,11 @@ function buildVoice(
 
   return {
     stop() {
-      const stopTime = ctx.currentTime + 0.01;
+      const stopTime = ctx.currentTime + VOICE_STOP_DELAY_SEC;
       try {
         gain.gain.cancelScheduledValues(ctx.currentTime);
         gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, stopTime);
+        gain.gain.exponentialRampToValueAtTime(GAIN_RAMP_FLOOR, stopTime);
         osc.stop(stopTime);
       } catch {
         // Voice may already be stopped by the engine; ignore cleanup errors.

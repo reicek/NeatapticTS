@@ -1,0 +1,141 @@
+# architecture/nodePool
+
+Core node-pool chapter for the architecture surface.
+
+This folder owns the reusable pool that recycles `Node` instances after
+topology edits. It sits beside the main node chapter because it is not a new
+neuron type; it is the lifecycle policy that decides when detached nodes can
+be scrubbed, retained, and reused.
+
+Think of this boundary as the object-lifecycle companion to topology
+mutation. Evolutionary search, pruning, and graph repair can create and
+discard many nodes across a run. Rebuilding a brand-new `Node` object for
+every edit turns those experiments into avoidable allocation churn. This
+chapter keeps detached node shells around so the next structural change can
+reuse them after a full reset.
+
+The important invariant is that reused nodes must feel fresh. `acquireNode()`
+does not hand back a half-detached neuron with old traces or dangling
+connections. It scrubs connection lists, resets runtime and error state,
+reinitializes bias and masks, and assigns a fresh gene id for the next
+lifecycle. `releaseNode()` is therefore only safe after the caller has fully
+removed the node from any live graph.
+
+That makes this pool stricter than the activation-array pool. Buffer pooling
+only needs zeroed scratch memory. Node pooling must also protect structural
+correctness, training state, and evolutionary identity boundaries. The value
+of this folder is not just fewer allocations; it is cheaper topology churn
+without ghost state leaking across experiments.
+
+```mermaid
+flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Live[Live graph node]:::base --> Detach[Detach from graph]:::accent
+  Detach --> Release[releaseNode]:::accent
+  Release --> Pool[Recycled node pool]:::base
+  Pool --> Acquire[acquireNode]:::accent
+  Acquire --> Reset[Reset state bias traces connections gene id]:::base
+  Reset --> Reused[Reusable fresh-feeling node]:::base
+```
+
+For background on the wider reuse pattern, see Wikipedia contributors,
+[Object pool pattern](https://en.wikipedia.org/wiki/Object_pool_pattern).
+This chapter applies that pattern to mutable neuron objects rather than to
+simple buffers.
+
+Read this chapter in three passes:
+
+1. start with `acquireNode()` to see how callers obtain a fully reset node,
+2. continue to `releaseNode()` when you need the detach-and-recycle rules,
+3. finish with `nodePoolStats()` and `resetNodePool()` for observability and
+   deterministic test harness cleanup.
+
+Example: recycle a detached hidden node between topology edits.
+
+```ts
+const hiddenNode = acquireNode({ type: 'hidden' });
+// wire the node into a graph, then detach it later
+releaseNode(hiddenNode);
+```
+
+Example: reset the pool before a deterministic harness or memory probe.
+
+```ts
+resetNodePool();
+const stats = nodePoolStats();
+```
+
+## architecture/nodePool/nodePool.ts
+
+### acquireNode
+
+```ts
+acquireNode(
+  opts: AcquireNodeOptions,
+): default
+```
+
+Acquire a node instance from the pool, or construct a fresh one when the
+pool is empty.
+
+The returned node is guaranteed to have detached connections, cleared error
+state, and a fresh gene id for its next lifecycle.
+
+Parameters:
+- `opts` - Optional acquisition settings.
+
+Returns: A ready-to-use node instance.
+
+### AcquireNodeOptions
+
+Options bag for acquiring a node from the recycled pool or constructing a fresh one when the pool is empty.
+
+### nodePoolNamespace
+
+Convenience namespace grouping all four public node-pool operations for callers that prefer
+a single default import over named imports.
+
+Prefer named imports (`acquireNode`, `releaseNode`, `nodePoolStats`, `resetNodePool`) when
+only a subset of the API is needed, and prefer this default import when the full surface
+is required in one destructure.
+
+### nodePoolStats
+
+```ts
+nodePoolStats(): { size: number; highWaterMark: number; reused: number; fresh: number; recycledRatio: number; }
+```
+
+Return current pool statistics for diagnostics, memory reporting, and recycling efficiency evaluation.
+
+Returns: Pool size, high-water mark, reuse and fresh allocation counts, and the long-run recycled ratio.
+
+### releaseNode
+
+```ts
+releaseNode(
+  node: default,
+): void
+```
+
+Release a detached node back into the pool so it can be reused by the next `acquireNode` caller.
+
+Callers must ensure the node is fully removed from any live graph before releasing it. The pool
+retains the object shell and clears connection lists, but does not reset activation or bias state;
+that scrub happens at acquisition time inside `acquireNode`.
+
+Parameters:
+- `node` - Detached node instance to recycle.
+
+Returns: Nothing.
+
+### resetNodePool
+
+```ts
+resetNodePool(): void
+```
+
+Drop all retained pooled nodes and reset instrumentation counters to zero for deterministic test harness cleanup or memory-probe baselines.
+
+Returns: Nothing.

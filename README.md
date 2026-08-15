@@ -81,7 +81,7 @@ The project gives you:
 - **Worker-backed evaluation** — parallel genome scoring for Node and browser environments.
 - **ONNX export** — trained networks portable to ONNX-compatible inference runtimes.
 - **NGE core** — seed-to-scale neuroevolution with canonical DNA envelopes, polyandric reproduction, and continuous juvenile growth validated beyond 8,000 neurons; deterministic checkpoints make growth replayable.
-- **WebGPU inference** — opt-in GPU forward pass for eligible networks via `network.activate(input, { useGPU: true })`; automatic CPU fallback keeps classic NEAT behavior unchanged. See [WebGPU.md](./WebGPU.md) and the measured-performance notes in [docs/webgpu-performance-guide.md](./docs/webgpu-performance-guide.md).
+- **WebGPU inference** — opt-in GPU forward pass for eligible networks via `network.activate(input, { useGPU: true })`; automatic CPU fallback keeps classic NEAT behavior unchanged. See [docs/webgpu-inference.md](./docs/webgpu-inference.md) and the measured-performance notes in [docs/webgpu-performance-guide.md](./docs/webgpu-performance-guide.md).
 - **Educational examples** — three full examples (Flappy Bird, ASCII Maze, Racing Curriculum) that teach architecture choices rather than hiding them.
 
 ---

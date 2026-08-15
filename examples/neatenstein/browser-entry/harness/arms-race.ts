@@ -23,58 +23,36 @@ import type {
   Genome,
   MainVariant,
   MlpSnapshot,
-  ReplayBuffer,
   Snapshot,
+  RunArmsRaceGenerationOptions,
+  ArmsRaceGenerationResult,
 } from './types';
+import {
+  REPLAY_PRESSURE_PER_ENTRY,
+  ARMS_RACE_REPLAY,
+  ARMS_RACE_BASELINE,
+  MAIN_GENOME_NODE_MIN,
+  MAIN_GENOME_NODE_SPAN,
+  MAIN_GENOME_CONNECTION_MIN,
+  MAIN_GENOME_CONNECTION_SPAN,
+} from './enemy-mlp.constants';
+import { SNAPSHOT_KIND_MLP } from '../constants';
 
 /**
  * Configuration accepted by {@link runArmsRaceGeneration}.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface RunArmsRaceGenerationOptions {
-  /** Deterministic seed for the generation. */
-  seed: number;
-  /** Current co-evolution generation (non-negative integer). */
-  generation: number;
-  /** Optional frozen enemy snapshot; when omitted the SWARM backend supplies one. */
-  enemySnapshot?: Snapshot;
-  /** When true, human-mode replay pressure is applied to generation selection. */
-  humanMode?: boolean;
-  /** Optional replay buffer of death contexts used as replay-driven selection pressure. */
-  replayBuffer?: ReplayBuffer;
-  /**
-   * Optional champion network produced by the hoisted async Neat evaluation
-   * (P3S2). When provided, the internal `runMainGeneration` call is skipped
-   * (the worker has already evaluated the population) and `championQuality`
-   * is used as the quality signal instead.
-   */
-  championNetwork?: Network;
-  /**
-   * Optional combat-quality signal for the champion network. When
-   * `championNetwork` is provided, this quality signal is used directly
-   * instead of running `runMainGeneration`.
-   */
-  championQuality?: CombatQualitySignal;
-}
+export type { RunArmsRaceGenerationOptions } from './types';
 
 /**
  * Result emitted by one arms-race generation.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface ArmsRaceGenerationResult {
-  /** Generation number advanced by one step. */
-  generation: number;
-  /** Deterministic main-agent champion selected for this generation. */
-  mainSnapshot: MainVariant;
-  /** Frozen enemy snapshot the main agent was evaluated against. */
-  enemySnapshot: Snapshot;
-  /** Combat-quality signal for the champion's episode. */
-  quality: CombatQualitySignal;
-  /** Whether this generation was driven by replay-buffer selection pressure. */
-  replayDriven: boolean;
-  /** Replay-buffer selection pressure applied to this generation (0 when no replay). */
-  replayPressure: number;
-  /** Enemy behavior metrics summarising the generation's enemy population. */
-  enemyBehaviorMetrics: EnemyBehaviorMetrics;
-}
+export type { ArmsRaceGenerationResult } from './types';
 
 /**
  * Run one deterministic arms-race generation.
@@ -155,7 +133,7 @@ export function runArmsRaceGeneration(
   // stored death contexts; otherwise it is zero. The scaling factor of 0.1
   // per entry keeps the value in a stable [0, ~1] range for typical buffer
   // capacities while remaining strictly positive whenever replay is active.
-  const replayPressure = replayDriven ? options.replayBuffer!.size() * 0.1 : 0;
+  const replayPressure = replayDriven ? options.replayBuffer!.size() * REPLAY_PRESSURE_PER_ENTRY : 0;
 
   // Step 6: Compute enemy behavior metrics. The metrics are derived
   // deterministically from the seed and generation. When the generation is
@@ -163,7 +141,7 @@ export function runArmsRaceGeneration(
   // behavior metrics shift measurably compared to the baseline — reflecting
   // the selection pressure applied by the replayed death contexts.
   const behaviorRng = seedrandom(
-    `${options.seed}:behavior:${options.generation}:${replayDriven ? 'replay' : 'baseline'}`,
+    `${options.seed}:behavior:${options.generation}:${replayDriven ? ARMS_RACE_REPLAY : ARMS_RACE_BASELINE}`,
   );
   const enemyBehaviorMetrics: EnemyBehaviorMetrics = {
     aggression: behaviorRng(),
@@ -224,8 +202,8 @@ function createMainSnapshot(
   championNetwork?: Network,
 ): MainVariant {
   const rng = seedrandom(`${seed}:arms-race:main:${generation}`);
-  const nodeCount = Math.floor(rng() * 20) + 10;
-  const connectionCount = Math.floor(rng() * 30) + 10;
+  const nodeCount = Math.floor(rng() * MAIN_GENOME_NODE_SPAN) + MAIN_GENOME_NODE_MIN;
+  const connectionCount = Math.floor(rng() * MAIN_GENOME_CONNECTION_SPAN) + MAIN_GENOME_CONNECTION_MIN;
 
   const genome: Genome = {
     nodes: new Array(nodeCount).fill(null),
@@ -251,7 +229,7 @@ function createMainSnapshot(
  * @returns `true` when the snapshot carries the MLP discriminator.
  */
 function isMlpSnapshot(snapshot: Snapshot): snapshot is MlpSnapshot {
-  return snapshot.kind === 'mlp';
+  return snapshot.kind === SNAPSHOT_KIND_MLP;
 }
 
 export { isMlpSnapshot };

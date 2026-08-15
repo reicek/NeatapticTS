@@ -119,6 +119,9 @@ Read the neighboring chapters like this:
 - `speciation/` explains the lightweight maintenance that can happen after scores land,
 - `objectives/` explains why entropy objective registration lives in evaluation instead of evolve.
 
+Parameters:
+- `this` - NEAT controller instance bound by method call.
+
 Returns: Promise that resolves after evaluation and adaptive follow-up steps.
 
 Example:

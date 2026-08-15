@@ -1,0 +1,894 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>architecture/network/prune – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/theme.css"><script defer src="../../../assets/theme-tooltips.js"></script></head><body class="">
+<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="../../../index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="../../../index.html">Home</a><a href="../../../index.html" class="active">Docs</a><a href="../../../examples/index.html">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar docs-panel docs-panel-left"><ul class="sidebar-sections"><li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links"><ul class="pipe-nav-list pipe-nav-list-priority"><li class="pipe-nav-item nav-priority-link"><a href="../../../examples/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Examples overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><ul class="pipe-nav-list pipe-nav-list-compact"><li class="pipe-nav-item"><a href="../../../examples/flappy_bird/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Flappy Bird</span></a></li><li class="pipe-nav-item"><a href="../../../examples/asciiMaze/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ASCII Maze</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></div></li><ul class="pipe-nav-list pipe-nav-list-root"><li class="pipe-nav-item"><a href="../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><li class="group"><div class="g-head">Architecture</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../activationArrayPool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ActivationArrayPool</span></a></li><li class="pipe-nav-item"><a href="../../architect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Architect</span></a></li><li class="pipe-nav-item"><a href="../../connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../group/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Group</span></a></li><li class="pipe-nav-item"><a href="../../layer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Layer</span></a></li><li class="pipe-nav-item"><a href="../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network</span></a></li><li class="pipe-nav-item"><a href="../activate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Activate</span></a></li><li class="pipe-nav-item"><a href="../bootstrap/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Bootstrap</span></a></li><li class="pipe-nav-item"><a href="../connect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Connect</span></a></li><li class="pipe-nav-item"><a href="../construct/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Construct</span></a></li><li class="pipe-nav-item"><a href="../deterministic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Deterministic</span></a></li><li class="pipe-nav-item"><a href="../evaluation-pack/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evaluation Pack</span></a></li><li class="pipe-nav-item"><a href="../evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evolve</span></a></li><li class="pipe-nav-item"><a href="../gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gating</span></a></li><li class="pipe-nav-item"><a href="../genetic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Genetic</span></a></li><li class="pipe-nav-item"><a href="../gpu/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gpu</span></a></li><li class="pipe-nav-item"><a href="../gpu/__mocks__/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gpu / Mocks</span></a></li><li class="pipe-nav-item"><a href="../mutate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Mutate</span></a></li><li class="pipe-nav-item"><a href="../onnx/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Onnx</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Export</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/layers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export / Layers</span></a></li><li class="pipe-nav-item"><a href="../onnx/import/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Import</span></a></li><li class="pipe-nav-item"><a href="../onnx/parity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Parity</span></a></li><li class="pipe-nav-item"><a href="../onnx/schema/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Schema</span></a></li><li class="pipe-nav-item"><a href="../onnx/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Validate</span></a></li><li class="pipe-nav-item current"><a href="./index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Prune</span></a></li><li class="pipe-nav-item"><a href="../remove/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Remove</span></a></li><li class="pipe-nav-item"><a href="../runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Runtime</span></a></li><li class="pipe-nav-item"><a href="../serialize/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Serialize</span></a></li><li class="pipe-nav-item"><a href="../slab/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Slab</span></a></li><li class="pipe-nav-item"><a href="../standalone/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Standalone</span></a></li><li class="pipe-nav-item"><a href="../stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Stats</span></a></li><li class="pipe-nav-item"><a href="../topology/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Topology</span></a></li><li class="pipe-nav-item"><a href="../training/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Training</span></a></li><li class="pipe-nav-item"><a href="../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Visualization</span></a></li><li class="pipe-nav-item"><a href="../window/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Window</span></a></li><li class="pipe-nav-item"><a href="../worker-payload/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Worker Payload</span></a></li><li class="pipe-nav-item"><a href="../../node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-item"><a href="../../nodePool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">NodePool</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Methods</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../methods/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../methods/activation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Activation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../methods/cost/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cost</span></a></li><li class="pipe-nav-item"><a href="../../../methods/crossover/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Crossover</span></a></li><li class="pipe-nav-item"><a href="../../../methods/gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gating</span></a></li><li class="pipe-nav-item"><a href="../../../methods/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/rate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rate</span></a></li><li class="pipe-nav-item"><a href="../../../methods/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Neat</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../neat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/acceptance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Acceptance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/complexity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Complexity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/auto-distance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Auto Distance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/fitness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Fitness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/offspring/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Offspring</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/population/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Population</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/warnings/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Warnings</span></a></li><li class="pipe-nav-item"><a href="../../../neat/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/heredity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome / Heredity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/harness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Harness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/helpers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Helpers</span></a></li><li class="pipe-nav-item"><a href="../../../neat/hybrid/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Hybrid</span></a></li><li class="pipe-nav-item"><a href="../../../neat/init/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Init</span></a></li><li class="pipe-nav-item"><a href="../../../neat/innovation-tracker/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Innovation Tracker</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/category/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Category</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/crowding/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Crowding</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/dominance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Dominance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/fronts/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Fronts</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-conn/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Conn</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Node</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/flow/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Flow</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/repair/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Repair</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/select/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Select</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-adult/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Adult</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-assimilation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Assimilation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-collective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Collective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-dna/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Dna</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-evolution/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Evolution</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-juvenile/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Juvenile</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-main-agent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Main Agent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/assignment/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Assignment</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/threshold/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Threshold</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/augmentation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Augmentation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/context/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Context</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/read/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Read</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/accessors/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Accessors</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/exports/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Exports</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/buffer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Buffer</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/operator-stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Operator Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/recorder/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Recorder</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/types/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Types</span></a></li><li class="pipe-nav-item"><a href="../../../neat/topology-intent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Topology Intent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Validate</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Multithreading</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../multithreading/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Browser</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-footer"></span><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Acceleration</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../acceleration/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Browser Tests</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../browser-tests/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Env</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../env/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../env/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Browser</span></a></li><li class="pipe-nav-item"><a href="../../../env/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Memory</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../memory/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Performance</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../performance/nge/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Research</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../research/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Src</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../src/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Utils</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../utils/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Visualization</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../visualization/network-view/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network View</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li></ul></aside><main class="content docs-panel docs-panel-center"><h1 id="architecture-network-prune">architecture/network/prune</h1><p>Error raised when a sparsity-budget max-connection count cap is invalid.</p>
+<h2 id="architecture-network-prune-network-prune-budget-errors-ts">architecture/network/prune/network.prune.budget.errors.ts</h2><h3 id="networkprunebudgetgrowthgracefractionerror">NetworkPruneBudgetGrowthGraceFractionError</h3><p>Error raised when the sparsity-budget growth-grace fraction configuration is invalid.</p>
+<h3 id="networkprunebudgetmaxconnectionserror">NetworkPruneBudgetMaxConnectionsError</h3><p>Error raised when a sparsity-budget max-connection count cap is invalid.</p>
+<h2 id="architecture-network-prune-network-prune-utils-types-ts">architecture/network/prune/network.prune.utils.types.ts</h2><h3 id="activepruningconfig">ActivePruningConfig</h3><p>Normalized pruning-config shape consumed by internal helpers after boundary
+guards confirm that runtime options are present.</p>
+<h3 id="default-prune-frequency">DEFAULT_PRUNE_FREQUENCY</h3><p>Default prune cadence used when schedule frequency is absent or invalid.</p>
+<h3 id="max-evolutionary-target-sparsity">MAX_EVOLUTIONARY_TARGET_SPARSITY</h3><p>Safety cap below full sparsity to avoid degenerate zero-connection networks.</p>
+<h3 id="max-progress-fraction">MAX_PROGRESS_FRACTION</h3><p>Maximum normalized schedule progress value used by clamp logic before
+deriving sparsity targets inside schedule helpers.</p>
+<h3 id="min-progress-fraction">MIN_PROGRESS_FRACTION</h3><p>Minimum normalized schedule progress value used by clamp logic before
+deriving sparsity targets inside schedule helpers.</p>
+<h3 id="min-remaining-connection-count">MIN_REMAINING_CONNECTION_COUNT</h3><p>Lower bound that guarantees at least one connection remains after pruning.</p>
+<h3 id="pruning-method-magnitude">PRUNING_METHOD_MAGNITUDE</h3><p>Pruning method identifier for absolute-weight ranking (<code>|w|</code>) used by
+default scheduled and evolutionary pruning selection helpers.</p>
+<h3 id="pruning-method-snip">PRUNING_METHOD_SNIP</h3><p>Pruning method identifier for SNIP-like saliency ranking (<code>|w * g|</code> proxy).</p>
+<h3 id="regrow-attempt-multiplier">REGROW_ATTEMPT_MULTIPLIER</h3><p>Retry multiplier used to translate desired regrowth count into max attempts.</p>
+<h2 id="architecture-network-prune-network-prune-utils-ts">architecture/network/prune/network.prune.utils.ts</h2><p>Structured and dynamic pruning utilities for networks.</p>
+<p>Features:</p>
+<ul>
+<li>Scheduled pruning during gradient-based training ({@link maybePrune}) with linear sparsity ramp.</li>
+<li>Evolutionary generation pruning toward a target sparsity ({@link pruneToSparsity}).</li>
+<li>Two ranking heuristics:
+  magnitude: |w|
+  snip: |w * g| approximation (g approximated via accumulated delta stats; falls back to |w|)</li>
+<li>Optional stochastic regrowth during scheduled pruning (dynamic sparse training), preserving acyclic constraints.</li>
+</ul>
+<p>Internal state fields (attached to Network through a loose internal bridge):</p>
+<ul>
+<li>_pruningConfig: user-specified schedule &amp; options (start, end, frequency, targetSparsity, method, regrowFraction, lastPruneIter)</li>
+<li>_initialConnectionCount: baseline connection count captured outside (first training iteration)</li>
+<li>_evoInitialConnCount: baseline for evolutionary pruning (first invocation of pruneToSparsity)</li>
+<li>_rand: deterministic RNG function</li>
+<li>_enforceAcyclic: boolean flag enforcing forward-only connectivity ordering</li>
+<li>_topoDirty: topology order invalidation flag consumed by activation fast path / topological sorting</li>
+</ul>
+<h3 id="configuresparsitybudget">configureSparsityBudget</h3><pre><code class="language-ts">configureSparsityBudget(
+  configuration: SparsityBudgetConfiguration,
+): void
+</code></pre>
+<p>Configure a total-connection growth sparsity budget on one network.</p>
+<p>The budget is expressed as an absolute cap across forward and self
+connections plus an optional grace fraction. Growth helpers can then prune
+before mutation or deny the request when the graph cannot stay within the
+allowed envelope.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Target network instance.</li>
+<li><code>configuration</code> - Budget settings for future structural growth.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="getcurrentsparsity">getCurrentSparsity</h3><pre><code class="language-ts">getCurrentSparsity(): number
+</code></pre>
+<p>Return current sparsity relative to the captured pruning baseline connection count.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Network instance whose pruning baseline is inspected.</li>
+</ul>
+<p>Returns: Current sparsity in the [0,1] range when baseline is available.</p>
+<h3 id="getsparsitybudgetsnapshot">getSparsityBudgetSnapshot</h3><pre><code class="language-ts">getSparsityBudgetSnapshot(
+  currentNetwork: default,
+): NetworkSparsityBudgetSnapshot | undefined
+</code></pre>
+<p>Return the latest recorded sparsity-budget decision snapshot for diagnostics and telemetry.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network to inspect.</li>
+</ul>
+<p>Returns: Snapshot clone when one exists; otherwise undefined.</p>
+<h3 id="maybeprune">maybePrune</h3><pre><code class="language-ts">maybePrune(
+  iteration: number,
+): void
+</code></pre>
+<p>Perform scheduled pruning at a given training iteration if conditions are met.</p>
+<p>Uses schedule fields from <code>_pruningConfig</code> (<code>start</code>, <code>end</code>, <code>frequency</code>,
+<code>targetSparsity</code>, <code>method</code>, and optional <code>regrowFraction</code>) to decide whether
+this iteration should prune, then removes low-ranked connections and can
+optionally regrow a bounded subset.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Network instance bound by method call.</li>
+<li><code>iteration</code> - Current (0-based or 1-based) training iteration counter used for scheduling.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="prunetosparsity">pruneToSparsity</h3><pre><code class="language-ts">pruneToSparsity(
+  targetSparsity: number,
+  method: PruningMethod,
+): void
+</code></pre>
+<p>Evolutionary (generation-based) pruning toward a target sparsity baseline.
+Unlike maybePrune this operates immediately relative to the first invocation&#39;s connection count
+(stored separately as _evoInitialConnCount) and does not implement scheduling or regrowth.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Network instance bound by method call.</li>
+<li><code>targetSparsity</code> - Requested target sparsity.</li>
+<li><code>method</code> - Connection ranking heuristic.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-prune-network-prune-budget-utils-ts">architecture/network/prune/network.prune.budget.utils.ts</h2><h3 id="assparsitybudgetprops">asSparsityBudgetProps</h3><pre><code class="language-ts">asSparsityBudgetProps(
+  currentNetwork: default,
+): NetworkSparsityBudgetProps
+</code></pre>
+<p>Interpret one network as a sparsity-budget host.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being inspected.</li>
+</ul>
+<p>Returns: Runtime budget props bridge.</p>
+<h3 id="assparsitybudgetruntimeprops">asSparsityBudgetRuntimeProps</h3><pre><code class="language-ts">asSparsityBudgetRuntimeProps(
+  currentNetwork: default,
+): NetworkSparsityBudgetRuntimeProps
+</code></pre>
+<p>Interpret one network as a sparsity-budget host with internal retry state.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being inspected.</li>
+</ul>
+<p>Returns: Runtime budget props bridge including deny-backoff state.</p>
+<h3 id="cleardeniedgrowthbackoffstate">clearDeniedGrowthBackoffState</h3><pre><code class="language-ts">clearDeniedGrowthBackoffState(
+  currentNetwork: default,
+): void
+</code></pre>
+<p>Reset any deny-backoff state after growth becomes viable again.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network whose retry state should be cleared.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="collectbudgetedconnections">collectBudgetedConnections</h3><pre><code class="language-ts">collectBudgetedConnections(
+  currentNetwork: default,
+): default[]
+</code></pre>
+<p>Collect all live connection objects that may be pruned to free budget.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being inspected.</li>
+</ul>
+<p>Returns: Forward and self connections.</p>
+<h3 id="configuresparsitybudget">configureSparsityBudget</h3><pre><code class="language-ts">configureSparsityBudget(
+  configuration: SparsityBudgetConfiguration,
+): void
+</code></pre>
+<p>Configure a total-connection growth sparsity budget on one network.</p>
+<p>The budget is expressed as an absolute cap across forward and self
+connections plus an optional grace fraction. Growth helpers can then prune
+before mutation or deny the request when the graph cannot stay within the
+allowed envelope.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Target network instance.</li>
+<li><code>configuration</code> - Budget settings for future structural growth.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="convertmegabytestobytes">convertMegabytesToBytes</h3><pre><code class="language-ts">convertMegabytesToBytes(
+  megabytes: number,
+): number
+</code></pre>
+<p>Convert megabytes to bytes for runtime-heap comparisons.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>megabytes</code> - Soft target expressed in megabytes.</li>
+</ul>
+<p>Returns: Equivalent byte count.</p>
+<h3 id="countbudgetedconnections">countBudgetedConnections</h3><pre><code class="language-ts">countBudgetedConnections(
+  currentNetwork: default,
+): number
+</code></pre>
+<p>Count all connection objects that contribute to structural sparsity.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being inspected.</li>
+</ul>
+<p>Returns: Total number of forward and self connections.</p>
+<h3 id="createdeniedgrowthbackofffingerprint">createDeniedGrowthBackoffFingerprint</h3><pre><code class="language-ts">createDeniedGrowthBackoffFingerprint(
+  input: { allowedConnectionLimit: number; budgetConfig: { maxConnections: number; growthGraceFraction: number; method: PruningMethod; }; connectionCountBeforeDecision: number; requiredAdditionalConnections: number; triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined; },
+): DeniedGrowthBackoffFingerprint
+</code></pre>
+<p>Build the fingerprint used to decide whether one deny state still matches.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>input</code> - Current decision inputs that define one growth dead-end.</li>
+</ul>
+<p>Returns: Stable fingerprint for deny-backoff reuse.</p>
+<h3 id="denyifpruneinfeasible">denyIfPruneInfeasible</h3><pre><code class="language-ts">denyIfPruneInfeasible(
+  currentNetwork: default,
+  params: { allowedConnectionLimit: number; connectionCountBeforeDecision: number; desiredConnectionCountBeforeGrowth: number; deniedGrowthBackoffFingerprint: DeniedGrowthBackoffFingerprint; maxPrunableConnectionCount: number; plannedPruneCount: number; projectedConnectionCount: number; requiredAdditionalConnections: number; triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined; },
+): boolean
+</code></pre>
+<p>Deny growth when pruning cannot free enough connections to fit the budget.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network about to grow.</li>
+<li><code>params</code> - Decision inputs for the feasibility check.</li>
+</ul>
+<p>Returns: True when growth was denied because pruning is infeasible.</p>
+<h3 id="ensuregrowthbudget">ensureGrowthBudget</h3><pre><code class="language-ts">ensureGrowthBudget(
+  currentNetwork: default,
+  requiredAdditionalConnections: number,
+): boolean
+</code></pre>
+<p>Ensure enough total-connection budget remains before a growth mutation writes.</p>
+<p>Behavior:</p>
+<ul>
+<li>allow immediately when the projected total connection count fits the budget,</li>
+<li>prune lowest-priority connections first when the budget can be satisfied by
+freeing space,</li>
+<li>temporarily stop net-new growth when the active Node/browser heap already exceeds
+its soft memory target,</li>
+<li>deny without structural writes when the request cannot stay within the
+minimum remaining-connection invariant.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network about to grow.</li>
+<li><code>requiredAdditionalConnections</code> - Net total-connection increase requested by the caller.</li>
+</ul>
+<p>Returns: True when growth may proceed.</p>
+<h3 id="executepruneandallow">executePruneAndAllow</h3><pre><code class="language-ts">executePruneAndAllow(
+  currentNetwork: default,
+  params: { allowedConnectionLimit: number; budgetConfig: { maxConnections: number; growthGraceFraction: number; method: PruningMethod; }; budgetedConnections: default[]; connectionCountBeforeDecision: number; deniedGrowthBackoffFingerprint: DeniedGrowthBackoffFingerprint; desiredConnectionCountBeforeGrowth: number; plannedPruneCount: number; projectedConnectionCount: number; requiredAdditionalConnections: number; triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined; },
+): boolean
+</code></pre>
+<p>Execute the prune-then-allow path: prune connections, check whether growth
+now fits, record the decision snapshot, and return the verdict.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network about to grow.</li>
+<li><code>params</code> - Decision inputs for the prune-and-allow path.</li>
+</ul>
+<p>Returns: True when growth may proceed after pruning.</p>
+<h3 id="getsoftbudgetenvironment">getSoftBudgetEnvironment</h3><pre><code class="language-ts">getSoftBudgetEnvironment(
+  triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined,
+): &quot;browser&quot; | &quot;node&quot; | undefined
+</code></pre>
+<p>Resolve the soft-budget environment label from the triggered state, if any.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>triggeredSoftBudgetState</code> - Active soft-budget pressure, if any.</li>
+</ul>
+<p>Returns: Environment label when a soft budget is active, otherwise undefined.</p>
+<h3 id="getsparsitybudgetsnapshot">getSparsityBudgetSnapshot</h3><pre><code class="language-ts">getSparsityBudgetSnapshot(
+  currentNetwork: default,
+): NetworkSparsityBudgetSnapshot | undefined
+</code></pre>
+<p>Return the latest recorded sparsity-budget decision snapshot for diagnostics and telemetry.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network to inspect.</li>
+</ul>
+<p>Returns: Snapshot clone when one exists; otherwise undefined.</p>
+<h3 id="issamedeniedgrowthfingerprint">isSameDeniedGrowthFingerprint</h3><pre><code class="language-ts">isSameDeniedGrowthFingerprint(
+  deniedGrowthBackoffState: DeniedGrowthBackoffState,
+  fingerprint: DeniedGrowthBackoffFingerprint,
+): boolean
+</code></pre>
+<p>Compare the current deny fingerprint against the stored backoff state.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>deniedGrowthBackoffState</code> - Previously recorded deny-backoff state.</li>
+<li><code>fingerprint</code> - Current decision fingerprint.</li>
+</ul>
+<p>Returns: True when the deny state is unchanged.</p>
+<h3 id="issoftbudgetexceeded">isSoftBudgetExceeded</h3><pre><code class="language-ts">isSoftBudgetExceeded(
+  measuredBytes: number | undefined,
+  configuredLimitMegabytes: number | undefined,
+): boolean
+</code></pre>
+<p>Compare one runtime memory reading against a configured soft target.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>measuredBytes</code> - Heap bytes reported by the runtime.</li>
+<li><code>configuredLimitMegabytes</code> - Soft target in megabytes.</li>
+</ul>
+<p>Returns: True when the runtime is already over the configured soft target.</p>
+<h3 id="normalizegrowthgracefraction">normalizeGrowthGraceFraction</h3><pre><code class="language-ts">normalizeGrowthGraceFraction(
+  growthGraceFraction: number | undefined,
+): number
+</code></pre>
+<p>Validate and normalize the configured growth-grace fraction.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>growthGraceFraction</code> - Raw configured grace fraction.</li>
+</ul>
+<p>Returns: Safe non-negative fraction.</p>
+<h3 id="normalizemaxconnections">normalizeMaxConnections</h3><pre><code class="language-ts">normalizeMaxConnections(
+  maxConnections: number,
+): number
+</code></pre>
+<p>Validate and normalize the configured max-connection cap.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>maxConnections</code> - Raw configured connection cap.</li>
+</ul>
+<p>Returns: Safe integer cap.</p>
+<h3 id="recordbudgetsnapshot">recordBudgetSnapshot</h3><pre><code class="language-ts">recordBudgetSnapshot(
+  currentNetwork: default,
+  snapshot: Omit&lt;NetworkSparsityBudgetSnapshot, &quot;softBudgetEnvironment&quot; | &quot;softBudgetTriggered&quot;&gt;,
+  triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined,
+): void
+</code></pre>
+<p>Persist a budget snapshot with the soft-budget fields filled automatically.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being updated.</li>
+<li><code>snapshot</code> - Snapshot fields excluding soft-budget environment/trigger.</li>
+<li><code>triggeredSoftBudgetState</code> - Active soft-budget pressure, if any.</li>
+</ul>
+<h3 id="recordsparsitybudgetsnapshot">recordSparsityBudgetSnapshot</h3><pre><code class="language-ts">recordSparsityBudgetSnapshot(
+  currentNetwork: default,
+  snapshot: NetworkSparsityBudgetSnapshot,
+): void
+</code></pre>
+<p>Persist the latest read-only decision snapshot.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being updated.</li>
+<li><code>snapshot</code> - Snapshot to store.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="registerdeniedgrowthbackoff">registerDeniedGrowthBackoff</h3><pre><code class="language-ts">registerDeniedGrowthBackoff(
+  currentNetwork: default,
+  fingerprint: DeniedGrowthBackoffFingerprint,
+): void
+</code></pre>
+<p>Record one evaluated deny and expand the retry window for unchanged future attempts.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network that just denied growth.</li>
+<li><code>fingerprint</code> - Current deny fingerprint.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolveallowedconnectionlimit">resolveAllowedConnectionLimit</h3><pre><code class="language-ts">resolveAllowedConnectionLimit(
+  budgetConfig: { maxConnections: number; growthGraceFraction: number; method: PruningMethod; },
+): number
+</code></pre>
+<p>Resolve the effective connection budget including grace headroom.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>budgetConfig</code> - Normalized sparsity-budget configuration.</li>
+</ul>
+<p>Returns: Effective allowed connection limit.</p>
+<h3 id="resolvedeniedgrowthbackoffwindow">resolveDeniedGrowthBackoffWindow</h3><pre><code class="language-ts">resolveDeniedGrowthBackoffWindow(
+  consecutiveEvaluatedDenials: number,
+): number
+</code></pre>
+<p>Resolve how many repeated requests to skip after one evaluated deny.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>consecutiveEvaluatedDenials</code> - Number of full reevaluated denies in the same state.</li>
+</ul>
+<p>Returns: Remaining retry slots to skip before the next reevaluation.</p>
+<h3 id="resolveeffectiveallowedconnectionlimit">resolveEffectiveAllowedConnectionLimit</h3><pre><code class="language-ts">resolveEffectiveAllowedConnectionLimit(
+  allowedConnectionLimit: number,
+  connectionCountBeforeDecision: number,
+  triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined,
+): number
+</code></pre>
+<p>Tighten the effective connection cap when the runtime is already over a soft heap target.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>allowedConnectionLimit</code> - Hard connection cap resolved from the network budget.</li>
+<li><code>connectionCountBeforeDecision</code> - Current total connection count.</li>
+<li><code>triggeredSoftBudgetState</code> - Active soft-budget pressure, if any.</li>
+</ul>
+<p>Returns: Effective cap for this growth decision.</p>
+<h3 id="resolvetriggeredsoftbudgetstate">resolveTriggeredSoftBudgetState</h3><pre><code class="language-ts">resolveTriggeredSoftBudgetState(): TriggeredSoftBudgetState | undefined
+</code></pre>
+<p>Detect whether the current runtime heap already exceeds one active soft-memory target.</p>
+<p>Returns: Triggered soft-budget details when one environment is over budget.</p>
+<h3 id="shouldskipdeniedgrowthattempt">shouldSkipDeniedGrowthAttempt</h3><pre><code class="language-ts">shouldSkipDeniedGrowthAttempt(
+  currentNetwork: default,
+  fingerprint: DeniedGrowthBackoffFingerprint,
+): boolean
+</code></pre>
+<p>Skip one repeated growth attempt when the network is still in the same dead-end state.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network about to retry growth.</li>
+<li><code>fingerprint</code> - Current deny fingerprint.</li>
+</ul>
+<p>Returns: True when the retry should be denied without reevaluating prune work.</p>
+<h2 id="architecture-network-prune-network-prune-regrowth-utils-ts">architecture/network/prune/network.prune.regrowth.utils.ts</h2><h3 id="buildregrowthcandidatepair">buildRegrowthCandidatePair</h3><pre><code class="language-ts">buildRegrowthCandidatePair(
+  currentNetwork: default,
+): { sourceNode: default; targetNode: default; } | null
+</code></pre>
+<p>Build one random regrowth candidate pair if valid.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being regrown.</li>
+</ul>
+<p>Returns: Candidate node pair or null when invalid.</p>
+<h3 id="buildregrowthplan">buildRegrowthPlan</h3><pre><code class="language-ts">buildRegrowthPlan(
+  context: RegrowthPlanContext,
+): RegrowthPlan | null
+</code></pre>
+<p>Convert regrowth intent into a bounded execution plan.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Regrowth planning inputs.</li>
+</ul>
+<p>Returns: A plan when regrowth is meaningful; otherwise null.</p>
+<h3 id="connectionalreadyexists">connectionAlreadyExists</h3><pre><code class="language-ts">connectionAlreadyExists(
+  currentNetwork: default,
+  sourceNode: default,
+  targetNode: default,
+): boolean
+</code></pre>
+<p>Check whether a connection already exists.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being regrown.</li>
+<li><code>sourceNode</code> - Proposed source node.</li>
+<li><code>targetNode</code> - Proposed target node.</li>
+</ul>
+<p>Returns: True when the edge already exists.</p>
+<h3 id="executeregrowthattempts">executeRegrowthAttempts</h3><pre><code class="language-ts">executeRegrowthAttempts(
+  context: RegrowthExecutionContext,
+): void
+</code></pre>
+<p>Execute bounded stochastic regrowth attempts.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Regrowth execution settings.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="isinvalidregrowthpair">isInvalidRegrowthPair</h3><pre><code class="language-ts">isInvalidRegrowthPair(
+  currentNetwork: default,
+  sourceNode: default,
+  targetNode: default,
+): boolean
+</code></pre>
+<p>Validate whether a candidate regrowth pair is acceptable.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being regrown.</li>
+<li><code>sourceNode</code> - Proposed source node.</li>
+<li><code>targetNode</code> - Proposed target node.</li>
+</ul>
+<p>Returns: True when the pair must be rejected.</p>
+<h3 id="mayberunregrowth">maybeRunRegrowth</h3><pre><code class="language-ts">maybeRunRegrowth(
+  currentNetwork: default,
+  context: RegrowthPlanContext,
+): void
+</code></pre>
+<p>Build and execute a bounded connection-regrowth plan when regrowth is enabled.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network to regrow.</li>
+<li><code>context</code> - Inputs describing regrowth intent.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="pickrandomnode">pickRandomNode</h3><pre><code class="language-ts">pickRandomNode(
+  currentNetwork: default,
+): default | undefined
+</code></pre>
+<p>Pick a random node using the network RNG.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network providing node set and RNG.</li>
+</ul>
+<p>Returns: Random node or undefined when the node list is empty.</p>
+<h3 id="shouldcontinueregrowth">shouldContinueRegrowth</h3><pre><code class="language-ts">shouldContinueRegrowth(
+  currentNetwork: default,
+  desiredRemainingConnections: number,
+  attemptedRegrowthCount: number,
+  maxAttempts: number,
+): boolean
+</code></pre>
+<p>Decide whether another regrowth attempt is allowed.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being regrown.</li>
+<li><code>desiredRemainingConnections</code> - Target remaining connection count.</li>
+<li><code>attemptedRegrowthCount</code> - Number of attempts already used.</li>
+<li><code>maxAttempts</code> - Maximum attempts allowed.</li>
+</ul>
+<p>Returns: True when another attempt should run.</p>
+<h3 id="tryregrowconnection">tryRegrowConnection</h3><pre><code class="language-ts">tryRegrowConnection(
+  currentNetwork: default,
+): void
+</code></pre>
+<p>Attempt one random valid connection addition.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being regrown.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="violatesacyclicconstraint">violatesAcyclicConstraint</h3><pre><code class="language-ts">violatesAcyclicConstraint(
+  currentNetwork: default,
+  sourceNode: default,
+  targetNode: default,
+): boolean
+</code></pre>
+<p>Check whether a pair violates forward-only acyclic ordering.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network being regrown.</li>
+<li><code>sourceNode</code> - Proposed source node.</li>
+<li><code>targetNode</code> - Proposed target node.</li>
+</ul>
+<p>Returns: True when acyclic ordering would be violated.</p>
+<h2 id="architecture-network-prune-network-prune-schedule-utils-ts">architecture/network/prune/network.prune.schedule.utils.ts</h2><h3 id="alreadyprunedthisiteration">alreadyPrunedThisIteration</h3><pre><code class="language-ts">alreadyPrunedThisIteration(
+  currentIteration: number,
+  currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; },
+): boolean
+</code></pre>
+<p>Check whether this iteration was already pruned.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentIteration</code> - Iteration to evaluate.</li>
+<li><code>currentPruningConfig</code> - Active pruning schedule.</li>
+</ul>
+<p>Returns: True when pruning already happened for this iteration.</p>
+<h3 id="buildpruneselection">buildPruneSelection</h3><pre><code class="language-ts">buildPruneSelection(
+  context: PruneSelectionContext,
+): PruneSelectionResult
+</code></pre>
+<p>Build a connection removal selection from ranking context so pruning removes the lowest-priority edges first.
+This helper isolates ordering and slicing rules from orchestration code that manages structural side effects.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Inputs for ranking and slicing removable connections.</li>
+</ul>
+<p>Returns: Connections selected for pruning.</p>
+<h3 id="buildscheduledtarget">buildScheduledTarget</h3><pre><code class="language-ts">buildScheduledTarget(
+  context: ScheduledTargetContext,
+  currentConnectionCount: number,
+): ScheduledTargetResult
+</code></pre>
+<p>Build current scheduled pruning targets from schedule context and current connection totals for this iteration.
+The output combines desired remaining edges and immediate excess so callers can prune deterministically.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Inputs required to compute desired remaining connections.</li>
+<li><code>currentConnectionCount</code> - Current number of network connections.</li>
+</ul>
+<p>Returns: Desired remaining connections and current excess.</p>
+<h3 id="calculateprogressfraction">calculateProgressFraction</h3><pre><code class="language-ts">calculateProgressFraction(
+  currentIteration: number,
+  scheduleStart: number,
+  scheduleEnd: number,
+): number
+</code></pre>
+<p>Compute clamped schedule progress in the [0,1] range.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentIteration</code> - Iteration to evaluate.</li>
+<li><code>scheduleStart</code> - Start iteration of schedule window.</li>
+<li><code>scheduleEnd</code> - End iteration of schedule window.</li>
+</ul>
+<p>Returns: Clamped normalized progress.</p>
+<h3 id="calculatesnipsaliency">calculateSnipSaliency</h3><pre><code class="language-ts">calculateSnipSaliency(
+  connection: default,
+): number
+</code></pre>
+<p>Compute saliency for SNIP-like ranking.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection to score.</li>
+</ul>
+<p>Returns: Saliency value used for sorting.</p>
+<h3 id="clamp">clamp</h3><pre><code class="language-ts">clamp(
+  value: number,
+  minimum: number,
+  maximum: number,
+): number
+</code></pre>
+<p>Clamp a number into an inclusive range.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>value</code> - Raw value to clamp.</li>
+<li><code>minimum</code> - Inclusive lower bound.</li>
+<li><code>maximum</code> - Inclusive upper bound.</li>
+</ul>
+<p>Returns: Clamped value.</p>
+<h3 id="disconnectconnections">disconnectConnections</h3><pre><code class="language-ts">disconnectConnections(
+  currentNetwork: default,
+  connectionsToDisconnect: default[],
+): void
+</code></pre>
+<p>Disconnect all selected connections from the network and schedule post-prune activation-pool compaction when needed.
+Grouping removal side effects here keeps pruning orchestration compact and consistent across pruning strategies.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network to mutate.</li>
+<li><code>connectionsToDisconnect</code> - Connections to remove.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="getinitialconnectionbaseline">getInitialConnectionBaseline</h3><pre><code class="language-ts">getInitialConnectionBaseline(
+  currentNetwork: default,
+): number | undefined
+</code></pre>
+<p>Read the scheduled-pruning baseline connection count used to compute progressive sparsity targets over time.
+Keeping this baseline explicit prevents schedule drift when connection totals fluctuate across pruning iterations.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network instance to inspect.</li>
+</ul>
+<p>Returns: Baseline count when captured; otherwise undefined.</p>
+<h3 id="getpruningconfig">getPruningConfig</h3><pre><code class="language-ts">getPruningConfig(
+  currentNetwork: default,
+): { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; } | undefined
+</code></pre>
+<p>Read the active pruning schedule from network internals so scheduled pruning logic can run against current runtime policy.
+Returning the optional config directly keeps orchestration code declarative and avoids repeated unsafe internal casts.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network instance to inspect.</li>
+</ul>
+<p>Returns: Pruning configuration when enabled; otherwise undefined.</p>
+<h3 id="isoutsidepruningwindow">isOutsidePruningWindow</h3><pre><code class="language-ts">isOutsidePruningWindow(
+  currentIteration: number,
+  currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; },
+): boolean
+</code></pre>
+<p>Check whether an iteration is outside the pruning window.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentIteration</code> - Iteration to evaluate.</li>
+<li><code>currentPruningConfig</code> - Active pruning schedule.</li>
+</ul>
+<p>Returns: True when the iteration is out of range.</p>
+<h3 id="isscheduledpruningiteration">isScheduledPruningIteration</h3><pre><code class="language-ts">isScheduledPruningIteration(
+  currentIteration: number,
+  currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; },
+): boolean
+</code></pre>
+<p>Check frequency cadence for scheduled pruning.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentIteration</code> - Iteration to evaluate.</li>
+<li><code>currentPruningConfig</code> - Active pruning schedule.</li>
+</ul>
+<p>Returns: True when this iteration matches the schedule cadence.</p>
+<h3 id="markpruneiteration">markPruneIteration</h3><pre><code class="language-ts">markPruneIteration(
+  currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; },
+  currentIteration: number,
+): void
+</code></pre>
+<p>Persist the iteration that last performed pruning so duplicate schedule triggers within the same step are ignored.
+This marker is essential for idempotent training loops that may re-enter pruning checks.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentPruningConfig</code> - Active pruning configuration.</li>
+<li><code>currentIteration</code> - Iteration to record.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="marktopologydirty">markTopologyDirty</h3><pre><code class="language-ts">markTopologyDirty(
+  currentNetwork: default,
+): void
+</code></pre>
+<p>Mark the topology cache as dirty after scheduled pruning structural updates.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network with modified connectivity.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="rankconnectionsbymagnitude">rankConnectionsByMagnitude</h3><pre><code class="language-ts">rankConnectionsByMagnitude(
+  connections: default[],
+): default[]
+</code></pre>
+<p>Rank connections by absolute weight magnitude.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connections</code> - Candidate connections to rank.</li>
+</ul>
+<p>Returns: Connections sorted by ascending absolute weight.</p>
+<h3 id="rankconnectionsbyremovalpriority">rankConnectionsByRemovalPriority</h3><pre><code class="language-ts">rankConnectionsByRemovalPriority(
+  connections: default[],
+  method: PruningMethod,
+): default[]
+</code></pre>
+<p>Route ranking to the configured pruning heuristic.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connections</code> - Candidate connections to rank.</li>
+<li><code>method</code> - Ranking method to apply.</li>
+</ul>
+<p>Returns: Connections sorted by ascending removal priority.</p>
+<h3 id="rankconnectionsbysnipsaliency">rankConnectionsBySnipSaliency</h3><pre><code class="language-ts">rankConnectionsBySnipSaliency(
+  connections: default[],
+): default[]
+</code></pre>
+<p>Rank connections by SNIP-like saliency approximation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connections</code> - Candidate connections to rank.</li>
+</ul>
+<p>Returns: Connections sorted by ascending saliency.</p>
+<h3 id="resolvegradientmagnitude">resolveGradientMagnitude</h3><pre><code class="language-ts">resolveGradientMagnitude(
+  connection: default,
+): number
+</code></pre>
+<p>Resolve a stable gradient-magnitude proxy from connection delta statistics.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection containing accumulated delta history.</li>
+</ul>
+<p>Returns: Absolute gradient magnitude proxy.</p>
+<h3 id="resolvepruningmethod">resolvePruningMethod</h3><pre><code class="language-ts">resolvePruningMethod(
+  method: PruningMethod | undefined,
+): PruningMethod
+</code></pre>
+<p>Normalize an optional pruning method to a concrete default value.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>method</code> - Optional configured pruning method.</li>
+</ul>
+<p>Returns: Concrete pruning method.</p>
+<h3 id="shouldrunscheduledprune">shouldRunScheduledPrune</h3><pre><code class="language-ts">shouldRunScheduledPrune(
+  currentIteration: number,
+  currentPruningConfig: { start: number; end: number; frequency: number; targetSparsity: number; method: PruningMethod; regrowFraction: number; lastPruneIter?: number | undefined; },
+): boolean
+</code></pre>
+<p>Determine whether scheduled pruning should run at this iteration using configured window bounds and cadence guards.
+The decision also prevents duplicate pruning passes within the same iteration when callers retry training steps.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentIteration</code> - Training iteration being processed.</li>
+<li><code>currentPruningConfig</code> - Active pruning schedule.</li>
+</ul>
+<p>Returns: True when pruning should execute now.</p>
+<h2 id="architecture-network-prune-network-prune-sparsity-utils-ts">architecture/network/prune/network.prune.sparsity.utils.ts</h2><h3 id="calculatesparsityfrombaseline">calculateSparsityFromBaseline</h3><pre><code class="language-ts">calculateSparsityFromBaseline(
+  currentConnectionCount: number,
+  baselineConnectionCount: number,
+): number
+</code></pre>
+<p>Convert current connection density into a normalized sparsity ratio value.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentConnectionCount</code> - Current connection count.</li>
+<li><code>baselineConnectionCount</code> - Baseline connection count.</li>
+</ul>
+<p>Returns: Sparsity ratio in [0,1] for valid baselines.</p>
+<h3 id="readinitialsparsitybaseline">readInitialSparsityBaseline</h3><pre><code class="language-ts">readInitialSparsityBaseline(
+  currentNetwork: default,
+): number | undefined
+</code></pre>
+<p>Read the initial connection-count baseline value used for sparsity ratio reporting.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network to inspect.</li>
+</ul>
+<p>Returns: Baseline connection count when available.</p>
+<h2 id="architecture-network-prune-network-prune-evolutionary-utils-ts">architecture/network/prune/network.prune.evolutionary.utils.ts</h2><h3 id="buildevolutionarypruneselection">buildEvolutionaryPruneSelection</h3><pre><code class="language-ts">buildEvolutionaryPruneSelection(
+  context: PruneSelectionContext,
+): PruneSelectionResult
+</code></pre>
+<p>Build evolutionary pruning connection selection.
+Ranking and slicing happen in one deterministic pass so stochastic training variance does not reorder equal-score candidates across repeated pruning runs.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Inputs for ranking and slicing.</li>
+</ul>
+<p>Returns: Connections selected for removal.</p>
+<h3 id="buildevolutionarytarget">buildEvolutionaryTarget</h3><pre><code class="language-ts">buildEvolutionaryTarget(
+  context: EvolutionaryTargetContext,
+  currentConnectionCount: number,
+): EvolutionaryTargetResult
+</code></pre>
+<p>Compute evolutionary pruning target counts.
+This conversion translates a normalized sparsity objective into concrete connection counts while enforcing the minimum remaining edge safety floor.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Inputs for sparsity-to-count conversion.</li>
+<li><code>currentConnectionCount</code> - Current number of network connections.</li>
+</ul>
+<p>Returns: Desired remaining and excess connection counts.</p>
+<h3 id="calculateevolutionarysnipsaliency">calculateEvolutionarySnipSaliency</h3><pre><code class="language-ts">calculateEvolutionarySnipSaliency(
+  connection: default,
+): number
+</code></pre>
+<p>Compute evolutionary SNIP-like saliency for one connection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection to score.</li>
+</ul>
+<p>Returns: Saliency score.</p>
+<h3 id="disconnectevolutionaryconnections">disconnectEvolutionaryConnections</h3><pre><code class="language-ts">disconnectEvolutionaryConnections(
+  currentNetwork: default,
+  connectionsToDisconnect: default[],
+): void
+</code></pre>
+<p>Disconnect selected evolutionary pruning edges.
+Removal is followed by deferred activation-pool compaction scheduling so large structural contractions can reclaim memory without forcing immediate synchronous pool reshaping.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network to mutate.</li>
+<li><code>connectionsToDisconnect</code> - Edges to remove.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="getorcaptureevolutionarybaseline">getOrCaptureEvolutionaryBaseline</h3><pre><code class="language-ts">getOrCaptureEvolutionaryBaseline(
+  currentNetwork: default,
+): number
+</code></pre>
+<p>Capture evolutionary baseline once and reuse it for subsequent pruning calls.
+The baseline anchors target sparsity to the original connection budget so repeated prune cycles converge predictably instead of drifting with the current graph size.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network to inspect and possibly initialize.</li>
+</ul>
+<p>Returns: Evolutionary baseline connection count.</p>
+<h3 id="markevolutionarytopologydirty">markEvolutionaryTopologyDirty</h3><pre><code class="language-ts">markEvolutionaryTopologyDirty(
+  currentNetwork: default,
+): void
+</code></pre>
+<p>Mark the topology cache as dirty after evolutionary pruning removes connections.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentNetwork</code> - Network with changed structure.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="normalizeevolutionarytargetsparsity">normalizeEvolutionaryTargetSparsity</h3><pre><code class="language-ts">normalizeEvolutionaryTargetSparsity(
+  rawTargetSparsity: number,
+): number
+</code></pre>
+<p>Clamp evolutionary target sparsity to safe operational bounds for pruning.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rawTargetSparsity</code> - Requested target sparsity.</li>
+</ul>
+<p>Returns: Normalized target sparsity.</p>
+<h3 id="rankevolutionaryconnections">rankEvolutionaryConnections</h3><pre><code class="language-ts">rankEvolutionaryConnections(
+  connections: default[],
+  pruningMethod: PruningMethod,
+): default[]
+</code></pre>
+<p>Route evolutionary ranking to selected heuristic.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connections</code> - Candidate connections.</li>
+<li><code>pruningMethod</code> - Ranking heuristic.</li>
+</ul>
+<p>Returns: Connections sorted by ascending removal priority.</p>
+<h3 id="rankevolutionaryconnectionsbymagnitude">rankEvolutionaryConnectionsByMagnitude</h3><pre><code class="language-ts">rankEvolutionaryConnectionsByMagnitude(
+  connections: default[],
+): default[]
+</code></pre>
+<p>Rank connections by magnitude for evolutionary pruning.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connections</code> - Candidate connections.</li>
+</ul>
+<p>Returns: Connections sorted by ascending absolute weight.</p>
+<h3 id="rankevolutionaryconnectionsbysnip">rankEvolutionaryConnectionsBySnip</h3><pre><code class="language-ts">rankEvolutionaryConnectionsBySnip(
+  connections: default[],
+): default[]
+</code></pre>
+<p>Rank connections by SNIP-like saliency for evolutionary pruning.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connections</code> - Candidate connections.</li>
+</ul>
+<p>Returns: Connections sorted by ascending saliency.</p>
+<h3 id="resolveevolutionarygradientmagnitude">resolveEvolutionaryGradientMagnitude</h3><pre><code class="language-ts">resolveEvolutionaryGradientMagnitude(
+  connection: default,
+): number
+</code></pre>
+<p>Resolve gradient proxy for evolutionary SNIP ranking.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection containing delta history.</li>
+</ul>
+<p>Returns: Absolute gradient magnitude proxy.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-prune-network-prune-budget-errors-ts">architecture/network/prune/network.prune.budget.errors.ts</a><ul><li><a href="#networkprunebudgetgrowthgracefractionerror">NetworkPruneBudgetGrowthGraceFractionError</a></li><li><a href="#networkprunebudgetmaxconnectionserror">NetworkPruneBudgetMaxConnectionsError</a></li></ul></div><div class="toc-file"><a href="#architecture-network-prune-network-prune-utils-types-ts">architecture/network/prune/network.prune.utils.types.ts</a><ul><li><a href="#activepruningconfig">ActivePruningConfig</a></li><li><a href="#default-prune-frequency">DEFAULT_PRUNE_FREQUENCY</a></li><li><a href="#max-evolutionary-target-sparsity">MAX_EVOLUTIONARY_TARGET_SPARSITY</a></li><li><a href="#max-progress-fraction">MAX_PROGRESS_FRACTION</a></li><li><a href="#min-progress-fraction">MIN_PROGRESS_FRACTION</a></li><li><a href="#min-remaining-connection-count">MIN_REMAINING_CONNECTION_COUNT</a></li><li><a href="#pruning-method-magnitude">PRUNING_METHOD_MAGNITUDE</a></li><li><a href="#pruning-method-snip">PRUNING_METHOD_SNIP</a></li><li><a href="#regrow-attempt-multiplier">REGROW_ATTEMPT_MULTIPLIER</a></li></ul></div><div class="toc-file"><a href="#architecture-network-prune-network-prune-utils-ts">architecture/network/prune/network.prune.utils.ts</a><ul><li><a href="#configuresparsitybudget">configureSparsityBudget</a></li><li><a href="#getcurrentsparsity">getCurrentSparsity</a></li><li><a href="#getsparsitybudgetsnapshot">getSparsityBudgetSnapshot</a></li><li><a href="#maybeprune">maybePrune</a></li><li><a href="#prunetosparsity">pruneToSparsity</a></li></ul></div><div class="toc-file"><a href="#architecture-network-prune-network-prune-budget-utils-ts">architecture/network/prune/network.prune.budget.utils.ts</a><ul><li><a href="#assparsitybudgetprops">asSparsityBudgetProps</a></li><li><a href="#assparsitybudgetruntimeprops">asSparsityBudgetRuntimeProps</a></li><li><a href="#cleardeniedgrowthbackoffstate">clearDeniedGrowthBackoffState</a></li><li><a href="#collectbudgetedconnections">collectBudgetedConnections</a></li><li><a href="#configuresparsitybudget">configureSparsityBudget</a></li><li><a href="#convertmegabytestobytes">convertMegabytesToBytes</a></li><li><a href="#countbudgetedconnections">countBudgetedConnections</a></li><li><a href="#createdeniedgrowthbackofffingerprint">createDeniedGrowthBackoffFingerprint</a></li><li><a href="#denyifpruneinfeasible">denyIfPruneInfeasible</a></li><li><a href="#ensuregrowthbudget">ensureGrowthBudget</a></li><li><a href="#executepruneandallow">executePruneAndAllow</a></li><li><a href="#getsoftbudgetenvironment">getSoftBudgetEnvironment</a></li><li><a href="#getsparsitybudgetsnapshot">getSparsityBudgetSnapshot</a></li><li><a href="#issamedeniedgrowthfingerprint">isSameDeniedGrowthFingerprint</a></li><li><a href="#issoftbudgetexceeded">isSoftBudgetExceeded</a></li><li><a href="#normalizegrowthgracefraction">normalizeGrowthGraceFraction</a></li><li><a href="#normalizemaxconnections">normalizeMaxConnections</a></li><li><a href="#recordbudgetsnapshot">recordBudgetSnapshot</a></li><li><a href="#recordsparsitybudgetsnapshot">recordSparsityBudgetSnapshot</a></li><li><a href="#registerdeniedgrowthbackoff">registerDeniedGrowthBackoff</a></li><li><a href="#resolveallowedconnectionlimit">resolveAllowedConnectionLimit</a></li><li><a href="#resolvedeniedgrowthbackoffwindow">resolveDeniedGrowthBackoffWindow</a></li><li><a href="#resolveeffectiveallowedconnectionlimit">resolveEffectiveAllowedConnectionLimit</a></li><li><a href="#resolvetriggeredsoftbudgetstate">resolveTriggeredSoftBudgetState</a></li><li><a href="#shouldskipdeniedgrowthattempt">shouldSkipDeniedGrowthAttempt</a></li></ul></div><div class="toc-file"><a href="#architecture-network-prune-network-prune-regrowth-utils-ts">architecture/network/prune/network.prune.regrowth.utils.ts</a><ul><li><a href="#buildregrowthcandidatepair">buildRegrowthCandidatePair</a></li><li><a href="#buildregrowthplan">buildRegrowthPlan</a></li><li><a href="#connectionalreadyexists">connectionAlreadyExists</a></li><li><a href="#executeregrowthattempts">executeRegrowthAttempts</a></li><li><a href="#isinvalidregrowthpair">isInvalidRegrowthPair</a></li><li><a href="#mayberunregrowth">maybeRunRegrowth</a></li><li><a href="#pickrandomnode">pickRandomNode</a></li><li><a href="#shouldcontinueregrowth">shouldContinueRegrowth</a></li><li><a href="#tryregrowconnection">tryRegrowConnection</a></li><li><a href="#violatesacyclicconstraint">violatesAcyclicConstraint</a></li></ul></div><div class="toc-file"><a href="#architecture-network-prune-network-prune-schedule-utils-ts">architecture/network/prune/network.prune.schedule.utils.ts</a><ul><li><a href="#alreadyprunedthisiteration">alreadyPrunedThisIteration</a></li><li><a href="#buildpruneselection">buildPruneSelection</a></li><li><a href="#buildscheduledtarget">buildScheduledTarget</a></li><li><a href="#calculateprogressfraction">calculateProgressFraction</a></li><li><a href="#calculatesnipsaliency">calculateSnipSaliency</a></li><li><a href="#clamp">clamp</a></li><li><a href="#disconnectconnections">disconnectConnections</a></li><li><a href="#getinitialconnectionbaseline">getInitialConnectionBaseline</a></li><li><a href="#getpruningconfig">getPruningConfig</a></li><li><a href="#isoutsidepruningwindow">isOutsidePruningWindow</a></li><li><a href="#isscheduledpruningiteration">isScheduledPruningIteration</a></li><li><a href="#markpruneiteration">markPruneIteration</a></li><li><a href="#marktopologydirty">markTopologyDirty</a></li><li><a href="#rankconnectionsbymagnitude">rankConnectionsByMagnitude</a></li><li><a href="#rankconnectionsbyremovalpriority">rankConnectionsByRemovalPriority</a></li><li><a href="#rankconnectionsbysnipsaliency">rankConnectionsBySnipSaliency</a></li><li><a href="#resolvegradientmagnitude">resolveGradientMagnitude</a></li><li><a href="#resolvepruningmethod">resolvePruningMethod</a></li><li><a href="#shouldrunscheduledprune">shouldRunScheduledPrune</a></li></ul></div><div class="toc-file"><a href="#architecture-network-prune-network-prune-sparsity-utils-ts">architecture/network/prune/network.prune.sparsity.utils.ts</a><ul><li><a href="#calculatesparsityfrombaseline">calculateSparsityFromBaseline</a></li><li><a href="#readinitialsparsitybaseline">readInitialSparsityBaseline</a></li></ul></div><div class="toc-file"><a href="#architecture-network-prune-network-prune-evolutionary-utils-ts">architecture/network/prune/network.prune.evolutionary.utils.ts</a><ul><li><a href="#buildevolutionarypruneselection">buildEvolutionaryPruneSelection</a></li><li><a href="#buildevolutionarytarget">buildEvolutionaryTarget</a></li><li><a href="#calculateevolutionarysnipsaliency">calculateEvolutionarySnipSaliency</a></li><li><a href="#disconnectevolutionaryconnections">disconnectEvolutionaryConnections</a></li><li><a href="#getorcaptureevolutionarybaseline">getOrCaptureEvolutionaryBaseline</a></li><li><a href="#markevolutionarytopologydirty">markEvolutionaryTopologyDirty</a></li><li><a href="#normalizeevolutionarytargetsparsity">normalizeEvolutionaryTargetSparsity</a></li><li><a href="#rankevolutionaryconnections">rankEvolutionaryConnections</a></li><li><a href="#rankevolutionaryconnectionsbymagnitude">rankEvolutionaryConnectionsByMagnitude</a></li><li><a href="#rankevolutionaryconnectionsbysnip">rankEvolutionaryConnectionsBySnip</a></li><li><a href="#resolveevolutionarygradientmagnitude">resolveEvolutionaryGradientMagnitude</a></li></ul></div></div></aside></div><script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script></body></html>

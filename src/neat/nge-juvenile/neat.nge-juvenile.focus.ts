@@ -36,43 +36,41 @@ import type {
  * console.log(config.cooldownWindowCount); // 5 (mirrors hysteresisWindowCount)
  * ```
  */
+const DEFAULT_JUVENILE_PHASE_CONFIG: NgeJuvenilePhaseConfig = {
+  focusWeights: NGE_JUVENILE_DEFAULT_FOCUS_WEIGHTS,
+  episodicHitRateThreshold: NGE_JUVENILE_DEFAULT_EPISODIC_HIT_RATE_THRESHOLD,
+  recurrentRefreshFloor: NGE_JUVENILE_DEFAULT_RECURRENT_REFRESH_FLOOR,
+  hysteresisWindowCount: NGE_JUVENILE_DEFAULT_HYSTERESIS_WINDOW_COUNT,
+  cooldownWindowCount: NGE_JUVENILE_DEFAULT_HYSTERESIS_WINDOW_COUNT,
+  gainStabilityWindow: NGE_JUVENILE_DEFAULT_GAIN_STABILITY_WINDOW,
+  gainStabilityTolerance: NGE_JUVENILE_DEFAULT_GAIN_STABILITY_TOLERANCE,
+  windowIndex: 0,
+  nodeGrowthSignalFloor: NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR,
+  nodeAdditionCount: NGE_JUVENILE_DEFAULT_NODE_ADDITION_COUNT,
+  edgeDensificationCount: NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
+  maxStructuralEditsPerStep:
+    NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP,
+};
+
+/**
+ * Resolve the NGE juvenile phase configuration by merging the supplied
+ * partial overrides with built-in default values. Nested `focusWeights`
+ * are deep-merged so that individual weight keys can be overridden
+ * without discarding the remaining defaults.
+ *
+ * @param partial - Partial configuration overrides to merge over defaults.
+ * @returns The fully resolved juvenile phase configuration.
+ */
 export function resolveFocusConfig(
   partial: Partial<NgeJuvenilePhaseConfig>,
 ): NgeJuvenilePhaseConfig {
   return {
+    ...DEFAULT_JUVENILE_PHASE_CONFIG,
+    ...partial,
     focusWeights: {
-      ...NGE_JUVENILE_DEFAULT_FOCUS_WEIGHTS,
+      ...DEFAULT_JUVENILE_PHASE_CONFIG.focusWeights,
       ...partial.focusWeights,
     },
-    episodicHitRateThreshold:
-      partial.episodicHitRateThreshold ??
-      NGE_JUVENILE_DEFAULT_EPISODIC_HIT_RATE_THRESHOLD,
-    recurrentRefreshFloor:
-      partial.recurrentRefreshFloor ??
-      NGE_JUVENILE_DEFAULT_RECURRENT_REFRESH_FLOOR,
-    hysteresisWindowCount:
-      partial.hysteresisWindowCount ??
-      NGE_JUVENILE_DEFAULT_HYSTERESIS_WINDOW_COUNT,
-    cooldownWindowCount:
-      partial.cooldownWindowCount ??
-      NGE_JUVENILE_DEFAULT_HYSTERESIS_WINDOW_COUNT,
-    gainStabilityWindow:
-      partial.gainStabilityWindow ?? NGE_JUVENILE_DEFAULT_GAIN_STABILITY_WINDOW,
-    gainStabilityTolerance:
-      partial.gainStabilityTolerance ??
-      NGE_JUVENILE_DEFAULT_GAIN_STABILITY_TOLERANCE,
-    windowIndex: partial.windowIndex ?? 0,
-    nodeGrowthSignalFloor:
-      partial.nodeGrowthSignalFloor ??
-      NGE_JUVENILE_DEFAULT_NODE_GROWTH_SIGNAL_FLOOR,
-    nodeAdditionCount:
-      partial.nodeAdditionCount ?? NGE_JUVENILE_DEFAULT_NODE_ADDITION_COUNT,
-    edgeDensificationCount:
-      partial.edgeDensificationCount ??
-      NGE_JUVENILE_DEFAULT_EDGE_DENSIFICATION_COUNT,
-    maxStructuralEditsPerStep:
-      partial.maxStructuralEditsPerStep ??
-      NGE_GROW_STABILIZE_DEFAULT_MAX_STRUCTURAL_EDITS_PER_STEP,
   };
 }
 

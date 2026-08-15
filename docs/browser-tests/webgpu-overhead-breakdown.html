@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebGPU GPU Overhead Breakdown</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 1rem; }
+      pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
+      button { margin-top: 1rem; }
+    </style>
+  </head>
+  <body>
+    <h1>WebGPU GPU Overhead Breakdown</h1>
+    <p>
+      Profiles a single cold-path GPU activation per tier and breaks the wall-clock
+      time into CPU preparation, buffer upload, pipeline compile, bind-group setup,
+      queue submission, GPU wait, and readback phases. Produces a downloadable JSON
+      artifact.
+    </p>
+    <div id="status">Running...</div>
+    <pre id="result">{}</pre>
+    <button id="download" disabled>Download artifact</button>
+
+    <script type="module">
+      import {
+        runOverheadBreakdown,
+        OVERHEAD_ARTIFACT_FILE_NAME,
+      } from './scenarios/webgpu-overhead-breakdown.mjs';
+
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+      const downloadBtn = document.getElementById('download');
+
+      /**
+       * Trigger a browser download of the overhead artifact as JSON.
+       * @param {object} result - Overhead artifact to serialize.
+       */
+      function downloadArtifact(result) {
+        const blob = new Blob([JSON.stringify(result, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = OVERHEAD_ARTIFACT_FILE_NAME;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      async function main() {
+        try {
+          const adapter = await navigator.gpu?.requestAdapter({
+            powerPreference: 'high-performance',
+          });
+          const device = await adapter?.requestDevice();
+
+          statusEl.textContent = 'Profiling overhead per tier...';
+          const result = await runOverheadBreakdown({ device, adapter });
+
+          window.webgpuOverheadBreakdownResult = result;
+          resultEl.textContent = JSON.stringify(result, null, 2);
+          statusEl.textContent = `Done. ${result.summary.successfulTierCount}/${result.summary.tierCount} tiers profiled, ${result.summary.totalWallTimeMs.toFixed(2)} ms total.`;
+          downloadBtn.disabled = false;
+          downloadBtn.addEventListener('click', () => downloadArtifact(result));
+
+          // Automatically offer the artifact for download on completion.
+          downloadArtifact(result);
+        } catch (error) {
+          const failure = { success: false, error: String(error) };
+          window.webgpuOverheadBreakdownResult = failure;
+          resultEl.textContent = JSON.stringify(failure, null, 2);
+          statusEl.textContent = 'Overhead breakdown failed.';
+        }
+      }
+
+      main();
+    </script>
+  </body>
+</html>

@@ -10,6 +10,28 @@
  */
 
 import type { GameTickInputSnapshot } from '../host/game/tick';
+import type { FireGateState, FireGateConfig } from './types';
+import {
+  DASH_THRESHOLD,
+  NEAT_OUTPUT_INDEX_DASH,
+  NEAT_OUTPUT_INDEX_FIRE,
+} from './enemy-mlp.constants';
+
+/**
+ * Mutable hysteresis state for the soft fire gate.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
+ */
+export type { FireGateState } from './types';
+
+/**
+ * Optional fire-gate configuration passed to {@link networkOutputToTickInput}.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
+ */
+export type { FireGateConfig } from './types';
 
 /**
  * Number of main-agent NEAT network inputs (sensor vector length).
@@ -174,19 +196,6 @@ export const FIRE_GATE_HYSTERESIS_LOW = 0.15;
 export const FIRE_GATE_HYSTERESIS_HIGH = 0.18;
 
 /**
- * Mutable hysteresis state for the soft fire gate.
- *
- * Maintained between ticks to prevent rapid on/off oscillation at the
- * vision boundary. The `fireActive` flag tracks whether the gate is
- * currently open (enemy was recently visible).
- *
- * @see AC-P5S1a-003
- */
-export interface FireGateState {
-  fireActive: boolean;
-}
-
-/**
  * Create a fresh fire-gate hysteresis state with the gate closed.
  *
  * @returns A new `FireGateState` with `fireActive = false`.
@@ -238,16 +247,6 @@ export function applyFireGate(
 }
 
 /**
- * Optional fire-gate configuration passed to {@link networkOutputToTickInput}.
- */
-export interface FireGateConfig {
-  /** Mutable hysteresis state, persisted between ticks by the caller. */
-  state: FireGateState;
-  /** Current enemyVisible sensor value (sensor[12]). */
-  enemyVisible: number;
-}
-
-/**
  * Map a raw NEAT network output vector to a {@link GameTickInputSnapshot}.
  *
  * The mapping uses `tanh` for continuous outputs (move, look) to produce
@@ -287,8 +286,8 @@ export function networkOutputToTickInput(
         ];
 
   const fire = fireGate
-    ? applyFireGate(fireGate.state, fireGate.enemyVisible, out[3])
-    : out[3] > 0;
+    ? applyFireGate(fireGate.state, fireGate.enemyVisible, out[NEAT_OUTPUT_INDEX_FIRE])
+    : out[NEAT_OUTPUT_INDEX_FIRE] > 0;
 
   return {
     move: {
@@ -297,6 +296,6 @@ export function networkOutputToTickInput(
     },
     lookDelta: Math.tanh(out[2]) * MAX_TURN_RATE,
     fire,
-    dash: out[4] > 0.5,
+    dash: out[NEAT_OUTPUT_INDEX_DASH] > DASH_THRESHOLD,
   };
 }

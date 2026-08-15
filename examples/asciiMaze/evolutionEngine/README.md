@@ -2124,7 +2124,7 @@ Default Values:
  - Simplify prune fraction: 0.05 (5%)
  - Simplify strategy: 'weakWeight'
  - Persist every: 25 generations
- - Persist directory: './ascii_maze_snapshots'
+ - Persist directory: 'examples/asciiMaze/ascii_maze_snapshots'
  - Persist top K: 3
  - Dynamic population enabled: true
  - Dynamic population expand interval: 25

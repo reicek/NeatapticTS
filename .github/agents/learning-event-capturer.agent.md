@@ -112,9 +112,6 @@ KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
-VALIDATION_EVIDENCE:
-- <learning-event gate result or NOT RUN>
-HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:

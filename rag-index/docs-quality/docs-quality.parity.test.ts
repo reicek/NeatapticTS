@@ -33,6 +33,13 @@ describe('docs-quality parity red contracts', () => {
       import { createRepoCortexMcpServer } from './scripts/mcp-semantic/repo-cortex-mcp.mjs';
       import { runDocsQualityMetrics } from './rag-index/docs-quality/docs-quality.metrics.mjs';
 
+      const normalizeForComparison = (manifest) => {
+        if (!manifest || typeof manifest !== 'object') return manifest;
+        const copy = JSON.parse(JSON.stringify(manifest));
+        delete copy.generatedAt;
+        return copy;
+      };
+
       const config = {
         complexityThreshold: 10,
         minJsdocWords: 10,
@@ -57,11 +64,11 @@ describe('docs-quality parity red contracts', () => {
 
       const mcpManifest = mcpResponse.structuredContent?.manifest ?? ${JSON.stringify(baseManifest)};
       const cliManifest = cliResult.manifest;
-      const parity = JSON.stringify(cliManifest) === JSON.stringify(mcpManifest);
+      const parity = JSON.stringify(normalizeForComparison(cliManifest)) === JSON.stringify(normalizeForComparison(mcpManifest));
       console.log(JSON.stringify({
-        leftDigest: cliManifest.scopeDigest,
+        leftDigest: cliManifest.sourcePathsDigest,
         parity,
-        rightDigest: mcpManifest.scopeDigest,
+        rightDigest: mcpManifest.sourcePathsDigest,
       }));
     `);
 

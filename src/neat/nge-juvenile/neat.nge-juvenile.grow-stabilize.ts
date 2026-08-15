@@ -614,318 +614,13 @@ export function computeGrowthThrottle(
 export async function runNgeGrowStabilizeCycle(
   input: NgeGrowStabilizeInput,
 ): Promise<NgeGrowStabilizeResult> {
-  const network = input.network;
-  const hasGrownBefore = input.hasGrownBefore;
-  const stabilizationTicksSinceGrowth = input.stabilizationTicksSinceGrowth;
-  const random = input.random ?? Math.random;
-  const runner = input.lifecycleRunner ?? runNgeLifecycle;
-  const config = resolveGrowStabilizeConfig(input.config);
-  const consecutiveWeightExhaustion = input.consecutiveWeightExhaustion ?? 0;
-  const postGrowthThresholdActive = input.postGrowthThresholdActive ?? false;
-  const consecutiveStabilizationFailures =
-    input.consecutiveStabilizationFailures ?? 0;
+  const ctx = resolveCycleContext(input);
 
-  // Resolve lifecycle-stage and variant-count state early so the
-  // weight-exhaustion gate can force growth even when the quality score has
-  // not yet plateaued.
-  const stage: NgeLifecycleStage = input.lifecycleStage ?? 'baby';
-  const effectiveVariantCount = resolveVariantCountForStage(
-    stage,
-    undefined,
-    input.accelerationConfig,
-  );
-  const hasTrainingData =
-    input.inputs !== undefined &&
-    input.inputs.length > 0 &&
-    input.target !== undefined &&
-    input.target.length > 0;
-  const shouldEvaluateVariants = effectiveVariantCount > 1 && hasTrainingData;
-  const exhaustionLimit = resolveExhaustionForceGrowthThreshold(
-    effectiveVariantCount,
-    postGrowthThresholdActive,
-  );
-  const forceGrowthByStabilizationFailures =
-    consecutiveStabilizationFailures >=
-    NGE_GROW_STABILIZE_FORCE_GROWTH_AFTER_FAILED_STABILIZATIONS;
-
-  // Step 1: Check whether the quality score has plateaued.
-  const plateauReached = isPlateauReached(
-    input.qualityScoreHistory ?? [],
-    hasGrownBefore,
-    stabilizationTicksSinceGrowth,
-  );
-
-  // Step 2: Stabilization phase — apply weight perturbations or evaluate
-  // parallel weight variants when training data are available. If weight
-  // exhaustion has crossed its limit, or the caller has reported enough
-  // consecutive failed stabilization ticks, fall through to the growth phase.
-  if (
-    !plateauReached &&
-    consecutiveWeightExhaustion < exhaustionLimit &&
-    !forceGrowthByStabilizationFailures
-  ) {
-    let mutatedCount = 0;
-    let reason: string;
-    let operations: readonly string[] = [];
-    let nextExhaustion: number;
-    let nextPostGrowthActive = postGrowthThresholdActive;
-    let nextPreGrowthBaseline = input.preGrowthBaseline;
-    const baselineScore =
-      input.baselineScore ??
-      (hasTrainingData
-        ? await evaluateNetworkScore(
-            network,
-            input.inputs,
-            input.target,
-            input.scoreFn ?? DEFAULT_VARIANT_SCORER,
-          )
-        : undefined) ??
-      input.previousScore ??
-      input.qualityScoreHistory?.at(-1) ??
-      0;
-
-    let bestVariantScore: number | undefined;
-    let threshold: number | undefined;
-    let actualVariantCount = 0;
-
-    if (shouldEvaluateVariants) {
-      // Step 6: Evaluate parallel weight variants.
-      const variantResult = await evaluateNgeWeightVariants(
-        network,
-        stage,
-        input.inputs,
-        input.target,
-        undefined,
-        {
-          accelerationConfig: input.accelerationConfig,
-          stageVariantCounts: {
-            [stage]: NGE_GROW_STABILIZE_STABILIZATION_VARIANT_COUNT,
-          },
-          scoreFn: input.scoreFn,
-        },
-      );
-
-      actualVariantCount =
-        variantResult.metadata?.variantCount ?? effectiveVariantCount;
-      const variants = buildWeightVariants(network, actualVariantCount, stage);
-      const bestIndex = variantResult.bestIndex;
-      const bestScore = variantResult.bestScore;
-      const scoreCeiling = input.scoreCeiling ?? Number.POSITIVE_INFINITY;
-      const neuronBudget = {
-        current: network.nodes.length,
-        max: input.maxNeurons ?? config.maxNodes,
-      };
-
-      // Step 7: Consolidated guard for an unrecoverable variant result.
-      const guardFailed =
-        bestIndex < 0 ||
-        !Number.isFinite(bestScore) ||
-        bestIndex >= variants.length;
-
-      if (!guardFailed) {
-        // Step 8: Compute the adaptive improvement threshold.
-        threshold = resolveExhaustionImprovementThreshold(
-          baselineScore,
-          bestScore,
-          actualVariantCount,
-          stage,
-          neuronBudget,
-          scoreCeiling,
-          consecutiveWeightExhaustion,
-        );
-        bestVariantScore = bestScore;
-
-        const bestVariant = variants[bestIndex];
-        if (
-          bestVariant !== undefined &&
-          network.connections[bestVariant.weightIndex] !== undefined &&
-          bestScore > baselineScore + threshold
-        ) {
-          // Step 9: Commit the winning weight variant and reset exhaustion.
-          network.connections[bestVariant.weightIndex].weight +=
-            bestVariant.delta;
-          mutatedCount = 1;
-          reason = 'weight_variant_committed';
-          operations = ['param_nudge'];
-          nextExhaustion = 0;
-          nextPostGrowthActive = false;
-        } else {
-          // Step 10: No meaningful improvement; increment exhaustion.
-          nextExhaustion = consecutiveWeightExhaustion + 1;
-          reason = 'no_weight_mutations';
-        }
-      } else {
-        // Step 7 (guard-failed branch): treat as an exhaustion tick.
-        nextExhaustion = consecutiveWeightExhaustion + 1;
-        reason = 'no_weight_mutations';
-      }
-    } else {
-      // Step 5: Non-variant fallback path — apply generic weight mutations
-      // and count the tick toward exhaustion.
-      mutatedCount = applyWeightMutations(network, random);
-      reason =
-        mutatedCount > 0 ? 'weight_mutation_committed' : 'no_weight_mutations';
-      operations = mutatedCount > 0 ? ['param_nudge'] : [];
-      nextExhaustion = consecutiveWeightExhaustion + 1;
-    }
-
-    // Compare the post-growth baseline against the baseline captured before
-    // the last growth. A large drop activates the anti-runaway boost; the
-    // captured baseline is consumed either way. The boost is reset when the
-    // growth phase is entered, so the time-boxed reset lives on the growth
-    // path rather than here.
-    if (nextPreGrowthBaseline !== undefined) {
-      if (baselineScore < nextPreGrowthBaseline - config.improvementThreshold) {
-        nextPostGrowthActive = true;
-      }
-      nextPreGrowthBaseline = undefined;
-    }
-
-    return {
-      committed: mutatedCount > 0,
-      phase: 'stabilization',
-      reason,
-      operations,
-      stabilizationTicksSinceGrowth: stabilizationTicksSinceGrowth + 1,
-      mutatedCount,
-      networkSizeAfter: {
-        nodes: network.nodes.length,
-        connections: network.connections.length,
-      },
-      consecutiveWeightExhaustion: nextExhaustion,
-      postGrowthThresholdActive: nextPostGrowthActive,
-      preGrowthBaseline: nextPreGrowthBaseline,
-      bestVariantScore,
-      threshold,
-      actualVariantCount,
-      consecutiveStabilizationFailures,
-    };
+  if (ctx.shouldStabilize) {
+    return runStabilizationPhase(input, ctx);
   }
 
-  // Step 3: Growth phase — build lifecycle inputs and call the lifecycle runner.
-  // Growth may be reached because the score plateaued or because weight
-  // exhaustion forced a structural growth attempt.
-  const forcedByExhaustion =
-    !plateauReached && consecutiveWeightExhaustion >= exhaustionLimit;
-  const forcedByStabilizationFailures =
-    !plateauReached && forceGrowthByStabilizationFailures;
-  const metrics = buildDefaultMetrics(
-    input.scoreHistory,
-    network,
-    config.moduleId,
-  );
-  const budget = buildDefaultBudget(network, config);
-  const pruneBudget = buildDefaultPruneBudget(network);
-  const adaptiveHysteresis = resolveAdaptiveHysteresis(network.nodes.length);
-  const isFirstGrowth = !hasGrownBefore;
-
-  // Pre-satisfy the hysteresis gate for first growth so the lifecycle
-  // produces candidate morphs immediately without waiting for accumulated
-  // positive-quality windows.
-  const lifecycleHysteresis: NgeHysteresisState = isFirstGrowth
-    ? {
-        growthPositiveWindowCount: adaptiveHysteresis,
-        pruneUnderuseWindowCount: 0,
-        lastMorphKind: 'none',
-        cooldownWindowsRemaining: 0,
-      }
-    : (input.hysteresis ?? {
-        growthPositiveWindowCount: 0,
-        pruneUnderuseWindowCount: 0,
-        lastMorphKind: 'none',
-        cooldownWindowsRemaining: 0,
-      });
-
-  const lifecycleResult = runner({
-    stage: 'juvenile',
-    moduleId: config.moduleId,
-    metrics,
-    budget,
-    config: {
-      hysteresisWindowCount: adaptiveHysteresis,
-      cooldownWindowCount: 5,
-      maxStructuralEditsPerStep: config.maxStructuralEditsPerStep,
-    },
-    hysteresis: lifecycleHysteresis,
-    network,
-    pruneBudget,
-  });
-
-  // Step 4: Map apply outcomes to operations.
-  let applyOutcomes = lifecycleResult.applyOutcomes ?? [];
-  let operations = mapOutcomesToOperations(applyOutcomes);
-  let resultHysteresis = lifecycleResult.hysteresis ?? input.hysteresis;
-
-  // First-growth guarantee: if the lifecycle produced no applied operations,
-  // force at least one structural mutation so a network that has never grown
-  // cannot get stuck at its starting size. This catches edge cases where the
-  // quality gate or lazy sampler would otherwise skip the very first growth.
-  let forcedFirstGrowth = false;
-  if (isFirstGrowth && operations.length === 0) {
-    network.mutate(mutation.ADD_NODE);
-    const fallbackOutcome: { status: 'applied'; kind: 'nodeAdd' } = {
-      status: 'applied',
-      kind: 'nodeAdd',
-    };
-    applyOutcomes = [...applyOutcomes, fallbackOutcome];
-    operations = mapOutcomesToOperations(applyOutcomes);
-    forcedFirstGrowth = true;
-  }
-
-  if (forcedFirstGrowth) {
-    resultHysteresis = {
-      ...resultHysteresis,
-      lastMorphKind: 'nodeAdd',
-      cooldownWindowsRemaining: config.lifecycleCooldownWindowCount,
-      growthPositiveWindowCount: 0,
-      pruneUnderuseWindowCount: resultHysteresis?.pruneUnderuseWindowCount ?? 0,
-    };
-  }
-
-  // Capture the pre-growth baseline so the next stabilization tick can detect
-  // a bad growth event (score drop) and activate the anti-runaway boost.
-  // Use the same scorer as the stabilization phase so the post-growth
-  // comparison stays in the same driving-quality score space.
-  const baselineScore =
-    input.baselineScore ??
-    (hasTrainingData
-      ? await evaluateNetworkScore(
-          network,
-          input.inputs,
-          input.target,
-          input.scoreFn ?? DEFAULT_VARIANT_SCORER,
-        )
-      : undefined) ??
-    input.previousScore ??
-    input.qualityScoreHistory?.at(-1) ??
-    0;
-
-  return {
-    committed: operations.length > 0,
-    phase: 'growth',
-    reason: forcedByStabilizationFailures
-      ? 'forced_by_stabilization_failures'
-      : forcedByExhaustion
-        ? 'forced_by_weight_exhaustion'
-        : operations.length > 0
-          ? 'committed'
-          : 'no_candidate_operations',
-    operations,
-    stabilizationTicksSinceGrowth: 0,
-    mutatedCount: 0,
-    networkSizeAfter: {
-      nodes: network.nodes.length,
-      connections: network.connections.length,
-    },
-    hysteresis: resultHysteresis,
-    consecutiveWeightExhaustion: 0,
-    postGrowthThresholdActive: false,
-    preGrowthBaseline: baselineScore,
-    bestVariantScore: undefined,
-    threshold: undefined,
-    actualVariantCount: 0,
-    consecutiveStabilizationFailures: 0,
-  };
+  return runGrowthPhase(input, ctx);
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -1105,4 +800,681 @@ async function evaluateNetworkScore(
     outputs.push([...output]);
   }
   return scoreFn(outputs, target);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Orchestrator helpers (extracted from runNgeGrowStabilizeCycle)
+// ──────────────────────────────────────────────────────────────────────
+
+/** Sub-result from the stabilization phase variant/fallback paths. */
+interface StabilizationSubResult {
+  readonly mutatedCount: number;
+  readonly reason: string;
+  readonly operations: readonly string[];
+  readonly nextExhaustion: number;
+  readonly nextPostGrowthActive: boolean;
+  readonly bestVariantScore: number | undefined;
+  readonly threshold: number | undefined;
+  readonly actualVariantCount: number;
+}
+
+/** Result of attempting to commit a weight variant. */
+interface VariantCommitResult {
+  readonly committed: boolean;
+  readonly reason: string;
+  readonly operations: readonly string[];
+  readonly nextExhaustion: number;
+  readonly nextPostGrowthActive: boolean;
+}
+
+/** Result of the first-growth guarantee check. */
+interface FirstGrowthResult {
+  readonly operations: string[];
+  readonly applyOutcomes: readonly { status: string; kind: string }[];
+  readonly forced: boolean;
+}
+
+/** Result of checking and consuming the pre-growth baseline. */
+interface PostGrowthCheck {
+  readonly nextPostGrowthActive: boolean;
+  readonly nextPreGrowthBaseline: number | undefined;
+}
+
+/** Shared context resolved once per cycle for both phases. */
+interface CycleContext {
+  readonly network: Network;
+  readonly hasGrownBefore: boolean;
+  readonly stabilizationTicksSinceGrowth: number;
+  readonly random: () => number;
+  readonly runner:
+    | NonNullable<NgeGrowStabilizeInput['lifecycleRunner']>
+    | typeof runNgeLifecycle;
+  readonly config: NgeGrowStabilizeConfig;
+  readonly consecutiveWeightExhaustion: number;
+  readonly postGrowthThresholdActive: boolean;
+  readonly consecutiveStabilizationFailures: number;
+  readonly stage: NgeLifecycleStage;
+  readonly effectiveVariantCount: number;
+  readonly hasTrainingData: boolean;
+  readonly shouldEvaluateVariants: boolean;
+  readonly exhaustionLimit: number;
+  readonly forceGrowthByStabilizationFailures: boolean;
+  readonly plateauReached: boolean;
+  readonly shouldStabilize: boolean;
+}
+
+/**
+ * Return `value` when defined, otherwise `fallback`.
+ *
+ * @internal
+ */
+function withDefault<T>(value: T | undefined, fallback: T): T {
+  return value ?? fallback;
+}
+
+/**
+ * Return the first defined number in the list, or 0 when all are undefined.
+ *
+ * @internal
+ */
+function firstDefined(...values: readonly (number | undefined)[]): number {
+  for (const value of values) {
+    if (value !== undefined) return value;
+  }
+  return 0;
+}
+
+/**
+ * Whether the input carries usable training data for variant evaluation.
+ *
+ * @internal
+ */
+function hasTrainingDataInput(input: NgeGrowStabilizeInput): boolean {
+  return (
+    input.inputs !== undefined &&
+    input.inputs.length > 0 &&
+    input.target !== undefined &&
+    input.target.length > 0
+  );
+}
+
+/**
+ * Whether parallel weight-variant evaluation should run for the current stage.
+ *
+ * @internal
+ */
+function shouldEvaluateVariantsForStage(
+  variantCount: number,
+  hasData: boolean,
+): boolean {
+  return variantCount > 1 && hasData;
+}
+
+/**
+ * Whether the cycle should enter the stabilization phase.
+ *
+ * @internal
+ */
+function shouldRunStabilization(
+  plateauReached: boolean,
+  exhaustion: number,
+  limit: number,
+  forceStabilization: boolean,
+): boolean {
+  return !plateauReached && exhaustion < limit && !forceStabilization;
+}
+
+/**
+ * Resolve the fallback baseline score from previous score or quality history.
+ *
+ * @internal
+ */
+function resolveFallbackScore(input: NgeGrowStabilizeInput): number {
+  return firstDefined(input.previousScore, input.qualityScoreHistory?.at(-1));
+}
+
+/**
+ * Resolve the baseline quality score using a cascade of fallbacks.
+ *
+ * @internal
+ */
+async function resolveBaselineScore(
+  input: NgeGrowStabilizeInput,
+  network: Network,
+  hasData: boolean,
+): Promise<number> {
+  if (input.baselineScore !== undefined) return input.baselineScore;
+  if (hasData) {
+    return evaluateNetworkScore(
+      network,
+      input.inputs!,
+      input.target!,
+      withDefault(input.scoreFn, DEFAULT_VARIANT_SCORER),
+    );
+  }
+  return resolveFallbackScore(input);
+}
+
+/**
+ * Whether the variant evaluation guard has failed.
+ *
+ * @internal
+ */
+function isVariantGuardFailed(
+  bestIndex: number,
+  bestScore: number,
+  variantCount: number,
+): boolean {
+  return (
+    bestIndex < 0 || !Number.isFinite(bestScore) || bestIndex >= variantCount
+  );
+}
+
+/**
+ * Build the result for a failed variant guard.
+ *
+ * @internal
+ */
+function buildGuardFailedResult(
+  exhaustion: number,
+  postGrowthActive: boolean,
+): StabilizationSubResult {
+  return {
+    mutatedCount: 0,
+    reason: 'no_weight_mutations',
+    operations: [],
+    nextExhaustion: exhaustion + 1,
+    nextPostGrowthActive: postGrowthActive,
+    bestVariantScore: undefined,
+    threshold: undefined,
+    actualVariantCount: 0,
+  };
+}
+
+/**
+ * Attempt to commit the best weight variant to the network.
+ *
+ * @internal
+ */
+function tryCommitVariant(
+  network: Network,
+  variants: readonly WeightVariant[],
+  bestIndex: number,
+  bestScore: number,
+  baselineScore: number,
+  threshold: number,
+  exhaustion: number,
+  postGrowthActive: boolean,
+): VariantCommitResult {
+  const bestVariant = variants[bestIndex];
+  const weightIndex = bestVariant.weightIndex;
+  if (
+    bestScore > baselineScore + threshold &&
+    weightIndex < network.connections.length
+  ) {
+    network.connections[weightIndex].weight += bestVariant.delta;
+    return {
+      committed: true,
+      reason: 'weight_variant_committed',
+      operations: ['param_nudge'],
+      nextExhaustion: 0,
+      nextPostGrowthActive: false,
+    };
+  }
+  return {
+    committed: false,
+    reason: 'no_weight_mutations',
+    operations: [],
+    nextExhaustion: exhaustion + 1,
+    nextPostGrowthActive: postGrowthActive,
+  };
+}
+
+/**
+ * Evaluate weight variants and attempt to commit the best one.
+ *
+ * @internal
+ */
+async function evaluateAndCommitVariant(
+  input: NgeGrowStabilizeInput,
+  network: Network,
+  stage: NgeLifecycleStage,
+  effectiveVariantCount: number,
+  baselineScore: number,
+  consecutiveWeightExhaustion: number,
+  postGrowthThresholdActive: boolean,
+  config: NgeGrowStabilizeConfig,
+): Promise<StabilizationSubResult> {
+  const variantResult = await evaluateNgeWeightVariants(
+    network,
+    stage,
+    input.inputs!,
+    input.target!,
+    undefined,
+    {
+      accelerationConfig: input.accelerationConfig,
+      stageVariantCounts: {
+        [stage]: NGE_GROW_STABILIZE_STABILIZATION_VARIANT_COUNT,
+      },
+      scoreFn: input.scoreFn,
+    },
+  );
+  const actualVariantCount = withDefault(
+    variantResult.metadata?.variantCount,
+    effectiveVariantCount,
+  );
+  const variants = buildWeightVariants(network, actualVariantCount, stage);
+  const bestIndex = variantResult.bestIndex;
+  const bestScore = variantResult.bestScore;
+
+  if (isVariantGuardFailed(bestIndex, bestScore, variants.length)) {
+    return buildGuardFailedResult(
+      consecutiveWeightExhaustion,
+      postGrowthThresholdActive,
+    );
+  }
+
+  const scoreCeiling = withDefault(
+    input.scoreCeiling,
+    Number.POSITIVE_INFINITY,
+  );
+  const neuronBudget = {
+    current: network.nodes.length,
+    max: withDefault(input.maxNeurons, config.maxNodes),
+  };
+  const threshold = resolveExhaustionImprovementThreshold(
+    baselineScore,
+    bestScore,
+    actualVariantCount,
+    stage,
+    neuronBudget,
+    scoreCeiling,
+    consecutiveWeightExhaustion,
+  );
+  const commit = tryCommitVariant(
+    network,
+    variants,
+    bestIndex,
+    bestScore,
+    baselineScore,
+    threshold,
+    consecutiveWeightExhaustion,
+    postGrowthThresholdActive,
+  );
+  return {
+    mutatedCount: +commit.committed,
+    reason: commit.reason,
+    operations: commit.operations,
+    nextExhaustion: commit.nextExhaustion,
+    nextPostGrowthActive: commit.nextPostGrowthActive,
+    bestVariantScore: bestScore,
+    threshold,
+    actualVariantCount,
+  };
+}
+
+/**
+ * Apply fallback random weight mutations when variant evaluation is skipped.
+ *
+ * @internal
+ */
+function applyFallbackWeightMutations(
+  network: Network,
+  random: () => number,
+  exhaustion: number,
+  postGrowthActive: boolean,
+): StabilizationSubResult {
+  const mutatedCount = applyWeightMutations(network, random);
+  return {
+    mutatedCount,
+    reason:
+      mutatedCount > 0 ? 'weight_mutation_committed' : 'no_weight_mutations',
+    operations: mutatedCount > 0 ? ['param_nudge'] : [],
+    nextExhaustion: exhaustion + 1,
+    nextPostGrowthActive: postGrowthActive,
+    bestVariantScore: undefined,
+    threshold: undefined,
+    actualVariantCount: 0,
+  };
+}
+
+/**
+ * Check and consume the pre-growth baseline, activating the post-growth boost
+ * when the new baseline drops below the pre-growth value.
+ *
+ * @internal
+ */
+function checkPostGrowthBaseline(
+  preGrowthBaseline: number | undefined,
+  baselineScore: number,
+  improvementThreshold: number,
+  currentPostGrowthActive: boolean,
+): PostGrowthCheck {
+  if (preGrowthBaseline === undefined) {
+    return {
+      nextPostGrowthActive: currentPostGrowthActive,
+      nextPreGrowthBaseline: undefined,
+    };
+  }
+  const triggered = baselineScore < preGrowthBaseline - improvementThreshold;
+  return {
+    nextPostGrowthActive: triggered || currentPostGrowthActive,
+    nextPreGrowthBaseline: undefined,
+  };
+}
+
+/**
+ * Resolve all shared state for the grow-stabilize cycle.
+ *
+ * @internal
+ */
+function resolveCycleContext(input: NgeGrowStabilizeInput): CycleContext {
+  const config = resolveGrowStabilizeConfig(input.config);
+  const stage = withDefault(input.lifecycleStage, 'baby');
+  const postGrowthThresholdActive = withDefault(
+    input.postGrowthThresholdActive,
+    false,
+  );
+  const consecutiveWeightExhaustion = withDefault(
+    input.consecutiveWeightExhaustion,
+    0,
+  );
+  const consecutiveStabilizationFailures = withDefault(
+    input.consecutiveStabilizationFailures,
+    0,
+  );
+  const effectiveVariantCount = resolveVariantCountForStage(
+    stage,
+    undefined,
+    input.accelerationConfig,
+  );
+  const hasTrainingData = hasTrainingDataInput(input);
+  const shouldEvaluateVariants = shouldEvaluateVariantsForStage(
+    effectiveVariantCount,
+    hasTrainingData,
+  );
+  const exhaustionLimit = resolveExhaustionForceGrowthThreshold(
+    effectiveVariantCount,
+    postGrowthThresholdActive,
+  );
+  const forceGrowthByStabilizationFailures =
+    consecutiveStabilizationFailures >=
+    NGE_GROW_STABILIZE_FORCE_GROWTH_AFTER_FAILED_STABILIZATIONS;
+  const plateauReached = isPlateauReached(
+    withDefault(input.qualityScoreHistory, []),
+    input.hasGrownBefore,
+    input.stabilizationTicksSinceGrowth,
+  );
+  const shouldStabilize = shouldRunStabilization(
+    plateauReached,
+    consecutiveWeightExhaustion,
+    exhaustionLimit,
+    forceGrowthByStabilizationFailures,
+  );
+  return {
+    network: input.network,
+    hasGrownBefore: input.hasGrownBefore,
+    stabilizationTicksSinceGrowth: input.stabilizationTicksSinceGrowth,
+    random: withDefault(input.random, Math.random),
+    runner: input.lifecycleRunner ?? runNgeLifecycle,
+    config,
+    consecutiveWeightExhaustion,
+    postGrowthThresholdActive,
+    consecutiveStabilizationFailures,
+    stage,
+    effectiveVariantCount,
+    hasTrainingData,
+    shouldEvaluateVariants,
+    exhaustionLimit,
+    forceGrowthByStabilizationFailures,
+    plateauReached,
+    shouldStabilize,
+  };
+}
+
+/**
+ * Run the stabilization phase: weight tuning or variant evaluation.
+ *
+ * @internal
+ */
+async function runStabilizationPhase(
+  input: NgeGrowStabilizeInput,
+  ctx: CycleContext,
+): Promise<NgeGrowStabilizeResult> {
+  const baselineScore = await resolveBaselineScore(
+    input,
+    ctx.network,
+    ctx.hasTrainingData,
+  );
+
+  const subResult = ctx.shouldEvaluateVariants
+    ? await evaluateAndCommitVariant(
+        input,
+        ctx.network,
+        ctx.stage,
+        ctx.effectiveVariantCount,
+        baselineScore,
+        ctx.consecutiveWeightExhaustion,
+        ctx.postGrowthThresholdActive,
+        ctx.config,
+      )
+    : applyFallbackWeightMutations(
+        ctx.network,
+        ctx.random,
+        ctx.consecutiveWeightExhaustion,
+        ctx.postGrowthThresholdActive,
+      );
+
+  const postGrowth = checkPostGrowthBaseline(
+    input.preGrowthBaseline,
+    baselineScore,
+    ctx.config.improvementThreshold,
+    subResult.nextPostGrowthActive,
+  );
+
+  return {
+    committed: subResult.mutatedCount > 0,
+    phase: 'stabilization',
+    reason: subResult.reason,
+    operations: subResult.operations,
+    stabilizationTicksSinceGrowth: ctx.stabilizationTicksSinceGrowth + 1,
+    mutatedCount: subResult.mutatedCount,
+    networkSizeAfter: {
+      nodes: ctx.network.nodes.length,
+      connections: ctx.network.connections.length,
+    },
+    consecutiveWeightExhaustion: subResult.nextExhaustion,
+    postGrowthThresholdActive: postGrowth.nextPostGrowthActive,
+    preGrowthBaseline: postGrowth.nextPreGrowthBaseline,
+    bestVariantScore: subResult.bestVariantScore,
+    threshold: subResult.threshold,
+    actualVariantCount: subResult.actualVariantCount,
+    consecutiveStabilizationFailures: ctx.consecutiveStabilizationFailures,
+  };
+}
+
+/**
+ * Resolve lifecycle hysteresis for the growth phase.
+ *
+ * @internal
+ */
+function resolveLifecycleHysteresis(
+  isFirstGrowth: boolean,
+  inputHysteresis: NgeHysteresisState | undefined,
+  adaptiveHysteresis: number,
+): NgeHysteresisState {
+  if (isFirstGrowth) {
+    return {
+      growthPositiveWindowCount: adaptiveHysteresis,
+      pruneUnderuseWindowCount: 0,
+      lastMorphKind: 'none',
+      cooldownWindowsRemaining: 0,
+    };
+  }
+  return withDefault(inputHysteresis, {
+    growthPositiveWindowCount: 0,
+    pruneUnderuseWindowCount: 0,
+    lastMorphKind: 'none',
+    cooldownWindowsRemaining: 0,
+  });
+}
+
+/**
+ * Apply the first-growth guarantee: force a node addition when the lifecycle
+ * produced no operations on the very first growth.
+ *
+ * @internal
+ */
+function applyFirstGrowthGuarantee(
+  network: Network,
+  isFirstGrowth: boolean,
+  operations: string[],
+  applyOutcomes: readonly { status: string; kind: string }[],
+): FirstGrowthResult {
+  if (!isFirstGrowth || operations.length > 0) {
+    return { operations, applyOutcomes, forced: false };
+  }
+  network.mutate(mutation.ADD_NODE);
+  const fallbackOutcomes = [
+    ...applyOutcomes,
+    { status: 'applied', kind: 'nodeAdd' },
+  ];
+  return {
+    operations: mapOutcomesToOperations(fallbackOutcomes),
+    applyOutcomes: fallbackOutcomes,
+    forced: true,
+  };
+}
+
+/**
+ * Apply forced first-growth hysteresis overrides.
+ *
+ * @internal
+ */
+function applyForcedFirstGrowthHysteresis(
+  resultHysteresis: NgeHysteresisState | undefined,
+  forced: boolean,
+  config: NgeGrowStabilizeConfig,
+): NgeHysteresisState | undefined {
+  if (!forced) return resultHysteresis;
+  return {
+    ...resultHysteresis,
+    lastMorphKind: 'nodeAdd',
+    cooldownWindowsRemaining: config.lifecycleCooldownWindowCount,
+    growthPositiveWindowCount: 0,
+    pruneUnderuseWindowCount: withDefault(
+      resultHysteresis?.pruneUnderuseWindowCount,
+      0,
+    ),
+  };
+}
+
+/**
+ * Resolve the growth reason string.
+ *
+ * @internal
+ */
+function resolveGrowthReason(
+  forcedByStabilizationFailures: boolean,
+  forcedByExhaustion: boolean,
+  operationCount: number,
+): string {
+  if (forcedByStabilizationFailures) return 'forced_by_stabilization_failures';
+  if (forcedByExhaustion) return 'forced_by_weight_exhaustion';
+  if (operationCount > 0) return 'committed';
+  return 'no_candidate_operations';
+}
+
+/**
+ * Run the growth phase: structural morphs via the lifecycle runner.
+ *
+ * @internal
+ */
+async function runGrowthPhase(
+  input: NgeGrowStabilizeInput,
+  ctx: CycleContext,
+): Promise<NgeGrowStabilizeResult> {
+  const forcedByExhaustion =
+    !ctx.plateauReached &&
+    ctx.consecutiveWeightExhaustion >= ctx.exhaustionLimit;
+  const forcedByStabilizationFailures =
+    !ctx.plateauReached && ctx.forceGrowthByStabilizationFailures;
+
+  const metrics = buildDefaultMetrics(
+    input.scoreHistory,
+    ctx.network,
+    ctx.config.moduleId,
+  );
+  const budget = buildDefaultBudget(ctx.network, ctx.config);
+  const pruneBudget = buildDefaultPruneBudget(ctx.network);
+  const adaptiveHysteresis = resolveAdaptiveHysteresis(
+    ctx.network.nodes.length,
+  );
+  const isFirstGrowth = !ctx.hasGrownBefore;
+  const lifecycleHysteresis = resolveLifecycleHysteresis(
+    isFirstGrowth,
+    input.hysteresis,
+    adaptiveHysteresis,
+  );
+
+  const lifecycleResult = ctx.runner({
+    stage: 'juvenile',
+    moduleId: ctx.config.moduleId,
+    metrics,
+    budget,
+    config: {
+      hysteresisWindowCount: adaptiveHysteresis,
+      cooldownWindowCount: 5,
+      maxStructuralEditsPerStep: ctx.config.maxStructuralEditsPerStep,
+    },
+    hysteresis: lifecycleHysteresis,
+    network: ctx.network,
+    pruneBudget,
+  });
+
+  const initialApplyOutcomes = withDefault(lifecycleResult.applyOutcomes, []);
+  const initialOperations = mapOutcomesToOperations(initialApplyOutcomes);
+  const firstGrowth = applyFirstGrowthGuarantee(
+    ctx.network,
+    isFirstGrowth,
+    initialOperations,
+    initialApplyOutcomes,
+  );
+  const operations = firstGrowth.operations;
+  const resultHysteresis = applyForcedFirstGrowthHysteresis(
+    lifecycleResult.hysteresis ?? input.hysteresis,
+    firstGrowth.forced,
+    ctx.config,
+  );
+
+  const baselineScore = await resolveBaselineScore(
+    input,
+    ctx.network,
+    ctx.hasTrainingData,
+  );
+
+  return {
+    committed: operations.length > 0,
+    phase: 'growth',
+    reason: resolveGrowthReason(
+      forcedByStabilizationFailures,
+      forcedByExhaustion,
+      operations.length,
+    ),
+    operations,
+    stabilizationTicksSinceGrowth: 0,
+    mutatedCount: 0,
+    networkSizeAfter: {
+      nodes: ctx.network.nodes.length,
+      connections: ctx.network.connections.length,
+    },
+    hysteresis: resultHysteresis,
+    consecutiveWeightExhaustion: 0,
+    postGrowthThresholdActive: false,
+    preGrowthBaseline: baselineScore,
+    bestVariantScore: undefined,
+    threshold: undefined,
+    actualVariantCount: 0,
+    consecutiveStabilizationFailures: 0,
+  };
 }

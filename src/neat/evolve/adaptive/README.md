@@ -58,6 +58,7 @@ probability when the sample size is large enough to be meaningful.
 
 Parameters:
 - `internal` - NEAT controller instance.
+- `config` - Adaptation thresholds and bounds for re-enable probability.
 
 Returns: Nothing.
 

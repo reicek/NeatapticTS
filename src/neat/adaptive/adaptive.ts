@@ -122,6 +122,7 @@ export type { NeatLikeWithAdaptive } from './core/adaptive.core.types';
  * later structural decisions rather than an immediate topology rewrite.
  *
  * @this {NeatLikeWithAdaptiveType} NeatEngine
+ * @param this {NeatLikeWithAdaptiveType} NeatEngine instance whose complexity budget options are adjusted.
  *
  * @returns {void} Updates `this.options.maxNodes` and possibly
  * `this.options.maxConns` in-place; no value is returned.
@@ -163,6 +164,7 @@ export function applyComplexityBudget(this: NeatLikeWithAdaptiveType) {
  * generations.
  *
  * @this {NeatLikeWithAdaptiveType} NeatEngine
+ * @param this {NeatLikeWithAdaptiveType} NeatEngine instance whose phased complexity state is toggled.
  * @returns {void} Mutates `this._phase` and `this._phaseStartGeneration` so later mutation-selection code knows whether to favor growth or simplification.
  *
  * @example
@@ -203,6 +205,7 @@ export function applyPhasedComplexity(this: NeatLikeWithAdaptiveType) {
  *   selection.
  *
  * @this {NeatLikeWithAdaptiveType} NeatEngine
+ * @param this {NeatLikeWithAdaptiveType} NeatEngine instance whose minimal-criterion threshold is adapted.
  * @returns {void} Updates `_mcThreshold` over time and may zero out scores for currently rejected genomes.
  *
  * @example
@@ -254,6 +257,7 @@ export function applyMinimalCriterionAdaptive(this: NeatLikeWithAdaptiveType) {
  * excessive divergence.
  *
  * @this {NeatLikeWithAdaptiveType} NeatEngine
+ * @param this {NeatLikeWithAdaptiveType} NeatEngine instance whose lineage diversity options may be adjusted.
  * @returns {void} May update lineage-related controller options and record the most recent adjustment generation.
  *
  * @example
@@ -311,6 +315,7 @@ export const applyAncestorUniqAdaptive = function (
  * more exploratory or more conservative depending on recent success.
  *
  * @this {NeatLikeWithAdaptiveType} NeatEngine
+ * @param this {NeatLikeWithAdaptiveType} NeatEngine instance whose per-genome mutation rates are tuned.
  * @returns {void} Updates per-genome mutation-rate state in place when the current generation satisfies the adaptation cadence.
  *
  * @example
@@ -370,6 +375,7 @@ export const applyAdaptiveMutation = function (this: NeatLikeWithAdaptiveType) {
  * id/name.
  *
  * @this {NeatLikeWithAdaptiveType} NeatEngine
+ * @param this {NeatLikeWithAdaptiveType} NeatEngine instance whose operator adaptation statistics are decayed.
  * @returns {void} Decays `_operatorStats` in place so later mutation-method selection reflects more recent operator performance.
  *
  * @example

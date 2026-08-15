@@ -290,7 +290,7 @@ export interface NgeCandidateEvaluator {
 }
 
 /**
- * Optional override values for a single `adapt()` call.
+ * Optional override values for a single `adapt()` call in the juvenile lifecycle.
  */
 export interface NgeAdaptConfig {
   /** Override values for the adaptation decision. */
@@ -314,7 +314,7 @@ export interface NgeMetricsProvider {
 }
 
 /**
- * Pluggable cadence policy called when supplied to `adapt()`.
+ * Pluggable cadence policy called when supplied to the `adapt()` entry point.
  */
 export interface NgeCadencePolicy {
   /** Decide whether the current tick should run an adaptation pass. */
@@ -346,7 +346,7 @@ export interface NgeObservationEncoder<T = unknown> {
 export type NgeLifecycleRunner = () => void;
 
 /**
- * Inputs for one score-gated adaptation window.
+ * Inputs for one score-gated adaptation window in the juvenile lifecycle phase.
  */
 export interface NgeAdaptOptions {
   /** Live mutable controller network. */
@@ -372,7 +372,7 @@ export interface NgeAdaptOptions {
 }
 
 /**
- * Telemetry recorded for one score-gated adaptation window.
+ * Telemetry recorded for one score-gated adaptation window during the lifecycle.
  */
 export interface NgeAdaptTelemetry {
   /** Whether a snapshot was captured before the candidate mutation. */
@@ -384,7 +384,7 @@ export interface NgeAdaptTelemetry {
 }
 
 /**
- * Result of one score-gated adaptation window.
+ * Result of one score-gated adaptation window in the juvenile lifecycle phase.
  */
 export interface NgeAdaptResult {
   /** Score before the candidate mutation. */
@@ -402,7 +402,7 @@ export interface NgeAdaptResult {
 // ──────────────────────────────────────────────────────────────────────
 
 /**
- * Configuration for candidate score-window and sample-index resolution.
+ * Configuration for candidate score-window and sample-index resolution in the juvenile phase.
  */
 export interface NgeCandidateScoringConfig {
   /** Length of the rolling score window used for plateau detection. */
@@ -563,7 +563,7 @@ export interface NgeGrowStabilizeConfig {
 }
 
 /**
- * Result of one grow-stabilize cycle call.
+ * Result of one grow-stabilize cycle call in the juvenile lifecycle phase.
  *
  * @property committed - Whether the cycle committed a structural or weight mutation.
  * @property phase - Current phase after the cycle (`growth` or `stabilization`).

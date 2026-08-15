@@ -1,0 +1,2030 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>architecture/network/onnx/import – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../../assets/theme.css"><script defer src="../../../../assets/theme-tooltips.js"></script></head><body class="">
+<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="../../../../index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="../../../../index.html">Home</a><a href="../../../../index.html" class="active">Docs</a><a href="../../../../examples/index.html">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar docs-panel docs-panel-left"><ul class="sidebar-sections"><li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links"><ul class="pipe-nav-list pipe-nav-list-priority"><li class="pipe-nav-item nav-priority-link"><a href="../../../../examples/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Examples overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><ul class="pipe-nav-list pipe-nav-list-compact"><li class="pipe-nav-item"><a href="../../../../examples/flappy_bird/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Flappy Bird</span></a></li><li class="pipe-nav-item"><a href="../../../../examples/asciiMaze/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ASCII Maze</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></div></li><ul class="pipe-nav-list pipe-nav-list-root"><li class="pipe-nav-item"><a href="../../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><li class="group"><div class="g-head">Architecture</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../activationArrayPool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ActivationArrayPool</span></a></li><li class="pipe-nav-item"><a href="../../../architect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Architect</span></a></li><li class="pipe-nav-item"><a href="../../../connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../group/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Group</span></a></li><li class="pipe-nav-item"><a href="../../../layer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Layer</span></a></li><li class="pipe-nav-item"><a href="../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network</span></a></li><li class="pipe-nav-item"><a href="../../activate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Activate</span></a></li><li class="pipe-nav-item"><a href="../../bootstrap/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Bootstrap</span></a></li><li class="pipe-nav-item"><a href="../../connect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Connect</span></a></li><li class="pipe-nav-item"><a href="../../construct/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Construct</span></a></li><li class="pipe-nav-item"><a href="../../deterministic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Deterministic</span></a></li><li class="pipe-nav-item"><a href="../../evaluation-pack/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evaluation Pack</span></a></li><li class="pipe-nav-item"><a href="../../evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evolve</span></a></li><li class="pipe-nav-item"><a href="../../gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gating</span></a></li><li class="pipe-nav-item"><a href="../../genetic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Genetic</span></a></li><li class="pipe-nav-item"><a href="../../gpu/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gpu</span></a></li><li class="pipe-nav-item"><a href="../../gpu/__mocks__/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gpu / Mocks</span></a></li><li class="pipe-nav-item"><a href="../../mutate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Mutate</span></a></li><li class="pipe-nav-item"><a href="../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Onnx</span></a></li><li class="pipe-nav-item"><a href="../export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Export</span></a></li><li class="pipe-nav-item"><a href="../export/layers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export / Layers</span></a></li><li class="pipe-nav-item current"><a href="./index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Import</span></a></li><li class="pipe-nav-item"><a href="../parity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Parity</span></a></li><li class="pipe-nav-item"><a href="../schema/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Schema</span></a></li><li class="pipe-nav-item"><a href="../validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Validate</span></a></li><li class="pipe-nav-item"><a href="../../prune/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Prune</span></a></li><li class="pipe-nav-item"><a href="../../remove/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Remove</span></a></li><li class="pipe-nav-item"><a href="../../runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../serialize/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Serialize</span></a></li><li class="pipe-nav-item"><a href="../../slab/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Slab</span></a></li><li class="pipe-nav-item"><a href="../../standalone/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Standalone</span></a></li><li class="pipe-nav-item"><a href="../../stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Stats</span></a></li><li class="pipe-nav-item"><a href="../../topology/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Topology</span></a></li><li class="pipe-nav-item"><a href="../../training/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Training</span></a></li><li class="pipe-nav-item"><a href="../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Visualization</span></a></li><li class="pipe-nav-item"><a href="../../window/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Window</span></a></li><li class="pipe-nav-item"><a href="../../worker-payload/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Worker Payload</span></a></li><li class="pipe-nav-item"><a href="../../../node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-item"><a href="../../../nodePool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">NodePool</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Methods</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../methods/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../methods/activation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Activation</span></a></li><li class="pipe-nav-item"><a href="../../../../methods/connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../../methods/cost/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cost</span></a></li><li class="pipe-nav-item"><a href="../../../../methods/crossover/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Crossover</span></a></li><li class="pipe-nav-item"><a href="../../../../methods/gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gating</span></a></li><li class="pipe-nav-item"><a href="../../../../methods/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../../methods/rate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rate</span></a></li><li class="pipe-nav-item"><a href="../../../../methods/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Neat</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../neat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/adaptive/acceptance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Acceptance</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/adaptive/complexity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Complexity</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/adaptive/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/adaptive/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/adaptive/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/cache/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/cache/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/compat/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/diversity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/diversity/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evaluate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evaluate/auto-distance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Auto Distance</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evaluate/entropy-compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Compat</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evaluate/entropy-sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evaluate/fitness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Fitness</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evaluate/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evaluate/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evaluate/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evaluate/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evolve/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evolve/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evolve/offspring/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Offspring</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evolve/population/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Population</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evolve/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evolve/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evolve/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/evolve/warnings/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Warnings</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/genome/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/genome/heredity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome / Heredity</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/harness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Harness</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/helpers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Helpers</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/hybrid/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Hybrid</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/init/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Init</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/innovation-tracker/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Innovation Tracker</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/lineage/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/maintenance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/maintenance/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/multiobjective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/multiobjective/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/multiobjective/category/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Category</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/multiobjective/crowding/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Crowding</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/multiobjective/dominance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Dominance</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/multiobjective/fronts/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Fronts</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/multiobjective/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/multiobjective/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/multiobjective/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/mutation/add-conn/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Conn</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/mutation/add-node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Node</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/mutation/flow/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Flow</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/mutation/repair/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Repair</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/mutation/select/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Select</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/mutation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/nge-adult/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Adult</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/nge-assimilation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Assimilation</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/nge-collective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Collective</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/nge-dna/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Dna</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/nge-evolution/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Evolution</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/nge-juvenile/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Juvenile</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/nge-main-agent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Main Agent</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/objectives/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/pruning/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/pruning/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/pruning/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/rng/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/rng/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/rng/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/selection/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/selection/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/speciation/assignment/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Assignment</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/speciation/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / History</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/speciation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/speciation/sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/speciation/threshold/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Threshold</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/species/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Core</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/species/core/augmentation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Augmentation</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/species/core/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/species/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / History</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/species/history/context/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Context</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/species/history/read/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Read</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/species/stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/accessors/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Accessors</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/exports/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Exports</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/facade/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/facade/buffer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Buffer</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/facade/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/facade/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/facade/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/facade/operator-stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Operator Stats</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/facade/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/facade/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Species</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/recorder/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Recorder</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/telemetry/types/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Types</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/topology-intent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Topology Intent</span></a></li><li class="pipe-nav-item"><a href="../../../../neat/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Validate</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Multithreading</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../multithreading/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../multithreading/workers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers</span></a></li><li class="pipe-nav-item"><a href="../../../../multithreading/workers/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Browser</span></a></li><li class="pipe-nav-item"><a href="../../../../multithreading/workers/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-footer"></span><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Acceleration</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../acceleration/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Browser Tests</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../browser-tests/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Env</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../env/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../env/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Browser</span></a></li><li class="pipe-nav-item"><a href="../../../../env/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Memory</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../memory/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Performance</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../performance/nge/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Research</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../research/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Src</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../src/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Utils</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../utils/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Visualization</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../../visualization/network-view/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network View</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li></ul></aside><main class="content docs-panel docs-panel-center"><h1 id="architecture-network-onnx-import">architecture/network/onnx/import</h1><p>ONNX import orchestration for rebuilding a NeatapticTS runtime network.</p>
+<p>This file is the chapter-level tour guide for the import folder. The import
+path is intentionally staged so a reader can follow the same questions the
+runtime asks while restoring a model:</p>
+<ol>
+<li>What architecture should be rebuilt?</li>
+<li>Which runtime factories should own the scaffold?</li>
+<li>How do dense weights and activations map back onto nodes?</li>
+<li>Which recurrent and pooling hints need a second pass?</li>
+</ol>
+<p>The neighboring files each own one of those stages. Keeping this overview on
+the flow file makes the generated folder README read like an import pipeline
+instead of an alphabetical pile of helper files.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const restored = runOnnxImportFlow(onnxModel);
+const output = restored.activate([0.2, 0.8]);
+</code></pre>
+<h2 id="architecture-network-onnx-import-network-onnx-import-flow-utils-ts">architecture/network/onnx/import/network.onnx.import-flow.utils.ts</h2><h3 id="runexternalonnximportflow">runExternalOnnxImportFlow</h3><pre><code class="language-ts">runExternalOnnxImportFlow(
+  binaryModel: Uint8Array&lt;ArrayBufferLike&gt;,
+): default
+</code></pre>
+<p>Execute the external binary ONNX import flow for the first supported dense lane.</p>
+<p>High-level behavior:</p>
+<ol>
+<li>Decode and normalize one accepted binary <code>ModelProto</code> into an importer-owned dense chain.</li>
+<li>Fold that chain into the JSON-first model shape used by the existing import flow.</li>
+<li>Reuse the same reconstruction pipeline to build the runtime network.</li>
+</ol>
+<p>Parameters:</p>
+<ul>
+<li><code>binaryModel</code> - Binary <code>ModelProto</code> payload.</li>
+</ul>
+<p>Returns: Reconstructed network instance.</p>
+<h3 id="runonnximportflow">runOnnxImportFlow</h3><pre><code class="language-ts">runOnnxImportFlow(
+  onnx: OnnxModel,
+): default
+</code></pre>
+<p>Execute the complete ONNX import flow and reconstruct a runtime network.</p>
+<p>High-level behavior:</p>
+<ol>
+<li>Extract architecture dimensions and build a perceptron scaffold.</li>
+<li>Restore dense parameters and activation functions.</li>
+<li>Reconstruct recurrent/pooling metadata and rebuild connection caches.</li>
+</ol>
+<p>Parameters:</p>
+<ul>
+<li><code>onnx</code> - ONNX-like model payload to reconstruct.</li>
+</ul>
+<p>Returns: Reconstructed network instance.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-runtime-load-types-ts">architecture/network/onnx/import/network.onnx.runtime-load.types.ts</h2><p>Import-owned types for ONNX runtime factory loading.</p>
+<p>These payloads describe the small runtime bootstrap contract that the import
+flow uses to rebuild a perceptron scaffold and attach recurrent layer
+constructors without making the parser own a hard-coded constructor shape.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const runtimeFactories: OnnxRuntimeFactories = {
+  perceptronFactory,
+  layerModule,
+};
+</code></pre>
+<h3 id="onnxperceptronbuildcontext">OnnxPerceptronBuildContext</h3><p>Build context for mapping ONNX layer sizes into a Neataptic MLP factory call.</p>
+<h3 id="onnxperceptronsizevalidationcontext">OnnxPerceptronSizeValidationContext</h3><p>Validation context for perceptron size-list checks during ONNX import, supplying sizes, minimum count, and message.</p>
+<h3 id="onnxruntimefactories">OnnxRuntimeFactories</h3><p>Runtime factories consumed during ONNX import network reconstruction, grouping the perceptron and layer module.</p>
+<h3 id="onnxruntimelayerfactory">OnnxRuntimeLayerFactory</h3><pre><code class="language-ts">OnnxRuntimeLayerFactory(
+  size: number,
+): default
+</code></pre>
+<p>Runtime layer-constructor signature used for recurrent layer reconstruction, accepting size and returning a Layer.</p>
+<h3 id="onnxruntimelayermodule">OnnxRuntimeLayerModule</h3><p>Runtime layer module shape consumed by ONNX import orchestration, exposing LSTM and GRU factory constructors.</p>
+<h3 id="onnxruntimeperceptronfactory">OnnxRuntimePerceptronFactory</h3><pre><code class="language-ts">OnnxRuntimePerceptronFactory(
+  sizes: number[],
+): default
+</code></pre>
+<p>Runtime perceptron factory signature used by ONNX import orchestration, producing a Network from size arguments.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-runtime-load-utils-ts">architecture/network/onnx/import/network.onnx.runtime-load.utils.ts</h2><h3 id="buildperceptronnetwork">buildPerceptronNetwork</h3><pre><code class="language-ts">buildPerceptronNetwork(
+  buildContext: OnnxPerceptronBuildContext,
+): default
+</code></pre>
+<p>Build a perceptron network from size-extraction context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Perceptron build context.</li>
+</ul>
+<p>Returns: Reconstructed network instance.</p>
+<h3 id="createperceptronbuildcontext">createPerceptronBuildContext</h3><pre><code class="language-ts">createPerceptronBuildContext(
+  sizes: number[],
+): OnnxPerceptronBuildContext
+</code></pre>
+<p>Build perceptron-network construction context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sizes</code> - Layer-size payload.</li>
+</ul>
+<p>Returns: Build context.</p>
+<h3 id="createperceptronfactory">createPerceptronFactory</h3><pre><code class="language-ts">createPerceptronFactory(): OnnxRuntimePerceptronFactory
+</code></pre>
+<p>Create an ONNX import network factory from modern static constructors.</p>
+<p>Returns: Perceptron-compatible factory function.</p>
+<h3 id="createperceptronsizevalidationcontext">createPerceptronSizeValidationContext</h3><pre><code class="language-ts">createPerceptronSizeValidationContext(
+  sizes: number[],
+): OnnxPerceptronSizeValidationContext
+</code></pre>
+<p>Build perceptron-size validation context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sizes</code> - Layer-size payload.</li>
+</ul>
+<p>Returns: Validation context.</p>
+<h3 id="createruntimelayermodule">createRuntimeLayerModule</h3><pre><code class="language-ts">createRuntimeLayerModule(): OnnxRuntimeLayerModule
+</code></pre>
+<p>Create the runtime layer-module wiring used by ONNX import orchestrators.</p>
+<p>Returns: Runtime recurrent-layer module object.</p>
+<h3 id="foldruntimefactories">foldRuntimeFactories</h3><pre><code class="language-ts">foldRuntimeFactories(
+  perceptronFactory: OnnxRuntimePerceptronFactory,
+  layerModule: OnnxRuntimeLayerModule,
+): OnnxRuntimeFactories
+</code></pre>
+<p>Fold runtime perceptron and layer module into a transport payload.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>perceptronFactory</code> - Perceptron factory function.</li>
+<li><code>layerModule</code> - Runtime recurrent-layer constructors.</li>
+</ul>
+<p>Returns: Runtime factories payload.</p>
+<h3 id="foldruntimelayermodule">foldRuntimeLayerModule</h3><pre><code class="language-ts">foldRuntimeLayerModule(
+  lstmFactory: OnnxRuntimeLayerFactory,
+  gruFactory: OnnxRuntimeLayerFactory,
+): OnnxRuntimeLayerModule
+</code></pre>
+<p>Fold LSTM/GRU factories into a runtime layer module payload.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>lstmFactory</code> - Runtime LSTM layer factory.</li>
+<li><code>gruFactory</code> - Runtime GRU layer factory.</li>
+</ul>
+<p>Returns: Runtime layer module.</p>
+<h3 id="loadruntimefactories">loadRuntimeFactories</h3><pre><code class="language-ts">loadRuntimeFactories(): OnnxRuntimeFactories
+</code></pre>
+<p>Resolve runtime constructor factories used by the ONNX import orchestration.</p>
+<p>Returns: Perceptron factory and layer module object.</p>
+<h3 id="resolvelayerfactory">resolveLayerFactory</h3><pre><code class="language-ts">resolveLayerFactory(
+  layerKey: keyof OnnxRuntimeLayerModule,
+): OnnxRuntimeLayerFactory
+</code></pre>
+<p>Resolve one runtime layer factory by module key.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerKey</code> - Runtime layer key.</li>
+</ul>
+<p>Returns: Matching layer factory.</p>
+<h3 id="validateperceptronsizes">validatePerceptronSizes</h3><pre><code class="language-ts">validatePerceptronSizes(
+  validationContext: OnnxPerceptronSizeValidationContext,
+): void
+</code></pre>
+<p>Validate perceptron size-list constraints.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>validationContext</code> - Validation context.</li>
+</ul>
+<p>Returns: Nothing. Throws on invalid size-list.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-import-weights-types-ts">architecture/network/onnx/import/network.onnx.import-weights.types.ts</h2><p>Import-owned types for ONNX weight restoration and Conv reconstruction.</p>
+<p>This chapter explains the state carried through the importer&#39;s heaviest
+restoration pass: hidden-size derivation, dense and per-neuron tensor
+assignment, and the optional Conv metadata replay that maps flattened ONNX
+initializers back onto runtime connections.</p>
+<p>Keeping these types near the weight importer makes the generated import README
+read like a reconstruction guide instead of scattering the execution model
+across the root compatibility barrel.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const assignmentContext: OnnxImportWeightAssignmentContext = {
+  onnx,
+  hiddenLayerSizes,
+  metadataProps,
+  initializerMap,
+  sortedLayerIndices,
+  inputNodes,
+  hiddenNodes,
+  outputNodes,
+};
+</code></pre>
+<h3 id="onnximportaggregatedlayerassignmentcontext">OnnxImportAggregatedLayerAssignmentContext</h3><p>Context for assigning aggregated dense tensors for one layer, supplying the initializer map and layer node pair.</p>
+<h3 id="onnximportaggregatedneuronassignmentcontext">OnnxImportAggregatedNeuronAssignmentContext</h3><p>Context for assigning one aggregated dense target neuron row, carrying previous nodes, target, and tensor refs.</p>
+<h3 id="onnximportconvcoordinateassignmentcontext">OnnxImportConvCoordinateAssignmentContext</h3><p>Context for applying Conv weights and bias at one output coordinate.</p>
+<h3 id="onnximportconvkernelassignmentcontext">OnnxImportConvKernelAssignmentContext</h3><p>Context for assigning one concrete Conv kernel connection weight, carrying tensor context, coordinate, and channels.</p>
+<h3 id="onnximportconvlayercontext">OnnxImportConvLayerContext</h3><p>Context object for reconstructing one Conv layer&#39;s imported connectivity weights.</p>
+<h3 id="onnximportconvlayercontextbuildparams">OnnxImportConvLayerContextBuildParams</h3><p>Build params for creating one Conv reconstruction layer context, supplying assignment context and Conv metadata.</p>
+<h3 id="onnximportconvmetadata">OnnxImportConvMetadata</h3><p>Parsed Conv metadata payload used for optional reconstruction pass, listing Conv layer indices and mapping specs.</p>
+<h3 id="onnximportconvnodeslices">OnnxImportConvNodeSlices</h3><p>Layer node slices used while applying Conv reconstruction assignments, carrying target and previous layer nodes.</p>
+<h3 id="onnximportconvoutputcoordinate">OnnxImportConvOutputCoordinate</h3><p>Coordinate for one Conv output neuron traversal position, encoding output channel, row, and column indices.</p>
+<h3 id="onnximportconvsourcelayout">OnnxImportConvSourceLayout</h3><p>Source layout used when replaying Conv weights onto dense source nodes.</p>
+<h3 id="onnximportconvtensorcontext">OnnxImportConvTensorContext</h3><p>Resolved Conv initializer tensors and dimensions for one layer, including channels, kernel height, and width.</p>
+<h3 id="onnximporthiddensizederivationcontext">OnnxImportHiddenSizeDerivationContext</h3><p>Context for deriving hidden layer sizes from initializer tensors and metadata.</p>
+<h3 id="onnximportinboundconnectionmap">OnnxImportInboundConnectionMap</h3><p>Inbound connection lookup map keyed by source node for one target neuron.</p>
+<h3 id="onnximportlayernodepair">OnnxImportLayerNodePair</h3><p>Node slices for one sequential imported layer assignment pass, carrying current and previous layer node lists.</p>
+<h3 id="onnximportlayernodepairbuildparams">OnnxImportLayerNodePairBuildParams</h3><p>Build params for one sequential layer node-pair slice operation, specifying layer index and sequential position.</p>
+<h3 id="onnximportlayertensornames">OnnxImportLayerTensorNames</h3><p>Weight tensor names for one imported layer index, identifying weight and bias initializer name strings.</p>
+<h3 id="onnximportlayerweightbucket">OnnxImportLayerWeightBucket</h3><p>Bucketed ONNX dense/per-neuron tensors for one exported layer index, holding the aggregated and per-neuron lists.</p>
+<h3 id="onnximportperneuronassignmentcontext">OnnxImportPerNeuronAssignmentContext</h3><p>Context for assigning one per-neuron imported target node, carrying previous nodes and weight and bias tensors.</p>
+<h3 id="onnximportperneuronlayerassignmentcontext">OnnxImportPerNeuronLayerAssignmentContext</h3><p>Context for assigning per-neuron tensors for one layer, supplying the initializer map and sequential layer node pair.</p>
+<h3 id="onnximportweightassignmentbuildparams">OnnxImportWeightAssignmentBuildParams</h3><p>Build params for creating shared ONNX import weight-assignment context, supplying network, model, and hidden sizes.</p>
+<h3 id="onnximportweightassignmentcontext">OnnxImportWeightAssignmentContext</h3><p>Shared weight-assignment context built once per ONNX import, carrying model, layers, metadata, and initializer map.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-import-weights-utils-ts">architecture/network/onnx/import/network.onnx.import-weights.utils.ts</h2><p>Assign weights and biases from ONNX initializers to a newly created network.</p>
+<h3 id="applyaggregatedlayerweights">applyAggregatedLayerWeights</h3><pre><code class="language-ts">applyAggregatedLayerWeights(
+  aggregatedContext: OnnxImportAggregatedLayerAssignmentContext,
+): void
+</code></pre>
+<p>Apply aggregated dense tensor assignments for one layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>aggregatedContext</code> - Aggregated assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyaggregatedneuronassignment">applyAggregatedNeuronAssignment</h3><pre><code class="language-ts">applyAggregatedNeuronAssignment(
+  neuronContext: OnnxImportAggregatedNeuronAssignmentContext,
+): void
+</code></pre>
+<p>Apply aggregated dense row weights and bias for one target neuron.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>neuronContext</code> - Aggregated neuron assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyconvcoordinateassignment">applyConvCoordinateAssignment</h3><pre><code class="language-ts">applyConvCoordinateAssignment(
+  coordinateContext: OnnxImportConvCoordinateAssignmentContext,
+): void
+</code></pre>
+<p>Apply Conv bias and kernel weights for one output coordinate.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>coordinateContext</code> - Conv coordinate assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyconvlayerreconstruction">applyConvLayerReconstruction</h3><pre><code class="language-ts">applyConvLayerReconstruction(
+  layerContext: OnnxImportConvLayerContext,
+): void
+</code></pre>
+<p>Apply Conv reconstruction for one validated Conv layer context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerContext</code> - Conv layer context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applydenseweightassignments">applyDenseWeightAssignments</h3><pre><code class="language-ts">applyDenseWeightAssignments(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+): void
+</code></pre>
+<p>Apply dense/per-neuron assignments for all sorted layer indices.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>assignmentContext</code> - Shared assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyoptionalconvreconstruction">applyOptionalConvReconstruction</h3><pre><code class="language-ts">applyOptionalConvReconstruction(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+): void
+</code></pre>
+<p>Apply optional Conv2D reconstruction pass from metadata payloads.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>assignmentContext</code> - Shared assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyperneuronassignment">applyPerNeuronAssignment</h3><pre><code class="language-ts">applyPerNeuronAssignment(
+  perNeuronAssignmentContext: OnnxImportPerNeuronAssignmentContext,
+): void
+</code></pre>
+<p>Apply one per-neuron weight vector and bias assignment.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>perNeuronAssignmentContext</code> - Per-neuron assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyperneuronlayerweights">applyPerNeuronLayerWeights</h3><pre><code class="language-ts">applyPerNeuronLayerWeights(
+  perNeuronContext: OnnxImportPerNeuronLayerAssignmentContext,
+): void
+</code></pre>
+<p>Apply per-neuron tensor assignments for one layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>perNeuronContext</code> - Per-neuron layer assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignconvkernelweight">assignConvKernelWeight</h3><pre><code class="language-ts">assignConvKernelWeight(
+  kernelAssignmentContext: OnnxImportConvKernelAssignmentContext,
+): void
+</code></pre>
+<p>Assign one Conv kernel weight to the matching inbound neuron connection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>kernelAssignmentContext</code> - Conv kernel assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignlayerweights">assignLayerWeights</h3><pre><code class="language-ts">assignLayerWeights(
+  initializerMap: Record&lt;string, OnnxTensor&gt;,
+  nodePair: OnnxImportLayerNodePair,
+): void
+</code></pre>
+<p>Assign one layer&#39;s weights using aggregated or per-neuron tensors.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>initializerMap</code> - ONNX initializer map.</li>
+<li><code>nodePair</code> - Current/previous node slices.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignweightsandbiases">assignWeightsAndBiases</h3><pre><code class="language-ts">assignWeightsAndBiases(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadataProps: OnnxMetadataProperty[] | undefined,
+): void
+</code></pre>
+<p>Contract for assignWeightsAndBiases.</p>
+<h3 id="buildconvlayercontext">buildConvLayerContext</h3><pre><code class="language-ts">buildConvLayerContext(
+  params: OnnxImportConvLayerContextBuildParams,
+): OnnxImportConvLayerContext | null
+</code></pre>
+<p>Build one Conv layer reconstruction context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Conv context input params.</li>
+</ul>
+<p>Returns: Conv layer context when valid.</p>
+<h3 id="buildconvneuronlinearindex">buildConvNeuronLinearIndex</h3><pre><code class="language-ts">buildConvNeuronLinearIndex(
+  coordinate: OnnxImportConvOutputCoordinate,
+  convSpec: Conv2DMapping,
+): number
+</code></pre>
+<p>Build flattened linear index for one Conv output coordinate.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>coordinate</code> - Conv output coordinate.</li>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+</ul>
+<p>Returns: Linear neuron index.</p>
+<h3 id="buildconvnodeslices">buildConvNodeSlices</h3><pre><code class="language-ts">buildConvNodeSlices(
+  layerContext: OnnxImportConvLayerContext,
+): OnnxImportConvNodeSlices
+</code></pre>
+<p>Build Conv current/previous node slices for one layer context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerContext</code> - Conv layer context.</li>
+</ul>
+<p>Returns: Node slice payload.</p>
+<h3 id="buildconvtensorcontext">buildConvTensorContext</h3><pre><code class="language-ts">buildConvTensorContext(
+  layerContext: OnnxImportConvLayerContext,
+): OnnxImportConvTensorContext | null
+</code></pre>
+<p>Build validated Conv tensor context for one layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerContext</code> - Conv layer context.</li>
+</ul>
+<p>Returns: Conv tensor context when valid.</p>
+<h3 id="buildhiddenlayersizesfrombuckets">buildHiddenLayerSizesFromBuckets</h3><pre><code class="language-ts">buildHiddenLayerSizesFromBuckets(
+  layerWeightBuckets: Record&lt;string, OnnxImportLayerWeightBucket&gt;,
+  sortedLayerIndices: number[],
+): number[]
+</code></pre>
+<p>Build hidden-layer sizes from weight buckets while excluding output layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerWeightBuckets</code> - Layer-weight buckets.</li>
+<li><code>sortedLayerIndices</code> - Ascending layer indices.</li>
+</ul>
+<p>Returns: Hidden-layer sizes.</p>
+<h3 id="buildinboundconnectionmap">buildInboundConnectionMap</h3><pre><code class="language-ts">buildInboundConnectionMap(
+  neuronInternal: NodeInternals,
+): OnnxImportInboundConnectionMap
+</code></pre>
+<p>Build inbound connection lookup map for one neuron.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>neuronInternal</code> - Neuron internals.</li>
+</ul>
+<p>Returns: Inbound connection map keyed by source node.</p>
+<h3 id="buildinitializermap">buildInitializerMap</h3><pre><code class="language-ts">buildInitializerMap(
+  initializers: OnnxTensor[],
+  metadataProps: OnnxMetadataProperty[],
+): Record&lt;string, OnnxTensor&gt;
+</code></pre>
+<p>Build ONNX initializer map keyed by tensor name.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>initializers</code> - ONNX initializer list.</li>
+</ul>
+<p>Returns: Tensor map by name.</p>
+<h3 id="buildinputcoordinate">buildInputCoordinate</h3><pre><code class="language-ts">buildInputCoordinate(
+  kernelAssignmentContext: OnnxImportConvKernelAssignmentContext,
+): { inputRow: number; inputColumn: number; } | null
+</code></pre>
+<p>Build input-space coordinate for one Conv kernel element.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>kernelAssignmentContext</code> - Conv kernel assignment context.</li>
+</ul>
+<p>Returns: Input coordinate when in bounds.</p>
+<h3 id="buildinputfeaturelinearindex">buildInputFeatureLinearIndex</h3><pre><code class="language-ts">buildInputFeatureLinearIndex(
+  sourceLayout: OnnxImportConvSourceLayout,
+  inChannelIndex: number,
+  inputRow: number,
+  inputColumn: number,
+): number
+</code></pre>
+<p>Build linear feature index in input feature space.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+<li><code>inChannelIndex</code> - Input channel index.</li>
+<li><code>inputRow</code> - Input row index.</li>
+<li><code>inputColumn</code> - Input column index.</li>
+</ul>
+<p>Returns: Linear input feature index.</p>
+<h3 id="buildlayernodepair">buildLayerNodePair</h3><pre><code class="language-ts">buildLayerNodePair(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+  params: OnnxImportLayerNodePairBuildParams,
+): OnnxImportLayerNodePair
+</code></pre>
+<p>Build current/previous node slices for one sequential import layer pass.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>assignmentContext</code> - Shared assignment context.</li>
+<li><code>params</code> - Sequential traversal params.</li>
+</ul>
+<p>Returns: Layer node pair.</p>
+<h3 id="buildlayertensornames">buildLayerTensorNames</h3><pre><code class="language-ts">buildLayerTensorNames(
+  layerIndex: number,
+): OnnxImportLayerTensorNames
+</code></pre>
+<p>Build dense weight/bias tensor names for one layer index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerIndex</code> - Export layer index.</li>
+</ul>
+<p>Returns: Layer tensor names.</p>
+<h3 id="buildperneurontensornames">buildPerNeuronTensorNames</h3><pre><code class="language-ts">buildPerNeuronTensorNames(
+  layerIndex: number,
+  neuronIndex: number,
+): OnnxImportLayerTensorNames
+</code></pre>
+<p>Build per-neuron tensor names for one layer and neuron index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerIndex</code> - Export layer index.</li>
+<li><code>neuronIndex</code> - Neuron index in layer.</li>
+</ul>
+<p>Returns: Per-neuron tensor names.</p>
+<h3 id="buildweightassignmentcontext">buildWeightAssignmentContext</h3><pre><code class="language-ts">buildWeightAssignmentContext(
+  params: OnnxImportWeightAssignmentBuildParams,
+): OnnxImportWeightAssignmentContext
+</code></pre>
+<p>Build the shared assignment context for import weight restoration.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>params</code> - Assignment context input params.</li>
+</ul>
+<p>Returns: Shared assignment context.</p>
+<h3 id="collectconvkernelcoordinates">collectConvKernelCoordinates</h3><pre><code class="language-ts">collectConvKernelCoordinates(
+  inChannels: number,
+  kernelHeight: number,
+  kernelWidth: number,
+): OnnxConvKernelCoordinate[]
+</code></pre>
+<p>Collect all kernel traversal coordinates for one Conv output position.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>inChannels</code> - Input channel count.</li>
+<li><code>kernelHeight</code> - Kernel height.</li>
+<li><code>kernelWidth</code> - Kernel width.</li>
+</ul>
+<p>Returns: Kernel traversal coordinates.</p>
+<h3 id="collectconvoutputcoordinates">collectConvOutputCoordinates</h3><pre><code class="language-ts">collectConvOutputCoordinates(
+  convSpec: Conv2DMapping,
+  outChannels: number,
+): OnnxImportConvOutputCoordinate[]
+</code></pre>
+<p>Collect all output traversal coordinates for one Conv layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>convSpec</code> - Conv mapping spec.</li>
+<li><code>outChannels</code> - Output channel count.</li>
+</ul>
+<p>Returns: Output traversal coordinates.</p>
+<h3 id="collectlayerweightbuckets">collectLayerWeightBuckets</h3><pre><code class="language-ts">collectLayerWeightBuckets(
+  initializers: OnnxTensor[],
+): Record&lt;string, OnnxImportLayerWeightBucket&gt;
+</code></pre>
+<p>Collect ONNX weight tensor buckets grouped by export layer index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>initializers</code> - ONNX initializer tensors.</li>
+</ul>
+<p>Returns: Layer-weight buckets keyed by export layer index.</p>
+<h3 id="collectnodesbytype">collectNodesByType</h3><pre><code class="language-ts">collectNodesByType(
+  nodes: default[],
+  nodeType: &quot;hidden&quot; | &quot;input&quot; | &quot;output&quot;,
+): default[]
+</code></pre>
+<p>Collect nodes by runtime node type discriminator.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Network nodes.</li>
+<li><code>nodeType</code> - Runtime node type.</li>
+</ul>
+<p>Returns: Filtered nodes.</p>
+<h3 id="collectsortedlayerindices">collectSortedLayerIndices</h3><pre><code class="language-ts">collectSortedLayerIndices(
+  layerWeightBuckets: Record&lt;string, OnnxImportLayerWeightBucket&gt;,
+): number[]
+</code></pre>
+<p>Collect sorted layer indices from weight buckets.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerWeightBuckets</code> - Layer-weight buckets.</li>
+</ul>
+<p>Returns: Ascending export layer indices.</p>
+<h3 id="collectsorteduniquelayerindices">collectSortedUniqueLayerIndices</h3><pre><code class="language-ts">collectSortedUniqueLayerIndices(
+  initializerMap: Record&lt;string, OnnxTensor&gt;,
+): number[]
+</code></pre>
+<p>Collect unique sorted layer indices from initializer weight tensors.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>initializerMap</code> - Initializer map keyed by tensor name.</li>
+</ul>
+<p>Returns: Unique sorted layer indices.</p>
+<h3 id="derivehiddenlayersizes">deriveHiddenLayerSizes</h3><pre><code class="language-ts">deriveHiddenLayerSizes(
+  initializers: OnnxTensor[],
+  metadataProps: OnnxMetadataProperty[] | undefined,
+): number[]
+</code></pre>
+<p>Derive hidden-layer sizes from ONNX weight initializers in export order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>initializers</code> - ONNX initializer tensors.</li>
+<li><code>metadataProps</code> - Optional ONNX metadata properties.</li>
+</ul>
+<p>Returns: Hidden layer sizes in order.</p>
+<h3 id="hasaggregatedlayerweights">hasAggregatedLayerWeights</h3><pre><code class="language-ts">hasAggregatedLayerWeights(
+  aggregatedContext: OnnxImportAggregatedLayerAssignmentContext,
+): boolean
+</code></pre>
+<p>Determine whether the layer has aggregated weight tensor data.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>aggregatedContext</code> - Aggregated assignment context.</li>
+</ul>
+<p>Returns: True when aggregated tensor exists.</p>
+<h3 id="hydratesharedinitializeraliases">hydrateSharedInitializerAliases</h3><pre><code class="language-ts">hydrateSharedInitializerAliases(
+  initializerMap: Record&lt;string, OnnxTensor&gt;,
+  metadataProps: OnnxMetadataProperty[],
+): void
+</code></pre>
+<p>Hydrate alias tensor names back into the initializer map for metadata-backed shared initializers.</p>
+<h3 id="parseconvmetadata">parseConvMetadata</h3><pre><code class="language-ts">parseConvMetadata(
+  metadataProps: OnnxMetadataProperty[],
+): OnnxImportConvMetadata | null
+</code></pre>
+<p>Parse Conv reconstruction metadata payload.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadataProps</code> - ONNX metadata properties.</li>
+</ul>
+<p>Returns: Parsed Conv metadata.</p>
+<h3 id="parselayerindexfromweighttensor">parseLayerIndexFromWeightTensor</h3><pre><code class="language-ts">parseLayerIndexFromWeightTensor(
+  tensorName: string,
+): number | null
+</code></pre>
+<p>Parse layer index from dense/per-neuron weight tensor name.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>tensorName</code> - Tensor name.</li>
+</ul>
+<p>Returns: Parsed layer index or null.</p>
+<h3 id="parsemetadatalayersizes">parseMetadataLayerSizes</h3><pre><code class="language-ts">parseMetadataLayerSizes(
+  metadataProps: OnnxMetadataProperty[],
+): number[] | null
+</code></pre>
+<p>Parse explicit metadata-driven hidden layer sizes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadataProps</code> - ONNX metadata properties.</li>
+</ul>
+<p>Returns: Parsed hidden layer sizes when available.</p>
+<h3 id="parsesharedinitializeraliases">parseSharedInitializerAliases</h3><pre><code class="language-ts">parseSharedInitializerAliases(
+  metadataProps: OnnxMetadataProperty[],
+): { aliasTensorName: string; canonicalTensorName: string; }[]
+</code></pre>
+<p>Parse valid shared-initializer alias metadata records from ONNX metadata.</p>
+<h3 id="parseweighttensorname">parseWeightTensorName</h3><pre><code class="language-ts">parseWeightTensorName(
+  tensorName: string,
+): { layerIndex: string; neuronIndex: number | null; } | null
+</code></pre>
+<p>Parse layer/neuron components from a weight tensor name.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>tensorName</code> - Tensor name.</li>
+</ul>
+<p>Returns: Parsed layer+neuron components when matched.</p>
+<h3 id="readconvkernelweight">readConvKernelWeight</h3><pre><code class="language-ts">readConvKernelWeight(
+  kernelAssignmentContext: OnnxImportConvKernelAssignmentContext,
+): number
+</code></pre>
+<p>Read one Conv kernel weight from flattened ONNX tensor payload.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>kernelAssignmentContext</code> - Conv kernel assignment context.</li>
+</ul>
+<p>Returns: Kernel weight.</p>
+<h3 id="resetinboundconnectionweights">resetInboundConnectionWeights</h3><pre><code class="language-ts">resetInboundConnectionWeights(
+  neuronInternal: NodeInternals,
+): void
+</code></pre>
+<p>Reset all inbound weights so Conv reconstruction can write only receptive edges.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>neuronInternal</code> - Target neuron internals.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolvecurrentlayernodes">resolveCurrentLayerNodes</h3><pre><code class="language-ts">resolveCurrentLayerNodes(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+  params: { layerIndex: number; },
+): default[]
+</code></pre>
+<p>Resolve current layer nodes for one sequential layer assignment pass.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>assignmentContext</code> - Shared assignment context.</li>
+<li><code>params</code> - Sequential traversal params.</li>
+</ul>
+<p>Returns: Current layer nodes.</p>
+<h3 id="resolvelayerhiddensize">resolveLayerHiddenSize</h3><pre><code class="language-ts">resolveLayerHiddenSize(
+  layerWeightBuckets: Record&lt;string, OnnxImportLayerWeightBucket&gt;,
+  layerIndex: number,
+): number
+</code></pre>
+<p>Resolve one hidden-layer size from its weight bucket.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerWeightBuckets</code> - Layer-weight buckets.</li>
+<li><code>layerIndex</code> - Export layer index.</li>
+</ul>
+<p>Returns: Hidden-layer size.</p>
+<h3 id="resolvepreviouslayernodes">resolvePreviousLayerNodes</h3><pre><code class="language-ts">resolvePreviousLayerNodes(
+  assignmentContext: OnnxImportWeightAssignmentContext,
+  params: { layerIndex: number; },
+): default[]
+</code></pre>
+<p>Resolve previous layer nodes for one sequential layer assignment pass.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>assignmentContext</code> - Shared assignment context.</li>
+<li><code>params</code> - Sequential traversal params.</li>
+</ul>
+<p>Returns: Previous layer nodes.</p>
+<h3 id="sumhiddensizestoindex">sumHiddenSizesToIndex</h3><pre><code class="language-ts">sumHiddenSizesToIndex(
+  hiddenLayerSizes: number[],
+  exclusiveEndIndex: number,
+): number
+</code></pre>
+<p>Sum hidden-layer sizes from index <code>0</code> to <code>exclusiveEndIndex</code>.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenLayerSizes</code> - Hidden-layer size list.</li>
+<li><code>exclusiveEndIndex</code> - Exclusive end index.</li>
+</ul>
+<p>Returns: Prefix sum.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-import-activations-utils-ts">architecture/network/onnx/import/network.onnx.import-activations.utils.ts</h2><h3 id="appendoperationtolayer">appendOperationToLayer</h3><pre><code class="language-ts">appendOperationToLayer(
+  operationsByLayer: OnnxActivationLayerOperations,
+  layerIndex: number,
+  operation: OnnxActivationOperation,
+): void
+</code></pre>
+<p>Append one operation to the lookup bucket for a layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>operationsByLayer</code> - Layer-indexed operation lookup.</li>
+<li><code>layerIndex</code> - Export-layer index.</li>
+<li><code>operation</code> - Supported activation operation.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyhiddenlayeractivations">applyHiddenLayerActivations</h3><pre><code class="language-ts">applyHiddenLayerActivations(
+  context: OnnxActivationAssignmentContext,
+): void
+</code></pre>
+<p>Apply imported activation operations to hidden layer nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Shared assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyhiddenlayertraversalactivation">applyHiddenLayerTraversalActivation</h3><pre><code class="language-ts">applyHiddenLayerTraversalActivation(
+  traversalContext: HiddenLayerActivationTraversalContext,
+): void
+</code></pre>
+<p>Apply activation operations for one hidden-layer traversal context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Hidden-layer traversal context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyhiddenlayertraversalcontexts">applyHiddenLayerTraversalContexts</h3><pre><code class="language-ts">applyHiddenLayerTraversalContexts(
+  traversalContexts: HiddenLayerActivationTraversalContext[],
+): void
+</code></pre>
+<p>Apply hidden-layer activation assignment for each traversal context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContexts</code> - Ordered hidden-layer traversal contexts.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyhiddenneuronactivation">applyHiddenNeuronActivation</h3><pre><code class="language-ts">applyHiddenNeuronActivation(
+  traversalContext: HiddenLayerActivationTraversalContext,
+  neuronIndex: number,
+): void
+</code></pre>
+<p>Apply one hidden neuron activation if the target node exists.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Hidden-layer traversal context.</li>
+<li><code>neuronIndex</code> - Neuron index in current hidden layer.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyoutputlayeractivation">applyOutputLayerActivation</h3><pre><code class="language-ts">applyOutputLayerActivation(
+  context: OnnxActivationAssignmentContext,
+): void
+</code></pre>
+<p>Apply imported activation to all output nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Shared assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="asnodeinternals">asNodeInternals</h3><pre><code class="language-ts">asNodeInternals(
+  node: unknown,
+): NodeInternals
+</code></pre>
+<p>Cast one public node instance to runtime node internals.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Source node object.</li>
+</ul>
+<p>Returns: Runtime node internals.</p>
+<h3 id="assignactivationfunctions">assignActivationFunctions</h3><pre><code class="language-ts">assignActivationFunctions(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+): void
+</code></pre>
+<p>Assign runtime node activation functions from ONNX activation graph operations.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network to mutate.</li>
+<li><code>onnx</code> - Source ONNX model.</li>
+<li><code>hiddenLayerSizes</code> - Hidden layer size list.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assupportedactivationoperation">asSupportedActivationOperation</h3><pre><code class="language-ts">asSupportedActivationOperation(
+  operationName: string,
+): OnnxActivationOperation | null
+</code></pre>
+<p>Convert an ONNX op type to a supported activation operation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>operationName</code> - ONNX graph node operation type.</li>
+</ul>
+<p>Returns: Supported activation operation or null when unsupported.</p>
+<h3 id="buildactivationassignmentcontext">buildActivationAssignmentContext</h3><pre><code class="language-ts">buildActivationAssignmentContext(
+  sourceNetwork: default,
+  sourceOnnx: OnnxModel,
+  sourceHiddenLayerSizes: number[],
+): OnnxActivationAssignmentContext
+</code></pre>
+<p>Build immutable assignment context for hidden/output activation import.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sourceNetwork</code> - Target network to mutate.</li>
+<li><code>sourceOnnx</code> - Source ONNX model.</li>
+<li><code>sourceHiddenLayerSizes</code> - Hidden layer widths in export order.</li>
+</ul>
+<p>Returns: Prepared assignment context.</p>
+<h3 id="buildhiddenlayertraversalcontexts">buildHiddenLayerTraversalContexts</h3><pre><code class="language-ts">buildHiddenLayerTraversalContexts(
+  context: OnnxActivationAssignmentContext,
+): HiddenLayerActivationTraversalContext[]
+</code></pre>
+<p>Build traversal contexts for each hidden layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Shared assignment context.</li>
+</ul>
+<p>Returns: Ordered hidden-layer traversal contexts.</p>
+<h3 id="buildhiddenneuronindices">buildHiddenNeuronIndices</h3><pre><code class="language-ts">buildHiddenNeuronIndices(
+  hiddenLayerSize: number,
+): number[]
+</code></pre>
+<p>Build contiguous hidden-neuron index list for one layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenLayerSize</code> - Hidden-layer width.</li>
+</ul>
+<p>Returns: Ordered neuron indices.</p>
+<h3 id="collectnodeinternalsbytype">collectNodeInternalsByType</h3><pre><code class="language-ts">collectNodeInternalsByType(
+  sourceNetwork: default,
+  targetType: string,
+): NodeInternals[]
+</code></pre>
+<p>Collect node internals by runtime node type.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sourceNetwork</code> - Network with runtime nodes.</li>
+<li><code>targetType</code> - Runtime node type to collect.</li>
+</ul>
+<p>Returns: Runtime node internals matching the requested type.</p>
+<h3 id="collectoperationsbylayer">collectOperationsByLayer</h3><pre><code class="language-ts">collectOperationsByLayer(
+  sourceOnnx: OnnxModel,
+): OnnxActivationLayerOperations
+</code></pre>
+<p>Collect ONNX activation operations grouped by export-layer index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sourceOnnx</code> - Source ONNX model.</li>
+</ul>
+<p>Returns: Layer-indexed activation operation lookup.</p>
+<h3 id="parseactivationnode">parseActivationNode</h3><pre><code class="language-ts">parseActivationNode(
+  nodeName: string,
+): OnnxActivationParseResult | null
+</code></pre>
+<p>Parse one ONNX activation node name.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeName</code> - ONNX graph node name.</li>
+</ul>
+<p>Returns: Parsed layer/neuron metadata or null when not a supported activation node.</p>
+<h3 id="resolveactivationfunction">resolveActivationFunction</h3><pre><code class="language-ts">resolveActivationFunction(
+  context: OnnxActivationOperationResolutionContext,
+): ((x: number, derivate?: boolean | undefined) =&gt; number) &amp; { name?: string | undefined; }
+</code></pre>
+<p>Resolve runtime activation function from operation context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Operation-resolution context.</li>
+</ul>
+<p>Returns: Runtime activation function.</p>
+<h3 id="resolvehiddennode">resolveHiddenNode</h3><pre><code class="language-ts">resolveHiddenNode(
+  traversalContext: HiddenLayerActivationTraversalContext,
+  neuronIndex: number,
+): NodeInternals | undefined
+</code></pre>
+<p>Resolve one hidden node by traversal/offset metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Hidden-layer traversal context.</li>
+<li><code>neuronIndex</code> - Neuron index in current hidden layer.</li>
+</ul>
+<p>Returns: Hidden node internals when present.</p>
+<h3 id="resolvelayeroperations">resolveLayerOperations</h3><pre><code class="language-ts">resolveLayerOperations(
+  traversalContext: HiddenLayerActivationTraversalContext,
+): OnnxActivationOperation[]
+</code></pre>
+<p>Resolve operations list for one hidden layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Hidden-layer traversal context.</li>
+</ul>
+<p>Returns: Ordered operations for target export layer.</p>
+<h3 id="resolveoperationbypriority">resolveOperationByPriority</h3><pre><code class="language-ts">resolveOperationByPriority(
+  context: OnnxActivationOperationResolutionContext,
+): OnnxActivationOperation
+</code></pre>
+<p>Resolve activation operation by neuron-first then layer-default fallback.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Operation-resolution context.</li>
+</ul>
+<p>Returns: Supported activation operation.</p>
+<h3 id="resolveoutputoperations">resolveOutputOperations</h3><pre><code class="language-ts">resolveOutputOperations(
+  context: OutputLayerActivationContext,
+): OnnxActivationOperation[]
+</code></pre>
+<p>Resolve output-layer operations from shared lookup.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Output-layer assignment context.</li>
+</ul>
+<p>Returns: Ordered output-layer operations.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-import-orchestrators-types-ts">architecture/network/onnx/import/network.onnx.import-orchestrators.types.ts</h2><p>Import-owned type surface for ONNX architecture reconstruction orchestration.</p>
+<p>These payloads stay close to the orchestration helpers that parse terminal
+dimensions, restore recurrent self-connections, and attach pooling metadata.
+Keeping them here makes the import chapter explain its own execution state
+without forcing the root ONNX compatibility barrel to remain the ownership
+home for importer-only details.</p>
+<h3 id="networkwithonnximportadvancedgraph">NetworkWithOnnxImportAdvancedGraph</h3><p>Network instance augmented with optional imported advanced-graph metadata via the _onnxAdvancedGraph field.</p>
+<h3 id="networkwithonnximportpooling">NetworkWithOnnxImportPooling</h3><p>Network instance augmented with optional imported ONNX pooling metadata via the _onnxPooling field.</p>
+<h3 id="onnximportadvancedgraphcrosslayerconnection">OnnxImportAdvancedGraphCrossLayerConnection</h3><p>Audit-only cross-layer feed-forward edge carried through Phase 5 import fallback.</p>
+<h3 id="onnximportadvancedgraphmetadata">OnnxImportAdvancedGraphMetadata</h3><p>Parsed advanced-graph metadata attached to imported network instances, grouping merges, residual adds, and blocks.</p>
+<h3 id="onnximportarchitecturecontext">OnnxImportArchitectureContext</h3><p>Shared architecture extraction context with resolved graph dimensions, initializers, and metadata properties.</p>
+<h3 id="onnximportarchitectureresult">OnnxImportArchitectureResult</h3><p>Parsed architecture dimensions extracted from ONNX import graph payloads, with input, output, and hidden sizes.</p>
+<h3 id="onnximportattentionblock">OnnxImportAttentionBlock</h3><p>Explicit fixed-width self-attention block carried through Phase 5 import fallback.</p>
+<h3 id="onnximportconcatmerge">OnnxImportConcatMerge</h3><p>Explicit concat merge carried through Phase 5 import hardening, identifying layer indices and merge tensor names.</p>
+<h3 id="onnximportdimensionrecord">OnnxImportDimensionRecord</h3><p>Loose ONNX shape-dimension record used by legacy import payload access.</p>
+<h3 id="onnximportflattenconsistencyaudit">OnnxImportFlattenConsistencyAudit</h3><p>Metadata-only audit record comparing a flattened pooled width to the next dense width.</p>
+<h3 id="onnximporthiddenlayerspan">OnnxImportHiddenLayerSpan</h3><p>Hidden-layer span payload with one-based layer numbering and global offset.</p>
+<h3 id="onnximportlayerconnectioncontext">OnnxImportLayerConnectionContext</h3><p>Execution context for assigning one hidden-layer recurrent diagonal tensor, carrying model, nodes, and span.</p>
+<h3 id="onnximportpoolingmetadata">OnnxImportPoolingMetadata</h3><p>Parsed pooling metadata payload attached to imported network instances, listing pool specs and virtual shapes.</p>
+<h3 id="onnximportpoolingvirtualshape">OnnxImportPoolingVirtualShape</h3><p>Virtual spatial shape derived from Conv and Pool metadata during import.</p>
+<h3 id="onnximportrecurrentrestorationcontext">OnnxImportRecurrentRestorationContext</h3><p>Context for recurrent self-connection restoration from ONNX metadata and tensors.</p>
+<h3 id="onnximportresidualadd">OnnxImportResidualAdd</h3><p>Explicit one-hop residual-add merge carried through Phase 5 import hardening.</p>
+<h3 id="onnximportselfconnectionupsertcontext">OnnxImportSelfConnectionUpsertContext</h3><p>Context for upserting one hidden node self-connection from recurrent weight.</p>
+<h3 id="onnximportsharedinitializeralias">OnnxImportSharedInitializerAlias</h3><p>Audit-only shared initializer alias carried through Phase 5 import fallback.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-import-orchestrators-utils-ts">architecture/network/onnx/import/network.onnx.import-orchestrators.utils.ts</h2><p>Restore recurrent self-connections from recurrent metadata and R tensors.
+Restoration uses metadata-gated span resolution and diagonal tensor extraction so imported recurrent units recover their self-feedback semantics without guessing hidden-node layout.</p>
+<h3 id="applylayerselfconnections">applyLayerSelfConnections</h3><pre><code class="language-ts">applyLayerSelfConnections(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): void
+</code></pre>
+<p>Apply one hidden layer diagonal recurrent self-weights.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerConnectionContext</code> - Layer connection context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="attachonnxadvancedgraphmetadata">attachOnnxAdvancedGraphMetadata</h3><pre><code class="language-ts">attachOnnxAdvancedGraphMetadata(
+  network: default,
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel | undefined,
+): void
+</code></pre>
+<p>Attach optional advanced-graph audit metadata from ONNX model metadata.</p>
+<p>Phase 5 starts with honest fallback: import keeps rebuilding the layered
+baseline, but it can still preserve the exact cross-layer feed-forward edges
+the exporter detected so later residual, concat, and attention passes have a
+deterministic seam to reuse.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>metadata</code> - ONNX metadata properties to parse for advanced-graph fields.</li>
+<li><code>onnx</code> - Optional source ONNX model for additional context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="attachonnxpoolingmetadata">attachOnnxPoolingMetadata</h3><pre><code class="language-ts">attachOnnxPoolingMetadata(
+  network: default,
+  metadata: OnnxMetadataProperty[],
+): void
+</code></pre>
+<p>Attach optional pooling metadata from ONNX model to network instance.
+The importer keeps pooling metadata as additive diagnostics state so later runtime or visualization tooling can reason about spatial stages without modifying core graph wiring.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>metadata</code> - ONNX metadata.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="attachparsedpoolingmetadata">attachParsedPoolingMetadata</h3><pre><code class="language-ts">attachParsedPoolingMetadata(
+  network: default,
+  poolingMetadata: OnnxImportPoolingMetadata,
+): void
+</code></pre>
+<p>Attach parsed pooling metadata to imported network instance.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>poolingMetadata</code> - Parsed pooling metadata payload.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="buildarchitecturecontext">buildArchitectureContext</h3><pre><code class="language-ts">buildArchitectureContext(
+  onnx: OnnxModel,
+): OnnxImportArchitectureContext
+</code></pre>
+<p>Build architecture extraction context from ONNX graph state.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>onnx</code> - Source ONNX model.</li>
+</ul>
+<p>Returns: Normalized architecture extraction context.</p>
+<h3 id="buildhiddenlayerspans">buildHiddenLayerSpans</h3><pre><code class="language-ts">buildHiddenLayerSpans(
+  hiddenLayerSizes: number[],
+): OnnxImportHiddenLayerSpan[]
+</code></pre>
+<p>Build hidden-layer spans with one-based layer numbering and global offsets.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenLayerSizes</code> - Hidden-layer size list.</li>
+</ul>
+<p>Returns: Hidden-layer span payload list.</p>
+<h3 id="buildimportedlayers">buildImportedLayers</h3><pre><code class="language-ts">buildImportedLayers(
+  network: default,
+  hiddenLayerSizes: number[],
+): default[][]
+</code></pre>
+<p>Build the imported layer ordering from runtime nodes and hidden-layer widths.</p>
+<h3 id="buildvirtualpoolingshape">buildVirtualPoolingShape</h3><pre><code class="language-ts">buildVirtualPoolingShape(
+  poolingSpec: Pool2DMapping,
+  convSpec: Conv2DMapping,
+  flattenLayerSet: Set&lt;number&gt;,
+): OnnxImportPoolingVirtualShape | null
+</code></pre>
+<p>Build one virtual pooled shape from the pre-pool Conv output shape.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>poolingSpec</code> - Pool metadata describing the virtual pooling step.</li>
+<li><code>convSpec</code> - Conv metadata describing the pre-pool spatial shape.</li>
+<li><code>flattenLayerSet</code> - Layer indices marked with flatten-after-pool metadata.</li>
+</ul>
+<p>Returns: Virtual pooled shape when the metadata is usable.</p>
+<h3 id="calculatespatialoutputsize">calculateSpatialOutputSize</h3><pre><code class="language-ts">calculateSpatialOutputSize(
+  inputSize: number,
+  kernelSize: number,
+  strideSize: number,
+  leadingPadding: number,
+  trailingPadding: number,
+): number
+</code></pre>
+<p>Calculate one pooled spatial output size from kernel, stride, and padding metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>inputSize</code> - Pre-pool spatial size.</li>
+<li><code>kernelSize</code> - Pool kernel size.</li>
+<li><code>strideSize</code> - Pool stride size.</li>
+<li><code>leadingPadding</code> - Leading padding value.</li>
+<li><code>trailingPadding</code> - Trailing padding value.</li>
+</ul>
+<p>Returns: Derived output size, or zero when the metadata is unusable.</p>
+<h3 id="collectavailableconvspecs">collectAvailableConvSpecs</h3><pre><code class="language-ts">collectAvailableConvSpecs(
+  metadata: OnnxMetadataProperty[],
+): Conv2DMapping[]
+</code></pre>
+<p>Collect explicit and inferred Conv specs that can anchor pooling shape simulation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadata</code> - ONNX metadata entries.</li>
+</ul>
+<p>Returns: Layer-indexed Conv specs, preferring explicit specs over inferred ones.</p>
+<h3 id="collectdiagonalrecurrentweights">collectDiagonalRecurrentWeights</h3><pre><code class="language-ts">collectDiagonalRecurrentWeights(
+  recurrentTensorWeights: number[],
+  hiddenLayerSize: number,
+): number[]
+</code></pre>
+<p>Collect diagonal recurrent weights from flattened layer tensor data.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>recurrentTensorWeights</code> - Flattened recurrent tensor weights.</li>
+<li><code>hiddenLayerSize</code> - Hidden-layer width.</li>
+</ul>
+<p>Returns: Diagonal recurrent self-weights.</p>
+<h3 id="collectflattenconsistencyaudit">collectFlattenConsistencyAudit</h3><pre><code class="language-ts">collectFlattenConsistencyAudit(
+  virtualShapes: OnnxImportPoolingVirtualShape[],
+  hiddenLayerSizes: number[],
+  outputCount: number,
+): OnnxImportFlattenConsistencyAudit[]
+</code></pre>
+<p>Collect flatten-consistency audit records for virtual pooled shapes with flatten metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>virtualShapes</code> - Derived virtual pooled shapes.</li>
+<li><code>hiddenLayerSizes</code> - Hidden-layer widths from ONNX metadata.</li>
+<li><code>outputCount</code> - Imported output width.</li>
+</ul>
+<p>Returns: Metadata-only flatten-consistency audit records.</p>
+<h3 id="collectfusedrecurrentgateweights">collectFusedRecurrentGateWeights</h3><pre><code class="language-ts">collectFusedRecurrentGateWeights(
+  recurrentTensorWeights: number[],
+  unitSize: number,
+): number[]
+</code></pre>
+<p>Collect diagonal recurrent weights from the recurrent gate block inside a fused tensor.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>recurrentTensorWeights</code> - Flattened fused recurrent tensor weights.</li>
+<li><code>unitSize</code> - Fused recurrent unit size.</li>
+</ul>
+<p>Returns: Diagonal recurrent self-weights for the recurrent gate slice.</p>
+<h3 id="collectnodesbytype">collectNodesByType</h3><pre><code class="language-ts">collectNodesByType(
+  nodes: default[],
+  nodeType: &quot;hidden&quot; | &quot;input&quot; | &quot;output&quot;,
+): default[]
+</code></pre>
+<p>Collect nodes matching one runtime node-type discriminator.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Node list.</li>
+<li><code>nodeType</code> - Runtime node type.</li>
+</ul>
+<p>Returns: Filtered node list.</p>
+<h3 id="collectperceptronboundarynodes">collectPerceptronBoundaryNodes</h3><pre><code class="language-ts">collectPerceptronBoundaryNodes(
+  nodes: default[],
+): default[]
+</code></pre>
+<p>Collect input and output boundary nodes for perceptron imports.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Full network node list.</li>
+</ul>
+<p>Returns: Input/output-only node list.</p>
+<h3 id="collectrecurrentlayerspans">collectRecurrentLayerSpans</h3><pre><code class="language-ts">collectRecurrentLayerSpans(
+  restorationContext: OnnxImportRecurrentRestorationContext,
+): OnnxImportHiddenLayerSpan[]
+</code></pre>
+<p>Resolve recurrent-target hidden-layer spans from metadata + hidden sizes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>restorationContext</code> - Recurrent restoration context.</li>
+</ul>
+<p>Returns: Hidden-layer spans requiring recurrent restoration.</p>
+<h3 id="collectvirtualpoolingshapes">collectVirtualPoolingShapes</h3><pre><code class="language-ts">collectVirtualPoolingShapes(
+  poolingSpecs: Pool2DMapping[],
+  convSpecs: Conv2DMapping[],
+  flattenLayers: number[],
+): OnnxImportPoolingVirtualShape[]
+</code></pre>
+<p>Derive virtual pooled shapes from Conv and Pool metadata without changing weights.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>poolingSpecs</code> - Imported pooling metadata specs.</li>
+<li><code>convSpecs</code> - Available explicit/inferred Conv specs.</li>
+<li><code>flattenLayers</code> - Layer indices marked with flatten-after-pool metadata.</li>
+</ul>
+<p>Returns: Derived virtual pooled shapes for future consistency checks.</p>
+<h3 id="extractonnxarchitecture">extractOnnxArchitecture</h3><pre><code class="language-ts">extractOnnxArchitecture(
+  onnx: OnnxModel,
+): OnnxImportArchitectureResult
+</code></pre>
+<p>Extract input/output counts and hidden layer sizes from ONNX model.
+This architecture probe normalizes graph terminal dimensions and initializer-derived hidden spans into one deterministic result contract used by all downstream reconstruction passes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>onnx</code> - Source ONNX model.</li>
+</ul>
+<p>Returns: Parsed architecture dimensions.</p>
+<h3 id="findfusedrecurrentinitializer">findFusedRecurrentInitializer</h3><pre><code class="language-ts">findFusedRecurrentInitializer(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): OnnxTensor | undefined
+</code></pre>
+<p>Resolve a fused recurrent tensor for one hidden-layer span when generic <code>Rk</code> is absent.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerConnectionContext</code> - Layer connection context.</li>
+</ul>
+<p>Returns: Matching fused recurrent tensor when present.</p>
+<h3 id="findmetadataproperty">findMetadataProperty</h3><pre><code class="language-ts">findMetadataProperty(
+  metadata: OnnxMetadataProperty[],
+  metadataKey: string,
+): OnnxMetadataProperty | undefined
+</code></pre>
+<p>Find one ONNX metadata property by key.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadata</code> - ONNX metadata array.</li>
+<li><code>metadataKey</code> - Metadata key.</li>
+</ul>
+<p>Returns: Matching metadata property when present.</p>
+<h3 id="findrecurrentinitializer">findRecurrentInitializer</h3><pre><code class="language-ts">findRecurrentInitializer(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): OnnxTensor | undefined
+</code></pre>
+<p>Resolve recurrent initializer tensor for one hidden-layer span.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerConnectionContext</code> - Layer connection context.</li>
+</ul>
+<p>Returns: Recurrent initializer tensor when available.</p>
+<h3 id="inferrecurrentlayerindicesfrominitializers">inferRecurrentLayerIndicesFromInitializers</h3><pre><code class="language-ts">inferRecurrentLayerIndicesFromInitializers(
+  hiddenLayerSizes: number[],
+  onnx: OnnxModel,
+): number[]
+</code></pre>
+<p>Infer recurrent layer indices from plain recurrent tensors when metadata is absent.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenLayerSizes</code> - Hidden-layer size list used to bound valid layer indices.</li>
+<li><code>onnx</code> - Source ONNX model.</li>
+</ul>
+<p>Returns: One-based recurrent layer indices inferred from <code>Rk</code> tensors.</p>
+<h3 id="isadvancedgraphcrosslayerconnection">isAdvancedGraphCrossLayerConnection</h3><pre><code class="language-ts">isAdvancedGraphCrossLayerConnection(
+  value: unknown,
+): boolean
+</code></pre>
+<p>Validate one parsed cross-layer audit record.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>value</code> - Parsed JSON value.</li>
+</ul>
+<p>Returns: Whether the value matches the expected metadata shape.</p>
+<h3 id="isattentionblock">isAttentionBlock</h3><pre><code class="language-ts">isAttentionBlock(
+  value: unknown,
+): boolean
+</code></pre>
+<p>Validate one parsed fixed-width self-attention audit record.</p>
+<h3 id="isresidualadd">isResidualAdd</h3><pre><code class="language-ts">isResidualAdd(
+  value: unknown,
+): boolean
+</code></pre>
+<p>Validate one parsed residual-add record.</p>
+<h3 id="issharedinitializeralias">isSharedInitializerAlias</h3><pre><code class="language-ts">isSharedInitializerAlias(
+  value: unknown,
+): boolean
+</code></pre>
+<p>Validate one parsed shared-initializer alias audit record.</p>
+<h3 id="issinglelayerperceptronimport">isSingleLayerPerceptronImport</h3><pre><code class="language-ts">isSingleLayerPerceptronImport(
+  hiddenLayerSizes: number[],
+): boolean
+</code></pre>
+<p>Determine whether import shape corresponds to a single-layer perceptron.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenLayerSizes</code> - Hidden-layer size list.</li>
+</ul>
+<p>Returns: True when no hidden layers exist.</p>
+<h3 id="normalizerecurrentlayerindices">normalizeRecurrentLayerIndices</h3><pre><code class="language-ts">normalizeRecurrentLayerIndices(
+  parsedMetadataValue: string | number | boolean | number[] | Record&lt;string, number&gt; | null,
+): number[]
+</code></pre>
+<p>Normalize recurrent layer indices parsed from metadata JSON.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>parsedMetadataValue</code> - Parsed metadata JSON value.</li>
+</ul>
+<p>Returns: Recurrent layer indices.</p>
+<h3 id="parseadvancedgraphcrosslayerconnections">parseAdvancedGraphCrossLayerConnections</h3><pre><code class="language-ts">parseAdvancedGraphCrossLayerConnections(
+  metadata: OnnxMetadataProperty[],
+): OnnxImportAdvancedGraphCrossLayerConnection[] | null
+</code></pre>
+<p>Parse valid cross-layer feed-forward audit metadata.</p>
+<h3 id="parseadvancedgraphmetadata">parseAdvancedGraphMetadata</h3><pre><code class="language-ts">parseAdvancedGraphMetadata(
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel | undefined,
+): OnnxImportAdvancedGraphMetadata | null
+</code></pre>
+<p>Parse advanced-graph cross-layer metadata from ONNX metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadata</code> - ONNX metadata entries.</li>
+</ul>
+<p>Returns: Parsed advanced-graph metadata, or null when absent or invalid.</p>
+<h3 id="parseattentionblockmetadata">parseAttentionBlockMetadata</h3><pre><code class="language-ts">parseAttentionBlockMetadata(
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel | undefined,
+): OnnxImportAttentionBlock[] | null
+</code></pre>
+<p>Parse valid fixed-width self-attention audit metadata.</p>
+<h3 id="parseoptionalconvspecs">parseOptionalConvSpecs</h3><pre><code class="language-ts">parseOptionalConvSpecs(
+  metadata: OnnxMetadataProperty[],
+  metadataKey: string,
+): Conv2DMapping[]
+</code></pre>
+<p>Parse one optional Conv spec metadata field.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadata</code> - ONNX metadata entries.</li>
+<li><code>metadataKey</code> - Metadata key carrying Conv spec JSON.</li>
+</ul>
+<p>Returns: Parsed Conv specs or an empty list when absent/invalid.</p>
+<h3 id="parseoptionallayerindicesmetadata">parseOptionalLayerIndicesMetadata</h3><pre><code class="language-ts">parseOptionalLayerIndicesMetadata(
+  metadata: OnnxMetadataProperty[],
+  metadataKey: string,
+): number[]
+</code></pre>
+<p>Parse one optional layer-index metadata field.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadata</code> - ONNX metadata entries.</li>
+<li><code>metadataKey</code> - Metadata key carrying a JSON array of layer indices.</li>
+</ul>
+<p>Returns: Parsed layer indices or an empty list when absent/invalid.</p>
+<h3 id="parsepoolingmetadata">parsePoolingMetadata</h3><pre><code class="language-ts">parsePoolingMetadata(
+  network: default,
+  metadata: OnnxMetadataProperty[],
+): OnnxImportPoolingMetadata | null
+</code></pre>
+<p>Parse pooling metadata payload from ONNX metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadata</code> - ONNX metadata entries.</li>
+</ul>
+<p>Returns: Parsed pooling metadata payload.</p>
+<h3 id="parserecurrentlayerindices">parseRecurrentLayerIndices</h3><pre><code class="language-ts">parseRecurrentLayerIndices(
+  rawMetadataValue: string,
+): number[]
+</code></pre>
+<p>Parse recurrent layer indices metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rawMetadataValue</code> - Raw metadata JSON string.</li>
+</ul>
+<p>Returns: Normalized recurrent layer indices.</p>
+<h3 id="parseresidualaddmetadata">parseResidualAddMetadata</h3><pre><code class="language-ts">parseResidualAddMetadata(
+  metadata: OnnxMetadataProperty[],
+): OnnxImportResidualAdd[] | null
+</code></pre>
+<p>Parse valid one-hop residual-add metadata.</p>
+<h3 id="parsesharedinitializeraliases">parseSharedInitializerAliases</h3><pre><code class="language-ts">parseSharedInitializerAliases(
+  metadata: OnnxMetadataProperty[],
+): OnnxImportSharedInitializerAlias[] | null
+</code></pre>
+<p>Parse valid shared-initializer alias audit metadata.</p>
+<h3 id="prunesinglelayerhiddenplaceholders">pruneSingleLayerHiddenPlaceholders</h3><pre><code class="language-ts">pruneSingleLayerHiddenPlaceholders(
+  network: default,
+  hiddenLayerSizes: number[],
+): void
+</code></pre>
+<p>Remove placeholder hidden nodes that arise from single-layer perceptron imports.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>hiddenLayerSizes</code> - Hidden layer sizes.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="readlastdimensionvalue">readLastDimensionValue</h3><pre><code class="language-ts">readLastDimensionValue(
+  dimensions: { dim_value?: number | undefined; }[],
+): number
+</code></pre>
+<p>Read the terminal ONNX shape dimension value from one shape array.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>dimensions</code> - ONNX shape dimensions.</li>
+</ul>
+<p>Returns: Terminal <code>dim_value</code> payload.</p>
+<h3 id="reconstructfusedrecurrentlayers">reconstructFusedRecurrentLayers</h3><pre><code class="language-ts">reconstructFusedRecurrentLayers(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  layerFactory: OnnxLayerFactory,
+  metadata: OnnxMetadataProperty[],
+): void
+</code></pre>
+<p>Contract for reconstructFusedRecurrentLayers.</p>
+<h3 id="resolveconsumerlayerwidth">resolveConsumerLayerWidth</h3><pre><code class="language-ts">resolveConsumerLayerWidth(
+  consumerLayerIndex: number,
+  hiddenLayerSizes: number[],
+  outputCount: number,
+): number | undefined
+</code></pre>
+<p>Resolve the width of the next dense consumer after one flattened pooling site.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>consumerLayerIndex</code> - One-based export-layer index for the next dense consumer.</li>
+<li><code>hiddenLayerSizes</code> - Hidden-layer widths from ONNX metadata.</li>
+<li><code>outputCount</code> - Imported output width.</li>
+</ul>
+<p>Returns: Consumer width when a dense consumer exists.</p>
+<h3 id="resolverecurrentlayerindices">resolveRecurrentLayerIndices</h3><pre><code class="language-ts">resolveRecurrentLayerIndices(
+  hiddenLayerSizes: number[],
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel,
+): number[]
+</code></pre>
+<p>Resolve recurrent layer indices from ONNX metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadata</code> - ONNX metadata payload.</li>
+</ul>
+<p>Returns: Parsed recurrent layer indices.</p>
+<h3 id="resolveresidualweight">resolveResidualWeight</h3><pre><code class="language-ts">resolveResidualWeight(
+  residualWeights: number[],
+  sourceLayerWidth: number,
+  sourceLayerIndex: number,
+  targetLayerIndex: number,
+): number
+</code></pre>
+<p>Resolve one residual branch weight from a row-major target-by-source matrix.</p>
+<h3 id="restorerecurrentselfconnections">restoreRecurrentSelfConnections</h3><pre><code class="language-ts">restoreRecurrentSelfConnections(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadata: OnnxMetadataProperty[],
+): void
+</code></pre>
+<p>Contract for restoreRecurrentSelfConnections.</p>
+<h3 id="restoreresidualaddconnections">restoreResidualAddConnections</h3><pre><code class="language-ts">restoreResidualAddConnections(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadata: OnnxMetadataProperty[],
+): void
+</code></pre>
+<p>Restore supported one-hop residual-add skip connections from ONNX metadata.</p>
+<p>The import side stays conservative: it only rehydrates skip edges when the
+exporter recorded both the residual merge intent and the exact cross-layer
+edge list, and when the residual branch tensor is still present.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>onnx</code> - Source ONNX model.</li>
+<li><code>hiddenLayerSizes</code> - Hidden layer sizes from architecture extraction.</li>
+<li><code>metadata</code> - ONNX metadata payload.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="restoresingleresidualaddconnections">restoreSingleResidualAddConnections</h3><pre><code class="language-ts">restoreSingleResidualAddConnections(
+  network: default,
+  onnx: OnnxModel,
+  importedLayers: default[][],
+  crossLayerConnections: OnnxImportAdvancedGraphCrossLayerConnection[],
+  residualAdd: OnnxImportResidualAdd,
+): void
+</code></pre>
+<p>Restore one residual-add branch using the recorded edge list and residual weight tensor.</p>
+<h3 id="slicelayerhiddennodes">sliceLayerHiddenNodes</h3><pre><code class="language-ts">sliceLayerHiddenNodes(
+  layerConnectionContext: OnnxImportLayerConnectionContext,
+): default[]
+</code></pre>
+<p>Slice hidden nodes for one hidden-layer span.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerConnectionContext</code> - Layer connection context.</li>
+</ul>
+<p>Returns: Hidden nodes belonging to the span.</p>
+<h3 id="upsertfeedforwardconnection">upsertFeedForwardConnection</h3><pre><code class="language-ts">upsertFeedForwardConnection(
+  sourceNode: default,
+  targetNode: default,
+  weight: number,
+): void
+</code></pre>
+<p>Upsert one feed-forward connection between two runtime nodes.</p>
+<h3 id="upsertselfconnection">upsertSelfConnection</h3><pre><code class="language-ts">upsertSelfConnection(
+  selfConnectionContext: OnnxImportSelfConnectionUpsertContext,
+): void
+</code></pre>
+<p>Upsert one node self-connection for recurrent import restoration.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>selfConnectionContext</code> - Self-connection upsert context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-import-fused-recurrent-types-ts">architecture/network/onnx/import/network.onnx.import-fused-recurrent.types.ts</h2><h3 id="onnxfusedgateapplicationcontext">OnnxFusedGateApplicationContext</h3><p>Gate-weight application context for one reconstructed fused layer, carrying spec, unit size, and weight arrays.</p>
+<h3 id="onnxfusedgaterowassignmentcontext">OnnxFusedGateRowAssignmentContext</h3><p>Context for assigning one gate-neuron row from flattened ONNX tensors.</p>
+<h3 id="onnxfusedlayerneighborhood">OnnxFusedLayerNeighborhood</h3><p>Hidden-layer neighborhood slices around a reconstructed fused layer, including old, previous, and next node lists.</p>
+<h3 id="onnxfusedlayerreconstructioncontext">OnnxFusedLayerReconstructionContext</h3><p>Execution context for one fused recurrent layer reconstruction, carrying spec, export index, and hidden layer index.</p>
+<h3 id="onnxfusedlayerruntime">OnnxFusedLayerRuntime</h3><p>Runtime interface of a reconstructed fused recurrent layer instance.</p>
+<p>The importer only relies on a narrow runtime contract: access to the
+reconstructed nodes, an input wiring hook, and an optional output group that
+can be reconnected to the next restored layer.</p>
+<h3 id="onnxfusedrecurrentkind">OnnxFusedRecurrentKind</h3><p>Supported fused recurrent operator families recognized during ONNX import, currently limited to LSTM and GRU.</p>
+<h3 id="onnxfusedrecurrentspec">OnnxFusedRecurrentSpec</h3><p>Fused recurrent family specification used during import reconstruction.</p>
+<p>This tells the importer how to interpret one emitted ONNX recurrent family:
+how many gates to expect, what order those gates were serialized in, and
+which gate owns the self-recurrent diagonal replay.</p>
+<h3 id="onnxfusedtensorpayload">OnnxFusedTensorPayload</h3><p>Fused recurrent tensor payload read from ONNX initializers.</p>
+<p>The importer resolves the three recurrent tensor families up front so the
+reconstruction pass can focus on wiring and row assignment instead of
+repeatedly re-looking up initializers.</p>
+<h3 id="onnxincomingweightassignmentcontext">OnnxIncomingWeightAssignmentContext</h3><p>Context for assigning dense incoming weights for one gate-neuron row.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-import-fused-recurrent-utils-ts">architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts</h2><p>Reconstruct emitted fused LSTM/GRU layers from ONNX metadata and initializers.</p>
+<h3 id="applygateweights">applyGateWeights</h3><pre><code class="language-ts">applyGateWeights(
+  context: OnnxFusedGateApplicationContext,
+): void
+</code></pre>
+<p>Apply imported gate parameters to a reconstructed fused layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Gate application context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assigngaterow">assignGateRow</h3><pre><code class="language-ts">assignGateRow(
+  context: OnnxFusedGateRowAssignmentContext,
+): void
+</code></pre>
+<p>Assign one gate-neuron row parameters.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Gate-row assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignincomingweightatcolumn">assignIncomingWeightAtColumn</h3><pre><code class="language-ts">assignIncomingWeightAtColumn(
+  context: OnnxIncomingWeightAssignmentContext,
+  columnIndex: number,
+): void
+</code></pre>
+<p>Assign one incoming connection weight by source-column index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Incoming-weight assignment context.</li>
+<li><code>columnIndex</code> - Source column index.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignincomingweights">assignIncomingWeights</h3><pre><code class="language-ts">assignIncomingWeights(
+  context: OnnxIncomingWeightAssignmentContext,
+): void
+</code></pre>
+<p>Assign dense incoming weights for one gate neuron.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Incoming-weight assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignrecurrentdiagonalweight">assignRecurrentDiagonalWeight</h3><pre><code class="language-ts">assignRecurrentDiagonalWeight(
+  context: OnnxFusedGateRowAssignmentContext,
+): void
+</code></pre>
+<p>Assign one recurrent diagonal self-weight.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Gate-row assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignrecurrentincomingweightatcolumn">assignRecurrentIncomingWeightAtColumn</h3><pre><code class="language-ts">assignRecurrentIncomingWeightAtColumn(
+  context: OnnxFusedGateRowAssignmentContext,
+  columnIndex: number,
+): void
+</code></pre>
+<p>Assign one recurrent incoming weight from the native GRU previous-output
+carrier into the current gate neuron.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Gate-row assignment context.</li>
+<li><code>columnIndex</code> - Recurrent source column index.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assignrecurrentweights">assignRecurrentWeights</h3><pre><code class="language-ts">assignRecurrentWeights(
+  context: OnnxFusedGateRowAssignmentContext,
+): void
+</code></pre>
+<p>Assign recurrent weights for one fused gate row.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Gate-row assignment context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="buildcontiguousgategroups">buildContiguousGateGroups</h3><pre><code class="language-ts">buildContiguousGateGroups(
+  fusedNodes: default[],
+  gateOrder: string[],
+  unitSize: number,
+): Record&lt;string, default[]&gt;
+</code></pre>
+<p>Build contiguous gate groups from one fused node list.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>fusedNodes</code> - Fused node list.</li>
+<li><code>gateOrder</code> - Gate order.</li>
+<li><code>unitSize</code> - Units per gate.</li>
+</ul>
+<p>Returns: Gate-name to neuron-list map.</p>
+<h3 id="createfusedlayerruntime">createFusedLayerRuntime</h3><pre><code class="language-ts">createFusedLayerRuntime(
+  layerFactory: OnnxLayerFactory,
+  spec: OnnxFusedRecurrentSpec,
+  unitSize: number,
+): OnnxFusedLayerRuntime
+</code></pre>
+<p>Create one fused recurrent runtime layer instance.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerFactory</code> - Dynamic layer module.</li>
+<li><code>spec</code> - Fused family spec.</li>
+<li><code>unitSize</code> - Unit count.</li>
+</ul>
+<p>Returns: Runtime fused layer.</p>
+<h3 id="createfusedrecurrentspecs">createFusedRecurrentSpecs</h3><pre><code class="language-ts">createFusedRecurrentSpecs(): OnnxFusedRecurrentSpec[]
+</code></pre>
+<p>Build fused recurrent family specifications.</p>
+<p>Returns: Family specifications.</p>
+<h3 id="createhiddenlayerrange">createHiddenLayerRange</h3><pre><code class="language-ts">createHiddenLayerRange(
+  hiddenLayerSizes: number[],
+  hiddenLayerIndex: number,
+): { start: number; end: number; }
+</code></pre>
+<p>Create hidden-range boundaries for one hidden-layer index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenLayerSizes</code> - Hidden-layer widths.</li>
+<li><code>hiddenLayerIndex</code> - Hidden-layer index.</li>
+</ul>
+<p>Returns: Start and end boundaries.</p>
+<h3 id="createimmutablesplicedarray">createImmutableSplicedArray</h3><pre><code class="language-ts">createImmutableSplicedArray(
+  source: TItem[],
+  start: number,
+  deleteCount: number,
+  insertItems: TItem[],
+): TItem[]
+</code></pre>
+<p>Create an immutable spliced copy, with a compatibility fallback when ES2023
+<code>toSpliced</code> is typed as optional in ambient declarations.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>source</code> - Source array.</li>
+<li><code>start</code> - Start index.</li>
+<li><code>deleteCount</code> - Number of removed items.</li>
+<li><code>insertItems</code> - Items to insert.</li>
+</ul>
+<p>Returns: New array containing the splice result.</p>
+<h3 id="createpreviouslayersourcegroup">createPreviousLayerSourceGroup</h3><pre><code class="language-ts">createPreviousLayerSourceGroup(
+  previousLayerNodes: default[],
+): PreviousLayerSourceGroup
+</code></pre>
+<p>Create a source group compatible with both runtime Layer input wiring and
+the existing mock fused-layer tests.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>previousLayerNodes</code> - Previous-layer node slice.</li>
+</ul>
+<p>Returns: Group-like source wrapper.</p>
+<h3 id="derivelayerneighborhood">deriveLayerNeighborhood</h3><pre><code class="language-ts">deriveLayerNeighborhood(
+  network: default,
+  hiddenLayerSizes: number[],
+  hiddenLayerIndex: number,
+): OnnxFusedLayerNeighborhood
+</code></pre>
+<p>Derive hidden-layer neighborhood slices for replacement traversal.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>hiddenLayerSizes</code> - Hidden-layer widths.</li>
+<li><code>hiddenLayerIndex</code> - Hidden-layer index.</li>
+</ul>
+<p>Returns: Layer neighborhood.</p>
+<h3 id="derivenextlayernodes">deriveNextLayerNodes</h3><pre><code class="language-ts">deriveNextLayerNodes(
+  network: default,
+  hiddenLayerSizes: number[],
+  hiddenLayerIndex: number,
+  hiddenNodes: default[],
+): default[]
+</code></pre>
+<p>Derive next-layer nodes for a hidden layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>hiddenLayerSizes</code> - Hidden-layer widths.</li>
+<li><code>hiddenLayerIndex</code> - Hidden-layer index.</li>
+<li><code>hiddenNodes</code> - All hidden nodes.</li>
+</ul>
+<p>Returns: Next-layer nodes.</p>
+<h3 id="derivepreviouslayernodes">derivePreviousLayerNodes</h3><pre><code class="language-ts">derivePreviousLayerNodes(
+  network: default,
+  hiddenLayerSizes: number[],
+  hiddenLayerIndex: number,
+  hiddenNodes: default[],
+): default[]
+</code></pre>
+<p>Derive previous-layer nodes for a hidden layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>hiddenLayerSizes</code> - Hidden-layer widths.</li>
+<li><code>hiddenLayerIndex</code> - Hidden-layer index.</li>
+<li><code>hiddenNodes</code> - All hidden nodes.</li>
+</ul>
+<p>Returns: Previous-layer nodes.</p>
+<h3 id="deriveunitsize">deriveUnitSize</h3><pre><code class="language-ts">deriveUnitSize(
+  rows: number,
+  gateCount: number,
+): number | null
+</code></pre>
+<p>Derive hidden unit size from recurrent row count and gate count.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rows</code> - Recurrent rows.</li>
+<li><code>gateCount</code> - Gate count.</li>
+</ul>
+<p>Returns: Unit size when compatible.</p>
+<h3 id="detacholdlayerconnections">detachOldLayerConnections</h3><pre><code class="language-ts">detachOldLayerConnections(
+  network: default,
+  neighborhood: OnnxFusedLayerNeighborhood,
+): void
+</code></pre>
+<p>Detach all connections touching replaced hidden-layer nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>neighborhood</code> - Layer neighborhood.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="filternodesbytype">filterNodesByType</h3><pre><code class="language-ts">filterNodesByType(
+  network: default,
+  nodeType: string,
+): default[]
+</code></pre>
+<p>Filter network nodes by semantic type.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>nodeType</code> - Node type name.</li>
+</ul>
+<p>Returns: Filtered node collection.</p>
+<h3 id="findinitializertensor">findInitializerTensor</h3><pre><code class="language-ts">findInitializerTensor(
+  onnx: OnnxModel,
+  kind: OnnxFusedRecurrentKind,
+  suffix: string,
+  hiddenLayerIndex: number,
+): OnnxTensor | undefined
+</code></pre>
+<p>Find one initializer tensor by fused family naming convention.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>onnx</code> - Source ONNX model.</li>
+<li><code>kind</code> - Fused family kind.</li>
+<li><code>suffix</code> - Tensor suffix.</li>
+<li><code>hiddenLayerIndex</code> - Hidden-layer index.</li>
+</ul>
+<p>Returns: Initializer tensor when found.</p>
+<h3 id="isvalidhiddenlayerindex">isValidHiddenLayerIndex</h3><pre><code class="language-ts">isValidHiddenLayerIndex(
+  hiddenLayerSizes: number[],
+  hiddenLayerIndex: number,
+): boolean
+</code></pre>
+<p>Validate hidden-layer index boundaries.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenLayerSizes</code> - Hidden-layer widths.</li>
+<li><code>hiddenLayerIndex</code> - Hidden-layer index.</li>
+</ul>
+<p>Returns: True when index is valid.</p>
+<h3 id="parseemittedlayerindices">parseEmittedLayerIndices</h3><pre><code class="language-ts">parseEmittedLayerIndices(
+  metadata: OnnxMetadataProperty[],
+  spec: OnnxFusedRecurrentSpec,
+): number[]
+</code></pre>
+<p>Parse exported layer indices from metadata for one fused family.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadata</code> - ONNX metadata properties.</li>
+<li><code>spec</code> - Fused family spec.</li>
+</ul>
+<p>Returns: Export-layer indices.</p>
+<h3 id="parsemetadatajsonarray">parseMetadataJsonArray</h3><pre><code class="language-ts">parseMetadataJsonArray(
+  metadataValue: string,
+): number[]
+</code></pre>
+<p>Parse metadata JSON payload as an array of indices.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>metadataValue</code> - Serialized metadata payload.</li>
+</ul>
+<p>Returns: Parsed index array.</p>
+<h3 id="reconstructallfusedfamilies">reconstructAllFusedFamilies</h3><pre><code class="language-ts">reconstructAllFusedFamilies(
+  scope: FusedRecurrentImportScope,
+  specs: OnnxFusedRecurrentSpec[],
+): void
+</code></pre>
+<p>Reconstruct all fused recurrent families declared by metadata.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>scope</code> - Import scope.</li>
+<li><code>specs</code> - Fused family specs.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="reconstructfusedrecurrentlayers">reconstructFusedRecurrentLayers</h3><pre><code class="language-ts">reconstructFusedRecurrentLayers(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  layerFactory: OnnxLayerFactory,
+  metadata: OnnxMetadataProperty[],
+): void
+</code></pre>
+<p>Contract for reconstructFusedRecurrentLayers.</p>
+<h3 id="reconstructonefusedfamily">reconstructOneFusedFamily</h3><pre><code class="language-ts">reconstructOneFusedFamily(
+  scope: FusedRecurrentImportScope,
+  spec: OnnxFusedRecurrentSpec,
+): void
+</code></pre>
+<p>Reconstruct one fused family across all emitted layer indices.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>scope</code> - Import scope.</li>
+<li><code>spec</code> - Fused family spec.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="reconstructonefusedlayer">reconstructOneFusedLayer</h3><pre><code class="language-ts">reconstructOneFusedLayer(
+  scope: FusedRecurrentImportScope,
+  context: OnnxFusedLayerReconstructionContext,
+): void
+</code></pre>
+<p>Reconstruct one fused layer from metadata and ONNX initializers.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>scope</code> - Import scope.</li>
+<li><code>context</code> - Layer reconstruction context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="replacehiddennodes">replaceHiddenNodes</h3><pre><code class="language-ts">replaceHiddenNodes(
+  network: default,
+  neighborhood: OnnxFusedLayerNeighborhood,
+  replacementNodes: default[],
+): void
+</code></pre>
+<p>Replace hidden node segment with reconstructed fused layer nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>neighborhood</code> - Layer neighborhood.</li>
+<li><code>replacementNodes</code> - Replacement nodes.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolvefusedtensors">resolveFusedTensors</h3><pre><code class="language-ts">resolveFusedTensors(
+  onnx: OnnxModel,
+  context: OnnxFusedLayerReconstructionContext,
+): OnnxFusedTensorPayload | null
+</code></pre>
+<p>Resolve ONNX fused tensors for one hidden layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>onnx</code> - Source ONNX model.</li>
+<li><code>context</code> - Layer reconstruction context.</li>
+</ul>
+<p>Returns: Tensor payload when fully available.</p>
+<h3 id="resolvegategroups">resolveGateGroups</h3><pre><code class="language-ts">resolveGateGroups(
+  fusedNodes: default[],
+  spec: OnnxFusedRecurrentSpec,
+  unitSize: number,
+): { gateGroups: Record&lt;string, default[]&gt;; recurrentSourceNodes: default[]; }
+</code></pre>
+<p>Resolve gate groups and recurrent source nodes from one fused runtime layout.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>fusedNodes</code> - Fused node list.</li>
+<li><code>spec</code> - Fused family specification.</li>
+<li><code>unitSize</code> - Units per gate.</li>
+</ul>
+<p>Returns: Gate groups plus recurrent-source nodes.</p>
+<h3 id="resolvegrugategroups">resolveGruGateGroups</h3><pre><code class="language-ts">resolveGruGateGroups(
+  fusedNodes: default[],
+  unitSize: number,
+): { gateGroups: Record&lt;string, default[]&gt;; recurrentSourceNodes: default[]; }
+</code></pre>
+<p>Resolve GRU gate groups for either the native six-group layout or the
+compact three-gate mock layout used by owner-local tests.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>fusedNodes</code> - Fused node list.</li>
+<li><code>unitSize</code> - Units per gate.</li>
+</ul>
+<p>Returns: Gate-name to neuron-list map plus recurrent-source nodes.</p>
+<h3 id="sumhiddenlayersizes">sumHiddenLayerSizes</h3><pre><code class="language-ts">sumHiddenLayerSizes(
+  hiddenLayerSizes: number[],
+  startIndex: number,
+  endIndex: number,
+): number
+</code></pre>
+<p>Sum hidden-layer sizes over a half-open range.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenLayerSizes</code> - Hidden-layer widths.</li>
+<li><code>startIndex</code> - Inclusive start.</li>
+<li><code>endIndex</code> - Exclusive end.</li>
+</ul>
+<p>Returns: Summed size.</p>
+<h3 id="tohiddenlayerindex">toHiddenLayerIndex</h3><pre><code class="language-ts">toHiddenLayerIndex(
+  exportLayerIndex: number,
+): number
+</code></pre>
+<p>Convert export-layer index to hidden-layer index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>exportLayerIndex</code> - Export-layer index.</li>
+</ul>
+<p>Returns: Hidden-layer index.</p>
+<h3 id="wirefusedlayer">wireFusedLayer</h3><pre><code class="language-ts">wireFusedLayer(
+  fusedLayerRuntime: OnnxFusedLayerRuntime,
+  previousLayerNodes: default[],
+  nextLayerNodes: default[],
+): void
+</code></pre>
+<p>Wire fused layer between previous and next layer slices.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>fusedLayerRuntime</code> - Reconstructed fused layer runtime.</li>
+<li><code>previousLayerNodes</code> - Previous-layer nodes.</li>
+<li><code>nextLayerNodes</code> - Next-layer nodes.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-import-external-types-ts">architecture/network/onnx/import/network.onnx.import-external.types.ts</h2><h3 id="decodedexternalonnxattribute">DecodedExternalOnnxAttribute</h3><p>Decoded ONNX attribute payload preserving scalar, integer, and byte-string forms emitted by the protobuf decoder.
+Attribute decoding uses this shape before operation-specific coercion into importer contracts.</p>
+<h3 id="decodedexternalonnxdimension">DecodedExternalOnnxDimension</h3><p>Decoded ONNX dimension payload used by external import parsing to preserve symbolic and numeric shape information from protobuf conversion.
+Import normalization relies on this shape to reconstruct rank and axis semantics before tensor compatibility checks run.</p>
+<h3 id="decodedexternalonnxgraph">DecodedExternalOnnxGraph</h3><p>Decoded ONNX graph payload containing decoded graph interfaces, initializer tables, and ordered node records for external import orchestration.
+Graph traversal, initializer indexing, and topology validation all begin from this representation.</p>
+<h3 id="decodedexternalonnxmodel">DecodedExternalOnnxModel</h3><p>Decoded ONNX model payload containing optional graph content and operator-set imports used to validate supported external import lanes.
+External import entrypoints decode into this shape before compatibility and topology checks proceed.</p>
+<h3 id="decodedexternalonnxnode">DecodedExternalOnnxNode</h3><p>Decoded ONNX node payload describing operator identity, wiring, and decoded attribute list for importer normalization passes.
+Node-level validation and operator support checks consume this schema directly.</p>
+<h3 id="decodedexternalonnxopsetimport">DecodedExternalOnnxOpsetImport</h3><p>Decoded ONNX operator-set import payload carrying the domain string and version number used by external import compatibility checks.</p>
+<h3 id="decodedexternalonnxtensor">DecodedExternalOnnxTensor</h3><p>Decoded ONNX tensor payload containing name, data type, shape dimensions, and raw or float initializer storage fields.
+Initializer extraction and shape-matching code paths depend on this decoded tensor contract.</p>
+<h3 id="decodedexternalonnxtensortype">DecodedExternalOnnxTensorType</h3><p>Decoded ONNX tensor-type payload describing element type and optional shape dimensions after external binary decode.
+This type bridges raw protobuf decode output and importer-owned tensor validation routines.</p>
+<h3 id="decodedexternalonnxvalueinfo">DecodedExternalOnnxValueInfo</h3><p>Decoded ONNX value-info payload carrying named tensor metadata for graph inputs, outputs, and intermediate value descriptors.
+It allows importer passes to align tensor names, element types, and shapes across graph boundaries.</p>
+<h3 id="onnxdecodedbytes">OnnxDecodedBytes</h3><p>Union type for raw byte fields emitted by <code>onnx-proto</code> object conversion; accepts string, Uint8Array, or number-array representations.</p>
+<h3 id="onnxdecodedlonglike">OnnxDecodedLongLike</h3><p>Union type for ONNX 64-bit integer fields decoded by <code>onnx-proto</code>; includes numeric, string, and toString-capable object forms to handle platform-specific long encoding.</p>
+<h3 id="onnxexternaldensechain">OnnxExternalDenseChain</h3><p>Canonical importer-owned dense chain derived from an accepted external binary graph, collecting opset version, IO widths, and an ordered layer list.</p>
+<h3 id="onnxexternaldenselayer">OnnxExternalDenseLayer</h3><p>Canonical single-layer payload for the external dense import lane, carrying input and output widths, weight values, biases, and the resolved activation operator.</p>
+<h3 id="onnxexternalimporterror">OnnxExternalImportError</h3><p>Error raised when an external ONNX binary falls outside the first supported import lane.</p>
+<h3 id="onnxexternalimporterrorcategory">OnnxExternalImportErrorCategory</h3><p>Named rejection category set for the external import lane; each string label identifies a distinct failure class so callers can route errors without string matching.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-import-concat-utils-ts">architecture/network/onnx/import/network.onnx.import-concat.utils.ts</h2><h3 id="attachonnxconcatmergemetadata">attachOnnxConcatMergeMetadata</h3><pre><code class="language-ts">attachOnnxConcatMergeMetadata(
+  network: default,
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel | undefined,
+): void
+</code></pre>
+<p>Attach validated concat-merge audit metadata to an imported network instance.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>metadata</code> - ONNX metadata payload.</li>
+<li><code>onnx</code> - Source ONNX model used for same-family validation.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="buildimportedlayers">buildImportedLayers</h3><pre><code class="language-ts">buildImportedLayers(
+  network: default,
+  hiddenLayerSizes: number[],
+): default[][]
+</code></pre>
+<p>Build the imported layer ordering from runtime nodes and hidden-layer widths.</p>
+<h3 id="collectnodesbytype">collectNodesByType</h3><pre><code class="language-ts">collectNodesByType(
+  nodes: default[],
+  nodeType: &quot;hidden&quot; | &quot;input&quot; | &quot;output&quot;,
+): default[]
+</code></pre>
+<p>Collect nodes matching one runtime node-type discriminator.</p>
+<h3 id="findinitializer">findInitializer</h3><pre><code class="language-ts">findInitializer(
+  onnx: OnnxModel,
+  tensorName: string,
+): OnnxTensor | undefined
+</code></pre>
+<p>Resolve one initializer by tensor name.</p>
+<h3 id="findmetadataproperty">findMetadataProperty</h3><pre><code class="language-ts">findMetadataProperty(
+  metadata: OnnxMetadataProperty[],
+  metadataKey: string,
+): OnnxMetadataProperty | undefined
+</code></pre>
+<p>Find one ONNX metadata property by key.</p>
+<h3 id="findnodebyname">findNodeByName</h3><pre><code class="language-ts">findNodeByName(
+  onnx: OnnxModel,
+  nodeName: string,
+): OnnxNode | undefined
+</code></pre>
+<p>Resolve one node by its deterministic export name.</p>
+<h3 id="isconcatmerge">isConcatMerge</h3><pre><code class="language-ts">isConcatMerge(
+  value: unknown,
+): boolean
+</code></pre>
+<p>Validate one parsed concat-merge record.</p>
+<h3 id="matchesexportedconcatmergesubset">matchesExportedConcatMergeSubset</h3><pre><code class="language-ts">matchesExportedConcatMergeSubset(
+  onnx: OnnxModel,
+  concatMerge: OnnxImportConcatMerge,
+): boolean
+</code></pre>
+<p>Validate the same-family explicit concat subset emitted by this exporter.</p>
+<h3 id="parseconcatmergemetadata">parseConcatMergeMetadata</h3><pre><code class="language-ts">parseConcatMergeMetadata(
+  metadata: OnnxMetadataProperty[],
+  onnx: OnnxModel,
+): OnnxImportConcatMerge[] | null
+</code></pre>
+<p>Parse valid explicit concat-merge metadata.</p>
+<h3 id="resolveconcatmergeweight">resolveConcatMergeWeight</h3><pre><code class="language-ts">resolveConcatMergeWeight(
+  mergedWeights: number[],
+  mergedSourceWidth: number,
+  previousLayerWidth: number,
+  targetLayerIndex: number,
+  sourceLayerIndex: number,
+): number
+</code></pre>
+<p>Resolve one concat branch weight from the widened row-major target-by-merged-source matrix.</p>
+<h3 id="restoreconcatmergeconnections">restoreConcatMergeConnections</h3><pre><code class="language-ts">restoreConcatMergeConnections(
+  network: default,
+  onnx: OnnxModel,
+  hiddenLayerSizes: number[],
+  metadata: OnnxMetadataProperty[],
+): void
+</code></pre>
+<p>Restore supported concat-merge skip connections from ONNX metadata.</p>
+<p>The import side stays narrow and deterministic: it only rebuilds skipped
+source-layer fan-in for the explicit concat subset emitted by the exporter,
+using the widened dense weight tensor tail while the ordinary adjacent-layer
+slice remains assigned by the baseline dense import path.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>onnx</code> - Source ONNX model.</li>
+<li><code>hiddenLayerSizes</code> - Hidden layer sizes from architecture extraction.</li>
+<li><code>metadata</code> - ONNX metadata payload.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="restoresingleconcatmergeconnections">restoreSingleConcatMergeConnections</h3><pre><code class="language-ts">restoreSingleConcatMergeConnections(
+  onnx: OnnxModel,
+  importedLayers: default[][],
+  concatMerge: OnnxImportConcatMerge,
+): void
+</code></pre>
+<p>Restore one concat-merge branch using the widened dense weight tensor tail.</p>
+<h3 id="upsertfeedforwardconnection">upsertFeedForwardConnection</h3><pre><code class="language-ts">upsertFeedForwardConnection(
+  sourceNode: default,
+  targetNode: default,
+  weight: number,
+): void
+</code></pre>
+<p>Upsert one feed-forward connection between two runtime nodes.</p>
+<h2 id="architecture-network-onnx-import-network-onnx-import-external-utils-ts">architecture/network/onnx/import/network.onnx.import-external.utils.ts</h2><h3 id="normalizeexternalbinaryonnxmodel">normalizeExternalBinaryOnnxModel</h3><pre><code class="language-ts">normalizeExternalBinaryOnnxModel(
+  binaryModel: Uint8Array&lt;ArrayBufferLike&gt;,
+): OnnxModel
+</code></pre>
+<p>Normalize the first supported external binary ONNX subset into an importer-owned model.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>binaryModel</code> - Binary <code>ModelProto</code> payload.</li>
+</ul>
+<p>Returns: Canonical JSON-first model that the existing import flow can reconstruct.</p>
+<h3 id="normalizeexternaldensechain">normalizeExternalDenseChain</h3><pre><code class="language-ts">normalizeExternalDenseChain(
+  binaryModel: Uint8Array&lt;ArrayBufferLike&gt;,
+): OnnxExternalDenseChain
+</code></pre>
+<p>Normalize the first supported external binary ONNX subset into a canonical dense chain.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>binaryModel</code> - Binary <code>ModelProto</code> payload.</li>
+</ul>
+<p>Returns: Canonical dense-chain payload for importer reconstruction.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-flow-utils-ts">architecture/network/onnx/import/network.onnx.import-flow.utils.ts</a><ul><li><a href="#runexternalonnximportflow">runExternalOnnxImportFlow</a></li><li><a href="#runonnximportflow">runOnnxImportFlow</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-runtime-load-types-ts">architecture/network/onnx/import/network.onnx.runtime-load.types.ts</a><ul><li><a href="#onnxperceptronbuildcontext">OnnxPerceptronBuildContext</a></li><li><a href="#onnxperceptronsizevalidationcontext">OnnxPerceptronSizeValidationContext</a></li><li><a href="#onnxruntimefactories">OnnxRuntimeFactories</a></li><li><a href="#onnxruntimelayerfactory">OnnxRuntimeLayerFactory</a></li><li><a href="#onnxruntimelayermodule">OnnxRuntimeLayerModule</a></li><li><a href="#onnxruntimeperceptronfactory">OnnxRuntimePerceptronFactory</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-runtime-load-utils-ts">architecture/network/onnx/import/network.onnx.runtime-load.utils.ts</a><ul><li><a href="#buildperceptronnetwork">buildPerceptronNetwork</a></li><li><a href="#createperceptronbuildcontext">createPerceptronBuildContext</a></li><li><a href="#createperceptronfactory">createPerceptronFactory</a></li><li><a href="#createperceptronsizevalidationcontext">createPerceptronSizeValidationContext</a></li><li><a href="#createruntimelayermodule">createRuntimeLayerModule</a></li><li><a href="#foldruntimefactories">foldRuntimeFactories</a></li><li><a href="#foldruntimelayermodule">foldRuntimeLayerModule</a></li><li><a href="#loadruntimefactories">loadRuntimeFactories</a></li><li><a href="#resolvelayerfactory">resolveLayerFactory</a></li><li><a href="#validateperceptronsizes">validatePerceptronSizes</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-weights-types-ts">architecture/network/onnx/import/network.onnx.import-weights.types.ts</a><ul><li><a href="#onnximportaggregatedlayerassignmentcontext">OnnxImportAggregatedLayerAssignmentContext</a></li><li><a href="#onnximportaggregatedneuronassignmentcontext">OnnxImportAggregatedNeuronAssignmentContext</a></li><li><a href="#onnximportconvcoordinateassignmentcontext">OnnxImportConvCoordinateAssignmentContext</a></li><li><a href="#onnximportconvkernelassignmentcontext">OnnxImportConvKernelAssignmentContext</a></li><li><a href="#onnximportconvlayercontext">OnnxImportConvLayerContext</a></li><li><a href="#onnximportconvlayercontextbuildparams">OnnxImportConvLayerContextBuildParams</a></li><li><a href="#onnximportconvmetadata">OnnxImportConvMetadata</a></li><li><a href="#onnximportconvnodeslices">OnnxImportConvNodeSlices</a></li><li><a href="#onnximportconvoutputcoordinate">OnnxImportConvOutputCoordinate</a></li><li><a href="#onnximportconvsourcelayout">OnnxImportConvSourceLayout</a></li><li><a href="#onnximportconvtensorcontext">OnnxImportConvTensorContext</a></li><li><a href="#onnximporthiddensizederivationcontext">OnnxImportHiddenSizeDerivationContext</a></li><li><a href="#onnximportinboundconnectionmap">OnnxImportInboundConnectionMap</a></li><li><a href="#onnximportlayernodepair">OnnxImportLayerNodePair</a></li><li><a href="#onnximportlayernodepairbuildparams">OnnxImportLayerNodePairBuildParams</a></li><li><a href="#onnximportlayertensornames">OnnxImportLayerTensorNames</a></li><li><a href="#onnximportlayerweightbucket">OnnxImportLayerWeightBucket</a></li><li><a href="#onnximportperneuronassignmentcontext">OnnxImportPerNeuronAssignmentContext</a></li><li><a href="#onnximportperneuronlayerassignmentcontext">OnnxImportPerNeuronLayerAssignmentContext</a></li><li><a href="#onnximportweightassignmentbuildparams">OnnxImportWeightAssignmentBuildParams</a></li><li><a href="#onnximportweightassignmentcontext">OnnxImportWeightAssignmentContext</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-weights-utils-ts">architecture/network/onnx/import/network.onnx.import-weights.utils.ts</a><ul><li><a href="#applyaggregatedlayerweights">applyAggregatedLayerWeights</a></li><li><a href="#applyaggregatedneuronassignment">applyAggregatedNeuronAssignment</a></li><li><a href="#applyconvcoordinateassignment">applyConvCoordinateAssignment</a></li><li><a href="#applyconvlayerreconstruction">applyConvLayerReconstruction</a></li><li><a href="#applydenseweightassignments">applyDenseWeightAssignments</a></li><li><a href="#applyoptionalconvreconstruction">applyOptionalConvReconstruction</a></li><li><a href="#applyperneuronassignment">applyPerNeuronAssignment</a></li><li><a href="#applyperneuronlayerweights">applyPerNeuronLayerWeights</a></li><li><a href="#assignconvkernelweight">assignConvKernelWeight</a></li><li><a href="#assignlayerweights">assignLayerWeights</a></li><li><a href="#assignweightsandbiases">assignWeightsAndBiases</a></li><li><a href="#buildconvlayercontext">buildConvLayerContext</a></li><li><a href="#buildconvneuronlinearindex">buildConvNeuronLinearIndex</a></li><li><a href="#buildconvnodeslices">buildConvNodeSlices</a></li><li><a href="#buildconvtensorcontext">buildConvTensorContext</a></li><li><a href="#buildhiddenlayersizesfrombuckets">buildHiddenLayerSizesFromBuckets</a></li><li><a href="#buildinboundconnectionmap">buildInboundConnectionMap</a></li><li><a href="#buildinitializermap">buildInitializerMap</a></li><li><a href="#buildinputcoordinate">buildInputCoordinate</a></li><li><a href="#buildinputfeaturelinearindex">buildInputFeatureLinearIndex</a></li><li><a href="#buildlayernodepair">buildLayerNodePair</a></li><li><a href="#buildlayertensornames">buildLayerTensorNames</a></li><li><a href="#buildperneurontensornames">buildPerNeuronTensorNames</a></li><li><a href="#buildweightassignmentcontext">buildWeightAssignmentContext</a></li><li><a href="#collectconvkernelcoordinates">collectConvKernelCoordinates</a></li><li><a href="#collectconvoutputcoordinates">collectConvOutputCoordinates</a></li><li><a href="#collectlayerweightbuckets">collectLayerWeightBuckets</a></li><li><a href="#collectnodesbytype">collectNodesByType</a></li><li><a href="#collectsortedlayerindices">collectSortedLayerIndices</a></li><li><a href="#collectsorteduniquelayerindices">collectSortedUniqueLayerIndices</a></li><li><a href="#derivehiddenlayersizes">deriveHiddenLayerSizes</a></li><li><a href="#hasaggregatedlayerweights">hasAggregatedLayerWeights</a></li><li><a href="#hydratesharedinitializeraliases">hydrateSharedInitializerAliases</a></li><li><a href="#parseconvmetadata">parseConvMetadata</a></li><li><a href="#parselayerindexfromweighttensor">parseLayerIndexFromWeightTensor</a></li><li><a href="#parsemetadatalayersizes">parseMetadataLayerSizes</a></li><li><a href="#parsesharedinitializeraliases">parseSharedInitializerAliases</a></li><li><a href="#parseweighttensorname">parseWeightTensorName</a></li><li><a href="#readconvkernelweight">readConvKernelWeight</a></li><li><a href="#resetinboundconnectionweights">resetInboundConnectionWeights</a></li><li><a href="#resolvecurrentlayernodes">resolveCurrentLayerNodes</a></li><li><a href="#resolvelayerhiddensize">resolveLayerHiddenSize</a></li><li><a href="#resolvepreviouslayernodes">resolvePreviousLayerNodes</a></li><li><a href="#sumhiddensizestoindex">sumHiddenSizesToIndex</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-activations-utils-ts">architecture/network/onnx/import/network.onnx.import-activations.utils.ts</a><ul><li><a href="#appendoperationtolayer">appendOperationToLayer</a></li><li><a href="#applyhiddenlayeractivations">applyHiddenLayerActivations</a></li><li><a href="#applyhiddenlayertraversalactivation">applyHiddenLayerTraversalActivation</a></li><li><a href="#applyhiddenlayertraversalcontexts">applyHiddenLayerTraversalContexts</a></li><li><a href="#applyhiddenneuronactivation">applyHiddenNeuronActivation</a></li><li><a href="#applyoutputlayeractivation">applyOutputLayerActivation</a></li><li><a href="#asnodeinternals">asNodeInternals</a></li><li><a href="#assignactivationfunctions">assignActivationFunctions</a></li><li><a href="#assupportedactivationoperation">asSupportedActivationOperation</a></li><li><a href="#buildactivationassignmentcontext">buildActivationAssignmentContext</a></li><li><a href="#buildhiddenlayertraversalcontexts">buildHiddenLayerTraversalContexts</a></li><li><a href="#buildhiddenneuronindices">buildHiddenNeuronIndices</a></li><li><a href="#collectnodeinternalsbytype">collectNodeInternalsByType</a></li><li><a href="#collectoperationsbylayer">collectOperationsByLayer</a></li><li><a href="#parseactivationnode">parseActivationNode</a></li><li><a href="#resolveactivationfunction">resolveActivationFunction</a></li><li><a href="#resolvehiddennode">resolveHiddenNode</a></li><li><a href="#resolvelayeroperations">resolveLayerOperations</a></li><li><a href="#resolveoperationbypriority">resolveOperationByPriority</a></li><li><a href="#resolveoutputoperations">resolveOutputOperations</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-orchestrators-types-ts">architecture/network/onnx/import/network.onnx.import-orchestrators.types.ts</a><ul><li><a href="#networkwithonnximportadvancedgraph">NetworkWithOnnxImportAdvancedGraph</a></li><li><a href="#networkwithonnximportpooling">NetworkWithOnnxImportPooling</a></li><li><a href="#onnximportadvancedgraphcrosslayerconnection">OnnxImportAdvancedGraphCrossLayerConnection</a></li><li><a href="#onnximportadvancedgraphmetadata">OnnxImportAdvancedGraphMetadata</a></li><li><a href="#onnximportarchitecturecontext">OnnxImportArchitectureContext</a></li><li><a href="#onnximportarchitectureresult">OnnxImportArchitectureResult</a></li><li><a href="#onnximportattentionblock">OnnxImportAttentionBlock</a></li><li><a href="#onnximportconcatmerge">OnnxImportConcatMerge</a></li><li><a href="#onnximportdimensionrecord">OnnxImportDimensionRecord</a></li><li><a href="#onnximportflattenconsistencyaudit">OnnxImportFlattenConsistencyAudit</a></li><li><a href="#onnximporthiddenlayerspan">OnnxImportHiddenLayerSpan</a></li><li><a href="#onnximportlayerconnectioncontext">OnnxImportLayerConnectionContext</a></li><li><a href="#onnximportpoolingmetadata">OnnxImportPoolingMetadata</a></li><li><a href="#onnximportpoolingvirtualshape">OnnxImportPoolingVirtualShape</a></li><li><a href="#onnximportrecurrentrestorationcontext">OnnxImportRecurrentRestorationContext</a></li><li><a href="#onnximportresidualadd">OnnxImportResidualAdd</a></li><li><a href="#onnximportselfconnectionupsertcontext">OnnxImportSelfConnectionUpsertContext</a></li><li><a href="#onnximportsharedinitializeralias">OnnxImportSharedInitializerAlias</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-orchestrators-utils-ts">architecture/network/onnx/import/network.onnx.import-orchestrators.utils.ts</a><ul><li><a href="#applylayerselfconnections">applyLayerSelfConnections</a></li><li><a href="#attachonnxadvancedgraphmetadata">attachOnnxAdvancedGraphMetadata</a></li><li><a href="#attachonnxpoolingmetadata">attachOnnxPoolingMetadata</a></li><li><a href="#attachparsedpoolingmetadata">attachParsedPoolingMetadata</a></li><li><a href="#buildarchitecturecontext">buildArchitectureContext</a></li><li><a href="#buildhiddenlayerspans">buildHiddenLayerSpans</a></li><li><a href="#buildimportedlayers">buildImportedLayers</a></li><li><a href="#buildvirtualpoolingshape">buildVirtualPoolingShape</a></li><li><a href="#calculatespatialoutputsize">calculateSpatialOutputSize</a></li><li><a href="#collectavailableconvspecs">collectAvailableConvSpecs</a></li><li><a href="#collectdiagonalrecurrentweights">collectDiagonalRecurrentWeights</a></li><li><a href="#collectflattenconsistencyaudit">collectFlattenConsistencyAudit</a></li><li><a href="#collectfusedrecurrentgateweights">collectFusedRecurrentGateWeights</a></li><li><a href="#collectnodesbytype">collectNodesByType</a></li><li><a href="#collectperceptronboundarynodes">collectPerceptronBoundaryNodes</a></li><li><a href="#collectrecurrentlayerspans">collectRecurrentLayerSpans</a></li><li><a href="#collectvirtualpoolingshapes">collectVirtualPoolingShapes</a></li><li><a href="#extractonnxarchitecture">extractOnnxArchitecture</a></li><li><a href="#findfusedrecurrentinitializer">findFusedRecurrentInitializer</a></li><li><a href="#findmetadataproperty">findMetadataProperty</a></li><li><a href="#findrecurrentinitializer">findRecurrentInitializer</a></li><li><a href="#inferrecurrentlayerindicesfrominitializers">inferRecurrentLayerIndicesFromInitializers</a></li><li><a href="#isadvancedgraphcrosslayerconnection">isAdvancedGraphCrossLayerConnection</a></li><li><a href="#isattentionblock">isAttentionBlock</a></li><li><a href="#isresidualadd">isResidualAdd</a></li><li><a href="#issharedinitializeralias">isSharedInitializerAlias</a></li><li><a href="#issinglelayerperceptronimport">isSingleLayerPerceptronImport</a></li><li><a href="#normalizerecurrentlayerindices">normalizeRecurrentLayerIndices</a></li><li><a href="#parseadvancedgraphcrosslayerconnections">parseAdvancedGraphCrossLayerConnections</a></li><li><a href="#parseadvancedgraphmetadata">parseAdvancedGraphMetadata</a></li><li><a href="#parseattentionblockmetadata">parseAttentionBlockMetadata</a></li><li><a href="#parseoptionalconvspecs">parseOptionalConvSpecs</a></li><li><a href="#parseoptionallayerindicesmetadata">parseOptionalLayerIndicesMetadata</a></li><li><a href="#parsepoolingmetadata">parsePoolingMetadata</a></li><li><a href="#parserecurrentlayerindices">parseRecurrentLayerIndices</a></li><li><a href="#parseresidualaddmetadata">parseResidualAddMetadata</a></li><li><a href="#parsesharedinitializeraliases">parseSharedInitializerAliases</a></li><li><a href="#prunesinglelayerhiddenplaceholders">pruneSingleLayerHiddenPlaceholders</a></li><li><a href="#readlastdimensionvalue">readLastDimensionValue</a></li><li><a href="#reconstructfusedrecurrentlayers">reconstructFusedRecurrentLayers</a></li><li><a href="#resolveconsumerlayerwidth">resolveConsumerLayerWidth</a></li><li><a href="#resolverecurrentlayerindices">resolveRecurrentLayerIndices</a></li><li><a href="#resolveresidualweight">resolveResidualWeight</a></li><li><a href="#restorerecurrentselfconnections">restoreRecurrentSelfConnections</a></li><li><a href="#restoreresidualaddconnections">restoreResidualAddConnections</a></li><li><a href="#restoresingleresidualaddconnections">restoreSingleResidualAddConnections</a></li><li><a href="#slicelayerhiddennodes">sliceLayerHiddenNodes</a></li><li><a href="#upsertfeedforwardconnection">upsertFeedForwardConnection</a></li><li><a href="#upsertselfconnection">upsertSelfConnection</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-fused-recurrent-types-ts">architecture/network/onnx/import/network.onnx.import-fused-recurrent.types.ts</a><ul><li><a href="#onnxfusedgateapplicationcontext">OnnxFusedGateApplicationContext</a></li><li><a href="#onnxfusedgaterowassignmentcontext">OnnxFusedGateRowAssignmentContext</a></li><li><a href="#onnxfusedlayerneighborhood">OnnxFusedLayerNeighborhood</a></li><li><a href="#onnxfusedlayerreconstructioncontext">OnnxFusedLayerReconstructionContext</a></li><li><a href="#onnxfusedlayerruntime">OnnxFusedLayerRuntime</a></li><li><a href="#onnxfusedrecurrentkind">OnnxFusedRecurrentKind</a></li><li><a href="#onnxfusedrecurrentspec">OnnxFusedRecurrentSpec</a></li><li><a href="#onnxfusedtensorpayload">OnnxFusedTensorPayload</a></li><li><a href="#onnxincomingweightassignmentcontext">OnnxIncomingWeightAssignmentContext</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-fused-recurrent-utils-ts">architecture/network/onnx/import/network.onnx.import-fused-recurrent.utils.ts</a><ul><li><a href="#applygateweights">applyGateWeights</a></li><li><a href="#assigngaterow">assignGateRow</a></li><li><a href="#assignincomingweightatcolumn">assignIncomingWeightAtColumn</a></li><li><a href="#assignincomingweights">assignIncomingWeights</a></li><li><a href="#assignrecurrentdiagonalweight">assignRecurrentDiagonalWeight</a></li><li><a href="#assignrecurrentincomingweightatcolumn">assignRecurrentIncomingWeightAtColumn</a></li><li><a href="#assignrecurrentweights">assignRecurrentWeights</a></li><li><a href="#buildcontiguousgategroups">buildContiguousGateGroups</a></li><li><a href="#createfusedlayerruntime">createFusedLayerRuntime</a></li><li><a href="#createfusedrecurrentspecs">createFusedRecurrentSpecs</a></li><li><a href="#createhiddenlayerrange">createHiddenLayerRange</a></li><li><a href="#createimmutablesplicedarray">createImmutableSplicedArray</a></li><li><a href="#createpreviouslayersourcegroup">createPreviousLayerSourceGroup</a></li><li><a href="#derivelayerneighborhood">deriveLayerNeighborhood</a></li><li><a href="#derivenextlayernodes">deriveNextLayerNodes</a></li><li><a href="#derivepreviouslayernodes">derivePreviousLayerNodes</a></li><li><a href="#deriveunitsize">deriveUnitSize</a></li><li><a href="#detacholdlayerconnections">detachOldLayerConnections</a></li><li><a href="#filternodesbytype">filterNodesByType</a></li><li><a href="#findinitializertensor">findInitializerTensor</a></li><li><a href="#isvalidhiddenlayerindex">isValidHiddenLayerIndex</a></li><li><a href="#parseemittedlayerindices">parseEmittedLayerIndices</a></li><li><a href="#parsemetadatajsonarray">parseMetadataJsonArray</a></li><li><a href="#reconstructallfusedfamilies">reconstructAllFusedFamilies</a></li><li><a href="#reconstructfusedrecurrentlayers">reconstructFusedRecurrentLayers</a></li><li><a href="#reconstructonefusedfamily">reconstructOneFusedFamily</a></li><li><a href="#reconstructonefusedlayer">reconstructOneFusedLayer</a></li><li><a href="#replacehiddennodes">replaceHiddenNodes</a></li><li><a href="#resolvefusedtensors">resolveFusedTensors</a></li><li><a href="#resolvegategroups">resolveGateGroups</a></li><li><a href="#resolvegrugategroups">resolveGruGateGroups</a></li><li><a href="#sumhiddenlayersizes">sumHiddenLayerSizes</a></li><li><a href="#tohiddenlayerindex">toHiddenLayerIndex</a></li><li><a href="#wirefusedlayer">wireFusedLayer</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-external-types-ts">architecture/network/onnx/import/network.onnx.import-external.types.ts</a><ul><li><a href="#decodedexternalonnxattribute">DecodedExternalOnnxAttribute</a></li><li><a href="#decodedexternalonnxdimension">DecodedExternalOnnxDimension</a></li><li><a href="#decodedexternalonnxgraph">DecodedExternalOnnxGraph</a></li><li><a href="#decodedexternalonnxmodel">DecodedExternalOnnxModel</a></li><li><a href="#decodedexternalonnxnode">DecodedExternalOnnxNode</a></li><li><a href="#decodedexternalonnxopsetimport">DecodedExternalOnnxOpsetImport</a></li><li><a href="#decodedexternalonnxtensor">DecodedExternalOnnxTensor</a></li><li><a href="#decodedexternalonnxtensortype">DecodedExternalOnnxTensorType</a></li><li><a href="#decodedexternalonnxvalueinfo">DecodedExternalOnnxValueInfo</a></li><li><a href="#onnxdecodedbytes">OnnxDecodedBytes</a></li><li><a href="#onnxdecodedlonglike">OnnxDecodedLongLike</a></li><li><a href="#onnxexternaldensechain">OnnxExternalDenseChain</a></li><li><a href="#onnxexternaldenselayer">OnnxExternalDenseLayer</a></li><li><a href="#onnxexternalimporterror">OnnxExternalImportError</a></li><li><a href="#onnxexternalimporterrorcategory">OnnxExternalImportErrorCategory</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-concat-utils-ts">architecture/network/onnx/import/network.onnx.import-concat.utils.ts</a><ul><li><a href="#attachonnxconcatmergemetadata">attachOnnxConcatMergeMetadata</a></li><li><a href="#buildimportedlayers">buildImportedLayers</a></li><li><a href="#collectnodesbytype">collectNodesByType</a></li><li><a href="#findinitializer">findInitializer</a></li><li><a href="#findmetadataproperty">findMetadataProperty</a></li><li><a href="#findnodebyname">findNodeByName</a></li><li><a href="#isconcatmerge">isConcatMerge</a></li><li><a href="#matchesexportedconcatmergesubset">matchesExportedConcatMergeSubset</a></li><li><a href="#parseconcatmergemetadata">parseConcatMergeMetadata</a></li><li><a href="#resolveconcatmergeweight">resolveConcatMergeWeight</a></li><li><a href="#restoreconcatmergeconnections">restoreConcatMergeConnections</a></li><li><a href="#restoresingleconcatmergeconnections">restoreSingleConcatMergeConnections</a></li><li><a href="#upsertfeedforwardconnection">upsertFeedForwardConnection</a></li></ul></div><div class="toc-file"><a href="#architecture-network-onnx-import-network-onnx-import-external-utils-ts">architecture/network/onnx/import/network.onnx.import-external.utils.ts</a><ul><li><a href="#normalizeexternalbinaryonnxmodel">normalizeExternalBinaryOnnxModel</a></li><li><a href="#normalizeexternaldensechain">normalizeExternalDenseChain</a></li></ul></div></div></aside></div><script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script></body></html>

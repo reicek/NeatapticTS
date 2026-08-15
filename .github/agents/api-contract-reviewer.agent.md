@@ -99,9 +99,6 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
-VERDICT: APPROVE | REQUEST_CHANGES
-OBSERVATIONS:
-- severity: <high|medium|low>, confidence: <0-1>, detail: <concise finding>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

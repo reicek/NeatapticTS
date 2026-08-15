@@ -82,6 +82,7 @@ export interface EvaluateInWorkersOptions<
  * @typeParam TResult - Result type produced for each input task.
  * @param options - Ordered inputs plus worker and fallback execution hooks.
  * @returns Ordered batch results with elapsed time and stable task ids.
+ * @throws {Error} When neither worker execution nor a local fallback evaluator is available.
  *
  * @example
  * ```ts

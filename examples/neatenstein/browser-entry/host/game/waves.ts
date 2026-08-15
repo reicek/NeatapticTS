@@ -10,6 +10,8 @@
  */
 
 import {
+  MAP_EDGE_OFFSET,
+  MAP_HALF_SIZE,
   NEATENSTEIN_ENEMY_MAX_CONCURRENT,
   NEATENSTEIN_ENEMY_MAX_HEALTH,
   NEATENSTEIN_MAP_SIZE,
@@ -19,14 +21,10 @@ import {
 import type { CollisionMap } from '../../renderer/map';
 import { createGameRng } from './state';
 import type { EnemyState, GameState } from './types';
+import type { SpawnWaveTickResult } from '../types';
 
-/** Result of a single spawn tick. */
-export interface SpawnWaveTickResult {
-  /** Number of enemies added this tick (always 0 or 1). */
-  spawnedThisTick: number;
-  /** New state snapshot with any spawned enemy included. */
-  state: GameState;
-}
+// Re-export consolidated types so existing imports from this module remain valid.
+export type { SpawnWaveTickResult } from '../types';
 
 /**
  * Edge directions used for deterministic enemy wave placement.
@@ -51,7 +49,7 @@ function resolveEdgeSpawn(
   collisionMap?: CollisionMap,
 ): { x: number; y: number } {
   const edge = SPAWN_EDGE_ORDER[directionIndex % SPAWN_EDGE_ORDER.length];
-  const edgeOffset = 0.5;
+  const edgeOffset = MAP_EDGE_OFFSET;
   const centerX = NEATENSTEIN_SPAWN_CENTER_X;
   const centerY = NEATENSTEIN_SPAWN_CENTER_Y;
   const max = NEATENSTEIN_MAP_SIZE - edgeOffset;
@@ -103,7 +101,7 @@ function resolveEdgeSpawn(
   // whole edge is solid, fall back to the guaranteed-open spawn center.
   // The cell under test must match the position that will be returned, so we
   // check the current (x, y) before incrementing — not a step-offset copy.
-  const limit = Math.floor(NEATENSTEIN_MAP_SIZE / 2);
+  const limit = MAP_HALF_SIZE;
   for (let step = 0; step <= limit; step += 1) {
     const cx = Math.floor(x);
     const cy = Math.floor(y);
@@ -201,6 +199,7 @@ export function spawnWaveTick(
   const position = resolveEdgeSpawn(directionIndex, collisionMap);
   const enemy: EnemyState = {
     position: { ...position },
+    initialPosition: { ...position },
     health: NEATENSTEIN_ENEMY_MAX_HEALTH,
     maxHealth: NEATENSTEIN_ENEMY_MAX_HEALTH,
     active: true,

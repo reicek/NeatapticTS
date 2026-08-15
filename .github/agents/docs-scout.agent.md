@@ -221,8 +221,6 @@ FILES_READ:
 - <path or NONE>
 FILES_CHANGED:
 - <path or NONE — this scout is read-only>
-DRIFT_MAP:
-- <DRIFT_FINDING or JSDOC_GAP block, or NONE>
 KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:

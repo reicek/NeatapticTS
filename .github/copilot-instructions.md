@@ -174,7 +174,7 @@ Use the canonical routing table. For new or unassigned skills, call `helping-gap
 
 ### §7 Code Standards (Summary)
 
-ES2023-first syntax, folder-based module architecture, JSDoc on exports, named constants, single-expect tests. Full standards and validation checklist live in the `implementation-standards` skill.
+ES2023-first syntax, folder-based module architecture, JSDoc on exports, named constants, single-expect tests. Complexity reduction follows the SOLID-Aligned pattern: orchestrators (complexity ≤ 10) call executor helpers (complexity ≤ 5) in `{category}.utils.ts` files (split if > 800 lines). Full standards and validation checklist live in the `implementation-standards` skill.
 
 ### §8 Documentation Standards (Summary)
 

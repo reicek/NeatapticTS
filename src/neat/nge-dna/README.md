@@ -621,7 +621,7 @@ Defines the equal-sized partition count used to assign deterministic zone cells 
 
 ### NgeCppnActivationKind
 
-CPPN activation families supported by the canonical deterministic evaluator.
+CPPN activation families supported by the canonical deterministic phenotype evaluator.
 
 ### NgeCppnEdge
 
@@ -684,7 +684,7 @@ Carries wiring cost, residual-tap, and broadcast flags for downstream budget-awa
 
 ### NgeRealizedModule
 
-One realized module emitted by the phenotype materialization pass.
+One realized module emitted by the phenotype materialization pass for the genome.
 
 ### NgeRealizedPhenotypeDescriptor
 
@@ -892,7 +892,7 @@ normalizeCoordinate(
 ): NeatGenomeSubstrateCoordinate
 ```
 
-Clamp one raw substrate coordinate into the unit cube.
+Clamp one raw substrate coordinate into the unit cube range [0, 1].
 
 Parameters:
 - `raw` - Raw three-axis coordinate to normalize.
@@ -927,11 +927,11 @@ Default rule-pass priority applied when constructor inputs omit one explicitly.
 
 ### NGE_DNA_DEFAULT_ZONE_PARTITION_COUNT
 
-Default per-axis partition count for the unit-cube substrate.
+Default per-axis partition count for the unit-cube substrate coordinate space.
 
 ### NGE_DNA_SCHEMA_VERSION
 
-Initial schema version for the canonical NGE DNA envelope.
+Initial schema version for the canonical NGE DNA envelope serialization format.
 
 ## neat/nge-dna/neat.nge-dna.utils.ts
 
@@ -1074,4 +1074,4 @@ across sessions.
 
 ### EnemyCoordinateAllocatorResult
 
-Result of allocating one deterministic enemy substrate coordinate.
+Result of allocating one deterministic enemy substrate coordinate within the unit cube.

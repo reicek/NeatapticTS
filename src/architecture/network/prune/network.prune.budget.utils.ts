@@ -146,19 +146,21 @@ export function ensureGrowthBudget(
 
   if (projectedConnectionCount <= allowedConnectionLimit) {
     clearDeniedGrowthBackoffState(currentNetwork);
-    recordSparsityBudgetSnapshot(currentNetwork, {
-      allowedConnectionLimit,
-      connectionCountBeforeDecision,
-      connectionCountBeforeGrowth: connectionCountBeforeDecision,
-      decision: 'allow',
-      desiredConnectionCountBeforeGrowth: connectionCountBeforeDecision,
-      plannedPruneCount: 0,
-      projectedConnectionCount,
-      remainingHeadroom: allowedConnectionLimit - projectedConnectionCount,
-      requiredAdditionalConnections,
-      softBudgetEnvironment: triggeredSoftBudgetState?.environment,
-      softBudgetTriggered: triggeredSoftBudgetState !== undefined,
-    });
+    recordBudgetSnapshot(
+      currentNetwork,
+      {
+        allowedConnectionLimit,
+        connectionCountBeforeDecision,
+        connectionCountBeforeGrowth: connectionCountBeforeDecision,
+        decision: 'allow',
+        desiredConnectionCountBeforeGrowth: connectionCountBeforeDecision,
+        plannedPruneCount: 0,
+        projectedConnectionCount,
+        remainingHeadroom: allowedConnectionLimit - projectedConnectionCount,
+        requiredAdditionalConnections,
+      },
+      triggeredSoftBudgetState,
+    );
     return true;
   }
 
@@ -168,19 +170,21 @@ export function ensureGrowthBudget(
       deniedGrowthBackoffFingerprint,
     )
   ) {
-    recordSparsityBudgetSnapshot(currentNetwork, {
-      allowedConnectionLimit,
-      connectionCountBeforeDecision,
-      connectionCountBeforeGrowth: connectionCountBeforeDecision,
-      decision: 'deny',
-      desiredConnectionCountBeforeGrowth: connectionCountBeforeDecision,
-      plannedPruneCount: 0,
-      projectedConnectionCount,
-      remainingHeadroom: allowedConnectionLimit - projectedConnectionCount,
-      requiredAdditionalConnections,
-      softBudgetEnvironment: triggeredSoftBudgetState?.environment,
-      softBudgetTriggered: triggeredSoftBudgetState !== undefined,
-    });
+    recordBudgetSnapshot(
+      currentNetwork,
+      {
+        allowedConnectionLimit,
+        connectionCountBeforeDecision,
+        connectionCountBeforeGrowth: connectionCountBeforeDecision,
+        decision: 'deny',
+        desiredConnectionCountBeforeGrowth: connectionCountBeforeDecision,
+        plannedPruneCount: 0,
+        projectedConnectionCount,
+        remainingHeadroom: allowedConnectionLimit - projectedConnectionCount,
+        requiredAdditionalConnections,
+      },
+      triggeredSoftBudgetState,
+    );
     return false;
   }
 
@@ -196,67 +200,33 @@ export function ensureGrowthBudget(
   );
 
   if (
-    desiredConnectionCountBeforeGrowth < MIN_REMAINING_CONNECTION_COUNT ||
-    plannedPruneCount > maxPrunableConnectionCount
-  ) {
-    registerDeniedGrowthBackoff(currentNetwork, deniedGrowthBackoffFingerprint);
-    recordSparsityBudgetSnapshot(currentNetwork, {
+    denyIfPruneInfeasible(currentNetwork, {
       allowedConnectionLimit,
       connectionCountBeforeDecision,
-      connectionCountBeforeGrowth: connectionCountBeforeDecision,
-      decision: 'deny',
-      desiredConnectionCountBeforeGrowth: connectionCountBeforeDecision,
-      plannedPruneCount: 0,
+      desiredConnectionCountBeforeGrowth,
+      deniedGrowthBackoffFingerprint,
+      maxPrunableConnectionCount,
+      plannedPruneCount,
       projectedConnectionCount,
-      remainingHeadroom: allowedConnectionLimit - projectedConnectionCount,
       requiredAdditionalConnections,
-      softBudgetEnvironment: triggeredSoftBudgetState?.environment,
-      softBudgetTriggered: triggeredSoftBudgetState !== undefined,
-    });
+      triggeredSoftBudgetState,
+    })
+  ) {
     return false;
   }
 
-  const pruneSelection = buildEvolutionaryPruneSelection({
-    connections: budgetedConnections,
-    method: budgetConfig.method,
-    removalCount: plannedPruneCount,
-  });
-
-  disconnectEvolutionaryConnections(
-    currentNetwork,
-    pruneSelection.connectionsToPrune,
-  );
-  markEvolutionaryTopologyDirty(currentNetwork);
-
-  const connectionCountBeforeGrowth = countBudgetedConnections(currentNetwork);
-  const growthStillFitsBudget =
-    connectionCountBeforeGrowth + requiredAdditionalConnections <=
-    allowedConnectionLimit;
-
-  if (growthStillFitsBudget) {
-    clearDeniedGrowthBackoffState(currentNetwork);
-  } else {
-    registerDeniedGrowthBackoff(currentNetwork, deniedGrowthBackoffFingerprint);
-  }
-
-  recordSparsityBudgetSnapshot(currentNetwork, {
+  return executePruneAndAllow(currentNetwork, {
     allowedConnectionLimit,
+    budgetConfig,
+    budgetedConnections,
     connectionCountBeforeDecision,
-    connectionCountBeforeGrowth,
-    decision: growthStillFitsBudget ? 'prune-then-allow' : 'deny',
+    deniedGrowthBackoffFingerprint,
     desiredConnectionCountBeforeGrowth,
     plannedPruneCount,
-    projectedConnectionCount:
-      connectionCountBeforeGrowth + requiredAdditionalConnections,
-    remainingHeadroom:
-      allowedConnectionLimit -
-      (connectionCountBeforeGrowth + requiredAdditionalConnections),
+    projectedConnectionCount,
     requiredAdditionalConnections,
-    softBudgetEnvironment: triggeredSoftBudgetState?.environment,
-    softBudgetTriggered: triggeredSoftBudgetState !== undefined,
+    triggeredSoftBudgetState,
   });
-
-  return growthStillFitsBudget;
 }
 
 /**
@@ -594,4 +564,165 @@ function recordSparsityBudgetSnapshot(
   snapshot: NetworkSparsityBudgetSnapshot,
 ): void {
   asSparsityBudgetProps(currentNetwork)._lastSparsityBudgetSnapshot = snapshot;
+}
+
+/**
+ * Resolve the soft-budget environment label from the triggered state, if any.
+ *
+ * @param triggeredSoftBudgetState - Active soft-budget pressure, if any.
+ * @returns Environment label when a soft budget is active, otherwise undefined.
+ */
+function getSoftBudgetEnvironment(
+  triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined,
+): 'browser' | 'node' | undefined {
+  return triggeredSoftBudgetState?.environment;
+}
+
+/**
+ * Persist a budget snapshot with the soft-budget fields filled automatically.
+ *
+ * @param currentNetwork - Network being updated.
+ * @param snapshot - Snapshot fields excluding soft-budget environment/trigger.
+ * @param triggeredSoftBudgetState - Active soft-budget pressure, if any.
+ */
+function recordBudgetSnapshot(
+  currentNetwork: Network,
+  snapshot: Omit<
+    NetworkSparsityBudgetSnapshot,
+    'softBudgetEnvironment' | 'softBudgetTriggered'
+  >,
+  triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined,
+): void {
+  recordSparsityBudgetSnapshot(currentNetwork, {
+    ...snapshot,
+    softBudgetEnvironment: getSoftBudgetEnvironment(triggeredSoftBudgetState),
+    softBudgetTriggered: triggeredSoftBudgetState !== undefined,
+  });
+}
+
+/**
+ * Deny growth when pruning cannot free enough connections to fit the budget.
+ *
+ * @param currentNetwork - Network about to grow.
+ * @param params - Decision inputs for the feasibility check.
+ * @returns True when growth was denied because pruning is infeasible.
+ */
+function denyIfPruneInfeasible(
+  currentNetwork: Network,
+  params: {
+    allowedConnectionLimit: number;
+    connectionCountBeforeDecision: number;
+    desiredConnectionCountBeforeGrowth: number;
+    deniedGrowthBackoffFingerprint: DeniedGrowthBackoffFingerprint;
+    maxPrunableConnectionCount: number;
+    plannedPruneCount: number;
+    projectedConnectionCount: number;
+    requiredAdditionalConnections: number;
+    triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined;
+  },
+): boolean {
+  if (
+    params.desiredConnectionCountBeforeGrowth <
+      MIN_REMAINING_CONNECTION_COUNT ||
+    params.plannedPruneCount > params.maxPrunableConnectionCount
+  ) {
+    registerDeniedGrowthBackoff(
+      currentNetwork,
+      params.deniedGrowthBackoffFingerprint,
+    );
+    recordBudgetSnapshot(
+      currentNetwork,
+      {
+        allowedConnectionLimit: params.allowedConnectionLimit,
+        connectionCountBeforeDecision: params.connectionCountBeforeDecision,
+        connectionCountBeforeGrowth: params.connectionCountBeforeDecision,
+        decision: 'deny',
+        desiredConnectionCountBeforeGrowth:
+          params.connectionCountBeforeDecision,
+        plannedPruneCount: 0,
+        projectedConnectionCount: params.projectedConnectionCount,
+        remainingHeadroom:
+          params.allowedConnectionLimit - params.projectedConnectionCount,
+        requiredAdditionalConnections: params.requiredAdditionalConnections,
+      },
+      params.triggeredSoftBudgetState,
+    );
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Execute the prune-then-allow path: prune connections, check whether growth
+ * now fits, record the decision snapshot, and return the verdict.
+ *
+ * @param currentNetwork - Network about to grow.
+ * @param params - Decision inputs for the prune-and-allow path.
+ * @returns True when growth may proceed after pruning.
+ */
+function executePruneAndAllow(
+  currentNetwork: Network,
+  params: {
+    allowedConnectionLimit: number;
+    budgetConfig: NonNullable<
+      NetworkSparsityBudgetProps['_sparsityBudgetConfig']
+    >;
+    budgetedConnections: ReturnType<typeof collectBudgetedConnections>;
+    connectionCountBeforeDecision: number;
+    deniedGrowthBackoffFingerprint: DeniedGrowthBackoffFingerprint;
+    desiredConnectionCountBeforeGrowth: number;
+    plannedPruneCount: number;
+    projectedConnectionCount: number;
+    requiredAdditionalConnections: number;
+    triggeredSoftBudgetState: TriggeredSoftBudgetState | undefined;
+  },
+): boolean {
+  const pruneSelection = buildEvolutionaryPruneSelection({
+    connections: params.budgetedConnections,
+    method: params.budgetConfig.method,
+    removalCount: params.plannedPruneCount,
+  });
+
+  disconnectEvolutionaryConnections(
+    currentNetwork,
+    pruneSelection.connectionsToPrune,
+  );
+  markEvolutionaryTopologyDirty(currentNetwork);
+
+  const connectionCountBeforeGrowth = countBudgetedConnections(currentNetwork);
+  const growthStillFitsBudget =
+    connectionCountBeforeGrowth + params.requiredAdditionalConnections <=
+    params.allowedConnectionLimit;
+
+  if (growthStillFitsBudget) {
+    clearDeniedGrowthBackoffState(currentNetwork);
+  } else {
+    registerDeniedGrowthBackoff(
+      currentNetwork,
+      params.deniedGrowthBackoffFingerprint,
+    );
+  }
+
+  recordBudgetSnapshot(
+    currentNetwork,
+    {
+      allowedConnectionLimit: params.allowedConnectionLimit,
+      connectionCountBeforeDecision: params.connectionCountBeforeDecision,
+      connectionCountBeforeGrowth,
+      decision: growthStillFitsBudget ? 'prune-then-allow' : 'deny',
+      desiredConnectionCountBeforeGrowth:
+        params.desiredConnectionCountBeforeGrowth,
+      plannedPruneCount: params.plannedPruneCount,
+      projectedConnectionCount:
+        connectionCountBeforeGrowth + params.requiredAdditionalConnections,
+      remainingHeadroom:
+        params.allowedConnectionLimit -
+        (connectionCountBeforeGrowth + params.requiredAdditionalConnections),
+      requiredAdditionalConnections: params.requiredAdditionalConnections,
+    },
+    params.triggeredSoftBudgetState,
+  );
+
+  return growthStillFitsBudget;
 }

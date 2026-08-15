@@ -8,6 +8,11 @@ import type { EvolutionSummary } from './network.evolve.utils.types';
  *
  * If no best genome is available, the optional NEAT warning hook is invoked so
  * callers can surface diagnostic context without throwing from finalize flow.
+ *
+ * @param network - Network instance to update with the best genome.
+ * @param neatInstance - NEAT runtime with optional warning hook.
+ * @param bestGenome - Best evolved genome or undefined when none exists.
+ * @param clearState - Whether to clear network state after adoption.
  */
 export function adoptBestGenomeOrWarn(
   network: Network,

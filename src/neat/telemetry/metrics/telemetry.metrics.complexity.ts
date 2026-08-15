@@ -219,6 +219,7 @@ export function applyComplexityStatsMultiObjective(
  *
  * @param telemetryContext - Neat-like context with population state.
  * @param telemetryOptions - Options controlling complexity telemetry.
+ * @param populationSnapshot - Snapshot of the current population used for complexity stats.
  * @param entry - Telemetry entry to update.
  */
 export function applyComplexityStatsMonoObjective(

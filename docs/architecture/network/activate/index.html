@@ -1,0 +1,1600 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>architecture/network/activate – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/theme.css"><script defer src="../../../assets/theme-tooltips.js"></script></head><body class="">
+<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="../../../index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="../../../index.html">Home</a><a href="../../../index.html" class="active">Docs</a><a href="../../../examples/index.html">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar docs-panel docs-panel-left"><ul class="sidebar-sections"><li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links"><ul class="pipe-nav-list pipe-nav-list-priority"><li class="pipe-nav-item nav-priority-link"><a href="../../../examples/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Examples overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><ul class="pipe-nav-list pipe-nav-list-compact"><li class="pipe-nav-item"><a href="../../../examples/flappy_bird/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Flappy Bird</span></a></li><li class="pipe-nav-item"><a href="../../../examples/asciiMaze/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ASCII Maze</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></div></li><ul class="pipe-nav-list pipe-nav-list-root"><li class="pipe-nav-item"><a href="../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><li class="group"><div class="g-head">Architecture</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../activationArrayPool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ActivationArrayPool</span></a></li><li class="pipe-nav-item"><a href="../../architect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Architect</span></a></li><li class="pipe-nav-item"><a href="../../connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../group/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Group</span></a></li><li class="pipe-nav-item"><a href="../../layer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Layer</span></a></li><li class="pipe-nav-item"><a href="../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network</span></a></li><li class="pipe-nav-item current"><a href="./index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Activate</span></a></li><li class="pipe-nav-item"><a href="../bootstrap/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Bootstrap</span></a></li><li class="pipe-nav-item"><a href="../connect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Connect</span></a></li><li class="pipe-nav-item"><a href="../construct/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Construct</span></a></li><li class="pipe-nav-item"><a href="../deterministic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Deterministic</span></a></li><li class="pipe-nav-item"><a href="../evaluation-pack/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evaluation Pack</span></a></li><li class="pipe-nav-item"><a href="../evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evolve</span></a></li><li class="pipe-nav-item"><a href="../gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gating</span></a></li><li class="pipe-nav-item"><a href="../genetic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Genetic</span></a></li><li class="pipe-nav-item"><a href="../gpu/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gpu</span></a></li><li class="pipe-nav-item"><a href="../gpu/__mocks__/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gpu / Mocks</span></a></li><li class="pipe-nav-item"><a href="../mutate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Mutate</span></a></li><li class="pipe-nav-item"><a href="../onnx/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Onnx</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Export</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/layers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export / Layers</span></a></li><li class="pipe-nav-item"><a href="../onnx/import/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Import</span></a></li><li class="pipe-nav-item"><a href="../onnx/parity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Parity</span></a></li><li class="pipe-nav-item"><a href="../onnx/schema/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Schema</span></a></li><li class="pipe-nav-item"><a href="../onnx/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Validate</span></a></li><li class="pipe-nav-item"><a href="../prune/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Prune</span></a></li><li class="pipe-nav-item"><a href="../remove/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Remove</span></a></li><li class="pipe-nav-item"><a href="../runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Runtime</span></a></li><li class="pipe-nav-item"><a href="../serialize/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Serialize</span></a></li><li class="pipe-nav-item"><a href="../slab/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Slab</span></a></li><li class="pipe-nav-item"><a href="../standalone/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Standalone</span></a></li><li class="pipe-nav-item"><a href="../stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Stats</span></a></li><li class="pipe-nav-item"><a href="../topology/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Topology</span></a></li><li class="pipe-nav-item"><a href="../training/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Training</span></a></li><li class="pipe-nav-item"><a href="../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Visualization</span></a></li><li class="pipe-nav-item"><a href="../window/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Window</span></a></li><li class="pipe-nav-item"><a href="../worker-payload/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Worker Payload</span></a></li><li class="pipe-nav-item"><a href="../../node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-item"><a href="../../nodePool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">NodePool</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Methods</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../methods/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../methods/activation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Activation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../methods/cost/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cost</span></a></li><li class="pipe-nav-item"><a href="../../../methods/crossover/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Crossover</span></a></li><li class="pipe-nav-item"><a href="../../../methods/gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gating</span></a></li><li class="pipe-nav-item"><a href="../../../methods/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/rate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rate</span></a></li><li class="pipe-nav-item"><a href="../../../methods/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Neat</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../neat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/acceptance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Acceptance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/complexity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Complexity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/auto-distance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Auto Distance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/fitness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Fitness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/offspring/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Offspring</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/population/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Population</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/warnings/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Warnings</span></a></li><li class="pipe-nav-item"><a href="../../../neat/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/heredity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome / Heredity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/harness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Harness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/helpers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Helpers</span></a></li><li class="pipe-nav-item"><a href="../../../neat/hybrid/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Hybrid</span></a></li><li class="pipe-nav-item"><a href="../../../neat/init/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Init</span></a></li><li class="pipe-nav-item"><a href="../../../neat/innovation-tracker/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Innovation Tracker</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/category/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Category</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/crowding/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Crowding</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/dominance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Dominance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/fronts/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Fronts</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-conn/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Conn</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Node</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/flow/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Flow</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/repair/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Repair</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/select/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Select</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-adult/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Adult</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-assimilation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Assimilation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-collective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Collective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-dna/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Dna</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-evolution/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Evolution</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-juvenile/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Juvenile</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-main-agent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Main Agent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/assignment/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Assignment</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/threshold/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Threshold</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/augmentation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Augmentation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/context/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Context</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/read/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Read</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/accessors/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Accessors</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/exports/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Exports</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/buffer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Buffer</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/operator-stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Operator Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/recorder/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Recorder</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/types/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Types</span></a></li><li class="pipe-nav-item"><a href="../../../neat/topology-intent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Topology Intent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Validate</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Multithreading</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../multithreading/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Browser</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-footer"></span><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Acceleration</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../acceleration/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Browser Tests</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../browser-tests/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Env</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../env/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../env/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Browser</span></a></li><li class="pipe-nav-item"><a href="../../../env/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Memory</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../memory/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Performance</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../performance/nge/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Research</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../research/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Src</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../src/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Utils</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../utils/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Visualization</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../visualization/network-view/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network View</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li></ul></aside><main class="content docs-panel docs-panel-center"><h1 id="architecture-network-activate">architecture/network/activate</h1><p>Activation chapter for <code>Network</code> execution policy.</p>
+<p>This folder answers the moment when a graph already exists and the next
+question becomes: how should signal move through it right now? The same
+network may be stepped for ordinary inference, training-aware forward passes,
+zero-copy raw output reuse, or a sequence of batch rows. Keeping those paths
+together makes the execution tradeoffs visible without mixing them into
+topology or serialization code.</p>
+<p>The important split is between graph meaning and graph execution. Node and
+connection chapters explain what the structure is. <code>activate/</code> explains how
+that structure is stepped: validate inputs, decide whether the slab fast path
+is still legal, preserve or skip training traces, and return outputs in the
+shape the caller requested.</p>
+<p>A second useful lens is to read the public exports as four modes.
+<code>activate()</code> is the ordinary compatibility path. <code>noTraceActivate()</code> is the
+hot inference path when trace bookkeeping would be wasteful. <code>activateRaw()</code>
+keeps typed-array reuse available when pooling matters more than boxed
+outputs. <code>activateBatch()</code> is the clear orchestration layer for repeated
+forward passes over many rows.</p>
+<p>The performance lesson here is not &quot;always choose the fastest path.&quot; It is
+&quot;choose the narrowest path that still matches the caller&#39;s semantics.&quot; If a
+network is slab-ready, this chapter can exploit contiguous typed arrays. If a
+structural edit made that layout stale, the same boundary falls back to node
+traversal instead of forcing callers to understand storage internals first.</p>
+<pre class="mermaid mermaid-diagram">flowchart LR
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  Input[caller input]:::base --&gt; Modes[activate chapter]:::accent
+  Modes --&gt; Trace[activate&lt;br/&gt;keep traces]:::base
+  Modes --&gt; NoTrace[noTraceActivate&lt;br/&gt;inference hot path]:::base
+  Modes --&gt; Raw[activateRaw&lt;br/&gt;typed output reuse]:::base
+  Modes --&gt; Batch[activateBatch&lt;br/&gt;repeat over rows]:::base</pre><pre class="mermaid mermaid-diagram">flowchart TD
+  classDef base fill:#08131f,stroke:#1ea7ff,color:#dff6ff,stroke-width:1px;
+  classDef accent fill:#0f2233,stroke:#ffd166,color:#fff4cc,stroke-width:1.5px;
+
+  ActivateChapter[activate/]:::accent --&gt; Validation[input validation and contexts]:::base
+  ActivateChapter --&gt; FastPath[slab fast path when layout is ready]:::base
+  ActivateChapter --&gt; Traversal[node traversal fallback]:::base
+  ActivateChapter --&gt; Buffers[pooled activation buffers]:::base</pre><p>For background on why some activation paths preserve training traces while
+others skip them, see Wikipedia contributors,
+<a href="https://en.wikipedia.org/wiki/Backpropagation">Backpropagation</a>. This
+chapter sits at the forward-pass side of that story and decides how much
+training bookkeeping each call should carry along.</p>
+<p>Example: use the no-trace path when you only need inference outputs.</p>
+<pre><code class="language-ts">const network = Network.createMLP(2, [3], 1);
+const outputValues = network.noTraceActivate([0.2, 0.8]);
+</code></pre>
+<p>Example: run the same network over several input rows with one orchestration
+call.</p>
+<pre><code class="language-ts">const network = Network.createMLP(2, [3], 1);
+const batchOutputs = network.activateBatch(
+  [
+    [0, 1],
+    [1, 0],
+  ],
+  true,
+);
+</code></pre>
+<p>Practical reading order:</p>
+<ol>
+<li>Start here for the public activation modes and their semantic differences.</li>
+<li>Continue into <code>network.activate.core.utils.ts</code> when you want the ordinary
+forward-pass pipeline.</li>
+<li>Continue into <code>network.activate.raw.utils.ts</code> and the no-trace helpers
+when typed-array reuse or inference hot paths are the next question.</li>
+<li>Finish with the context and helper files when you want the orchestration
+details behind validation, batching, and fallback behavior.</li>
+</ol>
+<h2 id="architecture-network-activate-network-activate-utils-ts">architecture/network/activate/network.activate.utils.ts</h2><h3 id="activate">activate</h3><pre><code class="language-ts">activate(
+  input: number[],
+  training: boolean,
+): number[]
+</code></pre>
+<p>Execute the main activation routine and return plain numeric outputs.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+<li><code>input</code> - Input values with length matching network input count.</li>
+<li><code>training</code> - Whether training-time stochastic behavior is enabled.</li>
+</ul>
+<p>Returns: Output activation values.</p>
+<h3 id="activatebatch">activateBatch</h3><pre><code class="language-ts">activateBatch(
+  inputs: number[][],
+  training: boolean,
+): number[][]
+</code></pre>
+<p>Activate the network over a mini‑batch (array) of input vectors, returning a 2‑D array of outputs.</p>
+<p>This helper simply loops, invoking {@link Network.activate} (or its bound variant) for each
+sample. It is intentionally naive: no attempt is made to fuse operations across the batch.
+For very large batch sizes or performance‑critical paths consider implementing a custom
+vectorized backend that exploits SIMD, GPU kernels, or parallel workers.</p>
+<p>Input validation occurs per row to surface the earliest mismatch with a descriptive index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound Network instance.</li>
+<li><code>inputs</code> - Array of input vectors; each must have length == network.input.</li>
+<li><code>training</code> - Whether each activation should keep training traces.</li>
+</ul>
+<p>Returns: 2‑D array: outputs[i] is the activation result for inputs[i].</p>
+<p>Example:</p>
+<p>const batchOut = net.activateBatch([[0,0,1],[1,0,0],[0,1,0]]);
+console.log(batchOut.length); // 3 rows</p>
+<h3 id="activateraw">activateRaw</h3><pre><code class="language-ts">activateRaw(
+  input: number[],
+  training: boolean,
+  maxActivationDepth: number,
+): ActivationArray
+</code></pre>
+<p>Raw activation wrapper with optional typed-output reuse semantics.</p>
+<p>The heavy math still lives in the main activation path, but this wrapper now
+owns the contract for network-local typed output reuse. When
+<code>reuseActivationArrays</code> is enabled, raw activation may copy the detached
+activation result into a reusable typed buffer whose element width follows
+the network&#39;s resolved activation precision. Callers that also enable
+<code>returnTypedActivations</code> may receive that reusable typed buffer directly.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound Network instance.</li>
+<li><code>input</code> - Input vector (length == network.input).</li>
+<li><code>training</code> - Whether to retain training traces / gradients (delegated downstream).</li>
+<li><code>maxActivationDepth</code> - Guard against runaway recursion / cyclic activation attempts.</li>
+</ul>
+<p>Returns: Output vector, either as a plain array or a reusable typed activation buffer.</p>
+<p>Example:</p>
+<p>const y = net.activateRaw([0,1,0]);</p>
+<h3 id="gaussianrand">gaussianRand</h3><pre><code class="language-ts">gaussianRand(
+  rng: () =&gt; number,
+): number
+</code></pre>
+<p>Produce a normally distributed random sample using the Box-Muller transform.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rng</code> - Pseudo-random source in the interval [0, 1).</li>
+</ul>
+<p>Returns: Standard normal sample with mean 0 and variance 1.</p>
+<h3 id="notraceactivate">noTraceActivate</h3><pre><code class="language-ts">noTraceActivate(
+  input: number[],
+): number[]
+</code></pre>
+<p>Perform a forward pass without creating or updating training / gradient traces.</p>
+<p>This is the most allocation‑sensitive activation path. Internally it will attempt
+to leverage a compact &quot;fast slab&quot; routine (an optimized, vectorized broadcast over
+contiguous activation buffers) when the Network instance indicates that such a path
+is currently valid. If that attempt fails (for instance because the slab is stale
+after a structural mutation) execution gracefully falls back to a node‑by‑node loop.</p>
+<p>Algorithm outline:</p>
+<ol>
+<li>(Optional) Refresh the compiled activation schedule when a structural change
+marked topology as dirty.</li>
+<li>Validate the input dimensionality.</li>
+<li>Try the fast slab path; if it throws, continue with the standard path.</li>
+<li>Acquire a pooled output buffer sized to the number of output neurons.</li>
+<li>Traverse nodes in the compiled activation order when available:<ul>
+<li>Input nodes: assign values by explicit <code>inputNodeIds</code>, not raw node position.</li>
+<li>Hidden and recurrent-component nodes: compute activation via
+Node.noTraceActivate without training traces.</li>
+<li>Output nodes: activate in schedule order, then read out results in explicit
+<code>outputNodeIds</code> order so vector semantics stay stable even if storage order drifts.</li>
+</ul>
+</li>
+<li>Copy the pooled buffer into a fresh array (detaches user from the pool) and
+release the pooled buffer back to the pool.</li>
+</ol>
+<p>Complexity considerations:</p>
+<ul>
+<li>Time: O(N + E) where N = number of nodes, E = number of inbound edges processed
+inside each Node.noTraceActivate call (not explicit here but inside the node).</li>
+<li>Space: O(O) transient (O = number of outputs) due to the pooled output buffer.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound Network instance.</li>
+<li><code>input</code> - Flat numeric vector whose length must equal network.input.</li>
+</ul>
+<p>Returns: Array of output neuron activations (length == network.output).</p>
+<p>Example:</p>
+<p>const out = net.noTraceActivate([0.1, 0.2, 0.3]);
+console.log(out); // =&gt; e.g. [0.5123, 0.0441]</p>
+<h2 id="architecture-network-activate-network-activate-utils-types-ts">architecture/network/activate/network.activate.utils.types.ts</h2><h3 id="activateruntimenetworkprops">ActivateRuntimeNetworkProps</h3><p>Runtime network view used by the object-graph activation pipeline.</p>
+<p>This intentionally describes the internal fields activation reads and writes
+while orchestrating scheduling, RNG use, regularization, and slab fast-path hooks.</p>
+<h3 id="activationoutputbuffer">ActivationOutputBuffer</h3><p>Type of the pooled activation output array acquired from the shared activation array pool.
+Using the pool avoids per-call allocation in tight inference loops.</p>
+<h3 id="activationstats">ActivationStats</h3><p>Activation telemetry collected during a single forward pass, tracking dropped nodes, skipped layers, dropped connections, and weight-noise statistics.</p>
+<h3 id="batch-inputs-collection-error-message">BATCH_INPUTS_COLLECTION_ERROR_MESSAGE</h3><p>Error message thrown when <code>activateBatch</code> receives a non-array collection as its top-level argument.
+Kept as a named constant so it can be matched in tests without coupling to a raw string literal.</p>
+<h3 id="batchactivationcontext">BatchActivationContext</h3><p>Shared orchestration state for batch activation, carrying the internal network, the full batch input array, expected input size, and training flag.</p>
+<h3 id="batchrowactivationcontext">BatchRowActivationContext</h3><p>Shared state used while validating and activating one row from a batch input collection,
+carrying the input slice, its position index within the batch, and the expected input size for validation.</p>
+<h3 id="default-max-activation-depth">DEFAULT_MAX_ACTIVATION_DEPTH</h3><p>Hard limit on recursive activation depth used by the raw (non-slab) activation path.
+Prevents unbounded recursion on networks with deep or cyclic structure when the
+caller does not supply an explicit <code>maxActivationDepth</code> argument.</p>
+<h3 id="initial-output-write-index">INITIAL_OUTPUT_WRITE_INDEX</h3><p>Starting write index used when collecting output activations into the result buffer.
+The output-collection loop increments from this value, writing one activation per slot.</p>
+<h3 id="input-node-type">INPUT_NODE_TYPE</h3><p>Node role label used by activation traversal to identify input neurons.
+Input nodes do not aggregate incoming connections; they read directly from the input vector.</p>
+<h3 id="networklayer">NetworkLayer</h3><p>Layer container type derived from the network&#39;s optional layers array for use by layered activation paths.</p>
+<h3 id="networklayernodes">NetworkLayerNodes</h3><p>Node collection type derived from one network layer, used by layered dropout and stochastic-depth traversal helpers.</p>
+<h3 id="no-trace-fast-slab-training-flag">NO_TRACE_FAST_SLAB_TRAINING_FLAG</h3><p>Training flag value used by no-trace fast-slab eligibility checks.
+The slab fast path requires that no gradient traces are accumulated, so this literal
+(<code>false</code>) is the only value that passes the eligibility predicate.</p>
+<h3 id="notraceactivationcontext">NoTraceActivationContext</h3><p>Shared context passed through the no-trace activation orchestration pipeline.
+Collecting these fields into one object avoids repeating the same four arguments
+across every helper in the activation chapter.</p>
+<h3 id="notracenodetraversalcontext">NoTraceNodeTraversalContext</h3><p>Shared context passed to node-traversal helpers during a no-trace activation pass.
+Contains the subset of orchestration state needed to write one node&#39;s output into
+the pooled result buffer.</p>
+<h3 id="output-node-type">OUTPUT_NODE_TYPE</h3><p>Node role label used by activation traversal to identify output neurons.
+Output nodes write their activation into the result array at the slot matching their ordered position.</p>
+<h3 id="output-write-index-increment">OUTPUT_WRITE_INDEX_INCREMENT</h3><p>Increment applied after writing one output activation value into the result buffer.
+Using an explicit constant (rather than <code>++</code>) keeps the protocol visible and testable.</p>
+<h3 id="rawactivationcontext">RawActivationContext</h3><p>Shared orchestration state for the raw (non-slab) activation path, carrying the network internals and the caller-supplied input vector.</p>
+<h3 id="singlenodenotraceactivationcontext">SingleNodeNoTraceActivationContext</h3><p>Shared activation state for a single node during no-trace traversal, carrying the accumulated input map and the current network node reference.</p>
+<h3 id="undefined-input-length-text">UNDEFINED_INPUT_LENGTH_TEXT</h3><p>Fallback text rendered when the actual input length is <code>undefined</code> inside an activation error message.
+Prevents <code>&#39;undefined&#39;</code> from appearing as a raw JS coercion artifact in user-facing error strings.</p>
+<h3 id="weightnoiseapplyresult">WeightNoiseApplyResult</h3><p>Marker interface returned by the weight-noise application helper to signal whether noise was applied and whether a restore pass is needed.</p>
+<h3 id="weightnoisestats">WeightNoiseStats</h3><p>Weight-noise telemetry collected during a single activation pass, capturing perturbation count, absolute sum, maximum, and mean magnitude.</p>
+<h2 id="architecture-network-activate-network-activate-core-utils-ts">architecture/network/activate/network.activate.core.utils.ts</h2><h3 id="acquireoutputbuffer">acquireOutputBuffer</h3><pre><code class="language-ts">acquireOutputBuffer(
+  outputSize: number,
+  activationPrecision: ActivationPrecision | undefined,
+): ActivationArray
+</code></pre>
+<p>Acquire a pooled activation output buffer for the current output width.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>outputSize</code> - Number of output slots.</li>
+</ul>
+<p>Returns: Mutable pooled output buffer.</p>
+<h3 id="acquiresequenceoutputbuffer">acquireSequenceOutputBuffer</h3><pre><code class="language-ts">acquireSequenceOutputBuffer(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  outputSize: number,
+): number[]
+</code></pre>
+<p>Acquire the next reusable plain array slot for one sequence activation result.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>outputSize</code> - Required activation output width.</li>
+</ul>
+<p>Returns: One reusable plain array slot from the network-owned output ring.</p>
+<h3 id="activate">activate</h3><pre><code class="language-ts">activate(
+  input: number[],
+  training: boolean,
+): number[]
+</code></pre>
+<p>Execute the main activation routine and return plain numeric outputs.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+<li><code>input</code> - Input values with length matching network input count.</li>
+<li><code>training</code> - Whether training-time stochastic behavior is enabled.</li>
+</ul>
+<p>Returns: Output activation values.</p>
+<h3 id="activatelayer">activateLayer</h3><pre><code class="language-ts">activateLayer(
+  currentLayer: default,
+  layerIndex: number,
+  inputVector: number[],
+  isTraining: boolean,
+): number[]
+</code></pre>
+<p>Activate one layer, routing input only for the first layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentLayer</code> - Layer instance to activate.</li>
+<li><code>layerIndex</code> - Layer index.</li>
+<li><code>inputVector</code> - Network input vector.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+</ul>
+<p>Returns: Layer activations.</p>
+<h3 id="activatelayerednetworkwithdropout">activateLayeredNetworkWithDropout</h3><pre><code class="language-ts">activateLayeredNetworkWithDropout(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+  outputBuffer: ActivationArray,
+  stats: ActivationStats,
+): void
+</code></pre>
+<p>Run layered activation with dropout masks and no stochastic-depth skips.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>inputVector</code> - Input vector.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>outputBuffer</code> - Mutable output buffer.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="activatelayerednetworkwithstochasticdepth">activateLayeredNetworkWithStochasticDepth</h3><pre><code class="language-ts">activateLayeredNetworkWithStochasticDepth(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+  outputBuffer: ActivationArray,
+  stats: ActivationStats,
+): void
+</code></pre>
+<p>Run layered activation with stochastic-depth skipping and inverse-survival scaling.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>inputVector</code> - Input vector.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>outputBuffer</code> - Mutable output buffer.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="activatenodenetworkfallback">activateNodeNetworkFallback</h3><pre><code class="language-ts">activateNodeNetworkFallback(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+  outputBuffer: ActivationArray,
+  stats: ActivationStats,
+): void
+</code></pre>
+<p>Run schedule-aware node activation for networks without explicit layer definitions.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>inputVector</code> - Input vector.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>outputBuffer</code> - Mutable output buffer.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="activatenodesandcollectoutputs">activateNodesAndCollectOutputs</h3><pre><code class="language-ts">activateNodesAndCollectOutputs(
+  activationNodes: default[],
+  inputValuesByNodeId: Map&lt;number, number&gt;,
+  orderedOutputNodes: default[],
+  outputBuffer: ActivationArray,
+): void
+</code></pre>
+<p>Activate raw nodes in the resolved execution order and collect outputs by explicit role order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationNodes</code> - Network nodes in activation order.</li>
+<li><code>inputValuesByNodeId</code> - Stable lookup for explicit input-role injection.</li>
+<li><code>orderedOutputNodes</code> - Output nodes in public vector order.</li>
+<li><code>outputBuffer</code> - Mutable output buffer.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applydropconnect">applyDropConnect</h3><pre><code class="language-ts">applyDropConnect(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
+  stats: ActivationStats,
+): void
+</code></pre>
+<p>Apply drop-connect masking and restore original weights where required.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyfallbackhiddendropout">applyFallbackHiddenDropout</h3><pre><code class="language-ts">applyFallbackHiddenDropout(
+  hiddenNodes: default[],
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  dropoutProbability: number,
+  isTraining: boolean,
+  stats: ActivationStats,
+): void
+</code></pre>
+<p>Apply fallback dropout for hidden nodes in raw node traversal mode.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenNodes</code> - Hidden nodes.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>dropoutProbability</code> - Dropout probability.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyfallbackweightnoise">applyFallbackWeightNoise</h3><pre><code class="language-ts">applyFallbackWeightNoise(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
+  stats: ActivationStats,
+): void
+</code></pre>
+<p>Apply raw fallback weight noise to all connections using global standard deviation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyhiddenlayerdropout">applyHiddenLayerDropout</h3><pre><code class="language-ts">applyHiddenLayerDropout(
+  layer: default,
+  rawActivations: number[],
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  dropoutProbability: number,
+  isTraining: boolean,
+  stats: ActivationStats,
+): void
+</code></pre>
+<p>Apply dropout masks to hidden layer nodes and enforce at least one active node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layer</code> - Hidden layer instance.</li>
+<li><code>rawActivations</code> - Raw layer activations.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>dropoutProbability</code> - Layer dropout probability.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applytrainingdropconnect">applyTrainingDropConnect</h3><pre><code class="language-ts">applyTrainingDropConnect(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  stats: ActivationStats,
+): void
+</code></pre>
+<p>Apply training-time drop-connect masks to each connection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applytrainingweightnoise">applyTrainingWeightNoise</h3><pre><code class="language-ts">applyTrainingWeightNoise(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
+  stats: ActivationStats,
+): WeightNoiseApplyResult
+</code></pre>
+<p>Apply per-connection training noise for the main activation flow.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+</ul>
+<p>Returns: Applied-state information for downstream restore logic.</p>
+<h3 id="collecthiddennodes">collectHiddenNodes</h3><pre><code class="language-ts">collectHiddenNodes(
+  nodes: default[],
+): default[]
+</code></pre>
+<p>Collect hidden nodes from a raw node list.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Network node collection.</li>
+</ul>
+<p>Returns: Hidden-only node list.</p>
+<h3 id="containsinvalidprobability">containsInvalidProbability</h3><pre><code class="language-ts">containsInvalidProbability(
+  probabilities: number[],
+): boolean
+</code></pre>
+<p>Check whether a probability vector contains values outside the (0, 1] interval.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>probabilities</code> - Candidate probability vector.</li>
+</ul>
+<p>Returns: True when one or more probabilities are invalid.</p>
+<h3 id="copyoutputbufferintosequencering">copyOutputBufferIntoSequenceRing</h3><pre><code class="language-ts">copyOutputBufferIntoSequenceRing(
+  outputBuffer: ActivationArray,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number[]
+</code></pre>
+<p>Copy one pooled activation result into the current reusable sequence-output slot.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>outputBuffer</code> - Mutable pooled output buffer.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+</ul>
+<p>Returns: Reused plain array slot for the current sequence step.</p>
+<h3 id="createactivationstats">createActivationStats</h3><pre><code class="language-ts">createActivationStats(
+  totalConnections: number,
+): ActivationStats
+</code></pre>
+<p>Create activation statistics container for the current pass.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>totalConnections</code> - Number of network connections.</li>
+</ul>
+<p>Returns: Initialized activation stats object.</p>
+<h3 id="createsequenceoutputring">createSequenceOutputRing</h3><pre><code class="language-ts">createSequenceOutputRing(
+  outputSize: number,
+): number[][]
+</code></pre>
+<p>Create a reusable plain-array ring for consecutive sequence outputs.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>outputSize</code> - Required activation output width.</li>
+</ul>
+<p>Returns: Fresh fixed-depth ring of plain output arrays.</p>
+<h3 id="createweightnoisestats">createWeightNoiseStats</h3><pre><code class="language-ts">createWeightNoiseStats(): WeightNoiseStats
+</code></pre>
+<p>Create the weight-noise statistics record with zeroed aggregates.</p>
+<p>Returns: Zero-initialized weight-noise stats.</p>
+<h3 id="decidelayerskip">decideLayerSkip</h3><pre><code class="language-ts">decideLayerSkip(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  currentLayerNodeCount: number,
+  layerIndex: number,
+  isTraining: boolean,
+  previousLayerActivations: number[] | undefined,
+): { shouldSkipLayer: boolean; surviveProbability: number; }
+</code></pre>
+<p>Decide whether a hidden layer should be skipped in stochastic-depth mode.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>currentLayerNodeCount</code> - Number of nodes in current layer.</li>
+<li><code>layerIndex</code> - Current layer index.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>previousLayerActivations</code> - Last computed layer activations.</li>
+</ul>
+<p>Returns: Skip decision and survival probability for the layer.</p>
+<h3 id="ensuresequenceoutputring">ensureSequenceOutputRing</h3><pre><code class="language-ts">ensureSequenceOutputRing(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  outputSize: number,
+): void
+</code></pre>
+<p>Ensure the network owns a fixed-depth reusable ring sized for the current output width.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>outputSize</code> - Required activation output width.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="executeactivationpath">executeActivationPath</h3><pre><code class="language-ts">executeActivationPath(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+  outputBuffer: ActivationArray,
+  stats: ActivationStats,
+): void
+</code></pre>
+<p>Execute one of the three activation branches: stochastic layers, standard layers, or raw nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>inputVector</code> - Input vector.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>outputBuffer</code> - Mutable output buffer.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="finalizenodepathweightnoiserestore">finalizeNodePathWeightNoiseRestore</h3><pre><code class="language-ts">finalizeNodePathWeightNoiseRestore(
+  network: default,
+  isTraining: boolean,
+  appliedWeightNoise: boolean,
+): void
+</code></pre>
+<p>Restore temporary weight-noise values for fallback node path only.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+<li><code>appliedWeightNoise</code> - Whether weight noise was applied during this pass.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="finalizetrainingstepandstats">finalizeTrainingStepAndStats</h3><pre><code class="language-ts">finalizeTrainingStepAndStats(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  stats: ActivationStats,
+  isTraining: boolean,
+): void
+</code></pre>
+<p>Finalize training counters and attach activation statistics to runtime state.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>stats</code> - Activation stats.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="findsourcelayerindex">findSourceLayerIndex</h3><pre><code class="language-ts">findSourceLayerIndex(
+  network: default,
+  connection: default,
+): number
+</code></pre>
+<p>Find the layer index containing a connection source node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>connection</code> - Connection to inspect.</li>
+</ul>
+<p>Returns: Layer index for source node, or -1 when not found.</p>
+<h3 id="gaussianrand">gaussianRand</h3><pre><code class="language-ts">gaussianRand(
+  rng: () =&gt; number,
+): number
+</code></pre>
+<p>Produce a normally distributed random sample using the Box-Muller transform.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rng</code> - Pseudo-random source in the interval [0, 1).</li>
+</ul>
+<p>Returns: Standard normal sample with mean 0 and variance 1.</p>
+<h3 id="hascompatibleskipstate">hasCompatibleSkipState</h3><pre><code class="language-ts">hasCompatibleSkipState(
+  previousLayerActivations: number[] | undefined,
+  currentLayerNodeCount: number,
+): boolean
+</code></pre>
+<p>Validate whether previous activations can be reused as skip pass-through output.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>previousLayerActivations</code> - Last computed layer activations.</li>
+<li><code>currentLayerNodeCount</code> - Current layer node count.</li>
+</ul>
+<p>Returns: True when pass-through activations are compatible.</p>
+<h3 id="haslayerednetwork">hasLayeredNetwork</h3><pre><code class="language-ts">hasLayeredNetwork(
+  network: default,
+): boolean
+</code></pre>
+<p>Check whether the network has at least one explicit layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+</ul>
+<p>Returns: True when layered activation path should run.</p>
+<h3 id="haslayerednetworkwithstochasticdepth">hasLayeredNetworkWithStochasticDepth</h3><pre><code class="language-ts">hasLayeredNetworkWithStochasticDepth(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): boolean
+</code></pre>
+<p>Check whether the network has layers and stochastic-depth configuration for layer skipping path.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+</ul>
+<p>Returns: True when stochastic-depth layer path should run.</p>
+<h3 id="hasoriginalweightnoise">hasOriginalWeightNoise</h3><pre><code class="language-ts">hasOriginalWeightNoise(
+  connection: default,
+): boolean
+</code></pre>
+<p>Check whether a connection already has an original weight-noise snapshot.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection to inspect.</li>
+</ul>
+<p>Returns: True when snapshot exists.</p>
+<h3 id="ishiddenlayer">isHiddenLayer</h3><pre><code class="language-ts">isHiddenLayer(
+  layerIndex: number,
+  totalLayerCount: number,
+): boolean
+</code></pre>
+<p>Check whether a layer index refers to a hidden layer in a layered network.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerIndex</code> - Current layer index.</li>
+<li><code>totalLayerCount</code> - Number of layers in the network.</li>
+</ul>
+<p>Returns: True when the layer is hidden.</p>
+<h3 id="persistoriginalweightnoise">persistOriginalWeightNoise</h3><pre><code class="language-ts">persistOriginalWeightNoise(
+  connection: default,
+): void
+</code></pre>
+<p>Store current connection weight before applying temporary weight-noise modifications.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection to persist.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="preparetopologyforactivation">prepareTopologyForActivation</h3><pre><code class="language-ts">prepareTopologyForActivation(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): void
+</code></pre>
+<p>Ensure compiled activation scheduling is refreshed before activation when topology changed.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="recordskippedlayer">recordSkippedLayer</h3><pre><code class="language-ts">recordSkippedLayer(
+  network: default,
+  stats: ActivationStats,
+  layerIndex: number,
+): void
+</code></pre>
+<p>Record a skipped layer in runtime and stats trackers.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>stats</code> - Activation stats accumulator.</li>
+<li><code>layerIndex</code> - Skipped layer index.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="recordweightnoisesample">recordWeightNoiseSample</h3><pre><code class="language-ts">recordWeightNoiseSample(
+  stats: ActivationStats,
+  sampledNoise: number,
+): void
+</code></pre>
+<p>Record one sampled weight-noise value in the activation statistics snapshot.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>stats</code> - Activation stats accumulator.</li>
+<li><code>sampledNoise</code> - Sampled noise value before restoration.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="releasebufferandcreateresult">releaseBufferAndCreateResult</h3><pre><code class="language-ts">releaseBufferAndCreateResult(
+  outputBuffer: ActivationArray,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number[]
+</code></pre>
+<p>Release pooled output buffer and return a detached plain array copy.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>outputBuffer</code> - Mutable pooled output buffer.</li>
+</ul>
+<p>Returns: Plain array of output values.</p>
+<h3 id="resetskippedlayers">resetSkippedLayers</h3><pre><code class="language-ts">resetSkippedLayers(
+  network: default,
+): void
+</code></pre>
+<p>Clear the runtime list of skipped layers before current activation pass.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network runtime owner.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolveconnectionnoisestd">resolveConnectionNoiseStd</h3><pre><code class="language-ts">resolveConnectionNoiseStd(
+  network: default,
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  connection: default,
+  fallbackStandardDeviation: number,
+): number
+</code></pre>
+<p>Resolve connection-specific weight-noise standard deviation, including per-hidden overrides.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>connection</code> - Current connection.</li>
+<li><code>fallbackStandardDeviation</code> - Global fallback deviation.</li>
+</ul>
+<p>Returns: Effective standard deviation for this connection.</p>
+<h3 id="resolvedynamicweightnoisestd">resolveDynamicWeightNoiseStd</h3><pre><code class="language-ts">resolveDynamicWeightNoiseStd(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): number
+</code></pre>
+<p>Resolve the training-step adjusted global weight-noise standard deviation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+</ul>
+<p>Returns: Effective weight-noise standard deviation for current training step.</p>
+<h3 id="resolveruntimeactivationprecision">resolveRuntimeActivationPrecision</h3><pre><code class="language-ts">resolveRuntimeActivationPrecision(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+): ActivationPrecision | undefined
+</code></pre>
+<p>Read the resolved runtime activation precision from the current network.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+</ul>
+<p>Returns: Active per-network activation precision when present.</p>
+<h3 id="restoredropconnectweights">restoreDropConnectWeights</h3><pre><code class="language-ts">restoreDropConnectWeights(
+  network: default,
+): void
+</code></pre>
+<p>Restore drop-connect modified weights and normalize all masks back to one.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="restoreoriginaldropconnectweight">restoreOriginalDropConnectWeight</h3><pre><code class="language-ts">restoreOriginalDropConnectWeight(
+  connection: default,
+): void
+</code></pre>
+<p>Restore and clear original connection weight after drop-connect.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection to restore.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="restoreoriginalweightnoise">restoreOriginalWeightNoise</h3><pre><code class="language-ts">restoreOriginalWeightNoise(
+  connection: default,
+): void
+</code></pre>
+<p>Restore and clear the original weight-noise snapshot for a connection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection to restore.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="scaleactivations">scaleActivations</h3><pre><code class="language-ts">scaleActivations(
+  activations: number[],
+  scaleFactor: number,
+): number[]
+</code></pre>
+<p>Create a new activation vector by multiplying each activation by a scale factor.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activations</code> - Source activation vector.</li>
+<li><code>scaleFactor</code> - Multiplicative scale factor.</li>
+</ul>
+<p>Returns: Scaled activation vector.</p>
+<h3 id="setallmaskstoone">setAllMasksToOne</h3><pre><code class="language-ts">setAllMasksToOne(
+  nodes: default[],
+): void
+</code></pre>
+<p>Set mask value to one for every node in a layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Layer nodes to normalize.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="setdropconnectmask">setDropConnectMask</h3><pre><code class="language-ts">setDropConnectMask(
+  connection: default,
+  dropConnectMask: number,
+): void
+</code></pre>
+<p>Set drop-connect mask value for a connection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection to annotate.</li>
+<li><code>dropConnectMask</code> - Drop-connect mask value.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="setlastsamplednoise">setLastSampledNoise</h3><pre><code class="language-ts">setLastSampledNoise(
+  connection: default,
+  sampledNoise: number,
+): void
+</code></pre>
+<p>Persist last sampled weight-noise value for a connection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection to annotate.</li>
+<li><code>sampledNoise</code> - Last sampled noise.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="stashoriginaldropconnectweight">stashOriginalDropConnectWeight</h3><pre><code class="language-ts">stashOriginalDropConnectWeight(
+  connection: default,
+): void
+</code></pre>
+<p>Store original connection weight before drop-connect zeroing.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connection</code> - Connection to persist.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="tryfastslabactivation">tryFastSlabActivation</h3><pre><code class="language-ts">tryFastSlabActivation(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  inputVector: number[],
+  isTraining: boolean,
+): number[] | undefined
+</code></pre>
+<p>Attempt fast slab activation and safely fall back to regular activation on failure.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>inputVector</code> - Input vector.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+</ul>
+<p>Returns: Fast slab output when available, otherwise undefined.</p>
+<h3 id="updatestochasticdepthfromschedule">updateStochasticDepthFromSchedule</h3><pre><code class="language-ts">updateStochasticDepthFromSchedule(
+  runtimeNetwork: ActivateRuntimeNetworkProps,
+  isTraining: boolean,
+): void
+</code></pre>
+<p>Update stochastic depth probabilities using a training schedule when valid.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Runtime activation internals.</li>
+<li><code>isTraining</code> - Training-time flag.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="validateinputvector">validateInputVector</h3><pre><code class="language-ts">validateInputVector(
+  network: default,
+  inputVector: number[],
+): void
+</code></pre>
+<p>Validate that the incoming input vector exists and matches expected input size.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+<li><code>inputVector</code> - Input vector to validate.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="validatenetworknodes">validateNetworkNodes</h3><pre><code class="language-ts">validateNetworkNodes(
+  network: default,
+): void
+</code></pre>
+<p>Assert that the network contains nodes before executing activation routines.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being activated.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="writelayeractivationstooutput">writeLayerActivationsToOutput</h3><pre><code class="language-ts">writeLayerActivationsToOutput(
+  layerActivations: number[] | undefined,
+  outputBuffer: ActivationArray,
+  outputSize: number,
+): void
+</code></pre>
+<p>Copy final layer activations into the pooled network output buffer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>layerActivations</code> - Final layer activations.</li>
+<li><code>outputBuffer</code> - Mutable output buffer.</li>
+<li><code>outputSize</code> - Maximum output width.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-activate-network-activate-helpers-utils-ts">architecture/network/activate/network.activate.helpers.utils.ts</h2><p>Re-export no-trace activation orchestration for callers that want output values
+without retaining per-node trace state.</p>
+<h3 id="createbatchactivationcontext">createBatchActivationContext</h3><pre><code class="language-ts">createBatchActivationContext(
+  network: default,
+  batchInputs: number[][],
+  isTraining: boolean,
+): BatchActivationContext
+</code></pre>
+<p>Create the context consumed by batch activation helpers.</p>
+<p>Batch mode carries the full input matrix, expected input width, and training
+trace policy in one object so downstream helpers can stay orchestration-only.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance bound to the activation call.</li>
+<li><code>batchInputs</code> - Input matrix supplied by the caller.</li>
+<li><code>isTraining</code> - Whether activation should retain training traces.</li>
+</ul>
+<p>Returns: Fully populated batch activation context.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const context = createBatchActivationContext(network, [[0, 1], [1, 0]], false);
+// context.batchInputs can be iterated row-by-row by activation helpers
+</code></pre>
+<h3 id="createnotraceactivationcontext">createNoTraceActivationContext</h3><pre><code class="language-ts">createNoTraceActivationContext(
+  network: default,
+  inputVector: number[],
+): NoTraceActivationContext
+</code></pre>
+<p>Create the immutable context consumed by no-trace activation helpers.</p>
+<p>This context snapshots the caller input and expected input width while exposing
+the internal network surface required by low-level activation utilities.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance bound to the activation call.</li>
+<li><code>inputVector</code> - Input activation vector supplied by the caller.</li>
+</ul>
+<p>Returns: Fully populated no-trace activation context.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const context = createNoTraceActivationContext(network, [0.2, 0.8]);
+// context.expectedInputSize mirrors network.input
+</code></pre>
+<h3 id="createrawactivationcontext">createRawActivationContext</h3><pre><code class="language-ts">createRawActivationContext(
+  network: default,
+  inputVector: number[],
+  isTraining: boolean,
+  maximumActivationDepth: number,
+): RawActivationContext
+</code></pre>
+<p>Create the context consumed by raw activation helpers.</p>
+<p>Raw activation may preserve node traces for training and uses an explicit
+depth limit to prevent runaway recurrent propagation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance bound to the activation call.</li>
+<li><code>inputVector</code> - Input activation vector supplied by the caller.</li>
+<li><code>isTraining</code> - Whether activation should retain training traces.</li>
+<li><code>maximumActivationDepth</code> - Guard against runaway activation depth.</li>
+</ul>
+<p>Returns: Fully populated raw activation context.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const context = createRawActivationContext(network, [1, 0], true, 64);
+// context.maximumActivationDepth bounds propagation depth
+</code></pre>
+<h3 id="executebatchactivation">executeBatchActivation</h3><pre><code class="language-ts">executeBatchActivation(
+  activationContext: BatchActivationContext,
+): number[][]
+</code></pre>
+<p>Execute mini-batch activation with top-level shape validation and per-row checks.</p>
+<p>The orchestration keeps behavior deterministic by validating the container first,
+then validating each row before delegating to the core network activation function.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared batch activation state.</li>
+</ul>
+<p>Returns: Matrix of activation outputs.</p>
+<h3 id="executenotraceactivation">executeNoTraceActivation</h3><pre><code class="language-ts">executeNoTraceActivation(
+  activationContext: NoTraceActivationContext,
+): number[]
+</code></pre>
+<p>Execute no-trace activation with a fast-path attempt and deterministic fallback traversal.</p>
+<p>The orchestration follows a strict sequence: refresh order guarantees, validate input shape,
+try fast slab inference, then compute outputs through node traversal when needed.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared no-trace activation state.</li>
+</ul>
+<p>Returns: Output activation vector detached from pooled storage.</p>
+<h3 id="executerawactivation">executeRawActivation</h3><pre><code class="language-ts">executeRawActivation(
+  activationContext: RawActivationContext,
+): ActivationArray
+</code></pre>
+<p>Execute raw activation through the network delegate using a compact orchestration flow.</p>
+<p>This helper keeps the exported activation method focused on context creation while this
+module owns the execution path and future branching behavior.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared raw activation state.</li>
+</ul>
+<p>Returns: Activation output vector from the network delegate.</p>
+<h2 id="architecture-network-activate-network-activate-errors-ts">architecture/network/activate/network.activate.errors.ts</h2><p>Raised when the input vector supplied to <code>activate()</code> does not match the
+network&#39;s expected input size.</p>
+<p>This is the most common activation error. It fires when <code>input.length</code>
+differs from <code>network.input</code> — for example, passing 3 values to a network
+that expects 2.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const network = new Network(2, 1);
+network.activate([0, 1, 0.5]); // throws NetworkActivateInputSizeMismatchError
+</code></pre>
+<h3 id="networkactivatebatchinputscollectionerror">NetworkActivateBatchInputsCollectionError</h3><p>Raised when <code>activateBatch()</code> receives a value that is not an array as its
+top-level <code>inputs</code> argument.</p>
+<p>Each element of <code>inputs</code> must itself be a <code>number[]</code> input row. Passing a
+single flat array of numbers (instead of an array of rows) is the most
+common trigger.</p>
+<p>Example:</p>
+<pre><code class="language-ts">network.activateBatch([0, 1]); // throws — should be [[0, 1]]
+</code></pre>
+<h3 id="networkactivatecorruptedstructureerror">NetworkActivateCorruptedStructureError</h3><p>Raised when activation is attempted on a network whose node structure is
+inconsistent or internally corrupted — for example, a node list that
+contains <code>null</code> entries, or a network reconstructed from a malformed
+serialized snapshot.</p>
+<p>If you encounter this error, inspect the network&#39;s <code>nodes</code> array before
+activation and verify the deserialization path.</p>
+<h3 id="networkactivateinputsizemismatcherror">NetworkActivateInputSizeMismatchError</h3><p>Raised when the input vector supplied to <code>activate()</code> does not match the
+network&#39;s expected input size.</p>
+<p>This is the most common activation error. It fires when <code>input.length</code>
+differs from <code>network.input</code> — for example, passing 3 values to a network
+that expects 2.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const network = new Network(2, 1);
+network.activate([0, 1, 0.5]); // throws NetworkActivateInputSizeMismatchError
+</code></pre>
+<h2 id="architecture-network-activate-network-activate-raw-utils-ts">architecture/network/activate/network.activate.raw.utils.ts</h2><h3 id="activatevianetworkdelegate">activateViaNetworkDelegate</h3><pre><code class="language-ts">activateViaNetworkDelegate(
+  activationContext: RawActivationContext,
+): number[]
+</code></pre>
+<p>Delegate raw activation to the core network activation implementation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared raw activation state.</li>
+</ul>
+<p>Returns: Activation output vector.</p>
+<h3 id="activatewithreusableoutputbuffer">activateWithReusableOutputBuffer</h3><pre><code class="language-ts">activateWithReusableOutputBuffer(
+  activationContext: RawActivationContext,
+): ActivationArray
+</code></pre>
+<p>Reuse the network-owned activation buffer for raw activation output when enabled.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared raw activation state.</li>
+</ul>
+<p>Returns: Reused typed buffer or a detached plain array, depending on runtime flags.</p>
+<h3 id="activatewithselectedreusepath">activateWithSelectedReusePath</h3><pre><code class="language-ts">activateWithSelectedReusePath(
+  activationContext: RawActivationContext,
+): ActivationArray
+</code></pre>
+<p>Select the raw activation execution path based on runtime reuse configuration.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared raw activation state.</li>
+</ul>
+<p>Returns: Activation output vector.</p>
+<h3 id="copyactivationresultintoreusablebuffer">copyActivationResultIntoReusableBuffer</h3><pre><code class="language-ts">copyActivationResultIntoReusableBuffer(
+  activationResult: number[],
+  reusableOutputBuffer: Float32Array&lt;ArrayBufferLike&gt; | Float64Array&lt;ArrayBufferLike&gt;,
+): void
+</code></pre>
+<p>Copy plain activation output values into the reusable typed buffer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationResult</code> - Detached activation result from the main activation path.</li>
+<li><code>reusableOutputBuffer</code> - Network-owned typed output buffer.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="detachreusableoutputbuffer">detachReusableOutputBuffer</h3><pre><code class="language-ts">detachReusableOutputBuffer(
+  reusableOutputBuffer: Float32Array&lt;ArrayBufferLike&gt; | Float64Array&lt;ArrayBufferLike&gt;,
+): number[]
+</code></pre>
+<p>Detach the reusable typed output buffer into a plain array for compatibility callers.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>reusableOutputBuffer</code> - Network-owned typed output buffer.</li>
+</ul>
+<p>Returns: Detached plain activation output array.</p>
+<h3 id="ensurereusableactivationoutputbuffer">ensureReusableActivationOutputBuffer</h3><pre><code class="language-ts">ensureReusableActivationOutputBuffer(
+  activationContext: RawActivationContext,
+  outputSize: number,
+): Float32Array&lt;ArrayBufferLike&gt; | Float64Array&lt;ArrayBufferLike&gt;
+</code></pre>
+<p>Ensure the network owns a reusable typed activation output buffer of the requested size.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared raw activation state.</li>
+<li><code>outputSize</code> - Required output width for the current activation pass.</li>
+</ul>
+<p>Returns: Reusable typed activation output buffer.</p>
+<h3 id="executerawactivation">executeRawActivation</h3><pre><code class="language-ts">executeRawActivation(
+  activationContext: RawActivationContext,
+): ActivationArray
+</code></pre>
+<p>Execute raw activation through the network delegate using a compact orchestration flow.</p>
+<p>This helper keeps the exported activation method focused on context creation while this
+module owns the execution path and future branching behavior.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared raw activation state.</li>
+</ul>
+<p>Returns: Activation output vector from the network delegate.</p>
+<h3 id="requirestypedactivationpoolreplacement">requiresTypedActivationPoolReplacement</h3><pre><code class="language-ts">requiresTypedActivationPoolReplacement(
+  activationPool: Float32Array&lt;ArrayBufferLike&gt; | Float64Array&lt;ArrayBufferLike&gt;,
+  useFloat32Activation: boolean,
+): boolean
+</code></pre>
+<p>Check whether the current reusable buffer must be replaced for the requested precision.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationPool</code> - Existing reusable activation pool buffer.</li>
+<li><code>useFloat32Activation</code> - True when the caller needs Float32 output.</li>
+</ul>
+<p>Returns: True when the current buffer type does not match the requested precision.</p>
+<h3 id="resolverawactivationprecision">resolveRawActivationPrecision</h3><pre><code class="language-ts">resolveRawActivationPrecision(
+  runtimeNetwork: RawActivationRuntimeProps,
+): ActivationPrecision
+</code></pre>
+<p>Read the resolved runtime activation precision for raw typed-output reuse.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNetwork</code> - Raw activation runtime view.</li>
+</ul>
+<p>Returns: Active activation precision for reusable raw output.</p>
+<h3 id="shouldreturntypedactivations">shouldReturnTypedActivations</h3><pre><code class="language-ts">shouldReturnTypedActivations(
+  activationContext: RawActivationContext,
+): boolean
+</code></pre>
+<p>Decide whether raw activation may return the reusable typed buffer directly.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared raw activation state.</li>
+</ul>
+<p>Returns: True when typed activations may escape to the caller.</p>
+<h2 id="architecture-network-activate-network-activate-batch-utils-ts">architecture/network/activate/network.activate.batch.utils.ts</h2><h3 id="activatesinglebatchrow">activateSingleBatchRow</h3><pre><code class="language-ts">activateSingleBatchRow(
+  rowActivationContext: BatchRowActivationContext,
+): number[]
+</code></pre>
+<p>Validate and activate one batch row.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rowActivationContext</code> - Shared state for one batch-row activation.</li>
+</ul>
+<p>Returns: Activation output vector for the row.</p>
+<h3 id="activatevalidatedbatchrows">activateValidatedBatchRows</h3><pre><code class="language-ts">activateValidatedBatchRows(
+  activationContext: BatchActivationContext,
+): number[][]
+</code></pre>
+<p>Activate each row in a validated batch matrix.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared batch activation state.</li>
+</ul>
+<p>Returns: Matrix of activation outputs.</p>
+<h3 id="assertbatchinputcollection">assertBatchInputCollection</h3><pre><code class="language-ts">assertBatchInputCollection(
+  batchInputs: number[][],
+): void
+</code></pre>
+<p>Validate that the batch input collection is an array of rows.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>batchInputs</code> - Candidate batch input collection.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assertbatchrowinputsize">assertBatchRowInputSize</h3><pre><code class="language-ts">assertBatchRowInputSize(
+  rowActivationContext: BatchRowActivationContext,
+): void
+</code></pre>
+<p>Validate one batch row dimensionality.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rowActivationContext</code> - Shared state for one batch-row activation.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="buildbatchrowinputsizemismatchmessage">buildBatchRowInputSizeMismatchMessage</h3><pre><code class="language-ts">buildBatchRowInputSizeMismatchMessage(
+  rowActivationContext: BatchRowActivationContext,
+): string
+</code></pre>
+<p>Build a descriptive mismatch message for invalid batch row input dimensions.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rowActivationContext</code> - Shared state for one batch-row activation.</li>
+</ul>
+<p>Returns: Formatted error message for invalid row dimensionality.</p>
+<h3 id="executebatchactivation">executeBatchActivation</h3><pre><code class="language-ts">executeBatchActivation(
+  activationContext: BatchActivationContext,
+): number[][]
+</code></pre>
+<p>Execute mini-batch activation with top-level shape validation and per-row checks.</p>
+<p>The orchestration keeps behavior deterministic by validating the container first,
+then validating each row before delegating to the core network activation function.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared batch activation state.</li>
+</ul>
+<p>Returns: Matrix of activation outputs.</p>
+<h3 id="formatinputlengthformessage">formatInputLengthForMessage</h3><pre><code class="language-ts">formatInputLengthForMessage(
+  inputVector: number[],
+): string
+</code></pre>
+<p>Convert input length into a display-safe string for error messaging.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>inputVector</code> - Candidate batch row input vector.</li>
+</ul>
+<p>Returns: Numeric length as string or predefined undefined text.</p>
+<h3 id="isbatchrowinputsizevalid">isBatchRowInputSizeValid</h3><pre><code class="language-ts">isBatchRowInputSizeValid(
+  rowActivationContext: BatchRowActivationContext,
+): boolean
+</code></pre>
+<p>Determine whether one batch row matches the expected input dimensionality.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>rowActivationContext</code> - Shared state for one batch-row activation.</li>
+</ul>
+<p>Returns: True when row size is valid.</p>
+<h2 id="architecture-network-activate-network-activate-notrace-utils-ts">architecture/network/activate/network.activate.notrace.utils.ts</h2><h3 id="activatewithouttraceusingnodeiteration">activateWithoutTraceUsingNodeIteration</h3><pre><code class="language-ts">activateWithoutTraceUsingNodeIteration(
+  activationContext: NoTraceActivationContext,
+): number[]
+</code></pre>
+<p>Execute no-trace activation through node traversal and pooled output collection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared no-trace activation state.</li>
+</ul>
+<p>Returns: Detached output activation vector.</p>
+<h3 id="assertinputmatchesnetworkinputsize">assertInputMatchesNetworkInputSize</h3><pre><code class="language-ts">assertInputMatchesNetworkInputSize(
+  activationContext: NoTraceActivationContext,
+): void
+</code></pre>
+<p>Validate that the input vector length matches expected network input dimensionality.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared no-trace activation state.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="buildinputsizemismatchmessage">buildInputSizeMismatchMessage</h3><pre><code class="language-ts">buildInputSizeMismatchMessage(
+  activationContext: NoTraceActivationContext,
+): string
+</code></pre>
+<p>Build a descriptive input mismatch message for activation validation errors.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared no-trace activation state.</li>
+</ul>
+<p>Returns: Formatted mismatch error message.</p>
+<h3 id="canusenotracefastslab">canUseNoTraceFastSlab</h3><pre><code class="language-ts">canUseNoTraceFastSlab(
+  activationContext: NoTraceActivationContext,
+): boolean
+</code></pre>
+<p>Determine whether fast slab activation is available for no-trace execution mode.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared no-trace activation state.</li>
+</ul>
+<p>Returns: True when slab execution is available for inference mode.</p>
+<h3 id="detachpooledoutputbuffer">detachPooledOutputBuffer</h3><pre><code class="language-ts">detachPooledOutputBuffer(
+  pooledOutputBuffer: ActivationArray,
+): number[]
+</code></pre>
+<p>Clone pooled output storage into a detached plain array.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>pooledOutputBuffer</code> - Pooled activation output storage.</li>
+</ul>
+<p>Returns: Detached output activation vector.</p>
+<h3 id="executenotraceactivation">executeNoTraceActivation</h3><pre><code class="language-ts">executeNoTraceActivation(
+  activationContext: NoTraceActivationContext,
+): number[]
+</code></pre>
+<p>Execute no-trace activation with a fast-path attempt and deterministic fallback traversal.</p>
+<p>The orchestration follows a strict sequence: refresh order guarantees, validate input shape,
+try fast slab inference, then compute outputs through node traversal when needed.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared no-trace activation state.</li>
+</ul>
+<p>Returns: Output activation vector detached from pooled storage.</p>
+<h3 id="formatinputlengthformessage">formatInputLengthForMessage</h3><pre><code class="language-ts">formatInputLengthForMessage(
+  inputVector: number[],
+): string
+</code></pre>
+<p>Convert input length into a display-safe string for error messaging.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>inputVector</code> - Candidate activation input vector.</li>
+</ul>
+<p>Returns: Numeric length as string or predefined undefined text.</p>
+<h3 id="isinputvectorlengthvalid">isInputVectorLengthValid</h3><pre><code class="language-ts">isInputVectorLengthValid(
+  activationContext: NoTraceActivationContext,
+): boolean
+</code></pre>
+<p>Check whether the input vector has a valid length for activation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared no-trace activation state.</li>
+</ul>
+<p>Returns: True when the input vector is an array with expected length.</p>
+<h3 id="refreshtopologicalorderwhenrequired">refreshTopologicalOrderWhenRequired</h3><pre><code class="language-ts">refreshTopologicalOrderWhenRequired(
+  activationContext: NoTraceActivationContext,
+): void
+</code></pre>
+<p>Refresh compiled activation scheduling when topology is marked dirty.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared no-trace activation state.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolvenotraceactivationprecision">resolveNoTraceActivationPrecision</h3><pre><code class="language-ts">resolveNoTraceActivationPrecision(
+  activationContext: NoTraceActivationContext,
+): ActivationPrecision | undefined
+</code></pre>
+<p>Read the resolved runtime activation precision for no-trace output pooling.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared no-trace activation state.</li>
+</ul>
+<p>Returns: Active per-network activation precision when present.</p>
+<h3 id="tryactivatewithfastslab">tryActivateWithFastSlab</h3><pre><code class="language-ts">tryActivateWithFastSlab(
+  activationContext: NoTraceActivationContext,
+): number[] | null
+</code></pre>
+<p>Attempt fast slab activation and return null when slab execution is unavailable or fails.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Shared no-trace activation state.</li>
+</ul>
+<p>Returns: Fast slab output when successful, otherwise null.</p>
+<h2 id="architecture-network-activate-network-activate-contexts-utils-ts">architecture/network/activate/network.activate.contexts.utils.ts</h2><h3 id="createbatchactivationcontext">createBatchActivationContext</h3><pre><code class="language-ts">createBatchActivationContext(
+  network: default,
+  batchInputs: number[][],
+  isTraining: boolean,
+): BatchActivationContext
+</code></pre>
+<p>Create the context consumed by batch activation helpers.</p>
+<p>Batch mode carries the full input matrix, expected input width, and training
+trace policy in one object so downstream helpers can stay orchestration-only.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance bound to the activation call.</li>
+<li><code>batchInputs</code> - Input matrix supplied by the caller.</li>
+<li><code>isTraining</code> - Whether activation should retain training traces.</li>
+</ul>
+<p>Returns: Fully populated batch activation context.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const context = createBatchActivationContext(network, [[0, 1], [1, 0]], false);
+// context.batchInputs can be iterated row-by-row by activation helpers
+</code></pre>
+<h3 id="createnotraceactivationcontext">createNoTraceActivationContext</h3><pre><code class="language-ts">createNoTraceActivationContext(
+  network: default,
+  inputVector: number[],
+): NoTraceActivationContext
+</code></pre>
+<p>Create the immutable context consumed by no-trace activation helpers.</p>
+<p>This context snapshots the caller input and expected input width while exposing
+the internal network surface required by low-level activation utilities.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance bound to the activation call.</li>
+<li><code>inputVector</code> - Input activation vector supplied by the caller.</li>
+</ul>
+<p>Returns: Fully populated no-trace activation context.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const context = createNoTraceActivationContext(network, [0.2, 0.8]);
+// context.expectedInputSize mirrors network.input
+</code></pre>
+<h3 id="createrawactivationcontext">createRawActivationContext</h3><pre><code class="language-ts">createRawActivationContext(
+  network: default,
+  inputVector: number[],
+  isTraining: boolean,
+  maximumActivationDepth: number,
+): RawActivationContext
+</code></pre>
+<p>Create the context consumed by raw activation helpers.</p>
+<p>Raw activation may preserve node traces for training and uses an explicit
+depth limit to prevent runaway recurrent propagation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance bound to the activation call.</li>
+<li><code>inputVector</code> - Input activation vector supplied by the caller.</li>
+<li><code>isTraining</code> - Whether activation should retain training traces.</li>
+<li><code>maximumActivationDepth</code> - Guard against runaway activation depth.</li>
+</ul>
+<p>Returns: Fully populated raw activation context.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const context = createRawActivationContext(network, [1, 0], true, 64);
+// context.maximumActivationDepth bounds propagation depth
+</code></pre>
+<h3 id="tonetworkinternals">toNetworkInternals</h3><pre><code class="language-ts">toNetworkInternals(
+  network: default,
+): ActivateNetworkInternals
+</code></pre>
+<p>Convert a network instance into the activation internals interface used by helper modules.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Runtime network instance.</li>
+</ul>
+<p>Returns: Network internals view used by activation helper modules.</p>
+<h2 id="architecture-network-activate-network-activate-schedule-utils-ts">architecture/network/activate/network.activate.schedule.utils.ts</h2><h3 id="createnodesbygeneid">createNodesByGeneId</h3><pre><code class="language-ts">createNodesByGeneId(
+  nodes: readonly default[],
+): Map&lt;number, default&gt;
+</code></pre>
+<p>Create a stable node lookup by gene id.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Runtime node collection.</li>
+</ul>
+<p>Returns: Stable node lookup map.</p>
+<h3 id="resolveactivationtraversalnodes">resolveActivationTraversalNodes</h3><pre><code class="language-ts">resolveActivationTraversalNodes(
+  network: default,
+): default[]
+</code></pre>
+<p>Resolve the node traversal order for one activation pass.</p>
+<p>The compiled activation schedule takes priority, then the legacy acyclic
+<code>_topoOrder</code> cache, then the raw <code>nodes</code> array as a final compatibility
+fallback for older or partially initialized runtimes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target runtime network.</li>
+</ul>
+<p>Returns: Deterministic activation-node traversal list.</p>
+<h3 id="resolveinputvaluesbynodeid">resolveInputValuesByNodeId</h3><pre><code class="language-ts">resolveInputValuesByNodeId(
+  network: default,
+  inputVector: number[],
+): Map&lt;number, number&gt;
+</code></pre>
+<p>Resolve one input-value lookup keyed by stable input-node gene id.</p>
+<p>Explicit <code>inputNodeIds</code> are used when available so callers can reorder the
+runtime <code>nodes</code> array without changing public input-vector semantics.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target runtime network.</li>
+<li><code>inputVector</code> - Input vector supplied by the caller.</li>
+</ul>
+<p>Returns: Stable input-value lookup for this activation pass.</p>
+<h3 id="resolvenodesfromcompiledschedule">resolveNodesFromCompiledSchedule</h3><pre><code class="language-ts">resolveNodesFromCompiledSchedule(
+  activationSchedule: ActivationSchedule | null | undefined,
+  nodesByGeneId: ReadonlyMap&lt;number, default&gt;,
+): default[] | null
+</code></pre>
+<p>Resolve activation nodes from the compiled schedule when it is present and valid.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationSchedule</code> - Cached compiled schedule.</li>
+<li><code>nodesByGeneId</code> - Stable node lookup by gene id.</li>
+</ul>
+<p>Returns: Flattened activation-node order or null when the schedule is absent or stale.</p>
+<h3 id="resolveorderedoutputnodes">resolveOrderedOutputNodes</h3><pre><code class="language-ts">resolveOrderedOutputNodes(
+  network: default,
+): default[]
+</code></pre>
+<p>Resolve output nodes in the public output-vector order.</p>
+<p>Explicit <code>outputNodeIds</code> keep output readout stable even when traversal order
+or storage order changes. Older runtimes fall back to raw output-node order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target runtime network.</li>
+</ul>
+<p>Returns: Output nodes in public vector order.</p>
+<h2 id="architecture-network-activate-network-activate-notrace-traversal-utils-ts">architecture/network/activate/network.activate.notrace.traversal.utils.ts</h2><h3 id="activatehiddennode">activateHiddenNode</h3><pre><code class="language-ts">activateHiddenNode(
+  networkNode: default,
+): void
+</code></pre>
+<p>Activate a hidden node without trace bookkeeping.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkNode</code> - Hidden-role node to activate.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="activateinputnode">activateInputNode</h3><pre><code class="language-ts">activateInputNode(
+  activationContext: SingleNodeNoTraceActivationContext,
+): void
+</code></pre>
+<p>Activate an input node using the matching input vector value.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Node-specific activation state.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="activatesinglenodewithouttrace">activateSingleNodeWithoutTrace</h3><pre><code class="language-ts">activateSingleNodeWithoutTrace(
+  activationContext: SingleNodeNoTraceActivationContext,
+): void
+</code></pre>
+<p>Activate one node and return the next output write index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Node-specific activation state.</li>
+</ul>
+<p>Returns: Updated output write index.</p>
+<h3 id="isinputnode">isInputNode</h3><pre><code class="language-ts">isInputNode(
+  networkNode: default,
+): boolean
+</code></pre>
+<p>Determine whether a node is an input-role node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkNode</code> - Node under traversal.</li>
+</ul>
+<p>Returns: True when node role is input.</p>
+<h3 id="isoutputnode">isOutputNode</h3><pre><code class="language-ts">isOutputNode(
+  networkNode: default,
+): boolean
+</code></pre>
+<p>Determine whether a node is an output-role node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkNode</code> - Node under traversal.</li>
+</ul>
+<p>Returns: True when node role is output.</p>
+<h3 id="populatepooledoutputbufferfromnodes">populatePooledOutputBufferFromNodes</h3><pre><code class="language-ts">populatePooledOutputBufferFromNodes(
+  traversalContext: NoTraceNodeTraversalContext,
+): void
+</code></pre>
+<p>Traverse nodes in activation order and write output activations into pooled storage.</p>
+<p>This helper isolates traversal concerns from no-trace orchestration so the main flow
+can remain focused on high-level activation phases.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Inputs required to process each node and collect outputs.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-activate-network-activate-utils-ts">architecture/network/activate/network.activate.utils.ts</a><ul><li><a href="#activate">activate</a></li><li><a href="#activatebatch">activateBatch</a></li><li><a href="#activateraw">activateRaw</a></li><li><a href="#gaussianrand">gaussianRand</a></li><li><a href="#notraceactivate">noTraceActivate</a></li></ul></div><div class="toc-file"><a href="#architecture-network-activate-network-activate-utils-types-ts">architecture/network/activate/network.activate.utils.types.ts</a><ul><li><a href="#activateruntimenetworkprops">ActivateRuntimeNetworkProps</a></li><li><a href="#activationoutputbuffer">ActivationOutputBuffer</a></li><li><a href="#activationstats">ActivationStats</a></li><li><a href="#batch-inputs-collection-error-message">BATCH_INPUTS_COLLECTION_ERROR_MESSAGE</a></li><li><a href="#batchactivationcontext">BatchActivationContext</a></li><li><a href="#batchrowactivationcontext">BatchRowActivationContext</a></li><li><a href="#default-max-activation-depth">DEFAULT_MAX_ACTIVATION_DEPTH</a></li><li><a href="#initial-output-write-index">INITIAL_OUTPUT_WRITE_INDEX</a></li><li><a href="#input-node-type">INPUT_NODE_TYPE</a></li><li><a href="#networklayer">NetworkLayer</a></li><li><a href="#networklayernodes">NetworkLayerNodes</a></li><li><a href="#no-trace-fast-slab-training-flag">NO_TRACE_FAST_SLAB_TRAINING_FLAG</a></li><li><a href="#notraceactivationcontext">NoTraceActivationContext</a></li><li><a href="#notracenodetraversalcontext">NoTraceNodeTraversalContext</a></li><li><a href="#output-node-type">OUTPUT_NODE_TYPE</a></li><li><a href="#output-write-index-increment">OUTPUT_WRITE_INDEX_INCREMENT</a></li><li><a href="#rawactivationcontext">RawActivationContext</a></li><li><a href="#singlenodenotraceactivationcontext">SingleNodeNoTraceActivationContext</a></li><li><a href="#undefined-input-length-text">UNDEFINED_INPUT_LENGTH_TEXT</a></li><li><a href="#weightnoiseapplyresult">WeightNoiseApplyResult</a></li><li><a href="#weightnoisestats">WeightNoiseStats</a></li></ul></div><div class="toc-file"><a href="#architecture-network-activate-network-activate-core-utils-ts">architecture/network/activate/network.activate.core.utils.ts</a><ul><li><a href="#acquireoutputbuffer">acquireOutputBuffer</a></li><li><a href="#acquiresequenceoutputbuffer">acquireSequenceOutputBuffer</a></li><li><a href="#activate">activate</a></li><li><a href="#activatelayer">activateLayer</a></li><li><a href="#activatelayerednetworkwithdropout">activateLayeredNetworkWithDropout</a></li><li><a href="#activatelayerednetworkwithstochasticdepth">activateLayeredNetworkWithStochasticDepth</a></li><li><a href="#activatenodenetworkfallback">activateNodeNetworkFallback</a></li><li><a href="#activatenodesandcollectoutputs">activateNodesAndCollectOutputs</a></li><li><a href="#applydropconnect">applyDropConnect</a></li><li><a href="#applyfallbackhiddendropout">applyFallbackHiddenDropout</a></li><li><a href="#applyfallbackweightnoise">applyFallbackWeightNoise</a></li><li><a href="#applyhiddenlayerdropout">applyHiddenLayerDropout</a></li><li><a href="#applytrainingdropconnect">applyTrainingDropConnect</a></li><li><a href="#applytrainingweightnoise">applyTrainingWeightNoise</a></li><li><a href="#collecthiddennodes">collectHiddenNodes</a></li><li><a href="#containsinvalidprobability">containsInvalidProbability</a></li><li><a href="#copyoutputbufferintosequencering">copyOutputBufferIntoSequenceRing</a></li><li><a href="#createactivationstats">createActivationStats</a></li><li><a href="#createsequenceoutputring">createSequenceOutputRing</a></li><li><a href="#createweightnoisestats">createWeightNoiseStats</a></li><li><a href="#decidelayerskip">decideLayerSkip</a></li><li><a href="#ensuresequenceoutputring">ensureSequenceOutputRing</a></li><li><a href="#executeactivationpath">executeActivationPath</a></li><li><a href="#finalizenodepathweightnoiserestore">finalizeNodePathWeightNoiseRestore</a></li><li><a href="#finalizetrainingstepandstats">finalizeTrainingStepAndStats</a></li><li><a href="#findsourcelayerindex">findSourceLayerIndex</a></li><li><a href="#gaussianrand">gaussianRand</a></li><li><a href="#hascompatibleskipstate">hasCompatibleSkipState</a></li><li><a href="#haslayerednetwork">hasLayeredNetwork</a></li><li><a href="#haslayerednetworkwithstochasticdepth">hasLayeredNetworkWithStochasticDepth</a></li><li><a href="#hasoriginalweightnoise">hasOriginalWeightNoise</a></li><li><a href="#ishiddenlayer">isHiddenLayer</a></li><li><a href="#persistoriginalweightnoise">persistOriginalWeightNoise</a></li><li><a href="#preparetopologyforactivation">prepareTopologyForActivation</a></li><li><a href="#recordskippedlayer">recordSkippedLayer</a></li><li><a href="#recordweightnoisesample">recordWeightNoiseSample</a></li><li><a href="#releasebufferandcreateresult">releaseBufferAndCreateResult</a></li><li><a href="#resetskippedlayers">resetSkippedLayers</a></li><li><a href="#resolveconnectionnoisestd">resolveConnectionNoiseStd</a></li><li><a href="#resolvedynamicweightnoisestd">resolveDynamicWeightNoiseStd</a></li><li><a href="#resolveruntimeactivationprecision">resolveRuntimeActivationPrecision</a></li><li><a href="#restoredropconnectweights">restoreDropConnectWeights</a></li><li><a href="#restoreoriginaldropconnectweight">restoreOriginalDropConnectWeight</a></li><li><a href="#restoreoriginalweightnoise">restoreOriginalWeightNoise</a></li><li><a href="#scaleactivations">scaleActivations</a></li><li><a href="#setallmaskstoone">setAllMasksToOne</a></li><li><a href="#setdropconnectmask">setDropConnectMask</a></li><li><a href="#setlastsamplednoise">setLastSampledNoise</a></li><li><a href="#stashoriginaldropconnectweight">stashOriginalDropConnectWeight</a></li><li><a href="#tryfastslabactivation">tryFastSlabActivation</a></li><li><a href="#updatestochasticdepthfromschedule">updateStochasticDepthFromSchedule</a></li><li><a href="#validateinputvector">validateInputVector</a></li><li><a href="#validatenetworknodes">validateNetworkNodes</a></li><li><a href="#writelayeractivationstooutput">writeLayerActivationsToOutput</a></li></ul></div><div class="toc-file"><a href="#architecture-network-activate-network-activate-helpers-utils-ts">architecture/network/activate/network.activate.helpers.utils.ts</a><ul><li><a href="#createbatchactivationcontext">createBatchActivationContext</a></li><li><a href="#createnotraceactivationcontext">createNoTraceActivationContext</a></li><li><a href="#createrawactivationcontext">createRawActivationContext</a></li><li><a href="#executebatchactivation">executeBatchActivation</a></li><li><a href="#executenotraceactivation">executeNoTraceActivation</a></li><li><a href="#executerawactivation">executeRawActivation</a></li></ul></div><div class="toc-file"><a href="#architecture-network-activate-network-activate-errors-ts">architecture/network/activate/network.activate.errors.ts</a><ul><li><a href="#networkactivatebatchinputscollectionerror">NetworkActivateBatchInputsCollectionError</a></li><li><a href="#networkactivatecorruptedstructureerror">NetworkActivateCorruptedStructureError</a></li><li><a href="#networkactivateinputsizemismatcherror">NetworkActivateInputSizeMismatchError</a></li></ul></div><div class="toc-file"><a href="#architecture-network-activate-network-activate-raw-utils-ts">architecture/network/activate/network.activate.raw.utils.ts</a><ul><li><a href="#activatevianetworkdelegate">activateViaNetworkDelegate</a></li><li><a href="#activatewithreusableoutputbuffer">activateWithReusableOutputBuffer</a></li><li><a href="#activatewithselectedreusepath">activateWithSelectedReusePath</a></li><li><a href="#copyactivationresultintoreusablebuffer">copyActivationResultIntoReusableBuffer</a></li><li><a href="#detachreusableoutputbuffer">detachReusableOutputBuffer</a></li><li><a href="#ensurereusableactivationoutputbuffer">ensureReusableActivationOutputBuffer</a></li><li><a href="#executerawactivation">executeRawActivation</a></li><li><a href="#requirestypedactivationpoolreplacement">requiresTypedActivationPoolReplacement</a></li><li><a href="#resolverawactivationprecision">resolveRawActivationPrecision</a></li><li><a href="#shouldreturntypedactivations">shouldReturnTypedActivations</a></li></ul></div><div class="toc-file"><a href="#architecture-network-activate-network-activate-batch-utils-ts">architecture/network/activate/network.activate.batch.utils.ts</a><ul><li><a href="#activatesinglebatchrow">activateSingleBatchRow</a></li><li><a href="#activatevalidatedbatchrows">activateValidatedBatchRows</a></li><li><a href="#assertbatchinputcollection">assertBatchInputCollection</a></li><li><a href="#assertbatchrowinputsize">assertBatchRowInputSize</a></li><li><a href="#buildbatchrowinputsizemismatchmessage">buildBatchRowInputSizeMismatchMessage</a></li><li><a href="#executebatchactivation">executeBatchActivation</a></li><li><a href="#formatinputlengthformessage">formatInputLengthForMessage</a></li><li><a href="#isbatchrowinputsizevalid">isBatchRowInputSizeValid</a></li></ul></div><div class="toc-file"><a href="#architecture-network-activate-network-activate-notrace-utils-ts">architecture/network/activate/network.activate.notrace.utils.ts</a><ul><li><a href="#activatewithouttraceusingnodeiteration">activateWithoutTraceUsingNodeIteration</a></li><li><a href="#assertinputmatchesnetworkinputsize">assertInputMatchesNetworkInputSize</a></li><li><a href="#buildinputsizemismatchmessage">buildInputSizeMismatchMessage</a></li><li><a href="#canusenotracefastslab">canUseNoTraceFastSlab</a></li><li><a href="#detachpooledoutputbuffer">detachPooledOutputBuffer</a></li><li><a href="#executenotraceactivation">executeNoTraceActivation</a></li><li><a href="#formatinputlengthformessage">formatInputLengthForMessage</a></li><li><a href="#isinputvectorlengthvalid">isInputVectorLengthValid</a></li><li><a href="#refreshtopologicalorderwhenrequired">refreshTopologicalOrderWhenRequired</a></li><li><a href="#resolvenotraceactivationprecision">resolveNoTraceActivationPrecision</a></li><li><a href="#tryactivatewithfastslab">tryActivateWithFastSlab</a></li></ul></div><div class="toc-file"><a href="#architecture-network-activate-network-activate-contexts-utils-ts">architecture/network/activate/network.activate.contexts.utils.ts</a><ul><li><a href="#createbatchactivationcontext">createBatchActivationContext</a></li><li><a href="#createnotraceactivationcontext">createNoTraceActivationContext</a></li><li><a href="#createrawactivationcontext">createRawActivationContext</a></li><li><a href="#tonetworkinternals">toNetworkInternals</a></li></ul></div><div class="toc-file"><a href="#architecture-network-activate-network-activate-schedule-utils-ts">architecture/network/activate/network.activate.schedule.utils.ts</a><ul><li><a href="#createnodesbygeneid">createNodesByGeneId</a></li><li><a href="#resolveactivationtraversalnodes">resolveActivationTraversalNodes</a></li><li><a href="#resolveinputvaluesbynodeid">resolveInputValuesByNodeId</a></li><li><a href="#resolvenodesfromcompiledschedule">resolveNodesFromCompiledSchedule</a></li><li><a href="#resolveorderedoutputnodes">resolveOrderedOutputNodes</a></li></ul></div><div class="toc-file"><a href="#architecture-network-activate-network-activate-notrace-traversal-utils-ts">architecture/network/activate/network.activate.notrace.traversal.utils.ts</a><ul><li><a href="#activatehiddennode">activateHiddenNode</a></li><li><a href="#activateinputnode">activateInputNode</a></li><li><a href="#activatesinglenodewithouttrace">activateSingleNodeWithoutTrace</a></li><li><a href="#isinputnode">isInputNode</a></li><li><a href="#isoutputnode">isOutputNode</a></li><li><a href="#populatepooledoutputbufferfromnodes">populatePooledOutputBufferFromNodes</a></li></ul></div></div></aside></div><script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script><script type="module">
+import mermaid from "../../../assets/vendor/mermaid.esm.min.mjs";
+
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'loose',
+  theme: 'base',
+  themeVariables: {
+    darkMode: true,
+    background: '#121a24',
+    primaryColor: '#102131',
+    primaryTextColor: '#d7e4f3',
+    primaryBorderColor: '#5ec8ff',
+    secondaryColor: '#0f1722',
+    secondaryTextColor: '#d7e4f3',
+    secondaryBorderColor: '#5ec8ff',
+    tertiaryColor: '#16283a',
+    tertiaryTextColor: '#d7e4f3',
+    tertiaryBorderColor: '#ffbf69',
+    mainBkg: '#0f1722',
+    nodeBorder: '#5ec8ff',
+    clusterBkg: '#102131',
+    clusterBorder: '#5ec8ff',
+    lineColor: '#5ec8ff',
+    edgeLabelBackground: '#0f1722',
+    textColor: '#d7e4f3',
+    fontFamily: 'Open Sans, sans-serif'
+  }
+});
+
+try {
+  await mermaid.run({ querySelector: '.mermaid-diagram' });
+} catch (error) {
+  console.error('[docs] Mermaid render failed.', error);
+}
+</script></body></html>

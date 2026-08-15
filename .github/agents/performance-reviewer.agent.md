@@ -115,9 +115,6 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
-VERDICT: APPROVE | REQUEST_CHANGES
-OBSERVATIONS:
-- class: <removed-cache|complexity-increase|unbounded-growth|unnecessary-allocation|typed-array-regression|sync-in-hot-path>, severity: <high|medium|low>, confidence: <0-1>, detail: <concise finding with code-level rationale>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

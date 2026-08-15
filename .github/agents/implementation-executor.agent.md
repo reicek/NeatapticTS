@@ -106,6 +106,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 5. **Apply surgical edits using the `edit` tool for existing files and `create` for new files.**
    - Use small, focused hunks — change only the specific lines in the plan boundary.
    - **Preserve `implementation-standards` in every edit:** ES2023-first syntax (`toSorted`, `structuredClone`, `?.`, `??`, numeric separators), JSDoc on all exported symbols (`@param`, `@returns`, `@throws`, `@example`), named constants over magic numbers, single-`expect` test style (up to three related `expect()` per `it()`), folder-based module layout, and no `any`/`unknown` without justification.
+   - **When reducing complexity, follow the SOLID-Aligned Complexity Reduction pattern** from `implementation-standards`: extract logic into SRP pure executor functions in `{category}.utils.ts` files (split if > 800 lines), keep orchestrators declarative (complexity ≤ 10, ideally ≤ 5), keep executors targeted (complexity ≤ 5, ideally ≤ 3). Replace `??`-chain config resolvers with spread-based defaults.
    - **Never** add backward-compatibility wrappers, dual-path code, or deferred cleanup — remove old code in the same edit that introduces the replacement.
    - Example: `edit` only the specific lines in the plan boundary; do not reformat surrounding code.
 6. **Run the smallest targeted validation command for touched files.**
@@ -259,17 +260,10 @@ TASK_STATUS: SUCCESS | PARTIAL | FAILED
 TIER: 2
 ROLE: implementation-executor
 TASK_RECEIVED: <brief restatement>
-SLICE_ID: <slice_id or NONE>
 FILES_READ:
 - <path or NONE>
 FILES_CHANGED:
 - <path or NONE>
-APPLIED_CHANGES:
-- file: <path>
-  edit_tool: edit | create
-  summary: <one-line description>
-  standards_check: <es2023|jsdoc|named_constants|single_expect status>
-  validation: <command + exit_code>
 KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:

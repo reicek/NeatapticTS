@@ -650,6 +650,9 @@ export interface PrimitiveDescriptor {
  * three standard roles (`'input'`, `'hidden'`, `'output'`), or `null`
  * for any other string. Used by descriptor helpers to stamp a default
  * intent without requiring the caller to repeat the role mapping.
+ *
+ * @param nodeType - Runtime node type string to resolve.
+ * @returns The matching primitive intent or null for non-standard types.
  */
 export function resolvePrimitiveIntent(
   nodeType: string,

@@ -1711,6 +1711,7 @@ are balanced around the center of available space.
 Parameters:
 - `positionedNodes` - Positioned nodes.
 - `drawableWidthPx` - Drawable width.
+- `drawableLeftPx` - Left pixel offset of the drawable area (defaults to 0).
 
 Returns: Centered positioned nodes.
 
@@ -4126,6 +4127,56 @@ the appropriate CPU or GPU path from scratch. Structural edits can change
 GPU eligibility (gates, self-connections, unsupported activations), so the
 cached backend must not survive them.
 
+#### _normalizeActivationOptions
+
+```ts
+_normalizeActivationOptions(
+  trainingOrOptions: boolean | NetworkActivationOptions,
+): NetworkActivationOptions
+```
+
+Normalize the mixed training-flag / options-bag argument into a
+{@link NetworkActivationOptions} object.
+
+Parameters:
+- `trainingOrOptions` - Boolean training flag or options bag.
+
+Returns: Normalized activation options.
+
+#### _notifyBackendChange
+
+```ts
+_notifyBackendChange(
+  observer: ActivationObserver | undefined,
+  backend: ActivationBackend,
+  previousBackend: ActivationBackend | undefined,
+): void
+```
+
+Notify the observer (if any) that the active backend changed.
+
+Parameters:
+- `observer` - Optional activation observer.
+- `backend` - Newly selected backend.
+- `previousBackend` - Previously used backend, if any.
+
+#### _notifyFallback
+
+```ts
+_notifyFallback(
+  observer: ActivationObserver | undefined,
+  requested: "gpu" | "auto",
+  reason: string,
+): void
+```
+
+Notify the observer (if any) that a GPU request fell back to CPU.
+
+Parameters:
+- `observer` - Optional activation observer.
+- `requested` - Backend originally requested by the caller.
+- `reason` - Human-readable fallback reason.
+
 #### _resolveActivationBackend
 
 ```ts
@@ -4162,6 +4213,30 @@ _safeUpdateWeight(
 ```
 
 Internal helper to safely update a connection weight with clipping and NaN checks.
+
+#### _tryGPUActivation
+
+```ts
+_tryGPUActivation(
+  input: number[] | Float32Array<ArrayBufferLike>,
+  backend: "gpu" | "auto",
+  observer: ActivationObserver | undefined,
+  previousBackend: ActivationBackend | undefined,
+  training: boolean,
+): number[] | Promise<Float32Array<ArrayBufferLike>>
+```
+
+Attempt GPU activation, falling back to CPU when the device is
+unavailable or ineligible.
+
+Parameters:
+- `input` - Input vector of length `this.input`.
+- `backend` - Requested backend (`'gpu'` or `'auto'`).
+- `observer` - Optional activation observer.
+- `previousBackend` - Previously used backend, if any.
+- `training` - Whether activation is part of training.
+
+Returns: Output values, or a promise when the GPU path succeeds.
 
 #### _warnUseGPUDeprecated
 
@@ -6888,7 +6963,7 @@ buildOverheadArtifact(
 ): Record<string, unknown>
 ```
 
-Build the overhead-breakdown artifact consumed by the browser scenario.
+Build the overhead-breakdown artifact consumed by the browser benchmark scenario page.
 
 Parameters:
 - `tierResults` - Per-tier profiling results.
@@ -8286,6 +8361,56 @@ the appropriate CPU or GPU path from scratch. Structural edits can change
 GPU eligibility (gates, self-connections, unsupported activations), so the
 cached backend must not survive them.
 
+#### _normalizeActivationOptions
+
+```ts
+_normalizeActivationOptions(
+  trainingOrOptions: boolean | NetworkActivationOptions,
+): NetworkActivationOptions
+```
+
+Normalize the mixed training-flag / options-bag argument into a
+{@link NetworkActivationOptions} object.
+
+Parameters:
+- `trainingOrOptions` - Boolean training flag or options bag.
+
+Returns: Normalized activation options.
+
+#### _notifyBackendChange
+
+```ts
+_notifyBackendChange(
+  observer: ActivationObserver | undefined,
+  backend: ActivationBackend,
+  previousBackend: ActivationBackend | undefined,
+): void
+```
+
+Notify the observer (if any) that the active backend changed.
+
+Parameters:
+- `observer` - Optional activation observer.
+- `backend` - Newly selected backend.
+- `previousBackend` - Previously used backend, if any.
+
+#### _notifyFallback
+
+```ts
+_notifyFallback(
+  observer: ActivationObserver | undefined,
+  requested: "gpu" | "auto",
+  reason: string,
+): void
+```
+
+Notify the observer (if any) that a GPU request fell back to CPU.
+
+Parameters:
+- `observer` - Optional activation observer.
+- `requested` - Backend originally requested by the caller.
+- `reason` - Human-readable fallback reason.
+
 #### _resolveActivationBackend
 
 ```ts
@@ -8322,6 +8447,30 @@ _safeUpdateWeight(
 ```
 
 Internal helper to safely update a connection weight with clipping and NaN checks.
+
+#### _tryGPUActivation
+
+```ts
+_tryGPUActivation(
+  input: number[] | Float32Array<ArrayBufferLike>,
+  backend: "gpu" | "auto",
+  observer: ActivationObserver | undefined,
+  previousBackend: ActivationBackend | undefined,
+  training: boolean,
+): number[] | Promise<Float32Array<ArrayBufferLike>>
+```
+
+Attempt GPU activation, falling back to CPU when the device is
+unavailable or ineligible.
+
+Parameters:
+- `input` - Input vector of length `this.input`.
+- `backend` - Requested backend (`'gpu'` or `'auto'`).
+- `observer` - Optional activation observer.
+- `previousBackend` - Previously used backend, if any.
+- `training` - Whether activation is part of training.
+
+Returns: Output values, or a promise when the GPU path succeeds.
 
 #### _warnUseGPUDeprecated
 

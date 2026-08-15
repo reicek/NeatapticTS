@@ -35,7 +35,7 @@ You map folder responsibilities, identify orchestration files versus helper/deta
 
 This agent is distinct from:
 
-- `solid-split` (Tier-2 coordinator) — **executes** the split, runs the durable workflow, applies edits, and validates.
+- `solid-split` (skill, carried by `04-implementing`/`01-planning`/`02-researching`) — **executes** the split, runs the durable workflow, applies edits, and validates.
 - `implementation-executor` (Tier-3) — applies scoped file edits under implementation standards.
 - `boundary-mapper` (this agent) — **maps and proposes only**; never edits, never splits, never runs validation gates beyond `cortex-index`.
 

@@ -281,8 +281,8 @@ be routed back to implementation through the orchestrator.
 
 ## References
 
-- `WebGPU_architecture/webgpu.docs.md` — synthesized WebGPU master reference.
-- `WebGPU_architecture/webgpu.architecture.md` — NeatapticTS GPU target architecture and risk register.
+- `docs/architecture/webgpu/webgpu.docs.md` — synthesized WebGPU master reference.
+- `docs/architecture/webgpu/webgpu.architecture.md` — NeatapticTS GPU target architecture and risk register.
 - `src/architecture/network/slab/network.slab.utils.ts` — CPU slab layout.
 - `src/architecture/network/slab/network.slab.fast-path.helpers.utils.ts` — CPU fast-path eligibility and helpers.
 - `src/multithreading/multi.utils.ts` — worker activation registry.

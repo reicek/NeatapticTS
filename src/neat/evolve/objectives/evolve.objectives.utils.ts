@@ -121,28 +121,65 @@ export function applyFitnessSuppressionForTests(
 ): void {
   // Step 1: Guard for optional multi-objective config.
   try {
-    const multiObjective = internal.options.multiObjective;
-    if (
-      multiObjective?.enabled &&
-      multiObjective.pruneInactive &&
-      multiObjective.pruneInactive.enabled === false
-    ) {
-      const keys = (internal._getObjectives?.() ?? []).map(
-        (objective) => objective.key,
-      );
-      if (
-        keys.includes('fitness') &&
-        keys.length > 1 &&
-        !internal._fitnessSuppressedOnce
-      ) {
-        internal._suppressFitnessObjective = true;
-        internal._fitnessSuppressedOnce = true;
-        internal._objectivesList = undefined;
-      }
-    }
+    if (!isFitnessSuppressionEligible(internal.options.multiObjective)) return;
+    const keys = collectObjectiveKeys(internal);
+    if (!shouldSuppressFitness(internal, keys)) return;
+    internal._suppressFitnessObjective = true;
+    internal._fitnessSuppressedOnce = true;
+    internal._objectivesList = undefined;
   } catch {
     // Empty catch: fitness suppression is a test-only helper.
   }
+}
+
+/**
+ * Check whether multi-objective configuration allows fitness suppression.
+ *
+ * Suppression is only eligible when multi-objective mode is enabled and
+ * prune-inactive is explicitly turned off.
+ *
+ * @param multiObjective - Multi-objective configuration option.
+ * @returns Whether fitness suppression may proceed.
+ */
+function isFitnessSuppressionEligible(
+  multiObjective: NeatControllerForEvolution['options']['multiObjective'],
+): boolean {
+  return !!(
+    multiObjective?.enabled &&
+    multiObjective.pruneInactive &&
+    multiObjective.pruneInactive.enabled === false
+  );
+}
+
+/**
+ * Collect the keys of all currently resolved objectives.
+ *
+ * @param internal - NEAT controller instance.
+ * @returns Array of objective key strings.
+ */
+function collectObjectiveKeys(internal: NeatControllerForEvolution): string[] {
+  return (internal._getObjectives?.() ?? []).map((objective) => objective.key);
+}
+
+/**
+ * Decide whether the fitness objective should be suppressed now.
+ *
+ * Suppression fires once when fitness is present alongside at least one other
+ * objective and the controller has not already suppressed it.
+ *
+ * @param internal - NEAT controller instance.
+ * @param keys - Currently resolved objective keys.
+ * @returns Whether fitness suppression should be applied.
+ */
+function shouldSuppressFitness(
+  internal: NeatControllerForEvolution,
+  keys: string[],
+): boolean {
+  return (
+    keys.includes('fitness') &&
+    keys.length > 1 &&
+    !internal._fitnessSuppressedOnce
+  );
 }
 
 /**

@@ -28,7 +28,7 @@ import { resolveGrowStabilizeConfig } from './neat.nge-juvenile.config';
 import type { NgeGrowStabilizeConfig } from './neat.nge-juvenile.types';
 
 /**
- * Inputs driving one plasticity pass.
+ * Inputs driving one plasticity pass for the activity-aware weight and bias adjustment.
  *
  * @property activity - Per-connection activity keyed by connection
  *   innovation ID (0..1).  Missing entries are treated as zero activity.

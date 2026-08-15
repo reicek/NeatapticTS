@@ -42,7 +42,7 @@ export interface ReproductionModePressureSignal {
 }
 
 /**
- * Input consumed by {@link reproductionModeHysteresis}.
+ * Input consumed by the {@link reproductionModeHysteresis} overlay for mode selection.
  */
 export interface ReproductionModeHysteresisInput {
   /** Reproduction policy whose `mode` may be updated. */
@@ -52,7 +52,7 @@ export interface ReproductionModeHysteresisInput {
 }
 
 /**
- * Result returned by {@link reproductionModeHysteresis}.
+ * Result returned by the {@link reproductionModeHysteresis} overlay for mode updates.
  */
 export interface ReproductionModeHysteresisResult {
   /** Selected reproduction mode from the 3-generation majority vote. */

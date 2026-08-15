@@ -503,14 +503,14 @@ export const NGE_EXHAUSTION_SCORE_EPSILON = 1e-6;
 export const NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY = 0.003;
 
 /**
- * Noise-sigma fraction for the juvenile lifecycle stage.
+ * Noise-sigma fraction for the juvenile lifecycle stage during exhaustion noise.
  *
  * Contract: NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE=0.002
  */
 export const NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE = 0.002;
 
 /**
- * Noise-sigma fraction for the adult lifecycle stage.
+ * Noise-sigma fraction for the adult lifecycle stage during exhaustion noise.
  *
  * Contract: NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT=0.001
  */
@@ -525,14 +525,14 @@ export const NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT = 0.001;
 export const NGE_EXHAUSTION_STAGE_FRACTION_BABY = 0.02;
 
 /**
- * Stage fraction for the juvenile lifecycle stage.
+ * Stage fraction for the juvenile lifecycle stage during exhaustion scoring.
  *
  * Contract: NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE=0.01
  */
 export const NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE = 0.01;
 
 /**
- * Stage fraction for the adult lifecycle stage.
+ * Stage fraction for the adult lifecycle stage during exhaustion scoring.
  *
  * Contract: NGE_EXHAUSTION_STAGE_FRACTION_ADULT=0.006
  */

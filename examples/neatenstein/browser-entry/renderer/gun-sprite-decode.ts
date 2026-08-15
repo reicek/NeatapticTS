@@ -11,17 +11,12 @@
 
 import { GUN_SPRITE_PALETTE, GUN_SPRITE_SCALE } from '../../gun-sprite-data.js';
 import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
+import { RGBA_CHANNELS } from '../constants';
+import type { EncodedGunSpriteFrame } from './renderer.gun.types';
 
-/**
- * Number of RGBA channels per pixel.
- */
-export const RGBA_CHANNELS = 4;
-
-/**
- * Encoded gun sprite frame: rows of palette indices into
- * {@link GUN_SPRITE_PALETTE}.
- */
-export type EncodedGunSpriteFrame = readonly (readonly number[])[];
+// Re-export constants and types for external consumers.
+export { RGBA_CHANNELS } from '../constants';
+export type { EncodedGunSpriteFrame } from './renderer.gun.types';
 
 /**
  * Decode an encoded gun sprite frame into a pre-rendered RGBA snapshot.

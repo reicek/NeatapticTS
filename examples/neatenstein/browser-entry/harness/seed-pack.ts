@@ -11,25 +11,18 @@
  * @module
  */
 
-import type { SeedPack } from './types.ts';
+import type { SeedPack, CreateSeedPackOptions } from './types.ts';
 import { NEATENSTEIN_MLP_VARIANT_COUNT } from './constants.ts';
+import { LCG_SEED_MULTIPLIER } from './enemy-mlp.constants';
 import { hashSeed } from './hash-seed';
 
 /**
  * Configuration for {@link createSeedPack}.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface CreateSeedPackOptions {
-  /** Generation the seed pack belongs to (non-negative integer). */
-  generation: number;
-  /** Number of deterministic seeds to generate (defaults to the MLP variant count). */
-  variantCount?: number;
-  /**
-   * Optional root seed. When provided, per-variant seeds are derived via
-   * {@link hashSeed} so the pack is tied to the caller's seed rather than the
-   * generation-only LCG. When omitted, the legacy generation-only LCG is used.
-   */
-  seed?: number;
-}
+export type { CreateSeedPackOptions } from './types';
 
 /** LCG multiplier from the classic Park-Miller minimal standard. */
 const SEED_PACK_LCG_MULTIPLIER = 16_807;
@@ -50,7 +43,7 @@ const SEED_PACK_LCG_OFFSET = 1_234_567_890;
  * @returns A positive integer LCG state.
  */
 function createLcgSeed(generation: number): number {
-  return ((generation + 1) * 2_654_435_761) >>> 0;
+  return ((generation + 1) * LCG_SEED_MULTIPLIER) >>> 0;
 }
 
 /**

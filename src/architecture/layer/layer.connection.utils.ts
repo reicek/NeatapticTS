@@ -49,6 +49,7 @@ const REVERSE_INDEX_STEP = 1;
  * @param method Optional connection method override.
  * @param weight Optional fixed weight to apply.
  * @returns The created connection list.
+ * @throws {LayerOutputConnectUnavailableError} When `context.output` is null.
  */
 export function connectLayer(
   context: LayerConnectionContext,
@@ -93,6 +94,7 @@ export function connectLayer(
  * @param context The layer state needed for gating.
  * @param connections The connections to gate.
  * @param method The gating method.
+ * @throws {LayerOutputGateUnavailableError} When `context.output` is null.
  */
 export function gateLayer(
   context: LayerConnectionContext,
@@ -135,6 +137,8 @@ export function gateLayer(
  * @param method Optional connection method override.
  * @param weight Optional fixed weight to apply.
  * @returns The created connection list.
+ * @throws {LayerInputTargetUnavailableError} When this layer's `context.output` is null.
+ * @throws {LayerInputSourceUnavailableError} When the resolved source group is null.
  */
 export function inputLayer(
   context: LayerConnectionContext,

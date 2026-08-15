@@ -17,8 +17,8 @@ const mockChild = {
 
 jest.unstable_mockModule('node:child_process', () => ({
   spawn: (...args) => {
-    mockSpawn(...args);
-    return mockChild;
+    const result = mockSpawn(...args);
+    return result ?? mockChild;
   },
 }));
 
@@ -32,12 +32,18 @@ jest.unstable_mockModule('node:fs', () => ({
   mkdirSync: (...args) => mockMkdirSync(...args),
 }));
 
-const { extractFilePath, triggerBackgroundReindex, safeLog } =
-  await import('./post-write-reindex-hook.mjs');
+const {
+  extractFilePath,
+  triggerBackgroundReindex,
+  safeLog,
+  main,
+  readHookInput,
+} = await import('./post-write-reindex-hook.mjs');
 
 describe('post-write-reindex-hook', () => {
   beforeEach(() => {
     mockSpawn.mockClear();
+    mockSpawn.mockReturnValue(mockChild);
     mockChild.unref.mockClear();
     mockReadFileSync.mockClear();
     mockAppendFileSync.mockClear();
@@ -105,6 +111,16 @@ describe('post-write-reindex-hook', () => {
       });
       assert.doesNotThrow(() => triggerBackgroundReindex('src/neat.ts'));
     });
+
+    it('logs "pid ?" when the spawned child has no pid', () => {
+      mockSpawn.mockImplementationOnce(() => ({
+        unref: jest.fn(),
+      }));
+      triggerBackgroundReindex('src/neat.ts');
+      assert.ok(mockAppendFileSync.mock.calls.length > 0);
+      const logLine = mockAppendFileSync.mock.calls[0][1];
+      assert.ok(logLine.includes('pid ?'));
+    });
   });
 
   describe('safeLog', () => {
@@ -119,6 +135,66 @@ describe('post-write-reindex-hook', () => {
         throw new Error('ENOENT');
       });
       assert.doesNotThrow(() => safeLog('test'));
+    });
+  });
+
+  describe('main', () => {
+    let writeSpy;
+
+    beforeEach(() => {
+      writeSpy = jest
+        .spyOn(process.stdout, 'write')
+        .mockImplementation(() => true);
+    });
+
+    afterEach(() => {
+      writeSpy.mockRestore();
+    });
+
+    it('writes continue:true for non-write tools', () => {
+      main({ tool_name: 'read', tool_input: { path: 'src/foo.ts' } });
+      assert.strictEqual(writeSpy.mock.calls.length, 1);
+      assert.strictEqual(writeSpy.mock.calls[0][0], '{"continue":true}\n');
+      assert.strictEqual(mockSpawn.mock.calls.length, 0);
+    });
+
+    it('writes continue:true when a write tool has no filePath', () => {
+      main({ tool_name: 'edit', tool_input: {} });
+      assert.strictEqual(writeSpy.mock.calls.length, 1);
+      assert.strictEqual(writeSpy.mock.calls[0][0], '{"continue":true}\n');
+      assert.strictEqual(mockSpawn.mock.calls.length, 0);
+    });
+
+    it('triggers reindex and writes context for a write tool with a path', () => {
+      main({ tool_name: 'edit', tool_input: { path: 'src/foo.ts' } });
+      assert.strictEqual(mockSpawn.mock.calls.length, 1);
+      assert.strictEqual(writeSpy.mock.calls.length, 1);
+      const output = JSON.parse(writeSpy.mock.calls[0][0]);
+      assert.strictEqual(output.continue, true);
+      assert.strictEqual(
+        output.hookSpecificOutput.hookEventName,
+        'PostToolUse',
+      );
+      assert.ok(
+        output.hookSpecificOutput.additionalContext.includes('src/foo.ts'),
+      );
+    });
+  });
+
+  describe('readHookInput', () => {
+    it('returns {} when stdin is empty', () => {
+      mockReadFileSync.mockReturnValue('');
+      assert.deepStrictEqual(readHookInput(), {});
+    });
+
+    it('parses valid JSON from stdin', () => {
+      mockReadFileSync.mockReturnValue('{"tool_name":"edit"}');
+      assert.deepStrictEqual(readHookInput(), { tool_name: 'edit' });
+    });
+
+    it('returns {} when JSON parsing fails', () => {
+      mockReadFileSync.mockReturnValue('not json');
+      assert.deepStrictEqual(readHookInput(), {});
     });
   });
 });

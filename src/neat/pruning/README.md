@@ -61,6 +61,9 @@ schedule-driven evolve hook: scheduled pruning answers "is this a pruning
 generation?" while adaptive pruning answers "has the population drifted far
 enough from the desired complexity level that the prune level should change?"
 
+Parameters:
+- `this` - NEAT host exposing adaptive pruning options, state, and population.
+
 Returns: Nothing. The baseline and shared prune level may be created or updated, and compatible genomes may then be pruned in place.
 
 Example:
@@ -101,6 +104,9 @@ The host generation counter is read but not mutated here.
 Choose this entrypoint when you want pruning to be predictable and tied to
 generation timing. Use `applyAdaptivePruning()` instead when pruning should
 react to observed population size or complexity metrics at runtime.
+
+Parameters:
+- `this` - NEAT host exposing pruning options, generation state, and population.
 
 Returns: Nothing. Compatible genomes may be pruned in place when the schedule is active, but no adaptive controller fields are updated.
 

@@ -23,8 +23,10 @@ type RawQuantizationPacket = {
 /**
  * Resolve export options with all defaults required by model construction.
  *
- * @param sourceOptions Raw export options.
+ * @param sourceOptions - Raw export options.
+ * @param networkLayerCount - Total number of layers in the export network.
  * @returns Resolved options used by this builder.
+ * @throws {Error} When precision and quantization options are incompatible.
  */
 export function resolveBuildOptions(
   sourceOptions: OnnxExportOptions,
@@ -57,8 +59,9 @@ export function resolveBuildOptions(
 /**
  * Resolve precision options with stable defaults and supported modes only.
  *
- * @param sourceOptions Raw export options.
+ * @param sourceOptions - Raw export options.
  * @returns Normalized precision packet.
+ * @throws {Error} When the precision mode is not `float32` or `storage-fp16`.
  */
 export function resolvePrecisionOptions(
   sourceOptions: OnnxExportOptions,
@@ -86,8 +89,10 @@ export function resolvePrecisionOptions(
 /**
  * Resolve quantization options with stable defaults and supported first-wave modes only.
  *
- * @param sourceOptions Raw export options.
+ * @param sourceOptions - Raw export options.
+ * @param networkLayerCount - Total number of layers in the export network.
  * @returns Normalized quantization packet.
+ * @throws {Error} When quantization mode is unrecognized or calibration data is invalid.
  */
 export function resolveQuantizationOptions(
   sourceOptions: OnnxExportOptions,

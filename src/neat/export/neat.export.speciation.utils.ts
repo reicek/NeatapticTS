@@ -12,7 +12,9 @@ import type {
   NeatControllerForExport,
   NetworkClass,
   SpeciationCheckpointJSON,
+  SpeciesCheckpointJSON,
 } from './neat.export.types';
+import type { SpeciesLastStats } from '../shared/neat.shared.types';
 
 /**
  * Full-checkpoint speciation helpers.
@@ -41,59 +43,118 @@ import type {
  *
  * @param internal - Live controller host.
  * @returns Serializable speciation checkpoint payload.
+ * @throws {NeatExportStateControllerRestoreError} When a species member or representative lacks a stable genome id.
  */
 export function serializeSpeciationCheckpoint(
   internal: NeatControllerForExport,
 ): SpeciationCheckpointJSON {
-  const livePopulationIds = new Set(
+  const livePopulationIds = collectLivePopulationIds(internal);
+
+  return {
+    nextSpeciesId: internal._nextSpeciesId,
+    species: serializeSpeciesCheckpointRows(internal, livePopulationIds),
+    speciesCreated: Array.from(internal._speciesCreated?.entries() ?? []),
+    prevSpeciesMembers: serializePrevSpeciesMembers(internal),
+    speciesLastStats: serializeSpeciesLastStats(internal),
+    compatIntegral: internal._compatIntegral,
+    compatSpeciesEMA: internal._compatSpeciesEMA,
+  };
+}
+
+/**
+ * Collect the set of stable genome ids present in the live population.
+ *
+ * This set drives the decision of whether a species representative must be
+ * serialized as a detached anchor (when it no longer lives in the current
+ * population).
+ *
+ * @param internal - Live controller host.
+ * @returns Set of stable genome ids in the current population.
+ */
+function collectLivePopulationIds(
+  internal: NeatControllerForExport,
+): Set<number> {
+  return new Set(
     internal.population.flatMap((genome) =>
       typeof genome._id === 'number' ? [genome._id] : [],
     ),
   );
+}
 
-  return {
-    nextSpeciesId: internal._nextSpeciesId,
-    species: (internal._species ?? []).map((species) => ({
-      id: species.id,
-      memberGenomeIds: species.members.map((member, memberIndex) =>
-        readRequiredGenomeId(
-          member,
-          `species ${species.id} member ${memberIndex}`,
-        ),
+/**
+ * Serialize all species rows from the live registry.
+ *
+ * Each row writes member ids by stable genome id and optionally carries a
+ * detached representative anchor when the representative is no longer in the
+ * live population.
+ *
+ * @param internal - Live controller host.
+ * @param livePopulationIds - Stable genome ids present in the current population.
+ * @returns Array of serialized species checkpoint rows.
+ */
+function serializeSpeciesCheckpointRows(
+  internal: NeatControllerForExport,
+  livePopulationIds: Set<number>,
+): SpeciesCheckpointJSON[] {
+  return (internal._species ?? []).map((species) => ({
+    id: species.id,
+    memberGenomeIds: species.members.map((member, memberIndex) =>
+      readRequiredGenomeId(
+        member,
+        `species ${species.id} member ${memberIndex}`,
       ),
-      representativeGenomeId: species.representative
-        ? readRequiredGenomeId(
-            species.representative,
-            `species ${species.id} representative`,
-          )
-        : undefined,
-      representativeGenome:
-        species.representative &&
-        shouldSerializeRepresentativeAnchor(
+    ),
+    representativeGenomeId: species.representative
+      ? readRequiredGenomeId(
           species.representative,
-          livePopulationIds,
+          `species ${species.id} representative`,
         )
-          ? serializeGenomeCheckpoint(species.representative)
-          : undefined,
-      bestScore: species.bestScore,
-      lastImproved: species.lastImproved,
-      sharedFitness: species.sharedFitness,
-      avgSharedFitness: species.avgSharedFitness,
-      offspring: species.offspring,
-      generation: species.generation,
-    })),
-    speciesCreated: Array.from(internal._speciesCreated?.entries() ?? []),
-    prevSpeciesMembers: Array.from(
-      internal._prevSpeciesMembers?.entries() ?? [],
-      ([speciesId, memberIds]) => [speciesId, Array.from(memberIds)],
-    ),
-    speciesLastStats: Array.from(
-      internal._speciesLastStats?.entries() ?? [],
-      ([speciesId, speciesStats]) => [speciesId, structuredClone(speciesStats)],
-    ),
-    compatIntegral: internal._compatIntegral,
-    compatSpeciesEMA: internal._compatSpeciesEMA,
-  };
+      : undefined,
+    representativeGenome:
+      species.representative &&
+      shouldSerializeRepresentativeAnchor(
+        species.representative,
+        livePopulationIds,
+      )
+        ? serializeGenomeCheckpoint(species.representative)
+        : undefined,
+    bestScore: species.bestScore,
+    lastImproved: species.lastImproved,
+    sharedFitness: species.sharedFitness,
+    avgSharedFitness: species.avgSharedFitness,
+    offspring: species.offspring,
+    generation: species.generation,
+  }));
+}
+
+/**
+ * Serialize the previous-generation species member id map for checkpoint continuity.
+ *
+ * @param internal - Live controller host.
+ * @returns Array of species-id to member-id-list pairs.
+ */
+function serializePrevSpeciesMembers(
+  internal: NeatControllerForExport,
+): Array<[number, number[]]> {
+  return Array.from(
+    internal._prevSpeciesMembers?.entries() ?? [],
+    ([speciesId, memberIds]) => [speciesId, Array.from(memberIds)],
+  );
+}
+
+/**
+ * Serialize per-species rolling statistics with deep-cloned payloads.
+ *
+ * @param internal - Live controller host.
+ * @returns Array of species-id to cloned statistics pairs.
+ */
+function serializeSpeciesLastStats(
+  internal: NeatControllerForExport,
+): Array<[number, SpeciesLastStats]> {
+  return Array.from(
+    internal._speciesLastStats?.entries() ?? [],
+    ([speciesId, speciesStats]) => [speciesId, structuredClone(speciesStats)],
+  );
 }
 
 /**
@@ -105,6 +166,7 @@ export function serializeSpeciationCheckpoint(
  *
  * @param neatInstance - Controller instance whose population is already restored.
  * @param speciationCheckpoint - Serialized speciation payload from persistence.
+ * @param networkClass - Network constructor class for rehydrating representative anchors.
  * @returns Nothing.
  * @throws {NeatExportStateControllerRestoreError} When species references are invalid.
  */

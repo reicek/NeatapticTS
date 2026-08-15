@@ -26,7 +26,6 @@ agents:
     'implementation-executor',
     'boundary-mapper',
     'docs-scout',
-    'solid-split',
     'browser-harness-specialist',
     'agent-maintenance-coordinator',
     'plan-scout',
@@ -40,6 +39,7 @@ agents:
 skills:
   [
     'implementation-standards',
+    'solid-split',
     'nge-core-algorithm',
     'reproducibility-contracts',
     'tracker-handoff',
@@ -236,7 +236,7 @@ All gates listed above must be executed via the named MCP commands (or equivalen
 The following skills must be invoked (or their checks executed) and evidence attached to the plan before handoff. Each entry below lists what evidence is required and an example command to produce it.
 
 - **`implementation-standards`**: evidence that code follows repo conventions.
-  - Required evidence: `tsc` output (noEmit), lint output (zero or explained issues), JSDoc presence checklist for exported symbols.
+  - Required evidence: `tsc` output (noEmit), lint output (zero or explained issues), JSDoc presence checklist for exported symbols, and — when reducing complexity — scanner complexity ≤ 10 for orchestrators and ≤ 5 for executors per the SOLID-Aligned Complexity Reduction pattern.
   - Example commands: `npx tsc --noEmit -p tsconfig.json`, `npm run lint`.
 
 - **`tracker-handoff`**: evidence that the `PlanUpdate` YAML block is present in the plan and the `Handoff query` is refreshed.

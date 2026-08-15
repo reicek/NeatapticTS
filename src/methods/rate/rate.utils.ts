@@ -277,6 +277,7 @@ export function createCosineAnnealingWarmRestartsSchedule(
  * @param warmupStepCount Optional number of warmup steps; defaults to 10% of total steps.
  * @param endRate Final rate once decay completes.
  * @returns A learning rate schedule implementing warmup then decay.
+ * @throws {RateLinearWarmupTotalStepsError} When totalStepCount is zero or negative.
  */
 export function createLinearWarmupDecaySchedule(
   totalStepCount: number,

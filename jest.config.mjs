@@ -222,6 +222,7 @@ const config = {
         'scripts/agent-customization/gates/code-coverage.gate.mjs',
         'scripts/agent-customization/gates/cortex-index.gate.mjs',
         'scripts/agent-customization/gates/cortex-index.gate.runtime.mjs',
+        'scripts/agent-customization/gates/docs-quality-metrics.gate.mjs',
         'scripts/agent-customization/gates/merge-coverage-summaries.mjs',
         'scripts/agent-customization/gates/routing-table-freshness.gate.mjs',
         'scripts/agent-customization/generate-agent-skill-routing-table.mjs',

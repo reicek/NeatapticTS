@@ -62,6 +62,7 @@ export function resolveTopologyIntent(
  *
  * @param options Optional constructor options.
  * @returns Nothing.
+ * @throws {NetworkBootstrapTopologyIntentConflictError} When feed-forward intent disables acyclic enforcement or unconstrained intent enables it.
  */
 export function validateTopologyIntentConfiguration(
   options?: NetworkConstructorOptions,

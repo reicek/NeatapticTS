@@ -2,8 +2,10 @@
 
 Active plan trackers in `plans/`.
 
-Trigger phrases: agent architecture, custom agents, neatenstein, neon shooter, nge demo, neatenstein firing, sensor system, line of sight, fire gating, vision range, reward redesign, shot telemetry.
+Trigger phrases: agent architecture, custom agents, neatenstein, neon shooter, nge demo, neatenstein firing, sensor system, line of sight, fire gating, vision range, reward redesign, shot telemetry, root cleanup, folder cleanup, temporal files, debug scripts, root scripts, docs quality metrics, docs:quality:metrics, coverage scope leak, scanner dimensions, generatedAt timestamp, coverage gate, symbol duplication, manifest schema, cyclomatic complexity, JSDoc tag completeness, ES2023-first policy, LCOV scope filtering.
 
+- Docs Quality Metrics Gap: `plans/docs-quality-metrics-gap.plans.md` — Phase 1 [DONE] (active tracker in `plans/`) — trigger: docs quality metrics, docs:quality:metrics, coverage scope leak, scanner dimensions, generatedAt timestamp, coverage gate, symbol duplication, manifest schema, cyclomatic complexity, JSDoc tag completeness, ES2023-first policy, LCOV scope filtering
+- Root Folder Cleanup: `plans/Root_Folder_Cleanup.plans.md` — Phase 1 [DONE] (closed tracker in `plans/`) — trigger: root cleanup, folder cleanup, temporal files, debug scripts, root scripts, relocate docs
 - Neatenstein Auto / NEAT Mode Wiring: `plans/completed/neatenstein-auto-neat-mode.plans.md` — Phases 0-9 [DONE] (archived in `plans/completed/`) — trigger: neatenstein auto mode, neat mode, humanMode auto, enemy evolution, arms race, generation counter, episode fitness
 - Neatenstein Vision System Wiring Fixes: `neatenstein-vision-wiring-fixes.plans.md` — Phase 1 [DONE] (archived in `plans/completed/`) — trigger: neatenstein vision, fallback auto tick, wave clear, fire gate, dead shooter, sensorHistory, PBRS
 - Neatenstein Firing / Sensor System: `neatenstein-firing-sensor-system.plans.md` — Phases 1-5 [DONE] (archived in `plans/completed/`) — trigger: neatenstein firing, sensor system, line of sight, fire gating, vision range, reward redesign, shot telemetry, sensor expansion, eval worker

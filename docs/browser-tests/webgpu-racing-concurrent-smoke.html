@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebGPU Racing Concurrent Smoke Test</title>
+  </head>
+  <body>
+    <h1>WebGPU Racing Concurrent Smoke Test</h1>
+    <pre id="result">Running...</pre>
+
+    <!--
+      Bundled scenario module. The bundle imports Network, createConcurrentBufferSet,
+      and evaluateConcurrentRacingAgents from the TypeScript source and exposes
+      runWebGPURacingConcurrentSmoke on the module namespace.
+    -->
+    <script type="module">
+      import { runWebGPURacingConcurrentSmoke } from './scenarios/webgpu-racing-concurrent-smoke.bundle.mjs';
+
+      async function main() {
+        try {
+          const result = await runWebGPURacingConcurrentSmoke();
+          window.webgpuRacingConcurrentSmokeResult = result;
+        } catch (error) {
+          window.webgpuRacingConcurrentSmokeResult = {
+            success: false,
+            error: String(error),
+          };
+        }
+        document.getElementById('result').textContent = JSON.stringify(
+          window.webgpuRacingConcurrentSmokeResult,
+          null,
+          2,
+        );
+      }
+
+      main();
+    </script>
+  </body>
+</html>

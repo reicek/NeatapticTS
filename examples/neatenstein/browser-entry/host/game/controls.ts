@@ -12,7 +12,26 @@
  */
 
 import { NEATENSTEIN_INPUT_MESSAGE_TYPE } from '../../constants';
-import { type InputSnapshot } from '../input';
+import {
+  DOM_EVENT_CLICK,
+  DOM_EVENT_KEYDOWN,
+  DOM_EVENT_MOUSEDOWN,
+  DOM_EVENT_MOUSEMOVE,
+  DOM_EVENT_TOUCHCANCEL,
+  DOM_EVENT_TOUCHEND,
+  DOM_EVENT_TOUCHMOVE,
+  DOM_EVENT_TOUCHSTART,
+} from '../dom-events.constants';
+import { ERROR_NOT_SUPPORTED } from '../hud.constants';
+import type {
+  BindingDetach,
+  FireCallback,
+  InputSnapshot,
+  LightToggleCallback,
+  LookCallback,
+  LookDelta,
+  TouchActiveCallback,
+} from '../types';
 import {
   NEATENSTEIN_KEY_MAP_LOOK,
   NEATENSTEIN_KEYBOARD_LOOK_RAD_PER_EVENT,
@@ -23,51 +42,15 @@ import {
   NEATENSTEIN_TOUCH_DRAG_THRESHOLD_PX,
 } from './constants';
 
-/**
- * Look delta produced by mouse, keyboard, or touch bindings.
- *
- * Values are in radians and are signed so callers can add them directly to
- * camera yaw/pitch accumulators.
- */
-export interface LookDelta {
-  /** Horizontal rotation delta. */
-  yawDelta: number;
-
-  /** Vertical rotation delta. */
-  pitchDelta: number;
-}
-
-/**
- * Callback invoked whenever a look binding emits a new delta.
- */
-export type LookCallback = (delta: LookDelta) => void;
-
-/**
- * Callback invoked when the primary fire input is pressed.
- *
- * The central router decides how to latch/consume the event.
- */
-export type FireCallback = () => void;
-
-/**
- * Callback invoked when the dynamic light toggle input is pressed.
- *
- * The binding is responsible for the `keydown` edge only; the central router
- * decides whether the toggle is latched or consumed immediately.
- */
-export type LightToggleCallback = () => void;
-
-/**
- * Callback invoked when touch look starts or ends tracking an active touch.
- */
-export type TouchActiveCallback = (active: boolean) => void;
-
-/**
- * Detaches a previously installed input binding.
- *
- * Detach functions returned by this module are idempotent.
- */
-export type BindingDetach = () => void;
+// Re-export consolidated types so existing imports from this module remain valid.
+export type {
+  BindingDetach,
+  FireCallback,
+  LightToggleCallback,
+  LookCallback,
+  LookDelta,
+  TouchActiveCallback,
+} from '../types';
 
 /**
  * Find a touch in a `TouchList` by identifier.
@@ -103,7 +86,7 @@ export function findTouch(
 function isUnsupportedPointerLockOptionsError(error: unknown): boolean {
   return (
     error instanceof TypeError ||
-    (error instanceof Error && error.name === 'NotSupportedError')
+    (error instanceof Error && error.name === ERROR_NOT_SUPPORTED)
   );
 }
 
@@ -164,7 +147,7 @@ export function bindPointerLock(canvas: HTMLElement): BindingDetach {
     void requestPointerLockWithFallback(canvas);
   };
 
-  canvas.addEventListener('click', requestLock);
+  canvas.addEventListener(DOM_EVENT_CLICK, requestLock);
 
   return () => {
     if (detached) {
@@ -172,7 +155,7 @@ export function bindPointerLock(canvas: HTMLElement): BindingDetach {
     }
 
     detached = true;
-    canvas.removeEventListener('click', requestLock);
+    canvas.removeEventListener(DOM_EVENT_CLICK, requestLock);
 
     if (
       typeof document !== 'undefined' &&
@@ -218,7 +201,7 @@ export function bindMouseLook(
     });
   };
 
-  document.addEventListener('mousemove', handleMouseMove);
+  document.addEventListener(DOM_EVENT_MOUSEMOVE, handleMouseMove);
 
   return () => {
     if (detached) {
@@ -227,7 +210,7 @@ export function bindMouseLook(
 
     detached = true;
 
-    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener(DOM_EVENT_MOUSEMOVE, handleMouseMove);
   };
 }
 
@@ -264,7 +247,7 @@ export function bindMouseFire(
     callback();
   };
 
-  target.addEventListener('mousedown', handleMouseDown);
+  target.addEventListener(DOM_EVENT_MOUSEDOWN, handleMouseDown);
 
   return () => {
     if (detached) {
@@ -272,7 +255,7 @@ export function bindMouseFire(
     }
 
     detached = true;
-    target.removeEventListener('mousedown', handleMouseDown);
+    target.removeEventListener(DOM_EVENT_MOUSEDOWN, handleMouseDown);
   };
 }
 
@@ -317,7 +300,7 @@ export function bindKeyboardLook(
     }
   };
 
-  target.addEventListener('keydown', handleKeyDown as EventListener);
+  target.addEventListener(DOM_EVENT_KEYDOWN, handleKeyDown as EventListener);
 
   return () => {
     if (detached) {
@@ -325,7 +308,7 @@ export function bindKeyboardLook(
     }
 
     detached = true;
-    target.removeEventListener('keydown', handleKeyDown as EventListener);
+    target.removeEventListener(DOM_EVENT_KEYDOWN, handleKeyDown as EventListener);
   };
 }
 
@@ -367,7 +350,7 @@ export function bindKeyboardLightToggle(
     callback();
   };
 
-  target.addEventListener('keydown', handleKeyDown as EventListener);
+  target.addEventListener(DOM_EVENT_KEYDOWN, handleKeyDown as EventListener);
 
   return () => {
     if (detached) {
@@ -375,7 +358,7 @@ export function bindKeyboardLightToggle(
     }
 
     detached = true;
-    target.removeEventListener('keydown', handleKeyDown as EventListener);
+    target.removeEventListener(DOM_EVENT_KEYDOWN, handleKeyDown as EventListener);
   };
 }
 
@@ -513,11 +496,11 @@ export function bindTouchLook(
 
   const touchListenerOptions: AddEventListenerOptions = { passive: false };
 
-  target.addEventListener('touchstart', handleTouchStart, touchListenerOptions);
-  target.addEventListener('touchmove', handleTouchMove, touchListenerOptions);
-  target.addEventListener('touchend', handleTouchEnd, touchListenerOptions);
+  target.addEventListener(DOM_EVENT_TOUCHSTART, handleTouchStart, touchListenerOptions);
+  target.addEventListener(DOM_EVENT_TOUCHMOVE, handleTouchMove, touchListenerOptions);
+  target.addEventListener(DOM_EVENT_TOUCHEND, handleTouchEnd, touchListenerOptions);
   target.addEventListener(
-    'touchcancel',
+    DOM_EVENT_TOUCHCANCEL,
     handleTouchCancel,
     touchListenerOptions,
   );
@@ -536,22 +519,22 @@ export function bindTouchLook(
     engaged = false;
 
     target.removeEventListener(
-      'touchstart',
+      DOM_EVENT_TOUCHSTART,
       handleTouchStart,
       touchListenerOptions,
     );
     target.removeEventListener(
-      'touchmove',
+      DOM_EVENT_TOUCHMOVE,
       handleTouchMove,
       touchListenerOptions,
     );
     target.removeEventListener(
-      'touchend',
+      DOM_EVENT_TOUCHEND,
       handleTouchEnd,
       touchListenerOptions,
     );
     target.removeEventListener(
-      'touchcancel',
+      DOM_EVENT_TOUCHCANCEL,
       handleTouchCancel,
       touchListenerOptions,
     );

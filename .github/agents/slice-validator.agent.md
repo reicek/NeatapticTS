@@ -199,9 +199,6 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - gate: <step-packet|plan-slice-quality|cortex-index>, pass: <bool>, fixHint: <one-line or NONE>
-VERDICT: PASS | FAIL
-OBSERVATIONS:
-- check_id: <SC-##>, severity: <high|medium|low>, confidence: <0-1>, detail: <concise finding>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

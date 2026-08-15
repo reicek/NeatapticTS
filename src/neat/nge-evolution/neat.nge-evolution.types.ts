@@ -11,7 +11,7 @@ export type NgeEvolutionCompatibilityDistanceTermName =
   'topology' | 'computation' | 'memory' | 'lifecycle';
 
 /**
- * One weighted compatibility-distance term captured during NGE speciation scoring.
+ * One weighted compatibility-distance term captured during NGE speciation scoring rounds.
  */
 export interface NgeEvolutionCompatibilityDistanceTerm {
   /** Stable term label for telemetry and assertion surfaces. */
@@ -27,7 +27,7 @@ export interface NgeEvolutionCompatibilityDistanceTerm {
 }
 
 /**
- * Alpha weights applied to the four NGE compatibility-distance terms.
+ * Alpha weights applied to the four NGE compatibility-distance scoring terms.
  */
 export interface NgeEvolutionCompatibilityDistanceWeights {
   /** Alpha weight for the classic topology-distance term. */
@@ -41,7 +41,7 @@ export interface NgeEvolutionCompatibilityDistanceWeights {
 }
 
 /**
- * Wiring-cost preference knobs compared by the NGE lifecycle-distance term.
+ * Wiring-cost preference knobs compared by the NGE lifecycle-distance scoring term.
  */
 export interface NgeEvolutionCompatibilityWiringCostWeights {
   /** Relative penalty applied to realized module count. */
@@ -106,7 +106,7 @@ export interface NgeEvolutionCompatibilityDistanceTerms {
 }
 
 /**
- * Composite compatibility-distance result returned by the NGE speciation helper.
+ * Composite compatibility-distance result returned by the NGE speciation scoring helper.
  */
 export interface NgeEvolutionCompatibilityDistanceResult {
   /** Weighted sum of the four normalized compatibility-distance terms. */
@@ -130,7 +130,7 @@ export type NgeEvolutionContributionKind =
   'clone' | 'mutation' | 'patch' | 'crossover' | 'blend';
 
 /**
- * One parent contribution reported by a NGE reproduction operator.
+ * One parent contribution reported by a NGE reproduction operator during offspring assembly.
  */
 export interface NgeEvolutionParentContribution {
   /** Stable parent identifier used for lineage or telemetry lookups. */

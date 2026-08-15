@@ -186,6 +186,9 @@ the population as a group, which makes it a convenient companion to
 {@link getFittest} when you want both "best genome" and "overall generation"
 signals side by side.
 
+Parameters:
+- `this` - NeatLike NEAT instance containing population and evaluation support.
+
 Returns: Mean fitness across the current population.
 
 Example:
@@ -211,6 +214,9 @@ returning the leading genome.
 
 That behavior keeps call sites simple: callers do not need to remember
 whether evaluation or sorting has already happened earlier in the generation.
+
+Parameters:
+- `this` - NeatLike NEAT instance containing population and evaluation support.
 
 Returns: Genome with the highest current score.
 
@@ -240,6 +246,9 @@ This is the controller-facing gateway into the three built-in strategies:
 If the selection mode is unrecognized, the helper falls back to the first
 genome in the current population so the controller still has a deterministic
 parent candidate instead of failing deep inside crossover logic.
+
+Parameters:
+- `this` - NeatLike NEAT instance containing population, selection options, and RNG access.
 
 Returns: Genome chosen according to the active selection strategy.
 
@@ -318,6 +327,9 @@ elsewhere in selection, so genomes without a score are treated as if they had
 This helper is intentionally narrow: it only reorders the current population.
 It does not evaluate genomes, mutate them, or change the active parent
 selection strategy.
+
+Parameters:
+- `this` - NeatLike NEAT instance whose population should be sorted.
 
 Returns: Nothing. The population array is reordered in place.
 

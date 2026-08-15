@@ -16,46 +16,39 @@ import {
   NEATENSTEIN_SWARM_MAX_SIZE,
   NEATENSTEIN_SWARM_REFRESH_INTERVAL_GENERATIONS,
 } from './constants';
-import type { EnemyPopulation, Snapshot, SwarmSnapshot } from './types';
+import { SNAPSHOT_KIND_SWARM } from '../constants';
+import type {
+  Snapshot,
+  SwarmSnapshot,
+  CreateSwarmEnemyPopulationOptions,
+  SwarmVariant,
+  SwarmEnemyPopulation,
+} from './types';
 import type { Vector2 } from '../host/game/types';
 
 /**
  * Options accepted by {@link createSwarmEnemyPopulation}.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface CreateSwarmEnemyPopulationOptions {
-  /** Deterministic seed used to generate the shared DNA and per-enemy coordinates. */
-  seed?: number;
-  /** Maximum cohort size. Defaults to {@link NEATENSTEIN_SWARM_MAX_SIZE}. */
-  size?: number;
-}
+export type { CreateSwarmEnemyPopulationOptions } from './types';
 
 /**
  * One member of the weight-shared cohort.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface SwarmVariant {
-  /** Stable enemy index within the cohort. */
-  id: number;
-  /** Shared DNA string that deterministically regenerates the swarm genotype. */
-  dna: string;
-  /** Shared weight vector for the cohort. */
-  weights: Float32Array;
-  /** Distinct stigmergic coordinates injected for this enemy member. */
-  coordinates: Vector2[];
-}
+export type { SwarmVariant } from './types';
 
 /**
  * Swarm enemy population returned by {@link createSwarmEnemyPopulation}.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface SwarmEnemyPopulation extends EnemyPopulation {
-  /**
-   * Advance the cohort snapshot on refresh generations.
-   *
-   * @param context - Current generation context.
-   * @returns The population snapshot. The same reference is returned when no
-   *   refresh happens; a new reference is returned on refresh generations.
-   */
-  update: (context: { generation: number }) => Snapshot;
-}
+export type { SwarmEnemyPopulation } from './types';
 
 /** Number of coordinate points injected into each enemy member. */
 const COORDINATES_PER_MEMBER = 4;
@@ -97,7 +90,7 @@ export function createSwarmEnemyPopulation(
   );
 
   return {
-    kind: 'swarm',
+    kind: SNAPSHOT_KIND_SWARM,
     size,
     sample(index: number): unknown {
       // Index-stable sampling: any index maps deterministically to a member.
@@ -221,7 +214,7 @@ function createChampionCoordinates(
  */
 function createSnapshot(dna: string, coordinates: Vector2[]): SwarmSnapshot {
   return {
-    kind: 'swarm',
+    kind: SNAPSHOT_KIND_SWARM,
     dna,
     coordinates: coordinates.map((point) => ({ x: point.x, y: point.y })),
   };

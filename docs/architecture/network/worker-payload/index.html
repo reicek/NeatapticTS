@@ -1,0 +1,1416 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>architecture/network/worker-payload – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/theme.css"><script defer src="../../../assets/theme-tooltips.js"></script></head><body class="">
+<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="../../../index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="../../../index.html">Home</a><a href="../../../index.html" class="active">Docs</a><a href="../../../examples/index.html">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar docs-panel docs-panel-left"><ul class="sidebar-sections"><li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links"><ul class="pipe-nav-list pipe-nav-list-priority"><li class="pipe-nav-item nav-priority-link"><a href="../../../examples/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Examples overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><ul class="pipe-nav-list pipe-nav-list-compact"><li class="pipe-nav-item"><a href="../../../examples/flappy_bird/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Flappy Bird</span></a></li><li class="pipe-nav-item"><a href="../../../examples/asciiMaze/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ASCII Maze</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></div></li><ul class="pipe-nav-list pipe-nav-list-root"><li class="pipe-nav-item"><a href="../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><li class="group"><div class="g-head">Architecture</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../activationArrayPool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ActivationArrayPool</span></a></li><li class="pipe-nav-item"><a href="../../architect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Architect</span></a></li><li class="pipe-nav-item"><a href="../../connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../group/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Group</span></a></li><li class="pipe-nav-item"><a href="../../layer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Layer</span></a></li><li class="pipe-nav-item"><a href="../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network</span></a></li><li class="pipe-nav-item"><a href="../activate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Activate</span></a></li><li class="pipe-nav-item"><a href="../bootstrap/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Bootstrap</span></a></li><li class="pipe-nav-item"><a href="../connect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Connect</span></a></li><li class="pipe-nav-item"><a href="../construct/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Construct</span></a></li><li class="pipe-nav-item"><a href="../deterministic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Deterministic</span></a></li><li class="pipe-nav-item"><a href="../evaluation-pack/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evaluation Pack</span></a></li><li class="pipe-nav-item"><a href="../evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evolve</span></a></li><li class="pipe-nav-item"><a href="../gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gating</span></a></li><li class="pipe-nav-item"><a href="../genetic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Genetic</span></a></li><li class="pipe-nav-item"><a href="../gpu/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gpu</span></a></li><li class="pipe-nav-item"><a href="../gpu/__mocks__/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gpu / Mocks</span></a></li><li class="pipe-nav-item"><a href="../mutate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Mutate</span></a></li><li class="pipe-nav-item"><a href="../onnx/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Onnx</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Export</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/layers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export / Layers</span></a></li><li class="pipe-nav-item"><a href="../onnx/import/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Import</span></a></li><li class="pipe-nav-item"><a href="../onnx/parity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Parity</span></a></li><li class="pipe-nav-item"><a href="../onnx/schema/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Schema</span></a></li><li class="pipe-nav-item"><a href="../onnx/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Validate</span></a></li><li class="pipe-nav-item"><a href="../prune/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Prune</span></a></li><li class="pipe-nav-item"><a href="../remove/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Remove</span></a></li><li class="pipe-nav-item"><a href="../runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Runtime</span></a></li><li class="pipe-nav-item"><a href="../serialize/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Serialize</span></a></li><li class="pipe-nav-item"><a href="../slab/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Slab</span></a></li><li class="pipe-nav-item"><a href="../standalone/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Standalone</span></a></li><li class="pipe-nav-item"><a href="../stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Stats</span></a></li><li class="pipe-nav-item"><a href="../topology/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Topology</span></a></li><li class="pipe-nav-item"><a href="../training/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Training</span></a></li><li class="pipe-nav-item"><a href="../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Visualization</span></a></li><li class="pipe-nav-item"><a href="../window/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Window</span></a></li><li class="pipe-nav-item current"><a href="./index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Worker Payload</span></a></li><li class="pipe-nav-item"><a href="../../node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-item"><a href="../../nodePool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">NodePool</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Methods</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../methods/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../methods/activation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Activation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../methods/cost/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cost</span></a></li><li class="pipe-nav-item"><a href="../../../methods/crossover/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Crossover</span></a></li><li class="pipe-nav-item"><a href="../../../methods/gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gating</span></a></li><li class="pipe-nav-item"><a href="../../../methods/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/rate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rate</span></a></li><li class="pipe-nav-item"><a href="../../../methods/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Neat</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../neat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/acceptance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Acceptance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/complexity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Complexity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/auto-distance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Auto Distance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/fitness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Fitness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/offspring/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Offspring</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/population/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Population</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/warnings/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Warnings</span></a></li><li class="pipe-nav-item"><a href="../../../neat/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/heredity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome / Heredity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/harness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Harness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/helpers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Helpers</span></a></li><li class="pipe-nav-item"><a href="../../../neat/hybrid/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Hybrid</span></a></li><li class="pipe-nav-item"><a href="../../../neat/init/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Init</span></a></li><li class="pipe-nav-item"><a href="../../../neat/innovation-tracker/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Innovation Tracker</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/category/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Category</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/crowding/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Crowding</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/dominance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Dominance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/fronts/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Fronts</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-conn/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Conn</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Node</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/flow/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Flow</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/repair/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Repair</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/select/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Select</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-adult/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Adult</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-assimilation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Assimilation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-collective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Collective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-dna/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Dna</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-evolution/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Evolution</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-juvenile/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Juvenile</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-main-agent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Main Agent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/assignment/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Assignment</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/threshold/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Threshold</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/augmentation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Augmentation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/context/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Context</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/read/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Read</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/accessors/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Accessors</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/exports/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Exports</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/buffer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Buffer</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/operator-stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Operator Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/recorder/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Recorder</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/types/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Types</span></a></li><li class="pipe-nav-item"><a href="../../../neat/topology-intent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Topology Intent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Validate</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Multithreading</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../multithreading/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Browser</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-footer"></span><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Acceleration</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../acceleration/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Browser Tests</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../browser-tests/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Env</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../env/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../env/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Browser</span></a></li><li class="pipe-nav-item"><a href="../../../env/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Memory</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../memory/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Performance</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../performance/nge/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Research</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../research/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Src</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../src/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Utils</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../utils/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Visualization</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../visualization/network-view/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network View</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li></ul></aside><main class="content docs-panel docs-panel-center"><h1 id="architecture-network-worker-payload">architecture/network/worker-payload</h1><p>One node snapshot inside the worker-friendly inference IR.</p>
+<p>The IR stores runtime inference data only: stable node indexes, activation
+lookup ids, recurrent self-loop metadata, and scalar modifiers that change
+forward-pass output.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const irNode: NetworkInferenceIRNode = {
+  index: 3,
+  bias: 0.15,
+  response: 1,
+  mask: 1,
+  activationId: 4,
+  selfWeight: 0,
+  selfGaterIndex: -1,
+};
+</code></pre>
+<h2 id="architecture-network-worker-payload-network-worker-payload-types-ts">architecture/network/worker-payload/network.worker-payload.types.ts</h2><h3 id="inferencechannel">InferenceChannel</h3><p>Persistent worker-backed inference channel.</p>
+<p>Channels bootstrap one transferable predictor payload exactly once, then keep
+the worker-side predictor warm across repeated predict or reset requests sent
+through one dedicated <code>MessageChannel</code> port pair.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network);
+const channel = openInferenceChannel(payload);
+const outputValues = await channel.predict([0.25, 0.75]);
+channel.close();
+</code></pre>
+<h3 id="inferencechanneloptions">InferenceChannelOptions</h3><p>Configuration for one dedicated persistent inference channel backed by a warm worker predictor.
+These options tune local request queue pressure and worker delivery strategy so repeated inference calls stay stable under bursty client traffic.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const channel = openInferenceChannel(payload, {
+  maxConcurrentRequests: 4,
+});
+</code></pre>
+<h3 id="inferencepredictor">InferencePredictor</h3><p>Runtime predictor created from an exported worker payload.</p>
+<p>Predictors intentionally keep mutable activation, recurrent-state, and gain
+buffers private so callers can reuse the same instance across many
+predictions without re-allocating worker state.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const predictor = createInferencePredictor(payload);
+const outputValues = predictor.predict([0.25, 0.75]);
+predictor.reset();
+</code></pre>
+<h3 id="networkinferenceir">NetworkInferenceIR</h3><p>Deterministic, worker-consumable snapshot of one network forward pass.</p>
+<p>This IR is the common substrate for portable, transferable, channel, and
+shared-memory worker transport strategies. It intentionally stores plain data
+only so callers can structured-clone it or re-encode it into typed arrays.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const inferenceIr = extractNetworkInferenceIR(network);
+console.log(inferenceIr.activationSteps);
+</code></pre>
+<h3 id="networkinferenceiredge">NetworkInferenceIREdge</h3><p>One deterministic non-self connection row inside the worker-friendly inference IR.
+This shape keeps forward edges compact and index-addressable so predictor hot paths can traverse weighted inputs without object graph lookups or runtime connection instances.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const irEdge: NetworkInferenceIREdge = {
+  from: 0,
+  to: 3,
+  weight: 0.75,
+  gaterIndex: -1,
+};
+</code></pre>
+<h3 id="networkinferenceirnode">NetworkInferenceIRNode</h3><p>One node snapshot inside the worker-friendly inference IR.</p>
+<p>The IR stores runtime inference data only: stable node indexes, activation
+lookup ids, recurrent self-loop metadata, and scalar modifiers that change
+forward-pass output.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const irNode: NetworkInferenceIRNode = {
+  index: 3,
+  bias: 0.15,
+  response: 1,
+  mask: 1,
+  activationId: 4,
+  selfWeight: 0,
+  selfGaterIndex: -1,
+};
+</code></pre>
+<h3 id="portableinferencepayload">PortableInferencePayload</h3><p>Structured-clone-safe inference payload for the universal worker fallback.</p>
+<p>This payload preserves the exact inference metadata needed to replay a
+forward pass without shipping live <code>Network</code>, <code>Node</code>, or <code>Connection</code>
+instances across the worker boundary.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportPortableInferencePayload(network);
+console.log(payload.activationTable);
+</code></pre>
+<h3 id="portableinferencepayloadedge">PortableInferencePayloadEdge</h3><p>One structured-clone-safe edge row used by the portable inference payload strategy.
+Portable edges preserve the same deterministic topology as IR edges while staying JSON-like and self-describing for debugging, logs, and cross-version message tracing.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const portableEdge: PortableInferencePayloadEdge = {
+  from: 0,
+  to: 3,
+  weight: 0.75,
+  gaterIndex: -1,
+};
+</code></pre>
+<h3 id="portableinferencepayloadnode">PortableInferencePayloadNode</h3><p>One portable node record used by the structured-clone payload surface.</p>
+<p>Portable payloads keep human-readable activation names instead of numeric ids
+so they remain self-describing across worker boundaries and versioned message
+logs.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const portableNode: PortableInferencePayloadNode = {
+  id: 3,
+  bias: 0.15,
+  response: 1,
+  mask: 1,
+  activation: &#39;relu&#39;,
+  selfWeight: 0,
+  selfGaterIndex: -1,
+};
+</code></pre>
+<h3 id="sharedinferenceworker">SharedInferenceWorker</h3><p>Persistent shared-memory inference worker.</p>
+<p>Shared-memory workers keep one predictor alive inside a dedicated worker and
+exchange input and output values through <code>SharedArrayBuffer</code> shelves instead
+of cloning or transferring a fresh payload for every request.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const worker = openSharedInferenceWorker(payload);
+const outputValues = await worker.infer([0.25, 0.75]);
+await worker.release();
+</code></pre>
+<h3 id="sharedinferenceworkeroptions">SharedInferenceWorkerOptions</h3><p>Configuration for one dedicated shared-memory inference worker.</p>
+<p>Browser hosts default to the module-relative shared worker emitted beside the
+library files. Provide <code>workerUrl</code> when bundling moves that worker asset or
+when CSP policy disallows the default delivery path.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const worker = openSharedInferenceWorker(payload, {
+  workerUrl: &#39;/assets/shared-inference.worker.js&#39;,
+});
+</code></pre>
+<h3 id="transferableinferencepayload">TransferableInferencePayload</h3><p>Typed-array inference payload for lower-copy worker transport.</p>
+<p>Transferable payloads keep the same semantic content as portable payloads,
+but pack it into flat typed arrays so callers can move ownership across
+worker boundaries without deep-cloning large object graphs.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network);
+console.log(payload.nodeIds.length);
+</code></pre>
+<h3 id="transferableinferencepayloadoptions">TransferableInferencePayloadOptions</h3><p>Configuration knobs for transferable payload export when balancing precision, size, and transport throughput.
+Use these options when a worker boundary prefers lower-copy typed shelves but still needs predictable numeric semantics across browser and Node runtimes.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network, {
+  numericPrecision: &#39;f32&#39;,
+});
+</code></pre>
+<h3 id="transferablenumericarray">TransferableNumericArray</h3><p>Numeric typed-array shelf used by transferable payload fields.</p>
+<h3 id="transferablenumericprecision">TransferableNumericPrecision</h3><p>Numeric precision modes supported by transferable payload export.</p>
+<h2 id="architecture-network-worker-payload-network-worker-payload-ts">architecture/network/worker-payload/network.worker-payload.ts</h2><p>Worker-friendly inference payload primitives for <code>Network</code> forward passes.</p>
+<p>This module starts the transport ladder with the one artifact every later
+strategy needs: a deterministic, plain-data inference IR. The IR keeps the
+runtime execution order, activation identities, recurrent self-loop metadata,
+and output ordering, but it deliberately leaves out training-time objects and
+host-specific worker mechanics.</p>
+<p>Read this boundary in two passes:</p>
+<ol>
+<li><code>extractNetworkInferenceIR(...)</code> when you want a stable snapshot of a
+live network forward pass.</li>
+<li><code>INFERENCE_ACTIVATION_TABLE</code> when you need the exact activation-id shelf
+that worker payloads reference.</li>
+</ol>
+<p>Example:</p>
+<pre><code class="language-ts">const inferenceIr = extractNetworkInferenceIR(network);
+const outputNodeIndexes = inferenceIr.outputNodeIndices;
+</code></pre>
+<h3 id="autoinferencetransport">AutoInferenceTransport</h3><p>Automatically selected worker-backed inference transport tier for the current host.</p>
+<ul>
+<li><code>&#39;shared-memory&#39;</code> — SharedArrayBuffer transfer path when cross-origin isolation is active.</li>
+<li><code>&#39;channel&#39;</code> — Persistent channel worker when a channel-worker script was delivered.</li>
+<li><code>&#39;transferable&#39;</code> — Universal typed-array fallback when higher tiers are unavailable.</li>
+</ul>
+<h3 id="batchevaluationresult">BatchEvaluationResult</h3><p>Ordered result envelope returned by <code>evaluateInWorkers(...)</code>.</p>
+<p>The helper preserves input order even when individual worker tasks finish out
+of order, and it reports stable task ids so callers can correlate results
+with their original batch shelf without reconstructing indexes manually.</p>
+<h3 id="browserworkerasseturloptions">BrowserWorkerAssetUrlOptions</h3><p>Options for resolving a browser worker asset URL relative to the current script or an explicit base URL override.</p>
+<p>When <code>baseUrl</code> is omitted the helper falls back to <code>document.currentScript.src</code>
+and then <code>location.href</code>, keeping the worker and host bundle co-located by default.</p>
+<h3 id="createinferencepredictor">createInferencePredictor</h3><pre><code class="language-ts">createInferencePredictor(
+  payload: PortableInferencePayload,
+): InferencePredictor
+</code></pre>
+<p>Create an inference predictor from a portable or transferable payload so repeated forward evaluations can run without reconstructing a mutable network instance.</p>
+<h3 id="createneatparallelpopulationevaluator">createNeatParallelPopulationEvaluator</h3><pre><code class="language-ts">createNeatParallelPopulationEvaluator(
+  options: NeatParallelPopulationEvaluatorOptions&lt;TGenome, TPayload, TWorker, TResult&gt;,
+): (population: TGenome[]) =&gt; Promise&lt;void&gt;
+</code></pre>
+<p>Create a NEAT-compatible population fitness delegate on top of <code>evaluateInWorkers(...)</code>.</p>
+<p>The returned function matches <code>fitnessPopulation: true</code> evaluation mode: it
+scores the whole population in one async call and writes ordered results back
+onto the genomes in place.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>options</code> - Boolean-first population-evaluation options plus advanced worker overrides.</li>
+</ul>
+<p>Returns: Population fitness delegate compatible with <code>fitnessPopulation: true</code>.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const evaluatePopulation = createNeatParallelPopulationEvaluator({
+  parallel: true,
+  evaluateGenome: async (genome) =&gt; genome.score ?? 0,
+  openWorker: (payload) =&gt; openSharedInferenceWorker(payload),
+  evaluateWithWorker: async (worker, genome) =&gt; worker.infer(genome.activate([0, 1])),
+});
+</code></pre>
+<h3 id="detectinferenceworkercapabilities">detectInferenceWorkerCapabilities</h3><pre><code class="language-ts">detectInferenceWorkerCapabilities(
+  options: InferenceWorkerCapabilityOptions,
+): InferenceWorkerCapabilities
+</code></pre>
+<p>Detect the usable worker-backed inference transport tiers for one host.</p>
+<p>The probe stays intentionally lightweight. It does not open a worker or fetch
+a script; it only combines runtime facts and delivery availability so callers
+can decide whether to use shared-memory, channel, or transferable fallback.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>options</code> - Runtime and delivery facts for the current host.</li>
+</ul>
+<p>Returns: Capability snapshot describing the usable transport tiers.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const capabilities = detectInferenceWorkerCapabilities({
+  hasChannelWorker: true,
+  hasSharedWorker: true,
+  runtime: &#39;browser&#39;,
+});
+</code></pre>
+<h3 id="evaluateinworkers">evaluateInWorkers</h3><pre><code class="language-ts">evaluateInWorkers(
+  options: EvaluateInWorkersOptions&lt;TInput, TPayload, TWorker, TResult&gt;,
+): Promise&lt;BatchEvaluationResult&lt;TResult&gt;&gt;
+</code></pre>
+<p>Evaluates an ordered batch through workers when available, otherwise locally.</p>
+<p>This helper keeps the honest async boundary visible: callers provide worker
+opening plus task execution when they want parallelism, and they also provide
+a local fallback when they need the same semantics in worker-less hosts.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>options</code> - Ordered inputs plus worker and fallback execution hooks.</li>
+</ul>
+<p>Returns: Ordered batch results with elapsed time and stable task ids.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const batchResult = await evaluateInWorkers({
+  inputs: payloads,
+  openWorker: (payload) =&gt; openSharedInferenceWorker(payload),
+  evaluateWithWorker: (worker, _payload) =&gt; worker.infer([0.25, 0.75]),
+});
+</code></pre>
+<h3 id="evaluateinworkersoptions">EvaluateInWorkersOptions</h3><p>Generic ordered batch-evaluation options for worker and fallback execution.</p>
+<p>Keep the transport substrate caller-owned: this helper schedules and assembles
+deterministic results, but the caller still decides how a worker is opened,
+how a task is scored, and what the single-thread fallback should do.</p>
+<h3 id="exportportableinferencepayload">exportPortableInferencePayload</h3><pre><code class="language-ts">exportPortableInferencePayload(
+  network: default,
+): PortableInferencePayload
+</code></pre>
+<p>Export a portable inference payload with structured-clone-safe data so browser and node runtimes can persist and reload predictor artifacts reliably.</p>
+<h3 id="exporttransferableinferencepayload">exportTransferableInferencePayload</h3><pre><code class="language-ts">exportTransferableInferencePayload(
+  network: default,
+  options: TransferableInferencePayloadOptions,
+): TransferableInferencePayload
+</code></pre>
+<p>Export a transferable inference payload so typed-array-heavy artifacts can cross worker boundaries with explicit ownership transfer and reduced copy overhead.</p>
+<h3 id="extractnetworkinferenceir">extractNetworkInferenceIR</h3><pre><code class="language-ts">extractNetworkInferenceIR(
+  network: default,
+): NetworkInferenceIR
+</code></pre>
+<p>Extract a deterministic inference intermediate representation from a live network so transport and payload-export helpers can share one stable graph contract.</p>
+<h3 id="gettransferlist">getTransferList</h3><pre><code class="language-ts">getTransferList(
+  payload: TransferableInferencePayload,
+): ArrayBuffer[]
+</code></pre>
+<p>Collect every transferable buffer from one typed-array inference payload.</p>
+<p>Transfer these buffers exactly once when posting the payload to a worker.
+After the transfer completes, the sending-side typed arrays are neutered and
+must not be read again.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Transferable inference payload whose buffers should move.</li>
+</ul>
+<p>Returns: ArrayBuffer transfer list aligned to the payload&#39;s typed shelves.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network);
+worker.postMessage(payload, getTransferList(payload));
+</code></pre>
+<h3 id="inference-activation-table">INFERENCE_ACTIVATION_TABLE</h3><p>Stable activation-function table used by worker inference transport.</p>
+<p>Each entry index is part of the public inference payload contract. New worker
+payloads should reference activations by these numeric ids rather than by
+serializing function bodies or relying on runtime function identity.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const activationFunction = INFERENCE_ACTIVATION_TABLE[0];
+const outputValue = activationFunction(0.5);
+</code></pre>
+<h3 id="inferencechannel">InferenceChannel</h3><p>Persistent worker-backed inference channel.</p>
+<p>Channels bootstrap one transferable predictor payload exactly once, then keep
+the worker-side predictor warm across repeated predict or reset requests sent
+through one dedicated <code>MessageChannel</code> port pair.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network);
+const channel = openInferenceChannel(payload);
+const outputValues = await channel.predict([0.25, 0.75]);
+channel.close();
+</code></pre>
+<h3 id="inferencechanneloptions">InferenceChannelOptions</h3><p>Channel options that configure request batching, queueing, and lifecycle behavior for asynchronous inference transport endpoints across browser and node worker runtimes.
+These options define how inference requests are buffered, dispatched, and finalized over long-lived channel sessions.</p>
+<h3 id="inferencepredictor">InferencePredictor</h3><p>Runtime predictor created from an exported worker payload.</p>
+<p>Predictors intentionally keep mutable activation, recurrent-state, and gain
+buffers private so callers can reuse the same instance across many
+predictions without re-allocating worker state.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const predictor = createInferencePredictor(payload);
+const outputValues = predictor.predict([0.25, 0.75]);
+predictor.reset();
+</code></pre>
+<h3 id="inferenceworkercapabilities">InferenceWorkerCapabilities</h3><p>Capability snapshot for the current worker-backed inference host.</p>
+<p>This probe answers a narrow question: which worker transport tiers are
+honestly usable in the current runtime before one evaluation pool or batch
+helper commits to a transport strategy?</p>
+<p>Example:</p>
+<pre><code class="language-ts">const capabilities = detectInferenceWorkerCapabilities({
+  crossOriginIsolated: globalThis.crossOriginIsolated === true,
+  hasChannelWorker: true,
+  hasSharedWorker: true,
+  runtime: &#39;browser&#39;,
+});
+const transport = resolveAutoInferenceTransport(capabilities);
+</code></pre>
+<h3 id="inferenceworkercapabilityoptions">InferenceWorkerCapabilityOptions</h3><p>Inputs used to probe worker-backed inference transport support.</p>
+<p>Keep delivery facts explicit here. Step 1 only answers capability and auto
+selection; Step 2 will own the generic worker-entry and URL resolution
+helpers that feed these booleans.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const capabilities = detectInferenceWorkerCapabilities({
+  crossOriginIsolated: false,
+  hasChannelWorker: true,
+  hasSharedWorker: true,
+  runtime: &#39;browser&#39;,
+});
+</code></pre>
+<h3 id="neatparallelpopulationevaluatoroptions">NeatParallelPopulationEvaluatorOptions</h3><p>Low-friction NEAT population-evaluation options built on top of <code>evaluateInWorkers(...)</code>.</p>
+<p>The factory keeps the public surface focused on population evaluation rather
+than transport details. Callers can opt into parallel execution with
+<code>parallel: true</code>, keep the local scoring delegate as the honest fallback,
+and add worker-specific overrides only when they need them.</p>
+<h3 id="networkinferenceir">NetworkInferenceIR</h3><p>Deterministic, worker-consumable snapshot of one network forward pass.</p>
+<p>This IR is the common substrate for portable, transferable, channel, and
+shared-memory worker transport strategies. It intentionally stores plain data
+only so callers can structured-clone it or re-encode it into typed arrays.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const inferenceIr = extractNetworkInferenceIR(network);
+console.log(inferenceIr.activationSteps);
+</code></pre>
+<h3 id="networkinferenceiredge">NetworkInferenceIREdge</h3><p>Directed edge record in the inference graph representation used by payload export, replay, and worker predictor execution pipelines.
+The edge contract preserves stable source-target linkage and weight metadata during transport and reconstruction.</p>
+<h3 id="networkinferenceirnode">NetworkInferenceIRNode</h3><p>One node snapshot inside the worker-friendly inference IR.</p>
+<p>The IR stores runtime inference data only: stable node indexes, activation
+lookup ids, recurrent self-loop metadata, and scalar modifiers that change
+forward-pass output.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const irNode: NetworkInferenceIRNode = {
+  index: 3,
+  bias: 0.15,
+  response: 1,
+  mask: 1,
+  activationId: 4,
+  selfWeight: 0,
+  selfGaterIndex: -1,
+};
+</code></pre>
+<h3 id="openinferencechannel">openInferenceChannel</h3><pre><code class="language-ts">openInferenceChannel(
+  payload: TransferableInferencePayload,
+  options: InferenceChannelOptions,
+): InferenceChannel
+</code></pre>
+<p>Open one persistent inference worker channel from a transferable payload.</p>
+<p>The channel transfers the predictor payload exactly once during bootstrap,
+then reuses the worker-side predictor state for every later <code>predict()</code> or
+<code>reset()</code> request sent over one dedicated <code>MessageChannel</code> port pair.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Transferable inference payload used to bootstrap the worker predictor.</li>
+<li><code>options</code> - Channel concurrency and worker delivery options.</li>
+</ul>
+<p>Returns: Persistent inference channel.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network);
+const channel = openInferenceChannel(payload);
+const outputValues = await channel.predict([0.25, 0.75]);
+channel.close();
+</code></pre>
+<h3 id="opensharedinferenceworker">openSharedInferenceWorker</h3><pre><code class="language-ts">openSharedInferenceWorker(
+  payload: TransferableInferencePayload,
+  options: SharedInferenceWorkerOptions,
+): SharedInferenceWorker
+</code></pre>
+<p>Open one persistent shared-memory inference worker from a transferable payload.</p>
+<p>Shared-memory workers keep one predictor alive inside a dedicated worker and
+exchange inputs and outputs through <code>SharedArrayBuffer</code> shelves rather than
+cloning request payloads for every inference call.</p>
+<p>Browser hosts default to a module-relative worker script emitted alongside
+the library files. Bundled or CSP-constrained hosts can override that entry
+with <code>workerUrl</code>.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Transferable inference payload used to bootstrap the shared worker predictor.</li>
+<li><code>options</code> - Shared worker delivery options.</li>
+</ul>
+<p>Returns: Persistent shared-memory inference worker.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network);
+const sharedWorker = openSharedInferenceWorker(payload);
+const outputValues = await sharedWorker.infer([0.25, 0.75]);
+await sharedWorker.release();
+</code></pre>
+<h3 id="parallelinferencepool">ParallelInferencePool</h3><p>Generic bounded worker pool for ordered parallel inference tasks.</p>
+<p>The pool keeps persistent predictors warm, caps concurrent worker usage, and
+rebuilds results in the caller&#39;s original order even when individual jobs
+finish out of order.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const pool = new ParallelInferencePool({
+  openWorker: (payload) =&gt; openSharedInferenceWorker(payload),
+  workerCount: 4,
+});
+await pool.initialize(payloads);
+const results = await pool.evaluateOrderedBatch(payloads, async (worker) =&gt; {
+  return worker.infer([0.25, 0.75]);
+});
+await pool.dispose();
+</code></pre>
+<h4 id="dispose">dispose</h4><pre><code class="language-ts">dispose(): Promise&lt;void&gt;
+</code></pre>
+<p>Releases every active worker and clears the slot shelf.</p>
+<p>Returns: Nothing.</p>
+<h4 id="evaluateorderedbatch">evaluateOrderedBatch</h4><pre><code class="language-ts">evaluateOrderedBatch(
+  payloads: readonly TPayload[],
+  evaluator: (worker: TWorker, payload: TPayload, payloadIndex: number) =&gt; Promise&lt;TResult&gt;,
+): Promise&lt;TResult[]&gt;
+</code></pre>
+<p>Evaluates a payload shelf through the bounded worker slots.</p>
+<p>The pool schedules work FIFO, lets each slot consume tasks until the queue
+is empty, and returns results in the same order as the input payloads.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloads</code> - Ordered payload shelf to evaluate.</li>
+<li><code>evaluator</code> - Caller-owned evaluation logic for one warm worker slot.</li>
+</ul>
+<p>Returns: Results in the caller&#39;s original payload order.</p>
+<h4 id="initialize">initialize</h4><pre><code class="language-ts">initialize(
+  payloads: readonly TPayload[],
+): Promise&lt;void&gt;
+</code></pre>
+<p>Prepares empty slot state for the next payload shelf.</p>
+<p>Existing workers are released before the new shelf becomes active so slot
+reuse stays deterministic across generations or evaluation batches.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloads</code> - Ordered payload shelf that may be evaluated next.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="parallelinferencepooloptions">ParallelInferencePoolOptions</h3><p>Configuration for one bounded parallel inference pool.</p>
+<p>The opener stays caller-owned so the pool can schedule shared-memory
+workers, inference channels, or future worker-backed predictors without
+coupling this boundary to one transport strategy.</p>
+<h3 id="parallelinferenceworkerlike">ParallelInferenceWorkerLike</h3><p>Minimal worker resource contract required by the generic inference pool.</p>
+<p>The pool owns worker lifecycle, not transport internals. Any persistent
+predictor or worker can participate as long as it can release its resources
+deterministically.</p>
+<h3 id="portableinferencepayload">PortableInferencePayload</h3><p>Structured-clone-safe inference payload for the universal worker fallback.</p>
+<p>This payload preserves the exact inference metadata needed to replay a
+forward pass without shipping live <code>Network</code>, <code>Node</code>, or <code>Connection</code>
+instances across the worker boundary.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportPortableInferencePayload(network);
+console.log(payload.activationTable);
+</code></pre>
+<h3 id="portableinferencepayloadedge">PortableInferencePayloadEdge</h3><p>Portable payload edge schema preserving source-target linkage and connection metadata in runtime-agnostic JSON-style artifacts.
+This shape is intentionally serialization-friendly so offline tooling can inspect and replay predictor graphs deterministically.</p>
+<h3 id="portableinferencepayloadnode">PortableInferencePayloadNode</h3><p>One portable node record used by the structured-clone payload surface.</p>
+<p>Portable payloads keep human-readable activation names instead of numeric ids
+so they remain self-describing across worker boundaries and versioned message
+logs.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const portableNode: PortableInferencePayloadNode = {
+  id: 3,
+  bias: 0.15,
+  response: 1,
+  mask: 1,
+  activation: &#39;relu&#39;,
+  selfWeight: 0,
+  selfGaterIndex: -1,
+};
+</code></pre>
+<h3 id="resolveautoinferencetransport">resolveAutoInferenceTransport</h3><pre><code class="language-ts">resolveAutoInferenceTransport(
+  capabilities: InferenceWorkerCapabilities,
+): AutoInferenceTransport
+</code></pre>
+<p>Resolve the honest automatic transport choice for one capability snapshot.</p>
+<p>The priority order matches the current transport ladder: shared-memory first,
+then persistent channels, then transferable payload fallback.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>capabilities</code> - Capability snapshot returned by the probe.</li>
+</ul>
+<p>Returns: Best automatic transport choice for the current host.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const capabilities = detectInferenceWorkerCapabilities({
+  hasChannelWorker: true,
+  runtime: &#39;browser&#39;,
+});
+const transport = resolveAutoInferenceTransport(capabilities);
+</code></pre>
+<h3 id="resolvebrowserworkerasseturl">resolveBrowserWorkerAssetUrl</h3><pre><code class="language-ts">resolveBrowserWorkerAssetUrl(
+  workerAssetPath: string,
+  options: BrowserWorkerAssetUrlOptions,
+): string | undefined
+</code></pre>
+<p>Resolves a browser worker asset beside the current script or page URL.</p>
+<p>This helper keeps the bundler boundary explicit: callers still name the
+emitted worker asset they expect, while the library handles the common URL
+math for browser demos, nested workers, and side-by-side bundle delivery.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>workerAssetPath</code> - Relative worker asset path emitted by the bundler.</li>
+<li><code>options</code> - Optional explicit base URL override.</li>
+</ul>
+<p>Returns: Absolute worker asset URL when a browser base URL is available.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
+  &#39;shared-inference.worker.bundle.js&#39;,
+);
+</code></pre>
+<h3 id="shared-inference-requires-cross-origin-isolation">SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION</h3><p>Browser <code>SharedArrayBuffer</code> inference requires cross-origin isolation.</p>
+<p>Node.js workers can use the shared-memory path without <code>COOP</code> or <code>COEP</code>, but
+browsers only expose <code>SharedArrayBuffer</code> reliably when the host page is
+cross-origin isolated.</p>
+<p>Example:</p>
+<pre><code class="language-ts">if (SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION) {
+  console.log(&#39;Configure COOP/COEP before enabling shared-memory inference.&#39;);
+}
+</code></pre>
+<h3 id="sharedinferenceworker">SharedInferenceWorker</h3><p>Persistent shared-memory inference worker.</p>
+<p>Shared-memory workers keep one predictor alive inside a dedicated worker and
+exchange input and output values through <code>SharedArrayBuffer</code> shelves instead
+of cloning or transferring a fresh payload for every request.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const worker = openSharedInferenceWorker(payload);
+const outputValues = await worker.infer([0.25, 0.75]);
+await worker.release();
+</code></pre>
+<h3 id="sharedinferenceworkeroptions">SharedInferenceWorkerOptions</h3><p>Configuration for one dedicated shared-memory inference worker.</p>
+<p>Browser hosts default to the module-relative shared worker emitted beside the
+library files. Provide <code>workerUrl</code> when bundling moves that worker asset or
+when CSP policy disallows the default delivery path.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const worker = openSharedInferenceWorker(payload, {
+  workerUrl: &#39;/assets/shared-inference.worker.js&#39;,
+});
+</code></pre>
+<h3 id="transferableinferencepayload">TransferableInferencePayload</h3><p>Typed-array inference payload for lower-copy worker transport.</p>
+<p>Transferable payloads keep the same semantic content as portable payloads,
+but pack it into flat typed arrays so callers can move ownership across
+worker boundaries without deep-cloning large object graphs.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network);
+console.log(payload.nodeIds.length);
+</code></pre>
+<h3 id="transferableinferencepayloadoptions">TransferableInferencePayloadOptions</h3><p>Transfer options that control buffer packing and transfer-list behavior for worker-friendly inference payload publication.
+They allow callers to tune ownership and copy semantics for high-throughput cross-thread prediction workloads.</p>
+<h2 id="architecture-network-worker-payload-network-worker-payload-neat-ts">architecture/network/worker-payload/network.worker-payload.neat.ts</h2><h3 id="createneatparallelpopulationevaluator">createNeatParallelPopulationEvaluator</h3><pre><code class="language-ts">createNeatParallelPopulationEvaluator(
+  options: NeatParallelPopulationEvaluatorOptions&lt;TGenome, TPayload, TWorker, TResult&gt;,
+): (population: TGenome[]) =&gt; Promise&lt;void&gt;
+</code></pre>
+<p>Create a NEAT-compatible population fitness delegate on top of <code>evaluateInWorkers(...)</code>.</p>
+<p>The returned function matches <code>fitnessPopulation: true</code> evaluation mode: it
+scores the whole population in one async call and writes ordered results back
+onto the genomes in place.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>options</code> - Boolean-first population-evaluation options plus advanced worker overrides.</li>
+</ul>
+<p>Returns: Population fitness delegate compatible with <code>fitnessPopulation: true</code>.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const evaluatePopulation = createNeatParallelPopulationEvaluator({
+  parallel: true,
+  evaluateGenome: async (genome) =&gt; genome.score ?? 0,
+  openWorker: (payload) =&gt; openSharedInferenceWorker(payload),
+  evaluateWithWorker: async (worker, genome) =&gt; worker.infer(genome.activate([0, 1])),
+});
+</code></pre>
+<h3 id="neatparallelpopulationevaluatoroptions">NeatParallelPopulationEvaluatorOptions</h3><p>Low-friction NEAT population-evaluation options built on top of <code>evaluateInWorkers(...)</code>.</p>
+<p>The factory keeps the public surface focused on population evaluation rather
+than transport details. Callers can opt into parallel execution with
+<code>parallel: true</code>, keep the local scoring delegate as the honest fallback,
+and add worker-specific overrides only when they need them.</p>
+<h2 id="architecture-network-worker-payload-network-worker-payload-pool-ts">architecture/network/worker-payload/network.worker-payload.pool.ts</h2><p>Minimal worker resource contract required by the generic inference pool.</p>
+<p>The pool owns worker lifecycle, not transport internals. Any persistent
+predictor or worker can participate as long as it can release its resources
+deterministically.</p>
+<h3 id="parallelinferencepool">ParallelInferencePool</h3><p>Generic bounded worker pool for ordered parallel inference tasks.</p>
+<p>The pool keeps persistent predictors warm, caps concurrent worker usage, and
+rebuilds results in the caller&#39;s original order even when individual jobs
+finish out of order.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const pool = new ParallelInferencePool({
+  openWorker: (payload) =&gt; openSharedInferenceWorker(payload),
+  workerCount: 4,
+});
+await pool.initialize(payloads);
+const results = await pool.evaluateOrderedBatch(payloads, async (worker) =&gt; {
+  return worker.infer([0.25, 0.75]);
+});
+await pool.dispose();
+</code></pre>
+<h4 id="dispose">dispose</h4><pre><code class="language-ts">dispose(): Promise&lt;void&gt;
+</code></pre>
+<p>Releases every active worker and clears the slot shelf.</p>
+<p>Returns: Nothing.</p>
+<h4 id="evaluateorderedbatch">evaluateOrderedBatch</h4><pre><code class="language-ts">evaluateOrderedBatch(
+  payloads: readonly TPayload[],
+  evaluator: (worker: TWorker, payload: TPayload, payloadIndex: number) =&gt; Promise&lt;TResult&gt;,
+): Promise&lt;TResult[]&gt;
+</code></pre>
+<p>Evaluates a payload shelf through the bounded worker slots.</p>
+<p>The pool schedules work FIFO, lets each slot consume tasks until the queue
+is empty, and returns results in the same order as the input payloads.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloads</code> - Ordered payload shelf to evaluate.</li>
+<li><code>evaluator</code> - Caller-owned evaluation logic for one warm worker slot.</li>
+</ul>
+<p>Returns: Results in the caller&#39;s original payload order.</p>
+<h4 id="initialize">initialize</h4><pre><code class="language-ts">initialize(
+  payloads: readonly TPayload[],
+): Promise&lt;void&gt;
+</code></pre>
+<p>Prepares empty slot state for the next payload shelf.</p>
+<p>Existing workers are released before the new shelf becomes active so slot
+reuse stays deterministic across generations or evaluation batches.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payloads</code> - Ordered payload shelf that may be evaluated next.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="parallelinferencepooloptions">ParallelInferencePoolOptions</h3><p>Configuration for one bounded parallel inference pool.</p>
+<p>The opener stays caller-owned so the pool can schedule shared-memory
+workers, inference channels, or future worker-backed predictors without
+coupling this boundary to one transport strategy.</p>
+<h3 id="parallelinferenceworkerlike">ParallelInferenceWorkerLike</h3><p>Minimal worker resource contract required by the generic inference pool.</p>
+<p>The pool owns worker lifecycle, not transport internals. Any persistent
+predictor or worker can participate as long as it can release its resources
+deterministically.</p>
+<h2 id="architecture-network-worker-payload-network-worker-payload-batch-ts">architecture/network/worker-payload/network.worker-payload.batch.ts</h2><h3 id="batchevaluationresult">BatchEvaluationResult</h3><p>Ordered result envelope returned by <code>evaluateInWorkers(...)</code>.</p>
+<p>The helper preserves input order even when individual worker tasks finish out
+of order, and it reports stable task ids so callers can correlate results
+with their original batch shelf without reconstructing indexes manually.</p>
+<h3 id="evaluateinworkers">evaluateInWorkers</h3><pre><code class="language-ts">evaluateInWorkers(
+  options: EvaluateInWorkersOptions&lt;TInput, TPayload, TWorker, TResult&gt;,
+): Promise&lt;BatchEvaluationResult&lt;TResult&gt;&gt;
+</code></pre>
+<p>Evaluates an ordered batch through workers when available, otherwise locally.</p>
+<p>This helper keeps the honest async boundary visible: callers provide worker
+opening plus task execution when they want parallelism, and they also provide
+a local fallback when they need the same semantics in worker-less hosts.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>options</code> - Ordered inputs plus worker and fallback execution hooks.</li>
+</ul>
+<p>Returns: Ordered batch results with elapsed time and stable task ids.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const batchResult = await evaluateInWorkers({
+  inputs: payloads,
+  openWorker: (payload) =&gt; openSharedInferenceWorker(payload),
+  evaluateWithWorker: (worker, _payload) =&gt; worker.infer([0.25, 0.75]),
+});
+</code></pre>
+<h3 id="evaluateinworkersoptions">EvaluateInWorkersOptions</h3><p>Generic ordered batch-evaluation options for worker and fallback execution.</p>
+<p>Keep the transport substrate caller-owned: this helper schedules and assembles
+deterministic results, but the caller still decides how a worker is opened,
+how a task is scored, and what the single-thread fallback should do.</p>
+<h2 id="architecture-network-worker-payload-network-worker-payload-shared-ts">architecture/network/worker-payload/network.worker-payload.shared.ts</h2><h3 id="copyinputvaluesintosharedbuffer">copyInputValuesIntoSharedBuffer</h3><pre><code class="language-ts">copyInputValuesIntoSharedBuffer(
+  dataView: Float64Array&lt;ArrayBufferLike&gt;,
+  inputValues: readonly number[],
+  inputOffset: number,
+  useChunkedConversion: boolean,
+): Promise&lt;void&gt;
+</code></pre>
+<p>Copy one submitted input vector into the shared numeric shelf.</p>
+<p>Browser-backed hosts can chunk very large numeric copies because the shared
+worker API already exposes an async boundary. Node keeps the native bulk copy
+path because there is no UI thread to protect.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>dataView</code> - Shared numeric shelf covering inputs and outputs.</li>
+<li><code>inputValues</code> - Caller-provided numeric input vector.</li>
+<li><code>inputOffset</code> - Start index of the shared input shelf.</li>
+<li><code>useChunkedConversion</code> - True when the caller wants browser-style chunking for large copies.</li>
+</ul>
+<p>Returns: Promise resolved after the shared input shelf mirrors the caller input.</p>
+<h3 id="copysharednumericvaluesinchunks">copySharedNumericValuesInChunks</h3><pre><code class="language-ts">copySharedNumericValuesInChunks(
+  valueCount: number,
+  copyChunk: (startIndex: number, endIndex: number) =&gt; void,
+): Promise&lt;void&gt;
+</code></pre>
+<p>Copy one large numeric conversion in browser-friendly chunks.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>valueCount</code> - Total numeric slots to copy.</li>
+<li><code>copyChunk</code> - Callback that copies one contiguous chunk range.</li>
+</ul>
+<p>Returns: Promise resolved after every chunk has been copied.</p>
+<h3 id="copysharedoutputvalues">copySharedOutputValues</h3><pre><code class="language-ts">copySharedOutputValues(
+  dataView: Float64Array&lt;ArrayBufferLike&gt;,
+  outputOffset: number,
+  outputCount: number,
+  useChunkedConversion: boolean,
+): Promise&lt;Float64Array&lt;ArrayBufferLike&gt;&gt;
+</code></pre>
+<p>Detach one shared-memory output shelf into a standalone typed array.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>dataView</code> - Shared numeric shelf covering inputs and outputs.</li>
+<li><code>outputOffset</code> - Start index of the output shelf.</li>
+<li><code>outputCount</code> - Number of output values to copy.</li>
+<li><code>useChunkedConversion</code> - True when the caller wants browser-style chunking for large copies.</li>
+</ul>
+<p>Returns: Detached output values safe for the caller to retain.</p>
+<h3 id="opensharedinferenceworker">openSharedInferenceWorker</h3><pre><code class="language-ts">openSharedInferenceWorker(
+  payload: TransferableInferencePayload,
+  options: SharedInferenceWorkerOptions,
+): SharedInferenceWorker
+</code></pre>
+<p>Open one persistent shared-memory inference worker from a transferable payload.</p>
+<p>Shared-memory workers keep one predictor alive inside a dedicated worker and
+exchange inputs and outputs through <code>SharedArrayBuffer</code> shelves rather than
+cloning request payloads for every inference call.</p>
+<p>Browser hosts default to a module-relative worker script emitted alongside
+the library files. Bundled or CSP-constrained hosts can override that entry
+with <code>workerUrl</code>.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Transferable inference payload used to bootstrap the shared worker predictor.</li>
+<li><code>options</code> - Shared worker delivery options.</li>
+</ul>
+<p>Returns: Persistent shared-memory inference worker.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network);
+const sharedWorker = openSharedInferenceWorker(payload);
+const outputValues = await sharedWorker.infer([0.25, 0.75]);
+await sharedWorker.release();
+</code></pre>
+<h3 id="shared-inference-requires-cross-origin-isolation">SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION</h3><p>Browser <code>SharedArrayBuffer</code> inference requires cross-origin isolation.</p>
+<p>Node.js workers can use the shared-memory path without <code>COOP</code> or <code>COEP</code>, but
+browsers only expose <code>SharedArrayBuffer</code> reliably when the host page is
+cross-origin isolated.</p>
+<p>Example:</p>
+<pre><code class="language-ts">if (SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION) {
+  console.log(&#39;Configure COOP/COEP before enabling shared-memory inference.&#39;);
+}
+</code></pre>
+<h3 id="shouldchunksharednumericconversion">shouldChunkSharedNumericConversion</h3><pre><code class="language-ts">shouldChunkSharedNumericConversion(
+  valueCount: number,
+  useChunkedConversion: boolean,
+): boolean
+</code></pre>
+<p>Decide whether one shared numeric copy should yield between browser-sized chunks.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>valueCount</code> - Number of numeric slots involved in the conversion.</li>
+<li><code>useChunkedConversion</code> - True when the current call path wants cooperative chunking.</li>
+</ul>
+<p>Returns: True when the current host is browser-backed and the conversion is large.</p>
+<h3 id="yieldsharedconversionmacrotask">yieldSharedConversionMacrotask</h3><pre><code class="language-ts">yieldSharedConversionMacrotask(): Promise&lt;void&gt;
+</code></pre>
+<p>Yield one timer turn between browser conversion chunks.</p>
+<p>Returns: Promise resolved on the next macrotask turn.</p>
+<h2 id="architecture-network-worker-payload-network-worker-payload-channel-ts">architecture/network/worker-payload/network.worker-payload.channel.ts</h2><h3 id="openinferencechannel">openInferenceChannel</h3><pre><code class="language-ts">openInferenceChannel(
+  payload: TransferableInferencePayload,
+  options: InferenceChannelOptions,
+): InferenceChannel
+</code></pre>
+<p>Open one persistent inference worker channel from a transferable payload.</p>
+<p>The channel transfers the predictor payload exactly once during bootstrap,
+then reuses the worker-side predictor state for every later <code>predict()</code> or
+<code>reset()</code> request sent over one dedicated <code>MessageChannel</code> port pair.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Transferable inference payload used to bootstrap the worker predictor.</li>
+<li><code>options</code> - Channel concurrency and worker delivery options.</li>
+</ul>
+<p>Returns: Persistent inference channel.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network);
+const channel = openInferenceChannel(payload);
+const outputValues = await channel.predict([0.25, 0.75]);
+channel.close();
+</code></pre>
+<h2 id="architecture-network-worker-payload-network-worker-payload-browser-url-ts">architecture/network/worker-payload/network.worker-payload.browser-url.ts</h2><h3 id="browserworkerasseturloptions">BrowserWorkerAssetUrlOptions</h3><p>Options for resolving a browser worker asset URL relative to the current script or an explicit base URL override.</p>
+<p>When <code>baseUrl</code> is omitted the helper falls back to <code>document.currentScript.src</code>
+and then <code>location.href</code>, keeping the worker and host bundle co-located by default.</p>
+<h3 id="resolvebrowserworkerasseturl">resolveBrowserWorkerAssetUrl</h3><pre><code class="language-ts">resolveBrowserWorkerAssetUrl(
+  workerAssetPath: string,
+  options: BrowserWorkerAssetUrlOptions,
+): string | undefined
+</code></pre>
+<p>Resolves a browser worker asset beside the current script or page URL.</p>
+<p>This helper keeps the bundler boundary explicit: callers still name the
+emitted worker asset they expect, while the library handles the common URL
+math for browser demos, nested workers, and side-by-side bundle delivery.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>workerAssetPath</code> - Relative worker asset path emitted by the bundler.</li>
+<li><code>options</code> - Optional explicit base URL override.</li>
+</ul>
+<p>Returns: Absolute worker asset URL when a browser base URL is available.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const sharedWorkerUrl = resolveBrowserWorkerAssetUrl(
+  &#39;shared-inference.worker.bundle.js&#39;,
+);
+</code></pre>
+<h2 id="architecture-network-worker-payload-network-worker-payload-capabilities-ts">architecture/network/worker-payload/network.worker-payload.capabilities.ts</h2><p>Capability snapshot for the current worker-backed inference host.</p>
+<p>This probe answers a narrow question: which worker transport tiers are
+honestly usable in the current runtime before one evaluation pool or batch
+helper commits to a transport strategy?</p>
+<p>Example:</p>
+<pre><code class="language-ts">const capabilities = detectInferenceWorkerCapabilities({
+  crossOriginIsolated: globalThis.crossOriginIsolated === true,
+  hasChannelWorker: true,
+  hasSharedWorker: true,
+  runtime: &#39;browser&#39;,
+});
+const transport = resolveAutoInferenceTransport(capabilities);
+</code></pre>
+<h3 id="autoinferencetransport">AutoInferenceTransport</h3><p>Automatically selected worker-backed inference transport tier for the current host.</p>
+<ul>
+<li><code>&#39;shared-memory&#39;</code> — SharedArrayBuffer transfer path when cross-origin isolation is active.</li>
+<li><code>&#39;channel&#39;</code> — Persistent channel worker when a channel-worker script was delivered.</li>
+<li><code>&#39;transferable&#39;</code> — Universal typed-array fallback when higher tiers are unavailable.</li>
+</ul>
+<h3 id="detectinferenceworkercapabilities">detectInferenceWorkerCapabilities</h3><pre><code class="language-ts">detectInferenceWorkerCapabilities(
+  options: InferenceWorkerCapabilityOptions,
+): InferenceWorkerCapabilities
+</code></pre>
+<p>Detect the usable worker-backed inference transport tiers for one host.</p>
+<p>The probe stays intentionally lightweight. It does not open a worker or fetch
+a script; it only combines runtime facts and delivery availability so callers
+can decide whether to use shared-memory, channel, or transferable fallback.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>options</code> - Runtime and delivery facts for the current host.</li>
+</ul>
+<p>Returns: Capability snapshot describing the usable transport tiers.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const capabilities = detectInferenceWorkerCapabilities({
+  hasChannelWorker: true,
+  hasSharedWorker: true,
+  runtime: &#39;browser&#39;,
+});
+</code></pre>
+<h3 id="inferenceworkercapabilities">InferenceWorkerCapabilities</h3><p>Capability snapshot for the current worker-backed inference host.</p>
+<p>This probe answers a narrow question: which worker transport tiers are
+honestly usable in the current runtime before one evaluation pool or batch
+helper commits to a transport strategy?</p>
+<p>Example:</p>
+<pre><code class="language-ts">const capabilities = detectInferenceWorkerCapabilities({
+  crossOriginIsolated: globalThis.crossOriginIsolated === true,
+  hasChannelWorker: true,
+  hasSharedWorker: true,
+  runtime: &#39;browser&#39;,
+});
+const transport = resolveAutoInferenceTransport(capabilities);
+</code></pre>
+<h3 id="inferenceworkercapabilityoptions">InferenceWorkerCapabilityOptions</h3><p>Inputs used to probe worker-backed inference transport support.</p>
+<p>Keep delivery facts explicit here. Step 1 only answers capability and auto
+selection; Step 2 will own the generic worker-entry and URL resolution
+helpers that feed these booleans.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const capabilities = detectInferenceWorkerCapabilities({
+  crossOriginIsolated: false,
+  hasChannelWorker: true,
+  hasSharedWorker: true,
+  runtime: &#39;browser&#39;,
+});
+</code></pre>
+<h3 id="resolveautoinferencetransport">resolveAutoInferenceTransport</h3><pre><code class="language-ts">resolveAutoInferenceTransport(
+  capabilities: InferenceWorkerCapabilities,
+): AutoInferenceTransport
+</code></pre>
+<p>Resolve the honest automatic transport choice for one capability snapshot.</p>
+<p>The priority order matches the current transport ladder: shared-memory first,
+then persistent channels, then transferable payload fallback.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>capabilities</code> - Capability snapshot returned by the probe.</li>
+</ul>
+<p>Returns: Best automatic transport choice for the current host.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const capabilities = detectInferenceWorkerCapabilities({
+  hasChannelWorker: true,
+  runtime: &#39;browser&#39;,
+});
+const transport = resolveAutoInferenceTransport(capabilities);
+</code></pre>
+<h2 id="architecture-network-worker-payload-network-worker-payload-shared-worker-ts">architecture/network/worker-payload/network.worker-payload.shared.worker.ts</h2><h3 id="registersharedinferenceworkerruntime">registerSharedInferenceWorkerRuntime</h3><pre><code class="language-ts">registerSharedInferenceWorkerRuntime(): void
+</code></pre>
+<p>Register the worker-side shared-memory inference runtime.</p>
+<p>The worker rebuilds one predictor from the transferred payload during
+bootstrap, then services inference requests by reading and writing the
+shared control and data shelves coordinated through <code>Atomics</code>.</p>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-worker-payload-network-worker-payload-channel-worker-ts">architecture/network/worker-payload/network.worker-payload.channel.worker.ts</h2><h3 id="registerinferencechannelworkerruntime">registerInferenceChannelWorkerRuntime</h3><pre><code class="language-ts">registerInferenceChannelWorkerRuntime(): void
+</code></pre>
+<p>Register the worker-side dedicated inference-channel runtime.</p>
+<p>The worker receives one transferable predictor payload during bootstrap,
+rebuilds the local predictor once, then services predict and reset requests
+over the transferred <code>MessagePort</code> instead of the default worker channel.</p>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-worker-payload-network-worker-payload-utils-ts">architecture/network/worker-payload/network.worker-payload.utils.ts</h2><h3 id="activateportablenode">activatePortableNode</h3><pre><code class="language-ts">activatePortableNode(
+  activationContext: PortableActivationContext,
+): void
+</code></pre>
+<p>Activate one portable node using no-trace runtime semantics.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Predictor context for this activation step.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="activatetransferablenode">activateTransferableNode</h3><pre><code class="language-ts">activateTransferableNode(
+  activationContext: TransferableActivationContext,
+): void
+</code></pre>
+<p>Activate one transferable node using no-trace runtime semantics.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationContext</code> - Predictor context for this activation step.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="buildinferenceiredge">buildInferenceIrEdge</h3><pre><code class="language-ts">buildInferenceIrEdge(
+  connectionReference: default,
+): { from: number; to: number; weight: number; gaterIndex: number; }
+</code></pre>
+<p>Build one deterministic non-self edge snapshot for the inference IR.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connectionReference</code> - Runtime connection.</li>
+</ul>
+<p>Returns: Edge IR snapshot.</p>
+<h3 id="buildinferenceirnode">buildInferenceIrNode</h3><pre><code class="language-ts">buildInferenceIrNode(
+  nodeReference: default,
+): { index: number; bias: number; response: number; mask: number; activationId: number; selfWeight: number; selfGaterIndex: number; }
+</code></pre>
+<p>Build one deterministic node snapshot for the inference IR.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeReference</code> - Runtime node.</li>
+</ul>
+<p>Returns: Node IR snapshot.</p>
+<h3 id="buildportableinferencepayloadedge">buildPortableInferencePayloadEdge</h3><pre><code class="language-ts">buildPortableInferencePayloadEdge(
+  inferenceEdge: NetworkInferenceIREdge,
+): PortableInferencePayloadEdge
+</code></pre>
+<p>Build one portable edge payload record from the inference IR.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>inferenceEdge</code> - Inference IR edge snapshot.</li>
+</ul>
+<p>Returns: Structured-clone-safe edge payload record.</p>
+<h3 id="buildportableinferencepayloadnode">buildPortableInferencePayloadNode</h3><pre><code class="language-ts">buildPortableInferencePayloadNode(
+  inferenceNode: NetworkInferenceIRNode,
+): PortableInferencePayloadNode
+</code></pre>
+<p>Build one portable node payload record from the inference IR.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>inferenceNode</code> - Inference IR node snapshot.</li>
+</ul>
+<p>Returns: Structured-clone-safe node payload record.</p>
+<h3 id="createedgeindexesbygaterindex">createEdgeIndexesByGaterIndex</h3><pre><code class="language-ts">createEdgeIndexesByGaterIndex(
+  portableEdges: readonly PortableInferencePayloadEdge[],
+): Map&lt;number, readonly number[]&gt;
+</code></pre>
+<p>Build gated forward-edge indexes keyed by gater node index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>portableEdges</code> - Portable payload edges.</li>
+</ul>
+<p>Returns: Gated edge indexes keyed by gater node index.</p>
+<h3 id="createincomingedgesbytargetindex">createIncomingEdgesByTargetIndex</h3><pre><code class="language-ts">createIncomingEdgesByTargetIndex(
+  portableEdges: readonly PortableInferencePayloadEdge[],
+  nodeCount: number,
+): readonly (readonly number[])[]
+</code></pre>
+<p>Build incoming-edge indexes keyed by target node index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>portableEdges</code> - Portable payload edges.</li>
+<li><code>nodeCount</code> - Portable node count.</li>
+</ul>
+<p>Returns: Incoming edge indexes keyed by target node index.</p>
+<h3 id="createincomingtransferableedgesbytargetindex">createIncomingTransferableEdgesByTargetIndex</h3><pre><code class="language-ts">createIncomingTransferableEdgesByTargetIndex(
+  edgeTo: Int32Array&lt;ArrayBufferLike&gt;,
+  nodeCount: number,
+): readonly (readonly number[])[]
+</code></pre>
+<p>Build incoming transferable-edge indexes keyed by target node index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>edgeTo</code> - Transferable edge target-node shelf.</li>
+<li><code>nodeCount</code> - Transferable node count.</li>
+</ul>
+<p>Returns: Incoming edge indexes keyed by target node index.</p>
+<h3 id="createinferenceactivationidsbyname">createInferenceActivationIdsByName</h3><pre><code class="language-ts">createInferenceActivationIdsByName(): Map&lt;string, number&gt;
+</code></pre>
+<p>Build the stable activation-name lookup used by inference payloads.</p>
+<p>Returns: Activation-id lookup by canonical key or function name.</p>
+<h3 id="createinferencepredictor">createInferencePredictor</h3><pre><code class="language-ts">createInferencePredictor(
+  payload: PortableInferencePayload,
+): InferencePredictor
+</code></pre>
+<p>Create a reusable local predictor from either portable or transferable inference payload contracts.
+The factory normalizes both transport strategies into one inference interface so callers can benchmark or run fallback execution paths without special-case runtime branching.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Portable or transferable inference payload.</li>
+</ul>
+<p>Returns: Predictor that mirrors runtime no-trace activation semantics.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportPortableInferencePayload(network);
+const predictor = createInferencePredictor(payload);
+const outputValues = predictor.predict([0.25, 0.75]);
+</code></pre>
+<h3 id="createnodesbygeneid">createNodesByGeneId</h3><pre><code class="language-ts">createNodesByGeneId(
+  nodes: readonly default[],
+): Map&lt;number, default&gt;
+</code></pre>
+<p>Build a stable node lookup keyed by runtime gene id.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Runtime nodes in deterministic index order.</li>
+</ul>
+<p>Returns: Node lookup keyed by gene id.</p>
+<h3 id="createportableinferencepredictor">createPortableInferencePredictor</h3><pre><code class="language-ts">createPortableInferencePredictor(
+  payload: PortableInferencePayload,
+): InferencePredictor
+</code></pre>
+<p>Create a reusable local predictor from a portable inference payload.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Portable inference payload.</li>
+</ul>
+<p>Returns: Predictor that mirrors runtime no-trace activation semantics.</p>
+<h3 id="createselfnodeindexesbygaterindex">createSelfNodeIndexesByGaterIndex</h3><pre><code class="language-ts">createSelfNodeIndexesByGaterIndex(
+  portableNodes: readonly PortableInferencePayloadNode[],
+): Map&lt;number, readonly number[]&gt;
+</code></pre>
+<p>Build gated self-connection indexes keyed by gater node index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>portableNodes</code> - Portable payload nodes.</li>
+</ul>
+<p>Returns: Self-connection node indexes keyed by gater node index.</p>
+<h3 id="createtransferableedgeindexesbygaterindex">createTransferableEdgeIndexesByGaterIndex</h3><pre><code class="language-ts">createTransferableEdgeIndexesByGaterIndex(
+  edgeGaterIndices: Int32Array&lt;ArrayBufferLike&gt;,
+): Map&lt;number, readonly number[]&gt;
+</code></pre>
+<p>Build gated transferable forward-edge indexes keyed by gater node index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>edgeGaterIndices</code> - Transferable edge gater shelf.</li>
+</ul>
+<p>Returns: Gated edge indexes keyed by gater node index.</p>
+<h3 id="createtransferableinferencepredictor">createTransferableInferencePredictor</h3><pre><code class="language-ts">createTransferableInferencePredictor(
+  payload: TransferableInferencePayload,
+): InferencePredictor
+</code></pre>
+<p>Create a reusable local predictor from a transferable inference payload.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Transferable inference payload.</li>
+</ul>
+<p>Returns: Predictor that mirrors runtime no-trace activation semantics.</p>
+<h3 id="createtransferablenumericarray">createTransferableNumericArray</h3><pre><code class="language-ts">createTransferableNumericArray(
+  values: readonly number[],
+  numericPrecision: TransferableNumericPrecision,
+): Float32Array&lt;ArrayBufferLike&gt; | Float64Array&lt;ArrayBufferLike&gt;
+</code></pre>
+<p>Create one numeric typed array using the requested transferable precision.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>values</code> - Numeric values to pack.</li>
+<li><code>numericPrecision</code> - Requested precision mode.</li>
+</ul>
+<p>Returns: Float32Array or Float64Array depending on the selected mode.</p>
+<h3 id="createtransferableselfnodeindexesbygaterindex">createTransferableSelfNodeIndexesByGaterIndex</h3><pre><code class="language-ts">createTransferableSelfNodeIndexesByGaterIndex(
+  nodeSelfGaterIndices: Int32Array&lt;ArrayBufferLike&gt;,
+): Map&lt;number, readonly number[]&gt;
+</code></pre>
+<p>Build gated transferable self-connection indexes keyed by gater node index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeSelfGaterIndices</code> - Transferable self-gater shelf.</li>
+</ul>
+<p>Returns: Self-connection node indexes keyed by gater node index.</p>
+<h3 id="exportportableinferencepayload">exportPortableInferencePayload</h3><pre><code class="language-ts">exportPortableInferencePayload(
+  network: default,
+): PortableInferencePayload
+</code></pre>
+<p>Export one structured-clone-safe inference payload from a live runtime network.
+The resulting payload keeps deterministic activation ordering, stable node or edge indexing, and canonical activation names so a worker can replay inference semantics without shipping live graph objects.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Runtime network to serialize for worker transport.</li>
+</ul>
+<p>Returns: Portable inference payload.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportPortableInferencePayload(network);
+console.log(payload.nodes[0]?.activation);
+</code></pre>
+<h3 id="exporttransferableinferencepayload">exportTransferableInferencePayload</h3><pre><code class="language-ts">exportTransferableInferencePayload(
+  network: default,
+  options: TransferableInferencePayloadOptions,
+): TransferableInferencePayload
+</code></pre>
+<p>Export one typed-array inference payload optimized for low-copy worker transport.
+This variant preserves the same deterministic IR semantics as the portable payload while flattening fields into transfer-friendly typed shelves that can be moved across worker boundaries efficiently.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Runtime network to serialize for worker transport.</li>
+<li><code>options</code> - Transferable export configuration.</li>
+</ul>
+<p>Returns: Transferable inference payload.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network, {
+  numericPrecision: &#39;f32&#39;,
+});
+console.log(payload.edgeWeights.length);
+</code></pre>
+<h3 id="extractnetworkinferenceir">extractNetworkInferenceIR</h3><pre><code class="language-ts">extractNetworkInferenceIR(
+  network: default,
+): NetworkInferenceIR
+</code></pre>
+<p>Extract a deterministic inference IR from one live network snapshot.
+This extraction pass captures exactly the runtime data required for worker-side forward execution, including node scalars, filtered forward edges, grouped activation steps, and stable output indexing.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Runtime network to snapshot.</li>
+</ul>
+<p>Returns: Worker-friendly inference IR.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const inferenceIr = extractNetworkInferenceIR(network);
+console.log(inferenceIr.outputNodeIndices);
+</code></pre>
+<h3 id="flattenactivationstepsfortransferablepayload">flattenActivationStepsForTransferablePayload</h3><pre><code class="language-ts">flattenActivationStepsForTransferablePayload(
+  activationSteps: readonly (readonly number[])[],
+): { activationStepsData: number[]; activationStepsIndex: number[]; }
+</code></pre>
+<p>Build the transferable activation-step packing from grouped IR steps.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationSteps</code> - Grouped activation steps from the inference IR.</li>
+</ul>
+<p>Returns: Flat activation-step data plus per-step start offsets.</p>
+<h3 id="gettransferlist">getTransferList</h3><pre><code class="language-ts">getTransferList(
+  payload: TransferableInferencePayload,
+): ArrayBuffer[]
+</code></pre>
+<p>Collect every transferable buffer from one typed-array inference payload.</p>
+<p>Transfer these buffers exactly once when posting the payload to a worker.
+After the transfer completes, the sending-side typed arrays are neutered and
+must not be read again.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Transferable inference payload whose buffers should move.</li>
+</ul>
+<p>Returns: ArrayBuffer transfer list aligned to the payload&#39;s typed shelves.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const payload = exportTransferableInferencePayload(network);
+worker.postMessage(payload, getTransferList(payload));
+</code></pre>
+<h3 id="inference-activation-table">INFERENCE_ACTIVATION_TABLE</h3><p>Stable activation-function table used by worker inference transport.</p>
+<p>Each entry index is part of the public inference payload contract. New worker
+payloads should reference activations by these numeric ids rather than by
+serializing function bodies or relying on runtime function identity.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const activationFunction = INFERENCE_ACTIVATION_TABLE[0];
+const outputValue = activationFunction(0.5);
+</code></pre>
+<h3 id="resolveactivationsteps">resolveActivationSteps</h3><pre><code class="language-ts">resolveActivationSteps(
+  network: default,
+  generationContext: StandaloneGenerationContext,
+  nodesByGeneId: ReadonlyMap&lt;number, default&gt;,
+): readonly (readonly number[])[]
+</code></pre>
+<p>Resolve grouped activation steps from the compiled runtime schedule when available.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Runtime network.</li>
+<li><code>generationContext</code> - Standalone generation context with fallback traversal order.</li>
+<li><code>nodesByGeneId</code> - Stable node lookup by gene id.</li>
+</ul>
+<p>Returns: Grouped activation steps.</p>
+<h3 id="resolveactiveselfconnection">resolveActiveSelfConnection</h3><pre><code class="language-ts">resolveActiveSelfConnection(
+  nodeReference: default,
+): default | undefined
+</code></pre>
+<p>Resolve the active self-connection for one runtime node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeReference</code> - Runtime node.</li>
+</ul>
+<p>Returns: Active self-connection or undefined.</p>
+<h3 id="resolvecompiledactivationsteps">resolveCompiledActivationSteps</h3><pre><code class="language-ts">resolveCompiledActivationSteps(
+  network: default,
+  nodesByGeneId: ReadonlyMap&lt;number, default&gt;,
+): readonly (readonly number[])[] | null
+</code></pre>
+<p>Resolve grouped activation steps from the compiled activation schedule.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Runtime network.</li>
+<li><code>nodesByGeneId</code> - Stable node lookup by gene id.</li>
+</ul>
+<p>Returns: Grouped activation steps or null when the schedule is unavailable.</p>
+<h3 id="resolveinferenceactivationid">resolveInferenceActivationId</h3><pre><code class="language-ts">resolveInferenceActivationId(
+  nodeReference: default,
+): number
+</code></pre>
+<p>Resolve the supported activation id for one runtime node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeReference</code> - Runtime node.</li>
+</ul>
+<p>Returns: Stable activation id.</p>
+<h3 id="resolvenodeindexorthrow">resolveNodeIndexOrThrow</h3><pre><code class="language-ts">resolveNodeIndexOrThrow(
+  nodeReference: default,
+): number
+</code></pre>
+<p>Resolve a required node index from the seeded standalone surface.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeReference</code> - Runtime node.</li>
+</ul>
+<p>Returns: Stable node index.</p>
+<h3 id="resolveoptionalnodeindex">resolveOptionalNodeIndex</h3><pre><code class="language-ts">resolveOptionalNodeIndex(
+  nodeReference: default | null,
+): number
+</code></pre>
+<p>Resolve an optional node index for gater references.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeReference</code> - Optional runtime node.</li>
+</ul>
+<p>Returns: Stable node index or <code>-1</code> when absent.</p>
+<h3 id="resolveportableactivationfunction">resolvePortableActivationFunction</h3><pre><code class="language-ts">resolvePortableActivationFunction(
+  portableNode: PortableInferencePayloadNode,
+  activationTable: readonly string[],
+): ActivationFn
+</code></pre>
+<p>Resolve the activation function for one portable node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>portableNode</code> - Portable node payload record.</li>
+<li><code>activationTable</code> - Portable activation table.</li>
+</ul>
+<p>Returns: Activation function from the stable inference registry.</p>
+<h3 id="resolveportablenodesbyindex">resolvePortableNodesByIndex</h3><pre><code class="language-ts">resolvePortableNodesByIndex(
+  payload: PortableInferencePayload,
+): PortableInferencePayloadNode[]
+</code></pre>
+<p>Resolve portable nodes in strict node-index order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Portable inference payload.</li>
+</ul>
+<p>Returns: Portable nodes aligned to index order.</p>
+<h3 id="resolvetransferableactivationfunctions">resolveTransferableActivationFunctions</h3><pre><code class="language-ts">resolveTransferableActivationFunctions(
+  payload: TransferableInferencePayload,
+): ActivationFn[]
+</code></pre>
+<p>Resolve activation functions directly from the transferable activation-id shelf.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Transferable inference payload.</li>
+</ul>
+<p>Returns: Activation functions aligned to the transferable node order.</p>
+<h3 id="resolvetransferableactivationstepnodeindex">resolveTransferableActivationStepNodeIndex</h3><pre><code class="language-ts">resolveTransferableActivationStepNodeIndex(
+  activationStepsData: Int32Array&lt;ArrayBufferLike&gt;,
+  activationDataIndex: number,
+): number
+</code></pre>
+<p>Resolve one transferable activation-step node index or throw when the step data is truncated.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationStepsData</code> - Flat activation-step node shelf.</li>
+<li><code>activationDataIndex</code> - Index inside the flat activation-step shelf.</li>
+</ul>
+<p>Returns: Transferable node index for one activation step entry.</p>
+<h3 id="seedpredictorinputactivations">seedPredictorInputActivations</h3><pre><code class="language-ts">seedPredictorInputActivations(
+  activationValues: Float64Array&lt;ArrayBufferLike&gt;,
+  inputValues: readonly number[],
+  inputCount: number,
+): void
+</code></pre>
+<p>Seed the public input activations for one prediction pass.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationValues</code> - Mutable activation buffer.</li>
+<li><code>inputValues</code> - Caller-provided input vector.</li>
+<li><code>inputCount</code> - Public input width.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="shouldincludeconnection">shouldIncludeConnection</h3><pre><code class="language-ts">shouldIncludeConnection(
+  connectionReference: default,
+): boolean
+</code></pre>
+<p>Determine whether a connection contributes to inference regardless of shape.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connectionReference</code> - Runtime connection.</li>
+</ul>
+<p>Returns: True when the connection is enabled for inference.</p>
+<h3 id="shouldincludeforwardedge">shouldIncludeForwardEdge</h3><pre><code class="language-ts">shouldIncludeForwardEdge(
+  connectionReference: default,
+): boolean
+</code></pre>
+<p>Determine whether a connection contributes to inference.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connectionReference</code> - Runtime connection.</li>
+</ul>
+<p>Returns: True when the connection should appear in the IR.</p>
+<h3 id="shouldincludeselfconnection">shouldIncludeSelfConnection</h3><pre><code class="language-ts">shouldIncludeSelfConnection(
+  connectionReference: default,
+): boolean
+</code></pre>
+<p>Determine whether a self-connection contributes to inference.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connectionReference</code> - Runtime self-connection.</li>
+</ul>
+<p>Returns: True when the self-connection should appear in the IR node snapshot.</p>
+<h3 id="validatepredictorinputsize">validatePredictorInputSize</h3><pre><code class="language-ts">validatePredictorInputSize(
+  inputValues: readonly number[],
+  expectedInputCount: number,
+): void
+</code></pre>
+<p>Validate input vector width for one prediction call.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>inputValues</code> - Caller-provided input vector.</li>
+<li><code>expectedInputCount</code> - Required input width.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="validatetransferableactivationtablelength">validateTransferableActivationTableLength</h3><pre><code class="language-ts">validateTransferableActivationTableLength(
+  activationTableLength: number,
+): void
+</code></pre>
+<p>Validate that the transferable activation shelf matches the runtime registry.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationTableLength</code> - Activation shelf length encoded in the payload.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="validatetransferablefieldlength">validateTransferableFieldLength</h3><pre><code class="language-ts">validateTransferableFieldLength(
+  fieldName: string,
+  actualLength: number,
+  expectedLength: number,
+): void
+</code></pre>
+<p>Validate one transferable shelf length against the expected payload count.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>fieldName</code> - Payload field name.</li>
+<li><code>actualLength</code> - Actual typed-array length.</li>
+<li><code>expectedLength</code> - Expected aligned length.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="validatetransferablefieldlengths">validateTransferableFieldLengths</h3><pre><code class="language-ts">validateTransferableFieldLengths(
+  payload: TransferableInferencePayload,
+): void
+</code></pre>
+<p>Validate that every transferable typed shelf stays aligned to the payload contract.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>payload</code> - Transferable inference payload.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="validatetransferablenodeids">validateTransferableNodeIds</h3><pre><code class="language-ts">validateTransferableNodeIds(
+  nodeIds: Int32Array&lt;ArrayBufferLike&gt;,
+): void
+</code></pre>
+<p>Validate that transferable node ids remain aligned to typed-shelf order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeIds</code> - Transferable node-id shelf.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-types-ts">architecture/network/worker-payload/network.worker-payload.types.ts</a><ul><li><a href="#inferencechannel">InferenceChannel</a></li><li><a href="#inferencechanneloptions">InferenceChannelOptions</a></li><li><a href="#inferencepredictor">InferencePredictor</a></li><li><a href="#networkinferenceir">NetworkInferenceIR</a></li><li><a href="#networkinferenceiredge">NetworkInferenceIREdge</a></li><li><a href="#networkinferenceirnode">NetworkInferenceIRNode</a></li><li><a href="#portableinferencepayload">PortableInferencePayload</a></li><li><a href="#portableinferencepayloadedge">PortableInferencePayloadEdge</a></li><li><a href="#portableinferencepayloadnode">PortableInferencePayloadNode</a></li><li><a href="#sharedinferenceworker">SharedInferenceWorker</a></li><li><a href="#sharedinferenceworkeroptions">SharedInferenceWorkerOptions</a></li><li><a href="#transferableinferencepayload">TransferableInferencePayload</a></li><li><a href="#transferableinferencepayloadoptions">TransferableInferencePayloadOptions</a></li><li><a href="#transferablenumericarray">TransferableNumericArray</a></li><li><a href="#transferablenumericprecision">TransferableNumericPrecision</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-ts">architecture/network/worker-payload/network.worker-payload.ts</a><ul><li><a href="#autoinferencetransport">AutoInferenceTransport</a></li><li><a href="#batchevaluationresult">BatchEvaluationResult</a></li><li><a href="#browserworkerasseturloptions">BrowserWorkerAssetUrlOptions</a></li><li><a href="#createinferencepredictor">createInferencePredictor</a></li><li><a href="#createneatparallelpopulationevaluator">createNeatParallelPopulationEvaluator</a></li><li><a href="#detectinferenceworkercapabilities">detectInferenceWorkerCapabilities</a></li><li><a href="#evaluateinworkers">evaluateInWorkers</a></li><li><a href="#evaluateinworkersoptions">EvaluateInWorkersOptions</a></li><li><a href="#exportportableinferencepayload">exportPortableInferencePayload</a></li><li><a href="#exporttransferableinferencepayload">exportTransferableInferencePayload</a></li><li><a href="#extractnetworkinferenceir">extractNetworkInferenceIR</a></li><li><a href="#gettransferlist">getTransferList</a></li><li><a href="#inference-activation-table">INFERENCE_ACTIVATION_TABLE</a></li><li><a href="#inferencechannel">InferenceChannel</a></li><li><a href="#inferencechanneloptions">InferenceChannelOptions</a></li><li><a href="#inferencepredictor">InferencePredictor</a></li><li><a href="#inferenceworkercapabilities">InferenceWorkerCapabilities</a></li><li><a href="#inferenceworkercapabilityoptions">InferenceWorkerCapabilityOptions</a></li><li><a href="#neatparallelpopulationevaluatoroptions">NeatParallelPopulationEvaluatorOptions</a></li><li><a href="#networkinferenceir">NetworkInferenceIR</a></li><li><a href="#networkinferenceiredge">NetworkInferenceIREdge</a></li><li><a href="#networkinferenceirnode">NetworkInferenceIRNode</a></li><li><a href="#openinferencechannel">openInferenceChannel</a></li><li><a href="#opensharedinferenceworker">openSharedInferenceWorker</a></li><li><a href="#parallelinferencepool">ParallelInferencePool</a></li><li><a href="#parallelinferencepooloptions">ParallelInferencePoolOptions</a></li><li><a href="#parallelinferenceworkerlike">ParallelInferenceWorkerLike</a></li><li><a href="#portableinferencepayload">PortableInferencePayload</a></li><li><a href="#portableinferencepayloadedge">PortableInferencePayloadEdge</a></li><li><a href="#portableinferencepayloadnode">PortableInferencePayloadNode</a></li><li><a href="#resolveautoinferencetransport">resolveAutoInferenceTransport</a></li><li><a href="#resolvebrowserworkerasseturl">resolveBrowserWorkerAssetUrl</a></li><li><a href="#shared-inference-requires-cross-origin-isolation">SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION</a></li><li><a href="#sharedinferenceworker">SharedInferenceWorker</a></li><li><a href="#sharedinferenceworkeroptions">SharedInferenceWorkerOptions</a></li><li><a href="#transferableinferencepayload">TransferableInferencePayload</a></li><li><a href="#transferableinferencepayloadoptions">TransferableInferencePayloadOptions</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-neat-ts">architecture/network/worker-payload/network.worker-payload.neat.ts</a><ul><li><a href="#createneatparallelpopulationevaluator">createNeatParallelPopulationEvaluator</a></li><li><a href="#neatparallelpopulationevaluatoroptions">NeatParallelPopulationEvaluatorOptions</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-pool-ts">architecture/network/worker-payload/network.worker-payload.pool.ts</a><ul><li><a href="#parallelinferencepool">ParallelInferencePool</a></li><li><a href="#parallelinferencepooloptions">ParallelInferencePoolOptions</a></li><li><a href="#parallelinferenceworkerlike">ParallelInferenceWorkerLike</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-batch-ts">architecture/network/worker-payload/network.worker-payload.batch.ts</a><ul><li><a href="#batchevaluationresult">BatchEvaluationResult</a></li><li><a href="#evaluateinworkers">evaluateInWorkers</a></li><li><a href="#evaluateinworkersoptions">EvaluateInWorkersOptions</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-shared-ts">architecture/network/worker-payload/network.worker-payload.shared.ts</a><ul><li><a href="#copyinputvaluesintosharedbuffer">copyInputValuesIntoSharedBuffer</a></li><li><a href="#copysharednumericvaluesinchunks">copySharedNumericValuesInChunks</a></li><li><a href="#copysharedoutputvalues">copySharedOutputValues</a></li><li><a href="#opensharedinferenceworker">openSharedInferenceWorker</a></li><li><a href="#shared-inference-requires-cross-origin-isolation">SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION</a></li><li><a href="#shouldchunksharednumericconversion">shouldChunkSharedNumericConversion</a></li><li><a href="#yieldsharedconversionmacrotask">yieldSharedConversionMacrotask</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-channel-ts">architecture/network/worker-payload/network.worker-payload.channel.ts</a><ul><li><a href="#openinferencechannel">openInferenceChannel</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-browser-url-ts">architecture/network/worker-payload/network.worker-payload.browser-url.ts</a><ul><li><a href="#browserworkerasseturloptions">BrowserWorkerAssetUrlOptions</a></li><li><a href="#resolvebrowserworkerasseturl">resolveBrowserWorkerAssetUrl</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-capabilities-ts">architecture/network/worker-payload/network.worker-payload.capabilities.ts</a><ul><li><a href="#autoinferencetransport">AutoInferenceTransport</a></li><li><a href="#detectinferenceworkercapabilities">detectInferenceWorkerCapabilities</a></li><li><a href="#inferenceworkercapabilities">InferenceWorkerCapabilities</a></li><li><a href="#inferenceworkercapabilityoptions">InferenceWorkerCapabilityOptions</a></li><li><a href="#resolveautoinferencetransport">resolveAutoInferenceTransport</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-shared-worker-ts">architecture/network/worker-payload/network.worker-payload.shared.worker.ts</a><ul><li><a href="#registersharedinferenceworkerruntime">registerSharedInferenceWorkerRuntime</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-channel-worker-ts">architecture/network/worker-payload/network.worker-payload.channel.worker.ts</a><ul><li><a href="#registerinferencechannelworkerruntime">registerInferenceChannelWorkerRuntime</a></li></ul></div><div class="toc-file"><a href="#architecture-network-worker-payload-network-worker-payload-utils-ts">architecture/network/worker-payload/network.worker-payload.utils.ts</a><ul><li><a href="#activateportablenode">activatePortableNode</a></li><li><a href="#activatetransferablenode">activateTransferableNode</a></li><li><a href="#buildinferenceiredge">buildInferenceIrEdge</a></li><li><a href="#buildinferenceirnode">buildInferenceIrNode</a></li><li><a href="#buildportableinferencepayloadedge">buildPortableInferencePayloadEdge</a></li><li><a href="#buildportableinferencepayloadnode">buildPortableInferencePayloadNode</a></li><li><a href="#createedgeindexesbygaterindex">createEdgeIndexesByGaterIndex</a></li><li><a href="#createincomingedgesbytargetindex">createIncomingEdgesByTargetIndex</a></li><li><a href="#createincomingtransferableedgesbytargetindex">createIncomingTransferableEdgesByTargetIndex</a></li><li><a href="#createinferenceactivationidsbyname">createInferenceActivationIdsByName</a></li><li><a href="#createinferencepredictor">createInferencePredictor</a></li><li><a href="#createnodesbygeneid">createNodesByGeneId</a></li><li><a href="#createportableinferencepredictor">createPortableInferencePredictor</a></li><li><a href="#createselfnodeindexesbygaterindex">createSelfNodeIndexesByGaterIndex</a></li><li><a href="#createtransferableedgeindexesbygaterindex">createTransferableEdgeIndexesByGaterIndex</a></li><li><a href="#createtransferableinferencepredictor">createTransferableInferencePredictor</a></li><li><a href="#createtransferablenumericarray">createTransferableNumericArray</a></li><li><a href="#createtransferableselfnodeindexesbygaterindex">createTransferableSelfNodeIndexesByGaterIndex</a></li><li><a href="#exportportableinferencepayload">exportPortableInferencePayload</a></li><li><a href="#exporttransferableinferencepayload">exportTransferableInferencePayload</a></li><li><a href="#extractnetworkinferenceir">extractNetworkInferenceIR</a></li><li><a href="#flattenactivationstepsfortransferablepayload">flattenActivationStepsForTransferablePayload</a></li><li><a href="#gettransferlist">getTransferList</a></li><li><a href="#inference-activation-table">INFERENCE_ACTIVATION_TABLE</a></li><li><a href="#resolveactivationsteps">resolveActivationSteps</a></li><li><a href="#resolveactiveselfconnection">resolveActiveSelfConnection</a></li><li><a href="#resolvecompiledactivationsteps">resolveCompiledActivationSteps</a></li><li><a href="#resolveinferenceactivationid">resolveInferenceActivationId</a></li><li><a href="#resolvenodeindexorthrow">resolveNodeIndexOrThrow</a></li><li><a href="#resolveoptionalnodeindex">resolveOptionalNodeIndex</a></li><li><a href="#resolveportableactivationfunction">resolvePortableActivationFunction</a></li><li><a href="#resolveportablenodesbyindex">resolvePortableNodesByIndex</a></li><li><a href="#resolvetransferableactivationfunctions">resolveTransferableActivationFunctions</a></li><li><a href="#resolvetransferableactivationstepnodeindex">resolveTransferableActivationStepNodeIndex</a></li><li><a href="#seedpredictorinputactivations">seedPredictorInputActivations</a></li><li><a href="#shouldincludeconnection">shouldIncludeConnection</a></li><li><a href="#shouldincludeforwardedge">shouldIncludeForwardEdge</a></li><li><a href="#shouldincludeselfconnection">shouldIncludeSelfConnection</a></li><li><a href="#validatepredictorinputsize">validatePredictorInputSize</a></li><li><a href="#validatetransferableactivationtablelength">validateTransferableActivationTableLength</a></li><li><a href="#validatetransferablefieldlength">validateTransferableFieldLength</a></li><li><a href="#validatetransferablefieldlengths">validateTransferableFieldLengths</a></li><li><a href="#validatetransferablenodeids">validateTransferableNodeIds</a></li></ul></div></div></aside></div><script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script></body></html>

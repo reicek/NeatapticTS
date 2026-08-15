@@ -32,6 +32,10 @@ import {
   NEATENSTEIN_ENEMY_STUN_DURATION_MS,
   NEATENSTEIN_MUZZLE_OFFSET_CELLS,
   NEATENSTEIN_AMMO_PICKUP_AMOUNT,
+  NEAR_MISS_MULTIPLIER,
+  SHOT_OUTCOME_ENEMY,
+  SHOT_OUTCOME_RANGE,
+  SHOT_OUTCOME_WALL,
 } from './constants';
 import { consumeAmmo } from './state';
 import type {
@@ -44,22 +48,16 @@ import type {
   ImpactSpot,
   Vector2,
 } from './types';
+import type { FireBoltResult, FireEnemyBoltInput } from '../types';
+
+// Re-export consolidated types so existing imports from this module remain valid.
+export type { FireBoltResult, FireEnemyBoltInput } from '../types';
 
 /** Re-export the muzzle offset so tests can assert bolt spawn position. */
 export { NEATENSTEIN_MUZZLE_OFFSET_CELLS } from './constants';
 
 /** Re-export the bolt damage constant for test contracts. */
 export { NEATENSTEIN_BOLT_DAMAGE } from './constants';
-
-/**
- * Multiplier applied to the bolt hit radius to define the near-miss threshold.
- *
- * An enemy within this threshold of the bolt path but outside the hit radius
- * counts as a near miss. Set to 3× the hit radius so shots that pass
- * reasonably close to an enemy are classified as near misses rather than
- * blind wall hits or range expirations.
- */
-const NEAR_MISS_RADIUS_MULTIPLIER = 3;
 
 /**
  * Default zero-valued telemetry for a fresh episode.
@@ -92,20 +90,6 @@ function withAimMissRate(telemetry: EpisodeTelemetry): EpisodeTelemetry {
   const { shotsFired, shotsHit } = telemetry;
   const aimMissRate = shotsFired > 0 ? (shotsFired - shotsHit) / shotsFired : 0;
   return { ...telemetry, aimMissRate };
-}
-
-/**
- * Result of attempting to fire the traveling plasma bolt.
- */
-export interface FireBoltResult {
-  /** Snapshot after the shot: ammo consumed, bolt appended, damage applied. */
-  state: GameState;
-
-  /** `true` when a shot was actually fired this frame. */
-  fired: boolean;
-
-  /** Spawned bolt for this frame, or `null` when the weapon did not fire. */
-  bolt: BoltState | null;
 }
 
 /**
@@ -208,8 +192,8 @@ export function fireBolt(state: GameState): FireBoltResult {
     ? wallHit.perpWallDist
     : Number.POSITIVE_INFINITY;
 
-  let hitType: 'wall' | 'enemy' | 'range' =
-    rawWallDistance <= NEATENSTEIN_BOLT_MAX_RANGE_CELLS ? 'wall' : 'range';
+  let hitType: typeof SHOT_OUTCOME_WALL | typeof SHOT_OUTCOME_ENEMY | typeof SHOT_OUTCOME_RANGE =
+    rawWallDistance <= NEATENSTEIN_BOLT_MAX_RANGE_CELLS ? SHOT_OUTCOME_WALL : SHOT_OUTCOME_RANGE;
   let hitDistance = Math.min(rawWallDistance, NEATENSTEIN_BOLT_MAX_RANGE_CELLS);
   let hitEnemyIndex = -1;
 
@@ -218,7 +202,7 @@ export function fireBolt(state: GameState): FireBoltResult {
   let hasActiveEnemy = false;
   let nearMissFound = false;
   const nearMissThreshold =
-    NEATENSTEIN_BOLT_HIT_RADIUS_CELLS * NEAR_MISS_RADIUS_MULTIPLIER;
+    NEATENSTEIN_BOLT_HIT_RADIUS_CELLS * NEAR_MISS_MULTIPLIER;
 
   // Test every living enemy against the bolt path and keep the nearest valid
   // hit before the wall.
@@ -245,7 +229,7 @@ export function fireBolt(state: GameState): FireBoltResult {
     );
 
     if (missDistance <= NEATENSTEIN_BOLT_HIT_RADIUS_CELLS) {
-      hitType = 'enemy';
+      hitType = SHOT_OUTCOME_ENEMY;
       hitDistance = distanceAlongBolt;
       hitEnemyIndex = index;
     } else if (missDistance <= nearMissThreshold) {
@@ -288,7 +272,7 @@ export function fireBolt(state: GameState): FireBoltResult {
   //   wallHit    — bolt hit a wall with no enemy near the path
   //   rangeExpired — bolt expired at max range with no enemy near the path
   let telemetryWithTaxonomy = telemetryAfterShot;
-  if (hitType !== 'enemy') {
+  if (hitType !== SHOT_OUTCOME_ENEMY) {
     if (!hasActiveEnemy) {
       telemetryWithTaxonomy = {
         ...telemetryWithTaxonomy,
@@ -299,7 +283,7 @@ export function fireBolt(state: GameState): FireBoltResult {
         ...telemetryWithTaxonomy,
         shotsNearMiss: telemetryWithTaxonomy.shotsNearMiss + 1,
       };
-    } else if (hitType === 'wall') {
+    } else if (hitType === SHOT_OUTCOME_WALL) {
       telemetryWithTaxonomy = {
         ...telemetryWithTaxonomy,
         shotsWallHit: telemetryWithTaxonomy.shotsWallHit + 1,
@@ -319,7 +303,7 @@ export function fireBolt(state: GameState): FireBoltResult {
 
   // Only create a wall impact when the shot truly terminated on a wall within
   // the bolt's maximum range. Beyond that range the bolt vanishes in mid-air.
-  if (hitType === 'wall') {
+  if (hitType === SHOT_OUTCOME_WALL) {
     const wallHitCoordinate =
       wallHit.side === 0
         ? origin.y + wallHit.perpWallDist * direction.y
@@ -345,7 +329,7 @@ export function fireBolt(state: GameState): FireBoltResult {
     };
   }
 
-  if (hitType === 'enemy' && hitEnemyIndex >= 0) {
+  if (hitType === SHOT_OUTCOME_ENEMY && hitEnemyIndex >= 0) {
     const enemy = state.enemies[hitEnemyIndex];
     const enemyImpact: EnemyImpactSpot = {
       position: { ...enemy.position },
@@ -516,21 +500,6 @@ export function applyEnemyDamage(
     ammoPickups: newAmmoPickups,
     telemetry: telemetryAfterHit,
   };
-}
-
-/**
- * Input shape for spawning an enemy bolt from a hitscan event.
- *
- * Mirrors the relevant fields of {@link HitscanEvent} without importing the
- * controller module, keeping the combat module dependency-free.
- */
-export interface FireEnemyBoltInput {
-  /** World-space origin of the enemy's hitscan ray. */
-  origin: Vector2;
-  /** Normalized direction toward the player at fire time. */
-  direction: Vector2;
-  /** Damage applied on hit. Defaults to {@link NEATENSTEIN_ENEMY_BOLT_DAMAGE}. */
-  damage?: number;
 }
 
 /**

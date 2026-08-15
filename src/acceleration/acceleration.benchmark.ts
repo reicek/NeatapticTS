@@ -54,7 +54,7 @@ export interface RegressionBenchmarkObserver {
 }
 
 /**
- * Options accepted by {@link runRegressionBenchmark}.
+ * Options accepted by the {@link runRegressionBenchmark} paired CPU vs GPU micro-benchmark.
  */
 export interface RegressionBenchmarkOptions {
   /** Seed for deterministic sample selection. */
@@ -80,7 +80,7 @@ export interface RegressionBenchmarkOptions {
 }
 
 /**
- * Per-backend median duration reported by {@link runRegressionBenchmark}.
+ * Per-backend median duration measurements reported by the {@link runRegressionBenchmark} micro-benchmark harness, capturing one representative timing sample.
  */
 export interface RegressionBenchmarkBackendResult {
   /** Backend that produced the median. */
@@ -91,7 +91,7 @@ export interface RegressionBenchmarkBackendResult {
 }
 
 /**
- * Result returned by {@link runRegressionBenchmark}.
+ * Result returned by the {@link runRegressionBenchmark} paired CPU vs GPU micro-benchmark.
  */
 export interface RegressionBenchmarkResult {
   /** Paired CPU and GPU median benchmark results. */

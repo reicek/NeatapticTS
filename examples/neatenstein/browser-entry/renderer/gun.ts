@@ -11,38 +11,15 @@
  * @module
  */
 
-import {
-  NEATENSTEIN_GUN_ACCENT_COLOR as GUN_ACCENT_COLOR,
-  NEATENSTEIN_GUN_BODY_COLOR as GUN_BODY_COLOR,
-} from '../constants';
+import { RGBA_OPAQUE_ALPHA } from '../constants';
 import type { GunState } from '../host/game/types';
 import { decodeGunSpriteFrame, RGBA_CHANNELS } from './gun-sprite-decode';
 import { GUN_SPRITE_FRAMES, GUN_SPRITE_SCALE } from '../../gun-sprite-data.js';
 
-/**
- * CSS color applied to the gun body overlay.
- *
- * A warm near-white ("Neon White") so the weapon reads as painted plastic or
- * ceramic against the dark raycast scene.
- */
-export const NEATENSTEIN_GUN_BODY_COLOR = GUN_BODY_COLOR;
-
-/**
- * CSS color applied to gun accent lines and highlights.
- *
- * A bright teal used for energy strips, sight dots, and the matching dynamic
- * light overlay.
- */
-export const NEATENSTEIN_GUN_ACCENT_COLOR = GUN_ACCENT_COLOR;
-
-/**
- * Gun body aspect ratio (width / height).
- *
- * Derived from the wide Wolfenstein-style chaingun reference silhouette so
- * the weapon reads as a horizontally elongated rotary cannon regardless of
- * viewport width.
- */
-export const GUN_BODY_ASPECT_RATIO = 1.6;
+// Re-export constants and types for external consumers.
+export { GUN_BODY_ASPECT_RATIO } from './renderer.gun.constants';
+export type { EncodedGunSpriteFrame } from './renderer.gun.types';
+export { NEATENSTEIN_GUN_BODY_COLOR, NEATENSTEIN_GUN_ACCENT_COLOR } from '../constants';
 
 /**
  * Create the canonical initial {@link GunState} for a fresh episode.
@@ -136,8 +113,8 @@ export function renderGunOverlay(
         continue;
       }
 
-      if (a < 255) {
-        ctx.fillStyle = `rgba(${r},${g},${b},${a / 255})`;
+      if (a < RGBA_OPAQUE_ALPHA) {
+        ctx.fillStyle = `rgba(${r},${g},${b},${a / RGBA_OPAQUE_ALPHA})`;
       } else {
         ctx.fillStyle = `rgb(${r},${g},${b})`;
       }

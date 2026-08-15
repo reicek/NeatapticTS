@@ -13,6 +13,7 @@
 import {
   NEATENSTEIN_LIGHT_TOGGLE_KEY as _NEATENSTEIN_LIGHT_TOGGLE_KEY,
   NEATENSTEIN_MAP_SIZE as _NEATENSTEIN_MAP_SIZE,
+  NEATENSTEIN_MS_PER_SECOND as _NEATENSTEIN_MS_PER_SECOND,
 } from '../../constants';
 
 /** Re-export of the light-toggle key from the browser-entry constants. */
@@ -20,6 +21,14 @@ export const NEATENSTEIN_LIGHT_TOGGLE_KEY = _NEATENSTEIN_LIGHT_TOGGLE_KEY;
 
 /** Re-export of the square map size from the browser-entry constants. */
 export const NEATENSTEIN_MAP_SIZE = _NEATENSTEIN_MAP_SIZE;
+
+/**
+ * Number of milliseconds in one second.
+ *
+ * Re-exported from the browser-entry shared constants so all game modules
+ * reference a single authoritative value.
+ */
+export const NEATENSTEIN_MS_PER_SECOND = _NEATENSTEIN_MS_PER_SECOND;
 
 /**
  * Fixed simulation timestep in milliseconds.
@@ -30,9 +39,6 @@ export const NEATENSTEIN_MAP_SIZE = _NEATENSTEIN_MAP_SIZE;
  * authoritative value while the host render loop now uses rAF delta-time.
  */
 export const NEATENSTEIN_FIXED_TIMESTEP_MS = 16;
-
-/** Number of milliseconds in one second. */
-export const NEATENSTEIN_MS_PER_SECOND = 1000;
 
 /** Maximum player health at the start of an episode. */
 export const NEATENSTEIN_PLAYER_MAX_HEALTH = 100;
@@ -547,3 +553,83 @@ export const NEATENSTEIN_EXPLORATION_WALL_BOUNCE_LOOKAHEAD_CELLS = 3;
  * @see buildFallbackAutoTickInput
  */
 export const NEATENSTEIN_EXPLORATION_BOUNCE_ANGLE_RAD = Math.PI / 4;
+
+// ---------------------------------------------------------------------------
+// HUD design tokens (re-exported for hud modules that still import from here)
+// ---------------------------------------------------------------------------
+
+/** Multiplier used to convert a fraction to a percentage for HUD labels. */
+export const HUD_PERCENT_MULTIPLIER = 100;
+
+/** Font size in pixels for overlay text rendered on the HUD. */
+export const HUD_OVERLAY_FONT_PX = 14;
+
+/** Z-index applied to absolutely-positioned HUD overlay elements. */
+export const HUD_Z_INDEX = 10;
+
+/** Font size in pixels for DOM-based HUD text elements. */
+export const HUD_DOM_FONT_PX = 16;
+
+/** Inner padding in pixels for DOM HUD containers. */
+export const HUD_PADDING_PX = 4;
+
+// ---------------------------------------------------------------------------
+// Map geometry helpers
+// ---------------------------------------------------------------------------
+
+/** Half-cell offset applied to world positions at the map edge. */
+export const MAP_EDGE_OFFSET = 0.5;
+
+/** Precomputed half of {@link NEATENSTEIN_MAP_SIZE} for spawn calculations. */
+export const MAP_HALF_SIZE = 2;
+
+/** Fallback seed used when no explicit seed is supplied to an episode. */
+export const FALLBACK_SEED = 1;
+
+// ---------------------------------------------------------------------------
+// Mugshot crop and color constants
+// ---------------------------------------------------------------------------
+
+/** Start column of the mugshot head crop in the 48×48 sprite grid. */
+export const MUGSHOT_CROP_START_COL = 19;
+
+/** End column (exclusive) of the mugshot head crop in the 48×48 sprite grid. */
+export const MUGSHOT_CROP_END_COL = 30;
+
+/** Start row of the mugshot head crop in the 48×48 sprite grid. */
+export const MUGSHOT_CROP_START_ROW = 0;
+
+/** End row (exclusive) of the mugshot head crop in the 48×48 sprite grid. */
+export const MUGSHOT_CROP_END_ROW = 15;
+
+/** Row index of the eye-stripe within the mugshot crop. */
+export const MUGSHOT_EYE_STRIPE_ROW = 7;
+
+/** Extended palette index for the tinted eye-stripe color. */
+export const EYE_STRIPE_TINT_INDEX = 9;
+
+/** Neon teal — healthy eye-stripe color at full health. */
+export const MUGSHOT_COLOR_CYAN: readonly [number, number, number, number] = [
+  0, 240, 255, 255,
+];
+
+/** Neon gray — dead eye-stripe color at zero health. */
+export const MUGSHOT_COLOR_GREY: readonly [number, number, number, number] = [
+  180, 190, 210, 255,
+];
+
+// ---------------------------------------------------------------------------
+// Combat constants
+// ---------------------------------------------------------------------------
+
+/** Multiplier applied to the near-miss radius for bolt impact detection. */
+export const NEAR_MISS_MULTIPLIER = 3;
+
+/** Shot outcome when the bolt hits a wall. */
+export const SHOT_OUTCOME_WALL = 'wall' as const;
+
+/** Shot outcome when the bolt hits an enemy. */
+export const SHOT_OUTCOME_ENEMY = 'enemy' as const;
+
+/** Shot outcome when the bolt travels beyond its maximum range. */
+export const SHOT_OUTCOME_RANGE = 'range' as const;

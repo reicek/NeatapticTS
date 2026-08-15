@@ -189,8 +189,9 @@ export function attachOnnxPoolingMetadata(
  * the exporter detected so later residual, concat, and attention passes have a
  * deterministic seam to reuse.
  *
- * @param network Target network.
- * @param metadata ONNX metadata.
+ * @param network - Target network.
+ * @param metadata - ONNX metadata properties to parse for advanced-graph fields.
+ * @param onnx - Optional source ONNX model for additional context.
  * @returns Nothing.
  */
 export function attachOnnxAdvancedGraphMetadata(

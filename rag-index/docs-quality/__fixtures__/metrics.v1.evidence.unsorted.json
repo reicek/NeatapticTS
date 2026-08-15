@@ -22,5 +22,17 @@
     "symbol": "allocateGenome",
     "issue": "weak JSDoc",
     "numericValue": 5
+  },
+  {
+    "file": "src/neat.ts",
+    "symbol": "incompleteTags",
+    "issue": "incomplete JSDoc tags",
+    "numericValue": 0
+  },
+  {
+    "file": "src/architecture/network.ts",
+    "symbol": "es2023Heavy",
+    "issue": "high complexity",
+    "numericValue": 9
   }
 ]

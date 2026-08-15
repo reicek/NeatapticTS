@@ -54,6 +54,7 @@ skills:
     'repo-cortex-workflow',
     'execute',
     'repo-cortex-embeddings',
+    'solid-split',
   ]
 handoffs:
   - label: 'Design Red Tests'

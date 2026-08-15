@@ -399,6 +399,40 @@ export function applyOperatorBanditForSelect(
       0,
     ) + EPSILON;
 
+  return selectBestMethodByUCB(
+    pool,
+    operatorStats,
+    fallbackMethod,
+    explorationCoefficient,
+    minAttempts,
+    totalAttempts,
+  );
+}
+
+/**
+ * Select the best mutation method using a UCB-style score.
+ *
+ * Iterates over the candidate pool and computes a combined exploitation and
+ * exploration score for each operator. Under-sampled operators receive an
+ * effectively infinite exploration bonus, ensuring every candidate is tried at
+ * least `minAttempts` times before the bandit converges on observed payoff.
+ *
+ * @param pool - candidate operator pool.
+ * @param operatorStats - per-operator success and attempt counters.
+ * @param fallbackMethod - method returned when no candidate scores higher.
+ * @param explorationCoefficient - exploration weight applied to the bonus term.
+ * @param minAttempts - minimum attempts before exploration bonus is bounded.
+ * @param totalAttempts - total attempts across all operators (for log term).
+ * @returns The method with the highest combined UCB score.
+ */
+function selectBestMethodByUCB(
+  pool: MutationMethod[],
+  operatorStats: Map<string, OperatorStats>,
+  fallbackMethod: MutationMethod,
+  explorationCoefficient: number,
+  minAttempts: number,
+  totalAttempts: number,
+): MutationMethod {
   let bestMethod = fallbackMethod;
   let bestScore = -Infinity;
   for (const method of pool) {
@@ -427,6 +461,7 @@ export function applyOperatorBanditForSelect(
  * the rest of the selection code can stay focused on scoring and weighting.
  *
  * @param mutationMethod - mutation operator to check
+ * @param genome - genome whose recurrent policy eligibility is evaluated.
  * @param internal - neat controller context
  * @param methods - methods module
  * @returns true when the mutation should be blocked

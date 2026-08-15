@@ -649,6 +649,8 @@ export function buildGruLayer<TLayer extends LayerFactoryLayer>(
  * @param size Number of nodes in each memory block.
  * @param memory Number of time steps to remember.
  * @returns The configured layer instance.
+ * @throws {LayerMemoryInputBlockTypeError} When the terminal memory block is not a Group.
+ * @throws {LayerMemoryInputSizeMismatchError} When source and memory input block sizes differ.
  *
  * Example:
  *

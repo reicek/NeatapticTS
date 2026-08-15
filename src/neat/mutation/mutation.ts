@@ -190,6 +190,7 @@ function synchronizeTrackerAboveGenomeInnovations(
  *
  * @returns Promise that resolves after every genome has gone through the mutation flow for this pass.
  * @this NeatLike Instance of a Neat controller with population and options.
+ * @param this {NeatLike} Neat controller instance with population and mutation options.
  */
 export async function mutate(this: NeatLike): Promise<void> {
   const internal = this as unknown as NeatControllerForMutation;
@@ -235,6 +236,7 @@ export async function mutate(this: NeatLike): Promise<void> {
  * ```
  *
  * @this NeatLike Neat controller context that holds innovation tables.
+ * @param this {NeatLike} Neat controller instance that holds innovation tables.
  * @param genome Genome to modify in place.
  * @returns Promise that resolves after the split has either reused an existing innovation record or created a new one.
  */
@@ -339,6 +341,7 @@ export async function mutateAddNodeReuse(
  * as a completely unrelated event.
  *
  * @this NeatLike Neat controller context that holds innovation tables.
+ * @param this {NeatLike} Neat controller instance that holds innovation tables.
  * @param genome Genome to modify in place.
  * @returns Nothing. The genome may gain one new connection and the controller innovation map may be consulted or extended.
  */
@@ -400,6 +403,7 @@ export function mutateAddConnReuse(
  * identity paths so repair work cannot drift from the innovation tracker or
  * the explicit topology-policy bridge.
  *
+ * @param this {NeatLike} Neat controller instance with mutation and innovation tracking state.
  * @param network Genome whose hidden-node budget and connectivity should be repaired.
  * @param multiplierOverride Optional override for the configured hidden-node multiplier.
  * @returns Promise that resolves after hidden-node and connectivity repairs have completed.
@@ -475,6 +479,7 @@ export async function ensureMinHiddenNodes(
  * reconnecting edges so maintenance work still respects the innovation tracker
  * and the explicit topology-policy bridge.
  *
+ * @param this {NeatLike} Neat controller instance with mutation and innovation tracking state.
  * @param network Genome whose endpoint and hidden-node connectivity should be repaired.
  * @returns Nothing. The network may gain repair connections in place.
  */
@@ -596,6 +601,7 @@ function normalizeRepairNodeOrderForFeedForward(
  * // structural limits, not just a random sample from the raw configured pool.
  * ```
  *
+ * @param this {NeatLike} Neat controller instance with mutation policy and operator statistics.
  * @param genome Genome whose current structure constrains which operators are legal.
  * @param rawReturnForTest Preserves legacy array-return behavior for test-only FFW checks.
  * @returns Resolved mutation method, legacy FFW array for compatibility tests, or `null` when no operator should run.

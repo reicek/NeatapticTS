@@ -221,3 +221,33 @@ The relevant gates for this coordinator:
 Do not mark a maintenance task complete until every gate that applies to the
 change returns `ok: true`. If a gate fails, fix the source `.agent.md` or
 allow-list file and re-run; never bypass a gate by editing the generated table.
+
+## Output format
+
+```structured-v1
+OUTPUT_CONTRACT: structured-v1
+TASK_STATUS: SUCCESS | PARTIAL | FAILED
+TIER: 2
+ROLE: agent-maintenance-coordinator
+TASK_RECEIVED: <brief restatement>
+FILES_READ:
+- <path or NONE>
+FILES_CHANGED:
+- <path or NONE>
+KEY_FINDINGS:
+- <finding or NONE>
+ACTIONS_TAKEN:
+- <action or NONE>
+VALIDATION_EVIDENCE:
+- <command/result or NOT RUN>
+SPECIALISTS_USED:
+- <agent or NONE>
+HANDOFF: <next step, reroute, or NONE>
+BLOCKERS:
+- <blocker or NONE>
+RISKS_OR_GAPS:
+- <risk or NONE>
+LEARNING_EVENT_NEEDED: true | false
+SUGGESTED_NEXT_AGENT: <agent name or NONE>
+SUMMARY: <brief truthful summary>
+```

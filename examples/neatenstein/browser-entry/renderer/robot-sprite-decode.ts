@@ -12,17 +12,12 @@ import {
   ROBOT_SPRITE_SCALE,
 } from '../../robot-sprite-data.js';
 import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
+import { RGBA_CHANNELS } from '../constants';
+import type { EncodedRobotSpriteFrame } from './renderer.sprite.types';
 
-/**
- * Number of RGBA channels per pixel.
- */
-export const RGBA_CHANNELS = 4;
-
-/**
- * Encoded robot sprite frame: rows of palette indices into
- * {@link ROBOT_SPRITE_PALETTE}.
- */
-export type EncodedRobotSpriteFrame = readonly (readonly number[])[];
+// Re-export constants and types for external consumers.
+export { RGBA_CHANNELS } from '../constants';
+export type { EncodedRobotSpriteFrame } from './renderer.sprite.types';
 
 /**
  * Decode an encoded robot sprite frame into a pre-rendered RGBA snapshot.

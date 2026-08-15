@@ -48,8 +48,8 @@ export interface WorkerAutoEnableResult {
 }
 
 /**
- * Parameters accepted by {@link autoEnableWorker} and
- * {@link shouldAutoEnableWorker}.
+ * Parameters accepted by the {@link autoEnableWorker} and
+ * {@link shouldAutoEnableWorker} acceleration helpers.
  */
 export interface AutoEnableWorkerOptions {
   /** Current network node count for a single evaluation. */

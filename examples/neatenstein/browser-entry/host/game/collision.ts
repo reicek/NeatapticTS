@@ -16,6 +16,10 @@ import {
 } from './constants';
 import { isInvulnerable } from './state';
 import type { GameState } from './types';
+import type { ContactPosition } from '../types';
+
+// Re-export consolidated type so existing imports from this module remain valid.
+export type { ContactPosition } from '../types';
 
 /**
  * Minimum health value for the player.
@@ -30,16 +34,6 @@ const MIN_PLAYER_HEALTH = 0;
  * The timer is clamped to this value after each tick.
  */
 const MIN_CONTACT_IFRAME_MS = 0;
-
-/**
- * Position-like shape used by contact-distance helpers.
- */
-interface ContactPosition {
-  /** World X coordinate in grid cells. */
-  x: number;
-  /** World Y coordinate in grid cells. */
-  y: number;
-}
 
 /**
  * Return whether a number is finite.
