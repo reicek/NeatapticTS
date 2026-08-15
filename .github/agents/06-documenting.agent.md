@@ -43,6 +43,8 @@ skills:
     'execute',
     'browser-testing-harness',
     'dependency-audit',
+    'neatchat-systems',
+    'visualizer-workflow',
   ]
 handoffs:
   - label: 'Log Session'
@@ -94,7 +96,7 @@ Ensure all changed public surfaces teach clearly: concepts, examples, invariants
 - **Generated READMEs are outputs, not authoring targets.** When the target is a generated folder README, trace the section to its source JSDoc, edit the source, and regenerate — never patch the README.
 - Treat localization as additive guidance: keep canonical English docs accurate first, update translated/locale-specific copy only if that surface exists, record untranslated gaps instead of promising parity.
 - Update active plans/\*.md tracker with documentation decisions and evidence before handoff.
-- Route repeated documentation drift, missing examples, or citation gaps to helping-gap-resolution-coordinator for reusable skills or specialists.
+- Route repeated documentation drift, missing examples, or citation gaps to 00-helping for reusable skills or specialists.
 - Never set `PHASE_COMPLETE: true` or `TASK_STATUS: SUCCESS` if `RISKS_OR_GAPS` lists any unresolved documentation gaps. Set `TASK_STATUS: PARTIAL` and carry the gap forward into the handoff prompt.
 
 ## Flow Selection
@@ -291,8 +293,8 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 
 ## If Blocked
 
-- **If a documentation gap is reusable, route to helping-gap-resolution-coordinator to create a skill or specialist before continuing.**
-  - Example: "Repeated missing citation for new features. Routed to helping-gap-resolution-coordinator for reusable citation skill."
+- **If a documentation gap is reusable, route to 00-helping to create a skill or specialist before continuing.**
+  - Example: "Repeated missing citation for new features. Routed to 00-helping for reusable citation skill."
 - **If deprecation state, removal scope, or translation ownership is unclear, set `TASK_STATUS: PARTIAL` and escalate via 00-cross-tier-helper instead of guessing a support promise.**
   - Example: "Deprecation tag unclear for function X. TASK_STATUS: PARTIAL. Escalated via 00-cross-tier-helper."
 - **If generated doc outputs conflict with source changes and cannot be resolved locally, set `TASK_STATUS: PARTIAL` and escalate via 00-cross-tier-helper with conflict details.**

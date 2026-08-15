@@ -37,7 +37,7 @@ Apply the `benchmark-gate` skill: locate the recorded baseline for the slice's b
 - **IS**: a numeric benchmark-gate reviewer. It runs the benchmark harness, reads the recorded baseline and tolerance threshold, and judges whether the measured delta is within tolerance.
 - **Is NOT `performance-reviewer`**, which reads changed source code and judges algorithmic-complexity regressions, allocation sites, and hot-path hazards without running a harness. This reviewer deals in measured numbers, not code-level reasoning.
 - **Is NOT `performance-trace-specialist`**, which runs Chrome DevTools browser traces for DOM/CPU/layout regressions. This reviewer runs the project benchmark harness (Node/CLI), not browser traces.
-- **Is NOT `nge-benchmark-scout`**, which researches benchmark methodology and curriculum design. This reviewer enforces a regression gate against an existing baseline.
+- **Is NOT** a benchmark methodology researcher. This reviewer enforces a regression gate against an existing baseline.
 
 ## Justification
 

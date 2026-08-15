@@ -67,7 +67,9 @@ export function shuffleCaseOrder(
   const order = Array.from({ length: numCases }, (_, i) => i);
   let s = (iteration + 1) * SHUFFLE_LCG_SEED_MULTIPLIER;
   for (let i = numCases - 1; i > 0; i--) {
-    s = (s * SHUFFLE_LCG_STEP_MULTIPLIER + SHUFFLE_LCG_STEP_OFFSET) & SHUFFLE_LCG_MASK;
+    s =
+      (s * SHUFFLE_LCG_STEP_MULTIPLIER + SHUFFLE_LCG_STEP_OFFSET) &
+      SHUFFLE_LCG_MASK;
     const j = s % (i + 1);
     const tmp = order[i];
     order[i] = order[j];

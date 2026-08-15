@@ -2,7 +2,7 @@
 description: 'Planning orchestrator for decomposing requests, risks, acceptance criteria, and test strategy.'
 name: '01-planning'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: glm-5.2:cloud
 tools:
   [
     read,
@@ -81,7 +81,7 @@ Transform an approved phase objective into a clear, step-by-step, machine-readab
 - Do not proceed if plan registration or model-routing assumptions are unclear.
 - Do not author new step packets if tracker is missing, unreadable, or malformed; recover tracker first.
 - Delegate plan reconnaissance to Plan Scout as needed.
-- Delegate agent/skill gaps to helping-gap-resolution-coordinator and resume after fix or deferral.
+- Delegate agent/skill gaps to 00-helping and resume after fix or deferral.
 - Always prefer local agent execution; escalate to cloud fallback only if local context, reasoning, or resource limits are reached.
 - **For agents with limited context:** After every action, check if all required information is present. If not, stop and escalate.
 - **No Deferred Cleanup Policy:** When planning any migration, refactor, or API replacement, the step MUST remove the old code in the same step that introduces the new code. No backward-compatibility wrappers, no dual-path code, no deferred cleanup. Dead code is removed immediately. This applies to ALL code in the library — src/, scripts/, examples/, benchmarks/, testing/. A step or slice that introduces new code alongside old code without removing the old code is a planning defect and MUST be rejected before implementation begins.
@@ -538,14 +538,14 @@ This enables deterministic parsing by downstream orchestrators.
 
 ## Delegation Targets
 
-| Task Type                                | Primary Delegation Target            | Tier |
-| ---------------------------------------- | ------------------------------------ | ---- |
-| Plan context gathering                   | `planning-context-coordinator`       | 2    |
-| Risk and blast-radius analysis           | `planning-risk-coordinator`          | 2    |
-| Test strategy and acceptance criteria    | `planning-test-strategy-coordinator` | 2    |
-| Plan and roadmap alignment               | `plan-scout`                         | 3    |
-| Boundary mapping before multi-file edits | `boundary-mapper`                    | 3    |
-| Acceptance criteria authoring            | `acceptance-criteria-writer`         | 3    |
+| Task Type                                | Primary Delegation Target      | Tier |
+| ---------------------------------------- | ------------------------------ | ---- |
+| Plan context gathering                   | `planning-context-coordinator` | 2    |
+| Risk and blast-radius analysis           | `planning-risk-coordinator`    | 2    |
+| Test strategy and acceptance criteria    | `unit-test-writer`             | 3    |
+| Plan and roadmap alignment               | `plan-scout`                   | 3    |
+| Boundary mapping before multi-file edits | `boundary-mapper`              | 3    |
+| Acceptance criteria authoring            | `acceptance-criteria-writer`   | 3    |
 
 ## Escalation Protocol
 
@@ -555,7 +555,7 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 
 - If roadmap/context ambiguous, delegate to Plan Scout and attach Decision Record with TASK_STATUS: PARTIAL.
 - If plan tracker is malformed, attempt bounded recovery using the latest plan history; if unresolved, escalate immediately and set TASK_STATUS: PARTIAL.
-- When agent/skill gaps prevent completion, call `helping-gap-resolution-coordinator` and attach its response.
+- When agent/skill gaps prevent completion, call `00-helping` and attach its response.
 
 ## References
 

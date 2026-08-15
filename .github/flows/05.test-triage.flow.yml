@@ -32,9 +32,7 @@ skills:
   - 'running-unit-tests'
 
 specialists:
-  - 'failure-triage-specialist'
   - 'green-test-failure-triage-coordinator'
-  - 'code-quality-auditor'
   - 'test-coverage-analyst'
   - 'performance-trace-specialist'
   - 'browser-ui-specialist'

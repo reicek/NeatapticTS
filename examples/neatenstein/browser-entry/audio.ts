@@ -161,7 +161,7 @@ function clamp(value: number, min: number, max: number): number {
  * @returns Pan value in the range [-1, 1].
  */
 function resolvePan(options?: NeatensteinPlaySoundOptions): number {
-  if (options === undefined)   return DEFAULT_PAN_CUE;
+  if (options === undefined) return DEFAULT_PAN_CUE;
   return clamp(Math.sin(options.angleRad), -1, 1);
 }
 
@@ -175,7 +175,7 @@ function resolvePan(options?: NeatensteinPlaySoundOptions): number {
  * @returns Attenuated gain in the range (0, 1].
  */
 function resolveGain(options?: NeatensteinPlaySoundOptions): number {
-  if (options === undefined)   return DEFAULT_GAIN_CUE;
+  if (options === undefined) return DEFAULT_GAIN_CUE;
   return 1 / (1 + options.distance * DISTANCE_ATTENUATION);
 }
 

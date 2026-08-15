@@ -19,7 +19,10 @@ import { GUN_SPRITE_FRAMES, GUN_SPRITE_SCALE } from '../../gun-sprite-data.js';
 // Re-export constants and types for external consumers.
 export { GUN_BODY_ASPECT_RATIO } from './renderer.gun.constants';
 export type { EncodedGunSpriteFrame } from './renderer.gun.types';
-export { NEATENSTEIN_GUN_BODY_COLOR, NEATENSTEIN_GUN_ACCENT_COLOR } from '../constants';
+export {
+  NEATENSTEIN_GUN_BODY_COLOR,
+  NEATENSTEIN_GUN_ACCENT_COLOR,
+} from '../constants';
 
 /**
  * Create the canonical initial {@link GunState} for a fresh episode.

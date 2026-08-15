@@ -192,8 +192,13 @@ export function fireBolt(state: GameState): FireBoltResult {
     ? wallHit.perpWallDist
     : Number.POSITIVE_INFINITY;
 
-  let hitType: typeof SHOT_OUTCOME_WALL | typeof SHOT_OUTCOME_ENEMY | typeof SHOT_OUTCOME_RANGE =
-    rawWallDistance <= NEATENSTEIN_BOLT_MAX_RANGE_CELLS ? SHOT_OUTCOME_WALL : SHOT_OUTCOME_RANGE;
+  let hitType:
+    | typeof SHOT_OUTCOME_WALL
+    | typeof SHOT_OUTCOME_ENEMY
+    | typeof SHOT_OUTCOME_RANGE =
+    rawWallDistance <= NEATENSTEIN_BOLT_MAX_RANGE_CELLS
+      ? SHOT_OUTCOME_WALL
+      : SHOT_OUTCOME_RANGE;
   let hitDistance = Math.min(rawWallDistance, NEATENSTEIN_BOLT_MAX_RANGE_CELLS);
   let hitEnemyIndex = -1;
 

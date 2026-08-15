@@ -267,7 +267,10 @@ export function getCurriculumCaseWeights(numCases: number): number[] {
   // learns both movement and combat within ≤60 iterations.
   const weights = new Array<number>(numCases);
   for (let i = 0; i < numCases; i++) {
-    weights[i] = i >= CURRICULUM_FIRST_COMBAT_CASE_INDEX ? CURRICULUM_COMBAT_CASE_WEIGHT : CURRICULUM_MOVEMENT_CASE_WEIGHT;
+    weights[i] =
+      i >= CURRICULUM_FIRST_COMBAT_CASE_INDEX
+        ? CURRICULUM_COMBAT_CASE_WEIGHT
+        : CURRICULUM_MOVEMENT_CASE_WEIGHT;
   }
   return weights;
 }

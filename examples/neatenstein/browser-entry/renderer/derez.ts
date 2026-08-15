@@ -41,7 +41,9 @@ import {
  */
 export function derezHash(x: number, y: number, seed: number): number {
   return (
-    (((x * DEREZ_HASH_PRIME_1 + y * DEREZ_HASH_PRIME_2) ^ (seed * DEREZ_HASH_PRIME_3)) >>> 0) /
+    (((x * DEREZ_HASH_PRIME_1 + y * DEREZ_HASH_PRIME_2) ^
+      (seed * DEREZ_HASH_PRIME_3)) >>>
+      0) /
     DEREZ_HASH_MODULUS
   );
 }

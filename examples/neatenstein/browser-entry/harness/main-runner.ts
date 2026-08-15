@@ -42,7 +42,11 @@ import {
 } from './constants';
 import { extractCombatQualitySignal } from './fitness';
 import { buildNeatensteinMap, createCollisionMap } from '../renderer/map';
-import { NEATENSTEIN_MAP_SIZE, SNAPSHOT_KIND_MLP, SNAPSHOT_KIND_SWARM } from '../constants';
+import {
+  NEATENSTEIN_MAP_SIZE,
+  SNAPSHOT_KIND_MLP,
+  SNAPSHOT_KIND_SWARM,
+} from '../constants';
 import { extractSensors } from '../../scripts/enemy-navigation';
 
 import type {

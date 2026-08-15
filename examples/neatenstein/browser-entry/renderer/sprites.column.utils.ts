@@ -95,8 +95,7 @@ export function renderNeatensteinVoxelSpriteColumn(
     const frameY = Math.floor(v * (frameHeight - 1));
     const safeFrameY = clampInt(frameY, 0, frameHeight - 1);
 
-    const frameOffset =
-      (safeFrameY * frameWidth + safeFrameX) * RGBA_CHANNELS;
+    const frameOffset = (safeFrameY * frameWidth + safeFrameX) * RGBA_CHANNELS;
     const alpha = frameData[frameOffset + 3];
     if (alpha === 0) {
       continue;
@@ -116,8 +115,7 @@ export function renderNeatensteinVoxelSpriteColumn(
       continue;
     }
 
-    const screenOffset =
-      (screenY * width + screenColumn) * RGBA_CHANNELS;
+    const screenOffset = (screenY * width + screenColumn) * RGBA_CHANNELS;
 
     // Apply fog, then optionally tint surviving pixels toward death color.
     const fogR = frameData[frameOffset] * invFog + bgR * fogFactor;

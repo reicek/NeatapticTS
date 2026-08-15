@@ -35,9 +35,7 @@ skills:
   - 'tracker-handoff'
 
 specialists:
-  - 'helping-gap-resolution-coordinator'
   - 'helping-agent-maintenance-coordinator'
-  - 'failure-triage-specialist'
 
 timeout-minutes: 15
 

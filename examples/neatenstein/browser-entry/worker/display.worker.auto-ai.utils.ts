@@ -30,7 +30,10 @@ import {
   extractSensors,
   findNearestVisibleEnemy,
 } from '../../scripts/enemy-navigation';
-import { FALLBACK_FIRE_RANGE, FALLBACK_FIRE_ANGLE } from './display.worker.constants';
+import {
+  FALLBACK_FIRE_RANGE,
+  FALLBACK_FIRE_ANGLE,
+} from './display.worker.constants';
 import type { AutoAiState } from './display.worker.types';
 import type { CollisionMap } from '../renderer/map';
 import type { EnemyState, GameState } from '../host/game/types';

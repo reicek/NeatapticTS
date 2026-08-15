@@ -32,10 +32,8 @@ agents:
     'plan-scout',
     'boundary-mapper',
     'slice-validator',
-    'security-reviewer',
-    'performance-reviewer',
-    'determinism-reviewer',
     'benchmark-gate-reviewer',
+    'review-coordinator',
   ]
 skills:
   [
@@ -57,6 +55,9 @@ skills:
     'mcp-local-server-workflow',
     'security-review',
     'benchmark-gate',
+    'worker-inference-transport',
+    'multithread-evaluation',
+    'browser-build',
   ]
 handoffs:
   - label: 'Curate Docs'
@@ -123,7 +124,7 @@ Validate that the active change works using the narrowest meaningful tests. Alwa
 - **Never skip green.** A slice may not advance to `06-documenting` or be marked `[DONE]` until `05-green-testing` returns `GREEN: OK` with recorded gate evidence. A skipped or assumed-green slice is a workflow defect.
 - **Loop back, do not self-fix.** On any content failure, return `OBSERVATIONS` + `SUGGESTED_NEXT_AGENT: 04-implementing`. The parent orchestrator dispatches a NEW `04-implementing` fix instance and then a NEW `05-green-testing` verification instance — fresh context each round, no artificial loop-back cap.
 - Treat flaky/intermittent failures as workflow signals: rerun, compare, record changes, and delegate unresolved flakes to `determinism-reviewer` for seed/replay analysis or `00-helping` for workflow improvement.
-- Route repeated, malformed, or uncovered validation patterns to helping-gap-resolution-coordinator for workflow improvement.
+- Route repeated, malformed, or uncovered validation patterns to 00-helping for workflow improvement.
 
 ## Green Validation Workflow
 
@@ -285,7 +286,7 @@ OBSERVATIONS:
 1. [file:line] Issue description — expected: X, actual: Y
 2. [file:line] Issue description — expected: X, actual: Y
 TRIAGE:
-- root_cause: <one line, or UNKNOWN — delegate to slice-validator / determinism-reviewer>
+- root_cause: <one line, or UNKNOWN — delegate to slice-validator / review-coordinator (routes to determinism-reviewer)>
 - failing_gates: [<gate-id>, ...]
 - failing_tests: [<test name or path>, ...]
 - delegated_to: [<specialist agent name>, ...]
@@ -409,7 +410,7 @@ until all slices have passing gate evidence.
    - `node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict`
    - `node scripts/agent-customization/validate-agent-graph.mjs --json`
 6. **On intermittent failures, rerun narrow command, compare outcomes, classify as regression, environment issue, or flake before widening scope.**
-   - Example: If a test fails once but passes on rerun, record as "flake" and rerun up to 3 times. If still flaky, delegate to `determinism-reviewer` for seed/replay analysis or escalate via `00-helping`.
+   - Example: If a test fails once but passes on rerun, record as "flake" and rerun up to 3 times. If still flaky, delegate to `review-coordinator` (routes to determinism-reviewer for seed/replay analysis) or escalate via `00-helping`.
 7. **Run build/lint/docs/coverage gates only if the changed surface requires.**
    - Example: If only documentation changed, skip build/lint; if code changed, run all.
 8. **Update the active plan with pass/fail evidence, environment notes, flake evidence, and reroute as needed.**
@@ -430,10 +431,11 @@ task is trivially self-contained.
 | Slice-scoped test execution + slice gate object | `slice-validator`               | 3    | Always for a declared slice; runs focused tests and returns the slice-level gate JSON. |
 | Plan/step selection or resume boundary          | `plan-scout`                    | 3    | When the active step packet is ambiguous or the resume boundary is unclear.            |
 | Module boundary / touched-surface mapping       | `boundary-mapper`               | 3    | When the changed surface spans modules and the narrowest test set is unclear.          |
-| Security review of changed code                 | `security-reviewer`             | 3    | For slices touching auth, serialization, worker transport, or untrusted input.         |
-| Performance regression review                   | `performance-reviewer`          | 3    | For slices touching hot paths, typed arrays, caches, or inference loops.               |
-| Determinism / seed-replay review                | `determinism-reviewer`          | 3    | For slices touching RNG, replay, workers, or evaluation ordering.                      |
+| Security review of changed code                 | `review-coordinator`            | 2    | Routes to security-reviewer: auth, serialization, worker transport, untrusted input.   |
+| Performance regression review                   | `review-coordinator`            | 2    | Routes to performance-reviewer: hot paths, typed arrays, caches, inference loops.      |
+| Determinism / seed-replay review                | `review-coordinator`            | 2    | Routes to determinism-reviewer: RNG, replay, workers, evaluation ordering.             |
 | Benchmark gate (perf delta vs baseline)         | `benchmark-gate-reviewer`       | 3    | When the slice declares a benchmark tolerance threshold.                               |
+| Pre-green specialist review (any domain)        | `review-coordinator`            | 2    | Severity-gated dispatch to the 8 POV reviewers (5 original + 3 Phase 5 domain).        |
 | Browser performance trace verification          | `performance-trace-specialist`  | 3    | Browser performance threshold verification (see Chrome DevTools MCP Decision Tree).    |
 | Browser DOM state verification                  | `browser-ui-specialist`         | 3    | Browser DOM state verification.                                                        |
 | Browser memory threshold verification           | `browser-memory-specialist`     | 3    | Browser memory / leak verification.                                                    |
@@ -447,8 +449,8 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 
 ## If Blocked
 
-- **Route repeated, malformed, or uncovered validation patterns to helping-gap-resolution-coordinator.**
-  - Example: "Validation script failed with unknown error. Routed to helping-gap-resolution-coordinator for workflow improvement."
+- **Route repeated, malformed, or uncovered validation patterns to 00-helping.**
+  - Example: "Validation script failed with unknown error. Routed to 00-helping for workflow improvement."
 - **If failure is intermittent after reruns, set TASK_STATUS: PARTIAL, capture rerun evidence, note environment/flake boundary, and delegate to `determinism-reviewer` for seed/replay analysis or escalate via 00-cross-tier-helper.**
   - Example: "Test 'should save agent' failed 2/3 times. TASK_STATUS: PARTIAL. Evidence and logs attached. Delegated to determinism-reviewer."
 - **If a required gate tool is unavailable or ambiguous, set TASK_STATUS: PARTIAL, document the stall, and escalate via 00-cross-tier-helper.**

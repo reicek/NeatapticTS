@@ -32,8 +32,6 @@ skills:
   - 'triaging-test-failures'
 
 specialists:
-  - 'unit-test-runner'
-  - 'failure-triage-specialist'
   - 'performance-trace-specialist'
   - 'browser-ui-specialist'
   - 'browser-memory-specialist'

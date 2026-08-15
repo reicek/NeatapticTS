@@ -25,7 +25,8 @@ import type { GunState } from './types';
 export function decayGunRecoil(gun: GunState, dtMs: number): GunState {
   const resolvedDtMs = resolveTickDurationMs(dtMs);
   const decayPixels =
-    NEATENSTEIN_GUN_RECOIL_DECAY_PX_PER_SECOND * (resolvedDtMs / NEATENSTEIN_MS_PER_SECOND);
+    NEATENSTEIN_GUN_RECOIL_DECAY_PX_PER_SECOND *
+    (resolvedDtMs / NEATENSTEIN_MS_PER_SECOND);
   const nextOffset = Math.max(0, gun.recoilOffset - decayPixels);
 
   return {

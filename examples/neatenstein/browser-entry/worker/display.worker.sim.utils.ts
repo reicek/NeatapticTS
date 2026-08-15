@@ -314,7 +314,8 @@ export function runSimStep(
       const armsRaceSeed = gameState.seed;
       const armsRaceGeneration = gameState.generation;
       const armsRaceSnapshot = advanceResult.snapshot;
-      const humanModeBool = state.latestState?.humanMode === NEATENSTEIN_HUMAN_MODE_LABEL_AUTO;
+      const humanModeBool =
+        state.latestState?.humanMode === NEATENSTEIN_HUMAN_MODE_LABEL_AUTO;
 
       if (armsRaceSnapshot.kind === SNAPSHOT_KIND_MLP) {
         delegateEval(

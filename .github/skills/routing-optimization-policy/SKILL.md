@@ -48,7 +48,7 @@ The repository enforces a strict five-tier agent graph. Delegation must flow dow
 | ---- | -------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 0    | Default / Main                         | false          | Default VS Code Copilot agent                                                                                                          |
 | 1    | Numbered SDLC Orchestrators            | true           | `00-helping`, `01-planning`, `02-researching`, `03-red-testing`, `04-implementing`, `05-green-testing`, `06-documenting`, `07-logging` |
-| 2    | Named Coordinators / Sub-Orchestrators | false          | `planning-context-coordinator`, `solid-split`, `helping-gap-resolution-coordinator`                                                    |
+| 2    | Named Coordinators / Sub-Orchestrators | false          | `planning-context-coordinator`, `solid-split`                                                                                          |
 | 3    | Hidden Scouts and Specialists          | false          | `Boundary Mapper`, `Coverage Scout`, `Plan Scout`, `Docs Scout`                                                                        |
 | 4    | Auxiliaries and One-Shot Helpers       | false          | `acceptance-criteria-writer`, `file-change-summarizer`                                                                                 |
 
@@ -220,7 +220,7 @@ Validate: grep .github/ai-learning/learning-log.jsonl for gate_exception entries
 
 - Use `agent-inventory-auditor` to discover tier violations across the full agent graph.
 - Use `helping-agent-maintenance-coordinator` when agent frontmatter needs repair.
-- Use `helping-gap-resolution-coordinator` when a routing gap reveals a missing specialist or weak skill.
+- Use `00-helping` when a routing gap reveals a missing specialist or weak skill.
 
 ## Decision Tree
 

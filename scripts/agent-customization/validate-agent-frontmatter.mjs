@@ -73,14 +73,6 @@ const strictTier2CoordinatorPathsByName = new Map([
     'planning-risk-coordinator',
     '.github/agents/planning-risk-coordinator.agent.md',
   ],
-  [
-    'planning-test-strategy-coordinator',
-    '.github/agents/planning-test-strategy-coordinator.agent.md',
-  ],
-  [
-    'research-codebase-coordinator',
-    '.github/agents/research-codebase-coordinator.agent.md',
-  ],
   ['solid-split', '.github/agents/solid-split.agent.md'],
 ]);
 const strictTier2CoordinatorPaths = new Set(
@@ -105,11 +97,7 @@ const strictTier2StructuredFields = [
   'SUGGESTED_NEXT_AGENT',
   'SUMMARY',
 ];
-const strictAllowedModels = new Set([
-  'glm-5.2:cloud (ollama)',
-  'anthropic/claude-sonnet-4-20250514',
-  'kimi-k2.7-code:cloud',
-]);
+const strictAllowedModels = new Set(['glm-5.2:cloud', 'kimi-k2.7-code:cloud']);
 
 if (options.help) {
   printUsage({
@@ -351,7 +339,7 @@ function validateAgent(agent, agents, skillNames, { strict }) {
       issue(
         'error',
         relativePath,
-        'Model must be a qualified model string like glm-5.2:cloud (ollama).',
+        'Model must be a qualified model string like glm-5.2:cloud.',
       ),
     );
   }

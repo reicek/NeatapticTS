@@ -11,9 +11,7 @@ import { mkdirSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { buildVoxelEnemy } from './voxel-enemy';
 import { renderVoxelSnapshot } from './snapshot-renderer';
-import {
-  ENEMY_ANIMATION_FRAME_COUNTS,
-} from './enemy-animator';
+import { ENEMY_ANIMATION_FRAME_COUNTS } from './enemy-animator';
 import { encodePng } from './generate-enemy-sprites.png.utils';
 import {
   buildAnimatedVoxelEnemy,
@@ -105,9 +103,7 @@ export function generateEnemySpriteSheet(
   );
   const atlasWidth = maxFrameCount * ENEMY_FRAME_SIZE_PX;
   const atlasHeight =
-    ENEMY_SPRITE_DIRECTIONS *
-    ENEMY_SPRITE_STATES.length *
-    ENEMY_FRAME_SIZE_PX;
+    ENEMY_SPRITE_DIRECTIONS * ENEMY_SPRITE_STATES.length * ENEMY_FRAME_SIZE_PX;
   const atlas = Buffer.alloc(atlasWidth * atlasHeight * RGBA_CHANNELS);
 
   const frames: SpriteFrameDescriptor[] = [];
@@ -236,7 +232,11 @@ export function generateEnemyReferenceSnapshots(
     const filePath = resolve(outputDir, `enemy-${name}.png`);
     writeFileSync(
       filePath,
-      encodePng(ENEMY_REFERENCE_SIZE_PX, ENEMY_REFERENCE_SIZE_PX, snapshot.data),
+      encodePng(
+        ENEMY_REFERENCE_SIZE_PX,
+        ENEMY_REFERENCE_SIZE_PX,
+        snapshot.data,
+      ),
     );
     paths[name] = filePath;
   }
@@ -259,7 +259,8 @@ function blitRgba(
   for (let y = 0; y < srcHeight; y++) {
     for (let x = 0; x < srcWidth; x++) {
       const srcIndex = (y * srcWidth + x) * RGBA_CHANNELS;
-      const destIndex = ((offsetY + y) * destWidth + (offsetX + x)) * RGBA_CHANNELS;
+      const destIndex =
+        ((offsetY + y) * destWidth + (offsetX + x)) * RGBA_CHANNELS;
       dest[destIndex] = src[srcIndex];
       dest[destIndex + 1] = src[srcIndex + 1];
       dest[destIndex + 2] = src[srcIndex + 2];

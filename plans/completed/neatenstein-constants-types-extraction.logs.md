@@ -17,15 +17,15 @@ the central `browser-entry/constants.ts` hub.
 
 ## Phases Completed
 
-| Phase | Scope | Outcome |
-|---|---|---|
+| Phase   | Scope                        | Outcome                                                                                                                                                |
+| ------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Phase 0 | Shared cross-layer constants | 40+ constants added to `browser-entry/constants.ts`; metrics script updated to exempt `.constants.ts`/`.types.ts` from missing-sibling-test-file check |
-| Phase 1 | `scripts/` layer | 15 new files, 19 modified |
-| Phase 2 | `renderer/` layer | 26 new files, 20 modified |
-| Phase 3 | `host/` layer | 4 new files, 23 modified |
-| Phase 4 | `worker/` layer | 2 new files, 8 modified |
-| Phase 5 | `entry/` + `harness/` layers | 7 new files, 15 modified |
-| Phase 6 | Verification & bug fixes | 15 files fixed, pre-existing SHA-256 bug fixed, regression test created |
+| Phase 1 | `scripts/` layer             | 15 new files, 19 modified                                                                                                                              |
+| Phase 2 | `renderer/` layer            | 26 new files, 20 modified                                                                                                                              |
+| Phase 3 | `host/` layer                | 4 new files, 23 modified                                                                                                                               |
+| Phase 4 | `worker/` layer              | 2 new files, 8 modified                                                                                                                                |
+| Phase 5 | `entry/` + `harness/` layers | 7 new files, 15 modified                                                                                                                               |
+| Phase 6 | Verification & bug fixes     | 15 files fixed, pre-existing SHA-256 bug fixed, regression test created                                                                                |
 
 ## Final Validation
 

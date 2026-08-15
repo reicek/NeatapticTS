@@ -31,7 +31,6 @@ skills:
 
 specialists:
   - 'unit-test-writer'
-  - 'failure-triage-specialist'
   - 'performance-trace-specialist'
   - 'browser-ui-specialist'
   - 'browser-memory-specialist'

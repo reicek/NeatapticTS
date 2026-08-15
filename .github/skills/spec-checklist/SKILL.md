@@ -39,8 +39,8 @@ plan/README/Roadmap alignment is needed, defer to `plan-sync-validation`.
 
 ## When NOT to use
 
-Do NOT use for implementation code review - use `implementation-standards` or
-`code-quality-auditor` instead. Do NOT use for runtime test execution - use
+Do NOT use for implementation code review - use `implementation-standards`
+skill instead. Do NOT use for runtime test execution - use
 `green-validation-gates` or `05-green-testing` instead. Do NOT use as a
 substitute for `plan-sync-validation`; it complements, but does not replace,
 plan/README/Roadmap alignment checks.

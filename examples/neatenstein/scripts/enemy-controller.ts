@@ -13,10 +13,7 @@
 
 import type { CollisionMap } from '../browser-entry/renderer/map';
 import { NEATENSTEIN_MAP_SIZE } from '../browser-entry/constants';
-import type {
-  EnemyState,
-  GameState,
-} from '../browser-entry/host/game/types';
+import type { EnemyState, GameState } from '../browser-entry/host/game/types';
 import {
   buildEnemyDistanceMap,
   type DistanceMap,
@@ -76,9 +73,7 @@ import type {
   EnemyUpdateContext,
   HitscanEvent,
 } from './enemy-controller.types';
-import {
-  PREVIOUS_STEP_DISTANCE_SENTINEL,
-} from './enemy-controller.constants';
+import { PREVIOUS_STEP_DISTANCE_SENTINEL } from './enemy-controller.constants';
 
 /**
  * Update one controlled enemy for a single tick via a declarative pipeline.
@@ -213,7 +208,8 @@ function updateControlledEnemy(
     bfsStallTicks: ctx.bfsStallTicks,
     weights: ctx.weights,
     variantId: ctx.variantId,
-    previousStepDistance: finalDist >= 0 ? finalDist : PREVIOUS_STEP_DISTANCE_SENTINEL,
+    previousStepDistance:
+      finalDist >= 0 ? finalDist : PREVIOUS_STEP_DISTANCE_SENTINEL,
     stunTimerMs: 0,
   };
 }

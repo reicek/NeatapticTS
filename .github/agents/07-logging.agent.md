@@ -181,7 +181,7 @@ The default flow implements the five-stage pipeline from the **Purpose** section
       "eventType": "routing-change",
       "triggeringTask": "Update boundary",
       "gap": "No suitable scout for new file type",
-      "resolution": "Delegated to helping-gap-resolution-coordinator",
+      "resolution": "Delegated to 00-helping",
       "filesChanged": ["src/moduleA.js"],
       "agentsAffected": ["boundary-mapper"],
       "skillsAffected": ["solid-split"],
@@ -288,7 +288,7 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 
 - **If tracker shape ambiguous or validation fails, delegate to plan-sync-validation via tracker-handoff before closing phase.**
   - Example: "Tracker shape unclear, delegating to plan-sync-validation before closing."
-- **If learning event cannot be captured, route gap to helping-gap-resolution-coordinator and continue log update.**
+- **If learning event cannot be captured, route gap to 00-helping and continue log update.**
   - Example: "Learning event capture failed, gap delegated, log update continued."
 - **If log entry would expose sensitive data, omit detail and use privacy-safe summary.**
   - Example: "Sensitive credential used, not recorded."

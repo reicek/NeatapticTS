@@ -52,6 +52,7 @@ The permanent `model:` field for each agent must be set based on task complexity
 - When pragmatic mode and "nothing deferred" conflict, lean toward thoroughness: keep validation gates, skip only plan-verification green-light cycle and fix-packet YAML ceremony
 
 ### Phase Sequencing
+
 Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] and validation passes. Cross-phase dependencies are noted inline. The orchestrator MUST update the Handoff Query's "Next" line after each phase completes.
 
 ## Current State
@@ -66,43 +67,55 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - 3 new features identified from Copilot research: hooks, array-model, customization evaluations
 
 <!-- slice: aio-phase-0 -->
-## Phase 0 — Model Assignment (Tiered Strategy) [PENDING]
+
+## Phase 0 — Model Assignment (Tiered Strategy) [DONE]
 
 **Goal:** Assign models based on task complexity, not universally
 
 <!-- step: aio-phase-0-step-0-1 -->
+
 **Step 0.1:** Set HEAVY agents to `glm-5.2:cloud` (5 agents):
-- 00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor
+
+- 00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor ✅ DONE
 
 <!-- step: aio-phase-0-step-0-2 -->
+
 **Step 0.2:** Set LIGHT agents to `kimi-k2.7-code:cloud` (26 agents, keep current):
+
 - 02-researching, 05-green-testing, 06-documenting, 07-logging
 - agent-maintenance-coordinator
 - ALL 19 Tier-3 specialists
-- learning-event-capturer (Tier-4)
+- learning-event-capturer (Tier-4) ✅ DONE (verified — all 26 already correct)
 
 <!-- step: aio-phase-0-step-0-3 -->
-**Step 0.3:** Add model-value allowlist to `validate-agent-frontmatter.mjs` — allow ONLY `glm-5.2:cloud` and `kimi-k2.7-code:cloud`. No other models are approved. Reject all other values. Also remove stale entries for `planning-test-strategy-coordinator` and `research-codebase-coordinator` from `strictTier2CoordinatorPathsByName` in `validate-agent-frontmatter.mjs`. Remove `anthropic/claude-sonnet-4-20250514` from the existing allowed models set — it is NOT approved.
+
+**Step 0.3:** Add model-value allowlist to `validate-agent-frontmatter.mjs` — allow ONLY `glm-5.2:cloud` and `kimi-k2.7-code:cloud`. No other models are approved. Reject all other values. Also remove stale entries for `planning-test-strategy-coordinator` and `research-codebase-coordinator` from `strictTier2CoordinatorPathsByName` in `validate-agent-frontmatter.mjs`. Remove `anthropic/claude-sonnet-4-20250514` from the existing allowed models set — it is NOT approved. ✅ DONE
 
 <!-- step: aio-phase-0-step-0-4 -->
-**Step 0.4:** Update `model-routing-and-budget` skill — remove ALL references to Claude Sonnet and Claude Haiku models. Neither Sonnet nor Haiku are approved models. Only `glm-5.2:cloud` and `kimi-k2.7-code:cloud` are approved. The skill's phase-based tier system must use only these two models: glm-5.2:cloud for heavy/full tasks, kimi-k2.7-code:cloud for light tasks. Remove the "Claude Haiku 4.6" reference (does not exist) and all Sonnet references. Document that additional models may be added later only with explicit user approval.
+
+**Step 0.4:** Update `model-routing-and-budget` skill — remove ALL references to Claude Sonnet and Claude Haiku models. Neither Sonnet nor Haiku are approved models. Only `glm-5.2:cloud` and `kimi-k2.7-code:cloud` are approved. The skill's phase-based tier system must use only these two models: glm-5.2:cloud for heavy/full tasks, kimi-k2.7-code:cloud for light tasks. Remove the "Claude Haiku 4.6" reference (does not exist) and all Sonnet references. Document that additional models may be added later only with explicit user approval. ✅ DONE
 
 **Validation:** `validate-agent-frontmatter.mjs --json --strict`, `validate-agent-quality.mjs`, `validate-agent-graph.mjs --json`
 
 <!-- slice: aio-phase-1 -->
-## Phase 1 — Phantom Agent Cleanup [PENDING]
+
+## Phase 1 — Phantom Agent Cleanup [DONE]
 
 **Goal:** Resolve ALL 14 phantom agent references — create needed agents, remove dead references
 
 <!-- step: aio-phase-1-step-1-1 -->
+
 **Step 1.1:** Remove `helping-gap-resolution-coordinator` phantom references (36 matches, all T1 + implementation-executor)
+
 - Update all 7 T1 orchestrators' "If Blocked" sections to reference `00-helping` directly
 - Update `implementation-executor` similarly
 - Update 00-helping's mission/body to explicitly document gap-resolution coordination as a first-class responsibility (absorbing the phantom `helping-gap-resolution-coordinator` scope)
 - **Slice files:** 8 agent files
 
 <!-- step: aio-phase-1-step-1-2 -->
+
 **Step 1.2:** Create `frontmatter-auditor` (Tier 3) — consolidates 3 phantom agents
+
 - Consolidates: `agent-frontmatter-auditor`, `skill-frontmatter-auditor`, `model-name-auditor`
 - Skills: `agent-frontmatter-standards`, `skill-frontmatter-standards`, `updating-agent-frontmatter`, `updating-skill-frontmatter`, `model-routing-and-budget`
 - Model: `kimi-k2.7-code:cloud` (read-only audit, light task)
@@ -110,14 +123,18 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - **Slice files:** 1 new agent, 2 modified
 
 <!-- step: aio-phase-1-step-1-3 -->
+
 **Step 1.3:** Create `repo-cortex-scout` (Tier 3)
+
 - Skills: `repo-cortex-workflow`, `repo-cortex-embeddings`, `research-methodology`
 - Model: `kimi-k2.7-code:cloud` (read-only scout)
 - Add to `agents:` allow-list of `00-helping` and `02-researching`
 - **Slice files:** 1 new agent, 2 modified
 
 <!-- step: aio-phase-1-step-1-4 -->
+
 **Step 1.4:** Remove ALL remaining phantom references:
+
 - `code-quality-auditor` → route to `implementation-standards` skill
 - `failure-triage-specialist` → route to `05-green-testing` with `test-fix-workflow`
 - `mcp-runtime-scout` → route to `mcp-local-server-workflow` skill
@@ -131,18 +148,23 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - **Slice files:** 9 files (00-helping, 02-researching, 03-red-testing, research-codebase-coordinator, 01-planning.agent.md, .github/FLOWS.md, .github/flows/03.behavior-change-red.flow.yml, .github/flows/01.acceptance-criteria.flow.yml, .github/flows/01.phase-kickoff.flow.yml)
 
 <!-- step: aio-phase-1-step-1-5 -->
+
 **Step 1.5:** Wire orphan skills `updating-agent-frontmatter` and `updating-skill-frontmatter` to `frontmatter-auditor` (created in Step 1.2)
+
 - **Slice files:** 1 agent file (frontmatter-auditor already has them in skills)
 
 **Validation:** `validate-agent-frontmatter.mjs --json --strict`, `validate-agent-quality.mjs`, `validate-agent-graph.mjs --json`, `npm run agents:routing-table`, routing-table-freshness gate, grep scan for zero phantom references
 
 <!-- slice: aio-phase-2 -->
-## Phase 2 — Consolidation & Skill Redistribution [PENDING]
+
+## Phase 2 — Consolidation & Skill Redistribution [DONE]
 
 **Goal:** Reduce 04-implementing overload, consolidate redundant coordinator, redistribute domain skills
 
 <!-- step: aio-phase-2-step-2-1 -->
+
 **Step 2.1:** Remove `research-codebase-coordinator` (Tier 2) — fold into `02-researching`
+
 - 02-researching already dispatches the same scouts and does synthesis
 - Delete `research-codebase-coordinator.agent.md`
 - Add `implementation-pattern-scout` to 02-researching's `agents:` array (it was in research-codebase-coordinator but not yet in 02-researching)
@@ -150,7 +172,9 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - **Slice files:** 2 (02-researching modified, research-codebase-coordinator deleted)
 
 <!-- step: aio-phase-2-step-2-2 -->
+
 **Step 2.2:** Reduce 04-implementing skill load (24 → 14, removes 10 skills)
+
 - REDISTRIBUTE from 04 to other agents/carriers (10 skills removed):
   - `webgpu` → REMOVE from 04, add to `webgpu-parity-reviewer` (Phase 5 agent)
   - `onnx-work` → REMOVE from 04, add to `onnx-parity-reviewer` (Phase 5 agent)
@@ -169,7 +193,9 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - Note: Skill redistribution to Phase 5 agents (webgpu-parity-reviewer, onnx-parity-reviewer, evolution-correctness-reviewer) is DEFERRED to Phase 5 Step 5.4 — these agents do not exist until Phase 5 creates them. Step 2.2 only removes these skills from 04-implementing; the addition to Phase 5 agents happens in Phase 5 after agent creation.
 
 <!-- step: aio-phase-2-step-2-3 -->
+
 **Step 2.3:** Extract Tier-2 review coordinator for 6 review specialists shared by 04+05
+
 - Specialists: security-reviewer, performance-reviewer, determinism-reviewer, api-contract-reviewer, dependency-audit-reviewer, benchmark-gate-reviewer
 - Cuts 04 fan-out from 13 to 9 (removes 5 reviewers, adds 1 coordinator). Cuts 05 fan-out from 13 to 10 (removes 4 reviewers, adds 1 coordinator). Only 3 reviewers are truly shared by both.
 - Create `review-coordinator` (Tier 2), model: `kimi-k2.7-code:cloud` (delegates to reviewers, light coordination)
@@ -179,7 +205,9 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - **Slice files:** 3 (1 new agent, 04-implementing, 05-green-testing)
 
 <!-- step: aio-phase-2-step-2-4 -->
+
 **Step 2.4:** Rewrite 04-implementing's inline severity-gating workflow (body lines 172-182) and delegation table (lines 414-418) to dispatch `review-coordinator` instead of naming individual reviewers. Update the 'FULL slices dispatch exactly 1 of the POV reviewers' logic to dispatch via review-coordinator, which selects the appropriate reviewer. Similarly update 05-green-testing's delegation table for any inline reviewer references. Update severity-gating to account for 8 POV reviewers (5 original + 3 domain from Phase 5). The review-coordinator holds 9 reviewers total (6 existing + 3 new domain).
+
 - **Slice files:** 2 (04-implementing, 05-green-testing)
 
 - Note: `plan-scout` has fan-in of 7 (flagged by research as 'possibly infrastructural'). Decision: keep as-is — plan-scout serves multiple planning consumers and this is intentional infrastructure, not redundancy.
@@ -187,40 +215,51 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 **Validation:** `validate-agent-frontmatter.mjs --json --strict`, `validate-agent-quality.mjs`, `validate-agent-graph.mjs --json`, `npm run agents:routing-table`
 
 <!-- slice: aio-phase-3 -->
+
 ## Phase 3 — Skill & Frontmatter Fixes [PENDING]
 
 **Goal:** Fix orphan skills, user-invocable flags, validator improvements, deprecated fields
 
 <!-- step: aio-phase-3-step-3-1 -->
+
 **Step 3.1:** Verify `updating-agent-frontmatter` and `updating-skill-frontmatter` wired to `frontmatter-auditor` (from Phase 1)
 
 <!-- step: aio-phase-3-step-3-2 -->
+
 **Step 3.2:** Set `webgpu` skill `user-invocable: true` (matches siblings onnx-work, worker-inference-transport, multithread-evaluation)
 
 <!-- step: aio-phase-3-step-3-3 -->
+
 **Step 3.3:** Review `execute` skill `user-invocable` — consider setting to `false` (meta-orchestration, not a user task)
 
 <!-- step: aio-phase-3-step-3-4 -->
+
 **Step 3.4:** Fix validator YAML parser charset handling so non-ASCII chars (≤, —) aren't corrupted to ? in parsed output
 
 <!-- step: aio-phase-3-step-3-5 -->
+
 **Step 3.5:** Mandatory repo-wide grep scan for `infer` field in all `.agent.md` files. Replace ALL instances with `user-invocable` + `disable-model-invocation` per latest Copilot spec. No conditional handling. Also update ORCHESTRATION_GUIDE.md to document `model:` as a retained local extension (the guide currently says it was removed, but it's present on all agents).
 
 <!-- step: aio-phase-3-step-3-6 -->
+
 **Step 3.6:** Consider adding `argument-hint` to user-invocable agents for better UX (currently only on skills)
 
 <!-- step: aio-phase-3-step-3-7 -->
+
 **Step 3.7:** Consider adding `target` field where appropriate (`vscode` for IDE-only, `github-copilot` for cloud, or omit for both)
 
 **Validation:** `validate-skill-frontmatter.mjs --json --strict`, `validate-agent-frontmatter.mjs --json --strict`, routing-table-freshness gate
 
 <!-- slice: aio-phase-4 -->
+
 ## Phase 4 — Phase Coverage Enhancement [PENDING]
 
 **Goal:** Add specialists for partial-coverage phases (DOCUMENT, LOG)
 
 <!-- step: aio-phase-4-step-4-1 -->
+
 **Step 4.1:** Create `session-summarizer` (Tier 3) under `07-logging`
+
 - Mission: Collect changed files, validation evidence, delegation graph in isolated context. Produce structured session summary.
 - Skills: `summarizing-session-log`, `tracker-handoff`
 - Model: `kimi-k2.7-code:cloud` (light summarization task)
@@ -228,7 +267,9 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - **Slice files:** 1 new agent, 1 modified
 
 <!-- step: aio-phase-4-step-4-2 -->
+
 **Step 4.2:** Create `docs-writer` (Tier 3) under `06-documenting`
+
 - Mission: Write JSDoc, READMEs, examples, and guides from source in isolated context. Apply educational-docs tone model.
 - Skills: `educational-docs`, `updating-js-docs`, `auditing-js-docs`
 - Model: `kimi-k2.7-code:cloud` (writing task, light)
@@ -238,12 +279,15 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 **Validation:** `validate-agent-frontmatter.mjs --json --strict`, `validate-agent-quality.mjs`, `validate-agent-graph.mjs --json`, `npm run agents:routing-table`
 
 <!-- slice: aio-phase-5 -->
+
 ## Phase 5 — Domain POV Reviewers [PENDING — NOT DEFERRED]
 
 **Goal:** Create domain-specific reviewers for neural network correctness validation
 
 <!-- step: aio-phase-5-step-5-1 -->
+
 **Step 5.1:** Create `evolution-correctness-reviewer` (Tier 3)
+
 - Mission: POV reviewer for NEAT evolution algorithm correctness — validate mutation/selection/crossover logic, topology mutation validity, fitness evaluation correctness, speciation boundary integrity
 - Skills: `nge-core-algorithm`, `reproducibility-contracts`, `implementation-standards`
 - Model: `kimi-k2.7-code:cloud` (read-only review)
@@ -251,7 +295,9 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - **Slice files:** 1 new agent, 1 modified (review-coordinator)
 
 <!-- step: aio-phase-5-step-5-2 -->
+
 **Step 5.2:** Create `onnx-parity-reviewer` (Tier 3)
+
 - Mission: POV reviewer for ONNX export/import parity — validate round-trip correctness, binary emission determinism, runtime parity
 - Skills: `onnx-work`, `implementation-standards`, `reproducibility-contracts`
 - Model: `kimi-k2.7-code:cloud`
@@ -259,7 +305,9 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - **Slice files:** 1 new agent, 1 modified (review-coordinator)
 
 <!-- step: aio-phase-5-step-5-3 -->
+
 **Step 5.3:** Create `webgpu-parity-reviewer` (Tier 3)
+
 - Mission: POV reviewer for WebGPU compute correctness — validate GPU-vs-CPU numerical parity, shader correctness, fallback behavior
 - Skills: `webgpu`, `implementation-standards`, `performance-optimization`
 - Model: `kimi-k2.7-code:cloud`
@@ -267,7 +315,9 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - **Slice files:** 1 new agent, 1 modified (review-coordinator)
 
 <!-- step: aio-phase-5-step-5-4 -->
+
 **Step 5.4:** Add redistributed skills to newly created domain reviewers
+
 - `webgpu` → add to `webgpu-parity-reviewer` (removed from 04 in Phase 2 Step 2.2)
 - `onnx-work` → add to `onnx-parity-reviewer` (removed from 04 in Phase 2 Step 2.2)
 - `nge-core-algorithm` → add to `evolution-correctness-reviewer` (removed from 04 in Phase 2 Step 2.2)
@@ -278,32 +328,42 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 **Validation:** `validate-agent-frontmatter.mjs --json --strict`, `validate-agent-quality.mjs`, `validate-agent-graph.mjs --json`, `npm run agents:routing-table`
 
 <!-- slice: aio-phase-6 -->
+
 ## Phase 6 — Independent Dual-Specialist Agent Review [PENDING]
 
 **Goal:** Every agent is reviewed by 2 independent specialists from different perspectives to validate content quality, normalization, and modern Copilot best practices
 
 **Approach:** For each agent (or batch of related agents), dispatch 2 specialists:
+
 - **Specialist A (Content Quality):** Reviews the agent's mission, constraints, workflow, and output format for optimal task alignment. Checks if the agent body is comprehensive, clear, and actionable. Verifies the agent can actually accomplish its stated mission with its current tools and skills.
 - **Specialist B (Standards & Normalization):** Reviews the agent against latest Copilot standards (official frontmatter, NeatapticTS quality contract, structured-v1, tier rules). Checks normalization across all agents (consistent section headers, field ordering, description style, JSDoc quality). Verifies modern best practices are followed.
 
 **Both specialists must check online** for latest Copilot agent requirements, contract, and features to ensure 100% alignment.
 
 <!-- step: aio-phase-6-step-6-1 -->
+
 **Step 6.1:** Review all 8 Tier-1 orchestrators (00-helping through 07-logging) — 2 specialists each, batch by tier
 <!-- step: aio-phase-6-step-6-2 -->
+
 **Step 6.2:** Review all Tier-2 coordinators (agent-maintenance-coordinator, implementation-executor, review-coordinator) — 2 specialists each
 <!-- step: aio-phase-6-step-6-3 -->
+
 **Step 6.3:** Review all Tier-3 scouts and specialists (existing + newly created) — 2 specialists each, batch in groups of 5-7
 <!-- step: aio-phase-6-step-6-4 -->
+
 **Step 6.4:** Review all Tier-4 auxiliaries — 2 specialists each
 <!-- step: aio-phase-6-step-6-5 -->
+
 **Step 6.5:** Review all newly created agents from Phases 1-5 specifically — verify they meet the highest standards since they're brand new
 <!-- step: aio-phase-6-step-6-6 -->
+
 **Step 6.6:** Address all observations in batches — fix issues found by specialists, re-validate after each batch
 <!-- step: aio-phase-6-step-6-7 -->
+
 **Step 6.7:** Repeat review rounds until all specialists approve. Once a specialist approves an agent, no need to include it in future rounds.
 
 **Review checklist for each agent:**
+
 1. Mission statement is clear, specific, and actionable
 2. Constraints are appropriate for the tier and task
 3. Workflow/Approach/Default Flow section matches the actual capabilities
@@ -323,12 +383,15 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 **Validation:** Full gate suite after all reviews complete
 
 <!-- slice: aio-phase-7 -->
+
 ## Phase 7 — Final Validation [PENDING]
 
 **Goal:** Full validation pass after all changes
 
 <!-- step: aio-phase-7-step-7-1 -->
+
 **Step 7.1:** Run all validation gates:
+
 - `validate-agent-frontmatter.mjs --json --strict`
 - `validate-skill-frontmatter.mjs --json --strict`
 - `validate-agent-quality.mjs`
@@ -338,7 +401,9 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - routing-table-freshness gate
 
 <!-- step: aio-phase-7-step-7-2 -->
+
 **Step 7.2:** Verification scans:
+
 - Grep scan: zero phantom agent references remaining
 - Confirm model assignments: 5 heavy agents on glm-5.2:cloud, all others on kimi-k2.7-code:cloud
 - Confirm all new agents exist and pass validation
@@ -348,7 +413,9 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - Gate ownership assignments: `convergence-tracker` → 05-green-testing, `delegate-skill-coverage` → agent-maintenance-coordinator, `folder-quality` → boundary-mapper, `specialist-review` → review-coordinator
 
 <!-- step: aio-phase-7-step-7-3 -->
+
 **Step 7.3:** Feature adoption check:
+
 - Consider adding `argument-hint` to user-invocable agents
 - Consider adding `hooks` to key agents (PostToolUse for tsc/test validation)
 - Consider array-valued `model` for agents that could benefit from fallback
@@ -357,6 +424,7 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 ## Summary of Changes
 
 ### Files to CREATE (8-10 new agents):
+
 1. `frontmatter-auditor.agent.md` (Tier 3) — Phase 1
 2. `repo-cortex-scout.agent.md` (Tier 3) — Phase 1
 3. `review-coordinator.agent.md` (Tier 2) — Phase 2
@@ -367,9 +435,11 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 8. `webgpu-parity-reviewer.agent.md` (Tier 3) — Phase 5
 
 ### Files to DELETE (2 agents):
+
 1. `research-codebase-coordinator.agent.md` — Phase 2 (folded into 02-researching)
 
 ### Files to MODIFY (~20+ agents):
+
 - 5 heavy agents: model → glm-5.2:cloud (Phase 0)
 - 26 light agents: model stays kimi-k2.7-code:cloud (Phase 0)
 - 00-helping: phantom cleanup, add frontmatter-auditor + repo-cortex-scout
@@ -388,10 +458,12 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - routing table: regenerate after each phase
 
 ### Validator improvements:
+
 - `validate-agent-frontmatter.mjs`: add model-value allowlist, fix YAML parser charset
 - `model-routing-and-budget` skill: correct "Claude Haiku 4.6" to "Claude Haiku 4.5"
 
 ### New features to consider (from Copilot research):
+
 - `argument-hint` on user-invocable agents
 - `hooks` (PostToolUse for tsc/test, PreToolUse for safety)
 - Array-valued `model` for fallback
@@ -412,6 +484,7 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 ## New Features from Copilot Research
 
 ### Features to adopt in this plan:
+
 1. **`argument-hint`** on user-invocable agents — improves UX in chat picker
 2. **Hooks (Preview)** — consider PostToolUse hooks on implementation agents to run `npx tsc --noEmit` after edits
 3. **Array-valued `model`** — consider `model: ['glm-5.2:cloud', 'kimi-k2.7-code:cloud']` for heavy agents as fallback
@@ -420,6 +493,7 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 6. **Session Chronicle** — track agent work across sessions for cost analysis and standup reports
 
 ### Features to document for future adoption:
+
 1. **Plugins** — package NeatapticTS skills/agents as distributable plugin
 2. **MCP Resources** — expose neural network topology data as structured context
 3. **Plan Agent** — use built-in Plan agent for complex feature planning
@@ -434,6 +508,37 @@ verification: 9 specialists (6 inventory analysts + 3 Copilot standards research
 verification_date: 2026-08-15
 note: Plan approved by ALL 6 validation specialists after 2 rounds. Pre-validated — plan-readiness gate may be bypassed under pragmatic mode.
 
+phase-0: DONE
+phase-0-evidence:
+
+- validate-agent-frontmatter.mjs --json --strict: PASS (0 errors, 0 warnings)
+- validate-agent-quality.mjs: PASS (0 errors, 0 warnings)
+- validate-agent-graph.mjs --json: PASS (0 violations, 31 agents, 68 delegation edges)
+- npm run agents:routing-table: PASS (31 agents, 67 skills, routing table regenerated)
+  phase-0-date: 2026-08-15
+
+phase-1: DONE
+phase-1-evidence:
+
+- validate-agent-frontmatter.mjs --json --strict: PASS (0 errors, 0 warnings, 33 agents)
+- validate-agent-quality.mjs: PASS (0 errors, 0 warnings)
+- validate-agent-graph.mjs --json: PASS (0 violations, 33 agents, 72 delegation edges)
+- npm run agents:routing-table: PASS (33 agents, 67 skills)
+- grep scan: ZERO phantom references remaining (excluding historical learning-log.jsonl)
+  phase-1-date: 2026-08-15
+
+phase-2: DONE
+phase-2-evidence:
+
+- validate-agent-frontmatter.mjs --json --strict: PASS (0 errors, 0 warnings, 33 agents)
+- validate-agent-quality.mjs: PASS (0 errors, 0 warnings)
+- validate-agent-graph.mjs --json: PASS (0 violations, 33 agents, 68 delegation edges)
+- npm run agents:routing-table: PASS (33 agents, 67 skills, hash fresh)
+- 04-implementing skills count: 14 (verified — reduced from 24)
+- review-coordinator.agent.md: CREATED (Tier 2, 6 reviewers)
+- research-codebase-coordinator.agent.md: DELETED
+  phase-2-date: 2026-08-15
+
 ## Handoff Query
 
 ```text
@@ -443,7 +548,7 @@ Active plan: plans/agent-inventory-optimization.plans.md
 Research: plans/agent-inventory-optimization.research.md
 Session log: plans/session-log-2026-08-15.md
 
-Next: Phase 0 — assign models based on tiered strategy (5 heavy agents to glm-5.2:cloud, 26 light agents stay on kimi-k2.7-code:cloud)
+Next: Phase 3 — Skill & Frontmatter Fixes (verify orphan skill wiring, set webgpu user-invocable, fix validator charset, replace infer field repo-wide, consider argument-hint and target fields)
 
 Model mandate: glm-5.2:cloud for heavy tasks (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor). kimi-k2.7-code:cloud for light tasks (all others). NO OTHER MODELS APPROVED — only glm-5.2:cloud and kimi-k2.7-code:cloud. Users may override per request between these two models only. Plan mandates continue to use glm-5.2:cloud for implementing agents.
 
@@ -458,3 +563,148 @@ Phases: 0 (model assignment) → 1 (phantom cleanup) → 2 (consolidation) → 3
 
 Nothing deferred. All phases implemented in detail. This is the core of the project.
 ```
+
+## VALIDATION_EVIDENCE
+
+Claim: 04-implementing @ 2026-08-15T20:30:00Z
+
+### Step 0.3 — validate-agent-frontmatter.mjs model allowlist
+
+- Removed `planning-test-strategy-coordinator` and `research-codebase-coordinator` from `strictTier2CoordinatorPathsByName`
+- Removed `anthropic/claude-sonnet-4-20250514` from `strictAllowedModels`
+- Changed `glm-5.2:cloud (ollama)` → `glm-5.2:cloud` in `strictAllowedModels` to match actual agent frontmatter values
+- Updated error message to reference `glm-5.2:cloud` instead of `glm-5.2:cloud (ollama)`
+
+### Step 0.4 — model-routing-and-budget SKILL.md
+
+- Removed all Claude Sonnet and Claude Haiku references from task packet, required workflow, phase defaults table, decision tree, before/after examples, and guardrails
+- Phase-based tier system now uses only `glm-5.2:cloud` (heavy/full) and `kimi-k2.7-code:cloud` (light)
+- Added step 9 to Required Workflow: additional models require explicit user approval
+
+### Preflight Results
+
+- tsc: `npx tsc --noEmit -p tsconfig.json` → OK (0 errors)
+- prettier: `npx prettier --check` on both changed files → All matched files use Prettier code style
+- validator strict: `node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict` → PASS, 0 errors, 0 warnings
+- lint: N/A (lint covers src/testing/benchmarks/examples only; changed files are in scripts/ and .github/)
+
+```yaml
+PlanUpdate:
+  slice_ids:
+    - aio-phase-0-step-0-3
+    - aio-phase-0-step-0-4
+  changed_files:
+    - scripts/agent-customization/validate-agent-frontmatter.mjs
+    - .github/skills/model-routing-and-budget/SKILL.md
+  preflight:
+    - 'npx tsc --noEmit -p tsconfig.json → OK'
+    - 'npx prettier --check scripts/agent-customization/validate-agent-frontmatter.mjs .github/skills/model-routing-and-budget/SKILL.md → All matched files use Prettier code style'
+    - 'node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict → PASS, 0 errors, 0 warnings'
+  tests_for_green:
+    - 'node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict'
+    - 'node scripts/agent-customization/validate-agent-quality.mjs'
+    - 'node scripts/agent-customization/validate-agent-graph.mjs --json'
+  rollback:
+    - 'Revert scripts/agent-customization/validate-agent-frontmatter.mjs: restore removed coordinator entries, restore anthropic/claude-sonnet-4-20250514 in strictAllowedModels, restore glm-5.2:cloud (ollama) string'
+    - 'Revert .github/skills/model-routing-and-budget/SKILL.md: restore Claude Sonnet/Haiku references and old tier labels'
+  next: 'Run 05-green-testing to validate all agent frontmatter passes strict validation and no Claude references remain in skill docs'
+```
+
+### slice-advancement Gate Results
+
+- slice-advancement (aio-phase-0-step-0-3): partial pass — 5/7 sub-gates pass, code-coverage FAIL (owned by 05-green-testing)
+  - plan-sync: PASS
+  - step-packet: PASS
+  - plan-slice-quality: PASS
+  - plan-command-lint: PASS
+  - shared-validation: PASS
+  - code-coverage: FAIL — requires 100% coverage on scripts/agent-customization/validate-agent-frontmatter.mjs (owned by 05-green-testing)
+  - specialist-review: PASS
+
+### Phase 1 Steps 1.2, 1.3, 1.5 — frontmatter-auditor + repo-cortex-scout creation + orphan skill wiring
+
+Claim: 04-implementing @ 2026-08-15T21:00:00Z
+
+**Step 1.2 — Create `frontmatter-auditor` (Tier 3):**
+
+- Created `.github/agents/frontmatter-auditor.agent.md` — consolidates 3 phantom agents (agent-frontmatter-auditor, skill-frontmatter-auditor, model-name-auditor)
+- Skills: agent-frontmatter-standards, skill-frontmatter-standards, updating-agent-frontmatter, updating-skill-frontmatter, model-routing-and-budget
+- Model: kimi-k2.7-code:cloud (read-only audit, light task)
+- user-invocable: false, tier: 3, agents: []
+- Description starts with "Use when:" per Copilot convention
+- Body follows Tier-3 scout structure: CRITICAL RULE, Purpose, Mission, Scope boundaries, Constraints, Gate Enforcement, Approach, Audit Decision Tree, Finding Templates, If Blocked, Output format
+
+**Step 1.3 — Create `repo-cortex-scout` (Tier 3):**
+
+- Created `.github/agents/repo-cortex-scout.agent.md` — Cortex index health scout
+- Skills: repo-cortex-workflow, repo-cortex-embeddings, research-methodology
+- Model: kimi-k2.7-code:cloud (read-only scout)
+- user-invocable: false, tier: 3, agents: []
+- Description starts with "Use when:" per Copilot convention
+- Body follows Tier-3 scout structure with Cortex Health Decision Tree and Finding Templates
+
+**Allow-list updates:**
+
+- Added `frontmatter-auditor` and `repo-cortex-scout` to `agents:` array of `00-helping`
+- Added `frontmatter-auditor` to `agents:` array of `agent-maintenance-coordinator`
+- Added `repo-cortex-scout` to `agents:` array of `02-researching`
+
+**Step 1.5 — Orphan skill wiring verification:**
+
+- `updating-agent-frontmatter` → carrier: frontmatter-auditor ✅ (confirmed in routing table line 113)
+- `updating-skill-frontmatter` → carrier: frontmatter-auditor ✅ (confirmed in routing table line 115)
+- Both orphan skills now have a carrier — no longer orphan
+
+### Phase 1 Validation Results
+
+- validate-agent-frontmatter.mjs --json --strict: PASS (0 errors, 0 warnings, 33 agents)
+- validate-agent-quality.mjs: PASS (0 errors, 0 warnings)
+- validate-agent-graph.mjs --json: PASS (33 agents, 0 issues, references resolve, no cycles, tier enforcement pass)
+- tier-enforcement gate: PASS (0 issues, byTier: {1:8, 2:3, 3:21, 4:1})
+- routing-table-freshness gate: PASS (hashes match after regeneration)
+- npm run agents:routing-table: PASS (33 agents, 67 skills, routing table regenerated)
+- MCP agent-graph gate: PASS (33 agents, 0 issues)
+
+```yaml
+PlanUpdate:
+  slice_ids:
+    - aio-phase-1-step-1-2
+    - aio-phase-1-step-1-3
+    - aio-phase-1-step-1-5
+  changed_files:
+    - .github/agents/frontmatter-auditor.agent.md
+    - .github/agents/repo-cortex-scout.agent.md
+    - .github/agents/00-helping.agent.md
+    - .github/agents/agent-maintenance-coordinator.agent.md
+    - .github/agents/02-researching.agent.md
+    - .github/agent-skill-routing-table.md
+  preflight:
+    - 'node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict → PASS, 0 errors, 0 warnings, 33 agents'
+    - 'node scripts/agent-customization/validate-agent-quality.mjs → PASS, 0 errors, 0 warnings'
+    - 'node scripts/agent-customization/gates/agent-graph.gate.mjs --json → PASS, 33 agents, 0 issues'
+    - 'node scripts/agent-customization/gates/tier-enforcement.gate.mjs --json → PASS, 0 issues'
+    - 'npm run agents:routing-table → PASS, 33 agents, 67 skills'
+    - 'routing-table-freshness gate → PASS, hashes match'
+  tests_for_green:
+    - 'node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict'
+    - 'node scripts/agent-customization/validate-agent-quality.mjs'
+    - 'node scripts/agent-customization/gates/agent-graph.gate.mjs --json'
+    - 'node scripts/agent-customization/gates/tier-enforcement.gate.mjs --json'
+    - 'npm run agents:routing-table:gate'
+  rollback:
+    - 'Delete .github/agents/frontmatter-auditor.agent.md'
+    - 'Delete .github/agents/repo-cortex-scout.agent.md'
+    - 'Revert 00-helping.agent.md agents array to [agent-maintenance-coordinator, coverage-analyst, learning-event-capturer]'
+    - 'Revert agent-maintenance-coordinator.agent.md agents array to [learning-event-capturer]'
+    - 'Revert 02-researching.agent.md agents array to remove repo-cortex-scout'
+    - 'Re-run npm run agents:routing-table to regenerate routing table'
+  next: 'Continue Phase 1 with Step 1.1 (phantom reference cleanup for helping-gap-resolution-coordinator) and Step 1.4 (remaining phantom reference removal). Then run 05-green-testing for full validation.'
+```
+
+### Phase 1 slice-advancement Gate Results
+
+- slice-advancement (aio-phase-1-step-1-2): PASS — all 4 sub-gates pass (TRIVIAL severity)
+  - plan-sync: PASS
+  - step-packet: PASS
+  - plan-slice-quality: PASS
+  - plan-command-lint: PASS

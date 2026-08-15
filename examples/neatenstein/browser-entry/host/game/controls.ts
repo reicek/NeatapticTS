@@ -308,7 +308,10 @@ export function bindKeyboardLook(
     }
 
     detached = true;
-    target.removeEventListener(DOM_EVENT_KEYDOWN, handleKeyDown as EventListener);
+    target.removeEventListener(
+      DOM_EVENT_KEYDOWN,
+      handleKeyDown as EventListener,
+    );
   };
 }
 
@@ -358,7 +361,10 @@ export function bindKeyboardLightToggle(
     }
 
     detached = true;
-    target.removeEventListener(DOM_EVENT_KEYDOWN, handleKeyDown as EventListener);
+    target.removeEventListener(
+      DOM_EVENT_KEYDOWN,
+      handleKeyDown as EventListener,
+    );
   };
 }
 
@@ -496,9 +502,21 @@ export function bindTouchLook(
 
   const touchListenerOptions: AddEventListenerOptions = { passive: false };
 
-  target.addEventListener(DOM_EVENT_TOUCHSTART, handleTouchStart, touchListenerOptions);
-  target.addEventListener(DOM_EVENT_TOUCHMOVE, handleTouchMove, touchListenerOptions);
-  target.addEventListener(DOM_EVENT_TOUCHEND, handleTouchEnd, touchListenerOptions);
+  target.addEventListener(
+    DOM_EVENT_TOUCHSTART,
+    handleTouchStart,
+    touchListenerOptions,
+  );
+  target.addEventListener(
+    DOM_EVENT_TOUCHMOVE,
+    handleTouchMove,
+    touchListenerOptions,
+  );
+  target.addEventListener(
+    DOM_EVENT_TOUCHEND,
+    handleTouchEnd,
+    touchListenerOptions,
+  );
   target.addEventListener(
     DOM_EVENT_TOUCHCANCEL,
     handleTouchCancel,

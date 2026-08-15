@@ -9,7 +9,10 @@
  */
 
 import type { EnemyUpdateContext } from './enemy-controller.types';
-import { ENEMY_CONTROLLER_STARTING_AMMO, PREVIOUS_STEP_DISTANCE_SENTINEL } from './enemy-controller.constants';
+import {
+  ENEMY_CONTROLLER_STARTING_AMMO,
+  PREVIOUS_STEP_DISTANCE_SENTINEL,
+} from './enemy-controller.constants';
 
 /**
  * Detect respawn and initialize all mutable pipeline state on the context.

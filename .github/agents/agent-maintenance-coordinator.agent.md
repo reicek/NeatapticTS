@@ -16,7 +16,7 @@ tools:
     neataptic-validation-mcp/*,
     neataptic-workflow-mcp/*,
   ]
-agents: [learning-event-capturer]
+agents: [learning-event-capturer, frontmatter-auditor]
 skills:
   [
     agent-frontmatter-standards,

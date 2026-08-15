@@ -94,7 +94,7 @@ Common failure reasons:
 - `Unknown agent '<name>'` — the target name does not exist in the inventory.
 - `caller_tier must be 0, 1, 2, 3, or 4` — the caller tier is out of range.
 - `Tier <caller> may not delegate to Tier <target> (target tier must be
-  greater than caller tier)` — upward or same-tier delegation.
+greater than caller tier)` — upward or same-tier delegation.
 - `userInvocable is only valid for Tier 1 agents; '<name>' is Tier <tier>` —
   the target has `userInvocable: true` but is not Tier 1.
 - `Prompt length <n> exceeds the maximum allowed length of <max> characters`
@@ -218,10 +218,8 @@ dispatch capability.
 
 ### Tier 3 Agents WITH T4 Dispatch
 
-| Agent                           | Can dispatch to                                        |
-| ------------------------------- | ------------------------------------------------------ |
-| `code-quality-auditor`          | `file-change-summarizer`                               |
-| `research-synthesis-specialist` | `acceptance-criteria-writer`, `file-change-summarizer` |
+| Agent | Can dispatch to |
+| ----- | --------------- |
 
 ### Design Rationale
 

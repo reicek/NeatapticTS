@@ -211,7 +211,10 @@ export function createInputRouter(): InputRouter {
     window.addEventListener(DOM_EVENT_KEYDOWN, keyDownHandler);
     window.addEventListener(DOM_EVENT_KEYUP, keyUpHandler);
     window.addEventListener(DOM_EVENT_BLUR, windowBlurHandler);
-    document.addEventListener(DOM_EVENT_VISIBILITYCHANGE, visibilityChangeHandler);
+    document.addEventListener(
+      DOM_EVENT_VISIBILITYCHANGE,
+      visibilityChangeHandler,
+    );
   }
 
   /**
@@ -229,9 +232,15 @@ export function createInputRouter(): InputRouter {
    * Remove keyboard and lifecycle listeners.
    */
   function removeMovementListeners(): void {
-    window.removeEventListener(DOM_EVENT_KEYDOWN, keyDownHandler as EventListener);
+    window.removeEventListener(
+      DOM_EVENT_KEYDOWN,
+      keyDownHandler as EventListener,
+    );
     window.removeEventListener(DOM_EVENT_KEYUP, keyUpHandler as EventListener);
-    window.removeEventListener(DOM_EVENT_BLUR, windowBlurHandler as EventListener);
+    window.removeEventListener(
+      DOM_EVENT_BLUR,
+      windowBlurHandler as EventListener,
+    );
     document.removeEventListener(
       DOM_EVENT_VISIBILITYCHANGE,
       visibilityChangeHandler as EventListener,

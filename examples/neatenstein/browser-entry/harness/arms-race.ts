@@ -133,7 +133,9 @@ export function runArmsRaceGeneration(
   // stored death contexts; otherwise it is zero. The scaling factor of 0.1
   // per entry keeps the value in a stable [0, ~1] range for typical buffer
   // capacities while remaining strictly positive whenever replay is active.
-  const replayPressure = replayDriven ? options.replayBuffer!.size() * REPLAY_PRESSURE_PER_ENTRY : 0;
+  const replayPressure = replayDriven
+    ? options.replayBuffer!.size() * REPLAY_PRESSURE_PER_ENTRY
+    : 0;
 
   // Step 6: Compute enemy behavior metrics. The metrics are derived
   // deterministically from the seed and generation. When the generation is
@@ -202,8 +204,11 @@ function createMainSnapshot(
   championNetwork?: Network,
 ): MainVariant {
   const rng = seedrandom(`${seed}:arms-race:main:${generation}`);
-  const nodeCount = Math.floor(rng() * MAIN_GENOME_NODE_SPAN) + MAIN_GENOME_NODE_MIN;
-  const connectionCount = Math.floor(rng() * MAIN_GENOME_CONNECTION_SPAN) + MAIN_GENOME_CONNECTION_MIN;
+  const nodeCount =
+    Math.floor(rng() * MAIN_GENOME_NODE_SPAN) + MAIN_GENOME_NODE_MIN;
+  const connectionCount =
+    Math.floor(rng() * MAIN_GENOME_CONNECTION_SPAN) +
+    MAIN_GENOME_CONNECTION_MIN;
 
   const genome: Genome = {
     nodes: new Array(nodeCount).fill(null),

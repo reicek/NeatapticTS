@@ -163,7 +163,7 @@ High certainty (≥0.85): act. Medium (0.5–0.85): delegate to a specialist. Lo
 
 ### §5 Skill & Companion Routing (Summary)
 
-Use the canonical routing table. For new or unassigned skills, call `helping-gap-resolution-coordinator`. Full table and gap resolution live in `routing-optimization-policy` and `agent-frontmatter-standards` skills.
+Use the canonical routing table. For new or unassigned skills, call `00-helping`. Full table and gap resolution live in `routing-optimization-policy` and `agent-frontmatter-standards` skills.
 
 ### §6 Workflow Protocols (Summary)
 

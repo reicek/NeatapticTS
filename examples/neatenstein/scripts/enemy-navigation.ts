@@ -12,10 +12,7 @@
 
 import { type CollisionMap } from '../browser-entry/renderer/map';
 import { DIRECTIONS } from './enemy-controller.constants';
-import {
-  WALL_VALUE,
-  UNREACHABLE_VALUE,
-} from './enemy-navigation.constants';
+import { WALL_VALUE, UNREACHABLE_VALUE } from './enemy-navigation.constants';
 import type { DistanceMap } from './enemy-navigation.types';
 
 // Re-export DIRECTIONS from the single source of truth in

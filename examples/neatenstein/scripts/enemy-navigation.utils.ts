@@ -330,10 +330,18 @@ export function extractSensors(
   // Player sensors (5) — normalized to [0, 1].
   sensors[SENSOR_INDEX_PLAYER_HEALTH] =
     p.maxHealth > 0 ? Math.min(1, Math.max(0, p.health / p.maxHealth)) : 0;
-  sensors[SENSOR_INDEX_PLAYER_AMMO] = p.maxAmmo > 0 ? Math.min(1, Math.max(0, p.ammo / p.maxAmmo)) : 0;
-  sensors[SENSOR_INDEX_PLAYER_LOOK_ANGLE] = (((p.angleRad % twoPi) + twoPi) % twoPi) / twoPi;
-  sensors[SENSOR_INDEX_PLAYER_POS_X] = Math.min(1, Math.max(0, p.position.x / mapSize));
-  sensors[SENSOR_INDEX_PLAYER_POS_Y] = Math.min(1, Math.max(0, p.position.y / mapSize));
+  sensors[SENSOR_INDEX_PLAYER_AMMO] =
+    p.maxAmmo > 0 ? Math.min(1, Math.max(0, p.ammo / p.maxAmmo)) : 0;
+  sensors[SENSOR_INDEX_PLAYER_LOOK_ANGLE] =
+    (((p.angleRad % twoPi) + twoPi) % twoPi) / twoPi;
+  sensors[SENSOR_INDEX_PLAYER_POS_X] = Math.min(
+    1,
+    Math.max(0, p.position.x / mapSize),
+  );
+  sensors[SENSOR_INDEX_PLAYER_POS_Y] = Math.min(
+    1,
+    Math.max(0, p.position.y / mapSize),
+  );
 
   // Nearest visible enemy sensors (3) — zeroed if no visible enemy.
   const visibleEnemy = findNearestVisibleEnemy(gameState, flatMap, mapSize);
@@ -345,7 +353,10 @@ export function extractSensors(
     const normalizedBearing = Math.atan2(Math.sin(bearing), Math.cos(bearing));
 
     sensors[SENSOR_INDEX_ENEMY_BEARING] = (normalizedBearing + Math.PI) / twoPi;
-    sensors[SENSOR_INDEX_ENEMY_DISTANCE] = Math.min(1, dist / VISION_RANGE_CELLS);
+    sensors[SENSOR_INDEX_ENEMY_DISTANCE] = Math.min(
+      1,
+      dist / VISION_RANGE_CELLS,
+    );
     const enemyMax = visibleEnemy.maxHealth ?? 100;
     sensors[SENSOR_INDEX_ENEMY_HEALTH] =
       enemyMax > 0
@@ -353,7 +364,8 @@ export function extractSensors(
         : 0;
 
     sensors[SENSOR_INDEX_ENEMY_VISIBLE] = 1;
-    sensors[SENSOR_INDEX_ENEMY_IN_FIRING_ARC] = Math.abs(normalizedBearing) <= FIRING_ARC_HALF_ANGLE ? 1 : 0;
+    sensors[SENSOR_INDEX_ENEMY_IN_FIRING_ARC] =
+      Math.abs(normalizedBearing) <= FIRING_ARC_HALF_ANGLE ? 1 : 0;
   }
 
   // Wall raycasts (4) — N, E, S, W cardinal directions, normalized to [0, 1].

@@ -2,7 +2,7 @@
 description: 'Executor for scoped file edits and patch application under implementation standards.'
 name: implementation-executor
 tier: 2
-model: kimi-k2.7-code:cloud
+model: glm-5.2:cloud
 tools:
   [
     read,
@@ -242,7 +242,7 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 ## If Blocked
 
 - **IF specialist or scout missing:**
-  - Example: `"No regex specialist available. Routing gap to helping-gap-resolution-coordinator. Provisional: manual edit of regex."`
+  - Example: `"No regex specialist available. Routing gap to 00-helping. Provisional: manual edit of regex."`
 - **IF terminal job active:**
   - Example: `"TASK_STATUS: PARTIAL. BLOCKERS: build.sh running, check in 10m, stop if error."`
 - **IF concurrent edits or patch drift create uncertain ownership:**

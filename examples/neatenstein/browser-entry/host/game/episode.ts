@@ -68,7 +68,9 @@ function isFiniteNumber(value: number): boolean {
  * @returns Finite episode seed.
  */
 function resolveEpisodeSeed(seed: number | undefined): number {
-  return typeof seed === 'number' && isFiniteNumber(seed) ? seed : FALLBACK_SEED;
+  return typeof seed === 'number' && isFiniteNumber(seed)
+    ? seed
+    : FALLBACK_SEED;
 }
 
 /**

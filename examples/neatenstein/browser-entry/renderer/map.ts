@@ -49,7 +49,8 @@ function normalizeLcgSeed(seed: number): number {
 
   // Keep negative and oversized seeds deterministic by wrapping them into the
   // valid modulus range.
-  state = ((state % PARK_MILLER_MODULUS) + PARK_MILLER_MODULUS) % PARK_MILLER_MODULUS;
+  state =
+    ((state % PARK_MILLER_MODULUS) + PARK_MILLER_MODULUS) % PARK_MILLER_MODULUS;
 
   return state === 0 ? LCG_MIN_NONZERO_STATE : state;
 }

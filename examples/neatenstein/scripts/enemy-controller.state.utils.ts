@@ -10,7 +10,10 @@
 
 import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../browser-entry/host/game/constants';
 import type { GameState } from '../browser-entry/host/game/types';
-import { ENEMY_CONTROLLER_STARTING_AMMO, PREVIOUS_STEP_DISTANCE_SENTINEL } from './enemy-controller.constants';
+import {
+  ENEMY_CONTROLLER_STARTING_AMMO,
+  PREVIOUS_STEP_DISTANCE_SENTINEL,
+} from './enemy-controller.constants';
 import type { EnemyControllerState } from './enemy-controller.types';
 
 /**

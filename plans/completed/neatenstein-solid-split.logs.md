@@ -18,14 +18,14 @@ modules. No compatibility shims — direct-path migration only.
 
 ## Phases Completed
 
-| Phase | Scope | Outcome |
-|---|---|---|
-| Phase 0 | Validate the pattern (low-risk leaf extractions) | enemy-controller leaf functions, sprites.ts pure guards + atlas caches, floor.ts band/shade/projection executors — all [DONE] |
-| Phase 1 | Renderer layer (isolated consumers) | sprites.ts projection + column utils finished, floor.ts + drawNeatensteinGrid refactored, bolt-render.ts split — all [DONE] |
-| Phase 2 | Host/Game layer | `host/game/tick.ts` split into 9 util files, `host/hud.ts` split into 6 util files + constants — all [DONE] |
-| Phase 3 | Scripts layer (index-alignment contract) | `updateControlledEnemy` decomposed (HIGH risk), `enemy-sprite.ts` utils extracted, `generate-enemy-sprites.ts` split, `enemy-navigation.ts` utils extracted — all [DONE] |
-| Phase 4 | Worker layer (2392-line monster) | `display.worker.ts` 2392→865 lines, pure zero-state executors extracted, render-paint executors extracted, `DisplayWorkerState` introduced with `onmessage` rewrite (HIGH risk) — all [DONE] |
-| Phase 5 | Harness + browser-entry | `enemy-warmstart.ts` split into 3 utils (mlp-math/backprop/curriculum), `browser-entry.ts` split into 3 util files (render-loop, bootstrap, canvas-dimensions) — all [DONE] |
+| Phase   | Scope                                            | Outcome                                                                                                                                                                                      |
+| ------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 0 | Validate the pattern (low-risk leaf extractions) | enemy-controller leaf functions, sprites.ts pure guards + atlas caches, floor.ts band/shade/projection executors — all [DONE]                                                                |
+| Phase 1 | Renderer layer (isolated consumers)              | sprites.ts projection + column utils finished, floor.ts + drawNeatensteinGrid refactored, bolt-render.ts split — all [DONE]                                                                  |
+| Phase 2 | Host/Game layer                                  | `host/game/tick.ts` split into 9 util files, `host/hud.ts` split into 6 util files + constants — all [DONE]                                                                                  |
+| Phase 3 | Scripts layer (index-alignment contract)         | `updateControlledEnemy` decomposed (HIGH risk), `enemy-sprite.ts` utils extracted, `generate-enemy-sprites.ts` split, `enemy-navigation.ts` utils extracted — all [DONE]                     |
+| Phase 4 | Worker layer (2392-line monster)                 | `display.worker.ts` 2392→865 lines, pure zero-state executors extracted, render-paint executors extracted, `DisplayWorkerState` introduced with `onmessage` rewrite (HIGH risk) — all [DONE] |
+| Phase 5 | Harness + browser-entry                          | `enemy-warmstart.ts` split into 3 utils (mlp-math/backprop/curriculum), `browser-entry.ts` split into 3 util files (render-loop, bootstrap, canvas-dimensions) — all [DONE]                  |
 
 ## Final Validation
 

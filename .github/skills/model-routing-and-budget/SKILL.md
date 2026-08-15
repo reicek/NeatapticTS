@@ -54,7 +54,7 @@ to validate.
 Use model-routing-and-budget for the 03-red-testing agent frontmatter.
 Agent: .github/agents/03-red-testing.agent.md.
 Phase: 03 Red Testing.
-Desired tier: Full (GPT-5.4 or Claude Sonnet 4.6).
+Desired tier: Full (glm-5.2:cloud).
 Validation: advisory — confirm qualified name before committing.
 ```
 
@@ -67,36 +67,38 @@ Validation: advisory — confirm qualified name before committing.
    not be written to frontmatter.
 3. Use `glm-5.2:cloud` for coding-heavy implementation and red-test
    synthesis when available.
-4. Use `Claude Sonnet 4.6 (copilot)` for planning, documentation synthesis,
+4. Use `glm-5.2:cloud` for planning, documentation synthesis,
    nuanced maintenance, and ambiguity-heavy coordination when available.
-5. Use `glm-5.2:cloud` for bounded research, validation, and subagent
+5. Use `kimi-k2.7-code:cloud` for bounded research, validation, and subagent
    work where coding or tool strength still matters.
-6. Use `Claude Haiku 4.6 (copilot)` for narrow checklist, summarization, and
-   mechanical assistant work. If the model picker exposes only a different Haiku
-   generation, update the qualified name before strict validation.
+6. Use `kimi-k2.7-code:cloud` for narrow checklist, summarization, and
+   mechanical assistant work.
 7. Write a single qualified model string in `model:`. When repairing a legacy
    array-valued `model`, preserve the first listed entry unless the user
    explicitly requests a different routing decision.
 8. Validate frontmatter shape with
    `node scripts/agent-customization/validate-agent-frontmatter.mjs`.
+9. Additional models may be added to the approved pool only with explicit user
+   approval. Do not introduce unapproved model names into agent frontmatter or
+   this skill's routing tables.
 
 ## Phase Defaults
 
-| Phase             | Tier          | Reason                                                                    |
-| ----------------- | ------------- | ------------------------------------------------------------------------- |
-| 00 Helping        | Sonnet / Full | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
-| 01 Planning       | Sonnet / Full | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
-| 02 Research       | Mini / Haiku  | Retrieval and summarization should be cheap and bounded.                  |
-| 03 Red Testing    | Full          | Test contracts need careful judgment.                                     |
-| 04 Implementation | Full          | Implementation needs deeper reasoning and edge-case handling.             |
-| 05 Green Testing  | Mini / Haiku  | Verification is mostly mechanical.                                        |
-| 06 Documentation  | Sonnet / Mini | Educational docs benefit from stronger writing after facts exist.         |
-| 07 Logging        | Haiku / Mini  | Summarization and tracker updates should be lightweight.                  |
+| Phase             | Tier                 | Reason                                                                    |
+| ----------------- | -------------------- | ------------------------------------------------------------------------- |
+| 00 Helping        | glm-5.2:cloud        | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
+| 01 Planning       | glm-5.2:cloud        | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
+| 02 Research       | kimi-k2.7-code:cloud | Retrieval and summarization should be cheap and bounded.                  |
+| 03 Red Testing    | glm-5.2:cloud        | Test contracts need careful judgment.                                     |
+| 04 Implementation | glm-5.2:cloud        | Implementation needs deeper reasoning and edge-case handling.             |
+| 05 Green Testing  | kimi-k2.7-code:cloud | Verification is mostly mechanical.                                        |
+| 06 Documentation  | glm-5.2:cloud        | Educational docs benefit from stronger writing after facts exist.         |
+| 07 Logging        | kimi-k2.7-code:cloud | Summarization and tracker updates should be lightweight.                  |
 
 ## Decision Tree: Model Selection by Tier
 
 ```text
-Flowchart summary: "Need model for agent" → "What tier?"; "What tier?" → "claude-sonnet-4-20250514" (Tier 0 (Agent Zero)), "claude-sonnet-4-20250514" (Tier 1 (SDLC)), "haiku-3.5 or equivalent" (Tier 2 (Coordinators)), "haiku-3.5 or equivalent" (Tier 3 (Scouts)), "Lightest available model" (Tier 4 (Auxiliaries)); "claude-sonnet-4-20250514"; "haiku-3.5 or equivalent"; "Lightest available model".
+Flowchart summary: "Need model for agent" → "What tier?"; "What tier?" → "glm-5.2:cloud" (Tier 0 (Agent Zero)), "glm-5.2:cloud" (Tier 1 (SDLC)), "kimi-k2.7-code:cloud" (Tier 2 (Coordinators)), "kimi-k2.7-code:cloud" (Tier 3 (Scouts)), "kimi-k2.7-code:cloud" (Tier 4 (Auxiliaries)); "glm-5.2:cloud"; "kimi-k2.7-code:cloud".
 ```
 
 ## Before / After Examples
@@ -114,7 +116,7 @@ model: claude-sonnet
 ```yaml
 ---
 # Qualified name confirmed in the active Copilot client; tier budget matches phase default.
-model: claude-sonnet-4-20250514
+model: glm-5.2:cloud
 ---
 ```
 
@@ -126,8 +128,9 @@ model: claude-sonnet-4-20250514
 - When a model is rejected by the active session, keep that session-local
   restriction out of frontmatter. Under the current cost-tier restriction,
   `GPT-5.5 (copilot)` must not be written to frontmatter.
-- Do not assign a Full-tier model to phases where a Mini or Haiku tier is
-  sufficient; unnecessary cost undermines the budget design.
+- Do not assign a Full-tier model (`glm-5.2:cloud`) to phases where a
+  light-tier model (`kimi-k2.7-code:cloud`) is sufficient; unnecessary cost
+  undermines the budget design.
 - Do not write arrays into `model:` frontmatter in this repo; NeatapticTS
   targets Copilot CLI-compatible scalar model strings.
 - Do not hand-edit qualified names without re-running

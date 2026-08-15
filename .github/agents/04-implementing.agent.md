@@ -2,7 +2,7 @@
 description: 'Implementation orchestrator for scoped code changes via specialists.'
 name: '04-implementing'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: glm-5.2:cloud
 tools:
   [
     read,
@@ -30,35 +30,21 @@ agents:
     'agent-maintenance-coordinator',
     'plan-scout',
     'performance-trace-specialist',
-    'security-reviewer',
-    'performance-reviewer',
-    'api-contract-reviewer',
-    'determinism-reviewer',
-    'dependency-audit-reviewer',
+    'review-coordinator',
   ]
 skills:
   [
     'implementation-standards',
     'solid-split',
-    'nge-core-algorithm',
     'reproducibility-contracts',
     'tracker-handoff',
-    'architecture-builder',
-    'onnx-work',
     'performance-optimization',
-    'trace-analyzer-extension',
-    'worker-inference-transport',
     'research-methodology',
     'execute',
     'browser-testing-harness',
-    'neatchat-systems',
     'mcp-local-server-workflow',
-    'webgpu',
-    'multithread-evaluation',
     'checkpointing-persistence',
     'hybrid-training-interop',
-    'visualizer-workflow',
-    'browser-build',
     'flappy-architecture-polish',
     'security-review',
     'dependency-audit',
@@ -171,22 +157,25 @@ Every slice follows this ordered workflow. Do not skip steps; do not reorder.
    `coverage`, or repo-wide Jest** — those are owned by `05-green-testing`.
 6. **Specialist review (severity-gated, delegate).** Classify the slice via
    `specialist-review-severity.gate.mjs`. **TRIVIAL** slices skip review.
-   **FULL** slices dispatch exactly **1** of the POV reviewers below, chosen by
-   slice risk surface:
-   - `security-reviewer` — auth, secrets, untrusted input, injection surface.
-   - `performance-reviewer` — hot loops, allocation, typed-array/cache paths.
-   - `api-contract-reviewer` — exported signatures, breaking changes, types.
-   - `determinism-reviewer` — RNG/seed, replay, worker ordering, reproducibility.
-   - `dependency-audit-reviewer` — new/changed deps, license/supply-chain risk.
+   **FULL** slices dispatch via `review-coordinator`, which selects the
+   appropriate Tier-3 reviewer from its roster of 8 POV reviewers (5 original +
+   3 domain from Phase 5) based on slice risk surface:
+   - security/auth/secrets/untrusted input → `review-coordinator` routes to `security-reviewer`
+   - hot loops/typed arrays/caches → `review-coordinator` routes to `performance-reviewer`
+   - exported signatures/breaking changes → `review-coordinator` routes to `api-contract-reviewer`
+   - RNG/seed/replay/workers → `review-coordinator` routes to `determinism-reviewer`
+   - new/changed dependencies → `review-coordinator` routes to `dependency-audit-reviewer`
+   - benchmark threshold claims → `review-coordinator` routes to `benchmark-gate-reviewer`
      Dispatch `performance-trace-specialist` separately when a trace is needed to
      confirm a perf claim. The reviewer returns APPROVE or REQUEST_CHANGES.
 7. **Fix loop until APPROVE.** If the reviewer returns REQUEST_CHANGES, append
    a single `fix_packet` block (see `execute` skill Section 5.8) under a
    deterministic fix-packet ID, dispatch a NEW `implementation-executor` with
    only that ID and a RAG load instruction, re-run the targeted preflight, and
-   re-dispatch a fresh reviewer instance. Loop until APPROVE. If fix-loop
-   iterations exceed 4 without a green pass (complex slices only), escalate to
-   `00-helping` via `00-cross-tier-helper` — do not keep spawning executors.
+   re-dispatch a fresh reviewer instance via `review-coordinator`. Loop until
+   APPROVE. If fix-loop iterations exceed 4 without a green pass (complex slices
+   only), escalate to `00-helping` via `00-cross-tier-helper` — do not keep
+   spawning executors.
 8. **Update the plan and hand off.** Append the `PlanUpdate` YAML block,
    preflight evidence, and the list of tests `05-green-testing` should run to
    the active plan's `VALIDATION_EVIDENCE`, then hand off to `05-green-testing`
@@ -411,11 +400,12 @@ Attach this block to the plan and include it in `VALIDATION_EVIDENCE` before inv
 | Plan/slice ambiguity resolution          | `plan-scout`                   | 3    | Resolve plan or slice boundary ambiguity via Cortex RAG; not for code patterns.                       |
 | SOLID module split and folderization     | `solid-split`                  | 2    | Restructure a module into the folder-based layout within plan boundaries.                             |
 | Performance trace confirmation           | `performance-trace-specialist` | 3    | Capture a Chrome DevTools trace to confirm a performance claim.                                       |
-| Security review (FULL slices)            | `security-reviewer`            | 3    | Review auth, secrets, untrusted input, injection surface.                                             |
-| Performance review (FULL slices)         | `performance-reviewer`         | 3    | Review hot loops, allocation, typed-array/cache paths.                                                |
-| API contract review (FULL slices)        | `api-contract-reviewer`        | 3    | Review exported signatures, breaking changes, type contracts.                                         |
-| Determinism review (FULL slices)         | `determinism-reviewer`         | 3    | Review RNG/seed, replay, worker ordering, reproducibility.                                            |
-| Dependency audit (FULL slices)           | `dependency-audit-reviewer`    | 3    | Review new/changed deps, license, and supply-chain risk.                                              |
+| Security review (FULL slices)            | `review-coordinator`           | 2    | Routes to security-reviewer: auth, secrets, untrusted input, injection surface.                       |
+| Performance review (FULL slices)         | `review-coordinator`           | 2    | Routes to performance-reviewer: hot loops, allocation, typed-array/cache paths.                       |
+| API contract review (FULL slices)        | `review-coordinator`           | 2    | Routes to api-contract-reviewer: exported signatures, breaking changes, type contracts.               |
+| Determinism review (FULL slices)         | `review-coordinator`           | 2    | Routes to determinism-reviewer: RNG/seed, replay, worker ordering, reproducibility.                   |
+| Dependency audit (FULL slices)           | `review-coordinator`           | 2    | Routes to dependency-audit-reviewer: new/changed deps, license, and supply-chain risk.                |
+| Benchmark gate review (FULL slices)      | `review-coordinator`           | 2    | Routes to benchmark-gate-reviewer: performance delta vs baseline, benchmark thresholds.               |
 
 ## Escalation Protocol
 
@@ -424,7 +414,7 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 ## If Blocked
 
 - **If specialist or scout missing:**
-  - Example: `"No regex specialist available. Routing gap to helping-gap-resolution-coordinator. Provisional: manual edit of regex."`
+  - Example: `"No regex specialist available. Routing gap to 00-helping. Provisional: manual edit of regex."`
 - **If terminal job active:**
   - Example: `"TASK_STATUS: PARTIAL. BLOCKERS: build.sh running, check in 10m, stop if error."`
 - **If concurrent edits or patch drift create uncertain ownership:**
@@ -495,7 +485,7 @@ red tests: testing/checkpoint/snapshot.test.ts (authored by 03-red-testing)
    adds rolling-window helper, JSDoc on export, removes old flushAll() (No Deferred Cleanup).
 5. preflight: npx tsc --noEmit → OK; npm run quality:folder -- --folder=src/checkpoint → 0 issues;
    npx jest --testPathPattern=testing/checkpoint/snapshot.test.ts → 4/4 pass (targeted smoke only).
-6. severity gate → FULL; risk surface = determinism → dispatch determinism-reviewer.
+6. severity gate → FULL; risk surface = determinism → dispatch via review-coordinator (routes to determinism-reviewer).
    reviewer → APPROVE (seed-stable, no Date.now() in path).
 7. PlanUpdate YAML appended; tests_for_green lists the focused slice + coverage-guard.
 8. handoff → 05-green-testing per frontmatter handoff entry.
@@ -513,7 +503,8 @@ PlanUpdate:
     - 'npm run quality:folder -- --folder=src/checkpoint'
     - 'npx jest --testPathPattern=testing/checkpoint/snapshot.test.ts'
   specialist_review:
-    agent: determinism-reviewer
+    via: review-coordinator
+    routed_to: determinism-reviewer
     verdict: APPROVE
   tests_for_green:
     - 'npx jest --config=jest.config.mjs --no-cache --coverage --testPathPattern=testing/checkpoint/snapshot.test.ts'

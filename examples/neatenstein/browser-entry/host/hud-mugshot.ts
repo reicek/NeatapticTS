@@ -14,10 +14,7 @@ import {
   ROBOT_SPRITE_PALETTE,
   ROBOT_SPRITE_SCALE,
 } from '../../robot-sprite-data.js';
-import {
-  NEATENSTEIN_CANVAS_2D_CONTEXT,
-  RGBA_OPAQUE_ALPHA,
-} from '../constants';
+import { NEATENSTEIN_CANVAS_2D_CONTEXT, RGBA_OPAQUE_ALPHA } from '../constants';
 import {
   CSS_FLEX_0_0_AUTO,
   CSS_HEIGHT_AUTO,
@@ -79,9 +76,12 @@ function computeEyeStripeTint(
   healthRatio: number,
 ): readonly [number, number, number, number] {
   return [
-    MUGSHOT_COLOR_GREY[0] + (MUGSHOT_COLOR_CYAN[0] - MUGSHOT_COLOR_GREY[0]) * healthRatio,
-    MUGSHOT_COLOR_GREY[1] + (MUGSHOT_COLOR_CYAN[1] - MUGSHOT_COLOR_GREY[1]) * healthRatio,
-    MUGSHOT_COLOR_GREY[2] + (MUGSHOT_COLOR_CYAN[2] - MUGSHOT_COLOR_GREY[2]) * healthRatio,
+    MUGSHOT_COLOR_GREY[0] +
+      (MUGSHOT_COLOR_CYAN[0] - MUGSHOT_COLOR_GREY[0]) * healthRatio,
+    MUGSHOT_COLOR_GREY[1] +
+      (MUGSHOT_COLOR_CYAN[1] - MUGSHOT_COLOR_GREY[1]) * healthRatio,
+    MUGSHOT_COLOR_GREY[2] +
+      (MUGSHOT_COLOR_CYAN[2] - MUGSHOT_COLOR_GREY[2]) * healthRatio,
     RGBA_OPAQUE_ALPHA,
   ];
 }

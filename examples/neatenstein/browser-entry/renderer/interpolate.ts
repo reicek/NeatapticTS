@@ -213,7 +213,11 @@ export function lerpNeatensteinState<T extends Record<string, number>>(
 
     if (hasPreviousValue && hasCurrentValue) {
       // Normal path: both snapshots have the field, so blend linearly.
-      const from = readFiniteSnapshotNumber(INTERP_PREVIOUS, key, previous[key]);
+      const from = readFiniteSnapshotNumber(
+        INTERP_PREVIOUS,
+        key,
+        previous[key],
+      );
       const to = readFiniteSnapshotNumber(INTERP_CURRENT, key, current[key]);
 
       result[key] = from + (to - from) * clampedAlpha;

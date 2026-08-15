@@ -6,7 +6,7 @@ description: >
   risk envelope for an ambiguous user request before red tests are authored.
   Pulls current plan state via neataptic-workflow-mcp first; falls back to
   direct file read if unavailable. Invokes planning-risk-coordinator for
-  blast-radius analysis and planning-test-strategy-coordinator for coverage
+  blast-radius analysis and unit-test-writer for coverage
   and validation strategy. Output is a compact criteria block recorded in the
   active plan step so 03-red-testing can use it as a contract.
 
@@ -31,7 +31,6 @@ skills:
 
 specialists:
   - 'planning-risk-coordinator'
-  - 'planning-test-strategy-coordinator'
   - 'acceptance-criteria-writer'
   - 'Plan Scout'
 

@@ -85,9 +85,7 @@ import {
   renderPackedTierColumns,
   fillPackedFrameFields,
 } from './display.worker.render.utils';
-import {
-  buildFallbackAutoTickInput,
-} from './display.worker.auto-ai.utils';
+import { buildFallbackAutoTickInput } from './display.worker.auto-ai.utils';
 import {
   createDisplayWorkerState,
   runSimStep,

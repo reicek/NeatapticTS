@@ -48,22 +48,22 @@
 
 ## Current Validation State
 
-| Check | Result |
-|---|---|
-| `npx tsc --noEmit` | **0 errors** |
-| Jest (full suite) | **1579/1581 pass** (1 pre-existing `eval.worker` GPU type failure, unrelated) |
-| Folder quality metrics | **PASS** |
-| Agent quality gate | **PASS** (16 agents fixed) |
-| Routing table | **Fresh** |
+| Check                  | Result                                                                        |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| `npx tsc --noEmit`     | **0 errors**                                                                  |
+| Jest (full suite)      | **1579/1581 pass** (1 pre-existing `eval.worker` GPU type failure, unrelated) |
+| Folder quality metrics | **PASS**                                                                      |
+| Agent quality gate     | **PASS** (16 agents fixed)                                                    |
+| Routing table          | **Fresh**                                                                     |
 
 ---
 
 ## Plans Archived
 
-| Plan | Destination | Logs |
-|---|---|---|
+| Plan                                              | Destination        | Logs                                             |
+| ------------------------------------------------- | ------------------ | ------------------------------------------------ |
 | `neatenstein-constants-types-extraction.plans.md` | `plans/completed/` | `neatenstein-constants-types-extraction.logs.md` |
-| `neatenstein-solid-split.plans.md` | `plans/completed/` | `neatenstein-solid-split.logs.md` |
+| `neatenstein-solid-split.plans.md`                | `plans/completed/` | `neatenstein-solid-split.logs.md`                |
 
 Both plans confirmed complete (all phases [DONE], terminal status) before
 archival. Matching `.logs.md` files created in `plans/completed/` with durable

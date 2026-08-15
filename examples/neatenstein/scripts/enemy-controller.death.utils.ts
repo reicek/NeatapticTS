@@ -8,8 +8,14 @@
  * @module
  */
 
-import type { ControlledEnemy, EnemyUpdateContext } from './enemy-controller.types';
-import { ENEMY_CONTROLLER_DE_REZ_DURATION_MS, PREVIOUS_STEP_DISTANCE_SENTINEL } from './enemy-controller.constants';
+import type {
+  ControlledEnemy,
+  EnemyUpdateContext,
+} from './enemy-controller.types';
+import {
+  ENEMY_CONTROLLER_DE_REZ_DURATION_MS,
+  PREVIOUS_STEP_DISTANCE_SENTINEL,
+} from './enemy-controller.constants';
 
 /**
  * Handle the death / de-rez branch.

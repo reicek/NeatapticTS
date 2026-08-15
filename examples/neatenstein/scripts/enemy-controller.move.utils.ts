@@ -57,7 +57,9 @@ export function computeMovement(ctx: EnemyUpdateContext): void {
   // navigates by direct vector to the slot target and does not need BFS.
   if (!shouldMoveByFlank && currentDist < 0) return;
 
-  const stepDistance = ENEMY_CONTROLLER_SPEED_CELLS_PER_SECOND * (dtMs / NEATENSTEIN_MS_PER_SECOND);
+  const stepDistance =
+    ENEMY_CONTROLLER_SPEED_CELLS_PER_SECOND *
+    (dtMs / NEATENSTEIN_MS_PER_SECOND);
 
   // Scale nudge magnitude by stepDistance so the correction is visually
   // continuous at high frame rates.
@@ -106,7 +108,9 @@ export function computeMovement(ctx: EnemyUpdateContext): void {
   }
 
   // Sort directions by priority.
-  const directions: Array<[number, number]> = [...DIRECTIONS].map((d) => [...d] as [number, number]);
+  const directions: Array<[number, number]> = [...DIRECTIONS].map(
+    (d) => [...d] as [number, number],
+  );
   if (shouldMoveByFlank) {
     directions.sort(
       (a, b) =>
@@ -474,7 +478,9 @@ function applyBfsStallRecovery(
   cellY: number,
   dtMs: number,
 ): { position: { x: number; y: number }; moved: boolean } {
-  const escapeStep = ENEMY_CONTROLLER_SPEED_CELLS_PER_SECOND * (dtMs / NEATENSTEIN_MS_PER_SECOND);
+  const escapeStep =
+    ENEMY_CONTROLLER_SPEED_CELLS_PER_SECOND *
+    (dtMs / NEATENSTEIN_MS_PER_SECOND);
   for (const [dx, dy] of DIRECTIONS) {
     if (collisionMap.isSolid(cellX + dx, cellY + dy)) {
       continue;

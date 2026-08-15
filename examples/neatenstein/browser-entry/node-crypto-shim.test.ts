@@ -7,9 +7,12 @@ import { SHA256_ALGORITHM, SHA256_ENCODING } from './constants';
  * Known SHA-256 test vectors from NIST FIPS 180-4 and common references.
  * Verified against `node:crypto` output.
  */
-const SHA256_EMPTY = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
-const SHA256_ABC = 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
-const SHA256_HELLO = '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824';
+const SHA256_EMPTY =
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+const SHA256_ABC =
+  'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad';
+const SHA256_HELLO =
+  '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824';
 
 describe('node-crypto-shim', (): void => {
   describe('createHash', (): void => {

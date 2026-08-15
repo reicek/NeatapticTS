@@ -49,7 +49,11 @@ import { NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS } from '../harness/constants';
 import type { CombatQualitySignal } from '../harness/types';
 import { runArmsRaceGeneration } from '../harness/arms-race';
 import { hashSeed } from '../harness/hash-seed';
-import { MAX_NODES, MAX_CONNECTIONS, NEAT_POPSIZE } from './display.worker.constants';
+import {
+  MAX_NODES,
+  MAX_CONNECTIONS,
+  NEAT_POPSIZE,
+} from './display.worker.constants';
 import type { EvalRequestPayload } from './display.worker.types';
 
 /**
@@ -170,11 +174,7 @@ export function __testOnlyGetNeatConstructor(): () => Promise<
 
 self.onmessage = async (event: MessageEvent) => {
   const data = event.data as EvalRequestPayload | null;
-  if (
-    !data ||
-    typeof data !== 'object' ||
-    data.type !== EVAL_MSG_EVALUATE
-  ) {
+  if (!data || typeof data !== 'object' || data.type !== EVAL_MSG_EVALUATE) {
     return;
   }
 

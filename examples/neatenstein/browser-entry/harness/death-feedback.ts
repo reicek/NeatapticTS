@@ -9,10 +9,7 @@
  * @module
  */
 
-import type {
-  GenerationSnapshot,
-  AdaptationSignal,
-} from './types';
+import type { GenerationSnapshot, AdaptationSignal } from './types';
 import {
   ADAPTATION_STRONGER,
   ADAPTATION_WEAKER,

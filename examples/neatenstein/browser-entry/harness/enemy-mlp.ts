@@ -223,7 +223,9 @@ export function interpretMlpOutputs(
   }
   const result: Record<string, number> = {};
   for (let i = 0; i < labels.length; i++) {
-    result[labels[i]] = Number(Number(outputs[i]).toPrecision(OUTPUT_PRECISION));
+    result[labels[i]] = Number(
+      Number(outputs[i]).toPrecision(OUTPUT_PRECISION),
+    );
   }
   return result;
 }

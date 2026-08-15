@@ -286,7 +286,11 @@ export function networkOutputToTickInput(
         ];
 
   const fire = fireGate
-    ? applyFireGate(fireGate.state, fireGate.enemyVisible, out[NEAT_OUTPUT_INDEX_FIRE])
+    ? applyFireGate(
+        fireGate.state,
+        fireGate.enemyVisible,
+        out[NEAT_OUTPUT_INDEX_FIRE],
+      )
     : out[NEAT_OUTPUT_INDEX_FIRE] > 0;
 
   return {
