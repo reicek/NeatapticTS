@@ -19,7 +19,9 @@ tools:
     neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
+argument-hint: 'Describe the slice ID or plan step to implement, the files in scope, and whether tests already exist or need a red phase first.'
 disable-model-invocation: false
+target: vscode
 agents:
   [
     'implementation-pattern-scout',

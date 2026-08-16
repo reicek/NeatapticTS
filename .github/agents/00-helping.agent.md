@@ -20,7 +20,9 @@ tools:
     neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
+argument-hint: 'Describe the workflow gap, blocker, routing issue, or escalation that needs cross-tier resolution, and whether it requires investigation, a fix, or guidance.'
 disable-model-invocation: false
+target: vscode
 agents:
   [
     agent-maintenance-coordinator,

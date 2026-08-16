@@ -11,6 +11,11 @@ import {
   writeReport,
 } from './customization-utils.mjs';
 
+// Ensure stdout uses UTF-8 encoding so non-ASCII characters (e.g. ≤, —) in
+// parsed frontmatter are not corrupted to '?' on hosts with a non-UTF-8
+// console code page (notably Windows PowerShell with OEM code page 437).
+process.stdout.setDefaultEncoding('utf8');
+
 const options = parseArgs(process.argv.slice(2));
 
 const strictVisibleAgentPathsByName = new Map([
@@ -98,6 +103,7 @@ const strictTier2StructuredFields = [
   'SUMMARY',
 ];
 const strictAllowedModels = new Set(['glm-5.2:cloud', 'kimi-k2.7-code:cloud']);
+const allowedTargetValues = new Set(['vscode', 'github-copilot']);
 
 if (options.help) {
   printUsage({
@@ -190,6 +196,19 @@ function validateAgent(agent, agents, skillNames, { strict }) {
         '`disable-model-invocation` must be a boolean.',
       ),
     );
+  }
+  if ('target' in data) {
+    if (typeof data.target !== 'string') {
+      issues.push(issue('error', relativePath, '`target` must be a string.'));
+    } else if (!allowedTargetValues.has(data.target)) {
+      issues.push(
+        issue(
+          'error',
+          relativePath,
+          `\`target\` must be one of: ${[...allowedTargetValues].join(', ')}.`,
+        ),
+      );
+    }
   }
   if ('tools' in data && !Array.isArray(data.tools)) {
     issues.push(

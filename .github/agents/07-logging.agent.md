@@ -18,9 +18,16 @@ tools:
     neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
+argument-hint: 'Describe the session or phase to log, the changed files, validation evidence, and whether this is a session summary or phase compression.'
 disable-model-invocation: false
+target: vscode
 agents:
-  ['plan-scout', 'learning-event-capturer', 'agent-maintenance-coordinator']
+  [
+    'plan-scout',
+    'learning-event-capturer',
+    'agent-maintenance-coordinator',
+    'session-summarizer',
+  ]
 skills:
   [
     'tracker-handoff',

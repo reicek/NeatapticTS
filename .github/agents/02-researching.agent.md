@@ -20,7 +20,9 @@ tools:
     neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
+argument-hint: 'Describe the research target, the question to answer, relevant files or modules to investigate, and whether this is codebase exploration, prior art, or dependency analysis.'
 disable-model-invocation: false
+target: vscode
 triggers:
   - research
   - boundary

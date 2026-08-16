@@ -13,6 +13,8 @@ tools:
     neataptic-workflow-mcp/*,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: [repo-cortex-workflow, repo-cortex-embeddings, research-methodology]
 ---

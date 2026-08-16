@@ -19,10 +19,13 @@ tools:
     neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
+argument-hint: 'Describe the documentation target, whether this is JSDoc, README generation, examples, or changelog work, and the source files to document.'
 disable-model-invocation: false
+target: vscode
 agents:
   [
     'docs-scout',
+    'docs-writer',
     'plan-scout',
     'browser-harness-specialist',
     'agent-maintenance-coordinator',

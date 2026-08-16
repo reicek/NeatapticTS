@@ -15,6 +15,8 @@ tools:
     devtools/devtools,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: [chrome-devtools-mcp, research-methodology]
 ---

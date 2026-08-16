@@ -20,7 +20,9 @@ tools:
     devtools/devtools,
   ]
 user-invocable: true
+argument-hint: 'Describe the slice or step to validate, the changed files, the acceptance criteria, and whether coverage-guard or full regression is required.'
 disable-model-invocation: false
+target: vscode
 agents:
   [
     'performance-trace-specialist',

@@ -16,6 +16,7 @@ tools:
   ]
 user-invocable: false
 disable-model-invocation: false
+target: vscode
 agents:
   [
     'security-reviewer',
@@ -24,6 +25,9 @@ agents:
     'api-contract-reviewer',
     'dependency-audit-reviewer',
     'benchmark-gate-reviewer',
+    'evolution-correctness-reviewer',
+    'onnx-parity-reviewer',
+    'webgpu-parity-reviewer',
   ]
 skills:
   [
@@ -43,10 +47,9 @@ skills:
 ## Role
 
 **Tier-2 named coordinator** for pre-green specialist reviews. Holds the
-repository's 6 existing Tier-3 reviewers and will hold 3 additional domain
-reviewers created in Phase 5 (evolution-correctness, onnx-parity, webgpu-parity)
-for a total of 9. Selects and dispatches the appropriate reviewer based on
-slice domain and severity classification.
+repository's Tier-3 reviewers (6 original + 3 Phase 5 domain additions) for a
+total of 9 once all Phase 5 agents are created. Selects and dispatches the
+appropriate reviewer based on slice domain and severity classification.
 
 This coordinator is **delegated by** two Tier-1 consumers:
 
@@ -65,7 +68,7 @@ coordinator forwards that verdict back to the calling orchestrator.
 
 ## Reviewer Roster
 
-### Current (6 reviewers)
+### Current (7 reviewers)
 
 | Reviewer                    | Domain                                                 |
 | --------------------------- | ------------------------------------------------------ |
@@ -75,16 +78,16 @@ coordinator forwards that verdict back to the calling orchestrator.
 | `api-contract-reviewer`     | Exported signatures, breaking changes, type contracts. |
 | `dependency-audit-reviewer` | New/changed deps, license/supply-chain risk.           |
 | `benchmark-gate-reviewer`   | Performance delta vs baseline, benchmark thresholds.   |
+| `onnx-parity-reviewer`      | ONNX export/import roundtrip fidelity.                 |
 
-### Phase 5 additions (3 domain reviewers)
+### Phase 5 additions (2 remaining domain reviewers)
 
 | Reviewer                         | Domain                                          |
 | -------------------------------- | ----------------------------------------------- |
 | `evolution-correctness-reviewer` | NGE/NEAT algorithm correctness, DNA, lifecycle. |
-| `onnx-parity-reviewer`           | ONNX export/import roundtrip fidelity.          |
 | `webgpu-parity-reviewer`         | WebGPU CPU-vs-GPU parity, kernel correctness.   |
 
-Total: 9 reviewers (6 current + 3 Phase 5 domain).
+Total: 9 reviewers (7 current + 2 remaining Phase 5 domain).
 
 ## Selection Logic
 

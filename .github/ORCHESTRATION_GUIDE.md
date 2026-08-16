@@ -43,7 +43,15 @@ Delegation is strictly downward. No T1→T1. Agent Zero manages the main loop; T
 | `COPILOT_SUBAGENT_MAX_DEPTH` | 6 | Max delegation chain depth |
 
 ## Model Resolution Note
-Agent `model:` frontmatter fields use `glm-5.2:cloud` (local Ollama, free) and `kimi-k2.7-code:cloud` (Copilot cloud). The CLI may append `(ollama)` suffix for local models. If dispatch returns 400 errors, verify the model name is valid. Per-dispatch override is available via the `task` tool's `model` parameter. See `agent-model-reference.md`.
+
+`model:` is a **retained local extension** — it is not part of the standard
+Copilot agent frontmatter spec, but NeatapticTS keeps it on all agents for
+per-agent model routing. The CLI honors it for local dispatch; per-dispatch
+override is available via the `task` tool's `model` parameter. Agent `model:`
+frontmatter fields use `glm-5.2:cloud` (local Ollama, free) and
+`kimi-k2.7-code:cloud` (Copilot cloud). The CLI may append `(ollama)` suffix
+for local models. If dispatch returns 400 errors, verify the model name is
+valid. See `agent-model-reference.md`.
 
 ## Tool Aliases
 Some aliases may not resolve in all CLI versions. Use explicit names: `view` (not `read`), `grep` (not `search`), `powershell` (not `execute`), `task` (not `agent`), SQL `todos` (not `todo`).

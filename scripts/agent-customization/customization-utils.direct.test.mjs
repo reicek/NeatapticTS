@@ -118,13 +118,19 @@ describe('parseArgs', () => {
 describe('report helpers', () => {
   /** @type {jest.SpyInstance} */
   let logSpy;
+  /** @type {jest.SpyInstance} */
+  let stdoutSpy;
 
   beforeEach(() => {
     logSpy = jest.spyOn(global.console, 'log').mockImplementation(() => {});
+    stdoutSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
   });
 
   afterEach(() => {
     logSpy.mockRestore();
+    stdoutSpy.mockRestore();
   });
 
   it('printUsage writes the title, usage, and options', () => {
@@ -147,14 +153,32 @@ describe('report helpers', () => {
       { json: false },
     );
 
-    expect(logSpy).toHaveBeenCalledWith('PASS demo');
+    expect(stdoutSpy).toHaveBeenCalledWith('PASS demo\n', 'utf8');
   });
 
   it('writeReport serializes the full report when json is true', () => {
     const report = { ok: false, name: 'demo', issues: [] };
     writeReport(report, { json: true });
 
-    expect(logSpy).toHaveBeenCalledWith(JSON.stringify(report, null, 2));
+    expect(stdoutSpy).toHaveBeenCalledWith(
+      JSON.stringify(report, null, 2) + '\n',
+      'utf8',
+    );
+  });
+
+  it('writeReport preserves non-ASCII characters in JSON output', () => {
+    const report = {
+      ok: true,
+      name: 'charset-test',
+      description: 'Verify \u22643 files \u2014 no corruption',
+    };
+    writeReport(report, { json: true });
+
+    const expectedJson = JSON.stringify(report, null, 2) + '\n';
+    expect(stdoutSpy).toHaveBeenCalledWith(expectedJson, 'utf8');
+    expect(expectedJson).toContain('\u2264');
+    expect(expectedJson).toContain('\u2014');
+    expect(expectedJson).not.toContain('?');
   });
 });
 
@@ -293,6 +317,18 @@ describe('parseFrontmatter', () => {
     const result = parseFrontmatter('\uFEFF---\nname: demo\n---\n', 'test.md');
 
     expect(result.data.name).toBe('demo');
+  });
+
+  it('preserves non-ASCII characters (\u2264, \u2014) in parsed values', () => {
+    const result = parseFrontmatter(
+      '---\nname: test\ndescription: Foo \u22643 files \u2014 bar\n---\n',
+      'test.md',
+    );
+
+    expect(result.data.description).toBe('Foo \u22643 files \u2014 bar');
+    expect(result.data.description).toContain('\u2264');
+    expect(result.data.description).toContain('\u2014');
+    expect(result.data.description).not.toContain('?');
   });
 
   it('parses a multi-line bracketed array starting on the same line', () => {

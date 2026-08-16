@@ -16,6 +16,8 @@ tools:
 agents: []
 skills: ['capturing-learning-event']
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT

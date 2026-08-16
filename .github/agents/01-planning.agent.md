@@ -19,7 +19,9 @@ tools:
     neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
+argument-hint: 'Describe the request, goal, constraints, acceptance criteria, and any existing plan file to create or update.'
 disable-model-invocation: false
+target: vscode
 agents: ['plan-scout', 'agent-maintenance-coordinator']
 skills:
   [

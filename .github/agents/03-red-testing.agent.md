@@ -20,7 +20,9 @@ tools:
     devtools/devtools,
   ]
 user-invocable: true
+argument-hint: 'Describe the feature or slice to test, the expected behavior, the test boundary, and any existing fixtures or mocks to reuse.'
 disable-model-invocation: false
+target: vscode
 agents:
   [
     'unit-test-writer',

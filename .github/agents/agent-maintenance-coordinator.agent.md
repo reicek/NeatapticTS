@@ -30,6 +30,8 @@ skills:
     splitting-monolithic-agent,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 ---
 
 # agent-maintenance-coordinator
@@ -134,12 +136,14 @@ tools: [read, edit, search, execute, agent, cortex/cortex, neataptic-gate-mcp/*]
 agents: [<explicit child allow-list, or [] for leaf agents>]
 skills: [<skill bindings, or [] if none yet>]
 user-invocable: false
+disable-model-invocation: false
 ---
 ```
 
 Rules: include `agent` in `tools` whenever `agents` is non-empty; keep
 `skills: []` explicit even when empty; set `user-invocable: true` only for the
-eight numbered Tier-1 orchestrators; use inline arrays `[a, b, c]`.
+eight numbered Tier-1 orchestrators; set `disable-model-invocation: false` on
+all agents (model delegation is always enabled); use inline arrays `[a, b, c]`.
 
 ## Routing-Table Regen Flow
 

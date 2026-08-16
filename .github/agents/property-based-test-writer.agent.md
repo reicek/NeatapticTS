@@ -15,6 +15,8 @@ tools:
     neataptic-workflow-mcp/*,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: ['property-based-testing', 'red-test-contracts', 'creating-unit-tests']
 ---

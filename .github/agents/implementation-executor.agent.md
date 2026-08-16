@@ -19,6 +19,7 @@ tools:
   ]
 user-invocable: false
 disable-model-invocation: false
+target: vscode
 agents: ['boundary-mapper', 'docs-scout']
 skills: ['implementation-standards', 'coverage-guard', 'execute']
 handoffs:
