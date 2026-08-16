@@ -83,7 +83,7 @@ Before any codebase search, run `neataptic-gate-mcp:run_gate_check --gate=cortex
 
 If blocked, return PARTIAL status with the blocker description. Only escalate to the parent Tier 1 agent when a genuine technical limit blocks progress. No concessions.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

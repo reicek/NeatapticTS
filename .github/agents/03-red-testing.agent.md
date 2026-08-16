@@ -1,5 +1,5 @@
 ﻿---
-description: 'Red-test orchestrator for failing tests, fixtures, mocks, and coverage strategy.'
+description: 'Use when: authoring failing tests, fixtures, mocks, or coverage strategy for a slice.'
 name: '03-red-testing'
 tier: 1
 model: glm-5.2:cloud
@@ -177,7 +177,7 @@ Before completing any task, run the `slice-advancement` consolidated gate via `n
 
 **NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually.**
 
-## Default Flow — Red-Phase Pipeline
+## Default Flow
 
 This is the concrete RED pipeline. Each step delegates to a named sub-agent; the orchestrator confirms RED before handing off to `04-implementing`.
 
@@ -335,9 +335,9 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 - **No focused test writer, fixture, or assertion skill fits:**
   - Example: "No skill found for writing assertion on new data type. Delegating gap to 00-helping."
 - **Smallest failing surface depends on unclear test type, unstable data, or missing cleanup:**
-  - Example: "Test type ambiguous, fixture unstable, cleanup missing. TASK_STATUS: PARTIAL. Documenting and escalating via '00-cross-tier-helper'."
+  - Example: "Test type ambiguous, fixture unstable, cleanup missing. TASK_STATUS: PARTIAL. Documenting and escalating via '00.cross-tier-helper'."
 - **Behavior cannot be isolated to a single failing assertion:**
-  - Example: "Multiple behaviors fail together, cannot isolate single assertion. TASK_STATUS: PARTIAL. Documenting and escalating via '00-cross-tier-helper'."
+  - Example: "Multiple behaviors fail together, cannot isolate single assertion. TASK_STATUS: PARTIAL. Documenting and escalating via '00.cross-tier-helper'."
 
 ## References
 
@@ -347,7 +347,7 @@ Reference: property-based-testing — canonical property/fuzz test shapes and sh
 Reference: boundary-mapper — owner-local test file and source-boundary mapping.
 Reference: slice-validator — focused red-run confirmation and slice validation.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

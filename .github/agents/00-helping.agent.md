@@ -1,5 +1,5 @@
 ﻿---
-description: 'Cross-tier helper for AI system maintenance, workflow gaps, and CI.'
+description: 'Use when: cross-tier help is needed for AI system maintenance, workflow gaps, or CI issues.'
 name: '00-helping'
 tier: 1
 model: glm-5.2:cloud
@@ -273,14 +273,14 @@ While inspecting plan state, an uncompressed `[DONE]` phase is found.
 
 ## Delegation Targets
 
-| Task Type                      | Primary Delegation Target               | Tier |
-| ------------------------------ | --------------------------------------- | ---- |
-| Workflow gap diagnosis         | `00-helping` (self-owned)               | 1    |
-| Agent/skill frontmatter repair | `helping-agent-maintenance-coordinator` | 2    |
-| MCP runtime visibility gaps    | `mcp-local-server-workflow` skill       | —    |
-| Agent frontmatter validation   | `agent-frontmatter-auditor`             | 3    |
-| Skill frontmatter validation   | `skill-frontmatter-auditor`             | 3    |
-| Model name validation          | `model-name-auditor`                    | 3    |
+| Task Type                      | Primary Delegation Target         | Tier |
+| ------------------------------ | --------------------------------- | ---- |
+| Workflow gap diagnosis         | `00-helping` (self-owned)         | 1    |
+| Agent/skill frontmatter repair | `agent-maintenance-coordinator`   | 2    |
+| MCP runtime visibility gaps    | `mcp-local-server-workflow` skill | —    |
+| Agent frontmatter validation   | `frontmatter-auditor`             | 3    |
+| Routing table freshness        | `agent-maintenance-coordinator`   | 2    |
+| Cortex index gaps              | `repo-cortex-scout`               | 3    |
 
 ## Escalation Protocol
 
@@ -303,7 +303,7 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 Reference: agent-frontmatter-standards — canonical agent frontmatter shape and validation.
 Reference: phase-handoff-workflow — canonical phase ordering and handoff mechanics.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

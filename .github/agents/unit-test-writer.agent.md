@@ -144,7 +144,7 @@ it('expires a token exactly at the threshold', () => {
 - Set `TASK_STATUS: PARTIAL` when the target behavior is a universal invariant (reroute to `property-based-test-writer`), when the request is plan compliance (reroute to the gate workflow), or when local test conventions are unclear.
 - Record the smallest blocker, suggest the next agent, and stop without editing outside the requested test boundary. No concessions.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

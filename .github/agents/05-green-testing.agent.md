@@ -1,5 +1,5 @@
 ﻿---
-description: 'Green-test orchestrator for validation, triage, and regression fixes.'
+description: 'Use when: validating a slice, triaging failures, or fixing regressions.'
 name: '05-green-testing'
 tier: 1
 model: kimi-k2.7-code:cloud
@@ -319,6 +319,14 @@ semantic-index inputs were touched). Every gate result MUST be recorded in
   confirm `pass: true` before marking the step `[DONE]`.
 - `specialist-review` — for FULL slices that require Tier-3 specialist sign-off;
   run via `slice-advancement` when the slice declares specialist review.
+  **Gate ownership:** `specialist-review` is owned by `review-coordinator`,
+  which selects and dispatches the single Tier-3 reviewer for each FULL slice.
+- `convergence-tracker` — **owned by `05-green-testing`**. This gate scans
+  the plan's `## Latest validation evidence` section for `fix-loop:` markers,
+  counts iterations per slice, and escalates to `00-helping` when the count
+  exceeds 4 without a `passed` marker. Run before any loop-back dispatch to
+  `04-implementing` for complex slices:
+  `node scripts/agent-customization/gates/convergence-tracker.gate.mjs --json --slice-id=<slice_id>`.
 - `slice-advancement` — after updating the plan with validation results
   (consolidates `plan-sync` + `step-packet` + `plan-slice-quality` +
   `plan-command-lint`, and for FULL slices `shared-validation` + `code-coverage` +
@@ -453,17 +461,17 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 
 - **Route repeated, malformed, or uncovered validation patterns to 00-helping.**
   - Example: "Validation script failed with unknown error. Routed to 00-helping for workflow improvement."
-- **If failure is intermittent after reruns, set TASK_STATUS: PARTIAL, capture rerun evidence, note environment/flake boundary, and delegate to `determinism-reviewer` for seed/replay analysis or escalate via 00-cross-tier-helper.**
+- **If failure is intermittent after reruns, set TASK_STATUS: PARTIAL, capture rerun evidence, note environment/flake boundary, and delegate to `determinism-reviewer` for seed/replay analysis or escalate via 00.cross-tier-helper.**
   - Example: "Test 'should save agent' failed 2/3 times. TASK_STATUS: PARTIAL. Evidence and logs attached. Delegated to determinism-reviewer."
-- **If a required gate tool is unavailable or ambiguous, set TASK_STATUS: PARTIAL, document the stall, and escalate via 00-cross-tier-helper.**
-  - Example: "coverage-guard tool not found. TASK_STATUS: PARTIAL. Escalated via 00-cross-tier-helper."
+- **If a required gate tool is unavailable or ambiguous, set TASK_STATUS: PARTIAL, document the stall, and escalate via 00.cross-tier-helper.**
+  - Example: "coverage-guard tool not found. TASK_STATUS: PARTIAL. Escalated via 00.cross-tier-helper."
 
 ## References
 
 Reference: green-validation-gates — canonical green validation gate contracts.
 Reference: coverage-guard — canonical coverage enforcement for touched src/ files.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

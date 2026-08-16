@@ -24,8 +24,6 @@ skills: [coverage-guard, coverage-tranche]
 
 **NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
 
-# coverage-analyst
-
 ## Purpose
 
 Coverage-gap, dead-code, and test-mapping analyst for `src/` files. This
@@ -165,7 +163,7 @@ the next tranche or verify post-change regression. Uses the `coverage-tranche`
 skill for forward discovery and the `coverage-guard` skill for the
 post-change regression check. This agent delegates nothing (`agents: []`).
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

@@ -183,7 +183,7 @@ verification) to confirm slice compliance before phase work proceeds. Uses the
 `plan-sync-validation` skill for plan-tracker alignment. This agent delegates
 nothing (`agents: []`).
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

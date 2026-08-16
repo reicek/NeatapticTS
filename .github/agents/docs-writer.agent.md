@@ -196,7 +196,7 @@ implementing/planning agent that advances the slice.
 - Record the smallest blocker, suggest the next agent, and stop without
   broadening scope.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

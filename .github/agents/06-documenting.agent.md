@@ -1,5 +1,5 @@
 ﻿---
-description: 'Documentation orchestrator for docs, JSDoc, examples, and changelogs.'
+description: 'Use when: writing docs, JSDoc, examples, or changelogs.'
 name: '06-documenting'
 tier: 1
 model: kimi-k2.7-code:cloud
@@ -298,10 +298,10 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 
 - **If a documentation gap is reusable, route to 00-helping to create a skill or specialist before continuing.**
   - Example: "Repeated missing citation for new features. Routed to 00-helping for reusable citation skill."
-- **If deprecation state, removal scope, or translation ownership is unclear, set `TASK_STATUS: PARTIAL` and escalate via 00-cross-tier-helper instead of guessing a support promise.**
-  - Example: "Deprecation tag unclear for function X. TASK_STATUS: PARTIAL. Escalated via 00-cross-tier-helper."
-- **If generated doc outputs conflict with source changes and cannot be resolved locally, set `TASK_STATUS: PARTIAL` and escalate via 00-cross-tier-helper with conflict details.**
-  - Example: "Generated README.md does not match updated JSDoc. TASK_STATUS: PARTIAL. Escalated via 00-cross-tier-helper with conflict details."
+- **If deprecation state, removal scope, or translation ownership is unclear, set `TASK_STATUS: PARTIAL` and escalate via 00.cross-tier-helper instead of guessing a support promise.**
+  - Example: "Deprecation tag unclear for function X. TASK_STATUS: PARTIAL. Escalated via 00.cross-tier-helper."
+- **If generated doc outputs conflict with source changes and cannot be resolved locally, set `TASK_STATUS: PARTIAL` and escalate via 00.cross-tier-helper with conflict details.**
+  - Example: "Generated README.md does not match updated JSDoc. TASK_STATUS: PARTIAL. Escalated via 00.cross-tier-helper with conflict details."
 
 ## References
 
@@ -314,7 +314,7 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 - [Generated README source mapping checklist](../skills/educational-docs/assets/source-mapping-checklist.md) — source-to-README trace rules.
 - `.github/agent-skill-routing-table.md` — canonical agent/skill delegation lookup.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

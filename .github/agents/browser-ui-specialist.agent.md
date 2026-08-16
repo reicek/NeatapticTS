@@ -167,7 +167,7 @@ Example result produced by the UI inspection workflow. Summarize — do not dump
 }
 ```
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

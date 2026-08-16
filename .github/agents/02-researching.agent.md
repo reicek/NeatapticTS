@@ -1,5 +1,5 @@
 ﻿---
-description: 'Research orchestrator for codebase patterns, APIs, dependencies, and prior art.'
+description: 'Use when: researching codebase patterns, APIs, dependencies, or prior art.'
 name: '02-researching'
 tier: 1
 model: kimi-k2.7-code:cloud
@@ -23,21 +23,6 @@ user-invocable: true
 argument-hint: 'Describe the research target, the question to answer, relevant files or modules to investigate, and whether this is codebase exploration, prior art, or dependency analysis.'
 disable-model-invocation: false
 target: vscode
-triggers:
-  - research
-  - boundary
-  - scout
-  - prior-art
-  - integration-surface
-schemas:
-  - schemas/structured-v1.json
-expected_output: structured-v1
-tool_restrictions:
-  edit: 'plans/*.md'
-  execute: 'node .github/hooks/workflow-update-sync.mjs'
-pre_action_script: scripts/validate-structured-v1.mjs
-examples:
-  - examples/structured-v1-example.md
 agents:
   [
     'plan-scout',
@@ -283,7 +268,7 @@ SUGGESTED_NEXT_AGENT: 03-red-testing
 
 The matching research artifact is written to `plans/<PlanName>.research.md` with the required sections: **Question**, **Evidence**, **Decision**, **Risks**.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

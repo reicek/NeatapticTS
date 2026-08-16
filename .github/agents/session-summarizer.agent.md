@@ -169,7 +169,7 @@ SESSION_SUMMARY:
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

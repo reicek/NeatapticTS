@@ -86,7 +86,7 @@ Run `neataptic-gate-mcp:run_gate_check --gate=cortex-index` before any codebase 
 
 If an advisory database is unreachable, record it as a tooling gap and report PARTIAL; do not approve a risky dependency without verification. Only escalate to the parent Tier 1 agent when a genuine technical limit blocks progress. No concessions.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

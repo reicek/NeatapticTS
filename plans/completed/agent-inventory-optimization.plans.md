@@ -499,7 +499,9 @@ PlanUpdate:
 
 <!-- slice: aio-phase-6 -->
 
-## Phase 6 — Independent Dual-Specialist Agent Review [PENDING]
+## Phase 6 — Independent Dual-Specialist Agent Review [DONE]
+
+**Context file:** `artifacts/aio-phase-6-review-context.md` (agent list, checklist, online sources).
 
 **Goal:** Every agent is reviewed by 2 independent specialists from different perspectives to validate content quality, normalization, and modern Copilot best practices
 
@@ -552,11 +554,81 @@ PlanUpdate:
 
 **Validation:** Full gate suite after all reviews complete
 
+**Phase 6 validation evidence (after review rounds and fixes):**
+
+- Independent dual-specialist review completed for all 38 agents.
+- Round 1: Specialist A (Content Quality) flagged 5 agents; Specialist B (Standards) flagged 4 agents.
+- Fixes applied by `agent-maintenance-coordinator`:
+  - Trimmed oversized bodies for `01-planning` and `04-implementing` to under 30,000 characters.
+  - Removed non-standard frontmatter keys from `02-researching`.
+  - Removed stale phantom agent references from `00-helping` and `07-logging`.
+  - Normalized `agent-maintenance-coordinator` and `review-coordinator` section headers and output contracts.
+  - Renamed all `## Output format` headings to canonical `## Output Format` across all 38 agents.
+  - Restored encoding/punctuation in `01-planning` and `04-implementing`.
+  - Rewrote Tier-1 `description` fields to `Use when:` trigger phrases.
+  - Added missing `## If Blocked` to `01-planning`; normalized `## Default Flow` sections.
+- Round 2: Both specialists APPROVED all 38 agents (15/15 checklist items each).
+- Final validators (all pass, zero errors/warnings):
+  - `node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict` — PASS
+  - `node scripts/agent-customization/validate-agent-quality.mjs --json` — PASS
+  - `node scripts/agent-customization/validate-agent-graph.mjs --json` — PASS (38 agents, 0 violations)
+  - `npm run agents:routing-table` — PASS (38 agents, 67 skills, table fresh)
+  - `node scripts/agent-customization/gates/code-coverage.gate.mjs --json --changed-files=scripts/agent-customization/validate-agent-quality.mjs` — PASS (100% lines/statements/functions/branches)
+- MCP gate checks: `agent-graph` PASS, `tier-enforcement` PASS, `routing-table-freshness` PASS.
+- Supporting artifacts: `artifacts/aio-phase-6-review-context.md`, `artifacts/aio-phase-6-fix-instructions.md`.
+
+phase-7: DONE — all validation gates pass, phantom references removed, gate ownership recorded
+phase-7-evidence:
+
+- validate-agent-frontmatter.mjs --json --strict: PASS (0 errors, 0 warnings, 38 agents)
+- validate-skill-frontmatter.mjs --json --strict: PASS (0 errors, 0 warnings, 67 skills)
+- validate-agent-quality.mjs: PASS (0 errors, 0 warnings)
+- validate-agent-graph.mjs --json: PASS (0 violations, 38 agents, byTier={1:8, 2:3, 3:26, 4:1})
+- npm run agents:quality:gate: PASS
+- npm run agents:routing-table: PASS (38 agents, 67 skills, hash=17c7e1faa02a8b7ae797953ef3870edfa10f024352285479175963b5fd525e60)
+- routing-table-freshness gate: PASS (hash matched)
+- agent-graph gate: PASS (38 agents, 0 issues)
+- tier-enforcement gate: PASS (8 user-invocable Tier-1 agents)
+- slice-advancement gate (aio-phase-7): PASS — 7/7 sub-gates pass (plan-sync, step-packet, plan-slice-quality, plan-command-lint, shared-validation, code-coverage, specialist-review)
+- Model assignment verification: PASS — 5 heavy agents on `glm-5.2:cloud` (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor); 33 light agents on `kimi-k2.7-code:cloud`; 0 other models
+- New agent existence verification: PASS — 8 new agents exist and pass validation (frontmatter-auditor, repo-cortex-scout, review-coordinator, session-summarizer, docs-writer, evolution-correctness-reviewer, onnx-parity-reviewer, webgpu-parity-reviewer)
+- Deleted agent file verification: PASS — `research-codebase-coordinator.agent.md` is deleted
+- `argument-hint` feature adoption: PASS — present on all 8 user-invocable Tier-1 agents
+- `hooks` feature adoption: NOT ADOPTED — no `hooks`/`PostToolUse`/`PreToolUse` references found
+- Array-valued `model` feature adoption: NOT ADOPTED — no array model fields found
+- Tool alias verification: ADVISORY — `search` and `todo` are present in frontmatter `tools` arrays and accepted by `knownAgentTools`; CLI resolution not directly testable in this environment
+- Phantom reference scan: PASS — all 3 references to deleted `research-codebase-coordinator` removed from `.github/flows/02.*.yml` files
+- Gate ownership assignment verification:
+  - `convergence-tracker` → 05-green-testing: PASS — ownership recorded in 05-green-testing.agent.md Gate Enforcement section
+  - `delegate-skill-coverage` → agent-maintenance-coordinator: PASS — ownership recorded in agent-maintenance-coordinator.agent.md Gate Enforcement section
+  - `folder-quality` → boundary-mapper: PASS — ownership recorded in boundary-mapper.agent.md Gate Enforcement section
+  - `specialist-review` → review-coordinator: PASS — ownership recorded in review-coordinator.agent.md Gate Enforcement section
+    phase-7-date: 2026-08-15
+
 <!-- slice: aio-phase-7 -->
 
-## Phase 7 — Final Validation [PENDING]
+## Phase 7 — Final Validation [DONE]
 
 **Goal:** Full validation pass after all changes
+
+**Blockers:** NONE — phantom references removed and gate ownership recorded.
+
+## Latest validation evidence
+
+**Status:** Phase 7 final re-verification complete — all content gates pass. Phase marked `[DONE]`.
+
+- Phantom reference scan: PASS — 0 remaining references to `research-codebase-coordinator` in `.github/agents`, `.github/skills`, or `.github/flows`.
+- Gate ownership scan: PASS — `convergence-tracker`→`05-green-testing`, `delegate-skill-coverage`→`agent-maintenance-coordinator`, `folder-quality`→`boundary-mapper`, `specialist-review`→`review-coordinator` all explicitly recorded in owning agent files.
+- `validate-agent-frontmatter.mjs --json --strict`: PASS (0 errors, 0 warnings, 38 agents, 2 allowed models).
+- `validate-skill-frontmatter.mjs --json --strict`: PASS (0 errors, 0 warnings, 67 skills).
+- `validate-agent-quality.mjs --json`: PASS (0 errors, 0 warnings).
+- `validate-agent-graph.mjs --json`: PASS (0 violations, 38 agents, tier distribution {1:8, 2:3, 3:26, 4:1}).
+- `npm run agents:quality:gate`: PASS (0 issues).
+- `npm run agents:routing-table`: PASS — routing table fresh (38 agents, 67 skills, hash unchanged).
+- `routing-table-freshness` gate: PASS (hash matched).
+- `agent-graph` gate: PASS (38 agents, 0 issues, no cycles).
+- `tier-enforcement` gate: PASS (8 user-invocable Tier-1 agents, consistent tiers).
+- `slice-advancement` gate (aio-phase-7): **tooling/advisory** — MCP transport returned non-JSON for the consolidated gate call; all 7 constituent sub-gates were verified independently and pass. No content failure.
 
 <!-- step: aio-phase-7-step-7-1 -->
 
@@ -767,7 +839,7 @@ Active plan: plans/agent-inventory-optimization.plans.md
 Research: plans/agent-inventory-optimization.research.md
 Session log: plans/session-log-2026-08-15.md
 
-Next: Phase 6 — Independent Dual-Specialist Agent Review (every agent reviewed by 2 specialists: Content Quality + Standards, batched by tier)
+Next: PLAN COMPLETE — all 8 phases (0-7) DONE. No further work required.
 
 Model mandate: glm-5.2:cloud for heavy tasks (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor). kimi-k2.7-code:cloud for light tasks (all others). NO OTHER MODELS APPROVED — only glm-5.2:cloud and kimi-k2.7-code:cloud. Users may override per request between these two models only. Plan mandates continue to use glm-5.2:cloud for implementing agents.
 

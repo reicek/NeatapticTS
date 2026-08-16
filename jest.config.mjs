@@ -233,6 +233,7 @@ const config = {
         'scripts/agent-customization/mcp/cortex-tier-tool.mjs',
         'scripts/agent-customization/mcp/slice-context-archive.mjs',
         'scripts/agent-customization/validate-agent-frontmatter.mjs',
+        'scripts/agent-customization/validate-agent-quality.mjs',
       ],
       testPathIgnorePatterns: [
         '/node_modules/',

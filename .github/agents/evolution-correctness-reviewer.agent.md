@@ -226,7 +226,7 @@ If blocked, return PARTIAL status with the blocker description. Only escalate
 to the parent Tier 1 agent when a genuine, documented technical limit blocks
 progress. No concessions.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

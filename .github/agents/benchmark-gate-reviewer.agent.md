@@ -116,7 +116,7 @@ tolerance: +/-10% (regression threshold)
 classification: regression
 ```
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

@@ -86,7 +86,7 @@ Run `neataptic-gate-mcp:run_gate_check --gate=cortex-index` before any codebase 
 
 If a source has an unknown license, record it as a blocker and return PARTIAL. Do not approve a change relying on an unverified license. Only escalate to the parent Tier 1 agent when a genuine technical limit blocks progress. No concessions.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

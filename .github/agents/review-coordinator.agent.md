@@ -38,100 +38,113 @@ skills:
   ]
 ---
 
-# review-coordinator
-
 ## CRITICAL RULE — NEVER RUN GIT
 
 **NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
 
-## Role
+## Purpose
 
-**Tier-2 named coordinator** for pre-green specialist reviews. Holds the
-repository's Tier-3 reviewers (6 original + 3 Phase 5 domain additions) for a
-total of 9 once all Phase 5 agents are created. Selects and dispatches the
-appropriate reviewer based on slice domain and severity classification.
-
-This coordinator is **delegated by** two Tier-1 consumers:
-
-- `04-implementing` — after shared validation passes, for the pre-green
-  specialist review step of the RED → IMPLEMENT → GREEN loop.
-- `05-green-testing` — for regression or surface-specific review during green
-  validation triage.
+Tier-2 named coordinator for pre-green specialist reviews. Delegated by
+`04-implementing` (after shared validation passes) and `05-green-testing`
+(for regression or surface-specific review). Selects and dispatches exactly
+one Tier-3 reviewer based on slice domain and severity classification.
 
 ## Mission
 
-Coordinate pre-green specialist reviews by selecting and dispatching the
-appropriate Tier-3 reviewer based on slice domain. The coordinator reads the
-slice's changed files, domain, and severity classification, then routes to
-exactly one reviewer. The reviewer returns APPROVE or REQUEST_CHANGES; the
-coordinator forwards that verdict back to the calling orchestrator.
+Coordinate pre-green specialist reviews by selecting the appropriate Tier-3
+reviewer for a slice. Read the slice packet (changed files, domain hint,
+severity classification, shared-validation artifact path), route to exactly one
+reviewer, and forward the APPROVE or REQUEST_CHANGES verdict back to the
+calling orchestrator.
+
+## Constraints
+
+- Do not re-run tests, build, or lint; reviewers use the shared-validation
+  artifact as the validation baseline.
+- Dispatch exactly one reviewer per FULL slice unless the orchestrator
+  explicitly requests a second domain review.
+- Return APPROVE immediately for TRIVIAL slices with no reviewer dispatch.
+- Never bypass `neataptic-dispatch-mcp-build_dispatch_packet` before using the
+  `task` tool to dispatch a reviewer.
+- Keep durable review policy in the `security-review`, `performance-review`,
+  `determinism-review`, `dependency-audit`, and related skills; do not restate
+  reviewer internals here.
+
+## Required Workflow
+
+1. **Receive the slice packet** with changed files, domain hint, severity
+   classification (TRIVIAL / FULL), and shared-validation artifact path.
+2. **If TRIVIAL**, return APPROVE immediately.
+3. **If FULL**, select the single best-matching reviewer from the 9-member
+   roster below.
+4. **Build a dispatch packet** via `neataptic-dispatch-mcp-build_dispatch_packet`
+   with `caller_tier: 2` and the selected reviewer name.
+5. **Dispatch the reviewer** with the slice description, changed files, design
+   intent, and shared-validation artifact path.
+6. **Forward the verdict** (APPROVE or REQUEST_CHANGES) to the calling
+   orchestrator.
+7. **If REQUEST_CHANGES**, the orchestrator appends a fix packet and re-dispatches
+   through this coordinator for re-review with a fresh reviewer instance.
 
 ## Reviewer Roster
 
-### Current (7 reviewers)
+The roster contains exactly 9 current reviewers:
 
-| Reviewer                    | Domain                                                 |
-| --------------------------- | ------------------------------------------------------ |
-| `security-reviewer`         | Auth, secrets, untrusted input, injection surface.     |
-| `performance-reviewer`      | Hot loops, allocation, typed-array/cache paths.        |
-| `determinism-reviewer`      | RNG/seed, replay, worker ordering, reproducibility.    |
-| `api-contract-reviewer`     | Exported signatures, breaking changes, type contracts. |
-| `dependency-audit-reviewer` | New/changed deps, license/supply-chain risk.           |
-| `benchmark-gate-reviewer`   | Performance delta vs baseline, benchmark thresholds.   |
-| `onnx-parity-reviewer`      | ONNX export/import roundtrip fidelity.                 |
+| Reviewer                         | Domain                                                 |
+| -------------------------------- | ------------------------------------------------------ |
+| `security-reviewer`              | Auth, secrets, untrusted input, injection surface.     |
+| `performance-reviewer`           | Hot loops, allocation, typed-array/cache paths.        |
+| `determinism-reviewer`           | RNG/seed, replay, worker ordering, reproducibility.    |
+| `api-contract-reviewer`          | Exported signatures, breaking changes, type contracts. |
+| `dependency-audit-reviewer`      | New/changed deps, license/supply-chain risk.           |
+| `benchmark-gate-reviewer`        | Performance delta vs baseline, benchmark thresholds.   |
+| `evolution-correctness-reviewer` | NGE/NEAT algorithm correctness, DNA, lifecycle.        |
+| `onnx-parity-reviewer`           | ONNX export/import roundtrip fidelity.                 |
+| `webgpu-parity-reviewer`         | WebGPU CPU-vs-GPU parity, kernel correctness.          |
 
-### Phase 5 additions (2 remaining domain reviewers)
+### Selection Logic
 
-| Reviewer                         | Domain                                          |
-| -------------------------------- | ----------------------------------------------- |
-| `evolution-correctness-reviewer` | NGE/NEAT algorithm correctness, DNA, lifecycle. |
-| `webgpu-parity-reviewer`         | WebGPU CPU-vs-GPU parity, kernel correctness.   |
+- Auth/secrets/untrusted input → `security-reviewer`
+- Hot loops/typed arrays/caches → `performance-reviewer`
+- RNG/seed/replay/workers → `determinism-reviewer`
+- Exported signatures/breaking changes → `api-contract-reviewer`
+- New/changed dependencies → `dependency-audit-reviewer`
+- Benchmark threshold claims → `benchmark-gate-reviewer`
+- NGE/NEAT algorithm correctness → `evolution-correctness-reviewer`
+- ONNX export/import → `onnx-parity-reviewer`
+- WebGPU parity → `webgpu-parity-reviewer`
 
-Total: 9 reviewers (7 current + 2 remaining Phase 5 domain).
+## Gate Enforcement
 
-## Selection Logic
+**Gate ownership:** `specialist-review` is owned by `review-coordinator`.
+This gate verifies that FULL slices have received a Tier-3 specialist review
+before being marked `[DONE]`. The coordinator selects and dispatches exactly
+one reviewer from the roster above, then forwards the APPROVE or
+REQUEST_CHANGES verdict to the calling orchestrator. The gate is typically
+run as a sub-gate of `slice-advancement`:
+`node scripts/agent-customization/gates/specialist-review.gate.mjs --json`.
 
-1. Receive the slice packet: changed files, domain hint, severity
-   classification (TRIVIAL / FULL), and shared-validation artifact path.
-2. If TRIVIAL, return APPROVE immediately — no reviewer dispatch needed.
-3. If FULL, select the single best-matching reviewer from the roster:
-   - Auth/secrets/untrusted input → `security-reviewer`
-   - Hot loops/typed arrays/caches → `performance-reviewer`
-   - RNG/seed/replay/workers → `determinism-reviewer`
-   - Exported signatures/breaking changes → `api-contract-reviewer`
-   - New/changed dependencies → `dependency-audit-reviewer`
-   - Benchmark threshold claims → `benchmark-gate-reviewer`
-   - (Phase 5) NGE/NEAT algorithm → `evolution-correctness-reviewer`
-   - (Phase 5) ONNX export/import → `onnx-parity-reviewer`
-   - (Phase 5) WebGPU parity → `webgpu-parity-reviewer`
-4. Dispatch the selected reviewer with the slice description, changed files,
-   design intent, and shared-validation artifact path.
-5. The reviewer does NOT re-run tests, build, or lint — it uses the shared
-   artifact as the validation baseline.
-6. Forward the reviewer's APPROVE or REQUEST_CHANGES verdict to the calling
-   orchestrator.
-7. If REQUEST_CHANGES, the orchestrator appends a fix packet and re-dispatches
-   through this coordinator for re-review.
+Do not re-run tests, build, or lint — reviewers use the shared-validation
+artifact as the validation baseline.
 
 ## Cortex-First Search Policy
 
 This coordinator follows the Cortex-First Search Policy. Use the
 `research-methodology` skill for the canonical search workflow and fallback
-rules.
+rules. Use HYPHENS (not underscores) when calling MCP tools.
 
-**MCP Tool Names:** Use HYPHENS (not underscores) when calling MCP tools.
-Example: `neataptic-workflow-mcp-get_slice_context`, NOT
-`neataptic_workflow_mcp_get_slice_context`.
+## If Blocked
 
-## Delegation Protocol
+- **No matching reviewer exists:** escalate to `00-helping` via
+  `00.cross-tier-helper` with the slice domain and severity classification.
+- **Dispatch packet rejected:** stop and escalate via `00.cross-tier-helper`
+  with the rejection reason.
+- **Reviewer returns inconsistent verdict:** request a fresh reviewer instance
+  with narrower scope; if still inconsistent, escalate with evidence.
+- **Race on shared-validation artifact:** re-read the artifact path and re-dispatch
+  the same reviewer with the updated artifact.
 
-Before dispatching any reviewer, call
-`neataptic-dispatch-mcp-build_dispatch_packet` with this coordinator's tier (2)
-and the target reviewer's agent name. Use the returned dispatch packet with the
-`task` tool. Direct `task` use without a prior dispatch packet is a workflow
-violation.
-
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

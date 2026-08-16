@@ -247,13 +247,13 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 - **IF terminal job active:**
   - Example: `"TASK_STATUS: PARTIAL. BLOCKERS: build.sh running, check in 10m, stop if error."`
 - **IF concurrent edits or patch drift create uncertain ownership:**
-  - Example: `"src/feature.js changed during edit. Preserved live state, escalated via 00-cross-tier-helper."`
+  - Example: `"src/feature.js changed during edit. Preserved live state, escalated via 00.cross-tier-helper."`
 - **IF failed implementation cannot be rolled back safely:**
   - Example: `"Rollback failed for src/feature.js lines 30-40. BLOCKERS: manual intervention needed. Validation evidence attached."`
 - **FOR scope ambiguity or plan boundary conflicts:**
-  - Example: `"Ambiguous plan boundary for utils/parse.js. Escalating with evidence via 00-cross-tier-helper."`
+  - Example: `"Ambiguous plan boundary for utils/parse.js. Escalating with evidence via 00.cross-tier-helper."`
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
