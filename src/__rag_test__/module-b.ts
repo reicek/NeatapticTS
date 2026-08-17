@@ -1,4 +1,6 @@
-import { helperFunc, HelperInterface, HelperType } from './module-a';
+import { helperFunc } from './module-a';
+import type { HelperInterface, HelperType } from './module-a';
+// @ts-expect-error -- intentional test fixture for cross-reference extraction
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { externalThing } from 'external-package';
 
