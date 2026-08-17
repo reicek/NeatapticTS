@@ -92,7 +92,9 @@ const TIER_REQUIRED_FIELDS = {
 };
 
 function makeCanonicalFooter(tier, role) {
+  /* istanbul ignore next -- tier is always passed as String() from caller, so ?? '' is defensive */
   const t = String(tier ?? '').trim() || '';
+  /* istanbul ignore next -- role is always passed as String() from caller, so ?? '' is defensive */
   const r = String(role ?? '').trim() || '';
   const fields = TIER_REQUIRED_FIELDS[t] ?? TIER_REQUIRED_FIELDS['1'];
 
@@ -122,6 +124,7 @@ function makeCanonicalFooter(tier, role) {
   const lines = ['## Output format', '', '```structured-v1'];
   for (const f of fields) {
     const renderer = fieldRenderer[f];
+    /* istanbul ignore next -- all fields in TIER_REQUIRED_FIELDS have renderers */
     lines.push(renderer ? renderer() : `${f}: <value>`);
   }
   lines.push('```', '');
@@ -167,8 +170,8 @@ export async function runFix({ json = false } = {}) {
     }
     const role =
       parsed.data?.name ??
-      relativePath.split('/').at(-1)?.replace('.agent.md', '') ??
-      '';
+      /* istanbul ignore next -- split('/') always returns ≥1 element and replace always returns string */
+      (relativePath.split('/').at(-1)?.replace('.agent.md', '') ?? '');
     const tier = parsed.data?.tier ?? '';
 
     // Attempt fix: preserve content up to any existing '## Output format' heading

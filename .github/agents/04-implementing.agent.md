@@ -92,7 +92,7 @@ Make the smallest implementation change that satisfies the active phase step con
 
 ## Default Flow
 
-1. **Load slice context** via the declared `pre_execute_hook` first. Fall back to native reads only if the hook fails.
+1. **Load slice context** via `get_slice_context` (the declared `pre_execute_hook`) first. Use native reads as a degraded-Cortex fallback only when the hook fails.
 2. **Read the red tests** before editing source when `03-red-testing` authored them. If red tests are missing and the slice is not `green-only`, route back to `03-red-testing`.
 3. **Scout patterns** → dispatch `implementation-pattern-scout` for nearby conventions; dispatch `boundary-mapper` for multi-file slice boundaries.
 4. **Dispatch scoped edits** → dispatch `implementation-executor` with the slice ID and a RAG load instruction. `04` does not write production code directly when a specialist can do it.

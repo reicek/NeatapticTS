@@ -488,3 +488,43 @@ describe('validate-agent-frontmatter error-path coverage', () => {
     }
   });
 });
+
+/**
+ * Covers line 162 in validate-agent-frontmatter.mjs: the second `?? ''` fallback
+ * in `collectSkillNames`. This fires when `parsed.data.name` is undefined AND
+ * `relativePath.split('/').at(-2)` is undefined (i.e. the path has no `/` separator).
+ *
+ * Uses `jest.unstable_mockModule` to replace `listMarkdownFiles` and
+ * `readWorkspaceFile` so `collectSkillNames` processes a path like `SKILL.md`
+ * (no directory) with frontmatter that has no `name` field.
+ */
+describe('validate-agent-frontmatter collectSkillNames ?? "" fallback', () => {
+  beforeAll(() => {
+    jest.unstable_mockModule('./customization-utils.mjs', () => ({
+      ...realUtils,
+      listMarkdownFiles: jest.fn(async (rootRelativePath) => {
+        if (rootRelativePath === '.github/skills') return ['SKILL.md'];
+        if (rootRelativePath === '.github/agents') return [];
+        return [];
+      }),
+      readWorkspaceFile: jest
+        .fn()
+        .mockResolvedValue('---\ndescription: test\n---\nbody'),
+    }));
+  });
+
+  it('exercises the ?? "" fallback on a path with no directory separator', async () => {
+    await withArgv([process.execPath, SCRIPT_PATH, '--json'], async () => {
+      const { output } = await captureStdout(() =>
+        importInIsolation(async () => {
+          await import(SCRIPT_PATH);
+        }),
+      );
+      const parsed = JSON.parse(output);
+      // The validator runs with no agents and the fallback skill name "".
+      // With no agents, it should produce ok: true (no agents to validate).
+      assert.equal(parsed.ok, true);
+      process.exitCode = 0;
+    });
+  });
+});

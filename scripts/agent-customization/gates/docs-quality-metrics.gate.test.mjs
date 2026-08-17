@@ -34,6 +34,7 @@ describe('docs-quality-metrics.gate.mjs direct import', () => {
     console.log = (...args) => {
       logs.push(args.map(String).join(' '));
     };
+    process.exitCode = undefined;
 
     try {
       await gateModule.main(['--help']);

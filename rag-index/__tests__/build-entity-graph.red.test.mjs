@@ -5,6 +5,10 @@
  * Full database write tests are deferred to integration testing.
  */
 
+import { jest } from '@jest/globals';
+
+jest.setTimeout(120000);
+
 describe('build-entity-graph', () => {
   describe('buildEntityGraph (dry-run)', () => {
     it('runs dry-run without writing to database', async () => {

@@ -350,6 +350,45 @@ describe('nge-juvenile.variants', () => {
       );
     });
 
+    it('passes useGPU: false when GPU mode is active but no device is available', async () => {
+      jest
+        .spyOn(accelerationOrchestrator, 'autoEnableAcceleration')
+        .mockResolvedValue(buildAccelerationStatus('gpu', null));
+
+      const network = {
+        nodes: gpuSizedNodes(),
+        connections: [{ weight: 0.1 }],
+        activate: jest.fn().mockResolvedValue([0.6, 0.6]),
+      } as unknown as VariantEvaluationNetwork;
+
+      await evaluateNgeWeightVariants(network, 'baby', [[0.5, 0.5]], [1.0], 42);
+
+      expect(network.activate).toHaveBeenCalledWith(
+        [0.5, 0.5],
+        expect.objectContaining({ useGPU: false }),
+      );
+    });
+
+    it('passes useGPU: false when GPU device exists but node count is below threshold', async () => {
+      const device = {} as GPUDevice;
+      jest
+        .spyOn(accelerationOrchestrator, 'autoEnableAcceleration')
+        .mockResolvedValue(buildAccelerationStatus('gpu', device));
+
+      const network = {
+        nodes: [],
+        connections: [{ weight: 0.1 }],
+        activate: jest.fn().mockResolvedValue([0.6, 0.6]),
+      } as unknown as VariantEvaluationNetwork;
+
+      await evaluateNgeWeightVariants(network, 'baby', [[0.5, 0.5]], [1.0], 42);
+
+      expect(network.activate).toHaveBeenCalledWith(
+        [0.5, 0.5],
+        expect.objectContaining({ useGPU: false }),
+      );
+    });
+
     it('restores the previous GPU device even when activation throws', async () => {
       const device = {} as GPUDevice;
       const previousDevice = {} as GPUDevice;

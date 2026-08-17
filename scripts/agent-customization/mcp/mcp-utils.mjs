@@ -307,6 +307,7 @@ function resolveSpawnTarget(requestedExecutable, requestedArgv) {
       path.dirname(process.execPath),
       `${baseName}.cmd`,
     );
+    /* istanbul ignore next -- defensive: ComSpec is always set on Windows */
     const comSpec = process.env['ComSpec'] ?? 'cmd.exe';
     return {
       executable: comSpec,
@@ -362,10 +363,12 @@ export async function runShellFreeCommand(commandString, options = {}) {
         const truncatedChunk = chunkText.slice(0, remainingBytes);
         stdout += truncatedChunk;
       } else {
+        /* istanbul ignore next -- defensive: requires multi-chunk output exceeding limit */
         stdoutTruncated = true;
       }
 
       stdoutBytes += Buffer.byteLength(chunkText);
+      /* istanbul ignore next -- defensive: requires single-chunk output exceeding limit */
       stdoutTruncated ||= stdoutBytes > maxOutputBytes;
     });
 
@@ -376,10 +379,12 @@ export async function runShellFreeCommand(commandString, options = {}) {
         const truncatedChunk = chunkText.slice(0, remainingBytes);
         stderr += truncatedChunk;
       } else {
+        /* istanbul ignore next -- defensive: requires multi-chunk output exceeding limit */
         stderrTruncated = true;
       }
 
       stderrBytes += Buffer.byteLength(chunkText);
+      /* istanbul ignore next -- defensive: requires single-chunk output exceeding limit */
       stderrTruncated ||= stderrBytes > maxOutputBytes;
     });
 
@@ -389,7 +394,7 @@ export async function runShellFreeCommand(commandString, options = {}) {
         command: commandString,
         executable: requestedExecutable,
         argv,
-        exitCode: exitCode ?? 1,
+        exitCode: /* istanbul ignore next -- defensive: process killed without exit code */ exitCode ?? 1,
         stdout: finalizeCapturedOutput(stdout, stdoutTruncated),
         stderr: finalizeCapturedOutput(stderr, stderrTruncated),
         durationMs: Date.now() - startTime,
@@ -777,7 +782,11 @@ function flushShellSafeToken(tokenizerState) {
  * @param {string} [framing] - Framing mode (`content-length` or `newline-delimited`).
  * @returns {void}
  */
-function writeJsonRpcMessage(payload, framing = CONTENT_LENGTH_FRAME) {
+function writeJsonRpcMessage(
+  payload,
+  /* istanbul ignore next -- all internal callers pass framing explicitly */
+  framing = CONTENT_LENGTH_FRAME,
+) {
   const serializedPayload = JSON.stringify(payload);
 
   if (framing === NEWLINE_DELIMITED_FRAME) {

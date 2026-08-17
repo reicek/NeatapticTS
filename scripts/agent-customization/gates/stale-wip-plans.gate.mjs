@@ -74,6 +74,7 @@ function collectPhaseMarkers(implSection) {
     // YAML step-packet status field (e.g. `status: '[DONE]'`)
     if (/^status:\s*'\[(?:DONE|WIP|PLANNED)\]'/.test(trimmed)) {
       const match = statusRe.exec(trimmed);
+      /* istanbul ignore else -- regex test above guarantees match is non-null */
       if (match) phaseStatuses.push(match[1]);
     }
   }

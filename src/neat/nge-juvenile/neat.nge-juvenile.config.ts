@@ -138,5 +138,13 @@ function createDefaultGrowStabilizeConfig(): NgeGrowStabilizeConfig {
 export function resolveGrowStabilizeConfig(
   partial?: Partial<NgeGrowStabilizeConfig>,
 ): NgeGrowStabilizeConfig {
-  return { ...createDefaultGrowStabilizeConfig(), ...partial };
+  const filtered: Partial<NgeGrowStabilizeConfig> = {};
+  if (partial) {
+    for (const [key, value] of Object.entries(partial)) {
+      if (value !== undefined) {
+        (filtered as Record<string, unknown>)[key] = value;
+      }
+    }
+  }
+  return { ...createDefaultGrowStabilizeConfig(), ...filtered };
 }

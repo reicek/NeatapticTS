@@ -348,7 +348,10 @@ export function resolveVariantCountForStage(
     return sanitizeVariantCount(configCount);
   }
 
-  return DEFAULT_STAGE_VARIANT_COUNTS[stage];
+  return (
+    DEFAULT_STAGE_VARIANT_COUNTS[stage] ??
+    NGE_LIFECYCLE_DEFAULT_ADULT_VARIANT_COUNT
+  );
 }
 
 /**

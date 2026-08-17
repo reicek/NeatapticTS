@@ -102,7 +102,7 @@ const CODE_KEYWORDS = Object.freeze([
 
 /** Multi-hop connective patterns that signal multi_hop intent. */
 const MULTI_HOP_PATTERNS = Object.freeze([
-  'that also',
+  'that.*also',
   'which also',
   'and then',
   'call.*that',
@@ -482,6 +482,7 @@ export function classifyForSearchCorpus(query) {
   const classification = classifyQuery(query);
 
   // Graceful degradation: low-confidence queries fall back to balanced hybrid
+  /* istanbul ignore next -- defensive: no current confidence value is < 0.5 */
   if (classification.confidence < CONFIDENCE_DEGRADATION_THRESHOLD) {
     return {
       alpha: 0.5,
@@ -492,7 +493,9 @@ export function classifyForSearchCorpus(query) {
     };
   }
 
+  /* istanbul ignore next -- defensive: all 6 classes are in the defaults maps */
   const alpha = EMBEDDED_ALPHA_DEFAULTS[classification.query_class] ?? 0.5;
+  /* istanbul ignore next -- defensive: all 6 classes are in the defaults maps */
   const family = EMBEDDED_FAMILY_DEFAULTS[classification.query_class] ?? null;
 
   return {

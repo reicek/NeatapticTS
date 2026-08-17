@@ -792,7 +792,7 @@ async function evaluateNetworkScore(
   network: Network,
   inputs: number[][],
   target: number[],
-  scoreFn: VariantScorer = DEFAULT_VARIANT_SCORER,
+  scoreFn: VariantScorer,
 ): Promise<number> {
   const outputs: number[][] = [];
   for (const input of inputs) {

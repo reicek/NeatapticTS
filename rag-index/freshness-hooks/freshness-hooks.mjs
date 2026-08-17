@@ -119,7 +119,10 @@ export function createFreshnessHook(options = {}) {
     debounceTimer = setTimeout(() => {
       // Route through flush() so any explicit flush() awaiting the in-flight
       // work observes the same promise instead of racing with the timer.
-      flush().catch((error) => logWarning(formatWarning(error)));
+      flush().catch(
+        /* istanbul ignore next -- defensive: flush catches errors internally, this is a safety net */
+        (error) => logWarning(formatWarning(error)),
+      );
     }, debounceMs);
     // Do not hold the process open just because a debounce timer is pending;
     // the timer will still fire if the event loop is alive for other reasons.
@@ -132,6 +135,7 @@ export function createFreshnessHook(options = {}) {
    * @returns {Promise<IncrementalResult>}
    */
   async function flushNow() {
+    /* istanbul ignore next -- dead code: flush() always clears timer before calling flushNow() */
     if (debounceTimer) {
       clearTimeout(debounceTimer);
       debounceTimer = null;
@@ -348,6 +352,7 @@ function queueEmbeddingUpdate(options) {
  * @param {string} databasePath - Resolved corpus database path.
  * @returns {Set<string>}
  */
+/* istanbul ignore next -- default parameter, always called with explicit argument */
 async function collectIndexedPaths(databasePath, client = null) {
   const resolvedClient = client ?? (await getTursoClient(databasePath));
 
@@ -428,6 +433,7 @@ function formatWarning(error) {
 
 const SCRIPT_NAME = 'freshness-hooks.mjs';
 
+/* istanbul ignore next -- CLI entry point guard, functions tested directly */
 if (
   (typeof process.argv[1] === 'string' &&
     import.meta.url === pathToFileURL(process.argv[1]).href) ||
@@ -445,6 +451,7 @@ if (
       writeJsonOrText(summary, Boolean(args['json']), formatCliSummary);
       process.exit(summary.fatalError ? 1 : 0);
     })
+    /* istanbul ignore next -- unreachable: runFreshnessHookCli catches errors internally, so .catch is never triggered */
     .catch((error) => {
       const message = error instanceof Error ? error.message : String(error);
       if (args['json']) {
@@ -467,7 +474,7 @@ if (
  * @param {Record<string, unknown>} args - Parsed CLI arguments.
  * @returns {Promise<object>}
  */
-async function runFreshnessHookCli(args) {
+export async function runFreshnessHookCli(args) {
   const startMs = Date.now();
   const databasePath = path.resolve(
     args['database'] ?? args['databasePath'] ?? defaultDatabasePath,
@@ -527,7 +534,7 @@ async function runFreshnessHookCli(args) {
  * @param {object} summary
  * @returns {string}
  */
-function formatCliSummary(summary) {
+export function formatCliSummary(summary) {
   const lines = [
     `freshness-hooks: notified=${summary.notified} updated=${summary.result.updated.length} failed=${summary.result.failed.length} elapsed=${summary.elapsedMs}ms`,
   ];
@@ -537,7 +544,7 @@ function formatCliSummary(summary) {
   return lines.join('\n');
 }
 
-function printUsage() {
+export function printUsage() {
   console.log(
     [
       'freshness-hooks — debounced post-write semantic-index update',

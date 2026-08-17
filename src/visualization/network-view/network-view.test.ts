@@ -167,6 +167,115 @@ describe('network-view layout utilities', () => {
         hiddenColumns: 2,
       });
     });
+
+    it('applies custom render options when a full options object is supplied', () => {
+      const canvas = {
+        width: 400,
+        height: 300,
+        getContext: () => null,
+      } as unknown as HTMLCanvasElement;
+
+      const frame = renderNetworkView(
+        canvas,
+        {
+          version: 1,
+          nodes: [
+            { id: 1, role: 'input', bias: 0 },
+            { id: 2, role: 'output', bias: 0 },
+          ],
+          edges: [{ from: 1, to: 2, weight: 0.5, kind: 'forward' }],
+          io: { inputNodeIds: [1], outputNodeIds: [2] },
+        },
+        {
+          nodeDimensions: { widthPx: 32, heightPx: 32 },
+          panelPaddingPx: {
+            topPx: 10,
+            rightPx: 10,
+            bottomPx: 10,
+            leftPx: 10,
+          },
+          colorScales: {
+            weightPositive: '#fff',
+            weightNegative: '#000',
+            activationHot: '#f00',
+            activationCold: '#0ff',
+            bias: '#0f0',
+          },
+        },
+      );
+
+      const inputNode = frame.positionedNodes.find(
+        (node) => node.type === 'input',
+      );
+      expect(inputNode?.widthPx).toBe(32);
+      expect(inputNode?.heightPx).toBe(32);
+    });
+
+    it('applies partial render options and falls back to defaults for missing fields', () => {
+      const canvas = {
+        width: 400,
+        height: 300,
+        getContext: () => null,
+      } as unknown as HTMLCanvasElement;
+
+      const frame = renderNetworkView(
+        canvas,
+        {
+          version: 1,
+          nodes: [
+            { id: 1, role: 'input', bias: 0 },
+            { id: 2, role: 'output', bias: 0 },
+          ],
+          edges: [{ from: 1, to: 2, weight: 0.5, kind: 'forward' }],
+          io: { inputNodeIds: [1], outputNodeIds: [2] },
+        },
+        {
+          panelPaddingPx: {
+            topPx: 16,
+            rightPx: 16,
+            bottomPx: 16,
+            leftPx: 16,
+          },
+        },
+      );
+
+      const inputNode = frame.positionedNodes.find(
+        (node) => node.type === 'input',
+      );
+      expect(inputNode?.widthPx).toBe(24);
+      expect(inputNode?.heightPx).toBe(24);
+    });
+
+    it('falls back to default panel padding when options omit panelPaddingPx', () => {
+      const canvas = {
+        width: 400,
+        height: 300,
+        getContext: () => null,
+      } as unknown as HTMLCanvasElement;
+
+      const frame = renderNetworkView(
+        canvas,
+        {
+          version: 1,
+          nodes: [
+            { id: 1, role: 'input', bias: 0 },
+            { id: 2, role: 'output', bias: 0 },
+          ],
+          edges: [{ from: 1, to: 2, weight: 0.5, kind: 'forward' }],
+          io: { inputNodeIds: [1], outputNodeIds: [2] },
+        },
+        {
+          nodeDimensions: { widthPx: 20, heightPx: 20 },
+        },
+      );
+
+      // Default padding is 32px on all sides; with 400px width and 20px nodes,
+      // the leftmost node x should be 32 (default left padding).
+      const inputNode = frame.positionedNodes.find(
+        (node) => node.type === 'input',
+      );
+      expect(inputNode?.centerXPx).toBeGreaterThanOrEqual(32);
+    });
   });
 
   describe('positionNetworkNodes()', () => {

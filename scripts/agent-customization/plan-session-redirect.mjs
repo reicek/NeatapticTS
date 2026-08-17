@@ -168,6 +168,7 @@ function writeOutput(result, json) {
     return;
   }
 
+  /* istanbul ignore next -- false branch unreachable: errors go through console.error, not writeOutput with pass:false */
   console.log(
     result.pass ? 'PASS plan-session-redirect' : 'FAIL plan-session-redirect',
   );

@@ -9,7 +9,7 @@ import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createRepoCortexMcpServer } from '../../scripts/mcp-semantic/repo-cortex-mcp.mjs';
+import { createRepoCortexMcpServer } from '../../../mcp-semantic/repo-cortex-mcp.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const snapshotPath = path.join(__dirname, 'cortex-real-snapshot.json');

@@ -206,8 +206,11 @@ describe('generate-agent-skill-routing-table native-ESM coverage', () => {
 
   it('main prints JSON output', async () => {
     const logs = [];
-    const originalLog = console.log;
-    console.log = (...args) => logs.push(args.join(' '));
+    const originalWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (chunk) => {
+      logs.push(typeof chunk === 'string' ? chunk : chunk.toString());
+      return true;
+    };
     try {
       await withArgv([process.execPath, 'dummy-runner', '--json'], async () => {
         await importInIsolation(async () => {
@@ -216,18 +219,21 @@ describe('generate-agent-skill-routing-table native-ESM coverage', () => {
           await main();
         });
       });
-      assert.equal(logs.length, 1);
-      const parsed = JSON.parse(logs[0]);
+      const jsonOutput = logs.join('').trim();
+      const parsed = JSON.parse(jsonOutput);
       assert.equal(parsed.ok, true);
     } finally {
-      console.log = originalLog;
+      process.stdout.write = originalWrite;
     }
   });
 
   it('main prints human-readable output', async () => {
     const logs = [];
-    const originalLog = console.log;
-    console.log = (...args) => logs.push(args.join(' '));
+    const originalWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (chunk) => {
+      logs.push(typeof chunk === 'string' ? chunk : chunk.toString());
+      return true;
+    };
     try {
       await withArgv([process.execPath, 'dummy-runner'], async () => {
         await importInIsolation(async () => {
@@ -240,7 +246,7 @@ describe('generate-agent-skill-routing-table native-ESM coverage', () => {
         logs.some((line) => line.includes('PASS customization routing table')),
       );
     } finally {
-      console.log = originalLog;
+      process.stdout.write = originalWrite;
     }
   });
 

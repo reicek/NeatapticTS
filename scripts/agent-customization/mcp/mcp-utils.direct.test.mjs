@@ -8,7 +8,7 @@
  */
 
 describe('mcp-utils formatToolResult direct contracts', () => {
-  it('serializes a plain object into a JSON text block', async () => {
+  it('serializes a plain object into a compact summary text block', async () => {
     const { formatToolResult } = await import('./mcp-utils.mjs');
     const result = formatToolResult({ ok: true, count: 3 });
 
@@ -17,7 +17,7 @@ describe('mcp-utils formatToolResult direct contracts', () => {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({ ok: true, count: 3 }, null, 2),
+          text: 'Compact workflow context. See structuredContent for full payload.',
         },
       ],
       structuredContent: { ok: true, count: 3 },
@@ -49,7 +49,7 @@ describe('mcp-utils formatToolResult direct contracts', () => {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({ value: 'plain text' }, null, 2),
+          text: 'Compact workflow context. See structuredContent for full payload.',
         },
       ],
       structuredContent: { value: 'plain text' },
@@ -65,7 +65,7 @@ describe('mcp-utils formatToolResult direct contracts', () => {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({ value: null }, null, 2),
+          text: 'Compact workflow context. See structuredContent for full payload.',
         },
       ],
       structuredContent: { value: null },
@@ -81,7 +81,7 @@ describe('mcp-utils formatToolResult direct contracts', () => {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({ value: null }, null, 2),
+          text: 'Compact workflow context. See structuredContent for full payload.',
         },
       ],
       structuredContent: { value: null },

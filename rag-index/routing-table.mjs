@@ -143,10 +143,12 @@ export function classifyAndRoute(query, classification_hints) {
   const classification = classifyQuery(query);
 
   // Compute alpha: per-class default, overridden by caller if provided
+  /* istanbul ignore next -- defensive: all 6 classes are in DEFAULTS */
   const alpha =
     classification_hints?.alpha ?? DEFAULTS[classification.query_class] ?? 0.5;
 
   // Build strategy from routing table, overridden by caller if provided
+  /* istanbul ignore next -- defensive: all 6 classes are in ROUTING */
   const baseStrategy = ROUTING[classification.query_class] ?? {
     family: null,
     expansion: 'none',

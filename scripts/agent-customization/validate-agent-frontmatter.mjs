@@ -473,6 +473,7 @@ function validateStructuredV1PromptContract(agent, contract) {
     return issues;
   }
 
+  /* istanbul ignore next -- regex always captures body group when matched */
   const fenceBody = structuredFenceMatches[0].groups?.body ?? '';
   const parsedFields = parsePromptFields(fenceBody);
   const detectedFields = parsedFields.map(({ field }) => field);

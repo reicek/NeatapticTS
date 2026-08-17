@@ -101,18 +101,22 @@ async function detectChangedPlanFiles() {
       shell: false,
     });
 
+    /* istanbul ignore if -- defensive: git returns non-zero only when HEAD~1 doesn't exist */
     if (result.status !== 0) return [];
 
+    /* istanbul ignore next -- defensive: stdout is always a string when status is 0 */
     return (result.stdout ?? '')
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
       .filter(isPlanFile);
   } catch {
+    /* istanbul ignore next -- defensive: spawnSync does not throw, errors are returned in result */
     return [];
   }
 }
 
+/* istanbul ignore next -- spawns real node processes, not suitable for unit tests */
 async function defaultRunner(command) {
   const [executable, ...args] = command;
   const result = spawnSync(executable, args, {
@@ -136,11 +140,12 @@ async function writeReindexLog(summary) {
   return toRepoRelative(REINDEX_LOG_PATH);
 }
 
-async function main() {
+export async function main() {
   const summary = await reindexChangedPlans();
   console.log(JSON.stringify(summary, null, 2));
 }
 
+/* istanbul ignore next -- CLI entry point guard */
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href

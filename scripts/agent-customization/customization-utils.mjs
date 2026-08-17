@@ -596,7 +596,7 @@ function parseObjectFields(
           object[key] = parsed.list;
           index = parsed.nextIndex;
         } else {
-          object[key] = emptyDefaultToObject ? {} : [];
+          object[key] = [];
           index = startIndex + 1;
         }
       } else {

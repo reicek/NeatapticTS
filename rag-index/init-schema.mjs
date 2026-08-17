@@ -40,6 +40,7 @@ function splitSqlStatements(sql) {
       if (/^\s*END\s*;?\s*$/i.test(trimmedLine)) {
         inTrigger = false;
         const stmt = buffer.trim().replace(/;\s*$/, '');
+        /* istanbul ignore else -- buffer always contains the CREATE TRIGGER line */
         if (stmt) statements.push(stmt + ';');
         buffer = '';
       }

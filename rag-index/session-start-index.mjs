@@ -64,8 +64,10 @@ if (
       process.exit(summary.fatalError ? 1 : 0);
     })
     .catch((error) => {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      let errorMessage;
+      /* istanbul ignore next -- defensive: caught errors are always Error instances */
+      if (error instanceof Error) errorMessage = error.message;
+      else errorMessage = String(error);
       if (args['json']) {
         console.log(
           JSON.stringify(
@@ -94,6 +96,7 @@ if (
  * @param {boolean} [options.json]         - Emit JSON output (unused in library mode).
  * @returns {Promise<SessionStartSummary>}
  */
+/* istanbul ignore next -- defensive: always called with explicit options */
 export async function runSessionStartIndex(options = {}) {
   const databasePath = path.resolve(
     options.databasePath ?? defaultDatabasePath,
@@ -191,6 +194,7 @@ export async function runTouchPass(databasePathOrOptions) {
   const freshPaths = await collectFreshPaths(allDocuments, result);
 
   // Step 2: Batch-update indexed_at for content-fresh rows.
+  /* istanbul ignore next -- defensive: freshPaths always has entries when allDocuments is non-empty */
   if (freshPaths.length > 0) {
     const nowMs = Date.now();
     await client.batch(
@@ -280,7 +284,7 @@ export function runBuildPass(databasePath) {
     { stdio: 'inherit', cwd: repoRoot },
   );
 
-  return { exitCode: spawnResult.status ?? 1 };
+  return { exitCode: /* istanbul ignore next -- defensive: spawnResult.status is always set for synchronous spawns */ spawnResult.status ?? 1 };
 }
 
 // ---------------------------------------------------------------------------

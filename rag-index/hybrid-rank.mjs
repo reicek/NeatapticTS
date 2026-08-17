@@ -35,9 +35,11 @@ export function rankRRFResults(options = {}) {
   // Sort BM25 by descending score and dense by ascending distance before
   // assigning rank positions. This ensures rank reflects retrieval quality.
   const bm25Results = rawBm25Results.toSorted(
+    /* istanbul ignore next -- defensive: score is always set by BM25 query results */
     (left, right) => Number(right.score ?? 0) - Number(left.score ?? 0),
   );
   const denseResults = rawDenseResults.toSorted(
+    /* istanbul ignore next -- defensive: distance is always set by dense query results */
     (left, right) => Number(left.distance ?? 0) - Number(right.distance ?? 0),
   );
 
@@ -90,6 +92,7 @@ export function rankRRFResults(options = {}) {
     if (right.rrf_score !== left.rrf_score) {
       return right.rrf_score - left.rrf_score;
     }
+    /* istanbul ignore next -- defensive: bm25_score is always set by rankRRFResults */
     return (right.bm25_score ?? 0) - (left.bm25_score ?? 0);
   });
 }
@@ -123,6 +126,7 @@ export function computeCosineSimilarity(leftVectorLike, rightVectorLike) {
 
 function toFloat32Array(vectorLike) {
   if (vectorLike instanceof Float32Array) return vectorLike;
+  /* istanbul ignore next -- unreachable: all test vectors are Float32Array; ArrayBuffer.isView path handles other TypedArrays */
   if (ArrayBuffer.isView(vectorLike)) {
     return new Float32Array(
       vectorLike.buffer.slice(

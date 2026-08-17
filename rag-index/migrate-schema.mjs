@@ -118,6 +118,7 @@ async function addColumnIfMissing(client, table, column) {
  * @returns {Promise<void>}
  */
 async function ensureIndexes(client, statements) {
+  /* istanbul ignore next -- defensive: ensureIndexes is always called with non-empty statements */
   if (statements.length === 0) return;
 
   const batch = statements.map((sql) => ({ sql, args: [] }));

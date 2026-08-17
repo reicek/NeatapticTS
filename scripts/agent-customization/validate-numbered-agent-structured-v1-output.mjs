@@ -249,6 +249,7 @@ function validateStructuredV1Output(outputText, outputPath, contract) {
       }
 
       const listValue = listItemMatch.groups.value.trim();
+      /* istanbul ignore if -- regex requires .+ so value is never empty after trim */
       if (!listValue) {
         issues.push(
           issue(
@@ -271,6 +272,7 @@ function validateStructuredV1Output(outputText, outputPath, contract) {
         continue;
       }
 
+      /* istanbul ignore if -- list-capable fields always get [] at line 305 or string (caught above) */
       if (!Array.isArray(parsedFields[activeField])) {
         parsedFields[activeField] = [];
       }
@@ -384,6 +386,7 @@ function validateStructuredV1Output(outputText, outputPath, contract) {
 function validateFieldContent(parsedFields, fieldName, outputPath, issues) {
   const value = parsedFields[fieldName];
   if (typeof value === 'string') {
+    /* istanbul ignore if -- string values are always non-empty from line 301 */
     if (!value.trim()) {
       issues.push(
         issue('error', outputPath, `${fieldName} must not be empty.`),

@@ -401,6 +401,7 @@ export async function main(
       tools: createGateTools(),
     });
     process.exit(0);
+    return;
   }
 
   const server = createMcpServer({

@@ -172,16 +172,15 @@ describe('resolveArchLayer', () => {
     expect(result.layer).toBe('doc');
   });
 
-  it('resolves utils layer when module path is null but file path starts with src/', () => {
+  it('resolves network layer when module path is null but file path matches an arch layer rule', () => {
     // When modulePath is null, the function falls back to filePath.
-    // The fallback only checks .github/skills/, .github/agents/, plans/ —
-    // any src/ path that reaches the fallback returns 'utils' regardless of
-    // which architectural layer the file actually belongs to.
+    // It checks ARCH_LAYER_RULES first — src/architecture/network/ matches
+    // the network layer rule, so 'network' is returned (not 'utils').
     const result = runModuleEvaluation<ArchLayerResult>(`
       import { resolveArchLayer } from './rag-index/metadata-enrichment.mjs';
       console.log(JSON.stringify({ layer: resolveArchLayer(null, 'src/architecture/network/activate/network.activate.ts') }));
     `);
-    expect(result.layer).toBe('utils');
+    expect(result.layer).toBe('network');
   });
 });
 
@@ -287,13 +286,13 @@ describe('countJsdocWords', () => {
   });
 
   it('includes @param and @returns tags in word count', () => {
-    // "@param input - The input values @returns The output" = 9 words
-    // (hyphen "-" is counted as a word token)
+    // "@param input - The input values @returns The output" = 8 words
+    // (hyphen "-" is filtered out by the implementation)
     const result = runModuleEvaluation<WordCountResult>(`
       import { countJsdocWords } from './rag-index/metadata-enrichment.mjs';
       console.log(JSON.stringify({ count: countJsdocWords('@param input - The input values @returns The output') }));
     `);
-    expect(result.count).toBe(9);
+    expect(result.count).toBe(8);
   });
 });
 
@@ -669,10 +668,9 @@ describe('enrichDocumentMetadata', () => {
     expect(result).toHaveProperty('source_path_pattern');
   });
 
-  it('computes arch_layer from file_path via fallback (src/ paths resolve to utils)', () => {
-    // enrichDocumentMetadata calls resolveArchLayer(null, filePath), which only
-    // checks fallback rules (.github/skills/, .github/agents/, plans/) for file paths.
-    // Any src/ file path that reaches the fallback returns 'utils'.
+  it('computes arch_layer from file_path via fallback (src/neat/ paths resolve to neat)', () => {
+    // enrichDocumentMetadata calls resolveArchLayer(null, filePath), which checks
+    // ARCH_LAYER_RULES first. src/neat/ matches the neat layer rule.
     const document = {
       file_path: 'src/neat/mutation/neat.mutation.ts',
       family: 'ts-source',
@@ -682,7 +680,7 @@ describe('enrichDocumentMetadata', () => {
       const doc = ${JSON.stringify(document)};
       console.log(JSON.stringify(enrichDocumentMetadata(doc, null)));
     `);
-    expect(result.arch_layer).toBe('utils');
+    expect(result.arch_layer).toBe('neat');
   });
 
   it('computes test_coverage for ts-source family', () => {

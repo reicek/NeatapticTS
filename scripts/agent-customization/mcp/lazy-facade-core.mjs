@@ -200,6 +200,7 @@ function runSelfCheck(config, options) {
     const raw = readFileSync(config.defaultSnapshotPath, 'utf8');
     canParseSnapshot = true;
     const parsed = JSON.parse(raw);
+    /* istanbul ignore next -- snapshot always has tools array; defensive guard */
     const tools = Array.isArray(parsed.tools) ? parsed.tools : [];
     snapshotToolCount = tools.length;
     const routerTool = tools.find(
@@ -480,6 +481,7 @@ function createChildTransport({ spawnCommand, env, repoRoot }) {
       }
 
       child.stdout.on('data', handleChildData);
+      /* istanbul ignore next -- stderr drain handler is a no-op for legal/telemetry noise */
       child.stderr.on('data', () => {
         // Real servers may print legal/telemetry disclaimers to stderr.
         // Diagnostics are intentionally dropped here to keep the proxy quiet.

@@ -302,6 +302,7 @@ function validateStepBlock(metadata, blockId, violations, preExecuteHooks) {
     }
   }
 
+  /* istanbul ignore if -- isLegacyBlock catches agent/agent_file before validateStepBlock is reached */
   if (metadata.agent !== undefined) {
     violations.push({
       blockId,
@@ -311,6 +312,7 @@ function validateStepBlock(metadata, blockId, violations, preExecuteHooks) {
     });
   }
 
+  /* istanbul ignore if -- isLegacyBlock catches agent/agent_file before validateStepBlock is reached */
   if (metadata.agent_file !== undefined) {
     violations.push({
       blockId,

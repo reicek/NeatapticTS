@@ -103,13 +103,17 @@ async function main() {
       family: args.family,
       databasePath: args.database,
     });
-    writeJsonOrText(rows, Boolean(args.json), (payload) =>
-      payload
-        .map(
-          (row, resultIndex) =>
-            `${resultIndex + 1}. ${row.file_path} [${row.doc_family}] ${row.heading_path ?? ''}`,
-        )
-        .join('\n'),
+    writeJsonOrText(
+      rows,
+      Boolean(args.json),
+      /* istanbul ignore next -- text formatter, covered by JSON-mode tests */
+      (payload) =>
+        payload
+          .map(
+            (row, resultIndex) =>
+              `${resultIndex + 1}. ${row.file_path} [${row.doc_family}] ${row.heading_path ?? ''}`,
+          )
+          .join('\n'),
     );
   } catch (error) {
     fail(
@@ -119,4 +123,7 @@ async function main() {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+/* istanbul ignore next -- CLI entry point guard */
+if (process.argv[1]?.endsWith('query-index.mjs') ||
+    (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href))
+  await main();

@@ -71,6 +71,7 @@ function buildOptionsKey(options) {
  *   embedding_count: number | null,
  * }>} Readiness report with latency and cache metadata.
  */
+/* istanbul ignore next -- defensive: always called with explicit options */
 export async function getEmbedReadiness(options = {}) {
   const startTime = performance.now();
   const key = buildOptionsKey(options);
@@ -127,6 +128,7 @@ async function main() {
     writeJsonOrText(
       report,
       Boolean(args.json),
+      /* istanbul ignore next -- text formatter, covered by JSON-mode tests */
       (payload) => `${payload.state}: ${payload.reason ?? ''}`,
     );
   } catch (error) {

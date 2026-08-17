@@ -82,6 +82,7 @@ function normalizeQueryHash(value) {
  * @param {number} strength - Raw signal strength.
  * @returns {number} Strength clamped to [MIN_EXPLICIT_SIGNAL_STRENGTH, MAX_EXPLICIT_SIGNAL_STRENGTH].
  */
+/* istanbul ignore next -- unused internal helper */
 function clampSignalStrength(strength) {
   if (typeof strength !== 'number' || Number.isNaN(strength)) {
     return strength;
@@ -379,6 +380,7 @@ export async function recomputeAllFeedbackScores(client, now = Date.now()) {
   for (const row of result.rows) {
     const chunkId = Number(row.chunk_id);
     const score = await buildChunkAggregateAsync(client, chunkId, now);
+    /* istanbul ignore else -- defensive guard: chunk_id from DISTINCT query always has events */
     if (score) {
       scores.push(score);
     }

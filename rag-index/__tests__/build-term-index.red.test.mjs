@@ -254,6 +254,20 @@ describe('build-term-index: applyPorterStem', () => {
     expect(applyPorterStem('walked')).toBe('walk');
   });
 
+  it('doubles final d after stripping ed suffix', async () => {
+    const { applyPorterStem } = await import('../build-term-index.mjs');
+
+    // "added" → stem "add" (has vowel 'a') → ends with 'd' → double → "addd"
+    expect(applyPorterStem('added')).toBe('addd');
+  });
+
+  it('doubles final l after stripping ed suffix', async () => {
+    const { applyPorterStem } = await import('../build-term-index.mjs');
+
+    // "pulled" → stem "pull" (has vowel 'u') → ends with 'l' → double → "pulll"
+    expect(applyPorterStem('pulled')).toBe('pulll');
+  });
+
   it('strips ing suffix with vowel in stem returning runn', async () => {
     const { applyPorterStem } = await import('../build-term-index.mjs');
 
@@ -265,6 +279,20 @@ describe('build-term-index: applyPorterStem', () => {
     const { applyPorterStem } = await import('../build-term-index.mjs');
 
     expect(applyPorterStem('playing')).toBe('play');
+  });
+
+  it('doubles final d after stripping ing suffix', async () => {
+    const { applyPorterStem } = await import('../build-term-index.mjs');
+
+    // "embedding" → stem "embedd" (has vowel 'e') → ends with 'd' → double → "embeddd"
+    expect(applyPorterStem('embedding')).toBe('embeddd');
+  });
+
+  it('doubles final l after stripping ing suffix', async () => {
+    const { applyPorterStem } = await import('../build-term-index.mjs');
+
+    // "rolling" → stem "roll" (has vowel 'o') → ends with 'l' → double → "rolll"
+    expect(applyPorterStem('rolling')).toBe('rolll');
   });
 
   it('strips ational suffix', async () => {

@@ -328,11 +328,12 @@ function* extractPhaseBlocks(planText) {
 
   const phaseMatches = [...implementationSection.matchAll(PHASE_PATTERN)];
   for (const [phaseIndex, phaseMatch] of phaseMatches.entries()) {
+    /* istanbul ignore if -- defensive guard; named-group regex always yields groups */
     if (!phaseMatch.groups) {
       continue;
     }
 
-    const phaseBodyStart = (phaseMatch.index ?? 0) + phaseMatch[0].length;
+    const phaseBodyStart = phaseMatch.index + phaseMatch[0].length;
     const nextPhaseMatch = phaseMatches.at(phaseIndex + 1);
     const phaseBodyEnd = nextPhaseMatch?.index ?? implementationSection.length;
     const phaseLabel = phaseMatch.groups.phase;
@@ -354,11 +355,12 @@ function* extractPhaseBlocks(planText) {
 function* extractStepBlocks(phaseBody) {
   const stepMatches = [...phaseBody.matchAll(STEP_PATTERN)];
   for (const [stepIndex, stepMatch] of stepMatches.entries()) {
+    /* istanbul ignore if -- defensive guard; named-group regex always yields groups */
     if (!stepMatch.groups) {
       continue;
     }
 
-    const stepBodyStart = (stepMatch.index ?? 0) + stepMatch[0].length;
+    const stepBodyStart = stepMatch.index + stepMatch[0].length;
     const nextStepMatch = stepMatches.at(stepIndex + 1);
     const stepBodyEnd = nextStepMatch?.index ?? phaseBody.length;
     yield {

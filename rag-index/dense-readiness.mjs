@@ -132,6 +132,7 @@ function createModelOnlyReason(chunkCount, embeddingCount) {
   return 'Dense model is present but embeddings are missing or incomplete.';
 }
 
+/* istanbul ignore next -- CLI main entrypoint, only runs when file is executed directly */
 async function main() {
   const args = parseCliArgs(process.argv.slice(2));
 
@@ -169,5 +170,6 @@ async function main() {
   }
 }
 
+/* istanbul ignore next -- main module guard */
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
   await main();

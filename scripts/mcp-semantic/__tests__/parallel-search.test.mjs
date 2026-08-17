@@ -449,3 +449,120 @@ describe('parallel-search.mjs: configurable fusion', () => {
     expect(results.length).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Group 10: Alpha-blend fusion, empty queries, all-fail edge cases
+// Coverage gap closure for normalizeScores, mergeWithAlphaBlend, empty/failed paths
+// ---------------------------------------------------------------------------
+
+describe('parallel-search.mjs: alpha-blend fusion and edge cases', () => {
+  it('runParallelQueries merges results via alpha-blend when fusion is alpha', async () => {
+    const { runParallelQueries } = await import(PARALLEL_SEARCH_PATH);
+    const queryARows = [
+      { chunk_id: 1, score: 10 },
+      { chunk_id: 2, score: 5 },
+    ];
+    const queryBRows = [
+      { chunk_id: 2, score: 8 },
+      { chunk_id: 3, score: 2 },
+    ];
+    const { client } = createMockClient({
+      delayMs: 0,
+      rowFactory: ({ sql }) => {
+        if (sql.includes('queryA')) return queryARows;
+        if (sql.includes('queryB')) return queryBRows;
+        return [];
+      },
+    });
+    const results = await runParallelQueries({
+      client,
+      queries: [
+        { sql: 'SELECT queryA', args: [] },
+        { sql: 'SELECT queryB', args: [] },
+      ],
+      fusion: 'alpha',
+    });
+    const ids = results.map((r) => r.chunk_id).sort();
+    expect(ids).toEqual([1, 2, 3]);
+    expect(results[0]).toHaveProperty('alpha_score');
+  });
+
+  it('runParallelQueries with alpha fusion handles equal scores in a single list', async () => {
+    const { runParallelQueries } = await import(PARALLEL_SEARCH_PATH);
+    const { client } = createMockClient({
+      delayMs: 0,
+      rowFactory: () => [
+        { chunk_id: 1, score: 5 },
+        { chunk_id: 2, score: 5 },
+      ],
+    });
+    const results = await runParallelQueries({
+      client,
+      queries: [{ sql: 'SELECT q1', args: [] }],
+      fusion: 'alpha',
+    });
+    expect(results.length).toBe(2);
+  });
+
+  it('runParallelQueries returns empty array for empty queries', async () => {
+    const { runParallelQueries } = await import(PARALLEL_SEARCH_PATH);
+    const results = await runParallelQueries({
+      client: { async execute() { return { rows: [] }; } },
+      queries: [],
+    });
+    expect(results).toEqual([]);
+    expect(results.errors).toEqual([]);
+  });
+
+  it('runParallelQueries returns empty array with errors when all queries fail', async () => {
+    const { runParallelQueries } = await import(PARALLEL_SEARCH_PATH);
+    const { client } = createMockClient({
+      delayMs: 0,
+      failIndex: 0,
+      rowFactory: () => [{ chunk_id: 1, score: 1 }],
+    });
+    const results = await runParallelQueries({
+      client,
+      queries: [{ sql: 'SELECT fail', args: [] }],
+    });
+    expect(results).toEqual([]);
+    expect(results.errors.length).toBe(1);
+  });
+
+  it('runParallelQueries falls back to default concurrency for invalid TURSO_CONCURRENCY', async () => {
+    const savedValue = process.env.TURSO_CONCURRENCY;
+    process.env.TURSO_CONCURRENCY = 'not-a-number';
+    try {
+      const { runParallelQueries } = await import(PARALLEL_SEARCH_PATH);
+      const { client } = createMockClient({
+        delayMs: 0,
+        rowFactory: () => [{ chunk_id: 1, score: 1 }],
+      });
+      const results = await runParallelQueries({
+        client,
+        queries: [{ sql: 'SELECT 1', args: [] }],
+      });
+      expect(results.length).toBe(1);
+    } finally {
+      if (savedValue === undefined) {
+        delete process.env.TURSO_CONCURRENCY;
+      } else {
+        process.env.TURSO_CONCURRENCY = savedValue;
+      }
+    }
+  });
+
+  it('runParallelQueries passes use_dense flag through without error', async () => {
+    const { runParallelQueries } = await import(PARALLEL_SEARCH_PATH);
+    const { client } = createMockClient({
+      delayMs: 0,
+      rowFactory: () => [{ chunk_id: 1, score: 1 }],
+    });
+    const results = await runParallelQueries({
+      client,
+      queries: [{ sql: 'SELECT 1', args: [] }],
+      use_dense: true,
+    });
+    expect(results.length).toBe(1);
+  });
+});

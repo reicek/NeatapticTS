@@ -246,7 +246,9 @@ function* extractPhaseBlocks(text) {
   const matches = [...implementationBody.matchAll(phasePattern)];
 
   for (const [matchIndex, match] of matches.entries()) {
+    /* istanbul ignore if -- named groups always present in matchAll */
     if (!match.groups) continue;
+    /* istanbul ignore next -- match.index always defined for matchAll */
     const bodyStart = (match.index ?? 0) + match[0].length;
     const nextMatch = matches.at(matchIndex + 1);
     const bodyEnd = nextMatch?.index ?? implementationBody.length;
@@ -269,7 +271,9 @@ function* extractStepBlocks(phaseBody) {
   const matches = [...phaseBody.matchAll(stepPattern)];
 
   for (const [matchIndex, match] of matches.entries()) {
+    /* istanbul ignore if -- named groups always present in matchAll */
     if (!match.groups) continue;
+    /* istanbul ignore next -- match.index always defined for matchAll */
     const bodyStart = (match.index ?? 0) + match[0].length;
     const nextMatch = matches.at(matchIndex + 1);
     const bodyEnd = nextMatch?.index ?? phaseBody.length;
@@ -1066,6 +1070,7 @@ function stripStatus(value) {
 
 function getNextPhaseLabel(phaseLabel) {
   const normalizedPhaseLabel = normalizePhaseLabel(phaseLabel);
+  /* istanbul ignore if -- previousPhaseLabel is checked non-null before call */
   if (normalizedPhaseLabel === null) return null;
 
   if (/^\d+$/u.test(normalizedPhaseLabel)) {

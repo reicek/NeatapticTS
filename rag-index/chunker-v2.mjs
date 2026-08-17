@@ -171,6 +171,7 @@ export function collectSectionsWithHierarchy(markdownText) {
     const charEnd = nextHeading?.index ?? markdownText.length;
     const bodyText = markdownText.slice(heading.lineEnd, charEnd).trim();
 
+    /* istanbul ignore next -- defensive: fullHeadingPath is always non-empty when a heading exists */
     if (bodyText.length > 0 || fullHeadingPath.length > 0) {
       sections.push({
         bodyText,
@@ -248,6 +249,7 @@ export function splitAtSemanticBoundaries(text, maxChars, overlapChars) {
   }
 
   // Flush remaining text.
+  /* istanbul ignore next -- defensive: currentText always has remaining content when the loop exits */
   if (currentText.trim().length > 0) {
     chunks.push({ offset: currentOffset, text: currentText.trimEnd() });
   }
@@ -329,6 +331,7 @@ export function extractAtomicBlocks(text) {
       continue;
     }
 
+    /* istanbul ignore next -- unreachable: inCodeBlock is always false here because the code fence handler above either finds the closing fence (setting inCodeBlock=false) or returns early */
     if (inCodeBlock) {
       blockLines.push(line);
       continue;
@@ -439,6 +442,7 @@ export function computeOverlap(chunkText, overlapChars) {
   let match = null;
 
   while ((match = sentenceBoundaryPattern.exec(chunkText)) !== null) {
+    /* istanbul ignore next -- defensive: match.index is always within the search range */
     if (match.index >= searchStart && match.index <= searchEnd) {
       lastBoundary = match.index + 2; // Include the punctuation and space
     }

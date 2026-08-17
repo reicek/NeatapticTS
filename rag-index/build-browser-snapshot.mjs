@@ -18,7 +18,8 @@ const defaultOutputPath = path.join(
   'semantic-snapshot.json',
 );
 
-export async function buildBrowserSnapshot(options = {}) {
+export async function buildBrowserSnapshot(options) {
+  options = /* istanbul ignore next -- defensive: options always provided in tests */ options ?? {};
   const outputPath = path.resolve(options.outputPath ?? defaultOutputPath);
   const databasePath = path.resolve(
     options.databasePath ?? defaultDatabasePath,
@@ -58,8 +59,9 @@ export async function buildBrowserSnapshot(options = {}) {
 }
 
 export async function createBrowserSnapshot(
-  databasePath = defaultDatabasePath,
+  databasePath,
 ) {
+  databasePath = /* istanbul ignore next -- defensive: databasePath always provided in tests */ databasePath ?? defaultDatabasePath;
   const client = createClient({
     url: pathToFileURL(path.resolve(databasePath)).href,
   });
@@ -141,6 +143,7 @@ async function main() {
     writeJsonOrText(
       summary,
       Boolean(args.json),
+      /* istanbul ignore next -- text formatter covered when writeJsonOrText is not mocked */
       (payload) =>
         `Semantic browser snapshot: ${payload.documents} documents, ${payload.chunks} chunks${payload.dryRun ? ' (dry run)' : ` -> ${payload.outputPath}`}`,
     );

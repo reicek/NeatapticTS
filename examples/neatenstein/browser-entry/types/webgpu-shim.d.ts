@@ -16,6 +16,7 @@ declare global {
   // Use permissive `any` stubs — the neatenstein example never calls WebGPU
   // APIs directly; these types exist solely to satisfy the TypeScript compiler
   // when transitively importing the `neataptic` entry point.
+  type GPU = any;
   type GPUAdapter = any;
   type GPUBindGroup = any;
   type GPUBindGroupLayout = any;
